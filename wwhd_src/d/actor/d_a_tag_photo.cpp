@@ -35,7 +35,7 @@ daTagPhoto_c* daTagPhoto_construct(daTagPhoto_c* p) {
         p->__vtbl = 0x1003fbac;
         Photo_eventCutConstruct(&p->mEventCut);
         p->mTagNo = p->getPrmTagNo();
-        p->field_0x31C = 0;
+        p->mTalkEventSet = 0;
         p->mMode = 0;
     }
     return p;
@@ -111,7 +111,7 @@ void daTagPhoto_c::eventMesSetInit(s32 staff) {
     daTagPhoto_c* p = this;
 
     auto msg = Photo_getMyIntegerP(dComIfGp_getPEvtManager(), staff, "MsgNo", 3);
-    p->field_0x310 = nullptr;
+    p->mpMsgSeq = nullptr;
     u32 number = 0;
     if (msg) {
         number = *msg;
@@ -124,20 +124,20 @@ u32 daTagPhoto_c::getMsg() {
     daTagPhoto_c* p = this;
 
     u8 tag = p->mTagNo;
-    p->field_0x310 = nullptr;
+    p->mpMsgSeq = nullptr;
     return l_msg_talk[tag];
 }
 /* 024B1FF0 */
 u16 daTagPhoto_c::next_msgStatus(be<u32>* out) {
     daTagPhoto_c* p = this;
 
-    auto seq = p->field_0x310.get();
+    auto seq = p->mpMsgSeq.get();
     if (!seq)return fopMsgStts_MSG_ENDS_e;
     seq = seq+1;
-    p->field_0x310 = seq;
+    p->mpMsgSeq = seq;
     u32 number = *seq;
     if (!number) {
-        p->field_0x310 = nullptr;
+        p->mpMsgSeq = nullptr;
         return fopMsgStts_MSG_ENDS_e;
     }
     *out = number;
@@ -282,10 +282,10 @@ void daTagPhoto_c::executeWait() {
     f32 distance = std_sqrtf(squared);
     if (distance<160.0f) {
         u16 flags = p->eventInfo.mCondition;
-        u8 entered = p->field_0x31C;
+        u8 entered = p->mTalkEventSet;
         p->eventInfo.mCondition = flags|dEvtCnd_CANTALK_e;
         if (!entered) {
-            p->field_0x31C = 1;
+            p->mTalkEventSet = 1;
             auto npc = Photo_searchFromName("Po", 0xF, 0);
             if (npc&&!npc->isDate())p->eventInfo.setEventId(p->mPhotoTalkEventIdx);
         }

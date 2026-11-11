@@ -164,7 +164,7 @@ BOOL daObjEkskz::Act_c::Create() {
     mCyl.Set(&cylinderSource);
     mCyl.SetC(&current.pos);
     mCyl.SetStts(&mStts);
-    m480 = 0;
+    mBroken = 0;
     ekskz_dKy_tevstr_init(&mTevStr, home.roomNo, 0xFF);
 
     s8 room = current.roomNo;
@@ -195,11 +195,11 @@ BOOL daObjEkskz::Act_c::Execute(Mtx34 **mtx) {
     mBckAnm.play();
     mBtkAnm.play();
     dComIfG_Ccsp_Set(&mCyl);
-    if (m480 == 0) {
+    if (mBroken == 0) {
         if (mCyl.ChkTgHit()) {
             ekskz_mDoAud_seStart_1(0x806);
             dComIfGs_onSwitch(prm_get_swSave(), home.roomNo);
-            m480 = 1;
+            mBroken = 1;
             dPa_smokeEcallBack_end(&mSmokeCallback[0]);
             dPa_smokeEcallBack_end(&mSmokeCallback[1]);
             u8 r = tevStr.mColorK0.r, g = tevStr.mColorK0.g, b = tevStr.mColorK0.b;
@@ -212,7 +212,7 @@ BOOL daObjEkskz::Act_c::Execute(Mtx34 **mtx) {
             }
             // HD: smoke callback setup is inlined before the particle call.
             mSmokeCallback[3].mWindOff = 1;
-            mSmokeCallback[3].m12 = 1;
+            mSmokeCallback[3].mFollowOff = 1;
             s8 room = current.roomNo;
             dPa_control_c *pa = dComIfGp_getParticle();
             dPa_control_set(pa, 2, 0xA2ED, &current.pos, &current.angle, nullptr, 0x80,
@@ -221,7 +221,7 @@ BOOL daObjEkskz::Act_c::Execute(Mtx34 **mtx) {
             mSmokeCallback[3].mTevstr = gabi::ea(&mTevStr);
         }
     }
-    if (m480 != 0) {
+    if (mBroken != 0) {
         mBrkAnm.play();
         if (mBrkAnm.mFrameCtrl.checkState(J3DFrameCtrl::STATE_STOP_E) ||
             mBrkAnm.mFrameCtrl.getRate() == 0.0f)
@@ -243,7 +243,7 @@ BOOL daObjEkskz::Act_c::Draw() {
     settingTevStruct(dKy_getEnvlight(), TEV_TYPE_BG0, &current.pos, &tevStr);
     setLightTevColorType(dKy_getEnvlight(), mpModel, &tevStr);
     dComIfGd_setListBG();
-    if (m480 == 0)
+    if (mBroken == 0)
         mDoExt_modelUpdateDL(mpModel);
     dComIfGd_setList();
     return TRUE;

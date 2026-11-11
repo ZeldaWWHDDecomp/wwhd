@@ -159,7 +159,7 @@ struct Act_c : dBgS_MoveBgActor {
     /* 0x5E8 */ mDoExt_baseAnm mBrkAnm; /* mDoExt_brkAnm, HD 0x78 */
     /* 0x5F8 */ u8 _5F8[0x660 - 0x5F8];
     /* 0x660 */ mDoExt_btkAnm mBtkAnm; /* HD 0x74 */
-    /* 0x6D4 */ be<u8> m480;           /* broken */
+    /* 0x6D4 */ be<u8> mBroken;  /* was m480: Create 0233BCBC clears it; Execute 0233BEC8 sets 1 when the object breaks (dComIfGs_onSwitch(prm_get_swSave()), particle 0x82EC) and handles the pieces while set; Draw 0233C0C8 draws the whole object only while it is 0; broken */
     /* 0x6D5 */ u8 _6D5[3];
     /* 0x6D8 */ dPa_smokeEcallBack
         mSmokeCallback[4]; /* dPa_smokeEcallBack[4]: vtable +0, emitter +4 */

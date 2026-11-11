@@ -217,9 +217,9 @@ void daWindTag::daWindTag_c::CreateInit() {
         mbDraw = false;
     }
 
-    field_0x57f = false;
+    mSplash = false;
     if (daWindTag_prm::getSplashFlag(this) == 1) {
-        field_0x57f = true;
+        mSplash = true;
     }
 
     cullMtx = gabi::ea(J3DModel_getBaseTRMtx(mpModel)); /* fopAcM_SetMtx */
@@ -231,10 +231,10 @@ void daWindTag::daWindTag_c::CreateInit() {
 
     mStts.Init(0xFF, 0xFF, this); /* mStts.Init(0xFF, 0xFF, this) */
     dCcD_Cps_Set(&mCps, gabi::ea(&l_cps_src));
-    field_0x49c = scale.y;
+    mHeightScale = scale.y;
     mCps.mpStts = &mStts; /* mCps.SetStts(&mStts) */
     mSwNo = daWindTag_prm::getSwitchNo(this);
-    field_0x57c = (u8)fopAcM_isSwitch(this, mSwNo);
+    mPrevSwitch = (u8)fopAcM_isSwitch(this, mSwNo);
 
     u8 r28 = mSwNo == 0xFF;
     if (daWindTag_prm::getSwType(this) == 0) {
@@ -244,7 +244,7 @@ void daWindTag::daWindTag_c::CreateInit() {
     }
 
     if (r28 != 0) {
-        mOffsY = mData[mType * 2 + 1] * field_0x49c;
+        mOffsY = mData[mType * 2 + 1] * mHeightScale;
         mBtkAnm1.mFrameCtrl.setFrame((f32)mBtkAnm1.mFrameCtrl.getEnd());
     } else {
         mOffsY = 0.0f;
@@ -279,7 +279,7 @@ void daWindTag::daWindTag_c::CreateInit() {
     mLevelSeID = fopKyM_create(fpcNm_LEVEL_SE_e, seNum, &eyePos, nullptr, 0);
     mpEmitter = 0;
     f32 efScale = scale.x; /* cXyz efScale(scale.x, scale.x, scale.x) */
-    if (field_0x57f) {
+    if (mSplash) {
         settingTevStruct(dKy_getEnvlight(), 2 /* TEV_TYPE_BG1 */, &current.pos, &mEfTevStr);
         mEfColor[0] = (u8)(s16)mEfTevStr.mColorC0.r;
         mEfColor[1] = (u8)(s16)mEfTevStr.mColorC0.g;
@@ -429,19 +429,19 @@ bool daWindTag::daWindTag_c::_execute() {
     }
 
     if (mSwNo != 0xFF && r29 != 0) {
-        if (field_0x57d != 0 && r27v == 0) {
-            field_0x577 = 0;
+        if (mPrevSchActive != 0 && r27v == 0) {
+            mSwitchLatch = 0;
         }
         u32 sw = (u32)fopAcM_isSwitch(this, mSwNo);
-        if ((u32)field_0x57c != sw && r24 != 0) {
-            field_0x577 = 1;
+        if ((u32)mPrevSwitch != sw && r24 != 0) {
+            mSwitchLatch = 1;
         }
     }
 
     be<f32>* strength = &mPointWind.mWind.mStrength; /* mPointWind.mWind.mStrength */
-    if ((r27 != 0 && r26_2 != 0) || field_0x577 != 0) {
+    if ((r27 != 0 && r26_2 != 0) || mSwitchLatch != 0) {
         cLib_addCalc(strength, 1.0f, 0.5f, 0.5f, 0.01f);
-        f31 = mData[mType * 2 + 1] * field_0x49c;
+        f31 = mData[mType * 2 + 1] * mHeightScale;
         mBtkAnm1.mFrameCtrl.setRate(1.0f);
     } else {
         cLib_addCalc(strength, 0.0f, 0.5f, 0.5f, 0.01f);
@@ -451,7 +451,7 @@ bool daWindTag::daWindTag_c::_execute() {
 
     set_wind_se();
 
-    f32 len = mData[mType * 2 + 1] * field_0x49c;
+    f32 len = mData[mType * 2 + 1] * mHeightScale;
     if (daWindTag_prm::getSwType(this) == 0) {
         f32 f3 = len * 0.1f;
         cLib_addCalc(&mOffsY, f31, f30, f3, f3 * 0.5f);
@@ -474,8 +474,8 @@ bool daWindTag::daWindTag_c::_execute() {
     mBtkAnm0.play();
     mBckAnm.play();
     mBtkAnm1.play();
-    field_0x57d = (u8)r27v;
-    field_0x57c = (u8)fopAcM_isSwitch(this, mSwNo);
+    mPrevSchActive = (u8)r27v;
+    mPrevSwitch = (u8)fopAcM_isSwitch(this, mSwNo);
     MoveEmitter();
     mPointWind.set_pwind_move();
 

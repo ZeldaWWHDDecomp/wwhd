@@ -65,7 +65,7 @@ struct mtBodyActorView : fopEn_enemy_c {
     u8 _pad401[0x4B];
     /* 0x44C */ be<f32> mBodyWaveAmplitude;
     u8 _pad450[0x4];
-    /* 0x454 */ be<f32> m454;
+    /* 0x454 */ be<f32> mSegmentPulseAmp;  /* was m454: daMt_Execute 021D87A0 sets each mSegmentScaleY[k] to 1 + sin(phase) * it and eases it to 0.1; mt_move_maru 021DF238 (the roll) eases it to 0.3 and sets 0.5 at the roll start: the amplitude of the body segments' pulse */
     u8 _pad458[0xC];
     /* 0x464 */ be<u8> mWaterSteamState;
     u8 _pad465[0x1];

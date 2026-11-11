@@ -344,53 +344,53 @@ static u8* dCamera_BG_ct(u8* p) {
     }
     u32 o = gabi::ea(p);
     groundCheckConstruct(cameraArgument(gabi::ea(
-        &gabi::at<CameraProcessHD::BG>(o)->mChecks.m00.m04.mPolyPassChk))); /* cBgS_GndChk() */
-    fieldWrite<u8>(gabi::at<CameraProcessHD::BG>(o)->mChecks.m00.m04.mbRopeThrough, 0);
-    fieldWrite<u8>(gabi::at<CameraProcessHD::BG>(o)->mChecks.m00.m04.mbCamThrough, 1);
-    fieldWrite<u8>(gabi::at<CameraProcessHD::BG>(o)->mChecks.m00.m04.mbObjThrough, 0);
+        &gabi::at<CameraProcessHD::BG>(o)->mChecks.mPlayerGround.mGndChk.mPolyPassChk))); /* cBgS_GndChk() */
+    fieldWrite<u8>(gabi::at<CameraProcessHD::BG>(o)->mChecks.mPlayerGround.mGndChk.mbRopeThrough, 0);
+    fieldWrite<u8>(gabi::at<CameraProcessHD::BG>(o)->mChecks.mPlayerGround.mGndChk.mbCamThrough, 1);
+    fieldWrite<u8>(gabi::at<CameraProcessHD::BG>(o)->mChecks.mPlayerGround.mGndChk.mbObjThrough, 0);
     fieldWrite<u32>(
-        gabi::at<CameraProcessHD::BG>(o)->mChecks.m00.m04.mGrpPassChk,
-        gabi::ea(&gabi::at<CameraProcessHD::BG>(o)->mChecks.m00.m04.dBgS_GrpPassChk::__vtbl));
-    fieldWrite<u8>(gabi::at<CameraProcessHD::BG>(o)->mChecks.m00.m04.mbArrowThrough, 0);
-    fieldWrite<u8>(gabi::at<CameraProcessHD::BG>(o)->mChecks.m00.m04.mbBombThrough, 0);
-    fieldWrite<u32>(gabi::at<CameraProcessHD::BG>(o)->mChecks.m00.m04.mGrp, 1);
-    fieldWrite<u32>(gabi::at<CameraProcessHD::BG>(o)->mChecks.m00.m04.cBgS_Chk::__vtbl,
+        gabi::at<CameraProcessHD::BG>(o)->mChecks.mPlayerGround.mGndChk.mGrpPassChk,
+        gabi::ea(&gabi::at<CameraProcessHD::BG>(o)->mChecks.mPlayerGround.mGndChk.dBgS_GrpPassChk::__vtbl));
+    fieldWrite<u8>(gabi::at<CameraProcessHD::BG>(o)->mChecks.mPlayerGround.mGndChk.mbArrowThrough, 0);
+    fieldWrite<u8>(gabi::at<CameraProcessHD::BG>(o)->mChecks.mPlayerGround.mGndChk.mbBombThrough, 0);
+    fieldWrite<u32>(gabi::at<CameraProcessHD::BG>(o)->mChecks.mPlayerGround.mGndChk.mGrp, 1);
+    fieldWrite<u32>(gabi::at<CameraProcessHD::BG>(o)->mChecks.mPlayerGround.mGndChk.cBgS_Chk::__vtbl,
                     kCameraGroundVtable);
-    fieldWrite<u32>(gabi::at<CameraProcessHD::BG>(o)->mChecks.m00.m04.dBgS_GrpPassChk::__vtbl,
+    fieldWrite<u32>(gabi::at<CameraProcessHD::BG>(o)->mChecks.mPlayerGround.mGndChk.dBgS_GrpPassChk::__vtbl,
                     kCameraGroupVtable);
     fieldWrite<u32>(
-        gabi::at<CameraProcessHD::BG>(o)->mChecks.m00.m04.mPolyPassChk,
-        gabi::ea(&gabi::at<CameraProcessHD::BG>(o)->mChecks.m00.m04.dBgS_PolyPassChk::__vtbl));
-    fieldWrite<u32>(gabi::at<CameraProcessHD::BG>(o)->mChecks.m00.m04.cBgS_PolyInfo::__vtbl,
+        gabi::at<CameraProcessHD::BG>(o)->mChecks.mPlayerGround.mGndChk.mPolyPassChk,
+        gabi::ea(&gabi::at<CameraProcessHD::BG>(o)->mChecks.mPlayerGround.mGndChk.dBgS_PolyPassChk::__vtbl));
+    fieldWrite<u32>(gabi::at<CameraProcessHD::BG>(o)->mChecks.mPlayerGround.mGndChk.cBgS_PolyInfo::__vtbl,
                     kCameraPolyInfoVtable);
-    fieldWrite<u8>(gabi::at<CameraProcessHD::BG>(o)->mChecks.m00.m04.mbBoomerangThrough, 0);
-    fieldWrite<u32>(gabi::at<CameraProcessHD::BG>(o)->mChecks.m00.m04.dBgS_PolyPassChk::__vtbl,
+    fieldWrite<u8>(gabi::at<CameraProcessHD::BG>(o)->mChecks.mPlayerGround.mGndChk.mbBoomerangThrough, 0);
+    fieldWrite<u32>(gabi::at<CameraProcessHD::BG>(o)->mChecks.mPlayerGround.mGndChk.dBgS_PolyPassChk::__vtbl,
                     kCameraPassVtable);
-    fieldWrite<u8>(gabi::at<CameraProcessHD::BG>(o)->mChecks.m00.m04.mbLinkThrough, 0);
+    fieldWrite<u8>(gabi::at<CameraProcessHD::BG>(o)->mChecks.mPlayerGround.mGndChk.mbLinkThrough, 0);
     groundCheckConstruct(
-        cameraArgument(gabi::ea(&gabi::at<CameraProcessHD::BG>(o)->mChecks.m5C.m04.mPolyPassChk)));
-    fieldWrite<u32>(gabi::at<CameraProcessHD::BG>(o)->mChecks.m5C.m04.mGrp, 1);
+        cameraArgument(gabi::ea(&gabi::at<CameraProcessHD::BG>(o)->mChecks.mCameraGround.mGndChk.mPolyPassChk)));
+    fieldWrite<u32>(gabi::at<CameraProcessHD::BG>(o)->mChecks.mCameraGround.mGndChk.mGrp, 1);
     fieldWrite<u32>(
-        gabi::at<CameraProcessHD::BG>(o)->mChecks.m5C.m04.mGrpPassChk,
-        gabi::ea(&gabi::at<CameraProcessHD::BG>(o)->mChecks.m5C.m04.dBgS_GrpPassChk::__vtbl));
-    fieldWrite<u32>(gabi::at<CameraProcessHD::BG>(o)->mChecks.m5C.m04.dBgS_GrpPassChk::__vtbl,
+        gabi::at<CameraProcessHD::BG>(o)->mChecks.mCameraGround.mGndChk.mGrpPassChk,
+        gabi::ea(&gabi::at<CameraProcessHD::BG>(o)->mChecks.mCameraGround.mGndChk.dBgS_GrpPassChk::__vtbl));
+    fieldWrite<u32>(gabi::at<CameraProcessHD::BG>(o)->mChecks.mCameraGround.mGndChk.dBgS_GrpPassChk::__vtbl,
                     kCameraGroupVtable);
     fieldWrite<u32>(
-        gabi::at<CameraProcessHD::BG>(o)->mChecks.m5C.m04.mPolyPassChk,
-        gabi::ea(&gabi::at<CameraProcessHD::BG>(o)->mChecks.m5C.m04.dBgS_PolyPassChk::__vtbl));
-    fieldWrite<u32>(gabi::at<CameraProcessHD::BG>(o)->mChecks.m5C.m04.cBgS_PolyInfo::__vtbl,
+        gabi::at<CameraProcessHD::BG>(o)->mChecks.mCameraGround.mGndChk.mPolyPassChk,
+        gabi::ea(&gabi::at<CameraProcessHD::BG>(o)->mChecks.mCameraGround.mGndChk.dBgS_PolyPassChk::__vtbl));
+    fieldWrite<u32>(gabi::at<CameraProcessHD::BG>(o)->mChecks.mCameraGround.mGndChk.cBgS_PolyInfo::__vtbl,
                     kCameraPolyInfoVtable);
-    fieldWrite<u32>(gabi::at<CameraProcessHD::BG>(o)->mChecks.m5C.m04.dBgS_PolyPassChk::__vtbl,
+    fieldWrite<u32>(gabi::at<CameraProcessHD::BG>(o)->mChecks.mCameraGround.mGndChk.dBgS_PolyPassChk::__vtbl,
                     kCameraPassVtable);
-    fieldWrite<u8>(gabi::at<CameraProcessHD::BG>(o)->mChecks.m5C.m04.mbRopeThrough, 0);
-    fieldWrite<u8>(gabi::at<CameraProcessHD::BG>(o)->mChecks.m5C.m04.mbBombThrough, 0);
-    fieldWrite<u8>(gabi::at<CameraProcessHD::BG>(o)->mChecks.m5C.m04.mbArrowThrough, 0);
-    fieldWrite<u8>(gabi::at<CameraProcessHD::BG>(o)->mChecks.m5C.m04.mbBoomerangThrough, 0);
-    fieldWrite<u8>(gabi::at<CameraProcessHD::BG>(o)->mChecks.m5C.m04.mbObjThrough, 0);
-    fieldWrite<u8>(gabi::at<CameraProcessHD::BG>(o)->mChecks.m5C.m04.mbLinkThrough, 0);
-    fieldWrite<u32>(gabi::at<CameraProcessHD::BG>(o)->mChecks.m5C.m04.cBgS_Chk::__vtbl,
+    fieldWrite<u8>(gabi::at<CameraProcessHD::BG>(o)->mChecks.mCameraGround.mGndChk.mbRopeThrough, 0);
+    fieldWrite<u8>(gabi::at<CameraProcessHD::BG>(o)->mChecks.mCameraGround.mGndChk.mbBombThrough, 0);
+    fieldWrite<u8>(gabi::at<CameraProcessHD::BG>(o)->mChecks.mCameraGround.mGndChk.mbArrowThrough, 0);
+    fieldWrite<u8>(gabi::at<CameraProcessHD::BG>(o)->mChecks.mCameraGround.mGndChk.mbBoomerangThrough, 0);
+    fieldWrite<u8>(gabi::at<CameraProcessHD::BG>(o)->mChecks.mCameraGround.mGndChk.mbObjThrough, 0);
+    fieldWrite<u8>(gabi::at<CameraProcessHD::BG>(o)->mChecks.mCameraGround.mGndChk.mbLinkThrough, 0);
+    fieldWrite<u32>(gabi::at<CameraProcessHD::BG>(o)->mChecks.mCameraGround.mGndChk.cBgS_Chk::__vtbl,
                     kCameraGroundVtable);
-    fieldWrite<u8>(gabi::at<CameraProcessHD::BG>(o)->mChecks.m5C.m04.mbCamThrough, 1);
+    fieldWrite<u8>(gabi::at<CameraProcessHD::BG>(o)->mChecks.mCameraGround.mGndChk.mbCamThrough, 1);
     angleConstruct(
         cameraArgument(gabi::ea(&gabi::at<CameraProcessHD::BG>(o)->mFirstAngle))); /* cSAngle() */
     angleConstruct(cameraArgument(gabi::ea(&gabi::at<CameraProcessHD::BG>(o)->mSecondAngle)));
@@ -463,15 +463,15 @@ static void dCamera_dt(dCamera_c* i_this, s32 flags) {
                       cameraArgument(2)); /* ~projection */
     lookAtDestroy(cameraArgument(gabi::ea(&i_this->mHDLookAtCamera)),
                   cameraArgument(2)); /* ~LookAtCamera */
-    fieldWrite<u32>(i_this->mBG.m5C.m04.dBgS_PolyPassChk::__vtbl, kGroundPassVtable);
-    fieldWrite<u32>(i_this->mBG.m5C.m04.cBgS_PolyInfo::__vtbl, kGroundPolyInfoVtable);
-    fieldWrite<u32>(i_this->mBG.m5C.m04.dBgS_GrpPassChk::__vtbl, kGroupBaseVtable);
-    groundCheckDestroy(cameraArgument(gabi::ea(&i_this->mBG.m5C.m04.mPolyPassChk)),
+    fieldWrite<u32>(i_this->mBG.mCameraGround.mGndChk.dBgS_PolyPassChk::__vtbl, kGroundPassVtable);
+    fieldWrite<u32>(i_this->mBG.mCameraGround.mGndChk.cBgS_PolyInfo::__vtbl, kGroundPolyInfoVtable);
+    fieldWrite<u32>(i_this->mBG.mCameraGround.mGndChk.dBgS_GrpPassChk::__vtbl, kGroupBaseVtable);
+    groundCheckDestroy(cameraArgument(gabi::ea(&i_this->mBG.mCameraGround.mGndChk.mPolyPassChk)),
                        cameraArgument(0)); /* ~dBgS_CamGndChk (m5C) */
-    fieldWrite<u32>(i_this->mBG.m00.m04.cBgS_PolyInfo::__vtbl, kGroundPolyInfoVtable);
-    fieldWrite<u32>(i_this->mBG.m00.m04.dBgS_PolyPassChk::__vtbl, kGroundPassVtable);
-    fieldWrite<u32>(i_this->mBG.m00.m04.dBgS_GrpPassChk::__vtbl, kGroupBaseVtable);
-    groundCheckDestroy(cameraArgument(gabi::ea(&i_this->mBG.m00.m04.mPolyPassChk)),
+    fieldWrite<u32>(i_this->mBG.mPlayerGround.mGndChk.cBgS_PolyInfo::__vtbl, kGroundPolyInfoVtable);
+    fieldWrite<u32>(i_this->mBG.mPlayerGround.mGndChk.dBgS_PolyPassChk::__vtbl, kGroundPassVtable);
+    fieldWrite<u32>(i_this->mBG.mPlayerGround.mGndChk.dBgS_GrpPassChk::__vtbl, kGroupBaseVtable);
+    groundCheckDestroy(cameraArgument(gabi::ea(&i_this->mBG.mPlayerGround.mGndChk.mPolyPassChk)),
                        cameraArgument(0)); /* ~dBgS_CamGndChk (m00) */
     effectLineDestroy(cameraArgument(gabi::ea(&i_this->mForcusLine)),
                       cameraArgument(0)); /* ~dDlst_effectLine_c */
@@ -622,7 +622,7 @@ static dCamera_c* dCamera_ct(dCamera_c* i_this, camera_class* cam) {
     fieldWrite<u32>(i_this->mNextMode, 0);
     cSAngle_ct_at(gabi::ea(&i_this->mForwardTiltOffset));
     fieldWrite<f32>(i_this->m150, 0.0f);
-    fieldWrite<f32>(i_this->m154, 0.0f);
+    fieldWrite<f32>(i_this->mSmoothedCStickX, 0.0f);
     fieldWrite<f32>(i_this->mSightFitRadius, 0.0f);
     memzero(gabi::ea(&i_this->mStickMainPosXLast), 0x5C);
     memzero(gabi::ea(&i_this->mForcusLine), 0x70);
@@ -643,7 +643,7 @@ static dCamera_c* dCamera_ct(dCamera_c* i_this, camera_class* cam) {
     fieldWrite<u32>(i_this->mEventFlags, 0);
     fieldWrite<u32>(i_this->mMapToolType, 0);
     fieldWrite<u32>(i_this->mCurStyle, 0);
-    fieldWrite<u8>(i_this->m514, 0);
+    fieldWrite<u8>(i_this->mHoldType, 0);
     fieldWrite<u32>(i_this->mCurType, 0);
     fieldWrite<u32>(i_this->mNextType, 0);
     fieldWrite<u32>(i_this->mForceType, 0);
@@ -779,7 +779,7 @@ void dCamera_c::initialize(camera_class* camera, fopAc_ac_c* player, u32 infoIdx
     mForceType = 0xFF;
     mpForceTypeActor = nullptr;
     mEventFlags = 0;
-    fieldWrite<u8>(this->m514, 0); /* m514 */
+    fieldWrite<u8>(this->mHoldType, 0); /* mHoldType */
     mSeIds[1] = 0x828;               /* JA_SE_CAMERA_TO_MANUAL */
     mSeIds[2] = 0x381B;              /* JA_SE_ATM_PRT_SHIP_CREAK */
     mCamTypeKeep = keep;
@@ -806,22 +806,22 @@ void dCamera_c::initialize(camera_class* camera, fopAc_ac_c* player, u32 infoIdx
         }
     }
     s16 style = camTypeStyle(mCurType, mCurMode);
-    u32 grp = fieldRead<u32>(this->mBG.m00.m04.mGrp);
+    u32 grp = fieldRead<u32>(this->mBG.mPlayerGround.mGndChk.mGrp);
     mSeaWaveHeight = -1000000000.0f;
-    mBG.m5C.m58 = -1000000000.0f;
+    mBG.mCameraGround.mGroundY = -1000000000.0f;
     mFollowMoveBg = 0;
     mOnMoveBg = 0;
     mRoomNo = -1;
     mStageMapToolCameraIdx = 0xFF;
     mEventData.field_0x14 = -1;
-    mBG.m00.m58 = -1000000000.0f;
-    fieldWrite<u32>(this->mBG.m00.m04.mGrp,
+    mBG.mPlayerGround.mGroundY = -1000000000.0f;
+    fieldWrite<u32>(this->mBG.mPlayerGround.mGndChk.mGrp,
                     (grp & ~1u) | 2); /* mBG.m00.m04.OffNormalGrp(); OnWaterGrp() */
     mLockOnActorId = fpcM_ERROR_PROCESS_ID_e;
     mEventData.field_0x18 = -1;
     mEventData.mStaffIdx = -1;
     mEventData.field_0x0c = -1;
-    m0E8 = -1;
+    mEndEventIdCheck = -1;
     mCurStyle = style;
     mMoveBgLastPos.copy(*&sZeroVector); /* cXyz::Zero */
     mpMoveBgActor = nullptr;

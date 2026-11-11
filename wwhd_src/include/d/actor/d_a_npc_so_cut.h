@@ -49,29 +49,29 @@ inline SoCutRegisters& soCutRegisters() { return gabi::object_at<SoCutRegisters>
 
 struct SoCutHIO {
     u8 reserved0[0x3C];
-    /* 0x3C */ be<f32> m3C;
+    /* 0x3C */ be<f32> mMiniGameSphRadius;  /* was m3C: see d/actor/d_a_npc_so.h (daNpc_So_HIO_c) */
     u8 reserved40[0x10];
-    /* 0x50 */ be<f32> m50;
+    /* 0x50 */ be<f32> mJumpSpeedYMax;  /* was m50: see d/actor/d_a_npc_so.h (daNpc_So_HIO_c) */
     u8 reserved54[0x14];
-    /* 0x68 */ be<s16> m68;
+    /* 0x68 */ be<s16> mRisePitchFast;  /* was m68: see d/actor/d_a_npc_so.h (daNpc_So_HIO_c) */
     u8 reserved6A[0x16];
-    /* 0x80 */ be<f32> m80;
-    /* 0x84 */ be<f32> m84;
-    /* 0x88 */ be<f32> m88;
-    /* 0x8C */ be<f32> m8C;
-    /* 0x90 */ be<f32> m90;
-    /* 0x94 */ be<u8> m94;
+    /* 0x80 */ be<f32> mMapopenGravity;  /* was m80: see d/actor/d_a_npc_so.h (daNpc_So_HIO_c) */
+    /* 0x84 */ be<f32> mMapopenJumpSpeedY;  /* was m84: see d/actor/d_a_npc_so.h (daNpc_So_HIO_c) */
+    /* 0x88 */ be<f32> mMapopenNearDist;  /* was m88: see d/actor/d_a_npc_so.h (daNpc_So_HIO_c) */
+    /* 0x8C */ be<f32> mMapopenFarDist;  /* was m8C: see d/actor/d_a_npc_so.h (daNpc_So_HIO_c) */
+    /* 0x90 */ be<f32> mMapopenMoveStep;  /* was m90: see d/actor/d_a_npc_so.h (daNpc_So_HIO_c) */
+    /* 0x94 */ be<u8> mNoFmapFish;  /* was m94: see d/actor/d_a_npc_so.h (daNpc_So_HIO_c) */
     u8 tail[0x3];
 };
-WWHD_OFFSET(SoCutHIO, m3C, 0x3C);
-WWHD_OFFSET(SoCutHIO, m50, 0x50);
-WWHD_OFFSET(SoCutHIO, m68, 0x68);
-WWHD_OFFSET(SoCutHIO, m80, 0x80);
-WWHD_OFFSET(SoCutHIO, m84, 0x84);
-WWHD_OFFSET(SoCutHIO, m88, 0x88);
-WWHD_OFFSET(SoCutHIO, m8C, 0x8C);
-WWHD_OFFSET(SoCutHIO, m90, 0x90);
-WWHD_OFFSET(SoCutHIO, m94, 0x94);
+WWHD_OFFSET(SoCutHIO, mMiniGameSphRadius, 0x3C);
+WWHD_OFFSET(SoCutHIO, mJumpSpeedYMax, 0x50);
+WWHD_OFFSET(SoCutHIO, mRisePitchFast, 0x68);
+WWHD_OFFSET(SoCutHIO, mMapopenGravity, 0x80);
+WWHD_OFFSET(SoCutHIO, mMapopenJumpSpeedY, 0x84);
+WWHD_OFFSET(SoCutHIO, mMapopenNearDist, 0x88);
+WWHD_OFFSET(SoCutHIO, mMapopenFarDist, 0x8C);
+WWHD_OFFSET(SoCutHIO, mMapopenMoveStep, 0x90);
+WWHD_OFFSET(SoCutHIO, mNoFmapFish, 0x94);
 WWHD_SIZE(SoCutHIO, 0x98);
 
 inline SoCutHIO& soCutHIO() { return gabi::object_at<SoCutHIO>(0x104686CC); }

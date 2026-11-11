@@ -74,7 +74,7 @@ BOOL daSpcItem01_c::CreateInit() {
     mAcchCir.SetWall(30.0f, 30.0f);
     mAcch.Set(&current.pos, &old.pos, this, 1, &mAcchCir, &speed);
 
-    field_0x644 = daSpcItem01_prm::getFlag(this);
+    mFlag = daSpcItem01_prm::getFlag(this);
     gravity = -4.0f; /* fopAcM_SetGravity */
     switch (m_itemNo) {
     case dItemNo_SHIELD_e:
@@ -108,7 +108,7 @@ BOOL daSpcItem01_c::_execute() {
 
 /* 02489E3C */
 void daSpcItem01_c::set_effect() {
-    if ((field_0x644 & 0x01) && dItemDataView::checkAppearEffect(m_itemNo) && !field_0x642 && m_itemNo != dItemNo_KNIGHTS_CREST_e) {
+    if ((mFlag & 0x01) && dItemDataView::checkAppearEffect(m_itemNo) && !mBounceCount && m_itemNo != dItemNo_KNIGHTS_CREST_e) {
         dComIfGp_particle_setSimple(dItemDataView::getAppearEffect(m_itemNo), &current.pos);
     }
 }
@@ -148,8 +148,8 @@ void daSpcItem01_c::move() {
         break;
     default:
         if (mAcch.ChkGroundLanding()) {
-            field_0x642 = field_0x642 + 1;
-            f32 newGravity = field_0x63C * 0.62f;
+            mBounceCount = mBounceCount + 1;
+            f32 newGravity = mLastSpeedY * 0.62f;
             if (newGravity > gravity - 0.5f) {
                 speedF = 0.0f;
             } else {
@@ -162,19 +162,19 @@ void daSpcItem01_c::move() {
     }
 
     if (speed.y != 0.0f) {
-        field_0x63C = speed.y;
+        mLastSpeedY = speed.y;
     }
 }
 
 /* 0248A08C */
 void daSpcItem01_c::rotate_item() {
     if (isRupee(m_itemNo)) {
-        if (field_0x642 == 0) {
-            field_0x640 = current.angle.x + 0x2000;
+        if (mBounceCount == 0) {
+            mTargetAngleX = current.angle.x + 0x2000;
         } else {
-            field_0x640 = 0;
+            mTargetAngleX = 0;
         }
-        cLib_chaseAngleS(&current.angle.x, field_0x640, 0x2000);
+        cLib_chaseAngleS(&current.angle.x, mTargetAngleX, 0x2000);
     }
 }
 

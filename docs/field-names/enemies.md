@@ -110,9 +110,70 @@ header line keeps the old name (`was mXXXX`) with the evidence. Inlined GameCube
 | 0x139C | `m1244` | `mDemoCamCenter` | demo_camera (in daBk_Execute 0209BD1C): camera centre (player / ken / actor position + height), passed to dCam_Set as the centre |
 | 0x13B8 | `m1260` | `mDemoCamFovy` | demo_camera (in daBk_Execute 0209BD1C): 45/35/55 eased; passed to dCam_Set as the fovy |
 
-Open (no name yet): `m0320` (patrol target in jyunkai / stand2, random offset to the path point in path_run: two meanings), `m11E4` (particle ID_AK_JN_NG position in fight_attack; never written) and `m11F0` (yari_hit_check clears and shifts it, so it is always 0; fight_attack branches on it), the same pair as mo2_class m2934 / m2940, `m1212` (child spawn count in waki_set, random counter in fight_run, look-around delay in stand2: three meanings), the unused and padding members (`m02BB`, `m02C0`, `m02CF`, `m02D6`, `m02E0`, `m0312`, `m0319`, `m032C`, `m0B38`, `m0B44`, `m0B7C`, `m1184`, `m11B4`, `m11F6`, `m120A`, `m1211`, `m1226`, `m1250`), and the shared helper structs in d_a_bk.h (`damagereaction_l`, `enemyice_l`, `enemyfire_l`, `bkHIO_c`).
+Open (no name yet): `m0320` (patrol target in jyunkai / stand2, random offset to the path point in path_run: two meanings), `m11E4` (particle ID_AK_JN_NG position in fight_attack; never written) and `m11F0` (yari_hit_check clears and shifts it, so it is always 0; fight_attack branches on it), the same pair as mo2_class m2934 / m2940, `m1212` (child spawn count in waki_set, random counter in fight_run, look-around delay in stand2: three meanings), the unused and padding members (`m02BB`, `m02C0`, `m02CF`, `m02D6`, `m02E0`, `m0312`, `m0319`, `m032C`, `m0B38`, `m0B44`, `m0B7C`, `m1184`, `m11B4`, `m11F6`, `m120A`, `m1211`, `m1226`, `m1250`), and the shared helper structs in d_a_bk.h (`damagereaction_l`, `enemyice_l`, `enemyfire_l`: local copies of the c_damagereaction.h types, named with those; bkHIO_c below).
 
 View (views are renamed with the class): d_a_andsw0.h declares a private `bk_class` view with the one field hajimarinomori_check 02051174 sets; its `m121C` (0x137C) becomes `mPathEnd`, the name bk_class has for that offset.
+
+### bkHIO_c (l_bkHIO, the Bokoblin tuning block; d_a_bk.h)
+
+Old names are the GameCube offsets (zeldaret/tww `mXXX`, unnamed there). HD offsets are the GameCube ones - 4 (the vtable pointer
+follows the members). __sinit_d_a_bk_cpp 020A0364 (bkHIO_c::bkHIO_c) sets every field; nothing else writes them. Named from the reads.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x001 | `m005` | `mDrawSearchRange` | search_check_draw (in daBk_Draw 0209971C) draws the sight circles and cone only while it is set; __sinit_d_a_bk_cpp 020A0364 sets the default 0 |
+| 0x002 | `m006` | `mDebugFrameStep` | daBk_Execute 0209BD1C runs the per-frame update (mFrameCounter, mTimers, actions) only while it is 0 or on a B trigger / Y hold, so a set value steps frame by frame; __sinit_d_a_bk_cpp 020A0364 sets the default 0 |
+| 0x003 | `m007` | `mResetHealthOnHit` | damage_check (in daBk_Execute 0209BD1C) sets health back to 10 on every hit while it is set; __sinit_d_a_bk_cpp 020A0364 sets the default 0 |
+| 0x004 | `m008` | `mAlwaysGuard` | fight_run 020A0A98: a shield Bokoblin (mHasShield) guards a cut every time while it is set, else with a 50 % chance; __sinit_d_a_bk_cpp 020A0364 sets the default 1 |
+| 0x005 | `m009` | `mHeadAngleIsBody` | nodeCallBack 020991CC: while set mHeadAngleY takes angle.y instead of the head joint direction; __sinit_d_a_bk_cpp 020A0364 sets the default 0 |
+| 0x006 | `m00A` | `mNoPickupAttack` | wepon_search 020A3CC8: once the weapon is picked up, attacks (action 5) a player inside mAttackDist only while it is 0; __sinit_d_a_bk_cpp 020A0364 sets the default 0 |
+| 0x008 | `m00C` | `mSmokeTimerBase` | ground_smoke_set 020A070C sets smoke while mSmokeTimer >= it; hukki 020A3048, wepon_search 020A3CC8, carry_drop 020A47B4, daBk_Execute 0209BD1C and fight_run 020A0A98 load mSmokeTimer with it + 2..16; __sinit_d_a_bk_cpp 020A0364 sets the default 4 |
+| 0x00C | `m010` | `mWeakHitPushback` | damage_check (in daBk_Execute 0209BD1C): dr.mPushback = -it for a hit with knockback power below 25; __sinit_d_a_bk_cpp 020A0364 sets the default 0.0 |
+| 0x010 | `m014` | `mAttackBtMaxDis` | fight_attack (in fight 020A1AAC) copies it to the fopEn_enemy_c mBtMaxDis of the swing; __sinit_d_a_bk_cpp 020A0364 sets the default 400 |
+| 0x014 | `m018` | `mBlurScale` | br_draw (in daBk_Draw 0209971C): MtxScale(it * mBlurScaleX, it, it) of the swing blur model; __sinit_d_a_bk_cpp 020A0364 sets the default 0.7 |
+| 0x01C | `m020` | `mDropItemOffsetY` | fail 020A3704: the drop item (fopAcM_createDisappear) appears at current.pos.y + 100 + it; __sinit_d_a_bk_cpp 020A0364 sets the default 25 |
+| 0x020 | `m024` | `mAttnOffsetY` | nodeCallBack 020991CC: attention_info.position = eyePos + it in y; __sinit_d_a_bk_cpp 020A0364 sets the default 25 |
+| 0x024 | `m028` | `mNoticeDist` | jyunkai / path_run (in Bk_move 020A5EF4) notice the player closer than it (with the sight check); search_check_draw (in daBk_Draw 0209971C) draws a circle of this radius; __sinit_d_a_bk_cpp 020A0364 sets the default 1000 |
+| 0x028 | `m02C` | `mAttackDist` | fight_attack (in fight 020A1AAC), hukki 020A3048 and wepon_search 020A3CC8 attack a player closer than it; fight_run 020A0A98 gives up the fight beyond it + 75; search_check_draw draws a circle of this radius; __sinit_d_a_bk_cpp 020A0364 sets the default 400 |
+| 0x02C | `m030` | `mFightDist` | fight_run 020A0A98: walks in (mode 3) farther than it, backs off (mode 4) closer, attack chances inside it +- 62.5, the push (oshi) check below it - 62.5; __sinit_d_a_bk_cpp 020A0364 sets the default 240 |
+| 0x030 | `m034` | `mViewAngle` | daBk_player_view_check 0209B05C (called by fight_run 020A0A98, p_lost 020A27F8, jyunkai in Bk_move 020A5EF4, fight_attack) and search_bomb 0209A728: half angle of the sight cone around mHeadAngleY; search_check_draw draws the cone with it; __sinit_d_a_bk_cpp 020A0364 sets the default 0x6590 |
+| 0x034 | `m038` | `mViewHeight` | daBk_player_view_check 0209B05C, search_bomb 0209A728 and search_wepon_inline (in daBk_wepon_view_check 0209AB64): no sight when the height difference to eyePos is above it; search_check_draw draws the cone at +- it; __sinit_d_a_bk_cpp 020A0364 sets the default 300 |
+| 0x038 | `m03C` | `mViewBoxHalfX` | daBk_player_view_check 0209B05C, search_bomb 0209A728, search_wepon_inline (in daBk_wepon_view_check 0209AB64): the near sight box is |x| < it in the actor's frame; __sinit_d_a_bk_cpp 020A0364 sets the default 500 |
+| 0x03C | `m040` | `mViewBoxHalfY` | daBk_player_view_check 0209B05C, search_bomb 0209A728, search_wepon_inline (in daBk_wepon_view_check 0209AB64): the near sight box is |y| < it; __sinit_d_a_bk_cpp 020A0364 sets the default 300 |
+| 0x040 | `m044` | `mViewBoxFront` | daBk_player_view_check 0209B05C, search_bomb 0209A728, search_wepon_inline (in daBk_wepon_view_check 0209AB64): the near sight box ends at z < it (in front); __sinit_d_a_bk_cpp 020A0364 sets the default 500 |
+| 0x044 | `m048` | `mViewBoxBack` | daBk_player_view_check 0209B05C, search_bomb 0209A728, search_wepon_inline (in daBk_wepon_view_check 0209AB64): the near sight box starts at z > it (behind); __sinit_d_a_bk_cpp 020A0364 sets the default -125 |
+| 0x048 | `m04C` | `mPatrolSpeed` | jyunkai (in Bk_move 020A5EF4): patrol speedF target with a weapon (or bare-handed), arrival radius half of it; __sinit_d_a_bk_cpp 020A0364 sets the default 12 |
+| 0x04C | `m050` | `mPatrolSpeedNoWeapon` | jyunkai (in Bk_move 020A5EF4): patrol speedF target without a weapon, arrival radius half of it; __sinit_d_a_bk_cpp 020A0364 sets the default 60 |
+| 0x050 | `m054` | `mRunSpeed` | stand / path_run (in Bk_move 020A5EF4) speedF (x 0.5 / x 1.2 in some modes, home arrival radius it x 1.25); fight_run 020A0A98 run speed with a weapon; __sinit_d_a_bk_cpp 020A0364 sets the default 45 |
+| 0x054 | `m058` | `mRunSpeedNoWeapon` | fight_run 020A0A98: run speed (mode 1) while it holds no weapon and is not bare-handed; __sinit_d_a_bk_cpp 020A0364 sets the default 70 |
+| 0x058 | `m05C` | `mDashSpeed` | wepon_search 020A3CC8 (run to the weapon, x 0.5 while turning) and b_nige 020A2A54 (flee from a bomb): speedF; __sinit_d_a_bk_cpp 020A0364 sets the default 90 |
+| 0x05C | `m060` | `mFightWalkSpeed` | fight_run 020A0A98: speedF target walking in (mode 3), minus it backing off (mode 4); __sinit_d_a_bk_cpp 020A0364 sets the default 20 |
+| 0x060 | `m064` | `mSideStepSpeed` | fight_run 020A0A98: speedF target of the side step (mMoveAngleOffset +-0x4000); __sinit_d_a_bk_cpp 020A0364 sets the default 20 |
+| 0x064 | `m068` | `mJumpRunSpeed` | fight_run 020A0A98: speedF during the JUMP2 jumps while holding a weapon (mJumpStep); __sinit_d_a_bk_cpp 020A0364 sets the default 90 |
+| 0x06C | `m070` | `mRunAnmSpeed` | fight_run 020A0A98 (fight_run_set) and path_run (in Bk_move 020A5EF4): speed of the BK_RUN animation; __sinit_d_a_bk_cpp 020A0364 sets the default 1.0 |
+| 0x070 | `m074` | `mDashAnmSpeed` | wepon_search 020A3CC8: speed of the BK_RUN animation while running to the weapon; __sinit_d_a_bk_cpp 020A0364 sets the default 1.5 |
+| 0x074 | `m078` | `mAttackChanceWait` | fight_run 020A0A98: reloads mTimers[4] with it; the attack chance (mAttackChance) is rolled only when that timer is 0; __sinit_d_a_bk_cpp 020A0364 sets the default 0x23 |
+| 0x078 | `m07C` | `mAttackChance` | fight_run 020A0A98: attacks (action 5) when cM_rndF(100) < it inside mFightDist +- 62.5; __sinit_d_a_bk_cpp 020A0364 sets the default 50 |
+| 0x088 | `m08C` | `mDownTime` | daBk_Execute 0209BD1C: damage reaction modes 20 / 21 load dr.mDownTimers[2] with it; __sinit_d_a_bk_cpp 020A0364 sets the default 0x1E |
+| 0x08A | `m08E` | `mWeaponRunTime` | wepon_search 020A3CC8 loads mWeaponRunTimer with it when the run to the weapon starts; __sinit_d_a_bk_cpp 020A0364 sets the default 0x12C |
+| 0x098 | `m09C` | `mAttackTurnEndFrame` | attack_set 0209B760 (kind 0) and wepon_search 020A3CC8 copy it to mTurnEndFrame; __sinit_d_a_bk_cpp 020A0364 sets the default 10 |
+| 0x09C | `m0A0` | `mBlur0Start` | fight_attack (in fight 020A1AAC), attack kind 0: the swing blur is on from this mAttackFrame; mBlur0ScaleX is indexed from it; __sinit_d_a_bk_cpp 020A0364 sets the default 0x17 |
+| 0x09E | `m0A2` | `mBlur0ALen` | fight_attack (in fight 020A1AAC), attack kind 0: frames of the BLURA shape after mBlur0Start before mBlurUseB; __sinit_d_a_bk_cpp 020A0364 sets the default 1 |
+| 0x0A0 | `m0A4` | `mBlur0BLen` | fight_attack (in fight 020A1AAC), attack kind 0: frames with mBlurUseB (BLURB shape); __sinit_d_a_bk_cpp 020A0364 sets the default 1 |
+| 0x0A2 | `m0A6` | `mBlur0TailLen` | fight_attack (in fight 020A1AAC), attack kind 0: the last part of the blur window (start + A + B + it); __sinit_d_a_bk_cpp 020A0364 sets the default 0 |
+| 0x0A4 | `m0A8` | `mBlur0ScaleX` | fight_attack (in fight 020A1AAC), attack kind 0: mBlurScaleX = it[mAttackFrame - mBlur0Start] (10 entries); __sinit_d_a_bk_cpp 020A0364 sets the default table bkHioDefaultsA8 |
+| 0x0CC | `m0D0` | `mBlur1Start` | fight_attack (in fight 020A1AAC), attack kind 1: the swing blur is on from this mAttackFrame; mBlur1ScaleX is indexed from it; __sinit_d_a_bk_cpp 020A0364 sets the default 5 |
+| 0x0CE | `m0D2` | `mBlur1ALen` | fight_attack (in fight 020A1AAC), attack kind 1: frames of the BLURA shape after mBlur1Start before mBlurUseB; __sinit_d_a_bk_cpp 020A0364 sets the default 1 |
+| 0x0D0 | `m0D4` | `mBlur1BLen` | fight_attack (in fight 020A1AAC), attack kind 1: frames with mBlurUseB (BLURB shape); __sinit_d_a_bk_cpp 020A0364 sets the default 1 |
+| 0x0D2 | `m0D6` | `mBlur1TailLen` | fight_attack (in fight 020A1AAC), attack kind 1: the last part of the blur window (start + A + B + it); __sinit_d_a_bk_cpp 020A0364 sets the default 1 |
+| 0x0D4 | `m0D8` | `mBlur1ScaleX` | fight_attack (in fight 020A1AAC), attack kind 1: mBlurScaleX = it[mAttackFrame - mBlur1Start] (10 entries); __sinit_d_a_bk_cpp 020A0364 sets the default table bkHioDefaultsD8 |
+| 0x0FC | `m100` | `mBlurOffsetX` | br_draw (in daBk_Draw 0209971C): the blur model sits 150 + it along the BUKI joint's x; __sinit_d_a_bk_cpp 020A0364 sets the default -60 |
+| 0x100 | `m104` | `mWaitTimeMin` | stand (in Bk_move 020A5EF4): mTimers[1] = random in [it, mWaitTimeMax) for the wait; __sinit_d_a_bk_cpp 020A0364 sets the default 0xC8 |
+| 0x102 | `m106` | `mWaitTimeMax` | stand (in Bk_move 020A5EF4): upper end of the random wait time (mWaitTimeMin); __sinit_d_a_bk_cpp 020A0364 sets the default 0x1F4 |
+| 0x104 | `m108` | `mSleepTimeMin` | stand (in Bk_move 020A5EF4): mTimers[1] = random in [it, mSleepTimeMax) once the BK_SLEEP animation starts; __sinit_d_a_bk_cpp 020A0364 sets the default 0x12C |
+| 0x106 | `m10A` | `mSleepTimeMax` | stand (in Bk_move 020A5EF4): upper end of the random sleep time (mSleepTimeMin); __sinit_d_a_bk_cpp 020A0364 sets the default 0x258 |
+
+Open: `m01C`, `m06C`, `m080`, `m084`, `m088`, `m090`, `m094`, `m098` (only the constructor sets them, nothing reads them; tww the same), the padding `m00B`, `m00E`, `m036`, `m07A`.
 
 ## cc_class (ChuChu; d_a_cc.h)
 
@@ -314,6 +375,49 @@ zeldaret/tww (d217e2b, include/d/actor/d_a_bb.h) keeps these GameCube offset nam
 
 Open (no name yet): `unk_328` (read by bb_path_move as the case-23 dash speed factor, never written; no name settles from that), the unused members `unk_2DE`, `unk_C42`, and the padding arrays `unk314`, `unk334`, `unk35C`, `unk36A`, `unkBF0`, `unkC61`, `unkC7D`.
 
+### bbHIO_c (l_bbHIO, the Kargaroc tuning block; d_a_bb.h)
+
+Old names are tww's (`unk_XX`, unnamed there); the HD layout is the GameCube one. __sinit_d_a_bb_cpp 02062394 (bbHIO_c::bbHIO_c)
+sets every field; nothing else writes them. Named from the reads.
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+| 0x04 | `unk_04` | `mResetHealthOnHit` | damage_check 0206432C sets health back to 10 on every hit while it is set; __sinit_d_a_bb_cpp 02062394 sets the default 0 |
+| 0x05 | `unk_05` | `mDebugPause` | daBb_Execute 0205EA58 counts the timers down, applies the knock-back and runs the move / animation update only while it is 0; __sinit_d_a_bb_cpp 02062394 sets the default 0 |
+| 0x08 | `unk_08` | `mSeagullAttackSpeed` | bb_kamome_attack (in daBb_Execute 0205EA58): mTargetSpeed while chasing the seagull; __sinit_d_a_bb_cpp 02062394 sets the default 20 |
+| 0x0C | `unk_0C` | `mWanderRange` | bb_auto_move 020625E8: the next flight target is home.pos + cM_rndFX(it) in x and z; __sinit_d_a_bb_cpp 02062394 sets the default 2500 |
+| 0x12 | `unk_12` | `mAttackTimeMin` | bb_atack_move (in daBb_Execute 0205EA58), mode 4 entry from the free-flying modes: mTimers[1] (time circling the player before giving up) = random in [it, mAttackTimeMax); __sinit_d_a_bb_cpp 02062394 sets the default 0x258 |
+| 0x14 | `unk_14` | `mAttackTimeMax` | bb_atack_move (in daBb_Execute 0205EA58): upper end of that random attack time (mAttackTimeMin); __sinit_d_a_bb_cpp 02062394 sets the default 0x4B0 |
+| 0x16 | `unk_16` | `mWaitAttackTimeMin` | bb_atack_move (in daBb_Execute 0205EA58), mode 4 entry from BB_MODE_WAIT / BB_MODE_NEST_WAIT, and damage_check 0206432C when a hit starts BB_MODE_ATTACK: mTimers[1] = random in [it, mWaitAttackTimeMax); __sinit_d_a_bb_cpp 02062394 sets the default 0x1C2 |
+| 0x18 | `unk_18` | `mWaitAttackTimeMax` | bb_atack_move (in daBb_Execute 0205EA58) and damage_check 0206432C: upper end of that random attack time (mWaitAttackTimeMin); __sinit_d_a_bb_cpp 02062394 sets the default 0x2EE |
+| 0x1C | `unk_1C` | `mTurnScaleMax` | bb_atack_move (in daBb_Execute 0205EA58), modes 4 / 5: mTurnScale eases toward it (step 0.1 * it); __sinit_d_a_bb_cpp 02062394 sets the default 0.35 |
+| 0x20 | `unk_20` | `mAttackWaitScale` | bb_atack_move (in daBb_Execute 0205EA58): mTimers[5] (wait before the next dive, mode 5) = (rnd(30) + 20) * it after a hit, a dive or a crash; __sinit_d_a_bb_cpp 02062394 sets the default 0.5 |
+| 0x24 | `unk_24` | `mFlyAnmSpeed` | bb_path_move / bb_atack_move (in daBb_Execute 0205EA58), bb_auto_move 020625E8, wait_move_body (in bb_wait_move 0206348C, x 1.5): speed of the FLY01 animation; __sinit_d_a_bb_cpp 02062394 sets the default 1.5 |
+| 0x28 | `unk_28` | `mHoverAnmSpeed` | bb_atack_move (in daBb_Execute 0205EA58): speed of the FLYB01 animation while circling the player (mode 4); __sinit_d_a_bb_cpp 02062394 sets the default 1.0 |
+| 0x2C | `unk_2C` | `mDiveAnmSpeed` | bb_atack_move (in daBb_Execute 0205EA58): speed of the ATACK01 animation of the dive (mode 6); __sinit_d_a_bb_cpp 02062394 sets the default 0.85 |
+| 0x30 | `unk_30` | `mCrashTime` | bb_atack_move (in daBb_Execute 0205EA58): mTimers[0] after the dive hits a wall (modes 10 GUSYA / 11 FURA) before circling again; __sinit_d_a_bb_cpp 02062394 sets the default 0x2D |
+| 0x32 | `unk_32` | `mDiveWindUpTime` | bb_atack_move (in daBb_Execute 0205EA58): mTimers[0] of mode 5 (wind-up before the dive, mode 6); __sinit_d_a_bb_cpp 02062394 sets the default 20 |
+| 0x34 | `unk_34` | `mDiveWindUpAnmSpeed` | bb_atack_move (in daBb_Execute 0205EA58): speed of the FLYB01 animation in mode 5 (wind-up before the dive); __sinit_d_a_bb_cpp 02062394 sets the default 2.5 |
+| 0x38 | `unk_38` | `mCrashAnmSpeed` | bb_atack_move (in daBb_Execute 0205EA58): speed of the GUSYA01 (crash) animation, mode 10; __sinit_d_a_bb_cpp 02062394 sets the default 0.85 |
+| 0x3C | `unk_3C` | `mDizzyAnmSpeed` | bb_atack_move (in daBb_Execute 0205EA58): speed of the FURA01 (wobble) animation after the crash, mode 11; __sinit_d_a_bb_cpp 02062394 sets the default 1.0 |
+| 0x40 | `unk_40` | `mLandDelay` | wait_move_body (in bb_wait_move 0206348C): gravity and the LAND02 landing start only once mMoveCounter is above it; __sinit_d_a_bb_cpp 02062394 sets the default 30 |
+| 0x44 | `unk_44` | `mLand1AnmSpeed` | wait_move_body (in bb_wait_move 0206348C): speed of the LAND01 animation; __sinit_d_a_bb_cpp 02062394 sets the default 1.0 |
+| 0x48 | `unk_48` | `mLand2AnmSpeed` | wait_move_body (in bb_wait_move 0206348C): speed of the LAND02 animation; __sinit_d_a_bb_cpp 02062394 sets the default 1.0 |
+| 0x4C | `unk_4C` | `mCarryFlyAnmSpeed` | daBb_Execute 0205EA58, carry state 1: speed of the FLYC (carrying) animation; __sinit_d_a_bb_cpp 02062394 sets the default 1.5 |
+| 0x50 | `unk_50` | `mSwoopDist` | bb_atack_move (in daBb_Execute 0205EA58) mode 1, bb_auto_move 020625E8 mode 10 and wait_move_body (in bb_wait_move 0206348C) mode 11: closer than it to mTargetPos it switches to the FLY03 swoop animation and the next mode; __sinit_d_a_bb_cpp 02062394 sets the default 0x44C |
+| 0x54 | `unk_54` | `mEsaWalkSpeed` | bb_auto_move 020625E8, mode 23: mTargetSpeed while walking to the bait (esa) on the ground; __sinit_d_a_bb_cpp 02062394 sets the default 3.5 |
+| 0x58 | `unk_58` | `mKnockbackDistDead` | damage_check 0206432C: mKnockbackDist for a killing hit; __sinit_d_a_bb_cpp 02062394 sets the default 45 |
+| 0x5C | `unk_5C` | `mKnockbackDistAlive` | damage_check 0206432C: mKnockbackDist for a hit it survives; __sinit_d_a_bb_cpp 02062394 sets the default 30 |
+| 0x68 | `unk_68` | `mSightDist` | bb_player_view_check 0205DFC0: the player is out of sight farther than it (XZ), except in the wait modes and with mSightRangePrm; __sinit_d_a_bb_cpp 02062394 sets the default 8000 |
+| 0x6C | `unk_6C` | `mWaitSightDist` | bb_player_view_check 0205DFC0: the same in BB_MODE_WAIT / BB_MODE_NEST_WAIT; __sinit_d_a_bb_cpp 02062394 sets the default 1500 |
+| 0x70 | `unk_70` | `mViewAngle` | bb_player_view_check 0205DFC0: angle window toward the player outside the wait modes; __sinit_d_a_bb_cpp 02062394 sets the default 0x6D60 |
+| 0x72 | `unk_72` | `mWaitViewAngle` | bb_player_view_check 0205DFC0: angle window in BB_MODE_WAIT / BB_MODE_NEST_WAIT; __sinit_d_a_bb_cpp 02062394 sets the default 0x59D8 |
+| 0x74 | `unk_74` | `mViewHeight` | bb_player_view_check 0205DFC0: the player is in sight only while the height difference to eyePos is below it (outside the wait modes); __sinit_d_a_bb_cpp 02062394 sets the default 3000 |
+| 0x78 | `unk_78` | `mWaitViewHeight` | bb_player_view_check 0205DFC0: the same height limit in BB_MODE_WAIT / BB_MODE_NEST_WAIT; __sinit_d_a_bb_cpp 02062394 sets the default 2000 |
+| 0x7C | `unk_7C` | `mGiveUpDist` | bb_atack_move (in daBb_Execute 0205EA58): farther than it from mTargetPos (or the target blocked) the attack ends and mBehavior returns to mPrmMode; __sinit_d_a_bb_cpp 02062394 sets the default 10000 |
+
+Open: `unk_06` (two effects: bb_player_view_check 0205DFC0 always sees the player while it is set, and bb_path_move / bb_auto_move 020625E8 search for bait regardless of the carry timer; no single role), `unk_10` (nothing sets or reads it in WWHD; tww's constructor sets 0x3228 and only its demo version reads it, as a switch for the seagull attack), `unk_60`, `unk_62`, `unk_64` (only the constructor sets them; tww the same), the padding `_07`, `_1A`, `_42`, `_52`, `_66`.
+
 ## pw_class (Poe; d_a_pw.h)
 
 zeldaret/tww (d217e2b, include/d/actor/d_a_pw.h) keeps these GameCube offset names (`mXXX`) and TP has no pw_class, so every name below is from the use. `m344` is also read by Jalhalla through the view `BpwChildPoeHD` (d_a_bpw.h), renamed with it.
@@ -361,7 +465,7 @@ zeldaret/tww (d217e2b, include/d/actor/d_a_pw.h) keeps these GameCube offset nam
 | 0x4CC | `m3B0` | `mLanternSwingAmpX` | kantera_calc 0244F730: eased to 5000 / 10000 by mLanternSwingMode; sine(mLanternSwingPhase) * it is the lantern joint's x rotation |
 | 0x6E0 | `m5C4` | `mAttackEcallBack` | action_kougeki (in daPW_Execute 0244B3E4) mode 110 starts particle 0x8445 into it at the jump attack; mode 111 ends it on landing; daPW_Delete 0244DD6C ends it |
 
-Open (no name yet): `m32C[2]` (no use), `m384` (two meanings: the sway phase while possessing Link in action_torituku 0244FE24, a wait timer in action_big_demo 024500C0; in tww d217e2b it is the first element of `m384[4]`, which our helper `pwDamageTimer` clears), `m386` / `m388` (only cleared through `pwDamageTimer`), and the padding arrays `_3D4`, `_459`, `_468`, `_476`, `_486`, `_4D0`.
+Open (no name yet): `m32C[2]` (no use), `m384[3]` (tww d217e2b's `m384[4]` block, whose fourth element is our `mSilentVanish`; [0] has two meanings: the sway phase while possessing Link in action_torituku 0244FE24, a wait timer in action_big_demo 024500C0; [1] / [2] are only cleared, with all four, through the helper `pwM384At`, was `pwDamageTimer` (misnamed)), and the padding arrays `_3D4`, `_459`, `_468`, `_476`, `_486`, `_4D0`.
 
 Corrected existing names (our own names, not tww/TP: tww d217e2b covers these bytes with its padding arrays `m392` and `m3B4`; separate commit):
 
@@ -381,7 +485,7 @@ zeldaret/tww (d217e2b, include/d/actor/d_a_tn.h) keeps these GameCube offset nam
 | 0x03F4 | `m02DC` | `mPartsAttached` | daTn_Create 024C0B0C sets 3; part_move 024BC3EC subtracts 1 each time an armour part (helmet, armour, shield) falls off |
 | 0x03F5 | `m02DD` | `mPartDetachFlags` | applyArmoredHit (in daTn_Execute 024BD170) ORs 1 / 2 for the part that was hit off; part_move 024BC3EC detaches the part whose bit is set; executePrefix clears it |
 | 0x04F0 | `m03D8` | `mFrameCount` | executePrefix (in daTn_Execute 024BD170) adds 1 every frame; tn_combatDefensiveReaction (in Tn_move 024C3E64) and yogan_fail 024C2BEC act only every 4th frame (& 3) |
-| 0x0502 | `m03EA` | `mWeponRunTimer` | wepon_search 024C1A3C sets l_tnHIO.m082 when the Darknut starts running to a dropped weapon and gives up (mWeponSearchGaveUp) when it reaches 0; counted down by executePrefix (in daTn_Execute 024BD170) |
+| 0x0502 | `m03EA` | `mWeponRunTimer` | wepon_search 024C1A3C sets l_tnHIO.mWeponRunTime when the Darknut starts running to a dropped weapon and gives up (mWeponSearchGaveUp) when it reaches 0; counted down by executePrefix (in daTn_Execute 024BD170) |
 | 0x0504 | `m03EC` | `mAnmLock` | anm_init 024B91E4, tate_anm_init 024B931C and yoroi_anm_init 024B93E8 return at once while it is set, and tn_moveCombat (in Tn_move 024C3E64) skips the turn toward mTargetAngle; nothing sets it (same in tww d217e2b) |
 | 0x0506 | `m03EE` | `mWeponTurnWait` | wepon_search 024C1A3C sets 5 and turns toward the weapon only once it is 0; counted down in updateDemoCameraAndSmoke (in daTn_Execute 024BD170) |
 | 0x0508 | `m03F0` | `mNoDamageTimer` | prepareDamage (in daTn_Execute 024BD170) returns at once while it runs and sets REG0_S(7) + 5 after a hit; applyArmoredHit sets 20; updateCollisionShapes moves the head sphere away while it runs; counted down by executePrefix |
@@ -394,7 +498,7 @@ zeldaret/tww (d217e2b, include/d/actor/d_a_tn.h) keeps these GameCube offset nam
 | 0x0538 | `m041C` | `mSmokePos` | updateDemoCameraAndSmoke (in daTn_Execute 024BD170) puts it on the smoke ring around the body (MtxPosition) or 25000 above mSpawnY when idle; smoke_set_s 024B94C0 drops it to the ground and emits the smoke there |
 | 0x0544 | `m0428` | `mEffectAngle` | updateDemoCameraAndSmoke (in daTn_Execute 024BD170) sets y = mSmokeAngle for the ground smoke; updateCollisionShapes sets y = angle.y for particle 0x0E at mHeadPos; updateDamageAnimation / updateKnockback set x (-0x4000 / 0) |
 | 0x054A | `m042E` | `mSmokeAngle` | tn_attackAnimation (in Tn_move 024C3E64) seeds it from the heading; updateDemoCameraAndSmoke (in daTn_Execute 024BD170) rotates mSmokePos by it and adds a step each frame |
-| 0x054C | `m0430` | `mGroundSmokeTimer` | tn_attackAnimation (in Tn_move 024C3E64) and updateDamageAnimation (in daTn_Execute 024BD170) set it (l_tnHIO.m020 + 16 ...); updateDemoCameraAndSmoke emits ground smoke while it counts down; applyIceOrShatter clears it |
+| 0x054C | `m0430` | `mGroundSmokeTimer` | tn_attackAnimation (in Tn_move 024C3E64) and updateDamageAnimation (in daTn_Execute 024BD170) set it (l_tnHIO.mGroundSmokeEnd + 16 ...); updateDemoCameraAndSmoke emits ground smoke while it counts down; applyIceOrShatter clears it |
 | 0x054E | `m0432` | `mGroundSmokeType` | tn_attackAnimation (in Tn_move 024C3E64) sets 0 (attack ring, radius 200), updateDamageAnimation (in daTn_Execute 024BD170) 1 (fall, radius 55); updateDemoCameraAndSmoke picks the smoke ring by it |
 | 0x054F | `m0433` | `mSmokeCount` | smoke_set_s 024B94C0 counts the smoke puffs (the first one differs); updateDemoCameraAndSmoke (in daTn_Execute 024BD170) clears it when the ground smoke ends |
 | 0x0D84 | `m0C34` | `mHasWepon` | tn_moveReturnHome / tn_movePatrol / path_check use it as "holding a weapon" (armed patrol, BCK 0x39 vs 0x3D); updateHeldWeapon (in daTn_Execute 024BD170) clears it when the weapon drops (tww d217e2b yari_off_check) |
@@ -439,6 +543,45 @@ zeldaret/tww (d217e2b, include/d/actor/d_a_tn.h) keeps these GameCube offset nam
 
 Open (no name yet): `m13FC` (wepon_hit_check 024BBB3C only clears it), `m1404` (aite_miru 024C29CC eases it to 12000, Tn_move 024C3E64 back to 0; never read, so the meaning of the angle is not known), `m1420` (tn_combatLocomotion in Tn_move 024C3E64 only clears it).
 
+### tnHIO_c (the Darknut's HIO tuning values, l_tnHIO; d_a_tn.h)
+
+zeldaret/tww (d217e2b, src/d/actor/d_a_tn.cpp) keeps the GameCube offset names. Every named field is set only by the HIO constructor (WWHD tn_staticInit 024C161C, tww tnHIO_c::tnHIO_c) and read in the places given; nothing else writes it in WWHD or tww.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x006 | `m006` | `mPadStep` | written only by the HIO constructor tn_staticInit 024C161C (0); read only in tww daTn_Execute: while it is not 0 the Darknut's frame (timers and move) runs only on a pad B trigger or Y hold (frame-step debugging) |
+| 0x007 | `m007` | `mDebugHealth` | written only by the HIO constructor tn_staticInit 024C161C (0); read only in tww damage_check: after a hit 1 sets health 10, 2 sets health 0 |
+| 0x018 | `m018` | `mDropOffsetY` | fail 024C2AAC: the fopAcM_createDisappear drop point is current.pos.y + it + 100 |
+| 0x01E | `m01E` | `mSmokeAlpha` | smoke_set_s 024B94C0: alpha of the ground-smoke particle 0x2022 |
+| 0x020 | `m020` | `mGroundSmokeEnd` | tn_attackAnimation (in Tn_move 024C3E64) / updateDamageAnimation (in daTn_Execute 024BD170) load mGroundSmokeTimer with it + 14 / + 16; updateDemoCameraAndSmoke (in daTn_Execute) sets the smoke only while the timer is still >= it |
+| 0x024 | `m024` | `mAttentionOffsetY` | nodeCallBack 024B97A0: attention_info.position.y = eyePos.y + it |
+| 0x028 | `m028` | `mNoticeRange` | tn_movePatrol (in Tn_move 024C3E64): the patrol checks the player view only while mPlayerDistance < it |
+| 0x02C | `m02C` | `mFightRange` | tn_combatLocomotion / tn_combatRangeTransition / tn_finishAttack (in Tn_move 024C3E64), hukki 024C25F8: within it the fight run goes to the fight stance (mode 2), beyond it + 75 the Darknut runs again |
+| 0x030 | `m030` | `mAttackRange` | tn_combatLocomotion / tn_combatRangeTransition / tn_attackCircle (in Tn_move 024C3E64): an attack starts at mPlayerDistance < it (and within it +- 62.5 / 25) |
+| 0x034 | `m034` | `mViewAngle` | get_view_H 024BAA68: the view half-angle for daTn_player_view_check / search_wepon without the helmet |
+| 0x036 | `m036` | `mViewAngleHelmet` | get_view_H 024BAA68: the view half-angle while the helmet is on (EQUIPMENT_PIECE_HELMET) |
+| 0x038 | `m038` | `mViewHeight` | daTn_player_view_check 024BB404, search_wepon 024BAFAC: no sight when the height difference to the target is more than it |
+| 0x03C | `m03C` | `mViewBoxX` | daTn_player_view_check 024BB404, search_wepon 024BAFAC: sight box, /local x/ < it |
+| 0x040 | `m040` | `mViewBoxY` | daTn_player_view_check 024BB404, search_wepon 024BAFAC: sight box, /local y/ < it |
+| 0x044 | `m044` | `mViewBoxFront` | daTn_player_view_check 024BB404, search_wepon 024BAFAC, search_bomb 024BAB8C: sight box, local z < it |
+| 0x048 | `m048` | `mViewBoxBack` | daTn_player_view_check 024BB404, search_wepon 024BAFAC, search_bomb 024BAB8C: sight box, local z > it (-125) |
+| 0x04C | `m04C` | `mPathWalkSpeed` | tn_patrolLocomotion (in Tn_move 024C3E64): patrol speed along the path; tn_combatLocomotion: * 1.5 is the fight-run speed with the body armor |
+| 0x050 | `m050` | `mWalkSpeed` | tn_patrolLocomotion (in Tn_move 024C3E64): patrol speed without a path |
+| 0x054 | `m054` | `mRunSpeed` | tn_combatLocomotion (in Tn_move 024C3E64): fight-run speed without the body armor; tn_moveReturnHome: run speed back home |
+| 0x058 | `m058` | `mWeponRunSpeed` | wepon_search 024C1A3C: speed while running to the dropped weapon; b_nige 024C1ED4: speed while fleeing a bomb |
+| 0x05C | `m05C` | `mFightStepSpeed` | tn_combatLocomotion / tn_attackCircle (in Tn_move 024C3E64): speedF target (+ / -) of the fight-stance steps forward / back |
+| 0x060 | `m060` | `mSideStepSpeed` | tn_combatLocomotion / tn_attackCircle (in Tn_move 024C3E64): speedF target of the side steps (mSideStepAngle 0x4000 / 0xC000) |
+| 0x06C | `m06C` | `mAttackCheckDelay` | tn_combatRangeTransition (in Tn_move 024C3E64): mCountDownTimers[3] reload after each attack roll |
+| 0x070 | `m070` | `mAttackChance` | tn_combatRangeTransition (in Tn_move 024C3E64): the attack starts only when cM_rndF(100) < it |
+| 0x078 | `m078` | `mVerticalCutChance` | tn_chooseAttack (in Tn_move 024C3E64): with the weapon, cM_rndF(100) < it picks the vertical cut (YAT_TATE1, mAttackType 0), else the side cut (YAT_YOKO1, 1) |
+| 0x07C | `m07C` | `mPalmStrikeChance` | tn_chooseAttack (in Tn_move 024C3E64): without the weapon, cM_rndF(100) < it (or the body armor on) picks the palm strike BAT_SYOUTEI_S1 (mAttackType 2) |
+| 0x080 | `m080` | `mDownRecoverDelay` | updateDamageAnimation (in daTn_Execute 024BD170): mDamageReaction.mDownTimers[2] (the recovery delay) for the reactions 20 / 21 |
+| 0x082 | `m082` | `mWeponRunTime` | wepon_search 024C1A3C: mWeponRunTimer at the start of the run to the dropped weapon |
+| 0x0D0 | `m0D0` | `mWeakHitPushback` | updateKnockback (in daTn_Execute 024BD170): mDamageReaction.mPushback = -it for a hit with mKnockbackPower < 25 |
+| 0x0D4 | `m0D4` | `mWeponHitMaxDis` | tn_attackAnimation (in Tn_move 024C3E64): copied to mBtMaxDis for every attack |
+
+Open (no name yet): the constructor-only fields `m005`, `m008`, `m00A`, `m00C`, `m014`, `m01C`, `m064`, `m068`, `m074`, `m084`..`m0C0` (f32), `m0C4`..`m0CE` (s16) (no read in WWHD or tww), and the padding `m009`, `m010`, `m022`, `m06E`. `TnPlayer::field_0x2b0` is a view of the player class (on hold) and `TnBoko::m2C2` takes daBoko_c's `mRotAngleSpeed` (docs/field-names/objects.md).
+
 ## mo2_class (Moblin; d_a_mo2.h, d_a_mo2_main.h, d_a_mo2_exec.h, d_a_mo2_move.h)
 
 The class is declared in four headers (one per source split); all four copies are renamed together and carry the same comments. zeldaret/tww (d217e2b, include/d/actor/d_a_mo2.h) keeps these GameCube offset names and TP has no mo2_class, so every name below is from the WWHD use; tww d217e2b's d_a_mo2.cpp (same class) is cited only for helper names (ke_control / ke_disp). `m05C0_dy_hd` is an HD-only member next to `m05C0` and is renamed with it.
@@ -454,13 +597,13 @@ The class is declared in four headers (one per source split); all four copies ar
 | 0x045E | `m02E2` | `mWeaponViewWait` | wepon_search 021CF0F4 sets 70 when it gives up the run to the weapon; daMo2_Execute 021C9B1C counts it down; daMo2_wepon_view_check 021C872C finds no weapon while it is not 0 |
 | 0x0460 | `m02E8` | `mLanternId` | kantera_get_init (in daMo2_Create 021CCB00): fpcSCtRq_Request(fpcNm_KANTERA_e) result, then fopAcM_SearchByID(it) to give the lantern this actor's id |
 | 0x0830 | `m058C` | `mpBlurModel` | createHeap 021CC524: mDoExt_J3DModel__create of the spear-trail BMD (HD index 0x7E); br_draw (in daMo2_Draw 021C7344) places it on joint MO_JNT_MO_YARI_e and draws it |
-| 0x0834 | `m0590` | `mBlurScaleX` | fight (in Mo2_move 021D0A14): moveHIO m0E0[] / m110[] by the attack frame; br_draw (in daMo2_Draw 021C7344) scales the blur model x by l_mo2HIO.m014 * it |
+| 0x0834 | `m0590` | `mBlurScaleX` | fight (in Mo2_move 021D0A14): moveHIO mAttack1BlurScaleX[] / mAttack2BlurScaleX[] by the attack frame; br_draw (in daMo2_Draw 021C7344) scales the blur model x by l_mo2HIO.mBlurScale * it |
 | 0x0838 | `m0594` | `mBlurOn` | daMo2_Execute 021C9B1C clears it each frame; fight (in Mo2_move 021D0A14) sets 1 inside the swing frames of attack kinds 1 / 2; br_draw (in daMo2_Draw 021C7344) draws only while it is set |
 | 0x083C | `m0598` | `mBlurUseB` | daMo2_Execute 021C9B1C clears it each frame; fight (in Mo2_move 021D0A14) sets 1 for the middle swing frames; br_draw (in daMo2_Draw 021C7344) shows the blur model's shape 2 instead of 1 when set |
 | 0x0840 | `m059C` | `mFrameCounter` | daMo2_Execute 021C9B1C adds 1 per frame; p_lost 021CDE6C / yogan_fail 021CEEB0 / hip_damage 021CF900 / ground_smoke_set (in daMo2_Execute) / fight_run (in Mo2_move 021D0A14) test its low bits |
 | 0x0844 | `m05A0` | `mOshiCount` | fight_run (in Mo2_move 021D0A14) adds 1 per frame while the armed Moblin is close and sees the target, at 15 starts ACTION_OSHI (push) with 50 %, else clears it; damage_check (in daMo2_Execute 021C9B1C) clears it on a hit |
 | 0x0848 | `m05A4` | `mTimers` | daMo2_Execute 021C9B1C counts all 5 down each frame; the actions load [0]..[4] (e.g. wait_set 021C8E30 [1], nage 021CD958 [0]/[1]/[2], attack_set 021C9310 [4]) |
-| 0x0852 | `m05AE` | `mWeaponRunTimer` | wepon_search 021CF0F4 sets l_mo2HIO.m08A when the run to a weapon starts and gives up at 0; yari_off_check (in daMo2_Execute 021C9B1C) sets it when it spawns the dropped weapon actor; daMo2_Execute counts it down; jyunkai (in Mo2_move 021D0A14) sets mWeaponSearchGaveUp at 0 |
+| 0x0852 | `m05AE` | `mWeaponRunTimer` | wepon_search 021CF0F4 sets l_mo2HIO.mWeaponRunTime when the run to a weapon starts and gives up at 0; yari_off_check (in daMo2_Execute 021C9B1C) sets it when it spawns the dropped weapon actor; daMo2_Execute counts it down; jyunkai (in Mo2_move 021D0A14) sets mWeaponSearchGaveUp at 0 |
 | 0x0854 | `m05B0` | `mDashStopTimer` | fight_run (in Mo2_move 021D0A14) sets rnd(10)+15 when a dash longer than 20 frames stops (BCK GAKEDEMO) and waits for it; anm_init 021C6440 sets no new animation while it is not 0; daMo2_Execute 021C9B1C counts it down and keeps smoke type 4 going |
 | 0x0856 | `m05B2` | `mAnmStopTimer` | wepon_search 021CF0F4 sets 5 when it sees a weapon and turns only once it is 0; daMo2_Execute 021C9B1C counts it down and plays mpMorf only while it is 0 |
 | 0x0858 | `m05B4` | `mNoHitTimer` | damage_check (in daMo2_Execute 021C9B1C) takes a Tg hit only while it is 0 and reloads it (4, 10, 0x32, 200); fail 021CED78 / yogan_fail 021CEEB0 / d_sit 021CFFA4 / d_dozou 021D0064 / e3_demo 021D0570 / Mo2_move 021D0A14 hold it at 5; daMo2_Execute moves the head sphere 20000 down while it is not 0 |
@@ -479,7 +622,7 @@ The class is declared in four headers (one per source split); all four copies ar
 | 0x0884 | `m05DC` | `mSmokePos` | ground_smoke_set (in daMo2_Execute 021C9B1C) computes it (MtxPosition); smoke_set_s 021C6578 drops it to the ground and sets the ELEMENTSMOKE particle there |
 | 0x0890 | `m05E8` | `mEffectAngle` | smoke_set_s 021C6578 / ground_smoke_set (in daMo2_Execute 021C9B1C): smoke particle angle; daMo2_Execute / yogan_fail 021CEEB0: TUBA00 particle angle |
 | 0x0896 | `m05EE` | `mSmokeAngleY` | ground_smoke_set (in daMo2_Execute 021C9B1C) rotates the smoke offset by it and adds 2000 / 0x1FA0 / 0x2000 per call; fight (in Mo2_move 021D0A14) seeds it from angle.y |
-| 0x0898 | `m05F0` | `mSmokeTimer` | ground_smoke_set (in daMo2_Execute 021C9B1C) counts it down and sets smoke while it is >= l_mo2HIO.m024; b_nige 021CE138 / hukki 021CE6E8 / wepon_search 021CF0F4 / fight load m024 + n |
+| 0x0898 | `m05F0` | `mSmokeTimer` | ground_smoke_set (in daMo2_Execute 021C9B1C) counts it down and sets smoke while it is >= l_mo2HIO.mSmokeTimerBase; b_nige 021CE138 / hukki 021CE6E8 / wepon_search 021CF0F4 / fight load mSmokeTimerBase + n |
 | 0x089A | `m05F2` | `mSmokeType` | ground_smoke_set (in daMo2_Execute 021C9B1C): switch 0..4 selects where the smoke comes from; b_nige 021CE138 sets 4, hukki 021CE6E8 3, daMo2_Execute 1 |
 | 0x089B | `m05F3` | `mSmokeCount` | ground_smoke_set (in daMo2_Execute 021C9B1C) clears it; smoke_set_s 021C6578 adds 1 per smoke set and tests it with the ground attribute |
 | 0x089C | `m05F4` | `mSmokeCallBack` | mo2_class_ct 021CC91C: dPa_smokeEcallBack_ct; smoke_set_s 021C6578 passes it to the smoke emitter; daMo2_Delete 021CC44C removes it |
@@ -492,7 +635,7 @@ The class is declared in four headers (one per source split); all four copies ar
 | 0x2474 | `m206C` | `mAtStartFrame` | attack_set 021C9310 sets 3..36 per kind; yari_hit_check (in Mo2_move 021D0A14): no At before it, attack SE at it |
 | 0x2478 | `m2070` | `mAtEndFrame` | attack_set 021C9310 sets 8..52 per kind; yari_hit_check (in Mo2_move 021D0A14): no At after it |
 | 0x247C | `m2074` | `mLookStartFrame` | attack_set 021C9310 sets 0 / 10 / 59 / 75 per attack kind (hukki 021CE6E8 0, wepon_search 021CF0F4 75); fight (in Mo2_move 021D0A14) sets mDamageReaction.mLookMode = 1 (head toward mpLookTarget) once mAttackFrame is past it and the target is in view |
-| 0x2480 | `m2078` | `mTurnEndFrame` | attack_set 021C9310: l_mo2HIO m0CC..m0D6 per kind; fight (in Mo2_move 021D0A14) keeps turning to mTargetAngleY while mAttackFrame is below it |
+| 0x2480 | `m2078` | `mTurnEndFrame` | attack_set 021C9310: l_mo2HIO mAttack0TurnEndFrame..mAttack5TurnEndFrame per kind; fight (in Mo2_move 021D0A14) keeps turning to mTargetAngleY while mAttackFrame is below it |
 | 0x2484 | `m207C` | `mAtWaitTimer` | yari_hit_check (in Mo2_move 021D0A14) counts it down and does no spear hit check while it runs; nothing sets it (same in tww d217e2b) |
 | 0x2486 | `m207E` | `mAttackDir` | attack_set 021C9310 sets 1; fight (in Mo2_move 021D0A14) sets -1 when the player guards (plays back) and steps by it; yari_hit_check has no At while < 0 |
 | 0x2CD0 | `m28C8` | `mSpitPos` | nodeCallBack 021C6854: point (20.75, 18.5) on the face joint MO_JNT_KAO_J_e; daMo2_Execute 021C9B1C / yogan_fail 021CEEB0 set particle ID_AK_JN_TUBA00 there |
@@ -508,10 +651,10 @@ The class is declared in four headers (one per source split); all four copies ar
 | 0x2D4A | `m2942` | `mTurnAlways` | hukki 021CE6E8 sets 1 when it attacks out of getting up, attack_set 021C9310 clears it; fight (in Mo2_move 021D0A14) keeps turning to the target while it is set |
 | 0x2D4B | `m2943` | `mWeaponSearchGaveUp` | wepon_search 021CF0F4 sets 1 when the run to a weapon ends at a cliff / wall / timeout and clears it at the start; jyunkai (in Mo2_move 021D0A14) sets it when mWeaponRunTimer ran out; has_weapon / wait_set 021C8E30 / path_check 021C9004 treat it as armed |
 | 0x2D4C | `m2944` | `mBtCounter` | attack_set 021C9310 clears it for attack kinds 1 / 2 / 5; daMo2_Execute 021C9B1C adds 1 per frame up to 200 (then -1 = off) and opens the parry window at mBtWindow1Start / mBtWindow2Start; damage_check sets -1 |
-| 0x2D4E | `m2946` | `mBtWindow1Start` | attack_set 021C9310: l_mo2HIO m144 / m14C / m154; daMo2_Execute 021C9B1C loads mBtWindowTimer with mBtWindow1Len when mBtCounter reaches it |
-| 0x2D50 | `m2948` | `mBtWindow1Len` | attack_set 021C9310: l_mo2HIO m146 / m14E / m156; daMo2_Execute 021C9B1C copies it to mBtWindowTimer at mBtWindow1Start |
-| 0x2D52 | `m294A` | `mBtWindow2Start` | attack_set 021C9310: l_mo2HIO m148 / m150 / m158; daMo2_Execute 021C9B1C loads mBtWindowTimer with mBtWindow2Len when mBtCounter reaches it |
-| 0x2D54 | `m294C` | `mBtWindow2Len` | attack_set 021C9310: l_mo2HIO m14A / m152 / m15A; daMo2_Execute 021C9B1C copies it to mBtWindowTimer at mBtWindow2Start |
+| 0x2D4E | `m2946` | `mBtWindow1Start` | attack_set 021C9310: l_mo2HIO mAttack1BtWindow1Start / mAttack2BtWindow1Start / mAttack5BtWindow1Start; daMo2_Execute 021C9B1C loads mBtWindowTimer with mBtWindow1Len when mBtCounter reaches it |
+| 0x2D50 | `m2948` | `mBtWindow1Len` | attack_set 021C9310: l_mo2HIO mAttack1BtWindow1Len / mAttack2BtWindow1Len / mAttack5BtWindow1Len; daMo2_Execute 021C9B1C copies it to mBtWindowTimer at mBtWindow1Start |
+| 0x2D52 | `m294A` | `mBtWindow2Start` | attack_set 021C9310: l_mo2HIO mAttack1BtWindow2Start / mAttack2BtWindow2Start / mAttack5BtWindow2Start; daMo2_Execute 021C9B1C loads mBtWindowTimer with mBtWindow2Len when mBtCounter reaches it |
+| 0x2D54 | `m294C` | `mBtWindow2Len` | attack_set 021C9310: l_mo2HIO mAttack1BtWindow2Len / mAttack2BtWindow2Len / mAttack5BtWindow2Len; daMo2_Execute 021C9B1C copies it to mBtWindowTimer at mBtWindow2Start |
 | 0x2D56 | `m294E` | `mBtWindowTimer` | daMo2_Execute 021C9B1C counts it down and sets mBtNowFrame 5 (inside the parry window) while it is not 0, else 100; damage_check clears it |
 | 0x2D59 | `m2951` | `mItemStolen` | damage_check (in daMo2_Execute 021C9B1C) sets 1 at the first steal hit (type 0xE) and starts ACTION_P_LOST; daMo2_Draw 021C7344 hides the mo_e1 shape while it is set |
 | 0x2D5A | `m2952` | `mJawAngleZ` | nodeCallBack 021C6854: ZrotM of joint MO_JNT_JAWA_J_e by it; aite_miru 021CEC44 / fight_run (in Mo2_move 021D0A14) ease it to 12000, Mo2_move 021D0A14 back to 0 |
@@ -536,13 +679,20 @@ The class is declared in four headers (one per source split); all four copies ar
 | 0x2E4F | `m2A4B` | `mSendToPrison` | e3_demo 021D0570 sets 1 at the end of the catch demo; daMo2_Execute 021C9B1C then sets the next stage "majroom" |
 | 0x2E50 | `m2A4C` | `mCatchTimer` | AtHitCallback 021C9AA0 sets 200; daMo2_Execute 021C9B1C counts it down, stops JA_SE_MAJUTOU_ALERM at 30 and sets the next stage "majroom" at 1 |
 
-Open (no name yet): `m0570` (mDoExt_3DlineMat0, only constructed / destroyed), `m05D0[4]` and `m2978[3]` (no use), `m279C` (dCcD_Sph, only constructed / destroyed), `m2934` (particle ID_AK_JN_NG / ROPE_HOOK_METAL position in fight; never written), `m2940` (yari_hit_check clears and shifts it, so it is always 0; fight branches on it; what 1 / 2 would mean is not settled), `m2970` (no use in WWHD), `m2A09` (damage_check / nage / e3_demo set 1 / 2; never read), `m2A38` / `m2A3C` (mo2_demo_camera sets them; never read), `m2A40` (nage sets it, e3_demo eases it to 0; never read).
 
 Correction (a tww name that the tww code itself shows to be wrong may be corrected, own commit). `mHasPath` is the tww d217e2b name of this field, but the tww code (src/d/actor/d_a_mo2.cpp lines 1325, 1330 / 1340, 1386) and ours use it as the step direction along the path, not as a flag:
 
 | WWHD offset | Old | New | Evidence |
 |---|---|---|---|
 | 0x2D72 | `mHasPath` | `mPathDir` | daMo2_Create 021CCB00 sets 1 with a path; jyunkai (in Mo2_move 021D0A14) adds it to mPathPoint, sets -1 / 1 at the path ends and negates it; path_check 021C9004 / nage 021CD958 step mPathPoint back by it |
+
+Round 2:
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+| 0x2D3C | `m2934` | `mClangEffectPos` | fight (in Mo2_move 021D0A14) sets particle ID_AK_JN_NG and starts JA_SE_LK_ROPE_HOOK_METAL at it on the spear-bounce branch (m2940 != 0); daMo2_Delete 021CC44C deletes its sound object; never written (tww the same) |
+
+Open (no name yet): `m0570` (mDoExt_3DlineMat0, only constructed / destroyed), `m05D0[4]` and `m2978[3]` (no use; ga_s is otherwise unused), `m279C` (dCcD_Sph, only constructed / destroyed), `m2940` (yari_hit_check clears and shifts it, so it is always 0; fight branches on it; what 1 / 2 would mean is not settled), `m2970` (no use in WWHD; tww reads it but never writes it), `m2A09` (damage_check / nage / e3_demo set 1 / 2; never read), `m2A38` / `m2A3C` (mo2_demo_camera sets them; never read), `m2A40` (nage sets it, e3_demo eases it to 0; never read). The helper struct ke_s keeps `m0F0` (tail gap) and ga_s keeps all its members (`m10` .. `m2F`, no use).
 
 ## ks_class (Morth; d_a_ks.h)
 
@@ -580,7 +730,7 @@ Open (no name yet): `m2D1` (no use), `m2DC` (daKS_Create 021AA4C8 sets it to (1,
 
 ## sss_class (Dexivine; d_a_sss.h)
 
-zeldaret/tww (d217e2b, include/d/actor/d_a_sss.h) keeps these GameCube offset names (field_0x...) and TP has no sss_class, so every name below is from the WWHD use. The helper struct sss_s (`field_0x00`, `field_0x18`) is not part of this batch.
+zeldaret/tww (d217e2b, include/d/actor/d_a_sss.h) keeps these GameCube offset names (field_0x...) and TP has no sss_class, so every name below is from the WWHD use. The helper struct sss_s is named in round 2, below the table.
 
 | WWHD offset | Old (GameCube name) | New | Evidence |
 |---|---|---|---|
@@ -610,6 +760,16 @@ zeldaret/tww (d217e2b, include/d/actor/d_a_sss.h) keeps these GameCube offset na
 | 0xDCC | `field_0xA18` | `mCutEffectOn` | hand_move 0248F484 sets 1 at the cut; cut_control1 / cut_control2 (in hand_move) start the TSURU_TAIEKI00 emitters only while it is set; cut_control2 clears it when its emitter ends |
 
 Open (no name yet): none of sss_class's offset-named fields.
+
+
+### sss_s (one vine point; d_a_sss.h)
+
+| Offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x00 | `field_0x00` | `mPos` | the vine point: hand_move 0248F484 (control1 / control2) pulls each point toward its neighbour and pins mVine[0] to current.pos / mVine[9] to mHandPos; lines_copy (in hand_move) copies it into the line segments (tww the same) |
+| 0x18 | `field_0x18` | `mSize` | hand_move 0248F484 (control3) sets size_d[i] * a pulsing factor; lines_copy (in hand_move) converts it to the line width byte; the cut vine copies it (tww the same) |
+
+Open: the padding `_0C`.
 
 ## nzg_class (rat hole; d_a_nzg.h)
 
@@ -733,7 +893,7 @@ Offset-named ki_class fields (zeldaret/tww d217e2b include/d/actor/d_a_ki.h keep
 | 0x4B8 | `m304` | `mTurnScale` | ki_pos_move 02199A64 turns current.angle y / x by at most it * mPosMoveDist; ki_atack_move 02199C48 sets 10000, ki_fly_move / ki_path_move (in daKi_Execute 0219AAE8) 3000 / 4000 |
 | 0x4C8 | `m314` | `mNoHitTimer` | daKi_Execute 0219AAE8 counts it down and handles a mDamageSphere hit only while it is 0, then sets 10 (0x32 after fire); ki_damage_move keeps it at 3 |
 | 0x4CA | `m316` | `mKnockbackAngleY` | daKi_Execute 0219AAE8 sets the player angle (fopAcM_searchPlayerAngleY) at a hit; ki_damage_move (in daKi_Execute) turns shape_angle.y to it and moves along it by mKnockbackSpeed |
-| 0x4D0 | `m31C` | `mKnockbackSpeed` | daKi_Execute 0219AAE8 sets 100 (wind) / 150 / l_kiHIO.m34 / m38 at a hit; ki_damage_move (in daKi_Execute) moves back by it while > 0.1 and eases it to 0 (l_kiHIO.m40) |
+| 0x4D0 | `m31C` | `mKnockbackSpeed` | daKi_Execute 0219AAE8 sets 100 (wind) / 150 / l_kiHIO.mHitKnockback / mHitKnockbackSpl at a hit; ki_damage_move (in daKi_Execute) moves back by it while > 0.1 and eases it to 0 (l_kiHIO.mKnockbackDecay) |
 | 0x4D4 | `m320` | `mFrameCounter` | daKi_Create 0219D568 starts it at random(10000); daKi_Execute 0219AAE8 increments it every frame; ki_atack_move 02199C48 uses it as the phase of its sine / cosine circling offsets |
 | 0x4D6 | `m322` | `mHeadTargetAngleY` | ki_wait_move (in daKi_Execute 0219AAE8): the player's direction relative to current.angle.y, clamped to +-10000; daKi_Execute eases mHeadAngleY to it and clears it |
 | 0x4D8 | `m324` | `mHeadTargetAngleX` | ki_wait_move (in daKi_Execute 0219AAE8): the player's elevation (-atan2(y, xz)), clamped to -0x38E..0x1FF6; daKi_Execute eases mHeadAngleX to it and clears it |
@@ -749,11 +909,52 @@ Offset-named ki_class fields (zeldaret/tww d217e2b include/d/actor/d_a_ki.h keep
 | 0x4ED | `m339` | `mHioOwner` | daKi_Create 0219D568 sets 1 when this actor created the l_kiHIO child (hio_set); daKi_Delete 0219CE98 deletes the HIO child only then |
 | 0x6F4 | `m540` | `mBgCheckOn` | daKi_Execute 0219AAE8 clears it each frame and runs mAcch.CrrPos (with the position lowered by 30) only while it is set; ki_atack_move 02199C48, ki_fly_move, ki_damage_move and ki_fire_set_move (in daKi_Execute) set it |
 | 0x734 | `m580` | `mAtSph` | daKi_Create 0219D568 sets it from at_sph_src (attack type fire); ki_atack_move 02199C48 gives it radius 30 / attack power 1-2 and checks its AT hit; daKi_Execute 0219AAE8 resets the radius to 0 every frame |
-| 0x860 | `m6AC` | `mCoSph` | daKi_Create 0219D568 sets it from co_sph_src; daKi_Execute 0219AAE8 gives it radius l_kiHIO.m58 at current.pos every frame, ki_atack_move 02199C48 0 |
+| 0x860 | `m6AC` | `mCoSph` | daKi_Create 0219D568 sets it from co_sph_src; daKi_Execute 0219AAE8 gives it radius l_kiHIO.mCoSphRadius at current.pos every frame, ki_atack_move 02199C48 0 |
 | 0xAB8 | `m904` | `mFallSpinDir` | ki_damage_move (in daKi_Execute 0219AAE8): random 0 / 1 when it hits a wall; then turns shape_angle.z by -0x250 (0) or +0x250 (1) per frame while falling |
 | 0xABC | `m908` | `mFireCallBack` | ki_class_ct 0219D3F4 constructs the dPa_followEcallBack; ki_fire_set_move (in daKi_Execute 0219AAE8) passes it to the fire particle IT_SN_FIREK_FIRE_A and removes it with that emitter; daKi_Delete 0219CE98 removes it |
 | 0xAD0 | `m91C` | `mFireEmitter` | ki_fire_set_move (in daKi_Execute 0219AAE8): the emitter of IT_SN_FIREK_FIRE_A (with mFireCallBack) while the fire Keese is flung out, force-deleted when it lands |
 | 0xAD4 | `m920` | `mBtkAnm` | useHeapInit 0219CF38 creates and initialises the mDoExt_btkAnm; daKi_Execute 0219AAE8 plays it, daKi_Draw 02199748 enters it |
+
+Round 2:
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| enemyfire_l 0x228 | `m228` | `mHD20` | (round 3, misnamed: was mParticleScaleMultiplier) mLight + 0x20, the HD tail LIGHT_INFLUENCE::mHD20 (LIGHT_INFLUENCE is 0x24 in HD); enemyfire_ct 0219D368 sets 1.0 as the LIGHT_INFLUENCE constructor does; no reader |
+
+
+## kiHIO_c (l_kiHIO, the keese tuning; d_a_ki.h)
+
+Round 10. WWHD keeps the vtable at the end, so the offsets are 4 lower than the GameCube names. __sinit_d_a_ki_cpp 0219D920 sets every field; tww's kiHIO_c (d_a_ki.cpp) keeps the offset names and reads them the same way.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x01 | `m05` | `mDebugNoDeath` | daKi_Execute 0219AAE8: when set, a hit leaves the keese at health 10 (debug switch; __sinit 0219D920 clears it) (tww the same) |
+| 0x02 | `m06` | `mDebugPause` | daKi_Execute 0219AAE8: the timers, animation and move procs only run while it is 0 (debug switch; __sinit 0219D920 clears it) (tww the same) |
+| 0x03 | `m07` | `mDebugReport` | daKi_Execute 0219AAE8: when set, ki_check runs and JUTReport prints the ALL / READY / FIGHT counts (debug switch) (tww the same) |
+| 0x04 | `m08` | `mFly1AnmSpeed` | ki_atack_move 02199C48 / ki_fly_move: anm_init's speed of the FLY1 animation (tww the same) |
+| 0x08 | `m0C` | `mFlyWanderRange` | ki_fly_move (in daKi_Execute): cM_rndFX range of the next wander target around the flight position (tww the same) |
+| 0x10 | `m14` | `mFly2AnmSpeed` | ki_atack_move 02199C48: anm_init's speed of the FLY2 animation (tww the same) |
+| 0x14 | `m18` | `mAttack1AnmSpeed` | ki_atack_move 02199C48: anm_init's speed of the ATTACK1 animation (tww the same) |
+| 0x18 | `m1C` | `mCircleHeight` | ki_atack_move 02199C48: the circling target point is rnd(50) + it above the player (tww the same) |
+| 0x1C | `m20` | `mCircleDist` | ki_atack_move 02199C48: the circling (and reserve) target point's distance from the player (tww the same) |
+| 0x20 | `m24` | `mCircleAngleRange` | ki_atack_move 02199C48: the circling target point's random angle (degrees, cM_rndFX) around the player's facing (tww the same) |
+| 0x24 | `m28` | `mFlySpeed` | ki_atack_move 02199C48 / ki_fly_move / ki_path_move: mPosMoveTarget while flying; daKi_Execute 0219AAE8: speedF when the appear switch turns on (tww the same) |
+| 0x28 | `m2C` | `mCircleMoveRate` | ki_atack_move 02199C48: the circling move's cLib_addCalc2 step factor (times mPosMoveDist) (tww the same) |
+| 0x2C | `m30` | `mReserveMoveSpeed` | ki_atack_move 02199C48 behaviour 10 (waiting while enough keese fight): mPosMoveTarget and the cLib_addCalc2 step factor of the hover around the player (tww the same) |
+| 0x30 | `m34` | `mHitKnockback` | daKi_Execute 0219AAE8: mKnockbackSpeed after a normal hit (tww the same) |
+| 0x34 | `m38` | `mHitKnockbackSpl` | daKi_Execute 0219AAE8: mKnockbackSpeed after a hit with mAtSpl 1 (tww the same) |
+| 0x38 | `m3C` | `mWallStunSpeed` | ki_damage_move (in daKi_Execute): hitting a wall while mKnockbackSpeed is at least it stuns the keese (BITA1) (tww the same) |
+| 0x3C | `m40` | `mKnockbackDecay` | ki_damage_move (in daKi_Execute): cLib_addCalc0's step of mKnockbackSpeed (tww the same) |
+| 0x40 | `m44` | `mAttackSpeed` | ki_atack_move 02199C48: mPosMoveTarget when the attack dive starts (tww the same) |
+| 0x44 | `m48` | `mAttackChance` | ki_atack_move 02199C48: the chance (halved when mCrowdFightCount keese fight) to start an attack at each check (tww the same) |
+| 0x48 | `m4C` | `mAttackCheckTime` | ki_atack_move 02199C48: mTimers[2] between attack checks (doubled when crowded) (tww the same) |
+| 0x4A | `m4E` | `mAttackModeTimeMax` | ki_atack_move 02199C48: mTimers[0] (the attack mode's duration) = rnd(|it - mAttackModeTimeMin|) + mAttackModeTimeMin (tww the same) |
+| 0x4C | `m50` | `mAttackModeTimeMin` | ki_atack_move 02199C48: the lower bound of mTimers[0], the attack mode's duration (tww the same) |
+| 0x4E | `m52` | `mJoinFightCount` | ki_atack_move 02199C48 behaviour 10: a waiting keese joins the circling while fewer than it fight (tww the same) |
+| 0x50 | `m54` | `mCrowdFightCount` | ki_atack_move 02199C48: from it fighting keese on, the attack chance is halved and the check time doubled (tww the same) |
+| 0x54 | `m58` | `mCoSphRadius` | daKi_Execute 0219AAE8: mCoSph.SetR every frame (tww the same) |
+
+Open (no name yet): `m10` (__sinit sets 1.0; read nowhere in WWHD or tww).
 
 ## pt_class (Miniblin; d_a_pt.h)
 
@@ -853,6 +1054,16 @@ zeldaret/tww d217e2b include/d/actor/d_a_shand.h names these fields after their 
 |---|---|---|---|
 | 0x18 | `field_18` | `mThickness` | set_thickness (in daShand_Execute 0246FB78) sets it to shand_class mThickness for links 0..11 and thinner toward the tip for 12..19; hand_move (in daShand_Execute 0246FB78) writes it (ftoi) as the link's line width into mLineMat. tww d217e2b src/d/actor/d_a_shand.cpp keeps the offset name field_18 (same uses, lines 113 / 116 / 285) |
 
+
+## daShand_HIO_c (l_HIO, the hand tentacle tuning; d_a_shand.h)
+
+Round 10. WWHD keeps the vtable last (field_6 / field_8 are tww's names at the GameCube offsets 6 / 8). tww's daShand_HIO_c (d_a_shand.cpp) reads them the same way.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x02 | `field_6` | `mEyeSegment` | daShand_HIO_c_ct sets -3; hand_move 0246FAEC: eyePos is the hand line segment it + 10 (tww the same) |
+| 0x04 | `field_8` | `mHitHoldTime` | daShand_HIO_c_ct sets 50; hand_move 0246FAEC: mTimers[0] after the hand hits while it has a parent, mTimers[1] it + 90 (tww field_2BC[0] the same) |
+
 ## mt_class (Magtail; d_a_mt.h, with the views MtExec::Actor and mtBodyActorView)
 
 zeldaret/tww d217e2b names mt_class's fields after their GameCube offsets; TP has no mt_class. The names are those of the two views of the same object (MtExec::Actor in d_a_mt_exec.h, mtBodyActorView in d_a_mt_body.h), checked against the uses in d_a_mt.cpp / d_a_mt_exec.cpp (mt_move, mt_fight, damage_check, mt_action, body_control1 are inlined into daMt_Execute 021D87A0) / d_a_mt_body.cpp. Where the views disagreed, the name with the stronger use evidence was taken and the losing view name was corrected in a separate commit. Left open: m454 (no name in any view; four uses).
@@ -932,6 +1143,18 @@ zeldaret/tww d217e2b names mt_class's fields after their GameCube offsets; TP ha
 | 0x1A17 | `m1A17` | `mHeadHealth` | MtExec::Actor mHeadHealth (d_a_mt_exec.h, same offset); uses: daMt_Create 021DCE84; damage_check (in daMt_Execute 021D87A0); mt_action (in daMt_Execute 021D87A0) |
 | 0x1A18 | `m1A18` | `mHitEffectTimer` | MtExec::Actor mHitEffectTimer (d_a_mt_exec.h, same offset): damage_check sets 12, daMt_Execute counts it down; body_control3 flickers the pitch by (it & 2) * 500 (mtBodyActorView: mCrawlPitchFlags); uses: damage_check (in daMt_Execute 021D87A0); daMt_Execute 021D87A0; body_control3 021DE1E0 |
 | 0x1DD4 | `m1DD4` | `mDeleteRequested` | MtExec::Actor mDeleteRequested (d_a_mt_exec.h, same offset); uses: mt_bg_check 021D74F8; daMt_Delete 021DC634; damage_check (in daMt_Execute 021D87A0); mt_action (in daMt_Execute 021D87A0) |
+
+
+## daMt_HIO_c (l_HIO, the Magtail tuning; d_a_mt.h)
+
+Round 10. Only these two of the 29 offset-named fields are read; the tww daMt_HIO_c (d_a_mt.cpp) is never read there.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x1C | `m1C` | `mRubbleScale` | br_draw 021D7E80: the rubble (br) model scale is it * 2; the constructor sets 0.8 |
+| 0x50 | `m50` | `mSegmentFrameStep` | daMt_Draw 021D7FFC: segment i plays the brk / btk at mBrkFrame / mBtkFrame + i * it; the constructor sets -5 |
+
+Open (no name yet): the other 27 offset-named fields (`m05`-`m18`, `m20`-`m4C`, `m52`-`m5C`): the constructor sets them, nothing reads them in WWHD or tww.
 
 ## damagereaction (shared enemy damage reaction; c_damagereaction.h, with its copies / views)
 
@@ -1021,3 +1244,401 @@ zeldaret/tww d217e2b include/c/c_damagereaction.h names these fields after their
 | 0x7E8 | `m7B4` | `mBridgeRideRoll` | ride_call_back (d_a_bridge 020DF908) sets -0x2000; b_hang 020A5674 passes it to the bridge as mRideRollTarget |
 | 0x7EA | `m7B6` | `mSkipMoveOnce` | dr_damage_set 02043F34 sets 1 at recovery and skips one frame of its movement / ground checks while it is set (clearing it); hukki (bk 020A3048) sets 1 |
 | 0x7EC | `m7B8` | `mHangBridgeId` | ride_call_back (d_a_bridge 020DF908) stores the bridge's process ID; dr_damage_set 02043F34 sets -1 for a ledge hang; b_hang 020A5674 searches the bridge by it |
+
+## fm_main::HIO (Floormaster HIO; d_a_fm_main.h, with the views fm_a::HIO in d_a_fm_a.h and fm_c::HIO in d_a_fm_c.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+| 0x004 | `field_0x004` | `mDebugTargets` | debugDraw 021439A0: while set (and the body is out) marks mpActorTarget / mBaseTarget; tww debugDraw the same; ctor 0214996C clears it |
+| 0x005 | `field_0x005` | `mDebugHeadTop` | debugDraw 021439A0 tests it; tww debugDraw reads Link's getHeadTopPos() under it; ctor 0214996C clears it |
+| 0x006 | `field_0x006` | `mDebugGrabAxis` | debugDraw 021439A0 tests it; tww debugDraw draws the axis of mGrabMtx (dLib_debugDrawAxis) under it; ctor 0214996C clears it |
+| 0x007 | `field_0x007` | `mDebugHandAxis` | debugDraw 021439A0 tests it; tww debugDraw draws the axis of the FM_JNT_TE_e joint matrix under it; ctor 0214996C clears it |
+| 0x009 | `field_0x009` | `mDebugAngles` | debugDraw 021439A0 tests it; tww debugDraw draws the mGrabAngleMax / mTurnAngleMin fans (radius mReachDist) and the mHeightRange mark under it; ctor 0214996C clears it |
+| 0x00A | `field_0x00A` | `mDebugGoalLine` | debugDraw 021439A0 tests it; tww debugDraw draws current.pos to mGoalPos under it; ctor 0214996C clears it |
+| 0x00B | `field_0x00B` | `mDebugJoints` | debugDraw 021439A0 tests it (loop over the six joints, TE skipped); ctor 0214996C clears it |
+| 0x00C | `field_0x00C` | `mDebugArea` | debugDraw 021439A0 tests it; tww debugDraw draws the 12 mAreaPoints, the line to mBaseTarget and mHomePos under it; ctor 0214996C clears it |
+| 0x00D | `field_0x00D` | `mNoGrabDemo` | modeGrab 02147BE0 / modeGrabFootDemo 021487F8: while set the grab demo is not started (sink timer and item-throw timer end without MODE_GRAB_DEMO / MODE_THROW); ctor 0214996C clears it |
+| 0x00F | `field_0x00F` | `mIkJointOn` | _nodeControl 021404AC applies the IK quaternion of joint i only while [i] == 1; calcInvKine 021468E8 solves only those joints; ctor 0214996C sets 1 / 0 per joint |
+| 0x020 | `field_0x020` | `mHoleOffset` | holeSetMtx 0214162C translates the hole model by it after the Y rotation; ctor 0214996C (-10, 5, -10) |
+| 0x02C | `field_0x02C` | `mBodyOffsetInit` | createInit 02141930 copies it into daFm_c::mBodyOffset (the body model translation in bodySetMtx); ctor 0214996C (0, 0, -30) |
+| 0x038 | `field_0x038` | `mHandOffset` | _nodeControl 021404AC transforms it by the TE joint matrix into mHandPos; grabPlayer 021429BC / grabBomb 02142E0C / grabTsubo 02142EF4 add it to the carried position; ctor 0214996C (40, -20, 0) |
+| 0x066 | `field_0x066` | `mUnderFootTime` | modeUnderFootInit 0214468C loads mModeTimer with it (the wait before appear / hide / foot grab); ctor 0214996C 0x28 |
+| 0x068 | `field_0x068` | `mBikubikuTime` | modeBikubikuInit 021497C0 loads mModeTimer with it; ctor 0214996C 0x1E |
+| 0x084 | `field_0x084` | `mHideTimeMin` | modeHideInit 02144568: mModeTimer = setRnd(it, mHideTimeMax); ctor 0214996C 0x5A |
+| 0x086 | `field_0x086` | `mHideTimeMax` | modeHideInit 02144568: mModeTimer = setRnd(mHideTimeMin, it); ctor 0214996C 0xF0 |
+| 0x088 | `field_0x088` | `mFarTime` | modeWaitInit 02146434 / modeWait 021464B4 load mFarTimer with it; modeWait disappears when the base target stays beyond mNoticeRange until it runs out; ctor 0214996C 0x3C |
+| 0x08C | `field_0x08C` | `mWaitTimeMin` | modeWaitInit 02146434: mModeTimer = setRnd(it, mWaitTimeMax); ctor 0214996C 0x3C |
+| 0x08E | `field_0x08E` | `mWaitTimeMax` | modeWaitInit 02146434: mModeTimer = setRnd(mWaitTimeMin, it); ctor 0214996C 0x78 |
+| 0x090 | `field_0x090` | `mGrabLinkSinkTime` | modeGrabInit 02147810 loads mSinkTimer with it when the target is Link (mGrabNpcSinkTime otherwise); modeGrab 02147BE0 starts the grab demo when it runs out; ctor 0214996C 10 |
+| 0x092 | `field_0x092` | `mItemThrowTime` | modeGrabInit 02147810 loads mModeTimer with it; modeGrab 02147BE0 reloads it while Link guards and throws the held bomb / pot (MODE_THROW) when it runs out; ctor 0214996C 0x11 |
+| 0x094 | `field_0x094` | `mAttackTime` | modeAttackInit 02146764 loads mModeTimer with it; modeAttack 02146A34 ends the attack when the animation stops and it ran out; ctor 0214996C 0 |
+| 0x096 | `field_0x096` | `mTurnStep` | modeAttack 02146A34 / modeGrab 02147BE0: the max step of cLib_addCalcAngleS2 turning shape_angle.y to the target; ctor 0214996C 500 |
+| 0x098 | `field_0x098` | `mGrabAngleMax` | isGrabPos 02145F90 refuses while the angle to the grab position differs from shape_angle.y by more; ctor 0214996C 18000 |
+| 0x09A | `field_0x09A` | `mTurnAngleMin` | modeWait 021464B4 / modeAttack 02146A34 / modeGrab 02147BE0 turn only while the angle difference is above it; ctor 0214996C 7000 |
+| 0x09C | `field_0x09C` | `mTgHitTime` | checkTgHit 02145070 loads mTgHitTimer with it after a hit; ctor 0214996C 5 |
+| 0x09E | `field_0x09E` | `mGrabNpcSinkTime` | modeGrabInit 02147810 loads mSinkTimer with it when the target is not Link (mGrabLinkSinkTime otherwise); ctor 0214996C 0x96 |
+| 0x0A0 | `field_0x0A0` | `mRndMoveTime` | moveRndBack 02144DE4 / moveRndEscape 02147914 reload mMoveTimer with it when they pick a new random point; ctor 0214996C 0x14 |
+| 0x0A6 | `field_0x0A6` | `mDamageTime` | modeDamageInit 02147724 loads mModeTimer with it; ctor 0214996C 10 |
+| 0x0A8 | `field_0x0A8` | `mHeightRange` | the vertical range: checkHeight 02140CC0 (half of it), modeHide 021445B8 / modeUnderFoot 02144838 (base target against mHomePos.y), modePathMove 02144A18 / modeGoalKeeper 02144B94 / isGrabPos 02145F90 / isGrab 021467D8 / modeAttack 02146A34 compare a height difference with it; ctor 0214996C 600 |
+| 0x0AC | `field_0x0AC` | `mRndBackDist` | moveRndBack 02144DE4: the new mMoveTargetPos is it along mMoveAngle; ctor 0214996C 300 |
+| 0x0B0 | `field_0x0B0` | `mRndMoveStep` | moveRndBack 02144DE4 / moveRndEscape 02147914: the max step of fm_addCalcPosXZ2 toward mMoveTargetPos; ctor 0214996C 30 |
+| 0x0B4 | `field_0x0B4` | `mEscapeRange` | moveRndEscape 02147914 / modeGrab 02147BE0 compare the player distance with it (escape with an NPC, goal-keeper throw check); ctor 0214996C 1000 |
+| 0x0B8 | `field_0x0B8` | `mRndEscapeDist` | moveRndEscape 02147914: the new mMoveTargetPos is it along mMoveAngle from mGoalPos; ctor 0214996C 1000 |
+| 0x0BC | `field_0x0BC` | `mNpcDemoPlayerDist` | modeAttack 02146A34: after grabbing an NPC, MODE_GRAB_NPC_DEMO starts while the player is farther than it (or out of mHeightRange); ctor 0214996C 750 |
+| 0x0C0 | `field_0x0C0` | `mUnderFootStep` | modeUnderFoot 02144838: the max step of fm_addCalcPosXZ2 toward the base target; ctor 0214996C 15 |
+| 0x0C4 | `field_0x0C4` | `mReachDist` | modeAttack 02146A34 does not chase a grab position between mNearRange and it; modeGrab 02147BE0 throws the held NPC at the player inside it; tww debugDraw uses it as the radius of the angle fans; ctor 0214996C 290 |
+| 0x0C8 | `field_0x0C8` | `mSphRadius` | setCollision 021432B8: mSph.SetR(it); ctor 0214996C 50 |
+| 0x0CC | `field_0x0CC` | `mChaseSpeed` | modeGoalKeeper 02144B94 / modeAttack 02146A34 / moveRndEscape 02147914: step rate (it + 1) * 0.005 * mSpeedRate of fm_addCalcPosXZ2; ctor 0214996C 7 |
+| 0x0D0 | `field_0x0D0` | `mPathSpeed` | modePathMove 02144A18: step rate (it + 1) * 0.005 * mSpeedRate toward mPathPos; ctor 0214996C 2 |
+| 0x0D4 | `field_0x0D4` | `mPathReachDist` | _pathMove 02140AC8: a path point counts as reached within it + 1; ctor 0214996C 5 |
+| 0x0D8 | `field_0x0D8` | `mPathRndOffset` | _pathMove 02140AC8: the reached point moves along the segment by it times a random 1-10; ctor 0214996C 80 |
+| 0x0DC | `field_0x0DC` | `mFootGrabDist` | isGrabFoot 0214472C: Link must be within it (XZ); calcInvKine 021468E8 solves the IK only for a target within it; ctor 0214996C 100 |
+| 0x0E0 | `field_0x0E0` | `mNearRange` | areaCheck 0214264C: the radius of the 12 area points; isGrabPos 02145F90 / modeWait 021464B4 / modeAttack 02146A34: the inner distance limit; moveRndBack 02144DE4; ctor 0214996C 150 |
+| 0x0E4 | `field_0x0E4` | `mAttackRange` | searchNearOtherActor 02140D04 / searchTarget 02145A60 take targets within it; modeUnderFoot 02144838 / modePathMove 02144A18 appear when the base target is within it; isGrabPos 02145F90 outer limit for non-Link targets; ctor 0214996C 500 |
+| 0x0E8 | `field_0x0E8` | `mNoticeRange` | setBaseTarget 02141714 picks Medli / Link within it; _execute 02143418 line-checks the base target within it; modeGoalKeeper 02144B94 / modeWait 021464B4 (turn between mAttackRange and it, mFarTimer beyond it); ctor 0214996C 800 |
+| 0x0EC | `field_0x0EC` | `mGrabReach` | isGrab 021467D8: the hand (mHandPos) must be within it of mGrabPos (doubled with mSwAppearDemo); setAttention 021422A4 moves eyePos while Link's head top is within it of the hand; ctor 0214996C 30 |
+| 0x0F0 | `field_0x0F0` | `mThrowSpeedF` | modeThrow 02147408: the thrown target's speedF; ctor 0214996C 25 |
+| 0x0F4 | `field_0x0F4` | `mThrowSpeedY` | modeThrow 02147408: the thrown target's speed.y; ctor 0214996C 9 |
+| 0x0F8 | `field_0x0F8` | `mThrowGravity` | modeThrow 02147408: the thrown target's gravity; ctor 0214996C -2.5 |
+| 0x0FC | `field_0x0FC` | `mThrowFrame` | modeThrow 02147408 releases the target at this animation frame; ctor 0214996C 16 |
+| 0x100 | `field_0x100` | `mGrabDelayTime` | modeWaitInit 02146434 loads mGrabDelayTimer with it (modeWait attacks a held target only after it); ctor 0214996C 0x1E |
+| 0x104 | `field_0x104` | `mPullOffset` | _nodeControl 021404AC transforms it by the TE joint matrix into mPullPos; ctor 0214996C (0, -20, 0) |
+| 0x110 | `field_0x110` | `mPullDistMin` | modeAttack 02146A34 (fm_pushLink) / modeGrab 02147BE0 pull Link only while mGrabPos is farther than it from mPullPos; ctor 0214996C 20 |
+| 0x114 | `field_0x114` | `mPullDistMax` | modeAttack 02146A34 (fm_pushLink) / modeGrab 02147BE0 pull Link only while mGrabPos is nearer than it to mPullPos; ctor 0214996C 50 |
+| 0x118 | `field_0x118` | `mPullPower` | fm_pushLink (in modeAttack 02146A34) / modeGrab 02147BE0: daPy_setOutPower power = it * the distance ratio; ctor 0214996C -20 |
+| 0x11C | `field_0x11C` | `mParalysisTime` | modeParalysisInit 02149688 loads mModeTimer with it; modeParalysis 021496C8 shakes between it - 0x14 and it - 0x3C; ctor 0214996C 100 |
+| 0x120 | `field_0x120` | `mHoleScaleClosed` | the closed hole scale: modeSwWaitInit 02144190 / modePlayerStartDemoInit 021491B4 set mHoleScale to it; iceProc 021424D0 / modeHide 021445B8 / modeDeath 02148CC0 / modeDelete 021495F8 shrink toward it; ctor 0214996C 0.01 |
+| 0x124 | `field_0x124` | `mHoleScaleOpen` | the open hole scale: modePathMoveInit 021449C4 sets mHoleScale to it; modeSwWait 021442A8 / modeUnderFoot 02144838 / modePlayerStartDemo 02149208 grow toward it; ctor 0214996C 1 |
+| 0x128 | `field_0x128` | `mHoleScaleStep` | the max step of setHoleScale toward mHoleScaleClosed / mHoleScaleOpen (iceProc 021424D0, modeHide 021445B8, modeSwWait 021442A8, modeDeath 02148CC0, modePlayerStartDemo 02149208, modeDelete 021495F8); ctor 0214996C 0.1 |
+| 0x12C | `field_0x12C` | `mHoleScaleStepUnderFoot` | modeUnderFoot 02144838: the max step of setHoleScale toward mHoleScaleOpen; ctor 0214996C 0.02 |
+
+Open (offset names kept):
+
+- `field_0x008`, `field_0x00E`, `field_0x01F`, `field_0x044`, `field_0x050`, `field_0x05C`, `field_0x0A2`: only the constructor 0214996C writes them; no read in WWHD or tww.
+- `field_0x06A`, `field_0x0A4`, `field_0x11E`: no use in WWHD or tww.
+- `field_0x015`: unused padding.
+- `field_0x08A`: two unrelated reads (modeUnderFoot 02144838 reloads mMoveTimer with it; modeWaitInit 02146434 loads mSinkTimer with it), no single role.
+- The private view in d_a_fm_b.h (`daFm_HIO_c`, another batch) keeps its offset names; its fields are the same HIO and should take these names.
+
+
+## daFm_c (Floormaster; d_a_fm.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+| 0x3E3 | `field_0x2C7` | `mExitSclsNo` | getArg 021413E0: param bits 0-7; modeGrabDemo 021482F0 calls dLib_setNextStageBySclsNum(it) when the grab demo with Link ends (0xFF: back to the start stage) (tww the same) |
+| 0x3E4 | `field_0x2C8` | `mNpcRestartPoint` | getArg 021413E0: home.angle.x bits 8-15; modeGrabDemo 021482F0 passes it to daPy_npc_setPointRestart for Makar / Medli when DEFAULT_FM_SUIKOMI_NPC ends (0xFF: none) (tww the same) |
+| 0x3EC | `field_0x2D0` | `mMoveType` | getArg 021413E0: param bits 8-9 (3 -> 0); createInit 02141930 starts MODE_UNDERFOOT / MODE_PATH_MOVE / MODE_GOAL_KEEPER for 0 / 1 / 2 and picks the Fmaster / Fmastr1 / Fmastr2 item table; areaCheck 0214264C, modeDisappear 02146310, modeGrab 02147BE0 branch on it (tww the same) |
+| 0x3F0 | `field_0x2D4` | `mAppearSwitchNo` | getArg 021413E0: param bits 24-31; createInit 02141930 starts MODE_SW_WAIT while it is not set; modeSwWait 021442A8 waits for dComIfGs_isSwitch(it) (tww the same) |
+| 0x3F4 | `field_0x2D8` | `mNoCreateSwitchNo` | getArg 021413E0: home.angle.x bits 0-7; _create 02141E40 returns cPhs_ERROR_e while that switch is set (tww the same) |
+| 0x3F8 | `field_0x2DC` | `mBaseTargetType` | getArg 021413E0: param bits 10-11 (3 -> 0); setBaseTarget 02141714: 0 Medli or Link, 1 Link, 2 Makar or Medli; searchTarget 02145A60 / modeGrab 02147BE0 branch on it (tww the same) |
+| 0x3FC | `field_0x2E0` | `mAreaRadius` | getArg 021413E0: home.angle.z bits 0-7 times 100 (0xFF or 0: 3000); areaCheck 0214264C drops area points farther than it from mHomePos; modeGoalKeeper 02144B94 / isGrabPos 02145F90 / modeWait 021464B4 compare XZ distances to mHomePos with it (tww the same) |
+| 0x400 | `field_0x2E4` | `mSwAppearDemo` | getArg 021413E0 sets 1 when home.angle.y != 0 and mAppearSwitchNo != 0xFF; with it createInit 02141930 turns off the wall check, modeSwWait 021442A8 orders DEFAULT_FM_SW_APEEAR, modeGrab 02147BE0 goes to MODE_GRAB_NPC_DEMO, isGrab 021467D8 doubles mGrabReach, modeDisappear 02146310 deletes (tww the same) |
+| 0x401 | `field_0x2E5` | `mSwAppearInEvent` | modeSwWait 021442A8 sets 1 when the switch opens while DEFAULT_FM_SW_APEEAR runs; modeDisappear 02146310 deletes the actor while set; modeGoalKeeper 02144B94 waits for DEFAULT_FM_SUIKOMI_NPC to end while set (tww the same) |
+| 0x404 | `field_0x2E8` | `mJointPos` | _nodeControl 021404AC stores the world position of joints 0-5 (stack matrix translation); calcInvKine 021468E8 reads them as the IK chain (tww the same) |
+| 0x44C | `field_0x330` | `mJointQuat` | the IK rotation per joint: createInit 02141930 sets ZeroQuat; calcInvKine 021468E8 / resetInvKine 021441D0 slerp it toward the solved / zero rotation; _nodeControl 021404AC applies it (mDoMtx_stack_quatM) (tww the same) |
+| 0x4AC | `field_0x390` | `mIkStartJoint` | calcInvKine 021468E8 stores the first IK joint index; resetInvKine 021441D0 clears it; _nodeControl 021404AC applies mJointQuat only from it on (tww the same) |
+| 0x4B0 | `field_0x394` | `mSpeedRate` | createInit 02141930 / _pathMove 02140AC8: cM_rndF(9) + 1; modePathMove 02144A18 / modeGoalKeeper 02144B94 / modeAttack 02146A34 / moveRndEscape 02147914 scale the fm_addCalcPosXZ2 step by it (tww the same) |
+| 0x4CC | `field_0x3B0` | `mPathPos` | modePathMove 02144A18: dLib_pathMove moves it along mpPath and the actor follows it with fm_addCalcPosXZ2 (tww the same) |
+| 0x4D8 | `field_0x3BC` | `mPathPntNo` | modePathMove 02144A18: dLib_pathMove's point index argument for mpPath (tww the same) |
+| 0x55C | `field_0x3E0` | `mHoleScale` | the hole scale: setHoleScale 02142450 chases it (cLib_addCalc2); holeSetMtx 0214162C sets the hole model base scale to it; setHoleEffect 02142158 the emitter scale; setCollision 021432B8 mCyl.SetR(it); holeExecute 02142200 / _draw 021440D8 test it > 0.015 (tww the same) |
+| 0x560 | `field_0x3E4` | `mNearFmPos` | searchNearFm 02140F14 stores the position of the nearest other Floormaster; modeGrab 02147BE0 (goal keeper with an NPC) turns toward it when it is non-zero (tww the same) |
+| 0x578 | `field_0x3FC` | `mGrabDemoLink` | modeGrabDemoInit 021482AC stores fm_isLink(mpActorTarget); modeGrabDemo 021482F0 runs Link's grab demo (DEFAULT_FM_GRAB, next stage) while set, the NPC branch otherwise (tww the same) |
+| 0x78C | `field_0x610` | `mBodyOffset` | bodySetMtx 0214153C translates the body model by it; createInit 02141930 copies HIO mBodyOffsetInit into it; modeGrabDemo 021482F0 chases it to 0; modeGrabFootDemoInit 0214879C clears it (tww the same) |
+| 0x798 | `field_0x61C` | `mHandPos` | _nodeControl 021404AC: mHandOffset through the TE joint matrix; setAttention 021422A4 attention / eye position, setCollision 021432B8 mSph center, _draw 021440D8 snap position, isGrab 021467D8 / calcInvKine 021468E8 distance to mGrabPos, modeGrab 02147BE0 copies it into mGrabPos for held items (tww the same) |
+| 0x7AC | `field_0x630` | `mFootGrabLinkPos` | modeGrabFootDemoInit 0214879C copies Link's position; modeGrabFootDemo 021487F8 chases it to the actor (fm_addCalcPosXZ2) and sets Link there (daPy_setPlayerPosAndAngle) (tww the same) |
+| 0x7B8 | `field_0x63C` | `mPullPos` | _nodeControl 021404AC: HIO mPullOffset through the TE joint matrix; modeAttack 02146A34 (fm_pushLink) / modeGrab 02147BE0 pull Link toward it by distance and angle from mGrabPos (tww the same) |
+| 0x7C4 | `field_0x648` | `mMoveTimer` | moveRndBack 02144DE4 / moveRndEscape 02147914 pick a new random mMoveTargetPos when it runs out (reload mRndMoveTime); modeUnderFoot 02144838 retargets the base target when it runs out (tww the same) |
+| 0x7C8 | `field_0x64C` | `mHandShakeTimer` | checkTgHit 02145070 / modeBikubiku 02149818 set 0x28; _nodeControl 021404AC shakes the TE joint while fm_calcTimer counts it down; modeDamage 02147764 / modeBikubiku wait for 0 (tww the same) |
+| 0x7CC | `field_0x650` | `mModeTimer` | the per-mode timer: loaded by modeHideInit 02144568, modeUnderFootInit 0214468C, modeAppearInit 02144D88, modeWaitInit 02146434, modeAttackInit 02146764, modeGrabInit 02147810, modeDamageInit 02147724, modeParalysisInit 02149688, modeBikubikuInit 021497C0; the modes act when fm_calcTimer reaches 0 (tww the same) |
+| 0x7D4 | `field_0x658` | `mFarTimer` | modeWaitInit 02146434 / modeWait 021464B4 load HIO mFarTime; modeWait counts it down while the base target is beyond mNoticeRange and disappears at 0 (tww the same) |
+| 0x7D8 | `field_0x65C` | `mGrabDelayTimer` | modeWaitInit 02146434 loads HIO mGrabDelayTime; modeWait 021464B4 attacks a target Link carries (or an NPC) only after it ran out (tww the same) |
+| 0x7DC | `field_0x660` | `mMoveTargetPos` | the XZ move target: moveRndBack 02144DE4 / moveRndEscape 02147914 (random point), modeUnderFoot 02144838 (base target), modeAttack 02146A34 (mGrabPos), modeGrabInit 02147810 (mGoalPos); the actor follows it with fm_addCalcPosXZ2; _execute 02143418 keeps its y at current.pos.y (tww the same) |
+| 0x7FC | `field_0x680` | `mMoveAngle` | moveRndBack 02144DE4 / moveRndEscape 02147914: the random direction of the next mMoveTargetPos (turned by 0x5000 plus a random 4096 step) (tww the same) |
+| 0x800 | `field_0x684` | `mGrabKind` | what the hand holds: modeGrab 02147BE0 1 (Link), modeAttack 02146A34 2 (bomb) / 3 (pot) / 4 (NPC); _execute 02143418 calls grabPlayer / grabBomb / grabTsubo / grabNPC by it and clears it when the target is gone; cancelGrab 02142028, modeThrow 02147408 test it; createInit 02141930 clears it (tww the same) |
+| 0x806 | `field_0x68A` | `mHandShakePhase` | _nodeControl 021404AC: advanced by 0x1830 per frame while mHandShakeTimer runs, the sine phase of the TE joint shake (tww the same) |
+| 0x808 | `field_0x68C` | `mHandShakeAmp` | checkTgHit 02145070 sets 0x2B00; _nodeControl 021404AC decays it to 0 (cLib_addCalcAngleS2) and rotates the TE joint by it * sin(mHandShakePhase) (tww the same) |
+| 0x80C | `field_0x690` | `mGoalPos` | createInit 02141930 / modeUnderFoot 02144838 / modePathMove 02144A18 / modeDisappear 02146310 store the position; modeGoalKeeper 02144B94 sets it to mHomePos and moves there; modeGrabInit 02147810 / moveRndEscape 02147914 start the escape from it (tww the same) |
+| 0x818 | `field_0x69C` | `mHomePos` | createInit 02141930 copies the start position; areaCheck 0214264C measures the area points from it; modeHide 021445B8 / modeUnderFoot 02144838 compare the base target height with its y; modeGoalKeeper 02144B94 returns to it (tww the same) |
+| 0x838 | `field_0x6BC` | `mGrabMtx` | grabPlayer 021429BC / grabNPC 02142C4C / grabTsubo 02142EF4 copy the hand matrix (mDoMtx_stack_c::get()) into it; debugDraw 021439A0 draws its axis under HIO mDebugGrabAxis (tww the same) |
+| 0xB40 | `field_0x9C4` | `mTgHitTimer` | checkTgHit 02145070 ignores hits while fm_calcTimer counts it down and reloads it (HIO mTgHitTime, or 0xC) after a hit (tww the same) |
+| 0xB4C | `field_0x9D0` | `mBaseTargetAngleY` | setBaseTarget 02141714: fopAcM_searchActorAngleY(this, mBaseTarget) (0 without one); turnToBaseTarget 02144A04, modeAppearInit 02144D88, modeWait 021464B4 turn to it (tww the same) |
+| 0xB50 | `field_0x9D4` | `mBaseTargetDist` | setBaseTarget 02141714: fopAcM_searchActorDistanceXZ(this, mBaseTarget) (0 without one); _execute 02143418, modeUnderFoot 02144838, modePathMove 02144A18, modeGoalKeeper 02144B94, moveRndBack 02144DE4, modeWait 021464B4 compare it with the HIO ranges (tww the same) |
+| 0xBC4 | `field_0xA48` | `mAreaPoints` | areaCheck 0214264C: the 12 points at HIO mNearRange around the actor (every 0x1555), each checked against mAreaRadius and by a BG line (tww the same; tww debugDraw draws them) |
+| 0xC54 | `field_0xAD8` | `mAreaPointOk` | areaCheck 0214264C: per point of mAreaPoints 1 while it is inside mAreaRadius and has ground under it (lineCheck hit), else 0 (tww the same) |
+| 0xC60 | `field_0xAE4` | `mInArea` | _execute 02143418 stores areaCheck's result (all 12 mAreaPoints ok); modeHide 021445B8, modeUnderFoot 02144838, moveRndBack 02144DE4, modeAttack 02146A34, moveRndEscape 02147914 leave or stop moving without it (tww the same) |
+| 0xC61 | `field_0xAE5` | `mBaseTargetBlocked` | _execute 02143418: 1 when the BG line from the actor to mBaseTarget (100 up) hits within mNoticeRange, 0 with mSwAppearDemo; modeUnderFoot 02144838 / modePathMove 02144A18 / modeGoalKeeper 02144B94 act only while it is 0 (tww the same) |
+
+Open (offset names kept):
+
+- `field_0x398`, `field_0x3A4`: only written (_pathMove 02140AC8 copies its segment end points), never read in WWHD or tww.
+- `field_0x688`: only written (modeGrabDemo 021482F0 sets 1 when Medli is caught), never read in WWHD or tww.
+- `field_0x6B4`: only written (modeWaitInit 02146434 clears it), never read in WWHD or tww.
+- `field_0x6B8`: only written (modeAttack 02146A34 sets 1 on an NPC grab), never read in WWHD or tww.
+
+
+## st_ke_s (d_a_st.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+|  | `m000` | `mPos` | ke_control 02491458: the positions of the 10 points of the ke chain; part_move 024925B8 puts point 0 at the part joint; ke_control moves points 1-9 after the previous one with mSpeed and keeps them above the ground (tww ke_control the same) |
+|  | `m078` | `mSpeed` | ke_control 02491458: the per-point velocity of the ke chain, the damped difference of the new and old positions (tww ke_control the same) |
+|  | `m0F0` | `mRootAngle` | part_move 024925B8 copies the part rotation into it and spreads the three chains by 0x800 in y (chain 1 + 0x500 in x); ke_control 02491458 turns the chain direction by it (tww the same) |
+
+## mo2HIO_c (Moblin tuning values, l_mo2HIO / moveHIO; d_a_mo2.h, d_a_mo2_main.h, d_a_mo2_exec.h, d_a_mo2_move.h)
+
+The HIO block is declared in all four Moblin headers (d_a_mo2_move.cpp reads it as moveHIO, d_a_mo2_exec.cpp through l_mo2HIO()); all four copies are renamed together. The old names are the GameCube offsets (WWHD offset + 4: GHS puts the vtable pointer after the members). zeldaret/tww d217e2b (include/d/actor/d_a_mo2.h) keeps these offset names and its genMessage is empty, so nothing writes them except the constructor (__sinit_d_a_mo2_cpp 021CD5B4) and the few daMo2_Execute / daMo2_Create writes named below; the names are from the WWHD reads (tww reads them the same way). "Attack kind" is mo2_class mAttackKind (0..5).
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x0001 | `m005` | `mDrawSearchArea` | search_check_draw (in daMo2_Draw 021C7344) returns at once while it is 0, else builds the search circles / view box geometry from the ranges below (HD draws nothing); __sinit_d_a_mo2_cpp 021CD5B4 0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0002 | `m006` | `mFrameStep` | daMo2_Execute 021C9B1C runs the timers, damage_check and Mo2_move only while it is 0 or on a B trigger / Y hold (frame stepping); __sinit_d_a_mo2_cpp 021CD5B4 0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0003 | `m007` | `mKeepHealth` | __sinit_d_a_mo2_cpp 021CD5B4 0; no read in WWHD (daMo2_Execute: "HD: health debug reset removed"); tww d217e2b damage_check sets health = 10 after a hit while it is set (d_a_mo2.cpp line 3127); never written in WWHD or tww (tww genMessage registers nothing) |
+| 0x0004 | `m008` | `mHeadFollowsBody` | nodeCallBack 021C6854: 0 = mHeadAngleY from the face joint direction (atan2), else mHeadAngleY = current.angle.y; __sinit_d_a_mo2_cpp 021CD5B4 0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0005 | `m009` | `mNoAttack` | hukki 021CE6E8 (mode 14) and wepon_search 021CF0F4 start an attack only while it is 0; __sinit_d_a_mo2_cpp 021CD5B4 0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0006 | `m00A` | `mAlertCheckTime` | nage 021CD958: mTimers[1] = it + mAlertCheckDelay (length of the KKEIKAI alert look), so the alert runs this long after the view check opens; __sinit_d_a_mo2_cpp 021CD5B4 20; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0008 | `m00C` | `mAlertCheckDelay` | nage 021CD958: mTimers[2] = it at the alert start; the player view re-check waits until mTimers[2] is 0; __sinit_d_a_mo2_cpp 021CD5B4 40; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x000C | `m010` | `mModelScale` | daMo2_Execute 021C9B1C: MtxScale(it, it, it) for the model base matrix; __sinit_d_a_mo2_cpp 021CD5B4 1.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0010 | `m014` | `mBlurScale` | br_draw (in daMo2_Draw 021C7344): MtxScale(it * mBlurScaleX, it, it) for the spear-trail blur model; __sinit_d_a_mo2_cpp 021CD5B4 1.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0018 | `m01C` | `mDisappearOffsetY` | fail 021CED78: fopAcM_createDisappear at current.pos with y + it + 100; __sinit_d_a_mo2_cpp 021CD5B4 25.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x001C | `m020` | `mHairMode` | ke_control 021C6F14: 0 = ground check under each spear-hair point, else the floor is dr.mSpawnY + 2.5; daMo2_Draw 021C7344 draws the hair (ke_disp) only while it is <= 1; daMo2_Create 021CCB00 and __sinit_d_a_mo2_cpp 021CD5B4 set 0 (tww the same) |
+| 0x001E | `m022` | `mSmokeAlpha` | smoke_set_s 021C6578: alpha of the ID_AK_JT_ELEMENTSMOKE00 toon particle (dComIfGp_particle_setToon); __sinit_d_a_mo2_cpp 021CD5B4 185; never written in WWHD or tww (tww genMessage registers nothing) |
+| 0x0020 | `m024` | `mSmokeTimerBase` | ground_smoke_set (in daMo2_Execute 021C9B1C) sets smoke only while mSmokeTimer >= it; b_nige / hukki / wepon_search / fight (in Mo2_move 021D0A14) load mSmokeTimer with it + 3..16; __sinit_d_a_mo2_cpp 021CD5B4 12; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0024 | `m028` | `mAttentionOffsetY` | nodeCallBack 021C6854: attention_info.position = eyePos with y + it; __sinit_d_a_mo2_cpp 021CD5B4 25.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0028 | `m02C` | `mSearchDist` | jyunkai (in Mo2_move 021D0A14): an armed Moblin notices the player within it (and in view); daMo2_Execute 021C9B1C sets 800 / 1200 while the player has the grab wear in patrol; search_check_draw circle radius; __sinit_d_a_mo2_cpp 021CD5B4 1250.0 |
+| 0x002C | `m030` | `mFightDist` | fight_run (in Mo2_move 021D0A14) stops the run and strafes within it, goes back to patrol beyond it + 75; nage 021CD958 / e3_demo 021D0570 walk until within it; hukki / wepon_search attack within it; __sinit_d_a_mo2_cpp 021CD5B4 575.0; never written in WWHD or tww (tww genMessage registers nothing) |
+| 0x0030 | `m034` | `mAttackDist` | fight_run (in Mo2_move 021D0A14): attacks within it (random chance at it +-62.5), walks back below it, pushes (mOshiCount) below it - 62.5; __sinit_d_a_mo2_cpp 021CD5B4 375.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0034 | `m038` | `mViewAngle` | half angle of the view cone: jyunkai / fight_run / fight (in Mo2_move 021D0A14), nage 021CD958, p_lost 021CDE6C pass it to daMo2_player_view_check 021C8C14; search_bomb 021C8378 the same; __sinit_d_a_mo2_cpp 021CD5B4 12740; daMo2_Execute 021C9B1C 0x1932 with the grab wear |
+| 0x0038 | `m03C` | `mViewHeight` | daMo2_player_view_check 021C8C14 / daMo2_wepon_view_check 021C872C / search_bomb 021C8378 reject a target whose y + 50 differs from eyePos.y by more than it; __sinit_d_a_mo2_cpp 021CD5B4 400.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x003C | `m040` | `mViewBox` | daMo2_player_view_check 021C8C14 / daMo2_wepon_view_check 021C872C / search_bomb 021C8378: target in the body frame within |x| < it.x, |y| < it.y, z < it.z is seen; __sinit_d_a_mo2_cpp 021CD5B4 (500, 130, 500); daMo2_Execute 021C9B1C x / z 340 with the grab wear |
+| 0x0048 | `m04C` | `mViewBoxBackZ` | the same view checks (daMo2_player_view_check 021C8C14, daMo2_wepon_view_check 021C872C, search_bomb 021C8378): rear z limit of the view box (z > it); __sinit_d_a_mo2_cpp 021CD5B4 -125.0; daMo2_Execute 021C9B1C -200 with the grab wear |
+| 0x004C | `m050` | `mPatrolSpeedArmed` | jyunkai (in Mo2_move 021D0A14): speedF target (and path-point reach distance) while the Moblin has its weapon; __sinit_d_a_mo2_cpp 021CD5B4 12.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0050 | `m054` | `mPatrolSpeedUnarmed` | jyunkai (in Mo2_move 021D0A14): speedF target without a weapon (turn speed 0x1000); __sinit_d_a_mo2_cpp 021CD5B4 60.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0054 | `m058` | `mRunSpeedArmed` | fight_run (in Mo2_move 021D0A14): speedF target with the weapon (no dash); nage 021CD958 / e3_demo 021D0570 walk toward the target at it; __sinit_d_a_mo2_cpp 021CD5B4 45.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0058 | `m05C` | `mRunSpeedUnarmed` | fight_run (in Mo2_move 021D0A14): speedF target without a weapon; __sinit_d_a_mo2_cpp 021CD5B4 70.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x005C | `m060` | `mSprintSpeed` | b_nige 021CE138 (run from a bomb) and wepon_search 021CF0F4 (run to a weapon) set speedF to it; __sinit_d_a_mo2_cpp 021CD5B4 90.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0060 | `m064` | `mStrafeSpeed` | fight_run (in Mo2_move 021D0A14) modes 3 / 4: speedF eased to +it (forward) / -it (back); __sinit_d_a_mo2_cpp 021CD5B4 20.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0064 | `m068` | `mSideStepSpeed` | fight_run (in Mo2_move 021D0A14) modes 5 / 6 (move angle +-0x4000): speedF eased to it; __sinit_d_a_mo2_cpp 021CD5B4 20.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0068 | `m06C` | `mDashSpeed` | fight_run (in Mo2_move 021D0A14): speedF target while mDashFrames runs (DASH animation, smoke type 4); __sinit_d_a_mo2_cpp 021CD5B4 70.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x006C | `m070` | `mDashAnmSpeed` | fight_run (in Mo2_move 021D0A14): play speed of the looping BCK DASH animation (anm_init); __sinit_d_a_mo2_cpp 021CD5B4 1.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0070 | `m074` | `mAttackCheckWait` | fight_run (in Mo2_move 021D0A14): mTimers[4] = it each time it rolls the attack chance at mAttackDist +-62.5; __sinit_d_a_mo2_cpp 021CD5B4 15; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0074 | `m078` | `mAttackChance` | fight_run (in Mo2_move 021D0A14): attacks when cM_rndF(100) < it at that roll; __sinit_d_a_mo2_cpp 021CD5B4 80.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0078 | `m07C` | `mAttack0Chance` | attack_set 021C9310 (armed, on the player way): rnd(100) < it picks attack kind 0; __sinit_d_a_mo2_cpp 021CD5B4 40.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x007C | `m080` | `mAttack1Chance` | attack_set 021C9310: the next it percent (after mAttack0Chance) pick attack kind 1, the rest kind 2; __sinit_d_a_mo2_cpp 021CD5B4 30.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0080 | `m084` | `mAttack4Chance` | attack_set 021C9310 (unarmed): rnd(100) < it picks attack kind 4, else kind 5; __sinit_d_a_mo2_cpp 021CD5B4 50.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0084 | `m088` | `mDownRecoverDelay` | daMo2_Execute 021C9B1C damage results 0x14 / 0x15 set dr.mDownTimers[2] (recovery delay) to it; __sinit_d_a_mo2_cpp 021CD5B4 30; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0086 | `m08A` | `mWeaponRunTime` | wepon_search 021CF0F4 / yari_off_check (in daMo2_Execute 021C9B1C) set mWeaponRunTimer to it; __sinit_d_a_mo2_cpp 021CD5B4 300; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x00C8 | `m0CC` | `mAttack0TurnEndFrame` | attack_set 021C9310 sets mTurnEndFrame to it for attack kind 0; __sinit_d_a_mo2_cpp 021CD5B4 14; never written in WWHD or tww (tww genMessage registers nothing) |
+| 0x00CA | `m0CE` | `mAttack1TurnEndFrame` | attack_set 021C9310 sets mTurnEndFrame to it for attack kind 1; __sinit_d_a_mo2_cpp 021CD5B4 10; never written in WWHD or tww (tww genMessage registers nothing) |
+| 0x00CC | `m0D0` | `mAttack2TurnEndFrame` | attack_set 021C9310 sets mTurnEndFrame to it for attack kind 2; wepon_search 021CF0F4 uses it for its kind-2 attack; __sinit_d_a_mo2_cpp 021CD5B4 10; never written in WWHD or tww (tww genMessage registers nothing) |
+| 0x00CE | `m0D2` | `mAttack3TurnEndFrame` | attack_set 021C9310 sets mTurnEndFrame to it for attack kind 3; __sinit_d_a_mo2_cpp 021CD5B4 5; never written in WWHD or tww (tww genMessage registers nothing) |
+| 0x00D0 | `m0D4` | `mAttack4TurnEndFrame` | attack_set 021C9310 sets mTurnEndFrame to it for attack kind 4; __sinit_d_a_mo2_cpp 021CD5B4 100; never written in WWHD or tww (tww genMessage registers nothing) |
+| 0x00D2 | `m0D6` | `mAttack5TurnEndFrame` | attack_set 021C9310 sets mTurnEndFrame to it for attack kind 5; hukki 021CE6E8 uses it for its kind-5 attack; __sinit_d_a_mo2_cpp 021CD5B4 10; never written in WWHD or tww (tww genMessage registers nothing) |
+| 0x00D4 | `m0D8` | `mAttack1BlurStart` | fight (in Mo2_move 021D0A14), attack kind 1: the spear blur (mBlurOn) starts at this attack frame; mAttack1BlurScaleX is indexed from it; __sinit_d_a_mo2_cpp 021CD5B4 29; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x00D6 | `m0DA` | `mAttack1BlurPreLen` | fight (in Mo2_move 021D0A14), attack kind 1: blur frames before the mBlurUseB part (start + it .. start + it + mAttack1BlurBLen); __sinit_d_a_mo2_cpp 021CD5B4 1; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x00D8 | `m0DC` | `mAttack1BlurBLen` | fight (in Mo2_move 021D0A14), attack kind 1: length of the part with mBlurUseB = 1; __sinit_d_a_mo2_cpp 021CD5B4 2; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x00DA | `m0DE` | `mAttack1BlurPostLen` | fight (in Mo2_move 021D0A14), attack kind 1: blur frames after the mBlurUseB part (blur ends at start + pre + B + it); __sinit_d_a_mo2_cpp 021CD5B4 1; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x00DC | `m0E0` | `mAttack1BlurScaleX` | fight (in Mo2_move 021D0A14), attack kind 1: mBlurScaleX = it[attack frame - mAttack1BlurStart] (10 entries); __sinit_d_a_mo2_cpp 021CD5B4 1.0 / 1.25 / 1.25 / 1.0 / 0.5 ...; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0104 | `m108` | `mAttack2BlurStart` | fight (in Mo2_move 021D0A14), attack kind 2: the spear blur (mBlurOn) starts at this attack frame; mAttack2BlurScaleX is indexed from it; __sinit_d_a_mo2_cpp 021CD5B4 40; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0106 | `m10A` | `mAttack2BlurPreLen` | fight (in Mo2_move 021D0A14), attack kind 2: blur frames before the mBlurUseB part (start + it .. start + it + mAttack2BlurBLen); __sinit_d_a_mo2_cpp 021CD5B4 1; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0108 | `m10C` | `mAttack2BlurBLen` | fight (in Mo2_move 021D0A14), attack kind 2: length of the part with mBlurUseB = 1; __sinit_d_a_mo2_cpp 021CD5B4 3; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x010A | `m10E` | `mAttack2BlurPostLen` | fight (in Mo2_move 021D0A14), attack kind 2: blur frames after the mBlurUseB part (blur ends at start + pre + B + it); __sinit_d_a_mo2_cpp 021CD5B4 1; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x010C | `m110` | `mAttack2BlurScaleX` | fight (in Mo2_move 021D0A14), attack kind 2: mBlurScaleX = it[attack frame - mAttack2BlurStart] (10 entries); __sinit_d_a_mo2_cpp 021CD5B4 1.0 / 1.1 / 1.15 / 1.25 / 1.1 / 1.0 ...; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0134 | `m138` | `mBlurOffsetX` | br_draw (in daMo2_Draw 021C7344): the blur model sits at x = it + 150 on the spear joint MO_JNT_MO_YARI_e; __sinit_d_a_mo2_cpp 021CD5B4 -22.25; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0138 | `m13C` | `mHitPushback` | damage_check (in daMo2_Execute 021C9B1C): dr.mPushback = -it for a hit with mKnockbackPower < 25; __sinit_d_a_mo2_cpp 021CD5B4 30.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x013C | `m140` | `mBtMaxDistance` | daMo2_Execute 021C9B1C: mBtMaxDis (parry max distance) = it each frame; __sinit_d_a_mo2_cpp 021CD5B4 650.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0140 | `m144` | `mAttack1BtWindow1Start` | attack_set 021C9310 copies it to mo2_class mBtWindow1Start for attack kind 1 (parry window, opened by daMo2_Execute 021C9B1C); __sinit_d_a_mo2_cpp 021CD5B4 8; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0142 | `m146` | `mAttack1BtWindow1Len` | attack_set 021C9310 copies it to mo2_class mBtWindow1Len for attack kind 1 (parry window, opened by daMo2_Execute 021C9B1C); __sinit_d_a_mo2_cpp 021CD5B4 12; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0144 | `m148` | `mAttack1BtWindow2Start` | attack_set 021C9310 copies it to mo2_class mBtWindow2Start for attack kind 1 (parry window, opened by daMo2_Execute 021C9B1C); __sinit_d_a_mo2_cpp 021CD5B4 34; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0146 | `m14A` | `mAttack1BtWindow2Len` | attack_set 021C9310 copies it to mo2_class mBtWindow2Len for attack kind 1 (parry window, opened by daMo2_Execute 021C9B1C); __sinit_d_a_mo2_cpp 021CD5B4 25; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0148 | `m14C` | `mAttack2BtWindow1Start` | attack_set 021C9310 copies it to mo2_class mBtWindow1Start for attack kind 2 (parry window, opened by daMo2_Execute 021C9B1C); __sinit_d_a_mo2_cpp 021CD5B4 16; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x014A | `m14E` | `mAttack2BtWindow1Len` | attack_set 021C9310 copies it to mo2_class mBtWindow1Len for attack kind 2 (parry window, opened by daMo2_Execute 021C9B1C); __sinit_d_a_mo2_cpp 021CD5B4 12; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x014C | `m150` | `mAttack2BtWindow2Start` | attack_set 021C9310 copies it to mo2_class mBtWindow2Start for attack kind 2 (parry window, opened by daMo2_Execute 021C9B1C); __sinit_d_a_mo2_cpp 021CD5B4 45; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x014E | `m152` | `mAttack2BtWindow2Len` | attack_set 021C9310 copies it to mo2_class mBtWindow2Len for attack kind 2 (parry window, opened by daMo2_Execute 021C9B1C); __sinit_d_a_mo2_cpp 021CD5B4 30; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0150 | `m154` | `mAttack5BtWindow1Start` | attack_set 021C9310 copies it to mo2_class mBtWindow1Start for attack kind 5 (parry window, opened by daMo2_Execute 021C9B1C); __sinit_d_a_mo2_cpp 021CD5B4 8; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0152 | `m156` | `mAttack5BtWindow1Len` | attack_set 021C9310 copies it to mo2_class mBtWindow1Len for attack kind 5 (parry window, opened by daMo2_Execute 021C9B1C); __sinit_d_a_mo2_cpp 021CD5B4 12; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0154 | `m158` | `mAttack5BtWindow2Start` | attack_set 021C9310 copies it to mo2_class mBtWindow2Start for attack kind 5 (parry window, opened by daMo2_Execute 021C9B1C); __sinit_d_a_mo2_cpp 021CD5B4 40; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+| 0x0156 | `m15A` | `mAttack5BtWindow2Len` | attack_set 021C9310 copies it to mo2_class mBtWindow2Len for attack kind 5 (parry window, opened by daMo2_Execute 021C9B1C); __sinit_d_a_mo2_cpp 021CD5B4 25; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) |
+
+Open (no name yet): `m018` (1.0, never read) and the 16 floats `m08C` .. `m0C8` (0.9 / 1.0 / 1.1 / 0.5 / 1.2; the constructor sets them between the per-attack turn-end frames, but nothing reads them in WWHD or tww).
+
+## ke_s and Mo2AtInfo (Moblin helper structs; ke_s in d_a_mo2.h, d_a_mo2_main.h, d_a_mo2_exec.h, d_a_mo2_move.h; Mo2AtInfo in d_a_mo2_exec.h)
+
+ke_s is one spear-hair strand (mo2_class mSpearHair[16]); Mo2AtInfo is d_a_mo2_exec.h's copy of CcAtInfo; mo2Move::Sound is d_a_mo2_move.h's view of SND_INFLUENCE (d_kankyo.h).
+
+| Struct +offset | Old | New | Evidence |
+|---|---|---|---|
+| ke_s +0x000 | `m000` | `mPointPos` | ke_control 021C6F14: the 10 spear-hair points, each placed 21.875 from the previous one (floor-clamped); nodeCallBack_P 021C6BE0 sets [0] on joint MO_JNT_MO_YARI_e; ke_disp (in daMo2_Draw 021C7344) copies them into the 3D line (tww the same; after our decomp's tt_ke_s mPos) |
+| ke_s +0x078 | `m078` | `mPointVelocity` | ke_control 021C6F14: holds the old x / z, then (new - old) * damping, added to the next step's point (tww the same; after our decomp's tt_ke_s mVelocity) |
+| Mo2AtInfo +0x00C | `m0C` | `mHitAngle` | cc_at_check 025192A8 sets .y = cc_atan2s(-x, -z) of the hit direction; damage_check (in daMo2_Execute 021C9B1C) rotates calc_mtx by .y (cMtx_YrotS) for the paralysis / knock-down hit reactions (tww the same; as the CcAtInfo copies in d_a_mt_exec.h / d_a_pt.h) |
+
+Open: ke_s `m0F0` (tail gap 0x0F0..0x124, no use in WWHD or tww); mo2Move::Sound `field_0x0` (view of SND_INFLUENCE in d_kankyo.h, which another batch names; dKy_Sound_set copies the sound position there); the enemyice copy `m1B0` (gm, ks, ph set 1; read nowhere in WWHD or tww); `m00C` / `m028` / `m02C` are named in round 3 with the class (mFreezeType / mBodyLiftY / mIceOffsetY, see shared-types.md).
+## daDaiocta_c (Big Octo; d_a_daiocta.h)
+
+zeldaret/tww (d217e2b, include/d/actor/d_a_daiocta.h) names part of this class and keeps the GameCube offset names for the rest; TP has no such actor. Every name below is from the WWHD use (d_a_daiocta.cpp); where tww is cited it is the same code. The joint names are tww's generated enum (assets/GZLE01/res/Object/Daiocta.h, DO_MAIN1_JNT). The HIO fields are set only by the HIO constructor (WWHD daDaiocta_HIO_ct 0211CD80, tww daDaiocta_HIO_c::daDaiocta_HIO_c) and never written elsewhere in WWHD or tww.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x0691 | `m575` | `mExitNo` | getArg 021192CC: param bits 16-23; modeDemo 0211C59C passes it as the scls (exit) number of dComIfGp_setNextStage after the suction demo |
+| 0x0698 | `m057C` | `mElfType` | getArg 021192CC: from home.angle.z; modeDelete 0211BFFC: at 1 orders DAIOCTA_DEAD_ELF instead of DAIOCTA_DEAD and plays no riddle jingle |
+| 0x2320 | `m21A0` | `mTentacleLTipPos` | _nodeControl 021189D4: point 450 along joint 30 (J_DO_TE_L6); setCollision 0211A4BC: end of capsule 11 |
+| 0x232C | `m21AC` | `mTentacleRTipPos` | _nodeControl 021189D4: point 450 along joint 36 (J_DO_TE_R6); setCollision 0211A4BC: end of capsule 10 |
+| 0x2338 | `m21B8` | `mBodyTipPos` | _nodeControl 021189D4: point 450 along joint 6 (J_DO_BODY5); setCollision 0211A4BC: end of capsule 12 |
+| 0x2344 | `m21C4` | `mFinL1TipPos` | _nodeControl 021189D4: point (300, -200, 0) on joint 9 (J_DO_HIRE_L1); setCollision 0211A4BC: end of capsule 15 |
+| 0x2350 | `m21D0` | `mFinL2TipPos` | _nodeControl 021189D4: point 300 along joint 7 (J_DO_HIRE_L2); setCollision 0211A4BC: end of capsule 16 |
+| 0x235C | `m21DC` | `mFinR1TipPos` | _nodeControl 021189D4: point (300, 200, 0) on joint 10 (J_DO_HIRE_R1); setCollision 0211A4BC: end of capsule 13 |
+| 0x2368 | `m21E8` | `mFinR2TipPos` | _nodeControl 021189D4: point 300 along joint 8 (J_DO_HIRE_R2); setCollision 0211A4BC: end of capsule 14 |
+| 0x2374 | `m21F4` | `mShipPos` | modeDemo 0211C59C: copy of the ship's current.pos, pulled to mMouthPos at mShipPullSpeed and put back into the ship (oct_initStartPos) |
+| 0x2380 | `m2200` | `mShipAngle` | modeDemo 0211C59C: copy of the ship's current.angle; its y is passed to oct_initStartPos with mShipPos |
+| 0x2388 | `m2208` | `mShipPullSpeed` | modeDemo 0211C59C: eased to l_HIO.mShipPullSpeedTarget; the cLib_chaseF / cLib_chasePosXZ step pulling mShipPos to the mouth |
+| 0x238C | `m220C` | `mCreatePos` | createInit 02119A0C: copy of current.pos; modeDemo 0211C59C puts the body back there |
+| 0x25B4 | `m2434` | `mMouthPos` | _nodeControl 021189D4: point mMouthOffsetX along joint 20 (J_DO_KUTI2); modeDemo 0211C59C: the suck / spit sounds and the ship pull go to it; _delete deletes its sound object |
+| 0x2840 | `m26C0` | `mEnterSePlayed` | modeAppear 0211B7D8: set once the body is within 1900 of the surface target, with the JA_SE_CM_DO_ENTER sound and the battle BGM, which play only while it is 0 |
+| 0x2841 | `m26C1` | `mSinkStarted` | modeDelete 0211BFFC: set when the body is 600 below the water, with initAwa, JA_SE_CM_DO_SINK_IN_SEA and the BGM stop, which run only while it is 0 |
+| 0x590C | `m31C4` | `mAwaRepeat` | modeDelete 0211BFFC sets 1 when the sinking starts and 0 at the end; execAwa 02119F84 restarts the finished bubble animations while it (or l_HIO.mAwaRepeatAlways) is set |
+
+### daDaiocta_HIO_c (l_HIO)
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x004 | `m004` | `mDrawDebug` | _draw 0211B420 calls drawDebug while it is not 0 (tww the same) |
+| 0x005 | `m005` | `mHideBody` | _draw 0211B420 skips mpMorf->entryDL (the body) while it is not 0 (tww the same) |
+| 0x006 | `m006` | `mForceDelete` | oct_checkTransitions (in modeWait 0211BB9C): goes to MODE_DELETE when it is not 0 as when isDead (tww modeWait the same) |
+| 0x007 | `m007` | `mForceAnm` | _execute 0211AE68: while it is not 0, mPrmIdx = mForceAnmIdx and setAnm again (tww the same) |
+| 0x008 | `m008` | `mAwaRepeatAlways` | execAwa 02119F84: restarts the finished bubble animations while it or mAwaRepeat is set (tww the same) |
+| 0x00A | `m00A` | `mForceAnmIdx` | _execute 0211AE68: the mPrmIdx used while mForceAnm is set (tww the same) |
+| 0x010 | `m010` | `mAppearTurnStep` | modeAppear 0211B7D8: max step of cLib_addCalcAngleS2 turning shape_angle.y to the player |
+| 0x012 | `m012` | `mSuckAngle` | _execute 0211AE68: the suction demo starts when the player is within mSuckRange and the angle to the player off shape_angle.y + mSuckAngleOffset is below it; modeDemo 0211C59C: the ship is pulled sideways only within it |
+| 0x014 | `m014` | `mSuckAngleOffset` | _execute 0211AE68, modeDemo 0211C59C: added to shape_angle.y before cLib_distanceAngleS to the player / ship (the mouth direction) |
+| 0x016 | `m016` | `mAwaNum` | setAwaMtx 0211970C, initAwa 02119514, execAwa 02119F84, drawAwa: number of bubbles used (loop bound over the 30 mpAwaModels) |
+| 0x018 | `m018` | `mEffectColorAdd` | setEffect 0211A9A0 and _execute: added to the sea ambient r / g / b (capped at 0xFF) for the particle colour |
+| 0x05C | `m05C` | `mTentacleRTipRadius` | setCollision 0211A4BC: radius of capsule 10 (joint 36 J_DO_TE_R6 to mTentacleRTipPos) |
+| 0x060 | `m060` | `mTentacleLTipRadius` | setCollision 0211A4BC: radius of capsule 11 (joint 30 J_DO_TE_L6 to mTentacleLTipPos) |
+| 0x064 | `m064` | `mBodyTipRadius` | setCollision 0211A4BC: radius of capsule 12 (joint 6 J_DO_BODY5 to mBodyTipPos) |
+| 0x068 | `m068` | `mFinR1Radius` | setCollision 0211A4BC: radius of capsule 13 (joint 10 J_DO_HIRE_R1 to mFinR1TipPos) |
+| 0x06C | `m06C` | `mFinR2Radius` | setCollision 0211A4BC: radius of capsule 14 (joint 8 J_DO_HIRE_R2 to mFinR2TipPos) |
+| 0x070 | `m070` | `mFinL1Radius` | setCollision 0211A4BC: radius of capsule 15 (joint 9 J_DO_HIRE_L1 to mFinL1TipPos) |
+| 0x074 | `m074` | `mFinL2Radius` | setCollision 0211A4BC: radius of capsule 16 (joint 7 J_DO_HIRE_L2 to mFinL2TipPos) |
+| 0x080 | `m080` | `mAppearRiseStep` | modeAppear 0211B7D8: max step of cLib_addCalcPos2 moving the body up to the water surface |
+| 0x084 | `m084` | `mSuckRange` | _execute 0211AE68: the suction demo (MODE_DEMO) starts when the player is nearer than it (and within mSuckAngle) |
+| 0x088 | `m088` | `mShipPullSpeedTarget` | modeDemo 0211C59C: target of cLib_addCalc2 on mShipPullSpeed |
+| 0x08C | `m08C` | `mShipPullSpeedStep` | modeDemo 0211C59C: max step of cLib_addCalc2 on mShipPullSpeed |
+| 0x090 | `m090` | `mShipPullSpeedScale` | modeDemo 0211C59C: scale of cLib_addCalc2 on mShipPullSpeed |
+| 0x094 | `m094` | `mMouthOffsetX` | _nodeControl 021189D4: x offset on joint 20 (J_DO_KUTI2) for mMouthPos |
+| 0x098 | `m098` | `mAnmPlaySpeed` | setAnm 0211AB80: copied into the play speed of the nine animation parameter entries (tww anm_prms[i].mPlaySpeed) |
+| 0x0BC | `m0BC` | `mAnmMorf` | setAnm 0211AB80: copied into the morf of the nine animation parameter entries (tww anm_prms[i].mMorf) |
+| 0x0E0 | `m0E0` | `mSinkStep` | modeDelete 0211BFFC: cLib_chasePos step of the sinking body; within 3 times it of the target the demo ends |
+| 0x0E4 | `m0E4` | `mAwaDistMin` | setAwaRandom 021193F8: a bubble is placed at a random distance from mAwaDistMin to mAwaDistMax around current.pos |
+| 0x0E8 | `m0E8` | `mAwaDistMax` | setAwaRandom 021193F8: upper end of the random bubble distance |
+| 0x0EC | `m0EC` | `mAwaScaleMin` | setAwaRandom 021193F8: a bubble's scale is random from mAwaScaleMin to mAwaScaleMax |
+| 0x0F0 | `m0F0` | `mAwaScaleMax` | setAwaRandom 021193F8: upper end of the random bubble scale |
+| 0x0F4 | `m0F4` | `mAwaTimerMin` | initAwa 02119514 / execAwa 02119F84: mAwaTimers[i] = random from mAwaTimerMin to mAwaTimerMax |
+| 0x0F8 | `m0F8` | `mAwaTimerMax` | initAwa 02119514 / execAwa 02119F84: upper end of the random bubble timer |
+| 0x0FC | `m0FC` | `mSuikomiOffset` | setSuikomiMtx 02119630: mDoMtx_stack_transM offset of the suction (suikomi) model |
+
+Open (no name yet): the padding / unused members of daDaiocta_c (`m0568`, `m062C`, `m0692`, `m0699`, `m2386`, `m25FC`, `m2842`, `m590D`) and of daDaiocta_HIO_c (`m009`, `m01A`).
+
+## daRd_c (ReDead; d_a_rd.h)
+
+zeldaret/tww (d217e2b, include/d/actor/d_a_rd.h) names part of this class and keeps the GameCube offset names for the rest. Every name below is from the WWHD use (d_a_rd.cpp and the inline rd_breakFree in d_a_rd.h); where tww is cited it is the same code.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3E0 | `m2C4` | `mTgHitWait` | checkTgHit 0245C770: a hit is taken only while it has counted down to 0; reloaded with l_HIO m48 at every hit, 3 after a strong hit (resulting attack type 1) (tww the same) |
+| 0x8A8 | `m6D4` | `mFireDeathTimer` | _execute 0245BF50: reloaded with l_HIO m4E while mEnemyFire is off; while burning it counts down and at 0 the ReDead dies (MODE_DEATH) unless already attacking / crying / dead |
+| 0x8AF | `m6DB` | `mBtkAnmPrmIdx` | setBtkAnm 0245AC14: the btk_anm_prm_tbl entry to play, follows the entry's m01 at a non-looping end (as mAnmPrmIdx for the bck) |
+| 0x8B0 | `m6DC` | `mOldBtkAnmPrmIdx` | setBtkAnm 0245AC14: the entry last started; the btk is re-initialised only when mBtkAnmPrmIdx differs (as mOldAnmPrmIdx) |
+| 0xEB8 | `mCE0` | `mHitReactTimer` | checkTgHit 0245C770: 40 for a non-damaging wind / boomerang / stick / far arrow / grappling hit; _execute 0245BF50 tilts the head (mHeadRotY to 0x2000) while it counts down and starts mLookPlayerTimer when it reaches 1 |
+| 0xEBC | `mCE4` | `mLookPlayerTimer` | _execute 0245BF50: 4 * 30 when mHitReactTimer ends; lookBack 0245B9A8 turns the head to the player's head while it counts down (not while attacking / crying / dead) |
+| 0xEC0 | `mCE8` | `mHeadMtx` | _nodeHeadControl 0245A4DC: copy of the head joint matrix; debugDraw 0245C49C draws its axes (tww the same) |
+| 0xEF2 | `mD1A` | `mHeadRotX` | _nodeControl 0245A21C: extra X rotation of the head joint after the m_jnt angles; never written in WWHD or tww (always 0) |
+| 0xEF4 | `mD1C` | `mHeadRotZ` | _nodeControl 0245A21C: extra Z rotation of the head joint after mHeadRotX; never written in WWHD or tww (always 0) |
+| 0xEF6 | `mD1E` | `mHeadRotY` | _nodeControl 0245A21C: extra Y rotation of the head joint; _execute 0245BF50 eases it to 0x2000 while mHitReactTimer runs, else back to 0 (tww the same) |
+| 0xF10 | `mD38` | `mHeadOffsetX` | _nodeHeadControl 0245A4DC: transM(it, 0, 0) on the head joint; _execute 0245BF50 eases it to l_HIO m60 while isIkari (angry), else to 0 (tww the same) |
+| 0xF14 | `mD3C` | `mStickDirX` | createInit 0245B234 sets 1; rd_breakFree (d_a_rd.h, in modeCry 0245DD80 / modeAttack 0245E30C) flips it to -1 / 1 when the stick x changes side and counts mBreakFreeCounter down (tww the same) |
+| 0xF18 | `mD40` | `mStickDirY` | createInit 0245B234 sets 1; rd_breakFree (d_a_rd.h, in modeCry 0245DD80 / modeAttack 0245E30C) flips it to -1 / 1 when the stick y changes side and counts mBreakFreeCounter down (tww the same) |
+
+Open (no name yet): `mD2E` (_execute 0245BF50 eases it to 0x500 / 0 with mHeadRotY, never read; tww the same), the padding (`m2B0`, `m2C6`, `m30E`, `m6DD`, `mCDE`, `mD20`, `mD30`, `mD35`), and the local copies' `enemyice_l` `m1B0` (no read) / `enemyfire_l` `m228` (the LIGHT_INFLUENCE HD tail mHD20 of enemyfire::mLight, see shared-types.md) in d_a_rd.h; `m00C` / `m028` / `m02C` follow the class in round 3.
+
+
+## daRd_HIO_c (l_HIO, the ReDead tuning; d_a_rd.h)
+
+Round 10. WWHD keeps the vtable first here (offsets equal the GameCube names). daRd_HIO_c_ct 0245EFE0 sets every field; tww's daRd_HIO_c (d_a_rd.cpp, offset names kept) reads them the same way. mCryRadius, mAttackRadius, mCrySpreadAngle, mAttackSpreadAngle, mReturnWalkSpeed and mParalysisDuration were named earlier.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x2C | `m2C` | `mDebugDraw` | _draw 0245C620 calls debugDraw while it is set (debug switch; daRd_HIO_c_ct 0245EFE0 clears it) (tww the same) |
+| 0x30 | `m30` | `mAreaRadiusAdd` | getArg 0245AB98: mAreaRadius = it + the parameter's area radius (tww the same) |
+| 0x34 | `m34` | `mNoticeRadius` | the ReDead's notice range: rd_noticePlayer (checkInFan radius, with mNoticeSpreadAngle), _searchNearDeadRd 0245A194 (a dead ReDead nearer than it) and debugDraw 0245C49C's fan (tww the same) |
+| 0x40 | `m40` | `mNoticeSpreadAngle` | rd_noticePlayer: checkInFan's spread angle (with mNoticeRadius); debugDraw 0245C49C's fan angle (tww the same) |
+| 0x46 | `m46` | `mMaxHealth` | createInit 0245B234: max_health (tww the same) |
+| 0x48 | `m48` | `mHitWaitTime` | checkTgHit 0245C770: mTgHitWait after a hit (tww the same) |
+| 0x4A | `m4A` | `mFreezeTime` | checkTgHit 0245C770: mEnemyIce.mFreezeDuration on an ice hit (tww the same) |
+| 0x4C | `m4C` | `mFireTime` | checkTgHit 0245C770: mEnemyFire.mFireDuration on a fire hit (tww the same) |
+| 0x4E | `m4E` | `mFireDeathTime` | _execute 0245BF50: mFireDeathTimer (tww the same) |
+| 0x50 | `m50` | `mAttackBreakFreeCount` | modeAttackInit 0245E298: mBreakFreeCounter, the stick turns needed to break free of the grab (tww the same) |
+| 0x52 | `m52` | `mAttackTime` | modeAttackInit 0245E298: mTimer1 of the grab attack (tww the same) |
+| 0x54 | `m54` | `mCryTime` | modeCryInit 0245DC9C: mTimer1 of the paralysing cry (tww the same) |
+| 0x58 | `m58` | `mAttentionOffsetY` | setAttention 0245B854: added to the attention position's y (tww the same) |
+| 0x5C | `m5C` | `mEyeOffsetY` | setAttention 0245B854: added to eyePos.y (tww the same) |
+| 0x60 | `m60` | `mIkariHeadOffsetX` | _execute 0245BF50: mHeadOffsetX eases to it while isIkari (tww the same) |
+| 0x64 | `m64` | `mHeadOffsetStep` | _execute 0245BF50: cLib_addCalc2's step of mHeadOffsetX (tww the same) |
+| 0x68 | `m68` | `mWalkSpeed` | rd_walkToPlayer (modeMove / modeCry, d_a_rd.h): speedF eases to it * the distance factor, doubled while burning (tww modeMove / modeCry the same) |
+| 0x70 | `m70` | `mWalkAnmSpeedRate` | _execute 0245BF50: the walk animation's play speed is speedF * it (at least mWalkAnmSpeedMin) (tww the same) |
+| 0x74 | `m74` | `mWalkAnmSpeedMin` | _execute 0245BF50: the lower bound of the walk animation's play speed (tww the same) |
+| 0x78 | `m78` | `mCryBreakFreeCount` | modeCryInit 0245DC9C: mBreakFreeCounter, the stick turns needed to break free of the cry's paralysis (tww the same) |
+
+Open (no name yet): `m7C` (the JntHit_HIO_c member, kept as a byte view; constructJntHitHIO only).
+
+
+## daFm_HIO_c view in d_a_fm_b.h (Floormaster part B)
+
+d_a_fm_b.h's private view daFm_HIO_c of the Floormaster HIO (fm_main::HIO, d_a_fm_main.h) takes the names the class got in round 2 (views follow their class): `field_0x00F` -> `mIkJointOn`, `field_0x088` -> `mFarTime`, `field_0x08C` -> `mWaitTimeMin`, `field_0x08E` -> `mWaitTimeMax`, `field_0x094` -> `mAttackTime`, `field_0x096` -> `mTurnStep`, `field_0x098` -> `mGrabAngleMax`, `field_0x09A` -> `mTurnAngleMin`, `field_0x09C` -> `mTgHitTime`, `field_0x0A8` -> `mHeightRange`, `field_0x0BC` -> `mNpcDemoPlayerDist`, `field_0x0C4` -> `mReachDist`, `field_0x0CC` -> `mChaseSpeed`, `field_0x0DC` -> `mFootGrabDist`, `field_0x0E0` -> `mNearRange`, `field_0x0E4` -> `mAttackRange`, `field_0x0E8` -> `mNoticeRange`, `field_0x0EC` -> `mGrabReach`, `field_0x100` -> `mGrabDelayTime`, `field_0x110` -> `mPullDistMin`, `field_0x114` -> `mPullDistMax`, `field_0x118` -> `mPullPower`. `field_0x08A` stays open as in the class.
+
+## tn_p (Darknut armour part, tn_class::mParts[3]; d_a_tn.h)
+
+Round 4 (two-digit offset names). The state, motion and timer of each armour part that comes off and flies away (part_move, its inline tn_moveFlyingPart, part_draw). Same meanings in zeldaret/tww d217e2b.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x08 | `m08` | `mPartState` | part_move 024BC3EC: 0 follows the body joint, 1 coming loose (set when the actor's part-break bits ask for it), 5 flying, -1 broken (yoroi_break); part_draw 024BA0F0 skips the part below 0 (tww the same) |
+| 0x09 | `m09` | `mbDetached` | part_move 024BC3EC: 0 takes the body joint's matrix, 1 (set when the part comes off) builds the matrix from mPos and mAngle (tww the same) |
+| 0x0C | `m0C` | `mPos` | part_move 024BC3EC: the part's position, taken from the body joint while attached; tn_moveFlyingPart (inline of part_move) adds mSpeed each frame; yoroi_break's effect position (tww the same) |
+| 0x18 | `m18` | `mOldPos` | tn_moveFlyingPart (inline of part_move 024BC3EC): mPos before this frame's step, restored on a wall hit and used for the motion vector (tww the same) |
+| 0x24 | `m24` | `mSpeed` | tn_moveFlyingPart (inline of part_move 024BC3EC): added to mPos each frame, y minus 5 per frame (gravity), bounced and damped on the ground (tww the same) |
+| 0x30 | `m30` | `mAngle` | part_move 024BC3EC: the flying part's rotation (Y, X, Z rotM) and its start angle; tn_moveFlyingPart adds mAngleSpeed (tww the same) |
+| 0x36 | `m36` | `mAngleSpeed` | tn_moveFlyingPart (inline of part_move 024BC3EC): added to mAngle each frame; random on launch and bounce, 0 when the part settles (tww the same) |
+| 0x44 | `m44` | `mTimer` | part_move 024BC3EC counts it down each frame: the delay before a loose part flies, then 30 / 20 frames until it breaks at 1 (tww the same) |
+
+Open (no name yet): `m42` (part_move only increments it; read nowhere else in WWHD or tww), padding `_0A`, `_3C`, `_45`.
+
+## Stalfos::HIO_c (l_HIO; d_a_st.h)
+
+Round 5 (two-digit offset names). The Stalfos HIO: the two step windows of the patrol walk and the patrol speed, the coffin wait and the reassemble time. Same meanings in zeldaret/tww d217e2b (where the vtable comes first, so tww's offsets are 4 higher).
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x02 | `m06` | `mStepStartFrame1` | jyunkai (inlined in St_move 024972A4): from this walk frame to mStepEndFrame1 the Stalfos moves at mPatrolSpeed and turns, and on it the step sound 0x3832 plays; static_initialize 024960B4 9 (tww the same) |
+| 0x04 | `m08` | `mStepStartFrame2` | jyunkai (inlined in St_move 024972A4): the second step window, from this walk frame to mStepEndFrame2, the step sound plays on it; static_initialize 024960B4 0x2C (tww the same) |
+| 0x06 | `m0A` | `mStepEndFrame1` | jyunkai (inlined in St_move 024972A4): the last walk frame of the first step window; static_initialize 024960B4 0x15 (tww the same) |
+| 0x08 | `m0C` | `mStepEndFrame2` | jyunkai (inlined in St_move 024972A4): the last walk frame of the second step window; static_initialize 024960B4 0x35 (tww the same) |
+| 0x0C | `m10` | `mPatrolSpeed` | jyunkai (inlined in St_move 024972A4): mTargetSpeed inside the step windows (0 outside); static_initialize 024960B4 6.0 (tww m02DC = it) |
+| 0x14 | `m18` | `mCoffinWaitTime` | kan_wait (inlined in St_move 024972A4): after the ambush trigger mTimers[0] = it (mTimers[2] = it + 20); the coffin animation waits until it runs out; static_initialize 024960B4 0x46 (tww the same) |
+| 0x16 | `m1A` | `mReassembleTime` | st_break_wait 024963A4: on entering the broken wait mTimers[0] and mReassembleWait = it; when the timer runs out the parts are called back (mPartCommand 2); static_initialize 024960B4 200 (tww the same) |
+
+Open (no name yet): `m14` (set to 7.0 by static_initialize 024960B4, read nowhere in WWHD or tww), padding `mPad01`, `mPad0A`.
+
+## st_p (st_class::mParts[]; d_a_st.h)
+
+Round 5 (two-digit offset names). One Stalfos body part: whether it is loose, and the angles, wobble counter and speed of its flight back to its joint (part_move state 1). Same meanings in zeldaret/tww d217e2b.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x05 | `m05` | `mDetached` | part_move 024925B8: 0 while the part follows its joint matrix, 1 while it moves on its own (switch at the end); scatter_part (inlined) and the break code set 1, the return to the joint sets 0 (tww the same) |
+| 0x38 | `m38` | `mFlyAngleX` | part_move 024925B8 state 1: the part's pitch toward its joint, eased by cLib_addCalcAngleS2 (step 0x2000) and used for the flight matrix; the head (joint 15) takes it as mPartRot.x (tww the same) |
+| 0x3A | `m3A` | `mFlyAngleY` | part_move 024925B8 state 1: the part's yaw toward its joint, eased by cLib_addCalcAngleS2 and used for the flight matrix; the head takes it as mPartRot.y (tww the same) |
+| 0x3C | `m3C` | `mFlyAngleZ` | part_move 024925B8 state 1: the head (joint 15) takes it as mPartRot.z with mFlyAngleX / mFlyAngleY; never written in WWHD or tww (tww the same read) |
+| 0x3E | `m3E` | `mWobbleCount` | part_move 024925B8: counts up every frame (random start when a part breaks off); in state 1 the flight back wobbles by sin(it * 1000) / cos(it * 1100) / cos(it * 1200) (tww the same) |
+| 0x44 | `m44` | `mFlySpeed` | part_move 024925B8 state 1: the flight step is it * 20 along the flight direction, eased toward 1 by 0.01; 0 or 0.5 when the part breaks off (tww the same) |
+
+Open (no name yet): `m48` (the dPa_smokeEcallBack, constructed by part_construct 0249A0B0 and used nowhere else in WWHD or tww), padding `pad06`, `pad41`, `pad68`.
+

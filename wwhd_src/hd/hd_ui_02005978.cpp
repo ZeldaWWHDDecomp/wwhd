@@ -249,9 +249,9 @@ void hdAppGraphicsStaticInit() {
     initStatics(&l_statics2, &l_range2, &l_lower2, &l_upper2, &l_registration2_1,
                 &l_registration2_2, &l_registration2_3);
     l_layoutShader.mVTable = &l_shaderStringVTable;
-    l_layoutShader.mText = gabi::at<void>(gabi::guest_addr("lyt_BuildinShader.gsh"));
+    l_layoutShader.mText = gabi::at<void>(gabi::guest_addr("Lyt/shaders/lyt_BuildinShader.gsh"));
     l_fontShader.mVTable = &l_shaderStringVTable;
-    l_fontShader.mText = gabi::at<void>(gabi::guest_addr("font_BuildinShader.gsh"));
+    l_fontShader.mText = gabi::at<void>(gabi::guest_addr("common/shaders/font_BuildinShader.gsh"));
 }
 
 /* 02005E90 */
@@ -420,8 +420,8 @@ data l_upper3 10000A80
 data l_registration3_1 1018C40C
 data l_registration3_2 1018C418
 data l_registration3_3 1018C424
-str 100009E8 "lyt_BuildinShader.gsh" renamed
-str 100009C0 "font_BuildinShader.gsh" renamed
+str 100009E8 "Lyt/shaders/lyt_BuildinShader.gsh"
+str 100009C0 "common/shaders/font_BuildinShader.gsh"
 str 10000A58 "FrameworkCafe" renamed
 str 10000A68 "GraphicsSystem" renamed
 ext 0273AD10 void* hdAppAllocate(u32)

@@ -128,14 +128,14 @@ static bool chk_attrState(const daBomb_c *self, u32 mask) {
 void daBomb_fuseSmokeEcallBack::executeAfter(void *emitter) {
   BombEmitter* e = static_cast<BombEmitter*>(emitter);
   f32 z = mpPos->z, x = mpPos->x, y = mpPos->y;
-  f32 px = field_0x0C->x, py = field_0x0C->y, pz = field_0x0C->z;
+  f32 px = mpOldPos->x, py = mpOldPos->y, pz = mpOldPos->z;
   u8 type = (u8)e->mVolumeType;
   e->mGlobalTranslation.x = x;
   e->mGlobalTranslation.y = y;
   e->mGlobalTranslation.z = z;
   if (type >= 7)
     e->mGlobalTranslation.y = -(f32)e->mGlobalTranslation.y;
-  f32 distance = bomb_PSVECSquareDistance(mpPos.get(), field_0x0C.get());
+  f32 distance = bomb_PSVECSquareDistance(mpPos.get(), mpOldPos.get());
   distance = bomb_sqrtf(distance);
   s16 life = gabi::ftoi(bombSmokeFma(20 - distance, 0.5f, 10));
   if (life < 10)
@@ -143,14 +143,14 @@ void daBomb_fuseSmokeEcallBack::executeAfter(void *emitter) {
   e->mLifeTime = life;
   f32 dx = bombSmokeSub(x, px) * 0.5f, dy = bombSmokeSub(y, py) * 0.5f,
       dz = bombSmokeSub(z, pz) * 0.5f;
-  f32 tx = (px - field_0x10->x) * 0.5f, ty = (py - field_0x10->y) * 0.5f,
-      tz = (pz - field_0x10->z) * 0.5f;
-  distance = bomb_PSVECSquareDistance(mpPos.get(), field_0x0C.get());
+  f32 tx = (px - mpOldOldPos->x) * 0.5f, ty = (py - mpOldOldPos->y) * 0.5f,
+      tz = (pz - mpOldOldPos->z) * 0.5f;
+  distance = bomb_PSVECSquareDistance(mpPos.get(), mpOldPos.get());
   distance = bomb_sqrtf(distance);
   f32 count = distance * 0.1f;
   if (!(count <= 1)) {
     f32 step = 1 / count;
-    s16 delta = gabi::ftoi((f32)((s32)field_0x04 - (s32)life) * step);
+    s16 delta = gabi::ftoi((f32)((s32)mPrevLife - (s32)life) * step);
     s16 lifetime = life + delta;
     for (f32 t = step; t < 1; t = t + step, lifetime = lifetime + delta) {
       f32 square = t * t, cube = square * t, three = 3 * square;
@@ -173,7 +173,7 @@ void daBomb_fuseSmokeEcallBack::executeAfter(void *emitter) {
       }
     }
   }
-  field_0x04 = life;
+  mPrevLife = life;
 }
 
 /* 020C6C04 */
@@ -254,7 +254,7 @@ BOOL daBomb_c::draw() {
   // HD: the clipper and any nonzero water-effect flag suppress drawing; GC simple shadow is absent.
   if (chk_attrState(this, daBomb_c::ATTR_STATE_20))
     return TRUE;
-  if (chk_state(STATE_4) && field_0x77D != 0)
+  if (chk_state(STATE_4) && mWaterExplodeEffDone != 0)
     return TRUE;
   gabi::Local<cXyz> position;
   u32 self = gabi::ea(this);
@@ -264,7 +264,7 @@ BOOL daBomb_c::draw() {
   if (bomb_J3DUClipper_clip(0x1048CFF0, 0x104B45F8, position.get(),
                        80.0f))
     return TRUE;
-  if (field_0x7C8 > 0)
+  if (mDrawDelay > 0)
     return TRUE;
   u32 env = bomb_dKy_getEnvlight();
   bomb_dScnKy_env_light_c_settingTevStruct(env, 0, &current.pos, &tevStr);
@@ -311,7 +311,7 @@ bool daBomb_c::checkExplodeCc_nut() {
     mSph.ClrTgHit();
   }
   if (mSph.ChkCoHit()) {
-    if (field_0x780)
+    if (mThrown)
       hit = true;
     bomb_dCcD_GObjInf_ClrCoHit(&mSph);
   }
@@ -372,7 +372,7 @@ bool daBomb_c::checkExplodeBg_norm() {
   u8 land = chk_water_land();
   bool burn = chk_lava_hit();
   if (sink)
-    field_0x781 = 1;
+    mDeleteReq = 1;
   if (land)
     eff_water_splash();
   return burn ? procExplode_init() != 0 : false;
@@ -388,8 +388,8 @@ bool daBomb_c::checkExplodeBg_nut() {
     return procExplode_init() != 0;
   if (sink) {
     makeWaterEffect();
-    field_0x781 = 1;
-  } else if (hit && field_0x780) {
+    mDeleteReq = 1;
+  } else if (hit && mThrown) {
     change_state(STATE_1);
     setFuseEffect();
     if (mRestTime > 30) {
@@ -412,9 +412,9 @@ bool daBomb_c::checkExplodeBg_cannon() {
     return procExplode_init() != 0;
   if (sink) {
     makeWaterEffect();
-    field_0x781 = 1;
+    mDeleteReq = 1;
   } else if (dead)
-    field_0x781 = 1;
+    mDeleteReq = 1;
   return false;
 }
 
@@ -427,9 +427,9 @@ u32 daBomb_c::checkExplodeBg() {
 void daBomb_c::water_tention() {
   // HD: GHS fused the height correction, including its NaN operand order.
   if (chk_water_in()) {
-    f32 height = field_0x558;
+    f32 height = mWaterY;
     if (height != -1000000000.0f) {
-      f32 oldheight = field_0x55C;
+      f32 oldheight = mWaterYOld;
       if (oldheight != -1000000000.0f) {
         f32 difference = height - oldheight;
         f32 factor = difference >= 0 ? 0.2f : 0.8f;
@@ -452,7 +452,7 @@ void daBomb_c::posMoveF() {
     speed.y = vertical;
     speedF = horizontal;
   }
-  if (!chk_state(STATE_5) && !chk_state(STATE_6) && field_0x6F3 != 1) {
+  if (!chk_state(STATE_5) && !chk_state(STATE_6) && mNoHit != 1) {
     water_tention();
     u32 p = play_bomb(), self = gabi::ea(this);
     u16 polygon = (u16)mAcch.m_gnd.mPolyIndex,
@@ -494,7 +494,7 @@ void daBomb_c::bgCrrPos_lava() {
   mGndChk.m_pos.x = x;
   mGndChk.m_pos.y = y;
   u32 p = play_bomb();
-  field_0x554 = bomb_cBgS_GroundCross(p + 0x12A0, self + 0x880);
+  mLavaY = bomb_cBgS_GroundCross(p + 0x12A0, self + 0x880);
 }
 
 /* 020C59EC */
@@ -506,7 +506,7 @@ void daBomb_c::bgCrrPos_water() {
       bomb_daSea_calcWave((f32)current.pos.x, (f32)current.pos.z);
   bool water = (mAcch.m_flags & 0x1000) != 0,
        sea = area && current.pos.y < wave;
-  field_0x55C = field_0x558;
+  mWaterYOld = mWaterY;
   bool in = false;
   if (water && sea) {
     if (waterheight > wave)
@@ -515,24 +515,24 @@ void daBomb_c::bgCrrPos_water() {
       water = false;
   }
   if (water) {
-    field_0x558 = waterheight;
+    mWaterY = waterheight;
     in = true;
-    field_0x562 = 0;
+    mWaterIsSea = 0;
   } else if (sea) {
-    field_0x558 = wave;
+    mWaterY = wave;
     in = true;
-    field_0x562 = 1;
+    mWaterIsSea = 1;
   } else {
-    field_0x562 = 0;
-    field_0x558 = -1000000000.0f;
+    mWaterIsSea = 0;
+    mWaterY = -1000000000.0f;
   }
-  field_0x560 = in && mbWaterIn == 0;
+  mWaterLand = in && mbWaterIn == 0;
   mbWaterIn = in;
 }
 
 /* 020C7AEC */
 u8 daBomb_c::chk_water_land() {
-  return field_0x560;
+  return mWaterLand;
 }
 
 /* 020C6E3C */
@@ -542,18 +542,18 @@ u8 daBomb_c::chk_water_in() {
 
 /* 020C7A98 */
 bool daBomb_c::chk_water_sink() {
-  return chk_water_in() && field_0x558 - current.pos.y > 30.0f;
+  return chk_water_in() && mWaterY - current.pos.y > 30.0f;
 }
 
 /* 020C7AF4 */
 bool daBomb_c::chk_lava_hit() {
-  return field_0x554 != -1000000000.0f && current.pos.y < field_0x554;
+  return mLavaY != -1000000000.0f && current.pos.y < mLavaY;
 }
 
 /* 020C7EB0 */
 bool daBomb_c::chk_dead_zone() {
-  return mAcch.m_ground_h == -1000000000.0f && field_0x558 == -1000000000.0f &&
-         field_0x554 == -1000000000.0f;
+  return mAcch.m_ground_h == -1000000000.0f && mWaterY == -1000000000.0f &&
+         mLavaY == -1000000000.0f;
 }
 
 /* 020C71FC */
@@ -570,7 +570,7 @@ void daBomb_c::bound(f32 previousSpeed) {
     bomb_daObj_make_land_effect(this, gabi::ea(&mAcch.m_gnd), 0.6f);
     previousSpeed = previousSpeed * -0.6f;
     if (previousSpeed < 19.5f)
-      field_0x780 = 0;
+      mThrown = 0;
     else {
       speedF = speedF * 0.9f;
       f32 difference = 13 - previousSpeed;
@@ -584,7 +584,7 @@ void daBomb_c::bound(f32 previousSpeed) {
 void daBomb_c::set_real_shadow_flag() {
   bool state2 = chk_state(STATE_2), state3 = chk_state(STATE_3), shadow = false;
   u32 self = gabi::ea(this);
-  s32 timer = field_0x7C8;
+  s32 timer = mDrawDelay;
   if (timer <= 1 && (state2 || state3)) {
     if ((u32)model || state3 || timer == 1)
       shadow = true;
@@ -597,8 +597,8 @@ void daBomb_c::set_real_shadow_flag() {
         shadow = true;
     }
   }
-  if (field_0x7C8 > 0)
-    field_0x7C8 = field_0x7C8 - 1;
+  if (mDrawDelay > 0)
+    mDrawDelay = mDrawDelay - 1;
   model = shadow ? gabi::ea(mpModel.get()) : 0;
 }
 
@@ -643,7 +643,7 @@ void daBomb_c::makeFireEffect(cXyz *position, csXyz *angle) {
 
 /* 020C7CC0 */
 void daBomb_c::makeWaterEffect() {
-  if (field_0x77D)
+  if (mWaterExplodeEffDone)
     return;
   s32 reverb = bomb_dComIfGp_getReverb((s8)current.roomNo);
   mDoAud_seStart(0x6982, &eyePos, 0, reverb);
@@ -661,18 +661,18 @@ void daBomb_c::makeWaterEffect() {
     bomb_cCcS_Set(p + 0x26A4, &mSph);
     p = play_bomb();
     bomb_dCcMassS_Mng_Set(p + 0x4EF8, &mSph, 3);
-    field_0x782 = 1;
+    mExplodeCcSet = 1;
     mMassCounter = (s32)(u32)l_counter.mValue;
   }
-  field_0x77D = 1;
+  mWaterExplodeEffDone = 1;
 }
 
 /* 020C584C */
 void daBomb_c::setFuseEffect() {
-  if (field_0x77E)
+  if (mFuseEffectSet)
     return;
   f32 x = current.pos.x, y = current.pos.y + 60;
-  field_0x77E = 1;
+  mFuseEffectSet = 1;
   mFusePos.x = x;
   mFusePos.y = y;
   f32 z = current.pos.z;
@@ -692,9 +692,9 @@ void daBomb_c::setFuseEffect() {
   controller = gabi::ea(dComIfGp_getParticle());
   bomb_dPa_control_c_set(controller, 3, BombParticleId::ID_IT_JT_BM_SMOKE, &mFusePos, 0, &scale, 220,
              &mSmoke, room, gabi::ea(&tevStr.mColorK0), gabi::ea(&tevStr.mColorK0), 0);
-  mSmoke.field_0x0C = &mFusePos2;
-  mSmoke.field_0x04 = 20;
-  mSmoke.field_0x10 = &mFusePos3;
+  mSmoke.mpOldPos = &mFusePos2;
+  mSmoke.mPrevLife = 20;
+  mSmoke.mpOldOldPos = &mFusePos3;
 }
 
 /* 020C5D54 */
@@ -830,8 +830,8 @@ BOOL daBomb_c::procExplode_init() {
   bomb_dKyw_pntwind_set(&mPntWind);
   speedF = 0;
   mFunc.d = 0;
-  field_0x774 = 0;
-  field_0x778 = 0;
+  mExplodeLightStep = 0;
+  mExplodeLight = 0;
   mFunc.f = 0x020C74A0;
   mFunc.i = -1;
   for (u32 i = 0; i < 3; i++)
@@ -840,12 +840,12 @@ BOOL daBomb_c::procExplode_init() {
   if (!chk_state(STATE_8))
     change_state(STATE_0);
   attention_info.flags = (u32)attention_info.flags & ~0x10;
-  if (field_0x6F0) {
+  if (mInPlayerBombCnt) {
     u32 player = gabi::ea(dComIfGp_getLinkPlayer());
     u8 count = (u8)gabi::at<BombLinkView>(player)->mBombCnt;
     if (count)
       gabi::at<BombLinkView>(player)->mBombCnt = count - 1;
-    field_0x6F0 = 0;
+    mInPlayerBombCnt = 0;
   }
   mSph.mObjAt.mSPrm = (u32)mSph.mObjAt.mSPrm | 1;
   mSph.mObjTg.mSPrm = (u32)mSph.mObjTg.mSPrm & ~1;
@@ -857,7 +857,7 @@ BOOL daBomb_c::procExplode_init() {
     bomb_cCcS_Set(p + 0x26A4, &mSph);
     p = play_bomb();
     bomb_dCcMassS_Mng_Set(p + 0x4EF8, &mSph, 3);
-    field_0x782 = 1;
+    mExplodeCcSet = 1;
     mMassCounter = (u32)l_counter.mValue;
   }
   s32 reverb = bomb_dComIfGp_getReverb((s8)current.roomNo);
@@ -869,7 +869,7 @@ BOOL daBomb_c::procExplode_init() {
   position->z = current.pos.z;
   bomb_dKy_Sound_set(position.get(), 255, (u32)mBsPcId, 10);
   mRestTime = 0;
-  field_0x6FE = 2;
+  mExplodeCcTimer = 2;
   u32 p = play_bomb();
   position->x = 0;
   position->y = 1;
@@ -883,7 +883,7 @@ BOOL daBomb_c::procExplode_init() {
 bool daBomb_c::procExplode() {
   // HD: unordered fade comparisons advance the state as the original floating branches do.
   u32 p = play_bomb();
-  f32 intensity = field_0x778;
+  f32 intensity = mExplodeLight;
   mPntLight.mPower = 1500 * intensity;
   mPntWind.mStrength = intensity;
   u32 camera = gabi::at<dComIfG_inf_c>(p)->play.mCameraInfo[0].mpCamera;
@@ -892,34 +892,34 @@ bool daBomb_c::procExplode() {
   f32 factor = 0;
   if (distance < 1500)
     factor = 1 - distance / 1500;
-  bomb_dKy_actor_addcol_amb_set(200, 180, 100, (f32)field_0x778 * factor);
-  bomb_dKy_bg_addcol_amb_set(180, 160, 60, (f32)field_0x778 * factor);
-  bomb_dKy_bg_addcol_dif_set(255, 225, 120, (f32)field_0x778 * factor);
-  switch (field_0x774) {
+  bomb_dKy_actor_addcol_amb_set(200, 180, 100, (f32)mExplodeLight * factor);
+  bomb_dKy_bg_addcol_amb_set(180, 160, 60, (f32)mExplodeLight * factor);
+  bomb_dKy_bg_addcol_dif_set(255, 225, 120, (f32)mExplodeLight * factor);
+  switch (mExplodeLightStep) {
   case 0:
-    bomb_cLib_addCalc(&field_0x778, 1.0f, 0.5f, 0.4f, 0.01f);
-    if (!(field_0x778 < 0.99f))
-      field_0x774 = field_0x774 + 1;
+    bomb_cLib_addCalc(&mExplodeLight, 1.0f, 0.5f, 0.4f, 0.01f);
+    if (!(mExplodeLight < 0.99f))
+      mExplodeLightStep = mExplodeLightStep + 1;
     break;
   case 1:
-    bomb_cLib_addCalc(&field_0x778, 0.0f, 0.05f, 0.04f, 0.001f);
-    if (!(field_0x778 > 0.01f))
-      field_0x774 = field_0x774 + 1;
+    bomb_cLib_addCalc(&mExplodeLight, 0.0f, 0.05f, 0.04f, 0.001f);
+    if (!(mExplodeLight > 0.01f))
+      mExplodeLightStep = mExplodeLightStep + 1;
     break;
   }
-  if (field_0x6FE) {
-    field_0x6FE = field_0x6FE - 1;
+  if (mExplodeCcTimer) {
+    mExplodeCcTimer = mExplodeCcTimer - 1;
     mSph.SetC(&current.pos);
     if (mMassCounter != (u32)l_counter.mValue) {
       p = play_bomb();
       bomb_cCcS_Set(p + 0x26A4, &mSph);
       p = play_bomb();
       bomb_dCcMassS_Mng_Set(p + 0x4EF8, &mSph, 3);
-      field_0x782 = 1;
+      mExplodeCcSet = 1;
       mMassCounter = (u32)l_counter.mValue;
     }
-  } else if (field_0x774 > 1)
-    field_0x781 = 1;
+  } else if (mExplodeLightStep > 1)
+    mDeleteReq = 1;
   return true;
 }
 
@@ -944,7 +944,7 @@ bool daBomb_c::procCarry_init() {
 u32 daBomb_c::procCarry() {
   if (!((u32)actor_status & 0x2000)) {
     if (speedF > 0)
-      field_0x780 = 1;
+      mThrown = 1;
     procWait_init();
     return procWait();
   }
@@ -987,7 +987,7 @@ u32 daBomb_c::procWait() {
       return 1;
   } else if (chk_state(STATE_7))
     waitState_bomtyu();
-  if (field_0x781)
+  if (mDeleteReq)
     return 1;
   bound(yspeed);
   u32 flags = mAcch.m_flags;
@@ -1016,7 +1016,7 @@ void daBomb_c::waitState_bomtyu() {
   if (mBombFire) {
     setFuseEffect();
     mBombFire = 0;
-    field_0x6F4 = 1;
+    mFuseLit = 1;
     change_state(STATE_1);
   }
 }
@@ -1029,18 +1029,18 @@ BOOL daBomb_c::execute() {
     l_fuseOffset.mOffset.x = 0;
     l_fuseOffset.mGuard = 1;
   }
-  if (chk_state(STATE_4) && !field_0x77C) {
+  if (chk_state(STATE_4) && !mFireEffectSet) {
     f32 y = current.pos.y, x = current.pos.x, z = current.pos.z;
     gabi::Local<cXyz> position;
     position->set(x, y + 20, z);
-    field_0x77C = 1;
+    mFireEffectSet = 1;
     makeFireEffect(position.get(), &shape_angle);
   }
   set_wind_vec();
   u32 self = gabi::ea(this);
   if ((s16)mFunc.i != 0)
     (this->*mFunc)();
-  if (field_0x781)
+  if (mDeleteReq)
     bomb_fopAcM_delete(this);
   else {
     set_real_shadow_flag();
@@ -1082,13 +1082,13 @@ BOOL daBomb_c::execute() {
         mMassCounter = (s32)(u32)l_counter.mValue;
       }
     }
-    if (chk_attrState(this, daBomb_c::ATTR_STATE_10) || field_0x6F4 == 1) {
+    if (chk_attrState(this, daBomb_c::ATTR_STATE_10) || mFuseLit == 1) {
       s32 reverb = bomb_dComIfGp_getReverb((s8)current.roomNo);
       mDoAud_seStart(0x6100, &eyePos, 0, reverb);
     }
   }
-  if (field_0x782)
-    field_0x784 = (u32)field_0x784 + 1;
+  if (mExplodeCcSet)
+    mExplodeFrame = (u32)mExplodeFrame + 1;
   return TRUE;
 }
 
@@ -1203,24 +1203,24 @@ void daBomb_c::init_mtx() {
 /* 020C70DC */
 void daBomb_c::se_cannon_fly_set() {
   bomb_mDoAud_seStart(0x381F, &current.pos);
-  field_0x77F = 1;
+  mCannonFlySeOn = 1;
 }
 
 /* 020C5078 */
 void daBomb_c::se_cannon_fly_stop() {
-  if (field_0x77F) {
+  if (mCannonFlySeOn) {
     bomb_mDoAud_seStopActor(&current.pos);
-    field_0x77F = 0;
+    mCannonFlySeOn = 0;
   }
 }
 
 /* 020C7B24 */
 void daBomb_c::eff_water_splash() {
   gabi::Local<cXyz> position;
-  position->set(current.pos.x, field_0x558, current.pos.z);
+  position->set(current.pos.x, mWaterY, current.pos.z);
   bomb_fopKyM_createWpillar(position.get(), 0, 0.5f, 0.75f);
   u32 self = gabi::ea(this);
-  u32 polygons[2] = {field_0x562 ? 0 : self + 0x7F0, self + 0x764};
+  u32 polygons[2] = {mWaterIsSea ? 0 : self + 0x7F0, self + 0x764};
   s32 material = 19;
   for (u32 i = 0; i < 2; i++) {
     u32 polygon = polygons[i];
@@ -1259,7 +1259,7 @@ bool daBomb_c::bombDelete() {
     gabi::at<BombEmitter>(emitter)->mStatus = flags | 1;
   }
   mSparks.mpEmitter = nullptr;
-  if (field_0x6F0) {
+  if (mInPlayerBombCnt) {
     u32 player = gabi::ea(dComIfGp_getLinkPlayer());
     u8 count = (u8)gabi::at<BombLinkView>(player)->mBombCnt;
     if (count)
@@ -1396,14 +1396,14 @@ void daBomb_c::create_init() {
   u32 flags = mAcch.m_flags;
   u32 self = gabi::ea(this);
   u32 model = gabi::ea(mpModel.get());
-  field_0x558 = -1000000000.0f;
-  field_0x562 = 0;
+  mWaterY = -1000000000.0f;
+  mWaterIsSea = 0;
   mAcch.m_flags = (flags & ~0x408) | 0x2000;
   mbWaterIn = 0;
   mAcch.m_roof_crr_height = 50;
-  field_0x55C = -1000000000.0f;
-  field_0x560 = 0;
-  field_0x554 = -1000000000.0f;
+  mWaterYOld = -1000000000.0f;
+  mWaterLand = 0;
+  mLavaY = -1000000000.0f;
   cullMtx = model ? model + 0xC8 : 0;
   bomb_dCcD_Stts_Init(&mStts, 200, 255, this);
   bomb_dCcD_Sph_Set(&mSph, gabi::ea(&l_sphSrc));
@@ -1417,15 +1417,15 @@ void daBomb_c::create_init() {
   mInitialState = prm_get_state();
   if (!chk_state(STATE_4))
     attention_info.flags = (u32)attention_info.flags | 0x10;
-  field_0x6F4 = 0;
-  field_0x781 = 0;
-  field_0x77D = 0;
-  field_0x780 = 0;
-  field_0x77C = 0;
-  field_0x77F = 0;
-  field_0x782 = 0;
-  field_0x77E = 0;
-  field_0x784 = 0;
+  mFuseLit = 0;
+  mDeleteReq = 0;
+  mWaterExplodeEffDone = 0;
+  mThrown = 0;
+  mFireEffectSet = 0;
+  mCannonFlySeOn = 0;
+  mExplodeCcSet = 0;
+  mFuseEffectSet = 0;
+  mExplodeFrame = 0;
   mWindVec.x = (f32)l_zero.x;
   mWindVec.y = (f32)l_zero.y;
   mWindVec.z = (f32)l_zero.z;
@@ -1440,10 +1440,10 @@ void daBomb_c::create_init() {
   if (chk_attrState(this, ATTR_STATE_8))
     bgCrrPos();
   if (chk_state(STATE_3)) {
-    field_0x6F0 = 1;
-    field_0x7C8 = 2;
+    mInPlayerBombCnt = 1;
+    mDrawDelay = 2;
   } else
-    field_0x7C8 = 0;
+    mDrawDelay = 0;
   if (chk_attrState(this, ATTR_STATE_1))
     procExplode_init();
   else

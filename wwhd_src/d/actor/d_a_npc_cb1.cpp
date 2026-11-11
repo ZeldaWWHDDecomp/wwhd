@@ -158,7 +158,7 @@ static cb1_create::daNpc_Cb1_HIO_c *daNpc_Cb1_HIO_c_ct(cb1_create::daNpc_Cb1_HIO
     }
     i_this->vtable = cb1_create::HioVtable;
     CbCreate_constructNpcHio(gabi::ea(&i_this->mNpc)); /* dNpc_HIO_c::dNpc_HIO_c */
-    i_this->mNpc.m04 = -20.0f;
+    i_this->mNpc.mPlayerEyeOffsetY = -20.0f;
     i_this->mNpc.mMaxHeadX = 0;
     i_this->mNpc.mMaxHeadY = 0;
     i_this->mNpc.mMaxBackboneX = 0xBB8;
@@ -171,17 +171,17 @@ static cb1_create::daNpc_Cb1_HIO_c *daNpc_Cb1_HIO_c_ct(cb1_create::daNpc_Cb1_HIO
     i_this->mNpc.mMaxHeadTurnVel = 0x7D0;
     i_this->mNpc.mAttnYOffset = 65.0f;
     i_this->mNpc.mMaxAttnAngleY = 0x4000;
-    i_this->mNpc.m22 = 0;
+    i_this->mNpc.mDebugDraw = 0;
     i_this->mNpc.mMaxAttnDistXZ = 180.0f;
-    i_this->field_0x30 = 50.0f;
+    i_this->mEyePosOffsetY = 50.0f;
     i_this->mPlayerChaseDistance = 140.0f;
     i_this->mChaseDistScale = 0.05f;
     i_this->mMaxWalkSpeed = 9.0f;
     i_this->mMinWalkSpeed = 3.0f;
     i_this->mForwardAccel = 0.4f;
-    i_this->field_0xE8 = 0x8FC;
-    i_this->field_0xEA = 0x320;
-    i_this->field_0xEC = 0x3;
+    i_this->mWalkTurnMaxStep = 0x8FC;
+    i_this->mWalkTurnMinStep = 0x320;
+    i_this->mWalkTurnScale = 0x3;
     i_this->mDecelScale = 0.9f;
     i_this->mMaxDecel = 1.0f;
     i_this->mDecel = 1.0f;
@@ -189,46 +189,46 @@ static cb1_create::daNpc_Cb1_HIO_c *daNpc_Cb1_HIO_c_ct(cb1_create::daNpc_Cb1_HIO
     i_this->mMaxWalkAnmSpeed = 0.9f;
     i_this->mNpcFlyLaunchSpeedF = 50.0f;
     i_this->mNpcFlyLaunchSpeedY = 20.0f;
-    i_this->field_0x64 = 8.0f;
+    i_this->mFlyLandSpeedY = 8.0f;
     i_this->mHitSpeedScaleF = -1.0f;
     i_this->mHitSpeedScaleY = 3.5f;
-    i_this->field_0x70 = -4.0f;
-    i_this->field_0x74 = -1.5f;
-    i_this->field_0x78 = -6.0f;
-    i_this->field_0x7C = -7.6f;
-    i_this->field_0x80 = 0.1f;
-    i_this->field_0x84 = 0.2f;
+    i_this->mGravity = -4.0f;
+    i_this->mCarryOffsetX = -1.5f;
+    i_this->mCarryOffsetY = -6.0f;
+    i_this->mCarryOffsetZ = -7.6f;
+    i_this->mStickTurnMin = 0.1f;
+    i_this->mStickWalkMin = 0.2f;
     i_this->mStickWalkSpeedScale = 10.0f;
     i_this->field_0xC8 = -0x1000;
     i_this->mPlayerFlyTimer = 450; /* mPlayerFlyTimer */
-    i_this->field_0xCC = 0x64;
-    i_this->field_0xCE = 0xF;
-    i_this->field_0xD0 = 0x4E20;
-    i_this->field_0xD2 = 0x190;
-    i_this->field_0xD4 = 0x9C4;
-    i_this->field_0xD6 = 0xC8;
-    i_this->field_0x8C = 0.0002f;
-    i_this->field_0x90 = -15.0f;
-    i_this->field_0x98 = 10.0f;
-    i_this->field_0x9C = 10.0f;
-    i_this->field_0xA0 = -2.5f;
-    i_this->field_0xD8 = 1;
-    i_this->field_0xA4 = 100.0f;
-    i_this->field_0xA8 = 6000.0f;
-    i_this->field_0xE0 = 0xC8;
+    i_this->mLandIdleMax = 0x64;
+    i_this->mFlyEndWarnTime = 0xF;
+    i_this->mPropellerSpeedMax = 0x4E20;
+    i_this->mPropellerIdleSpeed = 0x190;
+    i_this->mPropellerAccel = 0x9C4;
+    i_this->mPropellerDecel = 0xC8;
+    i_this->mPropellerLiftScale = 0.0002f;
+    i_this->mFlyMaxFallSpeed = -15.0f;
+    i_this->mFlyMaxSpeedY = 10.0f;
+    i_this->mFlyMaxSpeed = 10.0f;
+    i_this->mFlyGravity = -2.5f;
+    i_this->mFlyAnmHeight = 1;
+    i_this->mFlyDriftHeight = 100.0f;
+    i_this->mFlyTiltScale = 6000.0f;
+    i_this->mFlyTiltStep = 0xC8;
     i_this->mStickFlySpeedScale = 0.5f; /* mStickFlySpeedScale */
-    i_this->field_0xDA = 0x2968;
-    i_this->field_0xB0 = 34.0f;
+    i_this->mPropellerOpenSpeed = 0x2968;
+    i_this->mFlyOpenSpeedY = 34.0f;
     i_this->field_0xB4 = 2.0f;
     i_this->mNpcFlyTimer = 60;
-    i_this->field_0xDE = 0xD;
-    i_this->field_0xB8 = 2.0f;
+    i_this->mFlyLiftPeriod = 0xD;
+    i_this->mFlyWindScale = 2.0f;
     i_this->mFlyLaunchSpeedY = 50.0f;
-    i_this->field_0xC0 = 400.0f;
-    i_this->field_0xE2 = 0x5;
-    i_this->field_0xE4 = 0x14;
-    i_this->field_0xE6 = 0xBB8;
-    i_this->field_0xC4 = 20.0f;
+    i_this->mNpcCallDist = 400.0f;
+    i_this->mSearchTimeBase = 0x5;
+    i_this->mSearchTimeRange = 0x14;
+    i_this->mSearchTurnAngle = 0xBB8;
+    i_this->mDamageSpeedF = 20.0f;
     i_this->mDamageTimer = 60;
     i_this->field_0xEF = 0;
     i_this->mNo = -1;
@@ -636,7 +636,7 @@ void daNpc_Cb1_c::setBaseMtx() {
     {
         gabi::Local<cXyz> ofs;
         ofs->x = 0.0f;
-        ofs->y = hio.field_0x30;
+        ofs->y = hio.mEyePosOffsetY;
         ofs->z = 0.0f;
         cLib_offsetPos(&eyePos /* eyePos */, &current.pos, shape_angle.y, ofs.get());
     }
@@ -646,7 +646,7 @@ void daNpc_Cb1_c::setBaseMtx() {
 BOOL daNpc_Cb1_c::init() {
 
     cb1_create::daNpc_Cb1_HIO_c &hio = cb1_l_HIO();
-    gravity = hio.field_0x70;
+    gravity = hio.mGravity;
     m_playerRoom = 0;  /* offPlayerRoom() */
     m_flying = 0;      /* offFlying() */
     m_flyingTimer = 0; /* setFlyingTimer(0) */
@@ -842,10 +842,10 @@ cPhs_State daNpc_Cb1_c::create() {
     if (result == cPhs_COMPLEATE_e) {
         if (fopAcM_GetParam(this) == 4) { /* isTypeKaze() */
             dSv_info_c *save = dComIfGs_info();
-            if (save->mSavedata.mPlayer.mPriest.field_0xf == 1) {
+            if (save->mSavedata.mPlayer.mPriest.mFlag == 1) {
                 dSv_player_priest_c *priest = &save->mSavedata.mPlayer.mPriest;
-                s16 angle = priest->field_0xc;
-                s8 roomNo = priest->field_0xe;
+                s16 angle = priest->mRotate;
+                s8 roomNo = priest->mRoomNo;
                 CbCreate_setRestartOption(gabi::ea(&save->mRestart), 1, gabi::ea(priest), angle,
                                           roomNo);
                 // HD: reload the save singleton before rewriting the priest record.

@@ -4,12 +4,12 @@
 // HD: only the Medli status word used by this tag is exposed here.
 struct TagEtcMedli : fopAc_ac_c {
     u8 mPadding[0x420C - sizeof(fopAc_ac_c)];
-    be<u32> m30F0;
-    bool checkStatusFly() const { return ((u32)m30F0 & 0x10) != 0; }
-    void onBitCamTagIn() { m30F0 = (u32)m30F0 | 0x20; }
-    void offBitCamTagIn() { m30F0 = (u32)m30F0 & ~0x20u; }
+    be<u32> mStatus;  /* was m30F0: as daNpc_Md_c::mStatus (d_a_npc_md.h, same offset 0x420C); checkStatusFly / onBitCamTagIn / offBitCamTagIn test and set its bits */
+    bool checkStatusFly() const { return ((u32)mStatus & 0x10) != 0; }
+    void onBitCamTagIn() { mStatus = (u32)mStatus | 0x20; }
+    void offBitCamTagIn() { mStatus = (u32)mStatus & ~0x20u; }
 };
-WWHD_OFFSET(TagEtcMedli, m30F0, 0x420C);
+WWHD_OFFSET(TagEtcMedli, mStatus, 0x420C);
 fopAc_ac_c* TagEtc_searchFromName(const char*, u32, u32);
 u32 TagEtc_getPId(dEvt_control_c*, fopAc_ac_c*);
 inline void TagEtc_setItemPartner(fopAc_ac_c* actor) {
@@ -43,9 +43,9 @@ struct daTag_Etc_c : fopAc_ac_c {
     /* 0x3AF */ be<u8> field_0x293;
     /* 0x3B0 */ be<u32> mMedliPID;
     /* 0x3B4 */ be<s16> mEventIdx;
-    /* 0x3B6 */ be<s16> field_0x29A;
+    /* 0x3B6 */ be<s16> mCutEndDelay;  /* was field_0x29A: demoInitProc 024A5FA4 sets 15 (type2 0); demoProc 024A5E0C counts it down while Medli is not flying and ends the TAG_ETC_D cut at 0 (tww the same) */
 };
 WWHD_OFFSET(daTag_Etc_c, mMedliPID, 0x3B0);
-WWHD_OFFSET(daTag_Etc_c, field_0x29A, 0x3B6);
+WWHD_OFFSET(daTag_Etc_c, mCutEndDelay, 0x3B6);
 WWHD_SIZE(daTag_Etc_c, 0x3B8);
 

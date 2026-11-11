@@ -89,11 +89,11 @@ static inline void sss_seStart(fopAc_ac_c* actor, u32 id) {
 }
 
 struct sss_s {
-    /* 0x00 */ cXyz field_0x00;
+    /* 0x00 */ cXyz mPos;  /* was field_0x00: the vine point: hand_move 0248F484 (control1 / control2) pulls each point toward its neighbour and pins mVine[0] to current.pos / mVine[9] to mHandPos; lines_copy (in hand_move) copies it into the line segments (tww the same) */
     /* 0x0C */ u8 _0C[0xC];
-    /* 0x18 */ be<f32> field_0x18;
+    /* 0x18 */ be<f32> mSize;  /* was field_0x18: hand_move 0248F484 (control3) sets size_d[i] * a pulsing factor; lines_copy (in hand_move) converts it to the line width byte; the cut vine copies it (tww the same) */
 };
-WWHD_OFFSET(sss_s, field_0x18, 0x18);
+WWHD_OFFSET(sss_s, mSize, 0x18);
 WWHD_SIZE(sss_s, 0x1C);
 
 struct sss_class : fopAc_ac_c {

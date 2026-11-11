@@ -491,7 +491,7 @@ static enemyfire_l* enemyfire_ct(enemyfire_l* p) {
         operator_new(0xC);
     dCcD_Stts_ct(&p->mStts);
     kiMain_sphereCtor(&p->mSph); /* dCcD_Sph::dCcD_Sph */
-    p->m228 = 1.0f;
+    p->mHD20 = 1.0f;
     return p;
 }
 
@@ -535,32 +535,32 @@ static ki_class* ki_class_ct(ki_class* p) {
 static void __sinit_d_a_ki_cpp() {
     sinit_header_statics(KI_HEADER_STATICS, KI_HEADER_RECORDS);
     kiHIO_c& h = l_kiHIO;
-    h.m05 = 0;
-    h.m06 = 0;
-    h.m07 = 0;
+    h.mDebugNoDeath = 0;
+    h.mDebugPause = 0;
+    h.mDebugReport = 0;
     h.m10 = 1.0f;
-    h.m08 = 1.0f;
-    h.m14 = 1.5f;
-    h.m18 = 2.0f;
-    h.m1C = 55.0f;
-    h.m20 = 175.0f;
-    h.m24 = 60.0f;
-    h.m28 = 30.0f;
-    h.m2C = 3.0f;
-    h.m30 = 7.0f;
-    h.m44 = 30.0f;
-    h.m34 = 65.0f;
-    h.m38 = 100.0f;
-    h.m40 = 7.0f;
-    h.m3C = 15.0f;
-    h.m4C = 30;
-    h.m48 = 0.2f;
-    h.m54 = 3;
-    h.m52 = 7;
-    h.m50 = 0x12C;
-    h.m4E = 0x320;
-    h.m0C = 500.0f;
-    h.m58 = 80.0f;
+    h.mFly1AnmSpeed = 1.0f;
+    h.mFly2AnmSpeed = 1.5f;
+    h.mAttack1AnmSpeed = 2.0f;
+    h.mCircleHeight = 55.0f;
+    h.mCircleDist = 175.0f;
+    h.mCircleAngleRange = 60.0f;
+    h.mFlySpeed = 30.0f;
+    h.mCircleMoveRate = 3.0f;
+    h.mReserveMoveSpeed = 7.0f;
+    h.mAttackSpeed = 30.0f;
+    h.mHitKnockback = 65.0f;
+    h.mHitKnockbackSpl = 100.0f;
+    h.mKnockbackDecay = 7.0f;
+    h.mWallStunSpeed = 15.0f;
+    h.mAttackCheckTime = 30;
+    h.mAttackChance = 0.2f;
+    h.mCrowdFightCount = 3;
+    h.mJoinFightCount = 7;
+    h.mAttackModeTimeMin = 0x12C;
+    h.mAttackModeTimeMax = 0x320;
+    h.mFlyWanderRange = 500.0f;
+    h.mCoSphRadius = 80.0f;
     h.__vtbl = KIHIO_VTBL;
 }
 

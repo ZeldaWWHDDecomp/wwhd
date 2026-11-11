@@ -520,7 +520,7 @@ u32 hdGameInfo_dComIfGp_getShip(u32 i_roomNo, u32 i_id) {
     if (p == 0)
         return 0;
     for (s32 i = 0; i < n; i++, p += 0x10)
-        if (i_id == (u8)GameInfoHD::view<GameInfoHD::Ship>(p)->field_0xe)
+        if (i_id == (u8)GameInfoHD::view<GameInfoHD::Ship>(p)->mShipId)
             return p;
     return 0;
 }

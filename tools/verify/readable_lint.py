@@ -19,7 +19,11 @@ counted. Columns:
             literals); named statics / gc_api objects instead
   fieldnum  unnamed fields: field_0x123, field_123 (2-5 hex digits), unk_123/unk123, unk_0x60,
             mXXX..mXXXXX hex names (m3522, m0FD7C), _0x.. members; field_/unk_0x u8 padding arrays
-            (u8 field_48[8]) are not counted
+            (u8 field_48[8]) are not counted. Short offset names count too: mXX with two upper-case hex
+            digits (m1C, m00, mBC), field_X / unk_X / unkX with one; not counted there are locals of
+            that shape (f32 m00 = mtx->m[0][0], matrix elements) unless reached as a member (->m04,
+            .m04) or declared in a struct body, enum values, and the hex-shaped real names in
+            SHORT_REAL (mAA: GX2 surface anti-aliasing mode). One-digit mX (mA, m0) is never counted
   fnnum     functions named after addresses (fn_/sub_/func_/FUN_ + hex, or a name ending in an
             8-digit address)
   scaffold  harness scaffolding written by hand: WWHD_FUNC(...) and VERIFY(...) lines (a glue source
@@ -55,6 +59,61 @@ PATTERNS = [
     ("local_l", re.compile(r"\b[A-Za-z]\w*_l\b")),
 ]
 COLS = [n for n, _ in PATTERNS] + ["framenoauto", "lines"]
+# short offset names (see the fieldnum doc): context decides, see short_offset_names()
+SHORT = re.compile(r"\bm[0-9A-F]{2}\b|(?<!\bu8 )\bfield_[0-9A-Fa-f]\b|(?<!\bu8 )\bunk_?[0-9A-F]\b")
+SHORT_REAL = {"mAA"}  # GX2SurfaceDesc aa (JPATextureDescriptor::mAA, daMant texture descriptor)
+SCALAR = (r"(?:const\s+)?(?:unsigned\s+|signed\s+)?(?:f32|f64|float|double|s8|s16|s32|s64|u8|u16|u32|u64|int|long|"
+          r"short|char|bool|BOOL|auto|cXyz|csXyz|Vec)\s*[*&]?\s*")
+LOCALDECL = re.compile(SCALAR + r"(m[0-9A-F]{2}|field_[0-9A-Fa-f]|unk_?[0-9A-F])\s*(?=[=;,)])")
+LOCALMORE = re.compile(r",\s*(m[0-9A-F]{2}|field_[0-9A-Fa-f]|unk_?[0-9A-F])\s*(?=[=;,])")
+STRUCTHEAD = re.compile(r"\b(struct|class|union)\b[^(){};=]*$")
+ENUMHEAD = re.compile(r"\benum\b[^(){};=]*$")
+
+
+def brace_kinds(code):
+    """per position: 's' inside a struct/class/union body, 'e' inside an enum body, 'c' anywhere else"""
+    kinds = bytearray(b"c" * (len(code) + 1))
+    stack, last, cur = [], 0, ord("c")
+    for i, ch in enumerate(code):
+        if ch == "{":
+            head = code[last:i]
+            stack.append(cur)
+            cur = ord("s") if STRUCTHEAD.search(head) else ord("e") if ENUMHEAD.search(head) else ord("c")
+            last = i + 1
+        elif ch == "}":
+            cur = stack.pop() if stack else ord("c")
+            last = i + 1
+        elif ch == ";":
+            last = i + 1
+        kinds[i] = cur
+    return kinds
+
+
+def short_offset_names(code):
+    """count short offset names (mXX, field_X, unk_X): members and their uses; not locals, enum values, SHORT_REAL"""
+    hits = [m for m in SHORT.finditer(code) if m.group(0) not in SHORT_REAL]
+    if not hits:
+        return 0
+    kinds = brace_kinds(code)
+    local = set()
+    for m in LOCALDECL.finditer(code):
+        if kinds[m.start(1)] != ord("c"):
+            continue
+        local.add(m.group(1))
+        end = code.find(";", m.end())
+        local.update(LOCALMORE.findall(code[m.end():end if end >= 0 else len(code)]))  # f32 m24 = .., m2C = ..
+    n = 0
+    for m in hits:
+        k = kinds[m.start()]
+        if k == ord("e"):
+            continue
+        member = re.search(r"(?:->|\.)\s*$", code[max(0, m.start() - 4):m.start()]) is not None
+        if m.group(0) in local and k != ord("s") and not member:
+            continue
+        n += 1
+    return n
+
+
 FRAMELOCAL = re.compile(r"\bFrameLocal\s*<")
 AUTOFRAME = re.compile(r"\bAutoFrame\b|\bWWHD_FUNC\s*\(")
 MARKER = re.compile(r"(?=^/\* [0-9A-Fa-f]{8} \*/)", re.M)
@@ -99,6 +158,7 @@ def strip(text):
 def lint(path):
     code = strip(open(path, errors="replace").read())
     row = {name: len(p.findall(code)) for name, p in PATTERNS}
+    row["fieldnum"] += short_offset_names(code)
     row["framenoauto"] = framenoauto(open(path, errors="replace").read())
     row["lines"] = sum(1 for l in code.splitlines() if l.strip())
     return row

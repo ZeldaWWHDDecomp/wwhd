@@ -340,7 +340,7 @@ void daSail_packet_c::setCorrectNrmAngle(s16 param_0, f32 param_1) {
     s16 r28 = (s16)(param_0 + 0x8000);
     s32 r27 = param_0;
 
-    s16 r26 = (s16)gabi::ftoi(l_HIO().m10 * gabi::fnmsubs(0.5f, param_1, 1.0f));
+    s16 r26 = (s16)gabi::ftoi(l_HIO().mNrmCorrectDeg * gabi::fnmsubs(0.5f, param_1, 1.0f));
     f32 f9 = (f32)r26;
     s16 lim = (s16)gabi::ftoi(f9 * 1.25f * 182.04445f);
 
@@ -466,7 +466,7 @@ void daSail_packet_c::setNrmVtx(cXyz* param_0, int param_1, int param_2) {
 /* 02460678 */
 static void sail_move(sail_class* i_this) {
     cXyz* windVec = sail_dKyw_get_wind_vec();
-    if (l_HIO().m06 == 0) {
+    if (l_HIO().mUnfurl == 0) {
         if (i_this->mFurl < 0.6f) {
             if (!(i_this->mFurlSpeed > 0.0f)) {
                 i_this->mFurlSpeed = 0.015f;
@@ -477,7 +477,7 @@ static void sail_move(sail_class* i_this) {
         } else {
             i_this->mFurlSpeed = 0.0f;
         }
-    } else if (l_HIO().m06 == 1 && i_this->mFurl > 0.0f) {
+    } else if (l_HIO().mUnfurl == 1 && i_this->mFurl > 0.0f) {
         i_this->mFurlSpeed = i_this->mFurlSpeed + 0.0075f;
         cLib_addCalc(&i_this->mFurl, 0.0f, 0.3f, i_this->mFurlSpeed, 0.01f);
     } else {
@@ -516,10 +516,10 @@ static void sail_move(sail_class* i_this) {
             demo = TRUE;
         }
     }
-    if (!demo && l_HIO().m08 != 0) {
-        i_this->mFurl = l_HIO().m0C;
+    if (!demo && l_HIO().mFixFurl != 0) {
+        i_this->mFurl = l_HIO().mFixedFurl;
     }
-    i_this->m1C4C = 15.0f * (i_this->mFurl - 0.6f);
+    i_this->mFurlFactor = 15.0f * (i_this->mFurl - 0.6f);
 
     s16 windAngle = cM_atan2s(windVec->x, windVec->z);
     cMtx_YrotS(calc_mtx(), (s16) - (i_this->current.angle.y - windAngle));
@@ -601,7 +601,7 @@ static void sail_move(sail_class* i_this) {
 
         f32 a44 = i_this->mFurl;
         f0 = f0 * gabi::fnmsubs(0.75f, a44, 1.0f);
-        f25 = f25 * gabi::fnmsubs(0.5f * a44, i_this->m1C4C, 1.0f);
+        f25 = f25 * gabi::fnmsubs(0.5f * a44, i_this->mFurlFactor, 1.0f);
         f32 f0sq = f0 * f0;
         f32 cosAmp = 550.0f * (f0sq + 0.1f);
         f32 sinAmp = 1750.0f * (f0sq + 0.05f);
@@ -706,7 +706,7 @@ static void sail_move(sail_class* i_this) {
         }
     }
 
-    f32 f31_2 = f31_1 * gabi::fnmsubs(0.5f * i_this->mFurl, i_this->m1C4C, 1.0f);
+    f32 f31_2 = f31_1 * gabi::fnmsubs(0.5f * i_this->mFurl, i_this->mFurlFactor, 1.0f);
     u32 nrm = gabi::ea(&i_this->mSailPacket.mNrm[0][0]) + (u8)i_this->mSailPacket.mCurArr * sizeof(cXyz[84]);
     s16 angleY = i_this->current.angle.y;
     gabi::Local<cXyz> light;
@@ -1375,7 +1375,7 @@ static cPhs_State daSail_Create(fopAc_ac_c* i_actor) {
     if (fopAcM_entrySolidHeap(i_this, daSail_checkCreateHeap, 0x4C0)) {
         if (l_HIO().mNo < 0) {
             l_HIO().mNo =
-                mDoHIO_createChild("Pirate Ship's Sail" // HD: translated debugger label; glue retains the
+                mDoHIO_createChild("海賊船の帆" // HD: translated debugger label; glue retains the
                                                         // original Japanese guest string.
                                    ,
                                    &l_HIO());
@@ -1398,10 +1398,10 @@ static cPhs_State daSail_Create(fopAc_ac_c* i_actor) {
         sail_shipAddress() = gabi::ea(p);
         /* HD: null check */
         if (p != nullptr && (u8)sail_view<SailShipView>(gabi::ea(p))->mSailSeOn == 0) { /* l_p_ship->mSailSeOn (tww m2CE) */
-            l_HIO().m06 = 0;
+            l_HIO().mUnfurl = 0;
             i_this->mFurl = 0.6f;
         } else {
-            l_HIO().m06 = 1;
+            l_HIO().mUnfurl = 1;
         }
         sail_move(i_this);
     } else {
@@ -1416,9 +1416,9 @@ static void __sinit_d_a_sail_cpp() {
     /* daSail_HIO_c l_HIO */
     l_HIO().__vtbl = sail_tu::hioVtable;
     l_HIO().mNo = -1;
-    l_HIO().m05 = 1;
-    l_HIO().m10 = 0.0f;
-    l_HIO().m06 = 1;
+    l_HIO().mbClothToon = 1;
+    l_HIO().mNrmCorrectDeg = 0.0f;
+    l_HIO().mUnfurl = 1;
     l_HIO().m07 = 0;
     sail_registerHio();
 }
@@ -1455,7 +1455,7 @@ data l_pos 101CF71C
 data l_texCoord 101CFB0C
 data l_sail_idx 10039450
 data l_vertexAttributes 10039700
-str 100396E8 "Pirate Ship's Sail" renamed in 02462194
+str 100396E8 "海賊船の帆" in 02462194
 str 100396DC in 02462194
 str 100396D4 in 02462194
 str 100396C4 in 024616AC

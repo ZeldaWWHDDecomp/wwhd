@@ -18,17 +18,18 @@ struct daWarphr_c : fopAc_ac_c {
     gptr<J3DModel> mpModel2;
     gptr<mDoExt_btkAnm> mpBtkAnm2;
     gptr<mDoExt_brkAnm> mpBrkAnm;
-    gptr<JPABaseEmitter> m2AC, m2B0;
-    Mtx34 m2B4;
-    be<u8> m2E4;
+    gptr<JPABaseEmitter> mpWarpEmitter;  /* was m2AC: initWarp 024DB718 / initWarpArrive 024DB808 store the ID_IT_SN_HRWARPB00 emitter; initWarpArriveEnd 024DB930 / _delete 024DA99C end it and clear it */
+    gptr<JPABaseEmitter> mpDemoEmitter;  /* was m2B0: _execute 024DB310 stores the ID_IT_SP_DEMO20_INDWP00 emitter in the demo; _draw 024DAA1C sets its rotation / translation from mDemoEmitterMtx; _delete 024DA99C ends it */
+    Mtx34 mDemoEmitterMtx;  /* was m2B4: _draw 024DAA1C: translation to the demo camera eye and its yaw; decomposed into mpDemoEmitter's global rotation / translation (tww the same) */
+    be<u8> mDemoEffectSet;  /* was m2E4: _execute 024DB310: set once the demo frame reaches 0x225 (the monotone effect starts only while it is 0) (tww the same) */
     u8 pad401[11];
-    be<s32> m2F0;
+    be<s32> mWarpOrder;  /* was m2F0: normal_execute 024DAEE4 sets 2 when check_warp sees the player; eventOrder 024DB1EC orders the warp event while it is 2; checkOrder 024DAF54 clears it when the event starts; _execute 024DB310 clears it in the demo (tww the same) */
     u8 pad410[4];
-    be<s16> m2F8;
+    be<s16> mEventIdx;  /* was m2F8: CreateInit 024DA6DC: the event index of TO_SEA_WARP_2 / TO_SEA_WARP_1; eventOrder 024DB1EC / checkOrder 024DAF54 order and check it (tww the same); as daWarpdm20_c::mEventIdx */
     be<u8> m2FA;
     u8 pad417[5];
-    be<u32> m300;
-    be<s32> m304;
+    be<u32> mDemoShapeId;  /* was m300: demo_execute 024DB24C: the demo actor's mShapeId; 0 plays animation 0 (tww switches on it); as daWarpdm20_c */
+    be<s32> mStaffIdx;  /* was m304: demo_proc 024DB028: dComIfGp_evmng_getMyStaffId("Ghrwp"); the warp cuts read it (tww the same); as daWarpdm20_c::mStaffIdx */
     s32 CreateHeap();
     void CreateInit();
     s32 _create();
@@ -57,13 +58,13 @@ struct daWarphr_c : fopAc_ac_c {
 };
 WWHD_OFFSET(daWarphr_c, mPhase, 0x3AC);
 WWHD_OFFSET(daWarphr_c, mpModel1, 0x3B4);
-WWHD_OFFSET(daWarphr_c, m2AC, 0x3C8);
-WWHD_OFFSET(daWarphr_c, m2B4, 0x3D0);
-WWHD_OFFSET(daWarphr_c, m2E4, 0x400);
-WWHD_OFFSET(daWarphr_c, m2F0, 0x40C);
-WWHD_OFFSET(daWarphr_c, m2F8, 0x414);
-WWHD_OFFSET(daWarphr_c, m300, 0x41C);
-WWHD_OFFSET(daWarphr_c, m304, 0x420);
+WWHD_OFFSET(daWarphr_c, mpWarpEmitter, 0x3C8);
+WWHD_OFFSET(daWarphr_c, mDemoEmitterMtx, 0x3D0);
+WWHD_OFFSET(daWarphr_c, mDemoEffectSet, 0x400);
+WWHD_OFFSET(daWarphr_c, mWarpOrder, 0x40C);
+WWHD_OFFSET(daWarphr_c, mEventIdx, 0x414);
+WWHD_OFFSET(daWarphr_c, mDemoShapeId, 0x41C);
+WWHD_OFFSET(daWarphr_c, mStaffIdx, 0x420);
 WWHD_SIZE(daWarphr_c, 0x424);
 
 struct SafeName {
@@ -145,7 +146,7 @@ inline bool equalStrings(u32 left, u32 right) {
 inline s32 invokeAction(daWarphr_c* actor, const void* descriptor) {
     u32 address = gabi::ea(descriptor);
     s16 slot = gabi::load<s16>(address + 2), delta = gabi::load<s16>(address);
-    s32 staff = actor->m304;
+    s32 staff = actor->mStaffIdx;
     u32 object = gabi::ea(actor) + s32(delta), target;
     if (slot < 0)
         target = gabi::load<u32>(address + 4);
@@ -213,7 +214,7 @@ inline JPABaseEmitter* emitterAt(u32 address) {
 WWHD_OFFSET(daWarphr_c, mpBtkAnm1, 0x3B8);
 WWHD_OFFSET(daWarphr_c, mpModel2, 0x3BC);
 WWHD_OFFSET(daWarphr_c, mpBrkAnm, 0x3C4);
-WWHD_OFFSET(daWarphr_c, m2B0, 0x3CC);
+WWHD_OFFSET(daWarphr_c, mpDemoEmitter, 0x3CC);
 WWHD_OFFSET(warphr::Emitter, mMaxFrame, 0x5C);
 WWHD_OFFSET(warphr::Emitter, mGlobalRotation, 0x1F0);
 WWHD_OFFSET(warphr::Emitter, mGlobalTranslation, 0x22C);

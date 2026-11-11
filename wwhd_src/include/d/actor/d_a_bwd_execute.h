@@ -56,7 +56,7 @@ inline void setOutPower(PlayerVtable* table, fopAc_ac_c* player, f32 power, s16 
 // HD: the timer loops span named fields and padding in the original actor layout.
 struct Timers {
     u8 mUnused[0x1B50];
-    be<s16> mTimers[5];  /* was mAction (misnamed): bwd_execute 020FA614 counts bwd_class mTimers[0] / [1], mActionTimer and the two padding words down in one sweep (zeldaret/tww daBwd_Execute m18CC[i], i < 5) */
+    be<s16> mTimers[5];  /* was mAction (misnamed): bwd_execute 020FA614 counts bwd_class mTimers[0..4] down in one sweep (zeldaret/tww daBwd_Execute m18CC[i], i < 5) */
 };
 WWHD_OFFSET(Timers, mTimers, 0x1B50);
 WWHD_SIZE(Timers, 0x1B5A);

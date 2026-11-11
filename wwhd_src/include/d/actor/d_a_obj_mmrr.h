@@ -118,19 +118,19 @@ WWHD_SIZE(MmrrPositionWords, sizeof(cXyz));
 static MmrrPositionWords& positionWords(cXyz& pos) { return *reinterpret_cast<MmrrPositionWords*>(&pos); }
 
 struct MmrrAttributes {
-    be<f32> field_0x00[5][3][3];
-    be<f32> field_0xB4;
-    be<f32> field_0xB8;
-    be<s16> field_0xBC;
+    be<f32> mTriVertices[5][3][3];  /* was field_0x00: set_cc_rec_pos 02374E98 transforms vertex(i, j) of these 5 x 3 points into the five mTri collision triangles (L_attr, filled by the static initialiser; tww set_cc_rec_pos the same) */
+    be<f32> mTriOffsetY;  /* was field_0xB4: set_cc_rec_pos 02374E98 translates the triangle frame by (0, it, mTriOffsetZ) before rotating it by mMirrorAngleX (tww the same) */
+    be<f32> mTriOffsetZ;  /* was field_0xB8: set_cc_rec_pos 02374E98: the z of that translation (tww the same) */
+    be<s16> mMirrorAngleX;  /* was field_0xBC: set_cc_rec_pos 02374E98 rotates the triangle frame about x by it; set_cull 02375264 turns the reflected beam's cull box by it (tww the same) */
     be<u16> mAlignment; // HD: explicit two-byte padding, zero in the checked record.
-    be<f32> field_0xC0[3];
+    be<f32> mBeamStart[3];  /* was field_0xC0: set_cc_trans_pos 02374FC0 translates to it for the start of the reflected beam capsule (tww the same) */
     be<f32> radius;
-    be<f32> field_0xD0;
-    cXyz& vertex(int i, int j) { return *reinterpret_cast<cXyz*>(field_0x00[i][j]); }
+    be<f32> mBeamLength;  /* was field_0xD0: set_cc_trans_pos 02374FC0: the beam end lies at z = it; mBeamLenRate is the line-check distance over it; set_cull 02375264 sizes the cull box by it (tww the same) */
+    cXyz& vertex(int i, int j) { return *reinterpret_cast<cXyz*>(mTriVertices[i][j]); }
 };
-WWHD_OFFSET(MmrrAttributes, field_0xB4, 0xB4);
-WWHD_OFFSET(MmrrAttributes, field_0xBC, 0xBC);
-WWHD_OFFSET(MmrrAttributes, field_0xC0, 0xC0);
+WWHD_OFFSET(MmrrAttributes, mTriOffsetY, 0xB4);
+WWHD_OFFSET(MmrrAttributes, mMirrorAngleX, 0xBC);
+WWHD_OFFSET(MmrrAttributes, mBeamStart, 0xC0);
 WWHD_SIZE(MmrrAttributes, 0xD4);
 struct MmrrTriangleSource {
     be<u32> mFlags;

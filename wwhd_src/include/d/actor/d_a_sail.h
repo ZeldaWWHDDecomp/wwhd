@@ -75,13 +75,13 @@ struct SailTexture {
 /* daSail_HIO_c l_HIO (HD: the vtable after the members) */
 struct daSail_HIO_c {
     /* 0x00 */ be<s8> mNo;
-    /* 0x01 */ be<u8> m05;
-    /* 0x02 */ be<u8> m06;
+    /* 0x01 */ be<u8> mbClothToon;  /* was m05: written only by __sinit_d_a_sail_cpp 024628E8 (1) in WWHD; tww daSail_packet_c::draw: while it is set the sail lighting goes through the Cloth toon texture (TEXCOORD1 generated from COLOR0 by SRTG, TEXMAP1 = clothtoon.bti), else the TEV uses the rasterized colour directly; read nowhere in WWHD (the HD draw uses its own shader) */
+    /* 0x02 */ be<u8> mUnfurl;  /* was m06: sail_move 02460678: 0 eases mFurl toward 0.6 (furled), 1 eases it toward 0 (unfurled); daSail_Create 02462194 sets 0 (with mFurl 0.6) while the ship's mSailSeOn is 0, else 1; __sinit_d_a_sail_cpp 024628E8 1 (tww the same) */
     /* 0x03 */ be<u8> m07;
-    /* 0x04 */ be<u8> m08;
+    /* 0x04 */ be<u8> mFixFurl;  /* was m08: sail_move 02460678: while it is set and no demo moves the sail, mFurl = mFixedFurl; never written in WWHD or tww (tww the same read) */
     /* 0x05 */ u8 _05[3];
-    /* 0x08 */ be<f32> m0C;
-    /* 0x0C */ be<f32> m10;
+    /* 0x08 */ be<f32> mFixedFurl;  /* was m0C: sail_move 02460678: the mFurl value used while mFixFurl is set; never written in WWHD or tww (tww mSailPacket.m1C44 = it) */
+    /* 0x0C */ be<f32> mNrmCorrectDeg;  /* was m10: daSail_packet_c::setCorrectNrmAngle 0245FFC8: the normal correction in degrees, it * (1 - 0.5 * its second argument); mNrmCorrectAngle eases to -+ that many degrees while the wind comes from within 1.25 times it of the front or back; __sinit_d_a_sail_cpp 024628E8 0 (tww the same) */
     /* 0x10 */ be<u32> __vtbl;
 };
 WWHD_SIZE(daSail_HIO_c, 0x14);
@@ -118,7 +118,7 @@ struct daSail_packet_c {
     /* 0x1EF8 */ cXyz mNrm[2][0x54];
     /* 0x26D8 */ cXyz mBackNrm[2][0x54];
     /* 0x2EB8 */ be<s16> mNrmAngle;  /* was m1C34: daSail_packet_c::setCorrectNrmAngle 0245FFC8: 300 * sin(mNrmWobblePhase) + mNrmCorrectAngle; daSail_packet_c::setNrmMtx 024601F0: the Y rotation of the normal matrix; daSail_packet_ct 024616AC: 0 */
-    /* 0x2EBA */ be<s16> mNrmCorrectAngle;  /* was m1C36: daSail_packet_c::setCorrectNrmAngle 0245FFC8: eased to +-l_HIO m10 degrees when the wind comes from near the front or back, else to 0; added to mNrmAngle; daSail_packet_ct 024616AC: 0 */
+    /* 0x2EBA */ be<s16> mNrmCorrectAngle;  /* was m1C36: daSail_packet_c::setCorrectNrmAngle 0245FFC8: eased to +-l_HIO mNrmCorrectDeg degrees when the wind comes from near the front or back, else to 0; added to mNrmAngle; daSail_packet_ct 024616AC: 0 */
     /* 0x2EBC */ be<s16> mNrmWobblePhase;  /* was m1C38: daSail_packet_c::setCorrectNrmAngle 0245FFC8: + 900 + cM_rndF(200) per call; sine phase of mNrmAngle; daSail_packet_ct 024616AC: 0 */
     /* 0x2EBE */ be<u8> mCurArr;  /* was m1C3A: daSail_packet_c::update 0245F638, setBackNrm 024605DC, sail_move 02460678: index of the mPos / mNrm / mBackNrm vertex array set in use (getPos / getNrm / getBackNrm); daSail_packet_ct 024616AC: 0 */
     /* 0x2EBF */ be<u8> m1C3B;
@@ -149,9 +149,9 @@ struct sail_class : fopAc_ac_c {
     /* 0x3BC */ daSail_packet_c mSailPacket;
     /* 0x327C */ gptr<J3DModel> mStickModel; /* GameCube: packet m1C3C */
     /* 0x3280 */ be<s32> mWavePhase;  /* was m1C40: sail_move 02460678: + 4000 * (1 - 0.95 * mFurl) * the wind's z share each frame; subtracted from / added to the per-vertex phase of the flutter sine / cosine (tww sail_move: mSailPacket.mWavePhase +=) */
-    /* 0x3284 */ be<f32> mFurl;  /* was m1C44: sail_move 02460678: eased to 0.6 (l_HIO m06 0) or to 0 (m06 1) at mFurlSpeed, kept in 0..1; a demo actor's animation frame sets it (0.6 - 0.006 * frame); it shortens the sail rows (the 'furl bulge' comment: 700 / 150) and lowers the flutter */
+    /* 0x3284 */ be<f32> mFurl;  /* was m1C44: sail_move 02460678: eased to 0.6 (l_HIO mUnfurl 0) or to 0 (mUnfurl 1) at mFurlSpeed, kept in 0..1; a demo actor's animation frame sets it (0.6 - 0.006 * frame); it shortens the sail rows (the 'furl bulge' comment: 700 / 150) and lowers the flutter */
     /* 0x3288 */ be<f32> mFurlSpeed;  /* was m1C48: sail_move 02460678: step of cLib_addCalc on mFurl: 0.015 then -0.001 per frame toward 0.6, +0.0075 per frame toward 0, 0 when settled */
-    /* 0x328C */ be<f32> m1C4C;
+    /* 0x328C */ be<f32> mFurlFactor;  /* was m1C4C: sail_move 02460678: 15 * (mFurl - 0.6) each frame; damps the wind z share and the light factor by 1 - 0.5 * mFurl * it (tww the same) */
     /* 0x3290 */ be<s16> mWaveColStep;  /* was m1C50: sail_move 02460678: 7500 * (1 + 1.5 * the wind's x share); flutter phase step per sail column (times j - 3) */
     /* 0x3292 */ be<s16> mWaveRowStep;  /* was m1C52: sail_move 02460678: 7200 * (0.05 + 0.95 * the wind's z share); flutter phase step per sail row (times i - 6) */
 };

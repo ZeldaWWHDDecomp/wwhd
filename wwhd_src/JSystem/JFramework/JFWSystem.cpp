@@ -17,14 +17,14 @@ static void JFWSystemBase__dt(void* object,u32 flags) {
 static void JFWSystemBase_reserved() {}
 /* 028012C0 */
 void JFWSystem::firstInit() {
-    if (sRootHeapInitialized != 0) JFWSystemAssert("JFWSystem.cpp",86,"rootHeap == NULL");
+    if (sRootHeapInitialized != 0) JFWSystemAssert("JFWSystem.cpp",86,"rootHeap == (0)");
     u32 size = sysHeapSize;
     // HD: root heap setup belongs to the platform manager; retain its initialized flag.
     sRootHeapInitialized = 1;
     systemHeap = JFWCreateSystemHeap(size,0,0);
     JFWHeap_l* heap = systemHeap;
     if (heap == NULL) {
-        JFWSystemAssert("JFWSystem.cpp",92,"systemHeap != NULL");
+        JFWSystemAssert("JFWSystem.cpp",92,"systemHeap != (0)");
         heap = systemHeap;
     }
     heap->mName.v = gabi::guest_str("SystemHeap");
@@ -57,9 +57,9 @@ void JFWSystem::init() {
  ext 027EC20C void* JFWBecomeSystemHeap(void*)
  ext 02756170 u32 JFWBecomeCurrentHeap(void*,u32)
  ext 027ECC0C void* JFWCreateMainThread(void*,u32)
- str 1016F258 "rootHeap == NULL"
+ str 1016F258 "rootHeap == (0)"
  str 1016F268 "JFWSystem.cpp" in 028012C0
- str 1016F278 "systemHeap != NULL"
+ str 1016F278 "systemHeap != (0)"
  str 1016F28C "SystemHeap"
  str 1016F298 "JFWSystem.cpp" in 0280136C
  str 1016F2A8 "sInitCalled == false"

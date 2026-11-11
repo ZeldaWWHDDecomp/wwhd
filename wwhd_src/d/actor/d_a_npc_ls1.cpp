@@ -489,7 +489,7 @@ static inline f32 clamp_m1_1(f32 v) {
 void daNpc_Ls1_c::eye_ctrl() {
     f32 fVar1, fVar2;
     if (mbEyeCtrlSet) {
-        f32 div = (f32)(s32)l_HIO.mPrm.m30;
+        f32 div = (f32)(s32)l_HIO.mPrm.mEyeAngleDiv;
         fVar1 = ((f32)(s32)mEyeAngleX / div) * 0.1f;
         fVar2 = ((f32)(s32)mEyeAngleY / div) * 0.1f;
         fVar1 = clamp_m1_1(fVar1);
@@ -512,7 +512,7 @@ void daNpc_Ls1_c::eye_ctrl() {
 /* 0227F514 */
 void daNpc_Ls1_c::play_btk_anm() {
     u8 frame_max = (u8)J3DAnm_getFrameMax(reinterpret_cast<Ls1BtkWork*>(&mBtkAnm)->mpAnm.get()); /* mBtkAnm.getBtkAnm() */
-    if (m838) {
+    if (mEyeFollow) {
         eye_ctrl();
     } else {
         u8 frame = (u8)(mBtkFrame + 1);
@@ -527,7 +527,7 @@ void daNpc_Ls1_c::play_btk_anm() {
 /* 0227F5AC */
 void daNpc_Ls1_c::play_animation() {
     u32 snd_id = 0;
-    if (mBtkNum == 0 && m838 != 0) {
+    if (mBtkNum == 0 && mEyeFollow != 0) {
         setEyeCtrl();
     } else {
         clrEyeCtrl();
@@ -786,7 +786,7 @@ void daNpc_Ls1_c::cut_init_LOK_PLYER(int param_1) {
     be<s32>* prm_p = (be<s32>*)dComIfGp_evmng_getMyIntegerP(param_1, "prm_0" /* "prm_0" */);
     mLookMode = 1;
     m_jnt.mbBackBoneLock = 0; /* offBackBoneLock() */
-    m840 = 0;
+    mLookHeadOnly = 0;
     m_jnt.mbHeadLock = 0;     /* offHeadLock() */
     if (prm_p) {
         s32 prm = *prm_p;
@@ -794,7 +794,7 @@ void daNpc_Ls1_c::cut_init_LOK_PLYER(int param_1) {
             m_jnt.mbTrn = 1; /* setTrn() */
         } else {
             if (prm & 1) {
-                m840 = 1;
+                mLookHeadOnly = 1;
             }
             if (prm & (1 << 1)) {
                 m_jnt.mbBackBoneLock = 1;
@@ -886,11 +886,11 @@ void daNpc_Ls1_c::event_proc(int i_staffIdx) {
             }
             dComIfGs_onEventBit(1);
             setStt(3);
-            m840 = 0;
+            mLookHeadOnly = 0;
             eventInfo.setEventId(mEventIDTbl[3]);
             mOrderEvent = 1;
             mEventIndex = 3;
-            m83B = false;
+            mbSetShapeAngle = false;
             m_jnt.mbBackBoneLock = 0; /* offBackBoneLock() */
             mRunEventProc = false;
             break;
@@ -1395,16 +1395,16 @@ u8 daNpc_Ls1_c::telescope_proc() {
         att->x = bm1_npc_p->attention_info.position.x;
         att->y = bm1_npc_p->attention_info.position.y;
         att->z = bm1_npc_p->attention_info.position.z;
-        if (chkTelescope_sph(att, 0.0f, l_HIO.mPrm.m2C)) {
-            // HD: choose the message from the camera zoom scale and m24.
-            mTelescopeMsgNo = ls1CameraZoom() < l_HIO.mPrm.m24 ? 0xBCA : 0xBCB;
+        if (chkTelescope_sph(att, 0.0f, l_HIO.mPrm.mScopeScreenRadius)) {
+            // HD: choose the message from the camera zoom scale and mZoomMsgScale.
+            mTelescopeMsgNo = ls1CameraZoom() < l_HIO.mPrm.mZoomMsgScale ? 0xBCA : 0xBCB;
         }
         m833v = mTelescopeStep;
         break;
     }
     case 2:
         mTelescopeMsgNo = 0xBCA;
-        if (!(ls1CameraZoom() < l_HIO.mPrm.m28)) {
+        if (!(ls1CameraZoom() < l_HIO.mPrm.mZoomDoneScale)) {
             if (scope_mesg_status == 0xA) {
                 fopMsgM_forceSendOn(msgMgr());
             }
@@ -1485,7 +1485,7 @@ BOOL daNpc_Ls1_c::wait_1() {
         pos->z = z;
         pos->y = y;
         mOrderEvent = 0;
-        if (chk_areaIN(l_HIO.mPrm.m29, 100.0f, 0x7FFF, pos)) {
+        if (chk_areaIN(l_HIO.mPrm.mOmedetoDist, 100.0f, 0x7FFF, pos)) {
             mOrderEvent = 4;
         }
     }
@@ -1514,7 +1514,7 @@ BOOL daNpc_Ls1_c::wait_2() {
             setStt(5);
             setAnm_NUM(ANMNUM_WAIT06_e, TRUE);
             m_jnt.mbBackBoneLock = 0; /* offBackBoneLock() */
-            m840 = 0;
+            mLookHeadOnly = 0;
             mLookMode = 1;
             m_jnt.mbTrn = 1;          /* setTrn() */
         }
@@ -1528,7 +1528,7 @@ BOOL daNpc_Ls1_c::wait_2() {
         pos->y = y;
         pos->z = current.pos.z;
         mOrderEvent = 0;
-        if (chk_areaIN(l_HIO.mPrm.m1C, 100.0f, 0x7FFF, pos) &&
+        if (chk_areaIN(l_HIO.mPrm.mTelescopeDist, 100.0f, 0x7FFF, pos) &&
             (dComIfGp_getPlayerStatus0() & 0x00200000) /* daPyStts0_TELESCOPE_LOOK_e */) {
             telescope_proc_result = telescope_proc();
         }
@@ -1537,7 +1537,7 @@ BOOL daNpc_Ls1_c::wait_2() {
         }
     }
     m_jnt.mbBackBoneLock = 1; /* onBackBoneLock() */
-    m840 = 1;
+    mLookHeadOnly = 1;
     if (mTelescopeStep != 0) {
         gabi::Local<cXyz> base_pos;
         base_pos->x = 20.0f;
@@ -1557,7 +1557,7 @@ BOOL daNpc_Ls1_c::wait_2() {
         mDoMtx_stack_c::YrotM(current.angle.y);
         PSMTXMultVec(mDoMtx_stack_c::get(), base_pos, &mPlayerEyePos);
         mLookMode = 2;
-        m838 = true;
+        mEyeFollow = true;
         return TRUE;
     }
     if (mbAttention && mBckNum == BCKNUM_WAIT01_e) {
@@ -1582,7 +1582,7 @@ BOOL daNpc_Ls1_c::wait_3() {
         if (chk_talk()) {
             setStt(5);
             m_jnt.mbTrn = 1; /* setTrn() */
-            m840 = 0;
+            mLookHeadOnly = 0;
             mLookMode = 1;
         }
         return true;
@@ -1590,9 +1590,9 @@ BOOL daNpc_Ls1_c::wait_3() {
     if (mOrderEvent != 1) {
         mOrderEvent = 2;
     }
-    m840 = 1;
+    mLookHeadOnly = 1;
     mLookMode = 2;
-    m838 = true;
+    mEyeFollow = true;
     return true;
 }
 
@@ -1602,13 +1602,13 @@ BOOL daNpc_Ls1_c::wait_4() {
         if (chk_talk()) {
             setStt(5);
             mLookMode = 1;
-            m840 = 0;
+            mLookHeadOnly = 0;
             m_jnt.mbTrn = 1; /* setTrn() */
         }
         return true;
     }
     mOrderEvent = 2;
-    m840 = 1;
+    mLookHeadOnly = 1;
     if (mbAttention) {
         mTimer4 = (s16)ls1Guest_cLib_getRndValue(15, 30);
     }
@@ -1717,7 +1717,7 @@ void daNpc_Ls1_c::checkOrder() {
                 break;
             case 1:
                 cLib_targetAngleY(&mPlayerEvnPos[0], &current.pos);
-                m83B = true;
+                mbSetShapeAngle = true;
                 break;
             case 2:
                 mTelescopeScale = 0.0f;
@@ -1748,7 +1748,7 @@ void daNpc_Ls1_c::lookBack() {
     s16 target_y = current.angle.y;
     mActorAngleY = target_y;
     f32 srcY = eyePos.y;
-    u8 temp_m840 = m840;
+    u8 temp_m840 = mLookHeadOnly;
     f32 srcZ = current.pos.z;
     f32 srcX = current.pos.x;
     mJointBackboneY = m_jnt.mAngles[1][1];
@@ -1761,7 +1761,7 @@ void daNpc_Ls1_c::lookBack() {
         mPlayerEyePos.copy(*eye);
         player_eye_pos->copy(*eye);
         player_eye_pos_p = player_eye_pos;
-        m838 = true;
+        mEyeFollow = true;
         break;
     }
     case 2:
@@ -1770,7 +1770,7 @@ void daNpc_Ls1_c::lookBack() {
         break;
     case 3:
         target_y = m82E;
-        m838 = false;
+        mEyeFollow = false;
         break;
     case 4: {
         gabi::Local<be<s32>> param;
@@ -1782,19 +1782,19 @@ void daNpc_Ls1_c::lookBack() {
             player_eye_pos->y = mPlayerEyePos.y;
             player_eye_pos->z = mPlayerEyePos.z;
             player_eye_pos_p = player_eye_pos;
-            m838 = true;
+            mEyeFollow = true;
         }
         break;
     }
     default:
-        m838 = false;
+        mEyeFollow = false;
         break;
     }
     gabi::Local<cXyz> current_pos; /* passed by value: a copy */
     current_pos->x = srcX;
     current_pos->y = srcY;
     current_pos->z = srcZ;
-    ls1Guest_dNpc_JntCtrl_lookAtTarget_2(&m_jnt, &current.angle.y, player_eye_pos_p, current_pos, target_y, l_HIO.mPrm.m12, temp_m840);
+    ls1Guest_dNpc_JntCtrl_lookAtTarget_2(&m_jnt, &current.angle.y, player_eye_pos_p, current_pos, target_y, l_HIO.mPrm.mMaxHeadTurnVel, temp_m840);
     s16 halfX = (s16)(m_jnt.mAngles[0][0] / 2);
     mHalfHeadAngleX = halfX;
     s16 halfY = (s16)(m_jnt.mAngles[0][1] / 2);
@@ -1825,7 +1825,7 @@ u8 daNpc_Ls1_c::demo() {
         m_jnt.mAngles[0][1] = 0; /* setHead_y(0) */
         m_jnt.mAngles[1][0] = 0; /* setBackBone_x(0) */
         mInDemo = true;
-        m83B = false;
+        mbSetShapeAngle = false;
         m_jnt.mAngles[0][0] = 0; /* setHead_x(0) */
         id = demoActorID;
         m_jnt.mAngles[1][1] = 0; /* setBackBone_y(0) */
@@ -1927,7 +1927,7 @@ BOOL daNpc_Ls1_c::_execute() {
     mAngle.x = current.angle.x;
     mAngle.y = current.angle.y;
     mAngle.z = current.angle.z;
-    if (!m83B) {
+    if (!mbSetShapeAngle) {
         shape_angle.x = current.angle.x;
         shape_angle.y = current.angle.y;
         shape_angle.z = current.angle.z;
@@ -1974,7 +1974,7 @@ BOOL daNpc_Ls1_c::_draw() {
     // HD: no shadowDraw()
     dSnap_RegistFig(0x49 /* DSNAP_TYPE_NPC_LS1 */, this, 1.0f, 1.0f, 1.0f);
     /* debug leftovers: function-local static colors initialised on first use */
-    if (l_HIO.mPrm.m18 /* l_HIO.mPrm.m18 */) {
+    if (l_HIO.mPrm.mDebugDraw) {
         local_static_init(&l_debugColorGuard0, &l_debugColor0, &l_debugColorSource0);
         local_static_init(&l_debugColorGuard1, &l_debugColor1, &l_debugColorSource1);
         local_static_init(&l_debugColorGuard2, &l_debugColor2, &l_debugColorSource2);

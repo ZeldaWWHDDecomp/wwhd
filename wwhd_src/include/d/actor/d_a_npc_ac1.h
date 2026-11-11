@@ -161,8 +161,8 @@ struct daNpc_Ac1_c : fopNpc_npc_c {
     /* 0x9E5 */ be<s8> mStt;  /* was m875: setStt 021E4A38 stores the new state; setAnm 021E44DC plays a_anm_prm_tbl[it]; wait_action1 021E4C10 switches on it; same code as daNpc_Km1_c / daNpc_Hi1_c::mStt */
     /* 0x9E6 */ be<s8> mPrevStt;  /* was m876: setStt 021E4A38 keeps the previous mStt; talk_1 021E4B38 returns to it (setStt(it)); same code as daNpc_Km1_c / daNpc_Hi1_c::mPrevStt */
     /* 0x9E7 */ be<s8> mLookMode;  /* was m877: lookBack 021E3CC0 switches on it; setStt 021E4A38 / wait_1 021E4A74 set 1 / 3; same code as daNpc_Km1_c / daNpc_Hi1_c::mLookMode */
-    /* 0x9E8 */ be<s8> mType;
-    /* 0x9E9 */ be<s8> m879;      /* GameCube m879 */
+    /* 0x9E8 */ be<s8> m878;  /* was mType (misnamed): only charDecide 021E3060 writes it (0), never read; _create 021E3794 uses the fixed a_heap_size (tww m878) */
+    /* 0x9E9 */ be<s8> mType;  /* was m879: charDecide 021E3060 sets 0; createInit 021E35E4 stops (returns false) unless it is 0; getBitMask 021E47EC (mask 0x10) and getMsg 021E4938 (getMsg_AC1_0) pick the type-0 code only while it is 0; after daNpc_Jb1_c / daNpc_Hi1_c mType (the same charDecide / createInit / getMsg role) */
     /* 0x9EA */ be<s8> mActState; /* set_action: 9 in the old action, 0 in the new */
     /* 0x9EB */ be<s8> mMessageAnimationStarted;
 };
@@ -199,7 +199,7 @@ struct daNpc_Ac1_HIO_c {
     /* 0x00 */ be<u32> __vtbl;
     /* 0x04 */ be<s8> mNo;
     /* 0x05 */ u8 _05[3];
-    /* 0x08 */ be<s32> field_0x8;
+    /* 0x08 */ be<s32> mRefCount;  /* was field_0x8: daNpc_Ac1_HIO_c_ct 021E4CCC -1; never read in WWHD or tww (tww has stubs only); after our decomp's daNpc_Pm1_HIO_c / daNpc_Ba1_HIO_c mRefCount: the same HIO layout (mNo, then the s32 instance counter) */
     /* 0x0C */ hio_prm_c mPrmTbl;
 };
 WWHD_SIZE(daNpc_Ac1_HIO_c, 0x3C);

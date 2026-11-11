@@ -331,7 +331,7 @@ static inline void core_move(bmd_class* i_this) {
 }
 
 static inline void bmd_kankyo(bmd_class* i_this) {
-    dKy_custom_timeset((f32)l_HIO().m0C);
+    dKy_custom_timeset((f32)l_HIO().mCustomTime);
     switch (i_this->mKankyoMode) {
     case 0:
         dKy_custom_colset(0, 6, (f32)i_this->mColBlend); /* dKy_custom_colset */

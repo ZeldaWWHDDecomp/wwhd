@@ -385,8 +385,8 @@ static cPhs_State daKN_Create(fopAc_ac_c* a_this) {
     }
     cPhs_State PVar1 = dComIfG_resLoad(&i_this->mPhase, "Kn");
     if (PVar1 == cPhs_COMPLEATE_e) {
-        i_this->m2B4 = fopAcM_GetParam(a_this);
-        i_this->m2B5 = fopAcM_GetParam(a_this) >> 8;
+        i_this->mType = fopAcM_GetParam(a_this);
+        i_this->mSpawnCountPrm = fopAcM_GetParam(a_this) >> 8;
         i_this->mHomePos.copy(a_this->current.pos);
         if (!fopAcM_entrySolidHeap(a_this, useHeapInit, 0x2860)) {
             return cPhs_ERROR_e;

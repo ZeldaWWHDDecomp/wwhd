@@ -111,7 +111,7 @@ bool Act_c::_execute() {
             daObjHomensmoke_setRTMatrix(&mMtx, &r->mGlobalRotation, &r->mGlobalTranslation); /* setGlobalRTMatrix */
         }
         mbInitialized = TRUE;
-    } else if (mSmokeCb.m10 & 1) { /* mSmokeCb.isEnd() */
+    } else if (mSmokeCb.mFlag & 1) { /* mSmokeCb.isEnd() */
         fopAcM_delete(this);
     }
     return true;

@@ -23,7 +23,13 @@ struct MgBoardStickControlHD {
 };
 struct MgBoardShipHD {
   be<u8> mPositions[4][2];
-  be<u8> mLength, mHitCount, mState, mX, mY, mDamage, mVertical;
+  be<u8> mLength;
+  be<u8> mLife;  /* was mHitCount (misnamed): the view of dSeaFightGame_ship_data::mLife (0x9): put_ship 025BB198 sets the ship size, attack 025BB470 subtracts 1 per hit and sinks the ship at 0; it counts the remaining cells, not hits */
+  be<u8> mState;
+  be<u8> mX;
+  be<u8> mY;
+  be<u8> mLengthX;  /* was mDamage (misnamed): the view of dSeaFightGame_ship_data::mLengthX (0xD): put_ship 025BB198 stores the ship size when it lies along x, else 0; no damage role */
+  be<u8> mLengthY;  /* was mVertical (misnamed): the view of dSeaFightGame_ship_data::mLengthY (0xE): put_ship 025BB198 stores the ship size when it lies along y, else 0; the board draw turns the model by -0x8000 while it is non-zero (one name per field) */
 };
 struct MgBoardPadHD {
   u8 mReserved[0x18];
@@ -147,7 +153,7 @@ WWHD_SIZE(MgBoardJudgeTypeHD, 2);
 WWHD_SIZE(MgBoardPadHD, 0x128);
 WWHD_OFFSET(MgBoardShipHD, mLength, 8);
 WWHD_OFFSET(MgBoardShipHD, mX, 11);
-WWHD_OFFSET(MgBoardShipHD, mVertical, 14);
+WWHD_OFFSET(MgBoardShipHD, mLengthY, 14);
 WWHD_SIZE(MgBoardHudCommandHD, 0x30);
 WWHD_SIZE(MgBoardHudHD, 0x48);
 WWHD_SIZE(MgBoardHudManagerHD, 0x1FC);

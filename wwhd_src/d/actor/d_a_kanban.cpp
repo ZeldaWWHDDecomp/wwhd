@@ -34,7 +34,7 @@ struct daKanban_HIO_c {
     /* 0x04 */ be<f32> m04;
     /* 0x08 */ be<s16> m08;
     /* 0x0A */ be<s16> m0A;
-    /* 0x0C */ be<f32> m0C;
+    /* 0x0C */ be<f32> mModelScale;  /* was m0C: daKanban_Draw 0218A548 sets the signboard's scale (x, y, z) to it before drawing the parts; daKanban_HIO_c_ct 0218CE48 0.8 (tww daKanban_Draw the same) */
 };
 WWHD_SIZE(daKanban_HIO_c, 0x10);
 static daKanban_HIO_c l_HIO;
@@ -115,7 +115,7 @@ static inline s32 ppc_sraw(s32 v, s32 n) { n &= 63; return n >= 32 ? (v >> 31) :
 static BOOL daKanban_Draw(kanban_class* i_this) {
     settingTevStruct(dKy_getEnvlight(), TEV_TYPE_BG0, &i_this->actor.current.pos, &i_this->actor.tevStr);
     /* HD: no shadow (sp0C and m570 are gone) */
-    f32 s = l_HIO.m0C;
+    f32 s = l_HIO.mModelScale;
     i_this->actor.scale.set(s, s, s);
 
     u32 uVar5 = i_this->mPartsMask;
@@ -539,7 +539,7 @@ static daKanban_HIO_c* daKanban_HIO_c_ct(daKanban_HIO_c* h) {
     h->m04 = 0.0f;
     h->m08 = 0;
     h->m0A = 0;
-    h->m0C = 0.8f;
+    h->mModelScale = 0.8f;
     return h;
 }
 

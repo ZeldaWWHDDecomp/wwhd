@@ -41,9 +41,9 @@ field 0209BD1C 54005B2C u32 0x55000000 0x55000000   # player
 field 0209BD1C 550003AC u8 0,5,0x11            # player cut type
 fret 028F4384 900 1300                        # std::sqrtf (waki_set distances around the 1000..1200 window)
 fret 020198D8 0 1                              # cM_rndF
-field 0209BD1C 10462368 u8 0,0,1               # l_bkHIO.mNo..: m006 at +2 below
-field 0209BD1C 1046236A u8 0 1                 # l_bkHIO.m006
-field 0209BD1C 1046236B u8 0 1                 # l_bkHIO.m007
+field 0209BD1C 10462368 u8 0,0,1               # l_bkHIO.mNo..: mDebugFrameStep at +2 below
+field 0209BD1C 1046236A u8 0 1                 # l_bkHIO.mDebugFrameStep
+field 0209BD1C 1046236B u8 0 1                 # l_bkHIO.mResetHealthOnHit
 ret 020078BC 0 1
 ret 02007738 0 1
 field 0209BD1C r3+0x3D3 u8 0xFF,0xFF,0xFF,0             # mSwitchNo

@@ -314,13 +314,13 @@ BOOL daHookshot_c::execute() {
         shape_angle.y = link->shape_angle.y;
     }
 
-    if (fopAcM_GetParam(this) != Mode_Wait && !m2A0) {
+    if (fopAcM_GetParam(this) != Mode_Wait && !mKeepMtx) {
         mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
         mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), shape_angle.x, shape_angle.y, 0);
         mDoMtx_YrotM(mDoMtx_stack_c::get(), -0x4000);
         PSMTXCopy(mDoMtx_stack_c::get(), &mMtx);
     } else {
-        m2A0 = false;
+        mKeepMtx = false;
     }
 
     u8 roomNo = hookshotStayRoom();
@@ -330,7 +330,7 @@ BOOL daHookshot_c::execute() {
 
     if (fopAcM_GetParam(this) != Mode_Wait) {
         /* HD: setItemWaterEffect(actor, u8, int) is not a member of the player */
-        m2A1 = hs_setItemWaterEffect(this, (u8)m2A1, 0);
+        mWaterEffect = hs_setItemWaterEffect(this, (u8)mWaterEffect, 0);
         if (fopAcM_GetParam(this) == Mode_Shot) {
             speedF = std_sqrtf(PSVECSquareDistance(&current.pos, &old.pos));
             return TRUE;
@@ -480,7 +480,7 @@ BOOL daHookshot_c::procWait() {
         HookshotLocal<cXyz> r1_3C;
         cXyz_mi(&current.pos, r1_3C, mv);
         dBgS_LinChk_Set(mLinChk, r1_3C, &current.pos, this);
-        m2A0 = true;
+        mKeepMtx = true;
         if (cBgS_LineCross(dComIfG_Bgsp(), mLinChk)) {
             if (dBgS_ChkPolyHSStick(dComIfG_Bgsp(), mLinChk + 0x14)) {
                 fopAcM_SetParam(this, Mode_Pull);
@@ -514,7 +514,7 @@ BOOL daHookshot_c::procWait() {
             cps_CalcAtVec(c);
             dComIfG_Ccsp_Set(gabi::at<void>(c));
             dComIfG_Ccsp_SetMass(c, 1);
-            m2A3 = false;
+            mRebound = false;
             setProc(PROC_SHOT);
         }
     } else {
@@ -570,7 +570,7 @@ BOOL daHookshot_c::procShot() {
                 HookshotLocal<cXyz> d;
                 cXyz_mi(&current.pos, d, &hit_ac->current.pos);
                 mCarryOffset.copy(*d);
-                m2A4 = hit_ac->shape_angle.y;
+                mCarryAngleY = hit_ac->shape_angle.y;
                 mHookAngle.x = shape_angle.x;
                 mHookAngle.z = 0;
                 mHookAngle.y = shape_angle.y;
@@ -596,8 +596,8 @@ BOOL daHookshot_c::procShot() {
         return TRUE;
     }
 
-    /* m2A3 || current.pos.abs(root) >= 1500: m2A3 is read again after the distance */
-    bool rebound = m2A3 != 0;
+    /* mRebound || current.pos.abs(root) >= 1500: mRebound is read again after the distance */
+    bool rebound = mRebound != 0;
     bool stop = rebound;
     if (!rebound) {
         fopAc_ac_c* link = dComIfGp_getLinkPlayer();
@@ -608,18 +608,18 @@ BOOL daHookshot_c::procShot() {
         root->z = r->z;
         if (!(std_sqrtf(PSVECSquareDistance(&current.pos, root)) < 1500.0f)) {
             stop = true;
-            rebound = m2A3 != 0;
+            rebound = mRebound != 0;
         }
     }
     if (stop) {
         if (rebound) {
-            u16 id = m2A6;
+            u16 id = mReboundEffectId;
             dPa_control_c* pa = dComIfGp_getParticle();
             if (id == 0x825F /* dPa_name::ID_IT_SN_LK_FKSHOT_SUNA00 */)
                 dPa_control_set(pa, 1, id, &current.pos, nullptr, nullptr, 0xFF, nullptr, -1,
                                 nullptr, nullptr, nullptr);
             else
-                dPa_control_set(pa, 1, id, &current.pos, &m2BA, nullptr, 0xFF, nullptr, -1, nullptr,
+                dPa_control_set(pa, 1, id, &current.pos, &mReboundEffectAngle, nullptr, 0xFF, nullptr, -1, nullptr,
                                 nullptr, nullptr);
             u32 snd = mMtrlSndId;
             mDoAud_seStart(JA_SE_LK_HS_REBOUND, &current.pos, snd,
@@ -671,7 +671,7 @@ BOOL daHookshot_c::procShot() {
             dBgS* bgs = dComIfG_Bgsp();
             void* plane = cBgS_GetTriPla(bgs, hookshotLine(mLinChk)->mBgIndex,
                                          hookshotLine(mLinChk)->mPolyIndex);
-            cM3d_CalcVecZAngle(plane, &m2BA);
+            cM3d_CalcVecZAngle(plane, &mReboundEffectAngle);
             bool sand = false;
             /* HD: (y < 950 && (ground || sand attribute)) */
             if (hookshotIsStartStage("kazeB") && sp8C->y < 950.0f) {
@@ -683,9 +683,9 @@ BOOL daHookshot_c::procShot() {
                         0xB /* dBgS_Attr_SAND_e */)
                     sand = true;
             }
-            m2A6 = sand ? 0x825F /* ID_IT_SN_LK_FKSHOT_SUNA00 */ : 0xC /* ID_AK_JN_NG */;
+            mReboundEffectId = sand ? 0x825F /* ID_IT_SN_LK_FKSHOT_SUNA00 */ : 0xC /* ID_AK_JN_NG */;
             mMtrlSndId = dBgS_GetMtrlSndId(dComIfG_Bgsp(), (cBgS_PolyInfo*)(mLinChk + 0x14));
-            m2A3 = true;
+            mRebound = true;
         }
     }
     cps_SetStartEnd(c, &current.pos, sp8C, 5.0f);
@@ -706,12 +706,12 @@ BOOL daHookshot_c::procPlayerPull() {
             mCarryActorID = 0xFFFFFFFFu;
             return TRUE;
         }
-        if (carry_actor->shape_angle.y != m2A4) {
-            mDoMtx_YrotS(mDoMtx_stack_c::get(), (s16)(carry_actor->shape_angle.y - m2A4));
+        if (carry_actor->shape_angle.y != mCarryAngleY) {
+            mDoMtx_YrotS(mDoMtx_stack_c::get(), (s16)(carry_actor->shape_angle.y - mCarryAngleY));
             HookshotLocal<cXyz> sp4C;
             PSMTXMultVec(mDoMtx_stack_c::get(), &mCarryOffset, sp4C);
             mCarryOffset.copy(*sp4C);
-            m2A4 = carry_actor->shape_angle.y;
+            mCarryAngleY = carry_actor->shape_angle.y;
         }
         HookshotLocal<cXyz> p;
         cXyz_pl(&carry_actor->current.pos, p, &mCarryOffset);

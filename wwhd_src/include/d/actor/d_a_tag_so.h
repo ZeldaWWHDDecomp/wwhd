@@ -3,7 +3,7 @@
 /* HD: GHS lays out the vtable pointer after the members (+0xC); size 0x10 */
 struct daTag_So_HIO_c {
     /* 0x00 */ be<s8> mNo;
-    /* 0x01 */ be<u8> m05;
+    /* 0x01 */ be<u8> mDebugDraw;  /* was m05: _draw 024B2C3C calls debugDraw while it is set (tww the same) */
     /* 0x02 */ u8 m06[0xC - 0x2];
     /* 0x0C */ be<u32> __vtbl;
 };

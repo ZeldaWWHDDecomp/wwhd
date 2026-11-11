@@ -7,8 +7,8 @@ enum { ID_AK_SN_KOKIRIHOUSEHAHEN00 = 0x82A2, ID_AK_ST_KOKIRIHOUSESMOKE00 = 0xA2A
 }
 /* Unit-local API over the existing callback layout; +0x10 end flag, +0x11 rate-off. */
 struct dPa_smokeEcallBack_kanat : dPa_smokeEcallBack {
-    bool isEnd() { return (m10 & 1) != 0; }
-    void setRateOff(u8 v) { m11 = v; }
+    bool isEnd() { return (mFlag & 1) != 0; }
+    void setRateOff(u8 v) { mRateOff = v; }
 };
 inline u8 fpcM_CreateResult(base_process_class* p) { return (u8)p->mCreateResult; }
 namespace daObjKanat {

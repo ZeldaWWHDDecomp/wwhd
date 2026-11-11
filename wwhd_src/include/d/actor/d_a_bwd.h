@@ -17,8 +17,8 @@ struct dPa_smokeEcallBack_bd {
 };
 
 struct sita_s {
-    /* 0x00 */ gptr<J3DModel> m00;
-    /* 0x04 */ cXyz m04;
+    /* 0x00 */ gptr<J3DModel> mpModel;  /* was m00: useHeapInit 020FD6F8 creates the segment's model (BERO, the tip BERO_SAKI) into it; daBwd_Draw 020F9C1C draws it and sita_move (in bwd_execute 020FA614) sets its base matrix (tww the same) */
+    /* 0x04 */ cXyz mPos;  /* was m04: the tongue segment's position: daBwd_Create 020FE0B4 sets it, control1 / control2 (in bwd_execute 020FA614) chain each segment to its neighbour, sita_move places the model, the eye position and the tongue spheres on it (tww the same) */
     /* 0x10 */ u8 m10[4];
 };
 
@@ -76,9 +76,7 @@ struct bwd_class : fopEn_enemy_c {
     /* 0x1B44 */ u8 _1B44[4];
     /* 0x1B48 */ be<f32> mTurnSpeed;  /* was m18C4: end 020FEA30 sets 1000 (+REG); fly_pos_move 020F9F80: angle step = it * mTurnSpeedRate */
     /* 0x1B4C */ be<f32> mTurnSpeedRate;  /* was m18C8: fly_pos_move 020F9F80 multiplies mTurnSpeed by it and eases it to 1 */
-    /* 0x1B50 */ be<s16> mTimers[2];  /* was m18CC: bwd_execute 020FA614 counts [0] / [1] down each frame (one sweep of five halfwords with mActionTimer and the two padding words, as zeldaret/tww daBwd_Execute mTimers[i] for i < 5; view Timers in d_a_bwd_execute.h); wait / reset / sita_hit / eat_attack / fly / s_fly (in move 020FF80C) and end 020FEA30 load them and act at 0 or at a given count (as bgn_class / bwds_class mTimers) */
-    /* 0x1B54 */ be<s16> mActionTimer;  /* was m18D0: wait / eat_attack / fly / s_fly (in move 020FF80C) set 0xDE / 100 / 0xB4 / 0x12E and act at 0 or at 0x50 */
-    /* 0x1B56 */ u8 _1B56[4];
+    /* 0x1B50 */ be<s16> mTimers[5];  /* was m18CC: bwd_execute 020FA614 counts all five down each frame in one sweep (zeldaret/tww daBwd_Execute m18CC[i] for i < 5; view Timers in d_a_bwd_execute.h); wait / reset / sita_hit / eat_attack / fly / s_fly (in move 020FF80C) and end 020FEA30 load [0] / [1] and act at 0 or at a given count (as bgn_class / bwds_class mTimers); [2] was mActionTimer (m18D0: wait / eat_attack / fly / s_fly set 0xDE / 100 / 0xB4 / 0x12E and act at 0 or at 0x50); [3] / [4] were the padding _1B56 (never loaded) */
     /* 0x1B5A */ be<s16> mTongueNoHitTimer;  /* was m18D6: damage_check (in bwd_execute 020FA614) checks the tongue for hits only while it is 0 and sets 6 after a hit; sita_move 5, fly (in move 020FF80C) 10; bwd_execute 020FA614 counts it down */
     /* 0x1B5C */ be<u8> mBwdgCreated;  /* was m18D8: bwd_execute 020FA614 creates the BWDG (sand surface) actor once and sets 1 */
     /* 0x1B5D */ u8 _1B5D[3];
@@ -94,18 +92,18 @@ struct bwd_class : fopEn_enemy_c {
     /* 0x1E00 */ cXyz mTongueTipPos;  /* was m1B88: control2 (in bwd_execute 020FA614) puts the last tongue segment (mTongueSegments[29]) at it; sita_move (in bwd_execute) eases it toward the hookshot owner / mTonguePulledPos / the mouth and keeps it on the ground; the tongue loses attention while it is below mSandSurfacePos.y; daBwd_Create 020FE0B4 sets y -5000 / -20000 / current.pos.y, end 020FEA30 -20000 */
     /* 0x1E0C */ cXyz mTonguePulledPos;  /* was m1B94: sita_move (in bwd_execute 020FA614) copies mTongueTipPos into it while mTongueHooked is set, then (while mTonguePulledTimer runs) pulls it to within 1200 of the body and eases the tip to it (shaken by mTongueHitShakeTimer) */
     /* 0x1E18 */ be<f32> mTongueSegLength;  /* was m1BA0: sita_move (in bwd_execute 020FA614) eases it to 0.035 * the mouth-to-tip distance (at least 20 while mTongueRetract is set) and ends the hookshot pull above 50; control1 / control2 (in bwd_execute) place each tongue segment this far from the previous one */
-    /* 0x1E1C */ be<f32> m1BA4;
+    /* 0x1E1C */ be<f32> mTongueSegStep;  /* was m1BA4: control1 (in bwd_execute 020FA614): the forward length of the step added to every tongue segment along the body's angle (with the previous segment's offset); never written in WWHD or tww (always 0) */
     /* 0x1E20 */ be<f32> mTongueWaveAmplitude;  /* was m1BA8: sita_move (in bwd_execute 020FA614) sets 10 each frame; control1 (in bwd_execute) swings the free tongue segments by sin / cos * it (mTongueHitShakeTimer * 4.5 instead while that runs) */
     /* 0x1E24 */ be<f32> mTongueTipStepScale;  /* was m1BAC: sita_move (in bwd_execute 020FA614) moves the tip by at most 100 * it per frame, clears it while mTongueHooked is set and eases it back to 1; sita_hit (in move 020FF80C) sets 1 */
     /* 0x1E28 */ be<s8> mTongueHooked;  /* was m1BB0: damage_check (in bwd_execute 020FA614) sets 1 when the hookshot (AtType 0x8000) hits the tongue, with mHitOwnerId and mAction 3; sita_move (in bwd_execute) pulls the tip to the owner while it is set and clears it when the hookshot returns or mTongueSegLength exceeds 50; control1 (in bwd_execute) stops the tongue wave while it is set */
-    /* 0x1E29 */ be<s8> mTonguePulledTimer;  /* was m1BB1: sita_move (in bwd_execute 020FA614) sets l_HIO.m14 while mTongueHooked is set and counts it down after; damage_check (in bwd_execute) makes the tongue hittable by all attacks (TgType 0xFF1DFEFF) and counts mTongueHitCount only while it runs; sita_hit (in move 020FF80C) ends at 0 and clears it after a damage round; control1 lowers the tongue (y -5) while it runs */
+    /* 0x1E29 */ be<s8> mTonguePulledTimer;  /* was m1BB1: sita_move (in bwd_execute 020FA614) sets l_HIO.mTonguePulledTime while mTongueHooked is set and counts it down after; damage_check (in bwd_execute) makes the tongue hittable by all attacks (TgType 0xFF1DFEFF) and counts mTongueHitCount only while it runs; sita_hit (in move 020FF80C) ends at 0 and clears it after a damage round; control1 lowers the tongue (y -5) while it runs */
     /* 0x1E2A */ be<s8> mTongueThrashTimer;  /* was m1BB2: sita_hit (in move 020FF80C) sets 0x32 after a damage round and for the last hit; sita_move (in bwd_execute 020FA614) counts it down and swings the tip around the mouth by 400 * sin */
     /* 0x1E2B */ be<s8> mTongueHitShakeTimer;  /* was m1BB3: damage_check (in bwd_execute 020FA614) sets 20 on a counted tongue hit; sita_move counts it down and shakes the tip by it * 3; control1 (in bwd_execute) shakes the segments by it * 4.5 */
     /* 0x1E2C */ be<s8> mTongueHitCount;  /* was m1BB4: damage_check (in bwd_execute 020FA614) adds 1 per tongue hit; sita_hit (in move 020FF80C) acts below 3, then clears it */
     /* 0x1E2D */ be<s8> mTongueDamageCount;  /* was m1BB5: sita_hit (in move 020FF80C) adds 1 per finished damage round (mTongueHitCount reaching 3); at 2 it switches to the flying form (mAction 10), at 4 (or l_HIO.m06) to the death (mAction 0xC) */
     /* 0x1E2E */ be<s8> mTongueRetract;  /* was m1BB6: bwd_execute 020FA614 clears it every frame; start / sita_hit / eat_attack (in move 020FF80C) and end 020FEA30 set 1, fly / s_fly (in move) and end 2; sita_move (in bwd_execute) pulls the tip into the mouth while it is set and drops attention unless it is 2; daBwd_Draw 020F9C1C draws the tongue only below 2 */
     /* 0x1E2F */ u8 _1E2F;
-    /* 0x1E30 */ be<f32> mPlayerDistXZ;  /* was m1BB8: bwd_execute 020FA614: XZ distance to the player; wait (in move 020FF80C) compares it with 80 and l_HIO.m18 */
+    /* 0x1E30 */ be<f32> mPlayerDistXZ;  /* was m1BB8: bwd_execute 020FA614: XZ distance to the player; wait (in move 020FF80C) compares it with 80 and l_HIO.mEatAttackDistance */
     /* 0x1E34 */ be<u32> mHitOwnerId;  /* was m1BBC: damage_check (in bwd_execute 020FA614): ID of the Stts owner of the hit (else 0xFFFFFFFF); sita_move looks it up */
     /* 0x1E38 */ be<u32> mAttId;  /* was m1BC0: daBwd_Create 020FE0B4: fopAcM_create(fpcNm_ATT_e, 0x65, ...); end 020FEA30 / damage_check look it up */
     /* 0x1E3C */ dCcD_Stts mStts;
@@ -166,6 +164,9 @@ WWHD_OFFSET(bwd_class, mBodyAnmStartNo, 0x580);
 WWHD_OFFSET(bwd_class, mPlatformTevStr, 0x1880);
 WWHD_OFFSET(bwd_class, mSandWaveMode, 0x1A48);
 WWHD_OFFSET(bwd_class, mpBgW2, 0x1B20);
+WWHD_OFFSET(bwd_class, mTimers, 0x1B50);
+static_assert(sizeof(bwd_class::mTimers) == 10);
+WWHD_OFFSET(bwd_class, mTongueNoHitTimer, 0x1B5A);
 WWHD_OFFSET(bwd_class, mSandCrossWait, 0x1B74);
 WWHD_OFFSET(bwd_class, mTongueSegments, 0x1B80);
 WWHD_OFFSET(bwd_class, mTongueTipPos, 0x1E00);
@@ -183,24 +184,24 @@ WWHD_SIZE(bwd_class, 0x3ECC);
 /* l_HIO (0x10462A68): daBwd_HIO_c, HD layout {mNo, m05.., floats.., vtable last}, 0x40 bytes */
 struct daBwd_HIO_c {
     /* 0x00 */ be<s8> mNo;
-    /* 0x01 */ be<u8> m05;
-    /* 0x02 */ be<u8> m06;
-    /* 0x03 */ be<u8> m07;
+    /* 0x01 */ be<u8> mNoMove;  /* was m05: bwd_execute 020FA614: move and the head animation run only while it is 0 (tww daBwd_Execute the same); daBwd_HIO_c_ct 020FE7BC sets the default, never written elsewhere in WWHD or tww (0) */
+    /* 0x02 */ be<u8> mDebugLastHit;  /* was m06: sita_hit (in move 020FF80C): a tongue hit becomes the last hit (end action 12) when it is set, as at 4 tongue damage (tww the same); daBwd_HIO_c_ct 020FE7BC sets the default, never written elsewhere in WWHD or tww (0) */
+    /* 0x03 */ be<u8> mDebugFlyAfterHit;  /* was m07: sita_hit (in move 020FF80C): after the tongue hit the action becomes fly (10) when it is set, as at 2 tongue damage (tww the same); daBwd_HIO_c_ct 020FE7BC sets the default, never written elsewhere in WWHD or tww (0) */
     /* 0x04 */ be<u8> m08;
     /* 0x05 */ u8 _05[3];
-    /* 0x08 */ be<f32> m0C;
-    /* 0x0C */ be<f32> m10;
-    /* 0x10 */ be<s16> m14;
+    /* 0x08 */ be<f32> mWaitHeight;  /* was m0C: wait (in move 020FF80C): current.pos.y eases to mBaseHeight + it (tww the same); daBwd_HIO_c_ct 020FE7BC sets the default, never written elsewhere in WWHD or tww (-400) */
+    /* 0x0C */ be<f32> mPushPower;  /* was m10: bwd_execute 020FA614: the setOutPower strength (scaled down with the distance) that pushes the player away from mSandDentCenter (tww daBwd_Execute the same); daBwd_HIO_c_ct 020FE7BC sets the default, never written elsewhere in WWHD or tww (6) */
+    /* 0x10 */ be<s16> mTonguePulledTime;  /* was m14: sita_move (in bwd_execute 020FA614): mTonguePulledTimer when the tongue is pulled (tww the same); daBwd_HIO_c_ct 020FE7BC sets the default, never written elsewhere in WWHD or tww (120) */
     /* 0x12 */ u8 _12[2];
-    /* 0x14 */ be<f32> m18;
-    /* 0x18 */ be<f32> m1C;
-    /* 0x1C */ be<f32> m20;
-    /* 0x20 */ be<s16> m24;
-    /* 0x22 */ be<s16> m26;
-    /* 0x24 */ be<f32> m28;
-    /* 0x28 */ be<f32> m2C;
-    /* 0x2C */ be<f32> m30;
-    /* 0x30 */ be<f32> m34;
+    /* 0x14 */ be<f32> mEatAttackDistance;  /* was m18: wait (in move 020FF80C): the action becomes eat_attack (5) when the player's XZ distance (mPlayerDistXZ) is below it (tww the same); daBwd_HIO_c_ct 020FE7BC sets the default, never written elsewhere in WWHD or tww (700) */
+    /* 0x18 */ be<f32> mResetDistance;  /* was m1C: wait (in move 020FF80C): the action becomes reset (2) when mPlayerDistXZ is above it (tww the same); daBwd_HIO_c_ct 020FE7BC sets the default, never written elsewhere in WWHD or tww (3000) */
+    /* 0x1C */ be<f32> mBodyScale;  /* was m20: bwd_execute 020FA614: the head model's scale and the factor on the body spheres' radii, except while flying / ending (tww daBwd_Execute the same); daBwd_HIO_c_ct 020FE7BC sets the default, never written elsewhere in WWHD or tww (1.3) */
+    /* 0x20 */ be<s16> mHitLarvaCount;  /* was m24: sita_hit (in move 020FF80C): a larva (BWDS) is created on each of frames 0x30.. 0x30 + it - 1 of the dive while ko_count is below mLarvaMax (tww the same); daBwd_HIO_c_ct 020FE7BC sets the default, never written elsewhere in WWHD or tww (3) */
+    /* 0x22 */ be<s16> mLarvaMax;  /* was m26: ko_s_sub 020F9A28 / bwd_execute 020FA614 / sita_hit (in move 020FF80C): the number of larvae (BWDS) gathered into ko_ac and the cap on creating more (tww the same); daBwd_HIO_c_ct 020FE7BC sets the default, never written elsewhere in WWHD or tww (5) */
+    /* 0x24 */ be<f32> mBaseHeight;  /* was m28: start, wait, reset, sita_hit, eat_attack, fly, s_fly (in move 020FF80C), bwd_execute 020FA614, demo_camera 02101F30, end 020FEA30: the base height the boss, camera, larvae and platform positions are offset from (tww the same); daBwd_HIO_c_ct 020FE7BC sets the default, never written elsewhere in WWHD or tww (800) */
+    /* 0x28 */ be<f32> mPlatformHeight;  /* was m2C: bwd_execute 020FA614: the Triforce platform model's y offset from mBaseHeight (tww daBwd_Execute the same); daBwd_HIO_c_ct 020FE7BC sets the default, never written elsewhere in WWHD or tww (-500) */
+    /* 0x2C */ be<f32> mSplashScaleXZ;  /* was m30: bwd_execute 020FA614: the sand splash (Gsp) model's x and z scale (tww daBwd_Execute the same); daBwd_HIO_c_ct 020FE7BC sets the default, never written elsewhere in WWHD or tww (3.5) */
+    /* 0x30 */ be<f32> mSplashScaleY;  /* was m34: bwd_execute 020FA614: the sand splash (Gsp) model's y scale (tww daBwd_Execute the same); daBwd_HIO_c_ct 020FE7BC sets the default, never written elsewhere in WWHD or tww (2) */
     /* 0x34 */ be<s16> m38;
     /* 0x36 */ be<s16> m3A;
     /* 0x38 */ be<s16> m3C;

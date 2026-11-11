@@ -25,7 +25,7 @@ static fapGm_HIO_c* fapGm_HIO_c__ct(fapGm_HIO_c* i_this) {
     i_this->mDisplayMeter = dev ? 1 : 0;
     i_this->field_0x10 = 0;
     i_this->field_0x30 = 0;
-    i_this->field_0x09 = 1;
+    i_this->mDrawMap = 1;
     i_this->field_0x14 = 10;
     i_this->field_0x15 = 12;
     i_this->field_0x11 = 0;

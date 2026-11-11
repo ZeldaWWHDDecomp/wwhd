@@ -176,7 +176,7 @@ void Act_c::CreateInit() {
     attention_info.distances[fopAc_Attn_TYPE_TALK_e] = 0xA7;
     attention_info.distances[fopAc_Attn_TYPE_SPEAK_e] = 0xA7;
     mHookshotAnim = 0;
-    mSmoke.m11 = 0;
+    mSmoke.mRateOff = 0;
     mLinkRangeCheck = 1;
     Vmc_setEventName(&eventInfo, "cb_sow");
 }

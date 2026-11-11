@@ -156,7 +156,7 @@ field 0222091C 54005BB8 u8 7,0
 field 0222091C r3+0x605 u8 0,1
 # mutation-steering
 callee 028E8DD0 r3=12                             # PSVECSquareMag: the vector is compared
-field 02220288 r3+0x600 u32 3,2,0                # m4E4: event accept + return link
+field 02220288 r3+0x600 u32 3,2,0                # mNpcFlags: event accept + return link
 field 02220288 r3+0xAEB i8 1,0                   # mOrderedEvent
 ret 025440C8 1,0                                  # evmng endCheck
 field 02223694 r3+0x370 f32 0,1,-1               # speedF == 0 boundary

@@ -29,7 +29,7 @@ struct OsMainBrkEntry {
     u8 mPadding[3];
     be<s32> loopMode;
     be<f32> speed;
-    be<s32> unk_4;
+    be<s32> mStartAtEnd;  /* was unk_4: initBrkAnm 022A9F4C: when it is negative the new brk starts at its end frame, else at its current frame; static osMain_brkAnmTbl entries are 0 or -1, never written (tww initBrkAnm brkAnmTbl the same) */
 };
 WWHD_SIZE(OsMainBrkEntry, 0x10);
 struct OsMainAnmPrm {
@@ -37,7 +37,7 @@ struct OsMainAnmPrm {
     u8 mPadding[3];
     be<s32> mLoopMode;
     be<f32> mMorf, mPlaySpeed;
-    be<s32> m10;
+    be<s32> mStartAtEnd;  /* was m10: setAnm 022AA88C: when it is negative the new bck starts at its end frame (setFrame(getEndFrame())); static osMain_anmPrm entries are 0 or -1, never written (tww setAnm l_anmPrm the same) */
 };
 WWHD_SIZE(OsMainAnmPrm, 0x14);
 struct OsMainHeaderStatics {
@@ -103,10 +103,10 @@ WWHD_SIZE(OsMainGlobalRecord, 0xC);
 
 WWHD_OFFSET(OsMainBrkEntry, loopMode, 0x4);
 WWHD_OFFSET(OsMainBrkEntry, speed, 0x8);
-WWHD_OFFSET(OsMainBrkEntry, unk_4, 0xC);
+WWHD_OFFSET(OsMainBrkEntry, mStartAtEnd, 0xC);
 WWHD_OFFSET(OsMainAnmPrm, mLoopMode, 0x4);
 WWHD_OFFSET(OsMainAnmPrm, mPlaySpeed, 0xC);
-WWHD_OFFSET(OsMainAnmPrm, m10, 0x10);
+WWHD_OFFSET(OsMainAnmPrm, mStartAtEnd, 0x10);
 WWHD_SIZE(OsMainTables::Indices, 0x3);
 WWHD_SIZE(OsMainTables::Names, 0x40);
 WWHD_SIZE(OsMainTables::Staff, 0xC);

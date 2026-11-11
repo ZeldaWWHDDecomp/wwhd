@@ -31,12 +31,12 @@ public:
     /* 0x3BC */ u8 dummy2[0x08];
     /* 0x3C4 */ gptr<mDoExt_McaMorf> mAnims[2];
     /* 0x3CC */ u8 dummy[0x08];
-    /* 0x3D4 */ be<u32> m02B8;
+    /* 0x3D4 */ be<u32> mShapeId;  /* was m02B8: the demo shape id: daBranch_Execute 020DF140 (execute inlined) stores the demo actor's getShapeId() and plays mAnims[0] for 6 / mAnims[1] for 5; daBranch_Draw 020DEFB0 draws model 1 for 5, else model 0; daBranch_Create 020DF534 sets 6 (tww the same) */
     /* 0x3D8 */ be<u8> m02BC;
     /* 0x3D9 */ be<u8> m02BD;
     u8 mPadding3DA[2];
 };
 WWHD_OFFSET(daBranch_c, mModel, 0x3B4);
 WWHD_OFFSET(daBranch_c, mAnims, 0x3C4);
-WWHD_OFFSET(daBranch_c, m02B8, 0x3D4);
+WWHD_OFFSET(daBranch_c, mShapeId, 0x3D4);
 WWHD_SIZE(daBranch_c, 0x3DC);

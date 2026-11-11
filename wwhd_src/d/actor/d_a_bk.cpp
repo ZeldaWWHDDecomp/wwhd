@@ -138,7 +138,7 @@ void ground_smoke_set(bk_class* i_this) {
 
     i_this->mSmokeTimer--;
 
-    if (i_this->mSmokeTimer >= l_bkHIO().m00C) {
+    if (i_this->mSmokeTimer >= l_bkHIO().mSmokeTimerBase) {
         i_this->mEffectAngle.x = 0;
         i_this->mEffectAngle.z = 0;
         gabi::Local<cXyz> sp8;
@@ -257,8 +257,8 @@ BOOL nodeCallBack(J3DNode* node, int calcTiming) {
                     MtxPosition(offset, &i_this->eyePos);
                     cXyz* attnPos = &i_this->attention_info.position;
                     *attnPos = i_this->eyePos.get();
-                    attnPos->y += l_bkHIO().m024;
-                    if (l_bkHIO().m009 == 0) {
+                    attnPos->y += l_bkHIO().mAttnOffsetY;
+                    if (l_bkHIO().mHeadAngleIsBody == 0) {
                         i_this->mHeadAngleY =
                             cM_atan2s(sp08->x - i_this->eyePos.x, sp08->z - i_this->eyePos.z);
                     } else {
@@ -318,12 +318,12 @@ BOOL nodeCallBack_P(J3DNode* node, int calcTiming) {
 
 /* inlined into daBk_Draw */
 static inline void search_check_draw(bk_class* i_this) {
-    if (l_bkHIO().m005 == 0) {
+    if (l_bkHIO().mDrawSearchRange == 0) {
         return;
     }
     gabi::Local<cXyz> sp08;
     gabi::Local<cXyz> sp14[8];
-    sp08->z = l_bkHIO().m028;
+    sp08->z = l_bkHIO().mNoticeDist;
     sp08->y = 0.0f;
     sp08->x = 0.0f;
     int i;
@@ -335,7 +335,7 @@ static inline void search_check_draw(bk_class* i_this) {
         cMtx_YrotM(calc_mtx(), 0x1000);
         MtxPosition(sp08, sp14[1]);
     }
-    sp08->z = l_bkHIO().m02C;
+    sp08->z = l_bkHIO().mAttackDist;
     for (i = 0; i < 0x10; i++, r26 += 0x1000) {
         MtxTrans(i_this->current.pos.x, i_this->dr.mSpawnY + 2.5f, i_this->current.pos.z, 0);
         cMtx_YrotM(calc_mtx(), r26);
@@ -345,61 +345,61 @@ static inline void search_check_draw(bk_class* i_this) {
     }
 
     sp08->x = 0.0f;
-    sp08->z = l_bkHIO().m028;
+    sp08->z = l_bkHIO().mNoticeDist;
     MtxTrans(i_this->eyePos.x, i_this->eyePos.y, i_this->eyePos.z, 0);
 
     MtxPush();
-    cMtx_YrotM(calc_mtx(), (s16)(i_this->mHeadAngleY - l_bkHIO().m034));
-    sp08->y = l_bkHIO().m038;
+    cMtx_YrotM(calc_mtx(), (s16)(i_this->mHeadAngleY - l_bkHIO().mViewAngle));
+    sp08->y = l_bkHIO().mViewHeight;
     MtxPosition(sp08, sp14[1]);
     MtxPull();
 
     MtxPush();
-    sp08->y = l_bkHIO().m038;
-    cMtx_YrotM(calc_mtx(), (s16)(i_this->mHeadAngleY + l_bkHIO().m034));
+    sp08->y = l_bkHIO().mViewHeight;
+    cMtx_YrotM(calc_mtx(), (s16)(i_this->mHeadAngleY + l_bkHIO().mViewAngle));
     MtxPosition(sp08, sp14[2]);
     MtxPull();
 
     MtxPush();
-    cMtx_YrotM(calc_mtx(), (s16)(i_this->mHeadAngleY - l_bkHIO().m034));
-    sp08->y = -l_bkHIO().m038;
+    cMtx_YrotM(calc_mtx(), (s16)(i_this->mHeadAngleY - l_bkHIO().mViewAngle));
+    sp08->y = -l_bkHIO().mViewHeight;
     MtxPosition(sp08, sp14[4]);
     MtxPull();
 
-    sp08->y = -l_bkHIO().m038;
-    cMtx_YrotM(calc_mtx(), (s16)(i_this->mHeadAngleY + l_bkHIO().m034));
+    sp08->y = -l_bkHIO().mViewHeight;
+    cMtx_YrotM(calc_mtx(), (s16)(i_this->mHeadAngleY + l_bkHIO().mViewAngle));
     MtxPosition(sp08, sp14[5]);
 
     *sp14[0] = i_this->eyePos.get();
-    sp14[0]->y += l_bkHIO().m038;
+    sp14[0]->y += l_bkHIO().mViewHeight;
     *sp14[3] = i_this->eyePos.get();
-    sp14[3]->y -= l_bkHIO().m038;
+    sp14[3]->y -= l_bkHIO().mViewHeight;
     sp08->x = 0.0f;
-    sp08->z = l_bkHIO().m02C;
+    sp08->z = l_bkHIO().mAttackDist;
     MtxTrans(i_this->eyePos.x, i_this->eyePos.y, i_this->eyePos.z, 0);
     cMtx_YrotM(calc_mtx(), i_this->current.angle.y);
 
-    sp08->x = l_bkHIO().m03C;
-    sp08->y = l_bkHIO().m040;
-    sp08->z = l_bkHIO().m044;
+    sp08->x = l_bkHIO().mViewBoxHalfX;
+    sp08->y = l_bkHIO().mViewBoxHalfY;
+    sp08->z = l_bkHIO().mViewBoxFront;
     MtxPosition(sp08, sp14[7]);
-    sp08->y = -l_bkHIO().m040;
+    sp08->y = -l_bkHIO().mViewBoxHalfY;
     MtxPosition(sp08, sp14[5]);
-    sp08->x = -l_bkHIO().m03C;
-    sp08->y = l_bkHIO().m040;
+    sp08->x = -l_bkHIO().mViewBoxHalfX;
+    sp08->y = l_bkHIO().mViewBoxHalfY;
     MtxPosition(sp08, sp14[6]);
-    sp08->y = -l_bkHIO().m040;
+    sp08->y = -l_bkHIO().mViewBoxHalfY;
     MtxPosition(sp08, sp14[4]);
-    sp08->x = l_bkHIO().m03C;
-    sp08->y = l_bkHIO().m040;
-    sp08->z = l_bkHIO().m048;
+    sp08->x = l_bkHIO().mViewBoxHalfX;
+    sp08->y = l_bkHIO().mViewBoxHalfY;
+    sp08->z = l_bkHIO().mViewBoxBack;
     MtxPosition(sp08, sp14[1]);
-    sp08->y = -l_bkHIO().m040;
+    sp08->y = -l_bkHIO().mViewBoxHalfY;
     MtxPosition(sp08, sp14[3]);
-    sp08->x = -l_bkHIO().m03C;
-    sp08->y = l_bkHIO().m040;
+    sp08->x = -l_bkHIO().mViewBoxHalfX;
+    sp08->y = l_bkHIO().mViewBoxHalfY;
     MtxPosition(sp08, sp14[0]);
-    sp08->y = -l_bkHIO().m040;
+    sp08->y = -l_bkHIO().mViewBoxHalfY;
     MtxPosition(sp08, sp14[2]);
 }
 
@@ -437,10 +437,10 @@ static inline void br_draw(bk_class* i_this) {
     }
 
     PSMTXCopy(bk_getAnmMtx(i_this->mpMorf->getModel(), BK_JNT_BUKI_e), calc_mtx());
-    MtxTrans(150.0f + l_bkHIO().m100, REG8_F(1), REG8_F(2), 1);
+    MtxTrans(150.0f + l_bkHIO().mBlurOffsetX, REG8_F(1), REG8_F(2), 1);
     cMtx_XrotM(calc_mtx(), (s16)(REG8_S(6) + 0x4000));
     cMtx_ZrotM(calc_mtx(), (s16)(REG8_S(7) + 0x4000));
-    MtxScale(l_bkHIO().m018 * i_this->mBlurScaleX, l_bkHIO().m018, l_bkHIO().m018, 1);
+    MtxScale(l_bkHIO().mBlurScale * i_this->mBlurScaleX, l_bkHIO().mBlurScale, l_bkHIO().mBlurScale, 1);
     J3DModel_setBaseTRMtx(model, calc_mtx());
 
     setLightTevColorType(dKy_getEnvlight(), model, &i_this->tevStr);
@@ -633,7 +633,7 @@ static u32 search_wepon_inline(bk_class* i_this) {
             f32 f4 = std_sqrtf(gabi::fmadds(sp18->x, sp18->x, sp18->z * sp18->z));
             if (f4 < f29 && !daBk_other_bg_check(i_this, r25)) {
                 /* GHS: `bgt` skips, so NaN passes */
-                if (!(std::fabs(r25->current.pos.y + 50.0f - i_this->eyePos.y) > l_bkHIO().m038)) {
+                if (!(std::fabs(r25->current.pos.y + 50.0f - i_this->eyePos.y) > l_bkHIO().mViewHeight)) {
                     s16 ang = cM_atan2s(sp18->x, sp18->z);
                     s16 angleDiff = i_this->mHeadAngleY - ang;
                     if (angleDiff < 0) {
@@ -645,9 +645,9 @@ static u32 search_wepon_inline(bk_class* i_this) {
                     cMtx_YrotS(calc_mtx(), -i_this->current.angle.y);
                     gabi::Local<cXyz> sp0C;
                     MtxPosition(sp18, sp0C);
-                    if (std::fabs((f32)sp0C->x) < l_bkHIO().m03C &&
-                        std::fabs((f32)sp0C->y) < l_bkHIO().m040 && sp0C->z > l_bkHIO().m048 &&
-                        sp0C->z < l_bkHIO().m044) {
+                    if (std::fabs((f32)sp0C->x) < l_bkHIO().mViewBoxHalfX &&
+                        std::fabs((f32)sp0C->y) < l_bkHIO().mViewBoxHalfY && sp0C->z > l_bkHIO().mViewBoxBack &&
+                        sp0C->z < l_bkHIO().mViewBoxFront) {
                         return fopAcM_GetID(r25);
                     }
                 }
@@ -715,21 +715,21 @@ fopAc_ac_c* search_bomb(bk_class* i_this, BOOL r26) {
                 if (r26) {
                     /* GHS: `bgt` skips, so NaN passes */
                     if (!(std::fabs(r24->current.pos.y + 50.0f - i_this->eyePos.y) >
-                          l_bkHIO().m038)) {
+                          l_bkHIO().mViewHeight)) {
                         s16 ang = cM_atan2s(sp28->x, sp28->z);
                         s16 angleDiff = i_this->mHeadAngleY - ang;
                         if (angleDiff < 0) {
                             angleDiff = -angleDiff;
                         }
-                        if ((u16)angleDiff < l_bkHIO().m034) {
+                        if ((u16)angleDiff < l_bkHIO().mViewAngle) {
                             return r24;
                         }
                         cMtx_YrotS(calc_mtx(), -i_this->current.angle.y);
                         gabi::Local<cXyz> sp10;
                         MtxPosition(sp28, sp10);
-                        if (std::fabs((f32)sp10->x) < l_bkHIO().m03C &&
-                            std::fabs((f32)sp10->y) < l_bkHIO().m040 && sp10->z > l_bkHIO().m048 &&
-                            sp10->z < l_bkHIO().m044) {
+                        if (std::fabs((f32)sp10->x) < l_bkHIO().mViewBoxHalfX &&
+                            std::fabs((f32)sp10->y) < l_bkHIO().mViewBoxHalfY && sp10->z > l_bkHIO().mViewBoxBack &&
+                            sp10->z < l_bkHIO().mViewBoxFront) {
                             return r24;
                         }
                     }
@@ -811,7 +811,7 @@ BOOL daBk_player_view_check(bk_class* i_this, cXyz* r30, s16 r27, s16 r31) {
     if (daBk_player_bg_check(i_this, r30)) {
         return FALSE;
     }
-    if (std::fabs(player->current.pos.y + 50.0f - i_this->eyePos.y) > l_bkHIO().m038) {
+    if (std::fabs(player->current.pos.y + 50.0f - i_this->eyePos.y) > l_bkHIO().mViewHeight) {
         return FALSE;
     }
     s16 angleDiff = i_this->mHeadAngleY - r27;
@@ -829,8 +829,8 @@ BOOL daBk_player_view_check(bk_class* i_this, cXyz* r30, s16 r27, s16 r31) {
     sp14->z = r30->z - i_this->current.pos.z;
     gabi::Local<cXyz> sp08;
     MtxPosition(sp14, sp08);
-    if (std::fabs((f32)sp08->x) < l_bkHIO().m03C && std::fabs((f32)sp08->y) < l_bkHIO().m040 &&
-        sp08->z > l_bkHIO().m048 && sp08->z < l_bkHIO().m044) {
+    if (std::fabs((f32)sp08->x) < l_bkHIO().mViewBoxHalfX && std::fabs((f32)sp08->y) < l_bkHIO().mViewBoxHalfY &&
+        sp08->z > l_bkHIO().mViewBoxBack && sp08->z < l_bkHIO().mViewBoxFront) {
         i_this->dr.mPlayerInView = 1;
         return TRUE;
     } else {
@@ -1362,69 +1362,69 @@ void __sinit_d_a_bk_cpp() {
 
     /* bkHIO_c::bkHIO_c() */
     bkHIO_c& h = l_bkHIO();
-    h.m005 = 0x0;
-    h.m006 = 0x0;
-    h.m007 = 0x0;
-    h.m008 = 0x1;
-    h.m009 = 0x0;
-    h.m00A = 0x0;
+    h.mDrawSearchRange = 0x0;
+    h.mDebugFrameStep = 0x0;
+    h.mResetHealthOnHit = 0x0;
+    h.mAlwaysGuard = 0x1;
+    h.mHeadAngleIsBody = 0x0;
+    h.mNoPickupAttack = 0x0;
     h.m01C = 1.0f;
-    h.m020 = 25.0f;
-    h.m00C = 0x4;
-    h.m024 = 25.0f;
-    h.m028 = 1000.0f;
-    h.m02C = 400.0f;
-    h.m030 = 240.0f;
-    h.m034 = 0x6590;
-    h.m038 = 300.0f;
-    h.m03C = 500.0f;
-    h.m040 = 300.0f;
-    h.m044 = 500.0f;
-    h.m048 = -125.0f;
-    h.m04C = 12.0f;
-    h.m050 = 60.0f;
-    h.m054 = 45.0f;
-    h.m058 = 70.0f;
-    h.m05C = 90.0f;
-    h.m068 = 90.0f;
+    h.mDropItemOffsetY = 25.0f;
+    h.mSmokeTimerBase = 0x4;
+    h.mAttnOffsetY = 25.0f;
+    h.mNoticeDist = 1000.0f;
+    h.mAttackDist = 400.0f;
+    h.mFightDist = 240.0f;
+    h.mViewAngle = 0x6590;
+    h.mViewHeight = 300.0f;
+    h.mViewBoxHalfX = 500.0f;
+    h.mViewBoxHalfY = 300.0f;
+    h.mViewBoxFront = 500.0f;
+    h.mViewBoxBack = -125.0f;
+    h.mPatrolSpeed = 12.0f;
+    h.mPatrolSpeedNoWeapon = 60.0f;
+    h.mRunSpeed = 45.0f;
+    h.mRunSpeedNoWeapon = 70.0f;
+    h.mDashSpeed = 90.0f;
+    h.mJumpRunSpeed = 90.0f;
     h.m06C = 2.0f;
-    h.m070 = 1.0f;
-    h.m074 = 1.5f;
-    h.m060 = 20.0f;
-    h.m064 = 20.0f;
-    h.m078 = 0x23;
-    h.m07C = 50.0f;
+    h.mRunAnmSpeed = 1.0f;
+    h.mDashAnmSpeed = 1.5f;
+    h.mFightWalkSpeed = 20.0f;
+    h.mSideStepSpeed = 20.0f;
+    h.mAttackChanceWait = 0x23;
+    h.mAttackChance = 50.0f;
     h.m080 = 25.0f;
     h.m084 = 25.0f;
     h.m088 = 50.0f;
-    h.m08C = 0x1e;
-    h.m08E = 0x12c;
+    h.mDownTime = 0x1e;
+    h.mWeaponRunTime = 0x12c;
     h.m090 = 1.2f;
     h.m094 = 1.0f;
     h.m098 = 1.0f;
-    h.m09C = 10.0f;
-    h.m0A0 = 0x17;
-    h.m0A2 = 0x1;
-    h.m0A4 = 0x1;
-    h.m0A6 = 0x0;
+    h.mAttackTurnEndFrame = 10.0f;
+    h.mBlur0Start = 0x17;
+    h.mBlur0ALen = 0x1;
+    h.mBlur0BLen = 0x1;
+    h.mBlur0TailLen = 0x0;
 
     for (int i = 0; i < 10; i++)
-        h.m0A8[i] = bkHioDefaultsA8[i];
-    h.m0D0 = 0x5;
-    h.m0D2 = 0x1;
-    h.m0D4 = 0x1;
-    h.m0D6 = 0x1;
+        h.mBlur0ScaleX[i] = bkHioDefaultsA8[i];
+    h.mBlur1Start = 0x5;
+    h.mBlur1ALen = 0x1;
+    h.mBlur1BLen = 0x1;
+    h.mBlur1TailLen = 0x1;
 
     for (int i = 0; i < 10; i++)
-        h.m0D8[i] = bkHioDefaultsD8[i];
-    h.m100 = -60.0f;
-    h.m018 = 0.7f;
-    h.m104 = 0xc8;
-    h.m106 = 0x1f4;
-    h.m108 = 0x12c;
-    h.m10A = 0x258;
-    h.m010 = 0.0f;
-    h.m014 = 400.0f;
+        h.mBlur1ScaleX[i] = bkHioDefaultsD8[i];
+    h.mBlurOffsetX = -60.0f;
+    h.mBlurScale = 0.7f;
+    h.mWaitTimeMin = 0xc8;
+    h.mWaitTimeMax = 0x1f4;
+    h.mSleepTimeMin = 0x12c;
+    h.mSleepTimeMax = 0x258;
+    h.mWeakHitPushback = 0.0f;
+    h.mAttackBtMaxDis = 400.0f;
     h.__vtbl = bkMain_hioVtable();
 }
 

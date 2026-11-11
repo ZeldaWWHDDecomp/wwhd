@@ -1277,7 +1277,7 @@ bool dCamera_c::manualCamera(s32 style) {
     if (!(cx > 0.0f))
         turn = -turn;
     {
-        be<f32> *smoothedTurn = &m154; // HD: third stick-filter float at 0x154.
+        be<f32> *smoothedTurn = &mSmoothedCStickX; // HD: third stick-filter float at 0x154.
         if (ax < 0.01f) {
             cameraEngineChaseFloat(smoothedTurn, turn, 0.25f); /* cLib_chaseF */
             PORT_CAMERA_MANUAL_AT(0x02510448, this, yawStep);
@@ -1680,7 +1680,7 @@ bool dCamera_c::towerCamera(s32 style) {
     gabi::Local<cSGlobe_l> g;
     if (mFollowMoveBg != 0)
       cameraTowerMoveBackground(dComIfG_Bgsp(),
-                                static_cast<cBgS_PolyInfo *>(&mBG.m5C.m04), 1,
+                                static_cast<cBgS_PolyInfo *>(&mBG.mCameraGround.mGndChk), 1,
                                 &p->mCenter, 0, 0); /* MoveBgMatrixCrrPos */
     f32 r = (f32)(s32)((s32)p->mTransitionFrames - (s32)mCurModeTimer);
     f32 k = r / p->mRemainingWeight;

@@ -189,7 +189,7 @@ struct BokoReaction {
     be<s16> mBridgeRideTimer, mBridgeRideRoll;
     u8 paddingC86[2];
     be<u32> mHangBridgeId;
-    gptr<br_s> mpBridge;  /* mpBridge was m0B2C: bk_class mpBridge (d_a_bk.h); mpHangPos, mHangAngle, mBridgeRideTimer, mBridgeRideRoll, mHangBridgeId are bk_class dr (damagereaction_l) fields, named after damagereaction (c_damagereaction.h) */
+    gptr<br_s> mpBridge;  /* mpBridge was m0B2C: bk_class mpBridge (d_a_bk.h); mpHangPos, mHangAngle, mBridgeRideTimer, mBridgeRideRoll, mHangBridgeId were m79C, m7AC, m7B2, m7B4, m7B8: bk_class dr (damagereaction_l) fields, named after damagereaction (c_damagereaction.h) */
 };
 struct Emitter {
     u8 padding0[0x34];
@@ -313,7 +313,7 @@ struct CcAtInfo {
     /* 0x09 */ be<u8> mbDead;
     /* 0x0A */ be<u8> mResultingAttackType;
     /* 0x0B */ u8 _0B;
-    /* 0x0C */ csXyz m0C;
+    /* 0x0C */ csXyz mHitAngle;  /* was m0C: the CcAtInfo copy of this unit; see d/d_cc_uty.h */
     /* 0x12 */ be<u16> mPlCutBit;
     /* 0x14 */ be<u32> pParticlePos;
     /* 0x18 */ be<s32> mHitSoundId;

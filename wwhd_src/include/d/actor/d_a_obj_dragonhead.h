@@ -11,7 +11,7 @@ struct Act_c : fopAc_ac_c {
   /* 0x521 */ be<u8> mSwitchOn;
   /* 0x522 */ u8 padAlpha[2];
   /* 0x524 */ gptr<dBgW> mpBgW;
-  /* 0x528 */ be<u8> field_0x40c; // tww: background registered flag
+  /* 0x528 */ be<u8> mBgRegistered;  /* was field_0x40c: CreateInit 02337A28 clears it and sets 1 when dComIfG_Bgsp()->Regist(mpBgW) succeeds (switch off); Execute 02337FA0 releases mpBgW while set when the switch turns on (clears it on success, JA_SE_OBJ_ICEVERG_MELT); Delete 02337CAC releases it while set (tww: background registered flag); tww: background registered flag */
   /* 0x529 */ u8 padBgW[3];
   /* 0x52C */ cXyz mSphCenter;
   /* 0x538 */ Mtx34 mtx;

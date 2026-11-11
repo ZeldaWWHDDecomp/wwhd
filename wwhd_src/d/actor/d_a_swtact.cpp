@@ -43,7 +43,7 @@ static BOOL CheckCreateHeap(fopAc_ac_c* i_this) {
 BOOL daSwTact_c::CreateHeap() {
     J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes(m_arcname.get(), dRes_INDEX_ITACT_BDL_ITACT_e, gc_tu.safeString);
     if (modelData == nullptr) /* JUT_ASSERT(0xe1, modelData != NULL) */
-        JUT_ASSERT_fail("d_a_swtact.cpp", 0xE1, "modelData != NULL");
+        JUT_ASSERT_fail("d_a_swtact.cpp", 0xE1, "modelData != (0)");
     model = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000022);
     if (!model)
         return FALSE;
@@ -257,6 +257,6 @@ static void SafeString_assureTermination(SafeString*) {
 
 /* WWHD glue
 str 1003ED7C
-str 1003ED8C "modelData != NULL"
+str 1003ED8C "modelData != (0)"
 data m_arcname 101D15B0
 */

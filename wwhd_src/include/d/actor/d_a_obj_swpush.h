@@ -29,13 +29,13 @@ struct Attr_c {
     /* 0x028 */ be<f32> mSpring;
     /* 0x02C */ be<f32> mSpeedDecay;
     /* 0x030 */ be<f32> mPushSpeed0;
-    /* 0x034 */ be<f32> m34;
-    /* 0x038 */ be<s16> m38;
+    /* 0x034 */ be<f32> mLandSpeed;  /* was m34: daObjSwpush::Act_c::mode_upper 02398608: when a rider newly lands on a switch that does not need a heavy rider, mSpeed is set to it (with a 30-frame debounce and a pause); per-type attribute (tww the same field, unnamed) */
+    /* 0x038 */ be<s16> mLowerDelay;  /* was m38: daObjSwpush::Act_c::mode_u_l_init 02398348: the timer passed to top_bg_aim_req with target 0 when the switch starts going down (upper to lower); next to mMiniPushDelay1 / mPushDelay / mMiniPushDelay2 (tww the same field, unnamed) */
     /* 0x03A */ be<s16> mMiniPushDelay1;
     /* 0x03C */ be<s16> mPushDelay;
     /* 0x03E */ be<s16> mMiniPushDelay2;
-    /* 0x040 */ be<f32> m40;
-    /* 0x044 */ be<f32> m44;
+    /* 0x040 */ be<f32> mRideAreaScale;  /* was m40: rideCB 0239705C: scale of the no-push offset vectors that widen the top's ride-check triangles while the rider was not on it the previous frame (tww the same field, unnamed) */
+    /* 0x044 */ be<f32> mRideAreaScaleHeld;  /* was m44: rideCB 0239705C: the same scale while the rider was already on it (mPrevRiding), so the area differs once riding (tww the same field, unnamed) */
     /* 0x048 */ be<s16> mPauseDuration;
     /* 0x04A */ u8 padding4A[2];
 };
@@ -150,13 +150,13 @@ WWHD_OFFSET(Attr_c, mBtpResIndex, 0x26);
 WWHD_OFFSET(Attr_c, mSpring, 0x28);
 WWHD_OFFSET(Attr_c, mSpeedDecay, 0x2C);
 WWHD_OFFSET(Attr_c, mPushSpeed0, 0x30);
-WWHD_OFFSET(Attr_c, m34, 0x34);
-WWHD_OFFSET(Attr_c, m38, 0x38);
+WWHD_OFFSET(Attr_c, mLandSpeed, 0x34);
+WWHD_OFFSET(Attr_c, mLowerDelay, 0x38);
 WWHD_OFFSET(Attr_c, mMiniPushDelay1, 0x3A);
 WWHD_OFFSET(Attr_c, mPushDelay, 0x3C);
 WWHD_OFFSET(Attr_c, mMiniPushDelay2, 0x3E);
-WWHD_OFFSET(Attr_c, m40, 0x40);
-WWHD_OFFSET(Attr_c, m44, 0x44);
+WWHD_OFFSET(Attr_c, mRideAreaScale, 0x40);
+WWHD_OFFSET(Attr_c, mRideAreaScaleHeld, 0x44);
 WWHD_OFFSET(Attr_c, mPauseDuration, 0x48);
 WWHD_OFFSET(Attr_c, padding4A, 0x4A);
 WWHD_OFFSET(Act_c, mKbotaPhs, 0x3AC);

@@ -104,7 +104,7 @@ s32 fopMsgM_create(u32 i_procName, fopAc_ac_c* i_actor, cXyz* i_pos, be<u32>* i_
     if (i_msgNo != 0)
         params->mMsgNo = u32(*i_msgNo);
     if (param_5 != 0)
-        params->field_0x14 = u32(*param_5);
+        params->mStartMsgNo = u32(*param_5);
     if (i_pos != 0) {
         auto* posWords = reinterpret_cast<fopMsg_positionWordsHD*>(i_pos);
         params->mPosWords.x = u32(posWords->x);
@@ -128,7 +128,7 @@ s32 fopMsgM_Timer_create(u32 i_procName, s32 i_mode, u16 i_limitTimeMs, u8 i_sho
     if (req != 0) {
         req->mpActor = 0;
         req->mMsgNo = 0;
-        req->field_0x14 = 0;
+        req->mStartMsgNo = 0;
         req->mPosWords.x = 0;
         req->mPosWords.y = 0;
         req->mPosWords.z = 0;

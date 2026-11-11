@@ -28,7 +28,9 @@ struct LinkCollisionLayout {
     gptr<J3DModel> mpYbafo00Model;
     LinkItemBtk mpYbafo00Btk;
     u8 _55E4[0x6730 - 0x55E4];
-    LinkCollisionCutCallback m331C, m332C, m333C;
+    /* 0x6730 */ LinkCollisionCutCallback mCutTurnEcallBack0;  /* was m331C: view of daPy_lk_c::mCutTurnEcallBack0 */
+    /* 0x6740 */ LinkCollisionCutCallback mCutTurnEcallBack1;  /* was m332C: view of daPy_lk_c::mCutTurnEcallBack1 */
+    /* 0x6750 */ LinkCollisionCutCallback mCutTurnEcallBack2;  /* was m333C: view of daPy_lk_c::mCutTurnEcallBack2 */
 };
 WWHD_OFFSET(LinkCollisionLayout, mArrowLinChk, 0xBB4);
 WWHD_OFFSET(LinkCollisionLayout, mMirLightLinChk, 0xC20);
@@ -39,9 +41,9 @@ WWHD_OFFSET(LinkCollisionLayout, mpYuchw00Btk, 0x5480);
 WWHD_OFFSET(LinkCollisionLayout, mpYuchw00Brk, 0x54F4);
 WWHD_OFFSET(LinkCollisionLayout, mpYbafo00Model, 0x556C);
 WWHD_OFFSET(LinkCollisionLayout, mpYbafo00Btk, 0x5570);
-WWHD_OFFSET(LinkCollisionLayout, m331C, 0x6730);
-WWHD_OFFSET(LinkCollisionLayout, m332C, 0x6740);
-WWHD_OFFSET(LinkCollisionLayout, m333C, 0x6750);
+WWHD_OFFSET(LinkCollisionLayout, mCutTurnEcallBack0, 0x6730);
+WWHD_OFFSET(LinkCollisionLayout, mCutTurnEcallBack1, 0x6740);
+WWHD_OFFSET(LinkCollisionLayout, mCutTurnEcallBack2, 0x6750);
 WWHD_SIZE(LinkCollisionLayout, 0x6760);
 struct LinkCollisionEmitter {
     u8 _000[0x1F0];

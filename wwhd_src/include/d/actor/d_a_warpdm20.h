@@ -109,17 +109,18 @@ struct daWarpdm20_c : fopAc_ac_c {
     /*0x3C4*/ u8 m2A8[4];
     /*0x3C8*/ warpdm20::RippleCallback mRippleCallback;
     /*0x3DC*/ u8 m2C0[8];
-    /*0x3E4*/ be<s32> m2C8;
-    /*0x3E8*/ be<u8> m2CC;
+    /*0x3E4*/ be<s32> mWarpOrder;  /* was m2C8: CreateInit 024D4D10 clears it; normal_execute 024D5354 sets 1 when check_warp sees the ship within 500; eventOrder 024D5708 orders TO_HYRULE_WARP while it is 1; checkOrder 024D5468 clears it when the event starts and runs normal_execute only while it is 0 (tww the same) */
+    /*0x3E8*/ be<u8> mVisible;  /* was m2CC: CreateInit (event bit 0x2D08) / normal_execute 024D5354 / demo_execute 024D57E4 set 1; actDead 024D5B84 clears it when the bck ends; _draw 024D507C draws nothing while it is 0; _execute 024D58FC plays the warp sound while it is set (tww the same) */
     /*0x3E9*/ u8 m2CD[5];
     /*0x3EE*/ be<s16> mEventIdx;
     /*0x3F0*/ u8 m2D4[2];
     /*0x3F2*/ be<u8> m2D6;
     u8 pad3F3;
-    /*0x3F4*/ be<u32> m2D8;
+    /*0x3F4*/ be<u32> mDemoShapeId;  /* was m2D8: demo_execute 024D57E4: the demo actor's mShapeId; 0 hides the model, 1 starts the 0x82BD effect (tww switches on it) */
     /*0x3F8*/ be<s32> mStaffIdx;
-    /*0x3FC*/ cXyz m2E0, m2EC;
-    /*0x414*/ be<u8> m2F8;
+    /*0x3FC*/ cXyz mEffectPos;  /* was m2E0: CreateInit 024D4D10 / _execute: current.pos at the sea height; set_effect 024D513C places the ripple particle there (tww the same) */
+    /*0x408*/ cXyz mEffectScale;  /* was m2EC: CreateInit 024D4D10 sets (1, 1, 1); set_effect 024D513C passes it as the particle scale; actDead 024D5B84 chases it to 0 and copies it into the emitter's particle and dynamics scales (tww the same) */
+    /*0x414*/ be<u8> mSenkoSet;  /* was m2F8: set_wpsenko 024D5768: the 0x82BC particle is set only once; set to 1 after it (tww the same) */
     u8 pad415[3];
     // HD: return widths and pointer arguments retain their verified register signatures.
     BOOL _delete();
@@ -156,7 +157,7 @@ struct daWarpdm20_c : fopAc_ac_c {
 WWHD_SIZE(daWarpdm20_c, 0x418);
 WWHD_OFFSET(daWarpdm20_c, mRippleCallback, 0x3C8);
 WWHD_OFFSET(daWarpdm20_c, mEventIdx, 0x3EE);
-WWHD_OFFSET(daWarpdm20_c, m2EC, 0x408);
+WWHD_OFFSET(daWarpdm20_c, mEffectScale, 0x408);
 WWHD_OFFSET(warpdm20::Emitter, mGlobalDynamicsScale, 0x220);
 WWHD_OFFSET(warpdm20::Emitter, mGlobalParticleScale, 0x238);
 WWHD_OFFSET(warpdm20::Emitter, mStatus, 0x254);

@@ -17,6 +17,8 @@ and the glue block (at the end of the file) lists the addresses of the translati
     str  1001EC3C "modelData != NULL"    ... written differently in source (JUT_ASSERT)
     str  1001EC3C in 022A2AD8            ... only while that function is tested (duplicates)
     str  10057E04 "a->mSize" renamed     ... spelled with other names on purpose (not compared)
+                                         (never for assert text: a `renamed` line whose text the source
+                                         passes to an assert is an error)
     data mode_tbl 1001EE28               static table / object (initialiser checked against the image)
     data offset 10467D20 guard 10467D2C  function-local static with a GHS guard word
     */
@@ -290,6 +292,58 @@ def line_of(text, pos):
 
 
 # ------------------------------------------------------------------ glue block
+_ASSERT_CALL = re.compile(r"(\w*assert\w*)\s*$", re.I)
+
+
+def assert_text_use(text, glue_pos, host):
+    """the source passes a literal with these bytes to an assert: JUT_ASSERT_fail or any function whose name
+    contains "assert" (a unit's wrapper of JUTAssertion::showAssert), directly as an argument of that call"""
+    code = mask(text[:glue_pos])
+    for lm in re.finditer(r'"(x*)"', code):
+        try:
+            if c_str_bytes(text[lm.start() + 1:lm.end() - 1]) != host:
+                continue
+        except GlueError:
+            continue
+        depth, i = 0, lm.start() - 1
+        while i >= 0:
+            c = code[i]
+            if c in ")]}":
+                depth += 1
+            elif c in "([{":
+                if depth == 0:
+                    break
+                depth -= 1
+            elif c == ";" and depth == 0:
+                i = -1
+                break
+            i -= 1
+        if i >= 0 and code[i] == "(" and _ASSERT_CALL.search(code[max(0, i - 80):i]):
+            return True
+    # JUT_ASSERT(LINE, COND): the guest gets the condition stringized after macro expansion (gc_api/JSystem/JUTAssert.h)
+    for am in re.finditer(r"\bJUT_ASSERT\s*\(", code):
+        close = match_close(code, am.end() - 1, "(", ")")
+        depth, comma = 0, None
+        for j in range(am.end(), close):
+            if code[j] in "([{":
+                depth += 1
+            elif code[j] in ")]}":
+                depth -= 1
+            elif code[j] == "," and depth == 0:
+                comma = j
+                break
+        if comma is None:
+            continue
+        cond = "".join(" " if code[j] == " " and text[j] not in " \t\n" else text[j] for j in range(comma + 1, close))
+        cond = re.sub(r"[ \t\n]+", " ", cond).strip()
+        expanded = cond
+        for name, val in (("FALSE", "0"), ("TRUE", "1"), ("NULL", "__null")):
+            expanded = re.sub(r"\b%s\b" % name, val, expanded)
+        if host in (cond.encode("utf-8").decode("latin1"), expanded.encode("utf-8").decode("latin1")):
+            return True
+    return False
+
+
 def parse_glue(text):
     m = re.search(r"/\* WWHD glue(.*?)\*/", text, re.S)
     if not m:
@@ -316,6 +370,9 @@ def parse_glue(text):
             # condition whose HD member names differ from zeldaret/tww's; say which in a comment
             if sm.group(2) and not sm.group(3) and not same_text(host.replace("NULL", "(0)"), content):
                 raise GlueError("str %08X: source text %r does not match the image %r (intended? add `renamed`)" % (addr, host, content))
+            if sm.group(2) and sm.group(3) and host != content and assert_text_use(text, m.start(), host):
+                raise GlueError("str %08X: `renamed` on assert text %r; the image has %r. An assert message is the original's "
+                                "exact text: write the image's text and drop `renamed`" % (addr, host, content))
             strs.append((addr, host, int(sm.group(4), 16) if sm.group(4) else 0))
         elif dm:
             datas[dm.group(1)] = (int(dm.group(2), 16), int(dm.group(3), 16) if dm.group(3) else None, bool(dm.group(5)))

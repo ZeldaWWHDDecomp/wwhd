@@ -73,10 +73,10 @@ enum RaceItemSound {
     JA_SE_OBJ_FALL_WATER_S = 0x6918
 };
 struct daRaceItem_c : daItemBase_c {
-    /*0x750*/ be<s32> field_0x63C;
-    /*0x754*/ be<u32> field_0x640;
-    /*0x758*/ be<u8> field_0x644;
-    /*0x759*/ be<u8> field_0x645;
+    /*0x750*/ be<s32> mGetTimer;  /* was field_0x63C: execute 02459230 sets 13 when the get starts (the item hops above Link's head) and counts it down in RaceItem_Get; the item is deleted below 0 (tww the same) */
+    /*0x754*/ be<u32> mState;  /* was field_0x640: the race item state (RaceItem_Wait / GetStart / Get / DropStart / Drop): execute 02459230 switches on it; CreateInit 024597B8, normalItemGet 02459EA0, raceItemForceGet 02459F6C, startOffsetPos 02459F90 and endOffsetPos 02459FA0 set it (tww the same) */
+    /*0x758*/ be<u8> mType;  /* was field_0x644: CreateInit 024597B8 sets parameter bits 15..18; checkGet 0245910C and execute 02459230 take a touch or a boomerang hit only for RaceItem_Normal; raceItemForceGet 02459F6C reads it (tww the same) */
+    /*0x759*/ be<u8> mFlags;  /* was field_0x645: bit RaceItem_BoomerangCarry: execute 02459230 sets it on a boomerang hit and clears it when the boomerang lets go or the get starts; checkOffsetPos 0245A000 and execute keep the item on its offset only while it is clear (tww cLib_offBit(mFlags, 1)) */
     u8 mPadding[2];
     void setListStart();
     BOOL execute();
@@ -98,9 +98,9 @@ struct daRaceItem_c : daItemBase_c {
     BOOL endOffsetPos(f32, cXyz*, f32, f32, csXyz*);
     BOOL checkOffsetPos();
 };
-WWHD_OFFSET(daRaceItem_c, field_0x63C, 0x750);
-WWHD_OFFSET(daRaceItem_c, field_0x640, 0x754);
-WWHD_OFFSET(daRaceItem_c, field_0x644, 0x758);
+WWHD_OFFSET(daRaceItem_c, mGetTimer, 0x750);
+WWHD_OFFSET(daRaceItem_c, mState, 0x754);
+WWHD_OFFSET(daRaceItem_c, mType, 0x758);
 WWHD_SIZE(daRaceItem_c, 0x75C);
 // HD: these two queries retain the original full-width return register.
 u32 RaceItem_getHeight(daItemBase_c*);

@@ -447,7 +447,7 @@ void dMeter_rAlpha(sub_meter_class *meter) {
         u32 mode = (u8)meterGame(dComIfGp_ea())->play.mRStatusForce;
         meterGame(dComIfGp_ea())->play.mRStatus = (u8)(mode);
     }
-    if ((s16)meter->field_0x1cc8.mUserArea) {
+    if ((s16)meter->mRActionIcon.mUserArea) {
         game = dComIfGp_ea();
         if ((u8)meterGame(game)->play.mRStatus) {
             game = dComIfGp_ea();
@@ -456,13 +456,13 @@ void dMeter_rAlpha(sub_meter_class *meter) {
             dComIfGp_ea();
         }
         u32 mode = (u8)meterGame(dComIfGp_ea())->play.mRStatus;
-        meter->field_0x1cc8.mUserArea = (u16)(0);
+        meter->mRActionIcon.mUserArea = (u16)(0);
         meter->field_0x26d8.mUserArea = (u16)(1);
-        meter->field_0x301c = (u8)(mode);
+        meter->mRStatusShown = (u8)(mode);
     }
     game = dComIfGp_ea();
-    if ((u8)meter->field_0x301c != (u8)meterGame(game)->play.mRStatus)
-        meter->field_0x1cc8.mUserArea = (u16)(1);
+    if ((u8)meter->mRStatusShown != (u8)meterGame(game)->play.mRStatus)
+        meter->mRActionIcon.mUserArea = (u16)(1);
     Local<be<u8>> state;
     *state.get() = (u8)l_buttonAlphaState;
     u32 flags = (u32)meter->mStatusFlags, mode = 0;
@@ -525,19 +525,19 @@ void dMeter_rAlpha(sub_meter_class *meter) {
     if (hide)
         mode = 1;
     if ((s16)l_rFadeMode != (s32)mode) {
-        dMeter_alphaFlagOff(&meter->field_0x3026, 8);
+        dMeter_alphaFlagOff(&meter->mButtonMoveFlags, 8);
         if (mode == 1)
             dMeter_alphaFlagOff(state.get(), 8);
     }
     l_rFadeMode = (u16)(mode);
-    if ((u8)meter->field_0x3026 != 15) {
-        if (!dMeter_alphaFlagCheck(&meter->field_0x3026, 8)) {
+    if ((u8)meter->mButtonMoveFlags != 15) {
+        if (!dMeter_alphaFlagCheck(&meter->mButtonMoveFlags, 8)) {
             if (mode != 1)
                 dMeter_alphaFlagOn(state.get(), 8);
             s32 count = (s16)l_rFadeCount;
             if (count >= 5) {
                 l_rFadeCount = (u16)(5);
-                dMeter_alphaFlagOn(&meter->field_0x3026, 8);
+                dMeter_alphaFlagOn(&meter->mButtonMoveFlags, 8);
             } else
                 l_rFadeCount = (u16)(count + 1);
         }
@@ -574,20 +574,20 @@ void dMeter_rAlpha(sub_meter_class *meter) {
         l_rPaneCount = (u16)(count);
     } else {
         l_rPaneCount = (u16)(count < 5 ? count + 1 : 5);
-        meter->field_0x3024 = (u8)((u8)meter->field_0x3024 | 16);
+        meter->mButtonActionMode = (u8)((u8)meter->mButtonActionMode | 16);
         meter->mButtonShowFlags = (u8)((u8)meter->mButtonShowFlags | 16);
         count = (s16)l_rPaneCount;
     }
     f32 alpha = fopMsgM_valueIncrease(5, count, 0);
     game = dComIfGp_ea();
     if (!(u8)meterGame(game)->play.mRStatus)
-        fopMsgM_setNowAlphaZero(&meter->field_0x1cc8);
+        fopMsgM_setNowAlphaZero(&meter->mRActionIcon);
     else
-        fopMsgM_setNowAlpha(&meter->field_0x1cc8, alpha);
+        fopMsgM_setNowAlpha(&meter->mRActionIcon, alpha);
     if (((u32)meter->mStatusFlags & (dMtrStts_UNK20_e)) &&
         !((u16)meterStageView(meterStage())->mStageFlags & 3))
         alpha = fsubs_ppc((f32)l_one, alpha);
-    fopMsgM_setNowAlpha(&meter->field_0x26a0, alpha);
+    fopMsgM_setNowAlpha(&meter->mRButton, alpha);
     fopMsgM_setNowAlpha(&meter->field_0x26d8, alpha);
     meterGame(dComIfGp_ea())->play.mRStatusForce = (u8)(0);
 }
@@ -967,8 +967,8 @@ void dMeter_enemyMove(sub_meter_class *meter) {
     l_bossVisible = (u8)(1);
 }
 static void meterMaskBoth(sub_meter_class *meter, u8 mask) {
-    u8 a = (u8)meter->field_0x3024, b = (u8)meter->mButtonShowFlags;
-    meter->field_0x3024 = (u8)(a | mask);
+    u8 a = (u8)meter->mButtonActionMode, b = (u8)meter->mButtonShowFlags;
+    meter->mButtonActionMode = (u8)(a | mask);
     meter->mButtonShowFlags = (u8)(b | mask);
 }
 // HD: XY item change, quantity, alpha, bow pulse and forest-water particles share one entry.
@@ -983,7 +983,7 @@ void dMeter_xyMove(sub_meter_class *meter) {
     bool unchanged = true, particles = false;
     for (u32 i = 0; i < 3; i++) {
         game = dComIfGp_ea();
-        if ((u8)meter->field_0x3021[i] != (u8)meterGame(game)->play.mSelectItem[i]) {
+        if ((u8)meter->mLastSelectItem[i] != (u8)meterGame(game)->play.mSelectItem[i]) {
             dMeter_xyItemChange(meter, i);
             unchanged = false;
             game = dComIfGp_ea();
@@ -993,8 +993,8 @@ void dMeter_xyMove(sub_meter_class *meter) {
                 special = (u8)meterGame(game)->play.mSelectItem[i] == dItemNo_LIGHT_ARROW_e;
             }
             if (!special)
-                meter->field_0x2320[i].mUserArea = (u16)(0);
-            meter->field_0x3021[i] = (u8)((u8)meterGame(dComIfGp_ea())->play.mSelectItem[i]);
+                meter->mBowLight1[i].mUserArea = (u16)(0);
+            meter->mLastSelectItem[i] = (u8)((u8)meterGame(dComIfGp_ea())->play.mSelectItem[i]);
         }
     }
     if (unchanged) {
@@ -1189,19 +1189,19 @@ void dMeter_xyMove(sub_meter_class *meter) {
     if (hide)
         mode = 1;
     if ((s16)l_xyFadeMode != (s32)mode) {
-        dMeter_alphaFlagOff(&meter->field_0x3026, 4);
+        dMeter_alphaFlagOff(&meter->mButtonMoveFlags, 4);
         if (mode == 1)
             dMeter_alphaFlagOff(state.get(), 4);
     }
     l_xyFadeMode = (u16)(mode);
-    bool paneDone = (u8)meter->field_0x3026 == 15;
-    if (!paneDone && !dMeter_alphaFlagCheck(&meter->field_0x3026, 4)) {
+    bool paneDone = (u8)meter->mButtonMoveFlags == 15;
+    if (!paneDone && !dMeter_alphaFlagCheck(&meter->mButtonMoveFlags, 4)) {
         if (mode != 1)
             dMeter_alphaFlagOn(state.get(), 4);
         s32 count = (s16)l_xyFadeCount;
         if (count >= 5) {
             l_xyFadeCount = (u16)(5);
-            dMeter_alphaFlagOn(&meter->field_0x3026, 4);
+            dMeter_alphaFlagOn(&meter->mButtonMoveFlags, 4);
         } else
             l_xyFadeCount = (u16)(count + 1);
     } else if (paneDone) {
@@ -1218,9 +1218,9 @@ void dMeter_xyMove(sub_meter_class *meter) {
         if (!bow)
             bow = (u8)meterGame(dComIfGp_ea())->play.mSelectItem[i] == dItemNo_LIGHT_ARROW_e;
         if (bow) {
-            meter->field_0x2320[0].mUserArea = (u16)((s16)meter->field_0x2320[0].mUserArea + 1);
-            auto pane = &meter->field_0x2320[0];
-            auto pulsePane = &meter->field_0x2320[i];
+            meter->mBowLight1[0].mUserArea = (u16)((s16)meter->mBowLight1[0].mUserArea + 1);
+            auto pane = &meter->mBowLight1[0];
+            auto pulsePane = &meter->mBowLight1[i];
             s32 timer = (s16)pulsePane->mUserArea, phase;
             if (timer >= 120) {
                 pulsePane->mUserArea = (u16)(0);
@@ -1232,19 +1232,19 @@ void dMeter_xyMove(sub_meter_class *meter) {
             f32 scale = fnmsubs(pulseDepth, weight, one);
             for (u32 j = 0; j < 3; j++) {
                 auto panePart = j == 0
-                                    ? &meter->field_0x2320[i]
-                                    : (j == 1 ? &meter->field_0x23c8[i] : &meter->field_0x2470[i]);
+                                    ? &meter->mBowLight1[i]
+                                    : (j == 1 ? &meter->mBowLight2[i] : &meter->mBowLight3[i]);
                 fopMsgM_paneScaleOne(panePart, scale);
                 panePart->mNowAlpha = (u8)(alpha);
             }
         } else if ((u8)meterGame(dComIfGp_ea())->play.mSelectItem[i] == dItemNo_FOREST_WATER_e) {
             Local<cXyz> position;
-            position->x = fsubs_ppc((f32)meter->field_0x2080[i].mPosCenter.x, width);
-            position->y = fsubs_ppc((f32)meter->field_0x2080[i].mPosCenter.y, height);
+            position->x = fsubs_ppc((f32)meter->mItemIcon[i].mPosCenter.x, width);
+            position->y = fsubs_ppc((f32)meter->mItemIcon[i].mPosCenter.y, height);
             position->z = zero;
             particles = true;
             for (u32 j = 0; j < 2; j++) {
-                auto emitterSlot = &meter->field_0x2f2c[j];
+                auto emitterSlot = &meter->mpForestWaterParticle[j];
                 u32 emitter = (u32)*emitterSlot;
                 if (emitter) {
                     f32 y = position->y.get();
@@ -1258,7 +1258,7 @@ void dMeter_xyMove(sub_meter_class *meter) {
                         (u32)((u32)meterParticle(emitter)->mFlags & ~4u);
                     emitter = (u32)*emitterSlot;
                     meterParticle(emitter)->mGlobalAlpha =
-                        (u8)((u8)meter->field_0x2080[i].mNowAlpha);
+                        (u8)((u8)meter->mItemIcon[i].mNowAlpha);
                 } else {
                     game = dComIfGp_ea();
                     u32 p = meterParticleSet(gabi::ea(meterGame(game)->play.mParticle.get()), 9,
@@ -1270,7 +1270,7 @@ void dMeter_xyMove(sub_meter_class *meter) {
     }
     if (!particles)
         for (u32 j = 0; j < 2; j++) {
-            auto emitterSlot = &meter->field_0x2f2c[j];
+            auto emitterSlot = &meter->mpForestWaterParticle[j];
             u32 emitter = (u32)*emitterSlot;
             if (emitter) {
                 meterParticle(emitter)->mMaxFrame = (u32)(0xFFFFFFFF);

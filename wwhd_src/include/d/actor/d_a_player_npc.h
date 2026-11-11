@@ -20,8 +20,8 @@ WWHD_OFFSET(judge_parm_c, mpActor, 0x24);
 enum PlayerNpcProcessName { fpcNm_Obj_Movebox_e = 0x2B };
 struct daPy_npc_c : daPy_py_c {
     /* 0x43C */ dBgS_ObjAcch mAcch;
-    /* 0x600 */ be<u32> m4E4;
-    /* 0x604 */ be<u8> m4E8;
+    /* 0x600 */ be<u32> mNpcFlags;  /* was m4E4: the player-NPC flag word of the TWW accessors returnLink() / isReturnLink() (bit 1) and onEventAccept() / isEventAccept() (bit 2): checkNowPosMove 02445950 tests both; Medli / Makar / the stone heads (daNpc_Md_c::eventProc 02287EFC, daNpc_Cb1_c::eventProc 02220288, daNpc_Os_c::eventProc 022AB6DC) set and clear them */
+    /* 0x604 */ be<u8> mFallTimer;  /* was m4E8: frames without ground: daNpc_Md_c::execute 02288B08, cb1_execFallCheck and daNpc_Os_c::execute 022AC1DC count it up to 30 while the NPC has no ground (or falls) and clear it otherwise; check_moveStop 024452A0 puts the NPC back home at 30 and clears it (tww check_moveStop the same) */
     /* 0x605 */ be<u8> mDamageFogTimer;
     /* 0x606 */ u8 padding[2];
     s32 check_initialRoom();
@@ -67,8 +67,8 @@ struct daPy_npc_c : daPy_py_c {
 };
 WWHD_SIZE(daPy_npc_c, 0x608);
 WWHD_OFFSET(daPy_npc_c, mAcch, 0x43C);
-WWHD_OFFSET(daPy_npc_c, m4E4, 0x600);
-WWHD_OFFSET(daPy_npc_c, m4E8, 0x604);
+WWHD_OFFSET(daPy_npc_c, mNpcFlags, 0x600);
+WWHD_OFFSET(daPy_npc_c, mFallTimer, 0x604);
 WWHD_OFFSET(daPy_npc_c, mDamageFogTimer, 0x605);
 // HD: raw word views retain packed place copies and signaling-NaN payloads.
 template<class T, class Field> inline be<T>& npcWord(Field& field) {

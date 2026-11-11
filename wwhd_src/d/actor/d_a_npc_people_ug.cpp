@@ -84,7 +84,7 @@ void daNpcPeople_c::executeKyoro() {
     if (executeCommon() == false) {
         if (mAnmFlag & 1) {
             mEtcFlag = mEtcFlag | 8;
-            if (m78A || mInAttention) {
+            if (mInLookDist || mInAttention) {
                 mBodyTurn = 1;
                 mLookAtPlayer = 1;
                 executeSetMode(peopleUgHD::MODE_WAIT);
@@ -239,18 +239,18 @@ void daNpcPeople_c::getDirDistToPos(cXyz* result, s16 angle, f32 mag) {
     result->x = x;
 }
 
-/* m71C = getDirDistToPos(angle, mag) + base */
+/* mUgTargetPos = getDirDistToPos(angle, mag) + base */
 static void people_setDirPos(daNpcPeople_c* i_this, s16 angle, f32 mag, cXyz* base,
                              bool fpr = false) {
     gabi::Local<cXyz> dir, sum;
     i_this->getDirDistToPos(dir.get(), angle, mag);
     cXyz_pl(dir.get(), sum.get(), base);
     if (fpr) { /* copied through the FPRs */
-        i_this->m71C.x = sum->x;
-        i_this->m71C.y = sum->y;
-        i_this->m71C.z = sum->z;
+        i_this->mUgTargetPos.x = sum->x;
+        i_this->mUgTargetPos.y = sum->y;
+        i_this->mUgTargetPos.z = sum->z;
     } else {
-        i_this->m71C.copy(*sum);
+        i_this->mUgTargetPos.copy(*sum);
     }
 }
 
@@ -259,7 +259,7 @@ void daNpcPeople_c::executeUgWalk() {
 
     if (!executeCommon()) {
         gabi::Local<cXyz> diff, tmp;
-        cXyz_mi(&current.pos, diff.get(), &m71C);
+        cXyz_mi(&current.pos, diff.get(), &mUgTargetPos);
         diff->y = 0.0f;
         f32 temp = cXyz_abs(diff.get());
         cXyz_mi(&current.pos, tmp.get(), &home.pos);
@@ -330,7 +330,7 @@ void daNpcPeople_c::executeUgWalk() {
                         gabi::Local<cXyz> dir;
                         getDirDistToPos(dir.get(), (s16)angle1, 50.0f);
                         cXyz_pl(dir.get(), d2.get(), &current.pos);
-                        m71C.copy(*d2);
+                        mUgTargetPos.copy(*d2);
                         mEtcFlag = mEtcFlag | 0x10000;
                     }
                 }
@@ -347,7 +347,7 @@ void daNpcPeople_c::executeUgWalk() {
         f32 f48 = mpNpcDat->mWalkSpeed;
         mTargetSpeed = (10.0f - f48) * temp4 / f3 + f48;
         gabi::Local<be<s16>> angle;
-        calcDisXZAngY(&current.pos, &m71C, nullptr, angle.get());
+        calcDisXZAngY(&current.pos, &mUgTargetPos, nullptr, angle.get());
         s16 a = *angle;
         mLookHeadOnly = false;
         mTargetAngleY = a;
@@ -382,7 +382,7 @@ s32 daNpcPeople_c::executeUgTurnInit() {
         f32 mag = cM_rndF(180.0f);
         people_setDirPos(this, *angle, mag, &home.pos, true);
     }
-    calcDisXZAngY(&current.pos, &m71C, nullptr, angle.get());
+    calcDisXZAngY(&current.pos, &mUgTargetPos, nullptr, angle.get());
     if (*angle == current.angle.y) {
         setAnmTbl(l_npc_anm_walk, 1);
         return peopleUgHD::MODE_UG_WALK;
@@ -396,7 +396,7 @@ void daNpcPeople_c::executeUgTurn() {
 
     if (!executeCommon()) {
         gabi::Local<be<s16>> temp;
-        calcDisXZAngY(&current.pos, &m71C, nullptr, temp.get());
+        calcDisXZAngY(&current.pos, &mUgTargetPos, nullptr, temp.get());
         s16 t = *temp;
         mLookMode = 2;
         mLookHeadOnly = false;

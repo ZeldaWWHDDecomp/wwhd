@@ -450,8 +450,8 @@ struct Act_c : fopAc_ac_c {
     /* 0x31B4 */ Mtx34 mOldMtx; /* last frame's */
     /* 0x31E4 */ union { Mtx34 m10F0; Mtx34 mJumpMtx; };   /* base rotation of mode_jumpToSea (GameCube m10F0) */
     /* 0x3214 */ be<u32> mType; /* M_type (GameCube m1120) */
-    /* 0x3218 */ union { be<s32> m1124; be<s32> mMode; }; /* GameCube m1124 */
-    /* 0x321C */ union { be<u8> m1128; be<u8> mbInit; };  /* GameCube m1128: mode_jumpToSea first frame */
+    /* 0x3218 */ be<s32> mMode; /* GameCube m1124 */
+    /* 0x321C */ be<u8> mbInit;  /* GameCube m1128: mode_jumpToSea first frame */
     /* 0x321D */ u8 _321D;
     /* 0x321E */ be<s16> mRotAngle;
     /* 0x3220 */ be<f32> mRotSpeed;

@@ -106,7 +106,8 @@ field 02413E80 101CEF1A u8 0,1
 field 02417388 54005B2C u32 0x40000000,0
 arg 02410888 r5 0,1,2,3
 ret 0273AD10 0,0x58000000,0x58001000,0xFFFFFFF4
-ret 025E3630 0,0x59000000
+# (the heap mostly created, 1 in 8 picks the failure 0, so playerInit's two item heaps both exist on most inputs)
+ret 025E3630 0,0x59000000,0x59000000,0x59000000,0x59000000,0x59000000,0x59000000,0x59000000
 # HD selfie pose (02415AF8 / 02415BA4)
 field 02415AF8 54005BB3 u8 0xB,0
 field 02415AF8 r3+0x690D u8 2,0
@@ -279,7 +280,8 @@ ret 025D7C6C 0,0x68000000
 ret 0200FAAC 0,0x6000,0x6001,0x8000
 ret 024FA018 0,0x6B000000
 # 0240F564 swBlur ctor: the sampler/texture object comparison (equal -> only the image is taken over)
-arg 0240F564 r3 0x40000000
+# (its own block 0x6F000000 instead of the shared 0x40000000, so the vertex array can be stable below)
+arg 0240F564 r3 0x6F000000
 field 0240F564 r3+0x12218 u32 0
 field 0240F564 r3+0x123B0 u32 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
 field 0240F564 r3+0x1221C u32 0
@@ -318,7 +320,8 @@ field 024131D0 r3+0x8A0 f32 -1000000000.0,0.0,0.0,0.0
 field 024142F0 r3+0x9C u32 0xFFFFFFFF,0,1,2,7,30
 field 024142F0 r3+0xA4 u32 0,1,2
 stable 4000009C 4
-arg! 024142F0 r3 0x40000000
+# (the swBlur block 0x6F000000 shared with its ctor, whose vertex array is stable)
+arg! 024142F0 r3 0x6F000000
 # 02414834 sight packet draw: pinned this, lock-on flag, texture/sampler equality
 arg! 02414834 r3 0x40000000
 field 02414834 r3+5 u8 0,1
@@ -488,7 +491,12 @@ field 02410BE8 57000004 u32 0x10
 field 02410BE8 57000014 u32 0x6579654C,0x6579654C,0x6D617975
 field 02410BE8 57000018 u32 0x64616D41,0x64616D42,0,0x4C64616D
 field 02410BE8 5700001C u32 0,0x41000000,0x42000000
-ret 027F3F94 0x58000000
+# 027F3F94 (one-line accessor: block = *r3, returns block+0xC+*(block+0xC) or 0) runs real (zero-page steer);
+# the model data's first word is set so it answers the material-table fixture 0x58000000 as the old ret line did
+real 027F3F94
+field 02410BE8 76000100 u32 0x57FFFFF0
+field 02410BE8 57FFFFFC u32 4
+stable 57FFFFF0 0x10
 field 02410BE8 58000008 u16 0,2,5
 field 02410BE8 r3+0xB0 u32 0x0000,0x2000,0x6000,0x9000,0xA000,0xB000,0xC000,0xE000,0xF000,0x12000000
 field 02410BE8 101F84DC u32 0x55000000
@@ -622,3 +630,124 @@ stable 76000104 8
 field 02400C4C r3+0x604 u32 0x77000000
 field 02400C4C r3+0x608 u32 0x77000100
 stable 40000604 8
+# playerInit: m_pbCalc[2] (this+0x57F0/0x57F4, the under/upper blend calculators: playerInit stores this and the
+# callbacks into them)
+field 02410BE8 r3+0x57F0 u32 0x78000000
+field 02410BE8 r3+0x57F4 u32 0x78000100
+stable 400057F0 8
+stable 76000100 4
+stable 40000444 4
+# playerInit: mpHandsModel (this+0xCF4): model data +0xAC (material count +4, table +8), joint-matrix block +0x2C
+field 02410BE8 r3+0xCF4 u32 0x79000000
+field 02410BE8 790000AC u32 0x79000100
+field 02410BE8 79000104 u32 0,1,3
+field 02410BE8 79000108 u32 0x79001000
+field 02410BE8 7900002C u32 0x79000200
+field 02410BE8 79000210 u32 0x79002000
+stable 40000CF4 4
+stable 7900002C 4
+stable 790000AC 4
+stable 79000104 8
+stable 79000210 4
+# zero-page steers: the HD render members' shared fixtures
+# the HD graphics heap (current heap 02756140 / containing heap 02755FEC of *101F8B4C): a sead heap whose vtable
+# (+0xC) has tryAlloc 02754F50 at +0x34 and free 0273AF40 at +0x3C (as d_a_grid); tryAlloc hands out 0x7F000000
+ret! 02756140 0x7C000000 0x7C000000
+ret! 02755FEC 0x7C000000 0x7C000000
+field * 7C00000C u32 0x7C000100
+field * 7C000134 u32 0x02754F50
+field * 7C00013C u32 0x0273AF40
+stable 7C00000C 4
+stable 7C000134 4
+stable 7C00013C 4
+ret! 02754F50 0x7F000000 0x7F000000
+# the material manager (027FFCBC): archive +4 (count +0x1C, sources +0x20), count +8, entries +0xC (0x24 each; an
+# entry starts with the draw material: shader +0, uniform block count +0xC, blocks +0x10)
+ret! 027FFCBC 0x7D000000 0x7D000000
+ret 027B90AC -1,0,1,1,1
+field * 7D000004 u32 0x7D000100
+field * 7D000008 u32 2
+field * 7D00000C u32 0x7D001000
+field * 7D00011C u32 2
+field * 7D000120 u32 0x7D002000
+field * 7D001020 u8 0,1
+field * 7D001044 u8 0,1
+field * 7D001000 u32 0x7D003000
+field * 7D001024 u32 0x7D003000
+field * 7D00100C u32 1
+field * 7D001030 u32 1
+field * 7D001010 u32 0x7D004000
+field * 7D001034 u32 0x7D004000
+stable 7D000004 12
+stable 7D00011C 8
+stable 7D001000 0x48
+# the shader (flags +0, display list +4 / size +0xC, resource +0x7C -> program +0x28) and its uniform binding
+field * 7D003000 u8 0,2
+field * 7D003004 u32 0x7D007000
+field * 7D00300C u32 0,0x40
+field * 7D00307C u32 0x7D003100
+field * 7D003128 u32 0x7D003200
+field * 7D00400C i16 -1,0,1
+field * 7D00400E i16 -1,0,1
+field * 7D004010 i16 -1,0,1
+stable 7D003000 0x80
+stable 7D003128 4
+stable 7D00400C 6
+# the active shader cache (027F29D4 on 104B45C0): +0 program, +4 shader
+ret! 027F29D4 0x7D005000 0x7D005000
+field * 7D005000 u32 0,0x7D003200
+field * 7D005004 u32 0,0x7D003000
+stable 7D005000 8
+# the resource images (026066C4 getRes, 1 in 8 the missing resource 0, "Always" 0x71 / "Link" 0x70, 0x72): BTI header, data offset +0x1C, image +0x20
+ret! 026066C4 0,0x7E000000,0x7E000000,0x7E000000,0x7E000000,0x7E000000,0x7E000000,0x7E000000
+field * 7E00001C u32 0x100
+field * 7E000020 u32 0x7E000200
+stable 7E00001C 8
+# 0240EE9C sight packet ctor: pinned this (NULL is the operator new path)
+arg 0240EE9C r3 0x40000000
+# 0240F564 swBlur ctor: its vertex array (this+0x660, 120 slots of 0x254 + current index +0x11760) keeps what the ctor
+# stores across its mocked calls
+stable 6F000660 0x11778
+# 02415384 dtor: the sword blur (this+0x73EC) with its real vtable
+field 02415384 r3+0x73EC u32 0,0x7B000000
+field 02415384 7B00000C u32 0x10037BE8
+stable 7B00000C 4
+stable 400073EC 4
+# HD draws: the material and the shape data (uniform block index +0x4C, blocks +0x10, 0x1C each: data +4, size +0xC)
+field 024142F0 r3+0x65C u32 0x7D001000,0x7D001024
+field 024142F0 r3+0x11DDC u32 0x7D006000
+field 02414834 r3+0x50 u32 0x7D001000,0x7D001024
+field 02414834 r3+0x518 u32 0x7D006000
+field * 7D00604C u32 0,1
+field * 7D006014 u32 0x7D008000
+field * 7D00601C u32 0x40
+field * 7D006030 u32 0x7D008100
+field * 7D006038 u32 0x40
+stable 6F00065C 4
+stable 40000050 4
+stable 6F011DDC 4
+stable 40000518 4
+stable 7D00604C 4
+stable 7D006014 0x28
+# HD draws: the shape's two material vtables as lk_hdShape_ct stores them (+0x18 vertex 1016EF84, +0xC0 pixel 1016EFB4)
+field 024142F0 r3+0x11DF0 u32 0x1016EF84
+field 024142F0 r3+0x11E98 u32 0x1016EFB4
+field 02414834 r3+0x52C u32 0x1016EF84
+field 02414834 r3+0x5D4 u32 0x1016EFB4
+stable 6F011DF0 4
+stable 6F011E98 4
+stable 4000052C 4
+stable 400005D4 4
+# 024142F0 swBlur draw: every vertex slot pointer of the array 0x6F6F6F6F (a fill under the stable range), the current
+# buffer index 0 or 1 (the material's uniform block count is 1 above: both draws read the first binding whatever the count)
+fill 024142F0 6F000660 0x11778 0x6F
+field 024142F0 r3+0x11DC0 u32 0,1
+# playerInit: the hands model's joint nodes 0..2 (0x1C each) share one mesh whose shape it hides
+field 02410BE8 79001010 u32 0x79003000
+field 02410BE8 7900102C u32 0x79003000
+field 02410BE8 79001048 u32 0x79003000
+field 02410BE8 79003008 u32 0x79003100
+stable 79001010 4
+stable 7900102C 4
+stable 79001048 4
+stable 79003008 4

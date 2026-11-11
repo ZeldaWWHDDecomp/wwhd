@@ -157,7 +157,7 @@ static dBgS_Acch* constructAcch(dBgS_Acch* a) {
     static_cast<dBgS_PolyPassChk*>(a)->mbObjThrough = 0;
     acch_cM3dGCyl_ct(gabi::ea(a->m_wall_cyl)); /* cM3dGCyl::cM3dGCyl */
     a->m_my_ac.v = 0;
-    a->field_0x78 = 0;
+    a->mpNowBgW = 0;
     a->m_ap_id = 0;
     a->m_ground_up_h = 0.0f;
     a->m_ground_check_offset = 0.0f;
@@ -169,9 +169,9 @@ static dBgS_Acch* constructAcch(dBgS_Acch* a) {
     acch_cM3dGPla_ct(gabi::ea(a->m_pla)); /* cM3dGPla::cM3dGPla */
     a->field_0xC4 = 0.0f;
     a->pm_out_poly_info = 0;
-    a->field_0xb8 = 0.0f;
+    a->mGroundPosY = 0.0f;
     a->m_roof_crr_height = 0.0f;
-    a->field_0xb0 = 0;
+    a->mPrevGroundHit = 0;
     a->m_sea_height = 0.0f;
     a->field_0xb4 = 0.0f;
     a->m_wtr_check_offset = 0.0f;
@@ -201,7 +201,7 @@ static dBgS_Acch* constructAcch(dBgS_Acch* a) {
     static_cast<cBgS_Chk*>(a)->mPolyPassChk =
         gabi::ea(static_cast<dBgS_PolyPassChk*>(a)); /* SetPolyPassChk */
     a->pm_speed = nullptr;
-    a->field_0xb8 = 0.0f;
+    a->mGroundPosY = 0.0f;
     a->m_sea_height = -G_CM3D_F_INF;
     a->field_0xb4 = 0.0f;
     static_cast<cBgS_Chk*>(a)->mGrpPassChk =
@@ -210,7 +210,7 @@ static dBgS_Acch* constructAcch(dBgS_Acch* a) {
     a->m_roof_crr_height = 0.0f;
     a->m_ground_check_offset = 60.0f;
     a->m_wtr_check_offset = 200.0f;
-    a->field_0xb0 = 0;
+    a->mPrevGroundHit = 0;
     a->pm_shape_angle = 0;
     a->m_ground_up_h = 0.0f;
     a->m_roof_height = 0.0f;
@@ -308,7 +308,7 @@ void AcchRead::GroundCheckInit(dBgS* bgs) {
         return;
     SetExtChk_GndRoof(gabi::ea(&a->m_gnd), gabi::ea(a));
     u32 f = a->m_flags;
-    a->field_0xb0 = (f >> 5) & 1; /* ChkGroundHit */
+    a->mPrevGroundHit = (f >> 5) & 1; /* ChkGroundHit */
     a->m_flags =
         f & ~(u32)(dBgS_Acch::GROUND_HIT | dBgS_Acch::GROUND_LANDING | dBgS_Acch::GROUND_AWAY);
 }
@@ -347,7 +347,7 @@ void AcchRead::GroundCheck(dBgS* bgs) {
     a->m_ground_h = gh;
     if (gh != -G_CM3D_F_INF) {
         f32 h = gabi::fadds_ppc(gh, a->m_ground_up_h);
-        a->field_0xb8 = h;
+        a->mGroundPosY = h;
         if (h > a->field_0xb4) {
             a->pm_pos->y = h;
             if (a->pm_speed.v != 0)
@@ -367,11 +367,11 @@ void AcchRead::GroundCheck(dBgS* bgs) {
             a->m_flags |= dBgS_Acch::GROUND_FIND | dBgS_Acch::GROUND_HIT;
             acch_dBgS_RideCallBack(bgs, gabi::ea(static_cast<cBgS_PolyInfo*>(&a->m_gnd)),
                                    a->m_my_ac.v);
-            if (!a->field_0xb0)
+            if (!a->mPrevGroundHit)
                 a->m_flags |= dBgS_Acch::GROUND_LANDING;
         }
     }
-    if (a->field_0xb0 && !(a->m_flags & dBgS_Acch::GROUND_HIT))
+    if (a->mPrevGroundHit && !(a->m_flags & dBgS_Acch::GROUND_HIT))
         a->m_flags |= dBgS_Acch::GROUND_AWAY;
 }
 
@@ -382,7 +382,7 @@ void AcchRead::GroundRoofProc(dBgS* bgs) {
 
     if (a->m_ground_h != -G_CM3D_F_INF) {
         f32 c4 = a->field_0xC4;
-        if (a->field_0xb8 < c4) {
+        if (a->mGroundPosY < c4) {
             cXyz* p = a->pm_pos;
             if (c4 < p->y)
                 p->y = c4;

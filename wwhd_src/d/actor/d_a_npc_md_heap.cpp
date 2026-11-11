@@ -331,7 +331,7 @@ cPhs_State daNpc_Md_c::create() {
             mdHeap_constructJointControl(&mJntCtrl); /* dNpc_JntCtrl_c::dNpc_JntCtrl_c */
             mdHeap_constructMirror(mMirrorPacket);    /* dDlst_mirrorPacket::dDlst_mirrorPacket */
             mMirrorShieldCb.__vtbl = MTX_FOLLOW_CALLBACK_VTABLE;         /* daPy_mtxFollowEcallBack_c */
-            m3058.__vtbl = FOLLOW_CALLBACK_VTABLE;         /* daNpc_Md_followEcallBack_c */
+            mHitShieldLightCb.__vtbl = FOLLOW_CALLBACK_VTABLE;         /* daNpc_Md_followEcallBack_c */
             mdHeap_constructRipple(&mRippleCb);    /* dPa_rippleEcallBack::dPa_rippleEcallBack */
             /* cBgS_PolyInfo mPolyInfo */
             mPolyInfo.mpBgW = 0;
@@ -590,7 +590,7 @@ static BOOL hairNodeCallBack(J3DNode* node, int calcTiming) {
                 r1_e8.x = 0.0f;
                 r1_e8.z = 0.0f;
                 r1_e8.y = -1.0f;
-                PSVECScale(&r1_e8, &r1_e8, l_HIO().m14C);
+                PSVECScale(&r1_e8, &r1_e8, l_HIO().mHairGravity);
                 cXyz r1_dc;
                 gabi::Local<be<f32>> power;
                 dKyw_get_AllWind_vec(&i_this->current.pos, &r1_dc, power);
@@ -803,10 +803,10 @@ BOOL daNpc_Md_c::setAction(ProcFunc_l* pCurrActionFunc, ProcFunc_l* newActionFun
     pCurrActionFunc->i = newI;
     pCurrActionFunc->f = newF;
     pCurrActionFunc->d = newD;
-    m3150 = 0.0f;
-    m314A = 0;
-    m3146 = 0;
-    m3148 = 0;
+    mBasePosY = 0.0f;
+    mGlideAnmCount = 0;
+    mActionTimer = 0;
+    mCrossWindHit = 0;
     m3144 = 0;
     mActionStatus = ACTION_STARTING;
     md_pmf_call<BOOL>(this, pCurrActionFunc, arg);
@@ -829,14 +829,14 @@ BOOL daNpc_Md_c::initTexPatternAnm(u8 btpAnmTblIdx, u32 param_2) {
     BtpEntry* tbl = &btpAnmTbl.values[btpAnmTblIdx]; /* static btpAnmTbl[] {char name[0x20]; u8 m20;} */
     J3DModelData* modelData = md_getModelData(md_morfModel(mpMorf.get()));
     bool ret = false;
-    void* eyeTexPtrn = md_getObjectRes(mModelArcName, reinterpret_cast<const char*>(tbl->m00));
+    void* eyeTexPtrn = md_getObjectRes(mModelArcName, reinterpret_cast<const char*>(tbl->mFileName));
     if (eyeTexPtrn == nullptr) {
         JUT_ASSERT_fail(STR(EYE_PATTERN_ASSERT_FILE), 0x1E70, STR(EYE_PATTERN_ASSERT));
     }
     if (md_btpAnm_init(mBtpAnm, modelData, eyeTexPtrn, 1, 1 /* EMode_RESET */, 1.0f, 0, -1, param_2, 0)) {
         mBtpFrameMax = (s16)J3DAnm_getFrameMax(eyeTexPtrn);
         mBlinkTimer = 0;
-        m3136 = tbl->m20;
+        mBtpSyncBody = tbl->mbSyncBody;
         mBtpAnmTblIdx = btpAnmTblIdx;
         ret = true;
     }
@@ -891,10 +891,10 @@ void daNpc_Md_c::setBaseMtx() {
         PSMTXTrans(now, current.pos.x, current.pos.y, current.pos.z); /* transS */
         if (status & daMdStts_CARRY_ACTION) { /* isNoCarryAction() */
             mDoMtx_ZXYrotM(now, shape_angle.x, shape_angle.y, shape_angle.z);
-            mDoMtx_stack_transM(0.0f, -l_HIO().m05C.m4, 0.0f);
+            mDoMtx_stack_transM(0.0f, -l_HIO().mCarried.m4, 0.0f);
         } else {
             mDoMtx_YrotM(now, shape_angle.y);
-            mDoMtx_stack_transM(m3298.x, m3298.y, m3298.z);
+            mDoMtx_stack_transM(mCarryOffset.x, mCarryOffset.y, mCarryOffset.z);
             mDoMtx_XrotM(now, shape_angle.x);
             mDoMtx_ZrotM(now, shape_angle.z);
         }
@@ -921,7 +921,7 @@ void daNpc_Md_c::setBaseMtx() {
     } else {
         PSMTXTrans(now, current.pos.x, current.pos.y + 95.0f, current.pos.z);
         mDoMtx_YrotM(now, shape_angle.y);
-        mDoMtx_stack_transM(m3298.x, m3298.y, m3298.z);
+        mDoMtx_stack_transM(mCarryOffset.x, mCarryOffset.y, mCarryOffset.z);
         mDoMtx_XrotM(now, shape_angle.x);
         mDoMtx_ZrotM(now, shape_angle.z);
         mDoMtx_stack_transM(0.0f, -95.0f, 0.0f);
@@ -952,8 +952,8 @@ void daNpc_Md_c::setBaseMtx() {
 BOOL daNpc_Md_c::init() {
     u8 uVar1 = fopAcM_GetParam(this) & 0xFF;
     mSwitchNo = (fopAcM_GetParam(this) >> 0x10) & 0xFF;
-    m313E = 0;
-    m30F4 = JA_SE_CM_MD_HARP_CN4; /* HD: JA_SE_CM_MD_HARP_CN4 */
+    mHarpSeCount = 0;
+    mHarpSe = JA_SE_CM_MD_HARP_CN4; /* HD: JA_SE_CM_MD_HARP_CN4 */
     attention_info.flags = fopAc_Attn_LOCKON_TALK_e | fopAc_Attn_ACTION_SPEAK_e;  /* attention_info.flags = LOCKON_TALK | ACTION_SPEAK */
     attention_info.distances[fopAc_Attn_TYPE_TALK_e] = 0x21;  /* distances[TALK] */
     attention_info.distances[fopAc_Attn_TYPE_SPEAK_e] = 0x21;  /* distances[SPEAK] */
@@ -963,12 +963,12 @@ BOOL daNpc_Md_c::init() {
     for (int i = 0; i < 6; i++) {
         mEmitters[i] = 0;
     }
-    m30AC.x = 0.0f;
-    m30AC.y = 0.0f;
-    m30AC.z = 50.0f;
+    mLookDownOffset.x = 0.0f;
+    mLookDownOffset.y = 0.0f;
+    mLookDownOffset.z = 50.0f;
     mPiyo2TalkCnt = 0;
     mStatus = 0;
-    gravity = l_HIO().m0F4;
+    gravity = l_HIO().mGravity;
     gabi::Local<ProcFunc_l> fn;
     if (mType == TYPE_M_DAIB) {
         mdHeap_loadAction(fn, action_harpWaitNpc);
@@ -989,7 +989,7 @@ BOOL daNpc_Md_c::init() {
     m_flying = 0;
     m_mirror = 0;
     mRunRate = 0.0f;
-    m30F8 = 120.0f;
+    mCylH = 120.0f;
     reinterpret_cast<Morf*>(mpMorf.get())->mAnmRate = 0.0f; /* mpMorf->setAnmRate(mRunRate) */
     reinterpret_cast<Morf*>(mpArmMorf.get())->mAnmRate = mRunRate;
     if (!md_isEventBit(UNK_1620)) {

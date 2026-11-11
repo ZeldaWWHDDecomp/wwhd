@@ -33,7 +33,7 @@ void daBemos_c::set_mtx() {
     auto* i_this = this;
     f32 x = static_cast<f32>(i_this->scale.x), y = static_cast<f32>(i_this->scale.y),
         z = static_cast<f32>(i_this->scale.z);
-    u32 model = static_cast<u32>(i_this->m2B8.v);
+    u32 model = static_cast<u32>(i_this->mpBodyModel.v);
     at<J3DModel>(model)->mBaseScale.x = x;
     at<J3DModel>(model)->mBaseScale.y = y;
     at<J3DModel>(model)->mBaseScale.z = z;
@@ -43,39 +43,39 @@ void daBemos_c::set_mtx() {
     BemosHD_PSMTXTrans(mDoMtx_stack_c::get(), x, y, z);
     BemosHD_mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), static_cast<s16>(i_this->shape_angle.x),
                            static_cast<s16>(i_this->shape_angle.y), static_cast<s16>(i_this->shape_angle.z));
-    bemos_copy_matrix(&at<J3DModel>(i_this->m2B8.v)->mBaseTransformMtx);
-    if (static_cast<u8>(i_this->m6B8) == 2)
+    bemos_copy_matrix(&at<J3DModel>(i_this->mpBodyModel.v)->mBaseTransformMtx);
+    if (static_cast<u8>(i_this->mType) == 2)
         return;
     gabi::Local<cXyz> local;
     local->z = 60.f;
     local->x = 0;
     local->y = 0;
-    x = static_cast<f32>(i_this->m360.x);
-    y = static_cast<f32>(i_this->m360.y);
-    z = static_cast<f32>(i_this->m360.z);
-    model = static_cast<u32>(i_this->m2BC.v);
+    x = static_cast<f32>(i_this->mHeadScale.x);
+    y = static_cast<f32>(i_this->mHeadScale.y);
+    z = static_cast<f32>(i_this->mHeadScale.z);
+    model = static_cast<u32>(i_this->mpHeadModel.v);
     at<J3DModel>(model)->mBaseScale.x = x;
     at<J3DModel>(model)->mBaseScale.y = y;
     at<J3DModel>(model)->mBaseScale.z = z;
-    x = static_cast<f32>(i_this->m2A4.x);
-    y = static_cast<f32>(i_this->m2A4.y);
-    z = static_cast<f32>(i_this->m2A4.z);
+    x = static_cast<f32>(i_this->mHeadPos.x);
+    y = static_cast<f32>(i_this->mHeadPos.y);
+    z = static_cast<f32>(i_this->mHeadPos.z);
     BemosHD_PSMTXTrans(mDoMtx_stack_c::get(), x, y, z);
-    s16 sum = (s16)(static_cast<s16>(i_this->m29C.y) + static_cast<s16>(i_this->current.angle.y));
-    BemosHD_mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), static_cast<s16>(i_this->m29C.x), sum,
-                           static_cast<s16>(i_this->m29C.z));
-    BemosHD_PSMTXMultVec(mDoMtx_stack_c::get(), local.get(), &i_this->m354);
-    bemos_copy_matrix(&at<J3DModel>(i_this->m2BC.v)->mBaseTransformMtx);
-    if (static_cast<u8>(i_this->m6B8) != 1)
+    s16 sum = (s16)(static_cast<s16>(i_this->mHeadAngle.y) + static_cast<s16>(i_this->current.angle.y));
+    BemosHD_mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), static_cast<s16>(i_this->mHeadAngle.x), sum,
+                           static_cast<s16>(i_this->mHeadAngle.z));
+    BemosHD_PSMTXMultVec(mDoMtx_stack_c::get(), local.get(), &i_this->mBeamRootPos);
+    bemos_copy_matrix(&at<J3DModel>(i_this->mpHeadModel.v)->mBaseTransformMtx);
+    if (static_cast<u8>(i_this->mType) != 1)
         return;
     x = static_cast<f32>(i_this->current.pos.x);
     y = static_cast<f32>(i_this->current.pos.y);
     z = static_cast<f32>(i_this->current.pos.z);
     BemosHD_PSMTXTrans(mDoMtx_stack_c::get(), x, y, z);
-    sum = (s16)(static_cast<s16>(i_this->m29C.y) + static_cast<s16>(i_this->current.angle.y));
+    sum = (s16)(static_cast<s16>(i_this->mHeadAngle.y) + static_cast<s16>(i_this->current.angle.y));
     BemosHD_mDoMtx_YrotM(mDoMtx_stack_c::get(), sum);
     BemosHD_mDoMtx_stack_c_transM(0.f, 0.f, 0.f);
-    bemos_copy_matrix(&at<J3DModel>(i_this->m2C0.v)->mBaseTransformMtx);
+    bemos_copy_matrix(&at<J3DModel>(i_this->mpHmos2tModel.v)->mBaseTransformMtx);
 }
 
 /* 02324424 */
@@ -91,7 +91,7 @@ s32 daBemos_c::CreateHeap1() {
     if (!data0)
         BemosHD_JUTAssertion_showAssert("d_a_obj_bemos.cpp", 422, "modelData != (0)");
     u32 model0 = BemosHD_mDoExt_J3DModel__create(at<void>(data0), 0, 0x11020203);
-    i_this->m2B8.v = model0;
+    i_this->mpBodyModel.v = model0;
     if (!model0)
         return 0;
     gabi::Local<SafeString> name1;
@@ -102,7 +102,7 @@ s32 daBemos_c::CreateHeap1() {
     if (!data1)
         BemosHD_JUTAssertion_showAssert("d_a_obj_bemos.cpp", 431, "modelData != (0)");
     u32 model1 = BemosHD_mDoExt_J3DModel__create(at<void>(data1), 0, 0x11020203);
-    i_this->m2BC.v = model1;
+    i_this->mpHeadModel.v = model1;
     if (!model1)
         return 0;
     return 1;
@@ -118,7 +118,7 @@ s32 daBemos_c::CreateHeap2() {
     if (!data0)
         BemosHD_JUTAssertion_showAssert("d_a_obj_bemos.cpp", 453, "modelData != (0)");
     u32 model0 = BemosHD_mDoExt_J3DModel__create(at<void>(data0), 0, 0x11020203);
-    i_this->m2B8.v = model0;
+    i_this->mpBodyModel.v = model0;
     if (!model0)
         return 0;
     gabi::Local<SafeString> name1;
@@ -129,7 +129,7 @@ s32 daBemos_c::CreateHeap2() {
     if (!data1)
         BemosHD_JUTAssertion_showAssert("d_a_obj_bemos.cpp", 462, "modelData != (0)");
     u32 model1 = BemosHD_mDoExt_J3DModel__create(at<void>(data1), 0, 0x11020203);
-    i_this->m2BC.v = model1;
+    i_this->mpHeadModel.v = model1;
     if (!model1)
         return 0;
     gabi::Local<SafeString> name2;
@@ -140,8 +140,8 @@ s32 daBemos_c::CreateHeap2() {
     if (!data2)
         BemosHD_JUTAssertion_showAssert("d_a_obj_bemos.cpp", 480, "modelData != (0)");
     u32 model2 = BemosHD_mDoExt_J3DModel__create(at<void>(data2), 0, 0x11020203);
-    u32 upper = static_cast<u32>(i_this->m2BC.v);
-    i_this->m2C0.v = model2;
+    u32 upper = static_cast<u32>(i_this->mpHeadModel.v);
+    i_this->mpHmos2tModel.v = model2;
     if (!upper)
         return 0;
     gabi::Local<SafeString> name3;
@@ -168,7 +168,7 @@ s32 daBemos_c::CreateHeap3() {
     if (!data0)
         BemosHD_JUTAssertion_showAssert("d_a_obj_bemos.cpp", 501, "modelData != (0)");
     u32 model0 = BemosHD_mDoExt_J3DModel__create(at<void>(data0), 0, 0x11020203);
-    i_this->m2B8.v = model0;
+    i_this->mpBodyModel.v = model0;
     if (!model0)
         return 0;
     return 1;
@@ -176,7 +176,7 @@ s32 daBemos_c::CreateHeap3() {
 
 /* 023243F8 */
 s32 daBemos_c::CreateHeap() {
-    u8 type = this->m6B8;
+    u8 type = this->mType;
     if (type == 0)
         return CreateHeap1();
     if (type == 1)
@@ -192,7 +192,7 @@ s32 daBemos_c::CreateInit1() {
     u8 amount = u8(u32(mParameters));
     if (amount == 255)
         amount = 0;
-    i_this->m320 = gabi::fmadds((f32)amount, 100.f, 500.f);
+    i_this->mSearchRange = gabi::fmadds((f32)amount, 100.f, 500.f);
     BemosHD_dCcD_Stts_Init(&i_this->mSttsSph, 255, 255, this);
     BemosHD_dCcD_Sph_Set(&i_this->mSph, &l_sph_src);
     u32 flag = static_cast<u32>(i_this->mSph.mGObjTg.mSPrm);
@@ -201,47 +201,47 @@ s32 daBemos_c::CreateInit1() {
     BemosHD_daBemos_c_blue_eye_wait_init(this);
     f32 y = static_cast<f32>(i_this->current.pos.y), x = static_cast<f32>(i_this->current.pos.x),
         z = static_cast<f32>(i_this->current.pos.z);
-    i_this->m2A4.y = y;
-    i_this->m2A4.z = z;
-    i_this->m2A4.x = x;
+    i_this->mHeadPos.y = y;
+    i_this->mHeadPos.z = z;
+    i_this->mHeadPos.x = x;
     f32 height = f32(bemos_heightReg()) + 260.f;
     f32 eyeY = y + height, groundY = y + 50.f;
-    i_this->m314.x = 0;
-    i_this->m360.x = 0;
-    i_this->m314.y = 0;
+    i_this->mLaserRootScale.x = 0;
+    i_this->mHeadScale.x = 0;
+    i_this->mLaserRootScale.y = 0;
     i_this->mGndChk.m_pos.x = x;
-    i_this->m314.z = 0;
+    i_this->mLaserRootScale.z = 0;
     i_this->eyePos.x = x;
-    i_this->m310 = 255;
+    i_this->mEyeAlpha = 255;
     i_this->mGndChk.mActorPid = static_cast<u32>(i_this->mBsPcId);
-    i_this->m2A4.y = eyeY;
+    i_this->mHeadPos.y = eyeY;
     i_this->attention_info.position.x = x;
     i_this->attention_info.position.z = z;
     i_this->mGndChk.m_pos.y = groundY;
     i_this->attention_info.position.y = eyeY + 60.f;
-    i_this->m360.y = 0.75f;
+    i_this->mHeadScale.y = 0.75f;
     i_this->mGndChk.m_pos.z = z;
     i_this->eyePos.y = eyeY;
     i_this->eyePos.z = z;
-    i_this->m6A4 = 0;
-    i_this->m360.z = 1.f;
+    i_this->mInRange = 0;
+    i_this->mHeadScale.z = 1.f;
     u32 play = BemosHD_dComIfGp_get();
     f32 ground = BemosHD_cBgS_GroundCross(&bemos_play(play).mBgS, &i_this->mGndChk);
-    i_this->m6A0 = ground;
+    i_this->mGroundY = ground;
     gabi::Local<cXyz> scale;
     scale->x = 2.f;
     scale->y = 2.f;
     scale->z = 10.f;
     u32 id = static_cast<u32>(i_this->mBsPcId);
     s8 room = static_cast<s8>(i_this->tevStr.mRoomNo);
-    u32 child = BemosHD_fopAcM_createChild(fpcNm_Beam_e, id, 16777216, &i_this->m2A4, room,
+    u32 child = BemosHD_fopAcM_createChild(fpcNm_Beam_e, id, 16777216, &i_this->mHeadPos, room,
                                            &i_this->current.angle, scale.get(), -1, 0);
     s16 angle = static_cast<s16>(i_this->shape_angle.z);
     i_this->parentActorID = child;
     i_this->shape_angle.z = 0;
     i_this->current.angle.z = 0;
-    i_this->m6BF = (u16)angle & 63;
-    i_this->m6C0 = ((u16)angle >> 6) & 127;
+    i_this->mDropItemNo = (u16)angle & 63;
+    i_this->mDropItemBitNo = ((u16)angle >> 6) & 127;
     return 1;
 }
 
@@ -253,8 +253,8 @@ s32 daBemos_c::CreateInit2() {
     s8 direction = (s8)(param >> 8);
     if (amount == 255)
         amount = 0;
-    i_this->m320 = gabi::fmadds((f32)amount, 100.f, 500.f);
-    i_this->m6B2 = direction * 250 + (direction >= 0 ? 750 : -500);
+    i_this->mSearchRange = gabi::fmadds((f32)amount, 100.f, 500.f);
+    i_this->mRotSpeed = direction * 250 + (direction >= 0 ? 750 : -500);
     BemosHD_dCcD_Stts_Init(&i_this->mSttsSph, 255, 255, this);
     BemosHD_dCcD_Sph_Set(&i_this->mSph, &l_sph_src);
     u32 flag = static_cast<u32>(i_this->mSph.mGObjTg.mSPrm);
@@ -263,47 +263,47 @@ s32 daBemos_c::CreateInit2() {
     BemosHD_daBemos_c_red_eye_wait_init(this);
     f32 y = static_cast<f32>(i_this->current.pos.y), x = static_cast<f32>(i_this->current.pos.x),
         z = static_cast<f32>(i_this->current.pos.z);
-    i_this->m2A4.y = y;
-    i_this->m2A4.z = z;
-    i_this->m2A4.x = x;
+    i_this->mHeadPos.y = y;
+    i_this->mHeadPos.z = z;
+    i_this->mHeadPos.x = x;
     f32 height = f32(bemos_heightReg()) + 260.f;
     f32 eyeY = y + height, groundY = y + 50.f;
-    i_this->m314.x = 0;
-    i_this->m360.x = 0;
-    i_this->m314.y = 0;
+    i_this->mLaserRootScale.x = 0;
+    i_this->mHeadScale.x = 0;
+    i_this->mLaserRootScale.y = 0;
     i_this->mGndChk.m_pos.x = x;
-    i_this->m314.z = 0;
+    i_this->mLaserRootScale.z = 0;
     i_this->eyePos.x = x;
-    i_this->m310 = 255;
+    i_this->mEyeAlpha = 255;
     i_this->mGndChk.mActorPid = static_cast<u32>(i_this->mBsPcId);
-    i_this->m2A4.y = eyeY;
+    i_this->mHeadPos.y = eyeY;
     i_this->attention_info.position.x = x;
     i_this->attention_info.position.z = z;
     i_this->mGndChk.m_pos.y = groundY;
     i_this->attention_info.position.y = eyeY + 60.f;
-    i_this->m360.y = 0.75f;
+    i_this->mHeadScale.y = 0.75f;
     i_this->mGndChk.m_pos.z = z;
     i_this->eyePos.y = eyeY;
     i_this->eyePos.z = z;
-    i_this->m6A4 = 0;
-    i_this->m360.z = 1.f;
+    i_this->mInRange = 0;
+    i_this->mHeadScale.z = 1.f;
     u32 play = BemosHD_dComIfGp_get();
     f32 ground = BemosHD_cBgS_GroundCross(&bemos_play(play).mBgS, &i_this->mGndChk);
-    i_this->m6A0 = ground;
+    i_this->mGroundY = ground;
     gabi::Local<cXyz> scale;
     scale->x = 2.f;
     scale->y = 2.f;
     scale->z = 10.f;
     u32 id = static_cast<u32>(i_this->mBsPcId);
     s8 room = static_cast<s8>(i_this->tevStr.mRoomNo);
-    u32 child = BemosHD_fopAcM_createChild(fpcNm_Beam_e, id, 0, &i_this->m2A4, room, &i_this->current.angle,
+    u32 child = BemosHD_fopAcM_createChild(fpcNm_Beam_e, id, 0, &i_this->mHeadPos, room, &i_this->current.angle,
                                            scale.get(), -1, 0);
     s16 angle = static_cast<s16>(i_this->shape_angle.z);
     i_this->parentActorID = child;
     i_this->shape_angle.z = 0;
     i_this->current.angle.z = 0;
-    i_this->m6BF = (u16)angle & 63;
-    i_this->m6C0 = ((u16)angle >> 6) & 127;
+    i_this->mDropItemNo = (u16)angle & 63;
+    i_this->mDropItemBitNo = ((u16)angle >> 6) & 127;
     return 1;
 }
 
@@ -311,12 +311,12 @@ s32 daBemos_c::CreateInit2() {
 s32 daBemos_c::CreateInit3() {
     auto* i_this = this;
     u32 param = static_cast<u32>(i_this->mParameters);
-    i_this->m6B9 = param >> 8;
-    i_this->m6A8 = param & 255;
+    i_this->mSubType = param >> 8;
+    i_this->mSwitchNo = param & 255;
     u32 path = BemosHD_dPath_GetRoomPath((param >> 16) & 255, s32(static_cast<s8>(i_this->current.roomNo)));
-    i_this->m320 = 1000;
-    if (static_cast<u8>(i_this->m6B9) == 255)
-        i_this->m6B9 = 0;
+    i_this->mSearchRange = 1000;
+    if (static_cast<u8>(i_this->mSubType) == 255)
+        i_this->mSubType = 0;
     f32 length = 10, offset = 0;
     gabi::Local<cXyz> target, diff, flat;
     bool has = false;
@@ -342,7 +342,7 @@ s32 daBemos_c::CreateInit3() {
         target->z = f32(at<path_layout::dPnt>(points)[1].m_position.z);
         BemosHD_fopAcM_createChild(
             fpcNm_Bemos_e, static_cast<u32>(i_this->mBsPcId),
-            static_cast<u32>(i_this->m6A8) | 0x2fff0000 | (u32(static_cast<u8>(i_this->m6B9)) << 8),
+            static_cast<u32>(i_this->mSwitchNo) | 0x2fff0000 | (u32(static_cast<u8>(i_this->mSubType)) << 8),
             target.get(), s32(static_cast<s8>(i_this->tevStr.mRoomNo)), nullptr, nullptr, 2, 0);
         has = true;
     } else if (static_cast<u32>(i_this->parentActorID) != 0xffffffff) {
@@ -362,13 +362,13 @@ s32 daBemos_c::CreateInit3() {
     }
     if (has) {
         s32 y = BemosHD_cLib_targetAngleY(&i_this->current.pos, target.get());
-        i_this->m29C.y = y;
+        i_this->mHeadAngle.y = y;
         s32 x = BemosHD_cLib_targetAngleX(&i_this->current.pos, target.get());
         s16 z = static_cast<s16>(i_this->current.angle.z);
-        i_this->m29C.x = x;
+        i_this->mHeadAngle.x = x;
         i_this->current.angle.x = x;
         i_this->shape_angle.x = x;
-        s16 yy = static_cast<s16>(i_this->m29C.y);
+        s16 yy = static_cast<s16>(i_this->mHeadAngle.y);
         i_this->current.angle.y = yy;
         i_this->shape_angle.y = yy;
         i_this->shape_angle.z = z;
@@ -377,29 +377,29 @@ s32 daBemos_c::CreateInit3() {
         flat->y = 0;
         flat->z = diff->z;
         f32 sq = BemosHD_PSVECSquareMag(flat.get());
-        i_this->m320 = BemosHD_sqrtf(sq);
+        i_this->mSearchRange = BemosHD_sqrtf(sq);
         sq = BemosHD_PSVECSquareMag(diff.get());
         f32 d = BemosHD_sqrtf(sq);
         length = 0.01f * (d - 180.f);
         offset = path ? 20.f : -20.f;
-        i_this->m6BD = path ? 1 : 0;
+        i_this->mHasPath = path ? 1 : 0;
     }
     BemosHD_cM3dGCyl_SetH(&i_this->mCyl.mCyl, 60.f);
-    bemos_bits(i_this->m2A4.z) = static_cast<u32>(bemos_bits(i_this->current.pos.z));
+    bemos_bits(i_this->mHeadPos.z) = static_cast<u32>(bemos_bits(i_this->current.pos.z));
     u32 ypos = static_cast<u32>(bemos_bits(i_this->current.pos.y));
     s32 ax = static_cast<s16>(i_this->current.angle.x), ay = static_cast<s16>(i_this->current.angle.y),
         az = static_cast<s16>(i_this->current.angle.z);
     u32 xpos = static_cast<u32>(bemos_bits(i_this->current.pos.x));
-    bemos_bits(i_this->m2A4.y) = ypos;
-    bemos_bits(i_this->m2A4.x) = xpos;
+    bemos_bits(i_this->mHeadPos.y) = ypos;
+    bemos_bits(i_this->mHeadPos.x) = xpos;
     gabi::Local<cXyz> v, out;
     v->x = 0;
     v->y = 0;
     v->z = 80;
     BemosHD_mDoMtx_ZXYrotS(mDoMtx_stack_c::get(), ax, ay, az);
     BemosHD_PSMTXMultVec(mDoMtx_stack_c::get(), v.get(), out.get());
-    BemosHD_PSVECAdd(&i_this->m2A4, out.get(), &i_this->m2A4);
-    i_this->m6A4 = 0;
+    BemosHD_PSVECAdd(&i_this->mHeadPos, out.get(), &i_this->mHeadPos);
+    i_this->mInRange = 0;
     BemosHD_daBemos_c_yellow_eye_wait_init(this);
     gabi::Local<cXyz> scale, pos;
     scale->x = 2;
@@ -408,23 +408,23 @@ s32 daBemos_c::CreateInit3() {
     v->x = 0;
     v->y = offset;
     v->z = 40;
-    BemosHD_PSMTXTrans(mDoMtx_stack_c::get(), static_cast<f32>(i_this->m2A4.x),
-                       static_cast<f32>(i_this->m2A4.y), static_cast<f32>(i_this->m2A4.z));
-    BemosHD_mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), s32(static_cast<s16>(i_this->m29C.x)),
-                           s32(static_cast<s16>(i_this->m29C.y)), s32(static_cast<s16>(i_this->m29C.z)));
+    BemosHD_PSMTXTrans(mDoMtx_stack_c::get(), static_cast<f32>(i_this->mHeadPos.x),
+                       static_cast<f32>(i_this->mHeadPos.y), static_cast<f32>(i_this->mHeadPos.z));
+    BemosHD_mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), s32(static_cast<s16>(i_this->mHeadAngle.x)),
+                           s32(static_cast<s16>(i_this->mHeadAngle.y)), s32(static_cast<s16>(i_this->mHeadAngle.z)));
     BemosHD_PSMTXMultVec(mDoMtx_stack_c::get(), v.get(), pos.get());
-    u32 flags = static_cast<u8>(i_this->m6B9) == 2 ? 0x11000000 : 0x41000000;
+    u32 flags = static_cast<u8>(i_this->mSubType) == 2 ? 0x11000000 : 0x41000000;
     u32 id = BemosHD_fopAcM_createChild(fpcNm_Beam_e, static_cast<u32>(i_this->mBsPcId), flags, pos.get(),
-                                        s32(static_cast<s8>(i_this->tevStr.mRoomNo)), &i_this->m29C,
+                                        s32(static_cast<s8>(i_this->tevStr.mRoomNo)), &i_this->mHeadAngle,
                                         scale.get(), -1, 0);
     i_this->parentActorID = id;
-    i_this->m6BB = 0;
-    i_this->current.angle.y = static_cast<s16>(i_this->m29C.y);
-    u32 sw = static_cast<u32>(i_this->m6A8);
+    i_this->mEventStep = 0;
+    i_this->current.angle.y = static_cast<s16>(i_this->mHeadAngle.y);
+    u32 sw = static_cast<u32>(i_this->mSwitchNo);
     if (sw != 255)
-        i_this->m6BA =
+        i_this->mSwitchOn =
             BemosHD_dSv_info_c_isSwitch(bemos_save(), sw, s32(static_cast<s8>(i_this->home.roomNo)));
-    if (static_cast<u8>(i_this->m6BD) && static_cast<u8>(i_this->m6B9) != 2) {
+    if (static_cast<u8>(i_this->mHasPath) && static_cast<u8>(i_this->mSubType) != 2) {
         BemosHD_dCcD_Stts_Init(&i_this->mSttsCyl, 255, 255, this);
         BemosHD_dCcD_Cyl_Set(&i_this->mCyl, &l_cylGuard_src);
         i_this->mCyl.mStts.v = gabi::ea(&i_this->mSttsCyl);
@@ -436,24 +436,24 @@ s32 daBemos_c::CreateInit3() {
 /* 02325558 */
 s32 daBemos_c::CreateInit() {
     auto* i_this = this;
-    if (static_cast<u8>(i_this->m6B8) != 2) {
+    if (static_cast<u8>(i_this->mType) != 2) {
         BemosHD_dCcD_Stts_Init(&i_this->mSttsCyl, 255, 255, this);
         BemosHD_dCcD_Cyl_Set(&i_this->mCyl, &l_cyl_src);
         u32 flags = static_cast<u32>(i_this->mCyl.mGObjTg.mSPrm);
         i_this->mCyl.mStts.v = gabi::ea(&i_this->mSttsCyl);
         i_this->mCyl.mGObjTg.mSPrm = flags | 2;
     }
-    i_this->m29C.x = u16(bemos_zeroAngle().x);
-    i_this->m29C.y = u16(bemos_zeroAngle().y);
-    u8 type = static_cast<u8>(i_this->m6B8);
+    i_this->mHeadAngle.x = u16(bemos_zeroAngle().x);
+    i_this->mHeadAngle.y = u16(bemos_zeroAngle().y);
+    u8 type = static_cast<u8>(i_this->mType);
     u16 z = u16(bemos_zeroAngle().z);
-    i_this->m2FC.v = 0;
-    i_this->m29C.z = z;
-    i_this->m30C.v = 0;
-    i_this->m300.v = 0;
+    i_this->mpWaitEmitter.v = 0;
+    i_this->mHeadAngle.z = z;
+    i_this->mpLaserRootEmitter.v = 0;
+    i_this->mpEyeEmitter.v = 0;
     i_this->m308.v = 0;
-    i_this->m6BC = 1;
-    i_this->m304.v = 0;
+    i_this->mArmed = 1;
+    i_this->mpChargeEmitter.v = 0;
     if (type == 0)
         BemosHD_daBemos_c_CreateInit1(this);
     else if (type == 1)
@@ -461,7 +461,7 @@ s32 daBemos_c::CreateInit() {
     else if (type == 2)
         BemosHD_daBemos_c_CreateInit3(this);
     BemosHD_daBemos_c_set_mtx(this);
-    u32 model = static_cast<u32>(i_this->m2B8.v);
+    u32 model = static_cast<u32>(i_this->mpBodyModel.v);
     if (model)
         model = gabi::ea(&at<J3DModel>(model)->mBaseTransformMtx);
     i_this->cullMtx = model;
@@ -520,7 +520,7 @@ s32 daBemos_c::_create() {
     }
     s32 phase = BemosHD_dComIfG_resLoad(&i_this->mPhase, "Hmos");
     u32 type = static_cast<u32>(i_this->mParameters) >> 28;
-    i_this->m6B8 = type;
+    i_this->mType = type;
     if (phase != cPhs_COMPLEATE_e)
         return phase;
     u32 hint = u32(SHeapSize[type]);
@@ -542,7 +542,7 @@ s32 daBemos_c::blue_range_check(s32 active, csXyz* angle) {
     pos->z = z;
     BemosHD_cXyz_subtractInto(pos.get(), diff.get(), &i_this->current.pos);
     u16 yaw = static_cast<u16>(i_this->current.angle.y);
-    f32 range = static_cast<f32>(i_this->m320), width = static_cast<f32>(bemos_hio().m08);
+    f32 range = static_cast<f32>(i_this->mSearchRange), width = static_cast<f32>(bemos_hio().mBlueSearchWidth);
     u32 trig = yaw;
     f32 sine = f32(bemos_sinCos(trig).sin), cosine = f32(bemos_sinCos(trig).cos);
     v0->x = sine;
@@ -555,17 +555,17 @@ s32 daBemos_c::blue_range_check(s32 active, csXyz* angle) {
         side = BemosHD_PSVECDotProduct(v1.get(), diff.get());
     f32 mag = BemosHD_sqrtf(gabi::fmadds(forward, forward, side * side)), dy = diff->y;
     if (active) {
-        width += static_cast<f32>(bemos_hio().m30);
-        range += static_cast<f32>(bemos_hio().m34);
+        width += static_cast<f32>(bemos_hio().mBlueWidthInRangeAdd);
+        range += static_cast<f32>(bemos_hio().mBlueRangeInRangeAdd);
     }
     if (forward < range && forward > 0 && __builtin_fabsf(side) < width && __builtin_fabsf(dy) < 250.f) {
-        f32 base = static_cast<f32>(i_this->m2A4.y) - static_cast<f32>(i_this->current.pos.y);
+        f32 base = static_cast<f32>(i_this->mHeadPos.y) - static_cast<f32>(i_this->current.pos.y);
         s32 pitch = BemosHD_cM_atan2s(dy + base, mag);
         angle->x = pitch;
-        i_this->m6A4 = 1;
+        i_this->mInRange = 1;
         return 1;
     }
-    i_this->m6A4 = 0;
+    i_this->mInRange = 0;
     return 0;
 }
 
@@ -584,50 +584,50 @@ s32 daBemos_c::red_range_check(s32 active, csXyz* angle) {
     flat->x = diff->x;
     flat->y = 0;
     flat->z = diff->z;
-    f32 range = static_cast<f32>(i_this->m320), sq = BemosHD_PSVECSquareMag(flat.get()),
+    f32 range = static_cast<f32>(i_this->mSearchRange), sq = BemosHD_PSVECSquareMag(flat.get()),
         dist = BemosHD_sqrtf(sq);
     s32 direction = BemosHD_cM_atan2s(f32(diff->x), f32(diff->z));
     s16 relative = s16(direction - static_cast<s16>(i_this->current.angle.y)),
-        delta = s16(relative - static_cast<s16>(i_this->m29C.y));
+        delta = s16(relative - static_cast<s16>(i_this->mHeadAngle.y));
     s32 absdelta = delta < 0 ? -s32(delta) : s32(delta);
     bool eligible = true;
-    if (!static_cast<u8>(i_this->m6BC)) {
-        BemosHD_cXyz_subtractInto(&at<fopAc_ac_c>(player)->current.pos, move.get(), &i_this->m36C);
+    if (!static_cast<u8>(i_this->mArmed)) {
+        BemosHD_cXyz_subtractInto(&at<fopAc_ac_c>(player)->current.pos, move.get(), &i_this->mLastPlayerPos);
         sq = BemosHD_PSVECSquareMag(move.get());
         f32 moved = BemosHD_sqrtf(sq);
         if (moved > 5.f)
-            i_this->m6BC = 1;
+            i_this->mArmed = 1;
         else if (absdelta > 0x1000)
-            i_this->m6BC = 1;
+            i_this->mArmed = 1;
         else
             eligible = false;
     }
     if (eligible) {
         if (active)
-            range += static_cast<f32>(bemos_hio().m2C);
+            range += static_cast<f32>(bemos_hio().mRedRangeInRangeAdd);
         if ((absdelta < 0x1000 || active == 1) && dist < range) {
-            f32 base = static_cast<f32>(i_this->m2A4.y) - static_cast<f32>(i_this->current.pos.y);
+            f32 base = static_cast<f32>(i_this->mHeadPos.y) - static_cast<f32>(i_this->current.pos.y);
             s32 pitch = BemosHD_cM_atan2s(base - f32(diff->y), dist);
             angle->x = pitch;
             angle->y = relative;
-            i_this->m6A4 = 1;
+            i_this->mInRange = 1;
             return 1;
         }
     }
-    i_this->m6A4 = 0;
+    i_this->mInRange = 0;
     return 0;
 }
 
 /* 0232665C */
 s32 daBemos_c::yellow_range_check(s32 range, void* angle) {
-    this->m6A4 = 1;
+    this->mInRange = 1;
     return 1;
 }
 
 /* 02324428 */
 s32 daBemos_c::blue_eye_wait_init() {
     auto* i_this = this;
-    if (!static_cast<u32>(i_this->m2FC.v)) {
+    if (!static_cast<u32>(i_this->mpWaitEmitter.v)) {
         gabi::Local<cXyz> pos;
         f32 x = static_cast<f32>(i_this->current.pos.x), y = static_cast<f32>(i_this->current.pos.y),
             z = static_cast<f32>(i_this->current.pos.z);
@@ -638,25 +638,25 @@ s32 daBemos_c::blue_eye_wait_init() {
         u32 emitter = BemosHD_dPa_control_c_set(at<void>(u32(bemos_play(play).mParticle.v)), 0,
                                                 dPa_name::ID_AK_SN_BMOSWAIT00, pos.get(), nullptr, 0, 0xff, 0,
                                                 -1, nullptr, 0, 0);
-        i_this->m2FC.v = emitter;
+        i_this->mpWaitEmitter.v = emitter;
         if (emitter) {
             at<BemosEmitterHD>(emitter)->mGlobalPrmColor.r = 160;
             at<BemosEmitterHD>(emitter)->mGlobalPrmColor.g = 180;
             at<BemosEmitterHD>(emitter)->mGlobalPrmColor.b = 255;
-            u32 e = static_cast<u32>(i_this->m2FC.v);
+            u32 e = static_cast<u32>(i_this->mpWaitEmitter.v);
             at<BemosEmitterHD>(e)->mGlobalEnvColor.g = 155;
             at<BemosEmitterHD>(e)->mGlobalEnvColor.r = 24;
             at<BemosEmitterHD>(e)->mGlobalEnvColor.b = 212;
         }
     }
-    if (!static_cast<u32>(i_this->m300.v)) {
+    if (!static_cast<u32>(i_this->mpEyeEmitter.v)) {
         u32 angle = static_cast<u16>(i_this->current.angle.y), trig = angle;
-        f32 y = static_cast<f32>(i_this->m2A4.y), x = static_cast<f32>(i_this->m2A4.x);
+        f32 y = static_cast<f32>(i_this->mHeadPos.y), x = static_cast<f32>(i_this->mHeadPos.x);
         f32 sine = f32(bemos_sinCos(trig).sin);
         gabi::Local<cXyz> pos;
         pos->y = y;
         x = gabi::fmadds(60.f, sine, x);
-        f32 z = static_cast<f32>(i_this->m2A4.z), cosine = f32(bemos_sinCos(trig).cos);
+        f32 z = static_cast<f32>(i_this->mHeadPos.z), cosine = f32(bemos_sinCos(trig).cos);
         z = gabi::fmadds(60.f, cosine, z);
         pos->x = x;
         pos->z = z;
@@ -664,26 +664,26 @@ s32 daBemos_c::blue_eye_wait_init() {
         u32 e = BemosHD_dPa_control_c_set(at<void>(u32(bemos_play(play).mParticle.v)), 0,
                                           dPa_name::ID_AK_SN_BMOSEYE00, pos.get(), nullptr, 0, 0xff, 0, -1,
                                           nullptr, 0, 0);
-        i_this->m300.v = e;
+        i_this->mpEyeEmitter.v = e;
         if (e) {
             at<BemosEmitterHD>(e)->mGlobalPrmColor.r = 20;
             at<BemosEmitterHD>(e)->mGlobalPrmColor.g = 54;
             at<BemosEmitterHD>(e)->mGlobalPrmColor.b = 195;
         }
     }
-    u32 old = static_cast<u32>(i_this->m304.v);
+    u32 old = static_cast<u32>(i_this->mpChargeEmitter.v);
     if (old) {
         u32 flags = static_cast<u32>(at<BemosEmitterHD>(old)->mFlags);
         at<BemosEmitterHD>(old)->mMaxFrame = 0xffffffff;
         at<BemosEmitterHD>(old)->mFlags = flags | 1;
-        i_this->m304.v = 0;
+        i_this->mpChargeEmitter.v = 0;
     }
-    i_this->m290.d = 0;
-    i_this->m360.y = 0.75f;
-    i_this->m360.z = 1.f;
-    i_this->m290.i = 0xffff;
-    i_this->m360.x = 0.f;
-    i_this->m290.f = gabi::guest_fn((const void*)&BemosCallback_blue_eye_wait);
+    i_this->mEyeProc.d = 0;
+    i_this->mHeadScale.y = 0.75f;
+    i_this->mHeadScale.z = 1.f;
+    i_this->mEyeProc.i = 0xffff;
+    i_this->mHeadScale.x = 0.f;
+    i_this->mEyeProc.f = gabi::guest_fn((const void*)&BemosCallback_blue_eye_wait);
     return 1;
 }
 
@@ -693,18 +693,18 @@ s32 daBemos_c::blue_eye_wait() {
     u32 a = gabi::ea(this);
     if (BemosHD_daBemos_c_getBeamActor(this)) {
         gabi::Local<csXyz> angle;
-        if (BemosHD_daBemos_c_blue_range_check(this, static_cast<u32>(i_this->m6A4), angle.get())) {
+        if (BemosHD_daBemos_c_blue_range_check(this, static_cast<u32>(i_this->mInRange), angle.get())) {
             BemosHD_daBemos_c_blue_eye_charge_init(this);
             return 1;
         }
-        BemosHD_cLib_chaseUC(&i_this->m310, 255, 15);
-        u8 alpha = static_cast<u8>(i_this->m310);
-        u32 e = static_cast<u32>(i_this->m300.v);
+        BemosHD_cLib_chaseUC(&i_this->mEyeAlpha, 255, 15);
+        u8 alpha = static_cast<u8>(i_this->mEyeAlpha);
+        u32 e = static_cast<u32>(i_this->mpEyeEmitter.v);
         if (alpha == 255)
             i_this->attention_info.flags = 0;
         if (e) {
-            f32 y = static_cast<f32>(i_this->m354.y), x = static_cast<f32>(i_this->m354.x),
-                z = static_cast<f32>(i_this->m354.z);
+            f32 y = static_cast<f32>(i_this->mBeamRootPos.y), x = static_cast<f32>(i_this->mBeamRootPos.x),
+                z = static_cast<f32>(i_this->mBeamRootPos.z);
             u8 kind = static_cast<u8>(at<BemosEmitterHD>(e)->mCoordinateSystem);
             at<BemosEmitterHD>(e)->mGlobalTranslation.x = x;
             at<BemosEmitterHD>(e)->mGlobalTranslation.y = y;
@@ -712,7 +712,7 @@ s32 daBemos_c::blue_eye_wait() {
             if (kind >= 7)
                 at<BemosEmitterHD>(e)->mGlobalTranslation.y =
                     -static_cast<f32>(at<BemosEmitterHD>(e)->mGlobalTranslation.y);
-            at<BemosEmitterHD>(i_this->m300.v)->mGlobalPrmColor.a = i_this->m310;
+            at<BemosEmitterHD>(i_this->mpEyeEmitter.v)->mGlobalPrmColor.a = i_this->mEyeAlpha;
         }
     }
     return 0;
@@ -721,53 +721,53 @@ s32 daBemos_c::blue_eye_wait() {
 /* 0232666C */
 s32 daBemos_c::blue_eye_charge_init() {
     auto* i_this = this;
-    u32 existing = static_cast<u32>(i_this->m304.v);
+    u32 existing = static_cast<u32>(i_this->mpChargeEmitter.v);
     i_this->attention_info.flags = 1;
     if (!existing) {
         u32 p = BemosHD_dComIfGp_get();
         u32 e = BemosHD_dPa_control_c_set(at<void>(u32(bemos_play(p).mParticle.v)), 0,
-                                          dPa_name::ID_AK_SN_BMOSBALL00, &i_this->m2A4, nullptr, 0, 0xff, 0,
+                                          dPa_name::ID_AK_SN_BMOSBALL00, &i_this->mHeadPos, nullptr, 0, 0xff, 0,
                                           -1, nullptr, 0, 0);
-        i_this->m304.v = e;
+        i_this->mpChargeEmitter.v = e;
         if (e) {
             at<BemosEmitterHD>(e)->mGlobalPrmColor.r = 16;
             at<BemosEmitterHD>(e)->mGlobalPrmColor.g = 35;
             at<BemosEmitterHD>(e)->mGlobalPrmColor.b = 192;
         }
     }
-    u32 old = static_cast<u32>(i_this->m2FC.v);
+    u32 old = static_cast<u32>(i_this->mpWaitEmitter.v);
     if (old) {
         u32 flags = static_cast<u32>(at<BemosEmitterHD>(old)->mFlags);
         at<BemosEmitterHD>(old)->mMaxFrame = 0xffffffff;
         at<BemosEmitterHD>(old)->mFlags = flags | 1;
-        i_this->m2FC.v = 0;
+        i_this->mpWaitEmitter.v = 0;
     }
-    s16 index = static_cast<s16>(i_this->m290.i);
-    i_this->m6AC = 0;
+    s16 index = static_cast<s16>(i_this->mEyeProc.i);
+    i_this->mLaserRootTimer = 0;
     bool waiting = false;
     if (index == -1) {
         if (index == 0)
             waiting = true;
-        else if (static_cast<s16>(i_this->m290.d) == 0 &&
-                 static_cast<u32>(i_this->m290.f) ==
+        else if (static_cast<s16>(i_this->mEyeProc.d) == 0 &&
+                 static_cast<u32>(i_this->mEyeProc.f) ==
                      gabi::guest_fn((const void*)&BemosCallback_blue_eye_wait))
             waiting = true;
     }
     if (waiting) {
-        i_this->m6AE = 0;
-        s16 timer = static_cast<s16>(bemos_hio().m1C);
-        i_this->m290.d = 0;
-        i_this->m6B0 = timer;
-        i_this->m290.f = gabi::guest_fn((const void*)&BemosCallback_blue_eye_charge);
-        i_this->m290.i = 0xffff;
+        i_this->mChargeCount = 0;
+        s16 timer = static_cast<s16>(bemos_hio().mBlueChargeTime);
+        i_this->mEyeProc.d = 0;
+        i_this->mChargeTime = timer;
+        i_this->mEyeProc.f = gabi::guest_fn((const void*)&BemosCallback_blue_eye_charge);
+        i_this->mEyeProc.i = 0xffff;
     } else {
-        s16 timer = static_cast<s16>(bemos_hio().m1E);
-        i_this->m6AE = timer;
-        timer = static_cast<s16>(bemos_hio().m1E);
-        i_this->m290.d = 0;
-        i_this->m6B0 = timer;
-        i_this->m290.i = 0xffff;
-        i_this->m290.f = gabi::guest_fn((const void*)&BemosCallback_blue_eye_charge);
+        s16 timer = static_cast<s16>(bemos_hio().mBlueChargeResume);
+        i_this->mChargeCount = timer;
+        timer = static_cast<s16>(bemos_hio().mBlueChargeResume);
+        i_this->mEyeProc.d = 0;
+        i_this->mChargeTime = timer;
+        i_this->mEyeProc.i = 0xffff;
+        i_this->mEyeProc.f = gabi::guest_fn((const void*)&BemosCallback_blue_eye_charge);
     }
     return 1;
 }
@@ -777,71 +777,71 @@ s32 daBemos_c::blue_eye_charge() {
     auto* i_this = this;
     u32 a = gabi::ea(this);
     gabi::Local<csXyz> angle;
-    bool on = BemosHD_daBemos_c_blue_range_check(this, static_cast<u32>(i_this->m6A4), angle.get()) != 0;
+    bool on = BemosHD_daBemos_c_blue_range_check(this, static_cast<u32>(i_this->mInRange), angle.get()) != 0;
     if (on) {
-        BemosHD_cLib_chaseF(&i_this->m360.x, 1.f, static_cast<f32>(bemos_hio().m14));
-        BemosHD_cLib_chaseF(&i_this->m360.y, 1.f, 0.25f * static_cast<f32>(bemos_hio().m14));
-        s16 count = static_cast<s16>(i_this->m6AE), limit = static_cast<s16>(i_this->m6B0);
+        BemosHD_cLib_chaseF(&i_this->mHeadScale.x, 1.f, static_cast<f32>(bemos_hio().mBlueHeadOpenStep));
+        BemosHD_cLib_chaseF(&i_this->mHeadScale.y, 1.f, 0.25f * static_cast<f32>(bemos_hio().mBlueHeadOpenStep));
+        s16 count = static_cast<s16>(i_this->mChargeCount), limit = static_cast<s16>(i_this->mChargeTime);
         if (count > limit) {
-            if (!static_cast<u32>(i_this->m30C.v)) {
+            if (!static_cast<u32>(i_this->mpLaserRootEmitter.v)) {
                 u32 play = BemosHD_dComIfGp_get();
                 u32 e = BemosHD_dPa_control_c_set(at<void>(u32(bemos_play(play).mParticle.v)), 0,
-                                                  dPa_name::ID_AK_SN_LASERROOT00, &i_this->m354, nullptr, 0,
+                                                  dPa_name::ID_AK_SN_LASERROOT00, &i_this->mBeamRootPos, nullptr, 0,
                                                   255, 0, -1, nullptr, 0, 0);
-                i_this->m30C.v = e;
+                i_this->mpLaserRootEmitter.v = e;
             }
-            if (static_cast<f32>(i_this->m360.x) == 1.f) {
-                s16 timer = s16(static_cast<s16>(i_this->m6AC) + 1);
-                i_this->m6AC = timer;
+            if (static_cast<f32>(i_this->mHeadScale.x) == 1.f) {
+                s16 timer = s16(static_cast<s16>(i_this->mLaserRootTimer) + 1);
+                i_this->mLaserRootTimer = timer;
                 if (timer >= 5) {
-                    u32 e = static_cast<u32>(i_this->m30C.v);
+                    u32 e = static_cast<u32>(i_this->mpLaserRootEmitter.v);
                     if (e) {
                         u32 flags = static_cast<u32>(at<BemosEmitterHD>(e)->mFlags);
                         at<BemosEmitterHD>(e)->mMaxFrame = -1;
                         at<BemosEmitterHD>(e)->mFlags = flags | 1;
-                        i_this->m30C.v = 0;
+                        i_this->mpLaserRootEmitter.v = 0;
                     }
                     BemosHD_daBemos_blue_eye_search_init(this);
                 }
             }
         } else
-            i_this->m6AE = count + 1;
-        BemosHD_cLib_chaseUC(&i_this->m310, 0, 30);
-        BemosHD_cLib_addCalcAngleS2(&i_this->m29C, s32(s16(angle->x)), 4, 0x400);
+            i_this->mChargeCount = count + 1;
+        BemosHD_cLib_chaseUC(&i_this->mEyeAlpha, 0, 30);
+        BemosHD_cLib_addCalcAngleS2(&i_this->mHeadAngle, s32(s16(angle->x)), 4, 0x400);
     } else {
-        s16 count = static_cast<s16>(i_this->m6AE);
+        s16 count = static_cast<s16>(i_this->mChargeCount);
         if (count <= 0) {
-            BemosHD_cLib_chaseF(&i_this->m360.x, 0.f, static_cast<f32>(bemos_hio().m18));
-            BemosHD_cLib_chaseF(&i_this->m360.y, 0.75f, 0.25f * static_cast<f32>(bemos_hio().m18));
-            if (static_cast<f32>(i_this->m360.x) == 0) {
-                u32 e = static_cast<u32>(i_this->m30C.v);
+            BemosHD_cLib_chaseF(&i_this->mHeadScale.x, 0.f, static_cast<f32>(bemos_hio().mBlueHeadCloseStep));
+            BemosHD_cLib_chaseF(&i_this->mHeadScale.y, 0.75f, 0.25f * static_cast<f32>(bemos_hio().mBlueHeadCloseStep));
+            if (static_cast<f32>(i_this->mHeadScale.x) == 0) {
+                u32 e = static_cast<u32>(i_this->mpLaserRootEmitter.v);
                 if (e) {
                     u32 flags = static_cast<u32>(at<BemosEmitterHD>(e)->mFlags);
                     at<BemosEmitterHD>(e)->mMaxFrame = -1;
                     at<BemosEmitterHD>(e)->mFlags = flags | 1;
-                    i_this->m30C.v = 0;
+                    i_this->mpLaserRootEmitter.v = 0;
                 }
                 BemosHD_daBemos_c_blue_eye_wait_init(this);
             }
-            BemosHD_cLib_chaseUC(&i_this->m310, 255, 15);
-            BemosHD_cLib_addCalcAngleS2(&i_this->m29C, 0, 4, 0x400);
-            s16 timer = static_cast<s16>(i_this->m6AC);
+            BemosHD_cLib_chaseUC(&i_this->mEyeAlpha, 255, 15);
+            BemosHD_cLib_addCalcAngleS2(&i_this->mHeadAngle, 0, 4, 0x400);
+            s16 timer = static_cast<s16>(i_this->mLaserRootTimer);
             if (timer > 0)
-                i_this->m6AC = timer - 1;
+                i_this->mLaserRootTimer = timer - 1;
         } else
-            i_this->m6AE = count - 1;
+            i_this->mChargeCount = count - 1;
     }
-    f32 t = f32(static_cast<s16>(i_this->m6AC)) - 2.5f, scale = gabi::fnmsubs(t, t, 6.25f) * 1.6f;
-    i_this->m314.x = scale;
-    i_this->m314.y = scale;
-    i_this->m314.z = scale;
-    BemosHD_cM3dGSph_SetC(&i_this->mSph.mSph, &i_this->m2A4);
+    f32 t = f32(static_cast<s16>(i_this->mLaserRootTimer)) - 2.5f, scale = gabi::fnmsubs(t, t, 6.25f) * 1.6f;
+    i_this->mLaserRootScale.x = scale;
+    i_this->mLaserRootScale.y = scale;
+    i_this->mLaserRootScale.z = scale;
+    BemosHD_cM3dGSph_SetC(&i_this->mSph.mSph, &i_this->mHeadPos);
     u32 play = BemosHD_dComIfGp_get();
     BemosHD_cCcS_Set(&bemos_play(play).mCcS, &i_this->mSph);
-    u32 e = static_cast<u32>(i_this->m300.v);
+    u32 e = static_cast<u32>(i_this->mpEyeEmitter.v);
     if (e) {
-        f32 y = static_cast<f32>(i_this->m354.y), z = static_cast<f32>(i_this->m354.z),
-            x = static_cast<f32>(i_this->m354.x);
+        f32 y = static_cast<f32>(i_this->mBeamRootPos.y), z = static_cast<f32>(i_this->mBeamRootPos.z),
+            x = static_cast<f32>(i_this->mBeamRootPos.x);
         u8 kind = static_cast<u8>(at<BemosEmitterHD>(e)->mCoordinateSystem);
         at<BemosEmitterHD>(e)->mGlobalTranslation.x = x;
         at<BemosEmitterHD>(e)->mGlobalTranslation.y = y;
@@ -849,14 +849,14 @@ s32 daBemos_c::blue_eye_charge() {
         if (kind >= 7)
             at<BemosEmitterHD>(e)->mGlobalTranslation.y =
                 -static_cast<f32>(at<BemosEmitterHD>(e)->mGlobalTranslation.y);
-        at<BemosEmitterHD>(i_this->m300.v)->mGlobalPrmColor.a = i_this->m310;
+        at<BemosEmitterHD>(i_this->mpEyeEmitter.v)->mGlobalPrmColor.a = i_this->mEyeAlpha;
     }
-    e = static_cast<u32>(i_this->m30C.v);
+    e = static_cast<u32>(i_this->mpLaserRootEmitter.v);
     if (e) {
-        f32 x = static_cast<f32>(i_this->m354.x), z = static_cast<f32>(i_this->m354.z),
-            y = static_cast<f32>(i_this->m354.y);
-        s32 rz = static_cast<s16>(i_this->m29C.z), rx = static_cast<s16>(i_this->m29C.x),
-            ry = s16(static_cast<s16>(i_this->m29C.y) + static_cast<s16>(i_this->current.angle.y));
+        f32 x = static_cast<f32>(i_this->mBeamRootPos.x), z = static_cast<f32>(i_this->mBeamRootPos.z),
+            y = static_cast<f32>(i_this->mBeamRootPos.y);
+        s32 rz = static_cast<s16>(i_this->mHeadAngle.z), rx = static_cast<s16>(i_this->mHeadAngle.x),
+            ry = s16(static_cast<s16>(i_this->mHeadAngle.y) + static_cast<s16>(i_this->current.angle.y));
         u8 kind = static_cast<u8>(at<BemosEmitterHD>(e)->mCoordinateSystem);
         at<BemosEmitterHD>(e)->mGlobalTranslation.x = x;
         at<BemosEmitterHD>(e)->mGlobalTranslation.y = y;
@@ -864,11 +864,11 @@ s32 daBemos_c::blue_eye_charge() {
         if (kind >= 7)
             at<BemosEmitterHD>(e)->mGlobalTranslation.y =
                 -static_cast<f32>(at<BemosEmitterHD>(e)->mGlobalTranslation.y);
-        BemosHD_JPAGetXYZRotateMtx(rx, ry, rz, &at<BemosEmitterHD>(i_this->m30C.v)->mGlobalRotation);
-        x = static_cast<f32>(i_this->m314.x);
-        y = static_cast<f32>(i_this->m314.y);
-        e = static_cast<u32>(i_this->m30C.v);
-        z = static_cast<f32>(i_this->m314.z);
+        BemosHD_JPAGetXYZRotateMtx(rx, ry, rz, &at<BemosEmitterHD>(i_this->mpLaserRootEmitter.v)->mGlobalRotation);
+        x = static_cast<f32>(i_this->mLaserRootScale.x);
+        y = static_cast<f32>(i_this->mLaserRootScale.y);
+        e = static_cast<u32>(i_this->mpLaserRootEmitter.v);
+        z = static_cast<f32>(i_this->mLaserRootScale.z);
         at<BemosEmitterHD>(e)->mGlobalScale.x = x;
         at<BemosEmitterHD>(e)->mGlobalScale.y = y;
         at<BemosEmitterHD>(e)->mGlobalScale.z = z;
@@ -882,10 +882,10 @@ s32 daBemos_c::blue_eye_charge() {
 /* 023268A8 */
 s32 daBemos_c::blue_eye_search_init() {
     auto* i_this = this;
-    i_this->m290.d = 0;
-    i_this->m290.i = 0xffff;
-    i_this->m290.f = gabi::guest_fn((const void*)&BemosCallback_blue_eye_search);
-    i_this->m6AC = 0;
+    i_this->mEyeProc.d = 0;
+    i_this->mEyeProc.i = 0xffff;
+    i_this->mEyeProc.f = gabi::guest_fn((const void*)&BemosCallback_blue_eye_search);
+    i_this->mLaserRootTimer = 0;
     return 1;
 }
 
@@ -896,66 +896,66 @@ s32 daBemos_c::blue_eye_search() {
     if (!beam)
         return 0;
     gabi::Local<csXyz> angle, beamangle;
-    bool on = BemosHD_daBemos_c_blue_range_check(this, static_cast<u32>(i_this->m6A4), angle.get()) != 0;
+    bool on = BemosHD_daBemos_c_blue_range_check(this, static_cast<u32>(i_this->mInRange), angle.get()) != 0;
     if (on) {
-        BemosHD_cLib_addCalcAngleS2(&i_this->m29C, s32(s16(angle->x)), 4, 0x400);
-        s16 z = static_cast<s16>(i_this->m29C.z),
-            yaw = s16(static_cast<s16>(i_this->m29C.y) + static_cast<s16>(i_this->current.angle.y));
-        beamangle->x = static_cast<s16>(i_this->m29C.x);
+        BemosHD_cLib_addCalcAngleS2(&i_this->mHeadAngle, s32(s16(angle->x)), 4, 0x400);
+        s16 z = static_cast<s16>(i_this->mHeadAngle.z),
+            yaw = s16(static_cast<s16>(i_this->mHeadAngle.y) + static_cast<s16>(i_this->current.angle.y));
+        beamangle->x = static_cast<s16>(i_this->mHeadAngle.x);
         beamangle->z = z;
-        if (!static_cast<u32>(at<daBeam_c>(beam)->m690.v)) {
+        if (!static_cast<u32>(at<daBeam_c>(beam)->mpBeamEmitter.v)) {
             u32 play = BemosHD_dComIfGp_get();
             u32 e = BemosHD_dPa_control_c_set(
                 at<void>(u32(bemos_play(play).mParticle.v)), 0, dPa_name::ID_AK_SN_LASERROOT00,
                 &at<daBeam_c>(beam)->current.pos, nullptr, 0, 255, 0, -1, nullptr, 0, 0);
-            at<daBeam_c>(beam)->m690.v = e;
+            at<daBeam_c>(beam)->mpBeamEmitter.v = e;
         }
-        s16 state = static_cast<s16>(at<daBeam_c>(beam)->m5F4);
-        at<daBeam_c>(beam)->m5A8 = 0;
+        s16 state = static_cast<s16>(at<daBeam_c>(beam)->mBeamOn);
+        at<daBeam_c>(beam)->mFadeFrame = 0;
         f32 width = 5;
         if (!state) {
-            f32 old = static_cast<f32>(at<daBeam_c>(beam)->m588);
+            f32 old = static_cast<f32>(at<daBeam_c>(beam)->mBeamFrame);
             if (old < 5.f)
                 width = old + 1.f;
             else {
-                at<daBeam_c>(beam)->m5A8 = 0;
-                at<daBeam_c>(beam)->m5F4 = 1;
+                at<daBeam_c>(beam)->mFadeFrame = 0;
+                at<daBeam_c>(beam)->mBeamOn = 1;
             }
         }
-        at<daBeam_c>(beam)->m588 = width;
+        at<daBeam_c>(beam)->mBeamFrame = width;
         for (u32 i = 0; i < 3; i++)
-            bemos_positionWord(at<daBeam_c>(beam)->current.pos, i) = u32(bemos_positionWord(i_this->m354, i));
+            bemos_positionWord(at<daBeam_c>(beam)->current.pos, i) = u32(bemos_positionWord(i_this->mBeamRootPos, i));
         at<daBeam_c>(beam)->current.angle.y = yaw;
         at<daBeam_c>(beam)->current.angle.x = beamangle->x;
         at<daBeam_c>(beam)->current.angle.z = beamangle->z;
     } else {
-        u32 e = static_cast<u32>(at<daBeam_c>(beam)->m690.v);
+        u32 e = static_cast<u32>(at<daBeam_c>(beam)->mpBeamEmitter.v);
         if (e) {
             u32 flags = static_cast<u32>(at<BemosEmitterHD>(e)->mFlags);
             at<BemosEmitterHD>(e)->mMaxFrame = -1;
             at<BemosEmitterHD>(e)->mFlags = flags | 1;
-            at<daBeam_c>(beam)->m690.v = 0;
+            at<daBeam_c>(beam)->mpBeamEmitter.v = 0;
         }
-        if (static_cast<s16>(at<daBeam_c>(beam)->m5F4) == 1) {
-            f32 old = static_cast<f32>(at<daBeam_c>(beam)->m588);
+        if (static_cast<s16>(at<daBeam_c>(beam)->mBeamOn) == 1) {
+            f32 old = static_cast<f32>(at<daBeam_c>(beam)->mBeamFrame);
             if (old < 5.f)
-                at<daBeam_c>(beam)->m588 = old + 1.f;
-            f32 height = static_cast<f32>(at<daBeam_c>(beam)->m5A8);
+                at<daBeam_c>(beam)->mBeamFrame = old + 1.f;
+            f32 height = static_cast<f32>(at<daBeam_c>(beam)->mFadeFrame);
             if (height < 4.f)
-                at<daBeam_c>(beam)->m5A8 = height + 1.f;
+                at<daBeam_c>(beam)->mFadeFrame = height + 1.f;
             else {
-                at<daBeam_c>(beam)->m5A8 = 0;
-                at<daBeam_c>(beam)->m588 = 0;
-                at<daBeam_c>(beam)->m5F4 = 0;
+                at<daBeam_c>(beam)->mFadeFrame = 0;
+                at<daBeam_c>(beam)->mBeamFrame = 0;
+                at<daBeam_c>(beam)->mBeamOn = 0;
                 BemosHD_daBemos_c_blue_eye_charge_init(this);
             }
         } else {
-            at<daBeam_c>(beam)->m588 = 0;
-            at<daBeam_c>(beam)->m5A8 = 0;
+            at<daBeam_c>(beam)->mBeamFrame = 0;
+            at<daBeam_c>(beam)->mFadeFrame = 0;
             BemosHD_daBemos_c_blue_eye_charge_init(this);
         }
     }
-    BemosHD_cM3dGSph_SetC(&i_this->mSph.mSph, &i_this->m2A4);
+    BemosHD_cM3dGSph_SetC(&i_this->mSph.mSph, &i_this->mHeadPos);
     u32 play = BemosHD_dComIfGp_get();
     BemosHD_cCcS_Set(&bemos_play(play).mCcS, &i_this->mSph);
     return 0;
@@ -964,7 +964,7 @@ s32 daBemos_c::blue_eye_search() {
 /* 02324830 */
 s32 daBemos_c::red_eye_wait_init() {
     auto* i_this = this;
-    if (!static_cast<u32>(i_this->m2FC.v)) {
+    if (!static_cast<u32>(i_this->mpWaitEmitter.v)) {
         gabi::Local<cXyz> pos;
         f32 x = static_cast<f32>(i_this->current.pos.x), y = static_cast<f32>(i_this->current.pos.y),
             z = static_cast<f32>(i_this->current.pos.z);
@@ -975,25 +975,25 @@ s32 daBemos_c::red_eye_wait_init() {
         u32 emitter = BemosHD_dPa_control_c_set(at<void>(u32(bemos_play(play).mParticle.v)), 0,
                                                 dPa_name::ID_AK_SN_BMOSWAIT00, pos.get(), nullptr, 0, 0xff, 0,
                                                 -1, nullptr, 0, 0);
-        i_this->m2FC.v = emitter;
+        i_this->mpWaitEmitter.v = emitter;
         if (emitter) {
             at<BemosEmitterHD>(emitter)->mGlobalPrmColor.r = 255;
             at<BemosEmitterHD>(emitter)->mGlobalPrmColor.g = 128;
             at<BemosEmitterHD>(emitter)->mGlobalPrmColor.b = 200;
-            u32 e = static_cast<u32>(i_this->m2FC.v);
+            u32 e = static_cast<u32>(i_this->mpWaitEmitter.v);
             at<BemosEmitterHD>(e)->mGlobalEnvColor.r = 212;
             at<BemosEmitterHD>(e)->mGlobalEnvColor.b = 255;
             at<BemosEmitterHD>(e)->mGlobalEnvColor.g = 24;
         }
     }
-    if (!static_cast<u32>(i_this->m300.v)) {
+    if (!static_cast<u32>(i_this->mpEyeEmitter.v)) {
         u32 angle = static_cast<u16>(i_this->current.angle.y), trig = angle;
-        f32 y = static_cast<f32>(i_this->m2A4.y), x = static_cast<f32>(i_this->m2A4.x);
+        f32 y = static_cast<f32>(i_this->mHeadPos.y), x = static_cast<f32>(i_this->mHeadPos.x);
         f32 sine = f32(bemos_sinCos(trig).sin);
         gabi::Local<cXyz> pos;
         pos->y = y;
         x = gabi::fmadds(60.f, sine, x);
-        f32 z = static_cast<f32>(i_this->m2A4.z), cosine = f32(bemos_sinCos(trig).cos);
+        f32 z = static_cast<f32>(i_this->mHeadPos.z), cosine = f32(bemos_sinCos(trig).cos);
         z = gabi::fmadds(60.f, cosine, z);
         pos->x = x;
         pos->z = z;
@@ -1001,26 +1001,26 @@ s32 daBemos_c::red_eye_wait_init() {
         u32 e = BemosHD_dPa_control_c_set(at<void>(u32(bemos_play(play).mParticle.v)), 0,
                                           dPa_name::ID_AK_SN_BMOSEYE00, pos.get(), nullptr, 0, 0xff, 0, -1,
                                           nullptr, 0, 0);
-        i_this->m300.v = e;
+        i_this->mpEyeEmitter.v = e;
         if (e) {
             at<BemosEmitterHD>(e)->mGlobalPrmColor.r = 195;
             at<BemosEmitterHD>(e)->mGlobalPrmColor.g = 20;
             at<BemosEmitterHD>(e)->mGlobalPrmColor.b = 54;
         }
     }
-    u32 old = static_cast<u32>(i_this->m304.v);
+    u32 old = static_cast<u32>(i_this->mpChargeEmitter.v);
     if (old) {
         u32 flags = static_cast<u32>(at<BemosEmitterHD>(old)->mFlags);
         at<BemosEmitterHD>(old)->mMaxFrame = 0xffffffff;
         at<BemosEmitterHD>(old)->mFlags = flags | 1;
-        i_this->m304.v = 0;
+        i_this->mpChargeEmitter.v = 0;
     }
-    i_this->m290.d = 0;
-    i_this->m360.y = 0.75f;
-    i_this->m360.z = 1.f;
-    i_this->m290.i = 0xffff;
-    i_this->m360.x = 0.f;
-    i_this->m290.f = gabi::guest_fn((const void*)&BemosCallback_red_eye_wait);
+    i_this->mEyeProc.d = 0;
+    i_this->mHeadScale.y = 0.75f;
+    i_this->mHeadScale.z = 1.f;
+    i_this->mEyeProc.i = 0xffff;
+    i_this->mHeadScale.x = 0.f;
+    i_this->mEyeProc.f = gabi::guest_fn((const void*)&BemosCallback_red_eye_wait);
     return 1;
 }
 
@@ -1032,21 +1032,21 @@ s32 daBemos_c::red_eye_wait() {
     if (!beam)
         return 0;
     gabi::Local<csXyz> angle;
-    if (BemosHD_daBemos_c_red_range_check(this, static_cast<u32>(i_this->m6A4), angle.get())) {
+    if (BemosHD_daBemos_c_red_range_check(this, static_cast<u32>(i_this->mInRange), angle.get())) {
         BemosHD_daBemos_c_red_eye_charge_init(this);
         return 1;
     }
-    BemosHD_cLib_addCalcAngleS2(&i_this->m29C, 0, 4, 0x400);
-    s16 delta = static_cast<s16>(i_this->m6B2), old = static_cast<s16>(i_this->m29C.y);
-    i_this->m29C.y = old + delta;
-    BemosHD_cLib_chaseUC(&i_this->m310, 255, 15);
-    u8 alpha = static_cast<u8>(i_this->m310);
-    u32 e = static_cast<u32>(i_this->m300.v);
+    BemosHD_cLib_addCalcAngleS2(&i_this->mHeadAngle, 0, 4, 0x400);
+    s16 delta = static_cast<s16>(i_this->mRotSpeed), old = static_cast<s16>(i_this->mHeadAngle.y);
+    i_this->mHeadAngle.y = old + delta;
+    BemosHD_cLib_chaseUC(&i_this->mEyeAlpha, 255, 15);
+    u8 alpha = static_cast<u8>(i_this->mEyeAlpha);
+    u32 e = static_cast<u32>(i_this->mpEyeEmitter.v);
     if (alpha == 255)
         i_this->attention_info.flags = 0;
     if (e) {
-        f32 y = static_cast<f32>(i_this->m354.y), x = static_cast<f32>(i_this->m354.x),
-            z = static_cast<f32>(i_this->m354.z);
+        f32 y = static_cast<f32>(i_this->mBeamRootPos.y), x = static_cast<f32>(i_this->mBeamRootPos.x),
+            z = static_cast<f32>(i_this->mBeamRootPos.z);
         u8 kind = static_cast<u8>(at<BemosEmitterHD>(e)->mCoordinateSystem);
         at<BemosEmitterHD>(e)->mGlobalTranslation.x = x;
         at<BemosEmitterHD>(e)->mGlobalTranslation.y = y;
@@ -1054,7 +1054,7 @@ s32 daBemos_c::red_eye_wait() {
         if (kind >= 7)
             at<BemosEmitterHD>(e)->mGlobalTranslation.y =
                 -static_cast<f32>(at<BemosEmitterHD>(e)->mGlobalTranslation.y);
-        at<BemosEmitterHD>(i_this->m300.v)->mGlobalPrmColor.a = i_this->m310;
+        at<BemosEmitterHD>(i_this->mpEyeEmitter.v)->mGlobalPrmColor.a = i_this->mEyeAlpha;
     }
     return 1;
 }
@@ -1062,52 +1062,52 @@ s32 daBemos_c::red_eye_wait() {
 /* 0232712C */
 s32 daBemos_c::red_eye_charge_init() {
     auto* i_this = this;
-    u32 existing = static_cast<u32>(i_this->m304.v);
+    u32 existing = static_cast<u32>(i_this->mpChargeEmitter.v);
     i_this->attention_info.flags = 1;
     if (!existing) {
         u32 p = BemosHD_dComIfGp_get();
         u32 e = BemosHD_dPa_control_c_set(at<void>(u32(bemos_play(p).mParticle.v)), 0,
-                                          dPa_name::ID_AK_SN_BMOSBALL00, &i_this->m2A4, nullptr, 0, 0xff, 0,
+                                          dPa_name::ID_AK_SN_BMOSBALL00, &i_this->mHeadPos, nullptr, 0, 0xff, 0,
                                           -1, nullptr, 0, 0);
-        i_this->m304.v = e;
+        i_this->mpChargeEmitter.v = e;
         if (e) {
             at<BemosEmitterHD>(e)->mGlobalPrmColor.r = 192;
             at<BemosEmitterHD>(e)->mGlobalPrmColor.g = 16;
             at<BemosEmitterHD>(e)->mGlobalPrmColor.b = 35;
         }
     }
-    u32 old = static_cast<u32>(i_this->m2FC.v);
+    u32 old = static_cast<u32>(i_this->mpWaitEmitter.v);
     if (old) {
         u32 flags = static_cast<u32>(at<BemosEmitterHD>(old)->mFlags);
         at<BemosEmitterHD>(old)->mMaxFrame = 0xffffffff;
         at<BemosEmitterHD>(old)->mFlags = flags | 1;
-        i_this->m2FC.v = 0;
+        i_this->mpWaitEmitter.v = 0;
     }
-    s16 index = static_cast<s16>(i_this->m290.i);
-    i_this->m6AC = 0;
+    s16 index = static_cast<s16>(i_this->mEyeProc.i);
+    i_this->mLaserRootTimer = 0;
     bool waiting = false;
     if (index == -1) {
         if (index == 0)
             waiting = true;
-        else if (static_cast<s16>(i_this->m290.d) == 0 &&
-                 static_cast<u32>(i_this->m290.f) == gabi::guest_fn((const void*)&BemosCallback_red_eye_wait))
+        else if (static_cast<s16>(i_this->mEyeProc.d) == 0 &&
+                 static_cast<u32>(i_this->mEyeProc.f) == gabi::guest_fn((const void*)&BemosCallback_red_eye_wait))
             waiting = true;
     }
     if (waiting) {
-        i_this->m6AE = 0;
-        s16 timer = static_cast<s16>(bemos_hio().m28);
-        i_this->m290.d = 0;
-        i_this->m6B0 = timer;
-        i_this->m290.f = gabi::guest_fn((const void*)&BemosCallback_red_eye_charge);
-        i_this->m290.i = 0xffff;
+        i_this->mChargeCount = 0;
+        s16 timer = static_cast<s16>(bemos_hio().mRedChargeTime);
+        i_this->mEyeProc.d = 0;
+        i_this->mChargeTime = timer;
+        i_this->mEyeProc.f = gabi::guest_fn((const void*)&BemosCallback_red_eye_charge);
+        i_this->mEyeProc.i = 0xffff;
     } else {
-        s16 timer = static_cast<s16>(bemos_hio().m2A);
-        i_this->m6AE = timer;
-        timer = static_cast<s16>(bemos_hio().m2A);
-        i_this->m290.d = 0;
-        i_this->m6B0 = timer;
-        i_this->m290.i = 0xffff;
-        i_this->m290.f = gabi::guest_fn((const void*)&BemosCallback_red_eye_charge);
+        s16 timer = static_cast<s16>(bemos_hio().mRedChargeResume);
+        i_this->mChargeCount = timer;
+        timer = static_cast<s16>(bemos_hio().mRedChargeResume);
+        i_this->mEyeProc.d = 0;
+        i_this->mChargeTime = timer;
+        i_this->mEyeProc.i = 0xffff;
+        i_this->mEyeProc.f = gabi::guest_fn((const void*)&BemosCallback_red_eye_charge);
     }
     return 1;
 }
@@ -1118,72 +1118,72 @@ s32 daBemos_c::red_eye_charge() {
     u32 a = gabi::ea(this);
     BemosHD_mDoExt_baseAnm_play(&i_this->mBrkAnm2);
     gabi::Local<csXyz> angle;
-    bool on = BemosHD_daBemos_c_red_range_check(this, static_cast<u32>(i_this->m6A4), angle.get()) != 0;
+    bool on = BemosHD_daBemos_c_red_range_check(this, static_cast<u32>(i_this->mInRange), angle.get()) != 0;
     if (on) {
-        BemosHD_cLib_chaseF(&i_this->m360.x, 1.f, static_cast<f32>(bemos_hio().m20));
-        BemosHD_cLib_chaseF(&i_this->m360.y, 1.f, 0.25f * static_cast<f32>(bemos_hio().m20));
-        s16 count = static_cast<s16>(i_this->m6AE), limit = static_cast<s16>(bemos_hio().m28);
+        BemosHD_cLib_chaseF(&i_this->mHeadScale.x, 1.f, static_cast<f32>(bemos_hio().mRedHeadOpenStep));
+        BemosHD_cLib_chaseF(&i_this->mHeadScale.y, 1.f, 0.25f * static_cast<f32>(bemos_hio().mRedHeadOpenStep));
+        s16 count = static_cast<s16>(i_this->mChargeCount), limit = static_cast<s16>(bemos_hio().mRedChargeTime);
         if (count > limit) {
-            BemosHD_cLib_addCalcAngleS(&i_this->m29C, s32(s16(angle->x)), 2, 0x400, 0);
-            if (!static_cast<u32>(i_this->m30C.v)) {
+            BemosHD_cLib_addCalcAngleS(&i_this->mHeadAngle, s32(s16(angle->x)), 2, 0x400, 0);
+            if (!static_cast<u32>(i_this->mpLaserRootEmitter.v)) {
                 u32 play = BemosHD_dComIfGp_get();
                 u32 e = BemosHD_dPa_control_c_set(at<void>(u32(bemos_play(play).mParticle.v)), 0,
-                                                  dPa_name::ID_AK_SN_LASERROOT00, &i_this->m354, nullptr, 0,
+                                                  dPa_name::ID_AK_SN_LASERROOT00, &i_this->mBeamRootPos, nullptr, 0,
                                                   255, 0, -1, nullptr, 0, 0);
-                i_this->m30C.v = e;
+                i_this->mpLaserRootEmitter.v = e;
             }
-            if (static_cast<f32>(i_this->m360.x) == 1.f) {
-                s16 timer = s16(static_cast<s16>(i_this->m6AC) + 1);
-                i_this->m6AC = timer;
+            if (static_cast<f32>(i_this->mHeadScale.x) == 1.f) {
+                s16 timer = s16(static_cast<s16>(i_this->mLaserRootTimer) + 1);
+                i_this->mLaserRootTimer = timer;
                 if (timer >= 5) {
-                    u32 e = static_cast<u32>(i_this->m30C.v);
+                    u32 e = static_cast<u32>(i_this->mpLaserRootEmitter.v);
                     if (e) {
                         u32 flags = static_cast<u32>(at<BemosEmitterHD>(e)->mFlags);
                         at<BemosEmitterHD>(e)->mMaxFrame = -1;
                         at<BemosEmitterHD>(e)->mFlags = flags | 1;
-                        i_this->m30C.v = 0;
+                        i_this->mpLaserRootEmitter.v = 0;
                     }
                     BemosHD_daBemos_red_eye_search_init(this);
                 }
             }
         } else
-            i_this->m6AE = count + 1;
-        BemosHD_cLib_chaseUC(&i_this->m310, 0, 30);
+            i_this->mChargeCount = count + 1;
+        BemosHD_cLib_chaseUC(&i_this->mEyeAlpha, 0, 30);
 
     } else {
-        s16 count = static_cast<s16>(i_this->m6AE);
+        s16 count = static_cast<s16>(i_this->mChargeCount);
         if (count <= 0) {
-            BemosHD_cLib_chaseF(&i_this->m360.x, 0.f, static_cast<f32>(bemos_hio().m24));
-            BemosHD_cLib_chaseF(&i_this->m360.y, 0.75f, 0.25f * static_cast<f32>(bemos_hio().m24));
-            if (static_cast<f32>(i_this->m360.x) == 0) {
-                u32 e = static_cast<u32>(i_this->m30C.v);
+            BemosHD_cLib_chaseF(&i_this->mHeadScale.x, 0.f, static_cast<f32>(bemos_hio().mRedHeadCloseStep));
+            BemosHD_cLib_chaseF(&i_this->mHeadScale.y, 0.75f, 0.25f * static_cast<f32>(bemos_hio().mRedHeadCloseStep));
+            if (static_cast<f32>(i_this->mHeadScale.x) == 0) {
+                u32 e = static_cast<u32>(i_this->mpLaserRootEmitter.v);
                 if (e) {
                     u32 flags = static_cast<u32>(at<BemosEmitterHD>(e)->mFlags);
                     at<BemosEmitterHD>(e)->mMaxFrame = -1;
                     at<BemosEmitterHD>(e)->mFlags = flags | 1;
-                    i_this->m30C.v = 0;
+                    i_this->mpLaserRootEmitter.v = 0;
                 }
                 BemosHD_daBemos_c_red_eye_wait_init(this);
             }
-            BemosHD_cLib_chaseUC(&i_this->m310, 255, 15);
-            BemosHD_cLib_addCalcAngleS2(&i_this->m29C, 0, 4, 0x400);
-            s16 timer = static_cast<s16>(i_this->m6AC);
+            BemosHD_cLib_chaseUC(&i_this->mEyeAlpha, 255, 15);
+            BemosHD_cLib_addCalcAngleS2(&i_this->mHeadAngle, 0, 4, 0x400);
+            s16 timer = static_cast<s16>(i_this->mLaserRootTimer);
             if (timer > 0)
-                i_this->m6AC = timer - 1;
+                i_this->mLaserRootTimer = timer - 1;
         } else
-            i_this->m6AE = count - 1;
+            i_this->mChargeCount = count - 1;
     }
-    BemosHD_cM3dGSph_SetC(&i_this->mSph.mSph, &i_this->m2A4);
+    BemosHD_cM3dGSph_SetC(&i_this->mSph.mSph, &i_this->mHeadPos);
     u32 play = BemosHD_dComIfGp_get();
     BemosHD_cCcS_Set(&bemos_play(play).mCcS, &i_this->mSph);
-    f32 t = f32(static_cast<s16>(i_this->m6AC)) - 2.5f, scale = gabi::fnmsubs(t, t, 6.25f) * 1.6f;
-    i_this->m314.x = scale;
-    i_this->m314.y = scale;
-    i_this->m314.z = scale;
-    u32 e = static_cast<u32>(i_this->m300.v);
+    f32 t = f32(static_cast<s16>(i_this->mLaserRootTimer)) - 2.5f, scale = gabi::fnmsubs(t, t, 6.25f) * 1.6f;
+    i_this->mLaserRootScale.x = scale;
+    i_this->mLaserRootScale.y = scale;
+    i_this->mLaserRootScale.z = scale;
+    u32 e = static_cast<u32>(i_this->mpEyeEmitter.v);
     if (e) {
-        f32 y = static_cast<f32>(i_this->m354.y), z = static_cast<f32>(i_this->m354.z),
-            x = static_cast<f32>(i_this->m354.x);
+        f32 y = static_cast<f32>(i_this->mBeamRootPos.y), z = static_cast<f32>(i_this->mBeamRootPos.z),
+            x = static_cast<f32>(i_this->mBeamRootPos.x);
         u8 kind = static_cast<u8>(at<BemosEmitterHD>(e)->mCoordinateSystem);
         at<BemosEmitterHD>(e)->mGlobalTranslation.x = x;
         at<BemosEmitterHD>(e)->mGlobalTranslation.y = y;
@@ -1191,14 +1191,14 @@ s32 daBemos_c::red_eye_charge() {
         if (kind >= 7)
             at<BemosEmitterHD>(e)->mGlobalTranslation.y =
                 -static_cast<f32>(at<BemosEmitterHD>(e)->mGlobalTranslation.y);
-        at<BemosEmitterHD>(i_this->m300.v)->mGlobalPrmColor.a = i_this->m310;
+        at<BemosEmitterHD>(i_this->mpEyeEmitter.v)->mGlobalPrmColor.a = i_this->mEyeAlpha;
     }
-    e = static_cast<u32>(i_this->m30C.v);
+    e = static_cast<u32>(i_this->mpLaserRootEmitter.v);
     if (e) {
-        f32 x = static_cast<f32>(i_this->m354.x), z = static_cast<f32>(i_this->m354.z),
-            y = static_cast<f32>(i_this->m354.y);
-        s32 rz = static_cast<s16>(i_this->m29C.z), rx = static_cast<s16>(i_this->m29C.x),
-            ry = s16(static_cast<s16>(i_this->m29C.y) + static_cast<s16>(i_this->current.angle.y));
+        f32 x = static_cast<f32>(i_this->mBeamRootPos.x), z = static_cast<f32>(i_this->mBeamRootPos.z),
+            y = static_cast<f32>(i_this->mBeamRootPos.y);
+        s32 rz = static_cast<s16>(i_this->mHeadAngle.z), rx = static_cast<s16>(i_this->mHeadAngle.x),
+            ry = s16(static_cast<s16>(i_this->mHeadAngle.y) + static_cast<s16>(i_this->current.angle.y));
         u8 kind = static_cast<u8>(at<BemosEmitterHD>(e)->mCoordinateSystem);
         at<BemosEmitterHD>(e)->mGlobalTranslation.x = x;
         at<BemosEmitterHD>(e)->mGlobalTranslation.y = y;
@@ -1206,11 +1206,11 @@ s32 daBemos_c::red_eye_charge() {
         if (kind >= 7)
             at<BemosEmitterHD>(e)->mGlobalTranslation.y =
                 -static_cast<f32>(at<BemosEmitterHD>(e)->mGlobalTranslation.y);
-        BemosHD_JPAGetXYZRotateMtx(rx, ry, rz, &at<BemosEmitterHD>(i_this->m30C.v)->mGlobalRotation);
-        x = static_cast<f32>(i_this->m314.x);
-        y = static_cast<f32>(i_this->m314.y);
-        e = static_cast<u32>(i_this->m30C.v);
-        z = static_cast<f32>(i_this->m314.z);
+        BemosHD_JPAGetXYZRotateMtx(rx, ry, rz, &at<BemosEmitterHD>(i_this->mpLaserRootEmitter.v)->mGlobalRotation);
+        x = static_cast<f32>(i_this->mLaserRootScale.x);
+        y = static_cast<f32>(i_this->mLaserRootScale.y);
+        e = static_cast<u32>(i_this->mpLaserRootEmitter.v);
+        z = static_cast<f32>(i_this->mLaserRootScale.z);
         at<BemosEmitterHD>(e)->mGlobalScale.x = x;
         at<BemosEmitterHD>(e)->mGlobalScale.y = y;
         at<BemosEmitterHD>(e)->mGlobalScale.z = z;
@@ -1224,10 +1224,10 @@ s32 daBemos_c::red_eye_charge() {
 /* 023273C0 */
 s32 daBemos_c::red_eye_search_init() {
     auto* i_this = this;
-    i_this->m290.d = 0;
-    i_this->m290.i = 0xffff;
-    i_this->m290.f = gabi::guest_fn((const void*)&BemosCallback_red_eye_search);
-    i_this->m6B6 = static_cast<s16>(bemos_hio().m42);
+    i_this->mEyeProc.d = 0;
+    i_this->mEyeProc.i = 0xffff;
+    i_this->mEyeProc.f = gabi::guest_fn((const void*)&BemosCallback_red_eye_search);
+    i_this->mFireTimer = static_cast<s16>(bemos_hio().mRedFireTime);
     return 1;
 }
 
@@ -1239,78 +1239,78 @@ s32 daBemos_c::red_eye_search() {
     if (!beam)
         return 0;
     gabi::Local<csXyz> angle, beamangle;
-    bool on = BemosHD_daBemos_c_red_range_check(this, static_cast<u32>(i_this->m6A4), angle.get()) != 0;
+    bool on = BemosHD_daBemos_c_red_range_check(this, static_cast<u32>(i_this->mInRange), angle.get()) != 0;
     if (on) {
-        BemosHD_cLib_addCalcAngleS2(&i_this->m29C, s32(s16(angle->x)), 4, 0x400);
-        BemosHD_cLib_addCalcAngleS2(&i_this->m29C.y, s32(s16(angle->y)), 1,
-                                    s32(static_cast<s16>(bemos_hio().m40)));
-        s16 z = static_cast<s16>(i_this->m29C.z),
-            yaw = s16(static_cast<s16>(i_this->m29C.y) + static_cast<s16>(i_this->current.angle.y));
-        beamangle->x = static_cast<s16>(i_this->m29C.x);
+        BemosHD_cLib_addCalcAngleS2(&i_this->mHeadAngle, s32(s16(angle->x)), 4, 0x400);
+        BemosHD_cLib_addCalcAngleS2(&i_this->mHeadAngle.y, s32(s16(angle->y)), 1,
+                                    s32(static_cast<s16>(bemos_hio().mRedTurnStep)));
+        s16 z = static_cast<s16>(i_this->mHeadAngle.z),
+            yaw = s16(static_cast<s16>(i_this->mHeadAngle.y) + static_cast<s16>(i_this->current.angle.y));
+        beamangle->x = static_cast<s16>(i_this->mHeadAngle.x);
         beamangle->z = z;
-        if (!static_cast<u32>(at<daBeam_c>(beam)->m690.v)) {
+        if (!static_cast<u32>(at<daBeam_c>(beam)->mpBeamEmitter.v)) {
             u32 play = BemosHD_dComIfGp_get();
             u32 e = BemosHD_dPa_control_c_set(
                 at<void>(u32(bemos_play(play).mParticle.v)), 0, dPa_name::ID_AK_SN_LASERROOT00,
                 &at<daBeam_c>(beam)->current.pos, nullptr, 0, 255, 0, -1, nullptr, 0, 0);
-            at<daBeam_c>(beam)->m690.v = e;
+            at<daBeam_c>(beam)->mpBeamEmitter.v = e;
         }
-        s16 state = static_cast<s16>(at<daBeam_c>(beam)->m5F4);
-        at<daBeam_c>(beam)->m5A8 = 0;
+        s16 state = static_cast<s16>(at<daBeam_c>(beam)->mBeamOn);
+        at<daBeam_c>(beam)->mFadeFrame = 0;
         f32 width = 5;
         if (!state) {
-            f32 old = static_cast<f32>(at<daBeam_c>(beam)->m588);
+            f32 old = static_cast<f32>(at<daBeam_c>(beam)->mBeamFrame);
             if (old < 5.f)
                 width = old + 1.f;
             else {
-                at<daBeam_c>(beam)->m5A8 = 0;
-                at<daBeam_c>(beam)->m5F4 = 1;
+                at<daBeam_c>(beam)->mFadeFrame = 0;
+                at<daBeam_c>(beam)->mBeamOn = 1;
             }
         }
-        at<daBeam_c>(beam)->m588 = width;
+        at<daBeam_c>(beam)->mBeamFrame = width;
         for (u32 i = 0; i < 3; i++)
-            bemos_positionWord(at<daBeam_c>(beam)->current.pos, i) = u32(bemos_positionWord(i_this->m354, i));
+            bemos_positionWord(at<daBeam_c>(beam)->current.pos, i) = u32(bemos_positionWord(i_this->mBeamRootPos, i));
         at<daBeam_c>(beam)->current.angle.y = yaw;
         at<daBeam_c>(beam)->current.angle.x = beamangle->x;
         at<daBeam_c>(beam)->current.angle.z = beamangle->z;
-        s16 timer = static_cast<s16>(i_this->m6B6);
+        s16 timer = static_cast<s16>(i_this->mFireTimer);
         if (timer <= 0) {
             u32 play = BemosHD_dComIfGp_get(), player = u32(bemos_play(play).mPlayerInfo[0].mpPlayer.v);
-            bemos_bits(i_this->m36C.x) = static_cast<u32>(bemos_bits(at<fopAc_ac_c>(player)->current.pos.x));
-            bemos_bits(i_this->m36C.y) = static_cast<u32>(bemos_bits(at<fopAc_ac_c>(player)->current.pos.y));
+            bemos_bits(i_this->mLastPlayerPos.x) = static_cast<u32>(bemos_bits(at<fopAc_ac_c>(player)->current.pos.x));
+            bemos_bits(i_this->mLastPlayerPos.y) = static_cast<u32>(bemos_bits(at<fopAc_ac_c>(player)->current.pos.y));
             u32 z = static_cast<u32>(bemos_bits(at<fopAc_ac_c>(player)->current.pos.z));
-            i_this->m6BC = 0;
-            bemos_bits(i_this->m36C.z) = z;
+            i_this->mArmed = 0;
+            bemos_bits(i_this->mLastPlayerPos.z) = z;
         } else
-            i_this->m6B6 = timer - 1;
+            i_this->mFireTimer = timer - 1;
     } else {
-        u32 e = static_cast<u32>(at<daBeam_c>(beam)->m690.v);
+        u32 e = static_cast<u32>(at<daBeam_c>(beam)->mpBeamEmitter.v);
         if (e) {
             u32 flags = static_cast<u32>(at<BemosEmitterHD>(e)->mFlags);
             at<BemosEmitterHD>(e)->mMaxFrame = -1;
             at<BemosEmitterHD>(e)->mFlags = flags | 1;
-            at<daBeam_c>(beam)->m690.v = 0;
+            at<daBeam_c>(beam)->mpBeamEmitter.v = 0;
         }
-        if (static_cast<s16>(at<daBeam_c>(beam)->m5F4) == 1) {
-            f32 old = static_cast<f32>(at<daBeam_c>(beam)->m588);
+        if (static_cast<s16>(at<daBeam_c>(beam)->mBeamOn) == 1) {
+            f32 old = static_cast<f32>(at<daBeam_c>(beam)->mBeamFrame);
             if (old < 5.f)
-                at<daBeam_c>(beam)->m588 = old + 1.f;
-            f32 height = static_cast<f32>(at<daBeam_c>(beam)->m5A8);
+                at<daBeam_c>(beam)->mBeamFrame = old + 1.f;
+            f32 height = static_cast<f32>(at<daBeam_c>(beam)->mFadeFrame);
             if (height < 4.f)
-                at<daBeam_c>(beam)->m5A8 = height + 1.f;
+                at<daBeam_c>(beam)->mFadeFrame = height + 1.f;
             else {
-                at<daBeam_c>(beam)->m5A8 = 0;
-                at<daBeam_c>(beam)->m588 = 0;
-                at<daBeam_c>(beam)->m5F4 = 0;
+                at<daBeam_c>(beam)->mFadeFrame = 0;
+                at<daBeam_c>(beam)->mBeamFrame = 0;
+                at<daBeam_c>(beam)->mBeamOn = 0;
                 BemosHD_daBemos_c_red_eye_charge_init(this);
             }
         } else {
-            at<daBeam_c>(beam)->m588 = 0;
-            at<daBeam_c>(beam)->m5A8 = 0;
+            at<daBeam_c>(beam)->mBeamFrame = 0;
+            at<daBeam_c>(beam)->mFadeFrame = 0;
             BemosHD_daBemos_c_red_eye_charge_init(this);
         }
     }
-    BemosHD_cM3dGSph_SetC(&i_this->mSph.mSph, &i_this->m2A4);
+    BemosHD_cM3dGSph_SetC(&i_this->mSph.mSph, &i_this->mHeadPos);
     u32 play = BemosHD_dComIfGp_get();
     BemosHD_cCcS_Set(&bemos_play(play).mCcS, &i_this->mSph);
     return 0;
@@ -1320,14 +1320,14 @@ s32 daBemos_c::red_eye_search() {
 s32 daBemos_c::eye_break_init() {
     auto* i_this = this;
     bool blue = false;
-    if (!static_cast<u32>(i_this->m304.v)) {
+    if (!static_cast<u32>(i_this->mpChargeEmitter.v)) {
         u32 play = BemosHD_dComIfGp_get();
         u32 e = BemosHD_dPa_control_c_set(at<void>(u32(bemos_play(play).mParticle.v)), 0,
-                                          dPa_name::ID_AK_SN_BMOSBALL00, &i_this->m2A4, nullptr, 0, 255, 0,
+                                          dPa_name::ID_AK_SN_BMOSBALL00, &i_this->mHeadPos, nullptr, 0, 255, 0,
                                           -1, nullptr, 0, 0);
-        i_this->m304.v = e;
+        i_this->mpChargeEmitter.v = e;
         if (e) {
-            blue = static_cast<u8>(i_this->m6B8) == 0;
+            blue = static_cast<u8>(i_this->mType) == 0;
             at<BemosEmitterHD>(e)->mGlobalPrmColor.r = blue ? 16 : 192;
             at<BemosEmitterHD>(e)->mGlobalPrmColor.g = blue ? 35 : 16;
             at<BemosEmitterHD>(e)->mGlobalPrmColor.b = blue ? 192 : 35;
@@ -1335,14 +1335,14 @@ s32 daBemos_c::eye_break_init() {
     }
     u32 play = BemosHD_dComIfGp_get();
     BemosHD_dPa_control_c_set(at<void>(u32(bemos_play(play).mParticle.v)), 0, dPa_name::ID_AK_JN_OK,
-                              &i_this->m2A4, nullptr, 0, 255, 0, -1, nullptr, 0, 0);
+                              &i_this->mHeadPos, nullptr, 0, 255, 0, -1, nullptr, 0, 0);
     u32 flags = static_cast<u32>(i_this->actor_status);
     i_this->attention_info.flags = 0;
-    i_this->m6AC = 0;
-    i_this->m290.f = gabi::guest_fn((const void*)&BemosCallback_eye_break);
+    i_this->mLaserRootTimer = 0;
+    i_this->mEyeProc.f = gabi::guest_fn((const void*)&BemosCallback_eye_break);
     i_this->actor_status = flags & 0xffffffc0;
-    i_this->m290.d = 0;
-    i_this->m290.i = -1;
+    i_this->mEyeProc.d = 0;
+    i_this->mEyeProc.i = -1;
     return 1;
 }
 
@@ -1351,35 +1351,35 @@ s32 daBemos_c::eye_break() {
     auto* i_this = this;
     u32 beam = BemosHD_daBemos_c_getBeamActor(this);
     if (beam) {
-        u32 e = static_cast<u32>(at<daBeam_c>(beam)->m690.v);
+        u32 e = static_cast<u32>(at<daBeam_c>(beam)->mpBeamEmitter.v);
         if (e) {
             u32 flags = static_cast<u32>(at<BemosEmitterHD>(e)->mFlags);
             at<BemosEmitterHD>(e)->mMaxFrame = -1;
             at<BemosEmitterHD>(e)->mFlags = flags | 1;
-            at<daBeam_c>(beam)->m690.v = 0;
+            at<daBeam_c>(beam)->mpBeamEmitter.v = 0;
         }
-        if (static_cast<s16>(at<daBeam_c>(beam)->m5F4) == 1) {
-            f32 width = static_cast<f32>(at<daBeam_c>(beam)->m588);
+        if (static_cast<s16>(at<daBeam_c>(beam)->mBeamOn) == 1) {
+            f32 width = static_cast<f32>(at<daBeam_c>(beam)->mBeamFrame);
             if (width < 5.f)
-                at<daBeam_c>(beam)->m588 = width + 1.f;
-            f32 height = static_cast<f32>(at<daBeam_c>(beam)->m5A8);
+                at<daBeam_c>(beam)->mBeamFrame = width + 1.f;
+            f32 height = static_cast<f32>(at<daBeam_c>(beam)->mFadeFrame);
             if (height < 4.f)
-                at<daBeam_c>(beam)->m5A8 = height + 1.f;
+                at<daBeam_c>(beam)->mFadeFrame = height + 1.f;
             else {
-                at<daBeam_c>(beam)->m5F4 = 0;
-                at<daBeam_c>(beam)->m5A8 = 0;
-                at<daBeam_c>(beam)->m588 = 0;
+                at<daBeam_c>(beam)->mBeamOn = 0;
+                at<daBeam_c>(beam)->mFadeFrame = 0;
+                at<daBeam_c>(beam)->mBeamFrame = 0;
             }
         } else {
-            at<daBeam_c>(beam)->m5A8 = 0;
-            at<daBeam_c>(beam)->m588 = 0;
+            at<daBeam_c>(beam)->mFadeFrame = 0;
+            at<daBeam_c>(beam)->mBeamFrame = 0;
         }
     }
-    BemosHD_cLib_addCalcAngleS2(&i_this->m29C, 0, 2, 0x800);
-    BemosHD_cLib_chaseF(&i_this->m360.x, 1.f, 0.2f);
-    BemosHD_cLib_chaseF(&i_this->m360.y, 1.f, 0.05f);
-    s16 timer = s16(static_cast<s16>(i_this->m6AC) + 1);
-    i_this->m6AC = timer;
+    BemosHD_cLib_addCalcAngleS2(&i_this->mHeadAngle, 0, 2, 0x800);
+    BemosHD_cLib_chaseF(&i_this->mHeadScale.x, 1.f, 0.2f);
+    BemosHD_cLib_chaseF(&i_this->mHeadScale.y, 1.f, 0.05f);
+    s16 timer = s16(static_cast<s16>(i_this->mLaserRootTimer) + 1);
+    i_this->mLaserRootTimer = timer;
     if (timer <= 0)
         return 1;
     for (u32 i = 0; i < 5; i++) {
@@ -1391,20 +1391,20 @@ s32 daBemos_c::eye_break() {
         }
     }
     i_this->m308.v = 0;
-    i_this->m2FC.v = 0;
-    i_this->m300.v = 0;
-    i_this->m304.v = 0;
-    i_this->m30C.v = 0;
-    bemos_bits(i_this->m360.x) = u32(bemos_positionWord(bemos_zero(), 0));
+    i_this->mpWaitEmitter.v = 0;
+    i_this->mpEyeEmitter.v = 0;
+    i_this->mpChargeEmitter.v = 0;
+    i_this->mpLaserRootEmitter.v = 0;
+    bemos_bits(i_this->mHeadScale.x) = u32(bemos_positionWord(bemos_zero(), 0));
     u32 second = u32(bemos_positionWord(bemos_zero(), 1));
     gabi::Local<csXyz> angle;
-    s16 rz = static_cast<s16>(i_this->m29C.z), rx = static_cast<s16>(i_this->m29C.x),
-        yaw = static_cast<s16>(i_this->current.angle.y), ry = static_cast<s16>(i_this->m29C.y);
+    s16 rz = static_cast<s16>(i_this->mHeadAngle.z), rx = static_cast<s16>(i_this->mHeadAngle.x),
+        yaw = static_cast<s16>(i_this->current.angle.y), ry = static_cast<s16>(i_this->mHeadAngle.y);
     angle->x = rx;
     angle->z = rz;
-    u8 type = static_cast<u8>(i_this->m6B8);
-    bemos_bits(i_this->m360.y) = second;
-    bemos_bits(i_this->m360.z) = u32(bemos_positionWord(bemos_zero(), 2));
+    u8 type = static_cast<u8>(i_this->mType);
+    bemos_bits(i_this->mHeadScale.y) = second;
+    bemos_bits(i_this->mHeadScale.z) = u32(bemos_positionWord(bemos_zero(), 2));
     angle->y = s16(ry + yaw);
     u32 colorIndex = type ? 2 : 0;
     gabi::Local<be<u32>> color0, color1;
@@ -1422,19 +1422,19 @@ s32 daBemos_c::eye_break() {
     s32 room = static_cast<s8>(i_this->current.roomNo);
     u32 play = BemosHD_dComIfGp_get();
     BemosHD_dPa_control_c_set(at<void>(u32(bemos_play(play).mParticle.v)), 0, dPa_name::ID_AK_SN_BMOSBREAK00,
-                              &i_this->m2A4, angle.get(), 0, 255, 0, room, color0.get(), 0, 0);
+                              &i_this->mHeadPos, angle.get(), 0, 255, 0, room, color0.get(), 0, 0);
     room = static_cast<s8>(i_this->current.roomNo);
     play = BemosHD_dComIfGp_get();
     BemosHD_dPa_control_c_set(at<void>(u32(bemos_play(play).mParticle.v)), 0, dPa_name::ID_AK_SN_BMOSBREAK01,
-                              &i_this->m2A4, angle.get(), 0, 255, 0, room, color1.get(), 0, 0);
+                              &i_this->mHeadPos, angle.get(), 0, 255, 0, room, color1.get(), 0, 0);
     if (beam)
         BemosHD_fopAcM_delete(at<void>(beam));
     s32 reverb = BemosHD_dComIfGp_getReverb(s32(static_cast<s8>(i_this->current.roomNo)));
     // HD: emit positional audio at eyePos with the room reverb.
     BemosHD_mDoAud_seStart(0x6807, &i_this->eyePos, 0, reverb);
-    u32 item = static_cast<u8>(i_this->m6BF);
-    f32 x = static_cast<f32>(i_this->m2A4.x), y = static_cast<f32>(i_this->m2A4.y),
-        z = static_cast<f32>(i_this->m2A4.z);
+    u32 item = static_cast<u8>(i_this->mDropItemNo);
+    f32 x = static_cast<f32>(i_this->mHeadPos.x), y = static_cast<f32>(i_this->mHeadPos.y),
+        z = static_cast<f32>(i_this->mHeadPos.z);
     u16 ang = angle->y;
     u32 trig = ang;
     f32 sine = f32(bemos_sinCos(trig).sin), cosine = f32(bemos_sinCos(trig).cos);
@@ -1442,18 +1442,18 @@ s32 daBemos_c::eye_break() {
     pos->x = gabi::fmadds(30.f, sine, x);
     pos->y = y;
     pos->z = gabi::fmadds(30.f, cosine, z);
-    BemosHD_fopAcM_createItemFromTable(pos.get(), item, u32(static_cast<u8>(i_this->m6C0)),
+    BemosHD_fopAcM_createItemFromTable(pos.get(), item, u32(static_cast<u8>(i_this->mDropItemBitNo)),
                                        s32(static_cast<s8>(i_this->current.roomNo)), 0, angle.get(), 1, 0);
-    i_this->m290.d = 0;
-    i_this->m290.f = gabi::guest_fn((const void*)&BemosCallback_eye_dummy);
-    i_this->m290.i = -1;
+    i_this->mEyeProc.d = 0;
+    i_this->mEyeProc.f = gabi::guest_fn((const void*)&BemosCallback_eye_dummy);
+    i_this->mEyeProc.i = -1;
     return 1;
 }
 
 /* 023286F8 */
 s32 daBemos_c::eye_dummy() {
     auto* i_this = this;
-    if (static_cast<u8>(i_this->m6B8) == 1)
+    if (static_cast<u8>(i_this->mType) == 1)
         i_this->mBrkAnm2.mFrameCtrl.mFrame = 10.f;
     return 0;
 }
@@ -1461,7 +1461,7 @@ s32 daBemos_c::eye_dummy() {
 /* 02324C5C */
 s32 daBemos_c::yellow_eye_wait_init() {
     auto* i_this = this;
-    if (!static_cast<u32>(i_this->m2FC.v)) {
+    if (!static_cast<u32>(i_this->mpWaitEmitter.v)) {
         gabi::Local<cXyz> pos, delta, out;
         pos->x = static_cast<f32>(i_this->current.pos.x);
         pos->y = static_cast<f32>(i_this->current.pos.y);
@@ -1478,27 +1478,27 @@ s32 daBemos_c::yellow_eye_wait_init() {
         u32 e = BemosHD_dPa_control_c_set(at<void>(u32(bemos_play(play).mParticle.v)), 0,
                                           dPa_name::ID_AK_SN_BMOSWAIT00, pos.get(), &i_this->current.angle, 0,
                                           0xff, 0, -1, nullptr, 0, 0);
-        i_this->m2FC.v = e;
+        i_this->mpWaitEmitter.v = e;
         if (e) {
             at<BemosEmitterHD>(e)->mGlobalPrmColor.r = 180;
             at<BemosEmitterHD>(e)->mGlobalPrmColor.b = 120;
             at<BemosEmitterHD>(e)->mGlobalPrmColor.g = 180;
-            u32 p = static_cast<u32>(i_this->m2FC.v);
+            u32 p = static_cast<u32>(i_this->mpWaitEmitter.v);
             at<BemosEmitterHD>(p)->mGlobalEnvColor.r = 128;
             at<BemosEmitterHD>(p)->mGlobalEnvColor.b = 20;
             at<BemosEmitterHD>(p)->mGlobalEnvColor.g = 128;
         }
     }
-    u32 e = static_cast<u32>(i_this->m304.v);
+    u32 e = static_cast<u32>(i_this->mpChargeEmitter.v);
     if (e) {
         u32 flags = static_cast<u32>(at<BemosEmitterHD>(e)->mFlags);
         at<BemosEmitterHD>(e)->mMaxFrame = -1;
         at<BemosEmitterHD>(e)->mFlags = flags | 1;
-        i_this->m304.v = 0;
+        i_this->mpChargeEmitter.v = 0;
     }
-    i_this->m290.d = 0;
-    i_this->m290.i = -1;
-    i_this->m290.f = gabi::guest_fn((const void*)&BemosCallback_yellow_eye_wait);
+    i_this->mEyeProc.d = 0;
+    i_this->mEyeProc.i = -1;
+    i_this->mEyeProc.f = gabi::guest_fn((const void*)&BemosCallback_yellow_eye_wait);
     return 1;
 }
 
@@ -1508,43 +1508,43 @@ s32 daBemos_c::yellow_eye_wait() {
     u32 beam = BemosHD_daBemos_c_getBeamActor(this);
     if (!beam)
         return 0;
-    u32 sw = static_cast<u32>(i_this->m6A8);
+    u32 sw = static_cast<u32>(i_this->mSwitchNo);
     bool off = false;
     if (sw != 255)
         off = BemosHD_dSv_info_c_isSwitch(bemos_save(), sw, s32(static_cast<s8>(i_this->home.roomNo))) != 0;
-    if (!off && static_cast<u8>(i_this->m6B9) == 1)
+    if (!off && static_cast<u8>(i_this->mSubType) == 1)
         off = bemos_stayRoom() != static_cast<s8>(i_this->current.roomNo);
     if (off) {
-        s16 state = static_cast<s16>(at<daBeam_c>(beam)->m5F4);
+        s16 state = static_cast<s16>(at<daBeam_c>(beam)->mBeamOn);
         if (!state)
             return 0;
-        u32 e = static_cast<u32>(at<daBeam_c>(beam)->m690.v);
+        u32 e = static_cast<u32>(at<daBeam_c>(beam)->mpBeamEmitter.v);
         if (e) {
             u32 flags = static_cast<u32>(at<BemosEmitterHD>(e)->mFlags);
             at<BemosEmitterHD>(e)->mMaxFrame = -1;
             at<BemosEmitterHD>(e)->mFlags = flags | 1;
-            state = static_cast<s16>(at<daBeam_c>(beam)->m5F4);
-            at<daBeam_c>(beam)->m690.v = 0;
+            state = static_cast<s16>(at<daBeam_c>(beam)->mBeamOn);
+            at<daBeam_c>(beam)->mpBeamEmitter.v = 0;
         }
         if (state == 1) {
-            f32 x = static_cast<f32>(at<daBeam_c>(beam)->m588);
+            f32 x = static_cast<f32>(at<daBeam_c>(beam)->mBeamFrame);
             if (x < 5.f)
-                at<daBeam_c>(beam)->m588 = x + 1.f;
-            f32 z = static_cast<f32>(at<daBeam_c>(beam)->m5A8);
+                at<daBeam_c>(beam)->mBeamFrame = x + 1.f;
+            f32 z = static_cast<f32>(at<daBeam_c>(beam)->mFadeFrame);
             if (z < 4.f) {
-                at<daBeam_c>(beam)->m5A8 = z + 1.f;
+                at<daBeam_c>(beam)->mFadeFrame = z + 1.f;
                 return 0;
             }
-            at<daBeam_c>(beam)->m588 = 0;
-            at<daBeam_c>(beam)->m5A8 = 0;
-            at<daBeam_c>(beam)->m5F4 = 0;
+            at<daBeam_c>(beam)->mBeamFrame = 0;
+            at<daBeam_c>(beam)->mFadeFrame = 0;
+            at<daBeam_c>(beam)->mBeamOn = 0;
         } else {
-            at<daBeam_c>(beam)->m588 = 0;
-            at<daBeam_c>(beam)->m5A8 = 0;
+            at<daBeam_c>(beam)->mBeamFrame = 0;
+            at<daBeam_c>(beam)->mFadeFrame = 0;
         }
         return 0;
     }
-    if (BemosHD_daBemos_c_yellow_range_check(this, static_cast<u32>(i_this->m6A4), 0))
+    if (BemosHD_daBemos_c_yellow_range_check(this, static_cast<u32>(i_this->mInRange), 0))
         BemosHD_daBemos_c_yellow_eye_search_init(this);
     return 0;
 }
@@ -1552,29 +1552,29 @@ s32 daBemos_c::yellow_eye_wait() {
 /* 02327CB8 */
 s32 daBemos_c::yellow_eye_search_init() {
     auto* i_this = this;
-    if (!static_cast<u32>(i_this->m304.v)) {
+    if (!static_cast<u32>(i_this->mpChargeEmitter.v)) {
         u32 play = BemosHD_dComIfGp_get();
         u32 e = BemosHD_dPa_control_c_set(at<void>(u32(bemos_play(play).mParticle.v)), 0,
-                                          dPa_name::ID_AK_SN_BMOSBALL00, &i_this->m2A4, nullptr, 0, 255, 0,
+                                          dPa_name::ID_AK_SN_BMOSBALL00, &i_this->mHeadPos, nullptr, 0, 255, 0,
                                           -1, nullptr, 0, 0);
-        i_this->m304.v = e;
+        i_this->mpChargeEmitter.v = e;
         if (e) {
             at<BemosEmitterHD>(e)->mGlobalPrmColor.r = 160;
             at<BemosEmitterHD>(e)->mGlobalPrmColor.g = 192;
             at<BemosEmitterHD>(e)->mGlobalPrmColor.b = 20;
         }
     }
-    u32 e = static_cast<u32>(i_this->m2FC.v);
+    u32 e = static_cast<u32>(i_this->mpWaitEmitter.v);
     if (e) {
         u32 flags = static_cast<u32>(at<BemosEmitterHD>(e)->mFlags);
         at<BemosEmitterHD>(e)->mMaxFrame = -1;
         at<BemosEmitterHD>(e)->mFlags = flags | 1;
-        i_this->m2FC.v = 0;
+        i_this->mpWaitEmitter.v = 0;
     }
-    i_this->m6AC = 0;
-    i_this->m290.d = 0;
-    i_this->m290.i = -1;
-    i_this->m290.f = gabi::guest_fn((const void*)&BemosCallback_yellow_eye_search);
+    i_this->mLaserRootTimer = 0;
+    i_this->mEyeProc.d = 0;
+    i_this->mEyeProc.i = -1;
+    i_this->mEyeProc.f = gabi::guest_fn((const void*)&BemosCallback_yellow_eye_search);
     return 1;
 }
 
@@ -1584,59 +1584,59 @@ s32 daBemos_c::yellow_eye_search() {
     u32 beam = BemosHD_daBemos_c_getBeamActor(this);
     if (!beam)
         return 0;
-    bool on = BemosHD_daBemos_c_yellow_range_check(this, static_cast<u32>(i_this->m6A4), 0) != 0;
+    bool on = BemosHD_daBemos_c_yellow_range_check(this, static_cast<u32>(i_this->mInRange), 0) != 0;
     if (on) {
-        u32 sw = static_cast<u32>(i_this->m6A8);
+        u32 sw = static_cast<u32>(i_this->mSwitchNo);
         if (sw != 255)
             on =
                 BemosHD_dSv_info_c_isSwitch(bemos_save(), sw, s32(static_cast<s8>(i_this->home.roomNo))) == 0;
     }
     if (on) {
-        if (!static_cast<u32>(at<daBeam_c>(beam)->m690.v)) {
+        if (!static_cast<u32>(at<daBeam_c>(beam)->mpBeamEmitter.v)) {
             u32 play = BemosHD_dComIfGp_get();
             u32 e = BemosHD_dPa_control_c_set(
                 at<void>(u32(bemos_play(play).mParticle.v)), 0, dPa_name::ID_AK_SN_LASERROOT00,
                 &at<daBeam_c>(beam)->current.pos, nullptr, 0, 255, 0, -1, nullptr, 0, 0);
-            at<daBeam_c>(beam)->m690.v = e;
+            at<daBeam_c>(beam)->mpBeamEmitter.v = e;
         }
-        s16 state = static_cast<s16>(at<daBeam_c>(beam)->m5F4);
-        at<daBeam_c>(beam)->m5A8 = 0;
+        s16 state = static_cast<s16>(at<daBeam_c>(beam)->mBeamOn);
+        at<daBeam_c>(beam)->mFadeFrame = 0;
         if (!state) {
-            f32 x = static_cast<f32>(at<daBeam_c>(beam)->m588);
+            f32 x = static_cast<f32>(at<daBeam_c>(beam)->mBeamFrame);
             if (x < 5.f) {
-                at<daBeam_c>(beam)->m588 = x + 1.f;
+                at<daBeam_c>(beam)->mBeamFrame = x + 1.f;
                 return 0;
             }
-            at<daBeam_c>(beam)->m5A8 = 0;
-            at<daBeam_c>(beam)->m588 = 5;
-            at<daBeam_c>(beam)->m5F4 = 1;
+            at<daBeam_c>(beam)->mFadeFrame = 0;
+            at<daBeam_c>(beam)->mBeamFrame = 5;
+            at<daBeam_c>(beam)->mBeamOn = 1;
         } else
-            at<daBeam_c>(beam)->m588 = 5;
+            at<daBeam_c>(beam)->mBeamFrame = 5;
         return 0;
     }
-    u32 e = static_cast<u32>(at<daBeam_c>(beam)->m690.v);
+    u32 e = static_cast<u32>(at<daBeam_c>(beam)->mpBeamEmitter.v);
     if (e) {
         u32 flags = static_cast<u32>(at<BemosEmitterHD>(e)->mFlags);
         at<BemosEmitterHD>(e)->mMaxFrame = -1;
         at<BemosEmitterHD>(e)->mFlags = flags | 1;
-        at<daBeam_c>(beam)->m690.v = 0;
+        at<daBeam_c>(beam)->mpBeamEmitter.v = 0;
     }
-    if (static_cast<s16>(at<daBeam_c>(beam)->m5F4) == 1) {
-        f32 x = static_cast<f32>(at<daBeam_c>(beam)->m588);
+    if (static_cast<s16>(at<daBeam_c>(beam)->mBeamOn) == 1) {
+        f32 x = static_cast<f32>(at<daBeam_c>(beam)->mBeamFrame);
         if (x < 5.f)
-            at<daBeam_c>(beam)->m588 = x + 1.f;
-        f32 z = static_cast<f32>(at<daBeam_c>(beam)->m5A8);
+            at<daBeam_c>(beam)->mBeamFrame = x + 1.f;
+        f32 z = static_cast<f32>(at<daBeam_c>(beam)->mFadeFrame);
         if (z < 4.f) {
-            at<daBeam_c>(beam)->m5A8 = z + 1.f;
+            at<daBeam_c>(beam)->mFadeFrame = z + 1.f;
             return 0;
         }
-        at<daBeam_c>(beam)->m5A8 = 0;
-        at<daBeam_c>(beam)->m588 = 0;
-        at<daBeam_c>(beam)->m5F4 = 0;
+        at<daBeam_c>(beam)->mFadeFrame = 0;
+        at<daBeam_c>(beam)->mBeamFrame = 0;
+        at<daBeam_c>(beam)->mBeamOn = 0;
         BemosHD_daBemos_c_yellow_eye_wait_init(this);
     } else {
-        at<daBeam_c>(beam)->m588 = 0;
-        at<daBeam_c>(beam)->m5A8 = 0;
+        at<daBeam_c>(beam)->mBeamFrame = 0;
+        at<daBeam_c>(beam)->mFadeFrame = 0;
         BemosHD_daBemos_c_yellow_eye_wait_init(this);
     }
     return 0;
@@ -1645,31 +1645,31 @@ s32 daBemos_c::yellow_eye_search() {
 /* 02325B44 */
 void daBemos_c::event_move() {
     auto* i_this = this;
-    if (static_cast<u8>(i_this->m6B8) != 2)
+    if (static_cast<u8>(i_this->mType) != 2)
         return;
-    if (static_cast<u8>(i_this->m6BD)) {
-        u32 sw = static_cast<u32>(i_this->m6A8);
+    if (static_cast<u8>(i_this->mHasPath)) {
+        u32 sw = static_cast<u32>(i_this->mSwitchNo);
         if (sw == 255)
             return;
         s8 room = static_cast<s8>(i_this->home.roomNo);
         u32 save = gabi::ea(bemos_save());
-        u8 old = static_cast<u8>(i_this->m6BA);
+        u8 old = static_cast<u8>(i_this->mSwitchOn);
         u8 now = BemosHD_dSv_info_c_isSwitch(at<dSv_info_c>(save), sw, room);
-        i_this->m6BA = now;
+        i_this->mSwitchOn = now;
         bool start = false;
         if (now != old && now == 1) {
             save = gabi::ea(bemos_save());
             if (!BemosHD_dSv_event_c_isEventBit(&at<dSv_info_c>(save)->mSavedata.mEvent, 0x1010)) {
                 save = gabi::ea(bemos_save());
                 BemosHD_dSv_event_c_onEventBit(&at<dSv_info_c>(save)->mSavedata.mEvent, 0x1010);
-                i_this->m6BB = 1;
+                i_this->mEventStep = 1;
                 start = true;
             }
         }
-        u8 event = static_cast<u8>(i_this->m6BB);
+        u8 event = static_cast<u8>(i_this->mEventStep);
         if (start || event == 1) {
             if (static_cast<u16>(i_this->eventInfo.mCommand) == 2) {
-                i_this->m6BB = 2;
+                i_this->mEventStep = 2;
             } else {
                 BemosHD_fopAcM_orderOtherEvent2(this, "hmos3cam", 1, 65535);
                 i_this->eventInfo.mCondition = static_cast<u16>(i_this->eventInfo.mCondition) | 2;
@@ -1682,36 +1682,36 @@ void daBemos_c::event_move() {
             play = BemosHD_dComIfGp_get();
             if (ended) {
                 bemos_play(play).mEvtCtrl.mEventFlag |= 8;
-                i_this->m6BB = 0;
+                i_this->mEventStep = 0;
             } else
                 BemosHD_dEvent_manager_c_cutEnd(&bemos_play(play).mEvtManager, staff);
         }
-        if (static_cast<u8>(i_this->m6B8) != 2)
+        if (static_cast<u8>(i_this->mType) != 2)
             return;
     }
-    u32 sw = static_cast<u32>(i_this->m6A8);
+    u32 sw = static_cast<u32>(i_this->mSwitchNo);
     if (sw == 255)
         return;
     u32 save = gabi::ea(bemos_save());
     s8 room = static_cast<s8>(i_this->home.roomNo);
     if (!BemosHD_dSv_info_c_isSwitch(at<dSv_info_c>(save), sw, room))
         return;
-    u32 e = static_cast<u32>(i_this->m2FC.v);
+    u32 e = static_cast<u32>(i_this->mpWaitEmitter.v);
     if (e) {
         u32 flags = static_cast<u32>(at<BemosEmitterHD>(e)->mFlags);
         at<BemosEmitterHD>(e)->mMaxFrame = 0xffffffff;
         at<BemosEmitterHD>(e)->mFlags = flags | 1;
-        i_this->m2FC.v = 0;
+        i_this->mpWaitEmitter.v = 0;
     }
 }
 
 /* 02325DB8 */
 void daBemos_c::guard_proc() {
     auto* i_this = this;
-    if (static_cast<u8>(i_this->m6B8) != 2 || static_cast<u8>(i_this->m6BD) != 1)
+    if (static_cast<u8>(i_this->mType) != 2 || static_cast<u8>(i_this->mHasPath) != 1)
         return;
     u32 beam = BemosHD_daBemos_c_getBeamActor(this);
-    if (!beam || !static_cast<s16>(at<daBeam_c>(beam)->m5F4))
+    if (!beam || !static_cast<s16>(at<daBeam_c>(beam)->mBeamOn))
         return;
     u32 play = BemosHD_dComIfGp_get();
     gabi::Local<cXyz> diff, pos, v0, v1, out0, out1;
@@ -1734,7 +1734,7 @@ void daBemos_c::guard_proc() {
     f32 d0 = BemosHD_PSVECDotProduct(diff.get(), out0.get()),
         d1 = BemosHD_PSVECDotProduct(diff.get(), out1.get());
     BemosHD_PSVECScale(out0.get(), out0.get(), d0);
-    f32 scale = static_cast<f32>(bemos_hio().m44) - 20.f;
+    f32 scale = static_cast<f32>(bemos_hio().mGuardRadius) - 20.f;
     if (d1 > 0)
         scale = -scale;
     BemosHD_PSVECScale(out1.get(), out1.get(), scale);
@@ -1745,10 +1745,10 @@ void daBemos_c::guard_proc() {
     if (low)
         pos->y = f32(pos->y) - 50.f;
     else
-        pos->y = gabi::fnmsubs(static_cast<f32>(bemos_hio().m48), 0.5f, pos->y);
+        pos->y = gabi::fnmsubs(static_cast<f32>(bemos_hio().mGuardHeight), 0.5f, pos->y);
     BemosHD_cM3dGCyl_SetC(&i_this->mCyl.mCyl, pos.get());
-    BemosHD_cM3dGCyl_SetR(&i_this->mCyl.mCyl, static_cast<f32>(bemos_hio().m44));
-    BemosHD_cM3dGCyl_SetH(&i_this->mCyl.mCyl, low ? 100.f : static_cast<f32>(bemos_hio().m48));
+    BemosHD_cM3dGCyl_SetR(&i_this->mCyl.mCyl, static_cast<f32>(bemos_hio().mGuardRadius));
+    BemosHD_cM3dGCyl_SetH(&i_this->mCyl.mCyl, low ? 100.f : static_cast<f32>(bemos_hio().mGuardHeight));
     play = BemosHD_dComIfGp_get();
     BemosHD_cCcS_Set(&bemos_play(play).mCcS, &i_this->mCyl);
 }
@@ -1776,7 +1776,7 @@ s32 daBemos_c::_delete() {
     auto* i_this = this;
     BemosHD_dComIfG_resDelete(&i_this->mPhase, "Hmos");
     {
-        u32 e = static_cast<u32>(i_this->m2FC.v);
+        u32 e = static_cast<u32>(i_this->mpWaitEmitter.v);
         if (e) {
             u32 flags = static_cast<u32>(at<BemosEmitterHD>(e)->mFlags);
             at<BemosEmitterHD>(e)->mMaxFrame = 0xffffffff;
@@ -1784,7 +1784,7 @@ s32 daBemos_c::_delete() {
         }
     }
     {
-        u32 e = static_cast<u32>(i_this->m300.v);
+        u32 e = static_cast<u32>(i_this->mpEyeEmitter.v);
         if (e) {
             u32 flags = static_cast<u32>(at<BemosEmitterHD>(e)->mFlags);
             at<BemosEmitterHD>(e)->mMaxFrame = 0xffffffff;
@@ -1792,7 +1792,7 @@ s32 daBemos_c::_delete() {
         }
     }
     {
-        u32 e = static_cast<u32>(i_this->m304.v);
+        u32 e = static_cast<u32>(i_this->mpChargeEmitter.v);
         if (e) {
             u32 flags = static_cast<u32>(at<BemosEmitterHD>(e)->mFlags);
             at<BemosEmitterHD>(e)->mMaxFrame = 0xffffffff;
@@ -1808,32 +1808,32 @@ s32 daBemos_c::_delete() {
         }
     }
     {
-        u32 e = static_cast<u32>(i_this->m30C.v);
+        u32 e = static_cast<u32>(i_this->mpLaserRootEmitter.v);
         if (e) {
             u32 flags = static_cast<u32>(at<BemosEmitterHD>(e)->mFlags);
             at<BemosEmitterHD>(e)->mMaxFrame = 0xffffffff;
             at<BemosEmitterHD>(e)->mFlags = flags | 1;
         }
     }
-    i_this->m300.v = 0;
-    i_this->m304.v = 0;
+    i_this->mpEyeEmitter.v = 0;
+    i_this->mpChargeEmitter.v = 0;
     i_this->m308.v = 0;
-    i_this->m30C.v = 0;
-    i_this->m2FC.v = 0;
+    i_this->mpLaserRootEmitter.v = 0;
+    i_this->mpWaitEmitter.v = 0;
     return 1;
 }
 
 /* 02326020 */
 s32 daBemos_c::_execute() {
     auto* i_this = this;
-    if (static_cast<u8>(i_this->m6B8) != 2 && BemosHD_dCcD_GObjInf_ChkTgHit(&i_this->mSph)) {
+    if (static_cast<u8>(i_this->mType) != 2 && BemosHD_dCcD_GObjInf_ChkTgHit(&i_this->mSph)) {
         BemosHD_daBemos_c_eye_break_init(this);
         BemosHD_dCcD_GObjInf_ClrTgHit(&i_this->mSph);
     }
-    (this->*m290)();
+    (this->*mEyeProc)();
     BemosHD_daBemos_c_event_move(this);
     BemosHD_daBemos_c_set_mtx(this);
-    if (static_cast<u8>(i_this->m6B8) != 2) {
+    if (static_cast<u8>(i_this->mType) != 2) {
         BemosHD_dCcD_GStts_Move(&i_this->mSttsCyl.__vtbl_gstts);
         BemosHD_dCcD_GStts_Move(&i_this->mSttsSph.__vtbl_gstts);
         if (BemosHD_dCcD_GObjInf_ChkTgHit(&i_this->mCyl)) {
@@ -1844,7 +1844,7 @@ s32 daBemos_c::_execute() {
         BemosHD_cM3dGCyl_SetC(&i_this->mCyl.mCyl, &i_this->current.pos);
         u32 play = BemosHD_dComIfGp_get();
         BemosHD_cCcS_Set(&bemos_play(play).mCcS, &i_this->mCyl);
-    } else if (static_cast<u8>(i_this->m6B9) != 2)
+    } else if (static_cast<u8>(i_this->mSubType) != 2)
         BemosHD_daBemos_c_guard_proc(this);
     BemosHD_fopAcM_setGbaName(this, 39, 35, 44);
     return 0;
@@ -1856,26 +1856,26 @@ s32 daBemos_c::_draw() {
     u32 env = BemosHD_dKy_getEnvlight();
     BemosHD_dScnKy_env_light_c_settingTevStruct(at<void>(env), 0, &i_this->current.pos, &i_this->tevStr);
     env = BemosHD_dKy_getEnvlight();
-    BemosHD_dScnKy_env_light_setLightTevColorType(at<void>(env), at<void>(static_cast<u32>(i_this->m2B8.v)),
+    BemosHD_dScnKy_env_light_setLightTevColorType(at<void>(env), at<void>(static_cast<u32>(i_this->mpBodyModel.v)),
                                                   &i_this->tevStr);
-    BemosHD_mDoExt_modelUpdateDL(at<void>(static_cast<u32>(i_this->m2B8.v)), 0);
-    if (static_cast<u8>(i_this->m6B8) == 2)
+    BemosHD_mDoExt_modelUpdateDL(at<void>(static_cast<u32>(i_this->mpBodyModel.v)), 0);
+    if (static_cast<u8>(i_this->mType) == 2)
         return 1;
-    if (static_cast<f32>(i_this->m360.x) > 0.f) {
+    if (static_cast<f32>(i_this->mHeadScale.x) > 0.f) {
         env = BemosHD_dKy_getEnvlight();
         BemosHD_dScnKy_env_light_setLightTevColorType(
-            at<void>(env), at<void>(static_cast<u32>(i_this->m2BC.v)), &i_this->tevStr);
-        BemosHD_mDoExt_modelUpdateDL(at<void>(static_cast<u32>(i_this->m2BC.v)), 0);
+            at<void>(env), at<void>(static_cast<u32>(i_this->mpHeadModel.v)), &i_this->tevStr);
+        BemosHD_mDoExt_modelUpdateDL(at<void>(static_cast<u32>(i_this->mpHeadModel.v)), 0);
     }
-    if (static_cast<u8>(i_this->m6B8) != 1)
+    if (static_cast<u8>(i_this->mType) != 1)
         return 1;
     env = BemosHD_dKy_getEnvlight();
-    BemosHD_dScnKy_env_light_setLightTevColorType(at<void>(env), at<void>(static_cast<u32>(i_this->m2C0.v)),
+    BemosHD_dScnKy_env_light_setLightTevColorType(at<void>(env), at<void>(static_cast<u32>(i_this->mpHmos2tModel.v)),
                                                   &i_this->tevStr);
-    u32 m = static_cast<u32>(i_this->m2C0.v);
+    u32 m = static_cast<u32>(i_this->mpHmos2tModel.v);
     f32 frame = static_cast<f32>(i_this->mBrkAnm2.mFrameCtrl.mFrame);
     BemosHD_mDoExt_brkAnm_entry(&i_this->mBrkAnm2, at<void>(at<J3DModel>(m)->mModelData.v), frame);
-    BemosHD_mDoExt_modelUpdateDL(at<void>(static_cast<u32>(i_this->m2C0.v)), 0);
+    BemosHD_mDoExt_modelUpdateDL(at<void>(static_cast<u32>(i_this->mpHmos2tModel.v)), 0);
     return 1;
 }
 
@@ -1893,29 +1893,29 @@ void* daBemos_HIO_c__ct(void* obj) {
             return nullptr;
     }
     auto* i_hio = at<daBemos_HIO_c>(a);
-    i_hio->m20 = 0.1f;
-    i_hio->m14 = 0.3f;
-    i_hio->m08 = 400.f;
+    i_hio->mRedHeadOpenStep = 0.1f;
+    i_hio->mBlueHeadOpenStep = 0.3f;
+    i_hio->mBlueSearchWidth = 400.f;
     i_hio->mNo = 0xff;
-    i_hio->m30 = 0;
-    i_hio->m34 = 0;
+    i_hio->mBlueWidthInRangeAdd = 0;
+    i_hio->mBlueRangeInRangeAdd = 0;
     i_hio->m3C = 0;
-    i_hio->m2A = 0;
-    i_hio->m1E = 7;
-    i_hio->m1C = 3;
+    i_hio->mRedChargeResume = 0;
+    i_hio->mBlueChargeResume = 7;
+    i_hio->mBlueChargeTime = 3;
     i_hio->m0C = 900.f;
-    i_hio->m18 = 0.3f;
-    i_hio->m42 = 30;
-    i_hio->m40 = 400;
+    i_hio->mBlueHeadCloseStep = 0.3f;
+    i_hio->mRedFireTime = 30;
+    i_hio->mRedTurnStep = 400;
     i_hio->m38 = 0;
-    i_hio->m48 = 100.f;
+    i_hio->mGuardHeight = 100.f;
     i_hio->m10 = 0;
-    i_hio->m44 = 200.f;
-    i_hio->m2C = 0;
+    i_hio->mGuardRadius = 200.f;
+    i_hio->mRedRangeInRangeAdd = 0;
     i_hio->m4C = 0;
     i_hio->__vtbl = BemosVtableHD::mHio;
-    i_hio->m24 = 0.07f;
-    i_hio->m28 = 0;
+    i_hio->mRedHeadCloseStep = 0.07f;
+    i_hio->mRedChargeTime = 0;
     return at<void>(a);
 }
 

@@ -161,24 +161,24 @@ struct daWarpgn_c : fopAc_ac_c {
     be<u8> mIsSwitch;
     u8 pad[3];
     be<u32> mSceneNo;
-    be<s32> m2C4;
+    be<s32> mWarpOrder;  /* was m2C4: normal_execute 024D9880 sets WarpgnOrder_APPEAR / WarpgnOrder_WARP; eventOrder 024D9CA4 orders the appear / to-majyuu warp event by it; checkOrder 024D999C and _execute 024D9E00 (in a demo) reset it to WarpgnOrder_NONE (tww the same); as daWarpdm20_c / daWarphr_c::mWarpOrder */
     be<s16> mEvtToMajyuuWarpIdx, mEvtAppearWarpIdx;
     be<s32> mStaffId;
     be<u32> mDemoShape;
     be<s32> mTimer;
     dKy_tevstr_c mTevStr;
-    be<u8> m388;
+    be<u8> mAppeared;  /* was m388: actAppear 024DA23C sets 1; _execute 024D9E00 runs the warp effects and the 100-frame timer while it is set or event bit 0x3D02 is on (tww the same) */
     u8 tail[3];
 };
 WWHD_OFFSET(daWarpgn_c, mPhs, 0x3AC);
 WWHD_OFFSET(daWarpgn_c, mpModel, 0x3B4);
 WWHD_OFFSET(daWarpgn_c, mpEmitter1, 0x3C8);
 WWHD_OFFSET(daWarpgn_c, mSwitchNo, 0x3D4);
-WWHD_OFFSET(daWarpgn_c, m2C4, 0x3E0);
+WWHD_OFFSET(daWarpgn_c, mWarpOrder, 0x3E0);
 WWHD_OFFSET(daWarpgn_c, mStaffId, 0x3E8);
 WWHD_OFFSET(daWarpgn_c, mTimer, 0x3F0);
 WWHD_OFFSET(daWarpgn_c, mTevStr, 0x3F4);
-WWHD_OFFSET(daWarpgn_c, m388, 0x5BC);
+WWHD_OFFSET(daWarpgn_c, mAppeared, 0x5BC);
 WWHD_SIZE(daWarpgn_c, 0x5C0);
 namespace Warpgn { using Actor = daWarpgn_c; }
 

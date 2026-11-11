@@ -94,7 +94,7 @@ BOOL daNpc_Ji1_c::teachMove(f32 param_1) {
             setAnm(6, 4.0f, 0);
         }
         if (mAnimation == 6) {
-            mpOrcaMorf->setPlaySpeed(l_HIO().field_0x48 * param_1);
+            mpOrcaMorf->setPlaySpeed(l_HIO().mKrotAnmSpeed * param_1);
         }
         return TRUE;
     }
@@ -185,7 +185,7 @@ BOOL daNpc_Ji1_c::MoveToPlayer(f32 param_1, u8 param_2) {
             setAnm(6, 4.0f, 0);
         }
         if (mAnimation == 6) {
-            mpOrcaMorf->setPlaySpeed(l_HIO().field_0x48);
+            mpOrcaMorf->setPlaySpeed(l_HIO().mKrotAnmSpeed);
         }
         return TRUE;
     }
@@ -265,8 +265,8 @@ BOOL daNpc_Ji1_c::teachAction(void*) {
     if (mActionPhase == 0) {
         setAnm(5, 0.0f, 0);
         attention_info.flags |= fopAc_Attn_LOCKON_MISC_e;
-        field_0xC90 = 0;
-        field_0xD34 = 0;
+        mTeachResult = 0;
+        mRollTeachResult = 0;
         if (mTeachStep == 4) {
             mBattleTimer = 90;
         } else {
@@ -327,7 +327,7 @@ BOOL daNpc_Ji1_c::teachAction(void*) {
                 s32 d70 = mTeachStep;
                 s32 c98 = mTeachHitsLeft;
                 if (d70 < 3) {
-                    status = l_HIO().field_0x54[d70] - c98 + 1;
+                    status = l_HIO().mTeachHitCount[d70] - c98 + 1;
                 } else if (d70 < 5) {
                     if (c98 == 2) {
                         status = 1;
@@ -350,23 +350,23 @@ BOOL daNpc_Ji1_c::teachAction(void*) {
         }
 
         if (mSubActionPhase == 1) {
-            if ((!player->getCutAtFlg() || mpOrcaMorf->getFrame() > mpOrcaMorf->getEndFrame() - 2.0f) && field_0xC90 == 0) {
+            if ((!player->getCutAtFlg() || mpOrcaMorf->getFrame() > mpOrcaMorf->getEndFrame() - 2.0f) && mTeachResult == 0) {
                 if (checkCutType(mTeachCutType, mTeachStep)) {
                     mTeachHitsLeft = mTeachHitsLeft - 1;
                     if (mTeachHitsLeft > 0) {
-                        if (field_0xC94 == 0 && mTeachHitsLeft > 0 && field_0xD34 == 0) {
+                        if (field_0xC94 == 0 && mTeachHitsLeft > 0 && mRollTeachResult == 0) {
                             if (mTeachCutType != CUT_TYPE_CUT_ROLL) {
                                 ji1_orderOtherEventId(this, mEventIdx[1]);
                                 eventInfo.onCondition(dEvtCnd_UNK2_e);
-                                field_0xC90 = 1;
+                                mTeachResult = 1;
                             } else {
-                                field_0xD34 = 1;
+                                mRollTeachResult = 1;
                             }
                         } else {
-                            field_0xC90 = 0;
+                            mTeachResult = 0;
                             mSubActionPhase = 0;
                         }
-                    } else if (mTeachCutType != CUT_TYPE_CUT_ROLL && field_0xD34 == 0) {
+                    } else if (mTeachCutType != CUT_TYPE_CUT_ROLL && mRollTeachResult == 0) {
                         if (mTeachStep >= 5 || (mTeachStep >= 2 && !dComIfGs_isEventBit(0x0001))) {
                             if (dComIfGs_isEventBit(0x0001) && dComIfGs_isEventBit(0x2F10) == 0) {
                                 mEventNo = 0xF;
@@ -378,31 +378,31 @@ BOOL daNpc_Ji1_c::teachAction(void*) {
                             ji1_orderOtherEventId(this, mEventIdx[1]);
                         }
                         eventInfo.onCondition(dEvtCnd_UNK2_e);
-                        field_0xC90 = 3;
+                        mTeachResult = 3;
                         l_HD_badCutOnce() = 0;
                     } else {
-                        field_0xD34 = 3;
+                        mRollTeachResult = 3;
                     }
-                } else if (mTeachCutType != CUT_TYPE_CUT_ROLL && field_0xD34 == 0) {
+                } else if (mTeachCutType != CUT_TYPE_CUT_ROLL && mRollTeachResult == 0) {
                     if (l_HD_badCutOnce() == 0) {
                         l_HD_badCutOnce() = 1;
                         mSubActionPhase = 0;
                     } else {
                         ji1_orderOtherEventId(this, mEventIdx[3]);
                         eventInfo.onCondition(dEvtCnd_UNK2_e);
-                        field_0xC90 = 2;
+                        mTeachResult = 2;
                         l_HD_badCutOnce() = 0;
                     }
                 } else {
-                    field_0xD34 = 2;
+                    mRollTeachResult = 2;
                 }
             }
 
             if (mAnimation == 0xA && checkCutType(mTeachCutType, mTeachStep)) {
-                f32 target = l_HIO().field_0x34;
-                f32 step = l_HIO().field_0x38;
+                f32 target = l_HIO().mJpGuardSlideDist;
+                f32 step = l_HIO().mJpGuardSlideStep;
                 if (mTeachHitsLeft == 0) {
-                    target = target + target; /* l_HIO.field_0x34 * 2.0f */
+                    target = target + target; /* l_HIO.mJpGuardSlideDist * 2.0f */
                 }
                 cLib_addCalc2(&mBackSlideDist, target, 0.25f, step);
                 cXyz t;
@@ -422,7 +422,7 @@ BOOL daNpc_Ji1_c::teachAction(void*) {
             } else if (mAnimation == 0xB && checkCutType(mTeachCutType, mTeachStep)) {
                 teachSubActionJump();
             } else if (mAnimation != 5 && mAnimation != 6 && checkCutType(mTeachCutType, mTeachStep)) {
-                cLib_addCalc2(&mBackSlideDist, l_HIO().field_0x3C, 0.25f, l_HIO().field_0x40);
+                cLib_addCalc2(&mBackSlideDist, l_HIO().mGuardSlideDist, 0.25f, l_HIO().mGuardSlideStep);
                 cXyz t;
                 f32 x = mBackSlideStartPos.x;
                 f32 c9c = mBackSlideDist;
@@ -439,11 +439,11 @@ BOOL daNpc_Ji1_c::teachAction(void*) {
                 OnTgShield(&mGuardCyl);
 
                 if (mTeachCutType != CUT_TYPE_CUT_ROLL) {
-                    if (field_0xC90 == 1 || field_0xC90 == 3) {
+                    if (mTeachResult == 1 || mTeachResult == 3) {
                         mSubActionPhase = 0;
                         mBackSlideDist = 0.0f;
                         mBackSlideStartPos.copy(current.pos);
-                        if ((mTeachStep >= 5 || (mTeachStep >= 2 && !dComIfGs_isEventBit(0x0001))) && field_0xC90 == 3) {
+                        if ((mTeachStep >= 5 || (mTeachStep >= 2 && !dComIfGs_isEventBit(0x0001))) && mTeachResult == 3) {
                             if (dComIfGs_isEventBit(0x0001) && dComIfGs_isEventBit(0x2F10) == 0) {
                                 dComIfGs_onEventBit(0x2F10);
                                 field_0xD7C = 1;
@@ -456,7 +456,7 @@ BOOL daNpc_Ji1_c::teachAction(void*) {
                         } else {
                             ji1_setAction(this, ACT_speakAction, nullptr);
                         }
-                    } else if (field_0xC90 == 2) {
+                    } else if (mTeachResult == 2) {
                         mSubActionPhase = 0;
                         mBackSlideDist = 0.0f;
                         mBackSlideStartPos.copy(current.pos);
@@ -465,13 +465,13 @@ BOOL daNpc_Ji1_c::teachAction(void*) {
                         mAttackEndWait = 0;
                         ji1_setAction(this, ACT_speakBadAction, nullptr);
                     } else {
-                        field_0xC90 = 0;
+                        mTeachResult = 0;
                         mSubActionPhase = 0;
                         mBackSlideDist = 0.0f;
                         mBackSlideStartPos.copy(current.pos);
                     }
                 } else {
-                    field_0xC90 = 0;
+                    mTeachResult = 0;
                     mSubActionPhase = 0;
                     mBackSlideDist = 0.0f;
                     mBackSlideStartPos.copy(current.pos);
@@ -507,19 +507,19 @@ BOOL daNpc_Ji1_c::teachAction(void*) {
             }
         }
 
-        if (!player->getCutAtFlg() && field_0xD34) {
+        if (!player->getCutAtFlg() && mRollTeachResult) {
             mSubActionPhase = 0;
             mBackSlideDist = 0.0f;
             mBackSlideStartPos.copy(current.pos);
-            if (field_0xD34 == 1) {
-                field_0xC90 = 1;
+            if (mRollTeachResult == 1) {
+                mTeachResult = 1;
                 ji1_setAction(this, ACT_speakAction, nullptr);
-            } else if (field_0xD34 == 3) {
-                field_0xC90 = 3;
+            } else if (mRollTeachResult == 3) {
+                mTeachResult = 3;
                 ji1_setAction(this, ACT_speakAction, nullptr);
                 l_HD_badCutOnce() = 0;
-            } else if (field_0xD34 == 2) {
-                field_0xC90 = 2;
+            } else if (mRollTeachResult == 2) {
+                mTeachResult = 2;
                 mAttackEndWait = 0;
                 mCoCorrectSum = 0.0f;
                 mBgCorrectSum = 0.0f;

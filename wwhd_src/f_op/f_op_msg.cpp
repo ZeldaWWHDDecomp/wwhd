@@ -54,7 +54,7 @@ cPhs_State fopMsg_Create(void* i_this) {
             self->mPosWords.y = prm->mPosWords.y;
             self->mPosWords.z = prm->mPosWords.z;
             self->mMsgNo = prm->mMsgNo;
-            self->field_0xf0 = prm->field_0x14;
+            self->mStartMsgNo = prm->mStartMsgNo;
             self->field_0xf4 = prm->field_0x18;
         }
     }

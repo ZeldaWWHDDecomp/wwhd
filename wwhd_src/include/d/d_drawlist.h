@@ -39,14 +39,14 @@ WWHD_OFFSET(dDlst_window_c, mMode, 0x29);
 
 struct cM_rnd_c {
     void init(u32 a, u32 b, u32 c);
-    /* 0x000 */ be<u32> mSeed;
-    /* 0x004 */ be<u32> mMultiplier;
-    /* 0x008 */ be<u32> mIncrement;
+    /* 0x000 */ be<u32> mSeed0;  /* was mSeed: the first of the three Wichmann-Hill seeds: cM_rnd_c::get multiplies it by 171 mod 30269 (tww cM_rnd_c::get m0); init 0252CD10 stores its first argument */
+    /* 0x004 */ be<u32> mSeed1;  /* was mMultiplier (misnamed): the second Wichmann-Hill seed, not a multiplier: tww cM_rnd_c::get computes m4 = m4 * 172 mod 30307; init 0252CD10 stores its second argument */
+    /* 0x008 */ be<u32> mSeed2;  /* was mIncrement (misnamed): the third Wichmann-Hill seed, not an increment: tww cM_rnd_c::get computes m8 = m8 * 170 mod 30323; init 0252CD10 stores its third argument */
 };
 WWHD_SIZE(cM_rnd_c, 0xC);
-WWHD_OFFSET(cM_rnd_c, mSeed, 0x0);
-WWHD_OFFSET(cM_rnd_c, mMultiplier, 0x4);
-WWHD_OFFSET(cM_rnd_c, mIncrement, 0x8);
+WWHD_OFFSET(cM_rnd_c, mSeed0, 0x0);
+WWHD_OFFSET(cM_rnd_c, mSeed1, 0x4);
+WWHD_OFFSET(cM_rnd_c, mSeed2, 0x8);
 
 struct dDlst_base_c {
     /* 0x000 */ be<u32> mVtable;
@@ -57,39 +57,39 @@ WWHD_OFFSET(dDlst_base_c, mVtable, 0x0);
 struct dDlst_effectLine_c {
     void update(u32 vector, u32 colour, u32 a, u32 b, u32 c, u32 d, f32 x, f32 y, f32 z, f32 w);
     /* 0x000 */ be<u32> mVtable;
-    /* 0x004 */ be<u32> mSeed;
-    /* 0x008 */ be<u32> mMultiplier;
-    /* 0x00C */ be<u32> mIncrement;
+    /* 0x004 */ be<u32> mSeed0;  /* was mSeed: dDlst_effectLine_c's embedded cM_rnd_c (tww mRnd): the first of the three Wichmann-Hill seeds: cM_rnd_c::get multiplies it by 171 mod 30269 (tww cM_rnd_c::get m0); init 0252CD10 stores its first argument */
+    /* 0x008 */ be<u32> mSeed1;  /* was mMultiplier (misnamed): dDlst_effectLine_c's embedded cM_rnd_c (tww mRnd): the second Wichmann-Hill seed, not a multiplier: tww cM_rnd_c::get computes m4 = m4 * 172 mod 30307; init 0252CD10 stores its second argument */
+    /* 0x00C */ be<u32> mSeed2;  /* was mIncrement (misnamed): dDlst_effectLine_c's embedded cM_rnd_c (tww mRnd): the third Wichmann-Hill seed, not an increment: tww cM_rnd_c::get computes m8 = m8 * 170 mod 30323; init 0252CD10 stores its third argument */
     /* 0x010 */ be<u32> mPositionX;
     /* 0x014 */ be<u32> mPositionY;
     /* 0x018 */ be<u32> mPositionZ;
     /* 0x01C */ be<u32> mColor;
-    /* 0x020 */ be<u16> mLineCount;
-    /* 0x022 */ be<u16> mLineLength;
-    /* 0x024 */ be<u16> mLineSpeed;
-    /* 0x026 */ be<u16> mLineMode;
-    /* 0x028 */ be<f32> mWidth;
-    /* 0x02C */ be<f32> mHeight;
-    /* 0x030 */ be<f32> mDepth;
-    /* 0x034 */ be<f32> mScale;
+    /* 0x020 */ be<u16> mLineNumMin;  /* was mLineCount (misnamed): update 0252CDF0 stores its 3rd argument; tww draw: the number of lines is mRnd.getValue(it, mLineNumRange) (field_0x20) */
+    /* 0x022 */ be<u16> mLineNumRange;  /* was mLineLength (misnamed): update's 4th argument; tww draw: the random range added to mLineNumMin (field_0x22) */
+    /* 0x024 */ be<u16> mLineWidthMin;  /* was mLineSpeed (misnamed): update's 5th argument; tww draw: GXSetLineWidth(mRnd.getValue(it, mLineWidthRange)) per line (field_0x24) */
+    /* 0x026 */ be<u16> mLineWidthRange;  /* was mLineMode (misnamed): update's 6th argument; tww draw: the random range added to mLineWidthMin (field_0x26) */
+    /* 0x028 */ be<f32> mStartRadiusMin;  /* was mWidth (misnamed): update's 1st float; tww draw: each line starts mRnd.getValue(it, mStartRadiusRange) from mPos at a random angle (field_0x28) */
+    /* 0x02C */ be<f32> mStartRadiusRange;  /* was mHeight (misnamed): update's 2nd float; tww draw: the random range added to mStartRadiusMin (field_0x2C) */
+    /* 0x030 */ be<f32> mLineLengthMin;  /* was mDepth (misnamed): update's 3rd float; tww draw: each line is mRnd.getValue(it, mLineLengthRange) long (field_0x30) */
+    /* 0x034 */ be<f32> mLineLengthRange;  /* was mScale (misnamed): update's 4th float; tww draw: the random range added to mLineLengthMin (field_0x34) */
 };
 WWHD_SIZE(dDlst_effectLine_c, 0x38);
 WWHD_OFFSET(dDlst_effectLine_c, mVtable, 0x0);
-WWHD_OFFSET(dDlst_effectLine_c, mSeed, 0x4);
-WWHD_OFFSET(dDlst_effectLine_c, mMultiplier, 0x8);
-WWHD_OFFSET(dDlst_effectLine_c, mIncrement, 0xC);
+WWHD_OFFSET(dDlst_effectLine_c, mSeed0, 0x4);
+WWHD_OFFSET(dDlst_effectLine_c, mSeed1, 0x8);
+WWHD_OFFSET(dDlst_effectLine_c, mSeed2, 0xC);
 WWHD_OFFSET(dDlst_effectLine_c, mPositionX, 0x10);
 WWHD_OFFSET(dDlst_effectLine_c, mPositionY, 0x14);
 WWHD_OFFSET(dDlst_effectLine_c, mPositionZ, 0x18);
 WWHD_OFFSET(dDlst_effectLine_c, mColor, 0x1C);
-WWHD_OFFSET(dDlst_effectLine_c, mLineCount, 0x20);
-WWHD_OFFSET(dDlst_effectLine_c, mLineLength, 0x22);
-WWHD_OFFSET(dDlst_effectLine_c, mLineSpeed, 0x24);
-WWHD_OFFSET(dDlst_effectLine_c, mLineMode, 0x26);
-WWHD_OFFSET(dDlst_effectLine_c, mWidth, 0x28);
-WWHD_OFFSET(dDlst_effectLine_c, mHeight, 0x2C);
-WWHD_OFFSET(dDlst_effectLine_c, mDepth, 0x30);
-WWHD_OFFSET(dDlst_effectLine_c, mScale, 0x34);
+WWHD_OFFSET(dDlst_effectLine_c, mLineNumMin, 0x20);
+WWHD_OFFSET(dDlst_effectLine_c, mLineNumRange, 0x22);
+WWHD_OFFSET(dDlst_effectLine_c, mLineWidthMin, 0x24);
+WWHD_OFFSET(dDlst_effectLine_c, mLineWidthRange, 0x26);
+WWHD_OFFSET(dDlst_effectLine_c, mStartRadiusMin, 0x28);
+WWHD_OFFSET(dDlst_effectLine_c, mStartRadiusRange, 0x2C);
+WWHD_OFFSET(dDlst_effectLine_c, mLineLengthMin, 0x30);
+WWHD_OFFSET(dDlst_effectLine_c, mLineLengthRange, 0x34);
 
 struct dDlst_peekZ_entry {
     /* 0x000 */ be<s16> mX;

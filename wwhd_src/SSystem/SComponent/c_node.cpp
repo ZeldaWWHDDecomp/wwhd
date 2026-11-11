@@ -85,7 +85,7 @@ void cNd_Cut(node_class* pNode) {
 
 /* 02019B94 */
 void cNd_Addition(node_class* pA, node_class* pB) {
-    JUT_ASSERT(219, pA != NULL && pB != NULL); // HD: reject missing lists.
+    JUT_ASSERT_MSG(219, pA != NULL && pB != NULL, "!((i_Dst) == (0)) && !((i_Src) == (0))"); // HD: reject missing lists.
     if (pA && pB) {
         node_class* pLast = cNd_Last(pA);
         cNd_Join(pLast, pB);
@@ -139,5 +139,5 @@ static void __sinit_c_node_cpp() {
 
 /* WWHD glue (tools/verify/autoglue.py): this translation unit's data
 str 10003608
-str 10003614 "pA != NULL && pB != NULL" renamed # HD: "!((i_Dst) == (0)) && !((i_Src) == (0))"
+str 10003614 "!((i_Dst) == (0)) && !((i_Src) == (0))" # HD: "!((i_Dst) == (0)) && !((i_Src) == (0))"
 */

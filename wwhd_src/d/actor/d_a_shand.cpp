@@ -45,8 +45,8 @@ static daShand_HIO_c* daShand_HIO_c_ct(daShand_HIO_c* i_this) {
     }
     i_this->__vtbl = daShand_HIO_c::__vt;
     i_this->mNo = -1;
-    i_this->field_6 = -3;
-    i_this->field_8 = 50;
+    i_this->mEyeSegment = -3;
+    i_this->mHitHoldTime = 50;
     return i_this;
 }
 
@@ -335,7 +335,7 @@ static inline void hand_move(shand_class* i_this) {
         }
     }
 
-    s16 seg = l_HIO.field_6;
+    s16 seg = l_HIO.mEyeSegment;
     cXyz* line_segments = i_this->mLineMat.getPos(0);
     cXyz* eye = &line_segments[seg + 10];
     shandSetEyePosition(actor, eye);
@@ -393,8 +393,8 @@ static inline void hand_move(shand_class* i_this) {
             if (i_this->mpParent != NULL) {
                 i_this->mState = 1;
                 i_this->mTipMode = 0;
-                i_this->mTimers[0] = l_HIO.field_8;
-                i_this->mTimers[1] = l_HIO.field_8 + 90 + REG0_S(2);
+                i_this->mTimers[0] = l_HIO.mHitHoldTime;
+                i_this->mTimers[1] = l_HIO.mHitHoldTime + 90 + REG0_S(2);
                 i_this->mBendY = 3.0f;
                 i_this->mBendZ = 40.0f;
                 i_this->mWobbleAmp = cM_rndF(20.0f) + 30.0f;

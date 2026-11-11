@@ -32,8 +32,8 @@ static BOOL dOvlpFd3_Execute(u32 self) {
 static BOOL dOvlpFd3_Delete(u32 self) {
     dOvlpFd3_c* i_this = gabi::at<dOvlpFd3_c>(self);
     if (self) {
-        dDlst_base_destroy(&i_this->field_0x120, 0);
-        dDlst_base_destroy(&i_this->field_0xdc, 0);
+        dDlst_base_destroy(&i_this->mFrameBufferPacket, 0);
+        dDlst_base_destroy(&i_this->mWipePacket, 0);
         dDlst_base_destroy(&i_this->mSnapshot_c, 0);
         fpcBs_destruct(&i_this->base, 0);
     }
@@ -55,11 +55,11 @@ static u32 dOvlpFd3_construct(u32 self) {
         i_this->base.__vtbl = overlapVtable;
         dDlst_base_construct(&i_this->mSnapshot_c);
         i_this->mSnapshot_c.__vtbl = snapshotVtable;
-        dDlst_base_construct(&i_this->field_0xdc);
-        i_this->field_0xdc.__vtbl = texturePacketVtable;
-        dDlst_base_construct(&i_this->field_0x120);
+        dDlst_base_construct(&i_this->mWipePacket);
+        i_this->mWipePacket.__vtbl = texturePacketVtable;
+        dDlst_base_construct(&i_this->mFrameBufferPacket);
         i_this->setExecute(dOvlpFd3_execFirstSnap);
-        i_this->field_0x120.__vtbl = texturePacketVtable;
+        i_this->mFrameBufferPacket.__vtbl = texturePacketVtable;
         l_drawRegistry->add(i_this);
     }
     return self;
@@ -74,7 +74,7 @@ static u32 dOvlpFd3_Create(u32 self) {
 /* 025A26D8 */
 static BOOL dOvlpFd3_execFirstSnap(u32 self) {
     dOvlpFd3_c* i_this = gabi::at<dOvlpFd3_c>(self);
-    if (i_this->field_0x164) {
+    if (i_this->mSnapTaken) {
         i_this->setExecute(dOvlpFd3_execFadeOut);
         fopOvlpM_Done(i_this);
         dComIfGp_setWindowNum(0);
@@ -102,7 +102,7 @@ static BOOL dOvlpFd3_execNextSnap(u32 self) {
     dOvlpFd3_c* i_this = gabi::at<dOvlpFd3_c>(self);
     i_this->mExecuteFn.i = -1;
     i_this->mExecuteFn.f = gabi::guest_fn((const void*)dOvlpFd3_execFadeIn);
-    i_this->field_0x164 = 0;
+    i_this->mSnapTaken = 0;
     i_this->mExecuteFn.d = 0;
     dOvlp_play_c* play = dOvlp_getPlay();
     f32 bias = l_fadeBias;
@@ -127,11 +127,11 @@ static BOOL dOvlpFd3_execFadeIn(u32 self) {
 /* 025A28B0 */
 static void dOvlpFd3_nativeDraw(u32 self, u32 context) {
     dOvlpFd3_c* i_this = gabi::at<dOvlpFd3_c>(self);
-    u8 first = i_this->field_0x164;
+    u8 first = i_this->mSnapTaken;
     dOvlpFadeRenderer_c* renderer = l_renderer;
     if (!first) {
         renderer->capture(4, context);
-        i_this->field_0x164 = 1;
+        i_this->mSnapTaken = 1;
         return;
     }
     renderer->draw(4, context, 1);

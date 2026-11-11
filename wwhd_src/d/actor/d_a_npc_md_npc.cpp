@@ -76,7 +76,7 @@ BOOL daNpc_Md_c::waitNpcAction(void* i_actionArg) {
         md_attnFlags(this) = md_attnFlags(this) & ~fopAc_Attn_ACTION_CARRY_e;
         if (mType == TYPE_SEA /* isTypeSea */) {
             s32 m = mAnmTblIdx; /* compared unsigned after sign extension */
-            if (m3104 == 0x1E || m3104 == 0x29 || (u32)m == 0xE || (u32)m == 0x12 || (u32)m == 0x13 ||
+            if (mAnmPrmIdx == 0x1E || mAnmPrmIdx == 0x29 || (u32)m == 0xE || (u32)m == 0x12 || (u32)m == 0x13 ||
                 (u32)m == 0x1A || (u32)m == 0x25) {
                 setHarpPlayNum(1);
             } else {
@@ -92,7 +92,7 @@ BOOL daNpc_Md_c::waitNpcAction(void* i_actionArg) {
             setAnm(0);
         }
         maxFallSpeed = -100.0f;
-        gravity = npcHIO.m0F4;
+        gravity = npcHIO.mGravity;
         clearStatus(daMdStts_UNK1 | daMdStts_UNK2 | daMdStts_FLY);
         if (mType != TYPE_SEA) {
             setBitStatus(daMdStts_UNK4);
@@ -102,17 +102,17 @@ BOOL daNpc_Md_c::waitNpcAction(void* i_actionArg) {
         shape_angle.x = 0;
         shape_angle.z = 0;
         speedF = 0.0f;
-        m30F8 = 120.0f;
+        mCylH = 120.0f;
         mAcchCir[1].SetWall(60.0f, 20.0f);
         m3144 = 150;
         mActionStatus = mActionStatus + 1;
     } else if (mActionStatus != ACTION_ENDING) {
-        if (m312A != 0) {
-            if (m3104 == 0x12) {
+        if (mAnmEnd != 0) {
+            if (mAnmPrmIdx == 0x12) {
                 setHarpPlayNum(1);
-            } else if (m3104 == 0x13 || m3104 == 0x21) {
+            } else if (mAnmPrmIdx == 0x13 || mAnmPrmIdx == 0x21) {
                 setAnm(0);
-            } else if (m3104 == 0x16 || m3104 == 0x17 || m3104 == 0x11) {
+            } else if (mAnmPrmIdx == 0x16 || mAnmPrmIdx == 0x17 || mAnmPrmIdx == 0x11) {
                 setHarpPlayNum(1);
             }
         }
@@ -128,7 +128,7 @@ BOOL daNpc_Md_c::waitNpcAction(void* i_actionArg) {
             if (link == play()->mpPlayer.get()) {
                 f32 distXZ2 = fopAcM_searchPlayerDistanceXZ2(this);
                 f32 distY = link->current.pos.y - current.pos.y;
-                if (distXZ2 < npcHIO.m0CC * npcHIO.m0CC && distY < npcHIO.m0BC && distY > npcHIO.m0C0) {
+                if (distXZ2 < npcHIO.mSeaEventDistXZ * npcHIO.mSeaEventDistXZ && distY < npcHIO.mMaxAttnY && distY > npcHIO.mMinAttnY) {
                     mCurEventMode = 0xB;
                 }
             }
@@ -141,7 +141,7 @@ BOOL daNpc_Md_c::waitNpcAction(void* i_actionArg) {
             md_attnFlags(this) = md_attnFlags(this) & ~(fopAc_Attn_LOCKON_TALK_e | fopAc_Attn_ACTION_SPEAK_e);
             u32 attn = mdNpc_chkAttentionWord(this, &pos, headAngle, 1); /* chkAttention */
             *sp08 = attn;
-            m312C = (u8)attn;
+            mHasAttention = (u8)attn;
             if (attn != 0) {
                 if (mType == TYPE_ATORIZK || mType == TYPE_ADANMAE || mType == TYPE_SEA) {
                     md_attnFlags(this) = md_attnFlags(this) | (fopAc_Attn_LOCKON_TALK_e | fopAc_Attn_ACTION_SPEAK_e);
@@ -181,11 +181,11 @@ BOOL daNpc_Md_c::waitNpcAction(void* i_actionArg) {
             md_setNpcAction(this, &action_demoFlyNpcAction);
         }
         if (mType == TYPE_M_DAI || mType == TYPE_EDAICHI) {
-            if (m3104 == 0) {
+            if (mAnmPrmIdx == 0) {
                 if (mdNpc_calcTimer(&m3144) == 0) {
                     setAnm(40);
                 }
-            } else if (m3104 == 0x28 && m312A != 0) {
+            } else if (mAnmPrmIdx == 0x28 && mAnmEnd != 0) {
                 setAnm(0);
                 m3144 = (s16)(gabi::ftoi(cM_rndF(180.0f)) + 60);
             }
@@ -204,7 +204,7 @@ BOOL daNpc_Md_c::waitNpcAction(void* i_actionArg) {
                 lookBack(1, 0, 1);
             }
         } else {
-            if (m3104 == 0x16 || m3104 == 0x17) {
+            if (mAnmPrmIdx == 0x16 || mAnmPrmIdx == 0x17) {
                 cXyz eye; /* cXyz::Zero by value (FPR copy) */
                 const cXyz* zero = &zeroVector;
                 f32 y = zero->y, x = zero->x, z = zero->z;
@@ -235,43 +235,43 @@ BOOL daNpc_Md_c::harpWaitNpcAction(void* i_actionArg) {
     if (mActionStatus == ACTION_STARTING) {
         setHarpPlayNum(1);
         maxFallSpeed = -100.0f;
-        gravity = npcHIO.m0F4;
+        gravity = npcHIO.mGravity;
         mStatus = daMdStts_UNK80; /* clearStatus(); setBitStatus(UNK80) */
         shape_angle.x = 0;
         shape_angle.z = 0;
         speedF = 0.0f;
-        m30F8 = 120.0f;
+        mCylH = 120.0f;
         mAcchCir[1].SetWall(60.0f, 20.0f);
         mActionStatus = mActionStatus + 1;
         m3144 = 0;
-        m3146 = 0xC;
+        mActionTimer = 0xC;
     } else if (mActionStatus != ACTION_ENDING) {
         if (mActionStatus == ACTION_ONGOING_1) {
-            if (m312A != 0) {
-                m3146 = m3146 - 1;
-                if (m3146 != 0) {
+            if (mAnmEnd != 0) {
+                mActionTimer = mActionTimer - 1;
+                if (mActionTimer != 0) {
                     setHarpPlayNum(1);
                 } else {
                     setAnm(0x11);
                     mActionStatus = mActionStatus + 1;
-                    m3146 = 0x78;
+                    mActionTimer = 0x78;
                 }
             }
         } else {
-            m3146 = m3146 - 1;
-            if (m3146 == 0) {
+            mActionTimer = mActionTimer - 1;
+            if (mActionTimer == 0) {
                 setHarpPlayNum(1);
-                m3146 = 0xC;
+                mActionTimer = 0xC;
                 mActionStatus = ACTION_ONGOING_1;
             }
         }
-        if (mType == TYPE_M_DAIB /* isTypeM_DaiB */ && m3146 == 0xC) {
+        if (mType == TYPE_M_DAIB /* isTypeM_DaiB */ && mActionTimer == 0xC) {
             BOOL play = FALSE;
-            if (m3104 == 0x16) {
+            if (mAnmPrmIdx == 0x16) {
                 if (md_morf2Frame(mpMorf.get())->checkPass(11.0f)) {
                     play = TRUE;
                 }
-            } else if (m3104 == 0x17 && md_morf2Frame(mpMorf.get())->checkPass(11.0f)) {
+            } else if (mAnmPrmIdx == 0x17 && md_morf2Frame(mpMorf.get())->checkPass(11.0f)) {
                 play = TRUE;
             }
             if (play) {
@@ -295,7 +295,7 @@ BOOL daNpc_Md_c::talkNpcAction(void* i_actionArg) {
         mAcchCir[1].SetWall(60.0f, 20.0f);
         mActionStatus = mActionStatus + 1;
     } else if (mActionStatus != ACTION_ENDING) {
-        m312C = md_chkAttentionSelf(this);
+        mHasAttention = md_chkAttentionSelf(this);
         if (mActionStatus == ACTION_ONGOING_1) {
             if (XYTalkCheck()) {
                 mActionStatus = ACTION_ONGOING_2;
@@ -345,7 +345,7 @@ BOOL daNpc_Md_c::shipTalkNpcAction(void* i_actionArg) {
     } else if (mActionStatus == ACTION_ENDING) {
         clearStatus(daMdStts_SHIP_RIDE); /* offShipRide() */
     } else {
-        m312C = md_chkAttentionSelf(this);
+        mHasAttention = md_chkAttentionSelf(this);
         if (mActionStatus == ACTION_ONGOING_1) {
             if (talk_init()) {
                 mActionStatus = ACTION_ONGOING_2;
@@ -370,12 +370,12 @@ BOOL daNpc_Md_c::kyohiNpcAction(void* i_actionArg) {
         setBitStatus(daMdStts_UNK4);
         setAnm(0x27);
         speedF = 0.0f;
-        m30F8 = 120.0f;
+        mCylH = 120.0f;
         mAcchCir[1].SetWall(60.0f, 20.0f);
         m3144 = 2;
         mActionStatus = mActionStatus + 1;
     } else if (mActionStatus != ACTION_ENDING) {
-        if (m312A != 0) {
+        if (mAnmEnd != 0) {
             m3144 = m3144 - 1;
             if (m3144 == 0) {
                 md_setNpcAction(this, &action_waitNpcAction);
@@ -394,7 +394,7 @@ BOOL daNpc_Md_c::shipNpcAction(void* i_actionArg) {
         setBitStatus(daMdStts_UNK4);
         setAnm(0x23);
         speedF = 0.0f;
-        m30F8 = 120.0f;
+        mCylH = 120.0f;
         if (md_getShipActor() != nullptr) {
             setBitStatus(daMdStts_SHIP_RIDE);
         }
@@ -410,8 +410,8 @@ BOOL daNpc_Md_c::shipNpcAction(void* i_actionArg) {
             if (std::fabs((f32)ship->speedF) < 0.001f) {
                 setAnm(0x2A);
                 if (!(play()->mPlayerStatus0 & PLAYER_SHIP_RIDE)) {
-                    m312C = md_chkAttentionSelf(this);
-                    if (m312C != 0) {
+                    mHasAttention = md_chkAttentionSelf(this);
+                    if (mHasAttention != 0) {
                         md_attnFlags(this) = md_attnFlags(this) | (fopAc_Attn_LOCKON_TALK_e | fopAc_Attn_ACTION_SPEAK_e);
                         mCurEventMode = 2;
                     }
@@ -420,7 +420,7 @@ BOOL daNpc_Md_c::shipNpcAction(void* i_actionArg) {
                 setAnm(0x23);
             }
         }
-        if (m3104 == 0x23) {
+        if (mAnmPrmIdx == 0x23) {
             cXyz eye; /* cXyz::Zero by value (FPR copy) */
             const cXyz* zero = &zeroVector;
             f32 x = zero->x, z = zero->z, y = zero->y;
@@ -446,7 +446,7 @@ BOOL daNpc_Md_c::mwaitNpcAction(void* i_actionArg) {
         setAnm(0x20);
         shape_angle.x = 0;
         shape_angle.z = 0;
-        gravity = npcHIO.m0F4;
+        gravity = npcHIO.mGravity;
         maxFallSpeed = -100.0f;
         speedF = 0.0f;
         speed.y = 0.0f;
@@ -460,12 +460,12 @@ BOOL daNpc_Md_c::mwaitNpcAction(void* i_actionArg) {
                 md_attnFlags(this) = md_attnFlags(this) & ~(fopAc_Attn_LOCKON_TALK_e | fopAc_Attn_ACTION_SPEAK_e);
                 f32 dist2 = fopAcM_searchActorDistance2(this, dComIfGp_getPlayer(0));
                 if (!(mNoResetFlg1 & 2) /* !checkNpcCallCommand() */) {
-                    if (dist2 < npcHIO.m0C8 * npcHIO.m0C8) {
+                    if (dist2 < npcHIO.mCallDist * npcHIO.mCallDist) {
                         md_linkOnNpcCall();
                     }
                 } else {
                     mActionStatus = mActionStatus + 1;
-                    f32 r = npcHIO.m0C4 + npcHIO.m0C4; /* 2.0f * m0C4 */
+                    f32 r = npcHIO.mFollowStopDist + npcHIO.mFollowStopDist; /* 2.0f * mFollowStopDist */
                     if (dist2 < r * r) {
                         mActionStatus = mActionStatus + 1;
                     }
@@ -477,10 +477,10 @@ BOOL daNpc_Md_c::mwaitNpcAction(void* i_actionArg) {
                 mWaistRotX = 0;
                 mWaistRotY = 0;
                 setAnm(0x21);
-                m312A = 0;
+                mAnmEnd = 0;
             }
         } else {
-            if (lookBackWaist(mStickAngY, mStickValue) && m312A != 0) {
+            if (lookBackWaist(mStickAngY, mStickValue) && mAnmEnd != 0) {
                 mWaistRotX = 0;
                 mWaistRotY = 0;
                 if (mActionStatus == ACTION_ONGOING_2) {
@@ -503,12 +503,12 @@ BOOL daNpc_Md_c::squatdownNpcAction(void* i_actionArg) {
         setBitStatus(daMdStts_UNK4);
         setAnm(3);
         speedF = 0.0f;
-        m30F8 = 75.0f;
+        mCylH = 75.0f;
         mAcchCir[1].SetWall(60.0f, 20.0f);
         mActionStatus = mActionStatus + 1;
     } else if (mActionStatus != ACTION_ENDING) {
-        m312C = md_chkAttentionSelf(this);
-        if (m312A != 0) {
+        mHasAttention = md_chkAttentionSelf(this);
+        if (mAnmEnd != 0) {
             md_setNpcAction(this, &action_sqwait01NpcAction);
         }
         setAttention(true);
@@ -527,15 +527,15 @@ BOOL daNpc_Md_c::sqwait01NpcAction(void* i_actionArg) {
         setBitStatus(daMdStts_UNK4);
         setAnm(4);
         maxFallSpeed = -100.0f;
-        gravity = npcHIO.m0F4;
+        gravity = npcHIO.mGravity;
         speedF = 0.0f;
-        m30F8 = 75.0f;
+        mCylH = 75.0f;
         shape_angle.x = 0;
         shape_angle.z = 0;
         mAcchCir[1].SetWall(60.0f, 20.0f);
         mActionStatus = mActionStatus + 1;
     } else if (mActionStatus != ACTION_ENDING) {
-        m312C = md_chkAttentionSelf(this);
+        mHasAttention = md_chkAttentionSelf(this);
         if ((s8)(u8)mType >= 4) {
             md_setNpcAction(this, &action_waitNpcAction);
         }
@@ -559,28 +559,28 @@ BOOL daNpc_Md_c::carryNpcAction(void* i_actionArg) {
             setHane02Emitter();
             se = JA_SE_CV_MD_CRASH;
         } else {
-            if (m3104 == 4) {
+            if (mAnmPrmIdx == 4) {
                 setAnm(5);
             } else {
                 setAnm(3);
-                m312A = 0;
+                mAnmEnd = 0;
             }
             se = JA_SE_CV_MD_LIFT_UP;
         }
         mdNpc_sound(this, se);
-        m30F8 = 75.0f;
+        mCylH = 75.0f;
         mAcchCir[1].SetWall(60.0f, 20.0f);
         mActionStatus = mActionStatus + 1;
     } else if (mActionStatus == ACTION_ENDING) {
-        m3298.y = 0.0f;
-        m3298.z = 0.0f;
+        mCarryOffset.y = 0.0f;
+        mCarryOffset.z = 0.0f;
         mNoResetFlg1 = mNoResetFlg1 & ~0x40u; /* offNpcNotChange() */
         clearStatus(daMdStts_CARRY_ACTION);   /* offNoCarryAction() */
         deleteHane02Emitter();
         deleteHane03Emitter();
         emitterDelete(mEmitters);
     } else {
-        m3131 = 0;
+        mGroundHit = 0;
         BOOL landed = FALSE;
         if (actor_status & fopAcStts_CARRY_e /* fopAcM_checkCarryNow */) {
             mdNpc_setRestart(this, 2);
@@ -595,12 +595,12 @@ BOOL daNpc_Md_c::carryNpcAction(void* i_actionArg) {
                     setBitStatus(daMdStts_UNK1);
                     setWingEmitter();
                     setHane03Emitter();
-                    m312A = 0;
+                    mAnmEnd = 0;
                     mdNpc_sound(this, JA_SE_CV_MD_FLY_WITH_LINK);
                     if (dComIfGs_isEventBit_md(UNK_4001)) {
                         dComIfGs_onEventBit_md(UNK_4180);
                     }
-                } else if (m3104 == 5) {
+                } else if (mAnmPrmIdx == 5) {
                     f32 spdF = player->speedF;
                     Morf2* morf = morf2(mpMorf.get());
                     f32 oldRate = morf->mFrameCtrl.mRate; /* mpMorf->getPlaySpeed() */
@@ -629,17 +629,17 @@ BOOL daNpc_Md_c::carryNpcAction(void* i_actionArg) {
                         mdNpc_setMorf(m, 4.0f);
                         mdNpc_setMorf(mpArmMorf.get(), 4.0f);
                     }
-                    cLib_chaseF(&m3298.x, npcHIO.m0F8, 1.0f);
-                    cLib_chaseF(&m3298.y, npcHIO.m0FC, 1.0f);
-                    cLib_chaseF(&m3298.z, npcHIO.m100, 1.0f);
-                } else if (m312A != 0) {
+                    cLib_chaseF(&mCarryOffset.x, npcHIO.mCarryFlyOffsetX, 1.0f);
+                    cLib_chaseF(&mCarryOffset.y, npcHIO.mCarryFlyOffsetY, 1.0f);
+                    cLib_chaseF(&mCarryOffset.z, npcHIO.mCarryFlyOffsetZ, 1.0f);
+                } else if (mAnmEnd != 0) {
                     setAnm(5);
                 }
             } else if (mActionStatus == ACTION_ONGOING_2) {
                 if (flying < 0x1E) {
                     mActionStatus = ACTION_ONGOING_3;
-                    morf2(mpMorf.get())->mFrameCtrl.mRate = npcHIO.m120;      /* setPlaySpeed */
-                    mpWingMorf->mFrameCtrl.mRate = npcHIO.m120; /* setPlaySpeed */
+                    morf2(mpMorf.get())->mFrameCtrl.mRate = npcHIO.mCarryTiredAnmSpeed;      /* setPlaySpeed */
+                    mpWingMorf->mFrameCtrl.mRate = npcHIO.mCarryTiredAnmSpeed; /* setPlaySpeed */
                 }
             } else if (flying <= 0) {
                 mActionStatus = ACTION_ONGOING_1;
@@ -659,7 +659,7 @@ BOOL daNpc_Md_c::carryNpcAction(void* i_actionArg) {
                     md_setNpcAction(this, &action_land03NpcAction);
                 }
             } else if ((mStatus & daMdStts_UNK1) || landed) {
-                if (!(current.pos.y - mAcch.GetGroundH() < npcHIO.m1AC)) {
+                if (!(current.pos.y - mAcch.GetGroundH() < npcHIO.mHighFallHeight)) {
                     md_setNpcAction(this, &action_fall02NpcAction);
                 } else {
                     md_setNpcAction(this, &action_fallNpcAction);
@@ -687,14 +687,14 @@ BOOL daNpc_Md_c::carryNpcAction(void* i_actionArg) {
 BOOL daNpc_Md_c::throwNpcAction(void* i_actionArg) {
     if (mActionStatus == ACTION_STARTING) {
         mdNpc_sound(this, JA_SE_CV_MD_THROW);
-        m314C = 1;
-        m314E = npcHIO.m1B4;
-        m3148 = 0;
-        m3154 = 0.0f;
-        speedF = npcHIO.m0E8;
-        speed.y = npcHIO.m0EC;
-        maxFallSpeed = npcHIO.m110;
-        gravity = npcHIO.m114;
+        mWindProcRet = 1;
+        mThrowWindTimer = npcHIO.mThrowWindTime;
+        mCrossWindHit = 0;
+        mCrossWindPush = 0.0f;
+        speedF = npcHIO.mThrowSpeedF;
+        speed.y = npcHIO.mThrowSpeedY;
+        maxFallSpeed = npcHIO.mThrowMaxFallSpeed;
+        gravity = npcHIO.mThrowGravity;
         mThrowPos.copy(current.pos);
         clearStatus(daMdStts_UNK4);
         setBitStatus(daMdStts_UNK1 | daMdStts_FLY);
@@ -706,12 +706,12 @@ BOOL daNpc_Md_c::throwNpcAction(void* i_actionArg) {
         emitterDelete(mEmitters);
     } else {
         f32 frame = md_morfFrame(mpWingMorf.get());
-        if (frame == 23.0f && speed.y < npcHIO.m0F0) {
-            speed.y = npcHIO.m0F0;
+        if (frame == 23.0f && speed.y < npcHIO.mThrowFlapSpeedY) {
+            speed.y = npcHIO.mThrowFlapSpeedY;
         }
-        if (frame > npcHIO.m154) { // HD: keep this ordered comparison for NaN inputs.
+        if (frame > npcHIO.mThrowWindFrame) { // HD: keep this ordered comparison for NaN inputs.
             if (windProc() == 0) {
-                m314C = 0;
+                mWindProcRet = 0;
             }
         }
         if (mAcch.ChkGroundHit()) {
@@ -720,7 +720,7 @@ BOOL daNpc_Md_c::throwNpcAction(void* i_actionArg) {
         } else if (mAcch.ChkWallHit()) {
             md_setNpcAction(this, &action_wallHitNpcAction);
             md_camForceLockOff(this);
-        } else if (m312A != 0) {
+        } else if (mAnmEnd != 0) {
             md_setNpcAction(this, &action_glidingNpcAction);
         }
         setAttention(true);
@@ -731,14 +731,14 @@ BOOL daNpc_Md_c::throwNpcAction(void* i_actionArg) {
 /* 02291304 */
 BOOL daNpc_Md_c::glidingNpcAction(void* i_actionArg) {
     if (mActionStatus == ACTION_STARTING) {
-        if (m314C == 1) {
-            m3148 = 0;
+        if (mWindProcRet == 1) {
+            mCrossWindHit = 0;
             setAnm(0xB);
         } else {
-            m3148 = 1;
+            mCrossWindHit = 1;
             setAnm(0xA);
         }
-        m314A = 2;
+        mGlideAnmCount = 2;
         clearStatus(daMdStts_UNK4);
         setBitStatus(daMdStts_UNK1 | daMdStts_FLY);
         mAcchCir[1].SetWall(60.0f, 60.0f);
@@ -752,21 +752,21 @@ BOOL daNpc_Md_c::glidingNpcAction(void* i_actionArg) {
                 md_setNpcAction(this, &action_wallHitNpcAction, mType == TYPE_ADANMAE ? (void*)&m3144 : nullptr);
                 md_camForceLockOff(this);
             } else {
-                if (m3148 == 0) {
+                if (mCrossWindHit == 0) {
                     // HD: compare the full r3 from windProc with the sign-extended stored result.
                     s32 wind = mdNpc_windProcWord(this);
-                    if ((u32)(s32)m314C != (u32)wind) {
+                    if ((u32)(s32)mWindProcRet != (u32)wind) {
                         if (wind == 0) {
                             setAnm(0xA);
-                            m3148 = 1;
+                            mCrossWindHit = 1;
                         } else {
                             setAnm(0xB);
                         }
                     }
-                    m314C = (s16)wind;
-                } else if (m312A != 0) {
-                    m314A = m314A - 1;
-                    if (m314A != 0) {
+                    mWindProcRet = (s16)wind;
+                } else if (mAnmEnd != 0) {
+                    mGlideAnmCount = mGlideAnmCount - 1;
+                    if (mGlideAnmCount != 0) {
                         setAnm(0xA);
                     } else {
                         md_setNpcAction(this, &action_fall02NpcAction, mType == TYPE_ADANMAE ? (void*)&m3144 : nullptr);
@@ -795,7 +795,7 @@ s16 daNpc_Md_c::windProc() {
         wind.x = 0.0f;
         *pow = 0.0f;
     }
-    if (npcHIO.m1C6 != 0 && mdNpc_chkTgHit(&mCyl2)) {
+    if (npcHIO.mbWindAtkHit != 0 && mdNpc_chkTgHit(&mCyl2)) {
         u32 obj = mdNpc_getTgHitObj(&mCyl2);
         if (obj != 0 && (gabi::at<CollisionObject>(obj)->mAtType & AT_TYPE_WIND)) {
             cXyz* rvec = &reinterpret_cast<CollisionVector*>(&mCyl2)->mTgRVec; /* GetTgRVecP */
@@ -805,13 +805,13 @@ s16 daNpc_Md_c::windProc() {
             wind.x = x;
             cXyz res;
             mdNpc_normalizeZP(&wind, &res);
-            *pow = (f32)npcHIO.m148;
+            *pow = (f32)npcHIO.mWindAtkPower;
         }
     }
     f32 wx = wind.x;
     f32 sinY = cM_ssin(shape_angle.y);
     f32 cosY = cM_scos(shape_angle.y);
-    f32 rate = npcHIO.m134;
+    f32 rate = npcHIO.mTailWindRate;
     cXyz windXZ; /* cStack_64 */
     cXyz tmpXZ;  /* abs2XZ temporary */
     windXZ.y = 0.0f;
@@ -828,7 +828,7 @@ s16 daNpc_Md_c::windProc() {
         f32 dot = gabi::fmadds(sinY, windXZ.x, cosY * windXZ.z);
         if (!(dot > 0.7071f)) {
             ret = 0;
-            rate = npcHIO.m130;
+            rate = npcHIO.mCrossWindRate;
         }
     }
     cXyz add;  /* local_34 * local_a4 */
@@ -836,11 +836,11 @@ s16 daNpc_Md_c::windProc() {
     cXyz sumXZ;
     if (ret == 0) {
         f32 limit = *pow * rate;
-        f32 v = m3154 + npcHIO.m138;
+        f32 v = mCrossWindPush + npcHIO.mCrossWindStep;
         if (v > limit) {
             v = limit;
         }
-        m3154 = v;
+        mCrossWindPush = v;
         *pow = v;
         cXyz_ml(&wind, &add, v);
     } else {
@@ -855,19 +855,19 @@ s16 daNpc_Md_c::windProc() {
     sumXZ.z = (f32)sum.z;
     f32 spd = std_sqrtf(PSVECSquareMag(&sumXZ));
     speedF = spd;
-    f32 maxSpd = npcHIO.m13C;
+    f32 maxSpd = npcHIO.mWindMaxSpeed;
     speed.y = (f32)sum.y;
     speedF = (spd - maxSpd >= 0.0f) ? maxSpd : spd; /* cLib_maxLimit (fsel) */
-    if (m3148 == 0) {
-        maxFallSpeed = npcHIO.m110;
-        gravity = npcHIO.m114;
+    if (mCrossWindHit == 0) {
+        maxFallSpeed = npcHIO.mThrowMaxFallSpeed;
+        gravity = npcHIO.mThrowGravity;
     }
     if (!(std::fabs((f32)*pow) < 3.814697265625e-06f)) {
-        s16 t = mdNpc_calcTimer(&m314E);
-        s16 lim = (s16)(npcHIO.m1B4 - npcHIO.m1B6);
-        if (ret == 1 && t > 0 && t < lim && (npcHIO.m1C7 != 0 || m3148 == 0)) {
-            maxFallSpeed = npcHIO.m140;
-            gravity = npcHIO.m144;
+        s16 t = mdNpc_calcTimer(&mThrowWindTimer);
+        s16 lim = (s16)(npcHIO.mThrowWindTime - npcHIO.mWindLiftDelay);
+        if (ret == 1 && t > 0 && t < lim && (npcHIO.mbWindLiftAlways != 0 || mCrossWindHit == 0)) {
+            maxFallSpeed = npcHIO.mWindLiftMaxFallSpeed;
+            gravity = npcHIO.mWindLiftGravity;
         }
     }
     return ret;
@@ -899,17 +899,17 @@ BOOL daNpc_Md_c::fall02NpcAction(void* param_1) {
     if (mActionStatus == ACTION_STARTING) {
         clearStatus(daMdStts_UNK1 | daMdStts_UNK4);
         setBitStatus(daMdStts_FLY);
-        maxFallSpeed = npcHIO.m110;
-        gravity = npcHIO.m114;
-        m30F8 = 120.0f;
+        maxFallSpeed = npcHIO.mThrowMaxFallSpeed;
+        gravity = npcHIO.mThrowGravity;
+        mCylH = 120.0f;
         setAnm(0xD);
         mAcchCir[1].SetWall(60.0f, 20.0f);
         mActionStatus = mActionStatus + 1;
         m3144 = param_1 != nullptr ? 1 : 0;
-        m3150 = current.pos.y;
+        mBasePosY = current.pos.y;
     } else if (mActionStatus != ACTION_ENDING) {
         if (mType == TYPE_M_DAI /* isTypeM_Dai */ && mAcch.ChkGroundHit()) {
-            if (!(m3150 - current.pos.y < npcHIO.m1B0)) {
+            if (!(mBasePosY - current.pos.y < npcHIO.mShockFallHeight)) {
                 md_startShock(6, -0x21);
             }
         }
@@ -942,7 +942,7 @@ BOOL daNpc_Md_c::wallHitNpcAction(void* param_1) {
     if (mActionStatus == ACTION_STARTING) {
         mdNpc_sound(this, JA_SE_CV_MD_CRASH);
         maxFallSpeed = -100.0f;
-        gravity = npcHIO.m0F4;
+        gravity = npcHIO.mGravity;
         setAnm(0xD);
         shape_angle.x = 0;
         shape_angle.z = 0;
@@ -950,10 +950,10 @@ BOOL daNpc_Md_c::wallHitNpcAction(void* param_1) {
         if (i >= 0) {
             current.angle.y = mAcchCir[i].m_wall_angle_y;
         }
-        speedF = npcHIO.m150;
+        speedF = npcHIO.mWallHitSpeedF;
         clearStatus(daMdStts_UNK1 | daMdStts_UNK4);
         setBitStatus(daMdStts_UNK2 | daMdStts_FLY);
-        m30F8 = 120.0f;
+        mCylH = 120.0f;
         mAcchCir[1].SetWall(60.0f, 20.0f);
         mActionStatus = mActionStatus + 1;
         md_startShock(5, -0x11);
@@ -981,22 +981,22 @@ BOOL daNpc_Md_c::land01NpcAction(void* param_1) {
             mEffectStatus = mEffectStatus | 1; /* setBitEffectStatus(1) */
         }
         maxFallSpeed = -100.0f;
-        gravity = npcHIO.m0F4;
+        gravity = npcHIO.mGravity;
         setAnm(0xE);
         clearStatus(daMdStts_UNK1 | daMdStts_UNK2 | daMdStts_UNK4 | daMdStts_FLY);
         shape_angle.x = 0;
         shape_angle.z = 0;
         speedF = 0.0f;
-        m30F8 = 120.0f;
+        mCylH = 120.0f;
         mAcchCir[1].SetWall(60.0f, 20.0f);
         mActionStatus = mActionStatus + 1;
         m3144 = param_1 != nullptr ? 1 : 0;
     } else if (mActionStatus != ACTION_ENDING) {
         if (m3144 != 0) {
-            if (!chkAdanmaeDemoOrder() && m312A != 0) {
+            if (!chkAdanmaeDemoOrder() && mAnmEnd != 0) {
                 md_setNpcAction(this, &action_waitNpcAction);
             }
-        } else if (m312A != 0) {
+        } else if (mAnmEnd != 0) {
             md_setNpcAction(this, &action_waitNpcAction);
         }
         setAttention(true);
@@ -1008,17 +1008,17 @@ BOOL daNpc_Md_c::land01NpcAction(void* param_1) {
 BOOL daNpc_Md_c::land02NpcAction(void* i_actionArg) {
     if (mActionStatus == ACTION_STARTING) {
         maxFallSpeed = -100.0f;
-        gravity = npcHIO.m0F4;
+        gravity = npcHIO.mGravity;
         setAnm(0xF);
         clearStatus(daMdStts_UNK1 | daMdStts_UNK2 | daMdStts_UNK4 | daMdStts_FLY);
         shape_angle.x = 0;
         shape_angle.z = 0;
         speedF = 0.0f;
-        m30F8 = 120.0f;
+        mCylH = 120.0f;
         mAcchCir[1].SetWall(60.0f, 20.0f);
         mActionStatus = mActionStatus + 1;
     } else if (mActionStatus != ACTION_ENDING) {
-        if (m312A != 0) {
+        if (mAnmEnd != 0) {
             md_setNpcAction(this, &action_piyo2NpcAction);
         }
         setAttention(true);
@@ -1030,17 +1030,17 @@ BOOL daNpc_Md_c::land02NpcAction(void* i_actionArg) {
 BOOL daNpc_Md_c::land03NpcAction(void* i_actionArg) {
     if (mActionStatus == ACTION_STARTING) {
         maxFallSpeed = -100.0f;
-        gravity = npcHIO.m0F4;
+        gravity = npcHIO.mGravity;
         setAnm(0xF);
         clearStatus(daMdStts_UNK1 | daMdStts_UNK2 | daMdStts_UNK4 | daMdStts_FLY);
         shape_angle.x = 0;
         shape_angle.z = 0;
         speedF = 0.0f;
-        m30F8 = 120.0f;
+        mCylH = 120.0f;
         mAcchCir[1].SetWall(60.0f, 20.0f);
         mActionStatus = mActionStatus + 1;
     } else if (mActionStatus != ACTION_ENDING) {
-        if (m312A != 0) {
+        if (mAnmEnd != 0) {
             md_setNpcAction(this, &action_waitNpcAction);
         }
         setAttention(true);

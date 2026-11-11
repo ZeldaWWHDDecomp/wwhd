@@ -104,12 +104,12 @@ static BOOL daSyan_Execute(syan_class* i_this) {
     case 2: {
         cLib_addCalc2(&i_this->mSwingSpeed0, gabi::fmadds(REG0_F(4), 100.0f, 500.0f), 0.1f, gabi::fmadds(REG0_F(5), 100.0f, 50.0f));
         cLib_addCalc2(&i_this->mSwingSpeed1, gabi::fmadds(REG0_F(6), 100.0f, 1000.0f), 0.1f, gabi::fmadds(REG0_F(7), 100.0f, 20.0f));
-        f32 t = i_this->field_0x2dc * gabi::fmadds(REG0_F(8), 100.0f, 300.0f);
+        f32 t = i_this->mSwingAmpScale * gabi::fmadds(REG0_F(8), 100.0f, 300.0f);
         cLib_addCalc2(&i_this->mSwingAmp0, t, 0.1f, gabi::fmadds(REG0_F(9), 100.0f, 10.0f));
-        t = i_this->field_0x2dc * gabi::fmadds(REG0_F(10), 100.0f, 300.0f);
+        t = i_this->mSwingAmpScale * gabi::fmadds(REG0_F(10), 100.0f, 300.0f);
         cLib_addCalc2(&i_this->mSwingAmp1, t, 0.1f, gabi::fmadds(REG0_F(11), 100.0f, 10.0f));
         cLib_addCalcAngleS2(&i_this->mSwayAngle.x, REG0_S(1) + 2500, 2, REG0_S(2) + 2000);
-        cLib_addCalc2(&i_this->mSwayAmp, i_this->field_0x2dc * 500.0f, 0.2f, REG0_F(13) + 5.0f);
+        cLib_addCalc2(&i_this->mSwayAmp, i_this->mSwingAmpScale * 500.0f, 0.2f, REG0_F(13) + 5.0f);
         break;
     }
     }

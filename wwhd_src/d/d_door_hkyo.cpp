@@ -66,7 +66,7 @@ static dDoor_hkyo_c* dDoor_hkyo_construct(dDoor_hkyo_c* i_this) {
         if (!i_this) return nullptr;
     }
     dDoor_phaseConstruct(&i_this->mPhs, sizeof(i_this->mPhs));
-    i_this->m11 = 0;
+    i_this->mUseMode = 0;
     i_this->mpModel = nullptr;
     i_this->mAnmIdx = 0;
     i_this->mpBrkAnm = nullptr;
@@ -75,18 +75,18 @@ static dDoor_hkyo_c* dDoor_hkyo_construct(dDoor_hkyo_c* i_this) {
 
 /* 0252C11C */
 s32 dDoor_hkyo_c::resLoad() {
-    if (!m11) return cPhs_COMPLEATE_e;
+    if (!mUseMode) return cPhs_COMPLEATE_e;
     return dComIfG_resLoad(&mPhs, "Hkyo");
 }
 
 /* 0252C13C */
 void dDoor_hkyo_c::resDelete() {
-    if (m11) dComIfG_resDelete(&mPhs, "Hkyo");
+    if (mUseMode) dComIfG_resDelete(&mPhs, "Hkyo");
 }
 
 /* 0252C154 */
 BOOL dDoor_hkyo_c::create() {
-    if (!m11) return TRUE;
+    if (!mUseMode) return TRUE;
     J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes("Hkyo", dRes_INDEX_HKYO_BDL_HKYO1_e);
     if (!modelData) dDoor_assert("d_door.cpp", 0x4A7, "modelData != (0)");
     mpModel = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000202);
@@ -103,7 +103,7 @@ void dDoor_hkyo_c::init() { mAnmIdx = NONE; }
 
 /* 0252C280 */
 void dDoor_hkyo_c::calcMtx(fopAc_ac_c* door, f32 offsY) {
-    if (!m11 || !mpModel) return;
+    if (!mUseMode || !mpModel) return;
     mDoMtx_stack_c::transS(door->current.pos.x, door->current.pos.y, door->current.pos.z);
     mDoMtx_stack_c::YrotM(door->current.angle.y);
     mDoMtx_stack_c::transM(0.0f, offsY, 0.0f);
@@ -116,13 +116,13 @@ void dDoor_hkyo_c::calcMtx(fopAc_ac_c* door, f32 offsY) {
 
 /* 0252C390 */
 BOOL dDoor_hkyo_c::chkFirst() {
-    if (m11 != 1 || mAnmIdx != FIRST) return FALSE;
+    if (mUseMode != 1 || mAnmIdx != FIRST) return FALSE;
     return !dComIfGs_isEventBit(0x2602);
 }
 
 /* 0252C3F8 */
 void dDoor_hkyo_c::draw(fopAc_ac_c* door) {
-    if (!m11 || !mAnmIdx || !mpModel || chkFirst()) return;
+    if (!mUseMode || !mAnmIdx || !mpModel || chkFirst()) return;
     J3DModelData* modelData = mpModel->getModelData();
     dScnKy_env_light_c* light = dKy_getEnvlight();
     setLightTevColorType(light, mpModel, &door->tevStr);
@@ -146,7 +146,7 @@ void dDoor_hkyo_c::setAnm(u32 idx) {
 
 /* 0252C574 */
 void dDoor_hkyo_c::proc(fopAc_ac_c* door) {
-    u8 mode = m11;
+    u8 mode = mUseMode;
     if (!mode || !mpModel) return;
     u32 idx = NONE;
     switch (mode) {

@@ -46,12 +46,12 @@ WWHD_OFFSET(BtdDamageViewHD, mCylHitTimer, 0x6112);
 WWHD_SIZE(BtdDamageViewHD, 0x611E);
 struct BtdHioDamageHD {
     u8 _000[2];
-    be<u8> m06;
+    be<u8> mDebugBreak;  /* was m06: see d/actor/d_a_btd.h (daBtd_HIO_c) */
     u8 _003[7];
-    be<s16> m0E;
+    be<s16> mDamageLimit;  /* was m0E: see d/actor/d_a_btd.h (daBtd_HIO_c) */
 };
-WWHD_OFFSET(BtdHioDamageHD, m06, 2);
-WWHD_OFFSET(BtdHioDamageHD, m0E, 10);
+WWHD_OFFSET(BtdHioDamageHD, mDebugBreak, 2);
+WWHD_OFFSET(BtdHioDamageHD, mDamageLimit, 10);
 WWHD_SIZE(BtdHioDamageHD, 12);
 struct CcAtInfoBtdHD {
     gptr<void> mpObj;

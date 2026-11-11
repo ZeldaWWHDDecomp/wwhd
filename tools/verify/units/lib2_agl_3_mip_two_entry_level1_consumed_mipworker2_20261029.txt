@@ -318,3 +318,6 @@ observearg 025C0928 r3+0x94 8
 
 # Actual preceding loop iteration, identical original call on both sides.
 postsetup 02776524 02776524 r3=0x56000000 r4=1 r5=0 r6=0 f1=1.0
+# GX2CopySurface (C0006120, called by 02776524): the port's CPU re-tiling copy (the destination image is
+# read after the call on the inputs where an earlier run found 17 02776524 kills, which now rest on modelled bytes)
+mockcopysurface C0006120

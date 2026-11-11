@@ -222,10 +222,10 @@ static void ki_fly_move(ki_class* i_this) {
 
     switch (i_this->mBehaviorType) {
     case 0:
-        anm_init(i_this, dRes_INDEX_KI_BCK_FLY1_e, 10.0f, 2, hio.m08, dRes_INDEX_KI_BAS_FLY1_e);
+        anm_init(i_this, dRes_INDEX_KI_BCK_FLY1_e, 10.0f, 2, hio.mFly1AnmSpeed, dRes_INDEX_KI_BAS_FLY1_e);
         i_this->mBehaviorType = 1;
         tex_anm_set(i_this, 0);
-        i_this->mPosMoveTarget = hio.m28;
+        i_this->mPosMoveTarget = hio.mFlySpeed;
         i_this->mPosMoveMaxSpeed = 2.0f;
         i_this->mTurnScale = 3000.0f;
         [[fallthrough]];
@@ -238,10 +238,10 @@ static void ki_fly_move(ki_class* i_this) {
             i_this->mPosMove.x = hx;
             i_this->mPosMove.y = a_this->home.pos.y;
             i_this->mPosMove.z = a_this->home.pos.z;
-            f32 r = cM_rndFX(hio.m0C);
+            f32 r = cM_rndFX(hio.mFlyWanderRange);
             i_this->mPosMove.x = hx + r;
             i_this->mPosMove.y -= cM_rndF(200.0f);
-            i_this->mPosMove.z += cM_rndFX(hio.m0C);
+            i_this->mPosMove.z += cM_rndFX(hio.mFlyWanderRange);
             i_this->mPosMoveDist = 0.0f;
         }
 
@@ -304,7 +304,7 @@ static void ki_fire_set_move(ki_class* i_this) {
         break;
 
     case 10:
-        anm_init(i_this, dRes_INDEX_KI_BCK_FLY1_e, 10.0f, 2, l_kiHIO.m08, dRes_INDEX_KI_BAS_FLY1_e);
+        anm_init(i_this, dRes_INDEX_KI_BCK_FLY1_e, 10.0f, 2, l_kiHIO.mFly1AnmSpeed, dRes_INDEX_KI_BAS_FLY1_e);
         i_this->mBehaviorType = 0xB;
         i_this->mTimers[1] = 100;
         [[fallthrough]];
@@ -409,7 +409,7 @@ static void ki_damage_move(ki_class* i_this) {
 
             if (i_this->mAcch.ChkWallHit()) {
                 sp1C.z = 0.0f;
-                if (!(i_this->mKnockbackSpeed < l_kiHIO.m3C)) { /* mKnockbackSpeed >= m3C (blt: NaN enters) */
+                if (!(i_this->mKnockbackSpeed < l_kiHIO.mWallStunSpeed)) { /* mKnockbackSpeed >= mWallStunSpeed (blt: NaN enters) */
                     i_this->mBehaviorType = 2;
                     i_this->mTimers[0] = 0x32;
                     anm_init(i_this, dRes_INDEX_KI_BCK_BITA1_e, 1.0f, 0, 1.0f, dRes_INDEX_KI_BAS_BITA1_e);
@@ -430,7 +430,7 @@ static void ki_damage_move(ki_class* i_this) {
             a_this->current.pos.x += sp10.x;
             a_this->current.pos.y += sp10.y;
             a_this->current.pos.z += sp10.z;
-            cLib_addCalc0(&i_this->mKnockbackSpeed, 1.0f, l_kiHIO.m40);
+            cLib_addCalc0(&i_this->mKnockbackSpeed, 1.0f, l_kiHIO.mKnockbackDecay);
             a_this->speedF = 0.0f;
         } else {
             i_this->mAction = ki_class::ACT_ATTACK_MOVE_INDEX_e;
@@ -558,7 +558,7 @@ static void ki_path_move(ki_class* i_this) {
     }
     }
 
-    i_this->mPosMoveTarget = hio.m28;
+    i_this->mPosMoveTarget = hio.mFlySpeed;
     i_this->mPosMoveMaxSpeed = 2.0f;
     i_this->mTurnScale = 4000.0f;
     i_this->mPosMoveDist = 1.0f;
@@ -606,7 +606,7 @@ static BOOL daKi_Execute(ki_class* i_this) {
     if (i_this->mAppearSwitch != 0) {
         if (dComIfGs_isSwitch(i_this->mAppearSwitch - 1, fopAcM_GetRoomNo(a_this))) {
             i_this->mAppearSwitch = 0;
-            a_this->speedF = hio.m28;
+            a_this->speedF = hio.mFlySpeed;
             a_this->attention_info.flags = fopAc_Attn_LOCKON_BATTLE_e; /* attention_info.flags = fopAc_Attn_LOCKON_BATTLE_e */
         } else {
             // HD: no fopAcM_OnStatus(0) / OffStatus(0)
@@ -617,7 +617,7 @@ static BOOL daKi_Execute(ki_class* i_this) {
 
     a_this->actor_status |= fopAcStts_SHOWMAP_e; /* fopAcM_OnStatus(fopAcStts_SHOWMAP_e) */
 
-    if (hio.m07 != 0) {
+    if (hio.mDebugReport != 0) {
         ki_check(i_this);
         JUTReport(0x104, 0x186, "ALL      %d", ki_all_count);
         JUTReport(0x104, 0x19A, "READY    %d", ki_all_count - ki_fight_count);
@@ -626,9 +626,9 @@ static BOOL daKi_Execute(ki_class* i_this) {
 
     i_this->mAtSph.SetR(0.0f);
     i_this->mDamageSphere.SetR(40.0f);
-    i_this->mCoSph.SetR(hio.m58);
+    i_this->mCoSph.SetR(hio.mCoSphRadius);
 
-    if (hio.m06 == 0) {
+    if (hio.mDebugPause == 0) {
         i_this->mBgCheckOn = 0;
 
         for (s32 i = 0; i < 4; i++) {
@@ -760,16 +760,16 @@ static BOOL daKi_Execute(ki_class* i_this) {
                 }
             }
 
-            if (hio.m05 != 0) {
+            if (hio.mDebugNoDeath != 0) {
                 a_this->health = 10;
             }
 
             if (atInfo.mResultingAttackType == 9) {
                 i_this->mKnockbackSpeed = 150.0f;
             } else if (i_this->mStts.mAtSpl == 1 /* dCcG_At_Spl_UNK1 */) {
-                i_this->mKnockbackSpeed = hio.m38;
+                i_this->mKnockbackSpeed = hio.mHitKnockbackSpl;
             } else {
-                i_this->mKnockbackSpeed = hio.m34;
+                i_this->mKnockbackSpeed = hio.mHitKnockback;
             }
         }
 

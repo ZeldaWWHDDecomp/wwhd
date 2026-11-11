@@ -69,7 +69,7 @@ static daNpc_Kk1_HIO_c* daNpc_Kk1_HIO_c_ct(daNpc_Kk1_HIO_c* i_this) {
     i_this->__vtbl = 0x1001C300;
     memcpy_g(i_this->mPrm, a_prm_tbl, 0x54); /* a_prm_tbl */
     i_this->mNo = -1;
-    i_this->field_0x8 = -1;
+    i_this->mRefCount = -1;
     return i_this;
 }
 

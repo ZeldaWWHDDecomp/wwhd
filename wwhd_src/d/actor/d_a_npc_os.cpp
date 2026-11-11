@@ -192,12 +192,12 @@ BOOL daNpc_Os_c::initBrkAnm(u8 param_1, bool param_2) {
             param_1 * sizeof(OsMainBrkEntry)); /* brkAnmTbl[param_1] */
         void *a_brk = dComIfG_getObjectRes(OS_ARC, e->brkFileIndex, OS_SAFESTRING_VTBL);
         if (a_brk == nullptr) {
-            JUT_ASSERT_fail("d_a_npc_os.cpp", 0xBF2, "a_brk != NULL"); /* a_brk != NULL */
+            JUT_ASSERT_fail("d_a_npc_os.cpp", 0xBF2, "a_brk != (0)"); /* a_brk != NULL */
         }
         if (os_brkAnm_init(&mBrkAnm, modelData, a_brk, true, e->loopMode, e->speed, 0, -1, param_2,
                            0)) {
             mBrkAnmIdx = (s8)param_1;
-            if (e->unk_4 < 0) {
+            if (e->mStartAtEnd < 0) {
                 f32 end = (f32)(s16)mBrkAnm.mFrameCtrl.mEnd; /* setFrame(getEndFrame()) */
                 mBrkAnm.mFrameCtrl.mFrame = end;
                 mBrkLastFrame = end;
@@ -235,7 +235,7 @@ BOOL daNpc_Os_c::createHeap() {
     J3DModelData *modelData =
         (J3DModelData *)dComIfG_getObjectRes("Os", BDL_OS, OS_SAFESTRING_VTBL);
     if (modelData == nullptr) {
-        JUT_ASSERT_fail("d_a_npc_os.cpp", 0x2FE, "modelData != NULL"); /* modelData != NULL */
+        JUT_ASSERT_fail("d_a_npc_os.cpp", 0x2FE, "modelData != (0)"); /* modelData != NULL */
     }
     J3DAnmTransform *anm =
         (J3DAnmTransform *)dComIfG_getObjectRes("Os", BCK_OS_MOVE01, OS_SAFESTRING_VTBL);
@@ -387,7 +387,7 @@ void daNpc_Os_c::setAnm(int param_1) {
         mPrevMorfFrame = 0.0f;
         s8 anm = *gabi::at<be<s8>>(gabi::ea(&osMain_anmTbl) + (u32)idx); /* l_anmTbl */
         dNpc_Os_setAnm(mpMorf, prm->mLoopMode, prm->mMorf, playSpeed, anm, "Os");
-        if (prm->m10 < 0) {
+        if (prm->mStartAtEnd < 0) {
             mDoExt_McaMorf *m = mpMorf;
             f32 end = (f32)(s16)m->mFrameCtrl.mEnd;           /* getEndFrame */
             m->mFrameCtrl.mFrame = (f32)(s16)gabi::ftoi(end); /* setFrame */
@@ -514,7 +514,7 @@ BOOL daNpc_Os_c::init() {
         0;           /* offPlayerRoom(argument) */
     mStatus = 0; /* clearStatus() */
     mAnmTblIdx = 3;
-    gravity = (f32)osMain_HIO.field_0x8C; /* l_HIO gravity */
+    gravity = (f32)osMain_HIO.mGravity; /* l_HIO gravity */
     mAnmPrmIdx = 5;
     if (wakeupCheck()) {
         mStatus = mStatus | os_b::STATUS_GRAVITY;
@@ -771,16 +771,16 @@ static void *daNpc_Os_HIO2_c_ct(void *p) {
     auto *h = reinterpret_cast<os_b::daNpc_Os_HIO2_c *>(
         p); /* HD: fields from +0 (GameCube +4), vtable at the end (+0x28) */
     h->field_0x1C = 0.6f;
-    h->field_0x24 = 3000;
+    h->mTurnMaxStep = 3000;
     h->field_0x0C = 2.5f;
     h->vtable = HIO_CHILD_VTABLE_HD; /* vtable */
-    h->field_0x20 = 1.0f;
-    h->field_0x28 = 5;
+    h->mPlayerWalkRate = 1.0f;
+    h->mTurnScale = 5;
     h->field_0x18 = 2.5f;
     h->field_0x10 = 1.8f;
-    h->field_0x08 = 17.0f;
+    h->mWalkSpeed = 17.0f;
     h->field_0x14 = 0.6f;
-    h->field_0x26 = 1000;
+    h->mTurnMinStep = 1000;
     h->field_0x04 = 3.5f;
     return p;
 }
@@ -805,36 +805,36 @@ static void *daNpc_Os_HIO_c_ct(void *p) {
     h->mNpc.mMinHeadX = 0;
     h->field_0x68 = 0.05f;
     h->field_0x70 = 0.0f;
-    h->mNpc.m22 = 0;
+    h->mNpc.mDebugDraw = 0;
     h->field_0x78 = 0.2f;
     h->field_0x6C = 17.0f;
-    h->field_0x60 = 80.0f;
-    h->field_0x64 = 500.0f;
+    h->mFollowStopDist = 80.0f;
+    h->mCallDist = 500.0f;
     h->mNpc.mMaxBackboneY = 0;
     h->field_0x74 = 0.5f;
     h->mNpc.mMaxAttnAngleY = 0x4000;
     h->mNpc.mMinBackboneY = 0;
     h->mNpc.mMaxTurnStep = 0x1000;
-    h->mNpc.m04 = -20.0f;
+    h->mNpc.mPlayerEyeOffsetY = -20.0f;
     h->mNpc.mAttnYOffset = 130.0f;
     h->mNpc.mMaxHeadTurnVel = 0x800;
     h->mNpc.mMaxHeadY = 0x1388;
-    h->field_0x80 = 15.0f;
-    h->field_0xAC = 18.0f;
-    h->field_0x98 = -0.56152f;
-    h->field_0x8C = 4.0f;
+    h->mThrowSpeedF = 15.0f;
+    h->mWalkFrameEnd = 18.0f;
+    h->mCarryOffsetZ = -0.56152f;
+    h->mGravity = 4.0f;
     h->mNpc.mMaxHeadX = 0;
-    h->field_0xA8 = 0.75f;
+    h->mFollowWalkRate = 0.75f;
     h->field_0x5C = nullptr;
-    h->field_0x84 = 22.0f;
+    h->mThrowSpeedY = 22.0f;
     h->field_0x7C = 0.9f;
     h->field_0xA4 = 10.0f;
-    h->field_0xB0 = 8.0f;
-    h->field_0xA0 = 0.2f;
+    h->mWalkFrameStart = 8.0f;
+    h->mStickWalkMin = 0.2f;
     h->mNo = -1;
-    h->field_0x9C = 0.1f;
-    h->field_0x90 = -1.51367f;
-    h->field_0x94 = -1.09863f;
+    h->mStickTurnMin = 0.1f;
+    h->mCarryOffsetX = -1.51367f;
+    h->mCarryOffsetY = -1.09863f;
     return p;
 }
 
@@ -995,8 +995,8 @@ str 1001F598 "Os" in 022AA080
 str 1001F5FC "Os" in 022AA88C
 str 1001F5FF "Os" in 022AAEE0
 str 1001F604 "\u304a\u4f9b\u77f3\u50cf" renamed # HD: Shift-JIS guest name, UTF-8 source spelling
-str 1001F574 "a_brk != NULL"
-str 1001F5D0 "modelData != NULL"
+str 1001F574 "a_brk != (0)"
+str 1001F5D0 "modelData != (0)"
 str 1001F564 "d_a_npc_os.cpp" in 022A9F4C
 str 1001F5C0 "d_a_npc_os.cpp" in 022AA080
 data osMain_brkAnmTbl 101C2A24

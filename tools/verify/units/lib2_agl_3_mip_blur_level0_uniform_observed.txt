@@ -107,3 +107,6 @@ arg! 02776524 f1 1.0 1.0
 # Capture all four Color4 components passed to each GX2 uniform setter.
 callee C0006A40 r5=dyn4*r4
 callee C0006908 r5=dyn4*r4
+# GX2CopySurface (C0006120, called by 02776524): the port's CPU re-tiling copy (the destination image is
+# read after the call on the inputs where an earlier run found 17 02776524 kills, which now rest on modelled bytes)
+mockcopysurface C0006120

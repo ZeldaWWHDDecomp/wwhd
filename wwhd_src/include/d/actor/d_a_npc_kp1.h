@@ -91,7 +91,7 @@ struct daNpc_Kp1_c : fopNpc_npc_c {
     /* 0x91C */ be<f32> mPrevMorfFrame;  /* was field_0x7A4: setMtx 0227B9AC: a morf frame below it means the animation wrapped, then it takes the frame; setAnm_anm 0227CB88 0; after tww daNpc_Ls1_c mPrevMorfFrame */
     /* 0x920 */ u8 _920[4];
     /* 0x924 */ be<f32> field_0x7AC;
-    /* 0x928 */ be<s16> mLookAtMaxVel;  /* was field_0x7B0: lookBack 0227C41C eases it to HIO field_12 while turning, else 0, and passes it as the look-at's maxVel; after tww daNpc_Bm1_c mHeadLookAtMaxVel / daNpc_Ah_c mLookAtMaxVel */
+    /* 0x928 */ be<s16> mLookAtMaxVel;  /* was field_0x7B0: lookBack 0227C41C eases it to HIO mMaxHeadTurnVel while turning, else 0, and passes it as the look-at's maxVel; after tww daNpc_Bm1_c mHeadLookAtMaxVel / daNpc_Ah_c mLookAtMaxVel */
     /* 0x92A */ be<s16> mDesiredYRot;  /* was field_0x7B2: lookBack 0227C41C: the look-at's default Y angle (targetY = it); wait01 0227D3C8 sets mInitialAngle.y; same code as daNpc_Bm1_c::mDesiredYRot */
     /* 0x92C */ be<s8> mbMorfAnimStopped;  /* was field_0x7B4: setMtx 0227B9AC: the morf's play() result, or 1; setAnm_anm 0227CB88 0; ctrlAnmAtr 0227CDE4 tests it; after tww daNpc_Ls1_c mbMorfAnimStopped (same code) */
     /* 0x92D */ be<s8> mAnmLoopCount;  /* was field_0x7B5: setAnm_anm 0227CB88 0; ctrlAnmAtr 0227CDE4 counts the morf stops and changes the attribute at 2; same code as daNpc_Bm1_c::mAnmLoopCount */
@@ -101,7 +101,7 @@ struct daNpc_Kp1_c : fopNpc_npc_c {
     /* 0x931 */ be<u8> mLetterOffered;        /* Kp1: next_msgStatus/getMsg flag */
     /* 0x932 */ be<u8> mCancelPresent;        /* Kp1: present to cancel (talk01) */
     /* 0x933 */ be<u8> mbRanExecute;  /* was field_0x7B8: _execute 0227C774: 0 on the first run, when mInitialPos and mInitialAngle are taken, then 1; after tww daNpc_Bm1_c mbRanExecute (same code) */
-    /* 0x934 */ be<s32> field_0x7BC;
+    /* 0x934 */ be<s32> mbInitEyePos;  /* was field_0x7BC: createInit 0227BC14 1; setAttention 0227B94C copies mEyePos to eyePos while it or mbSetEyePos is set, then clears it (one eye position right after create); same code as daNpc_Pm1_c::mbInitEyePos */
     /* 0x938 */ be<s32> mbSetEyePos;  /* was field_0x7C0: wait_action1 0227D558 stores talk01() / wait01(); setAttention 0227B94C tests it; after tww daNpc_Ls1_c mbSetEyePos (same code) */
     /* 0x93C */ be<u8> mHasAttention;  /* was field_0x7C4: wait_action1 0227D558: chkAttention(); wait01 0227D3C8 looks at the player while it is set; after tww daNpc_Hi1_c mHasAttention (mHasAttention = chkAttention()) */
     /* 0x93D */ be<u8> mTalking;  /* was field_0x7C5: checkOrder 0227BF00 sets 1 on the talk command; wait01 0227D3C8 starts the talk while it is set; talk01 0227D480 clears it; same code as daNpc_Hi1_c::mTalking */
@@ -128,31 +128,31 @@ WWHD_OFFSET(daNpc_Kp1_c, m_head_tex_pattern, 0x7F4);
 WWHD_OFFSET(daNpc_Kp1_c, mAction, 0x870);
 WWHD_OFFSET(daNpc_Kp1_c, mEventCut, 0x878);
 WWHD_OFFSET(daNpc_Kp1_c, mEyePos, 0x904);
-WWHD_OFFSET(daNpc_Kp1_c, field_0x7BC, 0x934);
+WWHD_OFFSET(daNpc_Kp1_c, mbInitEyePos, 0x934);
 WWHD_OFFSET(daNpc_Kp1_c, mBtpNum, 0x945);
 WWHD_SIZE(daNpc_Kp1_c, 0x950);
 
 // HD: Kp1 keeps the HIO vtable first.
 struct daNpc_Kp1_HIO_c {
     struct hio_prm_c {
-        /* 0x00 */ be<s16> field_0;
-        /* 0x02 */ be<s16> field_2;
-        /* 0x04 */ be<s16> field_4;
-        /* 0x06 */ be<s16> field_6;
-        /* 0x08 */ be<s16> field_8;
-        /* 0x0A */ be<s16> field_A;
-        /* 0x0C */ be<s16> field_C;
-        /* 0x0E */ be<s16> field_E;
-        /* 0x10 */ be<s16> field_10;
-        /* 0x12 */ be<s16> field_12;
+        /* 0x00 */ be<s16> mMaxHeadX;  /* was field_0: _execute 0227C774 passes it to m_jnt.setParam as max_head_x (dNpc_JntCtrl_c::setParam's parameter, tww d_npc.h); never written in WWHD (tww Kp1 is a stub); same names as daNpc_Pm1_HIO_c::hio_prm_c (same setParam call) */
+        /* 0x02 */ be<s16> mMaxHeadY;  /* was field_2: _execute 0227C774 passes it to m_jnt.setParam as max_head_y (dNpc_JntCtrl_c::setParam's parameter, tww d_npc.h); never written in WWHD (tww Kp1 is a stub); same names as daNpc_Pm1_HIO_c::hio_prm_c (same setParam call) */
+        /* 0x04 */ be<s16> mMinHeadX;  /* was field_4: _execute 0227C774 passes it to m_jnt.setParam as min_head_x (dNpc_JntCtrl_c::setParam's parameter, tww d_npc.h); never written in WWHD (tww Kp1 is a stub); same names as daNpc_Pm1_HIO_c::hio_prm_c (same setParam call) */
+        /* 0x06 */ be<s16> mMinHeadY;  /* was field_6: _execute 0227C774 passes it to m_jnt.setParam as min_head_y (dNpc_JntCtrl_c::setParam's parameter, tww d_npc.h); never written in WWHD (tww Kp1 is a stub); same names as daNpc_Pm1_HIO_c::hio_prm_c (same setParam call) */
+        /* 0x08 */ be<s16> mMaxBackboneX;  /* was field_8: _execute 0227C774 passes it to m_jnt.setParam as max_backbone_x (dNpc_JntCtrl_c::setParam's parameter, tww d_npc.h); never written in WWHD (tww Kp1 is a stub); same names as daNpc_Pm1_HIO_c::hio_prm_c (same setParam call) */
+        /* 0x0A */ be<s16> mMaxBackboneY;  /* was field_A: _execute 0227C774 passes it to m_jnt.setParam as max_backbone_y (dNpc_JntCtrl_c::setParam's parameter, tww d_npc.h); never written in WWHD (tww Kp1 is a stub); same names as daNpc_Pm1_HIO_c::hio_prm_c (same setParam call) */
+        /* 0x0C */ be<s16> mMinBackboneX;  /* was field_C: _execute 0227C774 passes it to m_jnt.setParam as min_backbone_x (dNpc_JntCtrl_c::setParam's parameter, tww d_npc.h); never written in WWHD (tww Kp1 is a stub); same names as daNpc_Pm1_HIO_c::hio_prm_c (same setParam call) */
+        /* 0x0E */ be<s16> mMinBackboneY;  /* was field_E: _execute 0227C774 passes it to m_jnt.setParam as min_backbone_y (dNpc_JntCtrl_c::setParam's parameter, tww d_npc.h); never written in WWHD (tww Kp1 is a stub); same names as daNpc_Pm1_HIO_c::hio_prm_c (same setParam call) */
+        /* 0x10 */ be<s16> mMaxTurnStep;  /* was field_10: _execute 0227C774 passes it to m_jnt.setParam as the turn step (9th argument) (tww the same); same role as dNpc_HIO_c::mMaxTurnStep / daNpc_Hi1_HIO_c::hio_prm_c::mMaxTurnStep */
+        /* 0x12 */ be<s16> mMaxHeadTurnVel;  /* was field_12: lookBack 0227C41C: cLib_addCalcAngleS2 eases mLookAtMaxVel toward it while turning (tww the same); same role as dNpc_HIO_c::mMaxHeadTurnVel */
         /* 0x14 */ be<f32> mAttentionArrowYOffset;
-        /* 0x18 */ be<u8> field_18; /* HD: a byte flag (debug colours in _draw) */
+        /* 0x18 */ be<u8> mDebug;  /* was field_18: HD: a byte flag; _draw 0227C930 initialises the debug colour statics while it is set (tww: an unused f32 0.0); same role as daNpc_Hi1_HIO_c::hio_prm_c::mDebug */
         /* 0x19 */ u8 _19[3];
     };
     /* 0x00 */ be<u32> __vtbl;
     /* 0x04 */ be<s8> mNo;
     /* 0x05 */ u8 _05[3];
-    /* 0x08 */ be<s32> field_0x8;
+    /* 0x08 */ be<s32> mRefCount;  /* was field_0x8: daNpc_Kp1_HIO_c_ct 0227D61C -1; never read in WWHD or tww (tww has a stub only); after our decomp's daNpc_Pm1_HIO_c / daNpc_Ba1_HIO_c mRefCount: the same HIO layout (mNo, then the s32 instance counter) */
     /* 0x0C */ hio_prm_c mPrmTbl;
 };
 WWHD_SIZE(daNpc_Kp1_HIO_c, 0x28);
@@ -275,11 +275,11 @@ WWHD_OFFSET(daNpc_Kp1_c::anm_prm_c, speed, 8);
 WWHD_OFFSET(daNpc_Kp1_c::anm_prm_c, loopMode, 0xC);
 WWHD_OFFSET(daNpc_Kp1_HIO_c, __vtbl, 0);
 WWHD_OFFSET(daNpc_Kp1_HIO_c, mNo, 4);
-WWHD_OFFSET(daNpc_Kp1_HIO_c, field_0x8, 8);
+WWHD_OFFSET(daNpc_Kp1_HIO_c, mRefCount, 8);
 WWHD_OFFSET(daNpc_Kp1_HIO_c, mPrmTbl, 0xC);
 WWHD_SIZE(daNpc_Kp1_HIO_c::hio_prm_c, 0x1C);
 WWHD_OFFSET(daNpc_Kp1_HIO_c::hio_prm_c, mAttentionArrowYOffset, 0x14);
-WWHD_OFFSET(daNpc_Kp1_HIO_c::hio_prm_c, field_18, 0x18);
+WWHD_OFFSET(daNpc_Kp1_HIO_c::hio_prm_c, mDebug, 0x18);
 WWHD_SIZE(Kp1AnmVtable, 0x18);
 WWHD_SIZE(Kp1Anm, 8);
 WWHD_SIZE(Kp1ModelAnimation, 0x3C);

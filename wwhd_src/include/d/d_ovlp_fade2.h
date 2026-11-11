@@ -28,12 +28,14 @@ class dOvlpFd2_c : public overlap_task_class {
     gabi::ptmf<void (dOvlpFd2_c::*)()> mProc;
     fd2DrawList dSnap_dlst;
     dOvlpFd2_dlst_c dOvlpFd2_dlst;
-    be<s16> field_0x110, field_0x112, rotZ;
+    be<s16> mTurnAngle;  /* was field_0x110: execFadeOut 025A1FB4 adds mTurnSpeed to it each frame and moves on to the next snap when it crosses the next quarter turn (+-0x4000) with mTimer at 0, then sets -0x4000; execNextSnap 025A2150 adds mTurnSpeed once more (tww the same) */
+    be<s16> mTurnSpeed;  /* was field_0x112: execFadeOut 025A1FB4 chases it toward 2000 (step 100) and adds it to mTurnAngle; execNextSnap 025A2150 adds it once more (tww the same) */
+    be<s16> rotZ;
     u8 mPadding116[2];
     be<f32> scale;
     be<u8> mHasSnap;
     be<s8> mTimer;
-    be<u8> field_0x11e;
+    be<u8> mSceneStarted;  /* was field_0x11e: execFadeIn 025A21F0: once the scale is below 0.001 the first frame calls fopOvlpM_SceneIsStart and sets it, the next ends the overlap (fopOvlpM_Done) (tww the same) */
     u8 mPadding11f;
     u8 mHdSnapshotState[0x40];
     u8 mHdRendererState[0x148];
@@ -47,13 +49,13 @@ class dOvlpFd2_c : public overlap_task_class {
 WWHD_OFFSET(dOvlpFd2_c, mProc, 0xd0);
 WWHD_OFFSET(dOvlpFd2_c, dSnap_dlst, 0xd8);
 WWHD_OFFSET(dOvlpFd2_c, dOvlpFd2_dlst, 0xdc);
-WWHD_OFFSET(dOvlpFd2_c, field_0x110, 0x110);
-WWHD_OFFSET(dOvlpFd2_c, field_0x112, 0x112);
+WWHD_OFFSET(dOvlpFd2_c, mTurnAngle, 0x110);
+WWHD_OFFSET(dOvlpFd2_c, mTurnSpeed, 0x112);
 WWHD_OFFSET(dOvlpFd2_c, rotZ, 0x114);
 WWHD_OFFSET(dOvlpFd2_c, scale, 0x118);
 WWHD_OFFSET(dOvlpFd2_c, mHasSnap, 0x11c);
 WWHD_OFFSET(dOvlpFd2_c, mTimer, 0x11d);
-WWHD_OFFSET(dOvlpFd2_c, field_0x11e, 0x11e);
+WWHD_OFFSET(dOvlpFd2_c, mSceneStarted, 0x11e);
 WWHD_OFFSET(dOvlpFd2_c, mHdSnapshotState, 0x120);
 WWHD_OFFSET(dOvlpFd2_c, mHdRendererState, 0x160);
 WWHD_SIZE(dOvlpFd2_c, 0x2A8);

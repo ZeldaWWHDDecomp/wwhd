@@ -320,19 +320,19 @@ s32 bb_player_view_check(bb_class* i_this) {
             return 0;
         }
     } else if (i_this->mBehavior == BB_MODE_WAIT || i_this->mBehavior == BB_MODE_NEST_WAIT) {
-        if (i_this->mPlayerDistXZ > l_bbHIO.unk_6C || bb_player_bg_check(i_this)) {
+        if (i_this->mPlayerDistXZ > l_bbHIO.mWaitSightDist || bb_player_bg_check(i_this)) {
             return 0;
         }
-    } else if (i_this->mPlayerDistXZ > l_bbHIO.unk_68 || bb_player_bg_check(i_this)) {
+    } else if (i_this->mPlayerDistXZ > l_bbHIO.mSightDist || bb_player_bg_check(i_this)) {
         return 0;
     }
 
     if (i_this->mBehavior == BB_MODE_WAIT || i_this->mBehavior == BB_MODE_NEST_WAIT) {
-        var_r5 = l_bbHIO.unk_72;
-        var_f2 = l_bbHIO.unk_78;
+        var_r5 = l_bbHIO.mWaitViewAngle;
+        var_f2 = l_bbHIO.mWaitViewHeight;
     } else {
-        var_r5 = l_bbHIO.unk_70;
-        var_f2 = l_bbHIO.unk_74;
+        var_r5 = l_bbHIO.mViewAngle;
+        var_f2 = l_bbHIO.mViewHeight;
     }
 
     if (std::fabs(player->current.pos.y - i_this->eyePos.y) < var_f2) {
@@ -617,7 +617,7 @@ void damage_check(bb_class* i_this) {
         pos = p;
         dKy_Sound_set(&pos, 100, fopAcM_GetID(i_this), 5);
 
-        if (l_bbHIO.unk_04 != 0) {
+        if (l_bbHIO.mResetHealthOnHit != 0) {
             i_this->health = 10;
         }
 
@@ -662,26 +662,26 @@ void damage_check(bb_class* i_this) {
             i_this->mKnockbackAngleY = i_this->mPlayerAngleY;
             i_this->mKnockbackAngleX = i_this->mPlayerAngleX;
         } else {
-            i_this->mKnockbackAngleY = sp30.m0C.y;
+            i_this->mKnockbackAngleY = sp30.mHitAngle.y;
             i_this->mKnockbackAngleX = 0;
         }
 
         if (i_this->mBehavior != BB_MODE_ATTACK) {
             i_this->mBehavior = BB_MODE_ATTACK;
-            f32 r = cM_rndF((f32)(l_bbHIO.unk_18 - l_bbHIO.unk_16));
+            f32 r = cM_rndF((f32)(l_bbHIO.mWaitAttackTimeMax - l_bbHIO.mWaitAttackTimeMin));
             i_this->mPathOn = 0;
-            i_this->mTimers[1] = (s16)gabi::ftoi(r + (f32)l_bbHIO.unk_16);
+            i_this->mTimers[1] = (s16)gabi::ftoi(r + (f32)l_bbHIO.mWaitAttackTimeMin);
         }
 
         if (sp30.mbDead) {
-            i_this->mKnockbackDist = l_bbHIO.unk_58;
+            i_this->mKnockbackDist = l_bbHIO.mKnockbackDistDead;
             if (cM_rndF(1.0f) < 0.5f) {
                 i_this->mKnockbackSpinSpeed = (s16)gabi::ftoi(cM_rndF(3000.0f) + 5000.0f);
             } else {
                 i_this->mKnockbackSpinSpeed = (s16)gabi::ftoi(-(cM_rndF(3000.0f) + 5000.0f));
             }
         } else {
-            i_this->mKnockbackDist = l_bbHIO.unk_5C;
+            i_this->mKnockbackDist = l_bbHIO.mKnockbackDistAlive;
             i_this->mKnockbackSpinSpeed = 0;
         }
 
@@ -922,42 +922,42 @@ static void __sinit_d_a_bb_cpp() {
     sinit_header_statics(0x10461590, 0x10190600);
     bbHIO_c& h = l_bbHIO;
     h.__vtbl = 0x10007C7C;
-    h.unk_04 = 0;
-    h.unk_05 = 0;
-    h.unk_08 = 20.0f;
-    h.unk_0C = 2500.0f;
-    h.unk_12 = 0x258;
-    h.unk_14 = 0x4B0;
-    h.unk_16 = 0x1C2;
-    h.unk_18 = 0x2EE;
-    h.unk_1C = 0.35f;
-    h.unk_20 = 0.5f;
-    h.unk_24 = 1.5f;
-    h.unk_28 = 1.0f;
-    h.unk_2C = 0.85f;
-    h.unk_38 = 0.85f;
-    h.unk_3C = 1.0f;
-    h.unk_40 = 30;
-    h.unk_44 = 1.0f;
-    h.unk_48 = 1.0f;
-    h.unk_4C = 1.5f;
-    h.unk_50 = 0x44C;
-    h.unk_54 = 3.5f;
-    h.unk_32 = 20;
-    h.unk_30 = 0x2D;
-    h.unk_34 = 2.5f;
-    h.unk_58 = 45.0f;
-    h.unk_5C = 30.0f;
+    h.mResetHealthOnHit = 0;
+    h.mDebugPause = 0;
+    h.mSeagullAttackSpeed = 20.0f;
+    h.mWanderRange = 2500.0f;
+    h.mAttackTimeMin = 0x258;
+    h.mAttackTimeMax = 0x4B0;
+    h.mWaitAttackTimeMin = 0x1C2;
+    h.mWaitAttackTimeMax = 0x2EE;
+    h.mTurnScaleMax = 0.35f;
+    h.mAttackWaitScale = 0.5f;
+    h.mFlyAnmSpeed = 1.5f;
+    h.mHoverAnmSpeed = 1.0f;
+    h.mDiveAnmSpeed = 0.85f;
+    h.mCrashAnmSpeed = 0.85f;
+    h.mDizzyAnmSpeed = 1.0f;
+    h.mLandDelay = 30;
+    h.mLand1AnmSpeed = 1.0f;
+    h.mLand2AnmSpeed = 1.0f;
+    h.mCarryFlyAnmSpeed = 1.5f;
+    h.mSwoopDist = 0x44C;
+    h.mEsaWalkSpeed = 3.5f;
+    h.mDiveWindUpTime = 20;
+    h.mCrashTime = 0x2D;
+    h.mDiveWindUpAnmSpeed = 2.5f;
+    h.mKnockbackDistDead = 45.0f;
+    h.mKnockbackDistAlive = 30.0f;
     h.unk_60 = 2;
     h.unk_62 = 2;
     h.unk_64 = 1;
-    h.unk_68 = 8000.0f;
-    h.unk_74 = 3000.0f;
-    h.unk_70 = 0x6D60;
-    h.unk_6C = 1500.0f;
-    h.unk_78 = 2000.0f;
-    h.unk_72 = 0x59D8;
-    h.unk_7C = 10000.0f;
+    h.mSightDist = 8000.0f;
+    h.mViewHeight = 3000.0f;
+    h.mViewAngle = 0x6D60;
+    h.mWaitSightDist = 1500.0f;
+    h.mWaitViewHeight = 2000.0f;
+    h.mWaitViewAngle = 0x59D8;
+    h.mGiveUpDist = 10000.0f;
 }
 
 /* 02062584 */

@@ -119,7 +119,7 @@ struct daBigelf_c : fopAc_ac_c {
         mLightInfluenceTargetIntensity, _pad5D8, _pad5DC;
     /* 0x5E0 */ be<u8> mDarkActive;
     /* 0x5E1 */ u8 _pad5E1[3];
-    /* 0x5E4 */ be<f32> m3A0, m3A4, m3A8, m3AC;
+    /* 0x5E4 */ be<f32> mDarkRatio, mDarkRatioTarget, mColorBlendTarget, mColorBlend;  /* mDarkRatio was m3A0: darkProc 0209744C eases it toward mDarkRatioTarget while mDarkActive and scales the actor, background and sky light ratios by it; demoInitFlDmMd 020967A4 sets 1; mDarkRatioTarget was m3A4: demoProcFlDmMd 02097130 sets it from the frames left before the flower frame (0 after it); demoInitFlDmMd 020967A4 / demoProcFlDelete 02096EEC set 1; darkProc 0209744C eases mDarkRatio toward it; mColorBlendTarget was m3A8: _execute 020953C4 eases mColorBlend toward it; demoInitAppear 0209611C sets 0, demoProcExit 02096B20 / ready0 020977AC / CreateHeap 020948EC set 1; mColorBlend was m3AC: _execute 020953C4 passes it to bigelf_customColorSet(4, 0, it) (not for type 6) and eases it toward mColorBlendTarget; CreateHeap 020948EC sets 1; HD (tww has padding here) */
     /* 0x5F4 */ be<s16> mOctTimer, _pad5F6;
     /* 0x5F8 */ gabi::ptmf<ActionFunc> mCurrentStateFunc;
     /* 0x600 */ be<s8> mAnmID;

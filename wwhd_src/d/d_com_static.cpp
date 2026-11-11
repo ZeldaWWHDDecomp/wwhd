@@ -202,7 +202,7 @@ void daTagKbItem_c::dig_main() {
     ComStatic::SaveInfo* save = l_saveInfo;
     // HD: the switch test uses the tag's home room, while item creation uses its current room.
     if (ComStatic_isSwitch(save->mSavedata, mSwBitNo, home.roomNo)) return;
-    if (!field_0x299 || field_0x298) return;
+    if (!mDigRequest || mDigDone) return;
     gabi::Local<cXyz> scale;
     scale->x = l_zeroScale.x;
     scale->y = l_zeroScale.y;
@@ -242,15 +242,15 @@ void daTagKbItem_c::dig_main() {
         fopAcM_delete(this);
         done = true;
     }
-    if (done) field_0x298 = 1;
-    field_0x299 = 0;
+    if (done) mDigDone = 1;
+    mDigRequest = 0;
 }
 
 /* 02526560 */
 void daTagKbItem_c::kb_dig(fopAc_ac_c* i_pigActor) {
     // HD: the pointer store precedes the request flag.
     mpActor = i_pigActor;
-    field_0x299 = 1;
+    mDigRequest = 1;
     dig_main();
 }
 
@@ -269,10 +269,10 @@ static s32 daStandItem_daiItemNodeCallBack(J3DNode* node, s32 calcTiming) {
     Mtx34* stack = mDoMtx_stack_c::get();
     PSMTXCopy(&data->mAnmMtx[jntNo], stack);
     u32 item = i_this->mItemNo;
-    if (item == PINWHEEL) mDoMtx_XrotM(stack, i_this->m6B4);
+    if (item == PINWHEEL) mDoMtx_XrotM(stack, i_this->mSpinAngle);
     if (item == FOUNTAIN_IDOL) {
-        if (jntNo == 0) PSMTXCopy(stack, &i_this->m630);
-        else if (jntNo == 1) PSMTXCopy(stack, &i_this->m660);
+        if (jntNo == 0) PSMTXCopy(stack, &i_this->mBaseJointMtx);
+        else if (jntNo == 1) PSMTXCopy(stack, &i_this->mHeadJointMtx);
     }
     data = model->mMtxBuffer;
     data->mFlags = data->mFlags | 0x10;

@@ -30,6 +30,8 @@ offsets, types and code are unchanged. The header keeps the old name (`was mXXXX
 | 0x0664 | `m037C` | `mOldShapeAngleX` | execute 02477A24 copies shape_angle.x after setWaveAngle and reuses it as the wave pitch while flying; draw 0247255C uses it for the effect look-at |
 | 0x0666 | `m037E` | `mOldShapeAngleZ` | execute 02477A24 copies shape_angle.z after setWaveAngle and reuses it as the wave roll while flying; draw 0247255C passes it as the mDoMtx_lookAt roll |
 | 0x0668 | `m0380` | `mTargetSailAngle` | setSailAngle 0247D398 picks +-0x1555 from the wind side and eases mSailAngle toward it (cLib_addCalcAngleS(&mSailAngle, m0380,...)) |
+| 0x066C | `m0384` | `mPitchOffset` | execute 02477A24: shape_angle.x = mWaveAngleX + it; on the water sprung back to 0 through mPitchOffsetSpeed, eased to -0x800 while daSFLG_FLY_e is set; procZevDemo 024800A8 eases / sets it to 0 (tww the same) |
+| 0x066E | `m0386` | `mPitchOffsetSpeed` | execute 02477A24: velocity of the mPitchOffset spring (it += step; mPitchOffset += it; eased to 0), as mControllAngleSpeed; cleared in procSteerMove 0247E854 / procZevDemo 024800A8 (tww the same) |
 | 0x0670 | `m0388` | `mLandTimer` | setYPos 024754D8 sets 30 when the ship lands (offStateFlg(daSFLG_FLY_e)); execute 02477A24 counts down; setMoveAngle 0247D4B0 limits the turn rate while >= 15 |
 | 0x0672 | `m038A` | `mAnmTransformFileIdx` | procTalk_init 024749DC / procTalk 02481630: mAnmTransform = ship_getRes(m038A) (BCK_FN_TALK_A/B); TWW comment "file idx" |
 | 0x0674 | `m038C` | `mTurnTargetAngle` | checkOutRange 02474A98 stores the path direction +0x4000; procTurn 02481874 / execute 02477A24 ease shape_angle.y toward it (cLib_addCalcAngleS2) |
@@ -82,8 +84,6 @@ Open (no name yet):
 - `m0368`: u8[4] gap, no use in WWHD or TWW
 - `m0378`: only written: setSailAngle 0247D398 stores mSailAngle >> 1; never read in WWHD or TWW
 - `m0382`: no use in WWHD or TWW
-- `m0384`: evidence too weak: execute 02477A24: shape_angle.x = m0370 + m0384; eased to -0x800 while daSFLG_FLY_e is set, sprung back to 0 (via m0386) on the water; zeroed in procZevDemo 024800A8
-- `m0386`: evidence too weak: execute 02477A24 velocity of m0384's spring (m0386 += step; m0384 += m0386; eased to 0); cleared in procSteerMove 0247E854 / procZevDemo 024800A8
 - `m0390`: no use in WWHD or TWW
 - `m03A8`: only cleared: procCannon_init 0247EFE0 (TWW too)
 - `m03AA`: only read: setSailAngle 0247D398 uses m03AA+0x4000 as the wind direction while a tornado is active; never written in WWHD or TWW
@@ -92,8 +92,25 @@ Open (no name yet):
 - `m03F0`: u8[4] gap, no use in WWHD or TWW
 - `m1050`: no use in WWHD or TWW
 
+The view `ShipExecGrid` (d_a_ship_exec.h) of daGrid_c takes daGrid_c's name: `field_0x2200` -> `furl` (d_a_grid.h, 0x2B78; execute 02477A24 sets it to 1 - |sail offset| / 265).
+
 Type fixes (objcmp identical): `mpEffectTexMtx` / `mpScrollTexMtx` were `be<u32>` and are now
 `gptr<ShipTexMtx>` (J3DTexMtx pointers, TWW type; ShipTexMtx is the header's 0x94 J3DTexMtx layout view, the decomp
 has no J3DTexMtx declaration). `mRipple` and `mRopeRipple` were raw `u8[0x14]` and are now `ShipRipple`, the header's
 dPa_rippleEcallBack layout view (TWW type dPa_rippleEcallBack; the global dPa_rippleEcallBack in d_particle.h is a
 1-byte opaque stand-in). Corrected pin: the ripple constructor 025A9084 runs in create 0247C358, not createHeap.
+
+## daSail_HIO_c (l_HIO(); d_a_sail.h)
+
+Round 6 (two-digit offset names). The sail's furl mode, a fixed-furl override and the normal correction angle. Same meanings in zeldaret/tww d217e2b; in WWHD the vtable is last, so the offsets are 4 lower than the old names.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x01 | `m05` | `mbClothToon` | round 12 (2026-11-11 rule): written only by __sinit_d_a_sail_cpp 024628E8 (1) in WWHD; tww daSail_packet_c::draw: while it is set the sail lighting goes through the Cloth toon texture (TEXCOORD1 from COLOR0 by SRTG, TEXMAP1 = clothtoon.bti), else the TEV uses the rasterized colour directly; read nowhere in WWHD (the HD draw has its own shader) |
+| 0x02 | `m06` | `mUnfurl` | sail_move 02460678: 0 eases mFurl toward 0.6 (furled), 1 eases it toward 0 (unfurled); daSail_Create 02462194 sets 0 (with mFurl 0.6) while the ship's mSailSeOn is 0, else 1; __sinit_d_a_sail_cpp 024628E8 1 (tww the same) |
+| 0x04 | `m08` | `mFixFurl` | sail_move 02460678: while it is set and no demo moves the sail, mFurl = mFixedFurl; never written in WWHD or tww (tww the same read) |
+| 0x08 | `m0C` | `mFixedFurl` | sail_move 02460678: the mFurl value used while mFixFurl is set; never written in WWHD or tww (tww mSailPacket.m1C44 = it) |
+| 0x0C | `m10` | `mNrmCorrectDeg` | daSail_packet_c::setCorrectNrmAngle 0245FFC8: the normal correction in degrees, it * (1 - 0.5 * its second argument); mNrmCorrectAngle eases to -+ that many degrees while the wind comes from within 1.25 times it of the front or back; __sinit_d_a_sail_cpp 024628E8 0 (tww the same) |
+
+Open (no name yet): `m07` (set by __sinit only, read nowhere in WWHD or tww), padding `_05`.
+

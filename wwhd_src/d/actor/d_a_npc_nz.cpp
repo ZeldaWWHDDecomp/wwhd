@@ -181,7 +181,7 @@ static BOOL createHeap_CB(fopAc_ac_c* i_this) {
 /* 022A2AD8 */
 BOOL daNpc_Nz_c::_createHeap() {
     J3DModelData* modelData = static_cast<J3DModelData*>(dComIfG_getObjectRes(m_bdl_arc_name, 3 /* NZ.bdl */));
-    JUT_ASSERT(211, modelData != NULL);
+    JUT_ASSERT_MSG(211, modelData != NULL, "modelData != (0)");
 
     // HD: `new` is the constructor called with this == NULL
     mpMorf = mDoExt_McaMorf::create(NULL,
@@ -1353,7 +1353,7 @@ str  1001F02C                               # "Npcnz"
 str  1001EC1C                               # "head"
 str  1001EC24                               # "mune"
 str  1001EC2C                               # "d_a_npc_nz.cpp"
-str  1001EC3C "modelData != NULL"
+str 1001EC3C "modelData != (0)"
 str  1001EC50 "m_jnt.getHeadJntNum() >= 0"
 str  1001EC6C "m_jnt.getBackboneJntNum() >= 0"
 str  1001EC8C                               # "DEFAULT_NPC_NZ_ESA"

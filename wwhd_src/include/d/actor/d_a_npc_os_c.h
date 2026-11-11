@@ -5,8 +5,8 @@
 #include "gc_api/gc_api.h"
 // HD: HIO vtables trail their fields; the child starts at offset four.
 struct OsActionHioChildHD {
-    be<f32> field_0x04, field_0x08, field_0x0C, field_0x10, field_0x14, field_0x18, field_0x1C, field_0x20;
-    be<s16> field_0x24, field_0x26, field_0x28;
+    be<f32> field_0x04, mWalkSpeed, field_0x0C, field_0x10, field_0x14, field_0x18, field_0x1C, mPlayerWalkRate;  /* mWalkSpeed was field_0x08: walkProc 022AD668: speedF = it * the rate while the morf frame is inside (mWalkFrameStart, mWalkFrameEnd); walkPlayerAction 022AFF94 the same with the stick value (tww the same); mPlayerWalkRate was field_0x20: walkPlayerAction 022AFF94: speedF = mWalkSpeed * the stick value * it (tww the same) */
+    be<s16> mTurnMaxStep, mTurnMinStep, mTurnScale;  /* mTurnMaxStep was field_0x24: walkProc 022AD668 / walkPlayerAction 022AFF94: cLib_addCalcAngleS's maxStep (doubled for shape_angle in actionMoveEvent 022AD720, searchNpcAction 022AF8D4, walkPlayerAction) (tww the same; c_lib.h argument order); mTurnMinStep was field_0x26: walkProc 022AD668 / walkPlayerAction 022AFF94: cLib_addCalcAngleS's minStep (doubled for shape_angle, as mTurnMaxStep) (tww the same); mTurnScale was field_0x28: walkProc 022AD668 / walkPlayerAction 022AFF94 / actionMoveEvent 022AD720 / searchNpcAction 022AF8D4: cLib_addCalcAngleS's scale (tww the same) */
     u8 _pad[2];
     be<u32> vtable;
 };
@@ -17,27 +17,27 @@ struct OsActionHioHD {
     /* 0x04 */ OsActionHioChildHD mOs2;
     /* 0x30 */ dNpc_HIO_l mNpc;
     /* 0x58 */ gptr<daNpc_Os_c> field_0x5C;
-    /* 0x5C */ be<f32> field_0x60;
-    /* 0x60 */ be<f32> field_0x64;
+    /* 0x5C */ be<f32> mFollowStopDist;  /* was field_0x60: waitNpcAction 022AE504: once called, the statue starts searching while the player is farther than it; searchNpcAction 022AF8D4 walks at rate 0 inside it, else mFollowWalkRate (tww the same) */
+    /* 0x60 */ be<f32> mCallDist;  /* was field_0x64: waitNpcAction 022AE504: while the player is closer than it, they may call the statue (onNpcCall) (tww the same) */
     /* 0x64 */ be<f32> field_0x68;
     /* 0x68 */ be<f32> field_0x6C;
     /* 0x6C */ be<f32> field_0x70;
     /* 0x70 */ be<f32> field_0x74;
     /* 0x74 */ be<f32> field_0x78;
     /* 0x78 */ be<f32> field_0x7C;
-    /* 0x7C */ be<f32> field_0x80;
-    /* 0x80 */ be<f32> field_0x84;
+    /* 0x7C */ be<f32> mThrowSpeedF;  /* was field_0x80: throwNpcAction 022AEF70: speedF when thrown (tww the same) */
+    /* 0x80 */ be<f32> mThrowSpeedY;  /* was field_0x84: throwNpcAction 022AEF70: speed.y when thrown (tww the same) */
     /* 0x84 */ be<f32> field_0x88;
-    /* 0x88 */ be<f32> field_0x8C;
-    /* 0x8C */ be<f32> field_0x90;
-    /* 0x90 */ be<f32> field_0x94;
-    /* 0x94 */ be<f32> field_0x98;
-    /* 0x98 */ be<f32> field_0x9C;
-    /* 0x9C */ be<f32> field_0xA0;
+    /* 0x88 */ be<f32> mGravity;  /* was field_0x8C: init 022AA9A4, waitNpcAction 022AE504, finish01NpcAction 022AE834, finish02NpcAction 022AE980, throwNpcAction 022AEF70, jumpNpcAction 022AFBF4, initialWaitEvent 022AD36C, initialWakeupEvent 022AD598: gravity = it (tww the same) */
+    /* 0x8C */ be<f32> mCarryOffsetX;  /* was field_0x90: carryNpcAction 022AECD4 chases daNpc_Os_c::mCarryOffset.x toward it (tww the same) */
+    /* 0x90 */ be<f32> mCarryOffsetY;  /* was field_0x94: carryNpcAction 022AECD4 chases daNpc_Os_c::mCarryOffset.y toward it (tww the same) */
+    /* 0x94 */ be<f32> mCarryOffsetZ;  /* was field_0x98: carryNpcAction 022AECD4 chases daNpc_Os_c::mCarryOffset.z toward it (tww the same) */
+    /* 0x98 */ be<f32> mStickTurnMin;  /* was field_0x9C: waitPlayerAction 022AFCE0: turns toward the stick while the stick value is at least it (or locked on) (tww the same) */
+    /* 0x9C */ be<f32> mStickWalkMin;  /* was field_0xA0: waitPlayerAction 022AFCE0: switches to walkPlayerAction once the stick value is at least it (below it the statue only looks) (tww the same) */
     /* 0xA0 */ be<f32> field_0xA4;
-    /* 0xA4 */ be<f32> field_0xA8;
-    /* 0xA8 */ be<f32> field_0xAC;
-    /* 0xAC */ be<f32> field_0xB0;
+    /* 0xA4 */ be<f32> mFollowWalkRate;  /* was field_0xA8: searchNpcAction 022AF8D4: the walkProc rate while the player is farther than mFollowStopDist (tww the same) */
+    /* 0xA8 */ be<f32> mWalkFrameEnd;  /* was field_0xAC: walkProc 022AD668 / walkPlayerAction 022AFF94: the statue moves only while the morf frame is below it (and above mWalkFrameStart) (tww the same) */
+    /* 0xAC */ be<f32> mWalkFrameStart;  /* was field_0xB0: walkProc 022AD668 / walkPlayerAction 022AFF94: the statue moves only while the morf frame is above it (and below mWalkFrameEnd) (tww the same) */
     be<u32> vtable;
 };
 WWHD_SIZE(OsActionHioHD, 0xB4);
@@ -45,13 +45,13 @@ WWHD_OFFSET(OsActionHioHD, mNo, 0x00);
 WWHD_OFFSET(OsActionHioHD, mOs2, 0x04);
 WWHD_OFFSET(OsActionHioHD, mNpc, 0x30);
 WWHD_OFFSET(OsActionHioHD, field_0x5C, 0x58);
-WWHD_OFFSET(OsActionHioHD, field_0x8C, 0x88);
-WWHD_OFFSET(OsActionHioHD, field_0xAC, 0xA8);
-WWHD_OFFSET(OsActionHioHD, field_0xB0, 0xAC);
-WWHD_OFFSET(OsActionHioChildHD, field_0x08, 0x04);
-WWHD_OFFSET(OsActionHioChildHD, field_0x24, 0x20);
-WWHD_OFFSET(OsActionHioChildHD, field_0x26, 0x22);
-WWHD_OFFSET(OsActionHioChildHD, field_0x28, 0x24);
+WWHD_OFFSET(OsActionHioHD, mGravity, 0x88);
+WWHD_OFFSET(OsActionHioHD, mWalkFrameEnd, 0xA8);
+WWHD_OFFSET(OsActionHioHD, mWalkFrameStart, 0xAC);
+WWHD_OFFSET(OsActionHioChildHD, mWalkSpeed, 0x04);
+WWHD_OFFSET(OsActionHioChildHD, mTurnMaxStep, 0x20);
+WWHD_OFFSET(OsActionHioChildHD, mTurnMinStep, 0x22);
+WWHD_OFFSET(OsActionHioChildHD, mTurnScale, 0x24);
 
 inline const OsActionHioHD* Os_actionHioHD() { return gabi::at<const OsActionHioHD>(0x10467E44); }
 inline void Os_clearCbPlayerHD() {

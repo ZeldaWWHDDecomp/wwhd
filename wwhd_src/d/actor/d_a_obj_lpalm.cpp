@@ -46,7 +46,7 @@ static BOOL nodeCallBack(J3DNode* joint, int calcTiming) {
 /* 0236C44C */
 BOOL daObjLpalm_c::CreateHeap() {
     J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_OYASHI_BDL_OYASHI_e);
-    JUT_ASSERT(269, modelData != NULL); // HD
+    JUT_ASSERT_MSG(269, modelData != NULL, "modelData != (0)"); // HD
     for (u16 i = 0; i < modelData->getJointNum(); i++)
         modelData->getJointNodePointer(i)->setCallBack(nodeCallBack);
     if (modelData == NULL)
@@ -238,6 +238,6 @@ static void SafeString_assureTerminationImpl(SafeString* i_this) {
 /* WWHD glue (tools/verify/autoglue.py): this translation unit's data
 str  1002C1DC                               # "Oyashi"
 str  1002C154                               # "d_a_obj_lpalm.cpp"
-str  1002C168 "modelData != NULL"
+str 1002C168 "modelData != (0)"
 data bgScaleXZ 101FDC0C guard 101FDC08
 */

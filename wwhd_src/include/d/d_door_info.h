@@ -32,10 +32,10 @@ class dDoor_info_c : public fopAc_ac_c {
     /* 0x3AF */ u8 pad3AF;
     /* 0x3B0 */ cXyz mAngleVec;
     /* 0x3BC */ be<u8> mFrontCheck;
-    /* 0x3BD */ be<u8> m2A1;
+    /* 0x3BD */ be<u8> mStopOpenTimer;  /* was m2A1: door10 / door12 / kddoor chkStopOpen (door10 02126D8C): 65 while enemies remain, counted down once the room is clear, the stop bars open only at 0; chkStopClose sets 65; dDoor_info_c__ct 0252A244 0 (tww the same) */
     /* 0x3BE */ be<s16> mEventIdx[12];
     /* 0x3D6 */ be<u8> mToolId[12];
-    /* 0x3E2 */ be<u8> m2C6;
+    /* 0x3E2 */ be<u8> mEventKind;  /* was m2C6: index into mEventIdx / mToolId (event table DEFAULT_STOP_OPEN .. SHUTTER_DROP_CARRY): door10 setEventPrm 02127080 2/3 (+2, 6), knob00 setEventPrm 021A4318 7/8/9; initOpenDemo 0252A2DC tests != 9 (tww the same) */
     /* 0x3E3 */ be<u8> m2C7;
     /* 0x3E4 */ be<s32> mStaffId;
     /* 0x3E8 */ be<s8> mRoomNo;
@@ -96,8 +96,8 @@ struct dDoor_playerVtableHD {
 WWHD_OFFSET(dDoor_playerVtableHD, mSetPlayerPosAndAngle, 0x114);
 WWHD_OFFSET(dDoor_info_c, mFromRoomNo, 0x3AD);
 WWHD_OFFSET(dDoor_info_c, mToRoomNo, 0x3AE);
-WWHD_OFFSET(dDoor_info_c, m2A1, 0x3BD);
-WWHD_OFFSET(dDoor_info_c, m2C6, 0x3E2);
+WWHD_OFFSET(dDoor_info_c, mStopOpenTimer, 0x3BD);
+WWHD_OFFSET(dDoor_info_c, mEventKind, 0x3E2);
 WWHD_OFFSET(dDoor_info_c, m2C7, 0x3E3);
 WWHD_SIZE(dDoor_environmentHD, 0x10A4);
 WWHD_SIZE(dDoor_saveInfoHD, 0x20 + sizeof(dSv_info_c));

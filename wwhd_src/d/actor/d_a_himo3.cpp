@@ -133,12 +133,12 @@ static BOOL daHimo3_Draw(himo3_class* i_this) {
             /* HD: no alpha model and no simple shadow */
             /* ga_draw (inlined) */
             h3_ga_s* ga = &i_this->mGa[0];
-            if (ga->m2E == 1) {
+            if (ga->mActive == 1) {
                 MtxTrans(ga->mPos.x, ga->mPos.y, ga->mPos.z, 0);
-                cMtx_YrotM(calc_mtx(), ga->m1C.y);
-                cMtx_XrotM(calc_mtx(), ga->m1C.x);
-                f32 s = ga->m24;
-                MtxScale(s, s * ga->m28, s, true);
+                cMtx_YrotM(calc_mtx(), ga->mAngle.y);
+                cMtx_XrotM(calc_mtx(), ga->mAngle.x);
+                f32 s = ga->mScale;
+                MtxScale(s, s * ga->mFlapScale, s, true);
                 MtxTrans(0.0f, REG_F(10, 9) + -2.0f /* HD: GameCube -18.0f */, 0.0f, 1);
                 J3DModel_setBaseTRMtx(ga->mpModel, calc_mtx());
                 mDoExt_modelUpdateDL(ga->mpModel);
@@ -273,9 +273,9 @@ static inline void himo3_control(himo3_class* i_this) {
             f32 denom = (f32)(iVar8_2 - 1);
             for (i = 1; i < iVar8_2; i++, r31++) {
                 f32 fVar12 = (f32)i / denom;
-                r31->m00.x = gabi::fmadds(sp88->x, fVar12, actor->current.pos.x);
-                r31->m00.y = gabi::fmadds(sp88->y, fVar12, actor->current.pos.y);
-                r31->m00.z = gabi::fmadds(sp88->z, fVar12, actor->current.pos.z);
+                r31->mPos.x = gabi::fmadds(sp88->x, fVar12, actor->current.pos.x);
+                r31->mPos.y = gabi::fmadds(sp88->y, fVar12, actor->current.pos.y);
+                r31->mPos.z = gabi::fmadds(sp88->z, fVar12, actor->current.pos.z);
             }
         }
 
@@ -386,9 +386,9 @@ static inline void himo3_control(himo3_class* i_this) {
 
     for (; i < i_this->mSegmentNum; i++, r31++) {
         /* HD: tmpReg 0.0f, tmp200 -200.0f (no REG); the zero sp60 terms are gone */
-        f32 x = (((f32)(r31->m00.x - r31[-1].m00.x) + r31->m0C.x) + sp7C->x) + sp64->x;
-        f32 y = ((f32)(r31->m00.y - r31[-1].m00.y) + -200.0f) + r31->m0C.y;
-        f32 z = (((f32)(r31->m00.z - r31[-1].m00.z) + r31->m0C.z) + sp7C->z) + sp64->z;
+        f32 x = (((f32)(r31->mPos.x - r31[-1].mPos.x) + r31->mSpeed.x) + sp7C->x) + sp64->x;
+        f32 y = ((f32)(r31->mPos.y - r31[-1].mPos.y) + -200.0f) + r31->mSpeed.y;
+        f32 z = (((f32)(r31->mPos.z - r31[-1].mPos.z) + r31->mSpeed.z) + sp7C->z) + sp64->z;
 
         unaff_r24 = (s16)-cM_atan2s(y, z);
         unaff_r23 = cM_atan2s(x, std_sqrtf(gabi::fmadds(y, y, z * z)));
@@ -403,25 +403,25 @@ static inline void himo3_control(himo3_class* i_this) {
             spA0->z = sc;
         }
         MtxPosition(spA0.get(), sp94.get());
-        r31->m0C.copy(r31->m00);
+        r31->mSpeed.copy(r31->mPos);
         gabi::Local<cXyz> sum;
-        cXyz_pl(&r31[-1].m00, sum.get(), sp94.get());
+        cXyz_pl(&r31[-1].mPos, sum.get(), sp94.get());
         f32 nx = sum->x;
-        f32 ox = r31->m0C.x;
-        r31->m00.x = nx;
+        f32 ox = r31->mSpeed.x;
+        r31->mPos.x = nx;
         f32 ny = sum->y;
-        f32 oy = r31->m0C.y;
-        r31->m00.y = ny;
+        f32 oy = r31->mSpeed.y;
+        r31->mPos.y = ny;
         f32 nz = sum->z;
-        f32 oz = r31->m0C.z;
-        r31->m00.z = nz;
-        r31->m0C.x = (nx - ox) * 0.0f;
-        r31->m0C.y = (ny - oy) * 0.0f;
-        r31->m0C.z = (nz - oz) * 0.0f;
+        f32 oz = r31->mSpeed.z;
+        r31->mPos.z = nz;
+        r31->mSpeed.x = (nx - ox) * 0.0f;
+        r31->mSpeed.y = (ny - oy) * 0.0f;
+        r31->mSpeed.z = (nz - oz) * 0.0f;
 
         if (i_this->mType == 0xF && (u32)i == (u32)(i_this->mSegmentNum - 1)) {
             if (i_this->mHangType == 0) {
-                i_this->mCyl.SetC(&r31->m00);
+                i_this->mCyl.SetC(&r31->mPos);
             } else {
                 gabi::Local<cXyz> sp4C;
                 sp4C->x = -10000.0f;
@@ -432,7 +432,7 @@ static inline void himo3_control(himo3_class* i_this) {
             dComIfG_Ccsp_Set(&i_this->mCyl);
         } else if (((i + (i_this->mFrameCounter * 3)) & 0xF) == 0 && j < 5) {
             i_this->mSphs[j].SetR(f27);
-            i_this->mSphs[j].SetC(&r31->m00);
+            i_this->mSphs[j].SetC(&r31->mPos);
             dComIfG_Ccsp_Set(&i_this->mSphs[j]);
             j++;
         }
@@ -444,21 +444,21 @@ static inline void himo3_control(himo3_class* i_this) {
     for (i = 0; i < i_this->mSegmentNum; i++, r31++, pcVar10++) {
         cXyz* pos = pcVar10;
         if (!(i_this->mLineFollowRate < 0.999f)) {
-            pos->copy(r31->m00);
+            pos->copy(r31->mPos);
         } else {
-            cLib_addCalc2(&pos->x, r31->m00.x, 1.0f, 100.0f * i_this->mLineFollowRate);
-            cLib_addCalc2(&pos->y, r31->m00.y, 1.0f, 100.0f * i_this->mLineFollowRate);
-            cLib_addCalc2(&pos->z, r31->m00.z, 1.0f, 100.0f * i_this->mLineFollowRate);
+            cLib_addCalc2(&pos->x, r31->mPos.x, 1.0f, 100.0f * i_this->mLineFollowRate);
+            cLib_addCalc2(&pos->y, r31->mPos.y, 1.0f, 100.0f * i_this->mLineFollowRate);
+            cLib_addCalc2(&pos->z, r31->mPos.z, 1.0f, 100.0f * i_this->mLineFollowRate);
         }
 
         if ((i_this->mType != 0xF) && ((u32)i == (u32)(i_this->mSegmentNum - 1))) {
             MtxTrans(pos->x, pos->y, pos->z, 0);
             cMtx_XrotM(calc_mtx(), unaff_r24);
             cMtx_YrotM(calc_mtx(), unaff_r23);
-            f32 fVar14 = himo3HIO.m08;
+            f32 fVar14 = himo3HIO.mEndScaleType1;
             if (i_this->mType != 1) {
                 cMtx_XrotM(calc_mtx(), -0x4000);
-                fVar14 = himo3HIO.m0C;
+                fVar14 = himo3HIO.mEndScale;
             }
             MtxScale(fVar14, fVar14, fVar14, true);
             J3DModel_setBaseTRMtx(i_this->mpModel, calc_mtx());
@@ -471,32 +471,32 @@ static inline void himo3_control(himo3_class* i_this) {
 /* ga_move (inlined into daHimo3_Execute) */
 static inline void ga_move(himo3_class* i_this, cXyz* sp30) {
     h3_ga_s* ga = &i_this->mGa[0];
-    if (ga->m2E) {
-        if (ga->m2F != 0) {
-            ga->m2F = (u8)(ga->m2F - 1);
+    if (ga->mActive) {
+        if (ga->mRetargetTimer != 0) {
+            ga->mRetargetTimer = (u8)(ga->mRetargetTimer - 1);
         } else {
-            ga->m2F = (u8)gabi::ftoi(cM_rndF(10.0f));
+            ga->mRetargetTimer = (u8)gabi::ftoi(cM_rndF(10.0f));
             f32 r = cM_rndFX(150.0f);
-            ga->m10.x = i_this->mEndPos.x + r;
+            ga->mTargetPos.x = i_this->mEndPos.x + r;
             r = cM_rndFX(100.0f);
-            ga->m10.y = i_this->mEndPos.y + r;
+            ga->mTargetPos.y = i_this->mEndPos.y + r;
             r = cM_rndFX(150.0f);
-            ga->m10.z = i_this->mEndPos.z + r;
+            ga->mTargetPos.z = i_this->mEndPos.z + r;
         }
 
         gabi::Local<cXyz> sp0C;
-        cXyz_mi(&ga->m10, sp0C.get(), &ga->mPos);
+        cXyz_mi(&ga->mTargetPos, sp0C.get(), &ga->mPos);
         f32 x = sp0C->x, z = sp0C->z, y = sp0C->y;
-        cLib_addCalcAngleS2(&ga->m1C.y, cM_atan2s(x, z), 2, 0x1000);
-        cLib_addCalcAngleS2(&ga->m1C.x, (s16)-cM_atan2s(y, std_sqrtf(gabi::fmadds(x, x, z * z))), 2,
+        cLib_addCalcAngleS2(&ga->mAngle.y, cM_atan2s(x, z), 2, 0x1000);
+        cLib_addCalcAngleS2(&ga->mAngle.x, (s16)-cM_atan2s(y, std_sqrtf(gabi::fmadds(x, x, z * z))), 2,
                             0x1000);
-        cMtx_YrotS(calc_mtx(), ga->m1C.y);
-        cMtx_XrotM(calc_mtx(), ga->m1C.x);
+        cMtx_YrotS(calc_mtx(), ga->mAngle.y);
+        cMtx_XrotM(calc_mtx(), ga->mAngle.x);
         gabi::Local<cXyz> sp24;
         MtxPosition(sp30, sp24.get());
         PSVECAdd(&ga->mPos, sp24.get(), &ga->mPos);
-        ga->m28 = cM_ssin(ga->m2C);
-        ga->m2C = (s16)(ga->m2C + 0x3E00);
+        ga->mFlapScale = cM_ssin(ga->mFlapPhase);
+        ga->mFlapPhase = (s16)(ga->mFlapPhase + 0x3E00);
     }
 }
 
@@ -514,7 +514,7 @@ static BOOL daHimo3_Execute(himo3_class* i_this) {
     }
 
     i_this->mFrameCounter = (s16)(i_this->mFrameCounter + 1);
-    i_this->mSegments[0].m00.copy(actor->current.pos);
+    i_this->mSegments[0].mPos.copy(actor->current.pos);
     himo3_control(i_this);
 
     if (i_this->mType != 0xF) {
@@ -529,7 +529,7 @@ static BOOL daHimo3_Execute(himo3_class* i_this) {
         dBgS* bgs = dComIfG_Bgsp();
         i_this->mAcch.CrrPos(bgs);
         J3DModel* model = i_this->mpModel;
-        i_this->mGlowScale = himo3HIO.m18;
+        i_this->mGlowScale = himo3HIO.mGlowMtxScale;
         PSMTXCopy(J3DModel_getBaseTRMtx(model), calc_mtx());
 
         if (i_this->mType == 0) {
@@ -750,10 +750,10 @@ static inline cPhs_State useHeapInit(himo3_class* i_this) {
             }
 
             /* tmp == 0: always */
-            i_this->mGa[0].m2E = true;
+            i_this->mGa[0].mActive = true;
             i_this->mGa[0].mPos.copy(actor->current.pos);
-            i_this->mGa[0].m24 = cM_rndF(0.3f) + 0.3f;
-            i_this->mGa[0].m2C = (s16)gabi::ftoi(cM_rndF(30000.0f));
+            i_this->mGa[0].mScale = cM_rndF(0.3f) + 0.3f;
+            i_this->mGa[0].mFlapPhase = (s16)gabi::ftoi(cM_rndF(30000.0f));
         }
     }
 
@@ -894,14 +894,14 @@ static void __sinit_d_a_himo3_cpp() {
     sinit_header_statics(0x104646C4, 0x101B6FAC);
     /* static himo3HIO_c l_HIO (inline constructor; mNo is not set) */
     himo3HIO_c& h = himo3HIO;
-    h.m06 = 0;
-    h.m10 = 0xEB;
-    h.m08 = 0.75f;
-    h.m12 = 0x7D;
+    h.mAlphaModelType = 0;
+    h.mAlphaColorR = 0xEB;
+    h.mEndScaleType1 = 0.75f;
+    h.mAlphaColorG = 0x7D;
     h.__vtbl = 0x100111D8;
-    h.m0C = 0.5f;
-    h.m14 = 0;
-    h.m18 = 5.0f;
+    h.mEndScale = 0.5f;
+    h.mAlphaColorB = 0;
+    h.mGlowMtxScale = 5.0f;
 }
 
 /* 02175050 */

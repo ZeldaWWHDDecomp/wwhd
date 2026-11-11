@@ -3,13 +3,13 @@
 
 struct DEMO_PLIGHT {
     /* 0x00 */ be<s32> field_0x00;
-    /* 0x04 */ be<s32> field_0x04;
+    /* 0x04 */ be<s32> mType;  /* was field_0x04: dKydm_demo_plight_entry 02563ABC stores type + group * 100 (picks plight / efplight set), then the type; dKydm_demo_plight_delete 02563BF0 cuts the plight below 100, else the efplight (tww the same) */
     /* 0x08 */ LIGHT_INFLUENCE mLightInfluence;
     // HD: Initial update delay follows the expanded LIGHT_INFLUENCE.
     /* 0x2C */ be<f32> mBrightness;
     /* 0x30 */ be<u32> mUpdateDelay;
 };
-WWHD_OFFSET(DEMO_PLIGHT, field_0x04, 4);
+WWHD_OFFSET(DEMO_PLIGHT, mType, 4);
 WWHD_OFFSET(DEMO_PLIGHT, mLightInfluence, 8);
 
 WWHD_OFFSET(DEMO_PLIGHT, mBrightness, 0x2C);

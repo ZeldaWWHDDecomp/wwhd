@@ -249,7 +249,7 @@ void hdScreenBtnMenu_c::updateNewCount() {
     text->mpBuffer = buffer;
     buffer[0] = 0;
     text->mpVTable.v = gabi::ea(&sBtnMenuTextVtable);
-    hdBtnMenu_formatCount(text, "btn menu new count format", hdBtnMenu_notifyCount_l(comments));
+    hdBtnMenu_formatCount(text, "", hdBtnMenu_notifyCount_l(comments));
     ((hdTextPane_c*)(void*)mpTextPanes[1].get())->setStringPrepared(text, NULL);
 }
 
@@ -432,7 +432,7 @@ data sBtnMenuStateNumberReady 101FD8E4 nocheck
 data sBtnMenuStateNumber 101FDD50 nocheck
 str 100EA3BC "T_Btn_00" in 0263BFF0
 str 100EA3B0 "T_NewNum_00" in 0263BFF0
-str 100EA3C8 "btn menu new count format" renamed
+str 100EA3C8 ""
 str 100EA3D0 "SE_MENU_TAB_SWITCH" in 0263C7E8
 str 100EA408 "G_Btn_00" in 0263C7F4
 str 100EA414 "G_NewMark_00" in 0263C7F4

@@ -2,6 +2,7 @@
 // Verified wind/weather controls, packet geometry, rendering and GHS lifetimes.
 // HD: explicit render resources and double-buffered geometry extend the GC packets.
 #include "d/d_kankyo_wether.h"
+#include "sead/ElementAt.h"
 namespace d_kankyo_wether_cpp {
 
 // HD: GHS array constructor and destructor callbacks.
@@ -200,7 +201,9 @@ static void dKyw_pntwind_cut(WeatherWindInfluence *i_influence) {
     if (i_influence && static_cast<u32>(i_influence->mRegistIdx) < 30) {
         auto *env = dKy_getWeatherEnvlight();
         u32 index = i_influence->mRegistIdx;
-        env->mpWindInfluence[index] = nullptr;
+        /* guest address arithmetic: the index is read again after the call; mpWindInfluence + index * 4 wraps at
+         * 32 bits as on the console */
+        sead::elementAt<gptr<void>>(gabi::ea(env->mpWindInfluence), index) = nullptr;
     }
 }
 
@@ -1515,7 +1518,7 @@ static void wether_move_windline() {
             return;
         // The native scope constructor allocates/writes exactly one guest pointer (4 bytes).
         gabi::Local<gabi::be<u32>> heapScope;
-        weatherBeginHeap(heapScope.a, gabi::guest_addr("WINDEFF_SET"), (u32)0x82C, (u32)0);
+        weatherBeginHeap(heapScope.a, gabi::guest_addr("環境(風線)WINDEFF_SET"), (u32)0x82C, (u32)0);
         auto *env = dKy_getWeatherEnvlight();
         u32 packet = weatherAllocateAligned((u32)0x768, (u32)32);
         env->mpWind = gabi::at<void>(packet);
@@ -1563,7 +1566,7 @@ static void wether_move_wave() {
             return;
         gabi::Local<be<u32>> heapScope;
         // HD: the original heap label includes the Japanese description for waves.
-        weatherBeginHeap(heapScope.a, gabi::guest_addr("dKankyo_wave_Packet"), 0x17FA10u, 0u);
+        weatherBeginHeap(heapScope.a, gabi::guest_addr("環境(波)dKankyo_wave_Packet"), 0x17FA10u, 0u);
         u32 packet = weatherAllocateAligned(0x9DCC0u, 32u);
         if (packet)
             packet = weatherConstructWavePacket(packet);
@@ -1618,11 +1621,12 @@ static void wether_move_wave() {
 void dKankyo_wave_Packet::setColors(u32 index, u32 colorA, u32 colorB) {
     gabi::Local<ColorFloat> normalized, secondary;
     weatherNormalizeColor(normalized.a, colorA);
-    auto* texture = &mTextures[index];
+    /* guest address arithmetic: mTextures + index * 0x370 wraps at 32 bits as on the console */
+    auto* texture = &sead::elementAt<WeatherTexture>(gabi::ea(mTextures), index);
     u32 environment = weatherGetEnvironment();
     weatherScaleColor(
         gabi::ea(&texture->mParameters.mPrimaryColor), normalized.a,
-        static_cast<f32>(gabi::at<dKankyo::dScnKy_env_light_c>(environment)->field_0x10bc));
+        static_cast<f32>(gabi::at<dKankyo::dScnKy_env_light_c>(environment)->mWavePrimaryColorScale));
     float denominator = weatherColorScale.value;
     texture->mParameters.mPrimaryColor.alpha =
         divide_single((float)gabi::at<WeatherColorBytes>(colorA)->alpha, denominator);
@@ -1631,7 +1635,7 @@ void dKankyo_wave_Packet::setColors(u32 index, u32 colorA, u32 colorB) {
     environment = weatherGetEnvironment();
     weatherScaleColor(
         secondary.a, normalized.a,
-        static_cast<f32>(gabi::at<dKankyo::dScnKy_env_light_c>(environment)->field_0x10b8));
+        static_cast<f32>(gabi::at<dKankyo::dScnKy_env_light_c>(environment)->mWaveSecondaryColorScale));
     secondary.get()->alpha =
         divide_single((float)gabi::at<WeatherColorBytes>(colorB)->alpha, denominator);
     weatherSetSecondaryColor(gabi::ea(texture), secondary.a, 0u);
@@ -1694,16 +1698,19 @@ static u32 lookup_weather_material(u32 packet, u32 name) {
         return 0;
     u32 count = state->mCount;
     auto* table = static_cast<WeatherMaterialEntry*>(state->mpEntries);
-    auto* entry = &table[index < count ? index : 0];
+    /* guest address arithmetic: the table and resource elements wrap at 32 bits as on the console */
+    auto* entry = &sead::elementAt<WeatherMaterialEntry>(gabi::ea(table), index < count ? index : 0);
     if (!static_cast<u8>(entry->mbInitialized)) {
         auto* materials = static_cast<WeatherMaterialResources*>(state->mpMaterials);
         u32 materialCount = materials->mCount;
-        u32 material = index < materialCount ? gabi::ea(&materials->mpResources[index]) : 0;
+        u32 material = index < materialCount
+                           ? gabi::ea(&sead::elementAt<WeatherMaterialResource>(gabi::ea(materials->mpResources.get()), index))
+                           : 0;
         weatherInitializeMaterial(gabi::ea(entry), material, 0u);
         count = state->mCount;
         table = state->mpEntries;
     }
-    return gabi::ea(&table[index < count ? index : 0]);
+    return gabi::ea(&sead::elementAt<WeatherMaterialEntry>(gabi::ea(table), index < count ? index : 0));
 }
 static void prepare_weather_pair(u32 pair, u32 material, u32 attributes) {
     auto* i_pair = gabi::at<WeatherGeometryPair>(pair);
@@ -1914,7 +1921,7 @@ u32 dKankyo_poison_Packet::construct() {
 void dKankyo_star_Packet::setColor(u32 colorIndex) {
     auto* packetView = this;
 
-    weatherBindRenderer(gabi::ea(&packetView->mRenderer[colorIndex]),
+    weatherBindRenderer(gabi::ea(sead::elementPtr(packetView->mRenderer, colorIndex)), /* sibling: wraps at 32 bits as on the console */
                         static_cast<u32>(packetView->mpMaterial), (u32)0);
     s32 count = (s16) static_cast<u16>(packetView->mEffectNum);
     for (u32 i = 0; (s32)i < count; ++i) {
@@ -2034,7 +2041,7 @@ static void bind_weather_texture(u32 texture, u32 material) {
 static void bind_weather_uniforms(u32 renderer, u32 materialField) {
     auto* info = static_cast<WeatherUniformInfo*>(gabi::at<WeatherUniformOwner>(renderer)->mpInfo);
     u32 slot = info->mBufferIndex;
-    auto* uniform = &info->mUniforms[slot];
+    auto* uniform = sead::elementPtr(info->mUniforms, slot); /* sibling: wraps at 32 bits as on the console */
     auto* material = gabi::at<WeatherMaterial>(*gabi::at<be<u32>>(materialField));
     auto* descriptor = gabi::at<WeatherUniformDescriptor>(
         material->mDescriptorCount ? gabi::ea(material->mpDescriptors) : 0);
@@ -2296,7 +2303,7 @@ static void wether_move_moya() {
             return;
         gabi::Local<be<u32>> heapScope;
         // HD: the original heap label includes the Japanese description for haze.
-        weatherBeginHeap(heapScope.a, gabi::guest_addr("dKankyo_cloud_Packet"), 0x27510u, 0u);
+        weatherBeginHeap(heapScope.a, gabi::guest_addr("環境(もや)dKankyo_cloud_Packet"), 0x27510u, 0u);
         u32 packet = weatherAllocateAligned(sizeof(dKankyo_cloud_Packet), 32u);
         if (packet)
             packet = weatherConstructCloudPacket(packet);
@@ -2749,7 +2756,7 @@ static void wether_move_vrkumo() {
     if (!static_cast<u32>(dKy_getWeatherEnvlight()->mVrkumoCount))
         return;
     gabi::Local<gabi::be<u32>> heapScope;
-    weatherBeginHeap(heapScope.a, gabi::guest_addr("dKankyo_vrkumo_Packet"), (u32)0x18F0D0, (u32)0);
+    weatherBeginHeap(heapScope.a, gabi::guest_addr("環境(雲)dKankyo_vrkumo_Packet"), (u32)0x18F0D0, (u32)0);
     u32 packet = weatherAllocateAligned((u32)0xC5E20, (u32)0x20);
     if (packet)
         packet = weatherConstructVrkumoPacket(packet);
@@ -2793,7 +2800,7 @@ static void wether_move_vrkumo() {
 static u32 weather_packet(u32 offset) { return gabi::load<u32>(environment() + offset); }
 static void start_sun_weather(float zero) {
     gabi::Local<gabi::be<u32>> heapScope;
-    weatherBeginHeap(heapScope.a, gabi::guest_addr("dKankyo_sun_Packet"), (u32)0x2B9D0, (u32)0);
+    weatherBeginHeap(heapScope.a, gabi::guest_addr("環境(太陽)dKankyo_sun_Packet"), (u32)0x2B9D0, (u32)0);
     u32 packet = weatherAllocateAligned((u32)0x2628, (u32)0x20);
     if (packet)
         packet = weatherdKyw_wether_init(packet);
@@ -2856,7 +2863,7 @@ static void move_rain_weather() {
     case 0:
         if (static_cast<u32>(dKy_getWeatherEnvlight()->mRainCount)) {
             gabi::Local<gabi::be<u32>> heapScope;
-            weatherBeginHeap(heapScope.a, gabi::guest_addr("dKankyo_rain_Packet"), (u32)0x3637D0,
+            weatherBeginHeap(heapScope.a, gabi::guest_addr("環境(雨)dKankyo_rain_Packet"), (u32)0x3637D0,
                              (u32)0);
             u32 packet = weatherAllocateAligned((u32)0x1ACA40, (u32)0x20);
             if (packet)
@@ -2994,7 +3001,7 @@ static void move_star_weather() {
 }
 static void start_mud_weather(float zero) {
     gabi::Local<gabi::be<u32>> heapScope;
-    weatherBeginHeap(heapScope.a, gabi::guest_addr("dKankyo_housi_Packet"), (u32)0x2FBF10, (u32)0);
+    weatherBeginHeap(heapScope.a, gabi::guest_addr("環境(胞子)dKankyo_housi_Packet"), (u32)0x2FBF10, (u32)0);
     u32 packet = weatherAllocateAligned((u32)0x139250, (u32)0x20);
     if (packet)
         packet = weatherConstructHousiPacket(packet);
@@ -3765,7 +3772,7 @@ void d_kankyo_wether_cpp::dKankyo_sun_Packet::destroy(u32 flags) {
 /* 0257E8C0 */
 void d_kankyo_wether_cpp::dKankyo_sun_Packet::setColors(u32 index, u32 colorA, u32 colorB) {
     gabi::Local<ColorFloat> first, second;
-    u32 destination = gabi::ea(&this->mRenderer[index].mExtendedTexture.mParameters.mPrimaryColor);
+    u32 destination = gabi::ea(&sead::elementPtr(this->mRenderer, index)->mExtendedTexture.mParameters.mPrimaryColor); /* sibling: wraps at 32 bits as on the console */
     auto *primary = gabi::at<ColorFloat>(destination);
     auto *secondary = gabi::at<ColorFloat>(destination + sizeof(ColorFloat));
     weatherNormalizeColor(first.a, colorA);
@@ -3990,11 +3997,11 @@ data weatherHousiArchiveName 1004FDA0
 data weatherSunArchiveFile 1004FF30
 data weatherHousiArchiveFile 1004FF60
 str 10050080 "housi_bloom"
-str 1004FE84 "WINDEFF_SET" renamed
+str 1004FE84 "環境(風線)WINDEFF_SET"
 str 10050108 "Name" in 0257ACAC
 str 1005008C "cloud_shadow"
 str 1004FE10 "txa_tuki_as"
-str 1004FF10 "dKankyo_sun_Packet" renamed
+str 1004FF10 "環境(太陽)dKankyo_sun_Packet"
 str 1004FE9C "txa_taiyo"
 str 1004FE1C "txa_tuki_bs"
 str 1005009C "cloud_draw"
@@ -4013,13 +4020,13 @@ str 1004FDB8 "Name" in 0257C5B0
 str 1004FD38 "M_DragB" in 0257ACAC
 str 1005003C "sunlight"
 str 1004FFBC "cloud_02.bti"
-str 1004FE40 "dKankyo_rain_Packet" renamed
-str 1004FF40 "dKankyo_housi_Packet" renamed
+str 1004FE40 "環境(雨)dKankyo_rain_Packet"
+str 1004FF40 "環境(胞子)dKankyo_housi_Packet"
 str 1004FDC0 "GTower" in 0257C5B0
 str 1004FFCC "cloud_03.bti"
 str 1004FD4C "sea" in 0257C5B0
 str 1004FD50 "M_Dai" in 0257ACAC
-str 1004FED8 "dKankyo_vrkumo_Packet" renamed
+str 1004FED8 "環境(雲)dKankyo_vrkumo_Packet"
 str 10050058 "star"
 str 1004FD58 "Stage" in 0257C5B0
 str 1004FFDC "cloudtx_01.bti"
@@ -4269,12 +4276,12 @@ ext 027FFE54 void weatherApplyContextMaterial(u32,u32)
 ext 028EAB2C void weatherConstructArchiveFlag(u32)
 ext 028ED6F8 void weatherConstructHeaderFlag(u32)
 ext 028F026C void weatherRegisterGlobalObject(u32)
-str 1004FE68 "dKankyo_wave_Packet" renamed in 02583D00
+str 1004FE68 "環境(波)dKankyo_wave_Packet" in 02583D00
 str 1004FDC8 "Always" in 02583D00
 str 1005000C "Always.bfres" in 02583D00
 str 1004FEF8 "txa_usonami_256_64mip" in 02583D00
 str 1004FDF8 "txa_usonami_m_256_64mip" in 02583D00
-str 1004FF70 "dKankyo_cloud_Packet" renamed in 02583678
+str 1004FF70 "環境(もや)dKankyo_cloud_Packet" in 02583678
 str 1004FDA8 "Always" in 02583678
 str 1004FF90 "Always.bfres" in 02583678
 str 1004FEC8 "txa_moya_b_64" in 02583678

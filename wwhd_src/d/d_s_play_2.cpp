@@ -57,7 +57,7 @@ static void dScnPly_createOceanHeap() {
     u32 size = dScnPlyAPI_getUnitHeapOverhead(0x20) + 0x5000;
     gabi::Local<dScnPly_SafeString> name;
     name->mVtable = gc_tu.safeString;
-    name->mString = gabi::guest_addr("Darkness Spot");
+    name->mString = gabi::guest_addr("LOD48ユニットヒープ");
     u32 parent = dScnPlyAPI_getGameHeap();
     if (l_oceanHeap.mpHeap != 0)
         dScnPlyAPI_showAssert(gabi::guest_addr("d_s_play.cpp"), 0x110,
@@ -158,7 +158,7 @@ static dScnPly_env_otherHIO_c *dScnPly_env_otherHIO_c_ct(dScnPly_env_otherHIO_c 
     self->field_0x10 = 0;
     self->field_0x11 = 0;
     self->field_0x12 = 0;
-    self->field_0x40 = 0;
+    self->mFocusDepthOffset = 0;
     self->field_0x44 = 4000.0f;
     self->field_0x15 = 0;
     for (int i = 0; i < 20; i++)
@@ -195,15 +195,15 @@ static dScnPly_msg_HIO_c *dScnPly_msg_HIO_c_ct(dScnPly_msg_HIO_c *self) {
         if (self == 0)
             return self;
     }
-    self->field_0x06 = 0;
-    self->field_0x08 = 0;
+    self->mShowMessage = 0;
+    self->mLanguage = 0;
     self->mID = 1; /* mID */
     self->mVtable = play_tu.mMessageVtable;
-    self->field_0x10 = (u32)-1;
+    self->mMsgId = (u32)-1;
     self->mIsUpdate = 0; /* mIsUpdate */
     self->field_0x09 = 0;
     self->mGroup = 0; /* mGroup */
-    self->field_0x07 = 0;
+    self->mShowRequest = 0;
     return self;
 }
 
@@ -377,7 +377,7 @@ static s32 dScnPly_requestProcessDeletion(u32 p) {
 /* WWHD glue
 str 100533FC "d_s_play.cpp" in 025B2F90
 str 1005340C "resNameNum <= (sizeof(resPhase) / sizeof(resPhase[0]))" in 025B2F90
-str 10053444 "Darkness Spot" renamed in 025B306C
+str 10053444 "LOD48ユニットヒープ" in 025B306C
 str 10053458 "d_s_play.cpp" in 025B306C
 str 10053468 "sOceanHeap_ == (0)" in 025B306C
 str 1005347C "sea" in 025B3114

@@ -39,7 +39,7 @@ enum dCamStyleParam_e {
     /* 0x1D */ dCamStyleParam_LOCKON_FOVY_MAX = 29,
 };
 struct dCamera__Style {
-    be<u32> m00;
+    be<u32> mStyleName;  /* was m00: SearchStyle 024F732C returns the index of the style whose four-character name it is (callers pass e.g. 'TT01'); the camera style table, never written by code (tww dCamParam_c::SearchStyle the same) */
     be<s32> engineIdx;
     be<f32> styleParam[30];
     be<u16> flag;
@@ -50,7 +50,8 @@ struct CamParamStyles {
 };
 struct dCstick_c {
     be<u32> __vtbl;
-    be<f32> m00, m04;
+    be<f32> mUpReleaseY;  /* was m00: nextMode 024FA9C8: while the C-stick-up state (mCStickYState) is set it is cleared when the C-stick y falls below it; dCstick_c__ct 024F6DEC sets 0.2 (tww dCamera_c::nextMode the same) */
+    be<f32> mUpPressY;  /* was m04: written only by dCstick_c__ct 024F6DEC (0.95) in WWHD, where nextMode 024FA9C8 enters the C-stick-up state on a pad option flag (0x40) instead; tww dCamera_c::nextMode enters it (dCamAttnStts_00001000_e, m184 = 1) when the C-stick y rises above it */
     be<s32> m08;
     be<u16> mHDFlags;
     u8 _12[2];
@@ -92,7 +93,7 @@ struct dCamSetup_c {
     /* 0x020 */ be<s32> mForceType;
     /* 0x024 */ be<f32> mCusCus;
     /* 0x028 */ be<f32> m024;
-    /* 0x02C */ be<f32> m028;
+    /* 0x02C */ be<f32> mLockonCushion;  /* was m028: lockonCamera 025052E8 (through LockonSetupHD::mLockonCushion): the ease ratio of the view longitude without a lock-on target, of the view latitude, and of the fovy toward LockonFovy; dCamSetup_c__ct 024F75E4 sets it */
     /* 0x030 */ be<f32> m02C;
     /* 0x034 */ be<f32> m030;
     /* 0x038 */ be<f32> m034;
@@ -105,18 +106,18 @@ struct dCamSetup_c {
     /* 0x054 */ be<f32> m050;
     /* 0x058 */ be<f32> m054;
     /* 0x05C */ be<f32> m058;
-    /* 0x060 */ be<f32> m05C;
-    /* 0x064 */ be<f32> m060;
+    /* 0x060 */ be<f32> mLatitudeMin;  /* was m05C: dCamSetup_c::CheckLatitudeRange 024F7878: the lower latitude limit in degrees (clamps the angle); dCamSetup_c__ct 024F75E4 sets it (tww -60) */
+    /* 0x064 */ be<f32> mLatitudeMax;  /* was m060: dCamSetup_c::CheckLatitudeRange 024F7878: the upper latitude limit in degrees (clamps the angle); dCamSetup_c__ct 024F75E4 sets it (tww 80) */
     /* 0x068 */ be<f32> mTrimVistaHeight;
     /* 0x06C */ be<f32> mTrimCineScopeHeight;
     /* 0x070 */ be<f32> m06C;
     /* 0x074 */ be<f32> mHDExtraParameter;
     /* 0x078 */ be<f32> mForceLockOffDist;
     /* 0x07C */ be<s32> mForceLockOffTimer;
-    /* 0x080 */ be<f32> m078;
-    /* 0x084 */ be<f32> m07C;
-    /* 0x088 */ be<f32> m080;
-    /* 0x08C */ be<f32> m084;
+    /* 0x080 */ be<f32> mFanFovySwing;  /* was m078: the fovy wobble in strong wind: manualCamera 0250FDC8 (ManualSetupViewHD::mFanFovySwing, cM_rndFX(it * wind)) and followCamera 025028B8 (SetupView::mFanFovySwing, cM_rndFX(it)); dCamSetup_c__ct 024F75E4 sets it */
+    /* 0x084 */ be<f32> mLeafFovySwing;  /* was m07C: the fovy sine sway in wind: manualCamera 0250FDC8 (ManualSetupViewHD::mLeafFovySwing * sin) and followCamera 025028B8 (SetupView::mLeafFovySwing * sin + mFovy); dCamSetup_c__ct 024F75E4 sets it */
+    /* 0x088 */ be<f32> mFanBankBase;  /* was m080: dCamSetup_c::FanBank 024F78F0: the base of the camera bank in wind (base + cM_rndFX(mFanBankWidth) * wind power); dCamSetup_c__ct 024F75E4 sets it */
+    /* 0x08C */ be<f32> mFanBankWidth;  /* was m084: dCamSetup_c::FanBank 024F78F0: the random range of the camera bank, scaled by the wind power; dCamSetup_c__ct 024F75E4 sets it */
     /* 0x090 */ be<f32> mDMCValue;
     /* 0x094 */ be<f32> mDMCAngle;
     /* 0x098 */ be<f32> m090;
@@ -127,12 +128,12 @@ struct dCamSetup_c {
     /* 0x0AC */ be<f32> mChargeLatitude;
     /* 0x0B0 */ be<s32> mChargeTimer;
     /* 0x0B4 */ be<f32> mChargeBRatio;
-    /* 0x0B8 */ be<s32> m0B0;
-    /* 0x0BC */ be<f32> m0B4;
-    /* 0x0C0 */ be<f32> m0B8;
+    /* 0x0B8 */ be<s32> mLockonChangeTimer;  /* was m0B0: lockonCamera 025052E8 (LockonSetupHD::mLockonChangeTimer): for the first it frames of the lock-on style the lock-on longitude is scaled by mCurModeTimer / it and the cushion eases from mLockonChangeCushion; TP's dCamSetup_c mLockonChangeTimer at the same place (after mChargeBRatio); dCamSetup_c__ct 024F75E4 sets 60 */
+    /* 0x0BC */ be<f32> mLockonChangeCushion;  /* was m0B4: lockonCamera 025052E8 (LockonSetupHD::mLockonChangeCushion): the starting cushion that eases over mLockonChangeTimer frames; TP's dCamSetup_c mLockonChangeCushion at the same place; dCamSetup_c__ct 024F75E4 sets it */
+    /* 0x0C0 */ be<f32> mMovingShipScale;  /* was m0B8: checkGroundInfo 024F9044 (CameraBackgroundHD::Setup::mMovingShipScale) scales the moving background (ship) position delta by it; Run 024FE3E8 (CameraSetupView::mMovingShipScale) reads it too; dCamSetup_c__ct 024F75E4 sets it */
     /* 0x0C4 */ be<f32> m0BC;
-    /* 0x0C8 */ be<f32> m0C0;
-    /* 0x0CC */ be<f32> m0C4;
+    /* 0x0C8 */ be<f32> mBushHigh;  /* was m0C0: checkGroundInfo 024F9044 (CameraBackgroundHD::Setup::mBushHigh): dCamera_c::mBushHeight for the high bush hit bit; dCamSetup_c__ct 024F75E4 sets it */
+    /* 0x0CC */ be<f32> mBushLow;  /* was m0C4: checkGroundInfo 024F9044 (CameraBackgroundHD::Setup::mBushLow): dCamera_c::mBushHeight for the low bush hit bit; dCamSetup_c__ct 024F75E4 sets it */
     /* 0x0D0 */ be<s32> m0C8;
     /* 0x0D4 */ cXyz mHDVector;
     /* 0x0E0 */ be<f32> mHDDefaults[4];
@@ -231,13 +232,13 @@ void CamParam_initSecondObject(u8* object);
 
 enum : u32 { CAM_PARAM_DELETE_STORAGE = 1 };
 
-WWHD_OFFSET(dCstick_c, m04, 8);
+WWHD_OFFSET(dCstick_c, mUpPressY, 8);
 WWHD_OFFSET(dCstick_c, m08, 0xC);
 WWHD_OFFSET(dCamBGChk_c, mChkInfo, 8);
 WWHD_OFFSET(dCamBGChk_c, mFwdCushion, 0x2C);
-WWHD_OFFSET(dCamSetup_c, m05C, 0x60);
-WWHD_OFFSET(dCamSetup_c, m060, 0x64);
-WWHD_OFFSET(dCamSetup_c, m080, 0x88);
-WWHD_OFFSET(dCamSetup_c, m084, 0x8C);
+WWHD_OFFSET(dCamSetup_c, mLatitudeMin, 0x60);
+WWHD_OFFSET(dCamSetup_c, mLatitudeMax, 0x64);
+WWHD_OFFSET(dCamSetup_c, mFanBankBase, 0x88);
+WWHD_OFFSET(dCamSetup_c, mFanBankWidth, 0x8C);
 WWHD_OFFSET(dCamSetup_c, mHDVector, 0xD4);
 WWHD_OFFSET(CamParamHeaderStatics, mZeroWords, 0xC);

@@ -12,18 +12,18 @@
 
 
 struct sUbMsgDat {
-    /* 0x00 */ be<u32> field_0x00;
-    /* 0x04 */ be<u8> field_0x04;
-    /* 0x05 */ be<u8> field_0x05;
-    /* 0x06 */ be<u8> field_0x06;
+    /* 0x00 */ be<u32> mMsgNo;  /* was field_0x00: setMessageUb 022C1168 passes it to setMessage; next_msgStatus 022C6108 steps mpUbMsg to the next entry and ends the list at 0 (tww the same) */
+    /* 0x04 */ be<u8> mAnmTag;  /* was field_0x04: setMessageUb 022C1168: the speaker's animation tag, passed to setAnmFromMsgTagUb (tww the same) */
+    /* 0x05 */ be<u8> mPartnerAnmTag;  /* was field_0x05: setMessageUb 022C1168 copies it into daNpcPeople_c::mPartnerAnmTag, which the partner Ub plays in eventUb2Talk 022C2380 (tww the same) */
+    /* 0x06 */ be<u8> mFacePlayer;  /* was field_0x06: setMessageUb 022C1168 copies it into daNpcPeople_c::mBodyTurn and mLookAtPlayer and, when 1, opens the attention to 1000 / 0x7FFF (else the npc dat ranges); keeps it in mPartnerFacePlayer for the partner Ub (tww the same) */
     /* 0x07 */ be<u8> field_0x07;
 };
 WWHD_SIZE(sUbMsgDat, 8);
 
 struct sPeopleAnmDat {
-    /* 0x00 */ be<u8> field_0x00;
-    /* 0x01 */ be<u8> field_0x01;
-    /* 0x02 */ be<u8> field_0x02;
+    /* 0x00 */ be<u8> mAnmIdx;  /* was field_0x00: setAnmTbl 022BED70: the entry's animation index for setAnm (0xFF ends the table), compared with daNpcPeople_c::mAnmIdx; playAnm 022C2D6C replays it (tww the same); same code as sRotenAnmDat::mAnmIdx */
+    /* 0x01 */ be<u8> mMorf;  /* was field_0x01: setAnmTbl 022BED70: the entry's morf frames, passed to setAnm (tww the same); same code as sRotenAnmDat::mMorf */
+    /* 0x02 */ be<u8> mLoopCount;  /* was field_0x02: setAnmTbl 022BED70: the entry's count, copied into mAnmLoopCount; 0 loops, negative plays backwards (tww the same); same code as sRotenAnmDat::mLoopCount */
 };
 WWHD_SIZE(sPeopleAnmDat, 3);
 
@@ -44,7 +44,7 @@ struct daNpcPeople_c__l_npc_dat {
     /* 0x20 */ be<f32> mAttnOffsetZ;  /* was field_0x20: _execute 022C305C: the Z of the attention position offset (see mAttnOffsetX) (tww the same) */
     /* 0x24 */ be<f32> mEyeYOffset;  /* was field_0x24: _execute 022C305C: eyePos = current.pos + (0, it, 0) (tww the same); same role as daNpcRoten_c NpcDatStruct::mEyeYOffset */
     /* 0x28 */ be<f32> mMaxAttnDistXZ;  /* was field_0x28: createInit 022BF510 / chkEndEvent 022C0840 / setMessageUb 022C1168 / eventUb2Talk 022C2380 / executeLook 022C511C / executeLook2 022C5268 / initUgSearchArea 022C077C copy it into daNpcPeople_c::mMaxAttnDistXZ; executeWait 022C4074 reads it (tww the same) */
-    /* 0x2C */ be<f32> mMaxLookDistXZ;  /* was field_0x2C: chkAttention 022C0084: outside the attention range but closer than it, the player is still looked at (mLookMode 1, m78A set) (tww the same) */
+    /* 0x2C */ be<f32> mMaxLookDistXZ;  /* was field_0x2C: chkAttention 022C0084: outside the attention range but closer than it, the player is still looked at (mLookMode 1, mInLookDist set) (tww the same) */
     /* 0x30 */ be<f32> mCullFarDist;  /* was field_0x30: createInit 022BF510: fopAcM_setCullSizeFar(it / the clipper's far) (tww the same) */
     /* 0x34 */ be<s16> mMaxAttnAngleY;  /* was field_0x34: createInit 022BF510 / chkEndEvent 022C0840 / setMessageUb 022C1168 / eventUb2Talk 022C2380 / initUgSearchArea 022C077C copy it into daNpcPeople_c::mMaxAttnAngleY (tww the same) */
     /* 0x36 */ be<s16> mMaxLookAngleY;  /* was field_0x36: createInit 022BF510 / chkEndEvent 022C0840 / setMessageUb 022C1168 / eventUb2Talk 022C2380 / eventOrder 022C2A04 / initUgSearchArea 022C077C copy it into daNpcPeople_c::mMaxLookAngleY (tww the same) */
@@ -236,7 +236,7 @@ struct daNpcPeople_c : fopNpc_npc_c {
     /* 0x870 */ dNpc_PathRun_l mPathRun;           /* HD: no mShadowId before it */
     /* 0x878 */ u8 m704[0x884 - 0x878];
     /* 0x884 */ cXyz mLookAtPos;
-    /* 0x890 */ cXyz m71C;
+    /* 0x890 */ cXyz mUgTargetPos;  /* was m71C: executeUgWalk 022C5434 / executeUgTurnInit 022C5AC4 set it (home.pos or current.pos + a direction times a distance, or a 50-unit side step); executeUgWalk walks toward it, executeUgTurnInit / executeUgTurn 022C5D4C turn to its angle; eventCameraStopInit 022C16A4 takes it as the camera's position unless UM3 looks at a star (tww the same) */
     /* 0x89C */ gptr<sPeopleAnmDat> mpAnmTbl;  /* was m728: setAnmTbl 022BED70 stores the table (NULL to stop); playAnm 022C2D6C steps to the next entry and plays its animation */
     /* 0x8A0 */ gptr<daNpcPeople_c__l_npc_dat> mpNpcDat;
     /* 0x8A4 */ gptr<daNpcPeople_c> mpTalkPartner;  /* was m730: eventUb1TalkInit 022C1228 sets this / NULL; eventUb1TalkXyInit 022C1384 sets peopleSearchFromName("Ub2"); the Ub talk events talk through it */
@@ -263,14 +263,14 @@ struct daNpcPeople_c : fopNpc_npc_c {
     /* 0x8EC */ be<s16> mMaxLookAngleY;  /* was m778: chkAttention 022C0084: the player is looked at (mInAttention, mLookMode 1) while the angle to them is below it (+0x71C while mInAttention); createInit 022BF510 / chkEndEvent 022C0840 / eventOrder 022C2A04 copy npc dat 0x36, checkOrder 022C045C mMaxAttnAngleY at the talk start, the Ub talk events 0x7FFF (tww the same); daNpcRoten_c uses 0x4000 / 0x7FFF while talking in its place */
     /* 0x8EE */ be<s16> mTargetAngleY;  /* was m77A: eventTurnToPlayerInit 022C1094 sets the XZ angle to the player; eventTurnToPlayer 022C21D8 ends when current.angle.y equals it */
     /* 0x8F0 */ be<u16> mMsgStatus;  /* was m77C: talk3 022C1FD8 keeps the message status; talk2 022C1BBC resets 0xFFFF and tests MSG_CONTINUES / BOX_OPENING */
-    /* 0x8F2 */ be<u16> m77E;
+    /* 0x8F2 */ be<u16> mEventFlags;  /* was m77E: bit field: next_msgStatus 022C6108 sets 0x1..0x40 for message-list codes 1-5 / 7 / 9-0xA; when the box closes executeTalk 022C4404 orders the matching event (mOrderEventNum 3 / 7 / 8 / 9 / 0xC / 0xD / 0xF) and clears the bit, else sets 0x8000; chkEndEvent 022C0840 sets 0x8000 when the NPC's event ends; eventOrder 022C2A04 clears 0x8000 and resets the npc-data look state and the event (tww the same) */
     /* 0x8F4 */ be<s16> mBlinkTimer;  /* was m780: initTexPatternAnm 022BE1E8 clears it; playTexPatternAnm 022C2CC0 counts it down and restarts the head texture pattern with 0x78 */
     /* 0x8F6 */ be<s16> mLookMaxVelTarget;  /* was m782: chkAttention 022C0084 / executeWalk 022C46D0 set npc dat 0x38 / 0x3A; lookBack 022C2E50 eases mLookMaxVel toward it (the turn speed limit) */
     /* 0x8F8 */ be<s16> mLookMaxVel;  /* was m784: lookBack 022C2E50 eases it toward mLookMaxVelTarget (cLib_addCalcAngleS2 4, 0x800), else clears it, and passes it to lookAtTarget as maxVel; createInit 022BF510 clears it */
     /* 0x8FA */ be<s16> mLookAngleY;  /* was m786: lookBack 022C2E50: the target angle in look mode 2; chkAttention 022C0084 sets mTargetAngleY, executeWalk 022C46D0 / executeTurn 022C4A04 / executeUgWalk 022C5434 / executeUgTurn 022C5D4C the path angle, executeFurue 022C4CA8 +-0x4000 (tww the same); same code as daNpcRoten_c::mLookAngleY */
     /* 0x8FC */ be<u8> mTalk;
     /* 0x8FD */ be<u8> mInAttention;  /* was m789: chkAttention 022C0084: 1 once the player is in the look range (distance +40 and angles +0x71C while set), 0 when they leave; executeWait 022C4074 / executeWalk 022C46D0 / executeKyoro 022C4E98 / checkPig 022C3E78 / setWaitAnm 022BEEDC test it (tww the same); same code as daNpcRoten_c::mInAttention */
-    /* 0x8FE */ be<u8> m78A;
+    /* 0x8FE */ be<u8> mInLookDist;  /* was m78A: chkAttention 022C0084: cleared each frame, 1 while the player is outside the attention range but closer than npc dat mMaxLookDistXZ (he still looks at them); executeWait 022C4074 / executeWalk 022C46D0 / executeKyoro 022C4E98 / checkPig 022C3E78 treat it like mInAttention (tww the same) */
     /* 0x8FF */ be<u8> mCanTalk;  /* was m78B: chkAttention 022C0084: 1 while the player is in the talk range (or the event attention is on), else 0; executeCommon 022C3AC4 sets mOrderEventNum 1 (can talk) while it is set (tww the same); same code as daNpcRoten_c::mCanTalk */
     /* 0x900 */ be<u8> mNoTalk;
     /* 0x901 */ be<u8> mOrderEventNum;
@@ -278,7 +278,7 @@ struct daNpcPeople_c : fopNpc_npc_c {
     /* 0x903 */ be<u8> mExecuteMode;  /* was m78F: _execute 022C305C calls moveProc[it]; executeCommon 022C3AC4 / chkSurprise 022C39F0 test it */
     /* 0x904 */ be<u8> mResFlag;
     /* 0x905 */ be<u8> mNpcNo;
-    /* 0x906 */ be<u8> m792;
+    /* 0x906 */ be<u8> mSa3ItemIdx;  /* was m792: next_msgStatus 022C6108: message-list code 6 stores the index that follows; it picks the event bit (l_item_chk_sa3[it]) and the item (l_item_id_sa3[it]) given (tww the same) */
     /* 0x907 */ be<u8> mAnmIdx;  /* was m793: setAnm 022BEB7C stores the animation index; createHeap 022BE334 loads the bck by it; setAnmTbl 022BED70 / setWaitAnm 022BEEDC / _execute 022C305C / getMsg 022C6C68 test it (tww the same); same code as daNpcRoten_c::mAnmIdx */
     /* 0x908 */ be<u8> mLastRandNo;  /* was m794: _execute 022C305C draws a random number again when it equals this one, then keeps it here */
     /* 0x909 */ be<u8> mAnmFlag;
@@ -286,21 +286,21 @@ struct daNpcPeople_c : fopNpc_npc_c {
     /* 0x90B */ be<s8> mCutNo;  /* was m797: privateCut 022C25E8 stores the event cut index and switches on it */
     /* 0x90C */ be<u8> m798;
     /* 0x90D */ be<s8> mLookMode;  /* was m799: lookBack 022C2E50 switches on it: 1 looks at mLookAtPos, 2 turns to mLookAngleY, 0 neither; chkAttention 022C0084 and the walk / turn / look / Ug modes set it (tww the same); same code as daNpcRoten_c::mLookMode */
-    /* 0x90E */ be<u8> m79A;
+    /* 0x90E */ be<u8> mSurpriseFlags;  /* was m79A: bit 0x1: executeBikkuriInit 022C4B30 sets it, executeFurue 022C4CA8 clears it when the shake ends, getMsg 022C6C68 clears it and picks l_msg_uo2_surprise for UO2; bit 0x2: executeFurue toggles it at random times and turns the look +0x4000 / -0x4000 by it (tww the same) */
     /* 0x90F */ be<u8> mbIsNight;
-    /* 0x910 */ be<u8> m79C;
+    /* 0x910 */ be<u8> mModeInTalk;  /* was m79C: _execute 022C305C runs the mode (not eventMove) during a talk only while set; executeCommon 022C3AC4 switches to the talk mode and returns 1 while talking with it set; executeTalkInit 022C43A8 tests it; XyEventCB 022BF220 / checkOrder 022C045C / executeCommon / executeTalk 022C4404 / createInit 022BF510 set or clear it, the constructor 022BE7CC sets 1 (tww the same); same role as daNpcPhoto_c::mModeInTalk */
     /* 0x911 */ be<u8> mBodyTurn;  /* was m79D: checkOrder 022C045C (talk start) copies npc dat 0x5B, createInit 022BF510 / eventOrder 022C2A04 0x5A, the Ug look modes set 1; while set, chkAttention 022C0084 and lookBack 022C2E50 (when talking) turn the body (mLookHeadOnly 0) (tww the same); same code as daNpcRoten_c::mBodyTurn */
     /* 0x912 */ be<u8> mLookAtPlayer;  /* was m79E: createInit 022BF510 / eventOrder 022C2A04 copy npc dat 0x5C, checkOrder 022C045C sets 1 at the talk start; chkAttention 022C0084: while 0 the player in range only turns him to mTargetAngleY instead of being looked at (tww the same); same role as daNpcPhoto_c::mLookAtPlayer */
     /* 0x913 */ be<u8> m79F;
-    /* 0x914 */ be<u8> m7A0;
-    /* 0x915 */ be<u8> m7A1;
-    /* 0x916 */ be<u8> m7A2;
+    /* 0x914 */ be<u8> mPartnerFacePlayer;  /* was m7A0: setMessageUb 022C1168 stores the Ub message's sUbMsgDat::mFacePlayer there; eventUb2Talk 022C2380: the partner Ub copies it into its mBodyTurn and mLookAtPlayer and opens its attention to 1000 / 0x7FFF while it is 1 (tww the same); like mPartnerAnmTag */
+    /* 0x915 */ be<u8> mCanMove;  /* was m7A1: createInit 022BF510 sets 1 for the path walkers and UG1; _execute 022C305C chases the walk speed and moves the actor (posMoveF, CrrPos) only while set; the constructor 022BE7CC clears it (tww the same) */
+    /* 0x916 */ be<u8> mPartnerAnmTag;  /* was m7A2: setMessageUb 022C1168 stores the Ub message's partner animation tag (sUbMsgDat +0x05); eventUb2Talk 022C2380: the partner Ub plays it (setAnmFromMsgTagUb) once, then sets 0xFF (tww the same) */
     /* 0x917 */ be<s8> mHandRJntNo;  /* was m7A3: createHeap 022BE334: the "handR" joint index of the body model; _draw 022C36D4 puts mpEtcModel on that joint */
     /* 0x918 */ be<u8> m7A4;
     /* 0x919 */ be<u8> m7A5;
     /* 0x91A */ be<u8> mPsoNo;  /* was m7A6: _draw 022C36D4: l_pso_tbl()[it] unless 0xFF; _execute 022C305C sets 0xFF, executeFurue / executeLetter / executeLook set it */
-    /* 0x91B */ be<u8> m7A7;
-    /* 0x91C */ be<u8> m7A8;
+    /* 0x91B */ be<u8> mSkyLookNo;  /* was m7A7: executeWait 022C4074: the sky object UM3's telescope look found, 0 the moon, 1 Orion, 2 the Big Dipper (dKy_moon / orion / hokuto_look_chk); getMsg3 022C1F20 picks the message list and eventCameraStopInit 022C16A4 the camera position by it (tww the same) */
+    /* 0x91C */ be<u8> mMsgChecked;  /* was m7A8: talk2 022C1BBC: 1 once chkMsg has run for the shown message (typing after a continue or box open, or close wait); MSG_DISPLAYED and CLOSE_WAIT call chkMsg only while 0; a new message and MSG_DISPLAYED reset it (tww the same) */
     /* 0x91D */ u8 _91D[3];
 };
 WWHD_OFFSET(daNpcPeople_c, mPhase, 0x7DC);
@@ -311,7 +311,7 @@ WWHD_OFFSET(daNpcPeople_c, mEtcFlag, 0x8CC);
 WWHD_OFFSET(daNpcPeople_c, mTargetAngleY, 0x8EE);
 WWHD_OFFSET(daNpcPeople_c, mNpcNo, 0x905);
 WWHD_OFFSET(daNpcPeople_c, mbIsNight, 0x90F);
-WWHD_OFFSET(daNpcPeople_c, m7A8, 0x91C);
+WWHD_OFFSET(daNpcPeople_c, mMsgChecked, 0x91C);
 WWHD_SIZE(daNpcPeople_c, 0x920);
 
 enum NpcNo_e {

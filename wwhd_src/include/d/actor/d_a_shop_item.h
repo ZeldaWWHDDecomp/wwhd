@@ -28,15 +28,15 @@ struct daShopItem_c : daItemBase_c {
     void setTevType(s32 type) { mTevType = type; } /* [v nz] */
 
     /* 0x750 */ request_of_phase_process_class mPhase;   /* GameCube 0x63C */
-    /* 0x758 */ gptr<dCloth_packet_c> field_0x644;
-    /* 0x75C */ be<u8> field_0x648;
+    /* 0x758 */ gptr<dCloth_packet_c> mpCloth;  /* was field_0x644: clothCreate 02483C10 stores the dCloth_packet_c made for the flag items (nullptr for the others); set_mtx 02483508 sets its scale and matrix; _draw 02483B28 draws it (dCloth_packet_cloth_draw) (tww the same) */
+    /* 0x75C */ be<u8> mClothType;  /* was field_0x648: clothCreate 02483C10 stores the cloth kind of the item (0-3, by item number), the index into clothRes / clothFunc; set_mtx 02483508 reads it again (tww the same) */
     /* 0x75D */ u8 _75D[3];
-    /* 0x760 */ Mtx34 field_0x64C;
+    /* 0x760 */ Mtx34 mMtx;  /* was field_0x64C: set_mtx 02483508 copies the model matrix (mDoMtx_stack_c::get()) into it; CreateInit 024836F4 sets cullMtx to it (fopAcM_SetMtx) (tww the same) */
     /* 0x790 */ be<s32> mTevType;
 };
 WWHD_OFFSET(daShopItem_c, mPhase, 0x750);
-WWHD_OFFSET(daShopItem_c, field_0x644, 0x758);
-WWHD_OFFSET(daShopItem_c, field_0x64C, 0x760);
+WWHD_OFFSET(daShopItem_c, mpCloth, 0x758);
+WWHD_OFFSET(daShopItem_c, mMtx, 0x760);
 WWHD_OFFSET(daShopItem_c, mTevType, 0x790);
 WWHD_SIZE(daShopItem_c, 0x794);
 

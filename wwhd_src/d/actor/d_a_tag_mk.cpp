@@ -47,8 +47,8 @@ BOOL daTag_Mk_c::checkArea(f32 width, f32 depth, f32 radius) {
         return FALSE;
     // HD: normalization writes a hidden-result copy as well as its receiver.
     normalizePosition(&relative, &normalized);
-    f32 dot = gabi::fmadds(f32(relative.x), f32(m29C.x),
-                           f32(f32(relative.z) * f32(m29C.z)));
+    f32 dot = gabi::fmadds(f32(relative.x), f32(mFacingDir.x),
+                           f32(f32(relative.z) * f32(mFacingDir.z)));
     f32 extent = f32(f32(distance * dot) * dot);
     if (extent > depth || f32(distance - extent) > width)
         return FALSE;
@@ -76,34 +76,34 @@ u32 daTag_Mk_c::getMsg() {
 }
 /* 024B065C */
 void daTag_Mk_c::talkInit() {
-    m294 = 0;
+    mTalkState = 0;
 }
 /* 024B08E8 */
 u16 daTag_Mk_c::talk() {
     // HD: snapshot the manager before getMsg and the subsequent message calls.
     TagMkMessageManager* manager = l_msgManager;
-    s8 state = m294;
+    s8 state = mTalkState;
     u16 status = 0xFF;
     if (state == 0) {
         l_msgId = fpcM_ERROR_PROCESS_ID_e;
-        m290 = getMsg();
-        m294 = 1;
+        mMsgNo = getMsg();
+        mTalkState = 1;
     } else if (state != -1) {
         if (u32(l_msgId) == 0xFFFFFFFF) {
-            u32 id = setMessage(manager, u32(m290), &eyePos);
+            u32 id = setMessage(manager, u32(mMsgNo), &eyePos);
             l_msgId = id;
         } else if (state == 1)
-            m294 = 2;
+            mTalkState = 2;
         else if (state == 2) {
             status = u16(getMessageStatus(manager));
             if (status == 0xE) {
-                u16 next = next_msgStatus(&m290);
+                u16 next = next_msgStatus(&mMsgNo);
                 setMessageStatus(manager, next);
                 if (getMessageStatus(manager) == fopMsgStts_MSG_CONTINUES_e)
-                    setMessage(manager, u32(m290), nullptr);
+                    setMessage(manager, u32(mMsgNo), nullptr);
             } else if (status == fopMsgStts_BOX_CLOSED_e) {
                 setMessageStatus(manager, 0x13);
-                m294 = -1;
+                mTalkState = -1;
             }
         }
     }
@@ -125,13 +125,13 @@ void daTag_Mk_c::setTagWpEvId() {
 }
 /* 024B031C */
 void daTag_Mk_c::demoInitSetgoal() {
-    fopAc_ac_c* item = fopAcM_SearchByID(m2B4);
+    fopAc_ac_c* item = fopAcM_SearchByID(mItemId);
     if (item)
         dComIfGp_evmng_setGoal(&item->current.pos);
 }
 /* 024B02D0 */
 void daTag_Mk_c::demoInitDelete() {
-    fopAc_ac_c* item = fopAcM_SearchByID(m2B4);
+    fopAc_ac_c* item = fopAcM_SearchByID(mItemId);
     if (item)
         fopAcM_delete(item);
 }
@@ -150,7 +150,7 @@ void daTag_Mk_c::demoInitMake() {
         fopAcM_createItemForKP2(&pos, dItemNo_JOY_PENDANT_e, room, &angle, nullptr, 10.0f, 10.0f, -2.1f, 0);
     if (!item)
         JUTAssertion::showAssert("d_a_tag_mk.cpp", 0x167, "a_item");
-    m2B4 = fopAcM_GetID(item);
+    mItemId = fopAcM_GetID(item);
     dComIfGp_event_setTalkPartner(item);
 }
 /* 024B03D8 */
@@ -229,7 +229,7 @@ BOOL daTag_Mk_c::actionReady() {
     if (eventInfo.checkCommandDemoAccrpt()) {
         mActionTypes = ACT_EVENT_e;
         dComIfGs_onEventBit(0x1E02);
-        const char* name = m2B8;
+        const char* name = mStaffName;
         mStaffIdx = dComIfGp_evmng_getMyStaffId(name, nullptr, 0);
         demoProc();
     } else
@@ -298,12 +298,12 @@ BOOL daTag_Mk_c::actionTagWp() {
 }
 /* 024B0BD4 */
 BOOL daTag_Mk_c::actionDaichi() {
-    s16 state = m296;
+    s16 state = mDaichiStep;
     switch (state) {
     case 0:
     case 10:
         if (dComIfGs_isTmpBit(0x440)) {
-            m296 = s16(s16(m296) + 1);
+            mDaichiStep = s16(s16(mDaichiStep) + 1);
             mDoAud_bgmAllMute(30);
         }
         break;
@@ -311,7 +311,7 @@ BOOL daTag_Mk_c::actionDaichi() {
         u8 sw = getSwbit();
         s32 room = s8(current.roomNo);
         if (dComIfGs_isSwitch(sw, room))
-            m296 = s16(s16(m296) + 1);
+            mDaichiStep = s16(s16(mDaichiStep) + 1);
         break;
     }
     case 2:
@@ -319,7 +319,7 @@ BOOL daTag_Mk_c::actionDaichi() {
         if (s16(mCutEndTimer) > 0)
             mCutEndTimer = s16(s16(mCutEndTimer) - 1);
         else {
-            m296 = s16(state + 1);
+            mDaichiStep = s16(state + 1);
             if (dComIfGs_isTmpBit(0x440)) {
                 mDoAud_subBgmStart(0x80000019);
                 dComIfGs_onTmpBit(0x420);
@@ -331,7 +331,7 @@ BOOL daTag_Mk_c::actionDaichi() {
         u8 sw = getSwbit2();
         s32 room = s8(current.roomNo);
         if (dComIfGs_isSwitch(sw, room)) {
-            m296 = s16(s16(m296) + 1);
+            mDaichiStep = s16(s16(mDaichiStep) + 1);
             if (dComIfGs_isTmpBit(0x420)) {
                 mDoAud_subBgmStop();
                 dComIfGs_onTmpBit(0x410);
@@ -416,9 +416,9 @@ s32 daTag_Mk_Create(daTag_Mk_c *a) {
                 height = 210.0f;
             a->mActionTypes = daTag_Mk_c::ACT_VILLA_e;
             a->attention_info.flags = fopAc_Attn_TALKFLAG_NOTALK_e | fopAc_Attn_ACTION_SPEAK_e;
-            a->m29C.y = 0.0f;
-            a->m29C.x = cM_ssin(heading);
-            a->m29C.z = cM_scos(heading);
+            a->mFacingDir.y = 0.0f;
+            a->mFacingDir.x = cM_ssin(heading);
+            a->mFacingDir.z = cM_scos(heading);
             a->attention_info.position.y = f32(attention + height);
             a->eyePos.y = f32(eye + height);
         }
@@ -437,15 +437,15 @@ s32 daTag_Mk_Create(daTag_Mk_c *a) {
         u8 second = a->getSwbit2();
         s32 room = s8(a->current.roomNo);
         if (dComIfGs_isSwitch(second, room))
-            a->m296 = 20;
+            a->mDaichiStep = 20;
         else {
             u8 first = a->getSwbit();
             room = s8(a->current.roomNo);
             if (dComIfGs_isSwitch(first, room)) {
                 a->mCutEndTimer = 60;
-                a->m296 = 10;
+                a->mDaichiStep = 10;
             } else {
-                a->m296 = 0;
+                a->mDaichiStep = 0;
                 a->mCutEndTimer = 180;
             }
         }
@@ -453,7 +453,7 @@ s32 daTag_Mk_Create(daTag_Mk_c *a) {
         a->mActionTypes = dComIfGs_isEventBit(0x1E02) ? daTag_Mk_c::ACT_WAIT_e : daTag_Mk_c::ACT_ARRIVAL_e;
     a->current.angle.z = 0;
     a->current.angle.x = 0;
-    a->m2B8.v = gabi::guest_str("TagMk");
+    a->mStaffName.v = gabi::guest_str("TagMk");
     a->shape_angle.x = 0;
     a->shape_angle.z = 0;
     return cPhs_COMPLEATE_e;

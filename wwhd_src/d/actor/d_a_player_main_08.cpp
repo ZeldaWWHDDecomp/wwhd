@@ -330,7 +330,7 @@ static inline void lk_cutAt(daPy_lk_c* self, J3DFrameCtrl* frameCtrl, f32 start,
 static inline BOOL lk_procCutCommon(daPy_lk_c* self, J3DFrameCtrl* frameCtrl, u8 direction,
                                     u8 nextCut, f32 endFrame, f32 passFrame, f32 kickAdd,
                                     f32 atStart, f32 atEnd, f32 calcMax, u16 reverseAnm) {
-    self->m3522 = 2;
+    self->mCutComboTimer = 2;
     if (frameCtrl->getRate() < 0.01f) {
         self->mNormalSpeed = 0.0f;
         self->mDirection = direction;
@@ -358,7 +358,7 @@ static inline BOOL lk_procCutCommon(daPy_lk_c* self, J3DFrameCtrl* frameCtrl, u8
     if ((self->mItemTrigger & 2) /* swordTrigger() */ && self->m34C5 != 5) {
         self->m34C5 = nextCut;
     }
-    self->m34C2 = 1;
+    self->mRootMoveMode = 1;
     if (self->mpAttnActorLockOn != nullptr) {
         Link08_setShapeAngleToAtnActor(self);
         self->mProcVar2 = self->shape_angle.y;
@@ -444,7 +444,7 @@ static inline BOOL lk_procCutE(daPy_lk_c* self, J3DFrameCtrl* frameCtrl, u8 dir,
     }
     lk_cutKick(self, frameCtrl, 6.0f, kickAdd);
     lk_cutAt(self, frameCtrl, 5.0f, 11.0f);
-    self->m34C2 = 1;
+    self->mRootMoveMode = 1;
     cLib_addCalc(&self->mNormalSpeed, 0.0f, 0.7f, calcMax, 0.5f);
     return TRUE;
 }
@@ -468,9 +468,9 @@ BOOL daPy_lk_c::procCutEB() {
 }
 
 /* procCutExA/Kesa: the rate end, the 0x80 mode flag at passFrame, the sword trigger to nextCut */
-static inline BOOL lk_procCutExA(daPy_lk_c* self, J3DFrameCtrl* frameCtrl, s16 m3522, f32 endFrame,
+static inline BOOL lk_procCutExA(daPy_lk_c* self, J3DFrameCtrl* frameCtrl, s16 mCutComboTimer, f32 endFrame,
                                  f32 passFrame, u8 nextCut, f32 atStart, f32 atEnd) {
-    self->m3522 = m3522;
+    self->mCutComboTimer = mCutComboTimer;
     if (frameCtrl->getRate() < 0.01f) {
         self->mNormalSpeed = 0.0f;
         Link08_checkNextMode(self, 0);
@@ -501,7 +501,7 @@ static inline BOOL lk_procCutExA(daPy_lk_c* self, J3DFrameCtrl* frameCtrl, s16 m
         self->current.angle.y = self->shape_angle.y;
     }
     lk_cutAt(self, frameCtrl, atStart, atEnd);
-    self->m34C2 = 1;
+    self->mRootMoveMode = 1;
     cLib_addCalc(&self->mNormalSpeed, 0.0f, 0.7f, 4.0f, 0.5f);
     return TRUE;
 }
@@ -544,7 +544,7 @@ BOOL daPy_lk_c::procCutExB() {
         return Link08_changeSpecialBattle(this);
     }
     lk_cutAt(this, frameCtrl, 14.0f, 20.0f);
-    m34C2 = 1;
+    mRootMoveMode = 1;
     cLib_addCalc(&mNormalSpeed, 0.0f, 0.7f, 4.0f, 0.5f);
     return TRUE;
 }
@@ -554,8 +554,8 @@ BOOL daPy_lk_c::procCutExMJ() {
 
     m35EC = mFrameCtrlUnder[Link08::UNDER_MOVE0_e].getFrame();
     link08CutHoldFlag(this);
-    if (m34C4 != 0) {
-        m3522 = 2;
+    if (mCutComboCount != 0) {
+        mCutComboTimer = 2;
     }
     if (mFrameCtrlUnder[Link08::UNDER_MOVE0_e].getRate() < 0.01f) {
         if (mProcVar2 == 0) {
@@ -590,7 +590,7 @@ BOOL daPy_lk_c::procCutExMJ() {
     if (lk_checkParry(this)) {
         return Link08_changeSpecialBattle(this);
     }
-    if (m34C4 != 0 && ((mItemTrigger & 2) && m34C5 != 5)) {
+    if (mCutComboCount != 0 && ((mItemTrigger & 2) && m34C5 != 5)) {
         m34C5 = 30;
     }
     if (speed.y < -gravity) {
@@ -605,7 +605,7 @@ BOOL daPy_lk_c::procCutExMJ() {
         }
         setResetFlg0(resetFlg0() | 2);
     }
-    if (current.pos.y < m3688.y - 200.0f) {
+    if (current.pos.y < mProcStartPos.y - 200.0f) {
         cLib_chaseF(&mNormalSpeed, 0.0f, 0.08000000566244125f); // HD: 0.1f * HIO (0.8f) folded,
     }
     return TRUE;
@@ -648,10 +648,10 @@ BOOL daPy_lk_c::procCutTurn() {
         }
         mDirection = dir;
     } else if (frameCtrl->getFrame() > 17.0f) {
-        Link08_mtxFollow_end(&m32E4);
+        Link08_mtxFollow_end(&mProcEffectEcallBack0);
     }
     if (frameCtrl->getFrame() > m35A0) {
-        Link08_mtxFollow_end(&m32F0);
+        Link08_mtxFollow_end(&mProcEffectEcallBack1);
         Link08_endSmokeCallback(mSmokeEcallBack);
     }
     Link08_setSpecialBattle(this, 1);
@@ -666,17 +666,17 @@ BOOL daPy_lk_c::procCutTurn() {
         setResetFlg0(resetFlg0() | 2);
         cLib_chaseF(&mAtCyl.mCyl.mRadius, m35A4, 18.0f);
     }
-    /* m331C/m332C/m333C (dPa_cutTurnEcallBack_c) alpha at +4 */
+    /* mCutTurnEcallBack0/mCutTurnEcallBack1/mCutTurnEcallBack2 (dPa_cutTurnEcallBack_c) alpha at +4 */
     if (frameCtrl->checkPass(18.5f)) {
-        link08CutTurnCallback(m332C).mAlpha = 0x80;
-        link08CutTurnCallback(m333C).mAlpha = 0x80;
-        link08CutTurnCallback(m331C).mAlpha = 0x80;
-    } else if (link08CutTurnCallback(m331C).mAlpha == 0x80) {
-        link08CutTurnCallback(m331C).mAlpha = 0;
-        link08CutTurnCallback(m332C).mAlpha = 0;
-        link08CutTurnCallback(m333C).mAlpha = 0;
+        link08CutTurnCallback(mCutTurnEcallBack1).mAlpha = 0x80;
+        link08CutTurnCallback(mCutTurnEcallBack2).mAlpha = 0x80;
+        link08CutTurnCallback(mCutTurnEcallBack0).mAlpha = 0x80;
+    } else if (link08CutTurnCallback(mCutTurnEcallBack0).mAlpha == 0x80) {
+        link08CutTurnCallback(mCutTurnEcallBack0).mAlpha = 0;
+        link08CutTurnCallback(mCutTurnEcallBack1).mAlpha = 0;
+        link08CutTurnCallback(mCutTurnEcallBack2).mAlpha = 0;
     }
-    m34C2 = 1;
+    mRootMoveMode = 1;
     return TRUE;
 }
 
@@ -685,7 +685,7 @@ BOOL daPy_lk_c::procCutRoll_init() {
 
     Link08_commonProcInit(this, Link08::daPyProc_CUT_ROLL_e);
     Link08_setSingleMoveAnime(this, Link08::ANM_CUTTURNB, 1.2f, 4.0f, 6, 1.0f);
-    m3578 = 0;
+    mStickSpinAngle = 0;
     seStartMapInfo(Link08::JA_SE_LK_V_KAITEN_S);
     /* dComIfGp_setItemMagicCount(-2) */
     dComIfGp_setItemMagicCount(-2);
@@ -739,7 +739,7 @@ BOOL daPy_lk_c::procCutRollEnd_init() {
     }
     Mtx34* mtx = lk_getAnmMtx(mpCLModel, Link08::CL_JNT_HEAD_JNT_e /* CL_JNT_HEAD_JNT_e */);
     Link08Emitter* emitter = reinterpret_cast<Link08Emitter*>(Link08_mtxFollow_makeEmitter(
-        m33A8, Link08::ID_IT_JN_PIYOPIYO00, mtx, &current.pos, nullptr));
+        mProcEffectEcallBack2, Link08::ID_IT_JN_PIYOPIYO00, mtx, &current.pos, nullptr));
     if (emitter != 0) {
         emitter->mFlags = emitter->mFlags | 0x40;      /* becomeImmortalEmitter */
         emitter->mVolumeSize = 5;                      /* setVolumeSize(5) */
@@ -783,7 +783,7 @@ BOOL daPy_lk_c::procCutRoll() {
             }
         }
         if (mStickDistance > 0.05f) {
-            cLib_addCalcAngleS(&current.angle.y, m34E8, 5, 0xBB8, 0x64); // HD: HIO folded
+            cLib_addCalcAngleS(&current.angle.y, mMoveTargetAngleY, 5, 0xBB8, 0x64); // HD: HIO folded
             shape_angle.y = current.angle.y;
         }
         s16 turn = (s16)(current.angle.y - oldAngle);
@@ -855,10 +855,10 @@ BOOL daPy_lk_c::procCutTurnMove_init() {
         dComIfGp_getMiniGameType() != 2 && dComIfGp_getMiniGameType() != 6) {
         cXyz* scale = lk_checkNormalSwordEquip() ? nullptr : &l_swordEffectScale;
         Mtx34* mtx = lk_getAnmMtx(mpCLModel, Link08::CL_JNT_CL_LHANDA_e /* CL_JNT_CL_LHANDA_e */);
-        Link08_mtxFollow_makeEmitter(&m32E4, Link08::ID_AK_JN_CHARGEPOWER00, mtx, &current.pos,
+        Link08_mtxFollow_makeEmitter(&mProcEffectEcallBack0, Link08::ID_AK_JN_CHARGEPOWER00, mtx, &current.pos,
                                      scale);
         mtx = lk_getAnmMtx(mpCLModel, Link08::CL_JNT_CL_LHANDA_e);
-        Link08_mtxFollow_makeEmitter(&m32F0, Link08::ID_AK_JN_CHARGEPOWER01, mtx, &current.pos,
+        Link08_mtxFollow_makeEmitter(&mProcEffectEcallBack1, Link08::ID_AK_JN_CHARGEPOWER01, mtx, &current.pos,
                                      scale);
         mProcVar0 = 47;
     } else {
@@ -883,7 +883,7 @@ BOOL daPy_lk_c::procCutTurnCharge() {
 BOOL daPy_lk_c::procCutTurnMove() {
 
     Link08_setShapeAngleToAtnActor(this);
-    m34E6 = shape_angle.y;
+    mAtnShapeAngleY = shape_angle.y;
     if (0 < mProcVar0) {
         mProcVar0 = mProcVar0 - 1;
         if (mProcVar0 == 0) {
@@ -901,8 +901,8 @@ BOOL daPy_lk_c::procCutTurnMove() {
     } else if (mItemButton & 2) {
         f32 speed = 0.0f;
         if (mStickDistance > 0.05f) {
-            s16 target = m34E8;
-            int direction = Link08_getDirectionFromAngle(this, (s32)(s16)(target - m34E6));
+            s16 target = mMoveTargetAngleY;
+            int direction = Link08_getDirectionFromAngle(this, (s32)(s16)(target - mAtnShapeAngleY));
             u32 anm = 0xFFFF;
             cLib_addCalcAngleS(&current.angle.y, target, 4, 12000, 0x2000);
             if (mDirection == 0 /* DIR_FORWARD */ || mDirection == 1 /* DIR_BACKWARD */) {
@@ -990,7 +990,7 @@ BOOL daPy_lk_c::procCutReverse() {
 /* 02442990 */
 BOOL daPy_lk_c::procJumpCutLand_init() {
 
-    f32 fall = m35F0 - current.pos.y;
+    f32 fall = mFallStartY - current.pos.y;
     Link08_commonProcInit(this, Link08::daPyProc_JUMP_CUT_LAND_e);
     if (!dComIfGp_event_runCheck()) {
         // HD: HIO folded (100 * 60, 100 * 20); NaN counts as a long fall
@@ -1042,7 +1042,7 @@ BOOL daPy_lk_c::procJumpCut() {
 
     // HD: the spin-attack follow-up of procJumpCutLand is decided here (latched in
     // link08JumpCutFollowUp(this))
-    s32 v = m3578;
+    s32 v = mStickSpinAngle;
     if ((v < 0 ? -v : v) > 0xF800 && !lk_checkCurse() &&
         (mEquipItem == Link08::daPyItem_SWORD_e || mEquipItem == Link08::daPyItem_BOKO_e)) {
         link08JumpCutFollowUp(this) = 1;
@@ -1349,8 +1349,8 @@ void daPy_lk_c::setTactZev(u32 tactZevPartnerId, int r30, u32 r31) {
     if (tactZevPartnerId != 0xFFFFFFFF) {
         Link08_startSystemSound(Link08::JA_SE_PRE_TAKT);
     }
-    m34CC = (u8)r30;
-    m3494 = r31;
+    mTactZevMelodyNum = (u8)r30;
+    mTactZevEventName = r31;
     mTactZevPartnerId = tactZevPartnerId;
 }
 
@@ -1377,16 +1377,16 @@ void daPy_lk_c::voiceStart(u32 id) {
 /* 024438D4 */
 void daPy_lk_c::setOutPower(f32 power, s16 angle, int flag) {
 
-    f32 cur = m3644;
+    f32 cur = mOutPower;
     if (cur < 0.1f) {
-        m3640 = angle;
-        m3644 = power;
+        mOutPowerAngle = angle;
+        mOutPower = power;
     } else {
-        u16 old = (u16)m3640;
+        u16 old = (u16)mOutPowerAngle;
         f32 x = gabi::fmadds(cur, cM_ssin(old), gabi::fmuls_ppc(power, cM_ssin((u16)angle)));
         f32 z = gabi::fmadds(cur, cM_scos(old), gabi::fmuls_ppc(power, cM_scos((u16)angle)));
-        m3640 = cM_atan2s(x, z);
-        m3644 = std_sqrtf(gabi::fmadds(x, x, gabi::fmuls_ppc(z, z)));
+        mOutPowerAngle = cM_atan2s(x, z);
+        mOutPower = std_sqrtf(gabi::fmadds(x, x, gabi::fmuls_ppc(z, z)));
     }
     if (flag != 0) {
         setNoResetFlg1(noResetFlg1() | 0x10000000); /* onNoResetFlg1(daPyFlg1_UNK10000000) */
@@ -1511,18 +1511,18 @@ void daPy_lk_c::changeTextureAnime(u16 btpIdx, u16 btkIdx, int r7) {
         return;
     }
     if (r7 == -1) {
-        /* m_tex_anm_heap / m_tex_scroll_heap: field_0x4 (index), field_0x6 */
+        /* m_tex_anm_heap / m_tex_scroll_heap: mDemoIdx (index), mDemoAnmNo */
         Link08AnmHeap& tah = *reinterpret_cast<Link08AnmHeap*>(m_tex_anm_heap);
         Link08AnmHeap& tsh = *reinterpret_cast<Link08AnmHeap*>(m_tex_scroll_heap);
-        if (tah.field_0x4 != btpIdx || tah.field_0x6 != 0xFFFE) {
-            tah.field_0x4 = btpIdx;
-            tah.field_0x6 = 0xFFFE;
+        if (tah.mDemoIdx != btpIdx || tah.mDemoAnmNo != 0xFFFE) {
+            tah.mDemoIdx = btpIdx;
+            tah.mDemoAnmNo = 0xFFFE;
             u32 res = Link08_loadTextureAnimeResource(this, (u32)btpIdx, 0);
             Link08_setTextureAnimeResource(this, res, 0);
         }
-        if (tsh.field_0x4 != btkIdx || tsh.field_0x6 != 0xFFFE) {
-            tsh.field_0x4 = btkIdx;
-            tsh.field_0x6 = 0xFFFE;
+        if (tsh.mDemoIdx != btkIdx || tsh.mDemoAnmNo != 0xFFFE) {
+            tsh.mDemoIdx = btkIdx;
+            tsh.mDemoAnmNo = 0xFFFE;
             u32 res = Link08_loadTextureScrollResource(this, (u32)btkIdx, 0);
             Link08_setTextureScrollResource(this, res, 0);
         }
@@ -2204,7 +2204,7 @@ Mtx34* daPy_lk_c::getModelJointMtx_l(s32 jnt) {
 /* inlined into daPy_lk_c::setFlg8_02444F0C_l */
 inline void Link08Player::onFrollCrashFlg(u32 v) {
 
-    m3620 = v;
+    mFrollCrashMtrlSndId = v;
     mNoResetFlg0 = mNoResetFlg0 | 8;
 }
 

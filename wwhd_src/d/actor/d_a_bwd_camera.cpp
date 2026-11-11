@@ -194,15 +194,15 @@ static void demo_camera(bwd_class* i_this) {
             cLib_addCalcAngleS2(&i_this->mBlurRate, 1, 1, 1);
         }
         cLib_addCalc2(&i_this->mDemoCamCenter.x, actor->current.pos.x, 0.1f, 100.0f);
-        local_98->y = i_this->mTongueSegments[0].m04.y + REG0_F(10) + 200.0f;
-        fVar2 = (REG0_F(12) + 100.0f) + l_HIO.m28;
+        local_98->y = i_this->mTongueSegments[0].mPos.y + REG0_F(10) + 200.0f;
+        fVar2 = (REG0_F(12) + 100.0f) + l_HIO.mBaseHeight;
         if (local_98->y < fVar2) {
             local_98->y = fVar2;
         }
         cLib_addCalc2(&i_this->mDemoCamCenter.y, local_98->y, 0.1f, 100.0f);
         cLib_addCalc2(&i_this->mDemoCamCenter.z, actor->current.pos.z, 0.1f, 100.0f);
         cLib_addCalc2(&i_this->mDemoCamEye.x, actor->current.pos.x * 0.5f, 0.05f, 50.0f);
-        cLib_addCalc2(&i_this->mDemoCamEye.y, l_HIO.m28 + 100.0f + REG0_F(15) + 300.0f, 0.1f, 50.0f);
+        cLib_addCalc2(&i_this->mDemoCamEye.y, l_HIO.mBaseHeight + 100.0f + REG0_F(15) + 300.0f, 0.1f, 50.0f);
         cLib_addCalc2(&i_this->mDemoCamEye.z, (actor->current.pos.z + 2000.0f) + REG0_F(9), 0.05f, 50.0f);
         // HD: widen the late reveal and display its field of view.
         if (i_this->mDemoTimer > 550) {
@@ -259,15 +259,15 @@ static void demo_camera(bwd_class* i_this) {
         bd_GndChk_dt(gndChk.get());
     }
         cLib_addCalc2(&i_this->mDemoCamCenter.x, actor->current.pos.x, 0.1f, 100.0f);
-        local_98->y = i_this->mTongueSegments[0].m04.y + REG0_F(10) + 200.0f;
-        fVar2 = (REG0_F(12) + 100.0f) + l_HIO.m28;
+        local_98->y = i_this->mTongueSegments[0].mPos.y + REG0_F(10) + 200.0f;
+        fVar2 = (REG0_F(12) + 100.0f) + l_HIO.mBaseHeight;
         if (local_98->y < fVar2) {
             local_98->y = fVar2;
         }
         cLib_addCalc2(&i_this->mDemoCamCenter.y, local_98->y, 0.1f, 100.0f);
         cLib_addCalc2(&i_this->mDemoCamCenter.z, actor->current.pos.z, 0.1f, 100.0f);
         cLib_addCalc2(&i_this->mDemoCamEye.x, actor->current.pos.x, 0.05f, 50.0f);
-        cLib_addCalc2(&i_this->mDemoCamEye.y, l_HIO.m28 + 100.0f + REG0_F(15) + 300.0f, 0.1f, 50.0f);
+        cLib_addCalc2(&i_this->mDemoCamEye.y, l_HIO.mBaseHeight + 100.0f + REG0_F(15) + 300.0f, 0.1f, 50.0f);
         cLib_addCalc2(&i_this->mDemoCamEye.z, (actor->current.pos.z + 2200.0f) + REG0_F(9), 0.05f, 50.0f);
         cLib_addCalcAngleS2(&i_this->mBlurRate, 1, 1, 1);
         break;

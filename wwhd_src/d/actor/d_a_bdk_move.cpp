@@ -43,28 +43,28 @@ static inline void fly(bdk_class *i_this) {
         anm_init(i_this, dRes_INDEX_BDK_BCK_FLY1_e, 10.0f, 2, 1.0f, dRes_INDEX_BDK_BAS_FLY1_e, 0);
         i_this->mFlyAnm = 0;
     }
-    BdkMove_copyFloat(i_this->mTargetSpeed, BdkMove_hio().m020);
+    BdkMove_copyFloat(i_this->mTargetSpeed, BdkMove_hio().mFlySpeed);
     i_this->mSpeedStep = fadds_ppc(REG0_F(9), 1.0f);
     i_this->mTurnSpeed = 600.0f;
 
     switch ((u16)i_this->mState) {
     case 0: {
         u8 fc;
-        if (i_this->m2FC == 0) {
+        if (i_this->mFlyPoint == 0) {
             fc = (u8)gabi::ftoi(cM_rndF(2.99f));
-            i_this->m2FC = fc;
+            i_this->mFlyPoint = fc;
         } else if (cM_rndF(1.0f) < 0.8f) {
-            fc = i_this->m2FC;
+            fc = i_this->mFlyPoint;
             if (fc == 1) {
                 fc = 2;
-                i_this->m2FC = fc;
+                i_this->mFlyPoint = fc;
             } else if (fc == 2) {
                 fc = 1;
-                i_this->m2FC = fc;
+                i_this->mFlyPoint = fc;
             }
         } else {
             fc = 0;
-            i_this->m2FC = fc;
+            i_this->mFlyPoint = fc;
         }
         if (fc == 0) {
             actor->home.pos.x = fadds_ppc(REG0_F(0), 6500.0f);
@@ -118,7 +118,7 @@ static inline void fly(bdk_class *i_this) {
     }
     case 1:
         if (bdk_dist(i_this, &i_this->mTargetPos, &actor->current.pos) < 1500.0f) {
-            if (i_this->m2FC == 0 || cM_rndF(1.0f) < 0.3f || i_this->mFlyCount >= 4 || i_this->mMaskBreakStage < 2) {
+            if (i_this->mFlyPoint == 0 || cM_rndF(1.0f) < 0.3f || i_this->mFlyCount >= 4 || i_this->mMaskBreakStage < 2) {
                 i_this->mFlyCount = 0;
                 i_this->mAction = ACTION_LANDING;
                 i_this->mState = 0;
@@ -304,10 +304,10 @@ static inline void landing(bdk_class *i_this) {
     if (eff_hane_num != 0) {
         if (eff_hane_num <= 7) {
             if (!(i_this->mFrameCounter & eff_hane_num)) {
-                eff_hane_set(i_this, &i_this->m1168, 1, 0);
+                eff_hane_set(i_this, &i_this->mBodyCenter, 1, 0);
             }
         } else {
-            eff_hane_set(i_this, &i_this->m1168, eff_hane_num, 0);
+            eff_hane_set(i_this, &i_this->mBodyCenter, eff_hane_num, 0);
         }
     }
 }
@@ -440,7 +440,7 @@ static inline void wait(bdk_class *i_this) {
             i_this->mTurnSpeed = 100.0f; /* HD: 100 (GameCube REG0_F(0) + 800) */
         }
         if (i_this->mTimers[0] == 0 && i_this->mFlyAnm == 3) {
-            u8 mode = BdkMove_hio().m014;
+            u8 mode = BdkMove_hio().mForceAttack;
             if (mode != 0) {
                 if (mode == 1) {
                     i_this->mAction = ACTION_KUTI_ATTACK;
@@ -466,7 +466,7 @@ static inline void wait(bdk_class *i_this) {
                     i_this->mState = 0;
                 } else if (dist < fadds_ppc(REG0_F(15), 1300.0f)) {
                     i_this->mState = 2;
-                    anm_init(i_this, dRes_INDEX_BDK_BCK_WALK1_e, 3.0f, 2, BdkMove_hio().m01C,
+                    anm_init(i_this, dRes_INDEX_BDK_BCK_WALK1_e, 3.0f, 2, BdkMove_hio().mWalkAnmSpeed,
                              dRes_INDEX_BDK_BAS_WALK1_e, 0);
                     i_this->mTurnSpeedRate = 0.0f;
                     actor->speedF = 0.0f;
@@ -483,7 +483,7 @@ static inline void wait(bdk_class *i_this) {
         }
         break;
     case 2:
-        BdkMove_copyFloat(i_this->mTargetSpeed, BdkMove_hio().m018);
+        BdkMove_copyFloat(i_this->mTargetSpeed, BdkMove_hio().mWalkSpeed);
         i_this->mSpeedStep = 1.0f;
         if (dist < fadds_ppc(REG0_F(12), 530.0f) || dist > 1350.0f) {
             i_this->mState = 1;
@@ -598,7 +598,7 @@ static inline void jida_attack(bdk_class *i_this) {
         /* fall through */
     case 1: {
         if (!(i_this->mFrameCounter & 7)) {
-            eff_hane_set(i_this, &i_this->m1168, 1, 0);
+            eff_hane_set(i_this, &i_this->mBodyCenter, 1, 0);
         }
         i_this->mAttackPart = 2;
         s32 frame = gabi::ftoi(i_this->mpMorf->getFrame());
@@ -649,7 +649,7 @@ static inline void kuti_attack(bdk_class *i_this) {
     dComIfGp_get(); /* HD: an unused play-object read */
     s8 bVar1 = 0;
     s8 bVar2 = 0;
-    i_this->m1134 = 2500;
+    i_this->mTosakaWobbleTarget = 2500;
     switch ((u16)i_this->mState) {
     case 0:
         anm_init(i_this, dRes_INDEX_BDK_BCK_ATTACK1_e, 5.0f, 0, 1.0f, dRes_INDEX_BDK_BAS_ATTACK1_e, 0);
@@ -661,7 +661,7 @@ static inline void kuti_attack(bdk_class *i_this) {
             i_this->mAttackPart = 1;
         }
         if ((s16)(REG0_S(5) + 0x1E) == (s16)gabi::ftoi(i_this->mpMorf->getFrame())) {
-            i_this->m1138 = (s16)(REG0_S(6) + 0x1E);
+            i_this->mTosakaHitTimer = (s16)(REG0_S(6) + 0x1E);
             i_this->mHitAngleY = 0;
             bdk_seStart_a(actor, JA_SE_CM_DK_ATTACK, 0);
             bdk_StartShock(6);
@@ -675,7 +675,7 @@ static inline void kuti_attack(bdk_class *i_this) {
             MtxPosition(vec1, &BDK_EFF27.mPos);
             PSVECAdd(&BDK_EFF27.mPos, &actor->current.pos, &BDK_EFF27.mPos);
             dComIfGp_particle_set(ID_IT_SN_DK_KUTI_SENKO00, &BDK_EFF27.mPos, nullptr, nullptr, 0xFF);
-            eff_hane_set(i_this, &i_this->m1168, 5, 0);
+            eff_hane_set(i_this, &i_this->mBodyCenter, 5, 0);
             bVar2 = 1;
         }
         if (i_this->mpMorf->isStop()) {
@@ -706,7 +706,7 @@ static inline void kuti_attack(bdk_class *i_this) {
             i_this->mpMorf->setPlaySpeed(1.0f);
             i_this->mState = 5;
             bdk_se_pair(actor, JA_SE_CM_DK_JITABATA, JA_SE_CV_DK_NUKEZU);
-            eff_hane_set(i_this, &i_this->m1168, 2, 0);
+            eff_hane_set(i_this, &i_this->mBodyCenter, 2, 0);
         }
         break;
     case 10:
@@ -718,7 +718,7 @@ static inline void kuti_attack(bdk_class *i_this) {
                 i_this->mState = 5;
                 bdk_se_pair(actor, JA_SE_CM_DK_JITABATA, JA_SE_CV_DK_NUKEZU);
             }
-            eff_hane_set(i_this, &i_this->m1168, 2, 0);
+            eff_hane_set(i_this, &i_this->mBodyCenter, 2, 0);
         }
         break;
     default:

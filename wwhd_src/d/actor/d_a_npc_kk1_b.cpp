@@ -153,7 +153,7 @@ bool daNpc_Kk1_c::cut_init_RUN_START(int staffIdx) {
     gabi::Local<be<s32>> res;
     fopAc_ac_c* a_actor = searchByID(state.mPartnerId, res);
     if (a_actor == nullptr) /* JUT_ASSERT(1420, a_actor != NULL) */
-        JUT_ASSERT_fail("d_a_npc_kk1.cpp", 0x58C, "a_actor != NULL");
+        JUT_ASSERT_fail("d_a_npc_kk1.cpp", 0x58C, "a_actor != (0)");
     dEvt_control_c* event = dComIfGp_getEvent();
     event->mPtItem = kk1EventActorId(event, a_actor);
     return kk1PathNext(&mPathRun);
@@ -822,7 +822,7 @@ data debugBlue 101FEBF8
 data debugBlueInitial 1001C234
 
 str 1001C4A0 "d_a_npc_kk1.cpp" in 0226CC80
-str 1001C4B0 "a_actor != NULL" in 0226CC80
+str 1001C4B0 "a_actor != (0)" in 0226CC80
 str 1001C4C0 "Timer" in 0226CD04
 str 1001C4E0 "Timer" in 0226D0E8
 str 1001C4E8 "Delay" in 0226D0E8

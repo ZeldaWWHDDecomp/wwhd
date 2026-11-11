@@ -13,7 +13,7 @@ struct Model : J3DModel {
     void setBaseTRMtx(const Mtx34* matrix) { mtx_copy(&mBaseTransformMtx, matrix); }
 };
 struct SmokeCallback : dPa_smokeEcallBack {
-    bool isEnd() { return (m10 & 1) != 0; }
+    bool isEnd() { return (mFlag & 1) != 0; }
 };
 WWHD_SIZE(Model, 0x144);  /* = J3DModel */
 WWHD_SIZE(SmokeCallback, 0x20);

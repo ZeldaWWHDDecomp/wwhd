@@ -159,26 +159,26 @@ void daPz_c::createInit() {
         mEnemyFire.mFlameJntIdxs[i] = fire_j[i];   /* fire_j */
         mEnemyFire.mParticleScale[i] = fire_sc[i]; /* fire_sc */
     }
-    m08B0 = 0;
+    mBattlePhase = 0;
     mEventIce.mWallRadius = 50.0f;
-    mEventIce.m00C = 1;
+    mEventIce.mFreezeType = 1;
     mEventIce.mpActor = this;
     mEventIce.mCylHeight = 250.0f;
-    m0F80 = 0;
-    m0F7C = l_HIO.mTalkWaitTime[0];
+    mAutoTalkOff = 0;
+    mTalkWaitTimer = l_HIO.mTalkWaitTime[0];
     bodyCreateInit();
     be<u32>& attnFlags = attention_info.flags; /* attention_info.flags */
     if (mArg == 0) {
-        m0F88 = 1;
+        mHasBow = 1;
         modeProc(PROC_INIT_e, MODE_MOVE);
         attention_info.distances[1] = 3; /* attention_info.distances[fopAc_Attn_TYPE_TALK_e] */
-        m0920 = 1;
+        mCircleDir = 1;
         attnFlags |= 0xA;
         attention_info.distances[3] = 3; /* attention_info.distances[fopAc_Attn_TYPE_SPEAK_e] */
     } else {
         attnFlags = 0xA;
         modeProc(PROC_INIT_e, MODE_WAIT);
-        m0920 = 1;
+        mCircleDir = 1;
     }
     cullMtx = gabi::ea(J3DModel_getBaseTRMtx(mpMorf->getModel())); /* fopAcM_SetMtx */
     fopAcM_setCullSizeBox(this, -60.0f, -50.0f, -60.0f, 60.0f, 1800.0f, 60.0f);
@@ -331,13 +331,13 @@ void daPz_c::setAttention() {
     eyePos.copy(mEyePos2);
     attnPos->y = attnPos->y + l_HIO.mAttentionYOffset;
     cXyz d;
-    cXyz_mi(&mEyePos2, &d, &m08C4);
+    cXyz_mi(&mEyePos2, &d, &mTargetPos);
     cXyz xz;
     xz.x = d.x;
     xz.y = 0.0f;
     xz.z = d.z;
     pzSqrtf_d(PSVECSquareMag(&xz)); /* absXZ: result unused */
-    s16 target = cLib_targetAngleY(&mEyePos2, &m08C4);
+    s16 target = cLib_targetAngleY(&mEyePos2, &mTargetPos);
     cLib_distanceAngleS(shape_angle.y, target); /* result unused */
     s16 speed;
     if (!m_jnt.mbTrn)
@@ -351,7 +351,7 @@ void daPz_c::setAttention() {
     eye.x = mEyePos2.x;
     eye.y = mEyePos2.y;
     eye.z = mEyePos2.z;
-    pzLookAtTarget(&m_jnt, &shape_angle.y, &m08C4, &eye, shape_angle.y, mLookTurnSpeed, mbHeadOnly);
+    pzLookAtTarget(&m_jnt, &shape_angle.y, &mTargetPos, &eye, shape_angle.y, mLookTurnSpeed, mbHeadOnly);
 }
 
 // HD: The texture transform has its own initialization entry point.
@@ -389,11 +389,11 @@ u16 daPz_c::next_msgStatus(be<u32>* i_msgNo) {
 u32 daPz_c::getMsg() {
 
     u32 msgNo = PZ_MSG_FIRST;
-    if (m08B0 == 0) {
+    if (mBattlePhase == 0) {
         msgNo = PZ_MSG_FIRST;
-    } else if (m08B0 == 2) {
-        if (m0F65 == 0) {
-            m0F65 = 1;
+    } else if (mBattlePhase == 2) {
+        if (mAdviceGiven == 0) {
+            mAdviceGiven = 1;
             msgNo = PZ_MSG_ADVICE;
         } else {
             msgNo = PZ_MSG_REPEAT;

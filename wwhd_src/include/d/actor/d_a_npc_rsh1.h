@@ -46,29 +46,29 @@ WWHD_OFFSET(RshShopItems, mNumItems, 0x40);
 
 /* ShopCursor_c: only the members the NPCs touch (show/hide flag +0xB4, setScale +0x98..+0xB0) */
 struct RshShopCursor : ShopCursor_c {
-    void show() { m54 = 1; }
-    void hide() { m54 = 0; }
+    void show() { mbShow = 1; }
+    void hide() { mbShow = 0; }
     void setPos(cXyz* p) { gabi::call(0x025BD31C, this, p); }   /* 025BD31C (cXyz&) */
     void anm_play() { gabi::call(0x025BD290, this); }           /* 025BD290 */
     void draw() { gabi::call(0x025BD338, this); }               /* 025BD338 */
 };
 
 WWHD_SIZE(RshShopCursor, 0xB8);
-WWHD_OFFSET(RshShopCursor, m54, 0xB4);
+WWHD_OFFSET(RshShopCursor, mbShow, 0xB4);
 
 /* daNpc_Rsh1_HIO_c (HD 0x6C, l_HIO at 0x104685A0; vtable at the end) */
 struct daNpc_Rsh1_HIO_c {
     /* 0x00 */ be<s8> mNo;
     /* 0x01 */ u8 _01[3];
-    /* 0x04 */ be<s32> m08;
+    /* 0x04 */ be<s32> mRefCount;  /* was m08: _create 022D7998 creates the HIO child while it is < 0, then adds 1; _delete 022D7BF4 subtracts 1 and deletes the child when it falls below 0; daNpc_Rsh1_HIO_ct 022DB690 sets -1 (tww the same); named after daNpc_Ac1_HIO_c / daNpc_Jb1 HIO mRefCount (same code) */
     /* 0x08 */ dNpc_HIO_c mNpcHIO;
-    /* 0x30 */ be<f32> m34;
-    /* 0x34 */ be<f32> m38;
-    /* 0x38 */ be<f32> m3C;
-    /* 0x3C */ be<f32> m40;
-    /* 0x40 */ be<f32> m44;
-    /* 0x44 */ be<f32> m48;
-    /* 0x48 */ be<f32> m4C;
+    /* 0x30 */ be<f32> mCursorScale;  /* was m34: CreateHeap 022D6CC4 passes it as ShopCursor_create's scale; lookBack 022D83A8 passes it to the cursor's setScale as mPieceScale; HIO ctor 1.0 (tww the same) */
+    /* 0x34 */ be<f32> mCursorScaleYFar;  /* was m38: lookBack 022D83A8: the cursor's setScale argument stored as ShopCursor_c::mPieceScaleYFar; HIO ctor 0.9 (tww the same) */
+    /* 0x38 */ be<f32> mCursorScaleYNear;  /* was m3C: lookBack 022D83A8: the cursor's setScale argument stored as ShopCursor_c::mPieceScaleYNear; HIO ctor 0.5 (tww the same) */
+    /* 0x3C */ be<f32> mCursorDistFar;  /* was m40: lookBack 022D83A8: the cursor's setScale argument stored as ShopCursor_c::mPieceDistFar; HIO ctor 40 (tww the same) */
+    /* 0x40 */ be<f32> mCursorDistNear;  /* was m44: lookBack 022D83A8: the cursor's setScale argument stored as ShopCursor_c::mPieceDistNear; HIO ctor 30 (tww the same) */
+    /* 0x44 */ be<f32> mMoveSpeed;  /* was m48: shopPosMove 022D8E84 and pathMove 022D9F74: the step of cLib_chasePosXZ towards the shop position / next path point; HIO ctor 7.5 (tww the same) */
+    /* 0x48 */ be<f32> mAimSearchDist;  /* was m4C: getAimShopPosIdx 022D9E04: the starting distance of the search for the path point nearest to Link (only points closer than it count; then the nearest one's distance); HIO ctor 1300 (tww the same) */
     /* 0x4C */ be<f32> mCylR1;
     /* 0x50 */ be<f32> mCylR2;
     /* 0x54 */ be<f32> mCylH;

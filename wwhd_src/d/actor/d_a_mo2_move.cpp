@@ -150,10 +150,10 @@ static inline void jyunkai(mo2_class *i_this) {
     f32 dVar12;
     if (has_weapon(i_this)) {
       maxSpeed = 0x400;
-      dVar12 = moveHIO.m050;
+      dVar12 = moveHIO.mPatrolSpeedArmed;
     } else {
       maxSpeed = 0x1000;
-      dVar12 = moveHIO.m054;
+      dVar12 = moveHIO.mPatrolSpeedUnarmed;
     }
     f32 x = i_this->mPathTargetPos.x - i_this->actor.current.pos.x;
     f32 z = i_this->mPathTargetPos.z - i_this->actor.current.pos.z;
@@ -248,10 +248,10 @@ static inline void jyunkai(mo2_class *i_this) {
   s32 iVar6 = fopAcM_otoCheck(&i_this->actor, 1000.0f);
   iVar6 += moveSearchSpecial;
   if (has_weapon(i_this)) {
-    if (iVar6 != 0 || (i_this->mTargetDist < moveHIO.m02C &&
+    if (iVar6 != 0 || (i_this->mTargetDist < moveHIO.mSearchDist &&
                        daMo2_player_view_check(
                            i_this, &i_this->mDamageReaction.mpLookTarget->current.pos,
-                           i_this->mTargetAngleY, moveHIO.m038))) {
+                           i_this->mTargetAngleY, moveHIO.mViewAngle))) {
       if (i_this->mMode == 1) {
         i_this->mDamageReaction.mAction = ACTION_NAGE;
         if (moveJailMode != 0) {
@@ -355,14 +355,14 @@ static inline bool fight_run(mo2_class *i_this) {
     f32 target;
     f32 fVar10 = 20.0f;
     if (i_this->mDashFrames != 0) {
-      target = moveHIO.m06C;
-      i_this->mSmokeTimer = moveHIO.m024 + 4;
+      target = moveHIO.mDashSpeed;
+      i_this->mSmokeTimer = moveHIO.mSmokeTimerBase + 4;
       i_this->mSmokeType = 4;
     } else {
       if (has_weapon(i_this)) {
-        target = moveHIO.m058;
+        target = moveHIO.mRunSpeedArmed;
       } else {
-        target = moveHIO.m05C;
+        target = moveHIO.mRunSpeedUnarmed;
       }
       fVar10 = 5.0f;
     }
@@ -378,7 +378,7 @@ static inline bool fight_run(mo2_class *i_this) {
         i_this->mDashStopTimer = 0;
         fight_run_set(i_this);
       }
-      if (i_this->mDashStopTimer == 0 && i_this->mTargetDist < moveHIO.m030) {
+      if (i_this->mDashStopTimer == 0 && i_this->mTargetDist < moveHIO.mFightDist) {
         i_this->mDamageReaction.mMode = 2;
         i_this->mTimers[4] = 0x32;
       }
@@ -386,14 +386,14 @@ static inline bool fight_run(mo2_class *i_this) {
       if (i_this->mDashFrames == 0 && i_this->mbHasInnateWeapon != 0) {
         i_this->mDashFrames = 1;
         anm_init(i_this, dRes_INDEX_MO2_BCK_DASH_e, 5.0f,
-                 J3DFrameCtrl::EMode_LOOP, moveHIO.m070,
+                 J3DFrameCtrl::EMode_LOOP, moveHIO.mDashAnmSpeed,
                  dRes_INDEX_MO2_BAS_DASH_e);
       }
       if (i_this->mDashFrames != 0) {
         i_this->mDashFrames = i_this->mDashFrames + 1;
       }
       // HD: also limit the target height difference.
-      if (i_this->mDashStopTimer == 0 && i_this->mTargetDist < moveHIO.m034 &&
+      if (i_this->mDashStopTimer == 0 && i_this->mTargetDist < moveHIO.mAttackDist &&
           i_this->mTargetDistY < REG_F(10, 3) + 250.0f) {
         i_this->mDamageReaction.mAction = ACTION_FIGHT;
         i_this->mDamageReaction.mMode = 0;
@@ -424,7 +424,7 @@ static inline bool fight_run(mo2_class *i_this) {
         } else {
           i_this->mDamageReaction.mMode = 6;
         }
-      } else if (i_this->mTargetDist < moveHIO.m034) {
+      } else if (i_this->mTargetDist < moveHIO.mAttackDist) {
         if (has_weapon(i_this)) {
           anm_init(i_this, dRes_INDEX_MO2_BCK_BWALKFB_e, 10.0f,
                    J3DFrameCtrl::EMode_LOOP, -1.0f,
@@ -451,14 +451,14 @@ static inline bool fight_run(mo2_class *i_this) {
     }
     break;
   case 3:
-    cLib_addCalc2(&i_this->actor.speedF, moveHIO.m064, 1.0f, 20.0f);
+    cLib_addCalc2(&i_this->actor.speedF, moveHIO.mStrafeSpeed, 1.0f, 20.0f);
     if (i_this->mTimers[1] == 0) {
       i_this->mDamageReaction.mMode = 2;
     }
     break;
   case 4:
     if (i_this->mGroundCheck != 2) {
-      cLib_addCalc2(&i_this->actor.speedF, -moveHIO.m064, 1.0f, 20.0f);
+      cLib_addCalc2(&i_this->actor.speedF, -moveHIO.mStrafeSpeed, 1.0f, 20.0f);
       if (i_this->mTimers[1] == 0) {
         i_this->mDamageReaction.mMode = 2;
       }
@@ -489,7 +489,7 @@ static inline bool fight_run(mo2_class *i_this) {
       i_this->mDamageReaction.mMode = 5;
       i_this->mMoveAngleOffset = 0x4000;
     }
-    cLib_addCalc2(&i_this->actor.speedF, moveHIO.m068, 1.0f, 30.0f);
+    cLib_addCalc2(&i_this->actor.speedF, moveHIO.mSideStepSpeed, 1.0f, 30.0f);
     if (i_this->mTimers[1] == 0) {
       i_this->mDamageReaction.mMode = 2;
     }
@@ -502,13 +502,13 @@ static inline bool fight_run(mo2_class *i_this) {
     }
   }
   if (i_this->mDamageReaction.mMode >= 3 && i_this->mSideStepTimer <= 2) {
-    if (i_this->mTargetDist > moveHIO.m030 + 75.0f) {
+    if (i_this->mTargetDist > moveHIO.mFightDist + 75.0f) {
       to_jyunkai(i_this, 0);
     }
-    if (i_this->mTargetDist < moveHIO.m034 + 62.5f &&
-        i_this->mTargetDist > moveHIO.m034 - 62.5f && i_this->mTimers[4] == 0) {
-      i_this->mTimers[4] = moveHIO.m074;
-      if (cM_rndF(100.0f) < moveHIO.m078 &&
+    if (i_this->mTargetDist < moveHIO.mAttackDist + 62.5f &&
+        i_this->mTargetDist > moveHIO.mAttackDist - 62.5f && i_this->mTimers[4] == 0) {
+      i_this->mTimers[4] = moveHIO.mAttackCheckWait;
+      if (cM_rndF(100.0f) < moveHIO.mAttackChance &&
           i_this->mTargetDistY <
               REG_F(10, 3) +
                   250.0f) { // HD: also limit the target height difference.
@@ -531,14 +531,14 @@ static inline bool fight_run(mo2_class *i_this) {
       }
     }
   }
-  if (i_this->mbHasInnateWeapon != 0 && i_this->mTargetDist < moveHIO.m034 - 62.5f &&
+  if (i_this->mbHasInnateWeapon != 0 && i_this->mTargetDist < moveHIO.mAttackDist - 62.5f &&
       i_this->mTargetDistY <
           REG_F(10, 3) +
               250.0f && // HD: target height also limits this transition.
 
       daMo2_player_view_check(i_this,
                               &i_this->mDamageReaction.mpLookTarget->current.pos,
-                              i_this->mTargetAngleY, moveHIO.m038)) {
+                              i_this->mTargetAngleY, moveHIO.mViewAngle)) {
     i_this->mOshiCount++;
     if (i_this->mOshiCount >= 0xF && cM_rndF(1.0f) < 0.5f) {
       i_this->mOshiCount = 0;
@@ -693,46 +693,46 @@ static inline void fight(mo2_class *i_this) {
       } else {
         i_this->actor.speedF = -30.0f;
       }
-      i_this->mSmokeTimer = moveHIO.m024 + 3;
+      i_this->mSmokeTimer = moveHIO.mSmokeTimerBase + 3;
       i_this->mSmokeType = 4;
     }
     if (i_this->mAttackFrame > i_this->mLookStartFrame &&
         daMo2_player_view_check(i_this,
                                 &i_this->mDamageReaction.mpLookTarget->current.pos,
-                                i_this->mTargetAngleY, moveHIO.m038)) {
+                                i_this->mTargetAngleY, moveHIO.mViewAngle)) {
       i_this->mDamageReaction.mLookMode = 1;
     }
     if (i_this->mAttackDir > 0) {
       if (i_this->mAttackKind == 1) {
-        s32 r3 = moveHIO.m0D8 + moveHIO.m0DA + moveHIO.m0DC + moveHIO.m0DE;
+        s32 r3 = moveHIO.mAttack1BlurStart + moveHIO.mAttack1BlurPreLen + moveHIO.mAttack1BlurBLen + moveHIO.mAttack1BlurPostLen;
         s32 t = gabi::ftoi(i_this->mAttackFrame);
-        if (t >= moveHIO.m0D8 && t <= r3) {
+        if (t >= moveHIO.mAttack1BlurStart && t <= r3) {
           i_this->mBlurOn = 1;
           t = gabi::ftoi(i_this->mAttackFrame);
-          if (t >= moveHIO.m0D8 + moveHIO.m0DA &&
-              t < moveHIO.m0DC + (moveHIO.m0D8 + moveHIO.m0DA)) {
+          if (t >= moveHIO.mAttack1BlurStart + moveHIO.mAttack1BlurPreLen &&
+              t < moveHIO.mAttack1BlurBLen + (moveHIO.mAttack1BlurStart + moveHIO.mAttack1BlurPreLen)) {
             i_this->mBlurUseB = 1;
             t = gabi::ftoi(i_this->mAttackFrame);
           }
-          s32 iVar6 = t - moveHIO.m0D8;
+          s32 iVar6 = t - moveHIO.mAttack1BlurStart;
           if (iVar6 < 10) {
-            i_this->mBlurScaleX = moveHIO.m0E0[iVar6];
+            i_this->mBlurScaleX = moveHIO.mAttack1BlurScaleX[iVar6];
           }
         }
       } else if (i_this->mAttackKind == 2) {
-        s32 r3 = moveHIO.m108 + moveHIO.m10A + moveHIO.m10C + moveHIO.m10E;
+        s32 r3 = moveHIO.mAttack2BlurStart + moveHIO.mAttack2BlurPreLen + moveHIO.mAttack2BlurBLen + moveHIO.mAttack2BlurPostLen;
         s32 t = gabi::ftoi(i_this->mAttackFrame);
-        if (t >= moveHIO.m108 && t <= r3) {
+        if (t >= moveHIO.mAttack2BlurStart && t <= r3) {
           i_this->mBlurOn = 1;
           t = gabi::ftoi(i_this->mAttackFrame);
-          if (t >= moveHIO.m108 + moveHIO.m10A &&
-              t < moveHIO.m10C + (moveHIO.m108 + moveHIO.m10A)) {
+          if (t >= moveHIO.mAttack2BlurStart + moveHIO.mAttack2BlurPreLen &&
+              t < moveHIO.mAttack2BlurBLen + (moveHIO.mAttack2BlurStart + moveHIO.mAttack2BlurPreLen)) {
             i_this->mBlurUseB = 1;
             t = gabi::ftoi(i_this->mAttackFrame);
           }
-          s32 iVar6 = t - moveHIO.m108;
+          s32 iVar6 = t - moveHIO.mAttack2BlurStart;
           if (iVar6 < 10) {
-            i_this->mBlurScaleX = moveHIO.m110[iVar6];
+            i_this->mBlurScaleX = moveHIO.mAttack2BlurScaleX[iVar6];
           }
         }
       }
@@ -742,20 +742,20 @@ static inline void fight(mo2_class *i_this) {
       /* `>=` written as !(<): GHS branches on the negated comparison (NaN) */
       if (!(i_this->mAttackFrame < br) && !(i_this->mAttackFrame > br + 2.0f) &&
           i_this->mAttackKind == 2) {
-        i_this->mSmokeTimer = moveHIO.m024 + 0x10;
+        i_this->mSmokeTimer = moveHIO.mSmokeTimerBase + 0x10;
         i_this->mSmokeType = 0;
         i_this->mSmokeAngleY = i_this->actor.current.angle.y + REG0_S(8) + 0x2000;
       }
     }
     if (i_this->mAttackKind == 1 && !(i_this->mAttackFrame < 31.0f) &&
         !(i_this->mAttackFrame > 32.1f)) {
-      i_this->mSmokeTimer = moveHIO.m024 + 8;
+      i_this->mSmokeTimer = moveHIO.mSmokeTimerBase + 8;
       i_this->mSmokeType = 2;
       s32 reverb = dComIfGp_getReverb(fopAcM_GetRoomNo(&i_this->actor));
       mDoAud_seStart(JA_SE_CM_LANCE_HIT_FLOOR, &i_this->mSpearHeadPos, 0, reverb);
     }
     if (i_this->mAttackKind == 2 && i_this->mTimers[2] == 1) {
-      i_this->mSmokeTimer = moveHIO.m024 + 4;
+      i_this->mSmokeTimer = moveHIO.mSmokeTimerBase + 4;
       i_this->mSmokeType = 4;
     }
     if (fopAcM_searchPlayerDistance(&i_this->actor) < 500.0f) {
@@ -772,7 +772,7 @@ static inline void fight(mo2_class *i_this) {
             i_this->mAttackKind != 3) {
           i_this->mpMorf->setPlaySpeed(-1.0f);
           if (i_this->mSmokeTimer != 0) {
-            i_this->mSmokeTimer = moveHIO.m024 + 6;
+            i_this->mSmokeTimer = moveHIO.mSmokeTimerBase + 6;
           }
           i_this->mAttackDir = -1;
           i_this->mpMorf->play(&i_this->actor.eyePos, 0, 0);
@@ -788,7 +788,7 @@ static inline void fight(mo2_class *i_this) {
           i_this->mpMorf->setPlaySpeed(-1.0f);
           i_this->mBlurOn = 0;
           if (i_this->mSmokeTimer != 0) {
-            i_this->mSmokeTimer = moveHIO.m024 + 6;
+            i_this->mSmokeTimer = moveHIO.mSmokeTimerBase + 6;
           }
           i_this->mAttackDir = -1;
           i_this->mpMorf->play(&i_this->actor.eyePos, 0, 0);
@@ -799,10 +799,10 @@ static inline void fight(mo2_class *i_this) {
         i_this->mSideStepTimer = 0x10;
         gabi::Local<cXyz> local_38;
         local_38->x = local_38->y = local_38->z = 1.0f;
-        dComIfGp_particle_set(0xC /* ID_AK_JN_NG */, &i_this->m2934, nullptr,
+        dComIfGp_particle_set(0xC /* ID_AK_JN_NG */, &i_this->mClangEffectPos, nullptr,
                               local_38);
         s32 reverb = dComIfGp_getReverb(fopAcM_GetRoomNo(&i_this->actor));
-        mDoAud_seStart(JA_SE_LK_ROPE_HOOK_METAL, &i_this->m2934, 0, reverb);
+        mDoAud_seStart(JA_SE_LK_ROPE_HOOK_METAL, &i_this->mClangEffectPos, 0, reverb);
       }
     }
     if (i_this->mpMorf->isStop()) {
@@ -816,10 +816,10 @@ static inline void fight(mo2_class *i_this) {
         } else if (i_this->mHitActorId != fpcM_ERROR_PROCESS_ID_e) {
           i_this->mDamageReaction.mAction = ACTION_AITE_MIRU;
           i_this->mDamageReaction.mMode = 0;
-        } else if (i_this->mTargetDist < moveHIO.m030) {
+        } else if (i_this->mTargetDist < moveHIO.mFightDist) {
           if (daMo2_player_view_check(
                   i_this, &i_this->mDamageReaction.mpLookTarget->current.pos,
-                  i_this->mTargetAngleY, moveHIO.m038)) {
+                  i_this->mTargetAngleY, moveHIO.mViewAngle)) {
             if (cM_rndF(1.0f) < 0.5f || i_this->mAttackDir < 0) {
               i_this->mDamageReaction.mAction = ACTION_FIGHT_RUN;
               i_this->mDamageReaction.mMode = 2;
@@ -904,7 +904,7 @@ static void Mo2_move(mo2_class *i_this) {
     } else {
       i_this->mDamageReaction.mTurnTargetY = i_this->mTargetAngleY;
       i_this->actor.speedF = -30.0f;
-      i_this->mSmokeTimer = moveHIO.m024 + 3;
+      i_this->mSmokeTimer = moveHIO.mSmokeTimerBase + 3;
       i_this->mSmokeType = 4;
     }
   } else {

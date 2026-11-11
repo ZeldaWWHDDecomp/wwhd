@@ -1,5 +1,6 @@
 /* Tree collision, animation and HD native rendering. Verified against the original unit. */
 #include "d/d_tree.h"
+#include "sead/ElementAt.h"
 #include <cmath>
 using namespace gabi;
 static const f32 compilerPiMin = -3.1415927410125732f;
@@ -71,7 +72,7 @@ static bool tree_ensureAnm(u32 a) {
     u32 p = (at<TreeGameView>(game)->mpTree.v) + (u32)index * 0x84;
     game = getGameInfo();
     s32 next = newAnimation(at<void>((at<TreeGameView>(game)->mpTree.v)),
-                            (s32)(s16)(u16)(at<dTree_anm_c>(p + 10908)->field_0x02));
+                            (s32)(s16)(u16)(at<dTree_anm_c>(p + 10908)->mTrunkAngleY));
     if (next < 0)
         return false;
     at<dTree_data_c>(a)->mAnimIdx = next;
@@ -255,9 +256,9 @@ static void tree_setShape(u32 record, u32 flag, u32 index, u32 stride) {
 static void tree_drawIndexed(u32 p) {
     u32 count = (at<TreeIndexBuffer>(p)->mCount);
     if (count)
-        GX2DrawIndexedEx((at<TreeIndexBuffer>(p)->mPrimitive), count,
-                         (at<TreeIndexBuffer>(p)->mIndexType),
-                         at<void>((at<TreeIndexBuffer>(p)->mpIndices.v)), 0, 1);
+        GX2DrawIndexedEx((at<TreeIndexBuffer>(p)->mPrimitiveMode), count,
+                         (at<TreeIndexBuffer>(p)->mFormat),
+                         at<void>((at<TreeIndexBuffer>(p)->mStorage.v)), 0, 1);
 }
 
 /* inlined into TreePacketState::prepareRender */
@@ -457,7 +458,7 @@ f64 Tree_checkGroundY(u32 ignored, cXyz* pos) {
 /* 025C65CC */
 void dTree_data_c::WorkCo(TreeActorView* actor, u32 unused, u32 room) {
     u32 actorAddr = ea(actor);
-    if ((field_0x001))
+    if ((mCut))
         return;
     s32 index = (s8)(mAnimIdx);
     if (index < 8) {
@@ -466,7 +467,7 @@ void dTree_data_c::WorkCo(TreeActorView* actor, u32 unused, u32 room) {
         u32 anm = (at<TreeGameView>(game)->mpTree.v) + (u32)index * 0x84;
         game = getGameInfo();
         s32 next = newAnimation(at<void>((at<TreeGameView>(game)->mpTree.v)),
-                                (s32)(s16)(u16)at<dTree_anm_c>(anm + 0x2A9C)->field_0x02);
+                                (s32)(s16)(u16)at<dTree_anm_c>(anm + 0x2A9C)->mTrunkAngleY);
         if (next < 0)
             return;
         mAnimIdx = next;
@@ -490,7 +491,7 @@ void dTree_data_c::WorkCo(TreeActorView* actor, u32 unused, u32 room) {
     speed = fsubs_ppc(speed, minimum) >= 0 ? minimum : speed;
     f32 strength = fmuls_ppc(speed, cos);
     if (std::fabs((at<dTree_anm_c>(anm)->mAnimTimer)) < std::fabs(strength)) {
-        at<dTree_anm_c>(anm)->field_0x0a = angle;
+        at<dTree_anm_c>(anm)->mCutAngleY = angle;
         at<dTree_anm_c>(anm)->mAnimTimer = strength;
     }
 }
@@ -501,7 +502,7 @@ void dTree_data_c::WorkAt_NoCutAnim(TreeActorView* actor, u32 unused, u32 room, 
                                     TreeAttackView* hit) {
     u32 actorAddr = ea(actor);
     u32 a = ea(this);
-    if ((field_0x001) || !tree_ensureAnm(a))
+    if ((mCut) || !tree_ensureAnm(a))
         return;
     u32 obj = dCcD_GetGObjInf(hit);
     cXyz vel;
@@ -539,7 +540,7 @@ void dTree_data_c::WorkAt_NoCutAnim(TreeActorView* actor, u32 unused, u32 room, 
                 f32 strength = fmuls_ppc((f32)mag, groundRaise), limit = maximumSwing;
                 strength = fsubs_ppc(strength, limit) >= 0 ? limit : strength;
                 if (std::fabs((at<dTree_anm_c>(anm)->mAnimTimer)) < std::fabs(strength)) {
-                    at<dTree_anm_c>(anm)->field_0x0a = angle;
+                    at<dTree_anm_c>(anm)->mCutAngleY = angle;
                     at<dTree_anm_c>(anm)->mAnimTimer = strength;
                 }
                 return;
@@ -556,7 +557,7 @@ void dTree_data_c::WorkAt_NoCutAnim(TreeActorView* actor, u32 unused, u32 room, 
     f32 strength = fmuls_ppc((f32)mag, groundRaise), limit = maximumSwing;
     strength = fsubs_ppc(strength, limit) >= 0 ? limit : strength;
     if (std::fabs((at<dTree_anm_c>(anm)->mAnimTimer)) < std::fabs(strength)) {
-        at<dTree_anm_c>(anm)->field_0x0a = angle;
+        at<dTree_anm_c>(anm)->mCutAngleY = angle;
         at<dTree_anm_c>(anm)->mAnimTimer = strength;
     }
 }
@@ -578,17 +579,17 @@ void dTree_data_c::WorkAt(TreeActorView* actor, u32 flags, u32 room, TreeMassHit
     v.z = dz;
     PSVECSquareMag(&v);
     cM_atan2s(dx, dz);
-    if ((field_0x001) || !tree_ensureAnm(a))
+    if ((mCut) || !tree_ensureAnm(a))
         return;
-    field_0x001 = 1;
+    mCut = 1;
     u32 game = getGameInfo(),
         anm = (at<TreeGameView>(game)->mpTree.v) + (u32)(s32)(s8)(mAnimIdx) * 0x84;
     game = getGameInfo();
     u32 sword = (s32)(s16)(u16)at<TreeGameView>(game)->mpTree->mPlayerSwordMoveAngY;
     at<dTree_anm_c>(anm + 10908)->mAnimTimer = zero;
-    at<dTree_anm_c>(anm + 10908)->field_0x0a = sword;
-    at<dTree_anm_c>(anm + 10908)->field_0x10 = gravity;
-    at<dTree_anm_c>(anm + 10908)->field_0x14 = initialCutSpeed;
+    at<dTree_anm_c>(anm + 10908)->mCutAngleY = sword;
+    at<dTree_anm_c>(anm + 10908)->mFallSpeedXZ = gravity;
+    at<dTree_anm_c>(anm + 10908)->mFallSpeedY = initialCutSpeed;
     if (!(u8)l_CutSoundFlag) {
         l_CutSoundFlag = 1;
         u32 reverb = getReverb(room);
@@ -628,31 +629,31 @@ void dTree_data_c::animation(u32 room) {
     u32 game = getGameInfo(),
         anm = (at<TreeGameView>(game)->mpTree.v) + 0x2A9C + (u32)(s32)(s8)(mAnimIdx) * 0x84;
     f32 zero = treeZero, one = treeOne, threshold = swingStep;
-    if (!(field_0x001)) {
-        s32 angle = (s16)(u16)(at<dTree_anm_c>(anm)->field_0x08);
+    if (!(mCut)) {
+        s32 angle = (s16)(u16)(at<dTree_anm_c>(anm)->mTrunkAngleX);
         f32 restoring = -(f32)angle,
             timer = fmuls_ppc(fadds_ppc((at<dTree_anm_c>(anm)->mAnimTimer), restoring), damping);
         s16 next = (s16)(angle + (s16)ftoi(timer));
         at<dTree_anm_c>(anm)->mAnimTimer = timer;
         f32 product = fmuls_ppc((f32)next, restoring);
-        at<dTree_anm_c>(anm)->field_0x08 = next;
+        at<dTree_anm_c>(anm)->mTrunkAngleX = next;
         if (!(product < zero)) {
             f32 amount = std::fabs((at<dTree_anm_c>(anm)->mAnimTimer));
             if (amount < threshold) {
-                u32 idx = (u16)(at<dTree_anm_c>(anm)->field_0x02) >> 13;
-                at<dTree_anm_c>(anm)->field_0x08 = 0;
+                u32 idx = (u16)(at<dTree_anm_c>(anm)->mTrunkAngleY) >> 13;
+                at<dTree_anm_c>(anm)->mTrunkAngleX = 0;
                 at<dTree_anm_c>(anm)->mAnimTimer = zero;
                 game = getGameInfo();
                 u32 base = (at<TreeGameView>(game)->mpTree.v) + idx * 0x84 + 0x2A9C;
                 if (chaseAngle(at<void>(anm + 4),
-                               (s32)(s16)(u16)(at<dTree_anm_c>(base)->field_0x04), 800) &&
+                               (s32)(s16)(u16)(at<dTree_anm_c>(base)->mTopAngleX), 800) &&
                     chaseAngle(at<void>(anm + 6),
-                               (s32)(s16)(u16)(at<dTree_anm_c>(base)->field_0x06), 800)) {
+                               (s32)(s16)(u16)(at<dTree_anm_c>(base)->mTopAngleY), 800)) {
                     game = getGameInfo();
                     at<TreeGameView>(game)->mpTree->mAnm[(u32)(s32)(s8)mAnimIdx].mState = 0;
                     mAnimIdx = idx;
                 }
-                next = (s16)(u16)(at<dTree_anm_c>(anm)->field_0x08);
+                next = (s16)(u16)(at<dTree_anm_c>(anm)->mTrunkAngleX);
             } else if (amount > leafThreshold) {
                 cXyz pos;
                 f32 yy = fadds_ppc((mPos.y), leafHeight), zz = (mPos.z), xx = (mPos.x);
@@ -671,33 +672,33 @@ void dTree_data_c::animation(u32 room) {
                     tree_particleState((at<TreeParticleSlot>(slot)->mpEmitter.v), one);
                 u32 reverb = getReverb(room);
                 startObjectSound(0x6932, at<void>(a + 4), 0, reverb);
-                next = (s16)(u16)(at<dTree_anm_c>(anm)->field_0x08);
+                next = (s16)(u16)(at<dTree_anm_c>(anm)->mTrunkAngleX);
             }
         }
-        at<dTree_anm_c>(anm)->field_0x04 = next;
+        at<dTree_anm_c>(anm)->mTopAngleX = next;
         return;
     }
     // HD: zero-extend the angle before indexing the sine/cosine table.
-    u32 trig = 0x104A44F8 + ((u16)(at<dTree_anm_c>(anm)->field_0x0a) >> 3) * 8;
-    f32 velocity = (at<dTree_anm_c>(anm)->field_0x10),
-        vert = fadds_ppc((at<dTree_anm_c>(anm)->field_0x14), gravity);
+    u32 trig = 0x104A44F8 + ((u16)(at<dTree_anm_c>(anm)->mCutAngleY) >> 3) * 8;
+    f32 velocity = (at<dTree_anm_c>(anm)->mFallSpeedXZ),
+        vert = fadds_ppc((at<dTree_anm_c>(anm)->mFallSpeedY), gravity);
     f32 dx = fmuls_ppc(velocity, (f32)at<TreeTrig>(trig)->mSin),
         dz = fmuls_ppc(velocity, (f32)at<TreeTrig>(trig)->mCos);
     if (vert < terminalVelocity)
         vert = terminalVelocity;
-    f32 x = fadds_ppc((at<dTree_anm_c>(anm)->field_0x18), dx),
-        y = fadds_ppc((at<dTree_anm_c>(anm)->field_0x1c), vert),
-        z = fadds_ppc((at<dTree_anm_c>(anm)->field_0x20), dz);
-    at<dTree_anm_c>(anm)->field_0x14 = vert;
-    at<dTree_anm_c>(anm)->field_0x18 = x;
-    at<dTree_anm_c>(anm)->field_0x20 = z;
+    f32 x = fadds_ppc((at<dTree_anm_c>(anm)->mTopOffsetX), dx),
+        y = fadds_ppc((at<dTree_anm_c>(anm)->mTopOffsetY), vert),
+        z = fadds_ppc((at<dTree_anm_c>(anm)->mTopOffsetZ), dz);
+    at<dTree_anm_c>(anm)->mFallSpeedY = vert;
+    at<dTree_anm_c>(anm)->mTopOffsetX = x;
+    at<dTree_anm_c>(anm)->mTopOffsetZ = z;
     if (y < groundOffset) {
         y = groundOffset;
-        at<dTree_anm_c>(anm)->field_0x10 = zero;
+        at<dTree_anm_c>(anm)->mFallSpeedXZ = zero;
     }
-    at<dTree_anm_c>(anm)->field_0x1c = y;
+    at<dTree_anm_c>(anm)->mTopOffsetY = y;
     chaseFloat(at<void>(anm + 12), cutTargetSpeed, threshold);
-    if ((s16)(u16)(at<dTree_anm_c>(anm)->field_0x04) != 13600) {
+    if ((s16)(u16)(at<dTree_anm_c>(anm)->mTopAngleX) != 13600) {
         if (!chaseAngle(at<void>(anm + 4), 13600,
                         (s32)(s16)ftoi((at<dTree_anm_c>(anm)->mAnimTimer))))
             return;
@@ -738,25 +739,27 @@ void dTree_data_c::animation(u32 room) {
             tree_particleState(emitter, one);
         return;
     }
-    if ((at<dTree_anm_c>(anm)->field_0x10) == zero) {
+    if ((at<dTree_anm_c>(anm)->mFallSpeedXZ) == zero) {
         mState = (mState) | 8;
         PSMTXCopy(at<void>(anm + 36), at<void>(a + 0x70));
-        field_0x070.a[3] = fadds_ppc((mPos.x), (at<dTree_anm_c>(anm)->field_0x18));
-        field_0x070.a[7] = fadds_ppc((mPos.y), (at<dTree_anm_c>(anm)->field_0x1c));
-        field_0x070.a[11] = fadds_ppc((mPos.z), (at<dTree_anm_c>(anm)->field_0x20));
+        mFallenTopMtx.a[3] = fadds_ppc((mPos.x), (at<dTree_anm_c>(anm)->mTopOffsetX));
+        mFallenTopMtx.a[7] = fadds_ppc((mPos.y), (at<dTree_anm_c>(anm)->mTopOffsetY));
+        mFallenTopMtx.a[11] = fadds_ppc((mPos.z), (at<dTree_anm_c>(anm)->mTopOffsetZ));
         game = getGameInfo();
         at<TreeGameView>(game)->mpTree->mAnm[(u32)(s32)(s8)mAnimIdx].mState = 0;
-        mAnimIdx = (u16)(at<dTree_anm_c>(anm)->field_0x02) >> 13;
+        mAnimIdx = (u16)(at<dTree_anm_c>(anm)->mTrunkAngleY) >> 13;
     }
 }
 
+// Guest EA arithmetic (newData and its inlined copy in 025C9D68): mpData + n * 4 wraps at 32 bits as on the console (a host
+// index on a NULL data table reached host addresses past 4 GB).
 /* 025C738C */
 void dTree_room_c::newData(dTree_data_c* p) {
     u32 pAddr = ea(p);
     u32 n = (mCount);
     if ((s32)n >= (s32)(mCapacity))
         return;
-    mpData.get()[n].v = pAddr;
+    sead::elementAt(mpData, n).v = pAddr;
     mCount = (mCount) + 1;
 }
 
@@ -873,7 +876,7 @@ void* Tree_packetCtor(void* ptr) {
     for (u32 i = 0; i < 4; i++) {
         createIndexBuffer(at<void>(render + i * 24), at<void>(indexSources[i]), 4,
                           (u32)l_vertexCounts[i].mIndexCount);
-        at<TreeRenderer>(render)->mIndexBuffers[i].mPrimitive = 4;
+        at<TreeRenderer>(render)->mIndexBuffers[i].mPrimitiveMode = 4;
     }
     u32 slot = col + (at<TreeCollisionManager>(col)->mActiveBuffer) * 596;
     u32 sources[4][4] = {{0x101EE898, 0x101EE9E8, 0x101EECF8, 0x101EEB38},
@@ -1000,10 +1003,10 @@ void* Tree_dataCtor(void* p) {
         a = allocateObject(0xA8);
     if (!a)
         return nullptr;
-    at<dTree_data_c>(a)->field_0x003 = 0;
+    at<dTree_data_c>(a)->mTopAlpha = 0;
     at<dTree_data_c>(a)->mAnimIdx = 0;
     at<dTree_data_c>(a)->mState = 0;
-    at<dTree_data_c>(a)->field_0x001 = 0;
+    at<dTree_data_c>(a)->mCut = 0;
     zeroMemory(at<void>(a + 0x10), 0x30);
     zeroMemory(at<void>(a + 0x40), 0x30);
     zeroMemory(at<void>(a + 0x70), 0x30);
@@ -1034,8 +1037,8 @@ void TreePacketState::draw(u32 draw) {
             u32 data = at<be<u32>>(p)->get();
             if ((at<dTree_data_c>(data)->mState) & TreeState_Clipped)
                 continue;
-            u32 status = 0x101EE88C + (at<dTree_data_c>(data)->field_0x001) * 3;
-            u8 alpha = (at<dTree_data_c>(data)->field_0x003);
+            u32 status = 0x101EE88C + (at<dTree_data_c>(data)->mCut) * 3;
+            u8 alpha = (at<dTree_data_c>(data)->mTopAlpha);
             u32 object = a + 0xAA48 + small * 168;
             call_ptr<void>(at<TreeDrawBase>(object)->__vtbl->applyMaterial, at<void>(object),
                            at<void>(material), alpha == 255 ? data : small * 168);
@@ -1082,13 +1085,13 @@ void TreePacketState::calc() {
         u16 theta = (u16)ftoi(fmuls_ppc(frame, speed));
         // HD: zero-extend the angle before indexing the sine/cosine table.
         u32 trig = 0x104A44F8 + (theta >> 3) * 8;
-        f32 initial = fadds_ppc((f32)(s16)(u16)(at<dTree_anm_c>(p)->field_0x02), amp);
+        f32 initial = fadds_ppc((f32)(s16)(u16)(at<dTree_anm_c>(p)->mTrunkAngleY), amp);
         f32 heading = fmadds(amp, (f32)at<TreeTrig>(trig)->mCos, initial);
-        at<dTree_anm_c>(p)->field_0x06 = ftoi(heading);
+        at<dTree_anm_c>(p)->mTopAngleY = ftoi(heading);
         frame = (f32)((u32)g_Counter.mTimer + i * 250);
         theta = (u16)ftoi(fmuls_ppc(frame, rate));
         trig = 0x104A44F8 + (theta >> 3) * 8;
-        at<dTree_anm_c>(p)->field_0x04 = ftoi(fmadds(amp, (f32)at<TreeTrig>(trig)->mCos, amp));
+        at<dTree_anm_c>(p)->mTopAngleX = ftoi(fmadds(amp, (f32)at<TreeTrig>(trig)->mCos, amp));
     }
     s32 room = (s8)(u8)l_stayRoom;
     u32 list = base + (u32)room * 268 + 0x2520;
@@ -1139,19 +1142,19 @@ void TreePacketState::update() {
     u32 base = a + 0x2A9C;
     for (u32 i = 0; i < 72; i++) {
         u32 anmData = base + i * 0x84;
-        rotateY(at<void>(0x1048D0CC), (s32)(s16)(u16)(at<dTree_anm_c>(anmData)->field_0x0a));
+        rotateY(at<void>(0x1048D0CC), (s32)(s16)(u16)(at<dTree_anm_c>(anmData)->mCutAngleY));
         concatenateXRotation(at<void>(0x1048D0CC),
-                             (s32)(s16)(u16)(at<dTree_anm_c>(anmData)->field_0x04));
+                             (s32)(s16)(u16)(at<dTree_anm_c>(anmData)->mTopAngleX));
         concatenateYRotation(at<void>(0x1048D0CC),
-                             (s32)(s16)((s16)(u16)(at<dTree_anm_c>(anmData)->field_0x06) -
-                                        (s16)(u16)(at<dTree_anm_c>(anmData)->field_0x0a)));
+                             (s32)(s16)((s16)(u16)(at<dTree_anm_c>(anmData)->mTopAngleY) -
+                                        (s16)(u16)(at<dTree_anm_c>(anmData)->mCutAngleY)));
         PSMTXCopy(at<void>(0x1048D0CC), at<void>(anmData + 36));
-        rotateY(at<void>(0x1048D0CC), (s32)(s16)(u16)(at<dTree_anm_c>(anmData)->field_0x0a));
+        rotateY(at<void>(0x1048D0CC), (s32)(s16)(u16)(at<dTree_anm_c>(anmData)->mCutAngleY));
         concatenateXRotation(at<void>(0x1048D0CC),
-                             (s32)(s16)(u16)(at<dTree_anm_c>(anmData)->field_0x08));
+                             (s32)(s16)(u16)(at<dTree_anm_c>(anmData)->mTrunkAngleX));
         concatenateYRotation(at<void>(0x1048D0CC),
-                             (s32)(s16)((s16)(u16)(at<dTree_anm_c>(anmData)->field_0x02) -
-                                        (s16)(u16)(at<dTree_anm_c>(anmData)->field_0x0a)));
+                             (s32)(s16)((s16)(u16)(at<dTree_anm_c>(anmData)->mTrunkAngleY) -
+                                        (s16)(u16)(at<dTree_anm_c>(anmData)->mCutAngleY)));
         PSMTXCopy(at<void>(0x1048D0CC), at<void>(anmData + 84));
     }
     treeClipper.mFar = fmuls_ppc(treeOriginalFar, clipFarScale);
@@ -1184,19 +1187,19 @@ void TreePacketState::update() {
             PSMTXCopy(at<void>(data + 0x70), at<void>(data + 16));
             chaseAlpha(at<void>(data + 3), 0, 8);
         } else {
-            at<dTree_anm_c>(anim)->field_0x24.a[3] =
-                fadds_ppc((at<dTree_data_c>(data)->mPos.x), (at<dTree_anm_c>(anim)->field_0x18));
-            at<dTree_anm_c>(anim)->field_0x24.a[7] =
-                fadds_ppc((at<dTree_data_c>(data)->mPos.y), (at<dTree_anm_c>(anim)->field_0x1c));
-            at<dTree_anm_c>(anim)->field_0x24.a[11] =
-                fadds_ppc((at<dTree_data_c>(data)->mPos.z), (at<dTree_anm_c>(anim)->field_0x20));
+            at<dTree_anm_c>(anim)->mTopMtx.a[3] =
+                fadds_ppc((at<dTree_data_c>(data)->mPos.x), (at<dTree_anm_c>(anim)->mTopOffsetX));
+            at<dTree_anm_c>(anim)->mTopMtx.a[7] =
+                fadds_ppc((at<dTree_data_c>(data)->mPos.y), (at<dTree_anm_c>(anim)->mTopOffsetY));
+            at<dTree_anm_c>(anim)->mTopMtx.a[11] =
+                fadds_ppc((at<dTree_data_c>(data)->mPos.z), (at<dTree_anm_c>(anim)->mTopOffsetZ));
             PSMTXCopy(at<void>(anim + 36), at<void>(data + 16));
         }
-        storeFloatBits(at<dTree_anm_c>(anim)->field_0x54.a[3],
+        storeFloatBits(at<dTree_anm_c>(anim)->mTrunkMtx.a[3],
                        floatBits(at<dTree_data_c>(data)->mPos.x));
-        storeFloatBits(at<dTree_anm_c>(anim)->field_0x54.a[7],
+        storeFloatBits(at<dTree_anm_c>(anim)->mTrunkMtx.a[7],
                        floatBits(at<dTree_data_c>(data)->mPos.y));
-        storeFloatBits(at<dTree_anm_c>(anim)->field_0x54.a[11],
+        storeFloatBits(at<dTree_anm_c>(anim)->mTrunkMtx.a[11],
                        floatBits(at<dTree_data_c>(data)->mPos.z));
         PSMTXCopy(at<void>(anim + 84), at<void>(data + 64));
         PSMTXConcat(at<void>(0x104B45F8), at<void>(anim + 84), &m);
@@ -1228,8 +1231,8 @@ void TreePacketState::setData(dTree_data_c* data, u32 next, cXyz* pos, u32 state
         y = (pos->y);
         data->mState = TreeState_Active | TreeState_Clipped | TreeState_NeedsGround;
     }
-    data->field_0x001 = state;
-    data->field_0x003 = state == 1 ? 0 : 255;
+    data->mCut = state;
+    data->mTopAlpha = state == 1 ? 0 : 255;
     f64 r = cM_rndF(animationRandomRange);
     data->mAnimIdx = ftoi(r);
     f32 x = (pos->x), z = (pos->z);
@@ -1273,18 +1276,18 @@ s32 TreePacketState::newAnm(u32 angle) {
         u32 p = a + 0x2A9C + i * 0x84;
         if ((at<dTree_anm_c>(p)->mState))
             continue;
-        at<dTree_anm_c>(p)->field_0x08 = 0;
+        at<dTree_anm_c>(p)->mTrunkAngleX = 0;
         at<dTree_anm_c>(p)->mState = 1;
-        at<dTree_anm_c>(p)->field_0x1c = z;
-        at<dTree_anm_c>(p)->field_0x04 = 0;
-        at<dTree_anm_c>(p)->field_0x20 = z;
-        at<dTree_anm_c>(p)->field_0x06 = angle;
+        at<dTree_anm_c>(p)->mTopOffsetY = z;
+        at<dTree_anm_c>(p)->mTopAngleX = 0;
+        at<dTree_anm_c>(p)->mTopOffsetZ = z;
+        at<dTree_anm_c>(p)->mTopAngleY = angle;
         at<dTree_anm_c>(p)->mAnimTimer = z;
-        at<dTree_anm_c>(p)->field_0x10 = z;
-        at<dTree_anm_c>(p)->field_0x14 = z;
-        at<dTree_anm_c>(p)->field_0x0a = 0;
-        at<dTree_anm_c>(p)->field_0x02 = angle;
-        at<dTree_anm_c>(p)->field_0x18 = z;
+        at<dTree_anm_c>(p)->mFallSpeedXZ = z;
+        at<dTree_anm_c>(p)->mFallSpeedY = z;
+        at<dTree_anm_c>(p)->mCutAngleY = 0;
+        at<dTree_anm_c>(p)->mTrunkAngleY = angle;
+        at<dTree_anm_c>(p)->mTopOffsetX = z;
         return i;
     }
     return -1;
@@ -1296,16 +1299,16 @@ void TreePacketState::setAnm(u32 i, u32 angle) {
     u32 p = a + 0x2A9C + i * 0x84;
     f32 z = treeZero;
     at<dTree_anm_c>(p)->mState = 1;
-    at<dTree_anm_c>(p)->field_0x04 = 0;
-    at<dTree_anm_c>(p)->field_0x06 = angle;
-    at<dTree_anm_c>(p)->field_0x14 = z;
-    at<dTree_anm_c>(p)->field_0x08 = 0;
-    at<dTree_anm_c>(p)->field_0x0a = 0;
-    at<dTree_anm_c>(p)->field_0x1c = z;
-    at<dTree_anm_c>(p)->field_0x10 = z;
-    at<dTree_anm_c>(p)->field_0x02 = angle;
-    at<dTree_anm_c>(p)->field_0x18 = z;
-    at<dTree_anm_c>(p)->field_0x20 = z;
+    at<dTree_anm_c>(p)->mTopAngleX = 0;
+    at<dTree_anm_c>(p)->mTopAngleY = angle;
+    at<dTree_anm_c>(p)->mFallSpeedY = z;
+    at<dTree_anm_c>(p)->mTrunkAngleX = 0;
+    at<dTree_anm_c>(p)->mCutAngleY = 0;
+    at<dTree_anm_c>(p)->mTopOffsetY = z;
+    at<dTree_anm_c>(p)->mFallSpeedXZ = z;
+    at<dTree_anm_c>(p)->mTrunkAngleY = angle;
+    at<dTree_anm_c>(p)->mTopOffsetX = z;
+    at<dTree_anm_c>(p)->mTopOffsetZ = z;
     at<dTree_anm_c>(p)->mAnimTimer = z;
 }
 
@@ -1591,7 +1594,7 @@ void TreePacketState::prepareRender() {
             u32 data = at<be<u32>>(p)->get();
             if ((at<dTree_data_c>(data)->mState) & TreeState_Clipped)
                 continue;
-            u8 alpha = (at<dTree_data_c>(data)->field_0x003);
+            u8 alpha = (at<dTree_data_c>(data)->mTopAlpha);
             if (alpha == 0) {
                 tree_matrixUniform(a + 0xAA48 + small * 168, data + 0x40);
                 small++;
@@ -1603,14 +1606,14 @@ void TreePacketState::prepareRender() {
             } else {
                 tree_lightingUniform(
                     a + 0x20590 + shadowLarge, ea(&tev), shadow,
-                    (f32)((f32)(u8)at<dTree_data_c>(at<be<u32>>(p)->get())->field_0x003 /
+                    (f32)((f32)(u8)at<dTree_data_c>(at<be<u32>>(p)->get())->mTopAlpha /
                           denominator));
                 tree_matrixUniform(a + 0x1DB90 + shadowSmall, data + 0x10);
                 shadowLarge += 868;
                 shadowSmall += 168;
                 u32 n = (at<dTree_room_c>(listShadow)->mCount);
                 if ((s32)n < (s32)(at<dTree_room_c>(listShadow)->mCapacity)) {
-                    at<dTree_room_c>(listShadow)->mpData.get()[n].v = at<be<u32>>(p)->get();
+                    sead::elementAt(at<dTree_room_c>(listShadow)->mpData, n).v = at<be<u32>>(p)->get();
                     at<dTree_room_c>(listShadow)->mCount =
                         (at<dTree_room_c>(listShadow)->mCount) + 1;
                 }

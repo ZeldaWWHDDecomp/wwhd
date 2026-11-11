@@ -228,9 +228,9 @@ struct dSnap_Obj {
     /*0x10*/ be<f32> mHeight;
     /*0x14*/ be<u32> mActorPID;
     /*0x18*/ be<u8> mPhotoNo;
-    /*0x19*/ be<u8> field_0x19;
+    /*0x19*/ be<u8> mCylSegments;  /* was field_0x19: dSnap_Obj_ctor 025BD71C sets 4; CalcArea2D 025BDC78 projects that many cylinder side quads (cylvtx[i], cylvtx[i + 1]); SetInf 025BEB90 stores its fourth argument (tww: GXBegin(..., mCylSegments * 8) and the same loops) */
     /*0x1A*/ be<u8> field_0x1a;
-    /*0x1B*/ be<u8> field_0x1b;
+    /*0x1B*/ be<u8> mGeoFlags;  /* was field_0x1b: bit 0 = sphere geometry: SetGeoSph 025BEF3C sets it, SetGeo 025BEB5C clears it; CalcArea2D 025BDC78 / draw 025BF01C pick sphere or cylinder by it; ChkCamCull 025BE268 skips the angle cull for spheres; dSnap_Obj_ctor 025BD71C clears it */
     /*0x1C*/ be<s16> mCullAngle;
     /*0x1E*/ be<s16> mAngleY;
     /*0x20*/ be<s32> mCapturedPixels;
@@ -254,19 +254,19 @@ struct dSnap_Obj {
 WWHD_SIZE(dSnap_Obj, 0x34);
 WWHD_OFFSET(dSnap_Obj, mCenter, 0);
 struct dSnap_RegistObjElm : dSnap_Obj {
-    /*0x34*/ be<f32> field_0x34;
+    /*0x34*/ be<f32> mPlayerDistSq;  /* was field_0x34: dSnap_packet::Regist 025BE99C stores the squared distance from Link (+0x314) to the registered object; when the table is full it replaces the farthest entry with mPhotoNo >= 72; dSnap_packet::Execute 025BE870 resets it to 1e9 */
     /*0x38*/ be<u32> __elmVtable;
     u32 Regist(u32 src);
 };
 WWHD_SIZE(dSnap_RegistObjElm, 0x3C);
-WWHD_OFFSET(dSnap_RegistObjElm, field_0x34, 0x34);
+WWHD_OFFSET(dSnap_RegistObjElm, mPlayerDistSq, 0x34);
 WWHD_OFFSET(dSnap_RegistObjElm, __elmVtable, 0x38);
 struct dSnap_packet {
     /*0x00*/ u8 _00[0xC];
     /*0x0C*/ be<u32> __vtbl;
     /*0x10*/ u8 _10[0x88];
     /*0x98*/ be<s32> mPhotoNo;
-    /*0x9C*/ be<s32> field_0x14;
+    /*0x9C*/ be<s32> mRegistNum;  /* was field_0x14: the number of used m_tbl entries: dSnap_packet::Regist 025BE99C appends at it and adds 1 (full at 63); dSnap_packet::Execute 025BE870 / dSnap_packet_ctor clear it; the judge and draw loops run up to it */
     /*0xA0*/ dSnap_RegistObjElm m_tbl[63];
     /*0xF64*/ be<u32> mFlag;
     /*0xF68*/ be<u32> mResult;
@@ -309,9 +309,9 @@ WWHD_OFFSET(dSnap_Obj, mRadius, 0xC);
 WWHD_OFFSET(dSnap_Obj, mHeight, 0x10);
 WWHD_OFFSET(dSnap_Obj, mActorPID, 0x14);
 WWHD_OFFSET(dSnap_Obj, mPhotoNo, 0x18);
-WWHD_OFFSET(dSnap_Obj, field_0x19, 0x19);
+WWHD_OFFSET(dSnap_Obj, mCylSegments, 0x19);
 WWHD_OFFSET(dSnap_Obj, field_0x1a, 0x1A);
-WWHD_OFFSET(dSnap_Obj, field_0x1b, 0x1B);
+WWHD_OFFSET(dSnap_Obj, mGeoFlags, 0x1B);
 WWHD_OFFSET(dSnap_Obj, mCullAngle, 0x1C);
 WWHD_OFFSET(dSnap_Obj, mAngleY, 0x1E);
 WWHD_OFFSET(dSnap_Obj, mCapturedPixels, 0x20);
@@ -322,7 +322,7 @@ WWHD_OFFSET(dSnap_Obj, mMaxX, 0x2C);
 WWHD_OFFSET(dSnap_Obj, mMaxY, 0x2E);
 WWHD_OFFSET(dSnap_Obj, __vtbl, 0x30);
 WWHD_OFFSET(dSnap_packet, mPhotoNo, 0x98);
-WWHD_OFFSET(dSnap_packet, field_0x14, 0x9C);
+WWHD_OFFSET(dSnap_packet, mRegistNum, 0x9C);
 WWHD_OFFSET(dSnap_packet, mFlag, 0xF64);
 WWHD_OFFSET(dSnap_packet, mResult, 0xF68);
 WWHD_OFFSET(dSnap_packet, mResultDetail, 0xF6C);

@@ -47,7 +47,7 @@ void daPz_c::modeWait() {
 
     cXyz eye;
     dNpc_playerEyePos(&eye, l_HIO.mPlayerEyeYOffset);
-    m08C4.copy(eye);
+    mTargetPos.copy(eye);
     u32 play = dComIfGp_ea();
     /* HD: getEventIdx's result register is passed on unextended */
     u32 evIdx =
@@ -90,7 +90,7 @@ void daPz_c::modeWait() {
 /* 02455AB8 */
 void daPz_c::modeMoveInit() {
 
-    u32 o = 2 * m08B0;
+    u32 o = 2 * mBattlePhase;
     be<u32>& attnFlags = attention_info.flags;
     attnFlags |= 0xA;
     f32 rnd = cM_rndF((f32)l_HIO.mMoveWaitRandom[o / 2]);
@@ -99,16 +99,16 @@ void daPz_c::modeMoveInit() {
     mDodgeTimer = 120;
     setAnm(ANM_RUN, 0, 0xF);
     if (cM_rndF(100.0f) < l_HIO.mReverseDirectionChance)
-        m0920 = m0920 == 1 ? -1 : 1;
+        mCircleDir = mCircleDir == 1 ? -1 : 1;
     if (l_HIO.mbLookAtPlayer == 0) {
         if (mbHasGanondorf != 0) {
-            m08C4.copy(mGanondorfPos4);
-            mCircleRadius = l_HIO.mCircleRadius[m08B0];
+            mTargetPos.copy(mGanondorfPos4);
+            mCircleRadius = l_HIO.mCircleRadius[mBattlePhase];
             mCircleSpeed = l_HIO.mCircleSpeed;
-            mCircleCenter.x = m08C4.x;
-            mCircleCenter.y = m08C4.y;
-            mCircleCenter.z = m08C4.z;
-            mCircleAngleSpeed = (s16)((REG12_S(0) + 0x150) * m0920);
+            mCircleCenter.x = mTargetPos.x;
+            mCircleCenter.y = mTargetPos.y;
+            mCircleCenter.z = mTargetPos.z;
+            mCircleAngleSpeed = (s16)((REG12_S(0) + 0x150) * mCircleDir);
             pzDLib_setCirclePath(&mCircleCenter);
             m_jnt.mbTrn = 0;
             m_jnt.mbHeadLock = 0;
@@ -119,15 +119,15 @@ void daPz_c::modeMoveInit() {
     } else {
         cXyz eye;
         dNpc_playerEyePos(&eye, l_HIO.mPlayerEyeYOffset);
-        m08C4.copy(eye);
+        mTargetPos.copy(eye);
     }
     /* dLib_circle_path_c around the look position */
-    mCircleRadius = l_HIO.mCircleRadius[m08B0];
+    mCircleRadius = l_HIO.mCircleRadius[mBattlePhase];
     mCircleSpeed = l_HIO.mCircleSpeed;
-    mCircleCenter.x = m08C4.x;
-    mCircleCenter.y = m08C4.y;
-    mCircleCenter.z = m08C4.z;
-    mCircleAngleSpeed = (s16)((REG12_S(0) + 0x150) * m0920);
+    mCircleCenter.x = mTargetPos.x;
+    mCircleCenter.y = mTargetPos.y;
+    mCircleCenter.z = mTargetPos.z;
+    mCircleAngleSpeed = (s16)((REG12_S(0) + 0x150) * mCircleDir);
     pzDLib_setCirclePath(&mCircleCenter);
     mbHeadOnly = 0;
     m_jnt.mbTrn = 0;
@@ -138,10 +138,10 @@ void daPz_c::modeMoveInit() {
 /* 02456D34 */
 void daPz_c::modeAttackInit() {
 
-    s8 anm = m06D3;
+    s8 anm = mAnm;
     mDodgeTimer = 30;
-    s32 lvl = m08B0;
-    if (m0F65 == 0)
+    s32 lvl = mBattlePhase;
+    if (mAdviceGiven == 0)
         lvl = 0;
     if (anm != ANM_BOW_READY && anm != ANM_BOW_HOLD) {
         f32 rnd = cM_rndF((f32)l_HIO.mAttackChargeRandom[lvl]);
@@ -152,11 +152,11 @@ void daPz_c::modeAttackInit() {
     if (cM_rndF(100.0f) < l_HIO.mPlayerAimChance[lvl]) {
         mbHeadOnly = 0;
         m_jnt.mbHeadLock = 1;
-        m0F48 = 1;
+        mAimAtPlayer = 1;
         m_jnt.mbBackBoneLock = 0;
         return;
     }
-    m0F48 = 0;
+    mAimAtPlayer = 0;
     if (cM_rndF(100.0f) < l_HIO.mStraightAimChance[lvl]) {
         mbHeadOnly = 0;
         m_jnt.mbHeadLock = 1;
@@ -214,26 +214,26 @@ void daPz_c::modeAfraid() {
     mTargetSpeed = 0.0f;
     m_jnt.mbBackBoneLock = 0;
     mbHeadOnly = 0;
-    m073F = 0;
+    mAfraidRequest = 0;
     gabi::Local<be<u32>> gndId;
     if (!pzFopAcM_SearchByName(fpcNm_GND_e, gndId) || *gndId == 0)
         return;
     fopAc_ac_c* gnd = pzGuest<fopAc_ac_c>(*gndId);
     s16 dbg = REG12_S(9);
     if (dbg == 1) {
-        m08C4.x = gnd->current.pos.x;
+        mTargetPos.x = gnd->current.pos.x;
         f32 y = gnd->current.pos.y;
-        m08C4.y = y;
-        m08C4.z = gnd->current.pos.z;
-        m08C4.y = y + (REG12_F(10) + 1200.0f);
+        mTargetPos.y = y;
+        mTargetPos.z = gnd->current.pos.z;
+        mTargetPos.y = y + (REG12_F(10) + 1200.0f);
     } else if (dbg == 2) {
-        m08C4.x = gnd->eyePos.x;
+        mTargetPos.x = gnd->eyePos.x;
         f32 y = gnd->eyePos.y;
-        m08C4.y = y;
-        m08C4.z = gnd->eyePos.z;
-        m08C4.y = y + (REG12_F(10) + 800.0f);
+        mTargetPos.y = y;
+        mTargetPos.z = gnd->eyePos.z;
+        mTargetPos.y = y + (REG12_F(10) + 800.0f);
     } else {
-        m08C4.copy(gnd->current.pos);
+        mTargetPos.copy(gnd->current.pos);
         cXyz d;
         cXyz_mi(&current.pos, &d, &gnd->current.pos);
         cXyz xz;
@@ -245,7 +245,7 @@ void daPz_c::modeAfraid() {
         f32 y = (f32)(-((dist * 0.5) - (f64)(f32)gnd->eyePos.y));
         y = y * 8.0f;
         f32 lim = gnd->current.pos.y + 50.0f;
-        m08C4.y = (y > lim) ? y : lim;
+        mTargetPos.y = (y > lim) ? y : lim;
     }
     s16 target = cLib_targetAngleY(&current.pos, &gnd->current.pos);
     cLib_addCalcAngleS2(&shape_angle.y, target, 4, 0x400);
@@ -262,12 +262,12 @@ void daPz_c::modeSideStep() {
     m_jnt.mbTrn = 1;
     speedF = 0.0f;
     mbHeadOnly = 0;
-    m073F = 0;
-    cLib_addCalcAngleS2(&mWaistAngleY, (s16)(m0920 * 0x1194), 4, 0x800);
-    s16 angle = cLib_targetAngleY(&mEyePos2, &m08C4);
+    mAfraidRequest = 0;
+    cLib_addCalcAngleS2(&mWaistAngleY, (s16)(mCircleDir * 0x1194), 4, 0x800);
+    s16 angle = cLib_targetAngleY(&mEyePos2, &mTargetPos);
     cXyz out;
     cXyz in;
-    s32 dir = m0920;
+    s32 dir = mCircleDir;
     f32 step = mStepSpeed;
     out.y = 0.0f;
     out.x = 0.0f;
@@ -296,13 +296,13 @@ void daPz_c::modeBackStep() {
         mWaistAngleZ = 0;
         return;
     }
-    m073F = 0;
+    mAfraidRequest = 0;
     m_jnt.mbTrn = 1;
     speedF = 0.0f;
     mbHeadOnly = 0;
     mTargetSpeed = 0.0f;
     cLib_addCalcAngleS2(&mWaistAngleZ, -0x1194, 4, 0x800);
-    s16 angle = cLib_targetAngleY(&current.pos, &m08C4);
+    s16 angle = cLib_targetAngleY(&current.pos, &mTargetPos);
     cXyz out;
     cXyz in;
     f32 step = mStepSpeed;
@@ -476,7 +476,7 @@ static f64 distXZ(cXyz* a, cXyz* b) {
 }
 /* the player (look position) or Ganondorf came within the dodge distance */
 static bool isNearForDodge(daPz_c* i_this) {
-    f64 distPlayer = distXZ(&i_this->current.pos, &i_this->m08C4);
+    f64 distPlayer = distXZ(&i_this->current.pos, &i_this->mTargetPos);
     f64 distGnd = 100000.0;
     if (i_this->mbHasGanondorf)
         distGnd = distXZ(&i_this->current.pos, &i_this->mGanondorfPosCurrent);
@@ -489,12 +489,12 @@ static bool isNearForDodge(daPz_c* i_this) {
 static void lookAtPlayer(daPz_c* i_this) {
     cXyz eye;
     dNpc_playerEyePos(&eye, l_HIO.mPlayerEyeYOffset);
-    i_this->m08C4.copy(eye);
+    i_this->mTargetPos.copy(eye);
 }
 /* look at the player when hit too often by others (Ganondorf strong enough, player healthy), at
  * Ganondorf when he hit too often */
 static void selectLookTarget(daPz_c* i_this) {
-    if (i_this->m08B0 == 0) {
+    if (i_this->mBattlePhase == 0) {
         gabi::Local<be<u32>> gndId;
         if (pzFopAcM_SearchByName(fpcNm_GND_e, gndId) && *gndId != 0 &&
             pzGuest<fopAc_ac_c>(*gndId)->health > 0x3C /* health */ &&
@@ -505,7 +505,7 @@ static void selectLookTarget(daPz_c* i_this) {
             lookAtPlayer(i_this);
     }
     if (i_this->mbTargetGanondorf != 0 && i_this->mbHasGanondorf)
-        i_this->m08C4.copy(i_this->mGanondorfPos4);
+        i_this->mTargetPos.copy(i_this->mGanondorfPos4);
 }
 
 /* 024569F4 */
@@ -516,7 +516,7 @@ void daPz_c::modeAttackWait() {
     bool check;
     if (l_HIO.mbLookAtPlayer == 0) {
         if (mbHasGanondorf)
-            m08C4.copy(mGanondorfPos4);
+            mTargetPos.copy(mGanondorfPos4);
     } else {
         lookAtPlayer(this);
     }
@@ -540,14 +540,14 @@ void daPz_c::modeAttack() {
 
     if (checkTgHit())
         return;
-    if (m0F48 == 0) {
+    if (mAimAtPlayer == 0) {
         if (mbHasGanondorf)
-            m08C4.copy(mGanondorfPos4);
+            mTargetPos.copy(mGanondorfPos4);
     } else {
         lookAtPlayer(this);
     }
     selectLookTarget(this);
-    s8 anm = m06D3;
+    s8 anm = mAnm;
     if (anm == ANM_BOW_READY || anm == ANM_BOW_HOLD) {
         if (pzCLib_calcTimer(&mDodgeTimer) == 0 && isNearForDodge(this)) {
             mPreviousMode = mMode;
@@ -557,7 +557,7 @@ void daPz_c::modeAttack() {
                 modeProc(PROC_INIT_e, MODE_SIDE_STEP);
             return;
         }
-        anm = m06D3;
+        anm = mAnm;
         if (anm == ANM_BOW_READY) {
             if (mpMorf->isStop()) {
                 m_jnt.mbTrn = 1;
@@ -632,7 +632,7 @@ static void setDownLand(daPz_c* i_this, cXyz* pos, be<u32>* guard, cXyz* scale) 
 /* 02457718 */
 void daPz_c::modeDown() {
 
-    s8 anm = m06D3;
+    s8 anm = mAnm;
     speedF = 0.0f;
     m_jnt.mbTrn = 0;
     mTargetSpeed = 0.0f;
@@ -642,7 +642,7 @@ void daPz_c::modeDown() {
     bool down;
     if (pzCLib_calcTimer(&mModeTimer) == 0) {
         frame = gabi::ftoi(mpMorf->mFrameCtrl.mFrame);
-        down = m06D3 == ANM_DOWN;
+        down = mAnm == ANM_DOWN;
     } else {
         /* sliding back */
         cXyz out;
@@ -657,12 +657,12 @@ void daPz_c::modeDown() {
         mDoMtx_YrotS(mDoMtx_stack_c::get(), angle);
         PSMTXMultVec(mDoMtx_stack_c::get(), &in, &out);
         PSVECAdd(&current.pos, &out, &current.pos);
-        if (m06D3 == ANM_DOWN && mpMorf->isStop()) {
+        if (mAnm == ANM_DOWN && mpMorf->isStop()) {
             gabi::Local<be<s32>> land;
             setSimpleLand(this, land);
         }
         frame = gabi::ftoi(mpMorf->mFrameCtrl.mFrame);
-        down = m06D3 == ANM_DOWN;
+        down = mAnm == ANM_DOWN;
     }
     if (down) {
         f32 f = (f32)frame;
@@ -677,12 +677,12 @@ void daPz_c::modeDown() {
         }
         if (f == reg + 3.0f)
             setDownLand(this, &mEyePos2, &l_downHeadScaleInitialized, &l_downHeadScale);
-        if (m06D3 == ANM_DOWN && mpMorf->isStop())
+        if (mAnm == ANM_DOWN && mpMorf->isStop())
             mbHeadOnly = 1;
     }
-    if (m08B0 == 1)
+    if (mBattlePhase == 1)
         return;
-    if (m06D3 == ANM_WAKE) {
+    if (mAnm == ANM_WAKE) {
         if (mpMorf->isStop()) {
             mbHeadOnly = 0;
             setAnm(ANM_READY, 0, 0xF);
@@ -692,8 +692,8 @@ void daPz_c::modeDown() {
     if (mbWakeUp != 0) {
         mbWakeUp = 0;
         mbTargetPlayer = 0;
-        m0F7C = l_HIO.mTalkWaitTime[2];
-        m0F80 = 0;
+        mTalkWaitTimer = l_HIO.mTalkWaitTime[2];
+        mAutoTalkOff = 0;
         mbTargetGanondorf = 0;
         modeProc(PROC_INIT_e, MODE_MOVE);
     } else {
@@ -723,8 +723,8 @@ void daPz_c::modeMove() {
         blocked = TRUE;
     if (pzCLib_calcTimer(&mWallTurnTimer) == 0 && blocked) {
         mWallTurnTimer = 60;
-        s32 dir = m0920 == 1 ? -1 : 1;
-        m0920 = dir;
+        s32 dir = mCircleDir == 1 ? -1 : 1;
+        mCircleDir = dir;
         mCircleAngleSpeed = (s16)((REG12_S(0) + 0x4000) * dir);
         if (pzCLib_calcTimer(&mDodgeTimer) == 0) {
             pzDLib_setCirclePath(&mCircleCenter);
@@ -735,15 +735,15 @@ void daPz_c::modeMove() {
         return;
     if (l_HIO.mbLookAtPlayer == 0) {
         if (mbHasGanondorf)
-            m08C4.copy(mGanondorfPos4);
+            mTargetPos.copy(mGanondorfPos4);
     } else {
         lookAtPlayer(this);
     }
     m_jnt.mbTrn = 0;
-    cLib_addCalc2(&mCircleRadius, l_HIO.mCircleRadius[m08B0], 0.1f, 10.0f);
+    cLib_addCalc2(&mCircleRadius, l_HIO.mCircleRadius[mBattlePhase], 0.1f, 10.0f);
     f64 distPath = distXZ(&current.pos, &mCirclePos);
-    distXZ(&current.pos, &m08C4); /* result unused */
-    f64 distLook = distXZ(&m08C4, &mCirclePos);
+    distXZ(&current.pos, &mTargetPos); /* result unused */
+    f64 distLook = distXZ(&mTargetPos, &mCirclePos);
     bool setPath;
     if (distPath > REG12_F(7) + 200.0f || mbEyesFollowGanondorf == 0) {
         mTargetSpeed = l_HIO.mMoveSpeed;
@@ -755,15 +755,15 @@ void daPz_c::modeMove() {
     } else if (!(distPath > 200.0f)) {
         setPath = true;
     } else {
-        f32 r = l_HIO.mCircleRadius[m08B0];
+        f32 r = l_HIO.mCircleRadius[mBattlePhase];
         setPath = !(distLook < r + r) || mbEyesFollowGanondorf != 0;
     }
     if (setPath) {
         mCircleSpeed = l_HIO.mCircleSpeed;
-        mCircleCenter.z = m08C4.z;
-        mCircleAngleSpeed = (s16)((REG12_S(0) + 0x150) * m0920);
-        mCircleCenter.y = m08C4.y;
-        mCircleCenter.x = m08C4.x;
+        mCircleCenter.z = mTargetPos.z;
+        mCircleAngleSpeed = (s16)((REG12_S(0) + 0x150) * mCircleDir);
+        mCircleCenter.y = mTargetPos.y;
+        mCircleCenter.x = mTargetPos.x;
         pzDLib_setCirclePath(&mCircleCenter);
     }
     if (pzCLib_calcTimer(&mAttackWaitTimer) == 0 && isNearForDodge(this)) {
@@ -774,7 +774,7 @@ void daPz_c::modeMove() {
     s16 target = cLib_targetAngleY(&current.pos, &mCirclePos);
     cLib_addCalcAngleS2(&shape_angle.y, target, 8, 0x400);
     setAnm(speedF < 0.5f ? 2 : 3, 0, 0xF);
-    if (m08B0 == 2) {
+    if (mBattlePhase == 2) {
         fopAc_ac_c* link = dComIfGp_getLinkPlayer();
         cXyz pos;
         pos.x = link->current.pos.x;
@@ -784,10 +784,10 @@ void daPz_c::modeMove() {
             pzCheckActorInFan(&pos, this, (s16)link->shape_angle.y, 0x2500, 30000.0f, 1000.0f);
     }
     if (l_HIO.mDebugButtons[1] == 0 && pzCLib_calcTimer(&mModeTimer) == 0) {
-        if (m08B0 == 0) {
+        if (mBattlePhase == 0) {
             modeProc(PROC_INIT_e, MODE_ATTACK_WAIT);
-        } else if (m08B0 == 2) {
-            if (m0F65 == 0) {
+        } else if (mBattlePhase == 2) {
+            if (mAdviceGiven == 0) {
                 mbInPlayerFan = 1;
                 modeProc(PROC_INIT_e, MODE_ATTACK_WAIT);
             } else if (mbInPlayerFan != 0) {
@@ -795,7 +795,7 @@ void daPz_c::modeMove() {
             }
         }
     }
-    m0F82 = 2;
+    mEventType = 2;
 }
 
 /* 02458550 */
@@ -811,7 +811,7 @@ void daPz_c::modeFollow() {
         return;
     if (l_HIO.mbLookAtPlayer == 0) {
         if (mbHasGanondorf)
-            m08C4.copy(mGanondorfPos4);
+            mTargetPos.copy(mGanondorfPos4);
     } else {
         lookAtPlayer(this);
     }
@@ -848,7 +848,7 @@ void daPz_c::modeFollow() {
     setAnm(speedF < 0.5f ? 2 : 3, 0, 0xF);
     if (l_HIO.mDebugButtons[1] == 0 && pzCLib_calcTimer(&mModeTimer) == 0)
         modeProc(PROC_INIT_e, MODE_ATTACK_WAIT);
-    m0F82 = 2;
+    mEventType = 2;
 }
 
 /* 0245282C */
@@ -956,7 +956,7 @@ void daPz_c::modeTalk() {
     cXyz eye;
     dNpc_playerEyePos(&eye, l_HIO.mPlayerEyeYOffset);
     m_jnt.mbTrn = 1;
-    m08C4.copy(eye);
+    mTargetPos.copy(eye);
     if (talk(1) == fopMsgStts_BOX_CLOSED_e) {
         dComIfGp_event_reset();
         modeProc(PROC_INIT_e, MODE_ATTACK_WAIT);
@@ -972,10 +972,10 @@ void daPz_c::modeTalkInit() {
     mbHeadOnly = 0;
     speedF = 0.0f;
     m_jnt.mbBackBoneLock = 0;
-    if (m08B0 == 0)
-        m0F80 = 1;
+    if (mBattlePhase == 0)
+        mAutoTalkOff = 1;
     else
-        m0F7C = l_HIO.mTalkWaitTime[m08B0];
+        mTalkWaitTimer = l_HIO.mTalkWaitTime[mBattlePhase];
 }
 
 /* 0245897C */
@@ -983,7 +983,7 @@ void daPz_c::modeFollowInit() {
 
     be<u32>& attnFlags = attention_info.flags;
     attnFlags |= 0xA;
-    u32 o = 2 * m08B0;
+    u32 o = 2 * mBattlePhase;
     f32 rnd = cM_rndF((f32)l_HIO.mMoveWaitRandom[o / 2]);
     mModeTimer = gabi::ftoi((f32)l_HIO.mMoveWaitTime[o / 2] + rnd);
     mAttackWaitTimer = 10;

@@ -106,7 +106,7 @@ void hdPictographList::setDenominator(s32 value) {
     text->mBuffer[2] = 0;
     text->mBuffer[0] = 0;
     text->mString.mpVTable = reinterpret_cast<gfn*>(&sListNumberStringTable);
-    pictographCameraFormatCount(&text->mString, "pictograph list denominator format", value);
+    pictographCameraFormatCount(&text->mString, "", value);
     auto* table = reinterpret_cast<hdUiStringTable*>(text->mString.mpVTable.get());
     auto* pane = mNumberPanes[1].get();
     auto* paneTable = reinterpret_cast<hdPictoTextPaneTable*>(pane->mpVTable.get());
@@ -123,7 +123,7 @@ void hdPictographList::setNumerator(s32 value) {
     text->mBuffer[2] = 0;
     text->mBuffer[0] = 0;
     text->mString.mpVTable = reinterpret_cast<gfn*>(&sListNumberStringTable);
-    pictographCameraFormatCount(&text->mString, "pictograph list numerator format", value);
+    pictographCameraFormatCount(&text->mString, "", value);
     auto* table = reinterpret_cast<hdUiStringTable*>(text->mString.mpVTable.get());
     auto* pane = mNumberPanes[0].get();
     auto* paneTable = reinterpret_cast<hdPictoTextPaneTable*>(pane->mpVTable.get());
@@ -885,8 +885,8 @@ ext 0268B070 u32 pictographListChaseTranslation(be<f32>*,f32,f32)
 data sListNumberStringTable 10101034
 data sListPageWidth 10101104
 data sListNegativePageWidth 1010110C
-str 101010EC "pictograph list denominator format" renamed in 026C59CC
-str 101010F4 "pictograph list numerator format" renamed in 026C5A80
+str 101010EC "" in 026C59CC
+str 101010F4 "" in 026C5A80
 data sListTable 101013B0
 data sListHolderTable 10101610
 data sListSecondaryTable 10101620

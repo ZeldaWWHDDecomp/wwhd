@@ -23,7 +23,7 @@ u32 Gong_create_heap_result(Act_c*);
 bool Act_c::create_heap() {
     J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_VDORA_BDL_VDORA_e);
     J3DAnmTransform* bck = (J3DAnmTransform*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_VDORA_BCK_05_VDORA_CUT02_HIT_e);
-    JUT_ASSERT(0xbd, (modelData != NULL) && (bck != NULL));
+    JUT_ASSERT_MSG(0xbd, (modelData != NULL) && (bck != NULL), "(modelData != 0) && (bck != 0)");
 
     mpMorf = mDoExt_McaMorf::create(nullptr, modelData, nullptr, nullptr, bck, J3DFrameCtrl::EMode_LOOP, 1.0f, 0, -1, 0,
                                     nullptr, 0x00000000, 0x11020203);
@@ -153,7 +153,7 @@ static void Act_c_dt(Act_c* i_this, s32 flags) {
 str 10029910 # "Vdora"
 str 100298F8 in 0234C1F4 # "Vdora"
 str 100298A8 # "d_a_obj_gong.cpp"
-str 100298BC "(modelData != NULL) && (bck != NULL)" renamed # HD: null printed as 0
+str 100298BC "(modelData != 0) && (bck != 0)" # HD: null printed as 0
 ext 0234BEB8 u32 Gong_create_heap_result(Act_c*)
 ext 0252CA4C void dDlst_texSpecmapST(cXyz*, dKy_tevstr_c*, J3DModel*, f32)
 ext 02527028 BOOL dDemo_setDemoData(fopAc_ac_c*, u8, mDoExt_McaMorf*, const char*, s32, u16*, u32, s8)

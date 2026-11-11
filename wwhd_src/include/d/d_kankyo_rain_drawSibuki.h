@@ -25,7 +25,7 @@ struct HousiPacket {
     u8 header[0x9C];
     HOUSI_EFF mEffect[300];
     u8 countData[8];
-    be<f32> field_0x5ddc; // HD: GC field shifts to the verified packet extension.
+    be<f32> mAlpha;  /* was field_0x5ddc: view of dKankyo_housi_Packet (d_kankyo_wether.h): its 0x5E64 member mAlpha (the view follows the class); dKyr_housi_move 02567F68 eases it toward 1 while the environment's mHousiCount is non-zero (else toward 0) and reads it as the effects' alpha; HD: GC field shifts to the verified packet extension */
     be<s16> mCount;
     u8 tail[2];
 };
@@ -176,8 +176,8 @@ struct SunPacket {
     u8 padding0[0x98];
     /* 0x98 */ Vector mPos[2];
     u8 paddingB0[0x14];
-    /* 0xC4 */ be<u8> field_0x3c;
-    /* 0xC5 */ be<u8> field_0x3d;
+    /* 0xC4 */ be<u8> mOcclusionDelayHD;  /* was field_0x3c: view of dKankyo_sun_Packet (d_kankyo_wether.h): its 0xC4 member mOcclusionDelayHD (the view follows the class); dKyr_drawSun 0256F1C4 writes it through this view */
+    /* 0xC5 */ be<u8> mHasVisiblePointHD;  /* was field_0x3d: view of dKankyo_sun_Packet (d_kankyo_wether.h): its 0xC5 member mHasVisiblePointHD (the view follows the class); dKyr_drawSun 0256F1C4 writes it through this view */
     u8 paddingC6[0x2];
     /* 0xC8 */ be<f32> mVisibility;
     /* 0xCC */ be<f32> mSunAlpha;
@@ -187,8 +187,8 @@ struct SunPacket {
     /* 0xA70 */ Geometry mSunGeometry[2];
 };
 WWHD_OFFSET(SunPacket, mPos, 0x98);
-WWHD_OFFSET(SunPacket, field_0x3c, 0xC4);
-WWHD_OFFSET(SunPacket, field_0x3d, 0xC5);
+WWHD_OFFSET(SunPacket, mOcclusionDelayHD, 0xC4);
+WWHD_OFFSET(SunPacket, mHasVisiblePointHD, 0xC5);
 WWHD_OFFSET(SunPacket, mVisibility, 0xC8);
 WWHD_OFFSET(SunPacket, mSunAlpha, 0xCC);
 WWHD_OFFSET(SunPacket, mMoonAlpha, 0xD0);
@@ -540,7 +540,7 @@ struct SinCos {
 };
 WWHD_SIZE(Vector, 12);
 WWHD_SIZE(HOUSI_EFF, 0x50);
-WWHD_OFFSET(HousiPacket, field_0x5ddc, 0x5E64);
+WWHD_OFFSET(HousiPacket, mAlpha, 0x5E64);
 WWHD_OFFSET(HousiPacket, mCount, 0x5E68);
 WWHD_SIZE(GroundCheck, 84);
 WWHD_OFFSET(HousiWork, ground, 0x48);

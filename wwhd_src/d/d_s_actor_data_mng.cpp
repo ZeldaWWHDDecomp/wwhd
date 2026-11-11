@@ -65,7 +65,7 @@ void dADM_CharTbl::SetData(u32 offs, u32 row_num, u32 row_offs, u32 colum_num,
     }
     if (dat_size != row_num * colum_num) {
         // HD: assertion line 0x3A rather than GameCube's 0x39.
-        ADM_assert("d_s_actor_data_mng.cpp: dADM_CharTbl", 0x3A, "dat_size == row_num * colum_num");
+        ADM_assert("d_s_actor_data_mng.cpp", 0x3A, "dat_size == row_num * colum_num");
     }
     cDT_Set(this, row_num, row_offs, colum_num, colum_offs, data_offs);
     SetUpIndex();
@@ -153,7 +153,7 @@ void dADM::SetData(void* pData) {
     u32 dat_size = out->dat_size;
     if (row * name != dat_size) {
         // HD: assertion line 0xD7 rather than GameCube's 202.
-        ADM_assert("d_s_actor_data_mng.cpp: dADM", 0xD7, "row * name == dat_size");
+        ADM_assert("d_s_actor_data_mng.cpp", 0xD7, "row * name == dat_size");
         row = out->row;
         name = out->name;
         dat_size = out->dat_size;
@@ -197,8 +197,8 @@ str 100525E4
 str 100525EC
 str 100525F4
 str 100525FC
-str 1005266C "d_s_actor_data_mng.cpp: dADM_CharTbl" renamed
-str 10052688 "d_s_actor_data_mng.cpp: dADM" renamed
+str 1005266C "d_s_actor_data_mng.cpp" in 025ABAF4
+str 10052688 "d_s_actor_data_mng.cpp" in 025ABD4C
 str 1005264C "dat_size == row_num * colum_num" renamed
 str 100526A0 "row * name == dat_size" renamed
 data ADM_vtable 100526C8

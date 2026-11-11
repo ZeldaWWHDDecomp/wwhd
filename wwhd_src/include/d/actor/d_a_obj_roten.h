@@ -22,7 +22,7 @@ public:
     /* 0x3B8 */ u8 field_0x29C[0x30];
     /* 0x3E8 */ gptr<RotenBgW> mpBgW;
     /* 0x3EC */ be<u8> mType;
-    /* 0x3ED */ be<u8> field_0x2D1;
+    /* 0x3ED */ be<u8> mCreateFailed;  /* was field_0x2D1: daObj_RotenCreate 02388B50 sets 1 and fails when the bag holds too few items for the stall type, else 0; daObj_RotenDelete 02388CC4 releases mpBgW and the resource only while 0 (tww the same) */
     /* 0x3EE */ u8 mPadding[2];
 };
 WWHD_OFFSET(daObj_Roten_c, mpModel, 0x3B4);

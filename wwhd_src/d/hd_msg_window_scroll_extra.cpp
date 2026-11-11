@@ -1,5 +1,6 @@
 /* HD scrolling message window controls and animation helpers. */
 #include "d/hd_msg_window_scroll_extra.h"
+#include "sead/ElementAt.h"
 using namespace gabi;
 extern void scrollSetText(ScrollMessage_l *, const char *, u32);
 extern void scrollSetPaneText(ScrollPane_l *, ScrollMessage_l *, u32);
@@ -107,7 +108,8 @@ void MsgWindowScroll_l::hideButton(u32 index) {
   pane->mFlags = (pane->mFlags & 0xFE);
   const u32 count = mButtonCount;
   gptr<hdPartsKeyIcon_c> *buttons = mpButtons;
-  buttons[index < count ? index : 0]->hide();
+  /* guest address arithmetic: buttons + index * 4 wraps at 32 bits as on the console */
+  sead::elementAt<gptr<hdPartsKeyIcon_c>>(gabi::ea(buttons), index < count ? index : 0)->hide();
 }
 
 /* 026BA3F8 */
@@ -116,7 +118,8 @@ void MsgWindowScroll_l::showButton(u32 index) {
   pane->mFlags = (pane->mFlags & 0xFE) | 1;
   const u32 count = mButtonCount;
   gptr<hdPartsKeyIcon_c> *buttons = mpButtons;
-  buttons[index < count ? index : 0]->requestIn();
+  /* guest address arithmetic: buttons + index * 4 wraps at 32 bits as on the console */
+  sead::elementAt<gptr<hdPartsKeyIcon_c>>(gabi::ea(buttons), index < count ? index : 0)->requestIn();
 }
 
 /* 026BA80C */
@@ -125,7 +128,8 @@ void MsgWindowScroll_l::pressButton(u32 index) {
   pane->mFlags = (pane->mFlags & 0xFE) | 1;
   const u32 count = mButtonCount;
   gptr<hdPartsKeyIcon_c> *buttons = mpButtons;
-  buttons[index < count ? index : 0]->requestOut();
+  /* guest address arithmetic: buttons + index * 4 wraps at 32 bits as on the console */
+  sead::elementAt<gptr<hdPartsKeyIcon_c>>(gabi::ea(buttons), index < count ? index : 0)->requestOut();
 }
 
 /* 026B9AC4 */
@@ -177,14 +181,16 @@ void MsgWindowScroll_l::finishMiddleButton() {
 u32 MsgWindowScroll_l::buttonInEnded(u32 index) {
   const u32 count = mButtonCount;
   gptr<hdPartsKeyIcon_c> *buttons = mpButtons;
-  return buttons[index < count ? index : 0]->isWaiting();
+  /* guest address arithmetic: buttons + index * 4 wraps at 32 bits as on the console */
+  return sead::elementAt<gptr<hdPartsKeyIcon_c>>(gabi::ea(buttons), index < count ? index : 0)->isWaiting();
 }
 
 /* 026BAD54 */
 u32 MsgWindowScroll_l::buttonPressEnded(u32 index) {
   const u32 count = mButtonCount;
   gptr<hdPartsKeyIcon_c> *buttons = mpButtons;
-  return buttons[index < count ? index : 0]->isHidden();
+  /* guest address arithmetic: buttons + index * 4 wraps at 32 bits as on the console */
+  return sead::elementAt<gptr<hdPartsKeyIcon_c>>(gabi::ea(buttons), index < count ? index : 0)->isHidden();
 }
 
 /* 026BA54C */
@@ -216,7 +222,7 @@ void MsgWindowScroll_l::setLine(u32 index) {
 
 /* 026B9D9C */
 void MsgWindowScroll_l::playAnimation(u32 animation) {
-  const u32 kind = sScrollAnimationKinds.mValues[animation];
+  const u32 kind = sead::elementAt<be<u32>>(gabi::ea(sScrollAnimationKinds.mValues), animation); /* sibling: wraps at 32 bits as on the console */
   scrollSetFrame(mpAnimation->animSet(), animation, kind, 0.0f);
   scrollPlay(mpAnimation->animSet(), animation, kind, 1.0f);
 }
@@ -321,7 +327,7 @@ void MsgWindowScroll_l::startCloseAnimation() {
 /* 026BB278 */
 void MsgWindowScroll_l::stopAnimation(u32 animation, f32 frame) {
   void *player = mpAnimation->animSet();
-  const u32 kind = sScrollAnimationKinds.mValues[animation];
+  const u32 kind = sead::elementAt<be<u32>>(gabi::ea(sScrollAnimationKinds.mValues), animation); /* sibling: wraps at 32 bits as on the console */
   scrollStop(player, animation, kind, frame);
 }
 
@@ -373,7 +379,7 @@ void MsgWindowScroll_l::beginOpening() {
     const u32 material = mMaterial;
     ScrollPane_l *pane = mpMaterialPanes[i];
     pane->mFlags = (pane->mFlags & 0xFE) |
-                   sScrollMaterialVisible.mValues[material * 3 + i];
+                   sead::elementAt<be<u8>>(gabi::ea(sScrollMaterialVisible.mValues), material * 3 + i); /* sibling: wraps at 32 bits as on the console */
   }
   scrollSetLines(this, NULL);
   mTimer = 0;

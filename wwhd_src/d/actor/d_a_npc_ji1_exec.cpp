@@ -196,8 +196,8 @@ BOOL daNpc_Ji1_c::CreateInit() {
   mFirstMsgDone = 0;
   field_0xD79 = 0;
   field_0xC94 = 0;
-  field_0xC90 = 0;
-  mTeachHitsLeft = l_hio.field_0x54[mTeachStep];
+  mTeachResult = 0;
+  mTeachHitsLeft = l_hio.mTeachHitCount[mTeachStep];
   mCoHit = 0;
   mAttackEndWait = 0;
   mCoCorrectSum = 0.0f;
@@ -237,7 +237,7 @@ BOOL daNpc_Ji1_c::CreateInit() {
       ji1_setAction(this, ACT_normalAction, nullptr);
     } else {
       mHarpoonState = Ji1Exec_HARPOON_HIDDEN;
-      if (!dComIfGs_isEventBit(0x0640) || l_hio.field_0x30) {
+      if (!dComIfGs_isEventBit(0x0640) || l_hio.mbRepeatKaiten) {
         field_0xD68 = 0;
         ji1_setAction(this, ACT_kaitenExpAction, nullptr);
       } else {
@@ -350,7 +350,7 @@ static inline void daNpc_Ji1_setHairAngle(daNpc_Ji1_c *i_this) {
     i_this->mHair1AngleZ = (s16)(i_this->mHair1AngleZ + add + add);
   }
   i_this->mHair1AngleZ =
-      minMax(i_this->mHair1AngleZ, l_hio.field_0xF4, l_hio.field_0xF6);
+      minMax(i_this->mHair1AngleZ, l_hio.mHair1MinZ, l_hio.mHair1MaxZ);
 
   {
     s16 a = i_this->current.angle.y + i_this->m_jnt.mAngles[0][1];
@@ -364,7 +364,7 @@ static inline void daNpc_Ji1_setHairAngle(daNpc_Ji1_c *i_this) {
   }
   i_this->mHair1AngleY =
       (s16)(i_this->mHair1AngleY + (s16)(i_this->mHair1SpeedY - temp4_2));
-  s16 bac = minMax(i_this->mHair1AngleY, l_hio.field_0xE8, l_hio.field_0xEA);
+  s16 bac = minMax(i_this->mHair1AngleY, l_hio.mHair1MinY, l_hio.mHair1MaxY);
   s16 baa = i_this->mHair1AngleZ;
   i_this->mHair1AngleY = bac;
 
@@ -382,13 +382,13 @@ static inline void daNpc_Ji1_setHairAngle(daNpc_Ji1_c *i_this) {
   i_this->mHair2AngleZ =
       (s16)(i_this->mHair2AngleZ + (s16)(i_this->mHair2SpeedZ + temp3_2));
   i_this->mHair2AngleZ =
-      minMax(i_this->mHair2AngleZ, (s16)(l_hio.field_0xF8 - i_this->mHair1AngleZ),
-             (s16)(l_hio.field_0xFA - i_this->mHair1AngleZ));
+      minMax(i_this->mHair2AngleZ, (s16)(l_hio.mHair2MinZ - i_this->mHair1AngleZ),
+             (s16)(l_hio.mHair2MaxZ - i_this->mHair1AngleZ));
   i_this->mHair2AngleY =
       (s16)(i_this->mHair2AngleY + (s16)(i_this->mHair2SpeedY - temp4_2));
   i_this->mHair2AngleY =
-      minMax(i_this->mHair2AngleY, (s16)(l_hio.field_0xEC - i_this->mHair1AngleY),
-             (s16)(l_hio.field_0xEE - i_this->mHair1AngleY));
+      minMax(i_this->mHair2AngleY, (s16)(l_hio.mHair2MinY - i_this->mHair1AngleY),
+             (s16)(l_hio.mHair2MaxY - i_this->mHair1AngleY));
 
   d26 = i_this->mHair2AngleZ - r26;
   d25 = i_this->mHair2AngleY - r25;
@@ -405,14 +405,14 @@ static inline void daNpc_Ji1_setHairAngle(daNpc_Ji1_c *i_this) {
       (s16)(i_this->mHair3AngleZ + (s16)(i_this->mHair3SpeedZ + temp3_2));
   i_this->mHair3AngleZ = minMax(
       i_this->mHair3AngleZ,
-      (s16)(l_hio.field_0xFC - i_this->mHair1AngleZ - i_this->mHair2AngleZ),
-      (s16)(l_hio.field_0xFE - i_this->mHair1AngleZ - i_this->mHair2AngleZ));
+      (s16)(l_hio.mHair3MinZ - i_this->mHair1AngleZ - i_this->mHair2AngleZ),
+      (s16)(l_hio.mHair3MaxZ - i_this->mHair1AngleZ - i_this->mHair2AngleZ));
   i_this->mHair3AngleY =
       (s16)(i_this->mHair3AngleY + (s16)(i_this->mHair3SpeedY - temp4_2));
   i_this->mHair3AngleY = minMax(
       i_this->mHair3AngleY,
-      (s16)(l_hio.field_0xF0 - i_this->mHair2AngleY - i_this->mHair1AngleY),
-      (s16)(l_hio.field_0xF2 - i_this->mHair2AngleY - i_this->mHair1AngleY));
+      (s16)(l_hio.mHair3MinY - i_this->mHair2AngleY - i_this->mHair1AngleY),
+      (s16)(l_hio.mHair3MaxY - i_this->mHair2AngleY - i_this->mHair1AngleY));
   i_this->mHair3SpeedZ = tenth2(i_this->mHair3AngleZ - r26);
   i_this->mHair3SpeedY = tenth2(i_this->mHair3AngleY - r25);
 
@@ -602,81 +602,81 @@ static daNpc_Ji1_HIO_c *daNpc_Ji1_HIO_ct(daNpc_Ji1_HIO_c *p) {
   p->__vtbl = gabi::ea(&l_hioVtable);
   p->mNo = -1;
   p->field_0x08 = 100.0f;
-  p->field_0x0C = 7000;
-  p->field_0x0E = 4000;
-  p->field_0x10 = 9000;
-  p->field_0x12 = 7000;
-  p->field_0x14 = 5000;
-  p->field_0x16 = 1;
-  p->field_0x18 = 2000;
+  p->mMaxHeadX = 7000;
+  p->mMaxBackboneX = 4000;
+  p->mMaxHeadY = 9000;
+  p->mMaxBackboneY = 7000;
+  p->mMaxTurnStep = 5000;
+  p->mHeadTurnVelScale = 1;
+  p->mMaxHeadTurnVel = 2000;
   p->field_0x1C = 0.0f;
   p->field_0x20 = 20.0f;
   p->field_0x24 = 20.0f;
   p->field_0x28 = 0;
-  p->field_0x2C = 200.0f;
-  p->field_0x30 = 0;
-  p->field_0x34 = 150.0f;
-  p->field_0x38 = 20.0f;
-  p->field_0x3C = 90.0f;
-  p->field_0x40 = 10.0f;
-  p->field_0x44 = 2.0f;
-  p->field_0x48 = 2.0f;
-  p->field_0x4C = 1.25f;
+  p->mTalkDistXZ = 200.0f;
+  p->mbRepeatKaiten = 0;
+  p->mJpGuardSlideDist = 150.0f;
+  p->mJpGuardSlideStep = 20.0f;
+  p->mGuardSlideDist = 90.0f;
+  p->mGuardSlideStep = 10.0f;
+  p->mInasiAnmSpeed = 2.0f;
+  p->mKrotAnmSpeed = 2.0f;
+  p->mWaraiAnmSpeed = 1.25f;
   p->field_0x50 = 1.5f;
-  p->field_0x54[0] = 9;
-  p->field_0x54[1] = 9;
-  p->field_0x54[2] = 9;
-  p->field_0x54[3] = 2;
-  p->field_0x54[4] = 2;
-  p->field_0x54[5] = 2;
-  p->field_0x60[0] = 100;
-  p->field_0x60[1] = 300;
-  p->field_0x60[2] = 500;
-  p->field_0x60[3] = 1000;
+  p->mTeachHitCount[0] = 9;
+  p->mTeachHitCount[1] = 9;
+  p->mTeachHitCount[2] = 9;
+  p->mTeachHitCount[3] = 2;
+  p->mTeachHitCount[4] = 2;
+  p->mTeachHitCount[5] = 2;
+  p->mLevelHits[0] = 100;
+  p->mLevelHits[1] = 300;
+  p->mLevelHits[2] = 500;
+  p->mLevelHits[3] = 1000;
   p->field_0x68 = 0;
-  p->field_0x6C = 0.7f;
-  p->field_0x70 = 1.5f;
-  p->field_0x78 = 1.4f;
-  p->field_0x74 = 1.4f;
-  p->field_0x80 = 1.4f;
+  p->mAttackAnmSpeed = 0.7f;
+  p->mAttackSwingAnmSpeed = 1.5f;
+  p->mTateAnmSpeed = 1.4f;
+  p->mTateYokoSwingAnmSpeed = 1.4f;
+  p->mYokoAnmSpeed = 1.4f;
   p->field_0x7C = 1.2f;
-  p->field_0x84 = 0.1f;
-  p->field_0x88 = 0xB;
-  p->field_0x8A = 0x32;
-  p->field_0x8C = 0x28;
-  p->field_0x8E = 0x1E;
-  p->field_0x90 = 0x14;
-  p->field_0x92 = 0xF;
-  p->field_0x94 = 10;
-  p->field_0x96 = 0xB4;
-  p->field_0x98 = 0x8C;
-  p->field_0x9A = 100;
-  p->field_0x9C = 0x50;
-  p->field_0x9E = 0x3C;
-  p->field_0xA0 = 0x32;
-  p->field_0xA4 = 6.0f;
-  p->field_0xA8 = 16.0f;
-  p->field_0xAC = 70.0f;
-  p->field_0xB0 = 10.0f;
-  p->field_0xB4 = 1.0f;
+  p->mNockBackAnmSpeed = 0.1f;
+  p->mNockBackTime = 0xB;
+  p->mBattleTimerBase0 = 0x32;
+  p->mBattleTimerBase1 = 0x28;
+  p->mBattleTimerBase2 = 0x1E;
+  p->mBattleTimerBase3 = 0x14;
+  p->mBattleTimerBase4 = 0xF;
+  p->mBattleTimerBase5 = 10;
+  p->mBattleTimerRange0 = 0xB4;
+  p->mBattleTimerRange1 = 0x8C;
+  p->mBattleTimerRange2 = 100;
+  p->mBattleTimerRange3 = 0x50;
+  p->mBattleTimerRange4 = 0x3C;
+  p->mBattleTimerRange5 = 0x32;
+  p->mBibiriAnmMorf = 6.0f;
+  p->mOdorokuAnmMorf = 16.0f;
+  p->mBibiriSlideDist = 70.0f;
+  p->mBibiriSlideStep = 10.0f;
+  p->mBibiriSlideFrame = 1.0f;
   p->field_0xB8 = 0;
-  p->field_0xBC = 0.25f;
-  p->field_0xC0 = -5.0f;
-  p->field_0xC4[0].set(90.0f, 5.0f, 30.0f);
-  p->field_0xC4[1].set(90.0f, 5.0f, -30.0f);
-  p->field_0xC4[2].set(-20.0f, -20.0f, 0.0f);
-  p->field_0xE8 = (s16)0xC800;
-  p->field_0xEA = 0x3800;
-  p->field_0xEC = (s16)0xC600;
-  p->field_0xEE = 0x3A00;
-  p->field_0xF0 = (s16)0xC600;
-  p->field_0xF2 = 0x3A00;
-  p->field_0xF4 = (s16)0xFB00;
-  p->field_0xF6 = 0x3800;
-  p->field_0xF8 = (s16)0xF600;
-  p->field_0xFA = 0x3A00;
-  p->field_0xFC = (s16)0xF100;
-  p->field_0xFE = 0x3A00;
+  p->mHarpoonBounce = 0.25f;
+  p->mHarpoonGravity = -5.0f;
+  p->mBackboneOffsets[0].set(90.0f, 5.0f, 30.0f);
+  p->mBackboneOffsets[1].set(90.0f, 5.0f, -30.0f);
+  p->mBackboneOffsets[2].set(-20.0f, -20.0f, 0.0f);
+  p->mHair1MinY = (s16)0xC800;
+  p->mHair1MaxY = 0x3800;
+  p->mHair2MinY = (s16)0xC600;
+  p->mHair2MaxY = 0x3A00;
+  p->mHair3MinY = (s16)0xC600;
+  p->mHair3MaxY = 0x3A00;
+  p->mHair1MinZ = (s16)0xFB00;
+  p->mHair1MaxZ = 0x3800;
+  p->mHair2MinZ = (s16)0xF600;
+  p->mHair2MaxZ = 0x3A00;
+  p->mHair3MinZ = (s16)0xF100;
+  p->mHair3MaxZ = 0x3A00;
   return p;
 }
 

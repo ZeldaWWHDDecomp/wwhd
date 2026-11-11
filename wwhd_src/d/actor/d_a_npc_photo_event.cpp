@@ -226,7 +226,7 @@ void daNpcPhoto_c::eventPosSetInit() {
     mPathRun.mIdx = (u8)(gabi::object_at<path_layout::dPath>(gabi::ea(mPathRun.mPath.get())).m_num /* m_num */ - 2);
     mPathRun.mbDir = 0;
     executeSetMode(0);
-    field_0x9C1 = 1;
+    mPlaceState = 1;
     int temp = gabi::ftoi(cM_rndF(3.0f));
     if (temp == 3) {
         temp = 0;
@@ -250,7 +250,7 @@ void daNpcPhoto_c::eventSetAngleInit() {
 }
 /* 022CDC8C */
 void daNpcPhoto_c::eventSetEyeInit() {
-    field_0x9B0 = 0;
+    mCutCounter = 0;
     dComIfGp_event_setTalkPartner(this);
 }
 /* 022CDCDC */
@@ -269,7 +269,7 @@ void daNpcPhoto_c::eventTurnToPlayerInit() {
 /* 022CDD50 */
 void daNpcPhoto_c::eventClrHanmeInit() {
     initTexPatternAnm(true, -1);
-    field_0x9C9 = field_0x9C9 & 0x7F;
+    mAnmFlags = mAnmFlags & 0x7F;
 }
 /* 022CDD90 */
 void daNpcPhoto_c::eventGetPhotoInit() {
@@ -284,7 +284,7 @@ void daNpcPhoto_c::eventGetPhotoInit() {
         u32 play = dComIfGp_ea();
         gabi::object_at<dComIfG_inf_c>(play).play.mItemPictureNumCount += 1;
     }
-    field_0x9B0 = 10;
+    mCutCounter = 10;
 }
 /* 022CDE38 */
 void daNpcPhoto_c::eventMesSetUbInit(int i_staffId) {
@@ -314,10 +314,10 @@ void daNpcPhoto_c::setMsgCamera() {
         gabi::Local<cXyz> eye;
         cxyz_cpf(eye.get(), *temp2);
         dCamera_Set(pCam, center.get(), eye.get(), 60.0f, 0);
-        field_0x9D4 = true;
+        mMsgCameraSet = true;
     } else {
         dCamera_Start(pCam);
-        field_0x9D4 = false;
+        mMsgCameraSet = false;
     }
 }
 /* 022CDFAC */
@@ -340,7 +340,7 @@ u16 daNpcPhoto_c::talk2(int i_param) {
         mCurrMsgBsPcId = msgMng_messageSet(mgr, mCurrMsgNo, &eyePos);
         if (mCurrMsgBsPcId != fpcM_ERROR_PROCESS_ID_e) { // HD: only when the message was set
             mbHasMsg = 0;
-            field_0x9D5 = 1;
+            mMsgCameraPending = 1;
             setMsgCamera();
         }
     } else if (mbHasMsg) {
@@ -353,24 +353,24 @@ u16 daNpcPhoto_c::talk2(int i_param) {
             }
             break;
         case 6: /* fopMsgStts_MSG_TYPING_e */
-            if (field_0x9D5 != 0) {
-                field_0x9D5 = 0;
+            if (mMsgCameraPending != 0) {
+                mMsgCameraPending = 0;
                 setMsgCamera();
             }
             break;
         case 0x12: /* fopMsgStts_BOX_CLOSED_e */
-            if (field_0x9D4) {
+            if (mMsgCameraSet) {
                 dCamera_Start(dCam_getBody());
             }
-            if (field_0x9C6 & 0x20) {
-                field_0x9C6 = (field_0x9C6 & ~0x20) | 0x40;
+            if (mEventFlags & 0x20) {
+                mEventFlags = (mEventFlags & ~0x20) | 0x40;
             }
             msgMng_setStatus(mgr, fopMsgStts_MSG_DESTROYED_e);
             mCurrMsgBsPcId = fpcM_ERROR_PROCESS_ID_e;
             break;
         }
         if (status != 6) {
-            field_0x9D5 = 1;
+            mMsgCameraPending = 1;
         }
         photo_v_anmAtr(this, status);
     } else {
@@ -390,9 +390,9 @@ bool daNpcPhoto_c::eventMesSet() {
 /* 022CE33C */
 bool daNpcPhoto_c::eventSetEye() {
     fopAc_ac_c* link = dComIfGp_getLinkPlayer(); /* daPy_getPlayerLinkActorClass() */
-    u16 t = field_0x9B0;
+    u16 t = mCutCounter;
     s16 temp = (s16)gabi::ftoi(gabi::fmadds(cM_ssin(t), 12288.0f, (f32)(s32)link->shape_angle.y));
-    field_0x9B0 = t + 0x400;
+    mCutCounter = t + 0x400;
     mEyePos.x = 0.0f;
     mEyePos.y = 0.0f;
     mEyePos.z = 100.0f;
@@ -408,8 +408,8 @@ bool daNpcPhoto_c::eventTurnToPlayer() {
 }
 /* 022CE44C */
 bool daNpcPhoto_c::eventGetPhoto() {
-    field_0x9B0 = field_0x9B0 - 1;
-    return field_0x9B0 == 0;
+    mCutCounter = mCutCounter - 1;
+    return mCutCounter == 0;
 }
 /* 022CE468 */
 bool daNpcPhoto_c::eventLookUb() {
@@ -476,36 +476,36 @@ void daNpcPhoto_c::setAnmFromMsgTag() {
     switch (dComIfGp_getMesgAnimeAttrInfo()) {
     case 0:
         setAnmTbl(wait);
-        field_0x9C9 = field_0x9C9 & 0x7F;
+        mAnmFlags = mAnmFlags & 0x7F;
         break;
     case 1:
         setAnmTbl(talk);
-        field_0x9C9 = field_0x9C9 & 0x7F;
+        mAnmFlags = mAnmFlags & 0x7F;
         break;
     case 2:
     case 4:
         setAnmTbl(talk2);
-        field_0x9C9 = field_0x9C9 & 0x7F;
+        mAnmFlags = mAnmFlags & 0x7F;
         break;
     case 3:
         setAnmTbl(wait);
         initTexPatternAnm(true, 0);
-        field_0x9C9 = field_0x9C9 & 0x7F;
+        mAnmFlags = mAnmFlags & 0x7F;
         break;
     case 5:
         setAnmTbl(wait);
         initTexPatternAnm(true, 1);
         mFrame = 1;
-        field_0x9C9 = field_0x9C9 | 0x80;
+        mAnmFlags = mAnmFlags | 0x80;
         break;
     case 6:
         setAnmTbl(talk);
         initTexPatternAnm(true, 0);
-        field_0x9C9 = field_0x9C9 & 0x7F;
+        mAnmFlags = mAnmFlags & 0x7F;
         break;
     case 9:
         setAnmTbl(l_npc_anm_spit /* l_npc_anm_spit */);
-        field_0x9C9 = field_0x9C9 & 0x7F;
+        mAnmFlags = mAnmFlags & 0x7F;
         break;
     }
     dComIfGp_setMesgAnimeAttrInfo(0xFF); /* dComIfGp_setMesgAnimeAttrInfo(0xFF) */
@@ -513,21 +513,21 @@ void daNpcPhoto_c::setAnmFromMsgTag() {
 /* 022CE97C */
 void daNpcPhoto_c::eventMove() {
     if (dComIfGp_evmng_endCheck(mPhotoLinkBackEventIdx)) {
-        field_0x9C6 = field_0x9C6 | 0x40;
+        mEventFlags = mEventFlags | 0x40;
     } else if (dComIfGp_evmng_endCheck(mCounterTalkEventIdx)) {
         mModeInTalk = true;
         mOrderEvent = 0;
         mTalking = false;
         eventInfo_setEventId(this, -1);
-        field_0x9C6 = field_0x9C6 | 0x40;
+        mEventFlags = mEventFlags | 0x40;
         executeSetMode(0);
     } else if (dComIfGp_evmng_endCheck(mPhotoGetItemEventIdx) || dComIfGp_evmng_endCheck(mPhotoGetItem2EventIdx) ||
                dComIfGp_evmng_endCheck(mPhotoGetPhotoEventIdx) || dComIfGp_evmng_endCheck(mPhotoGalleryEventIdx)) {
-        field_0x9C6 = field_0x9C6 | 0x40;
+        mEventFlags = mEventFlags | 0x40;
     } else if (dComIfGp_evmng_endCheck(mPhotoDateUB4EventIdx)) {
         mLookAtPlayer = true;
         mBodyTurn = true;
-        field_0x9C6 = field_0x9C6 | 0x50;
+        mEventFlags = mEventFlags | 0x50;
     } else {
         u8 temp = mEventCut.mbAttention; /* getAttnFlag() */
         if (mEventCut.cutProc()) {
@@ -542,13 +542,13 @@ void daNpcPhoto_c::eventMove() {
 }
 /* 022CEB58 */
 void daNpcPhoto_c::eventOrder() {
-    if (field_0x9C6 & 0x40) {
-        field_0x9C6 = field_0x9C6 & ~0x40;
+    if (mEventFlags & 0x40) {
+        mEventFlags = mEventFlags & ~0x40;
         dComIfGp_event_reset();
         initTexPatternAnm(true, -1);
         mModeInTalk = true;
         mTalking = false;
-        field_0x9C9 = field_0x9C9 & 0x7F;
+        mAnmFlags = mAnmFlags & 0x7F;
         executeSetMode(0);
     }
     u8 temp = mOrderEvent;

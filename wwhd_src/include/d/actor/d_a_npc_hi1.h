@@ -108,16 +108,16 @@ struct daNpc_Hi1_c : fopNpc_npc_c {
     /* 0x968 */ u8 _968[8];
     /* 0x970 */ be<s16> mTimer2;
     /* 0x972 */ u8 _972[8];
-    /* 0x97A */ be<s16> field_0x7AA; /* lookBack state 3 target */
+    /* 0x97A */ be<s16> mLookAngleY;  /* was field_0x7AA: lookBack 0223D3E8: the target angle of look mode 3; never written in WWHD or tww (always 0); same role as daNpc_Zl1_c::mLookAngleY (the shared template); lookBack state 3 target */
     /* 0x97C */ be<s8> mbMorfAnimStopped;  /* was field_0x7AC: play_animation 0223C928: the morf's play() result, or 1 (tww); setAnm_anm 0223DB2C 0; after tww daNpc_Ls1_c mbMorfAnimStopped (same code) */
     /* 0x97D */ be<u8> field_0x7AD;
     /* 0x97E */ be<u8> mItemNo;
     /* 0x97F */ u8 _97F;
-    /* 0x980 */ be<u8> field_0x7B0; /* run event_proc */
+    /* 0x980 */ be<u8> mForceEventProc;  /* was field_0x7B0: _execute 0223D6EC runs event_proc while it is set even without a staff index; never written in WWHD or tww (always 0); same role as daNpc_Zl1_c::mForceEventProc (the shared template); run event_proc */
     /* 0x981 */ be<u8> mStateIsComplaete;
-    /* 0x982 */ be<u8> field_0x7B2; /* no execute/draw (unless in a demo) */
-    /* 0x983 */ be<u8> field_0x7B3; /* keep shape_angle */
-    /* 0x984 */ be<u8> field_0x7B4; /* no draw */
+    /* 0x982 */ be<u8> mHideUntilDemo;  /* was field_0x7B2: _execute 0223D6EC returns early while it is set and no demo runs and clears it in a demo; _draw 0223D9C0 draws nothing while it is set; never set in WWHD or tww (only cleared); same role as daNpc_Zl1_c::mHideUntilDemo (the shared template); no execute/draw (unless in a demo) */
+    /* 0x983 */ be<u8> mKeepShapeAngle;  /* was field_0x7B3: hi1_setAngle (in _execute 0223D6EC) copies current.angle into shape_angle only while it is 0; demo 0223CF54 clears it; never set in WWHD or tww; same role as daNpc_Zl1_c::mKeepShapeAngle (the shared template); keep shape_angle */
+    /* 0x984 */ be<u8> mNoDraw;  /* was field_0x7B4: _draw 0223D9C0 draws nothing while it (or mHideUntilDemo) is set; never written in WWHD or tww (always 0); no draw */
     /* 0x985 */ be<u8> mbRanExecute;  /* was field_0x7B5: _execute 0223D6EC: 0 on the first run, when mInitialPos and mInitialAngle are taken, then 1 (tww if (!it) { ..; it = 1; }); after tww daNpc_Bm1_c mbRanExecute (same code) */
     /* 0x986 */ be<u8> mHasAttention;
     /* 0x987 */ be<u8> mTalking;  /* was field_0x7B7: checkOrder 0223CE7C sets 1 on the talk command (tww); wait_1 0223DFB4 starts the talk (setStt(2)) while it is set (tww); talk_1 0223E12C clears it (tww); after daNpcMt_c::mTalking (npcs.md) */
@@ -133,7 +133,7 @@ struct daNpc_Hi1_c : fopNpc_npc_c {
     /* 0x991 */ be<s8> mOrderEvent;  /* was field_0x7C1: eventOrder 0223D67C: 1 / 2 the talk (1 orders the speak event), 3+ orders mEventIdx[it - 3] (tww); checkOrder 0223CE7C clears it once that event starts (tww); setStt 0223DF68 / wait_1 0223DFB4 set it; after daNpc_Cb1_c::mOrderEvent */
     /* 0x992 */ be<s8> mStt;  /* was field_0x7C2: setStt 0223DF68 stores the new state and switches on it (tww); setAnm 0223DC34 plays a_anm_prm_tbl[it] (tww); wait_action1 0223E204 switches on it; same name as daNpc_Zl1_c::mStt (npcs.md) */
     /* 0x993 */ be<s8> mPrevStt;  /* was field_0x7C3: setStt 0223DF68 keeps the previous mStt here (tww); talk_1 0223E12C returns to it (tww setStt(it)); same name as daNpc_Zl1_c::mPrevStt (npcs.md) */
-    /* 0x994 */ be<s8> mLookMode;  /* was field_0x7C4: lookBack 0223D3E8 switches on it: 1 the player's eyes, 2 mLookPos, 3 field_0x7AA, 4 the partner (tww); wait_1 0223DFB4 sets 0 / 1 (tww); after daNpcMt_c::mLookMode (npcs.md) */
+    /* 0x994 */ be<s8> mLookMode;  /* was field_0x7C4: lookBack 0223D3E8 switches on it: 1 the player's eyes, 2 mLookPos, 3 mLookAngleY, 4 the partner (tww); wait_1 0223DFB4 sets 0 / 1 (tww); after daNpcMt_c::mLookMode (npcs.md) */
     /* 0x995 */ be<s8> mHeapSizeIdx;  /* was field_0x7C5: decideType 0223C65C sets it (tww); _create 0223CCC4 creates the solid heap with a_heap_size_tbl[it] (tww a_siz_tbl[it]); the slot of tww daNpc_Ls1_c m854 (unnamed there) */
     /* 0x996 */ be<s8> mType;  /* was field_0x7C6: decideType 0223C65C sets it (tww); createInit 0223CB30 / getMsg_HI1_0 switch on it (tww); after tww daNpc_Ls1_c mType (same code) */
     /* 0x997 */ be<s8> mActionStatus;  /* was field_0x7C7: set_action 0223C6C0 sets 9 for the leaving action and 0 for the new one (tww); wait_action1 0223E204 switches on it and steps it (tww it++); after tww daNpc_Bs1_c mActionStatus */
@@ -149,7 +149,7 @@ WWHD_OFFSET(daNpc_Hi1_c, mEyePos, 0x914);
 WWHD_OFFSET(daNpc_Hi1_c, mFrame, 0x950);
 WWHD_OFFSET(daNpc_Hi1_c, mbSetEyePos, 0x960);
 WWHD_OFFSET(daNpc_Hi1_c, mTimer2, 0x970);
-WWHD_OFFSET(daNpc_Hi1_c, field_0x7B0, 0x980);
+WWHD_OFFSET(daNpc_Hi1_c, mForceEventProc, 0x980);
 WWHD_OFFSET(daNpc_Hi1_c, mAnmAtrSetCnt, 0x998);
 WWHD_SIZE(daNpc_Hi1_c, 0x99C);
 
@@ -165,7 +165,7 @@ struct daNpc_Hi1_HIO_c {
         be<s16> mMinBackboneX;
         be<s16> mMinBackboneY;
         be<s16> mMaxTurnStep;        /* dNpc_JntCtrl_c::setParam arguments */
-        /* 0x12 */ be<s16> field_12; /* lookBack */
+        /* 0x12 */ be<s16> mMaxHeadTurnVel;  /* was field_12: lookBack 0223D3E8 passes it to the look-at as the max turn speed (tww the same); same role as dNpc_HIO_c::mMaxHeadTurnVel */
         /* 0x14 */ be<f32> mAttentionYOffset;
         /* 0x18 */ be<u8> mDebug; /* debug colours in _draw */
         /* 0x19 */ u8 _19[3];
@@ -173,7 +173,7 @@ struct daNpc_Hi1_HIO_c {
     /* 0x00 */ be<u32> __vtbl;
     /* 0x04 */ be<s8> mNo;
     /* 0x05 */ u8 _05[3];
-    /* 0x08 */ be<s32> field_0x8;
+    /* 0x08 */ be<s32> mRefCount;  /* was field_0x8: daNpc_Hi1_HIO_c_ct 0223E2BC -1; never read in WWHD or tww; after our decomp's daNpc_Pm1_HIO_c / daNpc_Ba1_HIO_c mRefCount: the same HIO layout (mNo, then the s32 instance counter) */
     /* 0x0C */ hio_prm_c mPrmTbl;
 };
 WWHD_SIZE(daNpc_Hi1_HIO_c, 0x28);
@@ -340,4 +340,4 @@ WWHD_OFFSET(daNpc_Hi1_HIO_c::hio_prm_c, mMaxBackboneY, 0xA);
 WWHD_OFFSET(daNpc_Hi1_HIO_c::hio_prm_c, mMinBackboneX, 0xC);
 WWHD_OFFSET(daNpc_Hi1_HIO_c::hio_prm_c, mMinBackboneY, 0xE);
 WWHD_OFFSET(daNpc_Hi1_HIO_c::hio_prm_c, mMaxTurnStep, 0x10);
-WWHD_OFFSET(daNpc_Hi1_HIO_c::hio_prm_c, field_12, 0x12);
+WWHD_OFFSET(daNpc_Hi1_HIO_c::hio_prm_c, mMaxHeadTurnVel, 0x12);

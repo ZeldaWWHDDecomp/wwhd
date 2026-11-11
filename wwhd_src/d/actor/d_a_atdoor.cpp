@@ -44,7 +44,7 @@ static BOOL CheckCreateHeap(fopAc_ac_c* i_this) {
 /* 02058018 */
 BOOL daAtdoor_c::CreateHeap() {
     J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_ATDOOR_BDL_SDOOR01_e);
-    JUT_ASSERT(112, modelData != NULL);
+    JUT_ASSERT_MSG(112, modelData != NULL, "modelData != (0)");
 
     mpModel = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000022);
     if (!mpModel) {
@@ -74,7 +74,7 @@ BOOL daAtdoor_c::CreateHeap() {
 /* 02057F50 */
 void daAtdoor_c::calcMtx() {
     mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
-    mDoMtx_stack_c::YrotM(home.angle.y - unk_2A2);
+    mDoMtx_stack_c::YrotM(home.angle.y - mOpenAngle);
     mpModel->setBaseTRMtx(mDoMtx_stack_c::get());
 }
 
@@ -91,7 +91,7 @@ bool daAtdoor_c::CreateInit() {
         mAction = ACT_WAIT_e;
     } else if (dComIfGs_isSwitch(swBit, fopAcM_GetRoomNo(this))) {
         mAction = ACT_OPEN_WAIT_e;
-        unk_2A2 = 0x4000;
+        mOpenAngle = 0x4000;
     } else {
         mAction = ACT_CLOSE_WAIT_e;
     }
@@ -136,10 +136,10 @@ bool daAtdoor_actionCloseWait(daAtdoor_c* i_this) {
 
 /* 020581D0 */
 bool daAtdoor_actionClose(daAtdoor_c* i_this) {
-    i_this->unk_2A2 = (s16)(i_this->unk_2A2 - 0x400);
-    if (i_this->unk_2A2 <= 0) {
+    i_this->mOpenAngle = (s16)(i_this->mOpenAngle - 0x400);
+    if (i_this->mOpenAngle <= 0) {
         i_this->setAction(ACT_CLOSE_WAIT_e);
-        i_this->unk_2A2 = 0;
+        i_this->mOpenAngle = 0;
     }
 
     i_this->calcMtx();
@@ -158,10 +158,10 @@ bool daAtdoor_actionOpenWait(daAtdoor_c* i_this) {
 
 /* 0205828C */
 bool daAtdoor_actionOpen(daAtdoor_c* i_this) {
-    i_this->unk_2A2 = (s16)(i_this->unk_2A2 + 0x400);
-    if (i_this->unk_2A2 >= 0x4000) {
+    i_this->mOpenAngle = (s16)(i_this->mOpenAngle + 0x400);
+    if (i_this->mOpenAngle >= 0x4000) {
         i_this->setAction(ACT_OPEN_WAIT_e);
-        i_this->unk_2A2 = 0x4000;
+        i_this->mOpenAngle = 0x4000;
     }
 
     i_this->calcMtx();
@@ -254,8 +254,8 @@ static void emptyVirtual() {}
 str 100076E8
 str 1000769C
 str 100076C8 in 0205842C
-str 100076AC "modelData != NULL" renamed # HD: assertion spells zero instead of NULL.
-str 100076C4 "FALSE" renamed # HD: assertion text spells zero.
+str 100076AC "modelData != (0)" # HD: assertion spells zero instead of NULL.
+str 100076C4 "0"
 data l_action_guard 101FDA20
 data l_action 101FDA24 nocheck # HD: BSS table is populated by the checked source copy on first use.
 data l_action_init 1018FFB0

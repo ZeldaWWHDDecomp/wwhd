@@ -1,5 +1,6 @@
 /* WWHD light-sensitive breakable statue. */
 #include "d/actor/d_a_obj_mkie.h"
+#include "sead/ElementAt.h"
 using daObjMkie::Act_c;
 static MkieGuestText M_arcname;
 static MkieGuestText assertText1;
@@ -51,7 +52,8 @@ static daObjMkie::Attr_c *attribute(daObjMkie::Act_c *p, const char *file, const
         JUT_ASSERT_fail(file, 0x183, expression);
         type = p->mType;
     }
-    return &M_attr[type];
+    /* guest address arithmetic: M_attr + type * 0x128 wraps at 32 bits as on the console */
+    return &sead::elementAt<daObjMkie::Attr_c>(gabi::ea(M_attr), type);
 }
 /* 0236FFCC */
 s32 daObjMkie::Act_c::Mthd_Create() {
@@ -198,7 +200,8 @@ BOOL daObjMkie::Act_c::Create() {
         JUT_ASSERT_fail(assertText7.bytes, 0x183, assertText8.bytes);
         attributeType = mType;
     }
-    daObjMkie::Attr_c *a = &M_attr[attributeType];
+    /* guest address arithmetic: M_attr + type * 0x128 wraps at 32 bits as on the console */
+    daObjMkie::Attr_c *a = &sead::elementAt<daObjMkie::Attr_c>(gabi::ea(M_attr), attributeType);
     f32 y = current.pos.y, z = (f32)attention_info.position.z, x = (f32)attention_info.position.x;
     // HD: fused height arithmetic and load order retain NaN behavior.
     f32 attentionY = gabi::fmadds(130.0f, (f32)a->mScale, y);
@@ -216,7 +219,7 @@ BOOL daObjMkie::Act_c::Create() {
 /* 02370914 */
 void daObjMkie::Act_c::mode_proc_call() {
     u32 value = mModeProc;
-    (this->*mode_proc[value])();
+    (this->*sead::elementAt<ModeProc>(gabi::ea(mode_proc), value))(); /* sibling: wraps at 32 bits as on the console */
 }
 /* 02370960 */
 BOOL daObjMkie::Act_c::Execute(be<u32> *outMtx) {

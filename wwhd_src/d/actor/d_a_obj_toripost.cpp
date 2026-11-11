@@ -53,7 +53,7 @@ BOOL daObjTpost_c::_createHeap() {
     J3DModelData *modelData =
         postGetObjectRes(dComIfG_resControl(), name, dRes_INDEX_TORIPOST_BDL_VPOST_e);
     if (!modelData)
-        JUT_ASSERT_fail("d_a_obj_toripost.cpp", 0x87, "modelData != NULL");
+        JUT_ASSERT_fail("d_a_obj_toripost.cpp", 0x87, "modelData != (0)");
     mMorf = mDoExt_McaMorf::create(nullptr, modelData, nullptr, nullptr, nullptr, -1, 1.0f, 0, -1,
                                    1, nullptr, 0x80000, 0x11000022);
     if (!mMorf || !mMorf->getModel())
@@ -182,7 +182,7 @@ void daObjTpost_c::createInit() {
     if (wallet == 1 || wallet == 2)
         dLetter_autoStock(0x7A03);
 
-    field_0x8F0 = 1;
+    mLetterOrdinal = 1;
     mCurrMsgBsPcId = 0xFFFFFFFF;
 
     attention_info.distances[fopAc_Attn_TYPE_SPEAK_e] = 6;
@@ -277,9 +277,9 @@ void daObjTpost_c::checkOrder() {
     if (command == 1 && ((s8)mEventIdx == 1 || (s8)mEventIdx == 2)) {
         mEventIdx = 0;
         if (dComIfGp_event_chkTalkXY())
-            field_0x8F5 = 1;
+            mTalkXYReq = 1;
         else
-            field_0x8F4 = 1;
+            mTalkReq = 1;
     }
 }
 
@@ -465,7 +465,7 @@ static BOOL drawActor(daObjTpost_c *a) { return a->_draw(); }
 
 /* 023A4C68 */
 void daObjTpost_c::modeWaitInit() {
-    field_0x8F0 = 1;
+    mLetterOrdinal = 1;
     setAnm((s32)mNumReadable ? 4 : 1, false);
 }
 
@@ -480,9 +480,9 @@ BOOL daObjTpost_c::checkTalk() {
 /* 023A4CD8 */
 void daObjTpost_c::modeWait() {
     setAnm((s32)mNumReadable ? 4 : 1, false);
-    if (field_0x8F4)
+    if (mTalkReq)
         modeProc(PROC_INIT_e, MODE_TALK);
-    else if (field_0x8F5)
+    else if (mTalkXYReq)
         modeProc(PROC_INIT_e, MODE_TALK_XY);
     else if (checkTalk())
         mEventIdx = 2;
@@ -494,13 +494,13 @@ void daObjTpost_c::modeTalkInit() { setAnm(AnmPrm_POST_GET0, false); }
 /* 023A4D9C */
 void daObjTpost_c::modeTalk() {
     if (talk(1) == 18) {
-        if (field_0x8E9) {
+        if (mReceiveReq) {
             modeProc(PROC_INIT_e, MODE_RECEIVE);
-            field_0x8E9 = 0;
+            mReceiveReq = 0;
         } else
             modeProc(PROC_INIT_e, MODE_WAIT);
         dComIfGp_event_reset();
-        field_0x8F4 = 0;
+        mTalkReq = 0;
     }
 }
 
@@ -508,8 +508,8 @@ void daObjTpost_c::modeTalk() {
 void daObjTpost_c::modeTalkXYInit() {
     setAnm(AnmPrm_POST_GET0, false);
     mPreItemNo = dComIfGp_event_getPreItemNo();
-    field_0x8DC = l_HIO.field_0x14;
-    field_0x8E0 = l_HIO.field_0x16;
+    mXYEndTimer = l_HIO.mXYEndWaitTime;
+    mPresentTimer = l_HIO.mPresentWaitTime;
 }
 
 /* 023A4E8C */
@@ -526,13 +526,13 @@ void daObjTpost_c::modeTalkXY() {
     };
 
     if (index == 3) {
-        if (field_0x8EA) {
-            field_0x8EA = 0;
-            field_0x8E4 = 10;
+        if (mPutOutStart) {
+            mPutOutStart = 0;
+            mPutOutDemoTimer = 10;
         }
-        if ((s32)field_0x8E4 != -1 && !postCalcTimer(&field_0x8E4)) {
+        if ((s32)mPutOutDemoTimer != -1 && !postCalcTimer(&mPutOutDemoTimer)) {
             demo(24);
-            field_0x8E4 = -1;
+            mPutOutDemoTimer = -1;
         }
         u32 msg = mCurrMsgNo;
 
@@ -543,17 +543,17 @@ void daObjTpost_c::modeTalkXY() {
         index = mAnmPrmIdx;
     }
     if (index == 1) {
-        if (postPresentEnd(&postInfo()->play.mEvtManager) && !postCalcTimer(&field_0x8E0)) {
+        if (postPresentEnd(&postInfo()->play.mEvtManager) && !postCalcTimer(&mPresentTimer)) {
             postCancelPresent(&postInfo()->play.mEvtManager);
             setAnm(2, false);
         }
         index = mAnmPrmIdx;
     }
-    if ((index == 2 || index == 3) && mMorf->isStop() && !postCalcTimer(&field_0x8DC) &&
+    if ((index == 2 || index == 3) && mMorf->isStop() && !postCalcTimer(&mXYEndTimer) &&
         talk(1) == 18) {
         modeProc(PROC_INIT_e, MODE_WAIT);
         dComIfGp_event_reset();
-        field_0x8F5 = 0;
+        mTalkXYReq = 0;
     }
 }
 
@@ -578,11 +578,11 @@ void daObjTpost_c::modeReceiveDemo() {
         if ((s32)mNumReadable) {
             modeProc(PROC_INIT_e, MODE_TALK);
             mEventIdx = 1;
-            field_0x8EB = 1;
-            field_0x8F0 = (u32)field_0x8F0 + 1;
+            mNextLetterMsg = 1;
+            mLetterOrdinal = (u32)mLetterOrdinal + 1;
         } else {
             modeProc(PROC_INIT_e, MODE_WAIT);
-            field_0x8F0 = 1;
+            mLetterOrdinal = 1;
         }
     }
 }
@@ -668,16 +668,16 @@ u32 daObjTpost_c::getMsgXY() {
     color->g = 0;
     color->b = 0;
     setAnm(AnmPrm_POST_PUTOUT, false);
-    field_0x8EA = 1;
+    mPutOutStart = 1;
     return (item == 0x98 || item == 0x9B) ? 0xCEA : 0xCE9;
 }
 
 /* 023A5500 */
 u32 daObjTpost_c::getMsgNormal() {
-    if (field_0x8EB) {
+    if (mNextLetterMsg) {
         s16 n = mLetterOrdinalLow;
         dComIfGp_setMessageCountNumber(n);
-        field_0x8EB = 0;
+        mNextLetterMsg = 0;
         return 0xCF7;
     }
     return postDayNight() ? 0xCE6 : 0xCE5;
@@ -710,10 +710,10 @@ u16 daObjTpost_c::next_msgStatus(be<u32> *message) {
         break;
 
     case 0xCF7:
-        if (l_HIO.field_0x07 || letter(mNumReadable)->field_0x00)
+        if (l_HIO.mForcePay || letter(mNumReadable)->mPayOnReceive)
             *message = 0xCF3;
         else {
-            field_0x8E9 = 1;
+            mReceiveReq = 1;
             status = 16;
         }
         break;
@@ -743,12 +743,12 @@ u16 daObjTpost_c::next_msgStatus(be<u32> *message) {
                 *message = 0xCF2;
             } else {
                 setAnm(AnmPrm_POST_PUTOUT, false);
-                field_0x8EA = 1;
+                mPutOutStart = 1;
                 *message = 0xCF1;
             }
         } else {
             setAnm(AnmPrm_POST_PUTOUT, false);
-            field_0x8EA = 1;
+            mPutOutStart = 1;
             *message = 0xCF0;
         }
         break;
@@ -768,7 +768,7 @@ u16 daObjTpost_c::next_msgStatus(be<u32> *message) {
             if (money >= price) {
                 dComIfG_inf_c *info = postInfo();
                 info->play.mItemRupeeCount = (u32)info->play.mItemRupeeCount - price;
-                field_0x8E9 = 1;
+                mReceiveReq = 1;
                 status = 16;
             } else
                 *message = 0xCF6;
@@ -780,7 +780,7 @@ u16 daObjTpost_c::next_msgStatus(be<u32> *message) {
     case 0xCF5:
     case 0xCF6:
         mNumReadable = (s32)((u32)(s32)mNumReadable + 1);
-        field_0x8F0 = (u32)field_0x8F0 + 1;
+        mLetterOrdinal = (u32)mLetterOrdinal + 1;
         mNumReadable = getReadableLetterNum();
 
         if ((s32)mNumReadable) {
@@ -814,10 +814,10 @@ static daObjTpost_HIO_c *createHIO(daObjTpost_HIO_c *h) {
     h->mNo = -1;
     h->eye_pos_offset = 100.0f;
     h->talk_distance = 300.0f;
-    h->field_0x16 = 30;
+    h->mPresentWaitTime = 30;
     h->attn_pos_offset = 140.0f;
-    h->field_0x07 = 0;
-    h->field_0x14 = 30;
+    h->mForcePay = 0;
+    h->mXYEndWaitTime = 30;
     h->debug_draw = 0;
     h->vt = HIO_VTBL;
     return h;
@@ -890,7 +890,7 @@ ext 02544950 BOOL postPresentEnd(dEvent_manager_c*)
 ext 025162A4 BOOL postChkTgHit(dCcD_Cyl*)
 ext 02556D14 BOOL postDayNight()
 str 100312A4 in 023A3CC4
-str 100312BC "modelData != NULL" in 023A3CC4
+str 100312BC "modelData != (0)" in 023A3CC4
 str 100314B4 in 023A3DD0
 str 1003140C in 023A418C
 str 100314B4 in 023A4370

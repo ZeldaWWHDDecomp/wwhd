@@ -36,22 +36,22 @@ WWHD_SIZE(camSphChkdata_l, 0x20);
 
 struct dCamForcusLine {
     /* 0x00 */ u8 mEffectLine[0x38];  /* dDlst_effectLine_c */
-    /* 0x38 */ cXyz m38;
-    /* 0x44 */ GXColor m44;
-    /* 0x48 */ be<u8> m48;
-    /* 0x49 */ be<u8> m49;
+    /* 0x38 */ cXyz mCenterPos;  /* was m38: Init 02500880 sets (320, 240, 0); Draw 024FFB94 passes it as the effect line's centre (tww dDlst_effectLine_c::update mPos, the point the lines radiate from) */
+    /* 0x44 */ GXColor mColor;  /* was m44: Init 02500880 sets white, alpha 0x60; Draw 024FFB94 passes it as the effect line's colour (tww update mColor) */
+    /* 0x48 */ be<u8> mbNoReseed;  /* was m48: Init 02500880 sets 1; Draw 024FFB94 re-seeds the effect line's random generator with mRndSeed0..2 each frame only while it is 0 (tww the same) */
+    /* 0x49 */ be<u8> mbOn;  /* was m49: Draw 024FFB94 draws only while it is set; Init 02500880 / dCamForcusLine_Off 024F8D4C clear it (tww Off the same) */
     /* 0x4A */ u8 _4A[2];
-    /* 0x4C */ be<s32> m4C;
-    /* 0x50 */ be<s32> m50;
-    /* 0x54 */ be<s32> m54;
-    /* 0x58 */ be<u16> m58;
-    /* 0x5A */ be<u16> m5A;
-    /* 0x5C */ be<u16> m5C;
-    /* 0x5E */ be<u16> m5E;
-    /* 0x60 */ be<f32> m60;
-    /* 0x64 */ be<f32> m64;
-    /* 0x68 */ be<f32> m68;
-    /* 0x6C */ be<f32> m6C;
+    /* 0x4C */ be<s32> mRndSeed0;  /* was m4C: Init 02500880 sets 100; Draw 024FFB94: the first initRnd seed (tww the same) */
+    /* 0x50 */ be<s32> mRndSeed1;  /* was m50: Init 02500880 sets 100; Draw 024FFB94: the second initRnd seed (tww the same) */
+    /* 0x54 */ be<s32> mRndSeed2;  /* was m54: Init 02500880 sets 100; Draw 024FFB94: the third initRnd seed (tww the same) */
+    /* 0x58 */ be<u16> mLineNumMin;  /* was m58: Draw 024FFB94 -> update: the line count is cM_rnd_c::getValue(it, mLineNumRange) (tww dDlst_effectLine_c::draw field_0x20) */
+    /* 0x5A */ be<u16> mLineNumRange;  /* was m5A: Draw 024FFB94 -> update: the random range added to mLineNumMin (tww draw field_0x22) */
+    /* 0x5C */ be<u16> mLineWidthMin;  /* was m5C: Draw 024FFB94 -> update: GXSetLineWidth's width is getValue(it, mLineWidthRange) (tww draw field_0x24) */
+    /* 0x5E */ be<u16> mLineWidthRange;  /* was m5E: Draw 024FFB94 -> update: the random range added to mLineWidthMin (tww draw field_0x26) */
+    /* 0x60 */ be<f32> mStartRadiusMin;  /* was m60: Draw 024FFB94 -> update: each line starts getValue(it, mStartRadiusRange) from the centre (tww draw field_0x28) */
+    /* 0x64 */ be<f32> mStartRadiusRange;  /* was m64: Draw 024FFB94 -> update: the random range added to mStartRadiusMin (tww draw field_0x2C) */
+    /* 0x68 */ be<f32> mLineLengthMin;  /* was m68: Draw 024FFB94 -> update: each line is getValue(it, mLineLengthRange) long (tww draw field_0x30) */
+    /* 0x6C */ be<f32> mLineLengthRange;  /* was m6C: Draw 024FFB94 -> update: the random range added to mLineLengthMin (tww draw field_0x34) */
 };
 WWHD_SIZE(dCamForcusLine, 0x70);
 
@@ -84,15 +84,15 @@ struct dCamera_c {
         /* 0x1C */ be<f32> field_0x1C;
     };
     struct BGChk {
-        /* 0x00 */ be<u8> m00;
+        /* 0x00 */ be<u8> mbFound;  /* was m00: checkGroundInfo 024F9044 sets it when the ground check found ground (mGroundY != -1e9); the camera reads it before using the poly / room camera ids and the move-BG of the record (tww the same) */
         /* 0x01 */ u8 _01[3];
-        /* 0x04 */ dBgS_CamGndChk m04;
-        /* 0x58 */ be<f32> m58;
+        /* 0x04 */ dBgS_CamGndChk mGndChk;  /* was m04: checkGroundInfo 024F9044: the dBgS_CamGndChk of the record; its position is set and GroundCross runs on it, its poly / bg index give the camera ids and the move-BG (tww the same) */
+        /* 0x58 */ be<f32> mGroundY;  /* was m58: checkGroundInfo 024F9044 stores GroundCross of mGndChk (-1e9 when none); the camera modes compare heights with it (tww the same) */
     };
     /* GameCube struct BG (0xB8) */
     struct BG {
-        /* 0x00 */ BGChk m00;
-        /* 0x5C */ BGChk m5C;
+        /* 0x00 */ BGChk mPlayerGround;  /* was m00: checkGroundInfo 024F9044: the ground under the player's foot position (default check flags); its ground y feeds m354 and the swim camera id (tww the same) */
+        /* 0x5C */ BGChk mCameraGround;  /* was m5C: checkGroundInfo 024F9044: the camera ground under the player's head (SetCam / ClrObj, raised by the plain check when that is higher); its move-BG, room and poly camera ids and ground y drive the camera modes (tww the same) */
     };
     struct EventParam {
         /* 0x00 */ char mName[16];
@@ -133,7 +133,7 @@ struct dCamera_c {
     /* 0x068 */ be<s32> mBumpCheckFlags;  /* was m068: Run 024FE3E8 sets 9/0x3F/0xF, ORs 0x40, passes it to bumpCheck; TP name */
     /* 0x06C */ cSAngle_l mAngleY;
     /* 0x06E */ u8 _06E[2];
-    /* 0x070 */ cXyz m070;
+    /* 0x070 */ cXyz mCornerPos;  /* was m070: bumpCheck 024FD11C, corner hit (type 3): the point on the two walls' line near the middle of the two hits (cM3d_2PlaneLinePosNearPos), moved 2 units out along the summed plane normals; the camera direction is eased toward it from mCenter and the eye line check runs from it to the new eye; no other WWHD use (tww d_camera.cpp bumpCheck the same; TP keeps the hit point as mLastHitPos) */
     /* 0x07C */ be<u32> mFrameCounter;  /* was m07C: cleared by initialize 02500984, +1 per frame in Run 024FE3E8 and NotRun 024FF6C0; TP name */
     /* 0x080 */ be<u32> mTicks;  /* was m080: initialize 02500984 seeds it with cM_rndFX(32767), Run 024FE3E8 adds 1, event cameras test bit 0 (025314BC); TP name */
     /* 0x084 */ cXyz mSavedCenter;  /* was m084: pushPos 024FA3CC copies mViewCache.mCenter */
@@ -143,7 +143,7 @@ struct dCamera_c {
     /* 0x0A2 */ u8 _0A2[2];
     /* 0x0A4 */ PosSet mSavedViewStack[2];  /* was m0A4: saveEvCamera 02538B54 / loadEvCamera 02538C7C store and load slot [index]; TP name */
     /* 0x0E4 */ be<s32> mStageMapToolCameraIdx;
-    /* 0x0E8 */ be<s32> m0E8;
+    /* 0x0E8 */ be<s32> mEndEventIdCheck;  /* was m0E8: EndEventCamera 0253E860 (800300E8 lwz +0xE8): while it is not -1, an end request only ends the event camera when its id is mEventData field_0x14 (StartEventCamera 0253E70C's id); initialize 02500984 sets -1 and the constructor 02501B8C clears it with mStageMapToolCameraIdx; never set otherwise in WWHD or tww (tww initialize the same), so the id check is off */
     /* 0x0EC */ cXyz mExtendedPos;
     /* 0x0F8 */ u8 _0F8[8];
     /* 0x100 */ be<u8> mStyleSettle0;  /* was m100: engines set m100..m102 together when the view reached its target (0250C77C); onModeChange 024FA79C clears them; Run 024FE3E8 sets ComStat 0x10 only when all three are set (TP: one flag, mStyleSettle.mFinished) */
@@ -173,7 +173,7 @@ struct dCamera_c {
     /* 0x14A */ u8 _14A[2];
     /* 0x14C */ be<f32> mSightFitRadius;  /* was m14C: bumpCheck 024FD11C eases it toward the sight radius and adds it to the radius; onModeChange 024FA79C clears it; TP name */
     /* 0x150 */ be<f32> m150;
-    /* 0x154 */ be<f32> m154;
+    /* 0x154 */ be<f32> mSmoothedCStickX;  /* was m154: HD-only float (GC 0x154 is mStickMainPosXLast, +4 from here): manualCamera 0250FDC8 chases it toward the curved C stick x turn (cLib_chaseF, 0.25 while the stick is centred, 0.1, or 0.18 when the sign flips) and turns the camera by it * 0.92 (negated by the save option camera x); Run 024FE3E8 clears it on the change to a subject style; the constructor 02501B8C clears it */
     /* 0x158 */ be<f32> mStickMainPosXLast;   /* GC 0x154: +4 from here */
     /* 0x15C */ be<f32> mStickMainPosYLast;
     /* 0x160 */ be<f32> mStickMainValueLast;
@@ -242,7 +242,7 @@ struct dCamera_c {
     /* 0x3FC */ EventData mEventData;
     /* 0x510 */ be<u32> mEventFlags;
     /* 0x514 */ be<s32> mCurStyle;
-    /* 0x518 */ be<s32> m514;
+    /* 0x518 */ be<s32> mHoldType;  /* was m514: nextType 024FA410 (891E0518 lbz, a byte in WWHD) keeps the current camera type while it is not 0 (the event type still applies first; no map-tool, Seagal or player-state type change); Run 024FE3E8, initialize 02500984 and the constructor 02501B8C only store 0; never set non-zero in WWHD or tww (tww nextType reads it as != 1, tww writes only 0) */
     /* 0x51C */ be<s32> mCurType;
     /* 0x520 */ be<s32> mNextType;
     /* 0x524 */ be<s32> mMapToolType;

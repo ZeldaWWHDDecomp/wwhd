@@ -3,6 +3,7 @@
  * and sky boxes are skipped in GTower and Hyrule. Lighting slots use the HD layout.
  */
 #include "d/d_stage.h"
+#include "sead/ElementAt.h"
 
 /* StageLifecycleAPI::dComIfGp_setNextStage(name, point, roomNo, layer, speed, mode, enable, wipe); the registers as the callers set them */
 
@@ -312,7 +313,7 @@ static s32 dStage_RoomCheck(u32 i_gndChk) {
     u32 stage = gabi::ea(&gabi::at<dComIfG_inf_c>(dComIfGp_ea())->play.mStageData);
     u32 room = gabi::call_ptr<u32>(gabi::at<dStage_dt_c>(stage)->__vtbl->getRoom.function.get(), stage);
     if (room == 0 || (s32)gabi::at<roomRead_class>(room)->num <= (s32)grp) return 1;
-    u32 tp = gabi::at<roomRead_class>(room)->m_entries.get()[grp]->field_0x2 & 3; /* dStage_roomRead_dt_c_GetTimePass */
+    u32 tp = gabi::at<roomRead_class>(room)->m_entries.get()[grp]->mTimePass & 3; /* dStage_roomRead_dt_c_GetTimePass */
     dComIfGp_ea();
     l_timePass = (u8)tp;
     u32 e = gabi::ea(gabi::at<roomRead_class>(room)->m_entries.get()[grp].get());
@@ -515,7 +516,7 @@ u32 dStage_roomDt_c::getMapInfo2(u32 i_no) {
     if (e == 0) return 0;
     if ((s32)n <= 0) return 0;
     for (; n != 0; n--, e += 0x38)
-        if (i_no == gabi::at<stage_map_info_class>(e)->field_0x35) return e;
+        if (i_no == gabi::at<stage_map_info_class>(e)->mFloorNo) return e;
     return 0;
 }
 
@@ -550,7 +551,8 @@ static u32 dStage_roomStatus_c_ct(u32 self) {
 
 /* 025C4334 */
 static BOOL dStage_roomControl_c_checkRoomDisp(u32 self, s32 i_roomNo) {
-    u8 f = dStage_roomControlStatics::mStatus[i_roomNo].mFlags;
+    /* guest address arithmetic: mStatus + i_roomNo * size wraps at 32 bits as on the console */
+    u8 f = sead::elementAt<dStage_roomStatus_c>(gabi::ea(dStage_roomControlStatics::mStatus), (u32)i_roomNo).mFlags;
     if (f & 8) return FALSE;
     return (f & 0x10) ? TRUE : FALSE;
 }

@@ -3,6 +3,7 @@
  * WWHD, verified against the original; GameCube names/layout from zeldaret/tww.
  */
 #include "JSystem/JAudio/JASOuterParam.h"
+#include "sead/ElementAt.h"
 
 static const f32 zero = 0.0f;
 
@@ -51,7 +52,8 @@ u32 TOuterParam::getOuterUpdate() {
 
 /* 02816C94 */
 s32 TOuterParam::getIntFirFilter(u32 param_1) {
-    return mFirFilter[param_1];
+    /* guest address arithmetic: mFirFilter + param_1 * 2 wraps at 32 bits as on the console */
+    return sead::elementAt<std::remove_reference_t<decltype(mFirFilter[0])>>(gabi::ea(mFirFilter), param_1);
 }
 
 /* 02816CA4 */

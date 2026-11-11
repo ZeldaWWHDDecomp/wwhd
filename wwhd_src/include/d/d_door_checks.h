@@ -24,10 +24,10 @@ struct dDoor_info_c : fopAc_ac_c {
     /* 0x3AF */ u8 _3AF;
     /* 0x3B0 */ cXyz mAngleVec;
     /* 0x3BC */ be<u8> mFrontCheck;
-    /* 0x3BD */ be<u8> m2A1;
+    /* 0x3BD */ be<u8> mStopOpenTimer;  /* was m2A1: view of dDoor_info_c::mStopOpenTimer (d/d_door_info.h) */
     /* 0x3BE */ be<s16> mEventIdx[12];
     /* 0x3D6 */ be<u8> mToolId[12];
-    /* 0x3E2 */ be<u8> m2C6;
+    /* 0x3E2 */ be<u8> mEventKind;  /* was m2C6: view of dDoor_info_c::mEventKind (d/d_door_info.h) */
     /* 0x3E3 */ be<u8> m2C7;
     /* 0x3E4 */ be<s32> mStaffId;
     /* 0x3E8 */ be<s8> mRoomNo;

@@ -173,7 +173,7 @@ static void *obj_s_sub(void *param_1, void *) {
 }
 
 /* 0206D638 */
-static void after_fight(bdk_class *i_this) { i_this->m2F8 = 10; }
+static void after_fight(bdk_class *i_this) { i_this->mDamageTimer = 10; }
 
 /* 020692D8 */
 static BOOL daBdk_IsDelete(bdk_class *) { return TRUE; }
@@ -338,7 +338,7 @@ static cPhs_State daBdk_Create(fopAc_ac_c *a_this) {
         for (s32 i = 0; i < 3; i++) {
             BdkBase_setFollowOff(&i_this->mLidSmokeCb[i]);
         }
-        i_this->m2B4 = 1;
+        i_this->mTowerBattle = 1;
         BdkBase_setFollowOff(&i_this->mTakeoffSmokeCb);
 
         if (!fopAcM_entrySolidHeap(actor, gabi::guest_fn(reinterpret_cast<const void *>(useHeapInit)),
@@ -413,7 +413,7 @@ static cPhs_State daBdk_Create(fopAc_ac_c *a_this) {
             i_this->mShutterSlide = -630.0f;
             i_this->mShutterOffsetY = -70.0f;
             i_this->mTogeOffsetY = -500.0f;
-        } else if (i_this->m2B4 == 1) {
+        } else if (i_this->mTowerBattle == 1) {
             i_this->mAction = ACTION_T_FLY;
             actor->current.pos.copy(center_pos);
             actor->current.pos.y = 5000.0f;
@@ -426,9 +426,9 @@ static cPhs_State daBdk_Create(fopAc_ac_c *a_this) {
             i_this->mTimers[0] = 0x168;
         } else {
             actor->gravity = REG0_F(4) + -5.0f;
-            actor->speedF = (f32)l_HIO.m020;
+            actor->speedF = (f32)l_HIO.mFlySpeed;
             i_this->mFlyAnm = -1;
-            i_this->m1120 = -2000;
+            i_this->mTosakaYaw = -2000;
             actor->health = 20;
             actor->max_health = 20;
             actor->current.pos.y = 11000.0f;
@@ -448,18 +448,18 @@ static daBdk_HIO_c *daBdk_HIO_c_ct(daBdk_HIO_c *self) {
         if (self == nullptr)
             return self;
     }
-    self->m014 = 0;
-    self->m005 = 0;
-    self->m020 = 60.0f;
+    self->mForceAttack = 0;
+    self->mStopMove = 0;
+    self->mFlySpeed = 60.0f;
     self->m006 = 0;
-    self->m008 = 1.0f;
-    self->m018 = 20.0f;
+    self->mBodyScale = 1.0f;
+    self->mWalkSpeed = 20.0f;
     self->__vtbl = DABDK_HIO_VTBL;
-    self->m028 = 0x2D0;
-    self->m010 = 1.5f;
-    self->m00C = 4.0f;
-    self->m01C = 2.0f;
-    self->m024 = 100.0f;
+    self->mTowerAttackWait = 0x2D0;
+    self->mTailSpacing = 1.5f;
+    self->mTailScale = 4.0f;
+    self->mWalkAnmSpeed = 2.0f;
+    self->mFlyAttackSpeed = 100.0f;
     self->mNo = -1;
     return self;
 }

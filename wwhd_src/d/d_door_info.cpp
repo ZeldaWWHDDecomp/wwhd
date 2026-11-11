@@ -97,7 +97,7 @@ void dDoor_info_c::initProc(u32 spl) {
 
 /* 0252A2DC */
 void dDoor_info_c::initOpenDemo(s32 evt) {
-    if (m2C6 != 9)
+    if (mEventKind != 9)
         l_demoDoorFlag = 1;
     u8 side = mFrontCheck;
     s32 angle = current.angle.y;
@@ -294,7 +294,7 @@ u32 dDoor_info_c__ct(dDoor_info_c* self) {
     }
     fopAc_ac_c_ct(self);
     self->mToRoomNo = 0;
-    self->m2A1 = 0;
+    self->mStopOpenTimer = 0;
     self->__vtbl = gabi::ea(&l_doorVtable);
     self->mFromRoomNo = 0;
     self->mFrontCheck = 0;
@@ -303,7 +303,7 @@ u32 dDoor_info_c__ct(dDoor_info_c* self) {
     dDoor_bzeroHD(self->mToolId, sizeof(self->mToolId));
     self->mStaffId = 0;
     self->mRoomNo = 0;
-    self->m2C6 = 0;
+    self->mEventKind = 0;
     return gabi::ea(self);
 }
 

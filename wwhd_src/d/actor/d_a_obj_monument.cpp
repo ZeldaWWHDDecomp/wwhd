@@ -34,7 +34,7 @@ static BOOL solidHeapCB(fopAc_ac_c* i_this) {
 /* 02375C64 */
 bool Act_c::create_heap() {
     J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes(M_arcname, attr(mType).mModelId);
-    JUT_ASSERT(0x81, modelData != NULL);
+    JUT_ASSERT_MSG(0x81, modelData != NULL, "modelData != 0");
     J3DModel* model = mDoExt_J3DModel__create(modelData, 0x00, 0x11020203);
     mpModel = model;
     if (model == nullptr)
@@ -186,5 +186,5 @@ static u32 PrmAbstract(fopAc_ac_c* a, s32 width, s32 shift) {
 data L_attr 101CB168
 str 1002CF48 # "Esekh"
 str 1002CF18 # "d_a_obj_monument.cpp"
-str 1002CF30 "modelData != NULL" renamed # HD: modelData != 0
+str 1002CF30 "modelData != 0" # HD: modelData != 0
 */

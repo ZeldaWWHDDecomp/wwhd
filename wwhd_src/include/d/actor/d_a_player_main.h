@@ -6,9 +6,9 @@
  * against the this-relative offsets of the WWHD function of the same name (scratch notes in the
  * phase-1 report). GameCube -> WWHD:
  * - daPy_py_c base: 0x43C (d/actor/d_a_player.h; the GameCube daPy_py_c fields are +0x11C).
- * - 0x320..0x35C (+0x11C); HD replaced the GameCube ResTIMG mOtherLinktex by a 0x34 object and
- *   added ten 0x24 objects at 0x48C; 0x35C..0x3AC (+0x298); three HD 0x58 animation objects at
- *   0x644..0x74C.
+ * - 0x320..0x35C (+0x11C); HD replaced the GameCube ResTIMG mOtherLinktex by a 0x34 header list
+ *   (mLinktexList) and ten 0x24 headers (mOtherLinktex) at 0x48C; 0x35C..0x3AC (+0x298); three HD
+ *   0x58 texture animation controllers (mTexAnmCtrl) at 0x644..0x74C.
  * - 0x3AC..0x974 (+0x3A0): background checks, poly info, hand/sword models, mSwgripmsabBckAnim.
  * - 0x974..0x2FAC: re-laid out in HD (J3DAnm pointers became mDoExt_brk/btkAnm objects, the
  *   mirror packet grew); only constructor anchors are recorded (see mD90).
@@ -18,7 +18,7 @@
  *   to member.
  * - 0x34B8..0x34C6 (+0x341C); 0x34C7..0x34CF (+0x3445); mProcVar0..5 (+0x3446); 0x34DC.. (+0x3448);
  *   mSeAnmIdx became a pointer (0x6938); 0x34F0..0x3598 (+0x3450); 0x3598..0x3688 (+0x3458);
- *   0x3688..0x37E4 (+0x3C08, after 0x7B0 HD-only bytes at 0x6AE0); daPy_swBlur_c is allocated
+ *   0x3688..0x37E4 (+0x3C08, after the per-joint saved state at 0x6AB0, 0x7E0 bytes); daPy_swBlur_c is allocated
  *   (pointer at 0x73EC); 0x3DB8..0x4C28 (+0x3638): foot data and colliders; HD tail 0x8260..0x8284.
  * "[?]" marks offsets inferred by order or from a single function; the range verifications refine
  * them. Field names are the GameCube ones. */
@@ -934,8 +934,8 @@ struct daPy_lk_c : daPy_py_c {
     /* 0x044C */ gptr<J3DModel> mpKatsuraModel;
     /* 0x0450 */ gptr<J3DModel> mpYamuModel;  /* [?] by order */
     /* 0x0454 */ be<u32> mpCurrLinktex;  /* ResTIMG* */
-    /* 0x0458 */ u8 m458[0x34];  /* HD: an object (0x34, constructor 0273B560 with 10 entries of 0xC) in place of the GameCube ResTIMG mOtherLinktex */
-    /* 0x048C */ u8 m48C[0x168];  /* HD: 10 objects of 0x24 (constructor 02444280) */
+    /* 0x0458 */ u8 mLinktexList[0x34];  /* was m458: the list of Link's own texture headers that mpCurrLinktex points at (player04b::TextureOriginals: count, capacity, header pointers): the constructor 0240FE40 sets it up for 10 (lk_ct_listInit), playerInit 02410BE8 sets mpCurrLinktex to it and pushes the linktexS3TC headers; HD's form of what tww's mpCurrLinktex points at; HD: an object (0x34, constructor 0273B560 with 10 entries of 0xC) in place of the GameCube ResTIMG mOtherLinktex */
+    /* 0x048C */ u8 mOtherLinktex[0x168];  /* was m48C: after TWW mOtherLinktex: the headers of the other outfit (HD keeps 10 of 0x24): playerInit 02410BE8 copies the originals here and swaps them with mLinktexList for the casual clothes (player04bCopyTextureList); playerDelete 0240EBF0 swaps them back (swapTexture) while the casual clothes are on; HD: 10 objects of 0x24 (constructor 02444280) */
     /* 0x05F4 */ be<u32> mpAnmTexPatternData;  /* GameCube 0x35C (+0x298) */
     /* 0x05F8 */ be<u32> m_texNoAnms;
     /* 0x05FC */ be<u32> mpTexScrollResData;
@@ -946,7 +946,7 @@ struct daPy_lk_c : daPy_py_c {
     /* 0x062C */ be<u32> mpZOnShape[4];
     /* 0x063C */ be<u32> mpLhandShape;
     /* 0x0640 */ be<u32> mpRhandShape;
-    /* 0x0644 */ u8 m644[0x108];  /* HD: three 0x58 animation objects (constructor 027DA984, vtables 0x1016D860..) at 0x644/0x69C/0x6F4 */
+    /* 0x0644 */ u8 mTexAnmCtrl[0x108];  /* was m644: the three HD texture animation controllers (0x58 each): draw 023D9820 attaches [0] / [1] (texture patterns) and [2] (texture scroll) to the model data; procSelfieHD 02415BA4 (d_a_player_main_04b) evaluates them at mTexAnmFrame / mTexScrollFrame; frameBlend (d_a_player_main_07.h) indexes them; HD: three 0x58 animation objects (constructor 027DA984, vtables 0x1016D860..) at 0x644/0x69C/0x6F4 */
     /* 0x074C */ dBgS_AcchCir mAcchCir[3];  /* GameCube 0x3AC (+0x3A0) */
     /* 0x080C */ dBgS_Acch mAcch;  /* dBgS_LinkAcch */
     /* 0x09D0 */ u8 mLinkLinChk[0x6C];  /* dBgS_LinkLinChk */
@@ -993,59 +993,59 @@ struct daPy_lk_c : daPy_py_c {
     /* 0x65F0 */ be<s32> mCurProc;  /* GameCube 0x31D8 (+0x3418) */
     /* 0x65F4 */ ProcFunc_l mCurProcFunc;  /* GHS pointer to member (8 bytes, GameCube 12) */
     /* 0x65FC */ u8 mFootEffect[0x98];  /* daPy_footEffect_c[2], GameCube 0x31E8 (+0x3414 from here) */
-    /* 0x6694 */ u8 m3280[0x14];  /* dPa_rippleEcallBack */
+    /* 0x6694 */ u8 mRippleEcallBack[0x14];  /* was m3280: dPa_rippleEcallBack of the ripple ring ID_AK_JN_HAMON00 around Link: setWaterRipple 0240AB88 starts it (setShipTail) in shallow water, sets its rate and removes it; procFanGlide 02438E78 tests its emitter; playerDelete 0240EBF0 removes it (tww the same); dPa_rippleEcallBack */
     /* 0x66A8 */ u8 mSwimTailEcallBack[0x50];  /* daPy_swimTailEcallBack_c[2] */
-    /* 0x66F8 */ daPy_mtxFollowEcallBack_c m32E4;
-    /* 0x6704 */ daPy_mtxFollowEcallBack_c m32F0;
+    /* 0x66F8 */ daPy_mtxFollowEcallBack_c mProcEffectEcallBack0;  /* was m32E4: daPy_mtxFollowEcallBack_c the procs use for their own effect and commonProcInit 023DFDD8 ends on every proc change: procCutTurn_init 023E6380 (ID_AK_JN_ROUNDATTACKTOE), procCutTurnMove_init 02442190 (CHARGEPOWER00), dProcLavaDamage_init 023FE6B8 / dProcVorcanoFail_init 02424348 (HIDARUMAFIRE), dProcTalismanWait_init 02422950, procBottleOpen 0243DBFC, procFanGlide, the Wind Waker procs; offBodyEffect / onBodyEffect stop / play it (tww the same) */
+    /* 0x6704 */ daPy_mtxFollowEcallBack_c mProcEffectEcallBack1;  /* was m32F0: the second proc effect slot, also ended by commonProcInit 023DFDD8: setBottleModel 023DF0FC / procBottleGet_init 0243E534 (ID_AK_JN_FORESTWATER00), procCutTurn_init 023E6380 (ROUNDATTACKSHIBUKI), procCutTurnMove_init 02442190 (CHARGEPOWER01); procCutTurn 02441750 / playerDelete end it (tww the same) */
     /* 0x6710 */ u8 mSmokeEcallBack[0x20];  /* dPa_smokeEcallBack */
-    /* 0x6730 */ u8 m331C[0x10];  /* dPa_cutTurnEcallBack_c */
-    /* 0x6740 */ u8 m332C[0x10];
-    /* 0x6750 */ u8 m333C[0x10];
-    /* 0x6760 */ u8 m334C[0x20];  /* daPy_waterDropEcallBack_c */
-    /* 0x6780 */ u8 m336C[0x20];
-    /* 0x67A0 */ u8 m338C[0x1C];  /* daPy_followEcallBack_c */
-    /* 0x67BC */ u8 m33A8[0x10];  /* daPy_mtxPosFollowEcallBack_c */
+    /* 0x6730 */ u8 mCutTurnEcallBack0[0x10];  /* was m331C: dPa_cutTurnEcallBack_c of the spin-attack trail ID_AK_JN_ROUNDATTACK00: setCollision 024076CC starts it (with 01 / 02 below), feeds it the sword-blur positions while its alpha is 0xFF and removes it; procCutTurn 02441750 fades the alpha 0x80 -> 0; playerDelete 0240EBF0 removes it (tww the same); dPa_cutTurnEcallBack_c */
+    /* 0x6740 */ u8 mCutTurnEcallBack1[0x10];  /* was m332C: the same for ID_AK_JN_ROUNDATTACK01: setCollision 024076CC, procCutTurn 02441750, playerDelete 0240EBF0 (tww the same) */
+    /* 0x6750 */ u8 mCutTurnEcallBack2[0x10];  /* was m333C: the same for ID_AK_JN_ROUNDATTACK02: setCollision 024076CC, procCutTurn 02441750, playerDelete 0240EBF0 (tww the same) */
+    /* 0x6760 */ u8 mNeckWaterDropEcallBack[0x20];  /* was m334C: daPy_waterDropEcallBack_c at the neck joint: setWaterDrop 0240CBE0 puts it at CL_JNT_NECK_JNT and runs setSwimWaterDrop on it; offBodyEffect 023D83D8 / onBodyEffect 023D8FF8 stop / play its particles; the constructor 0240FE40 sets its vtable (tww the same); daPy_waterDropEcallBack_c */
+    /* 0x6780 */ u8 mBodyWaterDropEcallBack[0x20];  /* was m336C: the same at the body joint CL_JNT_BODY_CHN: setWaterDrop 0240CBE0, offBodyEffect 023D83D8 / onBodyEffect 023D8FF8; setFootMark 02405BC0 / setCutWaterSplash 02406DE0 test its emitter (tww the same) */
+    /* 0x67A0 */ u8 mTalismanFlashEcallBack[0x1C];  /* was m338C: daPy_followEcallBack_c of ID_IT_JN_OMAMORI_FLASH00: dProcTalismanWait_init 02422950 starts it at the hand position; commonProcInit 023DFDD8 / playerDelete 0240EBF0 end it (tww the same, plus dProcTalismanWait); daPy_followEcallBack_c */
+    /* 0x67BC */ u8 mProcEffectEcallBack2[0x10];  /* was m33A8: the third proc effect slot (daPy_mtxPosFollowEcallBack_c), faded and ended by commonProcInit 023DFDD8: procBottleDrink 0243D838, procCutRollEnd_init 02441C38 (ID_IT_JN_PIYOPIYO00 on the head), procVomitJump_init 023E47D4 (tww the same); daPy_mtxPosFollowEcallBack_c */
     /* 0x67CC */ u8 mDmEcallBack[0x30];  /* daPy_dmEcallBack_c[4] */
-    /* 0x67FC */ daPy_mtxFollowEcallBack_c m33E8;
+    /* 0x67FC */ daPy_mtxFollowEcallBack_c mFanWindEcallBack;  /* was m33E8: daPy_mtxFollowEcallBack_c of the Deku Leaf wind ID_AK_JN_UCHIWAWIND00: procFanSwing 024386C4 makes it on the YUCHW00 LWIND joint; setCollision 024076CC / playerDelete 0240EBF0 end it (tww the same) */
     /* 0x6808 */ u8 mFanSwingCb[0xC];  /* daPy_fanSwingEcallBack_c */
-    /* 0x6814 */ u8 m3400[0x10];  /* daPy_mtxPosFollowEcallBack_c */
-    /* 0x6824 */ u8 m3410[0x1C];  /* daPy_followEcallBack_c */
-    /* 0x6840 */ daPy_mtxFollowEcallBack_c m342C;
-    /* 0x684C */ u8 m3438[0x1C];  /* daPy_followEcallBack_c */
-    /* 0x6868 */ daPy_mtxFollowEcallBack_c m3454;
-    /* 0x6874 */ u8 m3460[0x20];  /* daPy_mtxPosFollowEcallBack_c[2] */
+    /* 0x6814 */ u8 mWaterfallSplashEcallBack[0x10];  /* was m3400: daPy_mtxPosFollowEcallBack_c of the waterfall splash: setWaterRipple 0240AB88 makes ID_AK_JN_ELEMENTSHIBUKI00 on the head joint while Link stands or swims in a waterfall (or hangs on attribute 0x17), ends it otherwise and tints it with the sea colour (tww the same); daPy_mtxPosFollowEcallBack_c */
+    /* 0x6824 */ u8 mWadeSplashEcallBack[0x1C];  /* was m3410: daPy_followEcallBack_c of the wading splash: setFootEffect 02406480 places ID_AK_JN_ELEMENTSHIBUKI00 45 in front of Link at the water surface, facing back, while he walks in water deeper than 25, and ends it otherwise (tww the same); daPy_followEcallBack_c */
+    /* 0x6840 */ daPy_mtxFollowEcallBack_c mMirrorShieldEcallBack;  /* was m342C: daPy_mtxFollowEcallBack_c of ID_AK_SN_MIRRORSHIELD00 on the shield model: checkLightHit 0240584C makes it while the mirror shield reflects light and ends it (alpha 0) otherwise (tww the same) */
+    /* 0x684C */ u8 mShieldLightHitEcallBack[0x1C];  /* was m3438: daPy_followEcallBack_c of ID_AK_SN_HITSHIELDLIGHT00: checkLightHit 0240584C puts it where the reflected beam (mFanLightCps) hits, larger on Jalhalla (fpcNm_BPW_e), and ends it when nothing is hit (tww the same); daPy_followEcallBack_c */
+    /* 0x6868 */ daPy_mtxFollowEcallBack_c mLightSaverEcallBack;  /* was m3454: daPy_mtxFollowEcallBack_c of ID_AK_JN_LIGHTSAVER00 on the sword joint: setLightSaver 0240C32C makes it in chance mode or with the soup power-up and ends it; deleteEquipItem 023DC7AC ends it (tww the same) */
+    /* 0x6874 */ u8 mRainDropEcallBack[0x20];  /* was m3460: two daPy_mtxPosFollowEcallBack_c of ID_AK_JN_LK_NURE_POTA01 on the neck / body joints: setWaterDrop 0240CBE0 makes them while nothing is overhead (dKyr_player_overhead_bg_chk, no roof, not a MISC stage) and ends them otherwise; offBodyEffect 023D83D8 / onBodyEffect 023D8FF8 (tww the same); daPy_mtxPosFollowEcallBack_c[2] */
     /* 0x6894 */ be<u32> mpAttention;  /* dAttention_c* (play + 0x5804) */
     /* 0x6898 */ be<u32> mpAttnEntryA;  /* dAttList_c* */
     /* 0x689C */ be<u32> mpAttnEntryX;
     /* 0x68A0 */ be<u32> mpAttnEntryY;
     /* 0x68A4 */ be<u32> mpAttnEntryZ;
     /* 0x68A8 */ be<u32> mpAttnEntryHD;  /* HD-only: the fourth item button entry (+4 from here) */
-    /* 0x68AC */ be<u32> m3494;  /* GameCube 0x3494 (+0x3418) */
+    /* 0x68AC */ be<u32> mTactZevEventName;  /* was m3494: TWW mTactZevEventName: setTactZev 02443768 stores the event name; procTactPlay 0243AC64 tests it, procTactPlayEnd_init 02412948 orders that event with the partner; GameCube 0x3494 (+0x3418) */
     /* 0x68B0 */ u8 mLightInfluence[0x20];  /* LIGHT_INFLUENCE */
     /* 0x68D0 */ be<f32> m68D0;  /* HD-only float (set by the constructor) */
     /* 0x68D4 */ be<u8> mDirection;  /* GameCube 0x34B8 (+0x341C) */
     /* 0x68D5 */ be<u8> mFrontWallType;
     /* 0x68D6 */ be<u8> m34BA;
     /* 0x68D7 */ be<u8> mCurrItemHeapIdx;
-    /* 0x68D8 */ be<u8> m34BC;
+    /* 0x68D8 */ be<u8> mBaseFootIdx;  /* was m34BC: posMoveFromFootPos 023FCB9C: the foot that stands lower (0 right, 1 left; 2 without old-frame data); Link is moved by that foot's movement (tww the same) */
     /* 0x68D9 */ be<u8> mReadyItemBtn;
     /* 0x68DA */ be<u8> mFootEffectPosType;
     /* 0x68DB */ be<s8> mReverb;
     /* 0x68DC */ be<u8> mLeftHandIdx;
     /* 0x68DD */ be<u8> mRightHandIdx;
-    /* 0x68DE */ be<u8> m34C2;
+    /* 0x68DE */ be<u8> mRootMoveMode;  /* was m34C2: how the animation's root translation moves Link: the procs set a mode (0 .. 11) when they start their animation; posMove 023FDA70 switches on it (1 / 5 move current.pos by the root's change, 5 also in y; 2 / 6 keep the root; 3 / 7 and 4 restart into 1 / 5; 8 / 9 the other way round; 10 / 11 move the root by the position change); jointBeforeCB 023D6B30 holds the root in x / z (1) or at mRootTransY (5); commonProcInit 023DFDD8 turns 1 into 2 (tww the same) */
     /* 0x68DF */ be<u8> m34C3;
-    /* 0x68E0 */ be<u8> m34C4;
+    /* 0x68E0 */ be<u8> mCutComboCount;  /* was m34C4: the sword combo count: changeCutProc 023E73FC adds 1 per cut and picks the cut by it (4 the finishing EA / EB cut, mCutCount from it); execute 0240CDD0 adds 2 on a hit at 2 / 3 and clears it when mCutComboTimer runs out; procCutTurn_init 023E6380 / procCutExMJ_init 023E6DC4 test 6; the finishing cuts clear it (tww the same) */
     /* 0x68E1 */ be<u8> m34C5;
-    /* 0x68E2 */ u8 m68E2[0x2A];  /* HD: m34C6 (GameCube 0x34C6) and HD-only bytes, not measured */
+    /* 0x68E2 */ u8 mJointFlag[0x2A];  /* was m68E2: per joint (42): bit 1 quaternion saved, bit 2 transform saved in mJointState (jointBeforeCB 023D6B30 / lk_saveTransInfo set them); jointAfterCB 023D7564 restores and clears them (the HD per-joint form of tww's m34C6); HD: m34C6 (GameCube 0x34C6) and HD-only bytes, not measured */
     /* 0x690C */ be<u8> mActivePlayerBombs;  /* GameCube 0x34C7 (+0x3445) */
     /* 0x690D */ be<u8> mItemTrigger;
     /* 0x690E */ be<u8> mItemButton;
-    /* 0x690F */ be<u8> m34CA;
+    /* 0x690F */ be<u8> mOldItemButton;  /* was m34CA: setStickData 023F32E4 keeps the last mItemButton here before reading the buttons and puts it back in DEMO_KEEP (tww the same) */
     /* 0x6910 */ be<u8> mDekuSpRestartPoint;
-    /* 0x6911 */ be<u8> m34CC;
-    /* 0x6912 */ be<u8> m34CD;
-    /* 0x6913 */ be<u8> m34CE;
+    /* 0x6911 */ be<u8> mTactZevMelodyNum;  /* was m34CC: TWW mTactZevMelodyNum: setTactZev 02443768 stores the melody number; procTactPlay_init 02439D54 / procTactPlay 0243AC64 compare the played song with it */
+    /* 0x6912 */ be<u8> mWaterfallRippleTimer;  /* was m34CD: setWaterRipple 0240AB88: when 0 it sets the ID_IT_JN_WP_HAMON03 ripple at the root joint, starts a quake and sets 15; otherwise counts down and stops the quake at 5 (tww the same) */
+    /* 0x6913 */ be<u8> mGetDemoFlg;  /* was m34CE: setGetDemo 023DBDD0: bit 1 the DEFAULT_GETITEM event is run here (in the air or off the ground), bit 2 the get-item sound was started, bit 4 the item message closed (cut end); cleared when no get-item event runs (tww the same) */
     /* 0x6914 */ u8 _6914[2];  /* [?] */
     /* 0x6916 */ be<s16> mProcVar0;  /* GameCube 0x34D0 (+0x3446) */
     /* 0x6918 */ be<s16> mProcVar1;
@@ -1054,61 +1054,61 @@ struct daPy_lk_c : daPy_py_c {
     /* 0x691E */ be<s16> mProcVar4;
     /* 0x6920 */ be<s16> mProcVar5;
     /* 0x6922 */ u8 _6922[2];  /* HD-only [?] */
-    /* 0x6924 */ be<s16> m34DC;  /* GameCube 0x34DC (+0x3448) */
+    /* 0x6924 */ be<s16> mStickAngle;  /* was m34DC: setStickData 023F32E4: the control stick angle (CPad stick angle, + 0x8000 in the camera modes that need it); the rope, ship-attention, vomit and Wind Waker procs take directions from it; the cut inits copy it (tww the same); GameCube 0x34DC (+0x3448) */
     /* 0x6926 */ be<s16> m34DE;
-    /* 0x6928 */ be<s16> m34E0;
-    /* 0x692A */ be<s16> m34E2;
-    /* 0x692C */ be<s16> m34E4;
-    /* 0x692E */ be<s16> m34E6;
-    /* 0x6930 */ be<s16> m34E8;
-    /* 0x6932 */ be<s16> m34EA;
+    /* 0x6928 */ be<s16> mWaistAngleZ;  /* was m34E0: jointBeforeCB 023D6B30: the Z rotation of the waist joint; procFanGlide 02438E78 leans it (clamped to +-0x2000), setWaistAngle 023FFB08 sets it; footBgCheck 0240005C / posMoveFromFootPos 023FCB9C correct the feet by it; commonProcInit 023DFDD8 clears it (tww the same) */
+    /* 0x692A */ be<s16> mGroundAngle;  /* was m34E2: execute 0240CDD0: the slope of the ground along shape_angle.y (getGroundAngle, 0 in the air or on some grounds); setShapeAngleOnGround tilts shape_angle.x by it, setBlendMoveAnime 023E14A0 / checkNormalDamage 023F9D84 / setNeckAngle 02400C4C / procCrouch 0241AC94 read it (tww the same) */
+    /* 0x692C */ be<s16> mWaistAngleY;  /* was m34E4: jointBeforeCB 023D6B30: the Y rotation of the waist joint; procFanGlide 02438E78 turns it (clamped to +-0x2000); commonProcInit 023DFDD8 clears it (tww the same) */
+    /* 0x692E */ be<s16> mAtnShapeAngleY;  /* was m34E6: the shape angle kept while moving with attention: setAtnList 023DCD30, procWait 024177A8 and procCutTurnMove 02442470 store it, setSpeedAndAngleAtn 02417538 / setSpeedAndAngleAtnBack 0241699C put shape_angle.y back to it; procCutTurnMove takes the stick direction relative to it (tww the same) */
+    /* 0x6930 */ be<s16> mMoveTargetAngleY;  /* was m34E8: setStickData 023F32E4: mStickAngle plus the camera angle (the demo move angle in demos, 0 without input); the move / swim / attention speed functions turn current.angle.y and shape_angle.y toward it, getDirectionFromShapeAngle 023E4E18 / getDirectionFromCurrentAngle 023E3398 compare with it (tww the same) */
+    /* 0x6932 */ be<s16> mOldStickAngle;  /* was m34EA: execute 0240CDD0 copies mStickAngle here; setStickData 023F32E4 turns the difference into the spin input (mStickSpinAngle); setSpeedAndAngleNormal 0241650C / checkNextMode test a backward flip (tww the same) */
     /* 0x6934 */ be<s16> m34EC;
     /* 0x6936 */ u8 _6936[2];
     /* 0x6938 */ be<u32> mpSeAnm;  /* HD: a pointer to the SE animation data (GameCube u16 mSeAnmIdx at 0x34EE); resetSeAnime stores 0x10035574 */
     /* 0x693C */ be<f32> m693C;  /* [?] probably mSeAnmRate (GameCube 0x360C) */
-    /* 0x6940 */ be<u16> m34F0;  /* GameCube 0x34F0 (+0x3450) */
+    /* 0x6940 */ be<u16> mSeAnmDemoAnmNo;  /* was m34F0: setSeAnime 023E07E4 copies the animation heap's mDemoAnmNo here next to mSeAnmIdx and keeps the loaded sound animation only while both match; resetSeAnime 023E07C0 / playerInit 02410BE8 set 0xFFFF (tww the same); GameCube 0x34F0 (+0x3450) */
     /* 0x6942 */ be<s16> m34F2;
     /* 0x6944 */ be<s16> m34F4;
-    /* 0x6946 */ be<s16> m34F6;
-    /* 0x6948 */ be<s16> m34F8;
-    /* 0x694A */ be<s16> m34FA;
-    /* 0x694C */ be<s16> m34FC;
-    /* 0x694E */ be<s16> m34FE;
-    /* 0x6950 */ be<s16> m3500;
-    /* 0x6952 */ be<s16> m3502;
-    /* 0x6954 */ be<s16> m3504;
-    /* 0x6956 */ be<s16> m3506;
-    /* 0x6958 */ be<s16> m3508;
-    /* 0x695A */ be<s16> m350A;
-    /* 0x695C */ be<s16> m350C;
-    /* 0x695E */ be<s16> m350E;
-    /* 0x6960 */ be<s16> m3510;
-    /* 0x6962 */ be<s16> m3512;
-    /* 0x6964 */ be<s16> m3514;
-    /* 0x6966 */ be<s16> m3516;
-    /* 0x6968 */ be<s16> m3518;
-    /* 0x696A */ be<s16> m351A;
-    /* 0x696C */ be<s16> m351C;
+    /* 0x6946 */ be<s16> mHatAAngleZ;  /* was m34F6: jointBeforeCB 023D6B30: the Z angle of the HATA joint (with mHeadFrontAngleX - 0x8000 and mHatASwingZ); setHatAngle 024022D0 eases it toward the wind / motion direction (cLib_addCalcAngleS2), adds mHatASpeedZ and the head pitch change and clamps it (tww the same) */
+    /* 0x6948 */ be<s16> mHatAAngleY;  /* was m34F8: jointBeforeCB 023D6B30: the Y angle of the HATA joint; setHatAngle 024022D0 eases it toward the sideways direction, adds mHatASpeedY minus the head yaw change, clamps it to +-0x3800 (tww the same) */
+    /* 0x694A */ be<s16> mHatBAngleZ;  /* was m34FA: jointBeforeCB 023D6B30: the Z angle of the HATB joint (with mHatBSwingZ); setHatAngle 024022D0 takes off mHatAAngleZ's change, eases it to 0, adds mHatBSpeedZ, clamps it to -0x800..0x1000 (tww the same) */
+    /* 0x694C */ be<s16> mHatBAngleY;  /* was m34FC: jointBeforeCB 023D6B30: the Y angle of the HATB joint; setHatAngle 024022D0 takes off mHatAAngleY's change, eases it to 0, adds mHatBSpeedY, keeps it + mHatAAngleY within +-0x3800 (tww the same) */
+    /* 0x694E */ be<s16> mHatCAngleZ;  /* was m34FE: jointBeforeCB 023D6B30: the Z angle of the HATC joint (with mHatCSwingZ); setHatAngle 024022D0 takes off mHatBAngleZ's change, eases it to 0, adds mHatCSpeedZ, clamps it to -0x800..0x1000 (tww the same) */
+    /* 0x6950 */ be<s16> mHatCAngleY;  /* was m3500: jointBeforeCB 023D6B30: the Y angle of the HATC joint; setHatAngle 024022D0 takes off mHatBAngleY's change, eases it to 0, adds mHatCSpeedY, keeps the sum of the three Y angles within +-0x3800 (tww the same) */
+    /* 0x6952 */ be<s16> mHatASpeedZ;  /* was m3502: setHatAngle 024022D0: 0.2 x the frame's change of mHatAAngleZ, added to it on the next frame (tww the same) */
+    /* 0x6954 */ be<s16> mHatASpeedY;  /* was m3504: setHatAngle 024022D0: 0.2 x the frame's change of mHatAAngleY, added to it on the next frame (tww the same) */
+    /* 0x6956 */ be<s16> mHatBSpeedZ;  /* was m3506: setHatAngle 024022D0: 0.2 x the frame's change of mHatBAngleZ, added to it on the next frame (tww the same) */
+    /* 0x6958 */ be<s16> mHatBSpeedY;  /* was m3508: setHatAngle 024022D0: 0.2 x the frame's change of mHatBAngleY, added to it on the next frame (tww the same) */
+    /* 0x695A */ be<s16> mHatCSpeedZ;  /* was m350A: setHatAngle 024022D0: 0.2 x the frame's change of mHatCAngleZ, added to it on the next frame (tww the same) */
+    /* 0x695C */ be<s16> mHatCSpeedY;  /* was m350C: setHatAngle 024022D0: 0.2 x the frame's change of mHatCAngleY, added to it on the next frame (tww the same) */
+    /* 0x695E */ be<s16> mHatASwingZ;  /* was m350E: setHatAngle 024022D0: the wind swing of HATA, 2280 x strength x cos(mHatSwingPhase); jointBeforeCB 023D6B30 adds it to the HATA Z angle (tww the same) */
+    /* 0x6960 */ be<s16> mHatBSwingZ;  /* was m3510: setHatAngle 024022D0: the wind swing of HATB, 3908 x strength x cos(mHatSwingPhase - 3 steps); jointBeforeCB 023D6B30 adds it to the HATB Z angle (tww the same) */
+    /* 0x6962 */ be<s16> mHatCSwingZ;  /* was m3512: setHatAngle 024022D0: the wind swing of HATC, 7568 x strength x cos(mHatSwingPhase - 6 steps); jointBeforeCB 023D6B30 adds it to the HATC Z angle (tww the same) */
+    /* 0x6964 */ be<s16> mHatSwingPhase;  /* was m3514: setHatAngle 024022D0: advanced by 1500 + 4060 x the wind strength each frame; the phase of mHatASwingZ / mHatBSwingZ / mHatCSwingZ (tww the same) */
+    /* 0x6966 */ be<s16> mLMomiAngleY;  /* was m3516: setHatAngle 024022D0: -8192 x the sideways wind x strength, at most 0x1000, 0 while swimming; jointBeforeCB 023D6B30: the Y rotation of the LMOMI joint (tww the same) */
+    /* 0x6968 */ be<s16> mRMomiAngleY;  /* was m3518: setHatAngle 024022D0: the same value as mLMomiAngleY, at least -0x1000, 0 while swimming; jointBeforeCB 023D6B30: the Y rotation of the RMOMI joint (tww the same) */
+    /* 0x696A */ be<s16> mMomiAngleZ;  /* was m351A: setHatAngle 024022D0: -8192 x the forward wind x strength, 0 while swimming; jointBeforeCB 023D6B30: the Z rotation of both MOMI joints (tww the same) */
+    /* 0x696C */ be<s16> mMoveSlantAngle;  /* was m351C: setMoveSlantAngle 02400990: the sideways lean while running (eased, shape_angle.z = half of it); setGrabItemPos 0240A41C tilts the held actor by it, setNeckAngle 02400C4C reads it (tww the same) */
     /* 0x696E */ be<s16> m351E;
     /* 0x6970 */ u8 m3520[2];
-    /* 0x6972 */ be<s16> m3522;
-    /* 0x6974 */ be<s16> m3524;
-    /* 0x6976 */ be<s16> m3526;
-    /* 0x6978 */ be<s16> m3528;
-    /* 0x697A */ be<s16> m352A;
+    /* 0x6972 */ be<s16> mCutComboTimer;  /* was m3522: the window for the next combo cut: the cut inits (procCutA_init 023E5F88, procCutF_init 023E5BD0, ...) set it from the HIO cut tables, the finishing cuts clear it; execute 0240CDD0 counts it down and clears mCutComboCount at 0 (tww the same) */
+    /* 0x6974 */ be<s16> mStickSpinTimer;  /* was m3524: setStickData 023F32E4: set to the HIO mCutTurnR frame count whenever mStickSpinAngle grows, counted down otherwise; at 0 mStickSpinAngle is cleared (tww the same) */
+    /* 0x6976 */ be<s16> mSlideStartTimer;  /* was m3526: changeSlideProc 023E4CD0: 8 off slide polygons; on one it counts down while the normal speed is eased to 0 and the slide starts only when it is 0 and the speed is 5 or less; procSlideFront_init 023E4B38 / procSlideBack_init 023E4C04 / playerInit 02410BE8 set 8 (tww the same) */
+    /* 0x6978 */ be<s16> mHeadFrontAngleX;  /* was m3528: setHatAngle 024022D0: the pitch of the head's front vector (l_neck_front), whose change (halved, clamped to +-0x200) moves the hat Z angles; jointBeforeCB 023D6B30 adds it to the HATA Z angle (tww the same) */
+    /* 0x697A */ be<s16> mHeadFrontAngleY;  /* was m352A: setHatAngle 024022D0: the yaw of the head's front vector (kept while it points steeply up or down), whose change (halved, clamped to +-0x800) moves the hat Y angles (tww the same) */
     /* 0x697C */ be<s16> m352C;
-    /* 0x697E */ be<s16> m352E;
-    /* 0x6980 */ be<u16> m3530;
-    /* 0x6982 */ be<u16> m3532;
-    /* 0x6984 */ be<s16> m3534;
-    /* 0x6986 */ be<s16> m3536;
-    /* 0x6988 */ be<s16> m3538;
-    /* 0x698A */ be<s16> m353A;
-    /* 0x698C */ be<s16> m353C;
-    /* 0x698E */ be<s16> m353E;
-    /* 0x6990 */ be<s16> m3540;
-    /* 0x6992 */ be<s16> m3542;
-    /* 0x6994 */ be<s16> m3544;
+    /* 0x697E */ be<s16> mBgWaitTimer;  /* was m352E: makeBgWait 024131D0: 900 from the player init, counted down each call; while set the start waits for a treasure-chest (TBOX) ground or, with parameter bit 0x80, for a raft (OBJ_IKADA) ground (then cleared) (tww the same) */
+    /* 0x6980 */ be<u16> mTexAnmFrame;  /* was m3530: the frame of the texture pattern (eyes / mouth) animation: playTextureAnime 023FBCEC advances it (blinks, demo frame); draw 023D9820 sets the pattern data frame from it; the talk / surprise / smile demo procs, procSelfieHD 02415BA4 and procShipScope 024327A4 set it (tww the same) */
+    /* 0x6982 */ be<u16> mTexScrollFrame;  /* was m3532: the frame of the texture scroll animation: playTextureAnime 023FBCEC advances it; draw 023D9820 sets the scroll data frame from it; setTextureScrollResource 023DC43C and the surprise demo procs set it (tww the same) */
+    /* 0x6984 */ be<s16> mFanWindTimer;  /* was m3534: procFanSwing 024386C4 sets 10; setCollision 024076CC scales the fan wind capsule by it / 10 and counts it down (tww the same) */
+    /* 0x6986 */ be<s16> mFanWindAngleY;  /* was m3536: procFanSwing 024386C4: shape_angle.y at the swing; setCollision 024076CC aims the fan wind capsule by it (tww the same) */
+    /* 0x6988 */ be<s16> mFanWindAngleX;  /* was m3538: procFanSwing 024386C4: the downward angle of the swing (0 or toward the ground); setCollision 024076CC updates it from the ground under the wind and aims the capsule by it (tww the same) */
+    /* 0x698A */ be<s16> mFanWindSphTimer;  /* was m353A: procFanSwing 024386C4 sets 3, procFanGlide 02438E78 5; setCollision 024076CC sets the fan wind sphere at Link while it counts down (tww the same) */
+    /* 0x698C */ be<s16> mShipRideAngleX;  /* was m353C: setShipRidePos 023E287C: follows the ship's shape_angle.x by mShipRideAngleXSpeed; setWorldMatrix 023FF6A0 rotates Link by it on the ship; procShipReady_init 023ECA94 / dProcBossWarp_init 024248C0 clear it (tww the same) */
+    /* 0x698E */ be<s16> mShipRideAngleZ;  /* was m353E: setShipRidePos 023E287C: follows the ship's shape_angle.z by mShipRideAngleZSpeed; setWorldMatrix 023FF6A0 rotates Link by it; procShipReady_init 023ECA94 / dProcBossWarp_init 024248C0 clear it (tww the same) */
+    /* 0x6990 */ be<s16> mShipRideAngleXSpeed;  /* was m3540: setShipRidePos 023E287C: the follow speed of mShipRideAngleX toward the ship's shape_angle.x (adds 0.75 x the difference, eased to 0, added to mShipRideAngleX each frame); procShipReady_init 023ECA94 clears it (tww the same) */
+    /* 0x6992 */ be<s16> mShipRideAngleZSpeed;  /* was m3542: setShipRidePos 023E287C: the follow speed of mShipRideAngleZ toward the ship's shape_angle.z (adds half the difference, eased to 0, added to mShipRideAngleZ each frame); procShipReady_init 023ECA94 clears it (tww the same) */
+    /* 0x6994 */ be<s16> mFrontWallTimer;  /* was m3544: changeFrontWallTypeProc 02418E00: frames Link keeps pushing against the front wall; above the HIO small-jump / wall-catch frame counts it starts the small jump, hang, or vertical jump, otherwise cleared; commonProcInit 023DFDD8 clears it (tww the same) */
     /* 0x6996 */ be<s16> mShieldFrontRangeYAngle;
     /* 0x6998 */ be<s16> m3548;
     /* 0x699A */ u8 m354A[2];
@@ -1116,63 +1116,65 @@ struct daPy_lk_c : daPy_py_c {
     /* 0x699E */ be<s16> mTinkleShieldTimer;
     /* 0x69A0 */ be<s16> m3550;
     /* 0x69A2 */ be<u16> mKeepItem;
-    /* 0x69A4 */ be<s16> m3554;
+    /* 0x69A4 */ be<s16> mForestWaterUseTimer;  /* was m3554: procBottleOpen 0243DBFC sets 3 when the Forest Water is used; setDemoData 023F22FC counts it down outside events and then clears daPyFlg1_FOREST_WATER_USE (tww the same) */
     /* 0x69A6 */ u8 m3556[2];
-    /* 0x69A8 */ be<s16> m3558;
-    /* 0x69AA */ be<s16> m355A;
+    /* 0x69A8 */ be<s16> mFanSmaAngleZ;  /* was m3558: fanJointCB 023D641C: ZrotS of the FANSMA joint of the small Deku Leaf model; setShapeFanLeaf 023E771C sets 0x600 x sin(m355C) (tww the same) */
+    /* 0x69AA */ be<s16> mFanSmbAngleZ;  /* was m355A: fanJointCB 023D641C: ZrotS of the FANSMB joint; setShapeFanLeaf 023E771C sets 0x800 x sin(m355C - 0xE00) (tww the same) */
     /* 0x69AC */ be<s16> m355C;
     /* 0x69AE */ be<s16> m355E;
     /* 0x69B0 */ be<u16> mEquipItem;
-    /* 0x69B2 */ be<u16> m3562;
-    /* 0x69B4 */ csXyz m3564;
+    /* 0x69B2 */ be<u16> mAnimeEquipItem;  /* was m3562: TWW mAnimeEquipItem: the item of the equip animation: setAnimeEquipItem 023EF750 / setAnimeEquipSword 023E9F60 / setAnimeUnequip 023ECEF0 set it; checkItemAction 023FB230 copies it into mEquipItem */
+    /* 0x69B4 */ csXyz mNeckAngle;  /* was m3564: jointBeforeCB 023D6B30 rotates the head joint by it (y, z, x); setNeckAngle 02400C4C eases it toward the look target (limited to the ship angle while riding); procDamage 0241E150 sets it from the hit direction; procWait 024177A8 tests it for 0 (tww the same) */
     /* 0x69BA */ u8 _69BA[2];
     /* 0x69BC */ be<s32> mCameraInfoIdx;  /* GameCube 0x356C (+0x3450) */
     /* 0x69C0 */ be<s32> mProcVar6;
     /* 0x69C4 */ be<s32> mProcVar7;
-    /* 0x69C8 */ be<s32> m3578;
-    /* 0x69CC */ be<s32> m357C;
-    /* 0x69D0 */ be<s32> m3580;
+    /* 0x69C8 */ be<s32> mStickSpinAngle;  /* was m3578: setStickData 023F32E4: the summed stick rotation while it keeps turning one way (reset when it turns back or mStickSpinTimer runs out); more than 0xF800 either way is a spin input: checkNextActionFromButton 023EFF20, procBackJumpLand 0241C140, procJumpCut 02442C1C / setJumpCutAtParam 023ED380; changeCutProc 023E73FC / procCutTurn_init 023E6380 / procCutRoll_init 02441A44 clear it (tww the same) */
+    /* 0x69CC */ be<s32> mOldGroundCode;  /* was m357C: execute 0240CDD0 / makeBgWait 024131D0 copy mGroundCode here before updating it; changeAutoJumpProc 023F81A4 tests 3 (tww the same) */
+    /* 0x69D0 */ be<s32> mGroundCode;  /* was m3580: execute 0240CDD0 / makeBgWait 024131D0: GetGroundCode of the ground (-1 in the air); checkFallCode 023FEA6C, setNeckAngle 02400C4C, setBlendMoveAnime 023E14A0, posMoveFromFootPos 023FCB9C ... test codes 4 / 5 / 8 (tww the same) */
     /* 0x69D4 */ be<s32> mCurrAttributeCode;
-    /* 0x69D8 */ be<s32> m3588;
+    /* 0x69D8 */ be<s32> mHangAttributeCode;  /* was m3588: changeHangEndProc 02428230: the attribute code of the ground found when hanging (dBgS_Attr_UNK1B when none); setWaterRipple 0240AB88 starts the waterfall splash while hanging on code 0x17 (tww the same) */
     /* 0x69DC */ be<s32> mStaffIdx;
     /* 0x69E0 */ be<s32> mEventIdx;
     /* 0x69E4 */ be<s32> mRestartPoint;
-    /* 0x69E8 */ u8 m69E8[8];  /* HD-only [?] (+0x3458 from here) */
+    /* 0x69E8 */ be<u8> mStrongJumpCut;  /* was m69E8: the name of the d_a_player_main_02.h view jumpCutState_c: procJumpCut_init 023ED380 / procJumpCut 02442C1C set it for a sword / Boko jump cut with |mStickSpinAngle| > 0xF800 (a spun-up jump cut, not cursed); procJumpCutLand then goes on to the spin cut (procCutTurn_init) while it is set and clears it; the damage code (d_cc_uty 025192A8) applies a spin attack's damage twice and the Stalfos / ReDead hit timers (d_a_st damage_check, daRd_c::checkTgHit 0245C770) use 2 / 3 while it is set; 023ED5A4 clears it; HD-only (+0x3458 from 0x69F0) */
+    /* 0x69E9 */ u8 _69E9[5];
+    /* 0x69EE */ be<s16> mHeavyStateCounter;  /* was m69EE: the name of the d_a_player_main_04_update.h view LinkUpdateHeavyState: each stuck morth (action_omoi in daKS_Execute) adds 1 per frame; execute 0240CDD0 turns daPyFlg0_HEAVY_STATE on at 5 or more, off otherwise, and clears it; HD-only */
     /* 0x69F0 */ be<f32> m3598;  /* GameCube 0x3598 (+0x3458) */
-    /* 0x69F4 */ be<f32> m359C;
+    /* 0x69F4 */ be<f32> mFootMoveDist;  /* was m359C: posMoveFromFootPos 023FCB9C: the XZ move of the base foot, smoothed (0.3 new + 0.7 old) while the stick is steady (tww the same) */
     /* 0x69F8 */ be<f32> m35A0;
     /* 0x69FC */ be<f32> m35A4;
     /* 0x6A00 */ be<f32> m35A8;
     /* 0x6A04 */ be<f32> m35AC;
     /* 0x6A08 */ be<f32> mStickDistance;
-    /* 0x6A0C */ be<f32> m35B4;
-    /* 0x6A10 */ be<f32> m35B8;
+    /* 0x6A0C */ be<f32> mOldStickDistance;  /* was m35B4: execute 0240CDD0 copies mStickDistance here; posMoveFromFootPos 023FCB9C smooths mFootMoveDist only while the stick changed by less than 0.2 (tww the same) */
+    /* 0x6A10 */ be<f32> mFootBgOffsetY;  /* was m35B8: footBgCheck 0240005C: eased (cLib_addCalc) to the lower foot's ground height below current.pos.y; added to the model base matrix y and taken off mInvWorldMtx (tww the same) */
     /* 0x6A14 */ be<f32> mNormalSpeed;
     /* 0x6A18 */ u8 m35C0[4];
     /* 0x6A1C */ be<f32> m35C4;
     /* 0x6A20 */ be<f32> m35C8;
-    /* 0x6A24 */ be<f32> m35CC;
+    /* 0x6A24 */ be<f32> mGrabItemBounceY;  /* was m35CC: setGrabItemPos 0240A41C: -0.2 x speed.y per frame (at most 40), chased back to 0 and added to the held actor's y; freeGrabItem 023DCF8C clears it (tww the same) */
     /* 0x6A28 */ be<f32> mWaterY;
     /* 0x6A2C */ be<f32> m35D4;
     /* 0x6A30 */ be<f32> m35D8;
     /* 0x6A34 */ be<f32> mHangGroundH;
-    /* 0x6A38 */ be<f32> m35E0;
+    /* 0x6A38 */ be<f32> mRootTransY;  /* was m35E0: jointBeforeCB 023D6B30 sets the root translation y to it in mRootMoveMode 5; posMove 023FDA70 takes it from the animation when mode 4 becomes 5; changeFrontWallTypeProc 02418E00 / procClimbDownStart_init set 43.67353 (tww the same) */
     /* 0x6A3C */ be<f32> m35E4;
     /* 0x6A40 */ be<f32> m35E8;
     /* 0x6A44 */ be<f32> m35EC;
-    /* 0x6A48 */ be<f32> m35F0;
+    /* 0x6A48 */ be<f32> mFallStartY;  /* was m35F0: the height a fall is measured from: posMoveFromFootPos 023FCB9C keeps it at current.pos.y on the ground, commonProcInit 023DFDD8 / procHookshotFly / procFanGlide / procAutoJump_init set mProcStartPos.y; changeLandProc 0241C898, setFallVoice 0241D6CC, procJumpCutLand_init 02442990 and procBtVerticalJumpLand_init 02430858 use it - current.pos.y (tww the same) */
     /* 0x6A4C */ be<f32> m35F4;
-    /* 0x6A50 */ be<f32> m35F8;
-    /* 0x6A54 */ be<f32> m35FC;
+    /* 0x6A50 */ be<f32> mLadderTopY;  /* was m35F8: setFrontWallType 023E3850: the top y of the ladder triangle in front (wall codes 4 / 5; m3724 gets the bottom middle); changeFrontWallTypeProc 02418E00 keeps current.pos.y at most 150 below it (tww the same) */
+    /* 0x6A54 */ be<f32> mSwordAtScale;  /* was m35FC: the reach of the sword attack capsules: setNormalCutAtParam 023E5B0C / setFinishCutAtParam 023E5678 / setExtraCutAtParam 023E6D00 / setExtraFinishCutAtParam 023E6A58 / setJumpCutAtParam 023ED380 set it from the HIO cut tables; setSwordAtCollision 02406E74 scales the root-to-top vectors by it (tww the same) */
     /* 0x6A58 */ be<f32> m3600;
     /* 0x6A5C */ be<f32> m3604;
-    /* 0x6A60 */ be<f32> m3608;
+    /* 0x6A60 */ be<f32> mSwimTiredOffsetY;  /* was m3608: setSwimTimerStartStop 023F8924 eases it toward a sink depth as the swim timer runs low (0 otherwise); setWorldMatrix 023FF6A0 adds it to the model y; commonProcInit 023DFDD8 clears it (tww the same) */
     /* 0x6A64 */ be<f32> mSeAnmRate;  /* [?] see m693C */
-    /* 0x6A68 */ be<f32> m3610;
+    /* 0x6A68 */ be<f32> mWhirlPullSpeed;  /* was m3610: posMove 023FDA70: chased toward 40 while a whirlpool (mWhirlId) pulls Link, who moves by it around the whirlpool; 0 otherwise (tww the same) */
     /* 0x6A6C */ be<u32> mShadowId;  /* GameCube 0x3614 (+0x3458); probably unused in HD (no shadow ids) */
     /* 0x6A70 */ be<u32> mModeFlg;
     /* 0x6A74 */ be<u32> mMtrlSndId;
-    /* 0x6A78 */ be<u32> m3620;
+    /* 0x6A78 */ be<u32> mFrollCrashMtrlSndId;  /* was m3620: TWW onFrollCrashFlg(): the material sound id of what Link rolled into; procFrontRoll 0241BAB8 sets it from mAcchCir[0], onFrollCrashFlg (in 02444F0C) from the caller; procFrontRollCrash_init 0241B904 plays JA_SE_LK_BODYATTACK with it */
     /* 0x6A7C */ be<u32> m3624;
     /* 0x6A80 */ be<u32> mGameOverId;
     /* 0x6A84 */ be<u32> mTactZevPartnerId;
@@ -1180,32 +1182,30 @@ struct daPy_lk_c : daPy_py_c {
     /* 0x6A8C */ be<u32> mWhirlId;
     /* 0x6A90 */ be<u32> mMsgId;
     /* 0x6A94 */ be<u32> mpSeAnmFrameCtrl;
-    /* 0x6A98 */ be<s16> m3640;
+    /* 0x6A98 */ be<s16> mOutPowerAngle;  /* was m3640: the direction of the outside push: setOutPower 024438D4 sets it or combines a new push with the old one (atan2 of the summed vectors); posMove 023FDA70 moves Link by mOutPower along it (tww the same) */
     /* 0x6A9A */ u8 _6A9A[2];
-    /* 0x6A9C */ be<f32> m3644;
-    /* 0x6AA0 */ u8 m3648[0x10];  /* Quaternion */
-    /* 0x6AB0 */ u8 m3658[0x10];  /* Quaternion */
-    /* 0x6AC0 */ u8 m3668[0x20];  /* J3DTransformInfo */
-    /* 0x6AE0 */ u8 m6AE0[0x7B0];  /* HD-only (0x7B0 bytes, not initialised by the constructor; probably joint matrices) */
-    /* 0x7290 */ cXyz m3688;  /* GameCube 0x3688 (+0x3C08) */
+    /* 0x6A9C */ be<f32> mOutPower;  /* was m3644: the strength of the outside push (TWW setOutPower()): setOutPower 024438D4 sets or sums it; posMove 023FDA70 moves current.pos by it along mOutPowerAngle and clears it; setNeckAngle 02400C4C / setBlendMoveAnime 023E14A0 test it (tww the same) */
+    /* 0x6AA0 */ u8 mRootJointQuat[0x10];  /* was m3648: jointBeforeCB 023D6B30: during the guard / grab / ready-throw upper animations it keeps the root joint's quaternion (the root gets the identity) and concatenates it on the waist chain; playerInit 02410BE8 sets w 1 (tww the same root save); Quaternion */
+    /* 0x6AB0 */ u8 mJointState[0x7E0];  /* was m3658: the per-joint saved state PlayerJointState (d_a_player_main_01.h: 42 quaternions, 42 J3DTransformInfo): jointBeforeCB 023D6B30 saves a joint's quaternion before turning it, lk_saveTransInfo its transform before moving it; jointAfterCB 023D7564 restores them as mJointFlag says (tww mJointState / m3668 for one joint); HD: the per-joint saved state PlayerJointState (d_a_player_main_01.h): 42 quaternions then 42 J3DTransformInfo; GameCube mJointState (Quaternion) / m3668 (J3DTransformInfo) for one joint, HD-only from 0x6AE0 */
+    /* 0x7290 */ cXyz mProcStartPos;  /* was m3688: commonProcInit 023DFDD8: current.pos when a proc starts (procHookshotFly 02437F00 / procFanGlide 02438E78 / procAutoJump_init 023F7958 / procRopeReady_init 023EB864 renew it); procSideStep 0241A604 / procBackJump 0241C094 / procFall 0241DD5C / changeLandProc 0241C898 measure how far Link dropped below its y (tww the same); GameCube 0x3688 (+0x3C08) */
     /* 0x729C */ cXyz mOldSpeed;
-    /* 0x72A8 */ cXyz m36A0;
-    /* 0x72B4 */ cXyz m36AC;
-    /* 0x72C0 */ cXyz m36B8;
-    /* 0x72CC */ cXyz m36C4;
-    /* 0x72D8 */ cXyz m36D0;
-    /* 0x72E4 */ cXyz m36DC;
+    /* 0x72A8 */ cXyz mSlipSpeed;  /* was m36A0: posMoveFromFootPos 023FCB9C: the sliding inertia, built from the speed lost each frame (0.75 x (old - new speed)) and eased back to 0 (cleared off slippery ground); posMove 023FDA70 adds it to current.pos; checkIceSlipFall 024197A0 / procIceSlipFall_init 02419514 and the blend-move functions read it; procFanSwing 024386C4 pushes it back (tww the same) */
+    /* 0x72B4 */ cXyz mOldSlipSpeed;  /* was m36AC: posMoveFromFootPos 023FCB9C copies mSlipSpeed here before updating it; procWait 024177A8 and procIceSlipAlmostFall_init 024173F4 use it (tww the same) */
+    /* 0x72C0 */ cXyz mBeltConveyerSpeed;  /* was m36B8: setBeltConveyerPower 023FC568: eased toward the conveyor's push (0 off a conveyor); posMove 023FDA70 adds it to current.pos; changeAutoJumpProc 023F81A4 / setBlendMoveAnime / setNeckAngle read it (tww the same) */
+    /* 0x72CC */ cXyz mSwordRootPos;  /* was m36C4: execute 0240CDD0: the root of the held weapon (sword, Skull Hammer, Boko stick, Deku Leaf, else the CL_PODA joint), next to mSwordTopPos; setSwordAtCollision 02406E74 builds the attack capsules from it; setCollision 024076CC / setHammerWaterSplash 0240C0A8 (tww the same) */
+    /* 0x72D8 */ cXyz mOldSwordTopPos;  /* was m36D0: execute 0240CDD0 copies mSwordTopPos here before updating it; setSwordAtCollision 02406E74 sweeps from it (tww the same) */
+    /* 0x72E4 */ cXyz mOldSwordRootPos;  /* was m36DC: execute 0240CDD0 copies mSwordRootPos here before updating it; setSwordAtCollision 02406E74 (tww the same) */
     /* 0x72F0 */ cXyz mHookshotRootPos;
     /* 0x72FC */ cXyz mBoomerangCatchPos;
-    /* 0x7308 */ cXyz m3700;
+    /* 0x7308 */ cXyz mPrevRootTrans;  /* was m3700: posMove 023FDA70: the root translation of the last frame, whose change moves Link in mRootMoveMode 1 / 5 / 8 / 9; the cut, crawl, auto-jump and door procs reset it when they start (tww the same) */
     /* 0x7314 */ cXyz m370C;
-    /* 0x7320 */ cXyz m3718;
+    /* 0x7320 */ cXyz mHatPrevPos;  /* was m3718: setHatAngle 024022D0: the HATA joint position of the last frame (set to the new one at the end); the hat leans away from its movement since then (tww the same) */
     /* 0x732C */ cXyz m3724;
-    /* 0x7338 */ cXyz m3730;
-    /* 0x7344 */ cXyz m373C;
-    /* 0x7350 */ cXyz m3748;
+    /* 0x7338 */ cXyz mWindSpeed;  /* was m3730: setWindAtPower 023FC7F0 eases it toward the wind push (0 in the heavy state, events and demos); posMove 023FDA70 adds its x / z to current.pos; procFanGlide 02438E78 drives the glide with it (procFanGlide_init 0241A3C4 clears it) (tww the same) */
+    /* 0x7344 */ cXyz mWindAnmSpeed;  /* was m373C: setWindAtPower 023FC7F0 eases it toward the wind push like mWindSpeed but also in the heavy state (0 in events and demos); it does not move Link: setBlendMoveAnime 023E14A0 and setNeckAngle 02400C4C react to it (tww the same) */
+    /* 0x7350 */ cXyz mExecStartPos;  /* was m3748: execute 0240CDD0 stores current.pos before the proc runs; procGrabReady_init 023ED0F0 / procGrabUp_init 0242D8DC measure the held actor from it (tww the same) */
     /* 0x735C */ u8 m3754[0x60];
-    /* 0x73BC */ Mtx34 m37B4;
+    /* 0x73BC */ Mtx34 mInvWorldMtx;  /* was m37B4: setWorldMatrix 023FF6A0: the inverse of Link's world matrix; footBgCheck 0240005C, setLegAngle 023FFBE0 and posMoveFromFootPos 023FCB9C bring joint matrices into Link's local space with it (tww the same) */
     /* 0x73EC */ be<u32> mpSwBlur;  /* HD: daPy_swBlur_c is allocated (GameCube member at 0x37E4) */
     /* 0x73F0 */ u8 mFootData[0x230];  /* daPy_footData_c[2] (GameCube 0x3DB8, +0x3638) */
     /* 0x7620 */ dCcD_Stts mStts;
@@ -1225,7 +1225,7 @@ WWHD_OFFSET(daPy_lk_c, mpCLModel, 0x448);
 WWHD_OFFSET(daPy_lk_c, mpKatsuraModel, 0x44C);
 WWHD_OFFSET(daPy_lk_c, mpYamuModel, 0x450);
 WWHD_OFFSET(daPy_lk_c, mpCurrLinktex, 0x454);
-WWHD_OFFSET(daPy_lk_c, m458, 0x458);
+WWHD_OFFSET(daPy_lk_c, mLinktexList, 0x458);
 WWHD_OFFSET(daPy_lk_c, mpAnmTexPatternData, 0x5F4);
 WWHD_OFFSET(daPy_lk_c, m_texNoAnms, 0x5F8);
 WWHD_OFFSET(daPy_lk_c, mpTexScrollResData, 0x5FC);
@@ -1279,176 +1279,178 @@ WWHD_OFFSET(daPy_lk_c, m_tex_scroll_heap, 0x65E0);
 WWHD_OFFSET(daPy_lk_c, mCurProc, 0x65F0);
 WWHD_OFFSET(daPy_lk_c, mCurProcFunc, 0x65F4);
 WWHD_OFFSET(daPy_lk_c, mFootEffect, 0x65FC);
-WWHD_OFFSET(daPy_lk_c, m3280, 0x6694);
+WWHD_OFFSET(daPy_lk_c, mRippleEcallBack, 0x6694);
 WWHD_OFFSET(daPy_lk_c, mSwimTailEcallBack, 0x66A8);
-WWHD_OFFSET(daPy_lk_c, m32E4, 0x66F8);
-WWHD_OFFSET(daPy_lk_c, m32F0, 0x6704);
+WWHD_OFFSET(daPy_lk_c, mProcEffectEcallBack0, 0x66F8);
+WWHD_OFFSET(daPy_lk_c, mProcEffectEcallBack1, 0x6704);
 WWHD_OFFSET(daPy_lk_c, mSmokeEcallBack, 0x6710);
-WWHD_OFFSET(daPy_lk_c, m331C, 0x6730);
-WWHD_OFFSET(daPy_lk_c, m332C, 0x6740);
-WWHD_OFFSET(daPy_lk_c, m333C, 0x6750);
-WWHD_OFFSET(daPy_lk_c, m334C, 0x6760);
-WWHD_OFFSET(daPy_lk_c, m336C, 0x6780);
-WWHD_OFFSET(daPy_lk_c, m338C, 0x67A0);
-WWHD_OFFSET(daPy_lk_c, m33A8, 0x67BC);
+WWHD_OFFSET(daPy_lk_c, mCutTurnEcallBack0, 0x6730);
+WWHD_OFFSET(daPy_lk_c, mCutTurnEcallBack1, 0x6740);
+WWHD_OFFSET(daPy_lk_c, mCutTurnEcallBack2, 0x6750);
+WWHD_OFFSET(daPy_lk_c, mNeckWaterDropEcallBack, 0x6760);
+WWHD_OFFSET(daPy_lk_c, mBodyWaterDropEcallBack, 0x6780);
+WWHD_OFFSET(daPy_lk_c, mTalismanFlashEcallBack, 0x67A0);
+WWHD_OFFSET(daPy_lk_c, mProcEffectEcallBack2, 0x67BC);
 WWHD_OFFSET(daPy_lk_c, mDmEcallBack, 0x67CC);
-WWHD_OFFSET(daPy_lk_c, m33E8, 0x67FC);
+WWHD_OFFSET(daPy_lk_c, mFanWindEcallBack, 0x67FC);
 WWHD_OFFSET(daPy_lk_c, mFanSwingCb, 0x6808);
-WWHD_OFFSET(daPy_lk_c, m3400, 0x6814);
-WWHD_OFFSET(daPy_lk_c, m3410, 0x6824);
-WWHD_OFFSET(daPy_lk_c, m342C, 0x6840);
-WWHD_OFFSET(daPy_lk_c, m3438, 0x684C);
-WWHD_OFFSET(daPy_lk_c, m3454, 0x6868);
-WWHD_OFFSET(daPy_lk_c, m3460, 0x6874);
+WWHD_OFFSET(daPy_lk_c, mWaterfallSplashEcallBack, 0x6814);
+WWHD_OFFSET(daPy_lk_c, mWadeSplashEcallBack, 0x6824);
+WWHD_OFFSET(daPy_lk_c, mMirrorShieldEcallBack, 0x6840);
+WWHD_OFFSET(daPy_lk_c, mShieldLightHitEcallBack, 0x684C);
+WWHD_OFFSET(daPy_lk_c, mLightSaverEcallBack, 0x6868);
+WWHD_OFFSET(daPy_lk_c, mRainDropEcallBack, 0x6874);
 WWHD_OFFSET(daPy_lk_c, mpAttention, 0x6894);
 WWHD_OFFSET(daPy_lk_c, mpAttnEntryA, 0x6898);
 WWHD_OFFSET(daPy_lk_c, mpAttnEntryX, 0x689C);
 WWHD_OFFSET(daPy_lk_c, mpAttnEntryY, 0x68A0);
 WWHD_OFFSET(daPy_lk_c, mpAttnEntryZ, 0x68A4);
 WWHD_OFFSET(daPy_lk_c, mpAttnEntryHD, 0x68A8);
-WWHD_OFFSET(daPy_lk_c, m3494, 0x68AC);
+WWHD_OFFSET(daPy_lk_c, mTactZevEventName, 0x68AC);
 WWHD_OFFSET(daPy_lk_c, mLightInfluence, 0x68B0);
 WWHD_OFFSET(daPy_lk_c, m68D0, 0x68D0);
 WWHD_OFFSET(daPy_lk_c, mDirection, 0x68D4);
 WWHD_OFFSET(daPy_lk_c, mFrontWallType, 0x68D5);
 WWHD_OFFSET(daPy_lk_c, m34BA, 0x68D6);
 WWHD_OFFSET(daPy_lk_c, mCurrItemHeapIdx, 0x68D7);
-WWHD_OFFSET(daPy_lk_c, m34BC, 0x68D8);
+WWHD_OFFSET(daPy_lk_c, mBaseFootIdx, 0x68D8);
 WWHD_OFFSET(daPy_lk_c, mReadyItemBtn, 0x68D9);
 WWHD_OFFSET(daPy_lk_c, mFootEffectPosType, 0x68DA);
 WWHD_OFFSET(daPy_lk_c, mReverb, 0x68DB);
 WWHD_OFFSET(daPy_lk_c, mLeftHandIdx, 0x68DC);
 WWHD_OFFSET(daPy_lk_c, mRightHandIdx, 0x68DD);
-WWHD_OFFSET(daPy_lk_c, m34C2, 0x68DE);
+WWHD_OFFSET(daPy_lk_c, mRootMoveMode, 0x68DE);
 WWHD_OFFSET(daPy_lk_c, m34C3, 0x68DF);
-WWHD_OFFSET(daPy_lk_c, m34C4, 0x68E0);
+WWHD_OFFSET(daPy_lk_c, mCutComboCount, 0x68E0);
 WWHD_OFFSET(daPy_lk_c, m34C5, 0x68E1);
 WWHD_OFFSET(daPy_lk_c, mActivePlayerBombs, 0x690C);
 WWHD_OFFSET(daPy_lk_c, mItemTrigger, 0x690D);
 WWHD_OFFSET(daPy_lk_c, mItemButton, 0x690E);
-WWHD_OFFSET(daPy_lk_c, m34CA, 0x690F);
+WWHD_OFFSET(daPy_lk_c, mOldItemButton, 0x690F);
 WWHD_OFFSET(daPy_lk_c, mDekuSpRestartPoint, 0x6910);
-WWHD_OFFSET(daPy_lk_c, m34CC, 0x6911);
-WWHD_OFFSET(daPy_lk_c, m34CD, 0x6912);
-WWHD_OFFSET(daPy_lk_c, m34CE, 0x6913);
+WWHD_OFFSET(daPy_lk_c, mTactZevMelodyNum, 0x6911);
+WWHD_OFFSET(daPy_lk_c, mWaterfallRippleTimer, 0x6912);
+WWHD_OFFSET(daPy_lk_c, mGetDemoFlg, 0x6913);
 WWHD_OFFSET(daPy_lk_c, mProcVar0, 0x6916);
 WWHD_OFFSET(daPy_lk_c, mProcVar1, 0x6918);
 WWHD_OFFSET(daPy_lk_c, mProcVar2, 0x691A);
 WWHD_OFFSET(daPy_lk_c, mProcVar3, 0x691C);
 WWHD_OFFSET(daPy_lk_c, mProcVar4, 0x691E);
 WWHD_OFFSET(daPy_lk_c, mProcVar5, 0x6920);
-WWHD_OFFSET(daPy_lk_c, m34DC, 0x6924);
+WWHD_OFFSET(daPy_lk_c, mStickAngle, 0x6924);
 WWHD_OFFSET(daPy_lk_c, m34DE, 0x6926);
-WWHD_OFFSET(daPy_lk_c, m34E0, 0x6928);
-WWHD_OFFSET(daPy_lk_c, m34E2, 0x692A);
-WWHD_OFFSET(daPy_lk_c, m34E4, 0x692C);
-WWHD_OFFSET(daPy_lk_c, m34E6, 0x692E);
-WWHD_OFFSET(daPy_lk_c, m34E8, 0x6930);
-WWHD_OFFSET(daPy_lk_c, m34EA, 0x6932);
+WWHD_OFFSET(daPy_lk_c, mWaistAngleZ, 0x6928);
+WWHD_OFFSET(daPy_lk_c, mGroundAngle, 0x692A);
+WWHD_OFFSET(daPy_lk_c, mWaistAngleY, 0x692C);
+WWHD_OFFSET(daPy_lk_c, mAtnShapeAngleY, 0x692E);
+WWHD_OFFSET(daPy_lk_c, mMoveTargetAngleY, 0x6930);
+WWHD_OFFSET(daPy_lk_c, mOldStickAngle, 0x6932);
 WWHD_OFFSET(daPy_lk_c, m34EC, 0x6934);
 WWHD_OFFSET(daPy_lk_c, mpSeAnm, 0x6938);
 WWHD_OFFSET(daPy_lk_c, m693C, 0x693C);
-WWHD_OFFSET(daPy_lk_c, m34F0, 0x6940);
+WWHD_OFFSET(daPy_lk_c, mSeAnmDemoAnmNo, 0x6940);
 WWHD_OFFSET(daPy_lk_c, m34F2, 0x6942);
 WWHD_OFFSET(daPy_lk_c, m34F4, 0x6944);
-WWHD_OFFSET(daPy_lk_c, m34F6, 0x6946);
-WWHD_OFFSET(daPy_lk_c, m34F8, 0x6948);
-WWHD_OFFSET(daPy_lk_c, m34FA, 0x694A);
-WWHD_OFFSET(daPy_lk_c, m34FC, 0x694C);
-WWHD_OFFSET(daPy_lk_c, m34FE, 0x694E);
-WWHD_OFFSET(daPy_lk_c, m3500, 0x6950);
-WWHD_OFFSET(daPy_lk_c, m3502, 0x6952);
-WWHD_OFFSET(daPy_lk_c, m3504, 0x6954);
-WWHD_OFFSET(daPy_lk_c, m3506, 0x6956);
-WWHD_OFFSET(daPy_lk_c, m3508, 0x6958);
-WWHD_OFFSET(daPy_lk_c, m350A, 0x695A);
-WWHD_OFFSET(daPy_lk_c, m350C, 0x695C);
-WWHD_OFFSET(daPy_lk_c, m350E, 0x695E);
-WWHD_OFFSET(daPy_lk_c, m3510, 0x6960);
-WWHD_OFFSET(daPy_lk_c, m3512, 0x6962);
-WWHD_OFFSET(daPy_lk_c, m3514, 0x6964);
-WWHD_OFFSET(daPy_lk_c, m3516, 0x6966);
-WWHD_OFFSET(daPy_lk_c, m3518, 0x6968);
-WWHD_OFFSET(daPy_lk_c, m351A, 0x696A);
-WWHD_OFFSET(daPy_lk_c, m351C, 0x696C);
+WWHD_OFFSET(daPy_lk_c, mHatAAngleZ, 0x6946);
+WWHD_OFFSET(daPy_lk_c, mHatAAngleY, 0x6948);
+WWHD_OFFSET(daPy_lk_c, mHatBAngleZ, 0x694A);
+WWHD_OFFSET(daPy_lk_c, mHatBAngleY, 0x694C);
+WWHD_OFFSET(daPy_lk_c, mHatCAngleZ, 0x694E);
+WWHD_OFFSET(daPy_lk_c, mHatCAngleY, 0x6950);
+WWHD_OFFSET(daPy_lk_c, mHatASpeedZ, 0x6952);
+WWHD_OFFSET(daPy_lk_c, mHatASpeedY, 0x6954);
+WWHD_OFFSET(daPy_lk_c, mHatBSpeedZ, 0x6956);
+WWHD_OFFSET(daPy_lk_c, mHatBSpeedY, 0x6958);
+WWHD_OFFSET(daPy_lk_c, mHatCSpeedZ, 0x695A);
+WWHD_OFFSET(daPy_lk_c, mHatCSpeedY, 0x695C);
+WWHD_OFFSET(daPy_lk_c, mHatASwingZ, 0x695E);
+WWHD_OFFSET(daPy_lk_c, mHatBSwingZ, 0x6960);
+WWHD_OFFSET(daPy_lk_c, mHatCSwingZ, 0x6962);
+WWHD_OFFSET(daPy_lk_c, mHatSwingPhase, 0x6964);
+WWHD_OFFSET(daPy_lk_c, mLMomiAngleY, 0x6966);
+WWHD_OFFSET(daPy_lk_c, mRMomiAngleY, 0x6968);
+WWHD_OFFSET(daPy_lk_c, mMomiAngleZ, 0x696A);
+WWHD_OFFSET(daPy_lk_c, mMoveSlantAngle, 0x696C);
 WWHD_OFFSET(daPy_lk_c, m351E, 0x696E);
-WWHD_OFFSET(daPy_lk_c, m3522, 0x6972);
-WWHD_OFFSET(daPy_lk_c, m3524, 0x6974);
-WWHD_OFFSET(daPy_lk_c, m3526, 0x6976);
-WWHD_OFFSET(daPy_lk_c, m3528, 0x6978);
-WWHD_OFFSET(daPy_lk_c, m352A, 0x697A);
+WWHD_OFFSET(daPy_lk_c, mCutComboTimer, 0x6972);
+WWHD_OFFSET(daPy_lk_c, mStickSpinTimer, 0x6974);
+WWHD_OFFSET(daPy_lk_c, mSlideStartTimer, 0x6976);
+WWHD_OFFSET(daPy_lk_c, mHeadFrontAngleX, 0x6978);
+WWHD_OFFSET(daPy_lk_c, mHeadFrontAngleY, 0x697A);
 WWHD_OFFSET(daPy_lk_c, m352C, 0x697C);
-WWHD_OFFSET(daPy_lk_c, m352E, 0x697E);
-WWHD_OFFSET(daPy_lk_c, m3530, 0x6980);
-WWHD_OFFSET(daPy_lk_c, m3532, 0x6982);
-WWHD_OFFSET(daPy_lk_c, m3534, 0x6984);
-WWHD_OFFSET(daPy_lk_c, m3536, 0x6986);
-WWHD_OFFSET(daPy_lk_c, m3538, 0x6988);
-WWHD_OFFSET(daPy_lk_c, m353A, 0x698A);
-WWHD_OFFSET(daPy_lk_c, m353C, 0x698C);
-WWHD_OFFSET(daPy_lk_c, m353E, 0x698E);
-WWHD_OFFSET(daPy_lk_c, m3540, 0x6990);
-WWHD_OFFSET(daPy_lk_c, m3542, 0x6992);
-WWHD_OFFSET(daPy_lk_c, m3544, 0x6994);
+WWHD_OFFSET(daPy_lk_c, mBgWaitTimer, 0x697E);
+WWHD_OFFSET(daPy_lk_c, mTexAnmFrame, 0x6980);
+WWHD_OFFSET(daPy_lk_c, mTexScrollFrame, 0x6982);
+WWHD_OFFSET(daPy_lk_c, mFanWindTimer, 0x6984);
+WWHD_OFFSET(daPy_lk_c, mFanWindAngleY, 0x6986);
+WWHD_OFFSET(daPy_lk_c, mFanWindAngleX, 0x6988);
+WWHD_OFFSET(daPy_lk_c, mFanWindSphTimer, 0x698A);
+WWHD_OFFSET(daPy_lk_c, mShipRideAngleX, 0x698C);
+WWHD_OFFSET(daPy_lk_c, mShipRideAngleZ, 0x698E);
+WWHD_OFFSET(daPy_lk_c, mShipRideAngleXSpeed, 0x6990);
+WWHD_OFFSET(daPy_lk_c, mShipRideAngleZSpeed, 0x6992);
+WWHD_OFFSET(daPy_lk_c, mFrontWallTimer, 0x6994);
 WWHD_OFFSET(daPy_lk_c, mShieldFrontRangeYAngle, 0x6996);
 WWHD_OFFSET(daPy_lk_c, m3548, 0x6998);
 WWHD_OFFSET(daPy_lk_c, mTinkleHoverTimer, 0x699C);
 WWHD_OFFSET(daPy_lk_c, mTinkleShieldTimer, 0x699E);
 WWHD_OFFSET(daPy_lk_c, m3550, 0x69A0);
 WWHD_OFFSET(daPy_lk_c, mKeepItem, 0x69A2);
-WWHD_OFFSET(daPy_lk_c, m3554, 0x69A4);
-WWHD_OFFSET(daPy_lk_c, m3558, 0x69A8);
-WWHD_OFFSET(daPy_lk_c, m355A, 0x69AA);
+WWHD_OFFSET(daPy_lk_c, mForestWaterUseTimer, 0x69A4);
+WWHD_OFFSET(daPy_lk_c, mFanSmaAngleZ, 0x69A8);
+WWHD_OFFSET(daPy_lk_c, mFanSmbAngleZ, 0x69AA);
 WWHD_OFFSET(daPy_lk_c, m355C, 0x69AC);
 WWHD_OFFSET(daPy_lk_c, m355E, 0x69AE);
 WWHD_OFFSET(daPy_lk_c, mEquipItem, 0x69B0);
-WWHD_OFFSET(daPy_lk_c, m3562, 0x69B2);
-WWHD_OFFSET(daPy_lk_c, m3564, 0x69B4);
+WWHD_OFFSET(daPy_lk_c, mAnimeEquipItem, 0x69B2);
+WWHD_OFFSET(daPy_lk_c, mNeckAngle, 0x69B4);
 WWHD_OFFSET(daPy_lk_c, mCameraInfoIdx, 0x69BC);
 WWHD_OFFSET(daPy_lk_c, mProcVar6, 0x69C0);
 WWHD_OFFSET(daPy_lk_c, mProcVar7, 0x69C4);
-WWHD_OFFSET(daPy_lk_c, m3578, 0x69C8);
-WWHD_OFFSET(daPy_lk_c, m357C, 0x69CC);
-WWHD_OFFSET(daPy_lk_c, m3580, 0x69D0);
+WWHD_OFFSET(daPy_lk_c, mStickSpinAngle, 0x69C8);
+WWHD_OFFSET(daPy_lk_c, mOldGroundCode, 0x69CC);
+WWHD_OFFSET(daPy_lk_c, mGroundCode, 0x69D0);
 WWHD_OFFSET(daPy_lk_c, mCurrAttributeCode, 0x69D4);
-WWHD_OFFSET(daPy_lk_c, m3588, 0x69D8);
+WWHD_OFFSET(daPy_lk_c, mHangAttributeCode, 0x69D8);
 WWHD_OFFSET(daPy_lk_c, mStaffIdx, 0x69DC);
 WWHD_OFFSET(daPy_lk_c, mEventIdx, 0x69E0);
 WWHD_OFFSET(daPy_lk_c, mRestartPoint, 0x69E4);
+WWHD_OFFSET(daPy_lk_c, mStrongJumpCut, 0x69E8);
+WWHD_OFFSET(daPy_lk_c, mHeavyStateCounter, 0x69EE);
 WWHD_OFFSET(daPy_lk_c, m3598, 0x69F0);
-WWHD_OFFSET(daPy_lk_c, m359C, 0x69F4);
+WWHD_OFFSET(daPy_lk_c, mFootMoveDist, 0x69F4);
 WWHD_OFFSET(daPy_lk_c, m35A0, 0x69F8);
 WWHD_OFFSET(daPy_lk_c, m35A4, 0x69FC);
 WWHD_OFFSET(daPy_lk_c, m35A8, 0x6A00);
 WWHD_OFFSET(daPy_lk_c, m35AC, 0x6A04);
 WWHD_OFFSET(daPy_lk_c, mStickDistance, 0x6A08);
-WWHD_OFFSET(daPy_lk_c, m35B4, 0x6A0C);
-WWHD_OFFSET(daPy_lk_c, m35B8, 0x6A10);
+WWHD_OFFSET(daPy_lk_c, mOldStickDistance, 0x6A0C);
+WWHD_OFFSET(daPy_lk_c, mFootBgOffsetY, 0x6A10);
 WWHD_OFFSET(daPy_lk_c, mNormalSpeed, 0x6A14);
 WWHD_OFFSET(daPy_lk_c, m35C4, 0x6A1C);
 WWHD_OFFSET(daPy_lk_c, m35C8, 0x6A20);
-WWHD_OFFSET(daPy_lk_c, m35CC, 0x6A24);
+WWHD_OFFSET(daPy_lk_c, mGrabItemBounceY, 0x6A24);
 WWHD_OFFSET(daPy_lk_c, mWaterY, 0x6A28);
 WWHD_OFFSET(daPy_lk_c, m35D4, 0x6A2C);
 WWHD_OFFSET(daPy_lk_c, m35D8, 0x6A30);
 WWHD_OFFSET(daPy_lk_c, mHangGroundH, 0x6A34);
-WWHD_OFFSET(daPy_lk_c, m35E0, 0x6A38);
+WWHD_OFFSET(daPy_lk_c, mRootTransY, 0x6A38);
 WWHD_OFFSET(daPy_lk_c, m35E4, 0x6A3C);
 WWHD_OFFSET(daPy_lk_c, m35E8, 0x6A40);
 WWHD_OFFSET(daPy_lk_c, m35EC, 0x6A44);
-WWHD_OFFSET(daPy_lk_c, m35F0, 0x6A48);
+WWHD_OFFSET(daPy_lk_c, mFallStartY, 0x6A48);
 WWHD_OFFSET(daPy_lk_c, m35F4, 0x6A4C);
-WWHD_OFFSET(daPy_lk_c, m35F8, 0x6A50);
-WWHD_OFFSET(daPy_lk_c, m35FC, 0x6A54);
+WWHD_OFFSET(daPy_lk_c, mLadderTopY, 0x6A50);
+WWHD_OFFSET(daPy_lk_c, mSwordAtScale, 0x6A54);
 WWHD_OFFSET(daPy_lk_c, m3600, 0x6A58);
 WWHD_OFFSET(daPy_lk_c, m3604, 0x6A5C);
-WWHD_OFFSET(daPy_lk_c, m3608, 0x6A60);
+WWHD_OFFSET(daPy_lk_c, mSwimTiredOffsetY, 0x6A60);
 WWHD_OFFSET(daPy_lk_c, mSeAnmRate, 0x6A64);
-WWHD_OFFSET(daPy_lk_c, m3610, 0x6A68);
+WWHD_OFFSET(daPy_lk_c, mWhirlPullSpeed, 0x6A68);
 WWHD_OFFSET(daPy_lk_c, mShadowId, 0x6A6C);
 WWHD_OFFSET(daPy_lk_c, mModeFlg, 0x6A70);
 WWHD_OFFSET(daPy_lk_c, mMtrlSndId, 0x6A74);
-WWHD_OFFSET(daPy_lk_c, m3620, 0x6A78);
+WWHD_OFFSET(daPy_lk_c, mFrollCrashMtrlSndId, 0x6A78);
 WWHD_OFFSET(daPy_lk_c, m3624, 0x6A7C);
 WWHD_OFFSET(daPy_lk_c, mGameOverId, 0x6A80);
 WWHD_OFFSET(daPy_lk_c, mTactZevPartnerId, 0x6A84);
@@ -1456,29 +1458,28 @@ WWHD_OFFSET(daPy_lk_c, m3630, 0x6A88);
 WWHD_OFFSET(daPy_lk_c, mWhirlId, 0x6A8C);
 WWHD_OFFSET(daPy_lk_c, mMsgId, 0x6A90);
 WWHD_OFFSET(daPy_lk_c, mpSeAnmFrameCtrl, 0x6A94);
-WWHD_OFFSET(daPy_lk_c, m3640, 0x6A98);
-WWHD_OFFSET(daPy_lk_c, m3644, 0x6A9C);
-WWHD_OFFSET(daPy_lk_c, m3648, 0x6AA0);
-WWHD_OFFSET(daPy_lk_c, m3658, 0x6AB0);
-WWHD_OFFSET(daPy_lk_c, m3668, 0x6AC0);
-WWHD_OFFSET(daPy_lk_c, m3688, 0x7290);
+WWHD_OFFSET(daPy_lk_c, mOutPowerAngle, 0x6A98);
+WWHD_OFFSET(daPy_lk_c, mOutPower, 0x6A9C);
+WWHD_OFFSET(daPy_lk_c, mRootJointQuat, 0x6AA0);
+WWHD_OFFSET(daPy_lk_c, mJointState, 0x6AB0);
+WWHD_OFFSET(daPy_lk_c, mProcStartPos, 0x7290);
 WWHD_OFFSET(daPy_lk_c, mOldSpeed, 0x729C);
-WWHD_OFFSET(daPy_lk_c, m36A0, 0x72A8);
-WWHD_OFFSET(daPy_lk_c, m36AC, 0x72B4);
-WWHD_OFFSET(daPy_lk_c, m36B8, 0x72C0);
-WWHD_OFFSET(daPy_lk_c, m36C4, 0x72CC);
-WWHD_OFFSET(daPy_lk_c, m36D0, 0x72D8);
-WWHD_OFFSET(daPy_lk_c, m36DC, 0x72E4);
+WWHD_OFFSET(daPy_lk_c, mSlipSpeed, 0x72A8);
+WWHD_OFFSET(daPy_lk_c, mOldSlipSpeed, 0x72B4);
+WWHD_OFFSET(daPy_lk_c, mBeltConveyerSpeed, 0x72C0);
+WWHD_OFFSET(daPy_lk_c, mSwordRootPos, 0x72CC);
+WWHD_OFFSET(daPy_lk_c, mOldSwordTopPos, 0x72D8);
+WWHD_OFFSET(daPy_lk_c, mOldSwordRootPos, 0x72E4);
 WWHD_OFFSET(daPy_lk_c, mHookshotRootPos, 0x72F0);
 WWHD_OFFSET(daPy_lk_c, mBoomerangCatchPos, 0x72FC);
-WWHD_OFFSET(daPy_lk_c, m3700, 0x7308);
+WWHD_OFFSET(daPy_lk_c, mPrevRootTrans, 0x7308);
 WWHD_OFFSET(daPy_lk_c, m370C, 0x7314);
-WWHD_OFFSET(daPy_lk_c, m3718, 0x7320);
+WWHD_OFFSET(daPy_lk_c, mHatPrevPos, 0x7320);
 WWHD_OFFSET(daPy_lk_c, m3724, 0x732C);
-WWHD_OFFSET(daPy_lk_c, m3730, 0x7338);
-WWHD_OFFSET(daPy_lk_c, m373C, 0x7344);
-WWHD_OFFSET(daPy_lk_c, m3748, 0x7350);
-WWHD_OFFSET(daPy_lk_c, m37B4, 0x73BC);
+WWHD_OFFSET(daPy_lk_c, mWindSpeed, 0x7338);
+WWHD_OFFSET(daPy_lk_c, mWindAnmSpeed, 0x7344);
+WWHD_OFFSET(daPy_lk_c, mExecStartPos, 0x7350);
+WWHD_OFFSET(daPy_lk_c, mInvWorldMtx, 0x73BC);
 WWHD_OFFSET(daPy_lk_c, mpSwBlur, 0x73EC);
 WWHD_OFFSET(daPy_lk_c, mFootData, 0x73F0);
 WWHD_OFFSET(daPy_lk_c, mStts, 0x7620);

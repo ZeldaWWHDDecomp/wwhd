@@ -312,8 +312,18 @@ are named) and TP has no crab, so every name comes from the WWHD uses (d_a_kn.cp
 | 0x430 | `m314` | `mSmokeEcallBack` | smoke_set 021A2160: the smoke's dPa_smokeEcallBack (ended before a new smoke); daKN_Create 021A30C0 constructs it, daKN_Delete 021A2F80 removes it |
 | 0x450 | `m334` | `mpSmokeEmitter` | smoke_set 021A2160: the ID_AK_JT_ELEMENTSMOKE01 emitter (max frame 0x19, rate 3, lifetime 25 set on it) |
 
-Open: `m2B4` / `m2B5` (0x3D0 / 0x3D1: daKN_Create 021A30C0 stores param bytes 0 and 1, nothing reads them) and `m2BC`
-(0x3D8, no use). `m2B6`, `m2C1`, `m2D6`, `m2FE` and `m30C` are unused byte gaps and stay.
+Round 2:
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3D0 | `m2B4` | `mType` | daKN_Create 021A30C0 stores param bits 0-7; nothing in WWHD reads it; tww daKN_Create / daKN_Execute (demo build only): 1 = crab spawner (oya_kn_move, no model, returns before the move code), 2 = spawned crab (starts buried at -25, tilted) |
+| 0x3D1 | `m2B5` | `mSpawnCountPrm` | daKN_Create 021A30C0 stores param bits 8-15; nothing in WWHD reads it; tww daKN_Create (demo build only): the spawner's crab count, copied to mSpawnLeft (0 / 0xFF -> 100) |
+| 0x3D8 | `m2BC` | `mIsSpawner` | no use in WWHD (retail); tww demo build: daKN_Create sets 1 for type 1, else 0; daKN_Execute switches on it: 0 kn_move, 1 oya_kn_move |
+| 0x3F0 | `m2D4` | `mSpawnLeft` | no use in WWHD (retail); tww demo build: daKN_Create sets it from mSpawnCountPrm (0 / 0xFF -> 100); oya_kn_move subtracts 1 per crab created (fopAcM_Create fpcNm_KN_e, param 2, every 10 frames) and deletes the spawner at 0 |
+
+Open: `m2B6`, `m2C1`, `m2D6`, `m2FE` and `m30C` are unused byte gaps and stay.
+mType, mSpawnCountPrm, mIsSpawner and mSpawnLeft are named from zeldaret/tww's `VERSION_DEMO` code (crab spawner); the
+retail code in WWHD only stores the two param bytes.
 
 ## kokiie_class (Forbidden Woods hanging flower house; d_a_kokiie.h)
 
@@ -529,16 +539,15 @@ keeps the GameCube offset names for the fields below; TP has no such actor, so t
 
 zeldaret/tww (d217e2b) names `mPhs`, `morf`, `frameCount`, `state`, `timer`, the `part*` arrays, `emtrCallBack` and
 `emtrEnabled` (kept) and keeps the GameCube offset names (field_0x...) for the fields below; TP has no such actor, so the
-names come from the WWHD uses (d_a_syan.cpp). field_0x2d8 (no uses) and field_0x2dc (only read: it scales the state 2
-targets, nothing in this source writes it) stay open.
+names come from the WWHD uses (d_a_syan.cpp). field_0x2d8 (no uses) stays open.
 
 | WWHD offset | Old (GameCube name) | New | Evidence |
 |---|---|---|---|
 | 0x3C0 | `field_0x2a4` | `mSwingAngle` | nodeCallBack 024A4298: [0] rotates joint 5 (SYAN_JNT_JOINT5_e: Y, -X, Z), [1].x is added to joint 8's X; daSyan_Execute 024A45E0: [0].x / [1].x = sine of mSwingPhase0 / 1 times mSwingAmp0 / 1 |
 | 0x3CC | `field_0x2b0` | `mSwayAngle` | nodeCallBack 024A4298: rotates joint 8 (SYAN_JNT_JOINT8_e: Y, -(X + mSwingAngle[1].x), Z); daSyan_Execute 024A45E0: y / z = sine of frameCount times mSwayAmp, x eased to 2500 in states 1 and 2 |
-| 0x3D4 | `field_0x2b8` | `mSwayAmp` | daSyan_Create 024A5224: 200; daSyan_Execute 024A45E0: amplitude of mSwayAngle.y / z, eased to 2000 in state 1 and to field_0x2dc * 500 in state 2 |
-| 0x3D8 | `field_0x2bc` | `mSwingAmp0` | daSyan_Execute 024A45E0: amplitude of mSwingAngle[0].x; eased to 1500 in state 1, to field_0x2dc * 300 in state 2 |
-| 0x3DC | `field_0x2c0` | `mSwingAmp1` | daSyan_Execute 024A45E0: amplitude of mSwingAngle[1].x; eased to 2500 in state 1, to field_0x2dc * 300 in state 2 |
+| 0x3D4 | `field_0x2b8` | `mSwayAmp` | daSyan_Create 024A5224: 200; daSyan_Execute 024A45E0: amplitude of mSwayAngle.y / z, eased to 2000 in state 1 and to mSwingAmpScale * 500 in state 2 |
+| 0x3D8 | `field_0x2bc` | `mSwingAmp0` | daSyan_Execute 024A45E0: amplitude of mSwingAngle[0].x; eased to 1500 in state 1, to mSwingAmpScale * 300 in state 2 |
+| 0x3DC | `field_0x2c0` | `mSwingAmp1` | daSyan_Execute 024A45E0: amplitude of mSwingAngle[1].x; eased to 2500 in state 1, to mSwingAmpScale * 300 in state 2 |
 | 0x3E0 | `field_0x2c4` | `mSwingPhase0` | daSyan_Execute 024A45E0: + mSwingSpeed0 per frame; sine phase of mSwingAngle[0].x |
 | 0x3E4 | `field_0x2c8` | `mSwingPhase1` | daSyan_Execute 024A45E0: + mSwingSpeed1 per frame; sine phase of mSwingAngle[1].x |
 | 0x3E8 | `field_0x2cc` | `mSwingSpeed0` | daSyan_Execute 024A45E0: added to mSwingPhase0 each frame; eased to 500 in state 2 |
@@ -548,6 +557,12 @@ targets, nothing in this source writes it) stay open.
 | 0x6A8 | `field_0x58c` | `mPartAlphaTimer` | daSyan_Execute 024A45E0: [i] = 5 + cM_rndF(10) at 0 (with a new mPartAlphaTarget[i]), counted down |
 | 0x6B4 | `field_0x598` | `mPartScale1Timer` | daSyan_Execute 024A45E0: [i] = 3 + cM_rndF(6) at 0 (with a new mPartScale1Target[i]), counted down |
 | 0x6C0 | `field_0x5a4` | `mFireStartTimer` | daSyan_Create 024A5224: [i] = fire_time[i]; daSyan_Execute 024A45E0: counted down; at 0 part i's ID_AK_JN_TORCH emitter starts (emtrEnabled) and partScale2[i] grows |
+
+Round 2:
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3F8 | `field_0x2dc` | `mSwingAmpScale` | daSyan_Execute 024A45E0 state 2: scales the targets of mSwingAmp0 / mSwingAmp1 (300) and mSwayAmp (500) (tww the same); never written in WWHD or tww |
 
 ## sk2_class (swaying lily-pad lift; d_a_sk2.h)
 
@@ -572,8 +587,7 @@ stays open.
 
 zeldaret/tww (d217e2b) keeps the GameCube offset names for all fields below; there they sit in daSail_packet_c
 (0x1C34..0x1C52), WWHD moves m1C40..m1C52 behind the packet into sail_class. TP has no such actor, so the names come
-from the WWHD uses (d_a_sail.cpp; sail_move inlines sail_pos_move and demo_move). Left open: sail_class m1C4C
-(= 15 * (mFurl - 0.6), only damps the flutter) and daSail_packet_c m1C3B (set to 1 in the constructor, never read).
+from the WWHD uses (d_a_sail.cpp; sail_move inlines sail_pos_move and demo_move). Left open: daSail_packet_c m1C3B (set to 1 in the constructor, never read).
 
 sail_class:
 
@@ -593,6 +607,12 @@ daSail_packet_c:
 | 0x2EBA | `m1C36` | `mNrmCorrectAngle` | daSail_packet_c::setCorrectNrmAngle 0245FFC8: eased to +-l_HIO m10 degrees when the wind comes from near the front or back, else to 0; added to mNrmAngle; daSail_packet_ct 024616AC: 0 |
 | 0x2EBC | `m1C38` | `mNrmWobblePhase` | daSail_packet_c::setCorrectNrmAngle 0245FFC8: + 900 + cM_rndF(200) per call; sine phase of mNrmAngle; daSail_packet_ct 024616AC: 0 |
 | 0x2EBE | `m1C3A` | `mCurArr` | daSail_packet_c::update 0245F638, setBackNrm 024605DC, sail_move 02460678: index of the mPos / mNrm / mBackNrm vertex array set in use (getPos / getNrm / getBackNrm); daSail_packet_ct 024616AC: 0 |
+
+Round 2:
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x328C | `m1C4C` | `mFurlFactor` | sail_move 02460678: 15 * (mFurl - 0.6) each frame; damps the wind z share and the light factor by 1 - 0.5 * mFurl * it (tww the same) |
 
 ## sk_class (small swaying stone tentacle; d_a_sk.h)
 
@@ -699,7 +719,7 @@ dr_class (d_a_dr.h):
 
 | WWHD offset | Old (GameCube name) | New | Evidence |
 |---|---|---|---|
-| 0x3E4 | `m2C8` | `mBikuRequest` | move (in daDr_Execute 0212A00C): when not 0 (or idle with l_HIO m0C / a quake) it is cleared and mMode 10 starts the flinch (BCK DR_BIKU1); nothing in d_a_dr sets it |
+| 0x3E4 | `m2C8` | `mBikuRequest` | move (in daDr_Execute 0212A00C): when not 0 (or idle with l_HIO mDebugBiku / a quake) it is cleared and mMode 10 starts the flinch (BCK DR_BIKU1); nothing in d_a_dr sets it |
 | 0x3E5 | `m2C9` | `mBikuDone` | move (in daDr_Execute 0212A00C): 0 when the flinch (mMode 10, DR_BIKU1) starts, 1 once its animation stopped; while 0, frame 15 sets mCountDownTimers[1] = 5 |
 
 ## pirate_flag_class and daPirate_Flag_packet_c (pirate ship flag; d_a_pirate_flag.h)
@@ -724,3 +744,792 @@ daPirate_Flag_packet_c:
 | 0x902 | `m87A` | `mNrmCorrectAngle` | daPirate_Flag_packet_c::setCorrectNrmAngle 023D1804: eased toward the wind-facing correction (step 0xC0), added to mNrmAngle; daPirate_Flag_Draw 023D116C adds it to the facing; pirate_packet_construct 023D3008: 0 (as daSail_packet_c mNrmCorrectAngle) |
 | 0x904 | `m87C` | `mNrmWobblePhase` | daPirate_Flag_packet_c::setCorrectNrmAngle 023D1804: + 900 + a random step per call; sine phase of mNrmAngle; pirate_packet_construct 023D3008: 0 (as daSail_packet_c mNrmWobblePhase) |
 | 0x906 | `m87E` | `mCurArr` | pirate_flag_move 023D1EA4: flipped (^ 1) each frame; index of the mPos / mNrm / mBackNrm array set in use (setNrmVtx 023D1A2C, setBackNrm 023D1E08, draw 023D0E68, daPirate_Flag_Create 023D33D4); pirate_packet_construct 023D3008: 0 (as daSail_packet_c mCurArr) |
+
+## daHookshot_c (d_a_hookshot.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+| 0xD4FC | `m2A0` | `mKeepMtx` | procWait 021789B4 sets it before the BG line check of the tip; execute 02176D98 skips rebuilding mMtx from the position and angle once while it is set and clears it |
+| 0xD4FD | `m2A1` | `mWaterEffect` | execute 02176D98: the state byte passed to and returned by Link's setItemWaterEffect each frame (outside Mode_Wait) |
+| 0xD4FF | `m2A3` | `mRebound` | procShot 02178DDC sets it when the tip hits a surface it cannot stick to (and stores mReboundEffectId / mReboundEffectAngle / mMtrlSndId); on the next check it plays the rebound particle, JA_SE_LK_HS_REBOUND and the shock vibration and returns; procWait 021789B4 clears it |
+| 0xD500 | `m2A4` | `mCarryAngleY` | procShot 02178DDC stores the hit actor's shape_angle.y; procPlayerPull 02179888 rotates mCarryOffset by the carried actor's change of shape_angle.y and stores the new one |
+| 0xD502 | `m2A6` | `mReboundEffectId` | procShot 02178DDC: the rebound particle, ID_IT_SN_LK_FKSHOT_SUNA00 on sand in kazeB, else ID_AK_JN_NG; played by procShot on mRebound |
+| 0xD516 | `m2BA` | `mReboundEffectAngle` | procShot 02178DDC: cM3d_CalcVecZAngle of the hit polygon's plane, the rotation of the rebound particle (not for the sand particle) |
+
+
+## esa_class (d_a_esa.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+| 0x3B4 | `field_0x298` | `mTaken` | s_a_d_sub 0218566C (kamome) / s_a_d_sub 0205DB74 (bb) pick only baits at 0, search_esa 02185808 (kamome) / search_esa 0205DCFC (bb) set 1 on the chosen bait, bb_auto_move 020625E8 sets 0 again; daNpc_Nz_c::_searchEsa 022A2EEC chases only baits at 0; daNpc_So_c::cutEatesaProc 022E2754 / cutEatesaFirstProc 022E2830 set 0x23 (HD; GameCube 1), and daEsa_Execute 021300C4 then deletes the bait (a splash half of the time) |
+| 0x3C0 | `field_0x2A4` | `mRippleCb` | esa_setRipple (in daEsa_Execute 021300C4): the callback of the ripple particle (rate 0.3), its emitter checked; daEsa_Delete 02130D6C ends it (dPa_rippleEcallBack_end); daEsa_Create 02130E30 constructs it; after TWW mRippleCallBack / mRipple (dPa_rippleEcallBack members of other actors) |
+| 0x3D4 | `field_0x2B9` | `mAppendNum` | daEsa_Create 02130E30: parameter bits 0-7; while mNoAppend (bits 8-15) is 0 that many more baits are created at Link's left hand (esaCreateAppend / esaCreate) |
+| 0x3D5 | `field_0x2BA` | `mNoAppend` | daEsa_Create 02130E30: parameter bits 8-15; only while it is 0 the bait creates mAppendNum more baits at Link's left hand (tww the same; tww's REG0 debug override sets 1) |
+
+
+## dScnKy_env_light_c (d_kankyo.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+| 0x101C | `field_0xc34` | `mColChgRatio` | the colour-change blend ratio: drawKankyo 0255A924 (the arrow colour changes, flags 0x10-0x60) and dKy_Itemgetcol_chg_move 0255A568 ease it toward 1 / 0 and pass it to dKy_actor_addcol_amb_set / dKy_bg*_addcol_amb_set and the dKy_set_*col_ratio calls, clearing mColChgFlag when it fades out; dScnKy_env_light_c ctor 025554CC / dKy_Create 0255DAC0 zero it (tww dKy_Itemgetcol_chg_move the same) |
+| 0x10A0 | `field_0xc98` | `mColChgActive` | dKy_Itemgetcol_chg_move 0255A568 clears it and sets 1 while mColChgFlag & 7 (the item-get colour change runs); the thunder flash in d_kankyo_rain_movement_qa (02577138) skips the actor flash colours while it is set; ctor 025554CC / dKy_Create 0255DAC0 zero it (tww the same, read in d_kankyo_rain) |
+| 0x10B8 | `field_0x10b8` | `mWaveSecondaryColorScale` | HD-only: dKankyo_wave_Packet::setColors 02582518 scales the wave texture's secondary colour (colorB) by it; dKy_Create 0255DAC0 initialises it (colorFogFlickerDivisor) |
+| 0x10BC | `field_0x10bc` | `mWavePrimaryColorScale` | HD-only: dKankyo_wave_Packet::setColors 02582518 scales the wave texture's primary colour (colorA) by it; dKy_Create 0255DAC0 initialises it (colorFogFlickerDivisor) |
+
+Open (offset names kept):
+
+- Only the constructor 025554CC / dKy_Create 0255DAC0 write them, no read in WWHD or tww: `field_0x760`, `field_0xc2c`, `field_0xc30`, `field_0x102c`..`field_0x1048` (except 0x103c), `field_0xc44`, `field_0xc48`, `field_0xc4c`, `field_0xc54`, `field_0xc58`, `field_0xc5c`, `field_0xc68`, `field_0xc74`, `field_0xc78`, `field_0xc9a`, `field_0xc9b`, `field_0x10a4`..`field_0x10b4`, `field_0x10c0`..`field_0x10e4`; `field_0xa1c` (the wave weather code clears it only).
+- `field_0xc8e`: only dKy_pship_existense_set 02560C34 / dKy_pship_existense_cut write it; no reader in WWHD or tww.
+- `field_0x10e8` -> `mMonotoneBlend` (round 3): read through monotoneBlend() (d_kankyo_4.h): 0255C85C (HD monotone option, Hyroom) chases it and passes it as the blend factor of the monotone light presets; the constructor 025554CC and dKy_Create 0255DAC0 clear it.
+- `field_0x103c` (skyBrightness(), d_kankyo_4.h: only set and eased toward its target, never read), `field_0x10c0`, `field_0x10d4` (shaderLightRatios() / shaderLightFactors(), d_kankyo_5.h: only set to 1): stay open.
+
+### SND_INFLUENCE (d_kankyo.h)
+
+`field_0x0` / `field_0xc` / `field_0x10` / `field_0x14` -> `mNoisePos` / `mNoiseLevel` / `mNoiseTimer` / `mNoiseActorId`: dKy_Sound_set 0255F458, Sndpos 0255B9AC, dKy_Sound_init 0255B930; tww fopAcM_otoCheck (evidence in the header).
+
+
+## dSnap_Obj (d_snap.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+| 0x19 | `field_0x19` | `mCylSegments` | dSnap_Obj_ctor 025BD71C sets 4; CalcArea2D 025BDC78 projects that many cylinder side quads (cylvtx[i], cylvtx[i + 1]); SetInf 025BEB90 stores its fourth argument (tww: GXBegin(..., mCylSegments * 8) and the same loops) |
+| 0x1B | `field_0x1b` | `mGeoFlags` | bit 0 = sphere geometry: SetGeoSph 025BEF3C sets it, SetGeo 025BEB5C clears it; CalcArea2D 025BDC78 / draw 025BF01C pick sphere or cylinder by it; ChkCamCull 025BE268 skips the angle cull for spheres; dSnap_Obj_ctor 025BD71C clears it |
+
+
+## dSnap_RegistObjElm (d_snap.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+| 0x34 | `field_0x34` | `mPlayerDistSq` | dSnap_packet::Regist 025BE99C stores the squared distance from Link (+0x314) to the registered object; when the table is full it replaces the farthest entry with mPhotoNo >= 72; dSnap_packet::Execute 025BE870 resets it to 1e9 |
+
+
+## dSnap_packet (d_snap.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+| 0x9C | `field_0x14` | `mRegistNum` | the number of used m_tbl entries: dSnap_packet::Regist 025BE99C appends at it and adds 1 (full at 63); dSnap_packet::Execute 025BE870 / dSnap_packet_ctor clear it; the judge and draw loops run up to it |
+
+
+## dSeaFightGame_ship_data (d_seafightgame.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+| 0x8 | `field_0x8` | `mLength` | put_ship 025BB198 stores the ship size (2-4); daMgBoard_c's MgBoardShipHD view (d_a_mgameboard.cpp) picks the ship model by it (mLength there) (tww the same) |
+| 0x9 | `field_0x9` | `mLife` | put_ship 025BB198 sets the ship size; attack 025BB470 subtracts 1 per hit and counts the ship as sunk (mAliveShipNum - 1, mDeadShipNum + 1) at 0 (tww the same) |
+| 0xB | `field_0xb` | `mX` | put_ship 025BB198: the ship's first cell x; the board draw (d_a_mgameboard.cpp MgBoardShipHD::mX) places the ship model there (tww the same) |
+| 0xC | `field_0xc` | `mY` | put_ship 025BB198: the ship's first cell y; the board draw (MgBoardShipHD::mY) places the ship model there (tww the same) |
+| 0xD | `field_0xd` | `mLengthX` | put_ship 025BB198: the ship size when it lies along x (direction 1), else 0 (tww the same) |
+| 0xE | `field_0xe` | `mLengthY` | put_ship 025BB198: the ship size when it lies along y (direction 0), else 0; the board draw (MgBoardShipHD::mVertical) turns the model by -0x8000 while it is non-zero, else 0x4000 (tww the same) |
+
+Open (offset names kept):
+
+- `field_0xa`: no use in WWHD or tww. dSeaFightGame_info_c `field_0x84[31]`: no use in WWHD or tww. The view MgBoardShipHD (d_a_mgameboard.h) took the class names mLife / mLengthX / mLengthY in a later '(misnamed)' commit (it had mHitCount / mDamage / mVertical).
+
+
+## dOvlpFd2_c (d_ovlp_fade2.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+|  | `field_0x110` | `mTurnAngle` | execFadeOut 025A1FB4 adds mTurnSpeed to it each frame and moves on to the next snap when it crosses the next quarter turn (+-0x4000) with mTimer at 0, then sets -0x4000; execNextSnap 025A2150 adds mTurnSpeed once more (tww the same) |
+|  | `field_0x112` | `mTurnSpeed` | execFadeOut 025A1FB4 chases it toward 2000 (step 100) and adds it to mTurnAngle; execNextSnap 025A2150 adds it once more (tww the same) |
+|  | `field_0x11e` | `mSceneStarted` | execFadeIn 025A21F0: once the scale is below 0.001 the first frame calls fopOvlpM_SceneIsStart and sets it, the next ends the overlap (fopOvlpM_Done) (tww the same) |
+
+
+## dStage_Event_dt_c (d_event_manager.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+|  | `field_0x0` | `mNextEventNo` | dEvent_manager_c::getToolId 02544708 follows the event entries through it (0xFF ends the chain) (tww the same); the event camera's next entry |
+|  | `field_0x10` | `mMapToolCamId` | the event camera map tool id: maptoolIdEvCamera 02535830 (d_ev_camera_3.cpp, through the StageEvent view) picks the camera type by it |
+|  | `field_0x11` | `mDuration` | the event camera duration in units of 10 frames: maptoolIdEvCamera 02535830 (through the StageEvent view) |
+
+
+## StageEvent (d_ev_camera_3.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+|  | `field_0x10` | `mMapToolCamId` | maptoolIdEvCamera 02535830 passes it (with mRoomNo) to getCameraTypeFromMapToolID to pick the event camera type; same byte as dStage_Event_dt_c::mMapToolCamId |
+|  | `field_0x11` | `mDuration` | maptoolIdEvCamera 02535830: the event camera keeps its style until mCurStyleTimer exceeds it * 10 (0xFF: until the event changes), then moves to the next event entry; same byte as dStage_Event_dt_c::mDuration |
+|  | `field_0x14` | `mRoomNo` | maptoolIdEvCamera 02535830 passes it as the room to getCameraTypeFromMapToolID |
+
+
+## dCcMassS_MngNative (d_cc_mass_s.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+| 0x128 | `field_0x128` | `mChkFlags` | the checks Chk 025170D8 runs, massFlag bits: ATTACK (1) the AT check against mCylAttr, COLLISION (2), AREA (8) the area objects, MOVE (16); Clear 025169A8 / Ct 02516A78 clear it; tww SetAttr(radius, height, it, camBit) sets it |
+
+
+## RAIN_EFF (d_kankyo_rain.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+|  | `field_0x30` | `mGroundY` | rain_bg_chk 0256691C stores the camera centre y plus RainFloorOffset (the floor of the drop); tww rain_bg_chk the same, and tww dKyr_rain_move respawns the drop above the camera once it falls below it + 20 |
+
+Open (offset names kept):
+
+- `WAVECHAN` (view) `field_0x0`, `field_0x4`, `field_0x8`, `field_0x2f`: only cleared / initialised (dKyr_wave init); no read in WWHD or tww. `WINDEFF_SET` `field_0x759`: only cleared; no read. `RAIN_EFF` `field_0x1c`, `field_0x20`, `field_0x24`, `field_0x2c`: dKyr_rain_move 02566B88 (through the d_kankyo_rain_kazanbai_move.h copy) sets 0x1c / 0x20 to random angles and 0x24 at spawn and eases 0x24, but nothing reads them; 0x2c no use (round 3 correction: the copies' 0x30 is mGroundY, read by dKyr_rain_move). `dKankyo_rain_Packet` `field_0x3700`: no use. `POISON_EFF` `field_0x2c`: no use in WWHD.
+
+
+## POISON_EFF (d_kankyo_rain.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+|  | `field_0x2e` | `mWaitTimer` | dKyr_poison_light_colision 0256C8FC sets 60 when a light arrow hits the poison particle; tww poison_move sets 180 / 120 / 60, counts it down and moves / damages only while it is 0 |
+
+
+## dKankyo_poison_Packet (d_kankyo_rain.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+|  | `field_0xbb9c` | `mNearestPos` | poison_init 0256DC04 clears it; tww poison_move stores the particle position nearest to the camera, and tww dKyw_drawPoison passes it to dKyw_setDrawPacketListXluZPos as the packet's sort position |
+
+
+## Small classes left open after a tww check (field naming round 2)
+
+Each field below was checked against WWHD and zeldaret/tww d217e2b (the 2026-11-11 rule: a field WWHD writes only in a constructor / init may take tww's read role); none has a read that shows a role, so all keep their offset names.
+
+| Header | Field | WWHD | tww |
+|---|---|---|---|
+| d_a_tama.h | TamaPartner `field_0x6ba` (WWHD 0x7D6) | daTama_c sets 1 on the partner when the ball hits the player | the same store; no reader of the partner's field in WWHD (fopNpc_npc_c 0x7D6 is only cleared by d_npc.cpp) |
+| d_a_grass.h | `field_0x00`, `field_0x04` | no use | no use |
+| d_a_sea.h | `m13A`, `m13B` | m13A set true once, m13B no use | m13A set once, no read |
+| d_a_steam_tag.h | `m29A`, `m29B` | m29A no use; m29B stores the schbit parameter | m29B stored only |
+| d_a_tori_flag.h | `field_0xF0`, `field_0xF2` | no use | no use |
+| d_a_obj_homensmoke.h | `m294[...]` | unaccessed block | - |
+| d_a_tag_ba1.h | hio_prm_c `field_0x0` | no use | - |
+| d_a_obj_shmrgrd.h | `m85C` | cleared once | cleared once |
+| d_salvage.h | `field_0x32` | no use | no use |
+| d_a_am2.h | `m304` | copies of the position stored, never read | stored, never read |
+| d_a_jbo.h | `m2BA` | set 1 once | set 1 once |
+| d_a_pirate_flag.h | `m87F` | the cloth packet's constructor sets 1 | constructor only |
+| d_a_bmdfoot.h | `m2C8[2]` | [0] counted down, never set non-zero in WWHD | counted down only |
+| d_cloth_packet.h | `field_0x64`, `field_0xF0`, `field_0xF2` | 0x64 cleared; 0xF0 advanced by 0xF2, which is always 0, and never read | the same ("field_0xF2 is always set to 0") |
+| d_jnt_hit.h | JntHit_c `field_0x1C`, JntHit_HIO_c `field_0x24` | cleared in the constructors only | no use |
+| d_a_obj_gryw00.h, d_a_lstair.h | GrywBckState / the lstair copy `field_0x58`, `field_0x7C`..`field_0x88` | cleared by the inline SDK constructor only | no use |
+| hd_snd_0202BD3C.h, hd_snd_020302E4.h | `field_0x8`, `field_0x10`, `field_0x0` | HD-only sound records, no read in the decomp | - |
+
+The earlier open lists (people_event, os_c, btsw, ko1, bs1, ep, st, dk, cb1_action, ff, ac1, jbo, msw, att, rsh1, jb1) were checked again against that rule and tww: only daObjMmrr's attribute table (MmrrAttributes, read in WWHD and tww) and st_ke_s (the ke chain, read in WWHD) had evidence; the rest keep their recorded reasons (btsw's HIO timer / setWaitParm arguments have no parameter names in tww; msw m29A is only a switch with an empty case in tww; jb1 field_0x90C is read but never set non-zero).
+## kita_class (Forbidden Woods hanging flower platform; d_a_kita.h)
+
+Old names are tww's (`field_XXX`, the GameCube offsets, unnamed there). Named from the uses in d_a_kita.cpp.
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+| 0x3B6 | `field_29A` | `mMode` | daKita_Execute 0219DF90 switches on it: 0 kita_move_wait (hanging on the vines), 1 kita_move_fall; kita_move_wait sets 1 once all four vines are cut, daKita_Create 0219F05C when mStartFloating; ride_call_back 0219DBFC tilts the platform only in mode 0 or on water |
+| 0x3BC | `field_2A0` | `mSizeType` | daKita_Create 0219F05C: param bits 0-7 (0xFF -> 0); 1 / 2 scale the platform by 1.25 / 1.5 in x and z |
+| 0x3BD | `field_2A1` | `mStartFloating` | daKita_Create 0219F05C: param bits 8-15; 1 starts the platform already fallen and floating (mMode 1, mOnWater 1, mFloorY = pos.y + 70) without creating vines |
+| 0x3CC | `field_2B0` | `mSwayAmp` | kita_move_wait (in daKita_Execute 0219DF90): mPosRel.x / .z = sin * it, eased to 0; ride_call_back 0219DBFC raises it from the rider's movement |
+| 0x3D8 | `field_2BC` | `mTiltAmp` | kita_move_wait / kita_move_fall (in daKita_Execute 0219DF90): amplitude of the mTilt wobble, eased toward 300 / 400 or 0; ride_call_back 0219DBFC raises it from the rider's movement; a hard landing sets 2000 |
+| 0x3E4 | `field_2C8` | `mTilt` | kita_move_wait / kita_move_fall (in daKita_Execute 0219DF90): x / z = sin(mMoveCounter * n) * mTiltAmp; shape_angle = current.angle + it |
+| 0x3F0 | `field_2D4` | `mShandIds` | himo_create (in daKita_Create 0219F05C): process IDs of the four fpcNm_SHAND_e vines it creates, looked up to link them |
+| 0x400 | `field_2E4` | `mShandCreateStep` | himo_create (in daKita_Create 0219F05C): per vine 0 create, 1 link (pointers into mRopeRootPos / mRopeState), 2 done |
+| 0x404 | `field_2E8` | `mRopeRootPos` | daKita_Execute 0219DF90: the four vine attachment points on the platform (xd / zd * scale, y -15) through the model matrix; himo_create hands each vine a pointer (KitaShandView::mpRootPos) |
+| 0x434 | `field_318` | `mRopeState` | himo_create (in daKita_Create 0219F05C) hands each vine a pointer (KitaShandView::mpParentState); kita_move_wait (in daKita_Execute 0219DF90) reads it: non-zero = that vine is cut (mask of himo_off_check), 1 -> 5 and 2 -> 0 restart mCutEase |
+| 0x43C | `field_320` | `mCutEase` | kita_move_wait (in daKita_Execute 0219DF90): cleared when a vine's state changes, eased to 1; scales the mHeight step (250 * it) and the mRotX / mRotY turn speed (10000 * it) |
+| 0x478 | `field_35C` | `mFloorY` | kita_move_wait (in daKita_Execute 0219DF90): the highest ground (solid ground cross or water + 40) under the platform once it falls; kita_move_fall lands on it; daKita_Create 0219F05C sets pos.y + 70 for mStartFloating |
+| 0x47C | `field_360` | `mOnWater` | kita_move_wait (in daKita_Execute 0219DF90) sets 1 when water is below; kita_move_fall sets 2 when it lands there (splash, FFHAMON00 ripple, the push sphere and drift run while 2); ride_call_back 0219DBFC tilts while set |
+| 0x480 | `field_364` | `mDriftSpeed` | kita_move_fall (in daKita_Execute 0219DF90): eased toward mDriftSpeedTarget while mPushTimer runs, else to 0; speed.x / .z chase 2 * it along mPlayerAngle |
+| 0x488 | `field_36C` | `mDriftSpeedTarget` | kita_move_fall (in daKita_Execute 0219DF90): set on a sphere hit from the player's facing (|cos| * -6 or 6) |
+| 0x48C | `field_370` | `mAngleYSpeedTarget` | kita_move_fall (in daKita_Execute 0219DF90): set on a sphere hit (sin * 200 * distance factor, or random 100); mAngleYSpeed eases toward it while mPushTimer runs |
+| 0x490 | `field_374` | `mPushTimer` | kita_move_fall (in daKita_Execute 0219DF90): 20 on a sphere hit, counted down; the drift and turn chase their targets while it runs |
+
+Open: `unused_324` (no use; tww names it unused), the padding `_3BE`, `_3EA`, `_47D`.
+## DEMO_PLIGHT (demo point light; d_kankyo_demo.h)
+
+Named from zeldaret/tww's code (d217e2b, src/d/d_kankyo_demo.cpp, field_0x00 / field_0x04) and our decomp's use.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x04 | `field_0x04` | `mType` | dKydm_demo_plight_entry 02563ABC stores type + group * 100 (picks plight / efplight set), then the type; dKydm_demo_plight_delete 02563BF0 cuts the plight below 100, else the efplight (tww the same) |
+
+Open: `field_0x00` (only cleared by dKydm_demo_plight_entry 02563ABC, never read in WWHD or tww).
+
+## dMagma_ballBoss_c (Gohma's magma balls; d_boss_magma.h)
+
+zeldaret/tww (d217e2b, include/d/d_magma.h) has field_0x7C with no code; the name comes from the WWHD use.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0xDD0 | `field_0x7C` | `mWaveSpeed` | dMagma_ballBoss_c::calc 024F60E8 adds it to mWave each frame (the sine bob of mPos.y), sets 1000 near the boss wave ring; setup 024F637C 400 + cM_rndF(100) |
+
+## Still open after round 2
+
+Re-checked in round 2, no name (unchanged): kytag00_class `field_0x290`, `field_0x296`; vrbox_class `m290`, `m298`, `m29C`; vrbox2_class `m290`, `m298`, `m2A0`, `m2A8`; dr_class `m290`, `m2B9`, `m2CA`; ssk_class `m35C` (padding); daMajuu_Flag_packet_c `m796`, `m798`, `m79B` (set only by the packet constructor 021B98B4); SieFlagClothHD `field_0xF0` / `field_0xF2` (view of dCloth_packet_c, unnamed there); PointWind::WIND_INFLUENCE `field_0x20` (view of WIND_INFLUENCE, d_kankyo.h, unnamed there).
+## dOvlpFd4_c (scene change overlap, fade type 4; d_ovlp_fade4.h)
+
+zeldaret/tww (d217e2b, include/d/d_ovlp_fade4.h) keeps the GameCube offset names; the name comes from the WWHD use (d_ovlp_fade4.cpp), the same code as tww's execFadeIn.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x368 | `field_0x2cc` | `mSceneStarted` | dOvlpFd4_construct 025A2D24 clears it; execFadeIn 025A3224: when the timer and blur are done, the first time calls fopOvlpM_SceneIsStart and sets it, the next time ends the overlap (fopOvlpM_Done) (tww the same) |
+
+Open (no name yet): `field_0x2b8`, `field_0x2bc`, `field_0x2c2`, `field_0x2c4` (dOvlpFd4_construct only clears them in WWHD).
+
+## dScnName_c (name entry scene; d_s_name.h)
+
+zeldaret/tww (d217e2b, include/d/d_s_name.h) keeps the GameCube offset name (GameCube offset 0x55F, WWHD 0x534); the name comes from the WWHD use (d_s_name.cpp) and tww's changeGameScene, which reads it the same way.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x534 | `field_0x55f` | `mToOpenScene` | NameInMain 025ADD1C copies the name controller's choice when the name is accepted; changeGameScene 025ADC60 requests OPEN_SCENE while it is set, else PLAY_SCENE (tww dScnName_c sets 1 after the name input, 0 on its other path) |
+
+Open (no name yet): the private views `Controller::field_0x145` (the HD name controller; only copied into mToOpenScene), `PlayView::field_0x62F1` (three other views call this play byte mBrightness / mBackAlpha / mWindowAlpha; no class declaration to follow). Round 3: `SaveView::field_0x7BC` -> `mDanStageNo` (dSv_info_c::mDan.mStageNo; changeGameScene 025ADC60 sets 255 where tww calls dComIfGs_resetDan()).
+
+## daTagPhoto_c (Lenzo's photo talk tag; d_a_tag_photo.h)
+
+zeldaret/tww (d217e2b, include/d/actor/d_a_tag_photo.h) keeps the GameCube offset names; the names come from the WWHD use (d_a_tag_photo.cpp), the same code as tww.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x42C | `field_0x310` | `mpMsgSeq` | eventMesSetInit 024B1F30 / getMsg 024B1FD4 clear it; next_msgStatus 024B1FF0 steps it through a 0-terminated message number list while it is set and clears it at the end (tww the same) |
+| 0x438 | `field_0x31C` | `mTalkEventSet` | daTagPhoto_construct 024B1D20 clears it; executeWait 024B24A4: the first time the player comes within 160 it is set and the photo talk event is ordered unless Po is on a date (tww the same) |
+
+The view `PhotoLenzo::field_0x9C1` takes daNpcPhoto_c's name `mPlaceState` (round 3).
+
+## ShopCursor_c (shop selection cursor; d_shop.h; views Bs1ShopCursor, Bms1ShopCursor, RshShopCursor in d_a_npc_bs1.h / bms1.h / rsh1.h)
+
+Round 4 (two-digit offset names). Four cursor pieces that pulse between a far and a near distance around the selected item; the shop NPCs (bs1, ds1, bms1, bmsw, btsw, rsh1) set the scale values from their HIO through setScale and show / hide it. Same meanings in zeldaret/tww d217e2b.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x98 | `m38` | `mPieceDistFar` | ShopCursor_c::anm_play 025BD290: mPieceDist switches between it and mPieceDistNear; the ctor ShopCursor_c_ct sets 30, the shop NPCs' setScale sets their HIO value (tww the same) |
+| 0x9C | `m3C` | `mPieceDistNear` | ShopCursor_c::anm_play 025BD290: mPieceDist switches between mPieceDistFar and it; the ctor sets 25, the shop NPCs' setScale their HIO value (tww the same) |
+| 0xA0 | `m40` | `mPieceDist` | ShopCursor_c::draw 025BD338: each of the four cursor pieces is moved it * sqrt(2) out from mPos; anm_play 025BD290 sets it to the far or near distance (tww the same) |
+| 0xA4 | `m44` | `mDistSwitchTimer` | ShopCursor_c::anm_play 025BD290: counts down; at 0 mPieceDist switches and it is reloaded with 15 + random (tww the same) |
+| 0xA8 | `m48` | `mPieceScale` | ShopCursor_c::draw 025BD338: the pieces' scale (y times mPieceScaleYFar / mPieceScaleYNear); ShopCursor_create's scale argument, setScale's first (tww the same) |
+| 0xAC | `m4C` | `mPieceScaleYFar` | ShopCursor_c::draw 025BD338: the pieces' y scale factor while mPieceDist is the far distance (tww the same) |
+| 0xB0 | `m50` | `mPieceScaleYNear` | ShopCursor_c::draw 025BD338: the pieces' y scale factor while mPieceDist is the near distance (tww the same) |
+| 0xB4 | `m54` | `mbShow` | ShopCursor_c::draw 025BD338 draws only while it is set; the shop NPCs' show() / hide() set 1 / 0 and test it (tww the same) |
+
+Open (no name yet): padding `_0A6`, `_0B5`.
+
+## ShopCam_action_c (shop camera; d_shop.h; views Bs1ShopCam, Bms1ShopCam, RshShopCamera, daNpc_Ds1_c::mShopCam)
+
+Round 4 (two-digit offset names). The camera the shop actions drive: the center, eye and fovy passed to the camera's Set, and the selected item index that picks shop_cam_data_tbl's zoomed row. Same meanings in zeldaret/tww d217e2b; tww's mOrigCenter / mOrigEye / mOrigFovy (Save / Reset) gave the pattern.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x10 | `m18` | `mCenter` | shop_cam_action 025BBF4C, rsh_talk_cam_action 025BC38C, ds_normal_cam_action 025BC4DC pass it to the camera's Set as the center (shop_cam_action eases it towards shop_cam_data_tbl's center); the NPCs' inline getItemZoomPos aims from mEye towards it (tww the same) |
+| 0x1C | `m24` | `mEye` | the same three actions pass it to the camera's Set as the eye; the NPCs' inline getItemZoomPos returns mEye + normalize(mCenter - mEye) * distance (tww the same) |
+| 0x28 | `m30` | `mFovy` | the same three actions pass it to the camera's Set as the fovy; shop_cam_action 025BBF4C eases it towards the table's fovy; ShopCam_action_c_ct 025BBDF0 sets 60 (tww the same) |
+| 0x4C | `m54` | `mSelectIdx` | shop_cam_action 025BBF4C uses the table's second (zoomed) row while it is >= 0; the NPCs set it to mShopItems.mSelectedItemIdx, the init actions and ShopCam_action_c_ct to -1 (tww the same) |
+
+Open (no name yet): `m50`, `m52` (ShopCam_action_c_ct 025BBDF0 clears them; read nowhere in WWHD or tww).
+
+## himo2HIO_c (l_himo2HIO; d_a_himo2.h)
+
+Round 4 (two-digit offset names). The Grappling Hook's target search tolerances (setTargetPos, the inline search_target), the rope width while locked on / free and the swing direction mode. Same meanings in zeldaret/tww d217e2b.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x02 | `m06` | `mSwingDirMode` | read only by tww: daHimo2_Execute's switch picks the swing directions (0 random, 1..4 the four fixed sign pairs); WWHD writes it only in __sinit_d_a_himo2_cpp 0216F6D8 (0) and new_himo2_move always takes (-1, -1) (2026-11-11 rule: tww's one role) |
+| 0x04 | `m08` | `mTargetAngleRange` | setTargetPos 0216EEB8 (inline search_target): a target counts only while its angle to Link lies within 0x4000 +- it (plus a debug register); HIO 15000 (tww the same) |
+| 0x08 | `m0C` | `mPitchTolBelow` | setTargetPos 0216EEB8: a normal target is taken only while its pitch from the camera eye exceeds the aim point's by less than it (2000 for flagged targets); HIO 600 (tww the same) |
+| 0x0A | `m0E` | `mPitchTolAbove` | setTargetPos 0216EEB8: a target is taken only while the aim point's pitch exceeds the target's by less than it; HIO 400 (tww the same) |
+| 0x0C | `m10` | `mTargetRadius` | setTargetPos 0216EEB8: the yaw tolerance is cM_atan2s(target scale.z * it, distance from the camera eye), the target's radius per unit of scale; HIO 60 (tww the same) |
+| 0x10 | `m14` | `mTargetMaxDY` | setTargetPos 0216EEB8: a normal target is taken only while its height offset in Link's frame is below it (plus a stage tolerance on ADMumi); HIO 1500 (tww the same) |
+| 0x14 | `m18` | `mSearchDistMax` | setTargetPos 0216EEB8: the search distance grows by 100 per pass and stops above it (2000 for flagged targets); HIO 1000 (tww the same) |
+| 0x18 | `m1C` | `mRopeScaleLockOn` | daHimo2_Execute 0216E194 and new_himo2_move 0216F7FC (while Lockon) store it in rope_scale, the rope lines' width for lineMat_update; HIO 2.3 (tww the same) |
+| 0x1C | `m20` | `mRopeScale` | new_himo2_move 0216F7FC stores it in rope_scale while nothing is locked on; HIO 1.9 (tww the same) |
+
+Open (no name yet): `m0A` (set to 1000 by __sinit_d_a_himo2_cpp, read nowhere in WWHD or tww), padding `_01`.
+
+## daPirate_Flag_HIO_c (l_HIO; d_a_pirate_flag.h)
+
+Round 4 (two-digit offset names). The pirate ship flag's cloth simulation values (wind wave, gravity, spring) and two debug switches. Same meanings in zeldaret/tww d217e2b.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x001 | `m05` | `mDrawDebugLines` | daPirate_Flag_Draw 023D116C: while it is set, lines for the first light's direction, the flag's facing and its escape-normal angle are drawn around the flag; __sinit 0 (tww the same) |
+| 0x003 | `m07` | `mStopMove` | daPirate_Flag_Execute 023D2610 returns at once while it is set (the cloth stops moving); __sinit 0 (tww the same) |
+| 0x004 | `m08` | `mWindPhaseStep` | pirate_flag_move 023D1EA4 adds it to mWindPhase every frame; the sine of that phase blends the wind strength; __sinit 0x40 (tww the same) |
+| 0x008 | `m0C` | `mWindStrengthMax` | pirate_flag_move 023D1EA4: the wind strength is it * f + mWindStrengthMin * (1 - f), f = 0.5 + 0.5 sin(mWindPhase); __sinit 13 (tww the same) |
+| 0x00C | `m10` | `mWindStrengthMin` | pirate_flag_move 023D1EA4: the wind strength's value at the low point of the wind wave (see mWindStrengthMax); __sinit 7 (tww the same) |
+| 0x010 | `m14` | `mGravity` | pirate_flag_move 023D1EA4 adds it to each cloth point's y force; __sinit -3.5 (tww the same) |
+| 0x014 | `m18` | `mSpringRate` | get_cloth_anim_sub_factor 023D176C: the force between neighbouring cloth points is (length - rest length) * it; __sinit 0.45 (tww the same) |
+| 0x018 | `m1C` | `mEscapeNrmAngle` | daPirate_Flag_packet_c::setCorrectNrmAngle 023D1804: the escape angle in degrees (scaled by 1 - wind strength / 2) the normals turn to when the wind blows along the flag; __sinit 0 (tww the same) |
+
+Open (no name yet): `m06` (set to 0 by __sinit_d_a_pirate_flag_cpp 023D3A90, read nowhere in WWHD or tww).
+
+## himo3HIO_c and h3_ga_s (himo3HIO, himo3_class::mGa[0]; d_a_himo3.h)
+
+Round 5 (two-digit offset names). The hanging rope (ぶら下がりロープ): the HIO's end model scales, glow scale and tww's alpha-model type and colour; the moth (ga) that flies around the rope end of type 0. Same meanings in zeldaret/tww d217e2b. In WWHD the HIO has the vtable last, so its offsets are 4 lower than the old names.
+
+himo3HIO_c:
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x02 | `m06` | `mAlphaModelType` | read only by tww: daHimo3_Draw picks the glow's alpha model, 0 one sphere, 1 two spheres (both in the mAlphaColorR / G / B colour), 2 the spot model; WWHD writes it only in __sinit_d_a_himo3_cpp 02174F64 (0) and has no alpha model (2026-11-11 rule: tww's one role) |
+| 0x04 | `m08` | `mEndScaleType1` | himo3_control (inlined in daHimo3_Execute 02172A00): the end model's scale for type 1; __sinit_d_a_himo3_cpp 02174F64 0.75 (tww the same) |
+| 0x08 | `m0C` | `mEndScale` | himo3_control (inlined in daHimo3_Execute 02172A00): the end model's scale for the other types, which also turn it by -0x4000 about x; __sinit_d_a_himo3_cpp 02174F64 0.5 (tww the same) |
+| 0x0C | `m10` | `mAlphaColorR` | read only by tww: daHimo3_Draw's alpha model colour r (dComIfGd_setAlphaModelColor); WWHD writes it only in __sinit_d_a_himo3_cpp 02174F64 (0xEB) (2026-11-11 rule: tww's one role) |
+| 0x0E | `m12` | `mAlphaColorG` | read only by tww: daHimo3_Draw's alpha model colour g; WWHD writes it only in __sinit_d_a_himo3_cpp 02174F64 (0x7D) (2026-11-11 rule: tww's one role) |
+| 0x10 | `m14` | `mAlphaColorB` | read only by tww: daHimo3_Draw's alpha model colour b; WWHD writes it only in __sinit_d_a_himo3_cpp 02174F64 (0) (2026-11-11 rule: tww's one role) |
+| 0x14 | `m18` | `mGlowMtxScale` | daHimo3_Execute 02172A00 copies it into the actor's mGlowScale every frame (the glow matrix scale); __sinit_d_a_himo3_cpp 02174F64 5.0 (tww m1870 = it) |
+
+h3_ga_s:
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x10 | `m10` | `mTargetPos` | ga_move (inlined in daHimo3_Execute 02172A00): a new random point within 150 / 100 / 150 of the rope end (mEndPos) whenever mRetargetTimer runs out; the moth turns toward it (tww the same) |
+| 0x1C | `m1C` | `mAngle` | ga_move: yaw / pitch eased toward mTargetPos by 0x1000 steps, the direction the moth flies; daHimo3_Draw 021727D4 (ga_draw inlined) turns its model by it (tww the same) |
+| 0x24 | `m24` | `mScale` | daHimo3_Create 02174730 (useHeapInit inlined): random 0.3..0.6; daHimo3_Draw (ga_draw) scales the moth model by it (tww the same) |
+| 0x28 | `m28` | `mFlapScale` | ga_move: sin(mFlapPhase); daHimo3_Draw (ga_draw) multiplies the model's y scale by it, the wing flap (tww the same) |
+| 0x2C | `m2C` | `mFlapPhase` | ga_move adds 0x3E00 per frame and takes mFlapScale = sin(it); daHimo3_Create (useHeapInit) random start (tww the same) |
+| 0x2E | `m2E` | `mActive` | daHimo3_Create (useHeapInit) sets it for type 0; ga_move moves and daHimo3_Draw (ga_draw) draws the moth only while it is set (tww the same) |
+| 0x2F | `m2F` | `mRetargetTimer` | ga_move counts it down and, at 0, sets a random 0..10 and picks a new mTargetPos (tww the same) |
+
+Open (no name yet): padding `himo3HIO_c::_01`, `_12`, `h3_ga_s::_22`.
+
+
+## himo2_s (himo2_class::mSegments[100] / m1120[100]; d_a_himo2.h)
+
+Round 6 (two-digit offset names). One Grappling Hook rope segment: its position and the yaw / pitch its model is drawn with. Same meanings in zeldaret/tww d217e2b.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x10 | `m10` | `mPos` | himo2_control / himo2_control2 (inlined in daHimo2_Execute 0216E194) move each rope segment from its neighbour's position; daHimo2_Execute 0216E194 takes the ground height below it; himo2_draw (in daHimo2_Draw 0216CA5C) puts the segment model there (tww the same) |
+| 0x1C | `m1C` | `mAngleX` | himo2_control2 (in daHimo2_Execute 0216E194) stores the segment's pitch toward the next one; himo2_draw (in daHimo2_Draw 0216CA5C) turns the segment model by it about x (tww the same) |
+| 0x1E | `m1E` | `mAngleY` | himo2_control2 (in daHimo2_Execute 0216E194) stores the segment's yaw toward the next one; himo2_draw (in daHimo2_Draw 0216CA5C) turns the segment model by it about y (tww the same) |
+
+Open (no name yet): `m0C` (daHimo2_Execute 0216E194 stores the ground height below the segment + 5, or -100000 while launched free; read nowhere in WWHD or tww), padding `m00`, `m20`.
+
+
+## kamomeHIO_c (l_kamomeHIO; d_a_kamome.h)
+
+Round 6 (two-digit offset names). The seagull's HIO: a stop switch, the forward-step frame window, the take-off distance and the player distance of the seagulls with Aryll. Same meanings in zeldaret/tww d217e2b; in WWHD the vtable is last, so the offsets are 4 lower than the old names.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x01 | `m05` | `mStopMove` | daKamome_Execute 021861D4 runs the timers, the move functions and the animation only while it is 0; __sinit_d_a_kamome_cpp 02189180 0 (tww the same) |
+| 0x02 | `m06` | `mMoveStartFrame` | kamome_path_move (inlined), kamome_imouto_move (inlined) and kamome_auto_move 02189270: from this animation frame to mMoveEndFrame the seagull moves forward (speedF scale * 5), outside it stands; __sinit_d_a_kamome_cpp 02189180 1 (tww the same) |
+| 0x04 | `m08` | `mMoveEndFrame` | the same three move functions: the last animation frame of the forward step window; __sinit_d_a_kamome_cpp 02189180 8 (tww the same) |
+| 0x08 | `m0C` | `mTakeOffDist` | kamome_auto_move 02189270: a seagull on the ground takes off (state 0, the bait released) when Link comes within it; __sinit_d_a_kamome_cpp 02189180 400 (tww the same) |
+| 0x0C | `m10` | `mImoutoPlayerDist` | kamome_imouto_move (inlined in daKamome_Execute 021861D4), the seagulls with Aryll: Link within it of Aryll or of the target makes the seagull drop it, and a landed one takes off; __sinit_d_a_kamome_cpp 02189180 300 (tww the same) |
+
+Open (no name yet): padding `_06`.
+
+
+## daKanban_HIO_c (l_HIO; d_a_kanban.cpp)
+
+Round 9 (two-digit offset names). The cuttable sign's HIO; only the model scale is read. Same in zeldaret/tww; the vtable is first, so the offsets equal the old names.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x0C | `m0C` | `mModelScale` | daKanban_Draw 0218A548 sets the signboard's scale (x, y, z) to it before drawing the parts; daKanban_HIO_c_ct 0218CE48 0.8 (tww daKanban_Draw the same) |
+
+Open (no name yet): `m04` (0), `m08` (0), `m0A` (0), set by daKanban_HIO_c_ct 0218CE48 and read nowhere in WWHD or tww.
+
+## Round 11 small classes
+
+Small classes named in round 11; each table is its own commit.
+
+### daNpc_Ba1_HIO_c::hio_prm_c (l_HIO.mPrmTbl; d_a_npc_ba1.h)
+
+Round 11. tww d_a_npc_ba1.cpp keeps the offset names and reads them the same way.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x18 | `m18` | `mDebugDraw` | _draw 021F128C: the debug-colour block runs only while it is set (tww _draw the same: tww d_a_npc_ba1.cpp _draw guards only an unused debug position with it, the same shape as the block before d_a_npc_bm1.cpp's stripped "// Debug:" dDbVw_drawSphereXlu / dDbVw_drawCircleOpa calls) |
+| 0x1C | `m1C` | `mUseFairyRadius` | check_useFairyArea 021F1DA8: the player counts as in the fairy area within it (XZ, and within 100 in y) (tww the same) |
+| 0x20 | `m20` | `mFairyEventRadius` | wait_0 021F1F0C: within it (XZ, 100 in y) tmp bit 0x0310 is set and event 6 is ordered (tww the same) |
+
+### daTag_So_HIO_c (l_HIO; d_a_tag_so.h)
+
+Round 11. WWHD keeps the vtable last (offset 1 = GameCube 5). The constructor clears it.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x01 | `m05` | `mDebugDraw` | _draw 024B2C3C calls debugDraw while it is set (tww the same) |
+
+### daDr_HIO_c (l_HIO; d_a_dr.h)
+
+Round 11. WWHD keeps the vtable last (offsets 4 lower). The constructor sets false / 300.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x08 | `m0C` | `mDebugBiku` | move (in daDr_Execute 0212A00C): when set while idle the flinch (mode 10) starts and it is cleared (debug trigger, like a quake) (tww the same) |
+| 0x0A | `m0E` | `mBikuTime` | move (in daDr_Execute 0212A00C) mode 10: mCountDownTimers[0] of the flinch (tww the same) |
+
+### daDr2_HIO_c (l_HIO; d_a_dr2.h)
+
+Round 11. WWHD keeps the vtable last (offset 4 = GameCube 8). The constructor sets 1.0.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x04 | `m08` | `mScale` | daDr2_Execute 0212B3D0: scale.x/y/z are set to it every frame (tww the same) |
+
+### daBgn3_HIO_c (l_HIO; d_a_bgn3.h)
+
+Round 11. The other HIO fields were named earlier (bosses.md).
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x28 | `m2C` | `mSpl1HitTime` | hioCtor 020914F4 sets 120; damage_check 02090384: the shake duration of a hit with mSpl 1 (next to mSwordHitTime / mArrowHitTime / mOtherHitTime) (tww the same) |
+
+### dDoor_hkyo_c (d_door_hkyo.h)
+
+Round 11. tww's dDoor_hkyo_c (d_door.h) keeps m11 and reads it through chkUse / onUse / offUse.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x11 | `m11` | `mUseMode` | dDoor_hkyo_construct 0252C0BC clears it; resLoad / proc 0252C574 and the other methods act only while it is not 0, proc picks the animation by it (1, 4, ...) (tww chkUse / onUse(arg) / offUse) |
+
+### dDoor_key2_c (d_door_key.h)
+
+Round 11. The copies dDoor_key2_c in d_door_smoke.h and Door10KeyHD in d_a_door10.h declare m20 in a comma list and follow in a later round. tww dDoor_key2_c (d_door.h) keeps m20.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x9C | `m20` | `mbUnlocking` | keyInit 0252B4A4 sets 1 when the key door is opened (switch on, key used, lock sound), else 0; keyProc 0252B5B4 plays the unlock bck only while it is set and clears it at the end (tww the same) |
+
+## Round 12 small classes
+
+Classes named in round 12; each table is its own commit.
+
+### CcAtInfo and its copies, the hit angle
+
+Round 12. CcAtInfo (d_cc_uty.h) and the 13 per-unit copies that still had m0C; the copies in d_a_mo2_exec.h, d_a_mt_exec.h and d_a_pt.h were already named mHitAngle. tww keeps m0C.
+
+| Struct | WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|---|
+| CcAtInfo (d_cc_uty.h) | 0x0C | `m0C` | `mHitAngle` | cc_at_check 025192A8 sets .y = cc_atan2s(-x, -z) of the hit direction (the attacker's speed, or the attacker-to-target offset when it is slow); damage_check of bk (in daBk_Execute 0209BD1C) rotates calc_mtx by .y (cMtx_YrotS) for the knock-back, bb's damage_check 0206432C copies .y into mKnockbackAngleY (tww the same) |
+| AttackInfo (d_a_st.h) | 0x0C | `m0C` | `mHitAngle` | copy of CcAtInfo; see the row above |
+| bkExecAtInfo (d_a_bk_exec.h) | 0x0C | `m0C` | `mHitAngle` | copy of CcAtInfo; see the row above |
+| CcAtInfo_gnd (d_a_gnd.h) | 0x0C | `m0C` | `mHitAngle` | copy of CcAtInfo; see the row above |
+| CcAtInfo_ss (d_a_ss.h) | 0x0C | `m0C` | `mHitAngle` | copy of CcAtInfo; see the row above |
+| CcAtInfo_bdk (d_a_bdk_exe.h) | 0x0C | `m0C` | `mHitAngle` | copy of CcAtInfo; see the row above |
+| CcAtInfo (d_a_bridge.h) | 0x0C | `m0C` | `mHitAngle` | copy of CcAtInfo; see the row above |
+| CcAtInfo_l (d_a_rd.h) | 0x0C | `m0C` | `mHitAngle` | copy of CcAtInfo; see the row above |
+| CcActionAtInfo (d_a_cc_act.h) | 0x0C | `m0C` | `mHitAngle` | copy of CcAtInfo; see the row above |
+| CcAtInfo_l (d_a_bgn2.h) | 0x0C | `m0C` | `mHitAngle` | copy of CcAtInfo; see the row above |
+| CcAtInfo_oq (d_a_oq.h) | 0x0C | `m0C` | `mHitAngle` | copy of CcAtInfo; see the row above |
+| BdkObjAttackInfo (d_a_bdkobj.h) | 0x0C | `m0C` | `mHitAngle` | copy of CcAtInfo; see the row above |
+| CcAtInfo_l (d_a_fm_local.h) | 0x0C | `m0C` | `mHitAngle` | copy of CcAtInfo; see the row above |
+| KiAttackInfo (d_a_ki.h) | 0x0C | `m0C` | `mHitAngle` | copy of CcAtInfo; see the row above |
+
+### dDoor_smoke_c (d_door_smoke.h) and its view KddoorDoorSmoke (d_a_kddoor.h)
+
+Round 12. The door smoke's wobble counter and started flag. KddoorDoorSmoke is d_a_kddoor's view of the same struct and takes the same names. tww dDoor_smoke_c (d_door.h) keeps m34 / m35.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x34 | `m34` | `mWaveStep` | smokeProc 0252B2D8: step counter of the smoke wobble, moves mPos sideways by step * 20 with alternating sign and counts up each frame; dDoor_smoke_ct 0252B190 / smokeInit 0252B1E8 clear it (tww the same) |
+| 0x35 | `m35` | `mbStarted` | smokeProc 0252B2D8: 0 on the first call, which only sets it to 1; the wobble runs once it is set; dDoor_smoke_ct 0252B190 / smokeInit 0252B1E8 clear it (tww the same) |
+
+### dDoor_key2_c copies (d_door_smoke.h, d_a_door10.h)
+
+Round 12. The two comma-list copies of dDoor_key2_c named in round 11 (d_door_key.h, `mbUnlocking`), split in the commit before, follow its name.
+
+| Struct | WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|---|
+| dDoor_key2_c (d_door_smoke.h) | 0x9C | `m20` | `mbUnlocking` | the same struct as d_door_key.h's; dDoor_key2_ct 0252B3D0 clears it |
+| Door10KeyHD (d_a_door10.h) | 0x9C | `m20` | `mbUnlocking` | view of dDoor_key2_c; no uses in d_a_door10 |
+
+### ShopItems_c__shop_cam_data (d_shop.h)
+
+Round 12. One row of shop_cam_data_tbl (normal and zoomed row per shop): the camera centre, eye and fovy that ShopCam_action_c's shop actions copy or ease towards. The names are ShopCam_action_c's (round 4) for the same values; tww keeps m00 / m0C / m18.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x00 | `m00` | `mCenter` | shop_cam_action_init 025BBE98 copies it into ShopCam_action_c::mCenter, shop_cam_action 025BBF4C eases mCenter towards it; the camera Set center (tww the same; one row per shop and zoom state in shop_cam_data_tbl) |
+| 0x0C | `m0C` | `mEye` | shop_cam_action_init 025BBE98 copies it into ShopCam_action_c::mEye, shop_cam_action 025BBF4C eases mEye towards it; the camera Set eye (tww the same) |
+| 0x18 | `m18` | `mFovy` | shop_cam_action_init 025BBE98 copies it into ShopCam_action_c::mFovy, shop_cam_action 025BBF4C eases mFovy towards it; the camera Set fovy (tww the same) |
+
+### __shop_items_set_data (d_shop.h)
+
+Round 12. The shop item set entry's sold-out message, next to mShowMsgNo / mBuyMsgNo. tww keeps m0C.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x0C | `m0C` | `mSoldOutMsgNo` | dShop_now_triggercheck 025BB698 shows it instead of mShowMsgNo when the selected item is sold out (tww the same: *pMsgNo = itemSetList[nextIdx]->m0C when isSoldOutItem) |
+
+### ShopItems_c (d_shop.h)
+
+Round 12. The zoom-up target of the selected shop item and its flag. tww keeps m30 / m3C.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x30 | `m30` | `mZoomPos` | Item_ZoomUp 025BCC7C stores the position it is given; Item_Select 025BCA2C moves the selected item towards it (minus the item centre) while mbZoomUp is 1 (tww the same) |
+| 0x3C | `m3C` | `mbZoomUp` | Item_ZoomUp 025BCC7C sets 1, Item_Move 025BCCA4 clears it after each pass, ShopItems_c_ct 025BC760 clears it; Item_Select 025BCA2C moves the item to mZoomPos while it is 1, else back home (tww the same) |
+
+### st_nun_s (d_a_st.h)
+
+Round 12. The Stalfos' pulled-off arm swung as a nunchaku (st_class::mNun): three chain points with position, angle and velocity, like st_ke_s. tww keeps m00 / m24 / m38.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x00 | `m00` | `mPos` | nun_control 0249196C: the positions of the 3 nunchaku chain points; point 1 is placed at the hand joint, point 2 moves from it by the swung offset and is drawn there (tww nun_control the same) |
+| 0x24 | `m24` | `mAngle` | nun_control 0249196C stores the pitch / yaw of point 2 as seen from point 1 in [1] and turns the nunchaku model by them (tww the same) |
+| 0x38 | `m38` | `mSpeed` | nun_control 0249196C: per-point velocity, the damped difference of the new and old position of point 2, added to the next step (tww the same; as st_ke_s::mSpeed) |
+
+### himo3_s (d_a_himo3.h)
+
+Round 12. One of himo3_class's 200 rope segments (mSegments): position and velocity, as himo2_s::mPos. tww keeps m00 / m0C.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x00 | `m00` | `mPos` | himo3_control (inlined in daHimo3_Execute 02172A00) moves each rope segment from the previous one by the gravity / pull offset and feeds the collision spheres and line from it; [0] = current.pos (tww the same; as himo2_s::mPos) |
+| 0x0C | `m0C` | `mSpeed` | himo3_control (in daHimo3_Execute 02172A00) adds it to the next step and stores (new - old) * a factor (0 in WWHD, a REG value in tww) (tww the same) |
+
+### OsMainBrkEntry (d_a_npc_os_create.h)
+
+Round 12. An entry of the Cannon statue NPC's brk table (osMain_brkAnmTbl, tww initBrkAnm's local brkAnmTbl). tww keeps unk_4.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x0C | `unk_4` | `mStartAtEnd` | initBrkAnm 022A9F4C: when it is negative the new brk starts at its end frame, else at its current frame; static osMain_brkAnmTbl entries are 0 or -1, never written (tww initBrkAnm brkAnmTbl the same) |
+
+### BrkTableEntry (d_a_npc_os_b.h)
+
+Round 12. An entry of setAnm_brkAnm's anmBrkTbl: the animation and brk indices set together. tww keeps unk_1 / unk_2.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x00 | `unk_1` | `mAnmPrmIdx` | setAnm_brkAnm 022ADA3C passes it to setAnm (the l_anmPrm index); static anmBrkTbl, never written (tww setAnm_brkAnm the same) |
+| 0x01 | `unk_2` | `mBrkAnmIdx` | setAnm_brkAnm 022ADA3C passes it to initBrkAnm (the brkAnmTbl index); static anmBrkTbl, never written (tww setAnm_brkAnm the same) |
+
+### OsMainAnmPrm (d_a_npc_os_create.h)
+
+Round 12. An entry of the statue NPC's animation parameter table (tww setAnm's l_anmPrm); the same start-at-end switch as OsMainBrkEntry. tww keeps m10.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x10 | `m10` | `mStartAtEnd` | setAnm 022AA88C: when it is negative the new bck starts at its end frame (setFrame(getEndFrame())); static osMain_anmPrm entries are 0 or -1, never written (tww setAnm l_anmPrm the same) |
+
+### KamomeAnmPrm (d_a_npc_kamome.h)
+
+Round 12. An entry of the seagull's animation parameter table l_anmPrm; the same start-at-end switch as OsMainAnmPrm. tww keeps m10.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x10 | `m10` | `mStartAtEnd` | setAnm 022602DC: when it is negative the new bck starts at its end frame (setFrame(getEndFrame())); static l_anmPrm (all three entries 0), never written (tww setAnm the same; as OsMainAnmPrm::mStartAtEnd) |
+
+### AnmTableEntry (d_a_pedestal.cpp)
+
+Round 12. An entry of the pedestal's brk table brkAnmTbl; the same start-at-end switch as OsMainBrkEntry. tww keeps unk_4.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x08 | `unk_4` | `mStartAtEnd` | initBrkAnm 023C85F8: when it is negative the new brk starts at its end frame (setFrame(getEndFrame())); static brkAnmTbl (0, 0, 0, -1), never written (tww daPds_c::initBrkAnm the same; as OsMainBrkEntry::mStartAtEnd) |
+
+### rd_anm_prm_struct (d_a_rd.h)
+
+Round 12. An entry of the ReDead's btk parameter table btk_anm_prm_tbl (setBtkAnm). tww keeps m00 / m01 (setBtkAnm's local anm_prm_struct).
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x00 | `m00` | `mBtkIdx` | setBtkAnm 0245AC14: index into btk_anm_idx_tbl of the btk to load (-1 none); static btk_anm_prm_tbl, never written (tww setBtkAnm a_anm_prm_tbl the same) |
+| 0x01 | `m01` | `mNextPrmIdx` | setBtkAnm 0245AC14: once a one-shot (EMode_NONE) btk has stopped, mBtkAnmPrmIdx moves on to this entry (-1 none; the open and close entries go on to a looping one); static btk_anm_prm_tbl, never written (tww setBtkAnm the same) |
+
+### AnmTbl (d_a_npc_md_exec.h)
+
+Round 12. An entry of Medli's bck name tables l_anmTbl / armAnmTbl / wingAnmTbl (setAnm). tww keeps m00 / m20 (setAnm's local anm_tbl).
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x00 | `m00` | `mBckName` | setAnm 02286D7C passes it to dNpc_Md_setAnm as the bck file of the body / arm morf (the only one of the wing morf); static l_anmTbl / armAnmTbl / wingAnmTbl, never written (tww setAnm anm_tbl the same) |
+| 0x20 | `m20` | `mBlendBckName` | setAnm 02286D7C passes it to dNpc_Md_setAnm as the second bck, which the McaMorf2 blends in by mRunRate when it is not "" (md_walk / md_run); static tables, never written (tww the same) |
+
+### BtpEntry (d_a_npc_md_heap.h)
+
+Round 12. An entry of Medli's eye btp table btpAnmTbl (initTexPatternAnm); a separate table from AnmTbl. tww keeps m00 / m20 (btp_anm_tbl).
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x00 | `m00` | `mFileName` | initTexPatternAnm 022846EC loads the eye btp of that file name; static btpAnmTbl, never written (tww initTexPatternAnm btp_anm_tbl the same) |
+| 0x20 | `m20` | `mbSyncBody` | initTexPatternAnm 022846EC copies it into daNpc_Md_c::mBtpSyncBody (0 / 1; while it is 1 the btp frame follows the body bck instead of blinking); static btpAnmTbl, never written (tww the same: m3136, playTexPatternAnm) |
+
+### dNpc_HIO_c and its copies, the player eye offset
+
+Round 12. dNpc_HIO_c (d_npc.h), the NPC HIO base, and its copies dNpc_HIO_l (d_a_npc_md.h; also used by d_a_npc_os and d_a_npc_cb1), dNpc_HIO_p2 (d_a_npc_p2.h, d_a_npc_p2_act.h) and the field inlined into daNpc_Bms1_HIO_c (d_a_npc_bms1.h). The census had put dNpc_HIO_c `m04` under "constructor only, no tww reader"; tww's d_a_npc_so / btsw / btsw2 / bmsw read `l_HIO.mNpc.m04`, so it is named here. tww keeps m04.
+
+| Struct | WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|---|
+| dNpc_HIO_c (d_npc.h) | 0x00 | `m04` | `mPlayerEyeOffsetY` | the player's eye height offset the NPCs pass to dNpc_playerEyePos for their look target (WWHD: so, btsw, btsw2, bmsw, bs1, ds1, rsh1, sarace, kg1, tc, cb1, md, os, p2, bms1; tww: so, btsw, btsw2, bmsw); the dNpc_HIO_c constructor 0259DA18 sets 0, each NPC's HIO constructor then its own value (-20 to -80) (tww the same); same name as the NpcDatStruct copies of other NPCs |
+| dNpc_HIO_l (d_a_npc_md.h) | 0x00 | `m04` | `mPlayerEyeOffsetY` | copy of dNpc_HIO_c |
+| dNpc_HIO_p2 (d_a_npc_p2.h, d_a_npc_p2_act.h) | 0x00 | `m04` | `mPlayerEyeOffsetY` | copy of dNpc_HIO_c |
+| daNpc_Bms1_HIO_c (d_a_npc_bms1.h) | 0x0C | `m04` | `mPlayerEyeOffsetY` | dNpc_HIO_c's field inlined into the bms1 HIO; lookBack passes it to dNpc_playerEyePos_l |
+
+### daObjSwheavy::Attr_c (d_a_obj_swheavy.h)
+
+Round 12. The heavy floor switch's attribute table (one entry per type). tww keeps m14.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x14 | `m14` | `mTopLowerDelay` | mode_u_l_init 02394AE8 passes it to top_bg_aim_req as the timer: calc_top_pos 02394730 moves the top collision aim to height 0 that many frames after the switch starts going down (0: the request never takes effect); static attribute table (0, 0, 4, 4), never written (tww mode_u_l_init the same) |
+
+### dCamera_c::BGChk (d_camera.h)
+
+Round 12. One ground record of dCamera_c::BG (tww's anonymous struct inside BG). tww keeps m00 / m04 / m58.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x00 | `m00` | `mbFound` | checkGroundInfo 024F9044 sets it when the ground check found ground (mGroundY != -1e9); the camera reads it before using the poly / room camera ids and the move-BG of the record (tww the same) |
+| 0x04 | `m04` | `mGndChk` | checkGroundInfo 024F9044: the dBgS_CamGndChk of the record; its position is set and GroundCross runs on it, its poly / bg index give the camera ids and the move-BG (tww the same) |
+| 0x58 | `m58` | `mGroundY` | checkGroundInfo 024F9044 stores GroundCross of mGndChk (-1e9 when none); the camera modes compare heights with it (tww the same) |
+
+### dCamera_c::BG (d_camera.h)
+
+Round 12. dCamera_c::mBG, the two ground records (BGChk) checkGroundInfo fills each frame; also embedded as CameraProcessHD::BG::mChecks in d_camera_proc.h. tww keeps m00 / m5C.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x00 | `m00` | `mPlayerGround` | checkGroundInfo 024F9044: the ground under the player's foot position (default check flags); its ground y feeds m354 and the swim camera id (tww the same) |
+| 0x5C | `m5C` | `mCameraGround` | checkGroundInfo 024F9044: the camera ground under the player's head (SetCam / ClrObj, raised by the plain check when that is higher); its move-BG, room and poly camera ids and ground y drive the camera modes (tww the same) |
+
+### dCstick_c (d_cam_param.h) and the CameraSetupView view (d_camera_mode.h)
+
+Round 12. The camera setup's C-stick thresholds (dCamSetup_c::mCstick). mUpPressY is named under the 2026-11-11 rule (WWHD constructor only, tww nextMode reads it). m08 (6) stays open: set by the constructors only, read nowhere in WWHD or tww. tww keeps m00 / m04 / m08.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x04 | `m00` | `mUpReleaseY` | nextMode 024FA9C8: while the C-stick-up state (mCStickYState) is set it is cleared when the C-stick y falls below it; dCstick_c__ct 024F6DEC sets 0.2 (tww dCamera_c::nextMode the same) |
+| 0x08 | `m04` | `mUpPressY` | written only by dCstick_c__ct 024F6DEC (0.95) in WWHD, where nextMode 024FA9C8 enters the C-stick-up state on a pad option flag (0x40) instead; tww dCamera_c::nextMode enters it (dCamAttnStts_00001000_e, m184 = 1) when the C-stick y rises above it |
+
+### dCamera__Style (d_cam_param.h)
+
+Round 12. An entry of the camera style table (dCamParam_c::styles). tww keeps m00.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x00 | `m00` | `mStyleName` | SearchStyle 024F732C returns the index of the style whose four-character name it is (callers pass e.g. 'TT01'); the camera style table, never written by code (tww dCamParam_c::SearchStyle the same) |
+
+### cM_rnd_c and dDlst_effectLine_c's embedded copy (d_drawlist.h), the three seeds (misnamed)
+
+Round 12. cM_rnd_c is the Wichmann-Hill generator: get() steps three seeds (x171 mod 30269, x172 mod 30307, x170 mod 30323) and sums their fractions. The second and third were named as if it were a linear congruential generator; all three now carry the seed number. dDlst_effectLine_c flattens its cM_rnd_c member (tww mRnd) at 0x04..0x0C and takes the same names. tww keeps m0 / m4 / m8.
+
+| Struct | WWHD offset | Old | New | Evidence |
+|---|---|---|---|---|
+| cM_rnd_c | 0x00 | `mSeed` | `mSeed0` | the first seed (x171 mod 30269); init 0252CD10 stores its first argument; renamed only to number the series |
+| cM_rnd_c | 0x04 | `mMultiplier` | `mSeed1` | (misnamed) the second seed (x172 mod 30307), not a multiplier; init's second argument |
+| cM_rnd_c | 0x08 | `mIncrement` | `mSeed2` | (misnamed) the third seed (x170 mod 30323), not an increment; init's third argument |
+| dDlst_effectLine_c | 0x04 / 0x08 / 0x0C | `mSeed` / `mMultiplier` / `mIncrement` | `mSeed0` / `mSeed1` / `mSeed2` | the embedded cM_rnd_c; the same seeds |
+
+### dDlst_effectLine_c (d_drawlist.h), the line parameters (misnamed)
+
+Round 12. update 0252CDF0 stores its four u16 and four f32 arguments here; tww's dDlst_effectLine_c::draw (field_0x20..0x34) shows each one is a min / random-range pair for cM_rnd_c::getValue: the line count, the line width, the start radius from mPos and the line length. The old names (mLineCount, mLineLength, mLineSpeed, mLineMode, mWidth, mHeight, mDepth, mScale) were our own and do not match that use; the fields now carry the names dCamForcusLine's matching update arguments took in round 11. tww keeps field_0x20..field_0x34.
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+| 0x20 | `mLineCount` | `mLineNumMin` | update's 3rd argument; tww draw: the line count is mRnd.getValue(it, mLineNumRange) |
+| 0x22 | `mLineLength` | `mLineNumRange` | update's 4th argument; tww draw: the random range added to mLineNumMin |
+| 0x24 | `mLineSpeed` | `mLineWidthMin` | update's 5th argument; tww draw: GXSetLineWidth(mRnd.getValue(it, mLineWidthRange)) per line |
+| 0x26 | `mLineMode` | `mLineWidthRange` | update's 6th argument; tww draw: the random range added to mLineWidthMin |
+| 0x28 | `mWidth` | `mStartRadiusMin` | update's 1st float; tww draw: each line starts mRnd.getValue(it, mStartRadiusRange) from mPos at a random angle |
+| 0x2C | `mHeight` | `mStartRadiusRange` | update's 2nd float; tww draw: the random range added to mStartRadiusMin |
+| 0x30 | `mDepth` | `mLineLengthMin` | update's 3rd float; tww draw: each line is mRnd.getValue(it, mLineLengthRange) long |
+| 0x34 | `mScale` | `mLineLengthRange` | update's 4th float; tww draw: the random range added to mLineLengthMin |
+
+### dNpc_HIO_c and its copies, the debug draw switch
+
+Round 12. The same struct and copies as the player eye offset above. The census had put `m22` under "constructor only, no tww reader" for all four; WWHD's btsw / bmsw / tc _draw and so's _draw (through d_a_npc_so_mode.h's view `debugDraw`) read it, and so do tww's so / btsw / bmsw. tww keeps m22.
+
+| Struct | WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|---|
+| dNpc_HIO_c (d_npc.h) | 0x1E | `m22` | `mDebugDraw` | _draw of btsw 02219840, bmsw 0220F06C, tc 022EA464 and so 022DFEDC draw the debug shapes while it is set (tww so / btsw / bmsw the same); the dNpc_HIO_c constructor 0259DA18 and the NPCs' HIO constructors clear it; same name as daRd_HIO_c's and daTag_So_HIO_c's own debug switches |
+| dNpc_HIO_l (d_a_npc_md.h) | 0x1E | `m22` | `mDebugDraw` | copy of dNpc_HIO_c |
+| dNpc_HIO_p2 (d_a_npc_p2.h, d_a_npc_p2_act.h) | 0x1E | `m22` | `mDebugDraw` | copy of dNpc_HIO_c |
+| daNpc_Bms1_HIO_c (d_a_npc_bms1.h) | 0x2A | `m22` | `mDebugDraw` | dNpc_HIO_c's field inlined into the bms1 HIO; its constructor clears it |
+
+## Two-digit offset names left open (round 3 census)
+
+Round 12. The round-3 census counted 440 two-digit offset names; rounds 10 to 12 named 205 of them. The 235 below stay open, one line per class or group, each with its reason: read nowhere, written only, padding, constructor-only with no tww reader, product of one value, or several roles.
+
+- `hdScreenMsgOnly2_c` (d/hd_screen_msg_only2.h): `m74`, `mA8`. Constructor-only, no tww reader: HD screen: construct clears it, read nowhere.
+- `dEvDtStaff_c` (d/d_event_data.h): `m28`, `m34`, `m44`, `m45`. Written only, read nowhere: written only (init / advanceCut clear m44/m45); m28 read nowhere; m34 padding.
+- `ShopCam_action_c` (d/d_shop.h): `m50`, `m52`. Constructor-only, no tww reader: constructor-only in WWHD (ShopCam_action_c_ct); the tww uses counted are ShopCursor_c's m50.
+- `dSnap_CharaData` (d/d_snap.h): `m11`. Read nowhere: declared after figRoom, read nowhere in WWHD; tww d_snap.cpp declares it only.
+- `dCamera_c::PosSet` (d/d_camera.h): `m1E`. Written only, read nowhere: written only (eventCamera clears it); tww only writes it too.
+- `CameraSavedViewHD` (d/d_ev_camera_5.h): `m1E`. Written only, read nowhere: set to 1/2 by saveEvCamera / possessedEvCamera only; no reader found (HD-only view).
+- `JntHit_HIO_c` (d/d_jnt_hit.h): `m06`, `m08`, `m0C`, `m10`, `m1C`, `m20`, `m24`. Constructor-only, no tww reader: constructor-only (JntHit_HIO_c__ct); tww d_jnt_hit.cpp has no reader either.
+- `dCstick_c` (d/d_cam_param.h): `m08`. Constructor-only, no tww reader: set by the constructors only (6), read nowhere in WWHD or tww.
+- `dCamBGChk_c` (d/d_cam_param.h): `m2C`, `m48`, `m4C`, `m50`, `m54`, `m58`, `m5C`. Constructor-only, no tww reader: constructor-only (dCamBGChk_c__ct); tww reads none of these offsets either.
+- `HIO_c` (d/actor/d_a_st.h): `m14`. Constructor-only, no tww reader: static_initialize only; read nowhere in d_a_st (the tww hits are d_a_stone).
+- `st_p` (d/actor/d_a_st.h): `m48`. Read nowhere: dPa_smokeEcallBack constructed in part_construct, used nowhere else.
+- `daSie_Flag_HIO_c` (d/actor/d_a_sie_flag.h): `m08`. Constructor-only, no tww reader: constructor-only.
+- `daFganon_HIO_c` (d/actor/d_a_fganon.h): `m07`, `m42`. Read nowhere: never used.
+- `daBmdfoot_HIO_c` (d/actor/d_a_bmdfoot.h): `m05`. Read nowhere: never used.
+- `sita_s` (d/actor/d_a_bwd.h): `m10`. Padding: padding (u8 view; the tww f32 m10 is the HIO).
+- `daBwd_HIO_c` (d/actor/d_a_bwd.h): `m08`, `m38`, `m3A`, `m3C`, `m3E`. Constructor-only, no tww reader: constructor-only; tww constructor only.
+- `daGFlag_HIO_c` (d/actor/d_a_goal_flag.h): `m04`, `m06`, `m07`, `m08`, `m09`. Constructor-only, no tww reader: constructor/destructor only (round 8).
+- `daPirate_Flag_HIO_c` (d/actor/d_a_pirate_flag.h): `m06`. Constructor-only, no tww reader: constructor-only.
+- `ga_s` (d/actor/d_a_mo2_main.h): `m10`, `m1C`, `m1E`, `m20`, `m24`, `m28`, `m2C`, `m2E`, `m2F`. Read nowhere: d_a_mo2 effect struct: never used in WWHD or tww (m20 padding).
+- `daNpc_Bs1_childHIO_c` (d/actor/d_a_npc_bs1.h): `unk0`. Read nowhere: never used.
+- `daBeam_HIO_c` (d/actor/d_a_beam.h): `m08`, `m0C`. Constructor-only, no tww reader: constructor-only; tww constructor only.
+- `daNpc_P1_childHIO_c` (d/actor/d_a_npc_p1.h): `unk4`. Read nowhere: never used.
+- `mo_ga_s` (d/actor/d_a_kantera.h): `m20`. Padding: padding.
+- `SoModeHIO` (d/actor/d_a_npc_so_mode.h): `m2D`. Constructor-only, no tww reader: constructor-only (copy of daNpc_So_HIO_c::m2D).
+- `BckConstructView` (d/actor/d_a_npc_jb1.h): `m58`, `m7C`, `m80`, `m84`, `m88`. Constructor-only, no tww reader: mDoExt_bckAnm view, zeroed in the constructor only (round 8).
+- `ep_ga_s` (d/actor/d_a_ep.h): `m2C`. Padding: padding.
+- `RippleCallback` (d/actor/d_a_warpdm20.h): `m08`. Read nowhere: never used.
+- `BckConstructView` (d/actor/d_a_warpdm20.h): `m58`, `m7C`, `m80`, `m84`, `m88`. Constructor-only, no tww reader: mDoExt_bckAnm view, zeroed in the constructor only (round 8).
+- `daBemos_HIO_c` (d/actor/d_a_obj_bemos.h): `m0C`, `m10`, `m38`, `m3C`, `m4C`. Constructor-only, no tww reader: constructor-only; tww constructor only.
+- `daObj_Warpt_HIO_c` (d/actor/d_a_obj_warpt.h): `m05`, `m10`. Constructor-only, no tww reader: constructor-only; tww constructor only.
+- `tn_p` (d/actor/d_a_tn.h): `m42`. Written only, read nowhere: only ever incremented (part_move ++); no other reader in WWHD or tww.
+- `daTori_Flag_HIO_c` (d/actor/d_a_tori_flag.h): `m08`, `m0C`. Constructor-only, no tww reader: constructor-only (tww).
+- `daMozo_childHIO_c` (d/actor/d_a_mozo.h): `m10`. Constructor-only, no tww reader: constructor-only.
+- `daMozo_HIO_c` (d/actor/d_a_mozo.h): `m08`, `m3C`, `m40`, `m44`. Constructor-only, no tww reader: constructor-only; tww constructor only.
+- `Act_c::Data_c` (d/actor/d_a_tsubo.h): `m54`, `m58`. Read nowhere: read nowhere (WWHD or tww d_a_tsubo.cpp); only the table value.
+- `Act_c::Data_c` (d/actor/d_a_tsubo.h): `mA0`. Padding: padding (u8[4], tww mA0[0xA4-0xA0]).
+- `Act_c::Data_c` (d/actor/d_a_tsubo.h): `mAC`. Padding: padding (u8[4], tww mAC[0xB0-0xAC]).
+- `Act_c::Data_c` (d/actor/d_a_tsubo.h): `mB4`. Padding: padding (u8[4], tww mB4[0xB8-0xB4]).
+- `Act_c::M7A0` (d/actor/d_a_tsubo.h): `m08`. Written only, read nowhere: written only (spec_make_boko copies m06 into it, spec_init clears it); read nowhere in WWHD or tww.
+- `Act_c::M7A0` (d/actor/d_a_tsubo.h): `m0C`. Written only, read nowhere: written only (spec_init / spec_mode_put_init clear it); read nowhere in WWHD or tww.
+- `bgn3_ke_s` (d/actor/d_a_bgn3.h): `m3C`. Read nowhere: never used in WWHD (the tww hit is daBgn3_HIO_c::m3C).
+- `daObjPirateShipHIO_c` (d/actor/d_a_obj_pirateship.h): `m06`. Written only, read nowhere: only copied into the ship's own unnamed m2CA; no role of its own.
+- `daObjPirateShipHIO_c` (d/actor/d_a_obj_pirateship.h): `m14`. Constructor-only, no tww reader: constructor only.
+- `PirateshipOffset` (d/actor/d_a_obj_pirateship.h): `m1A`. Read nowhere: never used.
+- `Attr_c` (d/actor/d_a_stone2.h): `m1C`, `m4C`. Read nowhere: read nowhere (WWHD or tww d_a_stone2.cpp).
+- `Part_c` (d/actor/d_a_obj_ajav.h): `mB8`. Padding: padding.
+- `daNpc_P2_childHIO_c` (d/actor/d_a_npc_p2.h): `unk0`, `m2C`, `m6C`. Constructor-only, no tww reader: constructor-only (unk0 unused).
+- `Attr_c` (d/actor/d_a_obj_swheavy.h): `m00`. Padding: padding.
+- `Attr_c` (d/actor/d_a_obj_movebox.h): `m00`, `m06`. Read nowhere: already listed open in objects.md (daObjMovebox::Attr_c): check_to_walk's push / pull counts for mPPLabel bit 4, tww's PPLABEL_UNK4 set from an unnamed proc variable; no role name.
+- `HIO` (d/actor/d_a_majuu_flag.h): `m05`, `m06`, `m07`, `m08`. Constructor-only, no tww reader: majuu flag HIO: constructor only.
+- `mDoExt_J3DModelPacketS_l` (d/actor/d_a_bgn.h): `m90`, `m9C`, `mA0`, `mA4`, `mAC`, `mAD`, `mAE`, `mAF`. Written only, read nowhere: HD packet view: mA0/mA4 written only, m90/m9C/mAD-mAF unused; mAC read once as a flag of the player packet with no role of its own here.
+- `daWarpfout_c` (d/actor/d_a_warpfout.h): `unk0`. Read nowhere: never used.
+- `daTag_So_HIO_c` (d/actor/d_a_tag_so.h): `m06`. Padding: padding.
+- `Hio` (d/actor/d_a_daiocta_eye.h): `m04`, `m08`, `m0C`, `m30`. Constructor-only, no tww reader: daiocta eye HIO: constructor only (m30 a JntHit_HIO_c byte view).
+- `daRd_HIO_c` (d/actor/d_a_rd.h): `m7C`. Read nowhere: JntHit_HIO_c member kept as a byte view (constructJntHitHIO only).
+- `KamomeHioPrm` (d/actor/d_a_npc_kamome.h): `m08`, `m0C`, `m14`, `m18`, `m1C`, `m1E`. Read nowhere: never used in WWHD or tww (declared only).
+- `KamomeHioPrm` (d/actor/d_a_npc_kamome.h): `m10`. Read nowhere: never used as KamomeHioPrm (the m10 read counted is KamomeAnmPrm::m10).
+- `Attr_c` (d/actor/d_a_obj_barrel2.h): `m1C`, `m20`, `m24`, `m28`, `m2C`, `m30`. Several roles (round 9): m20/m24 and m28/m2C only in products of one scale (WWHD and tww); m30 two uses; m1C unread.
+- `daSea_WaterHeightInfo_Mng` (d/actor/d_a_sea.h): `m51`. Padding: padding.
+- `daSea_WaveInfo` (d/actor/d_a_sea.h): `m04`. Constructor-only, no tww reader: constructor-only (array cleared).
+- `daObj_Ikada_HIO_c` (d/actor/d_a_obj_ikada.h): `m09`, `m26`. Padding: padding in tww (u8 arrays), unused in WWHD.
+- `daOship_HIO_c` (d/actor/d_a_oship.h): `m04`. Constructor-only, no tww reader: constructor-only.
+- `daYkgr_HIO_c` (d/actor/d_a_ykgr.h): `m08`, `m10`. Constructor-only, no tww reader: constructor-only (tww).
+- `daNpc_Ym1_HIO_c` (d/actor/d_a_npc_ym1_b.h): `m08`. Constructor-only, no tww reader: constructor-only.
+- `Bm1BehaviorChildHio` (d/actor/d_a_npc_bm1_b.h): `m50`. Written only, read nowhere: written only (child index in the constructor).
+- `daBmd_HIO_c` (d/actor/d_a_bmd.h): `m05`, `m10`. Constructor-only, no tww reader: constructor-only.
+- `daNpc_Ls1_matAnm_c` (d/actor/d_a_npc_ls1.h): `m74`, `m7D`. Padding: padding.
+- `daNpc_Ls1_HIO_c` (d/actor/d_a_npc_ls1.h): `m04`, `m08`. Constructor-only, no tww reader: constructor-only.
+- `himo2_s` (d/actor/d_a_himo2.h): `m00`, `m0C`, `m20`. Written only, read nowhere: m00/m20 padding; m0C written only (ground height + 5) with no reader found.
+- `himo2HIO_c` (d/actor/d_a_himo2.h): `m0A`. Constructor-only, no tww reader: constructor only.
+- `daMt_HIO_c` (d/actor/d_a_mt.h): `m05`, `m06`, `m07`, `m08`, `m0C`, `m10`, `m14`, `m18`, `m20`, `m24`, `m28`, `m2C`, `m30`, `m32`, `m34`, `m38`, `m3A`, `m3C`, `m3E`, `m40`, `m44`, `m48`, `m4C`, `m52`, `m54`, `m58`, `m5C`. Constructor-only, no tww reader: constructor-only in WWHD (the tww d_a_mt.cpp HIO is never read).
+- `daSail_HIO_c` (d/actor/d_a_sail.h): `m07`. Constructor-only, no tww reader: constructor-only.
+- `daNpc_Rsh1_HIO_c` (d/actor/d_a_npc_rsh1.h): `m5C`, `m68`, `m69`, `m6A`, `m6B`. Constructor-only, no tww reader: constructor-only; tww d_a_npc_rsh1.cpp only clears them in the constructor too.
+- `daPt_HIO_c` (d/actor/d_a_pt.h): `m02`. Constructor-only, no tww reader: constructor-only.
+- `Bm1SetupChildHio` (d/actor/d_a_npc_bm1.h): `m50`. Written only, read nowhere: written only (child index in the constructor).
+- `daNpc_So_HIO_c` (d/actor/d_a_npc_so.h): `m2D`, `m40`, `m58`, `m60`, `m6C`, `m70`, `m74`, `m78`. Constructor-only, no tww reader: constructor-only; tww constructor only too.
+- `btd_hahen_s` (d/actor/d_a_btd.h): `m05`, `m24`. Padding: padding (u8 views).
+- `btd_sibuki_s` (d/actor/d_a_btd.h): `m01`, `m1C`. Padding: padding (u8 views).
+- `daBtd_HIO_c` (d/actor/d_a_btd.h): `m11`, `m12`, `m13`, `m2E`. Read nowhere: never used (tww declares only).
+- `HioPrm::<anon>::<anon>` (d/actor/d_a_tag_md_cb.h): `m0C`, `m0D`, `m0E`, `m0F`, `m10`, `m11`, `m12`. Read nowhere: never used in WWHD or tww.
+- `dPa_rippleEcallBack_l` (d/actor/d_a_npc_ko1.h): `m04`, `m08`, `m0C`, `m10`. Read nowhere: ripple callback view: m08 cleared once, the rest unused.
+- `daNpc_Md_HIO3_l` (d/actor/d_a_npc_md.h): `m24`. Constructor-only, no tww reader: tww's l_HIO.m008.m24 reads are daNpc_Md_HIO2_c's field (already mTurnScale); HIO3's m24 is set by its constructor only and read nowhere in WWHD or tww.
+- `kiHIO_c` (d/actor/d_a_ki.h): `m10`. Constructor-only, no tww reader: constructor-only (__sinit 1.0f); read nowhere in WWHD or tww.
+- `MachineBck` (wwhd_src/d/actor/d_a_machine.cpp): `m7C`, `m80`, `m84`, `m88`. Constructor-only, no tww reader: mDoExt_bckAnm view, zeroed only (round 8).
+- `IbData` (wwhd_src/d/actor/d_a_ib.cpp): `m00`, `m01`, `m02`, `m03`. Read nowhere: declared, never used (round 9).
+- `Attr_c` (wwhd_src/d/actor/d_a_obj_coming.cpp): `m00`. Several roles: s16[16] array that packs several tables (make counts by index, wait-time base/range pairs at 4 + 2n / 5 + 2n): more than one role; would need a type split first.
+- `lk_emitterParam_l` (wwhd_src/d/actor/d_a_player_main_04.cpp): `m08`, `m18`. Written only, read nowhere: Link emitter param: written only (m08 also address-taken once for the emitter, no field role).
+- `daKanban_HIO_c` (wwhd_src/d/actor/d_a_kanban.cpp): `m04`, `m08`, `m0A`. Constructor-only, no tww reader: constructor-only (round 9).
+
+### Bm1BehaviorHioPrm (d_a_npc_bm1_b.h; copy Bm1SetupHioParam in d_a_npc_bm1.h)
+
+Round 12, resubmitted from round 11 with the tww debug-drawing evidence. tww's hio_prm (d_a_npc_bm1.cpp) keeps m18. npcs.md's open line no longer lists it.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x18 | `m18` | `mDebugDraw` | _draw 02200F90: the debug leftovers (the debug GXColor statics) run only while it is set; tww d_a_npc_bm1.cpp _draw tests it right before its stripped "// Debug:" block, the same three debug GXColors followed by the removed dDbVw_drawSphereXlu / dDbVw_drawCircleOpa calls, so it switches the debug drawing; tww's hio_prm tables hold 0 and no code writes it |

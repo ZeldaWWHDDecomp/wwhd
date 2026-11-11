@@ -62,7 +62,7 @@ class daKnob00_c : public dDoor_info_c {
         DEMO_SHIP_BACK = 18
     };
     enum Flags { FLAG_OPEN = 1, FLAG_AREA = 4 };
-    dDoor_msg_c m2D0;
+    dDoor_msg_c mDoorMsg;  /* was m2D0: the dDoor_msg_c door message: demoProc 021A3FB8 init(home.angle.z) at DEMO_MESSAGE and proc() until it ends; actionPassward2 021A4808 init(0x1B1A + event reg 0xBA0F) and proc() for the password door (tww: dDoor_msg_c mDoorMsg) */
     request_of_phase_process_class mPhase;
     gptr<J3DModel> mpModel;
     mDoExt_bckAnm mBckAnm;
@@ -74,7 +74,7 @@ class daKnob00_c : public dDoor_info_c {
     be<u8> mFlags, mHidden;
     be<s16> mAdjustTimer;
     be<u8> mPasswordState, mDoorType;
-    KnobMessageWork* messageWork() { return gabi::at<KnobMessageWork>(gabi::ea(&m2D0) + 8); }
+    KnobMessageWork* messageWork() { return gabi::at<KnobMessageWork>(gabi::ea(&mDoorMsg) + 8); }
     KnobBckStorage* animationStorage() { return reinterpret_cast<KnobBckStorage*>(&mBckAnm); }
     BOOL drawCheckShip();
     BOOL CreateHeap();
@@ -180,7 +180,7 @@ struct KnobNameTable {
     be<u32> mNamesOffset;
 };
 
-WWHD_OFFSET(daKnob00_c, m2D0, 0x3EC);
+WWHD_OFFSET(daKnob00_c, mDoorMsg, 0x3EC);
 WWHD_OFFSET(daKnob00_c, mPhase, 0x4F8);
 WWHD_OFFSET(daKnob00_c, mpModel, 0x500);
 WWHD_OFFSET(daKnob00_c, mBckAnm, 0x504);

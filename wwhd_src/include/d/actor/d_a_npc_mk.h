@@ -153,14 +153,14 @@ struct daNpc_Mk_c : fopAc_ac_c {
     /* 0x7FC */ be<u16> mFlags;
     /* 0x7FE */ be<u8> mAttentionTimer;
     /* 0x7FF */ be<u8> mMsgSelectNum;
-    /* 0x800 */ MkPath_l field_0x688; /* dNpc_PathRun_c */
-    /* 0x808 */ MkPath_l field_0x690;
-    /* 0x810 */ MkPath_l field_0x698;
+    /* 0x800 */ MkPath_l mPathRun;  /* was field_0x688: init 02295C30 sets it to the actor's path (parameter byte 1) and fails without it; visitInit 02297D78 / walkPath 02297F40 / runaway 02299A80 / seek_action 0229A3C8 walk it (setNearPathIndx, walkPath, runAwayProc, setRndPathPos) (tww the same); same role as daNpc_Mn_c::mPathRun; dNpc_PathRun_c */
+    /* 0x808 */ MkPath_l mChaseAreaPath;  /* was field_0x690: init 02295C30: the path after mPathRun (dNpc_PathRun_nextPath), used as an area: nextVisitMode 02297990 keeps VISIT_RUN_LINK / VISIT_REACHED_LINK only while the player is inside it (chkInside), else VISIT_LEFT_PATH (tww the same) */
+    /* 0x810 */ MkPath_l mNoticeAreaPath;  /* was field_0x698: init 02295C30: the path after mChaseAreaPath, used as an area: nextVisitMode 02297990 goes to VISIT_NOTICE_LINK / VISIT_RUN_LINK when the player is within 400 and inside it (chkInside) (tww the same) */
     /* 0x818 */ be<u8> mVisitMode;
     /* 0x819 */ be<u8> mWaitTimer;
     /* 0x81A */ be<u8> mRunAroundLinkTimer;
     /* 0x81B */ be<u8> mTimerToReachLink;
-    /* 0x81C */ be<u16> field_0x6A4;
+    /* 0x81C */ be<u16> mIgnoreLinkTimer;  /* was field_0x6A4: next_msgStatus 02297210 sets 1 on a non-zero answer to message 0x26CA; visitInit 02297D78 sets 100 (VISIT_WALK_PATH_FAST) / 600 (VISIT_WALK_PATH_IGNORE_LINK) and nextVisitMode 02297990 counts it down before the next mode; while it is non-zero getLookBackMode 022976A0 gives 2 and visit01 022995C4 drops the talk order (tww the same) */
     /* 0x81E */ u8 _81E[2];
     /* 0x820 */ ActionFunc mCurrActionFunc;
     /* 0x828 */ be<s8> mTexPatternIdx;
@@ -179,12 +179,12 @@ struct daNpc_Mk_c : fopAc_ac_c {
     /* 0x83C */ be<u32> mMtrlSndId;
     /* 0x840 */ be<s8> mReverb;
     /* 0x841 */ u8 _841[3];
-    /* 0x844 */ cXyz field_0x6D0;
-    /* 0x850 */ cXyz field_0x6DC;
-    /* 0x85C */ be<s16> field_0x6E8;
+    /* 0x844 */ cXyz mMoveStartPos;  /* was field_0x6D0: demoProc 022987B0 (cuts 3 / 4): current.pos when the move starts; chkPointPass(it, mMoveGoalPos, current.pos) ends the cut (tww the same) */
+    /* 0x850 */ cXyz mMoveGoalPos;  /* was field_0x6DC: demoProc 022987B0 (cuts 3 / 4): the event's "Pos" data; Mk runs to it, the cut ends at it (cut 4 snaps x / z to it) (tww the same) */
+    /* 0x85C */ be<s16> mMoveTimer;  /* was field_0x6E8: demoProc 022987B0 (cuts 3 / 4): the event's "Timer" data (-1 without it); counted down while running, the cut ends at 0 (tww the same) */
     /* 0x85E */ be<s16> mEventIdx;
     /* 0x860 */ be<u32> mpName;
-    /* 0x864 */ be<s16> field_0x6F0;
+    /* 0x864 */ be<s16> mTargetAngleY;  /* was field_0x6F0: demoProc 022987B0: the event's "Angle" data (cut 16), turned to by cLib_addCalcAngleS; runaway 02299A80: runAwayProc writes the flee angle; runawayInit 0229814C jumps along it (tww the same) */
     /* 0x866 */ u8 _866[2];
     /* 0x868 */ be<u32> mMsgNo;
     /* 0x86C */ daNpc_Mk_Static_c mMkStatic;
@@ -196,7 +196,7 @@ WWHD_OFFSET(daNpc_Mk_c, mStts, 0x638);
 WWHD_OFFSET(daNpc_Mk_c, mCyl, 0x674);
 WWHD_OFFSET(daNpc_Mk_c, m_jnt, 0x7A4);
 WWHD_OFFSET(daNpc_Mk_c, mFlags, 0x7FC);
-WWHD_OFFSET(daNpc_Mk_c, field_0x688, 0x800);
+WWHD_OFFSET(daNpc_Mk_c, mPathRun, 0x800);
 WWHD_OFFSET(daNpc_Mk_c, mCurrActionFunc, 0x820);
 WWHD_OFFSET(daNpc_Mk_c, mOrderFlags, 0x834);
 WWHD_OFFSET(daNpc_Mk_c, mMtrlSndId, 0x83C);

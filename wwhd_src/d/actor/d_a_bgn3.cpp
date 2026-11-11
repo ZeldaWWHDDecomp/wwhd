@@ -42,39 +42,39 @@ u32 hioCtor(u32 a) {
     if (!a)
         return 0;
     auto* hio = gabi::at<daBgn3_HIO_c>(a);
-    hio->m1C = 1200;
-    hio->m10 = 60.0f;
-    hio->m05 = 0;
-    hio->m08 = 50.0f;
-    hio->m06 = 0;
+    hio->mTurnSpeedHealth1 = 1200;
+    hio->mSpeedHealth2 = 60.0f;
+    hio->mNoMove = 0;
+    hio->mSpeedHealth3 = 50.0f;
+    hio->mDebugHealth = 0;
     hio->mNo = -1;
-    hio->m16 = 3;
-    hio->m0E = 3;
-    hio->m14 = 1000;
-    hio->m1E = 3;
-    hio->m0C = 800;
+    hio->mWallHitsHealth2 = 3;
+    hio->mWallHitsHealth3 = 3;
+    hio->mTurnSpeedHealth2 = 1000;
+    hio->mWallHitsHealth1 = 3;
+    hio->mTurnSpeedHealth3 = 800;
     hio->__vtbl = 0x10008FF4;
-    hio->m22 = 40;
-    hio->m26 = 10;
-    hio->m20 = 60;
-    hio->m2A = 45;
-    hio->m2C = 120;
-    hio->m28 = 20;
-    hio->m24 = 30;
-    hio->m18 = 80.0f;
-    hio->m3E = 1;
-    hio->m34 = 5.0f;
-    hio->m30 = 250;
-    hio->m4C = -8.0f;
-    hio->m38 = 0.5f;
-    hio->m44 = 45.0f;
-    hio->m2E = 200;
-    hio->m52 = 152;
-    hio->m40 = 150.0f;
-    hio->m50 = 188;
-    hio->m3C = 3;
-    hio->m48 = 8.0f;
-    hio->m54 = 66;
+    hio->mChaseTimeHealth2 = 40;
+    hio->mOtherHitTime = 10;
+    hio->mChaseTimeHealth3 = 60;
+    hio->mSwordHitTime = 45;
+    hio->mSpl1HitTime = 120;
+    hio->mArrowHitTime = 20;
+    hio->mChaseTimeHealth1 = 30;
+    hio->mSpeedHealth1 = 80.0f;
+    hio->mHairOn = 1;
+    hio->mPartDistanceTarget = 5.0f;
+    hio->mHammerHitTime = 250;
+    hio->mHairGravity = -8.0f;
+    hio->mPartStiffnessTarget = 0.5f;
+    hio->mHairLength = 45.0f;
+    hio->mBombHitTime = 200;
+    hio->mHairColorG = 152;
+    hio->mHairPullY = 150.0f;
+    hio->mHairColorR = 188;
+    hio->mWallKiCount = 3;
+    hio->mHairWidth = 8.0f;
+    hio->mHairColorB = 66;
     return a;
 }
 
@@ -92,20 +92,20 @@ bool daBgn3_Draw(u32 a) {
     u32 boss = Bgn3Bindings::fpcM_Search(gabi::guest_fn((const void*)&bgn_s_sub), a);
     bgn = gabi::at<Bgn3BossView>(boss);
     if (boss && static_cast<s8>(gabi::at<Bgn3BossView>(boss)->mForm) == 2 &&
-        static_cast<u8>(l_HIO.m3E)) {
+        static_cast<u8>(l_HIO.mHairOn)) {
         ke_color.r = 188;
         ke_color.g = 152;
         ke_color.b = 66;
         ke_color.a = 255;
         Bgn3Bindings::mDoExt_3DlineMat0_update(a + 0x19D8, 5, gabi::ea(&ke_color), 3, a + 0x110,
-                                               static_cast<f32>(l_HIO.m48));
+                                               static_cast<f32>(l_HIO.mHairWidth));
         u32 play = dComIfGp_ea();
         u32 index = bgn3LineMaterialID(&i_this->mLineMat);
         Bgn3Bindings::mDoExt_3DlineMatSortPacket_setMat(play + 0x5FB4 + index * 0x9C, a + 0x19D8);
         for (int i = 0; i < 6; ++i) {
             u32 part = a + 0x1BE8 + 0x19D8 * i;
             Bgn3Bindings::mDoExt_3DlineMat0_update(part + 0x1890, 5, gabi::ea(&ke_color), 3,
-                                                   a + 0x110, static_cast<f32>(l_HIO.m48));
+                                                   a + 0x110, static_cast<f32>(l_HIO.mHairWidth));
             play = dComIfGp_ea();
             index = bgn3LineMaterialID(&bgn3Part(part)->mPart3LineMat);
             Bgn3Bindings::mDoExt_3DlineMatSortPacket_setMat(play + 0x5FB4 + index * 0x9C,
@@ -307,8 +307,8 @@ void part_control(u32 a) {
         bgn3Part(part)->mPart3Speed.y = vy * stiffness;
         bgn3Part(part)->mPart3Speed.z = vz * stiffness;
     }
-    cLib_addCalc2(&i_this->mPartStiffness, static_cast<f32>(l_HIO.m38), 1.0f, 0.002f);
-    cLib_addCalc2(&i_this->mPartDistance, static_cast<f32>(l_HIO.m34), 1.0f, 0.5f);
+    cLib_addCalc2(&i_this->mPartStiffness, static_cast<f32>(l_HIO.mPartStiffnessTarget), 1.0f, 0.002f);
+    cLib_addCalc2(&i_this->mPartDistance, static_cast<f32>(l_HIO.mPartDistanceTarget), 1.0f, 0.5f);
     line.__vtbl_58 = 0x10008FE4;
     line.__vtbl_64 = 0x10008FA4;
     line.__vtbl_20 = 0x10008F94;
@@ -546,9 +546,9 @@ bool move0(u32 a) {
         }
     }
     s8 health = static_cast<s8>(i_this->health);
-    f32 speed = (health == 3   ? static_cast<f32>(l_HIO.m08)
-                 : health == 2 ? static_cast<f32>(l_HIO.m10)
-                               : static_cast<f32>(l_HIO.m18));
+    f32 speed = (health == 3   ? static_cast<f32>(l_HIO.mSpeedHealth3)
+                 : health == 2 ? static_cast<f32>(l_HIO.mSpeedHealth2)
+                               : static_cast<f32>(l_HIO.mSpeedHealth1));
     cLib_addCalc2(&i_this->speedF, speed, 1.0f, 3.0f);
     pos_move(a);
     checkGround(a);
@@ -569,18 +569,18 @@ bool move0(u32 a) {
         direction.x = 0.0f;
         Bgn3Bindings::dVibration_c_StartShock(play + 0x599C, strength, -33, gabi::ea(&direction));
         moveSound(a, 0x5981, 0);
-        i_this->mKiSetCount = static_cast<s16>(l_HIO.m3C);
+        i_this->mKiSetCount = static_cast<s16>(l_HIO.mWallKiCount);
         health = static_cast<s8>(i_this->health);
-        s16 threshold = (health == 3   ? static_cast<s16>(l_HIO.m0E)
-                         : health == 2 ? static_cast<s16>(l_HIO.m16)
-                                       : static_cast<s16>(l_HIO.m1E));
+        s16 threshold = (health == 3   ? static_cast<s16>(l_HIO.mWallHitsHealth3)
+                         : health == 2 ? static_cast<s16>(l_HIO.mWallHitsHealth2)
+                                       : static_cast<s16>(l_HIO.mWallHitsHealth1));
         s16 count = (s16)(static_cast<s16>(i_this->mWallHitCount) + 1);
         if (count >= threshold) {
             i_this->mWallHitCount = 0;
             health = static_cast<s8>(i_this->health);
-            i_this->mChaseTimer = (health == 3   ? static_cast<s16>(l_HIO.m20)
-                              : health == 2 ? static_cast<s16>(l_HIO.m22)
-                                            : static_cast<s16>(l_HIO.m24));
+            i_this->mChaseTimer = (health == 3   ? static_cast<s16>(l_HIO.mChaseTimeHealth3)
+                              : health == 2 ? static_cast<s16>(l_HIO.mChaseTimeHealth2)
+                                            : static_cast<s16>(l_HIO.mChaseTimeHealth1));
         } else {
             i_this->mWallHitCount = count;
         }
@@ -593,9 +593,9 @@ bool move0(u32 a) {
         newTurn = true;
     }
     if (newTurn) {
-        i_this->mTurnSpeed = (health == 3   ? static_cast<s16>(l_HIO.m0C)
-                          : health == 2 ? static_cast<s16>(l_HIO.m14)
-                                        : static_cast<s16>(l_HIO.m1C));
+        i_this->mTurnSpeed = (health == 3   ? static_cast<s16>(l_HIO.mTurnSpeedHealth3)
+                          : health == 2 ? static_cast<s16>(l_HIO.mTurnSpeedHealth2)
+                                        : static_cast<s16>(l_HIO.mTurnSpeedHealth1));
         f32 random = cM_rndF(1.0f);
         if (random < 0.5f)
             i_this->mTurnSpeed = (s16)(0u - (u32) static_cast<s16>(i_this->mTurnSpeed));
@@ -839,33 +839,33 @@ void damage_check(u32 a) {
                                                   gabi::ea(&direction));
             bgn3PauseTimer() = 5;
             i_this->mShakeTimer = 30;
-            duration = static_cast<s16>(l_HIO.m30);
+            duration = static_cast<s16>(l_HIO.mHammerHitTime);
         } else if (kind == 2) {
             i_this->mShakeTimer = 25;
             severity = 5;
-            duration = static_cast<s16>(l_HIO.m2E);
+            duration = static_cast<s16>(l_HIO.mBombHitTime);
         } else if (kind == 1) {
             u32 objectInfo = Bgn3Bindings::dCcD_GetGObjInf(static_cast<u32>(hit.mpObj));
             if (static_cast<u8>(gabi::at<dCcD_GObjInf>(objectInfo)->mGObjAt.mSpl) == 1) {
                 bgn3PauseTimer() = 3;
                 i_this->mShakeTimer = 20;
                 severity = 4;
-                duration = static_cast<s16>(l_HIO.m2C);
+                duration = static_cast<s16>(l_HIO.mSpl1HitTime);
             } else {
                 bgn3PauseTimer() = 2;
                 i_this->mShakeTimer = 15;
                 severity = 3;
-                duration = static_cast<s16>(l_HIO.m2A);
+                duration = static_cast<s16>(l_HIO.mSwordHitTime);
             }
         } else if (static_cast<u32>(hit.mpActor) &&
                    fpcM_GetName(gabi::at<fopAc_ac_c>(hit.mpActor)) == fpcNm_ARROW_e) {
             i_this->mShakeTimer = 10;
             severity = 2;
-            duration = static_cast<s16>(l_HIO.m28);
+            duration = static_cast<s16>(l_HIO.mArrowHitTime);
         } else {
             i_this->mShakeTimer = 7;
             severity = 1;
-            duration = static_cast<s16>(l_HIO.m26);
+            duration = static_cast<s16>(l_HIO.mOtherHitTime);
         }
         if (static_cast<s16>(i_this->mAction) != 1) {
             i_this->mTimers[0] = duration;
@@ -966,7 +966,7 @@ static f32 singleAdd(f32 a, f32 b) {
 
 /* 02090420 */
 void ke_move(u32 mat, u32 hair, s32 index, f32 length) {
-    if (!static_cast<u8>(l_HIO.m3E))
+    if (!static_cast<u8>(l_HIO.mHairOn))
         return;
     cXyz direction;
     cXyz out;
@@ -974,21 +974,21 @@ void ke_move(u32 mat, u32 hair, s32 index, f32 length) {
     direction.y = 0.0f;
     direction.z = length;
     auto* hairs = gabi::at<bgn3_ke_s>(hair);
-    cXyz* point = hairs->m00;
+    cXyz* point = hairs->mPos;
     for (int j = 4; j > 0; --j) {
         f32 step = REG_F(10, 1) + 0.1f;
-        f32 curx = static_cast<f32>(point[1].x), vy = static_cast<f32>(hairs->m78.y),
+        f32 curx = static_cast<f32>(point[1].x), vy = static_cast<f32>(hairs->mPull.y),
             curz = static_cast<f32>(point[1].z), cury = static_cast<f32>(point[1].y);
         f32 gain = (f32)j * step;
         f32 prevz = static_cast<f32>(point->z);
         f32 yz = gabi::fmadds(vy, gain, cury);
-        f32 bias = static_cast<f32>(l_HIO.m4C);
-        f32 vz = static_cast<f32>(hairs->m78.z);
+        f32 bias = static_cast<f32>(l_HIO.mHairGravity);
+        f32 vz = static_cast<f32>(hairs->mPull.z);
         f32 yy = yz + bias;
         f32 prevx = static_cast<f32>(point->x), prevy = static_cast<f32>(point->y);
         f32 dz = gabi::fmadds(vz, gain, curz - prevz);
         f32 dy = yy - prevy;
-        f32 vx = static_cast<f32>(hairs->m78.x);
+        f32 vx = static_cast<f32>(hairs->mPull.x);
         f32 dx = gabi::fmadds(vx, gain, curx - prevx);
         s16 rx = (s16)(0u - cM_atan2s(dy, dz));
         f32 horizontal = Bgn3Bindings::sqrtf(gabi::fmadds(dy, dy, dz * dz));
@@ -1008,11 +1008,11 @@ void ke_move(u32 mat, u32 hair, s32 index, f32 length) {
     }
     cXyz* dest = bgn3LinePositions(gabi::at<Bgn3LineMat0>(mat), index);
     for (int i = 0; i < 5; ++i) {
-        u32 x = bgn3Word(hairs->m00[i].x);
+        u32 x = bgn3Word(hairs->mPos[i].x);
         bgn3Word(dest[i].x) = x;
-        u32 y = bgn3Word(hairs->m00[i].y);
+        u32 y = bgn3Word(hairs->mPos[i].y);
         bgn3Word(dest[i].y) = y;
-        u32 z = bgn3Word(hairs->m00[i].z);
+        u32 z = bgn3Word(hairs->mPos[i].z);
         bgn3Word(dest[i].z) = z;
     }
 }
@@ -1122,11 +1122,11 @@ void setModels(u32 a, bool moving) {
         hairRotations(i, true);
         vector.y = singleAdd(REG_F(13, 13), 100.0f);
         u32 hair = a + 0x538 + i * 0x84;
-        MtxPosition(&vector, &gabi::at<bgn3_ke_s>(hair)->m00[0]);
-        vector.y = static_cast<f32>(l_HIO.m40);
-        MtxPosition(&vector, &gabi::at<bgn3_ke_s>(hair)->m78);
+        MtxPosition(&vector, &gabi::at<bgn3_ke_s>(hair)->mPos[0]);
+        vector.y = static_cast<f32>(l_HIO.mHairPullY);
+        MtxPosition(&vector, &gabi::at<bgn3_ke_s>(hair)->mPull);
         Bgn3Bindings::PSVECSubtract(hair + 0x78, gabi::ea(&world), hair + 0x78);
-        f32 length = static_cast<f32>(l_HIO.m44);
+        f32 length = static_cast<f32>(l_HIO.mHairLength);
         ke_move(a + 0x19D8, hair, i, singleAdd(length, length));
         MtxPull();
     }
@@ -1207,7 +1207,7 @@ void setModels(u32 a, bool moving) {
         bgn3Part(part)->mPart3Sph.mObjAt.mSPrm = moving ? flags | 1 : flags & ~1u;
         Bgn3Bindings::cCcS_Set(dComIfGp_ea() + 0x26A4, part + 0x2AC);
         MtxPull();
-        if (i < 7 && static_cast<u8>(l_HIO.m3E)) {
+        if (i < 7 && static_cast<u8>(l_HIO.mHairOn)) {
             for (int j = 0; j < ke_max[i]; ++j) {
                 MtxPush();
                 hairRotations(j, false);
@@ -1216,12 +1216,12 @@ void setModels(u32 a, bool moving) {
                 f32 hairLength = singleAdd(REG_F(13, 12), 60.0f);
                 vector.y = static_cast<f32>(bgn3Part(part)->mPart3Scale) * hairLength;
                 u32 hair = part + 0x3F0 + j * 0x84;
-                MtxPosition(&vector, &gabi::at<bgn3_ke_s>(hair)->m00[0]);
-                vector.y = static_cast<f32>(l_HIO.m40);
-                MtxPosition(&vector, &gabi::at<bgn3_ke_s>(hair)->m78);
+                MtxPosition(&vector, &gabi::at<bgn3_ke_s>(hair)->mPos[0]);
+                vector.y = static_cast<f32>(l_HIO.mHairPullY);
+                MtxPosition(&vector, &gabi::at<bgn3_ke_s>(hair)->mPull);
                 Bgn3Bindings::PSVECSubtract(hair + 0x78, gabi::ea(&world), hair + 0x78);
                 ke_move(part + 0x1890, hair, j,
-                        static_cast<f32>(bgn3Part(part)->mPart3Scale) * static_cast<f32>(l_HIO.m44));
+                        static_cast<f32>(bgn3Part(part)->mPart3Scale) * static_cast<f32>(l_HIO.mHairLength));
                 MtxPull();
             }
         }
@@ -1306,7 +1306,7 @@ void move(u32 a) {
     auto* i_this = gabi::at<bgn3_class>(a);
     dComIfGp_ea();
     bool moving = false;
-    if (static_cast<u8>(l_HIO.m05) == 0) {
+    if (static_cast<u8>(l_HIO.mNoMove) == 0) {
         switch (static_cast<u16>(i_this->mAction)) {
         case 0:
             moving = move0(a);
@@ -1347,7 +1347,7 @@ bool daBgn3_Execute(u32 a) {
     bgn = gabi::at<Bgn3BossView>(boss);
     if (!boss)
         return true;
-    u8 dbg = static_cast<u8>(l_HIO.m06);
+    u8 dbg = static_cast<u8>(l_HIO.mDebugHealth);
     if (dbg)
         i_this->health = dbg;
     u32 bait = Bgn3Bindings::fpcM_Search(gabi::guest_fn((const void*)&esa_s_sub), a);

@@ -366,7 +366,7 @@ static enemyfire* enemyfire_ct(enemyfire* self) {
     if (gabi::ea(&self->mDirection) == 0) operator_new(0xC);
     dCcD_Stts_ct(&self->mStts);
     pt_sphereCtor(&self->mSph); /* dCcD_Sph::dCcD_Sph */
-    self->mParticleScaleMultiplier = 1.0f;
+    self->mHD20 = 1.0f;
     return self;
 }
 
@@ -445,7 +445,7 @@ static cPhs_State daPt_Create(fopAc_ac_c* a_this) {
         i_this->mHioOwner = 1;
         hio_set = 1;
         // HD: original HIO label is Shift-JIS 837683608375838A8393; glue retains those guest bytes.
-        l_HIO.mNo = mDoHIO_createChild("Miniblin", &l_HIO);
+        l_HIO.mNo = mDoHIO_createChild("プチブリン", &l_HIO);
     }
 
     i_this->mAction = PT_WAIT;
@@ -573,5 +573,5 @@ str 1003829C "Pt" in 024468E4
 str 100382A4 "Pt" in 02446A4C
 str 100382AC "Pt" in 02446E54
 str 100382B0 "Puti" in 02446E54
-str 100382B8 "Miniblin" renamed in 02446E54
+str 100382B8 "プチブリン" in 02446E54
 */

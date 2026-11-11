@@ -49,11 +49,11 @@ u32 dGameover_c::_execute() {
     if (state == GAMEOVER_CLOSE || state == GAMEOVER_DONE || mAnimeStart == 0) {
         return TRUE;
     }
-    s16 timer = field_0x114;
+    s16 timer = mAnimeTimer;
     GameOverGraphics* graphics = l_graphics;
     if (timer == 90) {
         GameOverGraphics_start(graphics);
-        field_0x114 = (s16)u16(field_0x114 - 1);
+        mAnimeTimer = (s16)u16(mAnimeTimer - 1);
     } else if (GameOverGraphics_isReady(graphics) != 0) {
         mState = GAMEOVER_OPEN;
     }
@@ -89,10 +89,10 @@ u32 dGameover_c::_create() {
     if (deaths < 9999) {
         save->mDeathCount = deaths + 1;
     }
-    field_0x114 = 90;
+    mAnimeTimer = 90;
     s16 delay = l_gameoverDelay;
     mState = GAMEOVER_WAIT;
-    field_0x116 = delay;
+    mCloseDelay = delay;
     mAnimeStart = FALSE;
     return cPhs_COMPLEATE_e;
 }

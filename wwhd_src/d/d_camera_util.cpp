@@ -198,7 +198,7 @@ void dCamera_c::updateMonitor() {
     positionOf(playerPos, mpPlayerActor.get());
     if (mFollowMoveBg != 0) {
         /* dComIfG_Bgsp()->MoveBgMatrixCrrPos(mBG.m5C.m04 (poly info), TRUE, &mMonitor.mPos, NULL, NULL) */
-        cameraUtilMoveBgMatrixCrrPos(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mBG.m5C.m04), TRUE, &mMonitor.mPos, nullptr, nullptr);
+        cameraUtilMoveBgMatrixCrrPos(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mBG.mCameraGround.mGndChk), TRUE, &mMonitor.mPos, nullptr, nullptr);
     }
     f32 dist = cameraUtilHorizontalDistance(playerPos.get(), &mMonitor.mPos); /* dCamMath::xyzHorizontalDistance */
     f32 avg = mMonitor.field_0x0C.y;
@@ -372,39 +372,39 @@ f32 dCamera_c::shakeCamera() {
 
 /* 02500880 */
 void camera_util::dCamForcusLine::Init() {
-    m49 = 0;
-    m48 = 1;
-    m38.x = 320.0f;
-    m38.y = 240.0f;
-    m38.z = 0.0f;
-    m44.r = 0xFF;
-    m44.g = 0xFF;
-    m44.b = 0xFF;
-    m44.a = 0x60;
-    m4C = 100;
-    m50 = 100;
-    m54 = 100;
-    m58 = 0x50;
-    m5A = 0;
-    m5C = 4;
-    m5E = 4;
-    m68 = 180.0f;
-    m6C = 0.0f;
-    m60 = 180.0f;
-    m64 = 60.0f;
+    mbOn = 0;
+    mbNoReseed = 1;
+    mCenterPos.x = 320.0f;
+    mCenterPos.y = 240.0f;
+    mCenterPos.z = 0.0f;
+    mColor.r = 0xFF;
+    mColor.g = 0xFF;
+    mColor.b = 0xFF;
+    mColor.a = 0x60;
+    mRndSeed0 = 100;
+    mRndSeed1 = 100;
+    mRndSeed2 = 100;
+    mLineNumMin = 0x50;
+    mLineNumRange = 0;
+    mLineWidthMin = 4;
+    mLineWidthRange = 4;
+    mLineLengthMin = 180.0f;
+    mLineLengthRange = 0.0f;
+    mStartRadiusMin = 180.0f;
+    mStartRadiusRange = 60.0f;
 }
 
 /* 024FFB94 */
 void camera_util::dCamForcusLine::Draw() {
-    if (m49 == 0) return;
-    if (m48 == 0) {
+    if (mbOn == 0) return;
+    if (mbNoReseed == 0) {
         // HD: initRnd receives the embedded effect-line data at +4; update receives its original base.
-        /* mEffectLine.initRnd(m4C, m50, m54) */
-        cameraUtilEffectLineInit(&mEffectLine[4], (s32)m4C, (s32)m50, (s32)m54);
+        /* mEffectLine.initRnd(mRndSeed0, mRndSeed1, mRndSeed2) */
+        cameraUtilEffectLineInit(&mEffectLine[4], (s32)mRndSeed0, (s32)mRndSeed1, (s32)mRndSeed2);
     }
-    /* mEffectLine.update(m38, m44, m58, m5A, m5C, m5E, m60, m64, m68, m6C) */
-    cameraUtilEffectLineUpdate(this, &m38, &m44, (u16)m58, (u16)m5A, (u16)m5C,
-               (u16)m5E, (f32)m60, (f32)m64, (f32)m68, (f32)m6C);
+    /* mEffectLine.update(mCenterPos, mColor, mLineNumMin, mLineNumRange, mLineWidthMin, mLineWidthRange, mStartRadiusMin, mStartRadiusRange, mLineLengthMin, mLineLengthRange) */
+    cameraUtilEffectLineUpdate(this, &mCenterPos, &mColor, (u16)mLineNumMin, (u16)mLineNumRange, (u16)mLineWidthMin,
+               (u16)mLineWidthRange, (f32)mStartRadiusMin, (f32)mStartRadiusRange, (f32)mLineLengthMin, (f32)mLineLengthRange);
 }
 
 // clang-format off

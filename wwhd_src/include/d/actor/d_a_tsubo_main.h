@@ -60,52 +60,52 @@ struct Act_c : fopAc_ac_c {
 
     struct Data_c {
         /* 0x00 */ be<f32> mGravity;
-        /* 0x04 */ be<f32> m04;
+        /* 0x04 */ be<f32> mCenterHeight;  /* was m04: see d/actor/d_a_tsubo.h */
         /* 0x08 */ be<f32> mAttnY;
         /* 0x0C */ be<f32> mModelScale;
-        /* 0x10 */ be<u8> m10;
+        /* 0x10 */ be<u8> mWeight;  /* was m10: see d/actor/d_a_tsubo.h */
         /* 0x11 */ u8 _11[3];
-        /* 0x14 */ be<f32> m14;
-        /* 0x18 */ be<f32> m18;
-        /* 0x1C */ be<f32> m1C;
-        /* 0x20 */ be<f32> m20;
-        /* 0x24 */ be<f32> m24;
-        /* 0x28 */ be<s16> m28;
-        /* 0x2A */ be<s16> m2A;
-        /* 0x2C */ be<s16> m2C;
+        /* 0x14 */ be<f32> mDropSpeedY;  /* was m14: see d/actor/d_a_tsubo.h */
+        /* 0x18 */ be<f32> mDropSpeedF;  /* was m18: see d/actor/d_a_tsubo.h */
+        /* 0x1C */ be<f32> mDropSpeedFPlayerRate;  /* was m1C: see d/actor/d_a_tsubo.h */
+        /* 0x20 */ be<f32> mAirResistLinear;  /* was m20: see d/actor/d_a_tsubo.h */
+        /* 0x24 */ be<f32> mAirResistQuad;  /* was m24: see d/actor/d_a_tsubo.h */
+        /* 0x28 */ be<s16> mThrowRotAxisRollMax;  /* was m28: see d/actor/d_a_tsubo.h */
+        /* 0x2A */ be<s16> mThrowRotAxisPitchSpeed;  /* was m2A: see d/actor/d_a_tsubo.h */
+        /* 0x2C */ be<s16> mThrowRotAngleSpeed;  /* was m2C: see d/actor/d_a_tsubo.h */
         /* 0x2E */ u8 _2E[2];
-        /* 0x30 */ be<f32> m30;
-        /* 0x34 */ be<f32> m34;
-        /* 0x38 */ be<f32> m38;
-        /* 0x3C */ be<f32> m3C;
-        /* 0x40 */ be<f32> m40;
-        /* 0x44 */ be<f32> m44;
-        /* 0x48 */ be<f32> m48;
-        /* 0x4C */ be<f32> m4C;
-        /* 0x50 */ be<f32> m50;
+        /* 0x30 */ be<f32> mDropRotResistLinear;  /* was m30: see d/actor/d_a_tsubo.h */
+        /* 0x34 */ be<f32> mDropRotResistQuad;  /* was m34: see d/actor/d_a_tsubo.h */
+        /* 0x38 */ be<f32> mBreakFallHeight;  /* was m38: see d/actor/d_a_tsubo.h */
+        /* 0x3C */ be<f32> mBuoyancy;  /* was m3C: see d/actor/d_a_tsubo.h */
+        /* 0x40 */ be<f32> mWaterResistLinear;  /* was m40: see d/actor/d_a_tsubo.h */
+        /* 0x44 */ be<f32> mWaterResistQuad;  /* was m44: see d/actor/d_a_tsubo.h */
+        /* 0x48 */ be<f32> mWaterRotResistLinear;  /* was m48: see d/actor/d_a_tsubo.h */
+        /* 0x4C */ be<f32> mWaterRotResistQuad;  /* was m4C: see d/actor/d_a_tsubo.h */
+        /* 0x50 */ be<f32> mWaterEntrySpeedMax;  /* was m50: see d/actor/d_a_tsubo.h */
         /* 0x54 */ be<s16> m54;
-        /* 0x56 */ be<s16> m56;
+        /* 0x56 */ be<s16> mNoGradeAngle;  /* was m56: see d/actor/d_a_tsubo.h */
         /* 0x58 */ be<f32> m58;
-        /* 0x5C */ be<f32> m5C;
-        /* 0x60 */ be<u8> m60;
-        /* 0x61 */ be<u8> m61;
-        /* 0x62 */ be<u8> m62;
-        /* 0x63 */ be<u8> m63;
-        /* 0x64 */ be<u8> m64;
-        /* 0x65 */ be<u8> m65;
+        /* 0x5C */ be<f32> mGradeFriction;  /* was m5C: see d/actor/d_a_tsubo.h */
+        /* 0x60 */ be<u8> mBreakNoiseLevel;  /* was m60: see d/actor/d_a_tsubo.h */
+        /* 0x61 */ be<u8> mBreakNoiseTimer;  /* was m61: see d/actor/d_a_tsubo.h */
+        /* 0x62 */ be<u8> mHitNoiseLevel;  /* was m62: see d/actor/d_a_tsubo.h */
+        /* 0x63 */ be<u8> mHitNoiseTimer;  /* was m63: see d/actor/d_a_tsubo.h */
+        /* 0x64 */ be<u8> mFallInNoiseLevel;  /* was m64: see d/actor/d_a_tsubo.h */
+        /* 0x65 */ be<u8> mFallInNoiseTimer;  /* was m65: see d/actor/d_a_tsubo.h */
         /* 0x66 */ u8 _66[2];
         /* 0x68 */ be<u32> mFlag;
-        /* 0x6C */ be<u16> m6C;
-        /* 0x6E */ be<u8> m6E;
+        /* 0x6C */ be<u16> mModelIdx;  /* was m6C: see d/actor/d_a_tsubo.h */
+        /* 0x6E */ be<u8> mShadowSize;  /* was m6E: see d/actor/d_a_tsubo.h */
         /* 0x6F */ be<u8> mAcchCirRad;
-        /* 0x70 */ be<u8> m70;
+        /* 0x70 */ be<u8> mCylHeight;  /* was m70: see d/actor/d_a_tsubo.h */
         /* 0x71 */ be<u8> mAcchRoofHeight;
         /* 0x72 */ be<u8> mAttnDist;
         /* 0x73 */ u8 _73;
-        /* 0x74 */ cXyz m74;
-        /* 0x80 */ be<u32> m80;
+        /* 0x74 */ cXyz mBreakParticleScale;  /* was m74: see d/actor/d_a_tsubo.h */
+        /* 0x80 */ be<u32> mBreakTexIdx;  /* was m80: see d/actor/d_a_tsubo.h */
         /* 0x84 */ be<s32> mSoundID_Break;
-        /* 0x88 */ be<s32> m88;
+        /* 0x88 */ be<s32> mSoundID_Land;  /* was m88: see d/actor/d_a_tsubo.h */
         /* 0x8C */ be<s32> mSoundID_FallLava;
         /* 0x90 */ be<s32> mSoundID_FallWater;
         /* 0x94 */ be<s32> mSoundID_Hit;
@@ -119,52 +119,52 @@ struct Act_c : fopAc_ac_c {
         /* 0xA8 */ be<s16> mCullSphZ_Draw;
         /* 0xAA */ be<s16> mCullSphR_Draw;
         /* 0xAC */ u8 mAC[4];
-        /* 0xB0 */ be<f32> mB0;
+        /* 0xB0 */ be<f32> mCullSizeFar;  /* was mB0: see d/actor/d_a_tsubo.h */
         /* 0xB4 */ u8 mB4[4];
         /* 0xB8 */ be<u32> mHeapSize;
-        /* 0xBC */ be<f32> mBC;
-        /* 0xC0 */ be<f32> mC0;
-        /* 0xC4 */ be<f32> mC4;
-        /* 0xC8 */ be<f32> mC8;
+        /* 0xBC */ be<f32> mWpillarScaleXZ;  /* was mBC: see d/actor/d_a_tsubo.h */
+        /* 0xC0 */ be<f32> mWpillarScaleY;  /* was mC0: see d/actor/d_a_tsubo.h */
+        /* 0xC4 */ be<f32> mMpillarSize;  /* was mC4: see d/actor/d_a_tsubo.h */
+        /* 0xC8 */ be<f32> mLandEffectScale;  /* was mC8: see d/actor/d_a_tsubo.h */
     };
 
     struct AttrSpine_c {
-        /* 0x00 */ be<f32> m00;
-        /* 0x04 */ be<f32> m04;
-        /* 0x08 */ be<f32> m08;
-        /* 0x0C */ be<f32> m0C;
-        /* 0x10 */ be<f32> m10;
-        /* 0x14 */ be<f32> m14;
-        /* 0x18 */ be<s16> m18;
-        /* 0x1A */ be<s16> m1A;
-        /* 0x1C */ be<s16> m1C;
-        /* 0x1E */ be<s16> m1E;
-        /* 0x20 */ be<f32> m20;
-        /* 0x24 */ be<f32> m24;
-        /* 0x28 */ be<f32> m28;
-        /* 0x2C */ be<f32> m2C;
-        /* 0x30 */ be<s16> m30;
+        /* 0x00 */ be<f32> mSwellDampXZ;  /* was m00: see d/actor/d_a_tsubo.h */
+        /* 0x04 */ be<f32> mSwellDampY;  /* was m04: see d/actor/d_a_tsubo.h */
+        /* 0x08 */ be<f32> mSwellSpringXZ;  /* was m08: see d/actor/d_a_tsubo.h */
+        /* 0x0C */ be<f32> mSwellSpringY;  /* was m0C: see d/actor/d_a_tsubo.h */
+        /* 0x10 */ be<f32> mSwellSpeedXZInit;  /* was m10: see d/actor/d_a_tsubo.h */
+        /* 0x14 */ be<f32> mSwellSpeedYInit;  /* was m14: see d/actor/d_a_tsubo.h */
+        /* 0x18 */ be<s16> mRegrowTime;  /* was m18: see d/actor/d_a_tsubo.h */
+        /* 0x1A */ be<s16> mRegrowGrowEnd;  /* was m1A: see d/actor/d_a_tsubo.h */
+        /* 0x1C */ be<s16> mRecoverSeTime;  /* was m1C: see d/actor/d_a_tsubo.h */
+        /* 0x1E */ be<s16> mSwellSeTime;  /* was m1E: see d/actor/d_a_tsubo.h */
+        /* 0x20 */ be<f32> mRegrowScale;  /* was m20: see d/actor/d_a_tsubo.h */
+        /* 0x24 */ be<f32> mRegrowScaleRate;  /* was m24: see d/actor/d_a_tsubo.h */
+        /* 0x28 */ be<f32> mRegrowStepMax;  /* was m28: see d/actor/d_a_tsubo.h */
+        /* 0x2C */ be<f32> mRegrowStepMin;  /* was m2C: see d/actor/d_a_tsubo.h */
+        /* 0x30 */ be<s16> mFuseTime;  /* was m30: see d/actor/d_a_tsubo.h */
         /* 0x32 */ u8 _32[2];
     };
 
     struct SpecBokoData {
-        /* 0x00 */ be<s16> m00;
-        /* 0x02 */ be<s16> m02;
-        /* 0x04 */ be<f32> m04;
-        /* 0x08 */ be<f32> m08;
+        /* 0x00 */ be<s16> mYaw;  /* was m00: see d/actor/d_a_tsubo.h */
+        /* 0x02 */ be<s16> mTiltX;  /* was m02: see d/actor/d_a_tsubo.h */
+        /* 0x04 */ be<f32> mRestHeight;  /* was m04: see d/actor/d_a_tsubo.h */
+        /* 0x08 */ be<f32> mOffsetZ;  /* was m08: see d/actor/d_a_tsubo.h */
     };
 
     struct M7A0 {
-        /* 0x00 */ be<u32> m00;  /* fpc_ProcID */
-        /* 0x04 */ be<u8> m04;
+        /* 0x00 */ be<u32> mBokoId;  /* was m00: see d/actor/d_a_tsubo.h; fpc_ProcID */
+        /* 0x04 */ be<u8> mbCarried;  /* was m04: see d/actor/d_a_tsubo.h */
         /* 0x05 */ u8 _05;
-        /* 0x06 */ be<s16> m06;
+        /* 0x06 */ be<s16> mStickYaw;  /* was m06: see d/actor/d_a_tsubo.h */
         /* 0x08 */ be<s16> m08;
         /* 0x0A */ u8 _0A[2];
         /* 0x0C */ be<f32> m0C;
-        /* 0x10 */ be<f32> m10;
-        /* 0x14 */ be<f32> m14;
-        /* 0x18 */ be<s8> m18;
+        /* 0x10 */ be<f32> mHeight;  /* was m10: see d/actor/d_a_tsubo.h */
+        /* 0x14 */ be<f32> mHeightSpeed;  /* was m14: see d/actor/d_a_tsubo.h */
+        /* 0x18 */ be<s8> mBounceCount;  /* was m18: see d/actor/d_a_tsubo.h */
         /* 0x19 */ u8 _19[3];
     };
 
@@ -195,19 +195,19 @@ struct Act_c : fopAc_ac_c {
     /* 0x7A1 */ be<u8> m685;
     /* 0x7A2 */ be<u8> m686;
     /* 0x7A3 */ u8 _7A3;
-    /* 0x7A4 */ be<s16> m688;          /* cSAngle */
-    /* 0x7A6 */ be<s16> m68A;
-    /* 0x7A8 */ be<s16> m68C;
-    /* 0x7AA */ be<s16> m68E;
-    /* 0x7AC */ be<s16> m690;
-    /* 0x7AE */ be<s16> m692;
+    /* 0x7A4 */ be<s16> mRotAxisRoll;  /* was m688: the roll of the pose rotation axis: the set_tensor_* tail (set_tensor_wait 024CFEC8) turns BaseX by YrotS(mRotAxisYaw) XrotM(mRotAxisPitch) ZrotM(it) and set_tensor 024CB088 rotates the pose about that axis by mRotAngle; init_rot_throw 024CF4E0 sets data mThrowRotAxisRollMax * cM_rnd(), init_rot_clean 024CAA54 / pos_init 0 (tww d_a_tsubo.cpp the same); cSAngle */
+    /* 0x7A6 */ be<s16> mRotAxisPitch;  /* was m68A: cSAngle; the pitch of the pose rotation axis (XrotM in the set_tensor_* tail, set_tensor_wait 024CFEC8); init_rot_throw 024CF4E0 sets cM_rndFX(0x8000), set_tensor_drop 024D0074 / sink 024D0184 / afl 024D0294 add mRotAxisPitchSpeed to it each frame; init_rot_clean 024CAA54 / pos_init 0 (tww the same) */
+    /* 0x7A8 */ be<s16> mRotAxisPitchSpeed;  /* was m68C: cSAngle; the per-frame step of mRotAxisPitch: init_rot_throw 024CF4E0 sets data mThrowRotAxisPitchSpeed, set_tensor_drop 024D0074 (data mDropRotResistLinear/Quad) and sink 024D0184 / afl 024D0294 (data mWaterRotResistLinear/Quad) damp it and add it to mRotAxisPitch; init_rot_clean 024CAA54 / pos_init 0 (tww the same) */
+    /* 0x7AA */ be<s16> mRotAngle;  /* was m68E: cSAngle; the angle set_tensor 024CB088 rotates the pose matrix by about the axis (rotAxisRad, cM_s2rad); set_tensor_walk 024CFF48 / drop 024D0074 / sink 024D0184 / afl 024D0294 add mRotAngleSpeed to it each frame; init_rot_throw 024CF4E0 / init_rot_clean 024CAA54 / pos_init 0 (tww the same) */
+    /* 0x7AC */ be<s16> mRotAngleSpeed;  /* was m690: cSAngle; the per-frame step of mRotAngle: set_tensor_walk 024CFF48 eases it towards twice the distance moved over data mAcchRoofHeight (the pot rolls as it moves), set_tensor_drop 024D0074 / sink 024D0184 damp it, set_tensor_afl 024D0294 also pushes it back by mRotAngle and a sine sway; init_rot_throw 024CF4E0 sets data mThrowRotAngleSpeed, init_rot_clean 024CAA54 / pos_init 0 (tww the same) */
+    /* 0x7AE */ be<s16> mRotAxisYaw;  /* was m692: cSAngle; the yaw of the pose rotation axis (YrotS in the set_tensor_* tail, set_tensor_wait 024CFEC8); init_rot_throw 024CF4E0 / init_rot_clean 024CAA54 / pos_init set it to current.angle.y and set_tensor_walk 024CFF48 copies current.angle.y each frame (tww the same) */
     /* 0x7B0 */ be<f32> m694[4];       /* Quaternion x, y, z, w */
     /* 0x7C0 */ u8 m6A4[0xC];
     /* 0x7CC */ cXyz m6B0;
     /* 0x7D8 */ Mtx34 mPoseMtx;
     /* 0x808 */ be<f32> mOffsetY;  /* was m6EC: set_mtx 024CB280 adds it to the model's y translation; _create 024CB5EC clears it; moment_proc_call 024CE204 sets it */
     /* 0x80C */ cXyz m6F0;
-    /* 0x818 */ be<f32> mFallStartY;  /* was m6FC: _create 024CB5EC sets current.pos.y; damage_bg_proc_directly 024CDAB4 breaks the pot when it minus current.pos.y exceeds the attribute's fall height (m38) */
+    /* 0x818 */ be<f32> mFallStartY;  /* was m6FC: _create 024CB5EC sets current.pos.y; damage_bg_proc_directly 024CDAB4 breaks the pot when it minus current.pos.y exceeds the attribute's fall height (mBreakFallHeight) */
     /* 0x81C */ cXyz mWaterDropPos;  /* was m700: set_mtx 024CB280: the model matrix times offsetPos; eff_drop_water 024CD95C sets dPa_ID_IT_SN_WPOT_PITYA there */
     /* 0x828 */ dPa_followEcallBack m70C[3];
     /* 0x864 */ dPa_followEcallBack m748[3];
@@ -232,7 +232,7 @@ WWHD_OFFSET(Act_c, mAcchCir, 0x580);
 WWHD_OFFSET(Act_c, mCyl, 0x624);
 WWHD_OFFSET(Act_c, mStts, 0x754);
 WWHD_OFFSET(Act_c, mType, 0x790);
-WWHD_OFFSET(Act_c, m688, 0x7A4);
+WWHD_OFFSET(Act_c, mRotAxisRoll, 0x7A4);
 WWHD_OFFSET(Act_c, mPoseMtx, 0x7D8);
 WWHD_OFFSET(Act_c, m70C, 0x828);
 WWHD_OFFSET(Act_c, m7A0, 0x8BC);

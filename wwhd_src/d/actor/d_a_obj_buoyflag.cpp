@@ -77,7 +77,7 @@ BOOL Act_c::mode_afl() {
 /* 0232CF30 */
 BOOL Act_c::mode_jumpToSea() {
 
-    if (m1128) {
+    if (mbInit) {
         mRotSpeed = 1000.0f;
         gravity = -8.0f;
         mRotAngle = 0;
@@ -292,8 +292,8 @@ static cPhs_State Mthd_Create(void* i_this) {
         }
         a->mPacket.mpActor = a;
         a->mPacket.init(a);
-        a->m1124 = 0;
-        a->m1128 = 1;
+        a->mMode = 0;
+        a->mbInit = 1;
     }
     return phase;
 }
@@ -314,8 +314,8 @@ static BOOL Mthd_Execute(void* i_this) {
         modeInitialized = 1;
         memcpy_g(&modeTable, &modeInitial, sizeof(modeInitial));
     }
-    if ((a->*(*buoyflag_view<ModeProc>(gabi::ea(&modeTable) + sizeof(ModeProc) * (u32)a->m1124)))()) {
-        a->m1128 = 0;
+    if ((a->*(*buoyflag_view<ModeProc>(gabi::ea(&modeTable) + sizeof(ModeProc) * (u32)a->mMode)))()) {
+        a->mbInit = 0;
         PSMTXCopy(&a->m1090, &a->mOldMtx);
         return TRUE;
     }

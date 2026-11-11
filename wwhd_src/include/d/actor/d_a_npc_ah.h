@@ -10,7 +10,7 @@
 struct sAhAnmDat {
     /* 0x00 */ be<u8> mBckIdx; /* 0xFF: end */
     /* 0x01 */ be<u8> mMorf;
-    /* 0x02 */ be<s8> field_0x02; /* > 0: play n times, then the next entry */
+    /* 0x02 */ be<s8> mLoopCount;  /* was field_0x02: > 0: play n times, then the next entry; sAhAnmDat: setAnmTbl 021E56E4: the entry's count, copied into mAnmTimer; above 0 plays it that often, else loops (tww the same); same code as sPhotoAnmDat::mLoopCount */
 };
 WWHD_SIZE(sAhAnmDat, 3);
 
@@ -26,18 +26,18 @@ struct NpcDatStruct {
     /* 0x0E */ be<s16> mMin_backbone_y;
     /* 0x10 */ be<s16> mMax_turn_step;
     /* 0x12 */ be<s16> field_0x12;
-    /* 0x14 */ be<f32> field_0x14; /* dNpc_playerEyePos offset */
-    /* 0x18 */ be<f32> field_0x18; /* attention position (x, y, z) */
-    /* 0x1C */ be<f32> field_0x1C;
-    /* 0x20 */ be<f32> field_0x20;
-    /* 0x24 */ be<f32> field_0x24; /* eye height */
-    /* 0x28 */ be<f32> field_0x28; /* talk distance */
-    /* 0x2C */ be<f32> field_0x2C; /* look distance */
-    /* 0x30 */ be<s16> field_0x30; /* talk angle */
-    /* 0x32 */ be<s16> field_0x32; /* look speed */
+    /* 0x14 */ be<f32> mPlayerEyeOffsetY;  /* was field_0x14: dNpc_playerEyePos offset; chkAttention 021E5BE0: passed to dNpc_playerEyePos, the look target above the player's head (tww the same); same role as NpcDatStruct::mPlayerEyeOffsetY (photo, roten) */
+    /* 0x18 */ be<f32> mAttnOffsetX;  /* was field_0x18: attention position (x, y, z); _execute 021E688C: attention_info.position = current.pos + the vector (it, mAttnOffsetY, mAttnOffsetZ) Y-rotated by current.angle.y (tww the same); same role as daNpcPhoto_c NpcDatStruct::mAttnOffsetX */
+    /* 0x1C */ be<f32> mAttnOffsetY;  /* was field_0x1C: _execute 021E688C: the Y of the attention position offset (see mAttnOffsetX) (tww the same); same role as daNpcPhoto_c NpcDatStruct::mAttnOffsetY */
+    /* 0x20 */ be<f32> mAttnOffsetZ;  /* was field_0x20: _execute 021E688C: the Z of the attention position offset (see mAttnOffsetX) (tww the same); same role as daNpcPhoto_c NpcDatStruct::mAttnOffsetZ */
+    /* 0x24 */ be<f32> mEyeYOffset;  /* was field_0x24: eye height; _execute 021E688C: eyePos = current.pos + (0, it, 0) (tww the same); same role as NpcDatStruct::mEyeYOffset (photo, roten) */
+    /* 0x28 */ be<f32> mMaxAttnDistXZ;  /* was field_0x28: talk distance; createInit 021E5920 copies it into mAttnDistXZ, chkAttention 021E5BE0's attention distance (tww the same); same role as NpcDatStruct::mMaxAttnDistXZ (photo, roten) */
+    /* 0x2C */ be<f32> mLookDistXZ;  /* was field_0x2C: look distance; chkAttention 021E5BE0: outside the attention, the player is still looked at while closer than it (tww the same); same role as MtNpcDat::mLookDistXZ */
+    /* 0x30 */ be<s16> mMaxAttnAngleY;  /* was field_0x30: talk angle; createInit 021E5920 copies it into mAttnAngle, chkAttention 021E5BE0's attention angle (tww the same); same role as NpcDatStruct::mMaxAttnAngleY (photo, roten) */
+    /* 0x32 */ be<s16> mMaxHeadTurnVel;  /* was field_0x32: look speed; chkAttention 021E5BE0: mTargetAngle, the speed lookBack 021E6680 eases the look toward (tww the same); same role as NpcDatStruct::mMaxHeadTurnVel (photo, roten) */
     /* 0x34 */ be<s16> field_0x34;
     /* 0x36 */ be<s16> field_0x36;
-    /* 0x38 */ be<f32> field_0x38; /* cylinder radius */
+    /* 0x38 */ be<f32> mCylRadius;  /* was field_0x38: cylinder radius; createInit 021E5920 / _execute 021E688C: setCollision(it, 150), the body cylinder's radius (tww the same); same role as daNpcRoten_c NpcDatStruct::mCylRadius */
     /* 0x3C */ be<f32> field_0x3C;
     /* 0x40 */ be<f32> field_0x40;
     /* 0x44 */ be<s16> field_0x44;
@@ -46,9 +46,9 @@ struct NpcDatStruct {
     /* 0x4A */ be<s16> field_0x4A;
     /* 0x4C */ be<s16> field_0x4C;
     /* 0x4E */ be<s16> field_0x4E;
-    /* 0x50 */ be<s16> field_0x50; /* look timer */
-    /* 0x52 */ be<s8> field_0x52;
-    /* 0x53 */ be<s8> field_0x53;
+    /* 0x50 */ be<s16> mTurnBackTime;  /* was field_0x50: look timer; chkAttention 021E5BE0 loads mTurnBackTimer with it when the player leaves the attention (tww the same); same role as MtNpcDat::mTurnBackTime */
+    /* 0x52 */ be<s8> mBodyTurn;  /* was field_0x52: createInit 021E5920 copies it into daNpcAh_c::mBodyTurn; chkAttention 021E5BE0 turns the body while it is set (mHeadOnlyFollow 0), the head only while 0; lookBack 021E6680 turns the body while talking with it set (tww the same); same role as daNpcPhoto_c NpcDatStruct::mBodyTurn */
+    /* 0x53 */ be<s8> mLookAtPlayer;  /* was field_0x53: createInit 021E5920 copies it into daNpcAh_c::mLookAtPlayer; chkAttention 021E5BE0 turns back home after the look while 0 (tww the same); same role as daNpcPhoto_c NpcDatStruct::mLookAtPlayer */
 };
 WWHD_SIZE(NpcDatStruct, 0x54);
 
@@ -102,14 +102,14 @@ struct daNpcAh_c : fopNpc_npc_c {
     /* 0x888 */ be<u32> mpMsgNo; /* u32* */
     /* 0x88C */ be<f32> field_0x718;
     /* 0x890 */ be<f32> mNextMorf;  /* was field_0x71C: setAnm 021E55D8: when it is >= 0 it replaces the blend (morf) of the next animation and is reset to -1 (tww f32 tempMorf = it; it = -1); Ah_actorCtor 021E5398 -1; same code as daNpcMt_c::mNextMorf (npcs.md) */
-    /* 0x894 */ be<f32> mAttnDistXZ;  /* was field_0x720: createInit 021E5920: l_npc_dat field_0x28 (tww); chkAttention 021E5BE0: the player counts as in attention while closer than it (+40 once in attention) (tww f32 temp720 = it; if (temp720 > distXZ && ..)) */
+    /* 0x894 */ be<f32> mAttnDistXZ;  /* was field_0x720: createInit 021E5920: l_npc_dat mMaxAttnDistXZ (tww); chkAttention 021E5BE0: the player counts as in attention while closer than it (+40 once in attention) (tww f32 temp720 = it; if (temp720 > distXZ && ..)) */
     /* 0x898 */ be<u32> mItemNo;
     /* 0x89C */ be<u8> mHeadOnlyFollow;
     /* 0x89D */ u8 _89D;
     /* 0x89E */ be<s16> field_0x72A;
     /* 0x8A0 */ be<s16> field_0x72C;
-    /* 0x8A2 */ be<s16> mTurnBackTimer;  /* was field_0x72E: chkAttention 021E5BE0: l_npc_dat field_0x50 when the player leaves the attention, counted down, and at 0 the NPC turns back to mHomeAngleY (tww it = l_npc_dat.field_0x50; if (it != 0) it--; else { mTargetYRot = m732; .. }) */
-    /* 0x8A4 */ be<s16> mAttnAngle;  /* was field_0x730: createInit 021E5920: l_npc_dat field_0x30 (tww); chkAttention 021E5BE0: the player counts as in attention while the angle to them is below it (+0x71C once in attention) (tww s32 temp730 = it; .. temp730 > abs(angle)) */
+    /* 0x8A2 */ be<s16> mTurnBackTimer;  /* was field_0x72E: chkAttention 021E5BE0: l_npc_dat mTurnBackTime when the player leaves the attention, counted down, and at 0 the NPC turns back to mHomeAngleY (tww it = l_npc_dat.field_0x50; if (it != 0) it--; else { mTargetYRot = m732; .. }) */
+    /* 0x8A4 */ be<s16> mAttnAngle;  /* was field_0x730: createInit 021E5920: l_npc_dat mMaxAttnAngleY (tww); chkAttention 021E5BE0: the player counts as in attention while the angle to them is below it (+0x71C once in attention) (tww s32 temp730 = it; .. temp730 > abs(angle)) */
     /* 0x8A6 */ be<s16> mHomeAngleY;  /* was field_0x732: Ah_actorCtor 021E5398: home.angle.y (tww it = home.angle.y); chkAttention 021E5BE0 turns back to it (tww mTargetYRot = it); same code as daNpcMt_c::mHomeAngleY (npcs.md) */
     /* 0x8A8 */ be<u16> mMsgStatus;  /* was field_0x734: talk2 021E6088: the message status, 0xFFFF on a new message, then the status that next_msgStatus returned (tww it = -1; if (it == fopMsgStts_MSG_CONTINUES_e) ..; it = msg_status); same code as daNpcMt_c::mMsgStatus (npcs.md) */
     /* 0x8AA */ be<s16> field_0x736;
@@ -124,15 +124,15 @@ struct daNpcAh_c : fopNpc_npc_c {
     /* 0x8B9 */ be<u8> mBtpFrame;
     /* 0x8BA */ be<u8> mMoveState;
     /* 0x8BB */ be<u8> mResFlag;  /* was field_0x747: TWW accessor setResFlag(u8 flag) { field_0x747 = flag; }: Ah_actorCtor 021E5398 setResFlag(0), phase_1 021E549C setResFlag(1); _delete 021E5B78 deletes the resource only while it is set (tww) */
-    /* 0x8BC */ be<u8> field_0x748;
+    /* 0x8BC */ be<u8> mItemFlags;  /* was field_0x748: eventMesSet 021E623C: when the box closes, bit 0x1 gives item 7 and bit 0x2 item 5 (mItemNo, mOrderState 3), each bit cleared once used (tww the same); never set in WWHD or tww */
     /* 0x8BD */ be<u8> mBckIdx;
-    /* 0x8BE */ be<u8> field_0x74A;
-    /* 0x8BF */ be<s8> mAnmTimer;  /* was field_0x74B: setAnmTbl 021E56E4: mpAnmDat->field_0x02 (tww it = mpAnmDat->field_0x02); playAnm 021E65B0 counts it down and acts at 0 (tww if (it > 0) { it += -1; if (it == 0) .. }); same code as daNpcMt_c::mAnmTimer (npcs.md) */
+    /* 0x8BE */ be<u8> mAnmFlags;  /* was field_0x74A: playAnm 021E65B0: clears bit 0x1 each call and sets it when the animation table moves on to its next entry (setAnmTbl returns true) (tww the same); never read in WWHD or tww */
+    /* 0x8BF */ be<s8> mAnmTimer;  /* was field_0x74B: setAnmTbl 021E56E4: mpAnmDat->mLoopCount (tww it = mpAnmDat->field_0x02); playAnm 021E65B0 counts it down and acts at 0 (tww if (it > 0) { it += -1; if (it == 0) .. }); same code as daNpcMt_c::mAnmTimer (npcs.md) */
     /* 0x8C0 */ be<s8> mActIdx;
     /* 0x8C1 */ be<u8> field_0x74D;
     /* 0x8C2 */ be<s8> mLookMode;  /* was field_0x74E: chkAttention 021E5BE0: 1 looks at mEyePos, 2 faces mTargetYRot, 0 neither (tww); lookBack 021E6680 switches on it (tww); Ah_actorCtor 021E5398 0; same code as daNpcMt_c::mLookMode (npcs.md) */
-    /* 0x8C3 */ be<u8> field_0x74F;
-    /* 0x8C4 */ be<u8> field_0x750;
+    /* 0x8C3 */ be<u8> mBodyTurn;  /* was field_0x74F: createInit 021E5920 copies l_npc_dat mBodyTurn; chkAttention 021E5BE0 turns the body (mHeadOnlyFollow 0, m_jnt.mbTrn 1) while set, else the head only; lookBack 021E6680 turns the body while talking with it set (tww the same); same role as daNpcPeople_c::mBodyTurn */
+    /* 0x8C4 */ be<u8> mLookAtPlayer;  /* was field_0x750: createInit 021E5920 copies l_npc_dat mLookAtPlayer; chkAttention 021E5BE0: while 0 the player in range only turns him to mHomeAngleY (mLookMode 2) instead of being looked at (tww the same); same role as daNpcPeople_c::mLookAtPlayer */
     /* 0x8C5 */ be<u8> field_0x751;
     /* 0x8C6 */ u8 _8C6[2];
 };

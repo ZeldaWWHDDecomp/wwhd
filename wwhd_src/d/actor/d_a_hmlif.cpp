@@ -115,26 +115,26 @@ s32 daHmlif_c::Delete() {
 s32 daHmlif_c::daHmlifDelete() {
     s32 result = hmlifDeleteMoveBg(this);
     hmlifDeleteResource(static_cast<void*>(&mPhase),
-                        at<void>(gabi::ea((const char*)hmlifArcNames[u8(m489)])));
+                        at<void>(gabi::ea((const char*)hmlifArcNames[u8(mType)])));
     return result;
 }
 /* 02175520 */
 s32 daHmlif_c::CreateHeap() {
     gabi::Local<HmlifName> name0;
     name0->vt = 0x10011364;
-    name0->text = gabi::ea((const char*)hmlifArcNames[u8(m489)]);
+    name0->text = gabi::ea((const char*)hmlifArcNames[u8(mType)]);
     J3DModelData* modelData = static_cast<J3DModelData*>(hmlifGetObjectResource(
-        hmlifResourceControl, name0.get(), s32(s16(hmlifBmdIndices[u8(m489)]))));
+        hmlifResourceControl, name0.get(), s32(s16(hmlifBmdIndices[u8(mType)]))));
     if (!modelData)
         hmlifAssert("d_a_hmlif.cpp", 0x18f, "modelData != (0)");
-    s16 idx = s16(hmlifBtpIndices[u8(m489)]);
+    s16 idx = s16(hmlifBtpIndices[u8(mType)]);
     J3DModel* model =
         mDoExt_J3DModel__create(modelData, 0x80000, idx == -1 ? 0x11000022 : 0x11020022);
     mpModel = model;
     if (!model)
         return 0;
-    u32 t = u8(m489);
-    m478 = u8(u16(home.angle.z));
+    u32 t = u8(mType);
+    mSwitchNo2 = u8(u16(home.angle.z));
     mpBtp = at<mDoExt_btpAnm>(0);
     idx = s16(hmlifBtpIndices[t]);
     if (idx != -1) {
@@ -153,16 +153,16 @@ s32 daHmlif_c::CreateHeap() {
         if (!hmlifInitBtp(btp, modelData, pbtp, 0, 0, speed, 0, -1, 0, 0))
             return 0;
         u32 current = gabi::ea((mDoExt_btpAnm*)mpBtp);
-        m48A = 0;
+        mBtpFrame = 0;
         if (current) {
             s8 room = s8(home.roomNo);
             hmlifHD::SaveBlock* save = hmlifSave;
-            u32 sw = u32(m478);
+            u32 sw = u32(mSwitchNo2);
             if (hmlifIsSwitch(&save->save, sw, room))
-                m48A = 3;
+                mBtpFrame = 3;
         }
     }
-    t = u8(m489);
+    t = u8(mType);
     mpBrk = at<mDoExt_brkAnm>(0);
     idx = s16(hmlifBrkIndices[t]);
     if (idx != -1) {
@@ -187,7 +187,7 @@ s32 daHmlif_c::CreateHeap() {
 /* 021762C8 */
 s32 daHmlif_c::Create() {
     J3DModel* model = mpModel;
-    u8 type = u8(m489);
+    u8 type = u8(mType);
     hmlifHD::CullBox* box = &hmlifCullBoxes[type];
     cullMtx = model ? gabi::ea(&model->mBaseTransformMtx) : 0;
     hmlifSetCullBox(this, f32(box->minX), f32(box->minY), f32(box->minZ), f32(box->maxX),
@@ -196,18 +196,18 @@ s32 daHmlif_c::Create() {
     set_mtx();
     u32 param = u32(mParameters);
     u8 id = param >> 8;
-    m474 = param & 255;
-    m444 = id;
-    m445 = id;
+    mSwitchNo = param & 255;
+    mPathId = id;
+    mCurPathId = id;
     if (id == 255)
         return 0;
     hmlifHD::Path* path = hmlifGetRoomPath(u32(id), s32(s8(current.roomNo)));
     ppd = path;
     if (!path) {
-        m445 = 255;
+        mCurPathId = 255;
         return 0;
     }
-    u32 sw = u32(m474);
+    u32 sw = u32(mSwitchNo);
     u16 count = u16(path->m_num);
     if (sw != 255 && u8(path->mArg0) > count)
         return 0;
@@ -228,48 +228,48 @@ s32 daHmlif_c::Create() {
     u32 xb = *reinterpret_cast<be<u32>*>(&current.pos.x);
     current.pos.y = y;
     f32 z = f32(at<hmlifHD::Point>(point)->m_position.z);
-    *reinterpret_cast<be<u32>*>(&m45C.x) = xb;
+    *reinterpret_cast<be<u32>*>(&mPrevTargetPos.x) = xb;
     current.pos.z = z;
     u32 zb = *reinterpret_cast<be<u32>*>(&current.pos.z),
         yb = *reinterpret_cast<be<u32>*>(&current.pos.y);
-    m448 = start;
-    *reinterpret_cast<be<u32>*>(&m45C.y) = yb;
-    m450.x = x;
-    m450.y = y;
+    mPointNo = start;
+    *reinterpret_cast<be<u32>*>(&mPrevTargetPos.y) = yb;
+    mTargetPos.x = x;
+    mTargetPos.y = y;
     u32 direction = (u32(mParameters) >> 20) & 3;
-    m450.z = z;
-    *reinterpret_cast<be<u32>*>(&m45C.z) = zb;
+    mTargetPos.z = z;
+    *reinterpret_cast<be<u32>*>(&mPrevTargetPos.z) = zb;
     if (direction == 2) {
-        m446 = 1;
+        mPathDir = 1;
         f32 choice = hmlifRandom();
         if (choice < f32(hmlifDirectionThreshold))
-            m447 = u8(m446);
+            mSavedPathDir = u8(mPathDir);
         else {
-            m446 = -1;
-            m447 = -1;
+            mPathDir = -1;
+            mSavedPathDir = -1;
         }
     } else {
         u8 dir = direction == 1 ? 255 : 1;
-        m446 = dir;
-        m447 = dir;
+        mPathDir = dir;
+        mSavedPathDir = dir;
     }
     prm = u32(mParameters);
     u32 speed = (prm >> 16) & 15;
     if (speed > 8)
         speed = 8;
-    sw = u32(m474);
+    sw = u32(mSwitchNo);
     f32 value = f32(hmlifSpeeds[speed]);
-    m47E = prm >> 31;
+    mSmoothMove = prm >> 31;
     speedF = value;
-    m480 = value;
+    mMaxSpeed = value;
     if (sw != 255) {
         path = ppd;
         point = gabi::ea((hmlifHD::Point*)path->m_points) + u8(path->mArg0) * 16;
-        m468.x = f32(at<hmlifHD::Point>(point)->m_position.x);
-        m468.y = f32(at<hmlifHD::Point>(point)->m_position.y);
-        m468.z = f32(at<hmlifHD::Point>(point)->m_position.z);
+        mJunctionPos.x = f32(at<hmlifHD::Point>(point)->m_position.x);
+        mJunctionPos.y = f32(at<hmlifHD::Point>(point)->m_position.y);
+        mJunctionPos.z = f32(at<hmlifHD::Point>(point)->m_position.z);
     }
-    type = u8(m489);
+    type = u8(mType);
     if (type == 1 || type == 2) {
         gabi::Local<cXyz> center;
         f32 cy = f32(current.pos.y), cx = f32(current.pos.x);
@@ -307,11 +307,11 @@ s32 daHmlif_c::daHmlifCreate() {
     u32 type = (u32(mParameters) >> 27) & 15;
     if (type >= 3)
         type = 0;
-    m489 = type;
+    mType = type;
     s32 phase = hmlifLoadResource(static_cast<void*>(&mPhase),
                                   at<void>(gabi::ea((const char*)hmlifArcNames[type])));
     if (phase == cPhs_COMPLEATE_e) {
-        u32 t = u8(m489);
+        u32 t = u8(mType);
         phase = hmlifCreateMoveBg(this, at<void>(gabi::ea((const char*)hmlifArcNames[t])),
                                   s32(s16(hmlifDzbIndices[t])), at<void>(0x024ee708),
                                   s32(s16(hmlifHeapSizes[t])));
@@ -360,9 +360,9 @@ s32 daHmlif_c::Execute(be<u32>* output) {
 }
 /* 02175DE4 */
 void daHmlif_c::move() {
-    if (u8(m445) == 255)
+    if (u8(mCurPathId) == 255)
         return;
-    if (u8(m47E))
+    if (u8(mSmoothMove))
         lift_smooth_move();
     else
         lift_normal_move();
@@ -378,15 +378,15 @@ void daHmlif_c::set_se() {
 void daHmlif_c::anim_play() {
     s8 room = s8(home.roomNo);
     hmlifHD::SaveBlock* save = hmlifSave;
-    u32 on = hmlifIsSwitch(&save->save, u32(m478), room);
-    s16 frame = s16(s16(m48A) + (on ? 1 : -1));
+    u32 on = hmlifIsSwitch(&save->save, u32(mSwitchNo2), room);
+    s16 frame = s16(s16(mBtpFrame) + (on ? 1 : -1));
     if (on) {
         if (frame > 3)
             frame = 3;
     } else if (frame < 0)
         frame = 0;
     mDoExt_brkAnm* brk = mpBrk;
-    m48A = frame;
+    mBtpFrame = frame;
     if (!brk)
         return;
     u32 stopped =
@@ -409,16 +409,16 @@ void daHmlif_c::check_col() {
             hmlifClearTargetHit(static_cast<void*>(&mSph));
             hmlifHD::SaveBlock* save = hmlifSave;
             s8 room = s8(home.roomNo);
-            if (!hmlifIsSwitch(&save->save, u32(m478), s32(room))) {
+            if (!hmlifIsSwitch(&save->save, u32(mSwitchNo2), s32(room))) {
                 s32 reverb = hmlifGetReverb(s32(s8(current.roomNo)));
                 hmlifStartSound(0x695e, static_cast<void*>(&eyePos), 0, reverb);
             }
             room = s8(home.roomNo);
             save = hmlifSave;
-            hmlifOnSwitch(&save->save, u32(m478), s32(room));
+            hmlifOnSwitch(&save->save, u32(mSwitchNo2), s32(room));
         }
     }
-    u8 type = u8(m489);
+    u8 type = u8(mType);
     if (type != 1 && type != 2)
         return;
     gabi::Local<cXyz> pos;
@@ -432,14 +432,14 @@ void daHmlif_c::check_col() {
 }
 /* 02175AD0 */
 void daHmlif_c::lift_smooth_move() {
-    f32 oldx = f32(m45C.x), tx = f32(m450.x), oldz = f32(m45C.z), tz = f32(m450.z);
+    f32 oldx = f32(mPrevTargetPos.x), tx = f32(mTargetPos.x), oldz = f32(mPrevTargetPos.z), tz = f32(mTargetPos.z);
     s32 yaw = hmlifAtan2s(tx - oldx, tz - oldz);
-    f32 dy = f32(m450.y) - f32(current.pos.y), dx = f32(m450.x) - f32(current.pos.x),
-        dz = f32(m450.z) - f32(current.pos.z);
+    f32 dy = f32(mTargetPos.y) - f32(current.pos.y), dx = f32(mTargetPos.x) - f32(current.pos.x),
+        dz = f32(mTargetPos.z) - f32(current.pos.z);
     f32 square = gabi::fmadds(dz, dz, gabi::fmadds(dx, dx, dy * dy)), speed = f32(speedF);
     f32 distance = hmlifSqrt(square);
     hmlifAddCalcAngle(static_cast<void*>(&current.angle.y), yaw, 10, 0x400);
-    hmlifAddCalcSpeed(static_cast<void*>(&speedF), f32(m480), f32(hmlifSmoothAccel), f32(hmlifOne));
+    hmlifAddCalcSpeed(static_cast<void*>(&speedF), f32(mMaxSpeed), f32(hmlifSmoothAccel), f32(hmlifOne));
     gabi::Local<cXyz> v, out;
     v->x = f32(hmlifZero);
     v->y = f32(hmlifZero);
@@ -457,59 +457,59 @@ void daHmlif_c::lift_smooth_move() {
 }
 /* 02175C34 */
 void daHmlif_c::lift_normal_move() {
-    u8 state = u8(m488);
+    u8 state = u8(mMoveState);
     f32 factor = f32(hmlifNormalAccel), zero = f32(hmlifZero), one = f32(hmlifOne),
         divisor = f32(hmlifSpeedStepDivisor);
     if (state == MOVE_INIT) {
-        m484 = 0;
-        m488 = MOVE_ACCELERATE;
+        mMoveCount = 0;
+        mMoveState = MOVE_ACCELERATE;
         set_next_pnt();
         state = 1;
     }
     if (state == MOVE_ACCELERATE) {
-        f32 target = f32(m480);
-        u32 count = u32(m484);
-        m484 = count + 1;
+        f32 target = f32(mMaxSpeed);
+        u32 count = u32(mMoveCount);
+        mMoveCount = count + 1;
         f32 result =
             hmlifAddCalc(static_cast<void*>(&speedF), target, factor, one, target / divisor);
         if (result == zero)
-            m488 = MOVE_CRUISE;
+            mMoveState = MOVE_CRUISE;
     } else if (state == MOVE_CRUISE) {
         gabi::Local<cXyz> diff;
-        m484 = 0;
+        mMoveCount = 0;
         hmlifSubtractPosition(static_cast<void*>(&current.pos), diff.get(),
-                              static_cast<void*>(&m450.x));
+                              static_cast<void*>(&mTargetPos.x));
         f32 square = hmlifVectorSquare(diff.get());
         f32 distance = hmlifSqrt(square);
         if (distance < f32(hmlifBrakeThreshold))
-            m488 = MOVE_DECELERATE;
+            mMoveState = MOVE_DECELERATE;
     } else if (state == MOVE_DECELERATE) {
-        f32 target = f32(m480);
-        u32 count = u32(m484);
+        f32 target = f32(mMaxSpeed);
+        u32 count = u32(mMoveCount);
         f32 step = target / divisor;
         f32 divider = f32(hmlifBrakeDivisor);
-        m484 = count + 1;
+        mMoveCount = count + 1;
         f32 result = hmlifAddCalc(static_cast<void*>(&speedF), target / divider, factor, one, step);
         if (result == zero)
-            m488 = MOVE_INIT;
+            mMoveState = MOVE_INIT;
     }
-    hmlifAddCalcPos(static_cast<void*>(&current.pos), static_cast<void*>(&m450.x), one,
+    hmlifAddCalcPos(static_cast<void*>(&current.pos), static_cast<void*>(&mTargetPos.x), one,
                     f32(speedF));
 }
 
 /* 02175908 */
 void daHmlif_c::set_next_pnt() {
-    s32 index = s8(m448);
-    if (u8(m445) == 255)
+    s32 index = s8(mPointNo);
+    if (u8(mCurPathId) == 255)
         return;
     bool switched = false;
     if (chkSwitchPathType()) {
         s8 room = s8(current.roomNo);
-        hmlifHD::Path* first = hmlifGetRoomPath(u32(u8(m444)), s32(room));
+        hmlifHD::Path* first = hmlifGetRoomPath(u32(u8(mPathId)), s32(room));
         hmlifHD::Path* path = ppd;
         bool junction = path == first && u32(index) == u8(path->mArg0);
         if (!junction) {
-            first = hmlifGetRoomPath(u32(u8(m444)), s32(room));
+            first = hmlifGetRoomPath(u32(u8(mPathId)), s32(room));
             junction = path != first && index == 0;
         }
         if (junction) {
@@ -519,86 +519,86 @@ void daHmlif_c::set_next_pnt() {
             switched = change != 0;
         }
         if (!switched)
-            index = s8(m448);
+            index = s8(mPointNo);
     }
     if (!switched) {
-        index = s8(index + u8(m446));
+        index = s8(index + u8(mPathDir));
         hmlifHD::Path* path = ppd;
-        m448 = index;
+        mPointNo = index;
         if (u8(path->m_closed) & 1) {
             u16 count = u16(path->m_num);
             if (index > s32(s8(count)) - 1)
-                m448 = 0;
+                mPointNo = 0;
             else if (index < 0)
-                m448 = count - 1;
+                mPointNo = count - 1;
         } else {
             u16 count = u16(path->m_num);
             if (index > s32(count) - 1) {
                 hmlifHD::Path* p = ppd;
-                m446 = -1;
-                m448 = u16(p->m_num) - 2;
+                mPathDir = -1;
+                mPointNo = u16(p->m_num) - 2;
             } else if (index < 0) {
-                m446 = 1;
-                m448 = 1;
+                mPathDir = 1;
+                mPointNo = 1;
             }
         }
     }
-    u32 y = *reinterpret_cast<be<u32>*>(&m450.y);
+    u32 y = *reinterpret_cast<be<u32>*>(&mTargetPos.y);
     hmlifHD::Path* path = ppd;
-    *reinterpret_cast<be<u32>*>(&m45C.y) = y;
-    u32 z = *reinterpret_cast<be<u32>*>(&m450.z), x = *reinterpret_cast<be<u32>*>(&m450.x);
-    s32 point = s8(m448);
-    *reinterpret_cast<be<u32>*>(&m45C.x) = x;
-    *reinterpret_cast<be<u32>*>(&m45C.z) = z;
+    *reinterpret_cast<be<u32>*>(&mPrevTargetPos.y) = y;
+    u32 z = *reinterpret_cast<be<u32>*>(&mTargetPos.z), x = *reinterpret_cast<be<u32>*>(&mTargetPos.x);
+    s32 point = s8(mPointNo);
+    *reinterpret_cast<be<u32>*>(&mPrevTargetPos.x) = x;
+    *reinterpret_cast<be<u32>*>(&mPrevTargetPos.z) = z;
     u32 data = gabi::ea((hmlifHD::Point*)path->m_points) + u32(point) * 16;
-    m450.x = f32(at<hmlifHD::Point>(data)->m_position.x);
-    m450.y = f32(at<hmlifHD::Point>(data)->m_position.y);
-    m450.z = f32(at<hmlifHD::Point>(data)->m_position.z);
+    mTargetPos.x = f32(at<hmlifHD::Point>(data)->m_position.x);
+    mTargetPos.y = f32(at<hmlifHD::Point>(data)->m_position.y);
+    mTargetPos.z = f32(at<hmlifHD::Point>(data)->m_position.z);
 }
 /* 021757CC */
 s32 daHmlif_c::setNextPath() {
     s8 room = s8(current.roomNo);
     hmlifHD::Path* old = ppd;
-    hmlifHD::Path* path = hmlifGetRoomPath(u32(u8(m444)), s32(room));
+    hmlifHD::Path* path = hmlifGetRoomPath(u32(u8(mPathId)), s32(room));
     if (!path)
         hmlifAssert("d_a_hmlif.cpp", 0x42f, "homep != (0)");
     hmlifHD::Path* next = hmlifGetNextRoomPath(path, s32(room));
     hmlifHD::SaveBlock* save = hmlifSave;
     s8 saveRoom = s8(home.roomNo);
-    if (hmlifIsSwitch(&save->save, u32(m474), s32(saveRoom))) {
+    if (hmlifIsSwitch(&save->save, u32(mSwitchNo), s32(saveRoom))) {
         if (old == path)
-            m447 = u8(m446);
+            mSavedPathDir = u8(mPathDir);
         ppd = next;
-        m448 = 1;
-        m446 = 1;
+        mPointNo = 1;
+        mPathDir = 1;
         return 1;
     }
     if (static_cast<hmlifHD::Path*>(ppd) == path)
         return 0;
     ppd = path;
-    m445 = u8(m444);
+    mCurPathId = u8(mPathId);
     u8 anchor = u8(path->mArg0);
     u16 count = u16(path->m_num);
     if (anchor == count)
-        m447 = -1;
+        mSavedPathDir = -1;
     else if (u8(path->mArg0) == 0)
-        m447 = 1;
+        mSavedPathDir = 1;
     else {
-        u8 dir = u8(m447);
+        u8 dir = u8(mSavedPathDir);
         hmlifHD::Path* p = ppd;
-        m446 = dir;
-        m448 = u8(p->mArg0) + dir;
+        mPathDir = dir;
+        mPointNo = u8(p->mArg0) + dir;
         return 1;
     }
     hmlifHD::Path* p = ppd;
-    u8 dir = u8(m447);
-    m446 = dir;
-    m448 = u8(p->mArg0) + dir;
+    u8 dir = u8(mSavedPathDir);
+    mPathDir = dir;
+    mPointNo = u8(p->mArg0) + dir;
     return 1;
 }
 /* 021757B8 */
 u32 daHmlif_c::chkSwitchPathType() {
-    return m474 != 255;
+    return mSwitchNo != 255;
 }
 /* 021761F8 */
 s32 daHmlif_c::Draw() {
@@ -609,7 +609,7 @@ s32 daHmlif_c::Draw() {
     mDoExt_btpAnm* btp = mpBtp;
     if (btp) {
         J3DModel* model = mpModel;
-        s16 frame = s16(m48A);
+        s16 frame = s16(mBtpFrame);
         btp->entry(model->getModelData(), frame);
     }
     mDoExt_brkAnm* brk = mpBrk;

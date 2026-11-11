@@ -273,7 +273,7 @@ struct daNpc_Co1_HIO_c {
     /* 0x00 */ be<u32> __vtbl;
     /* 0x04 */ be<s8> mNo;
     /* 0x05 */ u8 _05[3];
-    /* 0x08 */ be<s32> field_0x8;
+    /* 0x08 */ be<s32> mRefCount;  /* was field_0x8: daNpc_Co1_HIO_c_ct 0222A73C -1; never read in WWHD or tww; after our decomp's daNpc_Pm1_HIO_c / daNpc_Ba1_HIO_c mRefCount: the same HIO layout (mNo, then the s32 instance counter) */
     /* 0x0C */ be<s16> mMaxHeadX;
     /* 0x0E */ be<s16> mMaxHeadY;
     /* 0x10 */ be<s16> mMinHeadX;

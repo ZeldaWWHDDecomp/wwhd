@@ -37,8 +37,11 @@ def write_unit(name, extra):
 
 
 def ntc(unit, extra=()):
+    # without WWHD_VERIFY_SCRATCH: case 3 runs the built harness from build/verify/_p0exclude_test/valid, and the cleanup
+    # below removes that directory (a scratch redirect would build it elsewhere and leave it there)
+    env = {k: v for k, v in os.environ.items() if k != "WWHD_VERIFY_SCRATCH"}
     r = subprocess.run([sys.executable, os.path.join(HERE, "nulltrap_compare.py"), unit, "-n", "200", "-seed", "1",
-                        "-only", FUNC] + list(extra), cwd=ROOT, capture_output=True, text=True)
+                        "-only", FUNC] + list(extra), cwd=ROOT, capture_output=True, text=True, env=env)
     return r.returncode, r.stdout + r.stderr
 
 

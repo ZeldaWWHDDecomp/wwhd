@@ -4,10 +4,10 @@
 
 // HD: startup record layout is verified; the four fields' roles remain unconfirmed.
 struct mDoMain_StartupRecord {
-    be<u32> field_0x0;
-    be<u32> field_0x4;
-    be<u32> field_0x8;
-    be<u32> field_0xc;
+    be<u32> mReset;  /* was field_0x0: tww name (mDoRstData, m_Do_Reset.h): main01 025F1660 clears it before setting sCurrentStartupRecord, as tww main01 mDoRst::offReset() */
+    be<u32> mResetPrepare;  /* was field_0x4: tww name (mDoRstData): main01 025F1660 clears it, as tww main01 mDoRst::offResetPrepare() */
+    be<u32> m3ButtonReset;  /* was field_0x8: tww name (mDoRstData): main01 025F1660 clears it, as tww main01 mDoRst::off3ButtonReset() */
+    be<u32> m3ButtonResetPort;  /* was field_0xc: tww name (mDoRstData): main01 025F1660 sets -1, as tww main01 mDoRst::set3ButtonResetPort(-1) */
 };
 WWHD_SIZE(mDoMain_StartupRecord, 0x10);
 struct mDoMain_HeaderZeroRecord {

@@ -228,7 +228,7 @@ void daObj_Warpt_c::_ride(fopAc_ac_c *rider) {
   gabi::Local<cXyz> position;
   *position = mLidPos;
   Warpt_checkPlayerInCircle(position.get(), 1.0f, 20.0f);
-  if (l_HIO.m06)
+  if (l_HIO.mNoRide)
     return;
   u32 table = rider->__vtbl;
   if (Warpt_checkPlayerFly(table, rider))
@@ -237,7 +237,7 @@ void daObj_Warpt_c::_ride(fopAc_ac_c *rider) {
     return;
   gabi::Local<cXyz> inner;
   *inner = mLidPos;
-  f32 radius = l_HIO.m0C;
+  f32 radius = l_HIO.mWarpRadius;
   if (Warpt_checkPlayerInCircle(inner.get(), radius, 20.0f))
     modeProc(PROC_INIT_e, 3);
 }
@@ -299,7 +299,7 @@ void daObj_Warpt_c::setMtx() {
   mLidPos.x = current.pos.x;
   f32 y = current.pos.y;
   mLidPos.y = y;
-  mLidPos.y = y + l_HIO.m08;
+  mLidPos.y = y + l_HIO.mLidOffsetY;
   play();
   if (mBgW2RegistTimer == 1 && mpBodyBgW2 != nullptr && !used(mpBodyBgW2)) {
     u32 p = play();
@@ -582,24 +582,24 @@ void daObj_Warpt_c::modeProc(s32 operation, s32 mode) {
 BOOL daObj_Warpt_c::_execute() {
   u32 emitter = gabi::ea((u8 *)mOpenSmokeCallBack.mEmitter);
   if (emitter) {
-    if (warptCustomColor(gabi::ea(&l_HIO.m14)))
-      warptEmitterColor(&Warpt_guest<WarptEmitter>(emitter)->mPrmColor, gabi::ea(&l_HIO.m14));
-    if (warptCustomColor(gabi::ea(&l_HIO.m18))) {
+    if (warptCustomColor(gabi::ea(&l_HIO.mSmokePrmColorOverride)))
+      warptEmitterColor(&Warpt_guest<WarptEmitter>(emitter)->mPrmColor, gabi::ea(&l_HIO.mSmokePrmColorOverride));
+    if (warptCustomColor(gabi::ea(&l_HIO.mSmokeEnvColorOverride))) {
       emitter = gabi::ea((u8 *)mOpenSmokeCallBack.mEmitter);
-      warptEmitterColor(&Warpt_guest<WarptEmitter>(emitter)->mEnvColor, gabi::ea(&l_HIO.m18));
+      warptEmitterColor(&Warpt_guest<WarptEmitter>(emitter)->mEnvColor, gabi::ea(&l_HIO.mSmokeEnvColorOverride));
     }
   }
   emitter = gabi::ea((u8 *)mCloseSmokeCallBack.mEmitter);
   if (emitter) {
-    if (warptCustomColor(gabi::ea(&l_HIO.m14)))
-      warptEmitterColor(&Warpt_guest<WarptEmitter>(emitter)->mPrmColor, gabi::ea(&l_HIO.m14));
-    if (warptCustomColor(gabi::ea(&l_HIO.m18))) {
+    if (warptCustomColor(gabi::ea(&l_HIO.mSmokePrmColorOverride)))
+      warptEmitterColor(&Warpt_guest<WarptEmitter>(emitter)->mPrmColor, gabi::ea(&l_HIO.mSmokePrmColorOverride));
+    if (warptCustomColor(gabi::ea(&l_HIO.mSmokeEnvColorOverride))) {
       emitter = gabi::ea((u8 *)mCloseSmokeCallBack.mEmitter);
-      warptEmitterColor(&Warpt_guest<WarptEmitter>(emitter)->mEnvColor, gabi::ea(&l_HIO.m18));
+      warptEmitterColor(&Warpt_guest<WarptEmitter>(emitter)->mEnvColor, gabi::ea(&l_HIO.mSmokeEnvColorOverride));
     }
   }
-  if (l_HIO.m04) {
-    l_HIO.m04 = 0;
+  if (l_HIO.mBreakHutaReq) {
+    l_HIO.mBreakHutaReq = 0;
     breakHuta(0);
     modeProc(PROC_INIT_e, 2);
   }
@@ -688,8 +688,8 @@ void daObj_Warpt_c::getArg() {
     mLidSwNo = (u8)x;
     mWarpSwNo = (u16)x >> 8;
     m2BC = (u8)z;
-    m2C0 = (u16)z >> 8;
-    if (m2C0 != 255)
+    mOpenPrm = (u16)z >> 8;
+    if (mOpenPrm != 255)
       onWarpBit(mWarpBit);
     mLidClosed = !isWarpBit(mWarpBit);
   }
@@ -873,22 +873,22 @@ static u8 *warptHioConstruct(u8 *self) {
   if (self) {
     u32 a = gabi::ea(self);
     Warpt_guest<daObj_Warpt_HIO_c>(a)->mVtable = gc_tu.mHioVtable;
-    Warpt_guest<daObj_Warpt_HIO_c>(a)->m0C = 30.0f;
+    Warpt_guest<daObj_Warpt_HIO_c>(a)->mWarpRadius = 30.0f;
     Warpt_guest<daObj_Warpt_HIO_c>(a)->m10 = -2.5f;
-    Warpt_guest<daObj_Warpt_HIO_c>(a)->m08 = 150.0f;
-    Warpt_guest<daObj_Warpt_HIO_c>(a)->m04 = 0;
+    Warpt_guest<daObj_Warpt_HIO_c>(a)->mLidOffsetY = 150.0f;
+    Warpt_guest<daObj_Warpt_HIO_c>(a)->mBreakHutaReq = 0;
     Warpt_guest<daObj_Warpt_HIO_c>(a)->m05 = 0;
-    Warpt_guest<daObj_Warpt_HIO_c>(a)->m06 = 0;
+    Warpt_guest<daObj_Warpt_HIO_c>(a)->mNoRide = 0;
     if (!l_colorGuard) {
       l_colorGuard = 1;
       Warpt_copyMemory(&l_savedColor, Warpt_guest<u8>(gc_tu.mDefaultColor), 4);
     }
-    Warpt_guest<daObj_Warpt_HIO_c>(a)->m14 = l_savedColor;
+    Warpt_guest<daObj_Warpt_HIO_c>(a)->mSmokePrmColorOverride = l_savedColor;
     if (!l_colorGuard) {
       l_colorGuard = 1;
       Warpt_copyMemory(&l_savedColor, Warpt_guest<u8>(gc_tu.mDefaultColor), 4);
     }
-    Warpt_guest<daObj_Warpt_HIO_c>(a)->m18 = l_savedColor;
+    Warpt_guest<daObj_Warpt_HIO_c>(a)->mSmokeEnvColorOverride = l_savedColor;
   }
   return self;
 }

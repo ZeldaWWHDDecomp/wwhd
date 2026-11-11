@@ -71,10 +71,10 @@ void daFallRock_c::setParticle(int param_1, cXyz *pos) {
     gabi::Local<cXyz> particle_scale;
     gabi::Local<cXyz> pos_copy;
 
-    field_0x60C.r = (u8)tevStr.mColorC0.r;
-    field_0x60C.g = (u8)tevStr.mColorC0.g;
-    field_0x60C.b = (u8)tevStr.mColorC0.b;
-    field_0x60C.a = (u8)tevStr.mColorC0.a;
+    mParticleColor.r = (u8)tevStr.mColorC0.r;
+    mParticleColor.g = (u8)tevStr.mColorC0.g;
+    mParticleColor.b = (u8)tevStr.mColorC0.b;
+    mParticleColor.a = (u8)tevStr.mColorC0.a;
 
     f32 s = 5.0f * scale.x;
     particle_scale->set(s, s, s);
@@ -89,7 +89,7 @@ void daFallRock_c::setParticle(int param_1, cXyz *pos) {
         void *anmTexPattern = dComIfG_getObjectRes("Always", dRes_INDEX_ALWAYS_BTP_MPI_KOISHI_e);
         JPABaseEmitter *emitter =
             dComIfGp_particle_set(dPa_name_ID_IT_JN_M_STS_HAHEN, pos_copy.get(), nullptr,
-                                  particle_scale.get(), 0xFF, nullptr, -1, &field_0x60C, &tevStr.mColorK0);
+                                  particle_scale.get(), 0xFF, nullptr, -1, &mParticleColor, &tevStr.mColorK0);
         if (emitter != nullptr && modelData != nullptr && anmTexPattern != nullptr) {
             void *modelEmitter =
                 FallRock_newModelEmitter(nullptr, emitter, modelData, 1, &tevStr, anmTexPattern, 0, 0);
@@ -115,14 +115,14 @@ static BOOL daFallRock_Execute(daFallRock_c *i_this) {
     i_this->field_0x614 = i_this->field_0x614 + 1;
 
     fopAcM_posMoveF(i_this, &i_this->mStts.m_cc_move);
-    i_this->field_0x29C.CrrPos(dComIfG_Bgsp());
+    i_this->mAcch.CrrPos(dComIfG_Bgsp());
 
-    i_this->field_0x610 = i_this->field_0x610 + std::fabs((f32)i_this->speed.y);
-    if (i_this->field_0x610 > daFallRock_c::m_falllen) {
+    i_this->mFallDist = i_this->mFallDist + std::fabs((f32)i_this->speed.y);
+    if (i_this->mFallDist > daFallRock_c::m_falllen) {
         deleted = fopAcM_delete(i_this);
     }
 
-    if (i_this->field_0x29C.ChkGroundLanding()) {
+    if (i_this->mAcch.ChkGroundLanding()) {
         i_this->setParticle(0, &i_this->current.pos);
         fopAcM_seStart(i_this, JA_SE_OBJ_BREAK_ROCK, 0);
         if (deleted == FALSE) {
@@ -130,7 +130,7 @@ static BOOL daFallRock_Execute(daFallRock_c *i_this) {
         }
     }
 
-    if (i_this->field_0x29C.ChkWaterIn()) {
+    if (i_this->mAcch.ChkWaterIn()) {
         u32 se = i_this->scale.x < 1.3f ? JA_SE_OBJ_FALL_WATER_M : JA_SE_OBJ_FALL_WATER_L;
         fopAcM_seStart(i_this, se, 0);
         i_this->setParticle(2, &i_this->current.pos);
@@ -188,8 +188,8 @@ cPhs_State daFallRock_c::create() {
         if (this != nullptr) {
             fopAc_ac_c_ct(this);
             __vtbl = FALLROCK_VTBL;
-            __ct(&field_0x29C);
-            __ct(&field_0x460);
+            __ct(&mAcch);
+            __ct(&mAcchCir);
             dCcD_Stts_ct(&mStts);
             dCcD_Cyl_ct(&mCyl, AAB_VTBL);
         }
@@ -208,13 +208,13 @@ cPhs_State daFallRock_c::create() {
         mCyl.SetStts(&mStts);
         mCyl.SetH(scale.x * 120.0f);
         mCyl.SetR(scale.x * 90.0f);
-        field_0x460.SetWall(30.0f, 30.0f);
-        field_0x29C.Set(&current.pos, &old.pos, this, 1, &field_0x460, &speed);
+        mAcchCir.SetWall(30.0f, 30.0f);
+        mAcch.Set(&current.pos, &old.pos, this, 1, &mAcchCir, &speed);
         set_mtx();
 
-        field_0x29C.m_flags &= ~(u32)dBgS_Acch::WATER_NONE; /* ClrWaterNone */
+        mAcch.m_flags &= ~(u32)dBgS_Acch::WATER_NONE; /* ClrWaterNone */
         gravity = -5.0f;
-        field_0x610 = 0.0f;
+        mFallDist = 0.0f;
         maxFallSpeed = -70.0f;
         speedF = 0.0f;
     }
@@ -245,8 +245,8 @@ static void daFallRock_c_dt(daFallRock_c *i_this, s32 flags) {
         dComIfG_resDelete(&i_this->mPhs, "Always");
         __dt(&i_this->mCyl);
         __dt(&i_this->mStts);
-        __dt(&i_this->field_0x460);
-        __dt(&i_this->field_0x29C);
+        __dt(&i_this->mAcchCir);
+        __dt(&i_this->mAcch);
         __dt(i_this);
         if (flags & 1)
             operator_delete(i_this);

@@ -1,5 +1,6 @@
 /** Background mesh geometry. */
 #include "SSystem/SComponent/c_bg_w.h"
+#include "sead/ElementAt.h"
 #include <cmath>
 using namespace gabi;
 
@@ -205,9 +206,16 @@ void cBgWMesh::MakeBlckTransMinMax(cXyz *min, cXyz *max) {
     PSVECAdd(max, &mTransVel, max);
 }
 
+// Guest EA arithmetic: table + index * size wraps at 32 bits as on the console (a host index from a parameter or a guest field
+// on a NULL table reached host addresses past 4 GB).
+template <class T> static inline T *guestElement(T *table, u32 index) { return sead::elementPtr(table, index); }
+template <class T> static inline T *guestElement(const gptr<T> &table, u32 index) { return sead::elementPtr(table.get(), index); }
+
+// Guest EA arithmetic (MakeBlckMinMax, GetGrpToRoomIndex): table + index * size wraps at 32 bits as on the console (a host
+// index on a NULL table reached host addresses past 4 GB).
 /* 02009750 */
 void cBgWMesh::MakeBlckMinMax(s32 index, cXyz *min, cXyz *max) {
-    cXyz *point = &pm_vtx_tbl[(u32)index];
+    cXyz *point = sead::elementPtr(pm_vtx_tbl.get(), (u32)index);
     // HD: reload the point after each minimum store, preserving possible aliasing.
     f32 x = point->x;
     if ((f32)min->x > x) {
@@ -236,7 +244,7 @@ void cBgWMesh::MakeBlckMinMax(s32 index, cXyz *min, cXyz *max) {
 void cBgWMesh::MakeBlckBnd(u32 block, cXyz *min, cXyz *max) {
     cBgD_Mesh *bg = pm_bgd.get();
     u32 num = bg->m_b_num;
-    cBgD_Blk_t *entry = &bg->m_b_tbl[block];
+    cBgD_Blk_t *entry = guestElement(bg->m_b_tbl, block);
     u32 start = entry->startTri;
     u8 full = mbNeedsFullTransform;
     s32 last = block == num - 1 ? (s32)((u32)bg->m_t_num - 1) : (s32)((u32)entry[1].startTri - 1);
@@ -280,52 +288,52 @@ void cBgWMesh::MakeBlckBnd(u32 block, cXyz *min, cXyz *max) {
 
 /* 02009930 */
 void cBgWMesh::MakeNodeTreeRp(u32 index) {
-    cBgD_Tree_t *tree = &pm_bgd->m_tree_tbl[index];
+    cBgD_Tree_t *tree = guestElement(pm_bgd->m_tree_tbl, index);
     if ((u16)tree->mFlag & 1) {
         u32 block = tree->mChild[0];
         if (block != 0xFFFF) {
-            cBgW_NodeTree *box = &m_nt_tbl[index];
+            cBgW_NodeTree *box = guestElement(m_nt_tbl, index);
             MakeBlckBnd(block, &box->mMin, &box->mMax);
         }
         return;
     }
-    clearBounds(&m_nt_tbl[index]);
+    clearBounds(guestElement(m_nt_tbl, index));
     for (u32 child = 0; child < 8; ++child) {
         u32 next = tree->mChild[child];
         if (next == 0xFFFF)
             continue;
         MakeNodeTreeRp(next);
         cBgW_NodeTree *boxes = m_nt_tbl.get();
-        expandBounds(&boxes[index], &boxes[next].mMin);
+        expandBounds(guestElement(boxes, index), &boxes[next].mMin);
         boxes = m_nt_tbl.get();
-        expandBounds(&boxes[index], &boxes[next].mMax);
+        expandBounds(guestElement(boxes, index), &boxes[next].mMax);
     }
 }
 
 /* 02009A10 */
 void cBgWMesh::MakeNodeTreeGrpRp(u32 index) {
-    cBgD_Grp_t *group = &pm_bgd->m_g_tbl[index];
+    cBgD_Grp_t *group = guestElement(pm_bgd->m_g_tbl, index);
     u32 node = group->m_tree_idx;
     if (node != 0xFFFF) {
         MakeNodeTreeRp(node);
-        group = &pm_bgd->m_g_tbl[index];
+        group = guestElement(pm_bgd->m_g_tbl, index);
         node = group->m_tree_idx;
         cBgW_GrpElm *groups = pm_grp.get();
         cBgW_NodeTree *nodes = m_nt_tbl.get();
-        setBoundsMin(&groups[index].aab, &nodes[node].mMin);
-        group = &pm_bgd->m_g_tbl[index];
+        setBoundsMin(&guestElement(groups, index)->aab, &nodes[node].mMin);
+        group = guestElement(pm_bgd->m_g_tbl, index);
         node = group->m_tree_idx;
         nodes = m_nt_tbl.get();
         groups = pm_grp.get();
-        setBoundsMax(&groups[index].aab, &nodes[node].mMax);
-        group = &pm_bgd->m_g_tbl[index];
+        setBoundsMax(&guestElement(groups, index)->aab, &nodes[node].mMax);
+        group = guestElement(pm_bgd->m_g_tbl, index);
     }
     for (u32 child = group->m_first_child; child != 0xFFFF;) {
         MakeNodeTreeGrpRp(child);
         cBgW_GrpElm *groups = pm_grp.get();
-        setBoundsMin(&groups[index].aab, &groups[child].aab.mMin);
+        setBoundsMin(&guestElement(groups, index)->aab, &groups[child].aab.mMin);
         groups = pm_grp.get();
-        setBoundsMax(&groups[index].aab, &groups[child].aab.mMax);
+        setBoundsMax(&guestElement(groups, index)->aab, &groups[child].aab.mMax);
         group = &pm_bgd->m_g_tbl[child];
         child = group->m_next_sibling;
     }
@@ -538,7 +546,7 @@ void cBgWMesh::GetTriPnt(u32 index, cXyz *p0, cXyz *p1, cXyz *p2) {
         JUT_ASSERT_fail(at<char>(0x10001258), 0xCE0, at<char>(0x10001248));
         bg = pm_bgd.get();
     }
-    cBgD_Tri_t *tri = &bg->m_t_tbl[index];
+    cBgD_Tri_t *tri = guestElement(bg->m_t_tbl, index);
     u32 i0 = tri->vtx0;
     cXyz *vertices = pm_vtx_tbl.get();
     p0->copy(vertices[i0]);
@@ -564,13 +572,13 @@ u32 cBgWMesh::GetGrpToRoomIndex(s32 index) {
         }
     }
     cBgD_Grp_t *groups = bg->m_g_tbl.get();
-    u32 parent = groups[(u32)index].m_parent;
+    u32 parent = sead::elementAt<cBgD_Grp_t>(gabi::ea(groups), (u32)index).m_parent;
     if (parent == 0xFFFF)
         return 0xFFFF;
-    parent = groups[parent].m_parent;
+    parent = sead::elementAt<cBgD_Grp_t>(gabi::ea(groups), parent).m_parent;
     if (parent == 0xFFFF)
         return 0xFFFF;
-    return groups[parent].m_room_id;
+    return sead::elementAt<cBgD_Grp_t>(gabi::ea(groups), parent).m_room_id;
 }
 
 /* 0200A3BC */
@@ -592,10 +600,10 @@ void cBgWMesh::GetTrans(cXyz *dst) {
 void cBgWMesh::GetTopUnder(be<f32> *top, be<f32> *under) {
     u32 index = m_rootGrpIdx;
     cBgW_GrpElm *groups = pm_grp.get();
-    *under = groups[index].aab.mMin.y;
+    *under = guestElement(groups, index)->aab.mMin.y;
     index = m_rootGrpIdx;
     groups = pm_grp.get();
-    *top = groups[index].aab.mMax.y;
+    *top = guestElement(groups, index)->aab.mMax.y;
 }
 
 /* 0200A430 */
@@ -635,9 +643,9 @@ void cBgWMesh::BlckConnect(be<u16> *head, be<s32> *previous, u32 index) {
         *head = index;
     u32 prev = *previous;
     if (prev != 0xFFFF)
-        pm_rwg[prev].next = index;
+        guestElement(pm_rwg, prev)->next = index;
     *previous = index;
-    pm_rwg[index].next = 0xFFFF;
+    guestElement(pm_rwg, index)->next = 0xFFFF;
 }
 
 /* 0200A5A8 */
@@ -705,12 +713,12 @@ u8 cBgWMesh::RwgLineCheck(s32 index, cBgW_LinChk *chk) {
     constructTriangle(triangle.get());
     u32 found = 0;
     do {
-        cBgD_Tri_t *tri = &pm_bgd->m_t_tbl[(u32)index];
+        cBgD_Tri_t *tri = guestElement(pm_bgd->m_t_tbl, (u32)index);
         u32 i1 = tri->vtx1, i0 = tri->vtx0, i2 = tri->vtx2;
         cBgW_TriElm *planes = pm_tri.get();
         cXyz *vertices = pm_vtx_tbl.get();
         setTriangleBg(triangle.get(), &vertices[i0], &vertices[i1], &vertices[i2],
-                      &planes[(u32)index].m_plane);
+                      &guestElement(planes, (u32)index)->m_plane);
         u32 front = chk->mFrontFlag, back = chk->mBackFlag;
         s32 hit = cM3d_Cross_LinTri(&chk->mLin, triangle.get(), point.get(), front, back);
         if (hit) {
@@ -724,17 +732,17 @@ u8 cBgWMesh::RwgLineCheck(s32 index, cBgW_LinChk *chk) {
                 found = 1;
             }
         }
-        index = pm_rwg[(u32)index].next;
+        index = guestElement(pm_rwg, (u32)index)->next;
     } while (index != 0xFFFF);
     return (u8)found;
 }
 
 /* 0200A8BC */
 u8 cBgWMesh::LineCheckRp(cBgW_LinChk *chk, u32 index) {
-    cBgW_NodeTree *box = &m_nt_tbl[index];
+    cBgW_NodeTree *box = guestElement(m_nt_tbl, index);
     if (!cM3d_Cross_MinMaxBoxLine(&box->mMin, &box->mMax, &chk->mLin.mStart, &chk->mLin.mEnd))
         return 0;
-    cBgD_Tree_t *tree = &pm_bgd->m_tree_tbl[index];
+    cBgD_Tree_t *tree = guestElement(pm_bgd->m_tree_tbl, index);
     u32 found = 0;
     if ((u16)tree->mFlag & 1) {
         for (u32 kind = 0; kind < 3; ++kind) {
@@ -766,15 +774,15 @@ u8 cBgWMesh::LineCheckGrpRp(cBgW_LinChk *chk, u32 index, u32 depth) {
     void *pass = chk->mGrpPassChk.get();
     if (DispatchGrpThrough(index, pass, depth))
         return 0;
-    cBgW_NodeTree *box = &pm_grp[index].aab;
+    cBgW_NodeTree *box = &guestElement(pm_grp, index)->aab;
     if (!cM3d_Cross_MinMaxBoxLine(&box->mMin, &box->mMax, &chk->mLin.mStart, &chk->mLin.mEnd))
         return 0;
-    cBgD_Grp_t *group = &pm_bgd->m_g_tbl[index];
+    cBgD_Grp_t *group = guestElement(pm_bgd->m_g_tbl, index);
     u32 node = group->m_tree_idx, found = 0;
     if (node != 0xFFFF) {
         if (cBgW_LineCheckRpEntry(this, chk, node))
             found = 1;
-        group = &pm_bgd->m_g_tbl[index];
+        group = guestElement(pm_bgd->m_g_tbl, index);
     }
     ++depth;
     for (u32 child = group->m_first_child; child != 0xFFFF;) {

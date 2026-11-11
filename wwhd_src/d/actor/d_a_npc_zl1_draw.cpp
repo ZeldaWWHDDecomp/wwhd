@@ -131,7 +131,7 @@ static void mesh_vis(daNpc_Zl1_c* t, u8 v) {
     Zl1Draw::Mesh* mesh = reinterpret_cast<Zl1Draw::MeshJoint*>(t->mJoint1.get())->mpMesh;
     while (mesh != nullptr) {
         u32 index = mesh->mpMaterial->mIndex;
-        if (index == (u32)(s32)t->mB0C || index == (u32)(s32)t->mB10) {
+        if (index == (u32)(s32)t->mHeadMaterialIndex || index == (u32)(s32)t->mHeadOverlayMaterialIndex) {
             mesh->mpShape->mVisible = v;
         } else {
             mesh->mpShape->mVisible = !v;
@@ -198,7 +198,7 @@ static BOOL nodeCB_BackBone(J3DNode* i_node, int i_param) {
 /* 023045E0 */
 void daNpc_Zl1_c::play_animation() {
     u32 mtrlSnd = 0;
-    if (mBtkNum == 1 && field_0x7D0 != 0) {
+    if (mBtkNum == 1 && mEyeFollow != 0) {
         setEyeCtrl();
     } else {
         clrEyeCtrl();
@@ -253,7 +253,7 @@ void daNpc_Zl1_c::setMtx(u32 param_1) {
     bool temp = false;
     J3DModel_setBaseScale(mpMorf->getModel(), &scale);
     Mtx34* stk = mDoMtx_stack_c::get();
-    if (field_0x7CE) {
+    if (mOnTreeBranch) {
         if (!isCreating((u32)mProcId1) && mProcId1 != 0xFFFFFFFF) {
             gabi::Local<gptr<fopAc_ac_c>> actor;
             if (searchActor((u32)mProcId1, actor.get()) == 1 && actor->get() != nullptr) {
@@ -263,12 +263,12 @@ void daNpc_Zl1_c::setMtx(u32 param_1) {
                 mDoMtx_stack_c::transM(120.28999f, -88.36f, -19.130001f);
             }
         }
-    } else if (field_0x7CA) {
+    } else if (mSwoonOnShip) {
         temp = swoon_OnShip();
     }
     if (!temp) {
         PSMTXTrans(stk, current.pos.x, current.pos.y, current.pos.z);
-        mDoMtx_ZXYrotM(stk, field_0x73E.x, field_0x73E.y, field_0x73E.z);
+        mDoMtx_ZXYrotM(stk, mMtxAngle.x, mMtxAngle.y, mMtxAngle.z);
     }
     J3DModel_setBaseTRMtx(mpMorf->getModel(), stk);
     mpMorf->calc();
@@ -336,7 +336,7 @@ void daNpc_Zl1_c::eye_ctrl() {
 void daNpc_Zl1_c::play_btk_anm() {
     u8 frame =
         (u8)animationLastFrame(reinterpret_cast<Zl1Draw::BtkAnimation*>(mBtkAnm)->mpAnimation);
-    if (field_0x7D0) {
+    if (mEyeFollow) {
         eye_ctrl();
     } else {
         u8 f = (u8)(mBtkAnmFrame + 1);
@@ -350,7 +350,7 @@ void daNpc_Zl1_c::play_btk_anm() {
 
 /* 02304824 */
 void daNpc_Zl1_c::setWaterRipple() {
-    if (!field_0x7CA) {
+    if (!mSwoonOnShip) {
         // HD: tests mbWaterIn (the water flag _execute stored) instead of mObjAcch.ChkWaterIn()
 
         if (mbWaterIn) {
@@ -410,11 +410,11 @@ void daNpc_Zl1_c::set_simpleLand(u32 param_1) {
 
 /* 02304A6C */
 void daNpc_Zl1_c::setEff() {
-    if (mAnmNo == 0xB || field_0x7C6) {
+    if (mAnmNo == 0xB || mJmpLandEff) {
         // HD: tests mbWaterIn (the water flag _execute stored) instead of mObjAcch.ChkWaterIn()
 
         if (mbWaterIn) {
-            if (!field_0x7C6) {
+            if (!mJmpLandEff) {
                 s16 ang = shape_angle.y;
                 mEffPos.x = gabi::fmadds(40.0f, cM_ssin(ang), current.pos.x);
                 mEffPos.z = gabi::fmadds(40.0f, cM_scos(ang), current.pos.z);
@@ -430,7 +430,7 @@ void daNpc_Zl1_c::setEff() {
                 }
             }
         } else {
-            if (!field_0x7C6) {
+            if (!mJmpLandEff) {
                 gabi::Local<csXyz> temp;
                 csXyz* t = constructAngles(temp.get(), (s16)current.angle.y, (s16)0, (s16)0);
                 mEffAngle.x = t->x;
@@ -440,9 +440,9 @@ void daNpc_Zl1_c::setEff() {
             }
         }
         if (mObjAcch.ChkGroundHit() && (mpMorf->mFrameCtrl.checkPass(13.0f) ||
-                                        mpMorf->mFrameCtrl.checkPass(27.0f) || field_0x7C6)) {
-            set_simpleLand(field_0x7C6);
-            field_0x7C6 = false;
+                                        mpMorf->mFrameCtrl.checkPass(27.0f) || mJmpLandEff)) {
+            set_simpleLand(mJmpLandEff);
+            mJmpLandEff = false;
         }
     }
 }
@@ -531,7 +531,7 @@ BOOL daNpc_Zl1_c::setFrontWallType() {
 BOOL daNpc_Zl1_c::_draw() {
     J3DModel* pModel = mpMorf->getModel();
     J3DModelData* modelData = pModel->getModelData();
-    if (field_0x7D2 || mNoDraw) {
+    if (mHideUntilDemo || mNoDraw) {
         return TRUE;
     }
     settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &current.pos, &tevStr);
@@ -539,37 +539,37 @@ BOOL daNpc_Zl1_c::_draw() {
     dComIfGp_get(); // HD: an unused accessor call
 
     mpMorf->calc();
-    // HD: no pModel->unlock() and no material animation sharing (field_0x860/878)
+    // HD: no pModel->unlock() and no material animation sharing (mpEyeMat/878)
 
     setListP0();
     packet_entryOpa(mOnCupOffAupPacket2);
 
-    shape_vis(field_0x890[2], 0);
-    shape_vis(field_0x890[5], 0);
-    shape_vis(field_0x890[1], 0);
-    shape_vis(field_0x890[4], 0);
-    shape_vis(field_0x890[0], 1);
-    shape_vis(field_0x890[3], 1);
+    shape_vis(mpEyeShape[2], 0);
+    shape_vis(mpEyeShape[5], 0);
+    shape_vis(mpEyeShape[1], 0);
+    shape_vis(mpEyeShape[4], 0);
+    shape_vis(mpEyeShape[0], 1);
+    shape_vis(mpEyeShape[3], 1);
     enterJoint(pModel, mJoint2);
-    shape_vis(field_0x8A8[2], 0);
-    shape_vis(field_0x8A8[5], 0);
-    shape_vis(field_0x8A8[1], 0);
-    shape_vis(field_0x8A8[4], 0);
-    shape_vis(field_0x8A8[0], 1);
-    shape_vis(field_0x8A8[3], 1);
+    shape_vis(mpMayuShape[2], 0);
+    shape_vis(mpMayuShape[5], 0);
+    shape_vis(mpMayuShape[1], 0);
+    shape_vis(mpMayuShape[4], 0);
+    shape_vis(mpMayuShape[0], 1);
+    shape_vis(mpMayuShape[3], 1);
     enterJoint(pModel, mJoint3);
     packet_entryOpa(mOffCupOnAupPacket2);
 
     mDoExt_btkAnm_entry((mDoExt_btkAnm*)(void*)mBtkAnm, modelData, (f32)(u32)mBtkAnmFrame);
-    shape_vis(field_0x890[0], 0);
-    shape_vis(field_0x890[3], 0);
-    shape_vis(field_0x890[2], 1);
-    shape_vis(field_0x890[5], 1);
+    shape_vis(mpEyeShape[0], 0);
+    shape_vis(mpEyeShape[3], 0);
+    shape_vis(mpEyeShape[2], 1);
+    shape_vis(mpEyeShape[5], 1);
     enterJoint(pModel, mJoint2);
-    shape_vis(field_0x8A8[0], 0);
-    shape_vis(field_0x8A8[3], 0);
-    shape_vis(field_0x8A8[2], 1);
-    shape_vis(field_0x8A8[5], 1);
+    shape_vis(mpMayuShape[0], 0);
+    shape_vis(mpMayuShape[3], 0);
+    shape_vis(mpMayuShape[2], 1);
+    shape_vis(mpMayuShape[5], 1);
     enterJoint(pModel, mJoint3);
     // HD: mBtkAnm.remove() moved to the end
 
@@ -579,21 +579,21 @@ BOOL daNpc_Zl1_c::_draw() {
 
     setListP1();
     packet_entryOpa(mOnCupOffAupPacket1);
-    shape_vis(field_0x890[1], 1);
-    shape_vis(field_0x890[4], 1);
-    shape_vis(field_0x890[2], 0);
-    shape_vis(field_0x890[5], 0);
+    shape_vis(mpEyeShape[1], 1);
+    shape_vis(mpEyeShape[4], 1);
+    shape_vis(mpEyeShape[2], 0);
+    shape_vis(mpEyeShape[5], 0);
     enterJoint(pModel, mJoint2);
-    shape_vis(field_0x8A8[1], 1);
-    shape_vis(field_0x8A8[4], 1);
-    shape_vis(field_0x8A8[2], 0);
-    shape_vis(field_0x8A8[5], 0);
+    shape_vis(mpMayuShape[1], 1);
+    shape_vis(mpMayuShape[4], 1);
+    shape_vis(mpMayuShape[2], 0);
+    shape_vis(mpMayuShape[5], 0);
     enterJoint(pModel, mJoint3);
     packet_entryOpa(mOffCupOnAupPacket1);
-    shape_vis(field_0x890[1], 0);
-    shape_vis(field_0x890[4], 0);
-    shape_vis(field_0x8A8[1], 0);
-    shape_vis(field_0x8A8[4], 0);
+    shape_vis(mpEyeShape[1], 0);
+    shape_vis(mpEyeShape[4], 0);
+    shape_vis(mpMayuShape[1], 0);
+    shape_vis(mpMayuShape[4], 0);
 
     setListHd(); // HD: another draw list pair
 
@@ -617,7 +617,7 @@ BOOL daNpc_Zl1_c::_draw() {
     // HD: no shadowDraw(); the snap figure is registered at the branch joint while hanging
 
     gabi::Local<cXyz> pos;
-    if (field_0x7CE) {
+    if (mOnTreeBranch) {
         gabi::Local<Mtx34> mtx;
         PSMTXCopy(J3DModel_getBaseTRMtx(mpMorf->getModel()), mtx);
         pos->x = mtx->m[0][3];

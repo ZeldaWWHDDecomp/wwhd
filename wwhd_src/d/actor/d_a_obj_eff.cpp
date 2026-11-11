@@ -115,13 +115,13 @@ static GXColor barrel_original_color;
 /* 0233A258 */
 BarrelSmokeCB::BarrelSmokeCB() {
     constructSmoke(this, &barrel_original_color, 0, 0);
-    field_0x20 = 60;
+    mLifeTimer = 60;
     __vtbl = 0x10027BF4;
 }
 /* 0233A2C4 */
 void BarrelSmokeCB::execute(JPABaseEmitter* emitter) {
-    s32 life = (s32)((u32)(s32)field_0x20 - 1);
-    field_0x20 = life;
+    s32 life = (s32)((u32)(s32)mLifeTimer - 1);
+    mLifeTimer = life;
     if (life <= 0) {
         smokeEnd(this, emitter);
         return;
@@ -133,13 +133,13 @@ static GXColor stool_original_color;
 /* 0233A35C */
 StoolSmokeCB::StoolSmokeCB() {
     constructSmoke(this, &stool_original_color, 0, 0);
-    field_0x20 = 60;
+    mLifeTimer = 60;
     __vtbl = 0x10027C3C;
 }
 /* 0233A3C8 */
 void StoolSmokeCB::execute(JPABaseEmitter* emitter) {
-    s32 life = (s32)((u32)(s32)field_0x20 - 1);
-    field_0x20 = life;
+    s32 life = (s32)((u32)(s32)mLifeTimer - 1);
+    mLifeTimer = life;
     if (life <= 0) {
         smokeEnd(this, emitter);
         return;
@@ -151,13 +151,13 @@ static GXColor skull_original_color;
 /* 0233A460 */
 SkullSmokeCB::SkullSmokeCB() {
     constructSmoke(this, &skull_original_color, 0, 0);
-    field_0x20 = 60;
+    mLifeTimer = 60;
     __vtbl = 0x10027C84;
 }
 /* 0233A4CC */
 void SkullSmokeCB::execute(JPABaseEmitter* emitter) {
-    s32 life = (s32)((u32)(s32)field_0x20 - 1);
-    field_0x20 = life;
+    s32 life = (s32)((u32)(s32)mLifeTimer - 1);
+    mLifeTimer = life;
     if (life <= 0) {
         smokeEnd(this, emitter);
         return;
@@ -174,13 +174,13 @@ static GXColor pinecone_original_color;
 /* 0233A5BC */
 PineconeSmokeCB::PineconeSmokeCB() {
     constructSmoke(this, &pinecone_original_color, 0, 0);
-    field_0x20 = 60;
+    mLifeTimer = 60;
     __vtbl = 0x10027CCC;
 }
 /* 0233A628 */
 void PineconeSmokeCB::execute(JPABaseEmitter* emitter) {
-    s32 life = (s32)((u32)(s32)field_0x20 - 1);
-    field_0x20 = life;
+    s32 life = (s32)((u32)(s32)mLifeTimer - 1);
+    mLifeTimer = life;
     if (life <= 0) {
         smokeEnd(this, emitter);
         return;
@@ -192,13 +192,13 @@ static GXColor woodbox_original_color;
 /* 0233A6C0 */
 WoodBoxSmokeCB::WoodBoxSmokeCB() {
     constructSmoke(this, &woodbox_original_color, 0, 0);
-    field_0x20 = 60;
+    mLifeTimer = 60;
     __vtbl = 0x10027D14;
 }
 /* 0233A72C */
 void WoodBoxSmokeCB::execute(JPABaseEmitter* emitter) {
-    s32 life = (s32)((u32)(s32)field_0x20 - 1);
-    field_0x20 = life;
+    s32 life = (s32)((u32)(s32)mLifeTimer - 1);
+    mLifeTimer = life;
     if (life <= 0) {
         smokeEnd(this, emitter);
         return;
@@ -288,7 +288,7 @@ void Act_c::remove_barrel_smoke() {
 /* 0233B300 */
 u32 Act_c::die_barrel_smoke() {
     // HD: preserve r3 when the void GameCube method falls through.
-    if (mParticleCallback->m10 & 1)
+    if (mParticleCallback->mFlag & 1)
         return Eff_deleteActor(this);
     return gabi::ea(this);
 }
@@ -330,7 +330,7 @@ void Act_c::remove_stool_smoke() {
 /* 0233B314 */
 u32 Act_c::die_stool_smoke() {
     // HD: preserve r3 when the void GameCube method falls through.
-    if (mParticleCallback->m10 & 1)
+    if (mParticleCallback->mFlag & 1)
         return Eff_deleteActor(this);
     return gabi::ea(this);
 }
@@ -370,7 +370,7 @@ void Act_c::remove_skull_smoke() {
 /* 0233B328 */
 u32 Act_c::die_skull_smoke() {
     // HD: preserve r3 when the void GameCube method falls through.
-    if (mParticleCallback->m10 & 1)
+    if (mParticleCallback->mFlag & 1)
         return Eff_deleteActor(this);
     return gabi::ea(this);
 }
@@ -428,7 +428,7 @@ void Act_c::remove_land_smoke() {
 /* 0233B33C */
 u32 Act_c::die_land_smoke() {
     // HD: preserve r3 when the void GameCube method falls through.
-    if (mParticleCallback->m10 & 1)
+    if (mParticleCallback->mFlag & 1)
         return Eff_deleteActor(this);
     return gabi::ea(this);
 }
@@ -454,7 +454,7 @@ void Act_c::remove_pinecone_smoke() {
 /* 0233B350 */
 u32 Act_c::die_pinecone_smoke() {
     // HD: preserve r3 when the void GameCube method falls through.
-    if (mParticleCallback->m10 & 1)
+    if (mParticleCallback->mFlag & 1)
         return Eff_deleteActor(this);
     return gabi::ea(this);
 }
@@ -493,7 +493,7 @@ void Act_c::remove_woodBox_smoke() {
 /* 0233B364 */
 u32 Act_c::die_woodBox_smoke() {
     // HD: preserve r3 when the void GameCube method falls through.
-    if (mParticleCallback->m10 & 1)
+    if (mParticleCallback->mFlag & 1)
         return Eff_deleteActor(this);
     return gabi::ea(this);
 }

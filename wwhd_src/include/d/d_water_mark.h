@@ -28,11 +28,11 @@ public:
     /* 0x100 */ gptr<J3DModel> mpModel;
     /* 0x104 */ WaterBrkAnm mBrk;
     /* 0x17C */ WaterBtpAnm mBtp;
-    /* 0x1F0 */ be<s16> field_0x12c;
-    /* 0x1F2 */ be<s16> field_0x12e;
-    /* 0x1F4 */ be<s16> field_0x130;
-    /* 0x1F6 */ be<s16> field_0x132;
-    /* 0x1F8 */ be<s16> field_0x134;
+    /* 0x1F0 */ be<s16> mOnMoveBg;  /* was field_0x12c: setMatrix 025CC2B4 stores whether the ground polygon belongs to a moving BG (Water_ChkMoveBG); execute 025CC4A4 recomputes the matrix every frame while it is 1 (tww the same) */
+    /* 0x1F2 */ be<s16> mAngleY;  /* was field_0x12e: create 025CC5D0 sets the upper parameter half; setMatrix 025CC2B4 turns the mark by it and tilts it by the ground normal relative to it (tww the same) */
+    /* 0x1F4 */ be<s16> mFadeStartId;  /* was field_0x130: create 025CC5D0 (footprint, param 2): this footprint's id + 20 (mod 40); execute 025CC4A4 starts the brk fade once m_player_foot_now_id is in [it, mFadeEndId) (tww the same) */
+    /* 0x1F6 */ be<s16> mFadeEndId;  /* was field_0x132: create 025CC5D0 (footprint, param 2): mFadeStartId + 20 (mod 40), the end of the id window that starts the fade (tww the same) */
+    /* 0x1F8 */ be<s16> mFootId;  /* was field_0x134: create 025CC5D0 (footprint, param 2) stores m_player_foot_now_id (then advances the ring); -1 for other marks and once execute 025CC4A4 has started the fade (tww the same) */
     u8 padding[2];
     u32 draw();
     u32 setMatrix();
@@ -44,8 +44,8 @@ WWHD_OFFSET(dWaterMark_c, mpHeap, 0xFC);
 WWHD_OFFSET(dWaterMark_c, mpModel, 0x100);
 WWHD_OFFSET(dWaterMark_c, mBrk, 0x104);
 WWHD_OFFSET(dWaterMark_c, mBtp, 0x17C);
-WWHD_OFFSET(dWaterMark_c, field_0x12c, 0x1F0);
-WWHD_OFFSET(dWaterMark_c, field_0x134, 0x1F8);
+WWHD_OFFSET(dWaterMark_c, mOnMoveBg, 0x1F0);
+WWHD_OFFSET(dWaterMark_c, mFootId, 0x1F8);
 WWHD_SIZE(dWaterMark_c, 0x1FC);
 
 struct WaterResourceName {

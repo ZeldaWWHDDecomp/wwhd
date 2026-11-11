@@ -62,8 +62,8 @@ cPhs_State daBgn_Create(fopAc_ac_c* a_this) {
                 i_this->mHioOwner = 1;
                 hio_set() = 1;
                 s8 no = mDoHIO_createChild("Ｇ（クグツ）" /* HD: translated HIO label; original guest string retained. */, &l_HIO());
-                BGN_HAND_MAX() = l_HIO().m0F0;
-                BGN_TAIL_MAX() = l_HIO().m0F2;
+                BGN_HAND_MAX() = l_HIO().mHandMax;
+                BGN_TAIL_MAX() = l_HIO().mTailMax;
                 l_HIO().mNo = no;
             }
             i_this->mStts.Init(0xFF, 0xFF, a_this);

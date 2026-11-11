@@ -1154,7 +1154,7 @@ BOOL daNpc_Pf1_c::_execute() {
         mbHomeSet = true;
     }
     daNpc_Pf1_HIO_c::hio_prm_c& prm = l_HIO.mPrm;
-    m_jnt.setParam(prm.mMaxBackBoneX, prm.mMaxBackBoneY, prm.mMinBackBoneX, prm.mMinBackBoneY,
+    m_jnt.setParam(prm.mMaxBackboneX, prm.mMaxBackboneY, prm.mMinBackboneX, prm.mMinBackboneY,
                    prm.mMaxHeadX, prm.mMaxHeadY, prm.mMinHeadX, prm.mMinHeadY, prm.mMaxTurnStep);
     if (mbWaitForDemo && demoActorID == 0) {
         return TRUE;

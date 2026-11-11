@@ -62,26 +62,14 @@ class Act_c : public fopAc_ac_c {
     /* 0x7B0 */ be<u8> mLandEffectDone, mMovingGround, mCollisionDelay;
     /* 0x7B3 */ u8 paddingSpeed;
     /* 0x7B4 */ be<f32> mPreviousSpeedY;
-    /* 0x7B8 */ union {
-        cXyz field_0x63C;
-        cXyz correctPosition;
-    };
-    /* 0x7C4 */ union {
-        be<s16> field_0x648;
-        be<s16> correctYaw;
-    };
+    /* 0x7B8 */ cXyz correctPosition;
+    /* 0x7C4 */ be<s16> correctYaw;
     /* 0x7C6 */ union {
         be<s16> mCorrectionYaw;
         be<s16> restartDelay;
     };
-    /* 0x7C8 */ union {
-        be<u8> field_0x64C;
-        be<u8> correctEnabled;
-    };
-    /* 0x7C9 */ union {
-        be<u8> field_0x64D;
-        be<u8> correctImmediate;
-    };
+    /* 0x7C8 */ be<u8> correctEnabled;
+    /* 0x7C9 */ be<u8> correctImmediate;
     /* 0x7CA */ be<u8> mCorrecting, mLeftHomeRoom;
     /* 0x7CC */ be<u8> appears, bingoActive, mUnused, mWaterSplashDone;
     /* 0x7D0 */ dPa_followEcallBack mFollowCallback;

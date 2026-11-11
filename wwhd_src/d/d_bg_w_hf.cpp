@@ -12,10 +12,10 @@ enum : u32 { heightFieldVtable = 0x10044560 };
 
 /* 024F5870 */
 bool dBgWHf::Set(HfData *bgd, be<u16> *map, f32 normal, s32 nx, s32 nz, u32 flag) {
-    mC8 = map;
+    mpTriMap = map;
     m_gridx = nx;
     m_gridz = nz;
-    mC4 = normal;
+    mNormalY = normal;
     if (SetBaseWorld(this, bgd, MOVE_BG_e | NO_CALC_VTX_e | NO_VTX_TBL_e | GLOBAL_e, NULL))
         return true;
     mSvFlag = flag;
@@ -45,10 +45,10 @@ void dBgWHf::CalcPlane() {
     for (s32 z = 0; z < rows; ++z) {
         s32 count = m_gridx;
         for (s32 x = 0; x < count; ++x) {
-            u32 slot = mC8.get()[index];
+            u32 slot = mpTriMap.get()[index];
             cBgD_Tri_t *t = &tri[slot];
             u16 v0 = t->vtx0, v1 = t->vtx1;
-            f32 ny = mC4;
+            f32 ny = mNormalY;
             cXyz *vertices = pm_vtx_tbl.get();
             u16 v2 = t->vtx2;
             cXyz *a = &vertices[v0], *b = &vertices[v1], *c = &vertices[v2];
@@ -313,10 +313,10 @@ static dBgWHf *dBgWHf__ct(dBgWHf *object) {
     }
     constructSavedVertexWorld(object);
     object->__vtbl = gabi::at<HfVtable>(heightFieldVtable);
-    object->mC4 = initialNormalY;
+    object->mNormalY = initialNormalY;
     object->m_gridx = 0;
     object->m_gridz = 0;
-    object->mC8 = NULL;
+    object->mpTriMap = NULL;
     return object;
 }
 /* 024F5A14 */

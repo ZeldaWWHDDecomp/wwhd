@@ -76,7 +76,7 @@ struct RAIN_EFF {
     /* 0x24 */ be<f32> field_0x24;
     /* 0x28 */ be<f32> mAlpha;
     /* 0x2C */ be<f32> field_0x2c;
-    /* 0x30 */ be<f32> field_0x30;
+    /* 0x30 */ be<f32> mGroundY;  /* was field_0x30: the floor of the drop: rain_bg_chk 0256691C (d_kankyo_rain.cpp, RAIN_EFF::mGroundY there) stores the camera centre y plus RainFloorOffset; dKyr_rain_move 02566B88 respawns the drop at the bottom once its y falls below it (tww the same) */
     /* 0x34 */ be<s16> mTimer;
     u8 tail[0x2];
 };
@@ -88,7 +88,7 @@ WWHD_OFFSET(RAIN_EFF, field_0x20, 0x20);
 WWHD_OFFSET(RAIN_EFF, field_0x24, 0x24);
 WWHD_OFFSET(RAIN_EFF, mAlpha, 0x28);
 WWHD_OFFSET(RAIN_EFF, field_0x2c, 0x2C);
-WWHD_OFFSET(RAIN_EFF, field_0x30, 0x30);
+WWHD_OFFSET(RAIN_EFF, mGroundY, 0x30);
 WWHD_OFFSET(RAIN_EFF, mTimer, 0x34);
 WWHD_SIZE(RAIN_EFF, 0x38);
 struct SNOW_EFF {

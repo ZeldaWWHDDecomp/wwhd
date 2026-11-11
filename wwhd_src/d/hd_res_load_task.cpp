@@ -4,6 +4,7 @@
  */
 // HD: This task and its sead string/heap plumbing have no GameCube counterpart.
 #include "d/hd_res_load_task.h"
+#include "sead/ElementAt.h"
 using namespace gabi;
 
 namespace hd_res_load_task {
@@ -469,7 +470,7 @@ u32 ResLoadTask::next(Request *i_entry, u32 retry) {
             if (i >= cap) {
                 i -= cap;
             }
-            gabi::at<be<u32>>(ids)[u32(i)] = id;
+            sead::elementAt<be<u32>>(ids, u32(i)) = id; /* ids + i * 4, wrapped at 32 bits as on the console */
         }
     }
     if (s32((u32)(mRequests.mCount)) > 0) {
@@ -1034,7 +1035,7 @@ u32 ResLoadTask::isLoadedId(u32 id) {
         if (j >= cap) {
             j -= cap;
         }
-        if ((u32)gabi::at<be<u32>>(base)[u32(j)] == id) {
+        if ((u32)sead::elementAt<be<u32>>(base, u32(j)) == id) { /* sibling: wrapped at 32 bits as on the console */
             return 1;
         }
     }
@@ -1053,7 +1054,7 @@ u32 ResLoadTask::isPendingId(u32 id) {
         if (j >= cap) {
             j -= cap;
         }
-        if ((u32)gabi::at<Request>(mRequests.mEntries)[u32(j)].mID == id) {
+        if ((u32)sead::elementAt<Request>(u32(mRequests.mEntries), u32(j)).mID == id) { /* sibling: wrapped at 32 bits as on the console */
             return 1;
         }
     }
@@ -1094,7 +1095,7 @@ void ResLoadTask::forgetId(u32 id) {
         if (j >= cap) {
             j -= cap;
         }
-        if ((u32)gabi::at<be<u32>>(base)[u32(j)] != id) {
+        if ((u32)sead::elementAt<be<u32>>(base, u32(j)) != id) { /* sibling: wrapped at 32 bits as on the console */
             continue;
         }
         if (cnt <= 0 || s32(i) < 0 || s32(i) >= cnt) {
@@ -1115,7 +1116,7 @@ void ResLoadTask::forgetId(u32 id) {
                 if (b >= cc) {
                     b -= cc;
                 }
-                gabi::at<be<u32>>(bb)[u32(a)] = gabi::at<be<u32>>(bb)[u32(b)];
+                sead::elementAt<be<u32>>(bb, u32(a)) = sead::elementAt<be<u32>>(bb, u32(b)); /* sibling: wrapped at 32 bits as on the console */
                 const s32 c = s32((u32)(mLoadedIDs.mCount));
                 k++;
                 last = c - 1;

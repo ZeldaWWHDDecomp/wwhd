@@ -112,7 +112,7 @@ struct daNpc_Pm1_c : fopNpc_npc_c {
     /* 0x933 */ be<u8> mbDemo;  /* was field_0x7C7: demo 022D1A9C: 1 while demoActorID is set (returned), else 0; setMtx 022D15F0 skips animation and ground while set (after our decomp's daNpc_Pf1_c mbDemo, same code) */
     /* 0x934 */ be<u8> field_0x7C8;
     /* 0x935 */ be<s8> mActionIndex;  /* was field_0x7C9: privateCut 022D1C04: dComIfGp_evmng_getMyActIdx(staff, cut_name_tbl, ..); -1 ends the cut, 0 runs event_action (after our decomp's daNpc_Pf1_c mActionIndex, same code) */
-    /* 0x936 */ be<s8> field_0x7CA;
+    /* 0x936 */ be<s8> mEventActionNo;  /* was field_0x7CA: event_actionInit 022D1B74 stores the cut's "ActNo" integer (dComIfGp_evmng_getMyIntegerP); event_action 022D1BFC is empty, so it is never read; same store as daNpc_Kp1_c::mEventActionNo (Kp1's event_action 0227C268 switches on it) */
     /* 0x937 */ be<u8> mAnmAtr;  /* was field_0x7CB: chngAnmAtr 022D24B0: the message animation attribute; setAnm_ATR 022D244C plays a_atr_prm_tbl[it]; setStt 022D2594 0xFF (after our decomp's daNpc_Pf1_c mAnmAtr) */
     /* 0x938 */ be<u8> mMesgAnimeTag;  /* was field_0x7CC: anmAtr 022D24D4: the last dComIfGp_getMesgAnimeTagInfo() taken (after our decomp's daNpc_Pf1_c mMesgAnimeTag, same code) */
     /* 0x939 */ be<s8> mBtpNum;  /* was field_0x7CD: setAnm_tex 022D2300: the btp (texture pattern) number; initTexPatternAnm 022D1060 / playTexPatternAnm 022D14A4 use it; CreateHeap 022D10A4 a_tex_pattern_num_tbl[0] (after our decomp's daNpc_Pf1_c mBtpNum) */
@@ -206,7 +206,7 @@ struct daNpc_Pm1_HIO_c {
         /* 0x10 */ be<s16> mMaxTurnStep;  /* was field_10: _execute 022D1F70 passes it to m_jnt.setParam as max_turn_step (dNpc_JntCtrl_c::setParam's parameter, tww d_npc.h; same names as daNpc_Nz_HIO_c) */
         /* 0x12 */ be<s16> mTurnSpeedTarget;  /* was field_12: lookBack 022D1CF4: mTurnSpeed eases to it while m_jnt turns (after our decomp's daNpcMt_c mTurnSpeedTarget, the same role) */
         /* 0x14 */ be<f32> mAttentionArrowYOffset;
-        /* 0x18 */ be<u8> field_18; /* HD: a byte flag (debug colours in _draw) */
+        /* 0x18 */ be<u8> mDebugDraw;  /* was field_18: HD byte flag: _draw 022D2128 initialises the debug colour statics (a_red / a_blue) while it is set; never written in WWHD (tww has no Pm1 code); after our decomp's daNpc_Pf1_HIO_c mDebugDraw (Pm1's template, same _draw code); HD: a byte flag (debug colours in _draw) */
         /* 0x19 */ u8 _19[3];
     };
     /* 0x00 */ be<s8> mNo;

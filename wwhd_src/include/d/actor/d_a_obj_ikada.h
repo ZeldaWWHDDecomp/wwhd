@@ -89,19 +89,19 @@ struct daObj_Ikada_HIO_c {
     /* 0x00 */ be<u32> __vtbl;
 
     /* 0x04 */ be<u8> mbDebugDraw;
-    /* 0x05 */ be<u8> m05;
-    /* 0x06 */ be<u8> m06;
+    /* 0x05 */ be<u8> mDebugHandleLeft;  /* was m05: daObj_Ikada_c::modePathMove 02364578 / modeStop 02364668: HandleLeft turns the handle animation back each frame while it is set (tww the same); hioConstructor 02364E6C sets the default, never written elsewhere in WWHD or tww (0) */
+    /* 0x06 */ be<u8> mDebugHandleRight;  /* was m06: daObj_Ikada_c::modePathMove 02364578 / modeStop 02364668: HandleRight turns the handle animation on each frame while it is set (tww the same); hioConstructor 02364E6C sets the default, never written elsewhere in WWHD or tww (0) */
     /* 0x07 */ be<u8> mbNoRotAnim;
-    /* 0x08 */ be<u8> m08;
+    /* 0x08 */ be<u8> mDebugNoPathMove;  /* was m08: daObj_Ikada_c::modePathMove 02364578: the path move is skipped while it is set (as without a path) (tww the same); hioConstructor 02364E6C sets the default, never written elsewhere in WWHD or tww (0) */
     /* 0x09 */ be<u8> m09[0x0C - 0x09];
     /* 0x0C */ cXyz mFlagOffset;
     /* 0x18 */ be<f32> mFlagScale;
-    /* 0x1C */ be<s16> m1C;
-    /* 0x1E */ be<s16> m1E;
-    /* 0x20 */ be<f32> m20;
-    /* 0x24 */ be<s16> m24;
+    /* 0x1C */ be<s16> mDebugRopeCnt;  /* was m1C: daObj_Ikada_c::modeWait 02363E98 (type 4): when not 0, mRopeCnt steps toward it by incRopeCnt (tww the same); hioConstructor 02364E6C sets the default, never written elsewhere in WWHD or tww (0) */
+    /* 0x1E */ be<s16> mCraneDownRopeCnt;  /* was m1E: daObj_Ikada_c::modeCraneDown 02364148: the rope is let out (incRopeCnt) until mRopeCnt reaches it, then crane wait (tww the same); hioConstructor 02364E6C sets the default, never written elsewhere in WWHD or tww (100) */
+    /* 0x20 */ be<f32> mHandleSpeed;  /* was m20: daObj_Ikada_c::HandleRight 02363F30 / HandleLeft 02364098: the handle animation's frame step (tww the same); hioConstructor 02364E6C sets the default, never written elsewhere in WWHD or tww (1.5) */
+    /* 0x24 */ be<s16> mCraneWaitTime;  /* was m24: daObj_Ikada_c::modeCraneUpWaitInit 02364034 / modeCraneDownWaitInit 02364204: mTimer for the crane waits (tww the same); hioConstructor 02364E6C sets the default, never written elsewhere in WWHD or tww (60) */
     /* 0x26 */ be<u8> m26[0x28 - 0x26];
-    /* 0x28 */ be<f32> m28;
+    /* 0x28 */ be<f32> mBombSmokeHeight;  /* was m28: daObj_Ikada_c::_execute 02362C54: mBombSmokePos.y (tww the same); hioConstructor 02364E6C sets the default, never written elsewhere in WWHD or tww (100) */
     /* 0x2C */ be<f32> mShipOffsY_Attention;
     /* 0x30 */ be<f32> mShipOffsY_Eye;
     /* 0x34 */ be<f32> mTerryWaveOffsZ;
@@ -121,14 +121,14 @@ struct daObj_Ikada_HIO_c {
     /* 0x78 */ be<f32> mWaveMaxVelocity;
     /* 0x7C */ cXyz mWaveCollapsePos0;
     /* 0x88 */ cXyz mWaveCollapsePos1;
-    /* 0x94 */ be<s16> m94;
+    /* 0x94 */ be<s16> mTerry1StopDistanceShip;  /* was m94: daObj_Ikada_c::modePathMoveTerry 023649B8 / modeStopTerry 02364C6C: type 1 stops while the player is closer than it and rides a ship (player status 0x10000, tww daPyStts0_SHIP_RIDE_e) (tww the same); hioConstructor 02364E6C sets the default, never written elsewhere in WWHD or tww (3000) */
     /* 0x96 */ be<s16> mPlayerStopDistance;
-    /* 0x98 */ be<s16> m98;
-    /* 0x9A */ be<s16> m9A;
-    /* 0x9C */ be<f32> m9C;
+    /* 0x98 */ be<s16> mTerry3StopDistance;  /* was m98: daObj_Ikada_c::modePathMoveTerry 023649B8 / modeStopTerry 02364C6C: type 3 stops while the player is closer than it (tww the same); hioConstructor 02364E6C sets the default, never written elsewhere in WWHD or tww (1000) */
+    /* 0x9A */ be<s16> mTerry1StopDistance;  /* was m9A: daObj_Ikada_c::modePathMoveTerry 023649B8 / modeStopTerry 02364C6C: type 1 stops while the player is closer than it and not on a ship (tww the same); hioConstructor 02364E6C sets the default, never written elsewhere in WWHD or tww (1000) */
+    /* 0x9C */ be<f32> mSphRadius;  /* was m9C: daObj_Ikada_c::setCollision 023647D0: the collision sphere's radius (times scale.x) (tww the same); hioConstructor 02364E6C sets the default, never written elsewhere in WWHD or tww (300) */
     /* 0xA0 */ be<f32> mVelocityTargetTerry1;
     /* 0xA4 */ be<f32> mVelocityTargetTerry3;
-    /* 0xA8 */ be<f32> mA8;
+    /* 0xA8 */ be<f32> mVelocityTargetTerry3Near;  /* was mA8: daObj_Ikada_c::modePathMoveTerry 023649B8: type 3's mVelocityFwdTarget while the player is closer than mPlayerStopDistance (tww the same); hioConstructor 02364E6C sets the default, never written elsewhere in WWHD or tww (30) */
 };
 WWHD_SIZE(daObj_Ikada_HIO_c, 0xAC);
 

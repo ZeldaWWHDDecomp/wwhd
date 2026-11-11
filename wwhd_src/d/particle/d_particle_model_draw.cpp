@@ -72,7 +72,7 @@ void dPa_modelEmitterDraw(void* emitter) {
             matrix.get()->m[2][2] = cz;
             f32 angle = f32((u16)gabi::at<JPABaseParticle>(q)->mRotateAngle) * angleScale;
             if (angle != zero) {
-                u8 axis = (u8)gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->field_0x26;
+                u8 axis = (u8)gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->mRotAxis;
                 if (axis < 3) {
                     pa_PSMTXRotRad(rotation.get(),
                                    u32(axis == 0   ? 'y'
@@ -105,11 +105,11 @@ void dPa_modelEmitterDraw(void* emitter) {
                      (f32)gabi::at<JPABaseParticle>(q)->mScaleX;
             void* light = pa_getEnvlight();
             pa_setLightTevColorType(light, model, p(a + 0x2C));
-            if ((u32)gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->field_0x1c &&
-                (u32)gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->field_0x20) {
-                F((u32)gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->field_0x1c,
-                  f32((u16)gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->field_0x24));
-                pa_mDoExt_btpAnm_entry(p((u32)gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->field_0x20),
+            if ((u32)gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->mpAnmTexPattern &&
+                (u32)gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->mpBtpAnm) {
+                F((u32)gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->mpAnmTexPattern,
+                  f32((u16)gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->mBtpFrame));
+                pa_mDoExt_btpAnm_entry(p((u32)gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->mpBtpAnm),
                                        p((u32)gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->modelData),
                                        s32(sh(a + 0x28)));
             }
@@ -122,7 +122,7 @@ void dPa_modelEmitterDraw(void* emitter) {
             for (u32 i = 0; i < 12; i++)
                 F(out + 0xC8 + i * 4, values[i]);
             pa_mDoExt_modelUpdateDL(model, u32(0));
-            if ((u32)gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->field_0x1c)
+            if ((u32)gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->mpAnmTexPattern)
                 W((u32)gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->modelData + 0x38, 0);
             node = w(node + 12);
         }

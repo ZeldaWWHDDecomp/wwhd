@@ -41,7 +41,7 @@ s32 Act_c::prm_get_swSave() { return PrmAbstract(this, PRM_SWSAVE_W, PRM_SWSAVE_
 /* 023399A4 */
 BOOL Act_c::CreateHeap() {
     J3DModelData* model_data = (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_EBOMZO_BDL_EBOMZO_e);
-    JUT_ASSERT(140, model_data != nullptr);
+    JUT_ASSERT_MSG(140, model_data != nullptr, "model_data != 0");
     J3DModel* model = mDoExt_J3DModel__create(model_data, 0, 0x11020203);
     mpModel = model;
     return model != nullptr; /* HD: tests the returned pointer */
@@ -255,7 +255,7 @@ static void Act_c_dt(Act_c* i_this, s32 flags) {
 /* WWHD glue (tools/verify/autoglue.py)
 str 10027A18
 str 100279E0 in 023399A4
-str 100279D0 "model_data != nullptr" renamed
+str 100279D0 "model_data != 0"
 str 10027978 in 02339858
 str 1002798C "(phase_state == cPhs_COMPLEATE_e) || (phase_state == cPhs_ERROR_e)" renamed
 data sph_check_src 101C8EC4

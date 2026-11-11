@@ -289,20 +289,46 @@ struct SoJntHitHIO {
 struct daNpc_So_HIO_c {
     be<u32> __vtbl;
     dNpc_HIO_c mNpc;
-    be<u8> m2C, m2D, m2E, m2F, m30, m31;
+    be<u8> mForceHudeDraw;  /* was m2C: _draw 022DFEDC: hudeDraw runs when mEquip is set or it is (tww the same); daNpc_So_HIO_ct 022E48B4 sets the default, never written elsewhere in WWHD or tww (0) */
+    be<u8> m2D;
+    be<u8> mForceMiniGameClear;  /* was m2E: getMsg 022E1CA8: the mini-game counts as cleared when it is set or mMiniGameHitCount >= 10 (tww the same); daNpc_So_HIO_ct 022E48B4 sets the default, never written elsewhere in WWHD or tww (0) */
+    be<u8> mForceGridArrived;  /* was m2F: next_msgStatus 022E179C: message 0x32D0 takes the arrived-grid branch when the room's grid is saved as arrived or it is set (tww the same); daNpc_So_HIO_ct 022E48B4 sets the default, never written elsewhere in WWHD or tww (0) */
+    be<u8> mForceMiniGameTag;  /* was m30: next_msgStatus 022E179C: message 0x32D6 goes on as if a mini-game tag was found when it is set (tww the same); daNpc_So_HIO_ct 022E48B4 sets the default, never written elsewhere in WWHD or tww (0) */
+    be<u8> mNoDraw;  /* was m31: _draw 022DFEDC: the model (and fins) are drawn only while it is 0 (tww the same); daNpc_So_HIO_ct 022E48B4 sets the default, never written elsewhere in WWHD or tww (0) */
     u8 _32[2];
-    be<f32> m34, m38, m3C, m40, m44, m48, m4C, m50, m54, m58, m5C, m60;
-    be<s16> m64, m66, m68, m6A;
-    be<f32> m6C, m70, m74, m78;
-    be<s16> m7C;
+    be<f32> mSwimAnmSpeed;  /* was m34: setAnmSwimSpeed 022DF60C: the swim animation speed is min(1, speed / 10) * it (tww the same); daNpc_So_HIO_ct 022E48B4 sets the default, never written elsewhere in WWHD or tww (3.0) */
+    be<f32> mSwimAnmSpeedMin;  /* was m38: setAnmSwimSpeed 022DF60C: the lower limit of that speed (tww cLib_minLimit); daNpc_So_HIO_ct 022E48B4 sets the default, never written elsewhere in WWHD or tww (0.9) */
+    be<f32> mMiniGameSphRadius;  /* was m3C: so_miniGameJump (in cutMiniGameProc 022E3484): mSph's radius while it jumps in the mini-game (tww SetR(l_HIO.m3C)); daNpc_So_HIO_ct 022E48B4 sets the default, never written elsewhere in WWHD or tww (100) */
+    be<f32> m40;
+    be<f32> mNearScale;  /* was m44: setScale 022DF060: mTargetScale while the player is within mScaleDist (tww the same); daNpc_So_HIO_ct 022E48B4 sets the default, never written elsewhere in WWHD or tww (0.7) */
+    be<f32> mScaleDist;  /* was m48: setScale 022DF060: beyond this player distance mTargetScale grows with the distance (tww the same); daNpc_So_HIO_ct 022E48B4 sets the default, never written elsewhere in WWHD or tww (2000) */
+    be<f32> mMaxScale;  /* was m4C: setScale 022DF060: the growth divisor and the upper limit of mTargetScale (tww the same); daNpc_So_HIO_ct 022E48B4 sets the default, never written elsewhere in WWHD or tww (2.0) */
+    be<f32> mJumpSpeedYMax;  /* was m50: modeJumpInit 022E00D4 / cutMiniGameProc 022E3484: the jump's speed.y is capped at it (tww modeJumpInit the same); daNpc_So_HIO_ct 022E48B4 sets the default, never written elsewhere in WWHD or tww (150) */
+    be<f32> mFirstWaitShipDist;  /* was m54: modeEventFirstWait 022E09CC: it waits until the ship is this far (XZ) from mInitialPos (tww the same); daNpc_So_HIO_ct 022E48B4 sets the default, never written elsewhere in WWHD or tww (20000) */
+    be<f32> m58;
+    be<f32> mWaitAnmSwapRate;  /* was m5C: setAnm 022DE6D4: at the end of a loop it swaps animation 3 / 5 when cM_rndF(100) < it (tww the same); daNpc_So_HIO_ct 022E48B4 sets the default, never written elsewhere in WWHD or tww (30) */
+    be<f32> m60;
+    be<s16> mFallPitchFast;  /* was m64: _execute 022DF6EC: the pitch target while speed.y < -mJumpSpeedY / 2 (tww the same); daNpc_So_HIO_ct 022E48B4 sets the default, never written elsewhere in WWHD or tww (0x1F40) */
+    be<s16> mFallPitchSlow;  /* was m66: _execute 022DF6EC: the pitch target while speed.y < -mJumpSpeedY / 4 (tww the same); daNpc_So_HIO_ct 022E48B4 sets the default, never written elsewhere in WWHD or tww (0xFA0) */
+    be<s16> mRisePitchFast;  /* was m68: _execute 022DF6EC: the pitch target while speed.y > mJumpSpeedY / 2; modeJumpInit 022E00D4 / cutJumpStart 022E1F90 / cutJumpMapopenProc 022E2C5C / cutMiniGameProc 022E3484 start the jump with shape_angle.x = it (tww the same); daNpc_So_HIO_ct 022E48B4 sets the default, never written elsewhere in WWHD or tww (-0x1F40) */
+    be<s16> mRisePitchSlow;  /* was m6A: _execute 022DF6EC: the pitch target while speed.y > mJumpSpeedY / 4 (tww the same); daNpc_So_HIO_ct 022E48B4 sets the default, never written elsewhere in WWHD or tww (-0xFA0) */
+    be<f32> m6C;
+    be<f32> m70;
+    be<f32> m74;
+    be<f32> m78;
+    be<s16> mTgHitTime;  /* was m7C: checkTgHit 022E160C: mTgHitTimer is set to it on a hit (tww the same); daNpc_So_HIO_ct 022E48B4 sets the default, never written elsewhere in WWHD or tww (5) */
     u8 _7E[2];
-    be<f32> m80, m84, m88, m8C, m90;
-    be<u8> m94;
+    be<f32> mMapopenGravity;  /* was m80: cutJumpMapopenProc 022E2C5C: gravity of the jump onto the ship; daNpc_So_HIO_ct 022E48B4 sets the default, never written elsewhere in WWHD or tww (-1.4) */
+    be<f32> mMapopenJumpSpeedY;  /* was m84: cutJumpMapopenProc 022E2C5C: speed.y (and mJumpSpeedY) of that jump; daNpc_So_HIO_ct 022E48B4 sets the default, never written elsewhere in WWHD or tww (18) */
+    be<f32> mMapopenNearDist;  /* was m88: cutJumpMapopenProc 022E2C5C: step 1's goal is this far to the ship's side; daNpc_So_HIO_ct 022E48B4 sets the default, never written elsewhere in WWHD or tww (120) */
+    be<f32> mMapopenFarDist;  /* was m8C: cutJumpMapopenProc 022E2C5C: step 2's goal (where it dives) is this far to the ship's side; daNpc_So_HIO_ct 022E48B4 sets the default, never written elsewhere in WWHD or tww (300) */
+    be<f32> mMapopenMoveStep;  /* was m90: cutJumpMapopenProc 022E2C5C: the XZ step of cLib_chasePosXZ toward both goals; daNpc_So_HIO_ct 022E48B4 sets the default, never written elsewhere in WWHD or tww (15) */
+    be<u8> mNoFmapFish;  /* was m94: cutJumpMapopenProc 022E2C5C: the fish mark on the map (dComIfGp_fmapOpenFishOn) is set only while it is 0; daNpc_So_HIO_ct 022E48B4 sets the default, never written elsewhere in WWHD or tww (0) */
     u8 _95[3];
     SoJntHitHIO jntHit;
 };
 WWHD_OFFSET(daNpc_So_HIO_c, mNpc, 4);
-WWHD_OFFSET(daNpc_So_HIO_c, m34, 0x34);
+WWHD_OFFSET(daNpc_So_HIO_c, mSwimAnmSpeed, 0x34);
 WWHD_OFFSET(daNpc_So_HIO_c, jntHit, 0x98);
 WWHD_SIZE(daNpc_So_HIO_c, 0xC4);
 struct SoModeEntry {

@@ -118,14 +118,14 @@ s32 daNpc_Os_c::wallHitCheck() {
 u32 daNpc_Os_c::walkProc(f32 param_1, s16 param_2) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     f32 f = mPrevMorfFrame;
-    if (f > f32(l_osHIO.field_0xB0) && f < f32(l_osHIO.field_0xAC)) {
-        speedF = f32(l_osHIO.mOs2.field_0x08) * param_1;
+    if (f > f32(l_osHIO.mWalkFrameStart) && f < f32(l_osHIO.mWalkFrameEnd)) {
+        speedF = f32(l_osHIO.mOs2.mWalkSpeed) * param_1;
     } else {
         speedF = 0.0f;
     }
-    return osAddCalcAngle(&current.angle.y, param_2, s16(l_osHIO.mOs2.field_0x28),
-                          s16(l_osHIO.mOs2.field_0x24),
-                          s16(l_osHIO.mOs2.field_0x26)); /* cLib_addCalcAngleS */
+    return osAddCalcAngle(&current.angle.y, param_2, s16(l_osHIO.mOs2.mTurnScale),
+                          s16(l_osHIO.mOs2.mTurnMaxStep),
+                          s16(l_osHIO.mOs2.mTurnMinStep)); /* cLib_addCalcAngleS */
 }
 
 /* 022AE340 */
@@ -211,7 +211,7 @@ void daNpc_Os_c::initialWaitEvent(int staffIdx) {
     if (dComIfGp_evmng_getMySubstanceP(staffIdx, "gravity", 3)) {
         mStatus |= STATUS_GRAVITY; /* onGravity */
         maxFallSpeed = -100.0f;
-        gravity = f32(l_osHIO.field_0x8C);
+        gravity = f32(l_osHIO.mGravity);
     }
 
     be<s32>* quakeData = (be<s32>*)dComIfGp_evmng_getMySubstanceP(staffIdx, "quake", 3);
@@ -245,7 +245,7 @@ void daNpc_Os_c::initialWakeupEvent(int) {
     if (os_b::partner() == this) { /* os_b::partner() == this */
         setWakeup();
         maxFallSpeed = -100.0f;
-        gravity = f32(l_osHIO.field_0x8C);
+        gravity = f32(l_osHIO.mGravity);
         mNoResetFlg1 &= ~u32(NPC_NOT_CHANGE); /* offNpcNotChange */
         os_initBrkAnm(this, 4, 1);
         mBrkAnmEnd = 0;
@@ -288,9 +288,9 @@ BOOL daNpc_Os_c::actionMoveEvent(int staffIdx) {
             s16 target_angle = fopAcM_searchActorAngleY(this, mpPedestal);
             os_walkProc(this, value, target_angle);
             mpMorf->mFrameCtrl.mRate = value + value; /* mpMorf->setPlaySpeed(value * 2) */
-            cLib_addCalcAngleS(&shape_angle.y, current.angle.y, s16(l_osHIO.mOs2.field_0x28),
-                               (s16)(s16(l_osHIO.mOs2.field_0x24) * 2),
-                               (s16)(s16(l_osHIO.mOs2.field_0x26) * 2));
+            cLib_addCalcAngleS(&shape_angle.y, current.angle.y, s16(l_osHIO.mOs2.mTurnScale),
+                               (s16)(s16(l_osHIO.mOs2.mTurnMaxStep) * 2),
+                               (s16)(s16(l_osHIO.mOs2.mTurnMinStep) * 2));
             s16 yrot = shape_angle.y;
             gabi::Local<cXyz> eye; /* cXyz::Zero (copy) */
             cXyz* z = &l_zero;
@@ -469,8 +469,8 @@ BOOL daNpc_Os_c::talk() {
 void daNpc_Os_c::setAnm_brkAnm(int param_1) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     BrkTableEntry* e = brkEntry(anmBrkTbl, param_1); /* anmBrkTbl[param_1] */
-    os_setAnm(this, u8(e->unk_1));
-    os_initBrkAnm(this, u8(e->unk_2), 1);
+    os_setAnm(this, u8(e->mAnmPrmIdx));
+    os_initBrkAnm(this, u8(e->mBrkAnmIdx), 1);
     mBrkAnmEnd = 0;
 }
 
@@ -558,7 +558,7 @@ void daNpc_Os_c::lookBack(int param_1, int param_2, int param_3) {
     }
     gabi::Local<cXyz> eye, dst, temp;
     if (param_1) {
-        osPlayerEyePos(eye.get(), f32(l_osHIO.mNpc.m04)); /* dNpc_playerEyePos(m04) */
+        osPlayerEyePos(eye.get(), f32(l_osHIO.mNpc.mPlayerEyeOffsetY)); /* dNpc_playerEyePos(m04) */
         dst->copy(*eye);
         tx = current.pos.x;
         ty = eyePos.y;

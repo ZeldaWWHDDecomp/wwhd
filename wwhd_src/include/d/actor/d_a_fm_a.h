@@ -7,77 +7,77 @@ namespace fm_a {
 inline J3DModel* actorModel(fopAc_ac_c* actor) { return gabi::at<J3DModel>(actor->model); }
 struct HIO {
     u8 mUnaccessed0[0x4];
-    be<u8> field_0x004;
-    be<u8> field_0x005;
-    be<u8> field_0x006;
-    be<u8> field_0x007;
+    be<u8> mDebugTargets;  /* was field_0x004: as fm_main::HIO::mDebugTargets */
+    be<u8> mDebugHeadTop;  /* was field_0x005: as fm_main::HIO::mDebugHeadTop */
+    be<u8> mDebugGrabAxis;  /* was field_0x006: as fm_main::HIO::mDebugGrabAxis */
+    be<u8> mDebugHandAxis;  /* was field_0x007: as fm_main::HIO::mDebugHandAxis */
     u8 mUnaccessed8[0x1];
-    be<u8> field_0x009;
-    be<u8> field_0x00A;
-    be<u8> field_0x00B;
-    be<u8> field_0x00C;
+    be<u8> mDebugAngles;  /* was field_0x009: as fm_main::HIO::mDebugAngles */
+    be<u8> mDebugGoalLine;  /* was field_0x00A: as fm_main::HIO::mDebugGoalLine */
+    be<u8> mDebugJoints;  /* was field_0x00B: as fm_main::HIO::mDebugJoints */
+    be<u8> mDebugArea;  /* was field_0x00C: as fm_main::HIO::mDebugArea */
     u8 mUnaccessedD[0x2B];
-    cXyz field_0x038;
+    cXyz mHandOffset;  /* was field_0x038: as fm_main::HIO::mHandOffset */
     u8 mUnaccessed44[0x22];
-    be<s16> field_0x066;
+    be<s16> mUnderFootTime;  /* was field_0x066: as fm_main::HIO::mUnderFootTime */
     u8 mUnaccessed68[0x1C];
-    be<s16> field_0x084;
-    be<s16> field_0x086;
+    be<s16> mHideTimeMin;  /* was field_0x084: as fm_main::HIO::mHideTimeMin */
+    be<s16> mHideTimeMax;  /* was field_0x086: as fm_main::HIO::mHideTimeMax */
     u8 mUnaccessed88[0x2];
     be<s16> field_0x08A;
     u8 mUnaccessed8C[0x14];
-    be<s16> field_0x0A0;
+    be<s16> mRndMoveTime;  /* was field_0x0A0: as fm_main::HIO::mRndMoveTime */
     u8 mUnaccessedA2[0x6];
-    be<f32> field_0x0A8;
-    be<f32> field_0x0AC;
-    be<f32> field_0x0B0;
+    be<f32> mHeightRange;  /* was field_0x0A8: as fm_main::HIO::mHeightRange */
+    be<f32> mRndBackDist;  /* was field_0x0AC: as fm_main::HIO::mRndBackDist */
+    be<f32> mRndMoveStep;  /* was field_0x0B0: as fm_main::HIO::mRndMoveStep */
     u8 mUnaccessedB4[0xC];
-    be<f32> field_0x0C0;
+    be<f32> mUnderFootStep;  /* was field_0x0C0: as fm_main::HIO::mUnderFootStep */
     u8 mUnaccessedC4[0x4];
-    be<f32> field_0x0C8;
-    be<f32> field_0x0CC;
-    be<f32> field_0x0D0;
+    be<f32> mSphRadius;  /* was field_0x0C8: as fm_main::HIO::mSphRadius */
+    be<f32> mChaseSpeed;  /* was field_0x0CC: as fm_main::HIO::mChaseSpeed */
+    be<f32> mPathSpeed;  /* was field_0x0D0: as fm_main::HIO::mPathSpeed */
     u8 mUnaccessedD4[0x8];
-    be<f32> field_0x0DC;
-    be<f32> field_0x0E0;
-    be<f32> field_0x0E4;
-    be<f32> field_0x0E8;
+    be<f32> mFootGrabDist;  /* was field_0x0DC: as fm_main::HIO::mFootGrabDist */
+    be<f32> mNearRange;  /* was field_0x0E0: as fm_main::HIO::mNearRange */
+    be<f32> mAttackRange;  /* was field_0x0E4: as fm_main::HIO::mAttackRange */
+    be<f32> mNoticeRange;  /* was field_0x0E8: as fm_main::HIO::mNoticeRange */
     u8 mUnaccessedEC[0x34];
-    be<f32> field_0x120;
-    be<f32> field_0x124;
-    be<f32> field_0x128;
-    be<f32> field_0x12C;
+    be<f32> mHoleScaleClosed;  /* was field_0x120: as fm_main::HIO::mHoleScaleClosed */
+    be<f32> mHoleScaleOpen;  /* was field_0x124: as fm_main::HIO::mHoleScaleOpen */
+    be<f32> mHoleScaleStep;  /* was field_0x128: as fm_main::HIO::mHoleScaleStep */
+    be<f32> mHoleScaleStepUnderFoot;  /* was field_0x12C: as fm_main::HIO::mHoleScaleStepUnderFoot */
     u8 mUnaccessed130[0x15C - 0x130];
 };
-WWHD_OFFSET(HIO, field_0x004, 0x4);
-WWHD_OFFSET(HIO, field_0x005, 0x5);
-WWHD_OFFSET(HIO, field_0x006, 0x6);
-WWHD_OFFSET(HIO, field_0x007, 0x7);
-WWHD_OFFSET(HIO, field_0x009, 0x9);
-WWHD_OFFSET(HIO, field_0x00A, 0xA);
-WWHD_OFFSET(HIO, field_0x00B, 0xB);
-WWHD_OFFSET(HIO, field_0x00C, 0xC);
-WWHD_OFFSET(HIO, field_0x038, 0x38);
-WWHD_OFFSET(HIO, field_0x066, 0x66);
-WWHD_OFFSET(HIO, field_0x084, 0x84);
-WWHD_OFFSET(HIO, field_0x086, 0x86);
+WWHD_OFFSET(HIO, mDebugTargets, 0x4);
+WWHD_OFFSET(HIO, mDebugHeadTop, 0x5);
+WWHD_OFFSET(HIO, mDebugGrabAxis, 0x6);
+WWHD_OFFSET(HIO, mDebugHandAxis, 0x7);
+WWHD_OFFSET(HIO, mDebugAngles, 0x9);
+WWHD_OFFSET(HIO, mDebugGoalLine, 0xA);
+WWHD_OFFSET(HIO, mDebugJoints, 0xB);
+WWHD_OFFSET(HIO, mDebugArea, 0xC);
+WWHD_OFFSET(HIO, mHandOffset, 0x38);
+WWHD_OFFSET(HIO, mUnderFootTime, 0x66);
+WWHD_OFFSET(HIO, mHideTimeMin, 0x84);
+WWHD_OFFSET(HIO, mHideTimeMax, 0x86);
 WWHD_OFFSET(HIO, field_0x08A, 0x8A);
-WWHD_OFFSET(HIO, field_0x0A0, 0xA0);
-WWHD_OFFSET(HIO, field_0x0A8, 0xA8);
-WWHD_OFFSET(HIO, field_0x0AC, 0xAC);
-WWHD_OFFSET(HIO, field_0x0B0, 0xB0);
-WWHD_OFFSET(HIO, field_0x0C0, 0xC0);
-WWHD_OFFSET(HIO, field_0x0C8, 0xC8);
-WWHD_OFFSET(HIO, field_0x0CC, 0xCC);
-WWHD_OFFSET(HIO, field_0x0D0, 0xD0);
-WWHD_OFFSET(HIO, field_0x0DC, 0xDC);
-WWHD_OFFSET(HIO, field_0x0E0, 0xE0);
-WWHD_OFFSET(HIO, field_0x0E4, 0xE4);
-WWHD_OFFSET(HIO, field_0x0E8, 0xE8);
-WWHD_OFFSET(HIO, field_0x120, 0x120);
-WWHD_OFFSET(HIO, field_0x124, 0x124);
-WWHD_OFFSET(HIO, field_0x128, 0x128);
-WWHD_OFFSET(HIO, field_0x12C, 0x12C);
+WWHD_OFFSET(HIO, mRndMoveTime, 0xA0);
+WWHD_OFFSET(HIO, mHeightRange, 0xA8);
+WWHD_OFFSET(HIO, mRndBackDist, 0xAC);
+WWHD_OFFSET(HIO, mRndMoveStep, 0xB0);
+WWHD_OFFSET(HIO, mUnderFootStep, 0xC0);
+WWHD_OFFSET(HIO, mSphRadius, 0xC8);
+WWHD_OFFSET(HIO, mChaseSpeed, 0xCC);
+WWHD_OFFSET(HIO, mPathSpeed, 0xD0);
+WWHD_OFFSET(HIO, mFootGrabDist, 0xDC);
+WWHD_OFFSET(HIO, mNearRange, 0xE0);
+WWHD_OFFSET(HIO, mAttackRange, 0xE4);
+WWHD_OFFSET(HIO, mNoticeRange, 0xE8);
+WWHD_OFFSET(HIO, mHoleScaleClosed, 0x120);
+WWHD_OFFSET(HIO, mHoleScaleOpen, 0x124);
+WWHD_OFFSET(HIO, mHoleScaleStep, 0x128);
+WWHD_OFFSET(HIO, mHoleScaleStepUnderFoot, 0x12C);
 WWHD_SIZE(HIO, 0x15C);
 inline HIO& hio() { return *gabi::at<HIO>(0x10463E0C); }
 inline be<u32>& counter() { return *gabi::at<be<u32>>(0x101FF558); }

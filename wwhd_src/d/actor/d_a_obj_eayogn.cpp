@@ -11,7 +11,7 @@ const char daObjEayogn_c::M_arcname[7] = "Eayogn";
 /* 02339330 */
 BOOL daObjEayogn_c::create_heap() {
     J3DModelData* mdl_data = (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_EAYOGN_BDL_EAYOGN_e);
-    JUT_ASSERT(0x5C, mdl_data != NULL);
+    JUT_ASSERT_MSG(0x5C, mdl_data != NULL, "mdl_data != 0");
     if (mdl_data == NULL)
         return FALSE;
     mpModel = mDoExt_J3DModel__create(mdl_data, 0, 0x11020203);
@@ -108,5 +108,5 @@ static BOOL Mthd_IsDelete(void*) { return TRUE; }
 /* WWHD glue (tools/verify/autoglue.py): translation-unit data
 str 10027950 # "Eayogn"
 str 10027914 # "d_a_obj_eayogn.cpp"
-str 10027904 "mdl_data != NULL" renamed # HD: assertion prints null as 0
+str 10027904 "mdl_data != 0" # HD: assertion prints null as 0
 */

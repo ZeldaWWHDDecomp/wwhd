@@ -52,12 +52,12 @@ void invalidate(STBoxEmitter *emitter) {
 }
 void clearEmitters(daSTBox_c *i_this) {
     for (int i = 0; i < 3; i++) {
-        auto *e = static_cast<STBoxEmitter *>((void *)i_this->field_0x29C[i]);
+        auto *e = static_cast<STBoxEmitter *>((void *)i_this->mpDropEmitter[i]);
         if (e) {
             e->mStatus = (u32)((u32)e->mStatus & ~u32(STBOX_IMMORTAL));
-            e = static_cast<STBoxEmitter *>((void *)i_this->field_0x29C[i]);
+            e = static_cast<STBoxEmitter *>((void *)i_this->mpDropEmitter[i]);
             invalidate(e);
-            i_this->field_0x29C[i] = 0;
+            i_this->mpDropEmitter[i] = 0;
         }
     }
 }
@@ -80,19 +80,19 @@ void *particleSet(daSTBox_c *i_this, u32 group, u32 id, u32 pos, u32 angle, u32 
                             ptr(callback), -1, 0, 0, 0);
 }
 void setupEmitter(daSTBox_c *i_this, int index, f32 scale, f32 y) {
-    auto *e = static_cast<STBoxEmitter *>((void *)i_this->field_0x29C[index]);
+    auto *e = static_cast<STBoxEmitter *>((void *)i_this->mpDropEmitter[index]);
     if (!e)
         return;
     e->mStatus = (u32)((u32)e->mStatus | STBOX_IMMORTAL);
-    e = static_cast<STBoxEmitter *>((void *)i_this->field_0x29C[index]);
+    e = static_cast<STBoxEmitter *>((void *)i_this->mpDropEmitter[index]);
     e->mGlobalParticleScale.x = (f32)(1.5f);
     e->mGlobalParticleScale.y = (f32)(1.5f);
     e->mGlobalParticleScale.z = (f32)(1.0f);
-    e = static_cast<STBoxEmitter *>((void *)i_this->field_0x29C[index]);
+    e = static_cast<STBoxEmitter *>((void *)i_this->mpDropEmitter[index]);
     e->mEmitterScale.x = (f32)(scale);
     e->mEmitterScale.y = (f32)(1.0f);
     e->mEmitterScale.z = (f32)(scale);
-    e = static_cast<STBoxEmitter *>((void *)i_this->field_0x29C[index]);
+    e = static_cast<STBoxEmitter *>((void *)i_this->mpDropEmitter[index]);
     e->mEmitterTranslation.x = (f32)(0.0f);
     e->mEmitterTranslation.z = (f32)(0.0f);
     e->mEmitterTranslation.y = (f32)(y);
@@ -268,7 +268,7 @@ void daSTBox_shadowEcallBack_c::draw(void *emitter) {
         if (step == 0) {
             for (int j = 0; j < 3; j++) {
                 u32 pt = (u32)gabi::at<STBoxParticleLink>(link)->mpObject;
-                copyFloat3(gabi::ea(&field_0x14[j]),
+                copyFloat3(gabi::ea(&mPrevRibbonPos[j]),
                            gabi::ea(&gabi::at<STBoxParticle>(pt)->mGlobalPosition));
                 link = (u32)gabi::at<STBoxParticleLink>(link)->mpNext;
             }
@@ -306,8 +306,8 @@ void daSTBox_shadowEcallBack_c::draw(void *emitter) {
                     v = (u32)gabi::at<STBoxRibbonRecord>(record)->mpVertices + written * 0x28;
                     gabi::at<STBoxRibbonVertex>(v)->mTexX = (f32)(textureX);
                     gabi::at<STBoxRibbonVertex>(v)->mTexY = (f32)(textureY);
-                    f32 x = field_0x14[written].x, y = field_0x14[written].y,
-                        z = field_0x14[written].z;
+                    f32 x = mPrevRibbonPos[written].x, y = mPrevRibbonPos[written].y,
+                        z = mPrevRibbonPos[written].z;
                     v = (u32)gabi::at<STBoxRibbonRecord>(record)->mpVertices + written * 0x28;
                     gabi::at<STBoxRibbonVertex>(v)->mPreviousPosition.y = (f32)(y);
                     gabi::at<STBoxRibbonVertex>(v)->mPreviousPosition.z = (f32)(z);
@@ -315,9 +315,9 @@ void daSTBox_shadowEcallBack_c::draw(void *emitter) {
                     v = (u32)gabi::at<STBoxRibbonRecord>(record)->mpVertices + written * 0x28;
                     gabi::at<STBoxRibbonVertex>(v)->mPreviousTexY = (f32)(priorY);
                     gabi::at<STBoxRibbonVertex>(v)->mPreviousTexX = (f32)(textureX);
-                    field_0x14[written].x = (f32)pos->x;
-                    field_0x14[written].y = (f32)pos->y;
-                    field_0x14[written].z = (f32)pos->z;
+                    mPrevRibbonPos[written].x = (f32)pos->x;
+                    mPrevRibbonPos[written].y = (f32)pos->y;
+                    mPrevRibbonPos[written].z = (f32)pos->z;
                     textureX = gabi::fadds_ppc(textureX, 0.5f);
                     written++;
                     j++;
@@ -364,7 +364,7 @@ s32 daSTBox_c::_delete() {
     stboxResDelete(&mPhase, "Salvage");
     u32 save = (u32)l_save;
     u32 reg = stboxGetEventReg(ptr(save + 0x644), 0xADFF);
-    if (field_0x331 == 2) {
+    if (mBoxType == 2) {
         save = (u32)l_save;
         stboxSetEventReg(ptr(save + 0x644), 0xADFF, (reg + 1) & 255);
     }
@@ -376,7 +376,7 @@ s32 CheckCreateHeap(daSTBox_c *i_this) { return i_this->CreateHeap(); }
 
 /* 02467D9C */
 s32 daSTBox_c::CreateHeap() {
-    u32 type = field_0x331;
+    u32 type = mBoxType;
     u32 res = (u32)l_resourceControl;
     s32 index = (s16)m_bdlidx.mEntries[type];
     gabi::Local<SafeName> name;
@@ -405,35 +405,35 @@ void daSTBox_c::CreateInit() {
         temp->y = (f32)gabi::at<cXyz>(top)->y;
         temp->z = (f32)gabi::at<cXyz>(top)->z;
         f32 water = getWaterY(temp.get());
-        field_0x324.z = crane->z;
-        field_0x324.y = water;
-        field_0x324.x = crane->x;
+        mShadowPos.z = crane->z;
+        mShadowPos.y = water;
+        mShadowPos.x = crane->x;
     } else {
-        field_0x324.x = crane->x;
-        field_0x324.y = crane->y;
-        field_0x324.z = crane->z;
+        mShadowPos.x = crane->x;
+        mShadowPos.y = crane->y;
+        mShadowPos.z = crane->z;
     }
     u32 m = gabi::ea((J3DModel *)mpModel);
     cullMtx = m ? m + 0xC8 : 0;
     stboxSetCullBox(this, -150.0f, -0.0f, -150.0f, 150.0f, 150.0f, 150.0f);
     set_mtx();
     u32 item = (u8)(u32)mParameters;
-    field_0x330 = (item - 1u < 4) ? 5 : item;
-    field_0x334 = 0;
-    field_0x336 = 0;
+    mItemNo = (item - 1u < 4) ? 5 : item;
+    mSplashDone = 0;
+    mBgmStarted = 0;
     for (int i = 0; i < 2; i++)
-        field_0x29C[i] = particleSet(this, 0, STBOX_WATER_DROP, gabi::ea(&current.pos),
+        mpDropEmitter[i] = particleSet(this, 0, STBOX_WATER_DROP, gabi::ea(&current.pos),
                                      gabi::ea(&current.angle), 0, 255, 0);
-    u32 type = field_0x331;
+    u32 type = mBoxType;
     if (type == 1 || type == 2) {
-        field_0x29C[2] = particleSet(this, 0, STBOX_WATER_DROP, gabi::ea(&current.pos),
+        mpDropEmitter[2] = particleSet(this, 0, STBOX_WATER_DROP, gabi::ea(&current.pos),
                                      gabi::ea(&current.angle), 0, 255, 0);
         for (int i = 0; i < 3; i++)
             setupEmitter(this, i, 3.0f, 20.0f);
         if (!(void *)mShadowCallback.mpEmitter) {
-            particleSet(this, 5, STBOX_SALVAGE_SHADOW, gabi::ea(&field_0x324),
+            particleSet(this, 5, STBOX_SALVAGE_SHADOW, gabi::ea(&mShadowPos),
                         gabi::ea(&current.angle), 0, 0, gabi::ea(&mShadowCallback));
-            mShadowCallback.mPos.copy(field_0x324);
+            mShadowCallback.mPos.copy(mShadowPos);
             mShadowCallback.mExScaleY = 4.0f;
             mItemPID = 0xFFFFFFFF;
             mShadowCallback.mExTransY = -0.1f;
@@ -457,16 +457,16 @@ s32 daSTBox_c::_create() {
             stboxRippleConstruct(ptr(gabi::ea(mRippleCallBack)));
             mShadowCallback.__vtbl = stbox_tu::shadow;
             stboxConstructArray(
-                ptr(gabi::ea(mShadowCallback.field_0x14)), 3, 12,
+                ptr(gabi::ea(mShadowCallback.mPrevRibbonPos)), 3, 12,
                 ptr(gabi::guest_fn(reinterpret_cast<const void *>(STBox_vectorConstructor))));
             condition = actor_condition;
         }
         actor_condition = condition | 8;
     }
-    field_0x331 = ((u32)mParameters >> 8) & 15;
+    mBoxType = ((u32)mParameters >> 8) & 15;
     s32 phase = stboxResLoad(&mPhase, "Salvage");
     if (phase == cPhs_COMPLEATE_e) {
-        u32 type = field_0x331;
+        u32 type = mBoxType;
         s32 size = (s16)m_heapsize.mEntries[type];
         if (!stboxEntrySolidHeap(
                 this, ptr(gabi::guest_fn(reinterpret_cast<const void *>(CheckCreateHeap))), size))
@@ -531,7 +531,7 @@ s32 daSTBox_c::_execute() {
         }
     }
     for (int i = 0; i < 3; i++) {
-        auto *e = static_cast<STBoxEmitter *>((void *)field_0x29C[i]);
+        auto *e = static_cast<STBoxEmitter *>((void *)mpDropEmitter[i]);
         if (e) {
             u32 kind = (u8)e->mEmitterKind;
             f32 x = current.pos.x, z = current.pos.z, y = current.pos.y;
@@ -588,7 +588,7 @@ s32 daSTBox_c::actWait(s32 staff) {
     temp->y = gabi::fadds_ppc((f32)gabi::at<cXyz>(top)->y, 5000.0f);
     temp->z = (f32)gabi::at<cXyz>(top)->z;
     f32 water = getWaterY(temp.get());
-    u32 type = field_0x331;
+    u32 type = mBoxType;
     current.angle.y = (s16)gabi::at<STBoxShip>(ship)->mCraneHookAngleY;
     f32 y = gabi::fsubs_ppc((f32)gabi::at<cXyz>(top)->y, (f32)crane_offset.mEntries[type]),
         x = (f32)gabi::at<cXyz>(top)->x, z = (f32)gabi::at<cXyz>(top)->z;
@@ -598,11 +598,11 @@ s32 daSTBox_c::actWait(s32 staff) {
     attention_info.position.x = x;
     attention_info.position.z = z;
     current.pos.z = z;
-    if ((type == 1 || type == 2) && (f32)current.pos.y > water && field_0x336 == 0) {
+    if ((type == 1 || type == 2) && (f32)current.pos.y > water && mBgmStarted == 0) {
         stboxSubBgmStart(0x8000005Du);
-        field_0x336 = 1;
+        mBgmStarted = 1;
     }
-    if (field_0x335 == 0) {
+    if (mRippleSet == 0) {
         mParticlePos.x = current.pos.x;
         mParticlePos.z = current.pos.z;
         mParticlePos.y = gabi::fadds_ppc((f32)current.pos.y, 2500.0f);
@@ -612,14 +612,14 @@ s32 daSTBox_c::actWait(s32 staff) {
         if (y > gabi::fsubs_ppc(height, 10.0f)) {
             particleSet(this, 5, STBOX_RIPPLE, gabi::ea(&mParticlePos), 0, gabi::ea(&scale), 255,
                         gabi::ea(mRippleCallBack));
-            field_0x335 = 1;
+            mRippleSet = 1;
             reinterpret_cast<STBoxRippleCallback *>(mRippleCallBack)->mRate = 12.0f;
         }
     }
-    type = field_0x331;
+    type = mBoxType;
     if ((type == 1 || type == 2) && (u32)mItemPID == 0xFFFFFFFF) {
         s32 room = (s8)l_stayRoom;
-        u32 item = field_0x330;
+        u32 item = mItemNo;
         u32 pid = stboxCreateItem(&current.pos, item, -1, room, 0, 0);
         mItemPID = pid;
         if (pid != 0xFFFFFFFF) {
@@ -644,12 +644,12 @@ s32 daSTBox_c::actDrop(s32 staff) {
     y = current.pos.y;
     water = getWaterY(q.get());
     if (y < water) {
-        if (field_0x334 == 0) {
+        if (mSplashDone == 0) {
             s32 room = current.roomNo;
             s32 reverb = stboxGetReverb(room);
             stboxSoundStart(0x6919, &eyePos, 0, reverb);
             stboxCreateWaterPillar(&current.pos, 0, 0.8f, 1.0f);
-            field_0x334 = 1;
+            mSplashDone = 1;
         }
         stboxRippleEnd(ptr(gabi::ea(mRippleCallBack)));
     }
@@ -662,7 +662,7 @@ s32 daSTBox_c::actWait02(s32 staff) {
     u32 ship = (u32)gabi::at<STBoxPlay>(play)->mpShipActor;
     u32 top = (u32)gabi::at<STBoxShip>(ship)->mpCraneTop;
     if (top) {
-        u32 type = field_0x331;
+        u32 type = mBoxType;
         f32 x = (f32)gabi::at<cXyz>(top)->x, y = (f32)gabi::at<cXyz>(top)->y;
         f32 offset = (f32)crane_offset.mEntries[type];
         f32 z = (f32)gabi::at<cXyz>(top)->z;

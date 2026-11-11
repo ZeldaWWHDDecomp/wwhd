@@ -1,5 +1,6 @@
 /** HD file-selection scene, controller selection and name-entry transitions. Private source. */
 #include "d/hd_scene_save_data.h"
+#include "sead/ElementAt.h"
 #include "port_hooks.h"
 static u8 sNameEntryActive;
 static u8 sSaveTransition;
@@ -90,7 +91,8 @@ static void* saveDataRenderContext(hdSaveDataDrawInfo_l* info) {
     u32 index = info->mSlot;
     u32 count = array->mCount;
     gptr<hdSaveDataRenderSlot_l>* slots = array->mpSlots;
-    hdSaveDataRenderSlot_l* slot = slots[index < count ? index : 0];
+    /* guest address arithmetic: slots + index * 4 wraps at 32 bits as on the console */
+    hdSaveDataRenderSlot_l* slot = sead::elementAt<gptr<hdSaveDataRenderSlot_l>>(gabi::ea(slots), index < count ? index : 0);
     return slot->mRenderContext;
 }
 /* 027095D0 */

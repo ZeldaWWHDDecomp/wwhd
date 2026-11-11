@@ -256,25 +256,25 @@ static inline bool player_busy() {
 static void dAttention_c_judgementButton(u32 i_this) {
     auto* self = AttentionHD::view<AttentionHD::Attention>(i_this);
     if (player_busy()) {
-        u8 b = (u8)self->field_0x01a;
+        u8 b = (u8)self->mLockButtonState;
         if (b < 1)
             return;
         if (b <= 2)
-            self->field_0x01a = 0;
+            self->mLockButtonState = 0;
         return;
     }
-    switch ((u8)self->field_0x01a) {
+    switch ((u8)self->mLockButtonState) {
     case 0:
         if (!att2_mDoCPd_L_LOCK_BUTTON((u32)self->mPadNo))
             break;
-        self->field_0x01a = 1;
+        self->mLockButtonState = 1;
         break;
     case 1:
-        self->field_0x01a = 2;
+        self->mLockButtonState = 2;
         /* fallthrough */
     case 2:
         if (!att2_mDoCPd_L_LOCK_BUTTON((u32)self->mPadNo))
-            self->field_0x01a = 0;
+            self->mLockButtonState = 0;
         break;
     }
 }
@@ -321,12 +321,12 @@ static void dAttention_c_judgementStatusSw(u32 i_this, u32 interactMask) {
     case 0:
         self->mLockonTargetID = 0xFFFFFFFF;
         dAttention_c_stockAttention(i_this, interactMask);
-        if ((u8)self->field_0x01a == 1)
+        if ((u8)self->mLockButtonState == 1)
             dAttention_c_judgementTriggerProc(i_this);
         break;
     case 1: {
         u32 id = dAttention_c_LockonTargetPId(i_this, 0);
-        u8 b = (u8)self->field_0x01a;
+        u8 b = (u8)self->mLockButtonState;
         self->mLockonTargetID = id;
         if (b == 1) {
             f32 stickY = att2_CPad_GET_STICK_POS_Y((u32)self->mPadNo);
@@ -345,7 +345,7 @@ static void dAttention_c_judgementStatusSw(u32 i_this, u32 interactMask) {
     }
     case 2: {
         u32 f = (u32)self->mFlags;
-        u8 b = (u8)self->field_0x01a;
+        u8 b = (u8)self->mLockButtonState;
         self->mFlags = f | 0x40;
         if (b == 1) {
             self->mLockOnState = 0;
@@ -366,12 +366,12 @@ static void dAttention_c_judgementStatusHd(u32 i_this, u32 interactMask) {
     case 0:
         self->mLockonTargetID = 0xFFFFFFFF;
         dAttention_c_stockAttention(i_this, interactMask);
-        if ((u8)self->field_0x01a == 1)
+        if ((u8)self->mLockButtonState == 1)
             dAttention_c_judgementTriggerProc(i_this);
         break;
     case 1:
         self->mLockonTargetID = dAttention_c_LockonTargetPId(i_this, 0);
-        if (dAttention_c_judgementLostCheck(i_this) == 0 && (u8)self->field_0x01a == 0) {
+        if (dAttention_c_judgementLostCheck(i_this) == 0 && (u8)self->mLockButtonState == 0) {
             u32 f = (u32)self->mFlags;
             self->mLockOnState = 2;
             self->mFlags = f | 0x10;
@@ -379,7 +379,7 @@ static void dAttention_c_judgementStatusHd(u32 i_this, u32 interactMask) {
         break;
     case 2: {
         u32 f = (u32)self->mFlags;
-        u8 b = (u8)self->field_0x01a;
+        u8 b = (u8)self->mLockButtonState;
         self->mFlags = f | 0x40;
         if (b == 1) {
             if (dAttention_c_nextAttention(i_this, interactMask) != 0) {

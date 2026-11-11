@@ -891,7 +891,7 @@ void action_torituku(pw_class* actor) {
     };
     if (mode == 0x50) {
         for (u32 i = 0; i < 4; ++i)
-            pwDamageTimer(actor, i) = 0;
+            pwM384At(actor, i) = 0;
         u32 flags = static_cast<u32>(actor->actor_status);
         mode = static_cast<s16>(actor->mMode);
         (actor->mActionTimer = 300);
@@ -902,7 +902,7 @@ void action_torituku(pw_class* actor) {
             sound(0x107F);
     } else if (a && pwAddress(actor, offsetof(pw_class, eyePos)))
         sound(0x107F);
-    (actor->m384 = (s16)(static_cast<s16>(actor->m384) + 700));
+    (actor->m384[0] = (s16)(static_cast<s16>(actor->m384[0]) + 700));
     (actor->shape_angle.y = (s16)(static_cast<s16>(actor->shape_angle.y) + 1000));
     bool leave = true;
     if (player == controlled && static_cast<s16>(actor->mActionTimer) != 0) {
@@ -938,7 +938,7 @@ void action_torituku(pw_class* actor) {
     } else {
         (pwViewdaPy_py_c(controlled)->mNoResetFlg1 =
              static_cast<u32>(pwViewdaPy_py_c(controlled)->mNoResetFlg1) | 0x100);
-        u16 phase = static_cast<u16>(actor->m384);
+        u16 phase = static_cast<u16>(actor->m384[0]);
         f32 y = static_cast<f32>(pwViewfopAc_ac_c(player)->current.pos.y);
         f32 sine = cM_ssin(phase);
         (actor->current.pos.z = playerZ);
@@ -1607,7 +1607,7 @@ void action_big_demo(pw_class* actor) {
     auto angleToParent = [&]() { return Pw_fopAcM_searchActorAngleY(a, found->get()); };
     if (mode == 150) {
         for (u32 i = 0; i < 4; ++i)
-            pwDamageTimer(actor, i) = 0;
+            pwM384At(actor, i) = 0;
         (actor->mAlpha = 255);
         (actor->mAlphaPhase = 0);
         (actor->speedF = add(static_cast<f32>(pwViewPwDebugRegisters(parameters)->mApproachSpeed), 17.f));
@@ -1702,17 +1702,17 @@ void action_big_demo(pw_class* actor) {
             (actor->mBigDemoTurnStep = (s16)ftoi(
                  add(static_cast<f32>(pwViewPwDebugRegisters(parameters)->mDemoTurnSpeed), 1000.f)));
             s32 yaw = angleToParent();
-            s16 timer = static_cast<s16>(actor->m384);
+            s16 timer = static_cast<s16>(actor->m384[0]);
             (actor->mTargetAngleY = (s16)(yaw - 0x8000));
             if (!timer)
-                (actor->m384 = (s16)ftoi(Pw_cM_rndF(
+                (actor->m384[0] = (s16)ftoi(Pw_cM_rndF(
                      add(static_cast<f32>(pwViewPwDebugRegisters(parameters)->mDemoRandomTimer), 40.f))));
             return;
         }
         if (stage == 6) {
-            s16 timer = static_cast<s16>(actor->m384);
+            s16 timer = static_cast<s16>(actor->m384[0]);
             if (timer > 0) {
-                (actor->m384 = (s16)(timer - 1));
+                (actor->m384[0] = (s16)(timer - 1));
                 return;
             }
             animation(dRes_INDEX_PW_BCK_TORITUKI2_e, 1.f, 2, -1);
@@ -1971,7 +1971,7 @@ static void action_dousa(pw_class* actor) {
     }
     case 13: {
         for (u32 i = 0; i < 4; ++i)
-            pwDamageTimer(actor, i) = 0;
+            pwM384At(actor, i) = 0;
         (actor->mNoTurn = 0);
         (actor->mLanternSwingMode = 0);
         randomTimer(actor->mActionTimer, 60.f);
@@ -2308,7 +2308,7 @@ static void action_kougeki(pw_class* actor) {
     case 32:
         Pw_kyori_sub(a);
         for (u32 i = 0; i < 4; ++i)
-            pwDamageTimer(actor, i) = 0;
+            pwM384At(actor, i) = 0;
         (actor->mNoTurn = 0);
         if (static_cast<s16>(actor->mLanternState) == 1) {
             animation(dRes_INDEX_PW_BCK_ATTACK1_e, 6.f, 0, 7);
@@ -2403,7 +2403,7 @@ static void action_kougeki(pw_class* actor) {
         break;
     case 37: {
         for (u32 i = 0; i < 4; ++i)
-            pwDamageTimer(actor, i) = 0;
+            pwM384At(actor, i) = 0;
         s16 held = static_cast<s16>(actor->mLanternState);
         (actor->speedF = 0.f);
         s32 desired = held == 1 ? 35 : 36;
@@ -2542,7 +2542,7 @@ static void action_itai(pw_class* actor) {
         (actor->mNoTurn = 1);
         (actor->shape_angle.y = yaw);
         for (u32 i = 0; i < 4; ++i)
-            pwDamageTimer(actor, i) = 0;
+            pwM384At(actor, i) = 0;
         if (static_cast<s32>(actor->mBckIdx) != 19)
             animation(dRes_INDEX_PW_BCK_DOKI1_e, 3.f, 2);
         (actor->mActionTimer = 30);

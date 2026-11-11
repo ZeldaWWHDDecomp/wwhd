@@ -28,7 +28,7 @@ static void* doguuResource(s32 index) {
     name->mTextPtr = gabi::guest_addr("Doguu");
     name->__vtbl = gc_tu.safeString;
     dRes_control_c* controller = dComIfG_resControl();
-    return reinterpret_cast<void*>((uintptr_t)doguuObjectResource(controller, name.get(), index));
+    return gabi::at<void>(doguuObjectResource(controller, name.get(), index));
 }
 /* inlined into daObjDoguu_c::CreateHeap */
 static void assertResource(void* resource, s32 line, const char* message) {
@@ -48,7 +48,7 @@ static void updateTexMatrices(J3DModel* model) {
             gabi::Local<be<s32>> index;
             *index = -1;
             auto* info =
-                reinterpret_cast<be<u32>*>((uintptr_t)doguuTexMatrixInfo(material, slot, index.get()));
+                gabi::at<be<u32>>(doguuTexMatrixInfo(material, slot, index.get()));
             if (!info || *info != 10)
                 continue;
             DoguuHD::MaterialData* data = material->mpData;
@@ -56,8 +56,8 @@ static void updateTexMatrices(J3DModel* model) {
             s32 matrix = *index;
             // Relative offsets and matrix indices retain HD's wrapping guest-address arithmetic.
             u32 table = relative ? gabi::ea(&data->mMatrixTableOffset) + relative : 0;
-            auto* entry = reinterpret_cast<DoguuHD::TextureMatrixEntry*>(
-                (uintptr_t)(table + (u32)matrix * sizeof(DoguuHD::TextureMatrixEntry)));
+            auto* entry = gabi::at<DoguuHD::TextureMatrixEntry>(
+                table + (u32)matrix * u32(sizeof(DoguuHD::TextureMatrixEntry)));
             auto dirty = [&](s32 which) {
                 u16 flags = material->mFlags;
                 be<u32>* bits = material->mpDirtyBits;
@@ -72,11 +72,11 @@ static void updateTexMatrices(J3DModel* model) {
             relative = data->mMatrixTableOffset;
             u16 parent = entry->mParent;
             table = relative ? gabi::ea(&data->mMatrixTableOffset) + relative : 0;
-            auto* parentEntry = reinterpret_cast<DoguuHD::TextureMatrixEntry*>(
-                (uintptr_t)(table + parent * sizeof(DoguuHD::TextureMatrixEntry)));
+            auto* parentEntry = gabi::at<DoguuHD::TextureMatrixEntry>(
+                table + parent * u32(sizeof(DoguuHD::TextureMatrixEntry)));
             if (parentEntry->mId >= 0)
                 dirty(parent);
-            auto* effect = reinterpret_cast<gptr<Mtx34>*>((uintptr_t)doguuTexEffectMatrix(material, slot));
+            auto* effect = gabi::at<gptr<Mtx34>>(doguuTexEffectMatrix(material, slot));
             if (effect)
                 *effect = &renderModel->mEffectMtx;
         }
@@ -138,10 +138,10 @@ BOOL daObjDoguu_c::CreateHeap() {
     if (!body)
         return FALSE;
     J3DModelData* modelData = body->mModelData;
-    auto* names = reinterpret_cast<DoguuHD::JointNames*>((uintptr_t)doguuJointNames(modelData));
+    auto* names = gabi::at<DoguuHD::JointNames>(doguuJointNames(modelData));
     u32 relative = names->mTableOffset;
     s32 joint = doguuJointIndex(
-        reinterpret_cast<void*>((uintptr_t)(relative ? gabi::ea(&names->mTableOffset) + relative : 0)),
+        gabi::at<void>((relative ? gabi::ea(&names->mTableOffset) + relative : 0)),
         "head1");
     if (joint >= 0)
         mHead1JntNo = joint;
@@ -192,7 +192,7 @@ void daObjDoguu_c::set_mtx() {
     u32 matrices = block->mpAnmMtx;
     J3DModel* head = mHeadModel;
     block->mFlags = flags | 0x10;
-    Mtx34* matrix = reinterpret_cast<Mtx34*>((uintptr_t)(matrices + joint * sizeof(Mtx34)));
+    Mtx34* matrix = gabi::at<Mtx34>(matrices + joint * u32(sizeof(Mtx34)));
     f32 values[12];
     for (u32 i = 0; i < 12; ++i)
         values[i] = matrix->m[i / 4][i % 4];
@@ -203,7 +203,7 @@ void daObjDoguu_c::set_mtx() {
 /* 02335548 */
 void daObjDoguu_c::CreateInit() {
     u32 model = gabi::ea((J3DModel*)mMainModel);
-    cullMtx = model ? gabi::ea(&reinterpret_cast<J3DModel*>((uintptr_t)model)->mBaseTransformMtx) : 0;
+    cullMtx = model ? gabi::ea(&gabi::at<J3DModel>(model)->mBaseTransformMtx) : 0;
     fopAcM_setCullSizeBox(this, -600.0f, -0.0f, -600.0f, 600.0f, 400.0f, 600.0f);
     s32 variant = mVariant;
     cullSizeFar = 1.0f;
@@ -307,18 +307,18 @@ BOOL daObjDoguu_c::_delete() {
 /* 02335CA4 */
 BOOL daObjDoguu_c::_draw() {
     u32 light = doguuEnvironment();
-    doguuSettingTev(reinterpret_cast<void*>((uintptr_t)light), 0, &current.pos, &tevStr);
+    doguuSettingTev(gabi::at<void>(light), 0, &current.pos, &tevStr);
     gptr<J3DModel>* const models[] = {&mMainModel, &mHeadModel, &mBodyModel, &mCrystalModel};
     for (auto* member : models) {
         light = doguuEnvironment();
         J3DModel* model = *member;
-        doguuLightTev(reinterpret_cast<void*>((uintptr_t)light), model, &tevStr);
+        doguuLightTev(gabi::at<void>(light), model, &tevStr);
     }
     if (!l_adjGuard) {
         l_adjGuard = 1;
         memcpy_g(&l_adjMtx, l_adjInit, sizeof(Mtx34));
     }
-    auto* camera = reinterpret_cast<DoguuHD::Camera*>((uintptr_t)doguuGetCamera());
+    auto* camera = gabi::at<DoguuHD::Camera>(doguuGetCamera());
     gabi::Local<cXyz> look, lightDirection, reflection;
     cXyz_mi(&eyePos, look.get(), &camera->mEye);
     doguuLightDirection(&tevStr.mLightPosWorld, &eyePos, lightDirection.get());
@@ -346,7 +346,7 @@ BOOL daObjDoguu_c::_draw() {
         doguuModelUpdate((J3DModel*)*member, 0);
         model = *member;
         data = model->mModelData;
-        auto* joint = reinterpret_cast<DoguuHD::JointTree*>((uintptr_t)(u32)data->mJointNodes);
+        auto* joint = gabi::at<DoguuHD::JointTree>((u32)data->mJointNodes);
         joint->mBck = 0;
     };
     if (mDrawHeadBody) {
@@ -371,7 +371,7 @@ BOOL daObjDoguu_c::_draw() {
 void daObjDoguu_c::setGoal(s32 staff) {
     auto* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
     auto* value =
-        reinterpret_cast<cXyz*>((uintptr_t)doguuGetSubstance(&play->play.mEvtManager, staff, "Posion", 1));
+        gabi::at<cXyz>(doguuGetSubstance(&play->play.mEvtManager, staff, "Posion", 1));
     f32 y = current.pos.y, localY = value->y;
     f32 x = current.pos.x, localZ = value->z, z = current.pos.z, localX = value->x;
     auto* matrix = mDoMtx_stack_c::get();
@@ -390,14 +390,13 @@ void daObjDoguu_c::setGoal(s32 staff) {
 /* 02336294 */
 void daObjDoguu_c::setPlayerAngle(s32 staff) {
     auto* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
-    auto* value = reinterpret_cast<const be<s16>*>(
-        (uintptr_t)doguuGetSubstance(&play->play.mEvtManager, staff, "angle", 3));
+    auto* value = gabi::at<const be<s16>>(doguuGetSubstance(&play->play.mEvtManager, staff, "angle", 3));
     s16 offset = value ? value[1] : 0;
     play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
     s16 angle = current.angle.y;
     fopAc_ac_c* player = play->play.mPlayerInfo[0].mpPlayer;
     u32 vt = player->__vtbl;
-    u32 fn = reinterpret_cast<DoguuHD::PlayerVtable*>((uintptr_t)vt)->mSetAngle;
+    u32 fn = gabi::at<DoguuHD::PlayerVtable>(vt)->mSetAngle;
     gabi::call(fn, player, &player->current.pos, (s16)(angle + offset));
 }
 
@@ -410,8 +409,7 @@ void daObjDoguu_c::setQuake(s32 staff) {
     direction->z = 0;
     doguuStartQuake(&play->play.mVibration, &l_quakePattern, 0, 63, direction.get());
     play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
-    auto* value = reinterpret_cast<const be<s32>*>(
-        (uintptr_t)doguuGetSubstance(&play->play.mEvtManager, staff, "Timer", 3));
+    auto* value = gabi::at<const be<s32>>(doguuGetSubstance(&play->play.mEvtManager, staff, "Timer", 3));
     if (!value) {
         JUT_ASSERT_fail("d_a_obj_doguu.cpp", 0x2F6, "pTimer != (0)");
         mTimer = 1;
@@ -516,7 +514,7 @@ void daObjDoguu_c::privateCut() {
             J3DMtxBuffer_hd* block = crystal->mpMtxBuffer;
             u32 matrices = block->mpAnmMtx;
             block->mFlags |= 0x10;
-            doguuMatrixCopy(reinterpret_cast<Mtx34*>((uintptr_t)(matrices + joint * sizeof(Mtx34))),
+            doguuMatrixCopy(gabi::at<Mtx34>((matrices + joint * u32(sizeof(Mtx34)))),
                             mDoMtx_stack_c::get());
             mPos.x = mDoMtx_stack_c::get()->m[0][3];
             mPos.y = mDoMtx_stack_c::get()->m[1][3];
@@ -571,7 +569,7 @@ BOOL daObjDoguu_c::_execute() {
         J3DMtxBuffer_hd* block = crystal->mpMtxBuffer;
         u32 matrices = block->mpAnmMtx;
         block->mFlags |= 0x10;
-        doguuMatrixCopy(reinterpret_cast<Mtx34*>((uintptr_t)(matrices + joint * sizeof(Mtx34))),
+        doguuMatrixCopy(gabi::at<Mtx34>((matrices + joint * u32(sizeof(Mtx34)))),
                         mDoMtx_stack_c::get());
         mPos.x = mDoMtx_stack_c::get()->m[0][3];
         f32 y = mDoMtx_stack_c::get()->m[1][3];
@@ -595,7 +593,7 @@ BOOL daObjDoguu_c::_execute() {
     switch ((s32)mState) {
     case STATE_WAIT_PEARL_e:
         if (doguuCheckItem((u8)mItemNo, 1) && doguuCheckCoHit(&mCyl)) {
-            auto* object = reinterpret_cast<dCcD_GObjInf*>((uintptr_t)doguuCoHitObject(&mCyl));
+            auto* object = gabi::at<dCcD_GObjInf>(doguuCoHitObject(&mCyl));
             if (object) {
                 dCcD_Stts* status = object->mStts;
                 if (status) {
@@ -701,8 +699,7 @@ BOOL daObjDoguu_c::_execute() {
                 JUT_ASSERT_fail("d_demo.h", 0x23A, "m_object != (0)");
                 object = l_demoManager;
             }
-            auto* playback = reinterpret_cast<DoguuHD::DemoActor*>(
-                (uintptr_t)doguuGetDemoActor(reinterpret_cast<void*>((uintptr_t)object), demo));
+            auto* playback = gabi::at<DoguuHD::DemoActor>(doguuGetDemoActor(reinterpret_cast<void*>((uintptr_t)object), demo));
             if (playback) {
                 if (playback->mEnable & DoguuHD::DemoActor::ENABLE_SHAPE_e)
                     mShape = playback->mShape;

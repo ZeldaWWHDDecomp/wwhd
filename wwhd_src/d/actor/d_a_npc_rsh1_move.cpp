@@ -21,7 +21,7 @@ static inline void rsh1_event_reset() {
 static inline void rsh1_items_init(RshShopItems* it) {
     it->mSelectedItemIdx = -1;
     it->mbIsHide = 0;
-    it->m3C = 0;
+    it->mbZoomUp = 0;
 }
 
 /* 022D9E04 */
@@ -29,7 +29,7 @@ int daNpc_Rsh1_c::getAimShopPosIdx() {
     fopAc_ac_c* link_p = rsh1_link();
     int temp_78C = mShopNum;
     int result_index = 1;
-    f32 fcond = rsh1_HIO().m4C;
+    f32 fcond = rsh1_HIO().mAimSearchDist;
     int condition = temp_78C < 1 ? 1 : temp_78C;
     f32 lx = link_p->current.pos.x;
     f32 ly = link_p->current.pos.y;
@@ -78,7 +78,7 @@ BOOL daNpc_Rsh1_c::pathMove(be<s32>* param_1) {
         temp = (s8)(temp - 1);
     }
     RshPathPoint* point = rsh1_path(mpPath)->m_points.get() + temp;
-    f32 step = rsh1_HIO().m48;
+    f32 step = rsh1_HIO().mMoveSpeed;
     cXyz target_pos;
     f32 py = point->m_position.y;
     f32 px = point->m_position.x;
@@ -189,7 +189,7 @@ bool daNpc_Rsh1_c::talk01() {
         mpShopItems->getSelectItemBuyMsg(); // HD: the result is not compared any more
     }
     // HD: the choose/cancel button prompts follow the shop cursor being shown
-    if (mpShopCursor->m54 != 0) {
+    if (mpShopCursor->mbShow != 0) {
         dComIfGp_setDoStatusForce(dActStts_CHOOSE_e); /* dComIfGp_setDoStatusForce(dActStts_CHOOSE_e) */
         dComIfGp_setAStatusForce(dActStts_CANCEL_e); /* dComIfGp_setAStatusForce(dActStts_CANCEL_e) */
     }

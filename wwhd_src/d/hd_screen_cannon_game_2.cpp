@@ -95,7 +95,7 @@ void hdScreenCannonGame_c::updateDegreeText() {
     gabi::store<u32>(frame + 0x20, (u32)gabi::ftoi(mAngle));
     text->mBuffer = buffer->characters;
     buffer->characters[0] = 0;
-    minigameFormatCount(text, "cannon game degree format", gabi::load<u32>(frame + 0x20));
+    minigameFormatCount(text, "", gabi::load<u32>(frame + 0x20));
     minigameSetText(mpDegreeText.get(), text, 0);
 }
 
@@ -372,7 +372,7 @@ data sCannonGameLayoutName 1049108C nocheck
 data sCannonGameAnimGroups 100ED260
 data sCannonGameStateNumberReady 101FD8E4 nocheck
 data sCannonGameStateNumber 101FDD50 nocheck
-str 100ED34C "cannon game degree format" renamed
+str 100ED34C ""
 str 100ED4C8 "G_All_00" in 02646CE8
 str 100ED4B4 "N_BatteryAngle_00" in 02646CE8
 str 100ED4D4 "T_NumDegree_00" in 02646CE8

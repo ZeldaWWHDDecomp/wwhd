@@ -8,13 +8,13 @@ struct CcAtInfo {
     gptr<fopAc_ac_c> mpActor;
     be<u8> mDamage, mbDead, mResultingAttackType;
     u8 mPadding;
-    csXyz m0C;
+    csXyz mHitAngle;  /* was m0C: cc_at_check 025192A8 sets .y = cc_atan2s(-x, -z) of the hit direction (the attacker's speed, or the attacker-to-target offset when it is slow); damage_check of bk (in daBk_Execute 0209BD1C) rotates calc_mtx by .y (cMtx_YrotS) for the knock-back, bb's damage_check 0206432C copies .y into mKnockbackAngleY (tww the same; named mHitAngle in the landed copies in d_a_mo2_exec.h / d_a_mt_exec.h / d_a_pt.h) */
     be<u16> mPlCutBit;
     gptr<cXyz> pParticlePos;
     be<u32> mHitSoundId;
 };
 WWHD_OFFSET(CcAtInfo, mDamage, 8);
-WWHD_OFFSET(CcAtInfo, m0C, 0xC);
+WWHD_OFFSET(CcAtInfo, mHitAngle, 0xC);
 WWHD_OFFSET(CcAtInfo, mPlCutBit, 0x12);
 WWHD_OFFSET(CcAtInfo, pParticlePos, 0x14);
 WWHD_OFFSET(CcAtInfo, mHitSoundId, 0x18);
@@ -22,17 +22,17 @@ WWHD_SIZE(CcAtInfo, 0x1C);
 struct cc_playerView : fopAc_ac_c {
     be<u8> mCutType, mCutCount;
     u8 mUnaccessed[0x69E8 - 0x3AE];
-    be<u8> mJumpCutExtraDamage;
+    be<u8> mStrongJumpCut;  /* was mJumpCutExtraDamage (misnamed): view of daPy_lk_c::mStrongJumpCut (d_a_player_main.h), set by the player's spun-up jump cut; the extra spin damage / hit timer here is what it does in this reader */
 };
 WWHD_OFFSET(cc_playerView, mCutType, 0x3AC);
 WWHD_OFFSET(cc_playerView, mCutCount, 0x3AD);
-WWHD_OFFSET(cc_playerView, mJumpCutExtraDamage, 0x69E8);
+WWHD_OFFSET(cc_playerView, mStrongJumpCut, 0x69E8);
 WWHD_SIZE(cc_playerView, 0x69E9);
 struct cc_mtView : fopAc_ac_c {
     u8 mUnaccessed[0x570 - 0x3AC];
-    be<u8> m454;
+    be<u8> mAction;  /* was m454: view of mt_class (d_a_mt.h) 0x570 mAction (GameCube m454 + 0x11C): cc_at_check 025192A8 plays JA_SE_OBJ_MG_BALL_DMG instead of the attack sound when a Magtail target's action is 2 */
 };
-WWHD_OFFSET(cc_mtView, m454, 0x570);
+WWHD_OFFSET(cc_mtView, mAction, 0x570);
 WWHD_SIZE(cc_mtView, 0x571);
 struct cc_gameInfo {
     u8 mUnaccessed[0x5AB0];

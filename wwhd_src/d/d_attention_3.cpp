@@ -273,9 +273,9 @@ static void dAttention_c_runDrawProc(u32 i_this) {
             att3_mDoAud_seStart(0x804);
     } else if (f & 0x10) {
         att3_setAnm(i_this + A_DRAW, 0x17, 0x44, 0);
-        if ((s8)(u8)self->field_0x028 >= 0) {
+        if ((s8)(u8)self->mCursorDrawState >= 0) {
             u32 f2 = (u32)self->mFlags;
-            self->field_0x028 = 1;
+            self->mCursorDrawState = 1;
             self->mFlags = f2 | 0x40000000;
         }
         if (se_allowed())
@@ -287,7 +287,7 @@ static void dAttention_c_runDrawProc(u32 i_this) {
         att3_setAnm(i_this + A_DRAW, 0x18, 0x45, 0);
         att3_setAnm(i_this + A_DRAW + 0xC, 0x1A, 0x47, 0);
         self->mFlags = (u32)self->mFlags | 0x40000000;
-    } else if ((s32)(u32)self->mLockonCount <= 0 && (s8)(u8)self->field_0x028 == 0) {
+    } else if ((s32)(u32)self->mLockonCount <= 0 && (s8)(u8)self->mCursorDrawState == 0) {
         gabi::Local<SafeString> a;
         gabi::Local<SafeString> b;
         a->mTextPtr = morf_anm_name((u32)self->draw[0].anm);
@@ -297,7 +297,7 @@ static void dAttention_c_runDrawProc(u32 i_this) {
         if (!safestring_eq(gabi::ea(a.get()), gabi::ea(b.get()), true))
             att3_setAnm(i_this + A_DRAW, 0x1A, 0x47, 0);
         u32 f2 = (u32)self->mFlags;
-        self->field_0x028 = 1;
+        self->mCursorDrawState = 1;
         self->mFlags = f2 | 0x40000000;
     }
     if ((u8)self->mLockOnState == 1) {
@@ -308,7 +308,7 @@ static void dAttention_c_runDrawProc(u32 i_this) {
     } else {
         if (att3_McaMorf_play((u32)self->draw[0].anm, 0, 0, 0)) {
             u32 f2 = (u32)self->mFlags;
-            self->field_0x028 = 0xFF;
+            self->mCursorDrawState = 0xFF;
             self->mFlags = f2 & ~0x40000000u;
         }
     }
@@ -320,18 +320,18 @@ static void dAttention_c_runDrawProc(u32 i_this) {
 static inline void members_ct(u32 t) {
     auto* self = AttentionHD::view<AttentionHD::Attention>(t);
     self->mpPlayer = 0;
-    self->field_0x028 = 0;
+    self->mCursorDrawState = 0;
     self->mLockOnState = 0;
     self->mCallBack = 0x1004321C; /* dAttDraw_CallBack_c vtable */
     self->heap = 0;
     self->mLockonTargetID = 0;
     self->mPadNo = 0;
-    self->field_0x019 = 0;
+    self->mLockOnStateCopy = 0;
     self->mFlagMask = 0;
     AttentionMemory3::st(t + 0x14, 0);
     self->field_0x01c = 0;
     self->mFlags = 0;
-    self->field_0x01a = 0;
+    self->mLockButtonState = 0;
     self->field_0x01b = 0;
     att3_memzero(t + A_DRAW, 0x18);
     self->mDrawLockonTargetID = 0;
@@ -380,9 +380,9 @@ static u32 dAttention_c_ct(u32 i_this, u32 i_player, u32 i_padNo) {
     AttentionHD::view<AttentionHD::Attention>(i_this)->field_0x01b = 0;
     AttentionHD::view<AttentionHD::Attention>(i_this)->mLockOnState = 0;
     AttentionHD::view<AttentionHD::Attention>(i_this)->mLockonTargetID = 0xFFFFFFFF;
-    AttentionHD::view<AttentionHD::Attention>(i_this)->field_0x01a = 0;
+    AttentionHD::view<AttentionHD::Attention>(i_this)->mLockButtonState = 0;
     AttentionHD::view<AttentionHD::Attention>(i_this)->field_0x01c = 0xFFFF;
-    AttentionHD::view<AttentionHD::Attention>(i_this)->field_0x019 = 0;
+    AttentionHD::view<AttentionHD::Attention>(i_this)->mLockOnStateCopy = 0;
     u32 heap = att3_createSolidHeapFromGameToCurrent(0, 0);
     AttentionHD::view<AttentionHD::Attention>(i_this)->heap = heap;
     if (heap == 0) {
@@ -432,7 +432,7 @@ static u32 dAttention_c_ct(u32 i_this, u32 i_player, u32 i_padNo) {
         att3_DCStoreRangeNoSync(start, size);
     }
     AttentionHD::view<AttentionHD::Attention>(i_this)->mFlags = 0;
-    AttentionHD::view<AttentionHD::Attention>(i_this)->field_0x028 = 0xFF;
+    AttentionHD::view<AttentionHD::Attention>(i_this)->mCursorDrawState = 0xFF;
     att3_dAttHint_c_init(i_this + A_HINT);
     att3_dAttCatch_c_init(i_this + A_CATCH);
     att3_dAttLook_c_init(i_this + A_LOOK0);
@@ -474,7 +474,7 @@ static bool dAttention_c_Run(u32 i_this, u32 interactMask) {
     if (AttentionMemory3::ld8(play() + 0x5292) != 0) { /* dComIfGp_event_runCheck */
         u32 f2 = (u32)self->mFlags;
         self->mLockOnState = 0;
-        self->field_0x01a = 0;
+        self->mLockButtonState = 0;
         self->mLockonTargetID = 0xFFFFFFFF;
         self->field_0x01b = 0;
         self->mFlags = f2 & 0xC0000000;
@@ -494,7 +494,7 @@ static bool dAttention_c_Run(u32 i_this, u32 interactMask) {
                 }
                 u8 s = (u8)self->mLockOnState;
                 self->mFlags = f2 & ~0x10000000u;
-                self->field_0x019 = s;
+                self->mLockOnStateCopy = s;
                 lockStateCopied = true;
             }
         } else if (att3_mDoCPd_L_LOCK_BUTTON((u32)self->mPadNo)) {
@@ -506,7 +506,7 @@ static bool dAttention_c_Run(u32 i_this, u32 interactMask) {
         }
     }
     if (!lockStateCopied)
-        self->field_0x019 = (u8)self->mLockOnState;
+        self->mLockOnStateCopy = (u8)self->mLockOnState;
     att3_runSoundProc(i_this);
     att3_runDrawProc(i_this); /* runDrawProc */
     {
@@ -559,9 +559,9 @@ static void dAttention_c_Draw(u32 i_this) {
         AttentionMemory3::st(i_this + A_DRAWPOS + 4,
                              AttentionMemory3::ld(target + AC_ATTN_POS + 4));
         u32 z = AttentionMemory3::ld(target + AC_ATTN_POS + 8);
-        self->field_0x028 = 0;
+        self->mCursorDrawState = 0;
         AttentionMemory3::st(i_this + A_DRAWPOS + 8, z);
-    } else if ((s8)(u8)self->field_0x028 > 0) {
+    } else if ((s8)(u8)self->mCursorDrawState > 0) {
         target = searchByID((u32)self->mDrawLockonTargetID);
         if (target != 0) {
             dAttDraw_c_draw(i_this + A_DRAW, target + AC_ATTN_POS, inv);

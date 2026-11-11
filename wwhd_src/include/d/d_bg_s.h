@@ -181,7 +181,7 @@ struct dBgS_Acch : cBgS_Chk, dBgS_Chk {
     /* 0x040 */ cM3dGLin m_lin;
     /* 0x05C */ u8 m_wall_cyl[0x18];     /* cM3dGCyl */
     /* 0x074 */ be<s32> m_bg_index;
-    /* 0x078 */ be<u32> field_0x78;
+    /* 0x078 */ be<u32> mpNowBgW;  /* was field_0x78: the dBgW of the current check (tww SetNowActorInfo(bg_index, bgw, apid) stores it); dBgW::positionWallCorrect 024F2514 passes it with m_bg_index / m_ap_id to the hit circle (mpBgW); the constructor 024F0474 clears it (tww SetWallPolyIndex the same) */
     /* 0x07C */ be<u32> m_ap_id;
     /* 0x080 */ gptr<fopAc_ac_c> m_my_ac;
     /* 0x084 */ be<s32> m_tbl_size;
@@ -191,10 +191,10 @@ struct dBgS_Acch : cBgS_Chk, dBgS_Chk {
     /* 0x094 */ be<f32> m_ground_h;      /* [v] */
     /* 0x098 */ be<f32> m_ground_check_offset;
     /* 0x09C */ u8 m_pla[0x14];          /* cM3dGPla */
-    /* 0x0B0 */ be<u8> field_0xb0;
+    /* 0x0B0 */ be<u8> mPrevGroundHit;  /* was field_0xb0: GroundCheckInit 024F034C stores the ground-hit bit of the last check (flags bit 5) before clearing it; GroundCheck 024EFF50 sets GROUND_LANDING on a hit when it was 0 and GROUND_AWAY when it was set and there is no hit now (tww the same) */
     /* 0x0B1 */ u8 _B1[3];
     /* 0x0B4 */ be<f32> field_0xb4;
-    /* 0x0B8 */ be<f32> field_0xb8;
+    /* 0x0B8 */ be<f32> mGroundPosY;  /* was field_0xb8: GroundCheck 024EFF50: the ground cross height plus m_ground_up_h; the actor is put on it when it is above field_0xb4; GroundRoofProc 024F03A0 compares it with field_0xC4 (tww the same) */
     /* 0x0BC */ be<f32> m_roof_height;
     /* 0x0C0 */ be<f32> m_roof_crr_height;
     /* 0x0C4 */ be<f32> field_0xC4;

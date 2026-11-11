@@ -297,7 +297,7 @@ static inline fopAc_ac_c* search_target(himo2_class* i_this, f32 px, f32 py, f32
     mDoMtx_YrotS(calc_mtx(), (s16)-player->shape_angle.y);
     f32 f24 = 100.0f;
     f32 f31 = 100.0f; /* the distance limit, GameCube f31 */
-    s16 m08 = l_himo2HIO.m08;
+    s16 m08 = l_himo2HIO.mTargetAngleRange;
     s16 reg = (s16)l_himo2Regs.mChild[10].mShortRegs[5];
     s16 r27 = (s16)(0x4000 - m08 - reg);
     s16 r26 = (s16)(m08 + reg + 0x4000);
@@ -341,7 +341,7 @@ static inline fopAc_ac_c* search_target(himo2_class* i_this, f32 px, f32 py, f32
                 gabi::Local<cXyz> sp30;
                 MtxPosition(sp3C, sp30);
                 f32 z = sp30->z;
-                if (z > f24 && (r24 || std::fabs((f32)sp30->y) < l_himo2HIO.m14 + yTol)) {
+                if (z > f24 && (r24 || std::fabs((f32)sp30->y) < l_himo2HIO.mTargetMaxDY + yTol)) {
                     f32 zz = z * z;
                     f32 x = sp30->x;
                     f32 f4 = std_sqrtf(gabi::fmadds(x, x, zz));
@@ -364,7 +364,7 @@ static inline fopAc_ac_c* search_target(himo2_class* i_this, f32 px, f32 py, f32
                         f32 s18x2 = s18x * s18x;
                         f32 s18z2 = s18z * s18z;
                         f32 f2 = std_sqrtf(gabi::fmadds(s18y, s18y, s18x2) + s18z2);
-                        s16 r4 = cM_atan2s(r28->scale.z * l_himo2HIO.m10, f2);
+                        s16 r4 = cM_atan2s(r28->scale.z * l_himo2HIO.mTargetRadius, f2);
                         if (r4 < 0)
                             r4 = (s16)-r4;
                         if (r21 > (s16)-r4 && r21 < r4) {
@@ -372,8 +372,8 @@ static inline fopAc_ac_c* search_target(himo2_class* i_this, f32 px, f32 py, f32
                             s16 a21 = (s16)-cM_atan2s(s24y, f2);
                             f2 = std_sqrtf(s18x2 + s18z2);
                             s16 a3 = (s16)-cM_atan2s(s18y, f2);
-                            s32 lim = r24 ? 2000 : (s32)l_himo2HIO.m0C;
-                            if (a21 < a3 + l_himo2HIO.m0E && (s16)(a3 - a21) < lim)
+                            s32 lim = r24 ? 2000 : (s32)l_himo2HIO.mPitchTolBelow;
+                            if (a21 < a3 + l_himo2HIO.mPitchTolAbove && (s16)(a3 - a21) < lim)
                                 return r28;
                         }
                     }
@@ -391,7 +391,7 @@ static inline fopAc_ac_c* search_target(himo2_class* i_this, f32 px, f32 py, f32
                 if (f31 > 2000.0f)
                     return nullptr;
             } else {
-                if (f31 > l_himo2HIO.m18)
+                if (f31 > l_himo2HIO.mSearchDistMax)
                     return nullptr;
             }
             if (!(r25 < (s32)n))
@@ -457,18 +457,18 @@ static inline void himo2_control(himo2_class* i_this, himo2_s* param_2) {
     s32 i2 = i_this->mRootSegment + 1;
     param_2 += i2;
     for (s32 i = i2; i < 100; i++, param_2++) {
-        f32 fVar2 = param_2->m10.z - param_2[-1].m10.z;
-        f32 fVar1 = param_2->m10.x - param_2[-1].m10.x;
-        f32 dVar8 = (param_2->m10.y + i_this->mSagY) - param_2[-1].m10.y;
+        f32 fVar2 = param_2->mPos.z - param_2[-1].mPos.z;
+        f32 fVar1 = param_2->mPos.x - param_2[-1].mPos.x;
+        f32 dVar8 = (param_2->mPos.y + i_this->mSagY) - param_2[-1].mPos.y;
         s16 r29 = cM_atan2s(fVar1, fVar2);
         f32 d = std_sqrtf(gabi::fmadds(fVar1, fVar1, fVar2 * fVar2));
         s16 r30 = (s16)-cM_atan2s(dVar8, d);
         mDoMtx_YrotS(calc_mtx(), r29);
         mDoMtx_XrotM(calc_mtx(), r30);
         MtxPosition(local_68, local_74);
-        param_2->m10.x = param_2[-1].m10.x + local_74->x;
-        param_2->m10.y = param_2[-1].m10.y + local_74->y;
-        param_2->m10.z = param_2[-1].m10.z + local_74->z;
+        param_2->mPos.x = param_2[-1].mPos.x + local_74->x;
+        param_2->mPos.y = param_2[-1].mPos.y + local_74->y;
+        param_2->mPos.z = param_2[-1].mPos.z + local_74->z;
     }
 }
 
@@ -492,7 +492,7 @@ static inline void himo2_control2(himo2_class* i_this, himo2_s* param_2) {
     f32 f1 = (f32)l_himo2Regs.mChild[8].mFloatRegs[17] + 10.0f; /* REG8_F(17) */
     s32 iVar4 = cc + 1;
     for (; iVar4 < 100; iVar4++, param_2--) {
-        f32 f30 = param_2->m10.y - param_2[1].m10.y;
+        f32 f30 = param_2->mPos.y - param_2[1].mPos.y;
         if ((u32)dc < 4) { /* mState >= 0 && mState <= 3 */
             if (dc != 0)
                 f1 = (i_this->mSwayAmp * (f32)(s32)(99 - iVar4)) * 0.01f;
@@ -503,19 +503,19 @@ static inline void himo2_control2(himo2_class* i_this, himo2_s* param_2) {
             sinT = cM_ssin(a1) * f1;
             cosT = cM_scos(a2) * f1;
         }
-        f32 dVar7 = (param_2->m10.x - param_2[1].m10.x) + sinT;
-        f32 dVar6 = (param_2->m10.z - param_2[1].m10.z) + cosT;
+        f32 dVar7 = (param_2->mPos.x - param_2[1].mPos.x) + sinT;
+        f32 dVar6 = (param_2->mPos.z - param_2[1].mPos.z) + cosT;
         s16 r26 = cM_atan2s(dVar7, dVar6);
         f32 d = std_sqrtf(gabi::fmadds(dVar7, dVar7, dVar6 * dVar6));
         s16 r27 = (s16)-cM_atan2s(f30, d);
-        param_2[1].m1E = r26;
-        param_2[1].m1C = r27;
+        param_2[1].mAngleY = r26;
+        param_2[1].mAngleX = r27;
         mDoMtx_YrotS(calc_mtx(), r26);
         mDoMtx_XrotM(calc_mtx(), r27);
         MtxPosition(local_a8, local_b4);
-        param_2->m10.x = param_2[1].m10.x + local_b4->x;
-        param_2->m10.y = param_2[1].m10.y + local_b4->y;
-        param_2->m10.z = param_2[1].m10.z + local_b4->z;
+        param_2->mPos.x = param_2[1].mPos.x + local_b4->x;
+        param_2->mPos.y = param_2[1].mPos.y + local_b4->y;
+        param_2->mPos.z = param_2[1].mPos.z + local_b4->z;
         dc = i_this->mState;
     }
 }
@@ -528,7 +528,7 @@ static BOOL daHimo2_Execute(himo2_class* i_this) {
     if (himo2_dr == 0)
         himo2_dr = (himo2_dr_c*)fpcM_Search(0x0216DDDC /* dr_a_sub */, i_this);
     i_this->mFrameCounter = i_this->mFrameCounter + 1;
-    rope_scale = l_himo2HIO.m1C;
+    rope_scale = l_himo2HIO.mRopeScaleLockOn;
     gabi::Local<cXyz> local_c8;
     local_c8->y = 0.0f;
     local_c8->x = 4.0f;
@@ -557,9 +557,9 @@ static BOOL daHimo2_Execute(himo2_class* i_this) {
     himo2_s* phVar3 = &i_this->m1120[0];
     do {
         if (i_this->mState != HIMO2_LAUNCH_FREE) {
-            f32 z = phVar3->m10.z;
-            f32 y = phVar3->m10.y;
-            f32 x = phVar3->m10.x;
+            f32 z = phVar3->mPos.z;
+            f32 y = phVar3->mPos.y;
+            f32 x = phVar3->mPos.x;
             gndChk->m_pos.z = z; /* gndChk.SetPos(&pos), pos.y += 60.0f */
             gndChk->m_pos.x = x;
             gndChk->m_pos.y = y + 60.0f;
@@ -574,10 +574,10 @@ static BOOL daHimo2_Execute(himo2_class* i_this) {
     himo2_moveExternal(i_this); /* new_himo2_move */
     phVar3 = &i_this->mSegments[0];
     for (s32 i = 0; i < i_this->mRootSegment + 1; i++, phVar3++)
-        phVar3->m10 = i_this->mRootPos;
+        phVar3->mPos = i_this->mRootPos;
     phVar3 = &i_this->mSegments[0];
     himo2_control(i_this, phVar3);
-    i_this->mSegments[99].m10 = i_this->current.pos;
+    i_this->mSegments[99].mPos = i_this->current.pos;
     himo2_control2(i_this, phVar3);
     if (i_this->mState == HIMO2_LAUNCH_FREE || i_this->mState == HIMO2_LAUNCH_TARGET) {
         i_this->mSph.SetR(20.0f);
@@ -750,9 +750,9 @@ static inline void himo2_draw(himo2_class* i_this, himo2_s* param_2) {
                 MtxTrans(10.0f, 0.0f, 0.0f, 1);
                 mDoMtx_YrotM(calc_mtx(), 0x4000);
             } else {
-                MtxTrans(phVar4->m10.x, phVar4->m10.y, phVar4->m10.z, 0);
-                mDoMtx_YrotM(calc_mtx(), phVar4->m1E);
-                mDoMtx_XrotM(calc_mtx(), phVar4->m1C);
+                MtxTrans(phVar4->mPos.x, phVar4->mPos.y, phVar4->mPos.z, 0);
+                mDoMtx_YrotM(calc_mtx(), phVar4->mAngleY);
+                mDoMtx_XrotM(calc_mtx(), phVar4->mAngleX);
                 MtxTrans(0.0f, 0.0f, 12.0f, 1);
                 MtxRotX(3.1415927f, 1);
                 MtxRotZ(3.1415927f, 1);
@@ -769,7 +769,7 @@ static inline void himo2_draw(himo2_class* i_this, himo2_s* param_2) {
             daPy_py_c* player = daPy_getPlayerLinkActorClass();
             himo2_setHookPacket(player, &i_this->mPackets[0], hookModel);
         } else {
-            *pcVar6 = phVar4->m10;
+            *pcVar6 = phVar4->mPos;
             i_this->mRopePointNum = i_this->mRopePointNum + 1;
             ++pcVar6;
         }
@@ -963,17 +963,17 @@ static void __sinit_d_a_himo2_cpp() {
     sinit_header_statics(gc_tu.headerStatics[0], gc_tu.headerStatics[1]);
     /* l_himo2HIO: himo2HIO_c::himo2HIO_c() */
     himo2HIO_c& h = l_himo2HIO;
-    h.m10 = 60.0f;
-    h.m06 = 0;
-    h.m08 = 15000;
-    h.m14 = 1500.0f;
+    h.mTargetRadius = 60.0f;
+    h.mSwingDirMode = 0;
+    h.mTargetAngleRange = 15000;
+    h.mTargetMaxDY = 1500.0f;
     h.m0A = 1000;
-    h.m18 = 1000.0f;
-    h.m0C = 600;
-    h.m0E = 400;
-    h.m1C = 2.3f;
+    h.mSearchDistMax = 1000.0f;
+    h.mPitchTolBelow = 600;
+    h.mPitchTolAbove = 400;
+    h.mRopeScaleLockOn = 2.3f;
     h.__vtbl = 0x10010EE4;
-    h.m20 = 1.9f;
+    h.mRopeScale = 1.9f;
 }
 
 /* WWHD glue

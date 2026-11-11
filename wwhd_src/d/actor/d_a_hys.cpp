@@ -40,7 +40,7 @@ BOOL daHys_c::Delete() {
 /* 0217A768 */
 BOOL daHys_c::CreateHeap() {
     J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes(m_arcname[mType], m_bdlidx[mType]);
-    JUT_ASSERT(262, modelData != nullptr);
+    JUT_ASSERT_MSG(262, modelData != nullptr, "modelData != (0)");
 
     mpModel = mDoExt_J3DModel__create(modelData, 0x80000, 0x11020022);
     if (mpModel == nullptr) {
@@ -48,13 +48,13 @@ BOOL daHys_c::CreateHeap() {
     }
 
     J3DAnmTexPattern* pbtp = (J3DAnmTexPattern*)dComIfG_getObjectRes(m_arcname[mType], m_btpidx[mType]);
-    JUT_ASSERT(276, pbtp != nullptr);
+    JUT_ASSERT_MSG(276, pbtp != nullptr, "pbtp != (0)");
 
     /* mBtpAnm.init(modelData, pbtp, FALSE, J3DFrameCtrl::EMode_NONE) */
     if (!mBtpAnm.init(modelData, pbtp, FALSE, J3DFrameCtrl::EMode_NONE, 1.0f, 0, -1, 0, 0)) {
         return FALSE;
     }
-    field_0x458 = 0;
+    mBtpFrame = 0;
     return TRUE;
 }
 
@@ -98,11 +98,11 @@ BOOL daHys_c::Create() {
     mSwitchNo = fopAcM_GetParam(this) & 0xFF;
 
     if (fopAcM_isSwitch(this, mSwitchNo)) {
-        field_0x450 = 1;
-        field_0x458 = 3;
+        mMode = 1;
+        mBtpFrame = 3;
     } else {
-        field_0x450 = 0;
-        field_0x458 = 0;
+        mMode = 0;
+        mBtpFrame = 0;
     }
 
     if (mType == 1) {
@@ -131,8 +131,8 @@ BOOL daHys_c::Execute(gptr<Mtx34>* mtx) {
 
 /* 0217A8B4 */
 void daHys_c::mode_proc_call() {
-    /* (this->*mode_proc[field_0x450])(): { &daHys_c::mode_wait, &daHys_c::mode_sw_on } */
-    (this->*mode_proc[field_0x450].proc)();
+    /* (this->*mode_proc[mMode])(): { &daHys_c::mode_wait, &daHys_c::mode_sw_on } */
+    (this->*mode_proc[mMode].proc)();
     mSph.SetC(&current.pos);
     dComIfG_Ccsp_Set(&mSph);
 }
@@ -149,15 +149,15 @@ void daHys_c::mode_wait() {
         }
     }
 
-    if (field_0x458 != 0) {
-        field_0x458 = field_0x458 - 1;
+    if (mBtpFrame != 0) {
+        mBtpFrame = mBtpFrame - 1;
     }
 }
 
 /* 0217AD8C */
 void daHys_c::mode_sw_on_init() {
     dComIfGs_onSwitch(mSwitchNo, home.roomNo);
-    field_0x450 = 1;
+    mMode = 1;
     fopAcM_seStart(this, JA_SE_OBJ_ARROW_SW_ON, 0);
 }
 
@@ -167,8 +167,8 @@ void daHys_c::mode_sw_on() {
     if (!fopAcM_isSwitch(this, mSwitchNo)) {
         mode_wait_init();
     } else {
-        if (field_0x458 < 3) {
-            field_0x458 = field_0x458 + 1;
+        if (mBtpFrame < 3) {
+            mBtpFrame = mBtpFrame + 1;
         }
     }
 }
@@ -176,14 +176,14 @@ void daHys_c::mode_sw_on() {
 // HD: (not named by the matcher)
 /* 0217AD04 */
 void daHys_c::mode_wait_init() {
-    field_0x450 = 0;
+    mMode = 0;
 }
 
 /* 0217AA6C */
 BOOL daHys_c::Draw() {
     settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &current.pos, &tevStr);
     setLightTevColorType(dKy_getEnvlight(), mpModel, &tevStr);
-    mBtpAnm.entry(mpModel->getModelData(), field_0x458);
+    mBtpAnm.entry(mpModel->getModelData(), mBtpFrame);
     mDoExt_modelUpdateDL(mpModel);
     return TRUE;
 }
@@ -253,8 +253,8 @@ static void SafeString_assureTerminationImpl(void*) {
 /* WWHD glue (tools/verify/autoglue.py)
 str 100117D4
 str 100117F4
-str 1001180C "modelData != nullptr" renamed
-str 10011800 "pbtp != nullptr" renamed
+str 1001180C "modelData != (0)"
+str 10011800 "pbtp != (0)"
 data m_arcname 101B7848
 data m_bdlidx 10011860
 data m_btpidx 10011864

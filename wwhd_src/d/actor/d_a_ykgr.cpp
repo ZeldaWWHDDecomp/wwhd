@@ -20,7 +20,7 @@ static u8 m_alpha_flag;
 static u8 m_alpha;
 
 /* 024EA58C */
-// HD: HD: the s8 m1C is the truncated parameter, and the result is halved once more
+// HD: HD: the s8 mIndScaleExp is the truncated parameter, and the result is halved once more
 void dPa_YkgrPcallBack::setParam(f32 arg1) {
     /* GHS: ble/bge on the negated comparisons (NaN returns) */
     if (!(arg1 > -17.0f)) return;
@@ -35,13 +35,13 @@ void dPa_YkgrPcallBack::setParam(f32 arg1) {
         c = (s8)gabi::ftoi(tmp);
         v = gabi::fmadds(tmp - (f32)c, 0.5f, 1.0f) * 0.5f;
     }
-    m1C = c;
-    m14 = v;
-    m04 = v;
-    m08 = 0.0f;
-    m0C = 0.0f;
-    m10 = 0.0f;
-    m18 = 0.0f;
+    mIndScaleExp = c;
+    mIndMtx11 = v;
+    mIndMtx00 = v;
+    mIndMtx01 = 0.0f;
+    mIndMtx02 = 0.0f;
+    mIndMtx10 = 0.0f;
+    mIndMtx12 = 0.0f;
 }
 
 /* 024EA984 */
@@ -71,8 +71,8 @@ f32 daYkgr_c::getPosRate() {
             fVar4 = abs;
         }
     }
-    f32 hi = l_HIO.m20;
-    f32 lo = l_HIO.m24;
+    f32 hi = l_HIO.mPathDistMax;
+    f32 lo = l_HIO.mPathDistMin;
     if (fVar4 > hi) {
         fVar4 = hi;
     } else if (fVar4 < lo) {
@@ -120,15 +120,15 @@ cPhs_State daYkgr_c::_create() {
             YkgrEmitter_view* e = m_emitter;
             m_alpha = 0xFF;                      /* setAlpha */
             e->setGlobalAlpha(0xFF);
-            m2CC = 0.5f;
-            m2D0 = 0.0f;
+            mAimRate = 0.5f;
+            mPosRate = 0.0f;
             if (m_emitter != nullptr) m_alpha_flag = 1; /* start() */
         } else {
             YkgrEmitter_view* e = m_emitter;
             m_alpha = 0;
             e->setGlobalAlpha(0);
-            m2CC = 0.5f;
-            m2D0 = 0.0f;
+            mAimRate = 0.5f;
+            mPosRate = 0.0f;
             if (m_emitter != nullptr) m_alpha_flag = 0; /* stop() */
         }
     } else {
@@ -147,20 +147,20 @@ static BOOL daYkgrDelete(void* v_this) {
 // HD: daYkgrExecute (_execute inlined)
 static BOOL daYkgrExecute(void* v_this) {
     daYkgr_c* i_this = (daYkgr_c*)v_this;
-    cLib_addCalc2(&i_this->m2CC, m_aim_rate, 0.25f, 0.05f);
-    cLib_addCalc2(&m_aim_rate, l_HIO.m1C, 0.25f, 0.05f);
+    cLib_addCalc2(&i_this->mAimRate, m_aim_rate, 0.25f, 0.05f);
+    cLib_addCalc2(&m_aim_rate, l_HIO.mAimRateTarget, 0.25f, 0.05f);
     f32 rate = i_this->getPosRate();
-    cLib_addCalc2(&i_this->m2D0, rate, 0.25f, 0.05f);
+    cLib_addCalc2(&i_this->mPosRate, rate, 0.25f, 0.05f);
 
-    f32 fVar1 = gabi::fmadds(0.5f, i_this->m2CC, 0.5f * i_this->m2D0);
-    f32 tmp2 = gabi::fmadds(fVar1, l_HIO.m18, (1.0f - fVar1) * l_HIO.m14);
+    f32 fVar1 = gabi::fmadds(0.5f, i_this->mAimRate, 0.5f * i_this->mPosRate);
+    f32 tmp2 = gabi::fmadds(fVar1, l_HIO.mStrengthHigh, (1.0f - fVar1) * l_HIO.mStrengthLow);
     YkgrCB.setParam(tmp2);
 
     u8 flag = m_alpha_flag;
     s32 alpha = m_alpha;
     if (flag == 0) {
         if (alpha != 0) {
-            s32 step = l_HIO.m0C;
+            s32 step = l_HIO.mAlphaStep;
             if (alpha > step) {
                 m_alpha = (u8)(alpha - step);
             } else {
@@ -168,7 +168,7 @@ static BOOL daYkgrExecute(void* v_this) {
             }
         }
     } else if ((u32)alpha < 0xFF) {
-        s32 step = l_HIO.m0C;
+        s32 step = l_HIO.mAlphaStep;
         if (alpha < 0xFF - step) {
             m_alpha = (u8)(alpha + step);
         } else {
@@ -205,7 +205,7 @@ static BOOL daYkgrDraw(void* v_this) {
 /* 024EAD4C */
 // HD: one GX2 indirect-matrix/alpha-input call with the matrix and signed scale exponent.
 static void YkgrPcallBack_draw(dPa_YkgrPcallBack* cb, u32 emitter, u32 ctx) {
-    JPASetIndTexMtx(ctx, 0, &cb->m04, (s32)(s8)cb->m1C);
+    JPASetIndTexMtx(ctx, 0, &cb->mIndMtx00, (s32)(s8)cb->mIndScaleExp);
 }
 
 /* 024EAD68 */
@@ -216,22 +216,22 @@ static void __sinit_d_a_ykgr_cpp() {
     dPa_YkgrPcallBack* cb = &YkgrCB;
     h.mNo = 0;
     h.m10 = -16.0f;
-    h.m14 = -5.0f;
-    h.m18 = -3.0f;
-    h.m1C = 0.0f;
-    cb->m1C = 1;
-    h.m20 = 1500.0f;
+    h.mStrengthLow = -5.0f;
+    h.mStrengthHigh = -3.0f;
+    h.mAimRateTarget = 0.0f;
+    cb->mIndScaleExp = 1;
+    h.mPathDistMax = 1500.0f;
     h.__vtbl = 0x10043068;
     h.m08 = 0xFF;
-    h.m24 = 500.0f;
-    h.m0C = 3;
+    h.mPathDistMin = 500.0f;
+    h.mAlphaStep = 3;
     cb->__vtbl = 0x100430A4;
-    cb->m04 = 0.5f;
-    cb->m08 = 0.0f;
-    cb->m0C = 0.0f;
-    cb->m10 = 0.0f;
-    cb->m14 = 0.5f;
-    cb->m18 = 0.0f;
+    cb->mIndMtx00 = 0.5f;
+    cb->mIndMtx01 = 0.0f;
+    cb->mIndMtx02 = 0.0f;
+    cb->mIndMtx10 = 0.0f;
+    cb->mIndMtx11 = 0.5f;
+    cb->mIndMtx12 = 0.0f;
     __register_global_object(0x101D3C60);
 }
 

@@ -2,7 +2,7 @@
  *
  * GameCube -> WWHD (measured from the verified functions and the constructor in _daItem_create):
  *  - daItemBase_c is 0x750 (GameCube 0x63C), so +0x114 up to mTargetAngleX... with HD fields:
- *  - 0x768: an HD float after field_0x650;
+ *  - 0x768: an HD float after mLastSpeedY;
  *  - 0x76C: an HD s16 added to the model's Y rotation (set_mtx_base); mRotateSpeed and the rest
  *    of the s16 block follow (+0x11A);
  *  - 0x787/0x788 HD bytes after mOnGroundTimer; 0x78C cXyz/0x798 f32 (HD action 0xD: thrown to
@@ -51,7 +51,7 @@ struct daItem_c : daItemBase_c {
     /* 0x750 */ cXyz mScaleTarget;
     /* 0x75C */ be<s32> mSpawnSwitchNo;
     /* 0x760 */ be<s32> mCollideSwitchNo;
-    /* 0x764 */ be<f32> field_0x650; /* the last non-zero speed.y */
+    /* 0x764 */ be<f32> mLastSpeedY;  /* was field_0x650: the last non-zero speed.y: CreateInit 021800F0 and the item actions (itemActionForRupee 02180DE4, ForKey 02181338, ForEmono 021814C0, ForArrow 021815E8, ForThrownItem 02182460) store speed.y while airborne and bounce with it * mGroundReflect on landing; set_bound_se 0218086C picks the bound sound by its size (tww the same); the last non-zero speed.y */
     /* 0x768 */ be<f32> mWaterAcceleration;
     /* 0x76C */ be<s16> mHDRotY; /* HD: added to the Y rotation of the model */
     /* 0x76E */ be<s16> mRotateSpeed;
@@ -60,9 +60,9 @@ struct daItem_c : daItemBase_c {
     /* 0x774 */ be<s16> mDisappearTimer;
     /* 0x776 */ be<s16> mSimpleExistTimer;
     /* 0x778 */ be<s16> mExtraZRot;
-    /* 0x77A */ be<s16> field_0x660;
+    /* 0x77A */ be<s16> mSwordRockAngle;  /* was field_0x660: itemActionForSword 0218188C: the lying sword's rocking angle, 0x2000 at the first ground touch, * -0.8 at each further touch; current.angle.x is eased to it + 0x4000 until it is 0 (tww the same) */
     /* 0x77C */ u8 _77C[4];
-    /* 0x780 */ be<u8> field_0x666;
+    /* 0x780 */ be<u8> mSwordRockCount;  /* was field_0x666: itemActionForSword 0218188C counts the ground touches of the rocking sword (1 starts the rock at 0x2000) and clears it when the rock ends (tww the same) */
     /* 0x781 */ be<u8> mType;
     /* 0x782 */ be<u8> mAction;
     /* 0x783 */ be<u8> mFlag;
@@ -140,7 +140,7 @@ struct daItem_c : daItemBase_c {
 };
 WWHD_OFFSET(daItem_c, mScaleTarget, 0x750);
 WWHD_OFFSET(daItem_c, mRotateSpeed, 0x76E);
-WWHD_OFFSET(daItem_c, field_0x666, 0x780);
+WWHD_OFFSET(daItem_c, mSwordRockCount, 0x780);
 WWHD_OFFSET(daItem_c, mItemStatus, 0x785);
 WWHD_OFFSET(daItem_c, mHDTargetPos, 0x78C);
 WWHD_OFFSET(daItem_c, mDemoItemBsPcId, 0x7A0);
@@ -174,14 +174,14 @@ struct daItemBase_c_m_data {
     /* 0x24 */ be<f32> mHeartAmplitude;
     /* 0x28 */ be<s16> mHeartFallCycleTime;
     /* 0x2A */ be<s16> mHeartTilt;
-    /* 0x2C */ be<f32> field_0x2C;
-    /* 0x30 */ be<f32> field_0x30;
+    /* 0x2C */ be<f32> mAct4SpeedY;  /* was field_0x2C: initAction 0217F93C: daItemAct_4_e launches the item with speed.y = it + rnd(5) (tww daItemBase_c_m_data the same) */
+    /* 0x30 */ be<f32> mAct4SpeedF;  /* was field_0x30: initAction 0217F93C: daItemAct_4_e gives the item a random speedF up to it (tww the same) */
     /* 0x34 */ be<f32> field_0x34;
     /* 0x38 */ be<f32> mGetDemoLaunchSpeed;
     /* 0x3C */ be<f32> mGetDemoGravity;
     /* 0x40 */ be<s16> mSimpleExistTime;
     /* 0x42 */ be<s16> mNoGetTime;
-    /* 0x44 */ be<f32> field_0x44;
+    /* 0x44 */ be<f32> mAct8SpeedY;  /* was field_0x44: initAction 0217F93C: daItemAct_8_e launches the item with speed.y = it + rnd(+-5) and speedF mVelocityScale (tww the same) */
     /* 0x48 */ be<f32> mVelocityScale;
 };
 WWHD_SIZE(daItemBase_c_m_data, 0x4C);

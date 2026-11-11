@@ -163,7 +163,7 @@ bool daNpc_So_c::_draw() {
     if (mMode == 5) {
         return true;
     }
-    if (soModeHIO().m31 == 0) {
+    if (soModeHIO().mNoDraw == 0) {
         J3DModel* model = mpMorf->getModel();
         J3DModelData* modelData = model->getModelData();
         settingTevStruct(dKy_getEnvlight(), 0 /* TEV_TYPE_ACTOR */, &current.pos, &tevStr);
@@ -172,7 +172,7 @@ bool daNpc_So_c::_draw() {
                         (s16)mBtpFrame); /* mBtpAnm.entry(modelData, mBtpFrame) */
         mpMorf->entryDL();
         soModeModelData(modelData).mpTexNoAnimator = 0; /* removeTexNoAnimator (HD inline) */
-        if (mEquip != 0 || soModeHIO().m2C != 0) {
+        if (mEquip != 0 || soModeHIO().mForceHudeDraw != 0) {
             hudeDraw();
         }
     }
@@ -236,13 +236,13 @@ void daNpc_So_c::modeJumpInit() {
     mTargetSpeedF = spd;
     speedF = spd;
     speed.y = vy;
-    f32 mx = soModeHIO().m50;
+    f32 mx = soModeHIO().mJumpSpeedYMax;
     if (vy > mx) {
         vy = mx;
         speed.y = vy;
     }
     mJumpSpeedY = vy;
-    shape_angle.x = soModeHIO().m68;
+    shape_angle.x = soModeHIO().mRisePitchFast;
     so_setAnm(this, 4, false);
     m_jnt.mbBackBoneLock = 1;
     so_seStart(this, SoModeConstants::JA_SE_CM_SO_JUMP_L, 0);
@@ -418,7 +418,7 @@ void daNpc_So_c::modeEventFirstWait() {
     so_word_copy3(gabi::ea(&current.pos),
                   gabi::ea(&ship->current.pos)); /* current.pos = ship->current.pos */
     f64 abs = so_absXZ(gabi::ea(&ship->current.pos), gabi::ea(&mInitialPos));
-    if (abs < soModeHIO().m54)
+    if (abs < soModeHIO().mFirstWaitShipDist)
         return;
     // HD: the sail or item 0x77
     if (!dComIfGs_checkGetItem(SoModeConstants::dItemNo_SAIL_e) &&
@@ -733,7 +733,7 @@ bool daNpc_So_c::checkTgHit() {
         return false;                        /* ChkTgHit */
     cXyz* pos = &mSph.mGObjTg.mHitPos;       /* GetTgHitPosP() */
     u32 obj = soMode_targetHitObject(&mSph); /* GetTgHitObj() */
-    mTgHitTimer = soModeHIO().m7C;
+    mTgHitTimer = soModeHIO().mTgHitTime;
     if (obj == 0)
         return false;
     if (soModeHitObject(obj).mAtType == SoModeConstants::AT_TYPE_NORMAL_ARROW) {
@@ -796,7 +796,7 @@ u16 daNpc_So_c::next_msgStatus(be<u32>* pMsgNo) {
     case 0x32D0:
         // HD: dComIfGs_isSaveArriveGrid through the HD map object
         if (soMode_mapCheck((u32)soModeHDInfo()->mpMap, fopAcM_GetRoomNo(this) - 1) ||
-            soModeHIO().m2F != 0) {
+            soModeHIO().mForceGridArrived != 0) {
             *pMsgNo = 0x32D4;
             break;
         }
@@ -815,7 +815,7 @@ u16 daNpc_So_c::next_msgStatus(be<u32>* pMsgNo) {
         break;
     case 0x32D6:
         soMode_searchMinigame(0x022DDFF4 /* searchMinigameTagSo_CB */, this); /* fopAcM_Search */
-        if (soModeHIO().m30 != 0 || mMiniGameTagFound != 0) {
+        if (soModeHIO().mForceMiniGameTag != 0 || mMiniGameTagFound != 0) {
             if (dComIfGs_getItem(SoModeConstants::dInvSlot_BOW_e) != 0xFF /* dComIfGs_getItem(dInvSlot_BOW_e) */ &&
                 dComIfG_getTimerPtr() == nullptr /* dComIfG_getTimerPtr() */) {
                 if (!so_isEventBit(0x3A10)) {
@@ -883,7 +883,7 @@ u16 daNpc_So_c::next_msgStatus(be<u32>* pMsgNo) {
 u32 daNpc_So_c::getMsg() {
     if (mBowEventDone) {
         s32 n;
-        if (soModeHIO().m2E != 0 || (n = mMiniGameHitCount) >= 10) {
+        if (soModeHIO().mForceMiniGameClear != 0 || (n = mMiniGameHitCount) >= 10) {
             if (mGetRupeeDone) {
                 return 0x32E2;
             }

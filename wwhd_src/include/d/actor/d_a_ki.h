@@ -19,7 +19,7 @@ struct enemyice_l {
     /* 0x006 */ be<s8> mLightShrinkTimer;
     /* 0x007 */ u8 _007;
     /* 0x008 */ be<f32> mYOffset;
-    /* 0x00C */ be<s8> m00C;
+    /* 0x00C */ be<s8> mFreezeType;  /* was m00C: view of enemyice::mFreezeType (c/c_damagereaction.h) */
     /* 0x00D */ be<s8> mMode;
     /* 0x00E */ be<s16> mFreezeTimer;
     /* 0x010 */ be<s16> mMoveDelayTimer;
@@ -28,8 +28,8 @@ struct enemyice_l {
     /* 0x016 */ u8 _016[2];
     /* 0x018 */ cXyz mSpeed;
     /* 0x024 */ be<f32> mSpeedF;
-    /* 0x028 */ be<f32> m028;
-    /* 0x02C */ be<f32> m02C;
+    /* 0x028 */ be<f32> mBodyLiftY;  /* was m028: view of enemyice::mBodyLiftY (c/c_damagereaction.h) */
+    /* 0x02C */ be<f32> mIceOffsetY;  /* was m02C: view of enemyice::mIceOffsetY (c/c_damagereaction.h) */
     /* 0x030 */ dCcD_Stts mStts;
     /* 0x06C */ dCcD_Cyl mCyl;
     /* 0x19C */ be<f32> mCylHeight;
@@ -67,7 +67,7 @@ struct enemyfire_l {
     /* 0x0A0 */ dCcD_Stts mStts;
     /* 0x0DC */ dCcD_Sph mSph;
     /* 0x208 */ u8 mLight[0x20];  /* LIGHT_INFLUENCE */
-    /* 0x228 */ be<f32> m228;     /* HD: 1.0f in the constructor */
+    /* 0x228 */ be<f32> mHD20;  /* was m228, then mParticleScaleMultiplier (misnamed): mLight (0x208, a LIGHT_INFLUENCE of HD size 0x24, declared here as its first 0x20 bytes) + 0x20 = LIGHT_INFLUENCE::mHD20 (bindings.h / d/d_kankyo.h), the light's HD tail; the enemyfire constructors (pt 02446C68, ki 0219D368, ks 021AA2D8, cc 02110B28, oq 023C3C80, am 0204B6A0, rd 0245A984, nz 0230F104) set it to 1.0 as the LIGHT_INFLUENCE constructor does; no reader in WWHD, so it keeps the class name */
 };
 WWHD_SIZE(enemyfire_l, 0x22C);
 
@@ -122,7 +122,7 @@ struct ki_class {
     /* 0x4CA */ be<s16> mKnockbackAngleY;  /* was m316: daKi_Execute 0219AAE8 sets the player angle (fopAcM_searchPlayerAngleY) at a hit; ki_damage_move (in daKi_Execute) turns shape_angle.y to it and moves along it by mKnockbackSpeed */
     /* 0x4CC */ be<s16> mRand2000;
     /* 0x4CE */ u8 _4CE[2];
-    /* 0x4D0 */ be<f32> mKnockbackSpeed;  /* was m31C: daKi_Execute 0219AAE8 sets 100 (wind) / 150 / l_kiHIO.m34 / m38 at a hit; ki_damage_move (in daKi_Execute) moves back by it while > 0.1 and eases it to 0 (l_kiHIO.m40) */
+    /* 0x4D0 */ be<f32> mKnockbackSpeed;  /* was m31C: daKi_Execute 0219AAE8 sets 100 (wind) / 150 / l_kiHIO.mHitKnockback / mHitKnockbackSpl at a hit; ki_damage_move (in daKi_Execute) moves back by it while > 0.1 and eases it to 0 (l_kiHIO.mKnockbackDecay) */
     /* 0x4D4 */ be<s16> mFrameCounter;  /* was m320: daKi_Create 0219D568 starts it at random(10000); daKi_Execute 0219AAE8 increments it every frame; ki_atack_move 02199C48 uses it as the phase of its sine / cosine circling offsets */
     /* 0x4D6 */ be<s16> mHeadTargetAngleY;  /* was m322: ki_wait_move (in daKi_Execute 0219AAE8): the player's direction relative to current.angle.y, clamped to +-10000; daKi_Execute eases mHeadAngleY to it and clears it */
     /* 0x4D8 */ be<s16> mHeadTargetAngleX;  /* was m324: ki_wait_move (in daKi_Execute 0219AAE8): the player's elevation (-atan2(y, xz)), clamped to -0x38E..0x1FF6; daKi_Execute eases mHeadAngleX to it and clears it */
@@ -144,7 +144,7 @@ struct ki_class {
     /* 0x6F5 */ u8 _6F5[3];
     /* 0x6F8 */ dCcD_Stts mStts;
     /* 0x734 */ dCcD_Sph mAtSph;  /* was m580: daKi_Create 0219D568 sets it from at_sph_src (attack type fire); ki_atack_move 02199C48 gives it radius 30 / attack power 1-2 and checks its AT hit; daKi_Execute 0219AAE8 resets the radius to 0 every frame */
-    /* 0x860 */ dCcD_Sph mCoSph;  /* was m6AC: daKi_Create 0219D568 sets it from co_sph_src; daKi_Execute 0219AAE8 gives it radius l_kiHIO.m58 at current.pos every frame, ki_atack_move 02199C48 0 */
+    /* 0x860 */ dCcD_Sph mCoSph;  /* was m6AC: daKi_Create 0219D568 sets it from co_sph_src; daKi_Execute 0219AAE8 gives it radius l_kiHIO.mCoSphRadius at current.pos every frame, ki_atack_move 02199C48 0 */
     /* 0x98C */ dCcD_Sph mDamageSphere;
     /* 0xAB8 */ be<u8> mFallSpinDir;  /* was m904: ki_damage_move (in daKi_Execute 0219AAE8): random 0 / 1 when it hits a wall; then turns shape_angle.z by -0x250 (0) or +0x250 (1) per frame while falling */
     /* 0xAB9 */ be<u8> mDamageType;
@@ -170,33 +170,33 @@ WWHD_SIZE(ki_class, 0x10BC);
 /* kiHIO_c, HD: vtable pointer after the members (GameCube members -4) */
 struct kiHIO_c {
     /* 0x00 */ be<s8> mNo;
-    /* 0x01 */ be<u8> m05;
-    /* 0x02 */ be<u8> m06;
-    /* 0x03 */ be<u8> m07;
-    /* 0x04 */ be<f32> m08;
-    /* 0x08 */ be<f32> m0C;
+    /* 0x01 */ be<u8> mDebugNoDeath;  /* was m05: daKi_Execute 0219AAE8: when set, a hit leaves the keese at health 10 (debug switch; __sinit 0219D920 clears it) (tww the same) */
+    /* 0x02 */ be<u8> mDebugPause;  /* was m06: daKi_Execute 0219AAE8: the timers, animation and move procs only run while it is 0 (debug switch; __sinit 0219D920 clears it) (tww the same) */
+    /* 0x03 */ be<u8> mDebugReport;  /* was m07: daKi_Execute 0219AAE8: when set, ki_check runs and JUTReport prints the ALL / READY / FIGHT counts (debug switch) (tww the same) */
+    /* 0x04 */ be<f32> mFly1AnmSpeed;  /* was m08: ki_atack_move 02199C48 / ki_fly_move: anm_init's speed of the FLY1 animation (tww the same) */
+    /* 0x08 */ be<f32> mFlyWanderRange;  /* was m0C: ki_fly_move (in daKi_Execute): cM_rndFX range of the next wander target around the flight position (tww the same) */
     /* 0x0C */ be<f32> m10;
-    /* 0x10 */ be<f32> m14;
-    /* 0x14 */ be<f32> m18;
-    /* 0x18 */ be<f32> m1C;
-    /* 0x1C */ be<f32> m20;
-    /* 0x20 */ be<f32> m24;
-    /* 0x24 */ be<f32> m28;
-    /* 0x28 */ be<f32> m2C;
-    /* 0x2C */ be<f32> m30;
-    /* 0x30 */ be<f32> m34;
-    /* 0x34 */ be<f32> m38;
-    /* 0x38 */ be<f32> m3C;
-    /* 0x3C */ be<f32> m40;
-    /* 0x40 */ be<f32> m44;
-    /* 0x44 */ be<f32> m48;
-    /* 0x48 */ be<s16> m4C;
-    /* 0x4A */ be<s16> m4E;
-    /* 0x4C */ be<s16> m50;
-    /* 0x4E */ be<s16> m52;
-    /* 0x50 */ be<s16> m54;
+    /* 0x10 */ be<f32> mFly2AnmSpeed;  /* was m14: ki_atack_move 02199C48: anm_init's speed of the FLY2 animation (tww the same) */
+    /* 0x14 */ be<f32> mAttack1AnmSpeed;  /* was m18: ki_atack_move 02199C48: anm_init's speed of the ATTACK1 animation (tww the same) */
+    /* 0x18 */ be<f32> mCircleHeight;  /* was m1C: ki_atack_move 02199C48: the circling target point is rnd(50) + it above the player (tww the same) */
+    /* 0x1C */ be<f32> mCircleDist;  /* was m20: ki_atack_move 02199C48: the circling (and reserve) target point's distance from the player (tww the same) */
+    /* 0x20 */ be<f32> mCircleAngleRange;  /* was m24: ki_atack_move 02199C48: the circling target point's random angle (degrees, cM_rndFX) around the player's facing (tww the same) */
+    /* 0x24 */ be<f32> mFlySpeed;  /* was m28: ki_atack_move 02199C48 / ki_fly_move / ki_path_move: mPosMoveTarget while flying; daKi_Execute 0219AAE8: speedF when the appear switch turns on (tww the same) */
+    /* 0x28 */ be<f32> mCircleMoveRate;  /* was m2C: ki_atack_move 02199C48: the circling move's cLib_addCalc2 step factor (times mPosMoveDist) (tww the same) */
+    /* 0x2C */ be<f32> mReserveMoveSpeed;  /* was m30: ki_atack_move 02199C48 behaviour 10 (waiting while enough keese fight): mPosMoveTarget and the cLib_addCalc2 step factor of the hover around the player (tww the same) */
+    /* 0x30 */ be<f32> mHitKnockback;  /* was m34: daKi_Execute 0219AAE8: mKnockbackSpeed after a normal hit (tww the same) */
+    /* 0x34 */ be<f32> mHitKnockbackSpl;  /* was m38: daKi_Execute 0219AAE8: mKnockbackSpeed after a hit with mAtSpl 1 (tww the same) */
+    /* 0x38 */ be<f32> mWallStunSpeed;  /* was m3C: ki_damage_move (in daKi_Execute): hitting a wall while mKnockbackSpeed is at least it stuns the keese (BITA1) (tww the same) */
+    /* 0x3C */ be<f32> mKnockbackDecay;  /* was m40: ki_damage_move (in daKi_Execute): cLib_addCalc0's step of mKnockbackSpeed (tww the same) */
+    /* 0x40 */ be<f32> mAttackSpeed;  /* was m44: ki_atack_move 02199C48: mPosMoveTarget when the attack dive starts (tww the same) */
+    /* 0x44 */ be<f32> mAttackChance;  /* was m48: ki_atack_move 02199C48: the chance (halved when mCrowdFightCount keese fight) to start an attack at each check (tww the same) */
+    /* 0x48 */ be<s16> mAttackCheckTime;  /* was m4C: ki_atack_move 02199C48: mTimers[2] between attack checks (doubled when crowded) (tww the same) */
+    /* 0x4A */ be<s16> mAttackModeTimeMax;  /* was m4E: ki_atack_move 02199C48: mTimers[0] (the attack mode's duration) = rnd(|it - mAttackModeTimeMin|) + mAttackModeTimeMin (tww the same) */
+    /* 0x4C */ be<s16> mAttackModeTimeMin;  /* was m50: ki_atack_move 02199C48: the lower bound of mTimers[0], the attack mode's duration (tww the same) */
+    /* 0x4E */ be<s16> mJoinFightCount;  /* was m52: ki_atack_move 02199C48 behaviour 10: a waiting keese joins the circling while fewer than it fight (tww the same) */
+    /* 0x50 */ be<s16> mCrowdFightCount;  /* was m54: ki_atack_move 02199C48: from it fighting keese on, the attack chance is halved and the check time doubled (tww the same) */
     /* 0x52 */ u8 _52[2];
-    /* 0x54 */ be<f32> m58;
+    /* 0x54 */ be<f32> mCoSphRadius;  /* was m58: daKi_Execute 0219AAE8: mCoSph.SetR every frame (tww the same) */
     /* 0x58 */ be<u32> __vtbl;
 };
 WWHD_SIZE(kiHIO_c, 0x5C);
@@ -364,7 +364,7 @@ struct KiAttackInfo {
     /* 0x09 */ be<u8> mbDead;
     /* 0x0A */ be<u8> mResultingAttackType;
     /* 0x0B */ u8 _0B;
-    /* 0x0C */ csXyz m0C;
+    /* 0x0C */ csXyz mHitAngle;  /* was m0C: the CcAtInfo copy of this unit; see d/d_cc_uty.h */
     /* 0x12 */ be<u16> mPlCutBit;
     /* 0x14 */ gptr<cXyz> pParticlePos;
     /* 0x18 */ be<s32> mHitSoundId;
@@ -377,7 +377,7 @@ WWHD_OFFSET(enemyice_l, mFreezeDuration, 0x004);
 WWHD_OFFSET(enemyice_l, mLightShrinkTimer, 0x006);
 WWHD_OFFSET(enemyice_l, _007, 0x007);
 WWHD_OFFSET(enemyice_l, mYOffset, 0x008);
-WWHD_OFFSET(enemyice_l, m00C, 0x00C);
+WWHD_OFFSET(enemyice_l, mFreezeType, 0x00C);
 WWHD_OFFSET(enemyice_l, mMode, 0x00D);
 WWHD_OFFSET(enemyice_l, mFreezeTimer, 0x00E);
 WWHD_OFFSET(enemyice_l, mMoveDelayTimer, 0x010);
@@ -386,8 +386,8 @@ WWHD_OFFSET(enemyice_l, mAngularVelY, 0x014);
 WWHD_OFFSET(enemyice_l, _016, 0x016);
 WWHD_OFFSET(enemyice_l, mSpeed, 0x018);
 WWHD_OFFSET(enemyice_l, mSpeedF, 0x024);
-WWHD_OFFSET(enemyice_l, m028, 0x028);
-WWHD_OFFSET(enemyice_l, m02C, 0x02C);
+WWHD_OFFSET(enemyice_l, mBodyLiftY, 0x028);
+WWHD_OFFSET(enemyice_l, mIceOffsetY, 0x02C);
 WWHD_OFFSET(enemyice_l, mStts, 0x030);
 WWHD_OFFSET(enemyice_l, mCyl, 0x06C);
 WWHD_OFFSET(enemyice_l, mCylHeight, 0x19C);
@@ -422,7 +422,7 @@ WWHD_OFFSET(enemyfire_l, _09E, 0x09E);
 WWHD_OFFSET(enemyfire_l, mStts, 0x0A0);
 WWHD_OFFSET(enemyfire_l, mSph, 0x0DC);
 WWHD_OFFSET(enemyfire_l, mLight, 0x208);
-WWHD_OFFSET(enemyfire_l, m228, 0x228);
+WWHD_OFFSET(enemyfire_l, mHD20, 0x228);
 
 WWHD_OFFSET(ki_class, actor, 0x000);
 WWHD_OFFSET(ki_class, mPhase, 0x3C8);
@@ -480,33 +480,33 @@ WWHD_OFFSET(ki_class, mFireEmitter, 0xAD0);
 WWHD_OFFSET(ki_class, mBtkAnm, 0xAD4);
 
 WWHD_OFFSET(kiHIO_c, mNo, 0x00);
-WWHD_OFFSET(kiHIO_c, m05, 0x01);
-WWHD_OFFSET(kiHIO_c, m06, 0x02);
-WWHD_OFFSET(kiHIO_c, m07, 0x03);
-WWHD_OFFSET(kiHIO_c, m08, 0x04);
-WWHD_OFFSET(kiHIO_c, m0C, 0x08);
+WWHD_OFFSET(kiHIO_c, mDebugNoDeath, 0x01);
+WWHD_OFFSET(kiHIO_c, mDebugPause, 0x02);
+WWHD_OFFSET(kiHIO_c, mDebugReport, 0x03);
+WWHD_OFFSET(kiHIO_c, mFly1AnmSpeed, 0x04);
+WWHD_OFFSET(kiHIO_c, mFlyWanderRange, 0x08);
 WWHD_OFFSET(kiHIO_c, m10, 0x0C);
-WWHD_OFFSET(kiHIO_c, m14, 0x10);
-WWHD_OFFSET(kiHIO_c, m18, 0x14);
-WWHD_OFFSET(kiHIO_c, m1C, 0x18);
-WWHD_OFFSET(kiHIO_c, m20, 0x1C);
-WWHD_OFFSET(kiHIO_c, m24, 0x20);
-WWHD_OFFSET(kiHIO_c, m28, 0x24);
-WWHD_OFFSET(kiHIO_c, m2C, 0x28);
-WWHD_OFFSET(kiHIO_c, m30, 0x2C);
-WWHD_OFFSET(kiHIO_c, m34, 0x30);
-WWHD_OFFSET(kiHIO_c, m38, 0x34);
-WWHD_OFFSET(kiHIO_c, m3C, 0x38);
-WWHD_OFFSET(kiHIO_c, m40, 0x3C);
-WWHD_OFFSET(kiHIO_c, m44, 0x40);
-WWHD_OFFSET(kiHIO_c, m48, 0x44);
-WWHD_OFFSET(kiHIO_c, m4C, 0x48);
-WWHD_OFFSET(kiHIO_c, m4E, 0x4A);
-WWHD_OFFSET(kiHIO_c, m50, 0x4C);
-WWHD_OFFSET(kiHIO_c, m52, 0x4E);
-WWHD_OFFSET(kiHIO_c, m54, 0x50);
+WWHD_OFFSET(kiHIO_c, mFly2AnmSpeed, 0x10);
+WWHD_OFFSET(kiHIO_c, mAttack1AnmSpeed, 0x14);
+WWHD_OFFSET(kiHIO_c, mCircleHeight, 0x18);
+WWHD_OFFSET(kiHIO_c, mCircleDist, 0x1C);
+WWHD_OFFSET(kiHIO_c, mCircleAngleRange, 0x20);
+WWHD_OFFSET(kiHIO_c, mFlySpeed, 0x24);
+WWHD_OFFSET(kiHIO_c, mCircleMoveRate, 0x28);
+WWHD_OFFSET(kiHIO_c, mReserveMoveSpeed, 0x2C);
+WWHD_OFFSET(kiHIO_c, mHitKnockback, 0x30);
+WWHD_OFFSET(kiHIO_c, mHitKnockbackSpl, 0x34);
+WWHD_OFFSET(kiHIO_c, mWallStunSpeed, 0x38);
+WWHD_OFFSET(kiHIO_c, mKnockbackDecay, 0x3C);
+WWHD_OFFSET(kiHIO_c, mAttackSpeed, 0x40);
+WWHD_OFFSET(kiHIO_c, mAttackChance, 0x44);
+WWHD_OFFSET(kiHIO_c, mAttackCheckTime, 0x48);
+WWHD_OFFSET(kiHIO_c, mAttackModeTimeMax, 0x4A);
+WWHD_OFFSET(kiHIO_c, mAttackModeTimeMin, 0x4C);
+WWHD_OFFSET(kiHIO_c, mJoinFightCount, 0x4E);
+WWHD_OFFSET(kiHIO_c, mCrowdFightCount, 0x50);
 WWHD_OFFSET(kiHIO_c, _52, 0x52);
-WWHD_OFFSET(kiHIO_c, m58, 0x54);
+WWHD_OFFSET(kiHIO_c, mCoSphRadius, 0x54);
 WWHD_OFFSET(kiHIO_c, __vtbl, 0x58);
 
 WWHD_OFFSET(dPa_followEcallBack_l, __vtbl, 0x00);
@@ -531,7 +531,7 @@ WWHD_OFFSET(KiAttackInfo, mDamage, 0x08);
 WWHD_OFFSET(KiAttackInfo, mbDead, 0x09);
 WWHD_OFFSET(KiAttackInfo, mResultingAttackType, 0x0A);
 WWHD_OFFSET(KiAttackInfo, _0B, 0x0B);
-WWHD_OFFSET(KiAttackInfo, m0C, 0x0C);
+WWHD_OFFSET(KiAttackInfo, mHitAngle, 0x0C);
 WWHD_OFFSET(KiAttackInfo, mPlCutBit, 0x12);
 WWHD_OFFSET(KiAttackInfo, pParticlePos, 0x14);
 WWHD_OFFSET(KiAttackInfo, mHitSoundId, 0x18);

@@ -28,29 +28,29 @@ struct daArrow_Iceeff_c : fopAc_ac_c {
 
     /* 0x3AC */ be<u32> field_0x290;
     /* 0x3B0 */ be<u32> field_0x294;
-    /* 0x3B4 */ gptr<J3DModel> field_0x298[30];
+    /* 0x3B4 */ gptr<J3DModel> mpIceModel[30];  /* was field_0x298: CreateHeap 02055B84 creates the 30 ice chunk models (only for the arrow version, mWaterType 0); set_mtx 02055D38 places them, _draw lights and draws the first min(mFrameCount, 30) (tww the same) */
     /* 0x42C */ gptr<J3DModel> mpModel;
-    /* 0x430 */ Mtx34 field_0x314[30];
-    /* 0x9D0 */ cXyz field_0x8B4[30];
-    /* 0xB38 */ gptr<ArrowIceBtkHD> field_0xA1C; /* J3DAnmTextureSRTKey* */
+    /* 0x430 */ Mtx34 mIceMtx[30];  /* was field_0x314: CreateInit 02055F04 builds each ice chunk's random rotation and offset matrix (in the arrow's frame); set_mtx 02055D38 concatenates it to place chunk i (tww the same) */
+    /* 0x9D0 */ cXyz mIceScale[30];  /* was field_0x8B4: CreateInit 02055F04 sets chunk i's random scale (6.3 .. 10.8); set_mtx 02055D38 gives it to the chunk model (tww the same) */
+    /* 0xB38 */ gptr<ArrowIceBtkHD> mpIceBtk;  /* was field_0xA1C: CreateInit 02055F04 points it at Link's ice particle btk (mWaterType 0) or ice-water particle btk (1); _draw sets its frame to mBtkFrame, advance_frame stops at its last frame (tww the same); J3DAnmTextureSRTKey* */
     /* 0xB3C */ mDoExt_bckAnm mBck;              /* HD 0x8C */
-    /* 0xBC8 */ be<s32> field_0xA30;
-    /* 0xBCC */ be<f32> field_0xA34;
-    /* 0xBD0 */ be<s32> field_0xA38;
-    /* 0xBD4 */ be<u8> field_0xA3C;
+    /* 0xBC8 */ be<s32> mFrameCount;  /* was field_0xA30: _execute 020564D0 counts it up: the arrow version draws min(it, 30) chunks, advances the btk from 30 and breaks at 60; the water version starts the hit effect at 0, the ripples at 0x23 / 0x28 and ends at 300; CreateInit 02055F04 clears it (tww the same) */
+    /* 0xBCC */ be<f32> mBtkFrame;  /* was field_0xA34: advance_frame (in _execute 020564D0) adds 1 up to the btk's last frame; _draw sets mpIceBtk's frame to it; CreateInit 02055F04 clears it (tww the same) */
+    /* 0xBD0 */ be<s32> mWaterType;  /* was field_0xA38: _create sets 1 when the arrow's parameter is 4 (the ice arrow hit the water surface), else 0; CreateHeap / CreateInit / set_mtx / _draw / _execute 020564D0 switch between the 30 ice chunks (0) and the single water model (1) (tww the same) */
+    /* 0xBD4 */ be<u8> mVisible;  /* was field_0xA3C: CreateInit 02055F04 sets 1; _draw draws the models only while it is set; _execute 020564D0 clears it at frame 0x28 of the water version (the break) (tww the same) */
     /* 0xBD5 */ u8 _BD5[3];
 };
-WWHD_OFFSET(daArrow_Iceeff_c, field_0x314, 0x430);
-WWHD_OFFSET(daArrow_Iceeff_c, field_0x8B4, 0x9D0);
+WWHD_OFFSET(daArrow_Iceeff_c, mIceMtx, 0x430);
+WWHD_OFFSET(daArrow_Iceeff_c, mIceScale, 0x9D0);
 WWHD_OFFSET(daArrow_Iceeff_c, mBck, 0xB3C);
-WWHD_OFFSET(daArrow_Iceeff_c, field_0xA3C, 0xBD4);
+WWHD_OFFSET(daArrow_Iceeff_c, mVisible, 0xBD4);
 WWHD_SIZE(daArrow_Iceeff_c, 0xBD8);
 
 struct ArrowIceParentHD : fopAc_ac_c {
     u8 mPad3AC[0x7C0 - 0x3AC];
-    cXyz field_0x6a8;
+    cXyz mImpactPos;  /* was field_0x6a8: view of daArrow_c::mImpactPos (d_a_arrow.h) */
 };
-WWHD_OFFSET(ArrowIceParentHD, field_0x6a8, 0x7C0);
+WWHD_OFFSET(ArrowIceParentHD, mImpactPos, 0x7C0);
 WWHD_SIZE(ArrowIceParentHD, 0x7CC);
 struct ArrowIceLinkHD {
     u8 mPad0[0x4638];

@@ -93,7 +93,7 @@ base_process_class* fpcBs_Create(s16 i_profName, fpc_ProcID i_procID, void* i_da
     u32 size;
 
     procProfDef = fpcPf_Get(i_profName);
-    JUT_ASSERT(484, (procProfDef->mSize & 0x3) == 0 && (procProfDef->mSizeOther & 0x3) == 0); // HD
+    JUT_ASSERT_MSG(484, (procProfDef->mSize & 0x3) == 0 && (procProfDef->mSizeOther & 0x3) == 0, "(profile->size & 0x3) == 0 && (profile->heapSize & 0x3) == 0"); // HD
     size = procProfDef->mSize + procProfDef->mSizeOther;
     procClass = (base_process_class*)cMl::memalignB(-4, size);
     if (procClass == NULL) {
@@ -172,7 +172,7 @@ static void __sinit_f_pc_base_cpp() {
 
 /* WWHD glue (tools/verify/autoglue.py): this translation unit's data
 str  10057DF4                               # "f_pc_base.cpp"
-str  10057E04 "(procProfDef->mSize & 0x3) == 0 && (procProfDef->mSizeOther & 0x3) == 0" renamed  # HD: "(profile->size & 0x3) == 0 && (profile->heapSize & 0x3) == 0"
+str 10057E04 "(profile->size & 0x3) == 0 && (profile->heapSize & 0x3) == 0"  # HD: "(profile->size & 0x3) == 0 && (profile->heapSize & 0x3) == 0"
 data g_fpcBs_type 101F3934
 data t_type 101F3908
 data process_id 101F390C

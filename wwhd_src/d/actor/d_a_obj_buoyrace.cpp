@@ -54,8 +54,8 @@ void Act_c::set_water_pos() {
     alongX->z = 0.0f;
     mMeanSeaHeight = ((h1 + h2) + h3) * 0.3333333432674408f;
     buoyOutprod(alongZ.get(), cross.get(), alongX.get());
-    m294.copy(*cross);
-    buoyNormalize(&m294, cross.get());
+    mWaterNrm.copy(*cross);
+    buoyNormalize(&mWaterNrm, cross.get());
 }
 /* 0232F918 */
 static s32 parameter(Act_c *actor, s32 width, s32 shift) {
@@ -101,9 +101,9 @@ void Act_c::set_mtx() {
     hasi->mBaseScale.y = hy;
     auto *stack = mDoMtx_stack_c::get();
     PSMTXTrans(stack, (f32)current.pos.x, (f32)current.pos.y, (f32)current.pos.z);
-    direction->x = (f32)m2AC;
+    direction->x = (f32)mSwayX;
     direction->y = 1.0f;
-    direction->z = (f32)m2B0;
+    direction->z = (f32)mSwayZ;
     mDoMtx_stack_c::transM(0.0f, 150.0f, 0.0f);
     buoyQuatRotBaseY(rotation.get(), direction.get());
     mDoMtx_stack_c::quatM(rotation.get());
@@ -139,7 +139,7 @@ s32 Act_c::_create() {
     if (!fopAcM_entrySolidHeap(this, solidHeapCB, 0x980))
         return 5;
     set_water_pos();
-    f32 bob = gabi::fmadds(0.5f, cM_ssin((u16)m2A0), -120.0f);
+    f32 bob = gabi::fmadds(0.5f, cM_ssin((u16)mBobPhase), -120.0f);
     current.pos.y = (f32)mMeanSeaHeight + (bob + bob);
     J3DModel *model = mpModelKiba;
     cullMtx = model ? gabi::ea(&model->mBaseTransformMtx) : 0;
@@ -155,7 +155,7 @@ bool Act_c::_delete() {
 }
 /* 0232F554 */
 void Act_c::afl_calc_sway() {
-    f32 x = (f32)m294.x * 0.3499999940395355f, z = (f32)m294.z * 0.3499999940395355f;
+    f32 x = (f32)mWaterNrm.x * 0.3499999940395355f, z = (f32)mWaterNrm.z * 0.3499999940395355f;
     // HD: retain the fused instructions used by the sway integrator.
     f32 square = gabi::fmadds(x, x, z * z);
     if (square > 0.09000000357627869f) {
@@ -164,33 +164,33 @@ void Act_c::afl_calc_sway() {
         z = z * ratio;
         x = x * ratio;
     }
-    f32 oldX = m2AC, vx = m2B4, vz = m2B8, oldZ = m2B0;
+    f32 oldX = mSwayX, vx = mSwaySpeedX, vz = mSwaySpeedZ, oldZ = mSwayZ;
     f32 dampingX = -(vx * 0.03999999910593033f), dampingZ = -(vz * 0.03999999910593033f);
     f32 accelX = gabi::fnmsubs(oldX - x, 0.019999999552965164f, dampingX);
     f32 accelZ = gabi::fnmsubs(oldZ - z, 0.019999999552965164f, dampingZ);
     vx = vx + accelX;
     vz = vz + accelZ;
-    m2B4 = vx;
-    m2B8 = vz;
-    m2AC = oldX + vx;
-    m2B0 = oldZ + vz;
+    mSwaySpeedX = vx;
+    mSwaySpeedZ = vz;
+    mSwayX = oldX + vx;
+    mSwayZ = oldZ + vz;
 }
 /* 0232F650 */
 void Act_c::afl_calc() {
-    f32 old = m2BC, velocity = m2C0;
+    f32 old = mBobOffsetY, velocity = mBobSpeedY;
     velocity = gabi::fmadds(old, -0.009999999776482582f, velocity) * 0.9399999976158142f;
     f32 bob = old + velocity;
-    m2C0 = velocity;
+    mBobSpeedY = velocity;
     if (bob > 30.0f)
         bob = 30.0f;
-    m2BC = bob;
+    mBobOffsetY = bob;
     f32 random = cM_rnd();
     s16 increment = (s16)gabi::ftoi(1000.0f * (random + 1.0f));
-    u16 phase = u16((s16)m2A0 + increment);
+    u16 phase = u16((s16)mBobPhase + increment);
     f32 mean = mMeanSeaHeight;
-    m2A0 = phase;
+    mBobPhase = phase;
     f32 wave = gabi::fmadds(0.5f, cM_ssin(phase), -120.0f);
-    f32 target = (mean + (f32)m2BC) + (wave + wave);
+    f32 target = (mean + (f32)mBobOffsetY) + (wave + wave);
     cLib_chaseF(&current.pos.y, target, 50.0f);
     afl_calc_sway();
 }

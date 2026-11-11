@@ -94,10 +94,10 @@ void daNpcPeople_c::checkOrder() {
     } else if (mNpcNo == NPC_UM1) {
         if (!mbIsNight) {
             eventInfo.setEventId(-1); /* eventInfo.setEventId(-1) */
-            m79C = 1;
+            mModeInTalk = 1;
         } else {
             eventInfo.setEventId(mEventIdx[1]);
-            m79C = 0;
+            mModeInTalk = 0;
             mBodyTurn = 0;
             mLookAtPlayer = 0;
         }
@@ -133,14 +133,14 @@ BOOL daNpcPeople_c::chkEndEvent() {
     switch (mNpcNo) {
     case NPC_UO1:
         if (dComIfGp_evmng_endCheck(mEventIdx[0])) {
-            m77E = m77E | 0x8000;
+            mEventFlags = mEventFlags | 0x8000;
             return true;
         }
         break;
     case NPC_UB1:
     case NPC_UB2:
         if (dComIfGp_evmng_endCheck(mEventIdx[0]) || dComIfGp_evmng_endCheck(mEventIdx[1]) || dComIfGp_evmng_endCheck(mEventIdx[3])) {
-            m77E = m77E | 0x8000;
+            mEventFlags = mEventFlags | 0x8000;
             mMaxAttnDistXZ = mpNpcDat->mMaxAttnDistXZ;
             mMaxAttnAngleY = mpNpcDat->mMaxAttnAngleY;
             mMaxLookAngleY = mpNpcDat->mMaxLookAngleY;
@@ -149,45 +149,45 @@ BOOL daNpcPeople_c::chkEndEvent() {
         break;
     case NPC_UB4:
         if (dComIfGp_evmng_endCheck(mEventIdx[0])) {
-            m77E = m77E | 0x8000;
+            mEventFlags = mEventFlags | 0x8000;
             return true;
         }
         break;
     case NPC_UW2:
         if (dComIfGp_evmng_endCheck(mEventIdx[0])) {
-            m77E = m77E | 0x8000;
+            mEventFlags = mEventFlags | 0x8000;
             return true;
         }
         break;
     case NPC_UM1:
         if (dComIfGp_evmng_endCheck(mEventIdx[1])) {
-            if (m77E & 0x8) {
-                m77E = m77E & ~0x8;
+            if (mEventFlags & 0x8) {
+                mEventFlags = mEventFlags & ~0x8;
                 mOrderEventNum = 9;
             } else {
-                m77E = m77E | 0x8000;
+                mEventFlags = mEventFlags | 0x8000;
             }
             return true;
         }
         if (dComIfGp_evmng_endCheck(mEventIdx[0])) {
-            m77E = m77E | 0x8000;
+            mEventFlags = mEventFlags | 0x8000;
             return true;
         }
         break;
     case NPC_UM3:
         if (dComIfGp_evmng_endCheck(mEventIdx[0])) {
             peopleCameraScopeViewMsgModeOff(peopleCameraBody()); /* peopleCameraBody()->ScopeViewMsgModeOff() */
-            m77E = m77E | 0x8000;
+            mEventFlags = mEventFlags | 0x8000;
             return true;
         }
         if (dComIfGp_evmng_endCheck(mEventIdx[1])) {
-            m77E = m77E | 0x8000;
+            mEventFlags = mEventFlags | 0x8000;
             return true;
         }
         break;
     case NPC_SA3:
         if (dComIfGp_evmng_endCheck(mEventIdx[0])) {
-            m77E = m77E | 0x8000;
+            mEventFlags = mEventFlags | 0x8000;
             return true;
         }
         break;
@@ -197,15 +197,15 @@ BOOL daNpcPeople_c::chkEndEvent() {
                 mEtcFlag = mEtcFlag & ~0x100000;
                 peopleEventGame()->play.mStartItemTimer = 1; /* dComIfGp_startItemTimer() */
             }
-            m77E = m77E | 0x8000;
-            m79C = 1;
+            mEventFlags = mEventFlags | 0x8000;
+            mModeInTalk = 1;
             return true;
         }
         break;
     case NPC_UG1:
     case NPC_UG2:
         if (dComIfGp_evmng_endCheck(mEventIdx[0])) {
-            m77E = m77E | 0x8000;
+            mEventFlags = mEventFlags | 0x8000;
             initUgSearchArea();
             return true;
         }
@@ -328,11 +328,11 @@ u32 daNpcPeople_c::setAnmFromMsgTagUb(int param_1) {
 
 /* 022C1168 */
 void daNpcPeople_c::setMessageUb(sUbMsgDat* param_1) {
-    setAnmFromMsgTagUb(param_1->field_0x04);
-    m7A2 = param_1->field_0x05;
-    mBodyTurn = param_1->field_0x06;
-    mLookAtPlayer = param_1->field_0x06;
-    if (param_1->field_0x06 == 1) {
+    setAnmFromMsgTagUb(param_1->mAnmTag);
+    mPartnerAnmTag = param_1->mPartnerAnmTag;
+    mBodyTurn = param_1->mFacePlayer;
+    mLookAtPlayer = param_1->mFacePlayer;
+    if (param_1->mFacePlayer == 1) {
         mMaxAttnDistXZ = 1000.0f;
         mMaxAttnAngleY = 0x7FFF;
         mMaxLookAngleY = 0x7FFF;
@@ -341,8 +341,8 @@ void daNpcPeople_c::setMessageUb(sUbMsgDat* param_1) {
         mMaxAttnAngleY = mpNpcDat->mMaxAttnAngleY;
         mMaxLookAngleY = mpNpcDat->mMaxLookAngleY;
     }
-    m7A0 = param_1->field_0x06;
-    setMessage(param_1->field_0x00);
+    mPartnerFacePlayer = param_1->mFacePlayer;
+    setMessage(param_1->mMsgNo);
 }
 
 /* 022C1228 */
@@ -418,11 +418,11 @@ void daNpcPeople_c::eventAreaMaxInit() {
 void daNpcPeople_c::eventCameraStopInit() {
     PeopleEventCamera* camera = peopleCameraBody();
     gabi::Local<cXyz> pos;
-    pos->x = m71C.x;
-    pos->y = m71C.y;
-    pos->z = m71C.z;
+    pos->x = mUgTargetPos.x;
+    pos->y = mUgTargetPos.y;
+    pos->z = mUgTargetPos.z;
     gabi::Local<cXyz> tmp;
-    switch (m7A7) {
+    switch (mSkyLookNo) {
     case 0:
         dKy_get_moon_pos(tmp.get());
         pos->copy(*tmp);
@@ -531,9 +531,9 @@ bool daNpcPeople_c::eventUb1TalkXy() {
 bool daNpcPeople_c::eventUb2Talk() {
     daNpcPeople_c* pActor = (daNpcPeople_c*)peopleSearchFromName(peopleEventData().l_npc_staff_id[3], 0, 0);
     if (pActor) {
-        mBodyTurn = pActor->m7A0;
-        mLookAtPlayer = pActor->m7A0;
-        if (pActor->m7A0 == 1) {
+        mBodyTurn = pActor->mPartnerFacePlayer;
+        mLookAtPlayer = pActor->mPartnerFacePlayer;
+        if (pActor->mPartnerFacePlayer == 1) {
             mMaxAttnDistXZ = 1000.0f;
             mMaxAttnAngleY = 0x7FFF;
             mMaxLookAngleY = 0x7FFF;
@@ -542,9 +542,9 @@ bool daNpcPeople_c::eventUb2Talk() {
             mMaxAttnAngleY = mpNpcDat->mMaxAttnAngleY;
             mMaxLookAngleY = mpNpcDat->mMaxLookAngleY;
         }
-        if (pActor->m7A2 != 0xFF) {
-            setAnmFromMsgTagUb(pActor->m7A2);
-            pActor->m7A2 = 0xFF;
+        if (pActor->mPartnerAnmTag != 0xFF) {
+            setAnmFromMsgTagUb(pActor->mPartnerAnmTag);
+            pActor->mPartnerAnmTag = 0xFF;
         }
     }
     mEtcFlag = mEtcFlag | 0x200000;
@@ -662,8 +662,8 @@ void daNpcPeople_c::eventMove() {
 
 /* 022C2A04 */
 void daNpcPeople_c::eventOrder() {
-    if (m77E & 0x8000) {
-        m77E = m77E & ~0x8000;
+    if (mEventFlags & 0x8000) {
+        mEventFlags = mEventFlags & ~0x8000;
         mBodyTurn = mpNpcDat->mBodyTurn;
         mLookAtPlayer = mpNpcDat->mLookAtPlayer;
         m79F = mpNpcDat->mLookAtPlayer;

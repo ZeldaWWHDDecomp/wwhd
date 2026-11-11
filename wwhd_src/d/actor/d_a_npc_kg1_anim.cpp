@@ -33,7 +33,7 @@ void daNpc_Kg1_setAnm(daNpc_Kg1_c *actor) {
         if (a->mAnimation == 9) {
             morf = reinterpret_cast<Kg1Morf *>(a->mpMorf.get());
             if (f32(morf->mFrame) == 31.0f)
-                a->mTalkAnimationWeight = 1.0f;
+                a->mBtpAnm.setFrame(1.0f);
             morf = reinterpret_cast<Kg1Morf *>(a->mpMorf.get());
         } else
             morf = reinterpret_cast<Kg1Morf *>(a->mpMorf.get());

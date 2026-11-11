@@ -8,12 +8,12 @@ enum { dRes_INDEX_GNNDEMOTAKIE_BDL_GNN_DEMO_TAKI_E_e = 4,
 /* 0234B4C0 */
 BOOL daObjGnntakie_c::create_heap() {
     auto* mdl_data = (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_GNNDEMOTAKIE_BDL_GNN_DEMO_TAKI_E_e);
-    JUT_ASSERT(0x5A, mdl_data != NULL);
+    JUT_ASSERT_MSG(0x5A, mdl_data != NULL, "mdl_data != 0");
     if (mdl_data == NULL) return FALSE;
     mpModel = mDoExt_J3DModel__create(mdl_data, 0, 0x11020203);
     if (mpModel == NULL) return FALSE;
     auto* btk_data = (J3DAnmTextureSRTKey*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_GNNDEMOTAKIE_BTK_GNN_DEMO_TAKI_E_e);
-    JUT_ASSERT(0x61, btk_data != NULL);
+    JUT_ASSERT_MSG(0x61, btk_data != NULL, "btk_data != 0");
     if (btk_data == NULL) return FALSE;
     return mpBtkAnm.init(mdl_data, btk_data, true, J3DFrameCtrl::EMode_LOOP, 1.0f, 0, -1, false, 0) != 0;
 }
@@ -98,7 +98,7 @@ daObjGnntakie_c::daObjGnntakie_c() {
 /* WWHD glue (tools/verify/autoglue.py): local HD data and binding
 str 100297C0 "Gnndemotakie"
 str 10029790 "d_a_obj_gnndemotakie.cpp"
-str 10029770 "mdl_data != NULL" renamed
-str 10029780 "btk_data != NULL" renamed
+str 10029770 "mdl_data != 0"
+str 10029780 "btk_data != 0"
 ext 025D50BC void gnntakie_actor_dt(void*, s32)
 */

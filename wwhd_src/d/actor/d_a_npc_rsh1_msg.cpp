@@ -22,11 +22,11 @@ static inline void rsh1m_cancelMsg(RshMessageManager* mng, be<u32>* pMsgNo, be<u
 
 /* the status is passed on unmasked: a 32-bit result in HD */
 
-/* ShopCam_action_c::getItemZoomPos(f) (inline): m24 + normalize(m18 - m24) * f, copied through the FPRs */
+/* ShopCam_action_c::getItemZoomPos(f) (inline): mEye + normalize(mCenter - mEye) * f, copied through the FPRs */
 /* inlined into normal_talk */
 static inline void rsh1m_getItemZoomPos(RshShopCamera* cam, cXyz* out, f32 f) {
     cXyz dir;
-    cXyz_mi(&cam->m18, &dir, &cam->m24);
+    cXyz_mi(&cam->mCenter, &dir, &cam->mEye);
     if (!rsh1m_normalizeRS(&dir)) {
         dir.x = 0.0f;
         dir.z = 1.0f;
@@ -35,7 +35,7 @@ static inline void rsh1m_getItemZoomPos(RshShopCamera* cam, cXyz* out, f32 f) {
     cXyz scaled;
     cXyz_ml(&dir, &scaled, f);
     cXyz zoom;
-    cXyz_pl(&cam->m24, &zoom, &scaled);
+    cXyz_pl(&cam->mEye, &zoom, &scaled);
     f32 x = zoom.x, y = zoom.y, z = zoom.z;
     out->x = x;
     out->y = y;
@@ -489,7 +489,7 @@ u16 daNpc_Rsh1_c::talk() {
         }
     }
     if (mpShopItems) {
-        mShopCamAct.m54 = mpShopItems->mSelectedItemIdx;
+        mShopCamAct.mSelectIdx = mpShopItems->mSelectedItemIdx;
     }
     return status;
 }

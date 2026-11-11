@@ -208,8 +208,8 @@ dCstick_c* dCstick_c__ct(dCstick_c* self) {
         self->__vtbl = CAM_PARAM_STICK_VTABLE;
         self->m08 = 6;
         self->mHDFlags = 0;
-        self->m04 = upper;
-        self->m00 = lower;
+        self->mUpPressY = upper;
+        self->mUpReleaseY = lower;
     }
     return gabi::at<dCstick_c>(a);
 }
@@ -317,7 +317,7 @@ s32 dCamParam_c::SearchStyle(u32 name) {
         return -1;
     }
     for (s32 i = 0; i < count; ++i) {
-        if ((u32)styles[i].m00 == name) {
+        if ((u32)styles[i].mStyleName == name) {
             return i;
         }
     }
@@ -474,11 +474,11 @@ dCamSetup_c* dCamSetup_c__ct(dCamSetup_c* self) {
         (void)dCamBGChk_c__ct(&self->mBGChk);
         f32 q1 = l_setupLatitudeLower;
         f32 q2 = l_setupM028;
-        self->m05C = q1;
+        self->mLatitudeMin = q1;
         f32 q3 = l_one;
         f32 q4 = l_setupM02C;
         self->mDrawNear = q3;
-        self->m028 = q4;
+        self->mLockonCushion = q4;
         f32 q5 = l_setupM054;
         f32 q6 = l_setupM05C;
         f32 q7 = l_setupSubjLinkCullDist;
@@ -505,7 +505,7 @@ dCamSetup_c* dCamSetup_c__ct(dCamSetup_c* self) {
         self->m044 = q7;
         self->m034 = q12;
         self->m050 = q5;
-        self->m060 = q13;
+        self->mLatitudeMax = q13;
         f32 q18 = l_setupM030;
         f32 q19 = l_farCheckAngle;
         self->m02C = q18;
@@ -525,7 +525,7 @@ dCamSetup_c* dCamSetup_c__ct(dCamSetup_c* self) {
         f32 q24 = l_farWeightL;
         f32 q25 = l_setupM0B8;
         self->mManualStartCThreshold = q24;
-        self->m0B8 = q25;
+        self->mMovingShipScale = q25;
         self->mManualEndVal = q14;
         f32 q26 = l_setupExtraParameter;
         self->m058 = q6;
@@ -540,27 +540,27 @@ dCamSetup_c* dCamSetup_c__ct(dCamSetup_c* self) {
         self->m0C8 = 0xffffffff;
         self->mDebugFlags = 0x1;
         self->mHDVector.z = q22;
-        self->m084 = q30;
+        self->mFanBankWidth = q30;
         self->mChargeLatitude = q20;
         f32 q31 = l_setupM078;
-        self->m0C0 = q16;
+        self->mBushHigh = q16;
         self->mForceLockOffDist = q31;
         self->m094 = 0x96;
-        self->m080 = q28;
+        self->mFanBankBase = q28;
         self->mDMCAngle = q23;
-        self->m0B0 = 0x3c;
+        self->mLockonChangeTimer = 0x3c;
         self->mChargeTimer = 0x14;
         self->mHDDefaults[1] = q23;
         f32 q32 = l_setupHDDefault;
         f32 q33 = l_farWeightH;
         f32 q34 = l_nearWeightH;
         self->mHDDefaults[3] = q32;
-        self->m07C = q34;
+        self->mLeafFovySwing = q34;
         self->mHDDefaults[0] = q5;
         self->mHDDefaults[2] = q13;
-        self->m0B4 = q6;
-        self->m0C4 = q5;
-        self->m078 = q33;
+        self->mLockonChangeCushion = q6;
+        self->mBushLow = q5;
+        self->mFanFovySwing = q33;
         self->mForceLockOffTimer = 0x78;
     }
     return gabi::at<dCamSetup_c>(a);
@@ -579,9 +579,9 @@ void dCamSetup_c__dt(dCamSetup_c* self, s32 flag) {
 
 /* 024F7878 */
 BOOL dCamSetup_c::CheckLatitudeRange(s16* angle) {
-    f32 high = m060, factor = l_degreeToSigned;
+    f32 high = mLatitudeMax, factor = l_degreeToSigned;
     s16 max = s16(gabi::ftoi(gabi::fmuls_ppc(high, factor)));
-    f32 low = m05C;
+    f32 low = mLatitudeMin;
     s16 min = s16(gabi::ftoi(gabi::fmuls_ppc(low, factor)));
     auto* value = reinterpret_cast<be<s16>*>(angle);
     s16 val = *value;
@@ -599,8 +599,8 @@ BOOL dCamSetup_c::CheckLatitudeRange(s16* angle) {
 /* 024F78F0 */
 f32 dCamSetup_c::FanBank() {
 
-    f32 width = (f32)this->m084, random = cM_rndFX(width), wind = dKyw_get_wind_pow(),
-        base = (f32)this->m080;
+    f32 width = (f32)this->mFanBankWidth, random = cM_rndFX(width), wind = dKyw_get_wind_pow(),
+        base = (f32)this->mFanBankBase;
     return gabi::fmadds(random, wind, base);
 }
 

@@ -24,8 +24,8 @@ struct Act_c : dBgS_MoveBgActor {
     dCcD_Cyl mCyl;
     dBgS_ObjGndChk mObjGndChk;
     // GameCube field names retained: ground height, retries, then lock timer.
-    be<f32> m494;
-    be<s16> m498;
+    be<f32> mGroundY;  /* was m494: set_ground 02380610: the GroundCross result 100 above the box (tww tests it against -G_CM3D_F_INF) */
+    be<s16> mGroundTries;  /* was m498: init_ground 023806CC sets 5; set_ground 02380610 checks the ground only while it is > 0, sets 0 once found, else counts down (tww the same) */
     be<u8> m49A;
     u8 _pad;
     s32 Mthd_Create();
@@ -46,6 +46,6 @@ struct Act_c : dBgS_MoveBgActor {
 WWHD_OFFSET(Act_c, mpModel, 0x3E8);
 WWHD_OFFSET(Act_c, mCyl, 0x428);
 WWHD_OFFSET(Act_c, mObjGndChk, 0x558);
-WWHD_OFFSET(Act_c, m494, 0x5AC);
+WWHD_OFFSET(Act_c, mGroundY, 0x5AC);
 WWHD_SIZE(Act_c, 0x5B4);
 } // namespace daObjOspbox

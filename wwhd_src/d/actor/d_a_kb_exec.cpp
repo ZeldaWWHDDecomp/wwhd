@@ -374,7 +374,9 @@ static inline void carry_move(kb_class *i_this) {
         if (i_this->mShapeType >= 8) {
             start_shock(i_this);
             kb_mons_se_start_a(i_this, JA_SE_CM_PG_L_JUMP);
-            if (kbIsStartStage("sea") && fopAcM_GetRoomNo(i_this) == dIsleRoom_OutsetIsland_e &&
+            // HD: the original loads the "sea" copy 100127DC here (021922E0) and 100129C4 at the two
+            // checks in daKb_Execute's case 0 (02191920 / 02191930): by address, since both read "sea".
+            if (kbIsStartStage(gabi::at<char>(0x100127DC)) && fopAcM_GetRoomNo(i_this) == dIsleRoom_OutsetIsland_e &&
                 i_this->mAcch.GetGroundH() != -1000000000.0f &&
                 kbGuest_dBgS_GetSpecialCode(dComIfG_Bgsp(), kb_gnd_poly(i_this)) != 4 &&
                 !dKy_daynight_check()) {
@@ -872,7 +874,6 @@ static BOOL daKb_Execute(kb_class *i_this) {
 
 // clang-format off
 /* WWHD glue
-str 100127DC "sea" in 02190CE0
 str 100129C4 "sea" in 02190CE0
 */
 // clang-format on

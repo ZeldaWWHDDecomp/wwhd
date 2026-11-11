@@ -223,7 +223,7 @@ static daNpcPhoto_c* daNpcPhoto_c_ct(daNpcPhoto_c* i_this) {
     i_this->field_0x9C3 = 0;
     i_this->field_0x9C2 = false;
     i_this->mExecuteMode = 0;
-    i_this->field_0x9C1 = 0;
+    i_this->mPlaceState = 0;
     i_this->mTargetSpeed = 0.0f;
     i_this->mWaitTimer = 0;
     i_this->mCylR = 60.0f;
@@ -259,7 +259,7 @@ static cPhs_State phase_1(daNpcPhoto_c* i_this) {
             if (dComIfGs_checkGetItem(dItemNo_COLLECT_MAP_20_e) || arg0 != (u32)(s32)dComIfGp_getStartStagePoint()) {
                 return cPhs_UNK3_e;
             }
-            i_this->field_0x9C1 = 4;
+            i_this->mPlaceState = 4;
         }
     }
     i_this->field_0x9C2 = true;
@@ -337,7 +337,7 @@ cPhs_State daNpcPhoto_c::createInit() {
             current.pos.copy(old.pos);
             mPathRun.incIdxLoop();
             mWaitTimer = 1;
-            field_0x9C1 = 2;
+            mPlaceState = 2;
         }
         temp = 0xFE;
     }
@@ -361,14 +361,14 @@ cPhs_State daNpcPhoto_c::createInit() {
     attention_info.flags = PHOTO_HD_ATTENTION | fopAc_Attn_LOCKON_TALK_e | fopAc_Attn_ACTION_SPEAK_e; /* attention_info.flags */
     eventInfo.setXyCheckCB(daNpcPhoto_XyCheckCB); /* eventInfo.setXyCheckCB(daNpcPhoto_XyCheckCB) */
     eventInfo.setXyEventCB(daNpcPhoto_XyEventCB); /* eventInfo.setXyEventCB(daNpcPhoto_XyEventCB) */
-    if (field_0x9C1 == 4) {
+    if (mPlaceState == 4) {
         mBodyTurn = false;
         mLookAtPlayer = false;
     } else {
-        mBodyTurn = l_npc_dat.field_0x52;
-        mLookAtPlayer = l_npc_dat.field_0x53;
+        mBodyTurn = l_npc_dat.mBodyTurn;
+        mLookAtPlayer = l_npc_dat.mLookAtPlayer;
     }
-    mMaxAttnAngleY = l_npc_dat.field_0x28;
+    mMaxAttnAngleY = l_npc_dat.mMaxAttnAngleY;
     mObjAcch.CrrPos(dComIfG_Bgsp());
     f32 gnd = mObjAcch.GetGroundH();
     if (gnd != -1000000000.0f /* -G_CM3D_F_INF */) {

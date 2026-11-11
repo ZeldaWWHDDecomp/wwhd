@@ -77,7 +77,7 @@ static void start(bwd_class* i_this) {
                 i_this->mAction = 0xB;
                 i_this->mMode = 0;
                 actor->current.pos.x = 0.0f;
-                actor->current.pos.y = ((l_HIO.m28 + -2000.0f) - 200.0f) + REG0_F(11);
+                actor->current.pos.y = ((l_HIO.mBaseHeight + -2000.0f) - 200.0f) + REG0_F(11);
                 actor->current.pos.z = 0.0f;
                 i_this->mTimers[1] = 0x28;
                 bwd_g_eff_on(i_this);
@@ -107,7 +107,7 @@ static void wait(bwd_class* i_this) {
             break;
         }
         i_this->mTimers[0] = 0x7a;
-        i_this->mActionTimer = 0xde;
+        i_this->mTimers[2] = 0xde;
         i_this->mMode = 1;
         break;
     case 0:
@@ -126,13 +126,13 @@ static void wait(bwd_class* i_this) {
             break;
         }
     case 2:
-        cLib_addCalc2(&actor->current.pos.y, l_HIO.m0C + l_HIO.m28, 0.1f, 20.0f);
-        if (i_this->mActionTimer == 0) {
-            if (i_this->mPlayerDistXZ < l_HIO.m18) {
+        cLib_addCalc2(&actor->current.pos.y, l_HIO.mWaitHeight + l_HIO.mBaseHeight, 0.1f, 20.0f);
+        if (i_this->mTimers[2] == 0) {
+            if (i_this->mPlayerDistXZ < l_HIO.mEatAttackDistance) {
                 i_this->mAction = 5;
                 i_this->mMode = 0;
             } else {
-                if (i_this->mPlayerDistXZ > l_HIO.m1C) {
+                if (i_this->mPlayerDistXZ > l_HIO.mResetDistance) {
                     i_this->mAction = 2;
                     i_this->mMode = 0;
                 }
@@ -153,20 +153,20 @@ static void reset(bwd_class* i_this) {
         i_this->mTimers[0] = 0x96;
         // fallthrough
     case 1:
-        cLib_addCalc2(&actor->current.pos.y, REG0_F(17) + -1500.0f + l_HIO.m28, 1.0f, 10.0f);
+        cLib_addCalc2(&actor->current.pos.y, REG0_F(17) + -1500.0f + l_HIO.mBaseHeight, 1.0f, 10.0f);
         if (i_this->mTimers[0] == 100) {
             bwd_g_eff_off(i_this);
         }
         if (i_this->mTimers[0] == 0) {
             i_this->mAction = 1;
             i_this->mMode = 0;
-            i_this->mActionTimer = 0xde;
+            i_this->mTimers[2] = 0xde;
             i_this->mTimers[0] = 0x7a;
             {
                 f32 randomOffset = cM_rndFX(300.0f);
                 actor->current.pos.x = player->current.pos.x + randomOffset;
             }
-            actor->current.pos.y = l_HIO.m28 + -1500.0f;
+            actor->current.pos.y = l_HIO.mBaseHeight + -1500.0f;
             {
                 f32 randomOffset = cM_rndFX(300.0f);
                 actor->current.pos.z = player->current.pos.z + randomOffset;
@@ -219,13 +219,13 @@ static void sita_hit(bwd_class* i_this) {
             break;
         }
         i_this->mTongueDamageCount++;
-        dComIfGp_particle_set(ID_AK_JN_CRITICALHITFLASH, &i_this->mTongueSegments[29].m04);
+        dComIfGp_particle_set(ID_AK_JN_CRITICALHITFLASH, &i_this->mTongueSegments[29].mPos);
         local_38.x = local_38.y = local_38.z = 2.0f;
         local_40.z = 0;
         local_40.x = 0;
         local_40.y = fopAcM_searchPlayerAngleY(actor);
-        dComIfGp_particle_set(ID_AK_JN_OK, &i_this->mTongueSegments[29].m04, &local_40, &local_38);
-        if ((i_this->mTongueDamageCount >= 4) || (l_HIO.m06 != 0)) {
+        dComIfGp_particle_set(ID_AK_JN_OK, &i_this->mTongueSegments[29].mPos, &local_40, &local_38);
+        if ((i_this->mTongueDamageCount >= 4) || (l_HIO.mDebugLastHit != 0)) {
             reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get())->play.mItemLifeCount =
                 0.0f; // HD: clears the item life count on the death transition.
             bd_monsSeStart(actor, JA_SE_CV_BWD_LAST_HIT, 0);
@@ -290,12 +290,12 @@ static void sita_hit(bwd_class* i_this) {
             mDoAud_seStart(JA_SE_CM_BWD_IN_SAND_3, &i_this->mSandSurfacePos, 0,
                            dComIfGp_getReverb(fopAcM_GetRoomNo(actor)));
         }
-        if (((((frame == 0x30) && (l_HIO.m24 >= 1)) || ((frame == 0x31) && (l_HIO.m24 >= 2)) ||
-              (frame == 0x32 && (l_HIO.m24 >= 3))) ||
-             (frame == 0x33 && (l_HIO.m24 >= 4))) &&
-            (ko_count < l_HIO.m26)) {
-            local_2c.copy(i_this->mTongueSegments[0].m04);
-            local_2c.y = REG0_F(9) + -600.0f + l_HIO.m28;
+        if (((((frame == 0x30) && (l_HIO.mHitLarvaCount >= 1)) || ((frame == 0x31) && (l_HIO.mHitLarvaCount >= 2)) ||
+              (frame == 0x32 && (l_HIO.mHitLarvaCount >= 3))) ||
+             (frame == 0x33 && (l_HIO.mHitLarvaCount >= 4))) &&
+            (ko_count < l_HIO.mLarvaMax)) {
+            local_2c.copy(i_this->mTongueSegments[0].mPos);
+            local_2c.y = REG0_F(9) + -600.0f + l_HIO.mBaseHeight;
             fopAcM_create(fpcNm_BWDS_e, 0x23, &local_2c, fopAcM_GetRoomNo(actor), nullptr, nullptr,
                           -1, 0);
             if (i_this->mBgmStartTimer == 0) {
@@ -308,14 +308,14 @@ static void sita_hit(bwd_class* i_this) {
             }
         }
         if (i_this->mTimers[0] == 0) {
-            if ((i_this->mTongueDamageCount >= 2) || (l_HIO.m07 != 0)) {
+            if ((i_this->mTongueDamageCount >= 2) || (l_HIO.mDebugFlyAfterHit != 0)) {
                 i_this->mAction = 10;
                 i_this->mMode = 0;
                 {
                     f32 randomOffset = cM_rndFX(300.0f);
                     actor->current.pos.x = player->current.pos.x + randomOffset;
                 }
-                actor->current.pos.y = l_HIO.m28 + -2500.0f;
+                actor->current.pos.y = l_HIO.mBaseHeight + -2500.0f;
                 {
                     f32 randomOffset = cM_rndFX(300.0f);
                     actor->current.pos.z = player->current.pos.z + randomOffset;
@@ -329,7 +329,7 @@ static void sita_hit(bwd_class* i_this) {
                 }
                 i_this->mTargetPos.x = actor->current.pos.x;
                 i_this->mSandSurfacePos.x = actor->current.pos.x;
-                i_this->mTargetPos.y = (l_HIO.m28 + 3000.0f) + REG10_F(3);
+                i_this->mTargetPos.y = (l_HIO.mBaseHeight + 3000.0f) + REG10_F(3);
                 i_this->mSandSurfacePos.z = actor->current.pos.z;
                 actor->current.angle.x = -0x4000;
                 i_this->mTargetPos.z = actor->current.pos.z;
@@ -341,13 +341,13 @@ static void sita_hit(bwd_class* i_this) {
             } else {
                 i_this->mAction = 1;
                 i_this->mMode = 0;
-                i_this->mActionTimer = 0xde;
+                i_this->mTimers[2] = 0xde;
                 i_this->mTimers[0] = 0x7a;
                 {
                     f32 randomOffset = cM_rndFX(300.0f);
                     actor->current.pos.x = player->current.pos.x + randomOffset;
                 }
-                actor->current.pos.y = l_HIO.m28 + -1500.0f;
+                actor->current.pos.y = l_HIO.mBaseHeight + -1500.0f;
                 {
                     f32 randomOffset = cM_rndFX(300.0f);
                     actor->current.pos.z = player->current.pos.z + randomOffset;
@@ -464,7 +464,7 @@ static void eat_attack(bwd_class* i_this) {
             bwd_g_eff_off(i_this);
         }
         if (i_this->mTimers[0] == 0x3c) {
-            local_38.copy(i_this->mTongueSegments[0].m04);
+            local_38.copy(i_this->mTongueSegments[0].mPos);
             local_38.y = i_this->mSandSurfacePos.y + REG0_F(9);
             if (bd_throwDamage(player, &local_38, actor->shape_angle.y, REG0_F(7) + 60.0f,
                                REG0_F(8) + 130.0f, 0) == 1) {
@@ -484,8 +484,8 @@ static void eat_attack(bwd_class* i_this) {
                 mDoAud_seStart(JA_SE_CM_BWD_SPIT_OUT, &i_this->mSandSurfacePos, 0,
                                dComIfGp_getReverb(fopAcM_GetRoomNo(actor)));
             } else {
-                local_38.copy(i_this->mTongueSegments[0].m04);
-                local_38.y = REG0_F(9) + -450.0f + l_HIO.m28;
+                local_38.copy(i_this->mTongueSegments[0].mPos);
+                local_38.y = REG0_F(9) + -450.0f + l_HIO.mBaseHeight;
                 bd_setPlayerPos(player, &local_38, player_actor->shape_angle.y);
                 i_this->mDemoMode = 0x96;
             }
@@ -499,10 +499,10 @@ static void eat_attack(bwd_class* i_this) {
         i_this->mAction = 1;
         i_this->mMode = 0;
         if (cVar10 == 1) {
-            i_this->mActionTimer = 100;
+            i_this->mTimers[2] = 100;
         } else {
             i_this->mTimers[0] = 0x7a;
-            i_this->mActionTimer = 0xde;
+            i_this->mTimers[2] = 0xde;
         }
     }
 }
@@ -527,7 +527,7 @@ static void fly(bwd_class* i_this) {
             i_this->mTimers[0] = REG_S(10, 1) + 50;
             i_this->mTimers[1] = (s16)gabi::ftoi((cM_rndF(50.0f) + 200.0f) + REG0_F(18));
             i_this->mHistoryStep = REG0_S(0) + 5;
-            i_this->mActionTimer = REG0_S(4) + 0xb4;
+            i_this->mTimers[2] = REG0_S(4) + 0xb4;
         } else {
             i_this->mSandDentCenter.copy(i_this->mSandSurfacePos);
             i_this->mSandWaveMode = 0xff;
@@ -544,14 +544,14 @@ static void fly(bwd_class* i_this) {
                 bd_seStartCurrent(actor, JA_SE_CV_BWD_FLYING, 0);
             }
         }
-        if (i_this->mActionTimer == 0x50) {
+        if (i_this->mTimers[2] == 0x50) {
             bwd_g_eff_off(i_this);
         }
         if (actor->current.pos.y < i_this->mSandSurfacePos.y) {
             i_this->mSandDentCenter.copy(i_this->mSandSurfacePos);
             i_this->mSandWaveMode = 0xff;
         } else {
-            if (i_this->mActionTimer == 0) {
+            if (i_this->mTimers[2] == 0) {
                 i_this->mSandWaveMode = 200;
             }
         }
@@ -562,7 +562,7 @@ static void fly(bwd_class* i_this) {
             i_this->mTargetPos.x = cM_rndFX(REG0_F(16) + 1500.0f);
             f32 targetYBase = REG0_F(15) + 2000.0f;
             f32 targetYRandom = cM_rndFX(800.0f);
-            i_this->mTargetPos.y = (targetYBase + targetYRandom) + l_HIO.m28;
+            i_this->mTargetPos.y = (targetYBase + targetYRandom) + l_HIO.mBaseHeight;
             i_this->mTargetPos.z = cM_rndFX(REG0_F(16) + 1500.0f);
             i_this->mTurnSpeedRate = 0.0f;
         }
@@ -601,8 +601,8 @@ static void fly(bwd_class* i_this) {
             i_this->mAction = 1;
             i_this->mMode = 0;
             i_this->mTimers[0] = 0x7a;
-            i_this->mActionTimer = 0xde;
-            actor->current.pos.set(cM_rndFX(1500.0f), REG0_F(17) + -1500.0f + l_HIO.m28,
+            i_this->mTimers[2] = 0xde;
+            actor->current.pos.set(cM_rndFX(1500.0f), REG0_F(17) + -1500.0f + l_HIO.mBaseHeight,
                                    cM_rndFX(1500.0f));
         }
         break;
@@ -627,10 +627,10 @@ static void s_fly(bwd_class* i_this) {
                          1.0f, -1);
             i_this->mMode = 1;
             i_this->mTargetPos.x = 0.0f;
-            i_this->mTargetPos.y = l_HIO.m28 + 3000.0f;
+            i_this->mTargetPos.y = l_HIO.mBaseHeight + 3000.0f;
             i_this->mTargetPos.z = 0.0f;
             actor->current.angle.x = -0x4000;
-            i_this->mActionTimer = REG0_S(4) + 0xb4;
+            i_this->mTimers[2] = REG0_S(4) + 0xb4;
             i_this->mHistoryStep = REG0_S(0) + 5;
         } else {
             i_this->mSandDentCenter.copy(i_this->mSandSurfacePos);
@@ -648,14 +648,14 @@ static void s_fly(bwd_class* i_this) {
                 bd_seStartCurrent(actor, JA_SE_CV_BWD_FLYING, 0);
             }
         }
-        if (i_this->mActionTimer == 0x50) {
+        if (i_this->mTimers[2] == 0x50) {
             bwd_g_eff_off(i_this);
         }
         if (actor->current.pos.y < i_this->mSandSurfacePos.y) {
             i_this->mSandDentCenter.copy(i_this->mSandSurfacePos);
             i_this->mSandWaveMode = 0xff;
         } else {
-            if (i_this->mActionTimer == 0) {
+            if (i_this->mTimers[2] == 0) {
                 i_this->mSandWaveMode = 200;
             }
         }
@@ -706,8 +706,8 @@ static void s_fly(bwd_class* i_this) {
             i_this->mAction = 1;
             i_this->mMode = 0;
             i_this->mTimers[0] = 0xac;
-            i_this->mActionTimer = 0x12e;
-            fVar6 = REG0_F(17) + -1500.0f + l_HIO.m28;
+            i_this->mTimers[2] = 0x12e;
+            fVar6 = REG0_F(17) + -1500.0f + l_HIO.mBaseHeight;
             actor->current.pos.x = 0.0f;
             actor->current.pos.y = fVar6;
             actor->current.pos.z = 0.0f;

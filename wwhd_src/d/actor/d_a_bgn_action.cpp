@@ -50,13 +50,13 @@ static inline void dance_A(bgn_class *i_this) {
             bgn_pose(tmp, bgn_action::dance_pause_1(), i);
             if (i_this->mTimers[3] == 0) {
                 i_this->mDanceStep = (s16)(i_this->mDanceStep + 1);
-                i_this->mTimers[3] = l_HIO().m0DA;
+                i_this->mTimers[3] = l_HIO().mDanceAStepTime;
             }
         } else {
             bgn_pose(tmp, bgn_action::dance_pause_2(), i);
             if (i_this->mTimers[3] == 0) {
                 i_this->mDanceStep = 1;
-                i_this->mTimers[3] = l_HIO().m0DA;
+                i_this->mTimers[3] = l_HIO().mDanceAStepTime;
             }
         }
     }
@@ -72,21 +72,21 @@ static inline void dance_A(bgn_class *i_this) {
     s8 health = actor->health;
     s16 target;
     if (health == 3)
-        target = l_HIO().m0DC;
+        target = l_HIO().mDanceASpin3HP;
     else if (health == 2)
-        target = l_HIO().m0DE;
+        target = l_HIO().mDanceASpin2HP;
     else
-        target = l_HIO().m0E0;
+        target = l_HIO().mDanceASpin1HP;
     cLib_addCalcAngleS2(&i_this->mDanceAngleSpeed, target, 1, 0x10);
 }
 
 static inline s16 bgn_dance_B_time(fopAc_ac_c *actor) {
     s8 health = actor->health;
     if (health == 3)
-        return l_HIO().m0E8;
+        return l_HIO().mDanceBStepTime3HP;
     if (health == 2)
-        return l_HIO().m0EA;
-    return l_HIO().m0EC;
+        return l_HIO().mDanceBStepTime2HP;
+    return l_HIO().mDanceBStepTime1HP;
 }
 
 /* inlined into action_main */
@@ -113,7 +113,7 @@ static inline void dance_B(bgn_class *i_this) {
         }
         st = i_this->mDanceStep;
     }
-    cLib_addCalcAngleS2(&i_this->mDanceAngleY, st == 1 ? 0x1555 : -0x1555, 8, l_HIO().m0EE);
+    cLib_addCalcAngleS2(&i_this->mDanceAngleY, st == 1 ? 0x1555 : -0x1555, 8, l_HIO().mDanceBTurnStep);
 }
 
 /* inlined into action_main */
@@ -139,7 +139,7 @@ static inline bool dance_0(bgn_class *i_this) {
     if (a == 0) {
         if (i_this->mDanceCount == 0) {
             i_this->mDanceType = 0;
-            i_this->mTimers[0] = l_HIO().m0D8;
+            i_this->mTimers[0] = l_HIO().mKeeseDanceTime;
             /* ki_set (inline) */
             s8 health = actor->health;
             if (health == 3)
@@ -152,16 +152,16 @@ static inline bool dance_0(bgn_class *i_this) {
             i_this->mDanceType = 1;
             s8 health = actor->health;
             if (health == 3)
-                i_this->mTimers[0] = l_HIO().m0E2;
+                i_this->mTimers[0] = l_HIO().mDanceTime3HP;
             else if (health == 2)
-                i_this->mTimers[0] = l_HIO().m0E4;
+                i_this->mTimers[0] = l_HIO().mDanceTime2HP;
             else
-                i_this->mTimers[0] = l_HIO().m0E6;
+                i_this->mTimers[0] = l_HIO().mDanceTime1HP;
         }
         i_this->mDanceStep = 0;
         i_this->mMode = (s16)(i_this->mMode + 1);
     } else if (a == 1) {
-        if (i_this->mTimers[0] == 0 && ki_check(i_this) == 0 && l_HIO().m028 != 0) {
+        if (i_this->mTimers[0] == 0 && ki_check(i_this) == 0 && l_HIO().mAttackOn != 0) {
             s16 n = i_this->mDanceCount;
             if (n == 1 || n == 2 || n == 3) {
                 if (i_this->mMove[0].mCut != 0 && i_this->mMove[1].mCut != 0 &&
@@ -539,7 +539,7 @@ static inline void body_attack(bgn_class *i_this) {
             actor->speed.y = 0.0f;
         }
         if (i_this->mTimers[0] > 10) {
-            cLib_addCalc2(&i_this->mC774, gabi::fadds_ppc(REG0_F(9), 250.0f), 1.0f,
+            cLib_addCalc2(&i_this->mRedRopeSway, gabi::fadds_ppc(REG0_F(9), 250.0f), 1.0f,
                           gabi::fadds_ppc(REG0_F(10), 50.0f));
             for (s32 i = 0; i < 8; i++)
                 cLib_addCalc2(&i_this->mMove[i].mSwayAmplitude, gabi::fadds_ppc(REG0_F(9), 250.0f), 1.0f,
@@ -570,13 +570,13 @@ void action_main(bgn_class *i_this) {
     local_9c->y = i_this->mBodyPos.y;
     local_9c->z = i_this->mBodyPos.z;
     local_9c->x = i_this->mBodyPos.x;
-    cLib_addCalc0(&i_this->mC774, 1.0f, 25.0f);
+    cLib_addCalc0(&i_this->mRedRopeSway, 1.0f, 25.0f);
     auto *lines = gabi::at<bgn_action::Line>(i_this->mRedRopeMat.mpLines);
     be<u8> *pcVar5 = gabi::at<be<u8>>(lines->mpSize);
     bgn_action::Words *pcVar7 = gabi::at<bgn_action::Words>(lines->mpPos);
     for (s32 i = 0; i < 60; i++, pcVar7++, pcVar5++) {
         f32 s = cM_ssin(cM_rad2s(gabi::fmuls_ppc((f32)i, 0.053247336f)));
-        f32 dVar9 = gabi::fmuls_ppc(gabi::fmuls_ppc(s, i_this->mC774),
+        f32 dVar9 = gabi::fmuls_ppc(gabi::fmuls_ppc(s, i_this->mRedRopeSway),
                                     gabi::fmuls_ppc((f32)(59 - i), 0.01666667f));
         s16 c746 = i_this->mFrameCounter;
         local_90->x =
@@ -590,7 +590,7 @@ void action_main(bgn_class *i_this) {
         *pcVar5 = (u8)(REG0_S(3) + 10);
         local_9c->y = gabi::fadds_ppc(local_9c->y, 50.0f);
     }
-    if (l_HIO().m025 == 0) {
+    if (l_HIO().mPoseEditMode == 0) {
         s16 mode = i_this->mAction;
         bool after = true;
         switch (mode) {
@@ -639,7 +639,7 @@ void action_main(bgn_class *i_this) {
     for (s32 i = 0; i < 8; i++)
         action_s(i_this, &i_this->mMove[i], i);
     cLib_addCalc2(&i_this->mPoseSpeed, i_this->mPoseSpeedTarget, 1.0f, 10.0f);
-    i_this->mPoseSpeedTarget = l_HIO().m0D4;
+    i_this->mPoseSpeedTarget = l_HIO().mPoseSpeedBase;
 }
 
 // clang-format off

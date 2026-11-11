@@ -22,23 +22,23 @@ struct Bm1BehaviorHioPrm {
     /* 0x10 */ be<s16> mMaxTurnStep;
     /* 0x12 */ be<s16> mCalcAngleTarget;
     /* 0x14 */ be<f32> mAttPosOffsetY;
-    /* 0x18 */ be<u8> m18;
+    /* 0x18 */ be<u8> mDebugDraw;  /* was m18: _draw 02200F90: the debug leftovers (the three debug GXColor statics) run only while it is set; tww d_a_npc_bm1.cpp _draw tests it right before its stripped "// Debug:" block, the same three debug GXColors followed by the removed dDbVw_drawSphereXlu / dDbVw_drawCircleOpa calls, so it switches the debug drawing; tww's hio_prm tables hold 0 and no code writes it */
     /* 0x19 */ u8 _19;
     /* 0x1A */ be<s16> mFlyScale;
     /* 0x1C */ be<s16> mFlyMaxStep;
     /* 0x1E */ u8 _1E[2];
-    /* 0x20 */ be<f32> m20;
-    /* 0x24 */ be<f32> m24;
-    /* 0x28 */ be<f32> m28;
-    /* 0x2C */ be<f32> m2C;
-    /* 0x30 */ be<f32> m30;
-    /* 0x34 */ be<s16> m34;
-    /* 0x36 */ be<s16> m36;
-    /* 0x38 */ be<f32> m38;
-    /* 0x3C */ be<f32> m3C;
-    /* 0x40 */ be<f32> m40;
-    /* 0x44 */ be<f32> m44;
-    /* 0x48 */ be<f32> m48;
+    /* 0x20 */ be<f32> mFlySpeed;  /* was m20: same field as Bm1SetupHioParam in d/actor/d_a_npc_bm1.h, evidence there */
+    /* 0x24 */ be<f32> mFlyAccel;  /* was m24: same field as Bm1SetupHioParam in d/actor/d_a_npc_bm1.h, evidence there */
+    /* 0x28 */ be<f32> mFlyUpSpeed;  /* was m28: same field as Bm1SetupHioParam in d/actor/d_a_npc_bm1.h, evidence there */
+    /* 0x2C */ be<f32> mFlyUpAccel;  /* was m2C: same field as Bm1SetupHioParam in d/actor/d_a_npc_bm1.h, evidence there */
+    /* 0x30 */ be<f32> mFlyPassDist;  /* was m30: same field as Bm1SetupHioParam in d/actor/d_a_npc_bm1.h, evidence there */
+    /* 0x34 */ be<s16> mTurnScale;  /* was m34: same field as Bm1SetupHioParam in d/actor/d_a_npc_bm1.h, evidence there */
+    /* 0x36 */ be<s16> mTurnMaxStep;  /* was m36: same field as Bm1SetupHioParam in d/actor/d_a_npc_bm1.h, evidence there */
+    /* 0x38 */ be<f32> mWalkAnmSpeed;  /* was m38: same field as Bm1SetupHioParam in d/actor/d_a_npc_bm1.h, evidence there */
+    /* 0x3C */ be<f32> mWalkSpeed;  /* was m3C: same field as Bm1SetupHioParam in d/actor/d_a_npc_bm1.h, evidence there */
+    /* 0x40 */ be<f32> mWalkAccel;  /* was m40: same field as Bm1SetupHioParam in d/actor/d_a_npc_bm1.h, evidence there */
+    /* 0x44 */ be<f32> mWalkPassDist;  /* was m44: same field as Bm1SetupHioParam in d/actor/d_a_npc_bm1.h, evidence there */
+    /* 0x48 */ be<f32> mEventOrderDist;  /* was m48: same field as Bm1SetupHioParam in d/actor/d_a_npc_bm1.h, evidence there */
 };
 WWHD_SIZE(Bm1BehaviorHioPrm, 0x4C);
 struct Bm1BehaviorChildHio {
@@ -134,7 +134,7 @@ WWHD_SIZE(Bm1BehaviorAction, 8);
 
 WWHD_OFFSET(Bm1BehaviorHioPrm, mAttPosOffsetY, 0x14);
 WWHD_OFFSET(Bm1BehaviorHioPrm, mFlyScale, 0x1A);
-WWHD_OFFSET(Bm1BehaviorHioPrm, m20, 0x20);
+WWHD_OFFSET(Bm1BehaviorHioPrm, mFlySpeed, 0x20);
 WWHD_OFFSET(Bm1BehaviorChildHio, hio_prm, 4);
 WWHD_OFFSET(Bm1BehaviorChildHio, m50, 0x50);
 WWHD_OFFSET(Bm1BehaviorHio, children, 0xC);

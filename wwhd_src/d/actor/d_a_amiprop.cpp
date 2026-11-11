@@ -49,7 +49,7 @@ static BOOL CheckCreateHeap(fopAc_ac_c* i_this) {
 /* 02050800 */
 BOOL daAmiProp_c::CreateHeap() {
     J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes(m_arcname, dRes_INDEX_HAMI1_BDL_HAMI1_e);
-    JUT_ASSERT(255, modelData != NULL);
+    JUT_ASSERT_MSG(255, modelData != NULL, "modelData != (0)");
 
     J3DModel* model = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000022);
     mpModel = model;
@@ -61,7 +61,7 @@ BOOL daAmiProp_c::CreateHeap() {
     mpBgW = reinterpret_cast<daAmiProp_bgW_c*>(new_dBgW());
     if (mpBgW != nullptr) {
         cBgD_t* dzb = (cBgD_t*)dComIfG_getObjectRes(m_arcname, dRes_INDEX_HAMI1_DZB_HAMI1_e);
-        if (mpBgW->Set(dzb, dBgW::MOVE_BG_e, &unk_40C) == true) {
+        if (mpBgW->Set(dzb, dBgW::MOVE_BG_e, &mBgMtx) == true) {
             return FALSE;
         }
         mpBgW->SetCrrFunc(0x024EE708 /* dBgS_MoveBGProc_TypicalRotY */);
@@ -79,8 +79,8 @@ void daAmiProp_c::CreateInit() {
     mStts.Init(255, 255, this);
     mCyl.Set(&l_cyl_src);
     mCyl.SetStts(&mStts);
-    unk_43C = daAmiProp_prm::getSwitchNo(this);
-    unk_446 = (s16)(current.angle.x + 0x4000);
+    mSwitchNo = daAmiProp_prm::getSwitchNo(this);
+    mTargetAngle = (s16)(current.angle.x + 0x4000);
     dComIfG_Bgsp()->Regist(mpBgW, this);
     set_mtx();
     mpBgW->Move();
@@ -105,7 +105,7 @@ void daAmiProp_c::set_mtx() {
     mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
     mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), current.angle.x, current.angle.y, current.angle.z);
     mpModel->setBaseTRMtx(mDoMtx_stack_c::get());
-    MTXCopy(mDoMtx_stack_c::get(), &unk_40C);
+    MTXCopy(mDoMtx_stack_c::get(), &mBgMtx);
 }
 
 /* 02050788 */
@@ -113,24 +113,24 @@ void daAmiProp_c::setMoveBGMtx() {
     mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
     mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), current.angle.x, current.angle.y, current.angle.z);
     mDoMtx_stack_c::scaleM(scale.x, scale.y, scale.z);
-    MTXCopy(mDoMtx_stack_c::get(), &unk_40C);
+    MTXCopy(mDoMtx_stack_c::get(), &mBgMtx);
 }
 
 /* 02050D14 */
 bool daAmiProp_c::_execute() {
-    s32 is_switch = fopAcM_isSwitch(this, unk_43C);
-    if ((u32)is_switch != (u32)unk_440) {
-        unk_444 = true;
+    s32 is_switch = fopAcM_isSwitch(this, mSwitchNo);
+    if ((u32)is_switch != (u32)mPrevSwitch) {
+        mTurning = true;
     }
 
-    if (unk_444) {
+    if (mTurning) {
         s16 tmp;
         switch (daAmiProp_prm::getType(this)) {
         case 0:
-            tmp = cLib_addCalcAngleS(&current.angle.x, unk_446, 10, 0x200, 0x10);
+            tmp = cLib_addCalcAngleS(&current.angle.x, mTargetAngle, 10, 0x200, 0x10);
             break;
         case 1:
-            tmp = cLib_addCalcAngleS(&current.angle.y, unk_446, 10, 0x200, 0x10);
+            tmp = cLib_addCalcAngleS(&current.angle.y, mTargetAngle, 10, 0x200, 0x10);
             break;
         default:
             // HD: GHS takes the sound path for types outside the two rotation axes.
@@ -138,8 +138,8 @@ bool daAmiProp_c::_execute() {
             break;
         }
         if (tmp == 0) {
-            unk_444 = false;
-            unk_446 = (s16)(unk_446 + 0x4000);
+            mTurning = false;
+            mTargetAngle = (s16)(mTargetAngle + 0x4000);
             dVibration_c* vib = dComIfGp_getVibration();
             gabi::Local<cXyz> pos;
             pos->x = 0.0f;
@@ -152,7 +152,7 @@ bool daAmiProp_c::_execute() {
             mDoAud_seStart(JA_SE_OBJ_AMI_PROP, &eyePos, 0, reverb);
         }
     }
-    unk_440 = is_switch;
+    mPrevSwitch = is_switch;
     set_mtx();
     mpBgW->Move();
     return true;
@@ -221,6 +221,6 @@ static void empty_virtual(void* p) {
 /* WWHD glue (tools/verify/autoglue.py)
 str 100071A0
 str 1000715C
-str 1000716C "modelData != NULL"
+str 1000716C "modelData != (0)"
 data l_cyl_src 1018FC0C
 */

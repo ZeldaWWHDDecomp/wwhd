@@ -118,13 +118,13 @@ static BOOL nodeCallBack(J3DNode *node, int calcTiming) {
                 PSMTXCopy(calc_mtx(), bdk_J3DSys_mCurrentMtx());
             } else if ((u32)(jnt_no - DK_JNT_J_DK_TOSAKA_A1_e) <
                        DK_JNT_J_DK_TOSAKA_B2_e - DK_JNT_J_DK_TOSAKA_A1_e + 1) {
-                s16 base = bdk->m112E + bdk->m1120;
+                s16 base = bdk->mTosakaHitYaw + bdk->mTosakaYaw;
                 if (jnt_no >= DK_JNT_J_DK_TOSAKA_B1_e) {
-                    cMtx_YrotM(calc_mtx(), (s16)(base + bdk->m1124));
-                    cMtx_ZrotM(calc_mtx(), (s16)(bdk->m112C + bdk->m1122 + bdk->m1126));
+                    cMtx_YrotM(calc_mtx(), (s16)(base + bdk->mTosakaWobbleYawB));
+                    cMtx_ZrotM(calc_mtx(), (s16)(bdk->mTosakaHitRoll + bdk->mTosakaRoll + bdk->mTosakaWobbleRollB));
                 } else {
-                    cMtx_YrotM(calc_mtx(), (s16) - (base + bdk->m1128));
-                    cMtx_ZrotM(calc_mtx(), (s16) - (bdk->m112C + bdk->m1122 + bdk->m112A));
+                    cMtx_YrotM(calc_mtx(), (s16) - (base + bdk->mTosakaWobbleYawA));
+                    cMtx_ZrotM(calc_mtx(), (s16) - (bdk->mTosakaHitRoll + bdk->mTosakaRoll + bdk->mTosakaWobbleRollA));
                 }
                 bdk_mtx_copy(bdk_getAnmMtx(model, jnt_no), calc_mtx());
                 PSMTXCopy(calc_mtx(), bdk_J3DSys_mCurrentMtx());

@@ -250,7 +250,7 @@ void daObjSwpush::Act_c::mode_u_l_init() {
     mMode = MODE_U_L;
     mTargetHFrac = 0.0f;
     mSpeed = attr("d_a_obj_swpush.cpp", "(M_type >=0) && (M_type <Type_Max)").mPushSpeed0;
-    s16 delay = attr("d_a_obj_swpush.cpp", "(M_type >=0) && (M_type <Type_Max)").m38;
+    s16 delay = attr("d_a_obj_swpush.cpp", "(M_type >=0) && (M_type <Type_Max)").mLowerDelay;
     top_bg_aim_req(0.0f, delay);
 }
 /* 02398A98 */
@@ -350,7 +350,7 @@ void daObjSwpush::Act_c::mode_upper() {
     auto& a = attr("d_a_obj_swpush.cpp", "(M_type >=0) && (M_type <Type_Max)");
     if (mDebounceTimer <= 0) {
         if (!((u32)a.mFlags & FLAG_REQ_HEAVY) && mRidingMode && !mPrevRiding) {
-            mSpeed = attr("d_a_obj_swpush.cpp", "(M_type >=0) && (M_type <Type_Max)").m34;
+            mSpeed = attr("d_a_obj_swpush.cpp", "(M_type >=0) && (M_type <Type_Max)").mLandSpeed;
             mDebounceTimer = 30;
             pause = true;
         }
@@ -833,7 +833,7 @@ static void rideCB(void* bg, Act_c* a, fopAc_ac_c* rider) {
     swpushConstructTriangle((cM3dGTri*)tri);
     bool previous = a->mPrevRiding;
     auto& attr = a->attr("d_a_obj_swpush.cpp", "(M_type >=0) && (M_type <Type_Max)");
-    f32 scale = previous ? (f32)attr.m44 : (f32)attr.m40;
+    f32 scale = previous ? (f32)attr.mRideAreaScaleHeld : (f32)attr.mRideAreaScale;
     swpushPushMatrix();
     swpushRotateY(mDoMtx_stack_c::get(), (s16)a->shape_angle.y);
     mDoMtx_stack_c::scaleM(scale, scale, scale);

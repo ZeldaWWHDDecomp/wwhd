@@ -45,7 +45,7 @@ void daTpota_c::make_ripple(cXyz* i_position) {
 
 /* 024C9E8C */
 BOOL daTpota_c::check_water_h(TpotaParticleView* i_ptcl, f32 i_position_y) {
-    unknown_struct* unknown_struct = field_0x2C4;
+    unknown_struct* unknown_struct = mSplash;
     int ret = FALSE;
     if (!(i_position_y > -230.0f)) {
         for (int i = 0; i < 30; i++, unknown_struct++) {
@@ -62,7 +62,7 @@ BOOL daTpota_c::check_water_h(TpotaParticleView* i_ptcl, f32 i_position_y) {
 
 /* 024C9F44 */
 void daTpota_c::clear_splash() {
-    unknown_struct* unknown_struct = field_0x2C4;
+    unknown_struct* unknown_struct = mSplash;
     for (int i = 0; i < 30; i++) {
         unknown_struct->ptcl = nullptr;
         unknown_struct->pos_y = 0.0f;
@@ -75,7 +75,7 @@ void daTpota_c::clear_splash() {
 void daTpota_c::renew_splash() {
     if (mpEmitters[1] != nullptr) {
         TpotaParticleList* list = mpEmitters[1]->getParticleList();
-        unknown_struct* unknown_struct = field_0x2C4;
+        unknown_struct* unknown_struct = mSplash;
         if (list != 0) {
             clear_splash();
             for (TpotaParticleLink* link = list->getFirst(); link != nullptr; link = link->getNext()) {

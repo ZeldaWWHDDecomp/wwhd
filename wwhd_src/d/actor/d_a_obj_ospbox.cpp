@@ -85,7 +85,7 @@ void Act_c::init_mtx() {
 }
 /* 02380610 */
 void Act_c::set_ground() {
-    if (m498 <= 0)
+    if (mGroundTries <= 0)
         return;
     mObjGndChk.SetActorPid(fopAcM_GetID(this));
     f32 y = current.pos.y, x = current.pos.x, z = current.pos.z;
@@ -94,15 +94,15 @@ void Act_c::set_ground() {
     mObjGndChk.m_pos.z = z;
     mObjGndChk.m_pos.y = y;
     f32 ground = dComIfG_Bgsp()->GroundCross(&mObjGndChk);
-    m494 = ground;
+    mGroundY = ground;
     if (ground > -1000000000.0f)
-        m498 = 0;
+        mGroundTries = 0;
     else
-        m498 = (s16)m498 - 1;
+        mGroundTries = (s16)mGroundTries - 1;
 }
 /* 023806CC */
 void Act_c::init_ground() {
-    m498 = 5;
+    mGroundTries = 5;
     set_ground();
 }
 /* 023806D8 */

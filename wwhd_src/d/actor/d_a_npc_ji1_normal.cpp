@@ -201,7 +201,7 @@ BOOL daNpc_Ji1_c::normalAction(void *arg) {
       }
     }
 
-    if (temp < l_hio.field_0x2C && isGuardAnim() == 0 &&
+    if (temp < l_hio.mTalkDistXZ && isGuardAnim() == 0 &&
         mAnimation != Ji1Normal_WARAI) {
       eventInfo.onCondition(dEvtCnd_CANTALK_e);
       if (dComIfGs_isEventBit(Ji1NormalEventFlag::UNK_0520)) {
@@ -338,14 +338,14 @@ BOOL daNpc_Ji1_c::kaitenwaitAction(void *arg) {
       }
     }
 
-    if (temp < l_hio.field_0x2C && isGuardAnim() == 0 &&
+    if (temp < l_hio.mTalkDistXZ && isGuardAnim() == 0 &&
         mAnimation != Ji1Normal_WARAI && rollPlayer->speedF < 1.0f) {
       eventInfo.onCondition(dEvtCnd_CANTALK_e);
     }
 
     if (static_cast<Ji1NormalPlayerHD *>(player)->checkFrontRollCrash() &&
         (!dComIfGs_isEventBit(Ji1NormalEventFlag::UNK_0501) ||
-         l_hio.field_0x30 != 0)) {
+         l_hio.mbRepeatKaiten != 0)) {
       field_0xD79 = 1;
       ji1NormalSetQuakeHD(
           &reinterpret_cast<dComIfG_inf_c *>(dComIfGp_get())->play.mDetect,

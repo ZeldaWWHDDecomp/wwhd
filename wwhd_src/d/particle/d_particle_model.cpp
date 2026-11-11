@@ -35,7 +35,7 @@ void* dPa_J3DModelEmitterCtor(void* obj, void* emitter, void* modelA, void* mode
     gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->mpBaseEmitter = e;
     gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->modelData = gabi::ea(modelA);
     gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->hdModelData = gabi::ea(modelB);
-    gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->field_0x26 = mode;
+    gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->mRotAxis = mode;
     copyTevLighting(t, a + 0x2C);
     for (u32 i = 0x84; i < 0x90; i += 4)
         W(a + 0x2C + i, w(t + i));
@@ -51,9 +51,9 @@ void* dPa_J3DModelEmitterCtor(void* obj, void* emitter, void* modelA, void* mode
         B(a + 0x2C + i, b(t + i));
     copyTevLighting(t + 0xC0, a + 0xEC);
     copyTevLighting(t + 0x144, a + 0x170, 1u << 16);
-    gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->field_0x1c = gabi::ea(pattern);
+    gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->mpAnmTexPattern = gabi::ea(pattern);
     if (!pattern) {
-        gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->field_0x20 = 0;
+        gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->mpBtpAnm = 0;
         gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->mpHeap = 0;
     } else {
         void* heap = pa_mDoExt_createSolidHeapToCurrent(u32(0), nullptr, u32(0));
@@ -62,13 +62,13 @@ void* dPa_J3DModelEmitterCtor(void* obj, void* emitter, void* modelA, void* mode
             void* animation = pa_operatorNewHeap(u32(0x74), heap, u32(4));
             if (animation)
                 animation = pa_mDoExt_btpAnm_ctor(animation);
-            gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->field_0x20 = gabi::ea(animation);
+            gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->mpBtpAnm = gabi::ea(animation);
             if (animation) {
                 u32 data = (u32)gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->modelData,
-                    pat = (u32)gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->field_0x1c;
+                    pat = (u32)gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->mpAnmTexPattern;
                 pa_mDoExt_btpAnm_init(animation, p(data), p(pat), u32(1), u32(2), u32(0), s32(-1),
                                       u32(0), u32(0), (f32)l_particleOne);
-                gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->field_0x24 = frame;
+                gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->mBtpFrame = frame;
             }
             pa_mDoExt_restoreCurrentHeap();
             pa_mDoExt_adjustSolidHeap(p((u32)gabi::at<pa::dPa_J3DmodelEmitter_c>(a)->mpHeap));

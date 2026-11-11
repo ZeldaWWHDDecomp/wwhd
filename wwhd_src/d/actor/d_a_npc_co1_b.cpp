@@ -760,7 +760,7 @@ static daNpc_Co1_HIO_c* daNpc_Co1_HIO_c_ct(daNpc_Co1_HIO_c* i_this) {
     /* memcpy(&mPrmTbl, &a_prm_tbl (.data 0x101BDE84), 0x2C) */
     memcpy_g(&i_this->mMaxHeadX, &l_hioParameters, 0x2C); /* 028FEAC0 memcpy */
     i_this->mNo = -1;
-    i_this->field_0x8 = -1;
+    i_this->mRefCount = -1;
     return i_this;
 }
 

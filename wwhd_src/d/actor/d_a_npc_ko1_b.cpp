@@ -393,10 +393,10 @@ void daNpc_Ko1_c::ko_nMove() {
         f32 rate, maxRate;
         if (fields.mMoveMode == KO1_MOVE_WALK) {
             rate = hio.mWalkAnimationRate;
-            maxRate = hio.mWalkMaxSpeed * rate;
+            maxRate = hio.mWalkSpeed * rate;
         } else {
             rate = hio.mRunAnimationRate;
-            maxRate = hio.mRunMaxSpeed * rate;
+            maxRate = hio.mRunSpeed * rate;
         }
         f32 play = spd * rate;
         play = (play - maxRate >= 0.0f) ? maxRate : play; /* fsel */

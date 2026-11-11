@@ -54,7 +54,7 @@ static u32 utiwa_sph_src[16] = {
 static void ride_call_back(dBgW* bgw, fopAc_ac_c* i_ac, fopAc_ac_c* i_pt) {
     kita_class* pActor = static_cast<kita_class*>(i_ac);
 
-    if (!pActor->field_29A || (pActor->field_360 != 0)) {
+    if (!pActor->mMode || (pActor->mOnWater != 0)) {
         gabi::Local<cXyz> tmp, delta_pos, local_44, local_50;
         cMtx_YrotS(calc_mtx(), (s16)-pActor->current.angle.y);
         cXyz_mi(&i_pt->current.pos, tmp, &pActor->current.pos);
@@ -75,20 +75,20 @@ static void ride_call_back(dBgW* bgw, fopAc_ac_c* i_ac, fopAc_ac_c* i_pt) {
         cLib_addCalcAngleS2(&pActor->current.angle.z, zAngle_target, 10, 0x800);
 
         f32 min_val_x = std::fabs(local_44->z - local_50->z) * (REG0_F(4) + 50.0f);
-        if (pActor->field_2BC.x < min_val_x)
-            pActor->field_2BC.x = min_val_x;
+        if (pActor->mTiltAmp.x < min_val_x)
+            pActor->mTiltAmp.x = min_val_x;
 
         f32 min_val_z = std::fabs(local_44->x - local_50->x) * (REG0_F(4) + 50.0f);
-        if (pActor->field_2BC.z < min_val_z)
-            pActor->field_2BC.z = min_val_z;
+        if (pActor->mTiltAmp.z < min_val_z)
+            pActor->mTiltAmp.z = min_val_z;
 
         f32 fVar1 = std::fabs(local_44->x - local_50->x) * (REG0_F(8) + 5.0f);
-        if (fVar1 > 10.0f && pActor->field_2B0.x < fVar1) {
-            cLib_addCalc2(&pActor->field_2B0.x, fVar1, 1.0f, REG0_F(7) + 1.2f);
+        if (fVar1 > 10.0f && pActor->mSwayAmp.x < fVar1) {
+            cLib_addCalc2(&pActor->mSwayAmp.x, fVar1, 1.0f, REG0_F(7) + 1.2f);
         }
         fVar1 = std::fabs(local_44->z - local_50->z) * (REG0_F(8) + 5.0f);
-        if (fVar1 > 10.0f && pActor->field_2B0.z < fVar1) {
-            cLib_addCalc2(&pActor->field_2B0.z, fVar1, 1.0f, REG0_F(7) + 1.2f);
+        if (fVar1 > 10.0f && pActor->mSwayAmp.z < fVar1) {
+            cLib_addCalc2(&pActor->mSwayAmp.z, fVar1, 1.0f, REG0_F(7) + 1.2f);
         }
         cLib_addCalc2(&pActor->mPosRel.y, REG0_F(2) + -100.0f, 0.1f, REG0_F(3) + 10.0f);
     }
@@ -109,27 +109,27 @@ static inline void kita_move_wait(kita_class* i_this) {
     fopAc_ac_c* actor = i_this;
     s32 mask = 0;
     for (int i = 0; i < 4; i++) {
-        if (i_this->field_318[i] == 2) {
-            i_this->field_318[i] = 0;
-            i_this->field_320 = 0.0f;
+        if (i_this->mRopeState[i] == 2) {
+            i_this->mRopeState[i] = 0;
+            i_this->mCutEase = 0.0f;
         }
-        u8 v = i_this->field_318[i];
+        u8 v = i_this->mRopeState[i];
         if (v != 0) {
             if (v == 1) {
-                i_this->field_320 = 0.0f;
-                i_this->field_318[i] = 5;
+                i_this->mCutEase = 0.0f;
+                i_this->mRopeState[i] = 5;
             }
             mask |= himo_off_check[i];
         }
     }
 
-    f32 step = 250.0f * i_this->field_320;
+    f32 step = 250.0f * i_this->mCutEase;
     f32 yp = (f32)himo_off_yp[mask];
     s16 ya_offset = himo_off_ya[mask];
     s16 xa_offset = himo_off_xa[mask];
     cLib_addCalc2(&i_this->mHeight, gabi::fnmsubs(yp, 0.3f, REG0_F(4)), 0.05f, step);
     if (mask == 0xF) {
-        i_this->field_29A = 1;
+        i_this->mMode = 1;
 
         gabi::Local<dBgS_GndChk> solid_ground_check;
         dBgS_GndChk_ct(solid_ground_check, GNDCHK_VT, false);
@@ -141,8 +141,8 @@ static inline void kita_move_wait(kita_class* i_this) {
             solid_ground_check->m_pos.z = z;
         }
         f32 solid_ground_cross = cBgS_GroundCross(dComIfG_Bgsp(), solid_ground_check) + REG0_F(13);
-        if (i_this->field_35C < solid_ground_cross)
-            i_this->field_35C = solid_ground_cross;
+        if (i_this->mFloorY < solid_ground_cross)
+            i_this->mFloorY = solid_ground_cross;
 
         gabi::Local<dBgS_GndChk> liquid_ground_check; /* dBgS_ObjGndChk_Spl */
         dBgS_GndChk_ct(liquid_ground_check, OBJGNDCHK_VT, true);
@@ -155,38 +155,38 @@ static inline void kita_move_wait(kita_class* i_this) {
             liquid_ground_check->m_pos.z = z;
         }
         f32 liquid_gnd_cross = cBgS_GroundCross(dComIfG_Bgsp(), liquid_ground_check);
-        if (liquid_gnd_cross != -1000000000.0f && liquid_gnd_cross > i_this->field_35C) {
-            i_this->field_360 = 1;
-            i_this->field_35C = liquid_gnd_cross + 40.0f + REG0_F(17);
+        if (liquid_gnd_cross != -1000000000.0f && liquid_gnd_cross > i_this->mFloorY) {
+            i_this->mOnWater = 1;
+            i_this->mFloorY = liquid_gnd_cross + 40.0f + REG0_F(17);
         }
         actor->health = 0;
         dBgS_GndChk_dt(liquid_ground_check, GNDCHK_VT, 0x10012DC4);
         dBgS_GndChk_dt(solid_ground_check, GNDCHK_VT, 0x10012DC4);
     }
-    s16 maxSpeed = (s16)gabi::ftoi(10000.0f * i_this->field_320);
+    s16 maxSpeed = (s16)gabi::ftoi(10000.0f * i_this->mCutEase);
     cLib_addCalcAngleS2(&i_this->mRotX, xa_offset, 16, maxSpeed);
     if (xa_offset != 0)
         cLib_addCalcAngleS2(&i_this->mRotY, ya_offset, 4, (s16)(maxSpeed * 2));
-    cLib_addCalc2(&i_this->field_320, 1.0f, 1.0f, REG0_F(14) + 0.001f);
+    cLib_addCalc2(&i_this->mCutEase, 1.0f, 1.0f, REG0_F(14) + 0.001f);
     cLib_addCalcAngleS2(&actor->current.angle.x, 0, 10, 0x200);
     cLib_addCalcAngleS2(&actor->current.angle.z, 0, 10, 0x200);
     {
         s16 cnt = i_this->mMoveCounter;
-        f32 bx = i_this->field_2BC.x;
-        i_this->field_2C8.x = (s16)gabi::ftoi(cM_ssin(cnt * 1500) * bx);
-        f32 bz = i_this->field_2BC.z;
-        i_this->field_2C8.z = (s16)gabi::ftoi(cM_ssin(cnt * 1300) * bz);
+        f32 bx = i_this->mTiltAmp.x;
+        i_this->mTilt.x = (s16)gabi::ftoi(cM_ssin(cnt * 1500) * bx);
+        f32 bz = i_this->mTiltAmp.z;
+        i_this->mTilt.z = (s16)gabi::ftoi(cM_ssin(cnt * 1300) * bz);
     }
-    cLib_addCalc2(&i_this->field_2BC.x, REG0_F(9) + 300.0f, 1.0f, REG0_F(3) + 20.0f);
-    cLib_addCalc2(&i_this->field_2BC.z, REG0_F(9) + 300.0f, 1.0f, REG0_F(3) + 20.0f);
+    cLib_addCalc2(&i_this->mTiltAmp.x, REG0_F(9) + 300.0f, 1.0f, REG0_F(3) + 20.0f);
+    cLib_addCalc2(&i_this->mTiltAmp.z, REG0_F(9) + 300.0f, 1.0f, REG0_F(3) + 20.0f);
     {
         s16 cnt = i_this->mMoveCounter;
-        i_this->mPosRel.x = cM_ssin(cnt * 750) * i_this->field_2B0.x;
-        i_this->mPosRel.z = cM_ssin(cnt * 900) * i_this->field_2B0.z;
+        i_this->mPosRel.x = cM_ssin(cnt * 750) * i_this->mSwayAmp.x;
+        i_this->mPosRel.z = cM_ssin(cnt * 900) * i_this->mSwayAmp.z;
     }
-    cLib_addCalc0(&i_this->field_2B0.x, 1.0f, REG0_F(6) + 0.25f);
-    cLib_addCalc0(&i_this->field_2B0.z, 1.0f, REG0_F(6) + 0.25f);
-    csXyz_pl_to(&actor->shape_angle, &actor->current.angle, &i_this->field_2C8);
+    cLib_addCalc0(&i_this->mSwayAmp.x, 1.0f, REG0_F(6) + 0.25f);
+    cLib_addCalc0(&i_this->mSwayAmp.z, 1.0f, REG0_F(6) + 0.25f);
+    csXyz_pl_to(&actor->shape_angle, &actor->current.angle, &i_this->mTilt);
     {
         gabi::Local<cXyz> sum;
         cXyz_pl(&actor->home.pos, sum, &i_this->mPosRel);
@@ -202,36 +202,36 @@ static inline void kita_move_wait(kita_class* i_this) {
 /* inlined into daKita_Execute */
 static inline void kita_move_fall(kita_class* i_this, fopAc_ac_c* player_actor) {
     fopAc_ac_c* actor = i_this;
-    if (i_this->field_360 == 2) {
+    if (i_this->mOnWater == 2) {
         i_this->mSph.SetC(&actor->current.pos);
         dComIfG_Ccsp_Set(&i_this->mSph);
         if (i_this->mSph.ChkTgHit() != 0) {
             s16 execCount = i_this->mExecuteCount;
             /* HD: the push direction is the player's facing, not the player-to-platform angle */
             i_this->mPlayerAngle = player_actor->shape_angle.y;
-            i_this->field_374 = 20;
+            i_this->mPushTimer = 20;
             s16 search = fopAcM_searchPlayerAngleY(actor);
             if (execCount != 0) {
                 s16 angleY_kita_player = (s16)(search - player_actor->shape_angle.y);
-                i_this->field_36C =
+                i_this->mDriftSpeedTarget =
                     std::fabs(cM_scos(angleY_kita_player)) * (REG0_F(2) + -6.0f); /* HD: fabs */
                 f32 fVar3 = fopAcM_searchPlayerDistance(actor) * 0.003f;
                 if (fVar3 > 1.0f)
                     fVar3 = 1.0f;
-                i_this->field_370 = (cM_ssin(angleY_kita_player) * (REG0_F(3) + 200.0f)) * fVar3;
+                i_this->mAngleYSpeedTarget = (cM_ssin(angleY_kita_player) * (REG0_F(3) + 200.0f)) * fVar3;
             } else {
                 s16 angle = (s16)(search - player_actor->shape_angle.y);
-                i_this->field_36C = std::fabs(cM_scos(angle)) * (REG0_F(12) + 6.0f); /* HD: fabs */
-                i_this->field_370 = cM_rndFX(100.0f);
+                i_this->mDriftSpeedTarget = std::fabs(cM_scos(angle)) * (REG0_F(12) + 6.0f); /* HD: fabs */
+                i_this->mAngleYSpeedTarget = cM_rndFX(100.0f);
             }
             fopAcM_seStartCurrent(actor, JA_SE_LK_FLIFT_GO_WATER, 0);
         }
-        if (i_this->field_374 != 0) {
-            i_this->field_374 = i_this->field_374 - 1;
-            cLib_addCalc2(&i_this->field_364, i_this->field_36C, 1.0f, REG0_F(5) + 0.3f);
-            cLib_addCalc2(&i_this->mAngleYSpeed, i_this->field_370, 1.0f, REG0_F(6) + 5.0f);
+        if (i_this->mPushTimer != 0) {
+            i_this->mPushTimer = i_this->mPushTimer - 1;
+            cLib_addCalc2(&i_this->mDriftSpeed, i_this->mDriftSpeedTarget, 1.0f, REG0_F(5) + 0.3f);
+            cLib_addCalc2(&i_this->mAngleYSpeed, i_this->mAngleYSpeedTarget, 1.0f, REG0_F(6) + 5.0f);
         } else {
-            cLib_addCalc0(&i_this->field_364, 1.0f, REG0_F(0) + 0.1f);
+            cLib_addCalc0(&i_this->mDriftSpeed, 1.0f, REG0_F(0) + 0.1f);
             cLib_addCalc0(&i_this->mAngleYSpeed, 1.0f, REG0_F(1) + 1.0f);
         }
         /* HD: the drift goes through speed (chased), not straight into current.pos */
@@ -239,7 +239,7 @@ static inline void kita_move_fall(kita_class* i_this, fopAc_ac_c* player_actor) 
         gabi::Local<cXyz> pos_offset2, pos_offset;
         pos_offset2->x = 0.0f;
         pos_offset2->y = 0.0f;
-        f32 f = i_this->field_364;
+        f32 f = i_this->mDriftSpeed;
         pos_offset2->z = f + f;
         MtxPosition(pos_offset2, pos_offset);
         cLib_addCalc2(&actor->speed.x, pos_offset->x, 0.5f, 0.5f);
@@ -256,7 +256,7 @@ static inline void kita_move_fall(kita_class* i_this, fopAc_ac_c* player_actor) 
 
     f32 fVar4;
     s32 local29A;
-    if (i_this->field_360 == 2) {
+    if (i_this->mOnWater == 2) {
         fVar4 = 1.0f;
         local29A = 800;
     } else {
@@ -265,15 +265,15 @@ static inline void kita_move_fall(kita_class* i_this, fopAc_ac_c* player_actor) 
     }
     {
         s16 cnt = i_this->mMoveCounter;
-        f32 bx = i_this->field_2BC.x;
-        i_this->field_2C8.x = (s16)gabi::ftoi(cM_ssin(cnt * local29A) * bx);
-        f32 bz = i_this->field_2BC.z;
-        i_this->field_2C8.z = (s16)gabi::ftoi(cM_ssin(cnt * (local29A - 200)) * bz);
+        f32 bx = i_this->mTiltAmp.x;
+        i_this->mTilt.x = (s16)gabi::ftoi(cM_ssin(cnt * local29A) * bx);
+        f32 bz = i_this->mTiltAmp.z;
+        i_this->mTilt.z = (s16)gabi::ftoi(cM_ssin(cnt * (local29A - 200)) * bz);
     }
-    cLib_addCalc2(&i_this->field_2BC.x, (REG0_F(9) + 400.0f) * fVar4, 1.0f, REG0_F(3) + 20.0f);
-    cLib_addCalc2(&i_this->field_2BC.z, (REG0_F(9) + 400.0f) * fVar4, 1.0f, REG0_F(3) + 20.0f);
+    cLib_addCalc2(&i_this->mTiltAmp.x, (REG0_F(9) + 400.0f) * fVar4, 1.0f, REG0_F(3) + 20.0f);
+    cLib_addCalc2(&i_this->mTiltAmp.z, (REG0_F(9) + 400.0f) * fVar4, 1.0f, REG0_F(3) + 20.0f);
 
-    csXyz_pl_to(&actor->shape_angle, &actor->current.angle, &i_this->field_2C8);
+    csXyz_pl_to(&actor->shape_angle, &actor->current.angle, &i_this->mTilt);
     PSVECAdd(&actor->current.pos, &actor->speed,
              &actor->current.pos); /* HD: current.pos += speed */
     f32 sy = actor->speed.y - 5.0f;
@@ -281,14 +281,14 @@ static inline void kita_move_fall(kita_class* i_this, fopAc_ac_c* player_actor) 
         sy = -150.0f;
     actor->speed.y = sy;
 
-    f32 floor = i_this->field_35C;
+    f32 floor = i_this->mFloorY;
     if (!(actor->current.pos.y > floor)) {
         actor->current.pos.y = floor;
         if (i_this->speed.y < -50.0f) {
-            i_this->field_2BC.z = 2000.0f;
-            i_this->field_2BC.x = 2000.0f;
-            if (i_this->field_360 != 0) {
-                i_this->field_360 = 2;
+            i_this->mTiltAmp.z = 2000.0f;
+            i_this->mTiltAmp.x = 2000.0f;
+            if (i_this->mOnWater != 0) {
+                i_this->mOnWater = 2;
                 fopAcM_seStart_nn(actor, JA_SE_OBJ_P_FLOWER_LAND_W, 0);
                 gabi::Local<cXyz> particle_scale;
                 particle_scale->set(3.0f, 3.0f, 3.0f);
@@ -308,7 +308,7 @@ static inline void kita_move_fall(kita_class* i_this, fopAc_ac_c* player_actor) 
         actor->speed.y = 0.0f;
         cLib_addCalcAngleS2(&i_this->mRotX, 0, 2, 0x2000);
     }
-    if (i_this->field_360 != 0) {
+    if (i_this->mOnWater != 0) {
         i_this->mAcch.CrrPos(dComIfG_Bgsp());
     }
 }
@@ -324,7 +324,7 @@ static BOOL daKita_Execute(kita_class* i_this) {
     /* kita_move(i_this) */
     fopAc_ac_c* player_actor = dComIfGp_getPlayer(0); /* daPy_getPlayerActorClass() */
     i_this->mMoveCounter = i_this->mMoveCounter + 1;
-    switch ((u16)i_this->field_29A) {
+    switch ((u16)i_this->mMode) {
     case 0:
         kita_move_wait(i_this);
         break;
@@ -352,13 +352,13 @@ static BOOL daKita_Execute(kita_class* i_this) {
         local48->x = xd[i] * actor->scale.x;
         local48->y = REG0_F(5) + -15.0f;
         local48->z = zd[i] * actor->scale.z;
-        MtxPosition(local48, &i_this->field_2E8[i]);
+        MtxPosition(local48, &i_this->mRopeRootPos[i]);
         MtxPull();
     }
     PSMTXCopy(calc_mtx(), &i_this->mBgwMtx);
     dBgW_Move(i_this->pm_bgw);
 
-    if (i_this->field_360 == 2) {
+    if (i_this->mOnWater == 2) {
         if (i_this->mBaseEmitter == nullptr) {
             i_this->mBaseEmitter =
                 dComIfGp_particle_set(dPa_name_ID_AK_SN_FFHAMON00, &actor->current.pos);
@@ -427,7 +427,7 @@ static inline BOOL himo_create(kita_class* i_this) {
     fopAcM_prm_class* param;
 
     for (int i = 0; i < 4; i++) {
-        switch (i_this->field_2E4[i]) {
+        switch (i_this->mShandCreateStep[i]) {
         case 0: {
             param = fopAcM_CreateAppend();
             f32 x = i_this->current.pos.x;
@@ -439,18 +439,18 @@ static inline BOOL himo_create(kita_class* i_this) {
             param->angle.y = yad[i];
             param->parameters = 0xFFFFFF35;
             param->room_no = i_this->current.roomNo;
-            i_this->field_2D4[i] = fopAcM_Create(fpcNm_SHAND_e, param);
-            i_this->field_2E4[i] = (u8)(i_this->field_2E4[i] + 1);
+            i_this->mShandIds[i] = fopAcM_Create(fpcNm_SHAND_e, param);
+            i_this->mShandCreateStep[i] = (u8)(i_this->mShandCreateStep[i] + 1);
         }
             /* fallthrough */
         case 1: {
-            fopAc_ac_c* shand_i = fopAcM_SearchByID(i_this->field_2D4[i]);
+            fopAc_ac_c* shand_i = fopAcM_SearchByID(i_this->mShandIds[i]);
             if (shand_i != nullptr) {
                 auto* shand = static_cast<KitaShandView*>(shand_i);
                 shand->mParentId = fopAcM_GetID(i_this);
-                shand->mpRootPos = &i_this->field_2E8[i];
-                shand->mpParentState = &i_this->field_318[i];
-                i_this->field_2E4[i] = (u8)(i_this->field_2E4[i] + 1);
+                shand->mpRootPos = &i_this->mRopeRootPos[i];
+                shand->mpParentState = &i_this->mRopeState[i];
+                i_this->mShandCreateStep[i] = (u8)(i_this->mShandCreateStep[i] + 1);
                 shand_count++;
             }
             break;
@@ -487,18 +487,18 @@ static cPhs_State daKita_Create(fopAc_ac_c* a_this) {
 
     ret = dComIfG_resLoad(&i_this->mPhs, "kita");
     if (ret == cPhs_COMPLEATE_e) {
-        i_this->field_2A0 = (u8)fopAcM_GetParam(a_this);
-        i_this->field_2A1 = (u8)(fopAcM_GetParam(a_this) >> 8);
+        i_this->mSizeType = (u8)fopAcM_GetParam(a_this);
+        i_this->mStartFloating = (u8)(fopAcM_GetParam(a_this) >> 8);
 
-        if (i_this->field_2A1 == 1) {
-            i_this->field_29A = 1;
-            i_this->field_360 = 1;
-            i_this->field_35C = a_this->current.pos.y + 70.0f + REG0_F(17);
+        if (i_this->mStartFloating == 1) {
+            i_this->mMode = 1;
+            i_this->mOnWater = 1;
+            i_this->mFloorY = a_this->current.pos.y + 70.0f + REG0_F(17);
         } else if (himo_create(i_this))
             return cPhs_INIT_e;
 
-        if (i_this->field_2A0 == 0xff)
-            i_this->field_2A0 = 0;
+        if (i_this->mSizeType == 0xff)
+            i_this->mSizeType = 0;
 
         if (fopAcM_entrySolidHeap(i_this, CallbackCreateHeap, 0x10000) == false)
             return cPhs_ERROR_e;
@@ -509,7 +509,7 @@ static cPhs_State daKita_Create(fopAc_ac_c* a_this) {
                 return cPhs_ERROR_e;
         }
 
-        switch (i_this->field_2A0) {
+        switch (i_this->mSizeType) {
         case 1:
             i_this->scale.x = 1.25f;
             i_this->scale.z = 1.25f;

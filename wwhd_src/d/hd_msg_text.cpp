@@ -300,7 +300,7 @@ static void setNumberLabel(HdMsgText *p, u32 number, const char *format) {
 /* 025F6B18 */
 void hdMsgText_setNumber(HdMsgText *p, u32 num, const HdMsgSoundPosition *sePos) {
     hdMsgText_reset(p);
-    setNumberLabel(p, num, "message number format");
+    setNumberLabel(p, num, "%05d");
     if (sePos) {
         p->mSoundPosition[0] = sePos->mBits[0];
         p->mSoundPosition[1] = sePos->mBits[1];
@@ -312,7 +312,7 @@ void hdMsgText_setNumber(HdMsgText *p, u32 num, const HdMsgSoundPosition *sePos)
 /* 025F6C54 */
 void hdMsgText_setNumberIdle(HdMsgText *p, u32 num) {
     hdMsgText_resetIdle(p);
-    setNumberLabel(p, num, "idle message number format");
+    setNumberLabel(p, num, "%05d");
 }
 
 /* 025F6D70: message by set name and label */
@@ -510,8 +510,8 @@ data l_hdMsgRegisterB 101F4AFC
 data l_hdMsgRegisterC 101F4B08
 data l_hdMsgObjectA 1048D708
 data l_hdMsgObjectB 1048D709
-str 100E0AB8 "message number format" renamed
-str 100E0AC0 "idle message number format" renamed
+str 100E0AB8 "%05d" in 025F6B18
+str 100E0AC0 "%05d" in 025F6C54
 ext 0273AD10 void* hdMsgText_allocate(u32)
 ext C0009988 void hdMsgText_copyBytes(char*, const char*, u32, u32)
 ext 02759C28 void hdMsgText_format(HdMsgString*, const char*, u32)

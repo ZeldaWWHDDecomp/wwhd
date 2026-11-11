@@ -39,7 +39,7 @@ BOOL daIkari_c::_createHeap() {
     // Autoglue checks the literal entries: three S_IKARI2 models, then S_IKARI3 and S_IKARI4.
     static s32 ikari_bdl[] = {3, 3, 3, 4, 5};
     J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes(M_arcname, ikari_bdl[mModelType]);
-    JUT_ASSERT(0x7e, modelData != NULL);
+    JUT_ASSERT_MSG(0x7e, modelData != NULL, "modelData != (0)");
     mpModel = mDoExt_J3DModel__create(modelData, 0x00080000, 0x11000022);
     if (!mpModel)
         return false;
@@ -204,7 +204,7 @@ static void empty_virtual(void* p) {
 /* WWHD glue (tools/verify/autoglue.py): this translation unit's data and existing local binding
 str 10011D18
 str 10011CB4
-str 10011CC4 "modelData != NULL"
+str 10011CC4 "modelData != (0)"
 data ikari_bdl 101B7990
 data l_HIO 104647EC
 ext 0257DB04 be<f32>* dKyw_get_wind_power()

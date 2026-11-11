@@ -321,12 +321,12 @@ static cPhs_State daEsa_Create(fopAc_ac_c* i_actor) {
     }
     esa_class* i_this = static_cast<esa_class*>(i_actor);
     i_this->mAppendNum = fopAcM_GetParam(i_this) & 0xFF;
-    i_this->field_0x2BA = fopAcM_GetParam(i_this) >> 8 & 0xFF;
+    i_this->mNoAppend = fopAcM_GetParam(i_this) >> 8 & 0xFF;
     /* HD: no REG0_S(0) override */
     if (!fopAcM_entrySolidHeap(i_this, daEsa_CreateHeap, 0x4C0)) {
         return cPhs_ERROR_e;
     }
-    if (i_this->field_0x2BA == 0) {
+    if (i_this->mNoAppend == 0) {
         s8 num = i_this->mAppendNum;
         if (num > 0) {
             for (int i = 0; i < num; i++) {

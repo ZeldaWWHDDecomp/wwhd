@@ -601,7 +601,7 @@ daObjKanoke_c* daObjKanoke_construct(daObjKanoke_c* a) {
     a->mEffectHandles[0] = 0;
     a->mEffectHandles[1] = 0;
     a->mState = STATE_NORMAL;
-    a->mSmoke.m11 = 0;
+    a->mSmoke.mRateOff = 0;
     a->mLightTimer = 0;
     a->mHidden = 0;
     a->setMtxHontai();

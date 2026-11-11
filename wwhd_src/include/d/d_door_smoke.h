@@ -11,12 +11,13 @@ WWHD_OFFSET(dDoor_info_c, mAngleVec, 0x3B0);
 struct dDoor_smoke_c {
     dPa_smokeEcallBack mSmokeCb;
     csXyz mRot; u8 _26[2]; cXyz mPos;
-    be<u8> m34, m35; u8 _36[2];
+    be<u8> mWaveStep;  /* was m34: smokeProc 0252B2D8: step counter of the smoke wobble, moves mPos sideways by step * 20 with alternating sign and counts up each frame; dDoor_smoke_ct 0252B190 / smokeInit 0252B1E8 clear it (tww the same) */
+    be<u8> mbStarted; u8 _36[2];  /* was m35: smokeProc 0252B2D8: 0 on the first call, which only sets it to 1; the wobble runs once it is set; dDoor_smoke_ct 0252B190 / smokeInit 0252B1E8 clear it (tww the same) */
     void smokeInit(dDoor_info_c*); void smokeProc(dDoor_info_c*); void smokeEnd();
 };
 WWHD_OFFSET(dDoor_smoke_c, mRot, 0x20);
 WWHD_OFFSET(dDoor_smoke_c, mPos, 0x28);
-WWHD_OFFSET(dDoor_smoke_c, m34, 0x34);
+WWHD_OFFSET(dDoor_smoke_c, mWaveStep, 0x34);
 WWHD_SIZE(dDoor_smoke_c, 0x38);
 struct DoorSmokeEmitter : JPABaseEmitter {
     // HD: global scale vectors follow the expanded particle/render state.
@@ -48,10 +49,11 @@ struct dDoor_key2_c {
     be<u8> mbEnabled; u8 _01[3]; gptr<J3DModel> mpModel;
     DoorKeyBckAnimation mBckAnim;
     request_of_phase_process_class mPhs;
-    be<u8> m20, mbIsBossDoor; u8 _9E[2];
+    be<u8> mbUnlocking;  /* was m20: dDoor_key2_c (d_door_key.h) mbUnlocking, see there; dDoor_key2_ct 0252B3D0 clears it */
+    be<u8> mbIsBossDoor; u8 _9E[2];
 };
 WWHD_OFFSET(dDoor_key2_c, mPhs, 0x94);
-WWHD_OFFSET(dDoor_key2_c, m20, 0x9C);
+WWHD_OFFSET(dDoor_key2_c, mbUnlocking, 0x9C);
 WWHD_SIZE(dDoor_key2_c, 0xA0);
 struct dDoor_stop_c {
     gptr<J3DModel> mpModel; be<f32> mOffsY;

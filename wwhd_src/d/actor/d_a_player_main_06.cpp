@@ -173,7 +173,7 @@ BOOL daPy_lk_c::dProcVorcanoFail_init() {
     gravity = 0.0f;
     setSingleMoveAnime(player_demo::ANM_LAVADAM, 1.0f, 0.0f, -1, 5.0f);
     Mtx34* mtx = mpCLModel->getAnmMtx(player_demo::CL_JNT_LINK_ROOT_e);
-    playerDemoMakeEmitter(&m32E4, 0x8078 /* ID_AK_SN_HIDARUMAFIRE */, mtx, &current.pos, nullptr);
+    playerDemoMakeEmitter(&mProcEffectEcallBack0, 0x8078 /* ID_AK_SN_HIDARUMAFIRE */, mtx, &current.pos, nullptr);
     return TRUE;
 }
 /* 024243F8 */
@@ -213,14 +213,14 @@ BOOL daPy_lk_c::dProcSlightSurprised() {
             mProcVar6 = 1;
             setSingleMoveAnime(player_demo::ANM_SURPRISEDWAIT, 1.0f, 0.0f, -1, 3.0f);
             if (gabi::at<PlayerDemoAnimation>(mpAnmTexPatternData)->getFrameMax() == 0) {
-                m3530 = 0;
+                mTexAnmFrame = 0;
             } else {
-                m3530 = gabi::at<PlayerDemoAnimation>(mpAnmTexPatternData)->getFrameMax() - 1;
+                mTexAnmFrame = gabi::at<PlayerDemoAnimation>(mpAnmTexPatternData)->getFrameMax() - 1;
             }
             if (gabi::at<PlayerDemoAnimation>(mpTexScrollResData)->getFrameMax() == 0) {
-                m3532 = 0;
+                mTexScrollFrame = 0;
             } else {
-                m3532 = gabi::at<PlayerDemoAnimation>(mpTexScrollResData)->getFrameMax() - 1;
+                mTexScrollFrame = gabi::at<PlayerDemoAnimation>(mpTexScrollResData)->getFrameMax() - 1;
             }
             mModeFlg = mModeFlg & ~player_demo::ModeFlg_00000400;
         }
@@ -246,8 +246,8 @@ BOOL daPy_lk_c::dProcSmile() {
     if (dComIfGp_checkPlayerStatus0(0, player_demo::daPyStts0_SHIP_RIDE_e)) {
         setShipRidePos(1);
     }
-    m3530 = m3530 + 1;
-    if ((s32)(u16)m3530 >= gabi::at<PlayerDemoAnimation>(mpAnmTexPatternData)->getFrameMax()) {
+    mTexAnmFrame = mTexAnmFrame + 1;
+    if ((s32)(u16)mTexAnmFrame >= gabi::at<PlayerDemoAnimation>(mpAnmTexPatternData)->getFrameMax()) {
         if (mProcVar6 == 0) {
             mProcVar6 = 1;
         } else {
@@ -273,7 +273,7 @@ BOOL daPy_lk_c::dProcBossWarp_init() {
     mNormalSpeed = 0.0f;
     if (mDemo.getParam0() == 2) {
         initShipRideUseItem(2, 1);
-        m353E = m353C = 0;
+        mShipRideAngleZ = mShipRideAngleX = 0;
     }
     if (mEquipItem == player_demo::daPyItem_BOKO_e) {
         deleteEquipItem(0);
@@ -284,7 +284,7 @@ BOOL daPy_lk_c::dProcBossWarp_init() {
 BOOL daPy_lk_c::dProcBossWarp() {
     if (dComIfGp_checkPlayerStatus0(0, player_demo::daPyStts0_SHIP_RIDE_e)) {
         setShipRidePos(1);
-        m353E = m353C = 0;
+        mShipRideAngleZ = mShipRideAngleX = 0;
     }
     if (mFrameCtrlUnder[0].getRate() < 0.01f) {
         if (mProcVar6 == 0) {
@@ -617,10 +617,10 @@ BOOL daPy_lk_c::dProcSurprisedWait_init() {
     int use = checkShipRideUseItem(0);
     setSingleMoveAnime(player_demo::ANM_SURPRISEDWAIT, 1.0f, 0.0f, -1, 3.0f);
     if (gabi::at<PlayerDemoAnimation>(mpAnmTexPatternData)->getFrameMax() >= 1) {
-        m3530 = gabi::at<PlayerDemoAnimation>(mpAnmTexPatternData)->getFrameMax() - 1;
+        mTexAnmFrame = gabi::at<PlayerDemoAnimation>(mpAnmTexPatternData)->getFrameMax() - 1;
     }
     if (gabi::at<PlayerDemoAnimation>(mpTexScrollResData)->getFrameMax() >= 1) {
-        m3532 = gabi::at<PlayerDemoAnimation>(mpTexScrollResData)->getFrameMax() - 1;
+        mTexScrollFrame = gabi::at<PlayerDemoAnimation>(mpTexScrollResData)->getFrameMax() - 1;
     }
     mNormalSpeed = 0.0f;
     initShipRideUseItem(use, 0);
@@ -1046,7 +1046,7 @@ BOOL daPy_lk_c::procLadderDownEnd_init(int param_0) {
     int anm = param_0 != 0 ? player_demo::ANM_LADDERDWEDL : player_demo::ANM_LADDERDWEDR;
     setSingleMoveAnime(anm, 1.0f, 0.0f, -1, 2.0f); /* HD: HIO folded */
     gravity = 0.0f;
-    m34C2 = 7;
+    mRootMoveMode = 7;
     dComIfGp_setPlayerStatus0(0, player_demo::daPyStts0_UNK2000000_e);
     return TRUE;
 }
@@ -1056,7 +1056,7 @@ int daPy_lk_c::changeLadderMoveProc(int param_0) {
     cLib_addCalc(&current.pos.y, m370C.y, 0.5f, 0.5f, 0.05f);
     cLib_addCalc(&current.pos.z, m370C.z, 0.5f, 0.5f, 0.05f);
     if (mStickDistance > 0.05f) {
-        s32 d = (s16)(m34E8 - shape_angle.y);
+        s32 d = (s16)(mMoveTargetAngleY - shape_angle.y);
         int iVar2 = d < 0 ? -d : d;
         if (iVar2 > 0x3C72 && iVar2 < 0x438E) {
             return FALSE;
@@ -1125,7 +1125,7 @@ BOOL daPy_lk_c::procLadderUpStart() {
         }
     } else {
         J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
-        m34C2 = 5;
+        mRootMoveMode = 5;
         if (frameCtrl.getRate() < 0.01f) {
             dComIfGp_setDoStatus(6 /* dActStts_LET_GO_e */);
             if (mProcVar2 == 0) {
@@ -1133,7 +1133,7 @@ BOOL daPy_lk_c::procLadderUpStart() {
                 mProcVar2 = 1;
             }
             if ((mItemTrigger & 1)) {
-                m34C2 = 0;
+                mRootMoveMode = 0;
                 procFall_init(1, 6.0f);
             } else {
                 changeLadderMoveProc(1);
@@ -1156,7 +1156,7 @@ BOOL daPy_lk_c::procLadderUpEnd() {
         if (frameCtrl.checkPass(9.0f) || frameCtrl.checkPass(19.0f)) {
             setLadderFootSe();
         }
-        m34C2 = 5;
+        mRootMoveMode = 5;
     }
     return TRUE;
 }
@@ -1171,11 +1171,11 @@ BOOL daPy_lk_c::procLadderDownStart() {
         }
     } else {
         J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
-        m34C2 = 5;
+        mRootMoveMode = 5;
         if (frameCtrl.getRate() < 0.01f) {
             dComIfGp_setDoStatus(6 /* dActStts_LET_GO_e */);
             if ((mItemTrigger & 1)) {
-                m34C2 = 0;
+                mRootMoveMode = 0;
                 procFall_init(1, 6.0f);
             } else {
                 changeLadderMoveProc(1);
@@ -1194,7 +1194,7 @@ BOOL daPy_lk_c::procLadderDownEnd() {
     if (mFrameCtrlUnder[0].getRate() < 0.01f) {
         checkNextMode(0);
     } else {
-        m34C2 = 5;
+        mRootMoveMode = 5;
     }
     return TRUE;
 }
@@ -1204,10 +1204,10 @@ BOOL daPy_lk_c::procLadderMove() {
     if (setMoveBGLadderCorrect()) {
         return TRUE;
     }
-    m34C2 = 5;
+    mRootMoveMode = 5;
     dComIfGp_setDoStatus(player_move::dActStts_LET_GO_e);
     if ((mItemTrigger & 1)) {
-        m34C2 = 0;
+        mRootMoveMode = 0;
         procFall_init(1, 6.0f);
     } else {
         f32 rate = mFrameCtrlUnder[0].getRate();
@@ -1239,7 +1239,7 @@ f32 daPy_lk_c::getHangMoveAnmSpeed() {
 
 /* 02427DA0 */
 int daPy_lk_c::getHangDirectionFromAngle() {
-    s32 d = (s16)(m34E8 - shape_angle.y);
+    s32 d = (s16)(mMoveTargetAngleY - shape_angle.y);
     if ((d < 0 ? -d : d) > 0x78E4) {
         return player_move::DIR_BACKWARD;
     } else if (d >= 0x71C) {
@@ -1337,11 +1337,11 @@ int daPy_lk_c::changeHangEndProc(int param_0) {
     f64 h = playerMoveGroundCross(dComIfG_Bgsp(), playerMoveGroundCheck(this));
     mHangGroundH = (f32)h;
     if (h != -1000000000.0 /* -G_CM3D_F_INF */) {
-        m3588 = playerMoveGetAttributeCode(playerMoveGroundPoly(this));
+        mHangAttributeCode = playerMoveGetAttributeCode(playerMoveGroundPoly(this));
     } else {
-        m3588 = player_move::dBgS_Attr_UNK1B_e;
+        mHangAttributeCode = player_move::dBgS_Attr_UNK1B_e;
     }
-    if (mHangGroundH > playerMoveFoot(this, 1)->field_0x018.y + current.pos.y) {
+    if (mHangGroundH > playerMoveFoot(this, 1)->mToePos.y + current.pos.y) {
         return procLand_init(1.3f /* HD: HIO folded */, 0);
     }
     if (param_0 != 0) {
@@ -1665,7 +1665,7 @@ f32 daPy_lk_c::getClimbMoveAnmSpeed() {
 
 /* 024291FC */
 int daPy_lk_c::getClimbDirectionFromAngle() {
-    s32 d = (s16)(m34E8 - shape_angle.y);
+    s32 d = (s16)(mMoveTargetAngleY - shape_angle.y);
     if ((d < 0 ? -d : d) > 0x7000) {
         return player_move::DIR_BACKWARD;
     } else if (d >= 0x1000) {
@@ -1680,9 +1680,9 @@ int daPy_lk_c::getClimbDirectionFromAngle() {
 BOOL daPy_lk_c::procClimbMoveSide_init(int param_0) {
     f64 spd = playerMoveClimbSpeedRegister(this); /* f1 passed on as returned */
     commonProcInit(player_move::daPyProc_CLIMB_MOVE_SIDE_e);
-    m34C2 = 7;
+    mRootMoveMode = 7;
     mProcVar6 = param_0;
-    mProcVar2 = (s16)(m34E8 - shape_angle.y);
+    mProcVar2 = (s16)(mMoveTargetAngleY - shape_angle.y);
     int anm;
     if (param_0 != 0) {
         anm = player_move::ANM_FCLIMBSLIDELUP;
@@ -1942,7 +1942,7 @@ BOOL daPy_lk_c::procClimbUpStart() {
         }
     } else {
         J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
-        m34C2 = 5;
+        mRootMoveMode = 5;
         if (frameCtrl.getRate() < 0.01f) {
             dComIfGp_setDoStatus(player_move::dActStts_LET_GO_e);
             if (mProcVar2 == 0) {
@@ -1950,7 +1950,7 @@ BOOL daPy_lk_c::procClimbUpStart() {
                 mProcVar2 = 1;
             }
             if ((mItemTrigger & 1)) {
-                m34C2 = 0;
+                mRootMoveMode = 0;
                 procFall_init(1, 6.0f);
             } else {
                 changeClimbMoveProc(1);
@@ -1968,11 +1968,11 @@ BOOL daPy_lk_c::procClimbDownStart() {
         return TRUE;
     }
     J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
-    m34C2 = 5;
+    mRootMoveMode = 5;
     if (frameCtrl.getRate() < 0.01f) {
         dComIfGp_setDoStatus(player_move::dActStts_LET_GO_e);
         if ((mItemTrigger & 1)) {
-            m34C2 = 0;
+            mRootMoveMode = 0;
             procFall_init(1, 6.0f);
         } else {
             changeClimbMoveProc(1);
@@ -1988,10 +1988,10 @@ BOOL daPy_lk_c::procClimbMoveUpDown() {
     if (setMoveBGCorrectClimb()) {
         return TRUE;
     }
-    m34C2 = 5;
+    mRootMoveMode = 5;
     dComIfGp_setDoStatus(player_move::dActStts_LET_GO_e);
     if ((mItemTrigger & 1)) {
-        m34C2 = 0;
+        mRootMoveMode = 0;
         procFall_init(1, 6.0f);
     } else {
         f32 rate = mFrameCtrlUnder[0].getRate();
@@ -2019,10 +2019,10 @@ BOOL daPy_lk_c::procClimbMoveSide() {
     if (setMoveBGCorrectClimb()) {
         return TRUE;
     }
-    m34C2 = 5;
+    mRootMoveMode = 5;
     dComIfGp_setDoStatus(player_move::dActStts_LET_GO_e);
     if ((mItemTrigger & 1)) {
-        m34C2 = 0;
+        mRootMoveMode = 0;
         procFall_init(1, 6.0f);
     } else {
         f32 rate = mFrameCtrlUnder[0].getRate();
@@ -2705,7 +2705,7 @@ BOOL daPy_lk_c::checkNotCrawlStand(cXyz* param_0, cXyz* param_1) {
 BOOL daPy_lk_c::procCrawlEnd_init(int param_1, s16 param_2, s16 param_3) {
     f32 dVar4 = mFrameCtrlUnder[0].getFrame();
     commonProcInit(player_move::daPyProc_CRAWL_END_e);
-    m34C2 = 1;
+    mRootMoveMode = 1;
     current.angle.y = shape_angle.y;
     /* HD: HIO folded (rate -1.0, start 0.0, end 8, morf 2.0) */
     setSingleMoveAnime(player_move::ANM_LIE, -1.0f, 0.0f, 8, param_1 != 0 ? 2.0f : -1.0f);
@@ -2722,10 +2722,10 @@ BOOL daPy_lk_c::procCrawlEnd_init(int param_1, s16 param_2, s16 param_3) {
     PlayerMoveCalcObject* obj = gabi::at<PlayerMoveCalcPack>(m_pbCalc[0])->mpCalc;
     obj->mFlags = obj->mFlags | 8;
     PlayerMoveJointTransform* tr = obj->mpTransform;
-    m3700.x = tr->mTranslate.x;
-    m3700.y = tr->mTranslate.y;
+    mPrevRootTrans.x = tr->mTranslate.x;
+    mPrevRootTrans.y = tr->mTranslate.y;
     mNormalSpeed = 0.0f;
-    m3700.z = tr->mTranslate.z;
+    mPrevRootTrans.z = tr->mTranslate.z;
     shape_angle.z = param_3;
     m35A0 = 0.2f; /* 1.0f / (8 - 3) folded */
     shape_angle.x = param_2;
@@ -2754,7 +2754,7 @@ BOOL daPy_lk_c::procCrawlStart() {
                (mFrameCtrlUnder[0].getRate() < 0.01f || mFrameCtrlUnder[0].getFrame() > 7.0f)) {
         playerMoveCrawlInitRegister(this, (s32)shape_angle.x, (s32)shape_angle.z);
     } else {
-        m34C2 = 1;
+        mRootMoveMode = 1;
     }
     return TRUE;
 }
@@ -2885,12 +2885,12 @@ BOOL daPy_lk_c::procCrawlMove() {
                 /* HD: in first-person view the crawl turns only towards a side direction, 45 degrees short */
                 int dir = getDirectionFromShapeAngle();
                 if (dir == 2 || dir == 3) {
-                    s16 target = m34E8;
+                    s16 target = mMoveTargetAngleY;
                     s16 off = (s16)(target - shape_angle.y) > 0 ? 0x2000 : -0x2000;
                     cLib_addCalcAngleS(&shape_angle.y, (s16)(target - off), 0x20, 0x1B58, 0x1F4);
                 }
             } else {
-                cLib_addCalcAngleS(&shape_angle.y, m34E8, 0x20, 0x1B58, 0x1F4); /* HD: HIO folded */
+                cLib_addCalcAngleS(&shape_angle.y, mMoveTargetAngleY, 0x20, 0x1B58, 0x1F4); /* HD: HIO folded */
             }
             s16 sy = shape_angle.y;
             if (sy != r24) {
@@ -3059,10 +3059,10 @@ BOOL daPy_lk_c::procCrawlEnd() {
         checkNextMode(0);
     } else if (mFrameCtrlUnder[0].getFrame() < 3.0f) {
         if (!checkNextMode(1)) {
-            m34C2 = 1;
+            mRootMoveMode = 1;
         }
     } else {
-        m34C2 = 1;
+        mRootMoveMode = 1;
     }
     return TRUE;
 }
@@ -3085,7 +3085,7 @@ BOOL daPy_lk_c::procGrabUp_init() {
     setSingleMoveAnime(player_move::ANM_GRABUP, 0.9f, 0.0f, end, 1.0f);
     gabi::Local<cXyz> xz; /* sp+0x08 */
     gabi::Local<cXyz> d;  /* sp+0x14 */
-    cXyz_mi(&mActorKeepGrab.mActor->current.pos, d, &m3748);
+    cXyz_mi(&mActorKeepGrab.mActor->current.pos, d, &mExecStartPos);
     m370C.x = d->x;
     m370C.z = d->z;
     xz->y = 0.0f;

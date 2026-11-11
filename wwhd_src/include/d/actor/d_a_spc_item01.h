@@ -29,16 +29,16 @@ struct daSpcItem01_c : daItemBase_c {
     BOOL _draw();
     void setTevStr();
 
-    /* 0x750 */ be<f32> field_0x63C;
-    /* 0x754 */ be<s16> field_0x640;
-    /* 0x756 */ be<u8> field_0x642;
+    /* 0x750 */ be<f32> mLastSpeedY;  /* was field_0x63C: move 02489FA4 stores speed.y whenever it is non-zero; on ground landing the bounce speed is -it * 0.62 (stop when below gravity - 0.5) (tww the same) */
+    /* 0x754 */ be<s16> mTargetAngleX;  /* was field_0x640: rotate_item 0248A08C: the angle.x target of cLib_chaseAngleS for rupees (angle.x + 0x2000 before the first bounce, else 0) (tww the same) */
+    /* 0x756 */ be<u8> mBounceCount;  /* was field_0x642: move 02489FA4 adds 1 per ground landing; set_effect 02489E3C makes the appear effect only while it is 0; rotate_item 0248A08C spins rupees only while it is 0 (tww the same) */
     /* 0x757 */ be<u8> field_0x643;
-    /* 0x758 */ be<u16> field_0x644;
+    /* 0x758 */ be<u16> mFlag;  /* was field_0x644: CreateInit 0248A2A4 stores daSpcItem01_prm::getFlag(this); set_effect 02489E3C makes the appear effect only with bit 0 set (tww the same) */
     /* 0x75A */ be<u8> field_0x646;
     /* 0x75B */ be<u8> field_0x647;
 };
-WWHD_OFFSET(daSpcItem01_c, field_0x63C, 0x750);
-WWHD_OFFSET(daSpcItem01_c, field_0x644, 0x758);
+WWHD_OFFSET(daSpcItem01_c, mLastSpeedY, 0x750);
+WWHD_OFFSET(daSpcItem01_c, mFlag, 0x758);
 
 
 enum { dItemNo_JOY_PENDANT_e = 0x1F, dItemNo_SHIELD_e = 0x3B, dItemNo_KNIGHTS_CREST_e = 0x48 };

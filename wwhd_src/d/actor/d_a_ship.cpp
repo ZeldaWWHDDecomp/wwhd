@@ -2754,7 +2754,7 @@ BOOL daShip_c::procSteerMove() {
                     }
                     current.angle.y = shape_angle.y;
                     speed.y = vy;
-                    m0386 = 0;
+                    mPitchOffsetSpeed = 0;
                     mControllAngle = mControllAngle >> 1;
                     mJumpRate = (vy - stickRate) * 0.008f;
                 }
@@ -3371,7 +3371,7 @@ BOOL daShip_c::procZevDemo() {
     } else if (mDemoMode == shipTail::DEMO_HWARP_UP_e) {
         cLib_addCalcAngleS(&mWaveAngleX, 0, 10, 0x1000, 0x200);
         cLib_addCalcAngleS(&mWaveAngleZ, 0, 10, 0x1000, 0x200);
-        cLib_addCalcAngleS(&m0384, 0, 10, 0x1000, 0x200);
+        cLib_addCalcAngleS(&mPitchOffset, 0, 10, 0x1000, 0x200);
         cLib_addCalcAngleS(&mControllAngle, 0, 10, 0x1000, 0x200);
         onStateFlg(daSFLG_FLY_e);
         if (speed.y < 15.0f) {
@@ -3381,7 +3381,7 @@ BOOL daShip_c::procZevDemo() {
         mControllAngleSpeed = 0;
         mWaveAngleSpeedX = 0;
         mWaveAngleSpeedZ = 0;
-        m0386 = 0;
+        mPitchOffsetSpeed = 0;
         gravity = 0.0f;
         speedF = 0.0f;
         current.pos.y += speed.y;
@@ -3394,13 +3394,13 @@ BOOL daShip_c::procZevDemo() {
         } else {
             mWaveAngleX = 0;
             mWaveAngleZ = 0;
-            m0384 = 0;
+            mPitchOffset = 0;
             mControllAngle = 0;
             mTillerAngle = 0;
             mControllAngleSpeed = 0;
             mWaveAngleSpeedX = 0;
             mWaveAngleSpeedZ = 0;
-            m0386 = 0;
+            mPitchOffsetSpeed = 0;
             onStateFlg(daSFLG_FLY_e);
             if (gravity < 0.0f) {
                 gravity = 0.0f;

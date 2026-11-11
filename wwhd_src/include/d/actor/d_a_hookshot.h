@@ -28,17 +28,17 @@ struct daHookshot_c : fopAc_ac_c {
 
     /* 0x03AC */ u8 mShape[0xD0A0]; /* HD daHookshot_shape (user area +0x18) */
     /* 0xD44C */ u8 mRenderObject[0xB0];  /* HD object (constructor 02080404) */
-    /* 0xD4FC */ be<u8> m2A0;
-    /* 0xD4FD */ be<u8> m2A1;
+    /* 0xD4FC */ be<u8> mKeepMtx;  /* was m2A0: procWait 021789B4 sets it before the BG line check of the tip; execute 02176D98 skips rebuilding mMtx from the position and angle once while it is set and clears it */
+    /* 0xD4FD */ be<u8> mWaterEffect;  /* was m2A1: execute 02176D98: the state byte passed to and returned by Link's setItemWaterEffect each frame (outside Mode_Wait) */
     /* 0xD4FE */ be<u8> mShipRideFlg;
-    /* 0xD4FF */ be<u8> m2A3;
-    /* 0xD500 */ be<s16> m2A4;
-    /* 0xD502 */ be<u16> m2A6;
+    /* 0xD4FF */ be<u8> mRebound;  /* was m2A3: procShot 02178DDC sets it when the tip hits a surface it cannot stick to (and stores mReboundEffectId / mReboundEffectAngle / mMtrlSndId); on the next check it plays the rebound particle, JA_SE_LK_HS_REBOUND and the shock vibration and returns; procWait 021789B4 clears it */
+    /* 0xD500 */ be<s16> mCarryAngleY;  /* was m2A4: procShot 02178DDC stores the hit actor's shape_angle.y; procPlayerPull 02179888 rotates mCarryOffset by the carried actor's change of shape_angle.y and stores the new one */
+    /* 0xD502 */ be<u16> mReboundEffectId;  /* was m2A6: procShot 02178DDC: the rebound particle, ID_IT_SN_LK_FKSHOT_SUNA00 on sand in kazeB, else ID_AK_JN_NG; played by procShot on mRebound */
     /* 0xD504 */ be<s32> mChainCnt;
     /* 0xD508 */ be<u32> mMtrlSndId;
     /* 0xD50C */ be<s32> mObjHookFlg;
     /* 0xD510 */ csXyz mHookAngle;
-    /* 0xD516 */ csXyz m2BA;
+    /* 0xD516 */ csXyz mReboundEffectAngle;  /* was m2BA: procShot 02178DDC: cM3d_CalcVecZAngle of the hit polygon's plane, the rotation of the rebound particle (not for the sand particle) */
     /* 0xD51C */ cXyz mMoveVec;
     /* 0xD528 */ cXyz mObjSightCrossPos;
     /* 0xD534 */ u8 mLinChk[0x6C]; /* dBgS_RopeLinChk (poly info +0x14, cross +0x30, flags +0x4C) */
@@ -51,7 +51,7 @@ struct daHookshot_c : fopAc_ac_c {
     /* 0xD7A8 */ gabi::ptmf<ProcFunc> mCurrProcFunc;
 };
 WWHD_OFFSET(daHookshot_c, mRenderObject, 0xD44C);
-WWHD_OFFSET(daHookshot_c, m2A0, 0xD4FC);
+WWHD_OFFSET(daHookshot_c, mKeepMtx, 0xD4FC);
 WWHD_OFFSET(daHookshot_c, mChainCnt, 0xD504);
 WWHD_OFFSET(daHookshot_c, mHookAngle, 0xD510);
 WWHD_OFFSET(daHookshot_c, mLinChk, 0xD534);

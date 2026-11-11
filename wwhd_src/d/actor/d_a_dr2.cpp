@@ -107,7 +107,7 @@ static daDr2_HIO_c* daDr2_HIO_c_ct(daDr2_HIO_c* i_this) {
     }
     i_this->mNo = -1;
     i_this->__vtbl = DR2_HIO_VTBL;
-    i_this->m08 = 1.0f;
+    i_this->mScale = 1.0f;
     return i_this;
 }
 
@@ -740,7 +740,7 @@ static BOOL daDr2_Execute(dr2_class* i_this) {
     move(i_this);
 
     fopAcM_SearchByID(i_this->mKuiId);
-    f32 s = l_HIO.m08;
+    f32 s = l_HIO.mScale;
     i_this->scale.z = s;
     i_this->scale.y = s;
     i_this->scale.x = s;

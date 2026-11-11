@@ -19,13 +19,13 @@ struct dTimer_c {
     u8 paddingB0[0x108 - 0xB0];
     /* 0x108 */ be<u32> mLimitFrames; // HD: replaces mLimitTime's OS ticks.
     /* 0x10C */ be<u32> mRestFrames; // HD: counts down once per execution.
-    /* 0x110 */ be<s32> field_0x150;
+    /* 0x110 */ be<s32> mPrevRestTimeMs;  /* was field_0x150: _execute 025C5A8C stores getRestTimeMs() each frame while not stopped; SetSE 025C5960 plays JA_SE_MINIGAME_TIMER_EACH when the rest time's second differs from it; RestTimeCheck 025C591C: threshold crossed since it (tww the same) */
     /* 0x114 */ be<u32> mTimerMode;
-    /* 0x118 */ be<s32> field_0x158;
-    /* 0x11C */ be<u32> field_0x15c;
-    /* 0x120 */ be<s16> field_0x160;
-    /* 0x122 */ be<u8> field_0x162;
-    /* 0x123 */ be<u8> field_0x163;
+    /* 0x118 */ be<s32> mEndDelay;  /* was field_0x158: end 025C58A8 stores its delay argument (unless -1); _execute 025C5A8C counts it down in ENDING and then sets FINISHED (or deleteRequest for VOLCANO); _create 025C5EB8 sets 120 (tww the same) */
+    /* 0x11C */ be<u32> mShowDelay;  /* was field_0x15c: _create 025C5EB8 sets 6; _execute 025C5A8C counts it down and calls timerShow() when it reaches 0 (HD; tww counts its draw-in frames up to 5 here) */
+    /* 0x120 */ be<s16> mStartDelay;  /* was field_0x160: startDelay 025C6250 / stock_startDelay 025C5E90 store the delay argument; _execute 025C5A8C counts it down in START_DELAY / STOCK_DELAY and starts the timer at <= 0 (tww the same) */
+    /* 0x122 */ be<u8> mIsStopped;  /* was field_0x162: stop 025C5794 sets 1, restart 025C57D4 sets 0; _execute 025C5A8C sets 1 under the HD freeze flag and neither counts nor delays while it is 1; SetSE 025C5960 beeps only while 0; _create 025C5EB8 clears it (tww the same) */
+    /* 0x123 */ be<u8> mStopReason;  /* was field_0x163: stop 025C5794 stores its reason argument; restart 025C57D4 restarts only for the same reason and clears it; _create 025C5EB8 clears it (tww the same) */
     /* 0x124 */ be<u8> mStatus;
     u8 padding125[3];
     /* 0x128 */ be<u32> mSeTimeLeft;

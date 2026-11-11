@@ -23,7 +23,7 @@ struct CcAtInfo_bdk {
     /* 0x09 */ be<u8> mbDead;
     /* 0x0A */ be<u8> mResultingAttackType;
     /* 0x0B */ u8 _0B;
-    /* 0x0C */ csXyz m0C;
+    /* 0x0C */ csXyz mHitAngle;  /* was m0C: the CcAtInfo copy of this unit; see d/d_cc_uty.h */
     /* 0x12 */ be<u16> mPlCutBit;
     /* 0x14 */ be<u32> pParticlePos;
     /* 0x18 */ be<s32> mHitSoundId;

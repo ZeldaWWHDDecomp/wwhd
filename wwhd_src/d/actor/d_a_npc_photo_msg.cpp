@@ -28,7 +28,7 @@ u16 daNpcPhoto_c::next_msgStatus(be<u32>* pMsgNo) {
             return 0xF; /* fopMsgStts_MSG_CONTINUES_e */
         }
     } else if (msgNo >= 0x378A && msgNo <= 0x378B) {
-        field_0x9C6 = field_0x9C6 | 0x20;
+        mEventFlags = mEventFlags | 0x20;
         return 0x10; /* fopMsgStts_MSG_ENDS_e */
     }
     if (mpMsgList.get() == nullptr) {
@@ -50,7 +50,7 @@ u16 daNpcPhoto_c::next_msgStatus(be<u32>* pMsgNo) {
     case 9:
         /* HD */
         mItemNo = 0x1F;
-        field_0x9C6 = field_0x9C6 | 2;
+        mEventFlags = mEventFlags | 2;
         return 0x10;
     case 10:
         // HD: the picture purchase (GameCube: 9)
@@ -76,8 +76,8 @@ u16 daNpcPhoto_c::next_msgStatus(be<u32>* pMsgNo) {
         }
         return 0xF;
     case 6:
-        field_0x9CC = true;
-        field_0x9C6 = field_0x9C6 | 1;
+        mPhotoAccepted = true;
+        mEventFlags = mEventFlags | 1;
         /* fall through */
     case 2:
     case 4: {
@@ -230,14 +230,14 @@ u32 daNpcPhoto_c::getMsg() {
         } else {
             msgNo = 0x2A56;
         }
-    } else if (field_0x9C1 == 3) {
+    } else if (mPlaceState == 3) {
         mpMsgCameraList = 0;
         mpMsgList = MSG(l_msg_down);
-    } else if (field_0x9C1 == 4) {
+    } else if (mPlaceState == 4) {
         mpMsgCameraList = 0;
         mpMsgList = MSG(l_msg_ub4);
     } else if (dComIfGs_isEventBit(0x1601 /* l_save_dat.field_0x04 */)) {
-        if (field_0x9C1 == 1) {
+        if (mPlaceState == 1) {
             msgNo = mMsgNno;
         } else if (dComIfGs_checkGetItem(dItemNo_DELUXE_PICTO_BOX_e)) {
             if (dComIfGs_isTmpBit(0x0301 /* UNK_0301 */)) {
@@ -302,10 +302,10 @@ u32 daNpcPhoto_c::getMsg() {
         if (!talked) {
             mpMsgList = MSG(l_msg_1st_talk);
             dComIfGs_onEventBit(0x1208);
-            field_0x9C6 = field_0x9C6 | 4;
+            mEventFlags = mEventFlags | 4;
         } else {
             mpMsgList = MSG(l_msg_2nd_talk);
-            field_0x9C6 = field_0x9C6 | 4;
+            mEventFlags = mEventFlags | 4;
         }
     }
     if (mpMsgList.get() != nullptr) {

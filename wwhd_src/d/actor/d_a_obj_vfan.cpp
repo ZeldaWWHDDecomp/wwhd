@@ -32,7 +32,7 @@ s32 Act_c::prm_get_swSave() { return PrmAbstract(this, PRM_SWSAVE_W, PRM_SWSAVE_
 /* 023B076C */
 BOOL Act_c::CreateHeap() {
     J3DModelData* model_data = (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_VFAN_BDL_V_FAN_00_e);
-    JUT_ASSERT(0x8c, model_data != NULL);
+    JUT_ASSERT_MSG(0x8c, model_data != NULL, "model_data != 0");
     J3DModel* model = mDoExt_J3DModel__create(model_data, 0, 0x11020203);
     mpModel = model;
     return model != nullptr; /* HD: tests the returned pointer */
@@ -243,7 +243,7 @@ static void Act_c_dt(Act_c* i_this, s32 flags) {
 str 10032B28 "Vfan"
 str 10032B14 "Vfan" in 023B0914
 str 10032AF0 in 023B076C
-str 10032AE0 "model_data != NULL" renamed
+str 10032AE0 "model_data != 0"
 str 10032A88 in 023B057C
 str 10032A9C
 data M_tmp_mtx 1046C844

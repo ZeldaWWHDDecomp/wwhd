@@ -62,6 +62,18 @@ SPELL_CASES = [
 ]
 
 
+# assert_text_use: a `renamed` line is refused when the source passes its text to an assert
+ASSERT_USE_CASES = [
+    ('JUT_ASSERT_fail("f.cpp", 1, "m644 >= 0");', "m644 >= 0", True),
+    ('Mtest_assert("f.cpp", 1, "x != NULL");', "x != NULL", True),            # a unit's wrapper (name contains assert)
+    ('JUT_ASSERT(1, x != NULL);', "x != NULL", True),                         # stringized condition, as written
+    ('JUT_ASSERT(1, FALSE);', "0", True),                                     # stringized after expansion
+    ('JUT_ASSERT(1, a /* c */ &&\n   b);', "a && b", True),                  # comment and newline: one space
+    ('setName(&m, "Wind boss");', "Wind boss", False),                        # not an assert: `renamed` allowed
+    ('JUT_ASSERT_MSG(1, x != NULL, "x != (0)");', "x != NULL", False),        # the message is the literal
+]
+
+
 def compile_check(cases):
     """compile `const char sN[] = <literal>;` for each case and print each one's bytes; [(ok, detail)]"""
     cxx = os.environ.get("CXX", "clang++")
@@ -118,6 +130,11 @@ def main():
         if got != want:
             fails += 1
             print("FAIL source_spelling %r: want %r got %r" % (src, want, got))
+    for src, host, want in ASSERT_USE_CASES:
+        n += 1
+        if autoglue.assert_text_use(src, len(src), host) != want:
+            fails += 1
+            print("FAIL assert_text_use %r %r: want %s" % (src, host, want))
     print("autoglue_str_test: %s %d/%d" % ("ok" if not fails else "FAIL", n - fails, n))
     return 1 if fails else 0
 

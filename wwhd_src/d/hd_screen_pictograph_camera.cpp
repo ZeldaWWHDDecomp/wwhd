@@ -126,7 +126,7 @@ void hdPictographCamera::setScaleText(f32 value) {
     text->mString.mpVTable = reinterpret_cast<gfn*>(&sCameraTextStringTable);
     f32 threshold = sCameraUnsignedThreshold;
     u32 number = value<threshold?u32(ftoi(value)):u32(ftoi(fsubs_ppc(value, threshold)))+0x80000000u;
-    pictographCameraFormatScale(&text->mString, "pictograph scale format", 0xD7, number);
+    pictographCameraFormatScale(&text->mString, "", 0xD7, number);
     auto* stringTable = reinterpret_cast<hdUiStringTable*>(text->mString.mpVTable.get());
     auto* pane = mNumberPanes[0].get();
     auto* paneTable = reinterpret_cast<hdPictoTextPaneTable*>(pane->mpVTable.get());
@@ -143,7 +143,7 @@ void hdPictographCamera::setCount(s32 value) {
     text->mString.mCapacity = 3;
     text->mBuffer[2] = 0;
     text->mBuffer[0] = 0;
-    pictographCameraFormatCount(&text->mString, "pictograph count format", value);
+    pictographCameraFormatCount(&text->mString, "", value);
     auto* stringTable = reinterpret_cast<hdUiStringTable*>(text->mString.mpVTable.get());
     auto* pane = mNumberPanes[1].get();
     auto* paneTable = reinterpret_cast<hdPictoTextPaneTable*>(pane->mpVTable.get());
@@ -598,8 +598,8 @@ data sCameraZoomFrameScale 10100744
 data sCameraTextStringTable 10100664
 data sCameraSelfieCloseState 10499840
 data sCameraSelfieReverseState 104998D0
-str 10100730 "pictograph scale format" renamed in 026C14B4
-str 1010073C "pictograph count format" renamed in 026C15B8
+str 10100730 "" in 026C14B4
+str 1010073C "" in 026C15B8
 ext 02759D3C void pictographCameraFormatCount(PaneString_l*,const char*,s32)
 ext 02759D3C void pictographCameraFormatScale(PaneString_l*,const char*,u32,u32)
 ext 0200579C void pictographCameraSetFrameTarget(hdAnimSet*,u32,u32,f32)

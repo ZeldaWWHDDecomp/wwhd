@@ -94,7 +94,7 @@ static daNpc_P2_HIO_c* daNpc_P2_HIO_ct(daNpc_P2_HIO_c* self) {
     self->__vtbl = l_vtables.hio;
     P2Base_constructArray(self->children, 3, 0xD8, gabi::guest_fn((const void*)&daNpc_P2_childHIO_ct)); // HD: __construct_array
     // Zuko
-    self->children[0].mNpc.m04 = -20.0f;
+    self->children[0].mNpc.mPlayerEyeOffsetY = -20.0f;
     self->children[0].mNpc.mMaxHeadX = 0x834;
     self->children[0].mNpc.mMaxBackboneX = 0;
     self->children[0].mNpc.mMaxHeadY = 0x28A0;
@@ -107,10 +107,10 @@ static daNpc_P2_HIO_c* daNpc_P2_HIO_ct(daNpc_P2_HIO_c* self) {
     self->children[0].mNpc.mMaxHeadTurnVel = 0;
     self->children[0].mNpc.mAttnYOffset = 50.0f;
     self->children[0].mNpc.mMaxAttnAngleY = 0x4000;
-    self->children[0].mNpc.m22 = 0;
+    self->children[0].mNpc.mDebugDraw = 0;
     self->children[0].mNpc.mMaxAttnDistXZ = 200.0f;
     // Niko
-    self->children[1].mNpc.m04 = -26.0f;
+    self->children[1].mNpc.mPlayerEyeOffsetY = -26.0f;
     self->children[1].mNpc.mMaxHeadX = 0x1FFE;
     self->children[1].mNpc.mMaxBackboneX = 0;
     self->children[1].mNpc.mMaxHeadY = 0x4268;
@@ -123,10 +123,10 @@ static daNpc_P2_HIO_c* daNpc_P2_HIO_ct(daNpc_P2_HIO_c* self) {
     self->children[1].mNpc.mMaxHeadTurnVel = 0x800;
     self->children[1].mNpc.mAttnYOffset = 50.0f;
     self->children[1].mNpc.mMaxAttnAngleY = 0x4000;
-    self->children[1].mNpc.m22 = 0;
+    self->children[1].mNpc.mDebugDraw = 0;
     self->children[1].mNpc.mMaxAttnDistXZ = 200.0f;
     // Mako
-    self->children[2].mNpc.m04 = -20.0f;
+    self->children[2].mNpc.mPlayerEyeOffsetY = -20.0f;
     self->children[2].mNpc.mMaxHeadX = 0x1FFE;
     self->children[2].mNpc.mMaxBackboneX = 0;
     self->children[2].mNpc.mMaxHeadY = 0x2134;
@@ -139,7 +139,7 @@ static daNpc_P2_HIO_c* daNpc_P2_HIO_ct(daNpc_P2_HIO_c* self) {
     self->children[2].mNpc.mMaxHeadTurnVel = 0x7D0;
     self->children[2].mNpc.mAttnYOffset = 50.0f;
     self->children[2].mNpc.mMaxAttnAngleY = 0x4000;
-    self->children[2].mNpc.m22 = 0;
+    self->children[2].mNpc.mDebugDraw = 0;
     self->children[2].mNpc.mMaxAttnDistXZ = 200.0f;
     self->mRunSpeedScale = 3.0f;
     self->mMinRunSpeed = 0.9f;

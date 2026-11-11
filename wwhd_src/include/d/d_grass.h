@@ -272,16 +272,16 @@ WWHD_OFFSET(ShaderPacket, mVtable, 0xC);
 WWHD_OFFSET(ShaderPacket, mInitialValues, 0x74);
 WWHD_OFFSET(ShaderPacket, mColorPairs, 0x124);
 struct IndexBuffer {
-    /* 0x0 */ be<u32> mPrimitive;
-    /* 0x4 */ be<u32> mpIndices;
-    /* 0x8 */ be<u32> mIndexType;
+    /* 0x0 */ be<u32> mFormat;  /* was mPrimitive (misnamed): GX2DrawIndexedEx indexType (r5, lwz 0(r8) / 0(r10)) at 0254C604 / 0254C68C in dGrass_packet_c::draw 0254C120; agl::IndexBufferLayout::mFormat */
+    /* 0x4 */ be<u32> mPrimitiveMode;  /* was mpIndices (misnamed): GX2DrawIndexedEx mode (r3, +0x4) at the same calls; dGrass_packet_c__ct 0254ACD8 sets 4 (triangles) after IndexBuffer_set on mIndices[0] and [1]; agl::IndexBufferLayout::mPrimitiveMode */
+    /* 0x8 */ be<u32> mStorage;  /* was mIndexType (misnamed): GX2DrawIndexedEx indices (r6, +0x8) at the same calls; agl::IndexBufferLayout::mStorage */
     /* 0xC */ be<u32> mCount;
     u8 padding10[8];
 };
 WWHD_SIZE(IndexBuffer, 24);
-WWHD_OFFSET(IndexBuffer, mPrimitive, 0x0);
-WWHD_OFFSET(IndexBuffer, mpIndices, 0x4);
-WWHD_OFFSET(IndexBuffer, mIndexType, 0x8);
+WWHD_OFFSET(IndexBuffer, mFormat, 0x0);
+WWHD_OFFSET(IndexBuffer, mPrimitiveMode, 0x4);
+WWHD_OFFSET(IndexBuffer, mStorage, 0x8);
 WWHD_OFFSET(IndexBuffer, mCount, 0xC);
 struct Texture {
     /* 0x0 */ be<u32> mWords[100];

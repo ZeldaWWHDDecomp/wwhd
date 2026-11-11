@@ -31,7 +31,7 @@ struct daWindMill_c : fopAc_ac_c {
     dCcD_Stts mStts;
     dCcD_Sph mSph[9];
     dCcD_Cps mCps[4];
-    WindmillCapsuleData m1244[4];
+    WindmillCapsuleData mCpsShape[4];  /* was m1244: set_at 024E179C: per blade the capsule start / end (model matrix) and radius 170 (large) / 70 (small), handed to mCps[i] (tww cM3dGCpsS mCpsShape, mCps[i].Set(mCpsShape[i])) */
     gptr<dBgW> mpBgW;
     Mtx34 mMtx;
     dCcD_Cyl mCyl;
@@ -43,7 +43,7 @@ struct daWindMill_c : fopAc_ac_c {
 WWHD_OFFSET(daWindMill_c, mpModel, 0x3B4);
 WWHD_OFFSET(daWindMill_c, mSph, 0x3F4);
 WWHD_OFFSET(daWindMill_c, mCps, 0xE80);
-WWHD_OFFSET(daWindMill_c, m1244, 0x1360);
+WWHD_OFFSET(daWindMill_c, mCpsShape, 0x1360);
 WWHD_OFFSET(daWindMill_c, mpBgW, 0x13D0);
 WWHD_OFFSET(daWindMill_c, mCyl, 0x1404);
 WWHD_OFFSET(daWindMill_c, mType, 0x1534);
@@ -89,11 +89,11 @@ struct WindTagView {
     be<u8> mType;
     u8 _6ED[3];
     be<f32> mOffsY;
-    be<f32> field_0x49c;
+    be<f32> mHeightScale;  /* was field_0x49c: view of daWindTag::daWindTag_c::mHeightScale (d_a_wind_tag.h) */
 };
 WWHD_OFFSET(WindTagView, mType, 0x6EC);
 WWHD_OFFSET(WindTagView, mOffsY, 0x6F0);
-WWHD_OFFSET(WindTagView, field_0x49c, 0x6F4);
+WWHD_OFFSET(WindTagView, mHeightScale, 0x6F4);
 struct WindPlayView {
     u8 _00[0x5D70];
     be<u32> mBgOpaque, mBgTranslucent, mOpaque, mTranslucent;

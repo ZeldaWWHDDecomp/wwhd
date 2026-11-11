@@ -112,7 +112,7 @@ BOOL daNh_c::createHeap() {
     auto *modelData = static_cast<J3DModelData *>(
         dComIfG_getObjectRes("Always", dRes_INDEX_ALWAYS_BDL_NH_e, gc_tu.safeString));
     if (!modelData)
-        JUT_ASSERT_fail("d_a_nh.cpp", 0x167, "modelData != NULL");
+        JUT_ASSERT_fail("d_a_nh.cpp", 0x167, "modelData != (0)");
     mpModel = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
     return mpModel.get() && initBrkAnm(0);
 }
@@ -140,7 +140,7 @@ static s32 daNh_createBodyHD(daNh_c *actor) {
     if (s8(l_HIO.mNo) < 0) {
         // HD: ASCII source label for Shift-JIS title; renamed glue retains the original guest
         // bytes.
-        const s32 child = nhCreateHioChild("Forest Firefly", &l_HIO);
+        const s32 child = nhCreateHioChild("森のほたる", &l_HIO);
         l_HIO.mpActor = actor;
         l_HIO.mNo = s8(child);
     }
@@ -226,10 +226,10 @@ BOOL daNh_c::checkBinCatch() {
         fopAcM_delete(this);
         return TRUE;
     }
-    const s16 angle = l_HIO.prm.field_0x3c;
-    const f32 distance = l_HIO.prm.field_0x08;
-    const f32 lower = l_HIO.prm.field_0x10;
-    const f32 upper = l_HIO.prm.field_0x0c;
+    const s16 angle = l_HIO.prm.mCatchAngle;
+    const f32 distance = l_HIO.prm.mCatchDist;
+    const f32 lower = l_HIO.prm.mCatchDownDist;
+    const f32 upper = l_HIO.prm.mCatchUpDist;
     NhCatch *attention = nhCatchController(dComIfGp_getAttention());
     nhCatchRequest(attention, this, dItemNo_FIREFLY_BOTTLE_e, distance, upper, lower, angle, 1);
     eventInfo.onCondition(dEvtCnd_CANCATCH_e);
@@ -476,7 +476,7 @@ BOOL daNh_c::initBrkAnm(u32 modify) {
     J3DModelData *modelData = nhModelData(mpModel);
     void *animation = dComIfG_getObjectRes("Always", dRes_INDEX_ALWAYS_BRK_TNH_e, gc_tu.safeString);
     if (!animation)
-        JUT_ASSERT_fail("d_a_nh.cpp", 0x37F, "a_brk != NULL");
+        JUT_ASSERT_fail("d_a_nh.cpp", 0x37F, "a_brk != (0)");
     return nhInitBrk(&mBrkAnm, modelData, animation, 1, 2, 1.0f, 0, -1, modify, 0) != 0;
 }
 
@@ -666,11 +666,11 @@ data l_matrixStack 1048D0CC
 data l_cyl_src 101BB0A8
 str 10015A44 "Always" in 021E07A4
 str 10015A4C "d_a_nh.cpp" in 021E07A4
-str 10015A58 "a_brk != NULL" in 021E07A4
+str 10015A58 "a_brk != (0)" in 021E07A4
 str 10015A68 "Always" in 021E0868
 str 10015A70 "d_a_nh.cpp" in 021E0868
-str 10015A7C "modelData != NULL" in 021E0868
-str 10015AB4 "Forest Firefly" renamed
+str 10015A7C "modelData != (0)" in 021E0868
+str 10015AB4 "森のほたる"
 ext 0211D2F8 s32 nhCalcTimerInt(be<s32>*)
 ext 0200F8D0 BOOL nhChaseAngleRegister(be<s16>*, u32, u32)
 ext 028F4384 f32 nhSqrtCurrentFloat(f32)

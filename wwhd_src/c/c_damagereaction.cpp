@@ -144,9 +144,9 @@ static void ice_render(u32 ice, u32 actor, f32 shiverX, f32 shiverZ, f32 one) {
     ac->current.angle.x = static_cast<u16>(static_cast<u16>(ac->shape_angle.x));
     ac->current.angle.y = static_cast<u16>(static_cast<u16>(ac->shape_angle.y));
     ac->current.angle.z = static_cast<u16>(static_cast<u16>(ac->shape_angle.z));
-    cLib_addCalc2(&ei->m028, static_cast<f32>(ei->m02C), one, 3.0f);
+    cLib_addCalc2(&ei->mBodyLiftY, static_cast<f32>(ei->mIceOffsetY), one, 3.0f);
     PSMTXTrans(damageView<Mtx34>(0x1048D0CC), static_cast<f32>(ac->current.pos.x) + shiverX,
-               static_cast<f32>(ac->current.pos.y) + static_cast<f32>(ei->m02C),
+               static_cast<f32>(ac->current.pos.y) + static_cast<f32>(ei->mIceOffsetY),
                static_cast<f32>(ac->current.pos.z) + shiverZ);
     cMtx_YrotM(damageView<Mtx34>(0x1048D0CC), static_cast<s16>(ac->shape_angle.y));
     cMtx_XrotM(damageView<Mtx34>(0x1048D0CC), static_cast<s16>(ac->shape_angle.x));
@@ -260,7 +260,7 @@ static u32 enemy_ice(u32 ice) {
         ei->mMode = static_cast<u8>(1);
         damageWord(ac->actor_status) = static_cast<u32>(
             (static_cast<u32>(damageWord(ac->actor_status)) | 0x08000000) & ~0x400u);
-        cLib_addCalc0(&ei->m028, one, 3.0f);
+        cLib_addCalc0(&ei->mBodyLiftY, one, 3.0f);
         return 0;
     case 1:
         if (static_cast<s16>(ei->mFreezeDuration) == 0)
@@ -268,7 +268,7 @@ static u32 enemy_ice(u32 ice) {
         ei->mFreezeTimer = static_cast<s16>(static_cast<s16>(ei->mFreezeDuration));
         ei->mFreezeDuration = static_cast<s16>(0);
         ei->mMode = static_cast<u8>(2);
-        if (static_cast<s8>(ei->m00C) == 0) {
+        if (static_cast<s8>(ei->mFreezeType) == 0) {
             ei->mSpeed.y = static_cast<f32>(30.0f);
             ei->mAngularVelY =
                 static_cast<s16>((s16)gabi::ftoi(damageRndFX(3000.0f)));
@@ -282,14 +282,14 @@ static u32 enemy_ice(u32 ice) {
         ice_pos_scale(ice, actor, pos, sc);
         ice_particle(0x274, pos, 0, sc);
         frozen = 1;
-        if (static_cast<s8>(ei->m00C) == 1) {
+        if (static_cast<s8>(ei->mFreezeType) == 1) {
             movement = true;
             break;
         }
         [[fallthrough]];
     case 2:
         frozen = 1;
-        if (static_cast<s8>(ei->m00C) == 1) {
+        if (static_cast<s8>(ei->mFreezeType) == 1) {
             movement = true;
             break;
         }
@@ -300,8 +300,8 @@ static u32 enemy_ice(u32 ice) {
             damageWord(ac->attention_info.flags) =
                 static_cast<u32>(static_cast<u32>(damageWord(ac->attention_info.flags)) & ~0x10u);
             ei->mMode = static_cast<u8>(3);
-            if (static_cast<s8>(ei->m00C) == 2)
-                ei->m00C = static_cast<u8>(0);
+            if (static_cast<s8>(ei->mFreezeType) == 2)
+                ei->mFreezeType = static_cast<u8>(0);
         }
         movement = true;
         break;
@@ -357,7 +357,7 @@ static u32 enemy_ice(u32 ice) {
     default:
         damageWord(ac->actor_status) =
             static_cast<u32>(static_cast<u32>(damageWord(ac->actor_status)) & ~0x400u);
-        cLib_addCalc0(&ei->m028, one, 3.0f);
+        cLib_addCalc0(&ei->mBodyLiftY, one, 3.0f);
         return 0;
     }
     if (movement) {
@@ -370,7 +370,7 @@ static u32 enemy_ice(u32 ice) {
             MtxPosition(damageView<cXyz>(dir), damageView<cXyz>(off));
             ei->mSpeed.x = static_cast<f32>(static_cast<f32>(offset.x));
             ei->mSpeed.z = static_cast<f32>(static_cast<f32>(offset.z));
-            if (static_cast<s8>(ei->m00C) == 2)
+            if (static_cast<s8>(ei->mFreezeType) == 2)
                 ei->mSpeed.y = static_cast<f32>(zero);
             else {
                 PSVECAdd(damageView<cXyz>(actor + 0x314), damageView<cXyz>(ice + 0x18),

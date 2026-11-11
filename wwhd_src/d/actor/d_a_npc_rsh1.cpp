@@ -441,7 +441,7 @@ BOOL daNpc_Rsh1_c::CreateInit() {
         RshShopItems* it = &mShopItemsArr[idx]; /* init() */
         it->mSelectedItemIdx = -1;
         it->mbIsHide = 0;
-        it->m3C = 0;
+        it->mbZoomUp = 0;
     }
     mpShopItems = nullptr;
     mShopIdx = -1;
@@ -550,7 +550,7 @@ void daNpc_Rsh1_c::lookBack() {
     case 1:
         if (mbAttention) {
             cXyz eye;
-            rsh1_playerEyePos(&eye, (f32)hio.mNpcHIO.m04); /* dNpc_playerEyePos */
+            rsh1_playerEyePos(&eye, (f32)hio.mNpcHIO.mPlayerEyeOffsetY); /* dNpc_playerEyePos */
             rsh1_copy12(gabi::ea(&player_eye_pos), gabi::ea(&eye));
             vec_p = &player_eye_pos;
             setTexAnm(0);
@@ -566,7 +566,7 @@ void daNpc_Rsh1_c::lookBack() {
                                      mShopCamAct.mCurrActionFunc.mFunction == RSH1_TALK_CAM_ACTION /* rsh_talk_cam_action */);
             if (match) {
                 cXyz eye;
-                rsh1_playerEyePos(&eye, (f32)hio.mNpcHIO.m04);
+                rsh1_playerEyePos(&eye, (f32)hio.mNpcHIO.mPlayerEyeOffsetY);
                 rsh1_copy12(gabi::ea(&player_eye_pos), gabi::ea(&eye));
                 temp = 0;
             } else if (mpShopItems->mSelectedItemIdx == -1) {
@@ -574,14 +574,14 @@ void daNpc_Rsh1_c::lookBack() {
                 cXyz dir;
                 cXyz ofs;
                 cXyz res;
-                cXyz_mi(&mShopCamAct.m18, &dir, &mShopCamAct.m24);
+                cXyz_mi(&mShopCamAct.mCenter, &dir, &mShopCamAct.mEye);
                 if (!rsh1_normalizeRS(&dir)) { /* normalizeRS */
                     dir.x = 0.0f;
                     dir.z = 1.0f;
                     dir.y = 0.0f;
                 }
                 cXyz_ml(&dir, &ofs, 125.0f);           /* cXyz::operator* */
-                cXyz_pl(&mShopCamAct.m24, &res, &ofs); /* cXyz::operator+ */
+                cXyz_pl(&mShopCamAct.mEye, &res, &ofs); /* cXyz::operator+ */
                 f32 z = res.z, y = res.y, x = res.x;
                 temp = 0;
                 player_eye_pos.y = y;
@@ -595,13 +595,13 @@ void daNpc_Rsh1_c::lookBack() {
                 mpShopItems->getSelectItemPos(&out);
                 rsh1_copy12(gabi::ea(&player_eye_pos), gabi::ea(&out));
                 mpShopCursor->setPos(&base);
-                f32 a = hio.m34, d = hio.m40, c = hio.m3C, b = hio.m38, e = hio.m44;
+                f32 a = hio.mCursorScale, d = hio.mCursorDistFar, c = hio.mCursorScaleYNear, b = hio.mCursorScaleYFar, e = hio.mCursorDistNear;
                 RshShopCursor* cur = mpShopCursor;
-                cur->m4C = b;
-                cur->m48 = a;
-                cur->m50 = c;
-                cur->m38 = d;
-                cur->m3C = e;
+                cur->mPieceScaleYFar = b;
+                cur->mPieceScale = a;
+                cur->mPieceScaleYNear = c;
+                cur->mPieceDistFar = d;
+                cur->mPieceDistNear = e;
                 mpShopCursor->anm_play();
             }
             vec_p = &player_eye_pos;
@@ -661,7 +661,7 @@ bool daNpc_Rsh1_c::pathGet() {
 BOOL daNpc_Rsh1_c::shopPosMove() {
     s32 idx = mShopIdx;
     if (idx != -1) {
-        f32 step = rsh1_HIO().m48;
+        f32 step = rsh1_HIO().mMoveSpeed;
         const cXyz& src = shop_buyer_pos[idx]; /* shop_buyer_pos */
         cXyz temp;
         temp.x = src.x;
@@ -749,10 +749,10 @@ BOOL daNpc_Rsh1_c::_delete() {
         mpMorf->stopZelAnime();
     }
     daNpc_Rsh1_HIO_c& hio = rsh1_HIO();
-    s32 n = hio.m08;
+    s32 n = hio.mRefCount;
     if (n >= 0) {
         n = n - 1;
-        hio.m08 = n;
+        hio.mRefCount = n;
         if (n < 0) {
             mDoHIO_deleteChild(hio.mNo);
         }
@@ -795,10 +795,10 @@ cPhs_State daNpc_Rsh1_c::_create() {
         }
         cullMtx = gabi::ea(J3DModel_getBaseTRMtx(mpMorf->getModel()));
         daNpc_Rsh1_HIO_c& hio = rsh1_HIO();
-        if (hio.m08 < 0) {
+        if (hio.mRefCount < 0) {
             hio.mNo = mDoHIO_createChild("露店の社長" /* "露店の社長" */, &hio);
         }
-        hio.m08 = hio.m08 + 1;
+        hio.mRefCount = hio.mRefCount + 1;
         if (!CreateInit()) {
             return cPhs_ERROR_e;
         }
@@ -842,7 +842,7 @@ BOOL daNpc_Rsh1_c::CreateHeap() {
     mAcch.Set(&current.pos, &old.pos, this, 1, &mAcchCir, &speed);
     void* cur_brk = rsh1_getRes(dRes_INDEX_RSH_BRK_SHOP_CURSOR01_e); /* GHS evaluates the second argument first */
     void* cur_mdl = rsh1_getRes(dRes_INDEX_RSH_BMD_SHOP_CURSOR01_e);
-    mpShopCursor = rsh1_ShopCursor_create(cur_mdl, cur_brk, rsh1_HIO().m34);
+    mpShopCursor = rsh1_ShopCursor_create(cur_mdl, cur_brk, rsh1_HIO().mCursorScale);
     return mpShopCursor != nullptr ? TRUE : FALSE;
 }
 
@@ -890,7 +890,7 @@ static daNpc_Rsh1_HIO_c* daNpc_Rsh1_HIO_ct(daNpc_Rsh1_HIO_c* self) {
     self->__vtbl = RSH1_HIO_VTBL;
     rsh1_npcHioConstruct(&self->mNpcHIO); /* dNpc_HIO_c::dNpc_HIO_c */
     dNpc_HIO_c& n = self->mNpcHIO;
-    n.m04 = -20.0f;
+    n.mPlayerEyeOffsetY = -20.0f;
     n.mMaxHeadX = 0x200;
     n.mMaxHeadY = 0x200;
     n.mMaxBackboneX = 0x1388;
@@ -903,15 +903,15 @@ static daNpc_Rsh1_HIO_c* daNpc_Rsh1_HIO_ct(daNpc_Rsh1_HIO_c* self) {
     n.mMaxHeadTurnVel = 0x800;
     n.mAttnYOffset = 80.0f;
     n.mMaxAttnAngleY = 0x4000;
-    n.m22 = 0;
+    n.mDebugDraw = 0;
     n.mMaxAttnDistXZ = 400.0f;
-    self->m34 = 1.0f;
-    self->m38 = 0.9f;
-    self->m3C = 0.5f;
-    self->m40 = 40.0f;
-    self->m44 = 30.0f;
-    self->m48 = 7.5f;
-    self->m4C = 1300.0f;
+    self->mCursorScale = 1.0f;
+    self->mCursorScaleYFar = 0.9f;
+    self->mCursorScaleYNear = 0.5f;
+    self->mCursorDistFar = 40.0f;
+    self->mCursorDistNear = 30.0f;
+    self->mMoveSpeed = 7.5f;
+    self->mAimSearchDist = 1300.0f;
     self->mCylR1 = 100.0f;
     self->mCylR2 = 180.0f;
     self->mCylH = 190.0f;
@@ -921,7 +921,7 @@ static daNpc_Rsh1_HIO_c* daNpc_Rsh1_HIO_ct(daNpc_Rsh1_HIO_c* self) {
     self->m6B = 0;
     for (int i = 0; i < 12; i++) self->m5C[i] = 0;
     self->mNo = -1;
-    self->m08 = -1;
+    self->mRefCount = -1;
     return self;
 }
 

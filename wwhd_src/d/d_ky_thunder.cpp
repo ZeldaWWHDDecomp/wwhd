@@ -102,7 +102,7 @@ u32 dThunder_c::createHeap() {
         }
     }
     // HD: source spelling is ASCII; glue preserves the original Japanese guest bytes.
-    JKRSolidHeap_setDebugName(heap, "Thunder");
+    JKRSolidHeap_setDebugName(heap, "稲妻");
     return TRUE;
 }
 
@@ -134,7 +134,7 @@ static u32 dThunder_Create(dThunder_c *i_this) {
     }
     J3DModelData *modelData =
         (J3DModelData *)dComIfG_getObjectRes("Always", dRes_INDEX_ALWAYS_BDL_YTHDR00_e);
-    JUT_ASSERT(0x8B, modelData != NULL);
+    JUT_ASSERT_MSG(0x8B, modelData != NULL, "modelData != (0)");
     J3DModel *model = mDoExt_J3DModel__create(modelData, 0x80000, 0x01000200);
     i_this->mModelInfo.mpModel = model;
     if (model == NULL || !mDoExt_invisibleModel_create(i_this->mModelInfo.mInvisModel, model)) {
@@ -142,14 +142,14 @@ static u32 dThunder_Create(dThunder_c *i_this) {
         return cPhs_ERROR_e;
     }
     void *anm = dComIfG_getObjectRes("Always", dRes_INDEX_ALWAYS_BTK_YTHDR00_e);
-    JUT_ASSERT(0x9A, anm != NULL);
+    JUT_ASSERT_MSG(0x9A, anm != NULL, "anm != (0)");
     if (!i_this->mModelInfo.mBtk.init(modelData, (J3DAnmTextureSRTKey *)anm, false,
                                       J3DFrameCtrl::EMode_LOOP, 1.0f, 0, -1, false, 0)) {
         i_this->adjustHeap();
         return cPhs_ERROR_e;
     }
     void *canm = dComIfG_getObjectRes("Always", dRes_INDEX_ALWAYS_BRK_YTHDR00_e);
-    JUT_ASSERT(0xA9, canm != NULL);
+    JUT_ASSERT_MSG(0xA9, canm != NULL, "canm != (0)");
     if (!i_this->mModelInfo.mBrk.init(modelData, (J3DAnmTevRegKey *)canm, true,
                                       J3DFrameCtrl::EMode_NONE, 1.0f, 0, -1, false, 0)) {
         i_this->adjustHeap();
@@ -231,9 +231,9 @@ static void SafeString__assureTerminationImpl(void *i_this) {
 ext 025E37D8 void mDoExt_restoreCurrentHeap()
 str 1005040C
 str 10050448
-str 1005045C "modelData != NULL"
-str 10050470 "anm != NULL"
-str 1005043C "canm != NULL"
-str 1005048C "Thunder" renamed
+str 1005045C "modelData != (0)"
+str 10050470 "anm != (0)"
+str 1005043C "canm != (0)"
+str 1005048C "稲妻"
 data l_offsetPos 101FDD04 guard 101FDD00
 */

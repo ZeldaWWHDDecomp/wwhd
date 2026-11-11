@@ -4,6 +4,7 @@
 // HD: entry signatures retain verified register widths; *Register entries are distinct
 // from shared typed or overloaded GameCube wrappers.
 #include "f_op/f_op_actor_mng.h"
+#include "sead/ElementAt.h"
 
 // One definition of every TU-wide object; the other source parts use the header declarations.
 static ActorManagerSinCosTable sincosTable;
@@ -68,11 +69,13 @@ static void fopAcM_setStageLayerRegister(u32 pProc) {
                              0xFFFD); /* fpcM_ChangeLayerID */
 }
 
+// Guest EA arithmetic: rooms + room_no * 0x22C wraps at 32 bits as on the console (a generated room number reached host
+// addresses far above the guest window).
 /* 025D5418 */
 static void fopAcM_setRoomLayer(u32 pProc, s32 room_no) {
     if (room_no >= 0) {
         u32 roomProc = actMngGuest_fopScnM_SearchByID(
-            (u32)roomStatuses.rooms[room_no].mProcID); /* getStatusProcID */
+            (u32)sead::elementAt<ActorManagerRoomStatus>(gabi::ea(roomStatuses.rooms), u32(room_no)).mProcID); /* getStatusProcID */
         if (roomProc == 0)
             actMngGuest_JUT_ASSERT(gabi::guest_addr("f_op_actor_mng.cpp"), 0x108,
                                    gabi::guest_addr("roomProc != (0)"));

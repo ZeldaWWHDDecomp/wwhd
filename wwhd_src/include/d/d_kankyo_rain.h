@@ -119,7 +119,8 @@ struct RAIN_EFF {
   be<u8> mStatus;
   u8 pad[3];
   cXyz mPos, mBasePos;
-  be<f32> field_0x1c, field_0x20, field_0x24, mAlpha, field_0x2c, field_0x30;
+  be<f32> field_0x1c, field_0x20, field_0x24, mAlpha, field_0x2c;
+  be<f32> mGroundY;  /* was field_0x30: rain_bg_chk 0256691C stores the camera centre y plus RainFloorOffset (the floor of the drop); tww rain_bg_chk the same, and tww dKyr_rain_move respawns the drop above the camera once it falls below it + 20 */
   be<s16> mTimer;
   u8 tail[2];
 };
@@ -147,12 +148,13 @@ struct POISON_EFF {
   u8 data[0x24 - 0x10];
   be<f32> mAlpha, mSize;
   be<s16> field_0x2c;
-  be<u16> field_0x2e;
+  be<u16> mWaitTimer;  /* was field_0x2e: dKyr_poison_light_colision 0256C8FC sets 60 when a light arrow hits the poison particle; tww poison_move sets 180 / 120 / 60, counts it down and moves / damages only while it is 0 */
 };
 struct dKankyo_poison_Packet {
   u8 prefix[0x98];
   POISON_EFF mEff[1000];
-  cXyz mBasePos, field_0xbb9c;
+  cXyz mBasePos;
+  cXyz mNearestPos;  /* was field_0xbb9c: poison_init 0256DC04 clears it; tww poison_move stores the particle position nearest to the camera, and tww dKyw_drawPoison passes it to dKyw_setDrawPacketListXluZPos as the packet's sort position */
   be<u32> mCount, mpTexture;
   be<f32> mRot;
 };

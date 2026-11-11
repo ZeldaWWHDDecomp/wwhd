@@ -369,7 +369,7 @@ void daItem_c::CreateInit() {
 
     u32 param = fopAcM_GetParam(this);
     mWaitTimer = daItem_getData()->mWaitTime;
-    field_0x650 = speed.y;
+    mLastSpeedY = speed.y;
     mDisappearTimer = daItem_getData()->mDisappearTime;
     u8 type = daItem_prm::getType(this);
     mItemStatus = STATUS_UNK0;
@@ -1100,7 +1100,7 @@ BOOL daItem_c::itemActionForRupee() {
         if (mNoCollect != 0) {
             mWaitTimer = 0;
         }
-        f32 temp2 = field_0x650 * daItem_getData()->mGroundReflect;
+        f32 temp2 = mLastSpeedY * daItem_getData()->mGroundReflect;
         if (temp2 > gravity - 0.5f) {
             fopAcM_SetSpeedF(this, 0.0f);
         } else {
@@ -1125,7 +1125,7 @@ BOOL daItem_c::itemActionForRupee() {
     }
 
     if (speed.y != 0.0f) {
-        field_0x650 = speed.y;
+        mLastSpeedY = speed.y;
     }
 
     s16 rotateSpeed = daItem_getData()->mRotateXSpeed;
@@ -1189,7 +1189,7 @@ BOOL daItem_c::itemActionForKey() {
     checkWall();
 
     if (mAcch.ChkGroundLanding()) {
-        f32 temp2 = field_0x650 * daItem_getData()->mGroundReflect;
+        f32 temp2 = mLastSpeedY * daItem_getData()->mGroundReflect;
         if (temp2 > gravity - 0.5f) {
             speedF = 0.0f;
             mRotateSpeed = 0;
@@ -1214,7 +1214,7 @@ BOOL daItem_c::itemActionForKey() {
     }
 
     if (speed.y != 0.0f) {
-        field_0x650 = speed.y;
+        mLastSpeedY = speed.y;
     }
 
     s16 rotateSpeed = daItem_getData()->mRotateXSpeed;
@@ -1237,7 +1237,7 @@ BOOL daItem_c::itemActionForEmono() {
     mAcch.CrrPos(dComIfG_Bgsp());
 
     if (mAcch.ChkGroundLanding()) {
-        f32 temp2 = field_0x650 * daItem_getData()->mGroundReflect;
+        f32 temp2 = mLastSpeedY * daItem_getData()->mGroundReflect;
         if (temp2 > gravity - 0.5f) {
             speedF = 0.0f;
         } else {
@@ -1255,7 +1255,7 @@ BOOL daItem_c::itemActionForEmono() {
     }
 
     if (speed.y != 0.0f) {
-        field_0x650 = speed.y;
+        mLastSpeedY = speed.y;
     }
 
     return TRUE;
@@ -1276,7 +1276,7 @@ BOOL daItem_c::itemActionForSword() {
     }
 
     if (mAcch.ChkGroundLanding()) {
-        f32 temp = field_0x650 * 0.9f;
+        f32 temp = mLastSpeedY * 0.9f;
         speed.x = 0.0f;
         speed.y = -temp;
         speed.z = 0.0f;
@@ -1312,22 +1312,22 @@ BOOL daItem_c::itemActionForSword() {
     f32 temp4 = groundY - topPos->y;
 
     s16 rot;
-    if (field_0x666 == 1) {
+    if (mSwordRockCount == 1) {
         rot = 0x2000;
-        field_0x660 = rot;
+        mSwordRockAngle = rot;
     } else {
-        rot = field_0x660;
+        rot = mSwordRockAngle;
     }
 
     if (temp3 > 0.0f || temp4 > 0.0f) {
         rot = (s16)gabi::ftoi((f32)rot * -0.8f);
-        u8 n = field_0x666;
-        field_0x660 = rot;
-        field_0x666 = n + 1;
+        u8 n = mSwordRockCount;
+        mSwordRockAngle = rot;
+        mSwordRockCount = n + 1;
     }
 
     if (rot == 0) {
-        field_0x666 = 0;
+        mSwordRockCount = 0;
     } else {
         cLib_addCalcAngleS2(&current.angle.x, rot + 0x4000, 10, 0x800);
     }
@@ -1368,7 +1368,7 @@ BOOL daItem_c::itemActionForArrow() {
     }
 
     if (mAcch.ChkGroundLanding()) {
-        f32 temp_f3 = field_0x650 * daItem_getData()->mGroundReflect;
+        f32 temp_f3 = mLastSpeedY * daItem_getData()->mGroundReflect;
         if (temp_f3 > gravity - 0.5f) {
             mOnGroundTimer = mOnGroundTimer + 1;
             speedF = 0.0f;
@@ -1414,7 +1414,7 @@ BOOL daItem_c::itemActionForArrow() {
     }
 
     if (speed.y != 0.0f) {
-        field_0x650 = speed.y;
+        mLastSpeedY = speed.y;
     }
 
     return TRUE;
@@ -1487,7 +1487,7 @@ void daItem_c::set_bound_se() {
         return;
     }
 
-    f32 a = std::fabs(field_0x650);
+    f32 a = std::fabs(mLastSpeedY);
     u32 temp = f2u(a + a);
     if (temp > 100) {
         temp = 100;
@@ -1862,8 +1862,8 @@ BOOL daItem_c::initAction() {
         switch (action) {
         case daItemAct_4_e: {
             current.angle.y = (s16)gabi::ftoi(cM_rndF(65535.0f));
-            f32 temp = data->field_0x2C + cM_rndF(5.0f);
-            speedF = cM_rndF(data->field_0x30);
+            f32 temp = data->mAct4SpeedY + cM_rndF(5.0f);
+            speedF = cM_rndF(data->mAct4SpeedF);
             speed.x = 0.0f;
             speed.y = temp;
             speed.z = 0.0f;
@@ -1926,7 +1926,7 @@ BOOL daItem_c::initAction() {
         current.angle.y = (s16)gabi::ftoi(cM_rndF(65535.0f));
         f32 r = cM_rndFX(5.0f);
         f32 velocity = data->mVelocityScale;
-        y_speed = data->field_0x44 + r;
+        y_speed = data->mAct8SpeedY + r;
         speedF = velocity;
         break;
     }
@@ -2063,7 +2063,7 @@ BOOL daItem_c::itemActionForThrownItem() {
         break;
     case THROWN_LAUNCH: {
         scale.x = 1.0f;
-        field_0x650 = 50.0f;
+        mLastSpeedY = 50.0f;
         scale.y = 1.0f, scale.z = 1.0f;
         speedF = 30.0f;
         fopAc_ac_c *player = dComIfGp_getPlayer(0);
@@ -2091,7 +2091,7 @@ BOOL daItem_c::itemActionForThrownItem() {
         u8 onGround = mOnGroundTimer;
         scale.x = 1.0f, scale.y = 1.0f, scale.z = 1.0f;
         bool vanish = false;
-        if (onGround != 0 && (!(field_0x650 > -gravity) || mAcch.ChkGroundHit())) {
+        if (onGround != 0 && (!(mLastSpeedY > -gravity) || mAcch.ChkGroundHit())) {
             vanish = true;
         } else {
             mThrownItemTimer = mThrownItemTimer - 1;
@@ -2125,7 +2125,7 @@ BOOL daItem_c::itemActionForThrownItem() {
             break;
         }
         if (mAcch.ChkGroundLanding()) {
-            f32 f = field_0x650 * 0.75f;
+            f32 f = mLastSpeedY * 0.75f;
             mOnGroundTimer = mOnGroundTimer + 1;
             speed.x = 0.0f;
             speed.y = -f;
@@ -2168,7 +2168,7 @@ BOOL daItem_c::itemActionForThrownItem() {
         mDoAud_seStart(ITEM_SPLASH_SOUND, &eyePos, 0, reverb);
         fopKyM_createWpillar(&current.pos, 0.5f, 1.0f, 0);
         current.angle.y = angleY;
-        f32 f = field_0x650;
+        f32 f = mLastSpeedY;
         mHDRotY = 0;
         speedF = spd * 0.75f;
         speed.x = 0.0f;
@@ -2217,7 +2217,7 @@ BOOL daItem_c::itemActionForThrownItem() {
     }
 
     if (speed.y != 0.0f) {
-        field_0x650 = speed.y;
+        mLastSpeedY = speed.y;
     }
     return TRUE;
 }

@@ -76,7 +76,7 @@ void hdKeyboardTextArea_c::setAnswer(const be<u16>* text) {
     buffer->mBuffer[0] = 0;
     buffer->mBuffer[255] = 0;
     // The original UTF-16 format is L"%s"; the glue alias preserves its address.
-    keyboardFormatWide(buffer.get(), "keyboard-wide-format", text);
+    keyboardFormatWide(buffer.get(), "", text);
     keyboardSetPaneWideText(mTextPanes[1], buffer.get(), nullptr);
 }
 /* 02673344 */
@@ -197,7 +197,7 @@ static void initializeKeyboardTextArea() {
  data sKeyboardHeap 1018C404
  data sKeyboardInput 101F5088
  data sQuestionPaneName 101F60DC
- str 100F6A0C "keyboard-wide-format" renamed
+ str 100F6A0C ""
  str 100F6A30 "InAll"
  str 100F6A38 "OutAll"
  str 100F6A7C "G_All_00"

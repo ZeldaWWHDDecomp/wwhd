@@ -13,14 +13,15 @@ struct daObjGnnbtaki_c : fopAc_ac_c {
     gptr<J3DModel> mpModel;
     request_of_phase_process_class mPhase;
     mDoExt_btkAnm mBtkAnm;
-    be<u8> field_0x2B0, field_0x2B1;
+    be<u8> mAnmStarted;  /* was field_0x2B0: _create 0234AFF8 sets 0 for type 1 (btk stopped) and 1 otherwise; _execute 0234B184 starts the btk animation (rate 1) once for type 1 when the g2before event passes demo frame 0x126F in the tower stage and sets it */
+    be<u8> mType;  /* was field_0x2B1: _create 0234AFF8: param bits 0-3 (0xF -> 0); type 1 waits for the g2before event (_execute 0234B184) */
     u8 padding[2];
 };
 WWHD_OFFSET(daObjGnnbtaki_c, mpModel, 0x3AC);
 WWHD_OFFSET(daObjGnnbtaki_c, mPhase, 0x3B0);
 WWHD_OFFSET(daObjGnnbtaki_c, mBtkAnm, 0x3B8);
-WWHD_OFFSET(daObjGnnbtaki_c, field_0x2B0, 0x42C);
-WWHD_OFFSET(daObjGnnbtaki_c, field_0x2B1, 0x42D);
+WWHD_OFFSET(daObjGnnbtaki_c, mAnmStarted, 0x42C);
+WWHD_OFFSET(daObjGnnbtaki_c, mType, 0x42D);
 WWHD_SIZE(daObjGnnbtaki_c, 0x430);
 
 void gnnbtaki_actor_dt(void*, s32);

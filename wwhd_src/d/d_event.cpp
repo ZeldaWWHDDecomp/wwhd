@@ -156,7 +156,7 @@ void EventControl::setParam(u32 order) {
         mCullFarClipRatio = static_cast<f32>(1.0f);
     } else {
         u8 v = static_cast<u8>(
-            gabi::at<EventStageEntry>(static_cast<u32>(info->events) + idx * 0x18)->field_0x10);
+            gabi::at<EventStageEntry>(static_cast<u32>(info->events) + idx * 0x18)->mMapToolCamId);
         mEventFlag = static_cast<u16>(0);
         field_0xde = static_cast<u8>(v);
         mCullFarClipRatio = static_cast<f32>(1.0f);

@@ -151,11 +151,14 @@ WWHD_SIZE(TboxCylView, 0x130);
 struct daTbox_HIO_c {
     be<s8> mNo;
     u8 mPadding;
-    be<s16> m06, m08, m0A, m0C;
+    be<s16> mAppearShowFrame;  /* was m06: daTbox_c::demoProcAppear_Tact 024B68B0: when mAppearTimer reaches mAppearTime - it (that many frames into the demo) the chest model is made visible and the appear brk is played to its end; daTbox_HIO_ct 024B7888 130 (tww the same) */
+    be<s16> mAppearTime;  /* was m08: the length of the chest's Wind Waker appear demo: daTbox_c::CreateInit 024B5CFC starts mAppearTimer at it, demoProcAppear_Tact 024B68B0 counts it down and measures the show frame and the dimming from it; daTbox_HIO_ct 024B7888 180 (tww the same) */
+    be<s16> mAppearDimTime;  /* was m0A: daTbox_c::demoProcAppear_Tact 024B68B0: over the first it frames the scene colour ratio falls from 1 to 0.4 (tboxSetAllColorRatio); daTbox_HIO_ct 024B7888 48 (tww dKy_set_allcol_ratio, the same) */
+    be<s16> mAppearBrightenTime;  /* was m0C: daTbox_c::demoProcAppear_Tact 024B68B0: over the last it frames the colour ratio rises from 0.4 back to 1; daTbox_HIO_ct 024B7888 30 (tww the same) */
     u8 mPaddingA[2];
     be<u32> __vtbl;
 };
-WWHD_OFFSET(daTbox_HIO_c, m08, 4);
+WWHD_OFFSET(daTbox_HIO_c, mAppearTime, 4);
 WWHD_OFFSET(daTbox_HIO_c, __vtbl, 12);
 WWHD_SIZE(daTbox_HIO_c, 16);
 WWHD_SIZE(daTbox_c::modelInfo, 12);

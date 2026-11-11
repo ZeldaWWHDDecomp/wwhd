@@ -331,7 +331,7 @@ void daPy_lk_c::setHandModel(int anmIdx) {
 void daPy_lk_c::resetSeAnime() {
     // HD: a pointer to the no-sound animation sentinel replaces mSeAnmIdx = -1.
     mpSeAnm = gabi::ea(&l_noSeAnimation);
-    m34F0 = 0xFFFF;
+    mSeAnmDemoAnmNo = 0xFFFF;
     mpSeAnmFrameCtrl = 0;
 }
 
@@ -350,12 +350,12 @@ int daPy_lk_c::getDirectionFromAngle(s16 angle) {
 
 /* 023E3398 */
 int daPy_lk_c::getDirectionFromCurrentAngle() {
-    return getDirectionFromAngle((s16)(m34E8 - current.angle.y));
+    return getDirectionFromAngle((s16)(mMoveTargetAngleY - current.angle.y));
 }
 
 /* 023E4E18 */
 int daPy_lk_c::getDirectionFromShapeAngle() {
-    return getDirectionFromAngle((s16)(m34E8 - shape_angle.y));
+    return getDirectionFromAngle((s16)(mMoveTargetAngleY - shape_angle.y));
 }
 
 /* 023E8C74 */

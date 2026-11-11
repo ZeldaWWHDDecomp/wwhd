@@ -303,7 +303,7 @@ cPhs_State daNpcBmcon_c::createInit() {
         0xA9;                   /* attention_info.distances[fopAc_Attn_TYPE_SPEAK_e] */
     attention_info.flags = 0xA; /* attention_info.flags */
     daNpcBmcon_c__l_npc_dat* dat = &l_npc_dat[mNpcNo];
-    m_jnt.setParam(dat->mMaxBackBoneX, dat->mMaxBackBoneY, dat->mMinBackBoneX, dat->mMinBackBoneY,
+    m_jnt.setParam(dat->mMaxBackboneX, dat->mMaxBackboneY, dat->mMinBackboneX, dat->mMinBackboneY,
                    dat->mMaxHeadX, dat->mMaxHeadY, dat->mMinHeadX, dat->mMinHeadY,
                    dat->mMaxTurnStep);
     dat = &l_npc_dat[mNpcNo];
@@ -498,7 +498,7 @@ s32 daNpcBmcon_c::executeWaitInit() {
     speedF = 0.0f;
     setAnmTbl(&l_anm_tag_tbl[npc == NPC_BMCON1 ? 0 : 1]);
     daNpcBmcon_c__l_npc_dat* dat = &l_npc_dat[mNpcNo];
-    m_jnt.setParam(dat->mMaxBackBoneX, dat->mMaxBackBoneY, dat->mMinBackBoneX, dat->mMinBackBoneY,
+    m_jnt.setParam(dat->mMaxBackboneX, dat->mMaxBackboneY, dat->mMinBackboneX, dat->mMinBackboneY,
                    dat->mMaxHeadX, dat->mMaxHeadY, dat->mMinHeadX, dat->mMinHeadY,
                    dat->mMaxTurnStep);
     return 0;

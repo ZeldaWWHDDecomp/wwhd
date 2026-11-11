@@ -8,66 +8,66 @@
 // HD: the GC HIO fields used here retain their offsets; other fields are untouched.
 struct daFm_HIO_c {
     u8 mUnaccessed0[0xF];
-    be<u8> field_0x00F[6];
+    be<u8> mIkJointOn[6];  /* was field_0x00F: view of fm_main::HIO 0x00F (d_a_fm_main.h mIkJointOn) */
     u8 mUnaccessed15[0x4D];
     be<s16> mFreezeDuration;
     u8 mUnaccessed64[0x24];
-    be<s16> field_0x088;
+    be<s16> mFarTime;  /* was field_0x088: view of fm_main::HIO 0x088 (d_a_fm_main.h mFarTime) */
     be<s16> field_0x08A;
-    be<s16> field_0x08C;
-    be<s16> field_0x08E;
+    be<s16> mWaitTimeMin;  /* was field_0x08C: view of fm_main::HIO 0x08C (d_a_fm_main.h mWaitTimeMin) */
+    be<s16> mWaitTimeMax;  /* was field_0x08E: view of fm_main::HIO 0x08E (d_a_fm_main.h mWaitTimeMax) */
     u8 mUnaccessed90[0x4];
-    be<s16> field_0x094;
-    be<s16> field_0x096;
-    be<s16> field_0x098;
-    be<s16> field_0x09A;
-    be<s16> field_0x09C;
+    be<s16> mAttackTime;  /* was field_0x094: view of fm_main::HIO 0x094 (d_a_fm_main.h mAttackTime) */
+    be<s16> mTurnStep;  /* was field_0x096: view of fm_main::HIO 0x096 (d_a_fm_main.h mTurnStep) */
+    be<s16> mGrabAngleMax;  /* was field_0x098: view of fm_main::HIO 0x098 (d_a_fm_main.h mGrabAngleMax) */
+    be<s16> mTurnAngleMin;  /* was field_0x09A: view of fm_main::HIO 0x09A (d_a_fm_main.h mTurnAngleMin) */
+    be<s16> mTgHitTime;  /* was field_0x09C: view of fm_main::HIO 0x09C (d_a_fm_main.h mTgHitTime) */
     u8 mUnaccessed9E[0xA];
-    be<f32> field_0x0A8;
+    be<f32> mHeightRange;  /* was field_0x0A8: view of fm_main::HIO 0x0A8 (d_a_fm_main.h mHeightRange) */
     u8 mUnaccessedAC[0x10];
-    be<f32> field_0x0BC;
+    be<f32> mNpcDemoPlayerDist;  /* was field_0x0BC: view of fm_main::HIO 0x0BC (d_a_fm_main.h mNpcDemoPlayerDist) */
     u8 mUnaccessedC0[0x4];
-    be<f32> field_0x0C4;
+    be<f32> mReachDist;  /* was field_0x0C4: view of fm_main::HIO 0x0C4 (d_a_fm_main.h mReachDist) */
     u8 mUnaccessedC8[0x4];
-    be<f32> field_0x0CC;
+    be<f32> mChaseSpeed;  /* was field_0x0CC: view of fm_main::HIO 0x0CC (d_a_fm_main.h mChaseSpeed) */
     u8 mUnaccessedD0[0xC];
-    be<f32> field_0x0DC;
-    be<f32> field_0x0E0;
-    be<f32> field_0x0E4;
-    be<f32> field_0x0E8;
-    be<f32> field_0x0EC;
+    be<f32> mFootGrabDist;  /* was field_0x0DC: view of fm_main::HIO 0x0DC (d_a_fm_main.h mFootGrabDist) */
+    be<f32> mNearRange;  /* was field_0x0E0: view of fm_main::HIO 0x0E0 (d_a_fm_main.h mNearRange) */
+    be<f32> mAttackRange;  /* was field_0x0E4: view of fm_main::HIO 0x0E4 (d_a_fm_main.h mAttackRange) */
+    be<f32> mNoticeRange;  /* was field_0x0E8: view of fm_main::HIO 0x0E8 (d_a_fm_main.h mNoticeRange) */
+    be<f32> mGrabReach;  /* was field_0x0EC: view of fm_main::HIO 0x0EC (d_a_fm_main.h mGrabReach) */
     u8 mUnaccessedF0[0x10];
-    be<s16> field_0x100;
+    be<s16> mGrabDelayTime;  /* was field_0x100: view of fm_main::HIO 0x100 (d_a_fm_main.h mGrabDelayTime) */
     u8 mUnaccessed102[0xE];
-    be<f32> field_0x110;
-    be<f32> field_0x114;
-    be<f32> field_0x118;
+    be<f32> mPullDistMin;  /* was field_0x110: view of fm_main::HIO 0x110 (d_a_fm_main.h mPullDistMin) */
+    be<f32> mPullDistMax;  /* was field_0x114: view of fm_main::HIO 0x114 (d_a_fm_main.h mPullDistMax) */
+    be<f32> mPullPower;  /* was field_0x118: view of fm_main::HIO 0x118 (d_a_fm_main.h mPullPower) */
     u8 mUnaccessed11C[0x15C - 0x11C];
 };
-WWHD_OFFSET(daFm_HIO_c, field_0x00F, 0xF);
+WWHD_OFFSET(daFm_HIO_c, mIkJointOn, 0xF);
 WWHD_OFFSET(daFm_HIO_c, mFreezeDuration, 0x62);
-WWHD_OFFSET(daFm_HIO_c, field_0x088, 0x88);
+WWHD_OFFSET(daFm_HIO_c, mFarTime, 0x88);
 WWHD_OFFSET(daFm_HIO_c, field_0x08A, 0x8A);
-WWHD_OFFSET(daFm_HIO_c, field_0x08C, 0x8C);
-WWHD_OFFSET(daFm_HIO_c, field_0x08E, 0x8E);
-WWHD_OFFSET(daFm_HIO_c, field_0x094, 0x94);
-WWHD_OFFSET(daFm_HIO_c, field_0x096, 0x96);
-WWHD_OFFSET(daFm_HIO_c, field_0x098, 0x98);
-WWHD_OFFSET(daFm_HIO_c, field_0x09A, 0x9A);
-WWHD_OFFSET(daFm_HIO_c, field_0x09C, 0x9C);
-WWHD_OFFSET(daFm_HIO_c, field_0x0A8, 0xA8);
-WWHD_OFFSET(daFm_HIO_c, field_0x0BC, 0xBC);
-WWHD_OFFSET(daFm_HIO_c, field_0x0C4, 0xC4);
-WWHD_OFFSET(daFm_HIO_c, field_0x0CC, 0xCC);
-WWHD_OFFSET(daFm_HIO_c, field_0x0DC, 0xDC);
-WWHD_OFFSET(daFm_HIO_c, field_0x0E0, 0xE0);
-WWHD_OFFSET(daFm_HIO_c, field_0x0E4, 0xE4);
-WWHD_OFFSET(daFm_HIO_c, field_0x0E8, 0xE8);
-WWHD_OFFSET(daFm_HIO_c, field_0x0EC, 0xEC);
-WWHD_OFFSET(daFm_HIO_c, field_0x100, 0x100);
-WWHD_OFFSET(daFm_HIO_c, field_0x110, 0x110);
-WWHD_OFFSET(daFm_HIO_c, field_0x114, 0x114);
-WWHD_OFFSET(daFm_HIO_c, field_0x118, 0x118);
+WWHD_OFFSET(daFm_HIO_c, mWaitTimeMin, 0x8C);
+WWHD_OFFSET(daFm_HIO_c, mWaitTimeMax, 0x8E);
+WWHD_OFFSET(daFm_HIO_c, mAttackTime, 0x94);
+WWHD_OFFSET(daFm_HIO_c, mTurnStep, 0x96);
+WWHD_OFFSET(daFm_HIO_c, mGrabAngleMax, 0x98);
+WWHD_OFFSET(daFm_HIO_c, mTurnAngleMin, 0x9A);
+WWHD_OFFSET(daFm_HIO_c, mTgHitTime, 0x9C);
+WWHD_OFFSET(daFm_HIO_c, mHeightRange, 0xA8);
+WWHD_OFFSET(daFm_HIO_c, mNpcDemoPlayerDist, 0xBC);
+WWHD_OFFSET(daFm_HIO_c, mReachDist, 0xC4);
+WWHD_OFFSET(daFm_HIO_c, mChaseSpeed, 0xCC);
+WWHD_OFFSET(daFm_HIO_c, mFootGrabDist, 0xDC);
+WWHD_OFFSET(daFm_HIO_c, mNearRange, 0xE0);
+WWHD_OFFSET(daFm_HIO_c, mAttackRange, 0xE4);
+WWHD_OFFSET(daFm_HIO_c, mNoticeRange, 0xE8);
+WWHD_OFFSET(daFm_HIO_c, mGrabReach, 0xEC);
+WWHD_OFFSET(daFm_HIO_c, mGrabDelayTime, 0x100);
+WWHD_OFFSET(daFm_HIO_c, mPullDistMin, 0x110);
+WWHD_OFFSET(daFm_HIO_c, mPullDistMax, 0x114);
+WWHD_OFFSET(daFm_HIO_c, mPullPower, 0x118);
 WWHD_SIZE(daFm_HIO_c, 0x15C);
 inline daFm_HIO_c& fm_HIO() { return *gabi::at<daFm_HIO_c>(0x10463E0C); }
 inline be<f32>& fm_invKineDebug() { return *gabi::at<be<f32>>(0x1047BD34); }

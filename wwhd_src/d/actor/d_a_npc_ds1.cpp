@@ -379,9 +379,9 @@ cPhs_State daNpc_Ds1_c::_create() {
         if (!fopAcM_entrySolidHeap(this, gabi::guest_fn((const void*)&CheckCreateHeap), 0x8340))
             return cPhs_ERROR_e;
         cullMtx = gabi::ea(J3DModel_getBaseTRMtx(mpMorf->getModel()));
-        if (l_HIO.mCount < 0)
+        if (l_HIO.mRefCount < 0)
             l_HIO.mNo = mDoHIO_createChild("薬屋店員", &l_HIO);
-        l_HIO.mCount = l_HIO.mCount + 1;
+        l_HIO.mRefCount = l_HIO.mRefCount + 1;
         if (!CreateInit())
             return cPhs_ERROR_e;
     }
@@ -414,9 +414,9 @@ BOOL daNpc_Ds1_c::_delete() {
     mDoAud_seDeleteObject((&l_soundPositions.mPositions[2]));
     mDoAud_seDeleteObject((&l_soundPositions.mPositions[3]));
     RoomEffectDelete();
-    if (l_HIO.mCount >= 0) {
-        l_HIO.mCount = l_HIO.mCount - 1;
-        if (l_HIO.mCount < 0)
+    if (l_HIO.mRefCount >= 0) {
+        l_HIO.mRefCount = l_HIO.mRefCount - 1;
+        if (l_HIO.mRefCount < 0)
             mDoHIO_deleteChild(l_HIO.mNo);
     }
     return TRUE;
@@ -681,13 +681,13 @@ static daNpc_Ds1_childHIO_c* daNpc_Ds1_childHIO_c_ct(daNpc_Ds1_childHIO_c* p) {
     }
     p->__vtbl = ds1_tu.mChildHioVtable;
     ds1Guest_NpcHio_construct(&p->mNpc); /* dNpc_HIO_c */
-    p->m38 = 0.0f;
-    p->m2C = 0.0f;
-    p->m3C = 0.0f;
+    p->mCursorScaleYFar = 0.0f;
+    p->mAttnMaxX = 0.0f;
+    p->mCursorScaleYNear = 0.0f;
     p->mCursorScale = 0.0f;
-    p->m30 = 0.0f;
-    p->m44 = 0.0f;
-    p->m40 = 0.0f;
+    p->mAttnMaxZ = 0.0f;
+    p->mCursorDistNear = 0.0f;
+    p->mCursorDistFar = 0.0f;
     return p;
 }
 
@@ -702,27 +702,27 @@ static daNpc_Ds1_HIO_c* daNpc_Ds1_HIO_c_ct(daNpc_Ds1_HIO_c* p) {
     ds1Guest_constructArray(p->mChild, 1, sizeof(daNpc_Ds1_childHIO_c), gabi::guest_fn((const void*)&daNpc_Ds1_childHIO_c_ct)); /* __construct_array */
     daNpc_Ds1_childHIO_c& c = p->mChild[0];
     c.mCursorScale = 0.65f;
-    c.mNpc.m04 = -80.0f;
-    c.m40 = 27.0f;
+    c.mNpc.mPlayerEyeOffsetY = -80.0f;
+    c.mCursorDistFar = 27.0f;
     c.mNpc.mMaxHeadX = 0x1FFE;
     c.mNpc.mMaxBackboneX = 0;
-    c.m44 = 20.0f;
-    c.m38 = 0.9f;
+    c.mCursorDistNear = 20.0f;
+    c.mCursorScaleYFar = 0.9f;
     c.mNpc.mMinHeadX = -0x1FFE;
     c.mNpc.mMaxAttnDistXZ = 300.0f;
-    c.m30 = 300.0f;
+    c.mAttnMaxZ = 300.0f;
     c.mNpc.mMinBackboneY = 0;
-    c.m2C = 300.0f;
+    c.mAttnMaxX = 300.0f;
     c.mNpc.mMaxBackboneY = 0x1C70;
     c.mNpc.mAttnYOffset = 60.0f;
     c.mNpc.mMaxTurnStep = 0x1000;
     c.mNpc.mMinBackboneX = 0;
     c.mNpc.mMaxHeadY = 0x38E0;
-    p->mCount = -1;
-    c.mNpc.m22 = 0;
+    p->mRefCount = -1;
+    c.mNpc.mDebugDraw = 0;
     c.mNpc.mMaxHeadTurnVel = 0x800;
     c.mNpc.mMinHeadY = 0;
-    c.m3C = 0.5f;
+    c.mCursorScaleYNear = 0.5f;
     p->mNo = -1;
     return p;
 }

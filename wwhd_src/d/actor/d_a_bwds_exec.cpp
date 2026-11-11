@@ -53,7 +53,7 @@ static inline void body_control(bwds_class* i_this) {
     gabi::Local<cXyz> vec1;
     vec1->z = (f32)REG0_F(2);
     vec1->y = (f32)REG0_F(1);
-    vec1->x = (REG0_F(0) + 60.0f) * l_HIO.m008;
+    vec1->x = (REG0_F(0) + 60.0f) * l_HIO.mBodyScale;
     MtxPosition(vec1, &i_this->mBodyPos[0]);
     i_this->mBodyAngle[0].x = (s16)actor->shape_angle.x;
     i_this->mBodyAngle[0].y = (s16)actor->shape_angle.y;
@@ -67,10 +67,10 @@ static inline void body_control(bwds_class* i_this) {
     gabi::Local<cXyz> vec3;
     if (i_this->mBodyFollowMode != 0) {
         /* HD: REG18 registers, -30 (GameCube REG0_F(6) - 10) */
-        vec1->z = (REG18_F(6) + -30.0f) * l_HIO.m008;
+        vec1->z = (REG18_F(6) + -30.0f) * l_HIO.mBodyScale;
         fVar1 = REG18_F(5) + 0.85f;
     } else {
-        vec1->z = (REG18_F(17) + -5.0f) * l_HIO.m008;
+        vec1->z = (REG18_F(17) + -5.0f) * l_HIO.mBodyScale;
     }
     MtxPosition(vec1, vec3);
     /* HD: no vec3.y adjustment while hooked */
@@ -108,7 +108,7 @@ static inline void body_control(bwds_class* i_this) {
 
         Mtx34* mtx = calc_mtx();
         vec1->x = 0.0f;
-        f32 len = (REG0_F(7) + 70.0f) * l_HIO.m008;
+        f32 len = (REG0_F(7) + 70.0f) * l_HIO.mBodyScale;
         vec1->y = 0.0f;
         vec1->z = len;
         cMtx_YrotS(mtx, sVar2);
@@ -134,13 +134,13 @@ static inline void body_control(bwds_class* i_this) {
             mDoMtx_XrotM(mDoMtx_stack_c::get(), p03e0->x);
             f32 s = cM_ssin(i_this->mFrameCounter * (REG0_S(5) + 3500) + i * (REG0_S(6) + 10000));
             f32 fVar4 = gabi::fmadds(s, REG0_F(4) + 0.1f, 1.0f);
-            f32 fVar5 = fVar4 * l_HIO.m008;
-            mDoMtx_stack_c::scaleM(fVar5, fVar5, l_HIO.m008);
+            f32 fVar5 = fVar4 * l_HIO.mBodyScale;
+            mDoMtx_stack_c::scaleM(fVar5, fVar5, l_HIO.mBodyScale);
             J3DModel_setBaseTRMtx(iVar5, mDoMtx_stack_c::get());
         }
         if (i >= 3) {
             i_this->mBodySph[i].SetC(p032c);
-            i_this->mBodySph[i].SetR((REG0_F(9) + 10.0f) * l_HIO.m008);
+            i_this->mBodySph[i].SetR((REG0_F(9) + 10.0f) * l_HIO.mBodyScale);
             dComIfG_Ccsp_Set(&i_this->mBodySph[i]);
         }
     }
@@ -207,7 +207,7 @@ static inline void ug_move(bwds_class* i_this) {
         bw_anm_init(i_this, dRes_INDEX_BWDS_BCK_KOBOSS_PAKUPAKU_e, 2.0f, 2, 1.0f, -1);
         i_this->mMode = 3;
         i_this->mTurnSpeed = REG0_F(3) + 3000.0f;
-        actor->speedF = (f32)l_HIO.m010;
+        actor->speedF = (f32)l_HIO.mMoveSpeed;
         {
             f32 base = REG0_F(13) + 60.0f;
             actor->speed.y = base + cM_rndF(20.0f);
@@ -230,7 +230,7 @@ static inline void ug_move(bwds_class* i_this) {
         actor->attention_info.flags = fopAc_Attn_LOCKON_BATTLE_e;
         i_this->mTargetPos.copy(player->current.pos);
         i_this->mTurnSpeed = REG0_F(3) + 3000.0f;
-        actor->speedF = (f32)l_HIO.m010;
+        actor->speedF = (f32)l_HIO.mMoveSpeed;
 
         gabi::Local<cXyz> tmp;
         cXyz_mi(&i_this->mTargetPos, tmp, &actor->current.pos);
@@ -239,7 +239,7 @@ static inline void ug_move(bwds_class* i_this) {
 
         f32 fVar8 = std_sqrtf(PSVECSquareMag(local_34));
         f32 fVar1 = fVar8 * 7.0f;
-        f32 lim = l_HIO.m018;
+        f32 lim = l_HIO.mSwayMax;
         if (fVar1 > lim) {
             fVar1 = lim;
         }
@@ -248,7 +248,7 @@ static inline void ug_move(bwds_class* i_this) {
         if (fVar8 < REG0_F(12) + 600.0f) {
             bw_anm_init(i_this, dRes_INDEX_BWDS_BCK_KOBOSS_PAKUPAKU_e, 2.0f, 2, 1.0f, -1);
             i_this->mMode = i_this->mMode + 1;
-            actor->speedF = (f32)l_HIO.m010;
+            actor->speedF = (f32)l_HIO.mMoveSpeed;
             actor->speed.y = REG0_F(13) + 50.0f;
             actor->current.angle.y = fopAcM_searchPlayerAngleY(actor);
             set_jump_target(i_this);
@@ -280,7 +280,7 @@ static inline void ug_move(bwds_class* i_this) {
         if (i_this->mTimers[0] == 0) {
             i_this->mMode = 5;
             actor->speed.y = 0.0f;
-            actor->speedF = (f32)l_HIO.m010;
+            actor->speedF = (f32)l_HIO.mMoveSpeed;
             i_this->mTimers[0] = 0x1e;
             i_this->mTimers[1] = ftos(cM_rndF(50.0f) + 120.0f);
             i_this->mTimers[2] = ftos(cM_rndF(30.0f) + 30.0f);
@@ -309,7 +309,7 @@ static inline void ug_move(bwds_class* i_this) {
         }
         actor->speed.y = actor->speed.y - (REG0_F(15) + 3.0f);
         i_this->mTurnSpeed = REG0_F(4) + 1000.0f;
-        actor->speedF = (f32)l_HIO.m010;
+        actor->speedF = (f32)l_HIO.mMoveSpeed;
 
         if (!(actor->current.pos.y > i_this->mSandY)) {
             actor->current.pos.y = (f32)i_this->mSandY;
@@ -364,7 +364,7 @@ static inline void hook_chance(bwds_class* i_this) {
     case 0:
         bw_anm_init(i_this, dRes_INDEX_BWDS_BCK_KOBOSS_PAKUPAKU_e, 2.0f, 2, 1.0f, -1);
         i_this->mMode = i_this->mMode + 1;
-        i_this->mTimers[0] = (s16)l_HIO.m014;
+        i_this->mTimers[0] = (s16)l_HIO.mHookChanceTime;
         /* fall through */
     case 1: {
         f32 floor_y = (i_this->mSandY + 100.0f) + REG0_F(14);
@@ -592,7 +592,7 @@ static BOOL daBwds_Execute(bwds_class* i_this) {
         i_this->mHitShakeTimer = i_this->mHitShakeTimer - 1;
     }
 
-    if (l_HIO.m005 == 0) {
+    if (l_HIO.mNoMove == 0) {
         i_this->mBodySph[0].OffAtSPrmBit(1); /* OffAtSetBit */
         i_this->mBodySph[0].OffCoSPrmBit(1); /* OffCoSetBit */
         move(i_this);
@@ -635,7 +635,7 @@ static BOOL daBwds_Execute(bwds_class* i_this) {
     mDoMtx_stack_c::YrotM((s16)(actor->shape_angle.y + s1));
     mDoMtx_XrotM(mDoMtx_stack_c::get(), (s16)(actor->shape_angle.x + s2));
     mDoMtx_ZrotM(mDoMtx_stack_c::get(), actor->shape_angle.z);
-    mDoMtx_stack_c::scaleM(l_HIO.m008, l_HIO.m008, l_HIO.m008);
+    mDoMtx_stack_c::scaleM(l_HIO.mBodyScale, l_HIO.mBodyScale, l_HIO.mBodyScale);
 
     J3DModel_setBaseTRMtx(pJVar8, mDoMtx_stack_c::get());
     i_this->mpMorf->calc();
@@ -668,10 +668,10 @@ static BOOL daBwds_Execute(bwds_class* i_this) {
     } else {
         r = REG0_F(10) + 60.0f;
     }
-    i_this->mBodySph[0].SetR(r * l_HIO.m008);
+    i_this->mBodySph[0].SetR(r * l_HIO.mBodyScale);
 
     dComIfG_Ccsp_Set(&i_this->mBodySph[0]);
-    i_this->mHsSph.SetR(l_HIO.m01C * l_HIO.m008);
+    i_this->mHsSph.SetR(l_HIO.mHsSphRadius * l_HIO.mBodyScale);
     i_this->mHsSph.SetC(cStack_c8);
     dComIfG_Ccsp_Set(&i_this->mHsSph);
     body_control(i_this);
@@ -762,7 +762,7 @@ static BOOL daBwds_Execute(bwds_class* i_this) {
             i_this->mpSplashBtk[i]->mFrameCtrl.mFrame = fVar14;
             i_this->mpSplashBrk[i]->mFrameCtrl.mFrame = fVar14;
             mDoMtx_stack_c::transS(i_this->mSplashPos[i].x, i_this->mSplashPos[i].y, i_this->mSplashPos[i].z);
-            mDoMtx_stack_c::scaleM(l_HIO.m00C, l_HIO.m00C, l_HIO.m00C);
+            mDoMtx_stack_c::scaleM(l_HIO.mSplashScale, l_HIO.mSplashScale, l_HIO.mSplashScale);
             J3DModel_setBaseTRMtx(i_this->mpSplashMorf[i]->getModel(), mDoMtx_stack_c::get());
             i_this->mpSplashMorf[i]->calc();
             s8 n = (s8)(i_this->mSplashFrame[i] + 1);

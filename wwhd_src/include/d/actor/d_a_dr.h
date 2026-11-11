@@ -32,9 +32,9 @@ struct daDr_HIO_c {
     /* 0x00 */ be<s8> mNo;
     /* 0x01 */ u8 _01[3];
     /* 0x04 */ be<f32> mScale;
-    /* 0x08 */ be<u8> m0C;
+    /* 0x08 */ be<u8> mDebugBiku;  /* was m0C: move (in daDr_Execute 0212A00C): when set while idle the flinch (mode 10) starts and it is cleared (debug trigger, like a quake) (tww the same) */
     /* 0x09 */ u8 _09;
-    /* 0x0A */ be<s16> m0E;
+    /* 0x0A */ be<s16> mBikuTime;  /* was m0E: move (in daDr_Execute 0212A00C) mode 10: mCountDownTimers[0] of the flinch (tww the same) */
     /* 0x0C */ be<f32> mWait1Morf;
     /* 0x10 */ be<f32> mAkubi1Morf;
     /* 0x14 */ be<f32> mBiku1Morf;
@@ -58,7 +58,7 @@ struct dr_class : fopAc_ac_c {
     /* 0x3D6 */ be<s16> mCountDownTimers[3];
     /* 0x3DC */ be<s32> mCurrBckIdx;
     /* 0x3E0 */ gptr<JPABaseEmitter> mpBreathEmitter;
-    /* 0x3E4 */ be<s8> mBikuRequest;  /* was m2C8: move (in daDr_Execute 0212A00C): when not 0 (or idle with l_HIO m0C / a quake) it is cleared and mMode 10 starts the flinch (BCK DR_BIKU1); nothing in d_a_dr sets it */
+    /* 0x3E4 */ be<s8> mBikuRequest;  /* was m2C8: move (in daDr_Execute 0212A00C): when not 0 (or idle with l_HIO mDebugBiku / a quake) it is cleared and mMode 10 starts the flinch (BCK DR_BIKU1); nothing in d_a_dr sets it */
     /* 0x3E5 */ be<s8> mBikuDone;  /* was m2C9: move (in daDr_Execute 0212A00C): 0 when the flinch (mMode 10, DR_BIKU1) starts, 1 once its animation stopped; while 0, frame 15 sets mCountDownTimers[1] = 5 */
     /* 0x3E6 */ u8 m2CA[2];
 };

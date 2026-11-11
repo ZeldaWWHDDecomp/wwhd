@@ -29,9 +29,10 @@ struct EF_THUNDER {
     EF_THUNDER *construct();
 };
 struct SND_INFLUENCE {
-    cXyz field_0x0;
-    be<s32> field_0xc, field_0x10;
-    be<u32> field_0x14;
+    cXyz mNoisePos;  /* was field_0x0: dKy_Sound_set 0255F458 stores the noise position when it is nearer to the camera (or louder); dKy_Sound_init 0255B930 sets it far away; tww fopAcM_otoCheck measures actors' distance to it, d_a_mo2 turns toward it */
+    be<s32> mNoiseLevel;  /* was field_0xc: dKy_Sound_set 0255F458 stores its second argument and keeps the old sound while that is not larger (beyond the near distance); dKy_Sound_init 0255B930 clears it; tww fopAcM_otoCheck returns it to actors within range */
+    be<s32> mNoiseTimer;  /* was field_0x10: dKy_Sound_set 0255F458 stores its fourth argument; Sndpos 0255B9AC counts it down and calls dKy_Sound_init at 0 (tww the same) */
+    be<u32> mNoiseActorId;  /* was field_0x14: dKy_Sound_set 0255F458 stores its third argument, the process id of the noise maker; dKy_Sound_init 0255B930 sets -1; tww fopAcM_otoCheck ignores the sound for that actor */
 };
 struct WAVECHAN {
     be<f32> field_0x0, field_0x4, field_0x8, mWaveSpeed, mWaveSpawnDist, mWaveSpawnRadius, mWaveScale, mWaveScaleRand,
@@ -339,7 +340,7 @@ struct dScnKy_env_light_c {
     /* 0x1010 */ be<f32> mVrboxKumoColGatherRatio;
     /* 0x1014 */ be<f32> field_0xc2c;
     /* 0x1018 */ be<f32> field_0xc30;
-    /* 0x101C */ be<f32> field_0xc34;
+    /* 0x101C */ be<f32> mColChgRatio;  /* was field_0xc34: the colour-change blend ratio: drawKankyo 0255A924 (the arrow colour changes, flags 0x10-0x60) and dKy_Itemgetcol_chg_move 0255A568 ease it toward 1 / 0 and pass it to dKy_actor_addcol_amb_set / dKy_bg*_addcol_amb_set and the dKy_set_*col_ratio calls, clearing mColChgFlag when it fades out; dScnKy_env_light_c ctor 025554CC / dKy_Create 0255DAC0 zero it (tww dKy_Itemgetcol_chg_move the same) */
     /* 0x1020 */ be<f32> mCurTime;
     /* 0x1024 */ be<f32> mNextTime;
     /* 0x1028 */ be<f32> mTimeAdv;
@@ -388,7 +389,7 @@ struct dScnKy_env_light_c {
     /* 0x109D */ be<u8> mSchbit;
     /* 0x109E */ be<u8> mbVrboxInvisible;
     /* 0x109F */ be<u8> mbContrastFlag;
-    /* 0x10A0 */ be<u8> field_0xc98;
+    /* 0x10A0 */ be<u8> mColChgActive;  /* was field_0xc98: dKy_Itemgetcol_chg_move 0255A568 clears it and sets 1 while mColChgFlag & 7 (the item-get colour change runs); the thunder flash in d_kankyo_rain_movement_qa (02577138) skips the actor flash colours while it is set; ctor 025554CC / dKy_Create 0255DAC0 zero it (tww the same, read in d_kankyo_rain) */
     /* 0x10A1 */ be<u8> mbDayNightTactStop;
     /* 0x10A2 */ be<u8> field_0xc9a;
     /* 0x10A3 */ be<u8> field_0xc9b;
@@ -400,8 +401,8 @@ struct dScnKy_env_light_c {
     /* 0x10AC */ be<f32> field_0x10ac;
     /* 0x10B0 */ be<f32> field_0x10b0;
     /* 0x10B4 */ be<f32> field_0x10b4;
-    /* 0x10B8 */ be<f32> field_0x10b8;
-    /* 0x10BC */ be<f32> field_0x10bc;
+    /* 0x10B8 */ be<f32> mWaveSecondaryColorScale;  /* was field_0x10b8: HD-only: dKankyo_wave_Packet::setColors 02582518 scales the wave texture's secondary colour (colorB) by it; dKy_Create 0255DAC0 initialises it (colorFogFlickerDivisor) */
+    /* 0x10BC */ be<f32> mWavePrimaryColorScale;  /* was field_0x10bc: HD-only: dKankyo_wave_Packet::setColors 02582518 scales the wave texture's primary colour (colorA) by it; dKy_Create 0255DAC0 initialises it (colorFogFlickerDivisor) */
     /* 0x10C0 */ be<f32> field_0x10c0;
     /* 0x10C4 */ be<f32> field_0x10c4;
     /* 0x10C8 */ be<f32> field_0x10c8;
@@ -412,7 +413,7 @@ struct dScnKy_env_light_c {
     /* 0x10DC */ be<f32> field_0x10dc;
     /* 0x10E0 */ be<f32> field_0x10e0;
     /* 0x10E4 */ be<f32> field_0x10e4;
-    /* 0x10E8 */ be<f32> field_0x10e8;
+    /* 0x10E8 */ be<f32> mMonotoneBlend;  /* was field_0x10e8: read through monotoneBlend() (d_kankyo_4.h): 0255C85C (HD monotone option, Hyroom) chases it toward 1 - (level + 600) / range, sets 0 / 1 at the ends and passes it as the blend factor of the monotone light presets (frameApplyLightPresets); the constructor 025554CC and dKy_Create 0255DAC0 clear it */
     /* 0x10EC */ u8 mHdTailState[28];
     /* 0x1108 */ u8 mHdTailTable0[128];
     /* 0x1188 */ u8 mHdTailTable1[128];
@@ -503,7 +504,7 @@ WWHD_OFFSET(KankyoEnvLight, mVrboxSoraColGatherRatio, 0x100C);
 WWHD_OFFSET(KankyoEnvLight, mVrboxKumoColGatherRatio, 0x1010);
 WWHD_OFFSET(KankyoEnvLight, field_0xc2c, 0x1014);
 WWHD_OFFSET(KankyoEnvLight, field_0xc30, 0x1018);
-WWHD_OFFSET(KankyoEnvLight, field_0xc34, 0x101C);
+WWHD_OFFSET(KankyoEnvLight, mColChgRatio, 0x101C);
 WWHD_OFFSET(KankyoEnvLight, mCurTime, 0x1020);
 WWHD_OFFSET(KankyoEnvLight, mNextTime, 0x1024);
 WWHD_OFFSET(KankyoEnvLight, mTimeAdv, 0x1028);
@@ -552,7 +553,7 @@ WWHD_OFFSET(KankyoEnvLight, mInitAnimTimer, 0x109C);
 WWHD_OFFSET(KankyoEnvLight, mSchbit, 0x109D);
 WWHD_OFFSET(KankyoEnvLight, mbVrboxInvisible, 0x109E);
 WWHD_OFFSET(KankyoEnvLight, mbContrastFlag, 0x109F);
-WWHD_OFFSET(KankyoEnvLight, field_0xc98, 0x10A0);
+WWHD_OFFSET(KankyoEnvLight, mColChgActive, 0x10A0);
 WWHD_OFFSET(KankyoEnvLight, mbDayNightTactStop, 0x10A1);
 WWHD_OFFSET(KankyoEnvLight, field_0xc9a, 0x10A2);
 WWHD_OFFSET(KankyoEnvLight, field_0xc9b, 0x10A3);
@@ -563,8 +564,8 @@ WWHD_OFFSET(KankyoEnvLight, field_0x10a8, 0x10A8);
 WWHD_OFFSET(KankyoEnvLight, field_0x10ac, 0x10AC);
 WWHD_OFFSET(KankyoEnvLight, field_0x10b0, 0x10B0);
 WWHD_OFFSET(KankyoEnvLight, field_0x10b4, 0x10B4);
-WWHD_OFFSET(KankyoEnvLight, field_0x10b8, 0x10B8);
-WWHD_OFFSET(KankyoEnvLight, field_0x10bc, 0x10BC);
+WWHD_OFFSET(KankyoEnvLight, mWaveSecondaryColorScale, 0x10B8);
+WWHD_OFFSET(KankyoEnvLight, mWavePrimaryColorScale, 0x10BC);
 WWHD_OFFSET(KankyoEnvLight, field_0x10c0, 0x10C0);
 WWHD_OFFSET(KankyoEnvLight, field_0x10c4, 0x10C4);
 WWHD_OFFSET(KankyoEnvLight, field_0x10c8, 0x10C8);
@@ -575,7 +576,7 @@ WWHD_OFFSET(KankyoEnvLight, field_0x10d8, 0x10D8);
 WWHD_OFFSET(KankyoEnvLight, field_0x10dc, 0x10DC);
 WWHD_OFFSET(KankyoEnvLight, field_0x10e0, 0x10E0);
 WWHD_OFFSET(KankyoEnvLight, field_0x10e4, 0x10E4);
-WWHD_OFFSET(KankyoEnvLight, field_0x10e8, 0x10E8);
+WWHD_OFFSET(KankyoEnvLight, mMonotoneBlend, 0x10E8);
 WWHD_OFFSET(KankyoEnvLight, mHdTailState, 0x10EC);
 WWHD_OFFSET(KankyoEnvLight, mHdTailTable0, 0x1108);
 WWHD_OFFSET(KankyoEnvLight, mHdTailTable1, 0x1188);

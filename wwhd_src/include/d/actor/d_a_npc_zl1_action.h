@@ -41,34 +41,34 @@ struct daNpc_Zl1_c : fopNpc_npc_c {
     /* 0x97C */ csXyz mInitialAngle;  /* was field_0x738: _execute 02307D18 copies current.angle on the first run, with mInitialPos, then mbRanExecute = 1; event_proc 023071C4 copies it again; wait_1 02309394 turns current.angle.y back to its y (type 4) (tww the same); same code as daNpc_Hi1_c::mInitialAngle */
     u8 _982[0x1A];
     /* 0x99C */ cXyz mLookPos;  /* was field_0x758: lookBack 023075B0 / kyorokyoro 023074E4 look at it; cut_init_MAJYU_START 02306624 and chngAnmAtr 0230883C set it */
-    /* 0x9A8 */ cXyz field_0x764;
+    /* 0x9A8 */ cXyz mDemoAreaPos;  /* was field_0x764: init_ZL1_3 02303BBC: a point in front of the start position (y 400), event_proc 023071C4 / demo_action2 02309EB8 set its y; demo_2 02309640 orders event 4 when the player is in the chk_areaIN area around it, demo_3 023096CC event 5 when the player is nearer than mPrmTbl.field_28 (tww the same) */
     u8 _9B4[0x24];
     /* 0x9D8 */ csXyz mPartsAngle;  /* was field_0x794: lookBack 023075B0 stores x = current.angle.y, y = the head Y angle, z = the backbone Y angle; chk_parts_notMov 02308DFC compares them with the current ones (tww the same); same code as daNpc_Hi1_c::mPartsAngle */
     u8 _9DE[0x2];
     /* 0x9E0 */ be<s32> mbSetEyePos;  /* was field_0x79C: wait_action1 02309CEC / demo_action1 02309E10 / demo_action2 02309EB8 / optn_action1 02309FC8 store the step's result (wait_1(), talk_1(), demo_1() ..); checkOrder 023055A4 sets 1; setAttention 02304C44 tests it with its param (if (it == 0 && !param_1)) (tww the same); same code as daNpc_Hi1_c::mbSetEyePos */
     u8 _9E4[0xE];
-    /* 0x9F2 */ be<s16> field_0x7AE;
+    /* 0x9F2 */ be<s16> mLookPlayerTimer;  /* was field_0x7AE: optn_1 02309794 / kyorokyoro 023074E4 load it from mPrmTbl.field_30 / field_32 with mKyoroTimer; optn_2 023099F4 keeps look mode 1 (the player) while it counts down, then look mode 5 (look around) (tww the same) */
     /* 0x9F4 */ be<s16> mKyoroTimer;  /* was field_0x7B0: optn_1 02309794 sets HIO prm 0x2C / 0x2E; kyorokyoro 023074E4 counts it down, then picks the next look position */
     /* 0x9F6 */ be<s16> mKyoroPosNo;  /* was field_0x7B2: kyorokyoro 023074E4 passes it to kyoroPos and sets cLib_getRndValue(1, 10); optn_1 02309794 clears it */
     u8 _9F8[0x2];
     /* 0x9FA */ be<s16> mWaitTimer;  /* was field_0x7B6: wait_1 02309394 / talk_1 02309478 set a random 15..30 and count it down */
-    /* 0x9FC */ be<s16> field_0x7B8;
-    /* 0x9FE */ be<s16> field_0x7BA;
-    /* 0xA00 */ be<s16> field_0x7BC;
+    /* 0x9FC */ be<s16> mIdleAnmTimer;  /* was field_0x7B8: setStt 02306184 / optn_1 02309794: random 90..180; optn_1 counts it down and switches to the second idle animation (setAnm_NUM 0xC) at 0 (tww the same) */
+    /* 0x9FE */ be<s16> mIdleAnmLoops;  /* was field_0x7BA: optn_1 02309794: 1 or 2 when animation 0xC starts, counted down at each animation end, back to animation 8 at 0; setStt 02306184 clears it (tww the same) */
+    /* 0xA00 */ be<s16> mTurnStepMode;  /* was field_0x7BC: _execute 02307D18: the m_jnt turn step is mPrmTbl.mMaxTurnStep while it is < 0, else mPrmTbl.field_5C; createInit 0230503C -1, chngAnmAtr 0230883C 10 for message 0x15E3 and -1 for 0x15E4 (tww the same) */
     u8 _A02[0x5];
     /* 0xA07 */ be<s8> mbMorfAnimStopped;  /* was field_0x7C3: play_animation 023045E0: the morf's play() result, or 1 when the frame wrapped; setAnm_anm 0230607C / cut_init_OKIRU 023066B4 clear it; cut_move_OKIRU 02306D34 returns it, cut_move_OKIRU_2 02306D48 / optn_1 02309794 test it (tww the same); same code as daNpc_Hi1_c::mbMorfAnimStopped (tww daNpc_Ls1_c mbMorfAnimStopped) */
     u8 _A08[0x1];
     /* 0xA09 */ be<u8> mItemNo;
     u8 _A0A[0x6];
-    /* 0xA10 */ be<u8> field_0x7CC;
+    /* 0xA10 */ be<u8> mJumping;  /* was field_0x7CC: optn_2 023099F4 sets it when she jumps a wall or a drop and, while set, only runs move_jmp and keeps its result (tww the same; tww's comment there suggests mIsMoveJumped) */
     u8 _A11[0x3];
-    /* 0xA14 */ be<u8> field_0x7D0;
+    /* 0xA14 */ be<u8> mEyeFollow;  /* was field_0x7D0: lookBack 023075B0 sets it in look modes 1 / 4 / 5 (a target position), clears it in 3 and the rest; play_btk_anm 02304548 runs eye_ctrl instead of the btk while set, play_animation 023045E0 turns the eye control on with btk 1; chngAnmAtr 0230883C / cut_init_MAJYU_START 02306624 set it (tww the same) */
     u8 _A15[0x5];
     /* 0xA1A */ be<u8> mHasAttention;
     /* 0xA1B */ be<u8> mTalking;  /* was field_0x7D7: checkOrder 023055A4 sets 1 on the talk command (dEvtCmd_INTALK); wait_1 02309394 starts the talk (setStt(2)) while it is set; talk_1 02309478 talks while it is set and clears it when the message ends; optn_1 02309794 tests it (tww the same); same code as daNpc_Hi1_c::mTalking */
     /* 0xA1C */ be<u8> mLookHeadOnly;  /* was field_0x7D8: lookBack 023075B0 passes it to dNpc_JntCtrl_c::lookAtTarget_2 as headOnly (d_npc.h; tww lookAtTarget_2 turns the body only if (mbTrn && !it)); wait_1 02309394 / optn_1 02309794 / checkOrder 023055A4 / cut_init_LOK_PLYER 023062C4 / cut_init_LOK_PARTNER 023063A0 set it, wait_1 / optn_2 023099F4 / cut_init_JMP_OFF 0230684C clear it (tww the same); same role as daNpcPhoto_c::mLookHeadOnly */
     u8 _A1D[0x5F];
-    /* 0xA7C */ cXyz field_0x830;
+    /* 0xA7C */ cXyz mLightPos;  /* was field_0x830: cut_init_OMAMORI_ONOFF 02306BD8: set_LightPos, copied into mLightInfluence1 / 2 .mPos (tww the same); chngAnmAtr 0230883C: message 0x15E7 looks at a point beside it */
     u8 _A88[0x9];
     /* 0xA91 */ be<u8> mAnmAtrNo;  /* was field_0x845: setAnm_ATR 02306458 plays a_anm_prm_tbl[it]; checkOrder 023055A4 / endEvent 02306280 / setStt 02306184 reset it to 0xFF */
     /* 0xA92 */ be<u8> mMesgAnimeTag;  /* was field_0x846: anmAtr 02308AC0: the message's animation tag (dComIfGp_getMesgAnimeTagInfo) when it changes; checkOrder 023055A4 / endEvent 02306280 / setStt 02306184 0xFF (tww the same); same code as daNpc_Hi1_c::mMesgAnimeTag (tww daNpc_Ls1_c mMesgAnimeTag) */
@@ -86,24 +86,24 @@ struct daNpc_Zl1_c : fopNpc_npc_c {
 };
 WWHD_OFFSET(daNpc_Zl1_c, mInitialAngle, 0x97C);
 WWHD_OFFSET(daNpc_Zl1_c, mLookPos, 0x99C);
-WWHD_OFFSET(daNpc_Zl1_c, field_0x764, 0x9A8);
+WWHD_OFFSET(daNpc_Zl1_c, mDemoAreaPos, 0x9A8);
 WWHD_OFFSET(daNpc_Zl1_c, mPartsAngle, 0x9D8);
 WWHD_OFFSET(daNpc_Zl1_c, mbSetEyePos, 0x9E0);
-WWHD_OFFSET(daNpc_Zl1_c, field_0x7AE, 0x9F2);
+WWHD_OFFSET(daNpc_Zl1_c, mLookPlayerTimer, 0x9F2);
 WWHD_OFFSET(daNpc_Zl1_c, mKyoroTimer, 0x9F4);
 WWHD_OFFSET(daNpc_Zl1_c, mKyoroPosNo, 0x9F6);
 WWHD_OFFSET(daNpc_Zl1_c, mWaitTimer, 0x9FA);
-WWHD_OFFSET(daNpc_Zl1_c, field_0x7B8, 0x9FC);
-WWHD_OFFSET(daNpc_Zl1_c, field_0x7BA, 0x9FE);
-WWHD_OFFSET(daNpc_Zl1_c, field_0x7BC, 0xA00);
+WWHD_OFFSET(daNpc_Zl1_c, mIdleAnmTimer, 0x9FC);
+WWHD_OFFSET(daNpc_Zl1_c, mIdleAnmLoops, 0x9FE);
+WWHD_OFFSET(daNpc_Zl1_c, mTurnStepMode, 0xA00);
 WWHD_OFFSET(daNpc_Zl1_c, mbMorfAnimStopped, 0xA07);
 WWHD_OFFSET(daNpc_Zl1_c, mItemNo, 0xA09);
-WWHD_OFFSET(daNpc_Zl1_c, field_0x7CC, 0xA10);
-WWHD_OFFSET(daNpc_Zl1_c, field_0x7D0, 0xA14);
+WWHD_OFFSET(daNpc_Zl1_c, mJumping, 0xA10);
+WWHD_OFFSET(daNpc_Zl1_c, mEyeFollow, 0xA14);
 WWHD_OFFSET(daNpc_Zl1_c, mHasAttention, 0xA1A);
 WWHD_OFFSET(daNpc_Zl1_c, mTalking, 0xA1B);
 WWHD_OFFSET(daNpc_Zl1_c, mLookHeadOnly, 0xA1C);
-WWHD_OFFSET(daNpc_Zl1_c, field_0x830, 0xA7C);
+WWHD_OFFSET(daNpc_Zl1_c, mLightPos, 0xA7C);
 WWHD_OFFSET(daNpc_Zl1_c, mAnmAtrNo, 0xA91);
 WWHD_OFFSET(daNpc_Zl1_c, mMesgAnimeTag, 0xA92);
 WWHD_OFFSET(daNpc_Zl1_c, mAnmNo, 0xA95);
@@ -155,7 +155,7 @@ struct daNpc_Zl1_HIO_c {
     /* 0x00 */ be<u32> __vtbl; /* HD: vtable first */
     /* 0x04 */ be<s8> mNo;
     /* 0x05 */ u8 _05[3];
-    /* 0x08 */ be<s32> field_0x8;
+    /* 0x08 */ be<s32> mRefCount;  /* was field_0x8: daNpc_Zl1_HIO_c_ct 0230A0EC -1; never read in WWHD or tww; after our decomp's daNpc_Hi1_HIO_c / daNpc_Ba1_HIO_c mRefCount: the same HIO layout (mNo, then the s32 instance counter) */
     /* 0x0C */ hio_prm_c mPrmTbl;
 };
 WWHD_SIZE(daNpc_Zl1_HIO_c, 0x64);

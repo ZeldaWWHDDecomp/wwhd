@@ -13,7 +13,7 @@ WWHD_SIZE(dDemo_colorWord, 4);
 struct dDemo_prm_c {
     be<u32> mId;
     gptr<u8> mData;
-    be<u32> field_0x54;
+    be<u32> mDataSize;  /* was field_0x54: dDemo_actor_c::JSGSetData 0252767C stores its third argument (the data size) next to mId / mData; getPrm_Morf 02526E7C reads a data byte only when it is above that byte's offset; dDemo_prm_ct 02527468 clears it (HD; tww has no such word) */
 };
 WWHD_SIZE(dDemo_prm_c, 0xC);
 
@@ -357,16 +357,16 @@ dDemo_cameraView* dDemo_getCameraView(dDemo_camera_c* caller);
 // HD: the GameCube parameter fields keep their names but contain unsigned bytes.
 struct dDemo_prm_data {
     u8 _00[4];
-    be<u8> field_0x4;
+    be<u8> mMorfPrm1;  /* was field_0x4: getPrm_Morf 02526E7C returns it as the morph value of parameter data with id ID_UNK_1 (when mDataSize >= 4) (tww the same) */
     u8 _05;
-    be<u8> field_0x6, field_0x7;
+    be<u8> mMorfPrm4, mMorfPrm2;  /* was field_0x6: getPrm_Morf 02526E7C returns it as the morph value of parameter data with id ID_UNK_4 (when mDataSize >= 6) (tww the same); was field_0x7: getPrm_Morf 02526E7C returns it as the morph value of parameter data with id ID_UNK_2 (when mDataSize >= 7) (tww the same) */
     u8 _08[3];
-    be<u8> field_0xb;
+    be<u8> mMorfPrm5;  /* was field_0xb: getPrm_Morf 02526E7C returns it as the morph value of parameter data with id ID_UNK_5 (when mDataSize >= 0xB) (tww the same) */
     u8 _0C[3];
-    be<u8> field_0xf;
+    be<u8> mMorfPrm6;  /* was field_0xf: getPrm_Morf 02526E7C returns it as the morph value of parameter data with id ID_UNK_6 (when mDataSize >= 0xF) (tww the same) */
 };
 WWHD_SIZE(dDemo_prm_data, 0x10);
-WWHD_OFFSET(dDemo_prm_data, field_0xf, 0xF);
+WWHD_OFFSET(dDemo_prm_data, mMorfPrm6, 0xF);
 // HD: GHS deleting-destructor dispatch is the vtable slot at 0xC.
 inline void dDemo_deleteObject(void* object, u32 flags) {
     auto* base = static_cast<dDemo_virtualObject*>(object);

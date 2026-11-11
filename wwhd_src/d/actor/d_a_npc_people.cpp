@@ -10,6 +10,7 @@
  * The other parts: d_a_npc_people_*.cpp.
  */
 #include "d/actor/d_a_npc_people_main.h"
+#include "sead/ElementAt.h"
 
 // HD: per-TU SafeString vtable used by resource requests.
 const gc_tu_data gc_tu = { .safeString = PEOPLE_SAFESTRING_VTBL, .safeStringAssure = 0x022C885C };
@@ -254,7 +255,7 @@ cPhs_State daNpcPeople_c::createInit() {
         dNpc_PathRun_incIdxLoop(&mPathRun);
         mWaitTimer = 1;
         temp = 0xFE;
-        m7A1 = 1;
+        mCanMove = 1;
     }
     gravity = -9.0f;
     setWaitAnm();
@@ -272,7 +273,7 @@ cPhs_State daNpcPeople_c::createInit() {
         mEventIdx[1] = people_getEventIdx("UB1_TALK_PHOTO"); /* "UB1_TALK_PHOTO" */
         {
             s16 idx = people_getEventIdx("UB1_TALK_PHOTO_GET_ITEM"); /* "UB1_TALK_PHOTO_GET_ITEM" */
-            m79C = 0;
+            mModeInTalk = 0;
             mEventIdx[3] = idx;
         }
         eventInfo.setEventId(mEventIdx[0]);
@@ -343,7 +344,7 @@ cPhs_State daNpcPeople_c::createInit() {
             mEtcFlag = 0x1000;
         }
         mEventIdx[0] = people_getEventIdx("UG1_TALK"); /* "UG1_TALK" */
-        m7A1 = 1;
+        mCanMove = 1;
         break;
     default:
         break;
@@ -355,7 +356,7 @@ cPhs_State daNpcPeople_c::createInit() {
     mLookMaxVel = 0;
     mTalk = 0;
     mInAttention = 0;
-    m78A = 0;
+    mInLookDist = 0;
     cullMtx = gabi::ea(J3DModel_getBaseTRMtx(mpMorf->getModel())); /* fopAcM_SetMtx */
     fopAcM_setCullSizeBox(this, -70.0f, 0.0f, -70.0f, 70.0f, 200.0f, 70.0f);
     cullSizeFar = mpNpcDat->mCullFarDist / peopleClipperFar();
@@ -451,12 +452,12 @@ bool daNpcPeople_c::_draw() {
         dSnap_Obj_ct(obj.get());
         PsoData_l* pso = l_pso_tbl()[mPsoNo];
         gabi::Local<cXyz> temp;
-        temp->x = pso->field_0x00;
-        temp->y = pso->field_0x04;
-        temp->z = pso->field_0x08;
+        temp->x = pso->mOffsetX;
+        temp->y = pso->mOffsetY;
+        temp->z = pso->mOffsetZ;
         PSVECAdd(temp.get(), &current.pos, temp.get());
         dSnap_Obj_SetInf(obj.get(), pso->photoNo, this, pso->field_0x16, pso->field_0x17, 0x7FFF);
-        dSnap_Obj_SetGeo(obj.get(), temp.get(), pso->field_0x0C, pso->field_0x10, pso->field_0x14 + current.angle.y);
+        dSnap_Obj_SetGeo(obj.get(), temp.get(), pso->mRadius, pso->mHeight, pso->mAngleY + current.angle.y);
         dSnap_RegistSnapObj(obj.get());
         /* HD: mPsoNo is not reset to 0xFF */
     } else {
@@ -528,10 +529,12 @@ BOOL daNpcPeople_c::initTexPatternAnm(u32 param_1) {
     return true;
 }
 
+// Guest EA arithmetic (getBck, getHeadBck): tbl + param_1 * 4 wraps at 32 bits as on the console (a host index on a NULL
+// table reached host addresses past 4 GB).
 /* 022BE18C */
 int daNpcPeople_c::getBck(int param_1) {
     be<s32>* tbl = l_bck_ix_tbl()[mNpcNo][mbIsNight];
-    return tbl[param_1];
+    return sead::elementAt<be<s32>>(gabi::ea(tbl), u32(param_1));
 }
 
 /* 022BE1B4 */
@@ -540,7 +543,7 @@ int daNpcPeople_c::getHeadBck(int param_1) {
     if (tbl == 0) {
         return -1;
     }
-    return tbl[param_1];
+    return sead::elementAt<be<s32>>(gabi::ea(tbl), u32(param_1));
 }
 
 /* 022BEB7C */
@@ -586,17 +589,17 @@ bool daNpcPeople_c::setAnmTbl(sPeopleAnmDat* param_1, int param_2) {
         }
     } else if (mNpcNo == NPC_UM3 && mAnmIdx == 5) {
         mMorf = 13.0f;
-        if (param_1->field_0x00 == 1) {
+        if (param_1->mAnmIdx == 1) {
             mMorf = 6.0f;
         }
     }
     mAnmFlag = mAnmFlag & ~0x1;
-    if (param_1->field_0x00 == 0xFF && param_2 != 0) {
+    if (param_1->mAnmIdx == 0xFF && param_2 != 0) {
         mpAnmTbl = nullptr;
         return true;
     }
     mpAnmTbl = param_1;
-    mAnmLoopCount = mpAnmTbl->field_0x02;
+    mAnmLoopCount = mpAnmTbl->mLoopCount;
     mAnmSpeed = 1.0f;
     int temp = 2;
     if (mAnmLoopCount != 0) {
@@ -606,8 +609,8 @@ bool daNpcPeople_c::setAnmTbl(sPeopleAnmDat* param_1, int param_2) {
         mAnmLoopCount = -mAnmLoopCount;
         mAnmSpeed = -1.0f;
     }
-    if (mAnmIdx != mpAnmTbl->field_0x00 || temp == 0 || mAnmPlayMode == 0) {
-        setAnm(mpAnmTbl->field_0x00, temp, (f32)mpAnmTbl->field_0x01, mAnmSpeed);
+    if (mAnmIdx != mpAnmTbl->mAnmIdx || temp == 0 || mAnmPlayMode == 0) {
+        setAnm(mpAnmTbl->mAnmIdx, temp, (f32)mpAnmTbl->mMorf, mAnmSpeed);
     }
     return false;
 }
@@ -687,15 +690,15 @@ s16 daNpcPeople_c::XyEventCB(int i_itemBtn) {
     case NPC_UB2:
         if (itemNo != dItemNo_JOY_PENDANT_e) {
             ret = mEventIdx[1];
-            m79C = 0;
+            mModeInTalk = 0;
             break;
         }
-        m79C = 1;
+        mModeInTalk = 1;
         break;
     case NPC_SA5:
         if (itemNo == dItemNo_SKULL_NECKLACE_e) {
             ret = mEventIdx[0];
-            m79C = 0;
+            mModeInTalk = 0;
             break;
         }
     default:
@@ -849,14 +852,14 @@ static daNpcPeople_c* daNpcPeople_c_ct(daNpcPeople_c* i_this) {
     i_this->mMorf = -1.0f;
     i_this->mLookMode = 0;
     i_this->mLookHeadOnly = true;
-    i_this->m79C = 1;
+    i_this->mModeInTalk = 1;
     i_this->mpUbMsg = nullptr;
     i_this->mTargetAngleY = i_this->home.angle.y;
     i_this->mAnmIdx = 0;
     i_this->mAnmPlayMode = 0;
     i_this->mLastRandNo = 0;
     i_this->mEtcFlag = 0;
-    i_this->m7A1 = 0;
+    i_this->mCanMove = 0;
     i_this->mbIsNight = dKy_daynight_check() & 1;
     i_this->mpNpcDat = l_npc_dat()[i_this->mNpcNo][i_this->mbIsNight];
     i_this->mpTalkPartner = nullptr;

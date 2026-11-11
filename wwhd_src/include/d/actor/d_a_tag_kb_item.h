@@ -12,8 +12,8 @@ public:
     cPhs_State _create();
 
     /* 0x3AC */ request_of_phase_process_class mPhase; /* unused */
-    /* 0x3B4 */ be<u8> field_0x298;
-    /* 0x3B5 */ be<u8> field_0x299;
+    /* 0x3B4 */ be<u8> mDigDone;  /* was field_0x298: the same field as daTagKbItem_c::mDigDone in d/d_com_static.h: dig_main 02526330 returns at once while it is set and sets it once the item is dropped or the enemy kind handed to the pig; CreateInit 024AB984 clears it (tww the same) */
+    /* 0x3B5 */ be<u8> mDigRequest;  /* was field_0x299: the same field as daTagKbItem_c::mDigRequest in d/d_com_static.h: kb_dig 02526560 sets it and calls dig_main 02526330, which does nothing unless it is set and clears it at the end; CreateInit 024AB984 clears it (tww the same) */
     /* 0x3B6 */ u8 _3B6[2];
     /* 0x3B8 */ be<s32> mItemBitNo;
     /* 0x3BC */ be<u8> mItemNo;

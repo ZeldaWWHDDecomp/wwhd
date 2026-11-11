@@ -358,7 +358,7 @@ static daNpc_Bmsw_HIO_c* daNpc_Bmsw_HIO_c_ct(daNpc_Bmsw_HIO_c* i_this) {
     }
     i_this->__vtbl = 0x1001803C;
     Bmsw_npcHioConstruct(gabi::ea(&i_this->mNpc)); /* dNpc_HIO_c::dNpc_HIO_c */
-    i_this->mNpc.m04 = -20.0f;
+    i_this->mNpc.mPlayerEyeOffsetY = -20.0f;
     i_this->mNpc.mMaxHeadX = 0x1FFE;
     i_this->mNpc.mMaxHeadY = 3000;
     i_this->mNpc.mMaxBackboneX = 0;
@@ -371,20 +371,20 @@ static daNpc_Bmsw_HIO_c* daNpc_Bmsw_HIO_c_ct(daNpc_Bmsw_HIO_c* i_this) {
     i_this->mNpc.mMaxHeadTurnVel = 0x800;
     i_this->mNpc.mAttnYOffset = 50.0f;
     i_this->mNpc.mMaxAttnAngleY = 0x2000;
-    i_this->mNpc.m22 = 0;
+    i_this->mNpc.mDebugDraw = 0;
     i_this->mNpc.mMaxAttnDistXZ = 300.0f;
-    i_this->field_0x30 = 0x1E;
-    i_this->field_0x32 = 0xF;
-    i_this->field_0x34 = 0x3C;
+    i_this->mTimerLimit = 0x1E;
+    i_this->mTimerStartDelay = 0xF;
+    i_this->mTimerEndDelay = 0x3C;
     i_this->r_1 = 192;
     i_this->g_1 = 174;
     i_this->b_1 = 192;
     i_this->r_2 = 192;
     i_this->g_2 = 174;
     i_this->b_2 = 192;
-    i_this->field_0x44 = 40.0f;
-    i_this->field_0x48 = 80.0f;
-    i_this->field_0x4C = 50.0f;
+    i_this->mMailThrowSpeed = 40.0f;
+    i_this->mTimerPosY = 80.0f;
+    i_this->mRupeePosY = 50.0f;
     i_this->field_0x50 = 0.8f;
     i_this->field_0x54 = 0.75f;
     i_this->mNo = -1;
@@ -426,9 +426,9 @@ static BOOL nodeCallBack(J3DNode* node, int calcTiming) {
                 mDoMtx_XrotM(mDoMtx_stack_c::get(), i_this->m_jnt.mAngles[1][1]);
                 mDoMtx_ZrotM(mDoMtx_stack_c::get(), (s16)-i_this->m_jnt.mAngles[1][0]);
             } else if (jointNo == (u32)(s32)i_this->m_body_ArmL) {
-                PSMTXCopy(mDoMtx_stack_c::get(), &i_this->field_0x794);
+                PSMTXCopy(mDoMtx_stack_c::get(), &i_this->mArmLMtx);
             } else if (jointNo == (u32)(s32)i_this->m_body_ArmR) {
-                PSMTXCopy(mDoMtx_stack_c::get(), &i_this->field_0x7C4);
+                PSMTXCopy(mDoMtx_stack_c::get(), &i_this->mArmRMtx);
             }
             PSMTXCopy(mDoMtx_stack_c::get(), j3dSys_mCurrentMtx());
             mtx_copy(getAnmMtx(model, jointNo),
@@ -456,11 +456,11 @@ static BOOL nodeCallBackArm(J3DNode* node, int calcTiming) {
                 gabi::object_at<BmswJointData>(gabi::ea(J3DNode_toJoint(node))).mNumber.get();
             PSMTXCopy(getAnmMtx(model, jointNo), mDoMtx_stack_c::get());
             if (jointNo == (u32)(s32)i_this->m_ArmL) {
-                PSMTXCopy(&i_this->field_0x794, j3dSys_mCurrentMtx());
-                mtx_copy(getAnmMtx(model, jointNo), &i_this->field_0x794);
+                PSMTXCopy(&i_this->mArmLMtx, j3dSys_mCurrentMtx());
+                mtx_copy(getAnmMtx(model, jointNo), &i_this->mArmLMtx);
             } else if (jointNo == (u32)(s32)i_this->m_ArmR) {
-                PSMTXCopy(&i_this->field_0x7C4, j3dSys_mCurrentMtx());
-                mtx_copy(getAnmMtx(model, jointNo), &i_this->field_0x7C4);
+                PSMTXCopy(&i_this->mArmRMtx, j3dSys_mCurrentMtx());
+                mtx_copy(getAnmMtx(model, jointNo), &i_this->mArmRMtx);
             }
         }
     }
@@ -469,29 +469,29 @@ static BOOL nodeCallBackArm(J3DNode* node, int calcTiming) {
 
 /* 0220D320 */
 BOOL daNpc_Bmsw_c::initTexPatternAnm(u32 i_modify) { /* bool, passed on unnormalised */
-    J3DModelData* modelData = Bmsw_modelData(field_0x6D4);
-    m_head_tex_pattern = (J3DAnmTexPattern*)Bmsw_getObjectIDRes("Bmsw", l_btp_ix_tbl[field_0x9D4]);
+    J3DModelData* modelData = Bmsw_modelData(mpHeadModel);
+    m_head_tex_pattern = (J3DAnmTexPattern*)Bmsw_getObjectIDRes("Bmsw", l_btp_ix_tbl[mBtpIdx]);
     if (m_head_tex_pattern.get() == nullptr) /* JUT_ASSERT(392, m_head_tex_pattern != NULL) */
         JUT_ASSERT_fail("d_a_npc_bmsw.cpp", 0x188, "m_head_tex_pattern != (0)");
-    if (!mDoExt_btpAnm_init(&field_0x7F8, modelData, m_head_tex_pattern, TRUE, 2 /* EMode_LOOP */,
+    if (!mDoExt_btpAnm_init(&mBtpAnm, modelData, m_head_tex_pattern, TRUE, 2 /* EMode_LOOP */,
                             1.0f, 0, -1, i_modify, FALSE)) {
         return FALSE;
     }
-    field_0x80C = 0;
-    field_0x964 = 0;
+    mBtpFrame = 0;
+    mBlinkTimer = 0;
     return TRUE;
 }
 
 /* 0220EC00 */
 void daNpc_Bmsw_c::playTexPatternAnm() {
-    if (cLib_calcTimer(&field_0x964) == 0) {
+    if (cLib_calcTimer(&mBlinkTimer) == 0) {
         s32 max = J3DAnm_getFrameMax(m_head_tex_pattern);
-        if ((s32)field_0x80C >= max) {
+        if ((s32)mBtpFrame >= max) {
             s32 frameMax = J3DAnm_getFrameMax(m_head_tex_pattern);
-            field_0x80C = (u8)(field_0x80C - frameMax);
-            field_0x964 = (s16)gabi::ftoi(cM_rndF(100.0f) + 30.0f);
+            mBtpFrame = (u8)(mBtpFrame - frameMax);
+            mBlinkTimer = (s16)gabi::ftoi(cM_rndF(100.0f) + 30.0f);
         } else {
-            field_0x80C = (u8)(field_0x80C + 1);
+            mBtpFrame = (u8)(mBtpFrame + 1);
         }
     }
 }
@@ -500,13 +500,13 @@ void daNpc_Bmsw_c::playTexPatternAnm() {
 void daNpc_Bmsw_c::setAnm(s8 idx) {
     /* a_play_mode_tbl 0x101BD438, a_morf_frame_tbl 0x101BD454, a_play_speed_tbl 0x101BD470;
      * l_bck_ix_tbl 0x1001804C, l_arm_bck_ix_tbl 0x10018068 */
-    if ((u32)(s32)idx != (u32)(s32)field_0x9D5) {
-        field_0x9D5 = idx;
-        s32 m = field_0x9DA;
+    if ((u32)(s32)idx != (u32)(s32)mAnmIdx) {
+        mAnmIdx = idx;
+        s32 m = mMode;
         dNpc_setAnmIDRes(mpMorf, a_play_mode_tbl[m], a_morf_frame_tbl[m], a_play_speed_tbl[m],
                          l_bck_ix_tbl[(s32)idx], -1, "Bmsw");
-        m = field_0x9DA;
-        s32 n = field_0x9D5;
+        m = mMode;
+        s32 n = mAnmIdx;
         dNpc_setAnmIDRes(mpMorfHand, a_play_mode_tbl[m], a_morf_frame_tbl[m], a_play_speed_tbl[m],
                          l_arm_bck_ix_tbl[n], -1, "Bmsw");
     }
@@ -532,9 +532,9 @@ u8 daNpc_Bmsw_c::chkAttention(cXyz* pos, s16 angle) {
 
 /* 0220EE0C */
 void daNpc_Bmsw_c::eventOrder() {
-    if (field_0x9D7 == 1 || field_0x9D7 == 2) {
+    if (mOrderEvent == 1 || mOrderEvent == 2) {
         eventInfo_onCondition(this, 1); /* dEvtCnd_CANTALK_e */
-        if (field_0x9D7 == 1) {
+        if (mOrderEvent == 1) {
             fopAcM_orderSpeakEvent(this);
         }
     }
@@ -547,10 +547,10 @@ void daNpc_Bmsw_c::checkOrder() {
         return;
     if (cmd != 1) /* !checkCommandTalk() */
         return;
-    if (field_0x9D7 != 1 && field_0x9D7 != 2)
+    if (mOrderEvent != 1 && mOrderEvent != 2)
         return;
-    field_0x9D7 = 0;
-    field_0x9B9 = 1;
+    mOrderEvent = 0;
+    mTalking = 1;
 }
 
 /* 0220FE68 */
@@ -719,9 +719,9 @@ u16 daNpc_Bmsw_c::next_msgStatus(be<u32>* currMsgNo) {
 
 /* 022102CC */
 u32 daNpc_Bmsw_c::getMsg() {
-    u32 msg = field_0x9C0;
-    if (field_0x9C0 != fpcM_ERROR_PROCESS_ID_e) {
-        field_0x9C0 = fpcM_ERROR_PROCESS_ID_e;
+    u32 msg = mPendingMsgNo;
+    if (mPendingMsgNo != fpcM_ERROR_PROCESS_ID_e) {
+        mPendingMsgNo = fpcM_ERROR_PROCESS_ID_e;
     } else if (dComIfGs_isEventBit(0x2701)) {
         if (!dComIfGs_isTmpBit(0x0320)) {
             dComIfGs_onTmpBit(0x0320);
@@ -793,18 +793,18 @@ BOOL daNpc_Bmsw_c::CreateInit() {
     setCollision(60.0f, 150.0f);
     field_0x9C4 = 0;
     mEventCut.setActorInfo2("Bmsw", this);
-    field_0x962 = 0;
-    field_0x963 = 0;
-    field_0x9C0 = fpcM_ERROR_PROCESS_ID_e;
-    STControl_setWaitParm(&field_0x988, 5, 2, 3, 2, 1.0f, 0.9f, 0, 0x2000);
+    mbTimerCreated = 0;
+    mbDrawMails = 0;
+    mPendingMsgNo = fpcM_ERROR_PROCESS_ID_e;
+    STControl_setWaitParm(&mStickControl, 5, 2, 3, 2, 1.0f, 0.9f, 0, 0x2000);
     set_mtx();
     mpMorf->calc();
     mpMorfHand->calc();
     set_mtx(); // HD: Refresh attachments again after the animation update.
 
-    dKy_tevstr_init(&field_0x6E0, home.roomNo, 0xFF);
+    dKy_tevstr_init(&mLetterTevStr, home.roomNo, 0xFF);
     if (dComIfGs_isEventBit(0x2701)) {
-        field_0x9E0 =
+        mBtswId =
             fopAcM_createChild("Btsw", fopAcM_GetID(this), fopAcM_GetParam(this), &current.pos,
                                fopAcM_GetRoomNo(this), &current.angle, nullptr, 0);
         /* *fopAcM_GetOldPosition_p(this) = cXyz(120.0f, 700.0f, 810.0f); current.pos = old.pos */
@@ -822,7 +822,7 @@ BOOL daNpc_Bmsw_c::CreateInit() {
         gabi::object_at<BmswPositionWords>(gabi::ea(&current.pos)).y = y;
         gabi::object_at<BmswPositionWords>(gabi::ea(&old.pos)).z = z;
     } else {
-        field_0x9E0 = fpcM_ERROR_PROCESS_ID_e;
+        mBtswId = fpcM_ERROR_PROCESS_ID_e;
     }
     return TRUE;
 }
@@ -833,9 +833,9 @@ void daNpc_Bmsw_c::set_mtx() {
     mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
     mDoMtx_YrotM(mDoMtx_stack_c::get(), current.angle.y);
     J3DModel_setBaseTRMtx(model, mDoMtx_stack_c::get());
-    J3DModel_setBaseTRMtx(field_0x6D4, getAnmMtx(model, m_jnt.mHeadJntNum));
-    J3DModel_setBaseTRMtx(field_0x6D8, getAnmMtx(model, m_jnt.mBackboneJntNum));
-    s8 anm = field_0x9D5;
+    J3DModel_setBaseTRMtx(mpHeadModel, getAnmMtx(model, m_jnt.mHeadJntNum));
+    J3DModel_setBaseTRMtx(mpBagModel, getAnmMtx(model, m_jnt.mBackboneJntNum));
+    s8 anm = mAnmIdx;
     if (anm == 5 || anm == 6) {
         /* (anm == 5 && frame < 18.0f + REG10_F(5)) || (anm == 6 && frame < 18.0f): HD has no REG10_F(5) */
         if (mpMorfHand->mFrameCtrl.mFrame < 18.0f) {
@@ -849,7 +849,7 @@ void daNpc_Bmsw_c::set_mtx() {
             /* cM_deg2s(113.05480612f), cM_deg2s(57.128904507f), cM_deg2s(-179.296869528f) */
             mDoMtx_XYZrotM(mDoMtx_stack_c::get(), 0x5065, 0x28A0, -0x7F80);
         }
-        J3DModel_setBaseTRMtx(field_0x6DC, mDoMtx_stack_c::get());
+        J3DModel_setBaseTRMtx(mpLetterModel, mDoMtx_stack_c::get());
     }
 }
 
@@ -870,19 +870,19 @@ void daNpc_Bmsw_c::lookBack() {
     f32 vx = 0.0f, vy = 0.0f, vz = 0.0f; /* cXyz &vec(0.0f, 0.0f, 0.0f) */
     cXyz* dstPos = nullptr;
     s16 desired_y_rot = current.angle.y;
-    switch (field_0x9DA) {
+    switch (mMode) {
     case 1:
     case 2:
         if (mHasAttention) {
             cXyz eye;
-            Bmsw_getPlayerEyePos(&eye, l_HIO.mNpc.m04);
+            Bmsw_getPlayerEyePos(&eye, l_HIO.mNpc.mPlayerEyeOffsetY);
             vec2.copy(eye);
             dstPos = &vec2;
             vx = current.pos.x;
             vy = eyePos.y;
             vz = current.pos.z;
-        } else if (dComIfGs_isEventBit(0x2701) && field_0x9E0 != fpcM_ERROR_PROCESS_ID_e) {
-            fopAc_ac_c* ac = fopAcM_SearchByID(field_0x9E0);
+        } else if (dComIfGs_isEventBit(0x2701) && mBtswId != fpcM_ERROR_PROCESS_ID_e) {
+            fopAc_ac_c* ac = fopAcM_SearchByID(mBtswId);
             if (ac != nullptr) {
                 vec2.copy(ac->eyePos);
                 dstPos = &vec2;
@@ -894,12 +894,12 @@ void daNpc_Bmsw_c::lookBack() {
     }
     cXyz vec;
     if (m_jnt.mbTrn) { /* trnChk() */
-        cLib_addCalcAngleS2(&field_0x97A, l_HIO.mNpc.mMaxHeadTurnVel, 4, 0x800);
+        cLib_addCalcAngleS2(&mLookAtMaxVel, l_HIO.mNpc.mMaxHeadTurnVel, 4, 0x800);
         vec.set(vx, vy, vz);
         dNpc_JntCtrl_lookAtTarget(&m_jnt, &current.angle.y, dstPos, &vec, desired_y_rot,
-                                  field_0x97A, true);
+                                  mLookAtMaxVel, true);
     } else {
-        field_0x97A = 0;
+        mLookAtMaxVel = 0;
         vec.set(vx, vy, vz);
         dNpc_JntCtrl_lookAtTarget(&m_jnt, &current.angle.y, dstPos, &vec, desired_y_rot, 0, true);
     }
@@ -907,28 +907,28 @@ void daNpc_Bmsw_c::lookBack() {
 
 /* 0221068C */
 void daNpc_Bmsw_c::wait01() {
-    if (field_0x9B9) {
+    if (mTalking) {
         m_jnt.mbHeadLock = 0;
         m_jnt.mbBackBoneLock = 0;
-        field_0x9DA = 2;
+        mMode = 2;
     } else {
         if (mHasAttention) {
-            field_0x9D7 = 2;
+            mOrderEvent = 2;
         }
         if (!dComIfGs_isEventBit(0x2701)) {
             if (mpMorf->checkFrame(mpMorf->getEndFrame() - 1.0f)) {
-                field_0x9D6 = (s8)(field_0x9D6 - 1);
-                if (field_0x9D6 <= 0) {
-                    if (field_0x9D5 == 5) {
-                        field_0x9D6 = 1;
+                mIdleLoopCount = (s8)(mIdleLoopCount - 1);
+                if (mIdleLoopCount <= 0) {
+                    if (mAnmIdx == 5) {
+                        mIdleLoopCount = 1;
                         setAnm(6);
                     } else {
-                        field_0x9D6 = (s8)gabi::ftoi(cM_rndF(4.0f) + 2.0f);
+                        mIdleLoopCount = (s8)gabi::ftoi(cM_rndF(4.0f) + 2.0f);
                         setAnm(5);
                     }
                 }
             }
-            if (field_0x9D5 == 5 || field_0x9D5 == 6) {
+            if (mAnmIdx == 5 || mAnmIdx == 6) {
                 m_jnt.mbHeadLock = 1;
                 m_jnt.mbBackBoneLock = 1;
             } else {
@@ -953,25 +953,25 @@ void daNpc_Bmsw_c::talk01() {
             mSwCam.mCenter.copy(*SwCam_camera_center_data(0, 1));
             mSwCam.mEye.copy(*SwCam_camera_eye());
             mSwCam.mFovY = 58.0f;
-            mSwCam.field_0x1C = 0;
-            mSwCam.field_0x1D = 0;
+            mSwCam.mAimX = 0;
+            mSwCam.mAimY = 0;
         } else if (no == 0x1A39 || no == 0x1A4E || no == 0x1A5F || no == 0x1A59 || no == 0x1A6F) {
-            /* dComIfGp_setItemRupeeCount(field_0x960): play+0x5B48 += n */
-            s32 n = field_0x960;
+            /* dComIfGp_setItemRupeeCount(mGameGetRupee): play+0x5B48 += n */
+            s32 n = mGameGetRupee;
             u32 a = dComIfGp_ea() + 0x5B48;
             gabi::object_at<be<s32>>(a) = gabi::object_at<be<s32>>(a).get() + n;
         }
     }
     if (talk_res == 0x12) { /* fopMsgStts_BOX_CLOSED_e */
-        field_0x9DA = 1;
+        mMode = 1;
         dComIfGp_event_reset();
         if (!dComIfGs_isEventBit(0x2701)) {
             setAnm(0);
         } else {
             setAnm(1);
         }
-        field_0x9D6 = 1;
-        field_0x9B9 = 0;
+        mIdleLoopCount = 1;
+        mTalking = 0;
         u32 no = mCurrMsgNo;
         if (no == 0x1A36 || no == 0x1A4B || no == 0x1A56 || no == 0x1A68) {
             Bmsw_setAction(this, FN_shiwake_game_action);
@@ -982,8 +982,8 @@ void daNpc_Bmsw_c::talk01() {
 /* 02210AC0 */
 BOOL daNpc_Bmsw_c::wait_action(void* arg) {
     if (mActionStatus == ACTION_STARTING) {
-        field_0x9DA = 1;
-        field_0x9D6 = 1;
+        mMode = 1;
+        mIdleLoopCount = 1;
         if (!dComIfGs_isEventBit(0x2701)) {
             // HD: In "Demo10", Koboli starts with the sorting animation.
             if (startStageIs(gabi::guest_addr("Demo10"))) {
@@ -1000,8 +1000,8 @@ BOOL daNpc_Bmsw_c::wait_action(void* arg) {
         cXyz pos;
         pos.set(current.pos.x, current.pos.y, current.pos.z);
         mHasAttention = chkAttention(&pos, angle);
-        field_0x9D7 = 0;
-        switch (field_0x9DA) {
+        mOrderEvent = 0;
+        switch (mMode) {
         case 1:
             wait01();
             break;
@@ -1017,14 +1017,14 @@ BOOL daNpc_Bmsw_c::wait_action(void* arg) {
 
 /* 02210DCC */
 BOOL daNpc_Bmsw_c::checkNextMailThrowOK() {
-    u8 mailIdx = field_0x93C;
+    u8 mailIdx = mMailIdx;
     if (mailIdx < 2) {
         mailIdx++;
     } else {
         mailIdx = 0;
     }
     u8 ret = 1;
-    SwMail_c* mail = field_0x930[mailIdx];
+    SwMail_c* mail = mpMails[mailIdx];
     if (!pmf_is(&mail->mFunc, FN_SwMail_Dummy)) {
         if (!pmf_is(&mail->mFunc, FN_SwMail_End)) {
             ret = 0;
@@ -1071,7 +1071,7 @@ void daNpc_Bmsw_c::setGameGetRupee(s16 rupees) {
         }
         break;
     }
-    field_0x960 = v;
+    mGameGetRupee = v;
     gabi::object_at<dComIfG_play_c>(dComIfGp_ea() + 0x12A0).mMsgCountNumber =
         v; /* dComIfGp_setMessageCountNumber */
 }
@@ -1079,13 +1079,13 @@ void daNpc_Bmsw_c::setGameGetRupee(s16 rupees) {
 /* 02210D20 */
 void daNpc_Bmsw_c::TimerCountDown() {
     s32 rest = dComIfG_getTimerRestTimeMs();
-    if (field_0x9B4 > rest) {
-        if (field_0x9B4 <= 10000) {
+    if (mNextTimerSeMs > rest) {
+        if (mNextTimerSeMs <= 10000) {
             mDoAud_seStart_id(JA_SE_MINIGAME_TIMER_30); /* JA_SE_MINIGAME_TIMER_30 */
-            field_0x9B4 = field_0x9B4 - 1000;
+            mNextTimerSeMs = mNextTimerSeMs - 1000;
         } else {
             mDoAud_seStart_id(JA_SE_MINIGAME_TIMER_10); /* JA_SE_MINIGAME_TIMER_10 */
-            field_0x9B4 = field_0x9B4 - 10000;
+            mNextTimerSeMs = mNextTimerSeMs - 10000;
         }
     }
 }
@@ -1117,9 +1117,9 @@ BOOL daNpc_Bmsw_c::shiwake_game_action(void* arg) {
 #define CURSOR_POS(row, col) (&cursor_pos_data.positions[row][col])
 
     if (mActionStatus == ACTION_STARTING) {
-        field_0x9B0 = 0;
-        field_0x9DA = 3;
-        field_0x9B1 = 0;
+        mCursorX = 0;
+        mMode = 3;
+        mCursorY = 0;
         if (!eventInfo_checkCommandDemoAccrpt(this)) {
             BOOL two = dComIfGs_isEventBit(0x2701);
             /* getEventIdx's result register is passed on as is (typed u32) */
@@ -1129,17 +1129,17 @@ BOOL daNpc_Bmsw_c::shiwake_game_action(void* arg) {
             } else {
                 idx = Bmsw_getEventIdx(dComIfGp_getPEvtManager(), "SHIWAKEGAME2", 0xFF);
             }
-            field_0x9D8 = (s16)idx;
+            mEventIdx = (s16)idx;
             Bmsw_orderOtherEventId(this, idx, 0xFF, (u16)0xFFFF, 0,
                                    1);      /* fopAcM_orderOtherEventId */
             eventInfo_onCondition(this, 2); /* dEvtCnd_UNK2_e */
             return FALSE;
         }
-        if (!field_0x962) {
-            /* dTimer_createTimer(6, limit, 3, 4, 221.0f, field_0x48, 32.0f, field_0x4C) */
-            Bmsw_timerCreate(6, (u16)l_HIO.field_0x30, 3, 4, 221.0f, (f32)l_HIO.field_0x48, 32.0f,
-                             (f32)l_HIO.field_0x4C);
-            field_0x962 = 1;
+        if (!mbTimerCreated) {
+            /* dTimer_createTimer(6, limit, 3, 4, 221.0f, mTimerPosY, 32.0f, mRupeePosY) */
+            Bmsw_timerCreate(6, (u16)l_HIO.mTimerLimit, 3, 4, 221.0f, (f32)l_HIO.mTimerPosY, 32.0f,
+                             (f32)l_HIO.mRupeePosY);
+            mbTimerCreated = 1;
             gabi::object_at<dComIfG_play_c>(dComIfGp_ea() + 0x12A0).mMiniGameRupee =
                 0; /* dComIfGp_setMiniGameRupee(0) */
             Bmsw_beginSortingGame();
@@ -1147,8 +1147,8 @@ BOOL daNpc_Bmsw_c::shiwake_game_action(void* arg) {
         if (Bmsw_timerAddress() == 0) {
             return FALSE;
         }
-        /* dComIfG_TimerStart(6, field_0x32) (HD inline) */
-        s16 limit = l_HIO.field_0x32;
+        /* dComIfG_TimerStart(6, mTimerStartDelay) (HD inline) */
+        s16 limit = l_HIO.mTimerStartDelay;
         if (gabi::object_at<dComIfG_play_c>(dComIfGp_ea() + 0x12A0).mTimerInfo.mTimerMode.get() ==
             6) {
             u32 timer = Bmsw_timerAddress();
@@ -1160,26 +1160,26 @@ BOOL daNpc_Bmsw_c::shiwake_game_action(void* arg) {
                 }
             }
         }
-        field_0x963 = 1;
-        field_0x930[0]->init();
-        field_0x930[0]->AppearInit();
-        field_0x930[1]->init();
-        field_0x930[1]->DummyInit();
-        field_0x930[2]->init();
-        field_0x930[2]->DummyInit();
-        s32 row = field_0x9B1;
-        s32 col = field_0x9B0;
-        field_0x93C = 0;
+        mbDrawMails = 1;
+        mpMails[0]->init();
+        mpMails[0]->AppearInit();
+        mpMails[1]->init();
+        mpMails[1]->DummyInit();
+        mpMails[2]->init();
+        mpMails[2]->DummyInit();
+        s32 row = mCursorY;
+        s32 col = mCursorX;
+        mMailIdx = 0;
         mActionStatus = (s8)(mActionStatus + 1);
         Bmsw_cursorSetPos(mpShopCursor.get(),
                           CURSOR_POS(row, col + 1)); /* mpShopCursor->setPos() */
-        mpShopCursor->m54 = 1;                       /* mpShopCursor->show() */
-        field_0x9B4 = 20000;
+        mpShopCursor->mbShow = 1;                       /* mpShopCursor->show() */
+        mNextTimerSeMs = 20000;
         Bmsw_padRepeatOn(Bmsw_padAddress(), 5, 5); /* HD: cursor repeat on */
         return TRUE;
     } else if (mActionStatus == ACTION_ENDING) {
-        field_0x962 = 0;
-        field_0x963 = 0;
+        mbTimerCreated = 0;
+        mbDrawMails = 0;
         Bmsw_padRepeatOff(Bmsw_padAddress()); /* HD: cursor repeat off */
         return TRUE;
     }
@@ -1188,61 +1188,61 @@ BOOL daNpc_Bmsw_c::shiwake_game_action(void* arg) {
         TimerCountDown();
         // HD: Controller trigger/repeat bits replace STControl input.
         u32 in = Bmsw_padAddress();
-        s8 x = field_0x9B0;
+        s8 x = mCursorX;
         u32 trig = gabi::object_at<BmswPad>(in).mTrigger.get() |
                    gabi::object_at<BmswPad>(in).mRepeatTrigger.get();
         if (gabi::object_at<BmswPad>(in).mDirectionalHold.get() & 0x00F00000)
             trig &= 0x00F00000;
         if (x > -1 && (trig & 0x00440000)) {             /* left */
             mDoAud_seStart_id(JA_SE_LETTER_GAME_CURSOR); /* JA_SE_LETTER_GAME_CURSOR */
-            field_0x9B0 = (s8)(field_0x9B0 - 1);
+            mCursorX = (s8)(mCursorX - 1);
         } else if (x < 1 && (trig & 0x00880000)) { /* right */
             mDoAud_seStart_id(JA_SE_LETTER_GAME_CURSOR);
-            field_0x9B0 = (s8)(field_0x9B0 + 1);
+            mCursorX = (s8)(mCursorX + 1);
         }
-        if (field_0x9B1 < 1 && (trig & 0x00110000)) { /* up */
+        if (mCursorY < 1 && (trig & 0x00110000)) { /* up */
             mDoAud_seStart_id(JA_SE_LETTER_GAME_CURSOR);
-            field_0x9B1 = (s8)(field_0x9B1 + 1);
-        } else if (field_0x9B1 > 0 && (trig & 0x00220000)) { /* down */
+            mCursorY = (s8)(mCursorY + 1);
+        } else if (mCursorY > 0 && (trig & 0x00220000)) { /* down */
             mDoAud_seStart_id(JA_SE_LETTER_GAME_CURSOR);
-            field_0x9B1 = (s8)(field_0x9B1 - 1);
+            mCursorY = (s8)(mCursorY - 1);
         }
-        if (pmf_is(&field_0x930[field_0x93C]->mFunc, FN_SwMail_Wait) &&
+        if (pmf_is(&mpMails[mMailIdx]->mFunc, FN_SwMail_Wait) &&
             gabi::object_at<BmswTimer>(Bmsw_timerAddress()).mStatus.get() !=
                 1 /* Bmsw_timerAddress()->getStatus() */
             && Bmsw_padCheckTriggerA(0) /* CPad_CHECK_TRIG_A(0) */ && checkNextMailThrowOK()) {
-            s32 col = field_0x9B0;
-            s32 row = field_0x9B1;
+            s32 col = mCursorX;
+            s32 row = mCursorY;
             u8 idx = (u8)(col - row * 3 + 4); /* (col + 1) + (1 - row) * 3 */
-            SwMail_c* mail = field_0x930[field_0x93C];
+            SwMail_c* mail = mpMails[mMailIdx];
             cXyz* src = AIM_POS(row, col + 1);
             cXyz aim_pos;
             aim_pos.set(src->x, src->y, src->z);
             mail->ThrowInit(&aim_pos, idx);
-            if (field_0x93C < 2) {
-                field_0x93C = (u8)(field_0x93C + 1);
+            if (mMailIdx < 2) {
+                mMailIdx = (u8)(mMailIdx + 1);
             } else {
-                field_0x93C = 0;
+                mMailIdx = 0;
             }
             mDoAud_seStart_id(JA_SE_LETTER_GAME_OK); /* JA_SE_LETTER_GAME_OK */
-            field_0x930[field_0x93C]->AppearInit();
+            mpMails[mMailIdx]->AppearInit();
         }
-        s8 row = field_0x9B1;
-        s8 col = field_0x9B0;
-        mSwCam.field_0x1D = row; /* mSwCam.setAimIdx(field_0x9B0, field_0x9B1) */
-        mSwCam.field_0x1C = col;
+        s8 row = mCursorY;
+        s8 col = mCursorX;
+        mSwCam.mAimY = row; /* mSwCam.setAimIdx(mCursorX, mCursorY) */
+        mSwCam.mAimX = col;
         Bmsw_cursorSetPos(mpShopCursor.get(), CURSOR_POS(row, col + 1));
         /* mpShopCursor->setScale(0.65f, 0.9f, 0.5f, 27.0f, 20.0f) */
-        mpShopCursor->m38 = 27.0f;
-        mpShopCursor->m48 = 0.65f;
-        mpShopCursor->m3C = 20.0f;
-        mpShopCursor->m50 = 0.5f;
-        mpShopCursor->m4C = 0.9f;
+        mpShopCursor->mPieceDistFar = 27.0f;
+        mpShopCursor->mPieceScale = 0.65f;
+        mpShopCursor->mPieceDistNear = 20.0f;
+        mpShopCursor->mPieceScaleYNear = 0.5f;
+        mpShopCursor->mPieceScaleYFar = 0.9f;
         Bmsw_cursorAnimationPlay(mpShopCursor.get()); /* anm_play() */
     } else if (mActionStatus == ACTION_ONGOING) {
         mDoAud_seStart_id(JA_SE_LETTER_GAME_TIMER_0);              /* JA_SE_LETTER_GAME_TIMER_0 */
-        Bmsw_timerEnd(Bmsw_timerAddress(), (s32)l_HIO.field_0x34); /* dTimer_c::end */
-        mpShopCursor->m54 = 0;                                     /* hide() */
+        Bmsw_timerEnd(Bmsw_timerAddress(), (s32)l_HIO.mTimerEndDelay); /* dTimer_c::end */
+        mpShopCursor->mbShow = 0;                                     /* hide() */
         mActionStatus = (s8)(mActionStatus + 1);
     } else if (mActionStatus == ACTION_UNK_2) {
         if (Bmsw_timerDeleteCheck(Bmsw_timerAddress()) /* deleteCheck() */) {
@@ -1252,13 +1252,13 @@ BOOL daNpc_Bmsw_c::shiwake_game_action(void* arg) {
     } else if (Bmsw_timerAddress() == 0) {
         s32 staff_id = dComIfGp_evmng_getMyStaffId("Bmsw", nullptr, 0);
         dComIfGp_evmng_cutEnd(staff_id);
-        if (dComIfGp_evmng_endCheck(field_0x9D8)) {
+        if (dComIfGp_evmng_endCheck(mEventIdx)) {
             dComIfGp_event_reset();
             s16 rupees = gabi::object_at<dComIfG_play_c>(dComIfGp_ea() + 0x12A0)
                              .mMiniGameRupee.get(); /* dComIfGp_getMiniGameRupee() */
-            field_0x9C0 = daNpc_Bmsw_getGameEndMsg(rupees);
+            mPendingMsgNo = daNpc_Bmsw_getGameEndMsg(rupees);
             setGameGetRupee(rupees);
-            field_0x9D7 = 1;
+            mOrderEvent = 1;
             Bmsw_setAction(this, FN_wait_action);
             mSwCam.mActive = 0; /* ActiveOff() */
             if (gabi::object_at<dComIfG_play_c>(dComIfGp_ea() + 0x12A0).mMiniGameType.get() ==
@@ -1267,9 +1267,9 @@ BOOL daNpc_Bmsw_c::shiwake_game_action(void* arg) {
             }
         }
     }
-    field_0x930[0]->move();
-    field_0x930[1]->move();
-    field_0x930[2]->move();
+    mpMails[0]->move();
+    mpMails[1]->move();
+    mpMails[2]->move();
 #undef AIM_POS
 #undef CURSOR_POS
     return TRUE;
@@ -1278,43 +1278,43 @@ BOOL daNpc_Bmsw_c::shiwake_game_action(void* arg) {
 /* 0220F06C */
 BOOL daNpc_Bmsw_c::_draw() {
     J3DModel* model = mpMorf->getModel();
-    J3DModelData* headModelData = Bmsw_modelData(field_0x6D4);
+    J3DModelData* headModelData = Bmsw_modelData(mpHeadModel);
     J3DModel* handModel = mpMorfHand->getModel();
     settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &current.pos, &tevStr);
     setLightTevColorType(dKy_getEnvlight(), model, &tevStr);
-    setLightTevColorType(dKy_getEnvlight(), field_0x6D4, &tevStr);
-    setLightTevColorType(dKy_getEnvlight(), field_0x6D8, &tevStr);
+    setLightTevColorType(dKy_getEnvlight(), mpHeadModel, &tevStr);
+    setLightTevColorType(dKy_getEnvlight(), mpBagModel, &tevStr);
     setLightTevColorType(dKy_getEnvlight(), handModel, &tevStr);
-    mDoExt_btpAnm_entry(&field_0x7F8, headModelData, field_0x80C);
+    mDoExt_btpAnm_entry(&mBtpAnm, headModelData, mBtpFrame);
     mpMorf->entryDL();
     mpMorfHand->entryDL();
-    mDoExt_modelUpdateDL(field_0x6D4);
-    mDoExt_modelUpdateDL(field_0x6D8);
-    if (field_0x9D5 == 5 || field_0x9D5 == 6) {
+    mDoExt_modelUpdateDL(mpHeadModel);
+    mDoExt_modelUpdateDL(mpBagModel);
+    if (mAnmIdx == 5 || mAnmIdx == 6) {
         settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &current.pos,
-                         &field_0x6E0); // HD: The debug lighting override is absent.
+                         &mLetterTevStr); // HD: The debug lighting override is absent.
 
-        u32 t = gabi::ea(&field_0x6E0);
+        u32 t = gabi::ea(&mLetterTevStr);
         gabi::object_at<BmswTevWork>(t).mColorK0.r = (u8)l_HIO.r_1; /* mColorK0 (HD +0x98) */
         gabi::object_at<BmswTevWork>(t).mColorK0.g = (u8)l_HIO.g_1;
         gabi::object_at<BmswTevWork>(t).mColorK0.b = (u8)l_HIO.b_1;
         gabi::object_at<BmswTevWork>(t).mColorC0.r = l_HIO.r_2; /* mColorC0 (HD +0x90) */
         gabi::object_at<BmswTevWork>(t).mColorC0.g = l_HIO.g_2;
         gabi::object_at<BmswTevWork>(t).mColorC0.b = l_HIO.b_2;
-        setLightTevColorType(dKy_getEnvlight(), field_0x6DC, &field_0x6E0);
-        mDoExt_modelUpdateDL(field_0x6DC);
+        setLightTevColorType(dKy_getEnvlight(), mpLetterModel, &mLetterTevStr);
+        mDoExt_modelUpdateDL(mpLetterModel);
     }
     mDoExt_btpAnm_remove(headModelData);
-    if (field_0x963 != 0) {
+    if (mbDrawMails != 0) {
         for (s32 i = 0; i < 3; i++) {
-            field_0x930[i]->draw(&tevStr);
+            mpMails[i]->draw(&tevStr);
         }
     }
     Bmsw_cursorDraw(mpShopCursor.get()); /* mpShopCursor->draw() */
     Bmsw_registFig(0x96 /* DSNAP_TYPE_NPC_BMSW */, this, &current.pos, current.angle.y, 1.0f, 1.0f,
                    1.0f);
     // HD: The debug display only initializes its two guarded color objects.
-    if (l_HIO.mNpc.m22 != 0) {
+    if (l_HIO.mNpc.mDebugDraw != 0) {
         if (l_debugColorOneGuard.get() == 0) {
             l_debugColorOneGuard = 1;
             memcpy_g(&gabi::object_at<u8>(0x101FEBF4), &gabi::object_at<u8>(0x10017FE8), 4);
@@ -1332,7 +1332,7 @@ BOOL daNpc_Bmsw_c::_execute() {
     dNpc_HIO_c& n = l_HIO.mNpc;
     m_jnt.setParam(n.mMaxBackboneX, n.mMaxBackboneY, n.mMinBackboneX, n.mMinBackboneY, n.mMaxHeadX,
                    n.mMaxHeadY, n.mMinHeadX, n.mMinHeadY, n.mMaxTurnStep);
-    STControl_setWaitParm(&field_0x988, 5, 2, 3, 2, l_HIO.field_0x50, l_HIO.field_0x54, 0, 0x2000);
+    STControl_setWaitParm(&mStickControl, 5, 2, 3, 2, l_HIO.field_0x50, l_HIO.field_0x54, 0, 0x2000);
     playTexPatternAnm();
     mpMorf->play(&eyePos, 0, 0);
     mpMorf->calc();
@@ -1433,8 +1433,8 @@ BOOL daNpc_Bmsw_c::CreateHeap() {
 
     J3DModelData* headModelData =
         (J3DModelData*)Bmsw_getObjectIDRes("Bmsw", dRes_ID_BMSW_BDL_BMHEAD11_e);
-    field_0x6D4 = mDoExt_J3DModel__create(headModelData, 0x80000, 0x11020022);
-    if (field_0x6D4.get() == nullptr)
+    mpHeadModel = mDoExt_J3DModel__create(headModelData, 0x80000, 0x11020022);
+    if (mpHeadModel.get() == nullptr)
         return FALSE;
 
     J3DModelData* armModelData =
@@ -1456,16 +1456,16 @@ BOOL daNpc_Bmsw_c::CreateHeap() {
 
     J3DModelData* bagModelData =
         (J3DModelData*)Bmsw_getObjectIDRes("Bmsw", dRes_ID_BMSW_BDL_BM_BAG_e);
-    field_0x6D8 = mDoExt_J3DModel__create(bagModelData, 0, 0x11020203);
-    if (field_0x6D8.get() == nullptr)
+    mpBagModel = mDoExt_J3DModel__create(bagModelData, 0, 0x11020203);
+    if (mpBagModel.get() == nullptr)
         return FALSE;
     J3DModelData* letterModelData =
         (J3DModelData*)Bmsw_getObjectIDRes("Bmsw", dRes_ID_BMSW_BDL_BM_LETTER_e);
-    field_0x6DC = mDoExt_J3DModel__create(letterModelData, 0, 0x11020203);
-    if (field_0x6DC.get() == nullptr)
+    mpLetterModel = mDoExt_J3DModel__create(letterModelData, 0, 0x11020203);
+    if (mpLetterModel.get() == nullptr)
         return FALSE;
 
-    field_0x9D4 = 0;
+    mBtpIdx = 0;
     if (!initTexPatternAnm(false))
         return FALSE;
 
@@ -1485,17 +1485,17 @@ BOOL daNpc_Bmsw_c::CreateHeap() {
     mpMorf->getModel()->mUserArea = gabi::ea(this); /* setUserArea */
     mpMorfHand->getModel()->mUserArea = gabi::ea(this);
 
-    field_0x930[0] = &mSwMail0;
-    field_0x930[1] = &mSwMail1;
-    field_0x930[2] = &mSwMail2;
-    field_0x93C = 0;
+    mpMails[0] = &mSwMail0;
+    mpMails[1] = &mSwMail1;
+    mpMails[2] = &mSwMail2;
+    mMailIdx = 0;
     cXyz* cameraCenter = &mSwCam.mCenter;
     cXyz* eyeP = &mSwCam.mEye;
-    if (!field_0x930[0]->MailCreateInit(cameraCenter, eyeP))
+    if (!mpMails[0]->MailCreateInit(cameraCenter, eyeP))
         return FALSE;
-    if (!field_0x930[1]->MailCreateInit(cameraCenter, eyeP))
+    if (!mpMails[1]->MailCreateInit(cameraCenter, eyeP))
         return FALSE;
-    if (!field_0x930[2]->MailCreateInit(cameraCenter, eyeP))
+    if (!mpMails[2]->MailCreateInit(cameraCenter, eyeP))
         return FALSE;
 
     void* tevRegKey = Bmsw_getObjectIDRes("Bmsw", dRes_ID_BMSW_BRK_SHOP_CURSOR01_e);
@@ -1503,7 +1503,7 @@ BOOL daNpc_Bmsw_c::CreateHeap() {
     mpShopCursor = Bmsw_cursorCreate(cursorModelData, tevRegKey, 0.65f); /* ShopCursor_create */
     if (mpShopCursor.get() == nullptr)
         return FALSE;
-    mpShopCursor->m54 = 0; /* mpShopCursor->m54 (HD +0xB4) */
+    mpShopCursor->mbShow = 0; /* mpShopCursor->mbShow (HD +0xB4) */
 
     mAcchCir.SetWall(30.0f, 0.0f);
     mObjAcch.Set(&current.pos, &old.pos, this, 1, &mAcchCir, &speed, nullptr, nullptr);
@@ -1518,13 +1518,13 @@ BOOL SwMail_c::MailCreateInit(cXyz* param_1, cXyz* param_2) {
         return FALSE;
     }
     void* texPattern = Bmsw_getObjectIDRes("Bmsw", dRes_ID_BMSW_BTP_QMAIL_e);
-    if (!mDoExt_btpAnm_init(&field_0x10, modelData, texPattern, TRUE, 2 /* EMode_LOOP */, 0.0f, 0,
+    if (!mDoExt_btpAnm_init(&mMailBtpAnm, modelData, texPattern, TRUE, 2 /* EMode_LOOP */, 0.0f, 0,
                             -1, 0, FALSE)) {
         return FALSE;
     }
-    field_0x5C = param_2;
-    field_0x54 = 0;
-    field_0x58 = param_1;
+    mpCamEye = param_2;
+    mBoxNo = 0;
+    mpCamCenter = param_1;
     init();
     DummyInit();
     return TRUE;
@@ -1597,46 +1597,46 @@ u8 Bmsw_getNextNo(u8 previous_no) {
 
 /* 0220D50C */
 void SwMail_c::init() {
-    field_0x54 = 0;
-    field_0x56 = 0;
+    mBoxNo = 0;
+    mThrowPhase = 0;
     field_0x30.copy(*cXyz_Zero);
-    field_0x3C.copy(*cXyz_Zero);
-    field_0x55 = 0;
-    cXyz* p = field_0x5C;
-    field_0x24.set(p->x, p->y - 200.0f, p->z);
+    mPosOffset.copy(*cXyz_Zero);
+    mThrownBoxNo = 0;
+    cXyz* p = mpCamEye;
+    mPos.set(p->x, p->y - 200.0f, p->z);
     set_mtx();
 }
 
 /* 0220D430 */
 void SwMail_c::set_mtx() {
-    mDoMtx_stack_c::transS(field_0x24.x + field_0x3C.x, field_0x24.y + field_0x3C.y,
-                           field_0x24.z + field_0x3C.z);
-    mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), field_0x48.x, field_0x48.y, field_0x48.z);
+    mDoMtx_stack_c::transS(mPos.x + mPosOffset.x, mPos.y + mPosOffset.y,
+                           mPos.z + mPosOffset.z);
+    mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), mAngle.x, mAngle.y, mAngle.z);
     J3DModel_setBaseTRMtx(mpModel, mDoMtx_stack_c::get());
 }
 
 /* 0220F2A0 */
 void SwMail_c::set_mtx_throw() {
-    mDoMtx_stack_c::transS(field_0x24.x + field_0x3C.x, field_0x24.y + field_0x3C.y,
-                           field_0x24.z + field_0x3C.z);
-    mDoMtx_XrotM(mDoMtx_stack_c::get(), field_0x48.x);
-    mDoMtx_YrotM(mDoMtx_stack_c::get(), field_0x48.y);
+    mDoMtx_stack_c::transS(mPos.x + mPosOffset.x, mPos.y + mPosOffset.y,
+                           mPos.z + mPosOffset.z);
+    mDoMtx_XrotM(mDoMtx_stack_c::get(), mAngle.x);
+    mDoMtx_YrotM(mDoMtx_stack_c::get(), mAngle.y);
     J3DModel_setBaseTRMtx(mpModel, mDoMtx_stack_c::get());
 }
 
 /* 0220D7AC */
 void SwMail_c::DummyInit() {
-    cLib_targetAngleY(field_0x58, field_0x5C);
-    field_0x48.y = -0x4000;
-    field_0x48.z = 0;
-    field_0x48.x = 0;
-    cXyz* p = field_0x5C;
-    field_0x24.set(p->x - 150.0f, p->y - 200.0f, p->z);
-    field_0x54 = Bmsw_getNextNo(field_0x54);
+    cLib_targetAngleY(mpCamCenter, mpCamEye);
+    mAngle.y = -0x4000;
+    mAngle.z = 0;
+    mAngle.x = 0;
+    cXyz* p = mpCamEye;
+    mPos.set(p->x - 150.0f, p->y - 200.0f, p->z);
+    mBoxNo = Bmsw_getNextNo(mBoxNo);
     field_0x4E.z = -0x4000;
     field_0x4E.x = 0;
     field_0x4E.y = -0x4000;
-    field_0x3C.copy(*cXyz_Zero);
+    mPosOffset.copy(*cXyz_Zero);
     pmf_set(&mFunc, FN_SwMail_Dummy);
 }
 
@@ -1645,44 +1645,44 @@ void SwMail_c::Dummy() { set_mtx(); }
 
 /* 0220F3C8 */
 void SwMail_c::AppearInit() {
-    cLib_targetAngleY(field_0x58, field_0x5C);
-    cXyz* p = field_0x5C;
-    u8 no = field_0x54;
-    field_0x48.y = -0x4000;
-    field_0x48.x = 0;
-    field_0x48.z = 0;
-    field_0x24.set(p->x, p->y - 200.0f, p->z);
+    cLib_targetAngleY(mpCamCenter, mpCamEye);
+    cXyz* p = mpCamEye;
+    u8 no = mBoxNo;
+    mAngle.y = -0x4000;
+    mAngle.x = 0;
+    mAngle.z = 0;
+    mPos.set(p->x, p->y - 200.0f, p->z);
     u8 res = Bmsw_getNextNo(no);
     field_0x4E.z = -0x4000;
     field_0x4E.x = 0;
     field_0x4E.y = -0x4000;
-    field_0x54 = res;
-    field_0x3C.copy(*cXyz_Zero);
-    field_0x56 = 0;
+    mBoxNo = res;
+    mPosOffset.copy(*cXyz_Zero);
+    mThrowPhase = 0;
     mDoAud_seStart_id(JA_SE_LETTER_GAME_NEW); /* JA_SE_LETTER_GAME_NEW */
     pmf_set(&mFunc, FN_SwMail_Appear);
 }
 
 /* 0220F4C0 */
 void SwMail_c::Appear() {
-    s16 new_y = cLib_targetAngleY(field_0x58, field_0x5C);
+    s16 new_y = cLib_targetAngleY(mpCamCenter, mpCamEye);
     cXyz diff;
-    cXyz_mi(field_0x58, &diff, field_0x5C);
+    cXyz_mi(mpCamCenter, &diff, mpCamEye);
     if (!cXyz_normalizeRS(&diff)) {
         diff.set(0.0f, 0.0f, 1.0f);
     }
     cXyz vec;
-    vec.copy(*field_0x5C.get());
+    vec.copy(*mpCamEye.get());
     cXyz tmp;
     cXyz_ml(&diff, &tmp, 120.0f);
     diff.copy(tmp);
     PSVECAdd(&vec, &diff, &vec);
     f32 y = vec.y - 40.0f;
-    field_0x48.x = field_0x4E.x;
-    field_0x48.y = (s16)(field_0x4E.y + new_y);
+    mAngle.x = field_0x4E.x;
+    mAngle.y = (s16)(field_0x4E.y + new_y);
     vec.y = y;
-    cLib_addCalcAngleS2(&field_0x48.z, field_0x4E.z, 4, 0x1000);
-    if (std::fabs(cLib_addCalcPos(&field_0x24, &vec, 0.25f, 30.0f, 2.5f)) < 2.5f) {
+    cLib_addCalcAngleS2(&mAngle.z, field_0x4E.z, 4, 0x1000);
+    if (std::fabs(cLib_addCalcPos(&mPos, &vec, 0.25f, 30.0f, 2.5f)) < 2.5f) {
         WaitInit();
     }
     set_mtx();
@@ -1693,66 +1693,66 @@ void SwMail_c::WaitInit() { pmf_set(&mFunc, FN_SwMail_Wait); }
 
 /* 0220F62C */
 void SwMail_c::Wait() {
-    s16 new_y = cLib_targetAngleY(field_0x58, field_0x5C);
+    s16 new_y = cLib_targetAngleY(mpCamCenter, mpCamEye);
     cXyz diff;
-    cXyz_mi(field_0x58, &diff, field_0x5C);
+    cXyz_mi(mpCamCenter, &diff, mpCamEye);
     if (!cXyz_normalizeRS(&diff)) {
         diff.set(0.0f, 0.0f, 1.0f);
     }
-    field_0x24.copy(*field_0x5C.get());
+    mPos.copy(*mpCamEye.get());
     cXyz tmp;
     cXyz_ml(&diff, &tmp, 120.0f);
     diff.copy(tmp);
-    PSVECAdd(&field_0x24, &diff, &field_0x24);
-    f32 y = field_0x24.y - 40.0f;
-    field_0x48.y = (s16)(field_0x4E.y + new_y);
-    field_0x48.z = field_0x4E.z;
-    field_0x48.x = field_0x4E.x;
-    field_0x24.y = y;
+    PSVECAdd(&mPos, &diff, &mPos);
+    f32 y = mPos.y - 40.0f;
+    mAngle.y = (s16)(field_0x4E.y + new_y);
+    mAngle.z = field_0x4E.z;
+    mAngle.x = field_0x4E.x;
+    mPos.y = y;
     set_mtx();
 }
 
 /* 0220F744 */
 void SwMail_c::ThrowInit(cXyz* param_1, u8 param_2) {
     field_0x30.copy(*param_1);
-    field_0x56 = 0;
-    field_0x55 = param_2;
+    mThrowPhase = 0;
+    mThrownBoxNo = param_2;
     pmf_set(&mFunc, FN_SwMail_Throw);
 }
 
 /* 0220F7C4 */
 void SwMail_c::Throw() {
-    u8 step = field_0x56;
+    u8 step = mThrowPhase;
     s16 x_angle = cLib_targetAngleX(
-        &field_0x30, field_0x5C); // HD: The throw angle is calculated before either phase.
+        &field_0x30, mpCamEye); // HD: The throw angle is calculated before either phase.
 
     if (step == 0) {
-        s16 y_angle = cLib_targetAngleY(field_0x58, field_0x5C);
+        s16 y_angle = cLib_targetAngleY(mpCamCenter, mpCamEye);
         cXyz vec;
         vec.set(-40.0f, -50.0f, 0.0f);
         cXyz multVec;
         mDoMtx_ZXYrotS(mDoMtx_stack_c::get(), x_angle, y_angle, 0);
         PSMTXMultVec(mDoMtx_stack_c::get(), &vec, &multVec);
-        PSVECAdd(&multVec, field_0x5C, &multVec);
-        if (cLib_addCalcPos(&field_0x24, &multVec, 0.5f, 30.0f, 2.0f) < 1.0f) {
-            field_0x48.y = 0;
+        PSVECAdd(&multVec, mpCamEye, &multVec);
+        if (cLib_addCalcPos(&mPos, &multVec, 0.5f, 30.0f, 2.0f) < 1.0f) {
+            mAngle.y = 0;
             field_0x4E.x = 0;
             mDoAud_seStart_id(JA_SE_LK_SW_KAZEKIRI_S); /* JA_SE_LK_SW_KAZEKIRI_S */
-            field_0x56 = (u8)(field_0x56 + 1);
+            mThrowPhase = (u8)(mThrowPhase + 1);
         }
         set_mtx();
     } else {
-        field_0x48.x = (s16)-x_angle;
-        s16 add = (s16)(field_0x54 * 0x80 + 0x1000);
-        field_0x48.z = 0;
-        field_0x48.y = (s16)(field_0x48.y + add);
-        f32 pos_step = cLib_addCalcPos(&field_0x24, &field_0x30, 0.5f, l_HIO.field_0x44, 1.0f);
+        mAngle.x = (s16)-x_angle;
+        s16 add = (s16)(mBoxNo * 0x80 + 0x1000);
+        mAngle.z = 0;
+        mAngle.y = (s16)(mAngle.y + add);
+        f32 pos_step = cLib_addCalcPos(&mPos, &field_0x30, 0.5f, l_HIO.mMailThrowSpeed, 1.0f);
         field_0x4E.x = (s16)(field_0x4E.x + 4000);
-        field_0x3C.y = 20.0f * (1.0f - cM_scos(field_0x4E.x));
+        mPosOffset.y = 20.0f * (1.0f - cM_scos(field_0x4E.x));
         if (pos_step < 1.0f) {
-            mDoAud_seStart_pos(JA_SE_LETTER_IN_BOX, &field_0x24); /* JA_SE_LETTER_IN_BOX */
-            u8 aim = field_0x55;
-            u8 no = field_0x54;
+            mDoAud_seStart_pos(JA_SE_LETTER_IN_BOX, &mPos); /* JA_SE_LETTER_IN_BOX */
+            u8 aim = mThrownBoxNo;
+            u8 no = mBoxNo;
             if (aim == no) {
                 Bmsw_addMiniGameRupee();
                 mDoAud_seStart_id(JA_SE_MINIGAME_RIGHT); /* JA_SE_MINIGAME_RIGHT */
@@ -1777,20 +1777,20 @@ void SwMail_c::EndInit() {
 
 /* 0220FA84 */
 void SwMail_c::End() {
-    if (field_0x55 == field_0x54) {
-        cLib_addCalcAngleS2(&field_0x48.y, 0, 4, 0x1000);
+    if (mThrownBoxNo == mBoxNo) {
+        cLib_addCalcAngleS2(&mAngle.y, 0, 4, 0x1000);
         cXyz target;
         target.set(cXyz_Zero->x, cXyz_Zero->y, cXyz_Zero->z);
-        cLib_addCalcPos2(&field_0x3C, &target, 0.25f, 5.0f);
+        cLib_addCalcPos2(&mPosOffset, &target, 0.25f, 5.0f);
         set_mtx_throw();
     } else {
-        cLib_addCalcAngleS2(&field_0x48.y, -0x8000, 4, 0x1000);
+        cLib_addCalcAngleS2(&mAngle.y, -0x8000, 4, 0x1000);
         cXyz target;
         target.set(cXyz_Zero->x, cXyz_Zero->y, cXyz_Zero->z);
-        cLib_addCalcPos2(&field_0x3C, &target, 0.25f, 5.0f);
-        if (field_0x24.z < 995.0f) {
+        cLib_addCalcPos2(&mPosOffset, &target, 0.25f, 5.0f);
+        if (mPos.z < 995.0f) {
             s16 tgt;
-            if (field_0x24.y > 720.0f) {
+            if (mPos.y > 720.0f) {
                 tgt = -0x4000;
                 field_0x30.y = field_0x30.y - 3.0f;
             } else {
@@ -1799,20 +1799,20 @@ void SwMail_c::End() {
                 field_0x30.x = field_0x30.x * 0.9f;
                 field_0x30.z = field_0x30.z * 0.9f;
             }
-            if (!(field_0x24.y > 700.0f)) {
-                field_0x24.y = 700.0f;
+            if (!(mPos.y > 700.0f)) {
+                mPos.y = 700.0f;
                 field_0x30.y = 0.0f;
             }
-            cLib_addCalcAngleS2(&field_0x48.x, tgt, 2, 0x800);
+            cLib_addCalcAngleS2(&mAngle.x, tgt, 2, 0x800);
         }
         PSVECScale(&field_0x30, &field_0x30, 0.9f);
-        PSVECAdd(&field_0x24, &field_0x30, &field_0x24);
+        PSVECAdd(&mPos, &field_0x30, &mPos);
         set_mtx_throw();
     }
 }
 
 /* 0220EB68 */
-void SwMail_c::SeDelete() { mDoAud_seDeleteObject(&field_0x24); }
+void SwMail_c::SeDelete() { mDoAud_seDeleteObject(&mPos); }
 
 /* 0220F380 */
 void SwMail_c::move() { pmf_call0(this, &mFunc); /* (this->*mFunc)() */ }
@@ -1820,7 +1820,7 @@ void SwMail_c::move() { pmf_call0(this, &mFunc); /* (this->*mFunc)() */ }
 /* 0220EFF4 */
 void SwMail_c::draw(dKy_tevstr_c* tevStr) {
     J3DModelData* modelData = Bmsw_modelData(mpModel);
-    mDoExt_btpAnm_entry(&field_0x10, modelData, field_0x54);
+    mDoExt_btpAnm_entry(&mMailBtpAnm, modelData, mBoxNo);
     dScnKy_env_light_c* l = dKy_getEnvlight();
     setLightTevColorType(l, mpModel, tevStr);
     mDoExt_modelUpdateDL(mpModel);
@@ -1834,7 +1834,7 @@ void SwCam_c::Move() {
         s32 camId =
             gabi::object_at<dComIfG_play_c>(dComIfGp_ea() + 0x12A0).mPlayerInfo[0].mCameraID.get();
         u32 camera = gabi::ea(dComIfGp_getCamera(camId));
-        cXyz* src = SwCam_camera_center_data(field_0x1D, field_0x1C + 1);
+        cXyz* src = SwCam_camera_center_data(mAimY, mAimX + 1);
         cXyz center;
         center.set(src->x, src->y, src->z);
         cLib_addCalcPos(&mCenter, &center, 0.25f, 10.0f, 1.0f);
@@ -1912,12 +1912,12 @@ static daNpc_Bmsw_c* daNpc_Bmsw_c_ct(daNpc_Bmsw_c* i_this) {
     }
     Bmsw_npcConstruct(i_this); /* fopNpc_npc_c::fopNpc_npc_c */
     i_this->__vtbl = l_actorVtable;
-    /* dKy_tevstr_c field_0x6E0 (HD, inline constructor): three 0x44-byte light blocks at +0, +0xC0
+    /* dKy_tevstr_c mLetterTevStr (HD, inline constructor): three 0x44-byte light blocks at +0, +0xC0
      * and +0x144 initialised from the template at 0x1016E414 (floats, then bytes and shorts) */
     for (int b = 0; b < 3; b++) {
         u32 offset = b == 0 ? 0 : b == 1 ? 0xC0 : 0x144;
         auto& block =
-            gabi::object_at<BmswLightDefaultBlock>(gabi::ea(&i_this->field_0x6E0) + offset);
+            gabi::object_at<BmswLightDefaultBlock>(gabi::ea(&i_this->mLetterTevStr) + offset);
         for (int i = 0; i < 6; i++)
             block.mVectors[i] = l_lightDefault.mVectors[i];
         for (int i = 0; i < 4; i++)
@@ -1927,28 +1927,28 @@ static daNpc_Bmsw_c* daNpc_Bmsw_c_ct(daNpc_Bmsw_c* i_this) {
         for (int i = 0; i < 8; i++)
             block.mFactors[i] = l_lightDefault.mFactors[i];
     }
-    Bmsw_btpConstruct(&i_this->field_0x7F8); /* mDoExt_btpAnm::mDoExt_btpAnm */
-    Bmsw_btpConstruct(&i_this->mSwMail0.field_0x10);
-    Bmsw_btpConstruct(&i_this->mSwMail1.field_0x10);
-    Bmsw_btpConstruct(&i_this->mSwMail2.field_0x10);
+    Bmsw_btpConstruct(&i_this->mBtpAnm); /* mDoExt_btpAnm::mDoExt_btpAnm */
+    Bmsw_btpConstruct(&i_this->mSwMail0.mMailBtpAnm);
+    Bmsw_btpConstruct(&i_this->mSwMail1.mMailBtpAnm);
+    Bmsw_btpConstruct(&i_this->mSwMail2.mMailBtpAnm);
     /* SwCam_c::SwCam_c() */
     i_this->mSwCam.mActive = 0;
-    i_this->mSwCam.field_0x1C = 0;
-    i_this->mSwCam.field_0x1D = 0;
+    i_this->mSwCam.mAimX = 0;
+    i_this->mSwCam.mAimY = 0;
     i_this->mSwCam.mCenter.copy(*SwCam_camera_center_data(0, 1));
     i_this->mSwCam.mEye.copy(*SwCam_camera_eye());
     i_this->mSwCam.mFovY = 58.0f;
     /* STControl::STControl(15, 15, 0, 0, 0.9f, 0.5f, 0, 0x2000) */
-    i_this->field_0x988.__vtbl = 0x10050788;
-    STControl_setWaitParm(&i_this->field_0x988, 15, 15, 0, 0, 0.9f, 0.5f, 0, 0x2000);
-    Bmsw_stickInit(&i_this->field_0x988); /* STControl::init */
+    i_this->mStickControl.__vtbl = 0x10050788;
+    STControl_setWaitParm(&i_this->mStickControl, 15, 15, 0, 0, 0.9f, 0.5f, 0, 0x2000);
+    Bmsw_stickInit(&i_this->mStickControl); /* STControl::init */
     return i_this;
 }
 
 /* 02211F5C */
 static void daNpc_Bmsw_c_dt(daNpc_Bmsw_c* i_this, s32 flags) {
     if (i_this != nullptr) {
-        Bmsw_stickDestroy(&i_this->field_0x988, 2); /* STControl::~STControl */
+        Bmsw_stickDestroy(&i_this->mStickControl, 2); /* STControl::~STControl */
         Bmsw_cylinderDestroy(&i_this->mCyl,
                              2); /* dCcD_Cyl::~dCcD_Cyl (matcher: dBgS_Acch::~dBgS_Acch) */
         Bmsw_statusDestroy(&i_this->mStts, 2);                    /* dCcD_Stts::~dCcD_Stts */

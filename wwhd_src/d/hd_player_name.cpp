@@ -10,9 +10,9 @@ static hdPictureStaticTokens_c sPlayerNameHeaderTokens;
 static const hdPictureAngles_c sPlayerNameHeaderAngles;
 /* 02726424 */
 void hdPlayerName_c::initialize() {
-    // HD: named glue spellings distinguish the two separate empty string copies.
-    playerNameFormatWide(&mWideName, "wide-name-empty");
-    playerNameFormat(&mNarrowName, "narrow-name-empty");
+    // HD: the original passes two separate empty string copies; by address, since both read "".
+    playerNameFormatWide(&mWideName, gabi::at<char>(0x10140CC8));
+    playerNameFormat(&mNarrowName, gabi::at<char>(0x10140CDC));
 }
 /* 02726470 */
 static hdPlayerName_c* constructPlayerName(hdPlayerName_c* self) {
@@ -84,12 +84,12 @@ void hdPlayerName_c::copyWideName(hdNameString_c* name) {
     name->assureTermination();
     u32 capacity = mNarrowName.mCapacity;
     playerNameConvertNarrow(output, capacity, name->mpText, -1);
-    playerNameFormatWide(&mWideName, "wide-name-empty");
+    playerNameFormatWide(&mWideName, "");
     copyWideString(&mWideName, name);
 }
 /* 027267FC */
 void hdPlayerName_c::copy(hdPlayerName_c* name) {
-    playerNameFormatWide(&mWideName, "wide-name-empty");
+    playerNameFormatWide(&mWideName, "");
     copyWideString(&mWideName, &name->mWideName);
     name->mNarrowName.assureTermination();
     playerNameFormatText(&mNarrowName, "%s", reinterpret_cast<char*>(name->mNarrowName.mpText.get()));
@@ -106,10 +106,8 @@ static void initializePlayerNameStatics() {
  data sPlayerNameHeaderState 1049F830
  data sPlayerNameHeaderTokens 101F85BC
  data sPlayerNameHeaderAngles 10140CF4
- str 10140CC8 "wide-name-empty" renamed in 02726424
- str 10140CDC "narrow-name-empty" renamed in 02726424
- str 10140CC8 "wide-name-empty" renamed in 027266CC
- str 10140CC8 "wide-name-empty" renamed in 027267FC
+ str 10140CC8 "" in 027266CC
+ str 10140CC8 "" in 027267FC
  str 10140CE8 "Link"
  str 10140CF0 "%s" in 027267FC
  ext 0273AD10 void* playerNameAllocate(u32)

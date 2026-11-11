@@ -17,7 +17,7 @@ struct enemyice_l {
     /* 0x006 */ be<s8> mLightShrinkTimer;
     /* 0x007 */ u8 _007;
     /* 0x008 */ be<f32> mYOffset;
-    /* 0x00C */ be<s8> m00C;
+    /* 0x00C */ be<s8> mFreezeType;  /* was m00C: view of enemyice::mFreezeType (c/c_damagereaction.h) */
     /* 0x00D */ be<s8> mMode;
     /* 0x00E */ be<s16> mFreezeTimer;
     /* 0x010 */ be<s16> mMoveDelayTimer;
@@ -26,8 +26,8 @@ struct enemyice_l {
     /* 0x016 */ u8 _016[2];
     /* 0x018 */ cXyz mSpeed;
     /* 0x024 */ be<f32> mSpeedF;
-    /* 0x028 */ be<f32> m028;
-    /* 0x02C */ be<f32> m02C;
+    /* 0x028 */ be<f32> mBodyLiftY;  /* was m028: view of enemyice::mBodyLiftY (c/c_damagereaction.h) */
+    /* 0x02C */ be<f32> mIceOffsetY;  /* was m02C: view of enemyice::mIceOffsetY (c/c_damagereaction.h) */
     /* 0x030 */ dCcD_Stts mStts;
     /* 0x06C */ dCcD_Cyl mCyl;
     /* 0x19C */ be<f32> mCylHeight;
@@ -65,7 +65,7 @@ struct enemyfire_l {
     /* 0x0A0 */ dCcD_Stts mStts;
     /* 0x0DC */ dCcD_Sph mSph;
     /* 0x208 */ u8 mLight[0x20];  /* LIGHT_INFLUENCE */
-    /* 0x228 */ be<f32> m228;     /* HD: 1.0f in the constructor */
+    /* 0x228 */ be<f32> mHD20;  /* HD: 1.0f in the constructor; was m228: mLight (0x208, a LIGHT_INFLUENCE of HD size 0x24, declared here as its first 0x20 bytes) + 0x20 = LIGHT_INFLUENCE::mHD20 (bindings.h / d/d_kankyo.h), the light's HD tail; the enemyfire constructors (pt 02446C68, ki 0219D368, ks 021AA2D8, cc 02110B28, oq 023C3C80, am 0204B6A0, rd 0245A984, nz 0230F104) set it to 1.0 as the LIGHT_INFLUENCE constructor does; no reader in WWHD, so it keeps the class name */
 };
 WWHD_SIZE(enemyfire_l, 0x22C);
 #endif
@@ -209,13 +209,13 @@ struct KsPlayerView {
     u8 mUnaccessed[0x3AC]; be<u8> mCutType;
     u8 mPad3AD[0x3C0 - 0x3AD]; be<u32> mStateFlags;
     u8 mPad3C4[0x3D8 - 0x3C4]; cXyz mHeadTopPos; cXyz mSwordTopPos;
-    u8 mPad3F0[0x69EE - 0x3F0]; be<s16> mHeavyCount;
+    u8 mPad3F0[0x69EE - 0x3F0]; be<s16> mHeavyStateCounter;  /* was mHeavyCount (misnamed): view of daPy_lk_c::mHeavyStateCounter (d_a_player_main.h), the per-frame count execute turns into the heavy state */
 };
 WWHD_OFFSET(KsPlayerView, mCutType, 0x3AC);
 WWHD_OFFSET(KsPlayerView, mStateFlags, 0x3C0);
 WWHD_OFFSET(KsPlayerView, mHeadTopPos, 0x3D8);
 WWHD_OFFSET(KsPlayerView, mSwordTopPos, 0x3E4);
-WWHD_OFFSET(KsPlayerView, mHeavyCount, 0x69EE); WWHD_SIZE(KsPlayerView, 0x69F0);
+WWHD_OFFSET(KsPlayerView, mHeavyStateCounter, 0x69EE); WWHD_SIZE(KsPlayerView, 0x69F0);
 inline KsPlayerView* ksPlayer(fopAc_ac_c* player) { return reinterpret_cast<KsPlayerView*>(player); }
 struct KsGmView { u8 mUnaccessed[0x43A]; be<s16> m31E; };
 WWHD_OFFSET(KsGmView, m31E, 0x43A); WWHD_SIZE(KsGmView, 0x43C);

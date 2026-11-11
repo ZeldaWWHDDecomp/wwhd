@@ -15,17 +15,32 @@ struct dTree_data_c {
     void WorkAt(TreeActorView* actor, u32 flags, u32 room, TreeMassHitInfo* info);
     s32 hitCheck(u32 unused, u32 room);
     void animation(u32 room);
-    /* 0x000 */ be<u8> mState, field_0x001, mAnimIdx, field_0x003;
+    /* 0x000 */ be<u8> mState;
+    /* 0x001 */ be<u8> mCut;  /* was field_0x001: setData 025CA9F8 stores the state argument (1: placed already cut); WorkAt 025C6A58 sets 1 when the tree is cut (and refuses a second cut); WorkCo 025C65CC / WorkAt_NoCutAnim 025C6784 skip a cut tree; animation 025C6D40 swings an uncut tree and drops the top of a cut one; TreePacketState::draw 025C91FC picks the model part status by it */
+    /* 0x002 */ be<u8> mAnimIdx;
+    /* 0x003 */ be<u8> mTopAlpha;  /* was field_0x003: setData 025CA9F8: 0 for a tree placed cut, else 255; update 025CA6EC fades it to 0 once the top has landed; TreePacketState::draw 025C91FC passes it as the top alpha (255: the opaque path), the native draw scales the top by it */
     /* 0x004 */ cXyz mPos;
-    /* 0x010 */ TreeMtx field_0x010, field_0x040, field_0x070;
+    /* 0x010 */ TreeMtx mTopDrawMtx;  /* was field_0x010: update 025CA6EC copies the animation's mTopMtx (or mFallenTopMtx once landed) into it; the native draw (tree_matrixUniform) uses it for the top part */
+    /* 0x040 */ TreeMtx mTrunkDrawMtx;  /* was field_0x040: update 025CA6EC copies the animation's mTrunkMtx into it; the native draw (tree_matrixUniform) uses it for the trunk; Tree_dataCtor 025C64C4 clears it */
+    /* 0x070 */ TreeMtx mFallenTopMtx;  /* was field_0x070: animation 025C6D40 stores the top's final matrix (with mTopOffset) once the falling top has landed (mState bit 8); update 025CA6EC then draws the top with it; Tree_dataCtor 025C64C4 clears it */
     /* 0x0A0 */ be<u32> mNativeFlags;
     /* 0x0A4 */ be<f32> mViewDepth;
 };
 struct dTree_anm_c {
     /* 0x000 */ be<u8> mState, padding;
-    /* 0x002 */ be<s16> field_0x02, field_0x04, field_0x06, field_0x08, field_0x0a;
-    /* 0x00C */ be<f32> mAnimTimer, field_0x10, field_0x14, field_0x18, field_0x1c, field_0x20;
-    /* 0x024 */ TreeMtx field_0x24, field_0x54;
+    /* 0x002 */ be<s16> mTrunkAngleY;  /* was field_0x02: setAnm 025C79D0 / newAnm 025C6558 store the tree's Y angle; update 025CA6EC builds mTrunkMtx with Y rotation it - mCutAngleY; its top 3 bits (>> 13) are the wind animation an uncut swinging tree returns to (animation 025C6D40) or a fallen one keeps; calc 025C9948 sways the 8 wind animations around it */
+    /* 0x004 */ be<s16> mTopAngleX;  /* was field_0x04: the X tilt of the top: calc 025C9948 sways it with the wind; animation 025C6D40 stores the swing angle for a hit tree and tilts a cut top to 13600; update 025CA6EC builds mTopMtx with it */
+    /* 0x006 */ be<s16> mTopAngleY;  /* was field_0x06: the Y rotation of the top: calc 025C9948 sways it with the wind; setAnm 025C79D0 / newAnm 025C6558 set the tree's angle; update 025CA6EC builds mTopMtx with it - mCutAngleY */
+    /* 0x008 */ be<s16> mTrunkAngleX;  /* was field_0x08: the swing of a hit tree: animation 025C6D40 runs it as a damped oscillation (with mAnimTimer) and clears it when it settles; update 025CA6EC builds mTrunkMtx with it */
+    /* 0x00A */ be<s16> mCutAngleY;  /* was field_0x0a: WorkAt 025C6A58 stores Link's sword move angle; animation 025C6D40 moves the falling top along it; update 025CA6EC rotates both matrices by it; WorkCo 025C65CC / WorkAt_NoCutAnim 025C6784 store the push / hit direction */
+    /* 0x00C */ be<f32> mAnimTimer;
+    /* 0x010 */ be<f32> mFallSpeedXZ;  /* was field_0x10: WorkAt 025C6A58 sets the cut top's horizontal speed; animation 025C6D40 moves the top by it along mCutAngleY and clears it on landing (which ends the fall) */
+    /* 0x014 */ be<f32> mFallSpeedY;  /* was field_0x14: WorkAt 025C6A58 sets the cut top's initial vertical speed; animation 025C6D40 adds gravity (down to the terminal speed) and moves the top by it */
+    /* 0x018 */ be<f32> mTopOffsetX;  /* was field_0x18: animation 025C6D40 moves the falling top along x; update 025CA6EC adds it to mPos.x for mTopMtx; animation adds it for mFallenTopMtx */
+    /* 0x01C */ be<f32> mTopOffsetY;  /* was field_0x1c: animation 025C6D40 moves the falling top along y (not below the ground offset); update 025CA6EC adds it to mPos.y for mTopMtx */
+    /* 0x020 */ be<f32> mTopOffsetZ;  /* was field_0x20: animation 025C6D40 moves the falling top along z; update 025CA6EC adds it to mPos.z for mTopMtx */
+    /* 0x024 */ TreeMtx mTopMtx;  /* was field_0x24: update 025CA6EC builds the top's matrix (Y mCutAngleY, X mTopAngleX, Y mTopAngleY, translation mPos + mTopOffset) into it; animation 025C6D40 places the cut smoke with it and copies it into mFallenTopMtx */
+    /* 0x054 */ TreeMtx mTrunkMtx;  /* was field_0x54: update 025CA6EC builds the trunk's matrix (Y mCutAngleY, X mTrunkAngleX, Y mTrunkAngleY, translation mPos) into it and copies it into dTree_data_c::mTrunkDrawMtx */
 };
 struct dTree_room_c {
     void newData(dTree_data_c* p);
@@ -38,7 +53,7 @@ struct dTree_room_c {
 WWHD_SIZE(dTree_data_c, 0xA8);
 WWHD_OFFSET(dTree_data_c, mViewDepth, 0xA4);
 WWHD_SIZE(dTree_anm_c, 0x84);
-WWHD_OFFSET(dTree_anm_c, field_0x24, 0x24);
+WWHD_OFFSET(dTree_anm_c, mTopMtx, 0x24);
 WWHD_SIZE(dTree_room_c, 0x10C);
 
 // HD: private complete native views; shared caller declarations remain opaque.
@@ -169,16 +184,16 @@ WWHD_OFFSET(TreeCollisionManager, mpAttributes, 0x1754);
 WWHD_OFFSET(TreeCollisionManager, mCount, 0x1758);
 WWHD_OFFSET(TreeCollisionManager, mDirty, 0x175C);
 struct TreeIndexBuffer {
-    /* 0x000 */ be<u32> mIndexType;  /* was mPrimitive: GX2DrawIndexedEx indexType (r5) at 025C7934 (lwz 0x0(r27)); agl::IndexBufferLayout::mFormat */
-    /* 0x004 */ be<u32> mPrimitive;  /* was mIndexType: GX2DrawIndexedEx mode (r3) at 025C7934 (lwz 0x4(r27)); agl::IndexBufferLayout::mPrimitiveMode */
-    /* 0x008 */ gptr<void> mpIndices;
+    /* 0x000 */ be<u32> mFormat;  /* was mIndexType (misnamed: agl name), before that mPrimitive: GX2DrawIndexedEx indexType (r5) at 025C7934 (lwz 0x0(r27)); agl::IndexBufferLayout::mFormat */
+    /* 0x004 */ be<u32> mPrimitiveMode;  /* was mPrimitive (misnamed: agl name), before that mIndexType: GX2DrawIndexedEx mode (r3) at 025C7934 (lwz 0x4(r27)); 025C7A1C sets 4 (triangles) after createIndexBuffer; agl::IndexBufferLayout::mPrimitiveMode */
+    /* 0x008 */ gptr<void> mStorage;  /* was mpIndices (misnamed: agl name): GX2DrawIndexedEx indices (r6, lwz 0x8(r27)) at 025C7934; agl::IndexBufferLayout::mStorage */
     /* 0x00C */ be<u32> mCount;
     u8 padding10[0x8];
 };
 WWHD_SIZE(TreeIndexBuffer, 0x18);
-WWHD_OFFSET(TreeIndexBuffer, mIndexType, 0x0);
-WWHD_OFFSET(TreeIndexBuffer, mPrimitive, 0x4);
-WWHD_OFFSET(TreeIndexBuffer, mpIndices, 0x8);
+WWHD_OFFSET(TreeIndexBuffer, mFormat, 0x0);
+WWHD_OFFSET(TreeIndexBuffer, mPrimitiveMode, 0x4);
+WWHD_OFFSET(TreeIndexBuffer, mStorage, 0x8);
 WWHD_OFFSET(TreeIndexBuffer, mCount, 0xC);
 struct TreeUniformContainer {
     /* 0x000 */ be<u32> mCount;

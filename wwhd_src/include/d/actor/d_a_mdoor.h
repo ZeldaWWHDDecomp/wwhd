@@ -44,29 +44,29 @@ class daMdoor_c : public fopAc_ac_c {
     s32 create(); // HD: preserve the full phase return register.
     void demoProc();
     static const char M_arcname[];
-    /* 0x3AC */ dPa_smokeEcallBack m290;
+    /* 0x3AC */ dPa_smokeEcallBack mSmokeCallback;  /* was m290: smokeInit 021C10C4: the dPa_smokeEcallBack of the ID_AK_JT_ELEMENTSMOKE00 landing smoke; create 021C1E8C constructs it, smokeEnd 021C19FC ends it (tww dPa_smokeEcallBack) */
     /* 0x3CC */ request_of_phase_process_class mPhase;
     /* 0x3D4 */ gptr<J3DModel> mpModel;
     /* 0x3D8 */ gptr<dBgW> mpBgW;
-    /* 0x3DC */ be<s32> m2C0;
-    /* 0x3E0 */ be<s16> m2C4;
-    /* 0x3E2 */ be<s16> m2C6;
-    /* 0x3E4 */ be<u8> m2C8;
+    /* 0x3DC */ be<s32> mStaffId;  /* was m2C0: daMdoor_actionDemoWait 021C1418 ("Mori1") / daMdoor_actionReady 021C17A4 ("SHUTTER_DOOR"): dComIfGp_evmng_getMyStaffId; demoProc 021C1174 reads the action and advance of that staff */
+    /* 0x3E0 */ be<s16> mDelayTimer;  /* was m2C4: CreateInit 021C1AFC sets 1 (type 1); daMdoor_actionGenocide 021C1514 counts it down after the room's enemies are gone before ordering the event; daMdoor_actionReadyOpen 021C188C sets 20 and daMdoor_actionOpen 021C15B0 counts it down before the door rises */
+    /* 0x3E2 */ be<s16> mEventIdx;  /* was m2C6: CreateInit 021C1AFC: event index of "MORI1_EVENT" (type 0) or "DEFAULT_STOP_OPEN" (types 1 / 2); order and the demo / open actions start and end-check it */
+    /* 0x3E4 */ be<u8> mToolId;  /* was m2C8: CreateInit 021C1AFC: 0xFF, or getToolId() for type 2; order passes it to fopAcM_orderOtherEventId; it selects ACT_SWITCH8_e / ACT_SWITCH12_e */
     /* 0x3E5 */ be<u8> mAction;
-    /* 0x3E6 */ be<u16> m2CA;
-    /* 0x3E8 */ be<f32> m2CC;
+    /* 0x3E6 */ be<u16> mDemoFlags;  /* was m2CA: demoProc 021C1174: bit 0 set when the close action starts, cleared when the door lands (then the debris and smokeInit) */
+    /* 0x3E8 */ be<f32> mHeight;  /* was m2CC: calcMtx 021C0EAC: the model's height above current.pos; CreateInit 021C1AFC: 0 (closed) or 280 (open); demoProc 021C1174 / daMdoor_actionOpen 021C15B0 chase it to 0 / 280 by speedF */
 };
-WWHD_OFFSET(daMdoor_c, m290, 0x3AC);
+WWHD_OFFSET(daMdoor_c, mSmokeCallback, 0x3AC);
 WWHD_OFFSET(daMdoor_c, mPhase, 0x3CC);
 WWHD_OFFSET(daMdoor_c, mpModel, 0x3D4);
 WWHD_OFFSET(daMdoor_c, mpBgW, 0x3D8);
-WWHD_OFFSET(daMdoor_c, m2C0, 0x3DC);
-WWHD_OFFSET(daMdoor_c, m2C4, 0x3E0);
-WWHD_OFFSET(daMdoor_c, m2C6, 0x3E2);
-WWHD_OFFSET(daMdoor_c, m2C8, 0x3E4);
+WWHD_OFFSET(daMdoor_c, mStaffId, 0x3DC);
+WWHD_OFFSET(daMdoor_c, mDelayTimer, 0x3E0);
+WWHD_OFFSET(daMdoor_c, mEventIdx, 0x3E2);
+WWHD_OFFSET(daMdoor_c, mToolId, 0x3E4);
 WWHD_OFFSET(daMdoor_c, mAction, 0x3E5);
-WWHD_OFFSET(daMdoor_c, m2CA, 0x3E6);
-WWHD_OFFSET(daMdoor_c, m2CC, 0x3E8);
+WWHD_OFFSET(daMdoor_c, mDemoFlags, 0x3E6);
+WWHD_OFFSET(daMdoor_c, mHeight, 0x3E8);
 WWHD_SIZE(daMdoor_c, 0x3EC);
 
 // HD: this unit writes both particle scale vectors, alternating their components.

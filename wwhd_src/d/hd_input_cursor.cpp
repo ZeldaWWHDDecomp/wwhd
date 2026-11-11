@@ -207,9 +207,9 @@ static void __sinit_hd_input_cursor_cpp() {
     initializeGlobals(&l_globals1, &l_registration1_1, &l_lower1, &l_upper1, &l_range1,
                       &l_registration1_2, &l_registration1_3);
     l_controllerIconAlt.mVtable = &l_iconVtable;
-    l_controllerIconAlt.mpName = gabi::at<const char>(gabi::guest_addr("controller alternate"));
+    l_controllerIconAlt.mpName = gabi::at<const char>(gabi::guest_addr("Icon=CONTROLLER"));
     l_controllerIcon.mVtable = &l_iconVtable;
-    l_controllerIcon.mpName = gabi::at<const char>(gabi::guest_addr("controller"));
+    l_controllerIcon.mpName = gabi::at<const char>(gabi::guest_addr("タッチでタクト管理"));
 }
 
 /* 0261ABF0 */
@@ -231,8 +231,8 @@ data l_inputScaleY 100E2B70
 data l_iconVtable 100E2B1C
 data l_controllerIcon 1048DEBC
 data l_controllerIconAlt 1048DEC4
-str 100E2B80 "controller alternate" renamed
-str 100E2B90 "controller" renamed
+str 100E2B80 "Icon=CONTROLLER"
+str 100E2B90 "タッチでタクト管理"
 data l_globals1 1048DED8
 data l_range1 1048DECC
 data l_lower1 100E2B78

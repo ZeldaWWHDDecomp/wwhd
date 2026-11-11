@@ -58,51 +58,51 @@ struct daBeam_c : fopAc_ac_c {
     /* 0x3AC */ dCcD_Stts mStts;
     /* 0x3E8 */ BeamCpsHD mCps1;
     /* 0x520 */ BeamCpsHD mCps2;
-    /* 0x658 */ be<u8> m53C;
+    /* 0x658 */ be<u8> mAtHit;  /* was m53C: daBeam_AtHitCallback 02074C98 / daBeam_checkHitCallback 02075078 set 1 and store the hit position in mAtHitPos; _execute 02075988 then ends the beam there (no hot floor) and clears it (tww the same) */
     u8 mPad659[3];
-    /* 0x65C */ cXyz m540;
-    /* 0x668 */ be<u8> m54C;
+    /* 0x65C */ cXyz mAtHitPos;  /* was m540: daBeam_AtHitCallback 02074C98 / daBeam_checkHitCallback 02075078 copy the AT hit position (mGObjAt.mHitPos); _execute 02075988 shortens the beam to it and copies it into mBeamEndPos (tww the same) */
+    /* 0x668 */ be<u8> mSidePush;  /* was m54C: CreateInit 02075384: param bits 24-27 (0 for the searching type); while non-zero the hit on Link (hitDirection, in the AT hit callbacks) sets the AT / TG vectors to the beam's side direction (tww the same) */
     u8 mPad669[3];
-    /* 0x66C */ Func m550;
-    /* 0x674 */ Func m55C;
+    /* 0x66C */ Func mSearchProc;  /* was m550: _execute 02075988 calls it every frame; CreateInit 02075384 sets it; tww setSearchProc(func) stores into it */
+    /* 0x674 */ Func mDefaultProc;  /* was m55C: _execute 02075988 restores mSearchProc from it when the switch is off; CreateInit 02075384 sets it; tww setDefaultProc(func) stores into it */
     /* 0x67C */ request_of_phase_process_class mPhase;
     /* 0x684 */ gptr<J3DModel> M_mdl;
     /* 0x688 */ gptr<J3DAnmTransform> M_bck;
     /* 0x68C */ mDoExt_bckAnm mBckAnm;
-    /* 0x718 */ be<f32> m588;
+    /* 0x718 */ be<f32> mBeamFrame;  /* was m588: the beam's grow frame 0..5: move_search 02076260 counts it up while on target, fade (in move_search / wait_proc 02076598) and _execute 02075988 use it; set_mtx 02075124 width (it * (5 - mFadeFrame)) / 50 + 0.5; the BG line length is it * 20 * scale.z (tww the same) */
     /* 0x71C */ gptr<J3DAnmTevRegKey> M_brk;
     /* 0x720 */ mDoExt_brkAnm mBrkAnm;
-    /* 0x798 */ be<f32> m5A8;
+    /* 0x798 */ be<f32> mFadeFrame;  /* was m5A8: fade (in move_search 02076260 / wait_proc 02076598) counts it up to 4 while mBeamOn and then ends the beam; set_mtx 02075124 narrows the beam by it (tww the same) */
     /* 0x79C */ gptr<J3DAnmTextureSRTKey> M_btk;
     /* 0x7A0 */ mDoExt_btkAnm mBtkAnm;
-    /* 0x814 */ Mtx34 m5C4;
-    /* 0x844 */ be<s16> m5F4;
-    /* 0x846 */ be<s16> m5F6;
-    /* 0x848 */ be<u8> m5F8;
-    /* 0x849 */ be<u8> m5F9;
+    /* 0x814 */ Mtx34 mHotFloorMtx;  /* was m5C4: set_mtx 02075124 builds the hot floor matrix (at mBeamEndPos, mHotFloorQuat, Y rotation, z scale mHotFloorScaleZ) into it and gives it to mpHotFloor (mtx_p) (tww the same) */
+    /* 0x844 */ be<s16> mBeamOn;  /* was m5F4: move_search 02076260 sets 1 once mBeamFrame reached 5 on target; fade (in move_search / wait_proc 02076598) fades the beam out and clears it; _execute 02075988 sets the AT capsule only while it is 1 (tww the same) */
+    /* 0x846 */ be<s16> mCycleTimer;  /* was m5F6: no use in WWHD (CreateInit 02075384 runs move_search for kind 2); tww CreateInit stores a parameter in it for kind 2 and timer_change counts it down: beam on while it is above 0, off below, reloaded with 60 at -30 */
+    /* 0x848 */ be<u8> mHFloorParticle;  /* was m5F8: CreateInit 02075384: 1 - param bit 28; _execute 02075988 passes !it as bit 0 of the Hot_Floor parameters; tww checkHFloorParticle / onHFloorParticle / offHFloorParticle use it */
+    /* 0x849 */ be<u8> mSmokeParticle;  /* was m5F9: CreateInit 02075384: 1 - param bit 29; _execute 02075988 passes !it as bit 1 of the Hot_Floor parameters; tww checkSmokeParticle / onSmokeParticle / offSmokeParticle use it */
     u8 mPad84A[2];
     /* 0x84C */ dBgS_ObjLinChk mLinChk;
-    /* 0x8B8 */ cXyz m668;
-    /* 0x8C4 */ Quaternion m674;
-    /* 0x8D4 */ be<u32> m684;
-    /* 0x8D8 */ be<f32> m688;
-    /* 0x8DC */ gptr<daHot_Floor_c> m68C;
-    /* 0x8E0 */ gptr<BeamEmitterHD> m690;
-    /* 0x8E4 */ be<f32> m694;
-    /* 0x8E8 */ be<s32> m698;
+    /* 0x8B8 */ cXyz mBeamEndPos;  /* was m668: _execute 02075988: the beam's end (mAtHitPos, the BG line cross or the line end), where the Hot_Floor is created and JA_SE_OBJ_STATUE_BEAM plays; set_mtx 02075124 places the hot floor there; daBeamDelete 02075924 deletes its sound (tww the same) */
+    /* 0x8C4 */ Quaternion mHotFloorQuat;  /* was m674: _execute 02075988: Quaternion_setRotate from the hit polygon's normal; set_mtx 02075124 rotates the hot floor by it; CreateInit 02075384 sets ZeroQuat (tww the same) */
+    /* 0x8D4 */ be<u32> mHotFloorId;  /* was m684: _execute 02075988 stores the fopAcM_create id of the Hot_Floor (-1 without one) and looks the actor up by it (tww the same) */
+    /* 0x8D8 */ be<f32> mHotFloorScaleZ;  /* was m688: _execute 02075988 sets 1; set_mtx 02075124 scales the hot floor matrix's z by it (tww the same) */
+    /* 0x8DC */ gptr<daHot_Floor_c> mpHotFloor;  /* was m68C: _execute 02075988 finds the daHot_Floor_c by mHotFloorId (nullptr while none); set_mtx 02075124 gives it mHotFloorMtx and mbSpawnParticle (tww the same) */
+    /* 0x8E0 */ gptr<BeamEmitterHD> mpBeamEmitter;  /* was m690: the ID_AK_SN_LASERROOT00 emitter: move_search 02076260 creates it, move_search / wait_proc 02076598 end it; set_mtx 02075124 places and scales it; tww beamCheck() tests it */
+    /* 0x8E4 */ be<f32> mEmitterOffsetZ;  /* was m694: CreateInit 02075384: 0.001 times a global float for the searching type, else 0; set_mtx 02075124 moves the emitter matrix along z by it */
+    /* 0x8E8 */ be<s32> mSwitchNo;  /* was m698: CreateInit 02075384: param bits 16-23 (searching type); CreateInit / _execute 02075988 switch to wait_proc while that switch is set (0xFF: none) (tww the same) */
 };
 WWHD_OFFSET(daBeam_c, mStts, 0x3AC);
 WWHD_OFFSET(daBeam_c, mCps1, 0x3E8);
 WWHD_OFFSET(daBeam_c, mCps2, 0x520);
-WWHD_OFFSET(daBeam_c, m550, 0x66C);
-WWHD_OFFSET(daBeam_c, m55C, 0x674);
+WWHD_OFFSET(daBeam_c, mSearchProc, 0x66C);
+WWHD_OFFSET(daBeam_c, mDefaultProc, 0x674);
 WWHD_OFFSET(daBeam_c, M_mdl, 0x684);
 WWHD_OFFSET(daBeam_c, mBckAnm, 0x68C);
 WWHD_OFFSET(daBeam_c, mBrkAnm, 0x720);
 WWHD_OFFSET(daBeam_c, mBtkAnm, 0x7A0);
 WWHD_OFFSET(daBeam_c, mLinChk, 0x84C);
-WWHD_OFFSET(daBeam_c, m668, 0x8B8);
-WWHD_OFFSET(daBeam_c, m698, 0x8E8);
+WWHD_OFFSET(daBeam_c, mBeamEndPos, 0x8B8);
+WWHD_OFFSET(daBeam_c, mSwitchNo, 0x8E8);
 WWHD_SIZE(daBeam_c, 0x8EC);
 // HD: the HIO vtable follows the fields rather than preceding them.
 struct daBeam_HIO_c {

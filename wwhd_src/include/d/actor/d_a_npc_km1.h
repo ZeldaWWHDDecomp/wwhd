@@ -81,15 +81,15 @@ struct daNpc_Km1_c : fopNpc_npc_c {
     /* 0x910 */ be<f32> mPrevMorfFrame;  /* was field_0x7A4: setMtx 02271D1C: a morf frame below it means the animation wrapped, then it takes the frame; setAnm_anm 02272A34 0 (tww km1 the same); after tww daNpc_Ls1_c mPrevMorfFrame */
     /* 0x914 */ u8 _914[4];
     /* 0x918 */ be<f32> field_0x7AC;
-    /* 0x91C */ be<s16> mLookAtMaxVel;  /* was field_0x7B0: lookBack 02272424 eases it to HIO field_12 while turning, else 0, and passes it as the look-at's maxVel (tww km1 the same); after tww daNpc_Bm1_c mHeadLookAtMaxVel / daNpc_Ah_c mLookAtMaxVel */
+    /* 0x91C */ be<s16> mLookAtMaxVel;  /* was field_0x7B0: lookBack 02272424 eases it to HIO mMaxHeadTurnVel while turning, else 0, and passes it as the look-at's maxVel (tww km1 the same); after tww daNpc_Bm1_c mHeadLookAtMaxVel / daNpc_Ah_c mLookAtMaxVel */
     /* 0x91E */ be<s16> mDesiredYRot;  /* was field_0x7B2: lookBack 02272424: the look-at's default Y angle (targetY = it); wait01 02272DAC sets mInitialAngle.y (tww km1 the same); same code as daNpc_Bm1_c::mDesiredYRot */
     /* 0x920 */ be<s8> mbMorfAnimStopped;  /* was field_0x7B4: setMtx 02271D1C: the morf's play() result, or 1; setAnm_anm 02272A34 0 (tww km1 the same); after tww daNpc_Ls1_c mbMorfAnimStopped (same code) */
     /* 0x921 */ be<s8> field_0x7B5;
     /* 0x922 */ be<u8> field_0x7B6;
-    /* 0x923 */ be<u8> field_0x7B7;
+    /* 0x923 */ be<u8> mItemNo;  /* was field_0x7B7: wait01 02272DAC: 0xFF, or dComIfGp_event_getPreItemNo() on a talk with an item; talk01 02272E6C 0xFF (tww the same); same code as daNpc_Pm1_c::mItemNo */
     /* 0x924 */ be<u8> mbRanExecute;  /* was field_0x7B8: _execute 022726A0: 0 on the first run, when mInitialPos and mInitialAngle are taken, then 1 (tww km1 the same); after tww daNpc_Bm1_c mbRanExecute (same code) */
     /* 0x925 */ u8 _925[3];
-    /* 0x928 */ be<s32> field_0x7BC;
+    /* 0x928 */ be<s32> mbInitEyePos;  /* was field_0x7BC: createInit 02271E78 1; setAttention 02271CBC copies mEyePos to eyePos while it or mbSetEyePos is set, then clears it (one eye position right after create); same code as daNpc_Kp1_c / daNpc_Pm1_c::mbInitEyePos */
     /* 0x92C */ be<s32> mbSetEyePos;  /* was field_0x7C0: wait_action1 02272EEC stores talk01() / wait01(); setAttention 02271CBC tests it (tww km1 the same); after tww daNpc_Ls1_c mbSetEyePos (same code) */
     /* 0x930 */ be<u8> mHasAttention;  /* was field_0x7C4: wait_action1 02272EEC: chkAttention(); wait01 02272DAC looks at the player while it is set (tww km1 the same); after tww daNpc_Hi1_c mHasAttention (mHasAttention = chkAttention()) */
     /* 0x931 */ be<u8> mTalking;  /* was field_0x7C5: checkOrder 0227218C sets 1 on the talk command; wait01 02272DAC starts the talk while it is set; talk01 02272E6C clears it (tww km1 the same); same code as daNpc_Hi1_c / daNpc_Kp1_c::mTalking */
@@ -116,30 +116,30 @@ WWHD_OFFSET(daNpc_Km1_c, m_head_tex_pattern, 0x7E8);
 WWHD_OFFSET(daNpc_Km1_c, mAction, 0x864);
 WWHD_OFFSET(daNpc_Km1_c, mEventCut, 0x86C);
 WWHD_OFFSET(daNpc_Km1_c, mEyePos, 0x8F8);
-WWHD_OFFSET(daNpc_Km1_c, field_0x7BC, 0x928);
+WWHD_OFFSET(daNpc_Km1_c, mbInitEyePos, 0x928);
 WWHD_OFFSET(daNpc_Km1_c, mBtpNum, 0x939);
 WWHD_SIZE(daNpc_Km1_c, 0x944);
 
 // HD: the HIO vtable moved to the end and the debug colour option is a byte.
 struct daNpc_Km1_HIO_c {
     struct hio_prm_c {
-        /* 0x00 */ be<s16> field_0;
-        /* 0x02 */ be<s16> field_2;
-        /* 0x04 */ be<s16> field_4;
-        /* 0x06 */ be<s16> field_6;
-        /* 0x08 */ be<s16> field_8;
-        /* 0x0A */ be<s16> field_A;
-        /* 0x0C */ be<s16> field_C;
-        /* 0x0E */ be<s16> field_E;
-        /* 0x10 */ be<s16> field_10;
-        /* 0x12 */ be<s16> field_12;
+        /* 0x00 */ be<s16> mMaxHeadX;  /* was field_0: _execute 022726A0 passes it to m_jnt.setParam as argument 5 (tww dNpc_JntCtrl_c::setParam max_head_x), the joint control's limit (tww the same); same slot and role as daNpc_Ls1_HIO_c::hio_prm_c / daNpc_Hi1_HIO_c::hio_prm_c::mMaxHeadX */
+        /* 0x02 */ be<s16> mMaxHeadY;  /* was field_2: _execute 022726A0 passes it to m_jnt.setParam as argument 6 (tww dNpc_JntCtrl_c::setParam max_head_y), the joint control's limit (tww the same); same slot and role as daNpc_Ls1_HIO_c::hio_prm_c / daNpc_Hi1_HIO_c::hio_prm_c::mMaxHeadY */
+        /* 0x04 */ be<s16> mMinHeadX;  /* was field_4: _execute 022726A0 passes it to m_jnt.setParam as argument 7 (tww dNpc_JntCtrl_c::setParam min_head_x), the joint control's limit (tww the same); same slot and role as daNpc_Ls1_HIO_c::hio_prm_c / daNpc_Hi1_HIO_c::hio_prm_c::mMinHeadX */
+        /* 0x06 */ be<s16> mMinHeadY;  /* was field_6: _execute 022726A0 passes it to m_jnt.setParam as argument 8 (tww dNpc_JntCtrl_c::setParam min_head_y), the joint control's limit (tww the same); same slot and role as daNpc_Ls1_HIO_c::hio_prm_c / daNpc_Hi1_HIO_c::hio_prm_c::mMinHeadY */
+        /* 0x08 */ be<s16> mMaxBackboneX;  /* was mMaxBackBoneX (misnamed): our own spelling; the joint control's limit passed to m_jnt.setParam as argument 1 (tww dNpc_JntCtrl_c::setParam max_backbone_x), spelled as tww dNpc_HIO_c::mMaxBackboneX and the other NPC parameter blocks; was field_8: _execute 022726A0 passes it to m_jnt.setParam as argument 1 (tww dNpc_JntCtrl_c::setParam max_backbone_x), the joint control's limit (tww the same); same slot and role as daNpc_Ls1_HIO_c::hio_prm_c::mMaxBackBoneX / daNpc_Hi1_HIO_c::hio_prm_c::mMaxBackboneX */
+        /* 0x0A */ be<s16> mMaxBackboneY;  /* was mMaxBackBoneY (misnamed): our own spelling; the joint control's limit passed to m_jnt.setParam as argument 2 (tww dNpc_JntCtrl_c::setParam max_backbone_y), spelled as tww dNpc_HIO_c::mMaxBackboneY and the other NPC parameter blocks; was field_A: _execute 022726A0 passes it to m_jnt.setParam as argument 2 (tww dNpc_JntCtrl_c::setParam max_backbone_y), the joint control's limit (tww the same); same slot and role as daNpc_Ls1_HIO_c::hio_prm_c::mMaxBackBoneY / daNpc_Hi1_HIO_c::hio_prm_c::mMaxBackboneY */
+        /* 0x0C */ be<s16> mMinBackboneX;  /* was mMinBackBoneX (misnamed): our own spelling; the joint control's limit passed to m_jnt.setParam as argument 3 (tww dNpc_JntCtrl_c::setParam min_backbone_x), spelled as tww dNpc_HIO_c::mMinBackboneX and the other NPC parameter blocks; was field_C: _execute 022726A0 passes it to m_jnt.setParam as argument 3 (tww dNpc_JntCtrl_c::setParam min_backbone_x), the joint control's limit (tww the same); same slot and role as daNpc_Ls1_HIO_c::hio_prm_c::mMinBackBoneX / daNpc_Hi1_HIO_c::hio_prm_c::mMinBackboneX */
+        /* 0x0E */ be<s16> mMinBackboneY;  /* was mMinBackBoneY (misnamed): our own spelling; the joint control's limit passed to m_jnt.setParam as argument 4 (tww dNpc_JntCtrl_c::setParam min_backbone_y), spelled as tww dNpc_HIO_c::mMinBackboneY and the other NPC parameter blocks; was field_E: _execute 022726A0 passes it to m_jnt.setParam as argument 4 (tww dNpc_JntCtrl_c::setParam min_backbone_y), the joint control's limit (tww the same); same slot and role as daNpc_Ls1_HIO_c::hio_prm_c::mMinBackBoneY / daNpc_Hi1_HIO_c::hio_prm_c::mMinBackboneY */
+        /* 0x10 */ be<s16> mMaxTurnStep;  /* was field_10: _execute 022726A0 passes it to m_jnt.setParam as the turn step (9th argument) (tww the same); same role as dNpc_HIO_c::mMaxTurnStep / daNpc_Hi1_HIO_c::hio_prm_c::mMaxTurnStep */
+        /* 0x12 */ be<s16> mMaxHeadTurnVel;  /* was field_12: lookBack 02272424: cLib_addCalcAngleS2 eases mLookAtMaxVel toward it while turning (tww the same); same role as dNpc_HIO_c::mMaxHeadTurnVel */
         /* 0x14 */ be<f32> mAttentionArrowYOffset;
-        /* 0x18 */ be<u8> field_18; /* HD: a byte flag (debug colours in _draw) */
+        /* 0x18 */ be<u8> mDebug;  /* was field_18: HD: a byte flag; _draw 02272858 initialises the debug colour statics while it is set (tww: an unused f32 0.0); same role as daNpc_Hi1_HIO_c::hio_prm_c::mDebug */
         /* 0x19 */ u8 _19[3];
     };
     /* 0x00 */ be<s8> mNo;
     /* 0x01 */ u8 _01[3];
-    /* 0x04 */ be<s32> field_0x8;
+    /* 0x04 */ be<s32> mRefCount;  /* was field_0x8: daNpc_Km1_HIO_c_ct 02272FB0 -1; _create 02271F84 creates the HIO child at < 0 and adds 1; _delete 02272110 subtracts 1 and deletes the child below 0 (tww the same); same code as daNpc_Pm1_HIO_c::mRefCount */
     /* 0x08 */ hio_prm_c mPrmTbl;
     /* 0x24 */ be<u32> __vtbl;
 };

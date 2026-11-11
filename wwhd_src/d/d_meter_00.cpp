@@ -2,6 +2,7 @@
  * register widths and GHS fused/NaN arithmetic follow the verified HD prefix.
  */
 #include "d/d_meter_00.h"
+#include "sead/ElementAt.h"
 using namespace gabi;
 using namespace meter00Item;
 using namespace meter00Status;
@@ -143,29 +144,30 @@ void dMeter_setNowHeartScaleXY(fopMsgM_pane_class *pane) {
 }
 
 /* 02591AB4 */
+/* sibling (this function and the next): timer arrays + index wrap at 32 bits as on the console */
 void dMeter_heartScaleCountdownHD(u32 index) {
 
-  if ((u8)sHeartTimers.mScaleActive[index]) {
-    u8 count = (u8)sHeartTimers.mCloseTimer[index];
+  if ((u8)sead::elementAt<be<u8>>(gabi::ea(sHeartTimers.mScaleActive), index)) {
+    u8 count = (u8)sead::elementAt<be<u8>>(gabi::ea(sHeartTimers.mCloseTimer), index);
     if (count)
-      sHeartTimers.mCloseTimer[index] = count - 1;
+      sead::elementAt<be<u8>>(gabi::ea(sHeartTimers.mCloseTimer), index) = count - 1;
     else
-      sHeartTimers.mScaleActive[index] = 0;
+      sead::elementAt<be<u8>>(gabi::ea(sHeartTimers.mScaleActive), index) = 0;
   } else
-    sHeartTimers.mOpenTimer[index] = 1;
+    sead::elementAt<be<u8>>(gabi::ea(sHeartTimers.mOpenTimer), index) = 1;
 }
 
 /* 02591B00 */
 void dMeter_maxLifeCountdownHD(u32 index) {
 
-  if (!(u8)sHeartTimers.mScaleActive[index]) {
-    u8 count = (u8)sHeartTimers.mOpenTimer[index];
+  if (!(u8)sead::elementAt<be<u8>>(gabi::ea(sHeartTimers.mScaleActive), index)) {
+    u8 count = (u8)sead::elementAt<be<u8>>(gabi::ea(sHeartTimers.mOpenTimer), index);
     if (count)
-      sHeartTimers.mOpenTimer[index] = count - 1;
+      sead::elementAt<be<u8>>(gabi::ea(sHeartTimers.mOpenTimer), index) = count - 1;
     else
-      sHeartTimers.mScaleActive[index] = 1;
+      sead::elementAt<be<u8>>(gabi::ea(sHeartTimers.mScaleActive), index) = 1;
   } else
-    sHeartTimers.mCloseTimer[index] = 1;
+    sead::elementAt<be<u8>>(gabi::ea(sHeartTimers.mCloseTimer), index) = 1;
 }
 
 // HD: the heart initialization loop includes the scale/light setup inline.
@@ -222,12 +224,13 @@ void dMeter_heartInit(dMeterPrefixHD *i_Meter) {
 }
 
 /* 02591E60 */
+/* guest address arithmetic (this function and the next): item arrays + index wrap at 32 bits as on the console */
 void dMeter_itemUseCheckHD(dMeterPrefixHD *i_Meter, u32 index) {
   dMeterGameInfoHD *state = meter00_getGameInfo();
-  bool special = (u8)state->mSelectItem[index] == dItemNo_PICTO_BOX_e;
+  bool special = (u8)sead::elementAt<be<u8>>(gabi::ea(state->mSelectItem), index) == dItemNo_PICTO_BOX_e;
   if (!special) {
     state = meter00_getGameInfo();
-    special = (u8)state->mSelectItem[index] == dItemNo_DELUXE_PICTO_BOX_e;
+    special = (u8)sead::elementAt<be<u8>>(gabi::ea(state->mSelectItem), index) == dItemNo_DELUXE_PICTO_BOX_e;
   }
   if (special) {
     meter00_photoCheck(&sSaveInfo->mPhoto);
@@ -237,10 +240,10 @@ void dMeter_itemUseCheckHD(dMeterPrefixHD *i_Meter, u32 index) {
   for (u8 item : {dItemNo_BOW_e, dItemNo_MAGIC_ARROW_e, dItemNo_LIGHT_ARROW_e,
                   dItemNo_BOMB_BAG_e}) {
     state = meter00_getGameInfo();
-    if ((u8)state->mSelectItem[index] == item)
+    if ((u8)sead::elementAt<be<u8>>(gabi::ea(state->mSelectItem), index) == item)
       return;
   }
-  u32 item = (u8)sSaveInfo->mSelectItem[index];
+  u32 item = (u8)sead::elementAt<be<u8>>(gabi::ea(sSaveInfo->mSelectItem), index);
   if (item < dInvSlot_BeastFirst_e || item <= dInvSlot_BeastLast_e - 1 ||
       (u32)(item - dInvSlot_BaitFirst_e) >=
           dInvSlot_BaitLast_e - dInvSlot_BaitFirst_e)
@@ -251,19 +254,19 @@ void dMeter_itemUseCheckHD(dMeterPrefixHD *i_Meter, u32 index) {
 /* 02591F68 */
 void dMeter_loadItemTextureHD(dMeterPrefixHD *i_Meter, u32 index) {
   dMeterGameInfoHD *state = meter00_getGameInfo();
-  if ((u8)state->mSelectItem[index] != dItemNo_NONE_e) {
-    u32 slot = (u8)sSaveInfo->mSelectItem[index];
+  if ((u8)sead::elementAt<be<u8>>(gabi::ea(state->mSelectItem), index) != dItemNo_NONE_e) {
+    u32 slot = (u8)sead::elementAt<be<u8>>(gabi::ea(sSaveInfo->mSelectItem), index);
     u32 resource;
     void *buffer;
-    gptr<void> *address = &i_Meter->xyIconTex[index];
+    gptr<void> *address = &sead::elementAt<gptr<void>>(gabi::ea(i_Meter->xyIconTex), index);
     if (slot >= dInvSlot_BeastFirst_e) {
       buffer = address->get();
       state = meter00_getGameInfo();
-      u32 item = (u8)state->mSelectItem[index];
+      u32 item = (u8)sead::elementAt<be<u8>>(gabi::ea(state->mSelectItem), index);
       resource = (u32)sItemResources.mItem[item].mIconName;
     } else {
       state = meter00_getGameInfo();
-      u32 item = (u8)state->mSelectItem[index];
+      u32 item = (u8)sead::elementAt<be<u8>>(gabi::ea(state->mSelectItem), index);
       if (item == dItemNo_MAGIC_ARROW_e || item == dItemNo_LIGHT_ARROW_e)
         item = dItemNo_BOW_e;
       buffer = address->get();
@@ -690,23 +693,23 @@ void dMeter_gaugeInitialPositionHD(dMeterPrefixHD *i_Meter) {
   meter00_getGameInfo();
   bool visible = (u8)sGaugeVisible != 0;
   f32 zero = (f32)sZero;
-  i_Meter->field_0x2f68 = visible ? (f32)sOne : zero;
+  i_Meter->mClockTimePass = visible ? (f32)sOne : zero;
   f32 lower = (f32)sAlphaSlope, mana = (f32)sSaveInfo->mMagic;
   bool mode = mana < lower || !(mana < (f32)sMagicUpperBound);
-  f32 x = -fadds_ppc((f32)i_Meter->field_0x1948.mPosTopLeftOrig.x,
-                     (f32)i_Meter->field_0x1948.mSizeOrig.x);
+  f32 x = -fadds_ppc((f32)i_Meter->mCompassClock.mPosTopLeftOrig.x,
+                     (f32)i_Meter->mCompassClock.mSizeOrig.x);
   if (mode) {
-    i_Meter->field_0x3012 = 1;
+    i_Meter->mClockNight = 1;
     i_Meter->mGaugeModeHD = 0;
-    i_Meter->field_0x12f0.mUserArea = 0;
+    i_Meter->mCompassBase.mUserArea = 0;
   } else {
-    i_Meter->field_0x12f0.mUserArea = 0;
+    i_Meter->mCompassBase.mUserArea = 0;
     i_Meter->mGaugeModeHD = 0;
-    i_Meter->field_0x3012 = 0;
+    i_Meter->mClockNight = 0;
   }
-  meter00_paneTrans(&i_Meter->field_0x12f0, x, zero);
-  meter00_paneTrans(&i_Meter->field_0x1948, x, zero);
-  i_Meter->field_0x3020 = 1;
+  meter00_paneTrans(&i_Meter->mCompassBase, x, zero);
+  meter00_paneTrans(&i_Meter->mCompassClock, x, zero);
+  i_Meter->mCompassState = 1;
 }
 /* WWHD glue
 str 100512CC "Xboss0"

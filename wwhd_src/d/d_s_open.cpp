@@ -91,10 +91,10 @@ BOOL dScnOpen_c::execute() {
             }
         }
         if (skip | buttons) {
-            field_0x1d4 = 1;
+            mSkipRequested = 1;
             mDoAud_bgmStop(20);
         }
-        if (field_0x1d4 && !mDoAud_isUsedHeapForStreamBuffer()) changeGameScene();
+        if (mSkipRequested && !mDoAud_isUsedHeapForStreamBuffer()) changeGameScene();
     }
     if (l_ui->mpProc->mIsEnd) changeGameScene();
     return TRUE;
@@ -134,7 +134,7 @@ static dScnOpen_c* dScnOpen__ct(dScnOpen_c* i_this) {
         dScnOpen_initPhase(&i_this->mPhs, 8);
         i_this->mStreamTimer = 0;
         i_this->solid_heap = nullptr;
-        i_this->field_0x1d4 = 0;
+        i_this->mSkipRequested = 0;
         i_this->mpProc = nullptr;
     }
     return i_this;

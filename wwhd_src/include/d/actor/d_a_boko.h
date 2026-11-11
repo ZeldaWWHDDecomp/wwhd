@@ -5,8 +5,8 @@
 #include "gc_api/d/d_com_inf_game.h"
 
 struct ke_c_s {
-    cXyz m000[10];
-    cXyz m078[10];
+    cXyz mNodePos[10];  /* was m000: keCalc1 020C1250: the 10 node positions of one strand, each pulled from the previous node (tww the same) */
+    cXyz mNodeSpeed[10];  /* was m078: keCalc1 020C1250: the 10 node velocities added to the strand step (tww the same) */
     // HD: cached ground heights are used when the staggered query is skipped.
     be<f32> mGroundHeight[10];
     u8 _118[0xC];
@@ -22,10 +22,10 @@ struct LineKe {
     be<u32> mVtable;
     u8 _134[0x10];
     gptr<BokoLineRow> mRows;
-    ke_c_s m001C[16];
+    ke_c_s mKe[16];  /* was m001C: keCalc 020C1684 / keCalc1 020C1250 / keDraw: the 16 hair strands (ke_c_s) drawn with the line material (tww the same) */
     be<f32> mDamping;
 };
-static_assert(offsetof(LineKe, m001C) == 0x148);
+static_assert(offsetof(LineKe, mKe) == 0x148);
 static_assert(offsetof(LineKe, mDamping) == 0x1388);
 static_assert(sizeof(LineKe) == 0x138C);
 
@@ -72,25 +72,33 @@ struct daBoko_c : fopAc_ac_c {
     /* 0x3AC */ request_of_phase_process_class mPhase;
     /* 0x3B4 */ gptr<J3DModel> mpModel;
     /* 0x3B8 */ mDoExt_brkAnm mBrkAnm;
-    /* 0x430 */ be<u8> mNowMode, m2B9, mbThrow, m2BB, mbFloorFlg;
+    /* 0x430 */ be<u8> mNowMode;
+    /* 0x431 */ be<u8> mNoDraw;  /* was m2B9: checkNoDraw 020C0BFC: the stick is not drawn while it is set (as in Mode_4_e); never written in WWHD or tww */
+    /* 0x432 */ be<u8> mbThrow;
+    /* 0x433 */ be<u8> mGroundSnapCount;  /* was m2BB: procMove_init 020C2624: bokoCarryHideTimer + 5; procMove 020C2C90: while it is not 0 each ground contact pulls current.pos.y down by the smaller root / top gap and counts it down (by 2 when the pitch has settled) */
+    /* 0x434 */ be<u8> mbFloorFlg;
     /* 0x435 */ u8 _435[3];
-    /* 0x438 */ be<s16> m2C0, m2C2, mFlameTimer;
+    /* 0x438 */ be<s16> mPitchSpeed;  /* was m2C0: procMove 020C2C90: the per-bounce pitch step toward the ground slope, added to shape_angle.x (with mRotAngleSpeed, the larger one); procWait_init 020C25A8 / setThrowReverse 020C26AC clear it (tww the same) */
+    /* 0x43A */ be<s16> mRotAngleSpeed;  /* was m2C2: tww setRotAngleSpeed(s16) stores it; setThrowReverse 020C26AC: +-0x7FF, then the 1500 / 2000 spin; procMove 020C2C90 adds it to shape_angle.x and damps it at each bounce; procWait_init 020C25A8 clears it */
+    /* 0x43C */ be<s16> mFlameTimer;
     /* 0x43E */ u8 _43E[2];
-    /* 0x440 */ be<s16> m2C8, m2CA;
+    /* 0x440 */ be<s16> mThrowGravityDelay;  /* was m2C8: procCarry 020C3480: 2 when the throw starts (gravity 0); procThrow 020C2978 counts it down and sets gravity -3 at 0 (tww the same) */
+    /* 0x442 */ be<s16> mThrowAngle;  /* was m2CA: tww setThrow(s16) stores it; procCarry 020C3480: the throw's shape_angle.x, speedF = 70 cos / speed.y = -70 sin of it */
     /* 0x444 */ be<s16> mChainTimer, mSpawnDelay;
     /* 0x448 */ u8 _448[4];
-    /* 0x44C */ cXyz m2D0, m2DC;
+    /* 0x44C */ cXyz mTopPos;  /* was m2D0: setTopRootPos 020C0E08: m_top_offset[type] through the stick matrix; procMove 020C2C90 ground-checks it; setFlameEffect 020C0EF8 puts the flame there (tww the same) */
+    /* 0x458 */ cXyz mRootPos;  /* was m2DC: setTopRootPos 020C0E08: m_root_offset[type] through the stick matrix; procMove 020C2C90 ground-checks it against mTopPos (tww the same) */
     /* 0x464 */ u8 _464[12];
     /* 0x470 */ cXyz m2F4;
     /* 0x47C */ LIGHT_INFLUENCE mLight;
-    /* 0x4A0 */ cXyz m320;
+    /* 0x4A0 */ cXyz mOldTopPos;  /* was m320: setFlameEffect 020C0EF8: copy of mTopPos after the flame emitter update; the emitter direction is (mTopPos - it) * rate (tww the same) */
     /* 0x4AC */ dPa_followEcallBack mParticleCallBack;
     /* 0x4C0 */ dBgS_ObjAcch mAcch;
     /* 0x684 */ dBgS_AcchCir mAcchCir;
     /* 0x6C4 */ dCcD_Stts mStts;
     /* 0x700 */ dCcD_Sph mSph;
     /* 0x82C */ BokoCapsule mCps;
-    /* 0x964 */ be<f32> m7E4;
+    /* 0x964 */ be<f32> mFlameScale;  /* was m7E4: setFlameEffect 020C0EF8: eased to 1 + random 0.2, scales the four flame models; execute 020C183C sets 0 when the flame goes out and scales mLight.mPower by it */
     // HD: four flame matrices are stored directly after the fluctuation scale.
     /* 0x968 */ Mtx34 mAlphaModelMtx[4];
     /* 0xA28 */ gptr<LineKe> mpLineKe;
@@ -125,16 +133,16 @@ WWHD_OFFSET(daBoko_c, mpModel, 0x3B4);
 WWHD_OFFSET(daBoko_c, mBrkAnm, 0x3B8);
 WWHD_OFFSET(daBoko_c, mNowMode, 0x430);
 WWHD_OFFSET(daBoko_c, mChainTimer, 0x444);
-WWHD_OFFSET(daBoko_c, m2D0, 0x44C);
+WWHD_OFFSET(daBoko_c, mTopPos, 0x44C);
 WWHD_OFFSET(daBoko_c, mLight, 0x47C);
-WWHD_OFFSET(daBoko_c, m320, 0x4A0);
+WWHD_OFFSET(daBoko_c, mOldTopPos, 0x4A0);
 WWHD_OFFSET(daBoko_c, mParticleCallBack, 0x4AC);
 WWHD_OFFSET(daBoko_c, mAcch, 0x4C0);
 WWHD_OFFSET(daBoko_c, mAcchCir, 0x684);
 WWHD_OFFSET(daBoko_c, mStts, 0x6C4);
 WWHD_OFFSET(daBoko_c, mSph, 0x700);
 WWHD_OFFSET(daBoko_c, mCps, 0x82C);
-WWHD_OFFSET(daBoko_c, m7E4, 0x964);
+WWHD_OFFSET(daBoko_c, mFlameScale, 0x964);
 WWHD_OFFSET(daBoko_c, mAlphaModelMtx, 0x968);
 WWHD_OFFSET(daBoko_c, mpLineKe, 0xA28);
 WWHD_OFFSET(daBoko_c, mCurrentProc, 0xA30);
@@ -397,25 +405,25 @@ enum BokoTuMetadata : u32 {
     BOKO_LINE_GROUP_VTABLE = 0x1000A418,
 };
 
-WWHD_OFFSET(daBoko_c, m2B9, 0x431);
+WWHD_OFFSET(daBoko_c, mNoDraw, 0x431);
 WWHD_OFFSET(daBoko_c, mbThrow, 0x432);
-WWHD_OFFSET(daBoko_c, m2BB, 0x433);
+WWHD_OFFSET(daBoko_c, mGroundSnapCount, 0x433);
 WWHD_OFFSET(daBoko_c, mbFloorFlg, 0x434);
-WWHD_OFFSET(daBoko_c, m2C0, 0x438);
-WWHD_OFFSET(daBoko_c, m2C2, 0x43A);
+WWHD_OFFSET(daBoko_c, mPitchSpeed, 0x438);
+WWHD_OFFSET(daBoko_c, mRotAngleSpeed, 0x43A);
 WWHD_OFFSET(daBoko_c, mFlameTimer, 0x43C);
-WWHD_OFFSET(daBoko_c, m2C8, 0x440);
-WWHD_OFFSET(daBoko_c, m2CA, 0x442);
+WWHD_OFFSET(daBoko_c, mThrowGravityDelay, 0x440);
+WWHD_OFFSET(daBoko_c, mThrowAngle, 0x442);
 WWHD_OFFSET(daBoko_c, mSpawnDelay, 0x446);
-WWHD_OFFSET(daBoko_c, m2DC, 0x458);
+WWHD_OFFSET(daBoko_c, mRootPos, 0x458);
 WWHD_OFFSET(daBoko_c, m2F4, 0x470);
 WWHD_OFFSET(daBoko_c, mProcDelta, 0xA2C);
 WWHD_OFFSET(daBoko_c, mProcSlot, 0xA2E);
 
 daBoko_c* daBoko_c__ct(daBoko_c* actor);
 
-WWHD_OFFSET(ke_c_s, m000, 0x00);
-WWHD_OFFSET(ke_c_s, m078, 0x78);
+WWHD_OFFSET(ke_c_s, mNodePos, 0x00);
+WWHD_OFFSET(ke_c_s, mNodeSpeed, 0x78);
 WWHD_OFFSET(ke_c_s, mGroundHeight, 0xF0);
 WWHD_SIZE(BokoLineRow, 0x10);
 WWHD_OFFSET(LineKe, mVtable, 0x130);

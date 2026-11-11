@@ -156,34 +156,34 @@ daAuction_c* Auction_constructor(daAuction_c* actor) {
     f32 light = l_one;
     actor->mLight.mIntensity = light;
     for (u32 i = 0; i < 8; ++i) {
-        actor->m738[i] = 0xFFFFFFFF;
-        actor->m80C[i] = i;
+        actor->mNpcIds[i] = 0xFFFFFFFF;
+        actor->mNpcKinds[i] = i;
         actor->mAucMdlNo[i] = 0xFF;
     }
     for (u32 i = 0; i < 100; ++i) {
         u32 first = (u32)actor->getRand(6) + 1;
         u32 second = (u32)actor->getRand(6) + 1;
 
-        u8 a = actor->m80C[second], b = actor->m80C[first];
-        actor->m80C[first] = a;
-        actor->m80C[second] = b;
+        u8 a = actor->mNpcKinds[second], b = actor->mNpcKinds[first];
+        actor->mNpcKinds[first] = a;
+        actor->mNpcKinds[second] = b;
     }
     u32 x = auctionWords(actor->current.pos).value[0];
     u32 z = auctionWords(actor->current.pos).value[2];
-    actor->m81C = 0xFF;
-    actor->m81D = 0xFF;
+    actor->mPairedCostume0 = 0xFF;
+    actor->mPairedCostume1 = 0xFF;
     u32 y = auctionWords(actor->current.pos).value[1];
-    actor->m832 = 0;
+    actor->mSetLinkFace = 0;
     auctionWords(actor->eyePos).value[1] = y;
-    actor->m7EC = 0;
-    actor->m7F0 = 0;
+    actor->mNextMsgNo = 0;
+    actor->mBidMsgNo = 0;
     auctionWords(actor->eyePos).value[0] = x;
     auctionWords(actor->eyePos).value[2] = z;
-    actor->m821 = 0;
-    actor->m820 = 1;
+    actor->mSelection = 0;
+    actor->mActiveNpcs = 1;
     actor->mpEmitter = 0;
     actor->mMoveState = daAuction_c::MOVE_WAIT;
-    actor->m836 = 0;
+    actor->mEmitterFadeFlags = 0;
     return actor;
 }
 
@@ -240,9 +240,9 @@ s32 daAuction_c::createInit() {
     }
     auction_dNpc_EventCut_c_setActorInfo(&mNpcEvtInfo, "Auction", this);
     u8 kind = mAucMdlNo[0];
-    m824 = 0;
-    m826 = 0xFF;
-    s32 message = kind < 12 ? (s16)l_npc_msg_dat[(u32)kind].field_0x00 : 0;
+    mCurrentNpc = 0;
+    mTopBidder = 0xFF;
+    s32 message = kind < 12 ? (s16)l_npc_msg_dat[(u32)kind].mNpcNameMsgID : 0;
     u32 play = dComIfGp_ea();
     auctionGameInfo(play).play.mNpcNameMessageID = message;
     mCurrAuctionItemIndex = 0;
@@ -304,12 +304,12 @@ BOOL daAuction_c::_execute() {
     eventOrder();
     u32 emitter = mpEmitter;
     if (emitter) {
-        u8 flags = m836;
+        u8 flags = mEmitterFadeFlags;
         f32 step = l_alphaStep;
         if (flags & 1) {
-            s16 delay = m80A;
+            s16 delay = mEmitterFadeDelay;
             if (delay)
-                m80A = (s16)((u32)(s32)delay - 1);
+                mEmitterFadeDelay = (s16)((u32)(s32)delay - 1);
             else {
                 f32 alpha = mAlpha;
                 f32 next = gabi::fadds_ppc(alpha, step);
@@ -317,7 +317,7 @@ BOOL daAuction_c::_execute() {
                 emitter = mpEmitter;
                 if (next > limit) {
                     mAlpha = limit;
-                    m836 = m836 & 0xFE;
+                    mEmitterFadeFlags = mEmitterFadeFlags & 0xFE;
                     next = limit;
                 } else
                     mAlpha = next;
@@ -344,7 +344,7 @@ BOOL daAuction_c::_execute() {
 /* 0205AD44 */
 void daAuction_c::executeWait() {
     for (u32 i = 0; i < 8; ++i)
-        if (m738[i] == 0xFFFFFFFF)
+        if (mNpcIds[i] == 0xFFFFFFFF)
             return;
     mMoveState = daAuction_c::MOVE_NORMAL;
 }
@@ -366,8 +366,8 @@ void daAuction_c::checkOrder() {
         u32 play = dComIfGp_ea();
         if (auction_dEvent_manager_c_startCheck(&auctionGameInfo(play).play.mEvtManager,
                                                 (s32)event) &&
-            m838 == (s8)(i + 3)) {
-            m838 = 0;
+            mOrderEvent == (s8)(i + 3)) {
+            mOrderEvent = 0;
             break;
         }
     }
@@ -376,8 +376,8 @@ void daAuction_c::checkOrder() {
         u32 play = dComIfGp_ea();
         if (auction_dEvent_manager_c_startCheck(&auctionGameInfo(play).play.mEvtManager,
                                                 (s32)event) &&
-            m838 == (s8)(i + 3)) {
-            m838 = 0;
+            mOrderEvent == (s8)(i + 3)) {
+            mOrderEvent = 0;
             break;
         }
     }
@@ -385,22 +385,22 @@ void daAuction_c::checkOrder() {
 
 /* 0205A724 */
 void daAuction_c::eventOrder() {
-    if (m821 == 1) {
-        m838 = 3;
+    if (mSelection == 1) {
+        mOrderEvent = 3;
         mMoveState = daAuction_c::MOVE_START;
-        u8 request = m821;
-        m821 = 0;
-        m822 = request;
-    } else if (m821 == 2) {
-        u8 request = m821;
+        u8 request = mSelection;
+        mSelection = 0;
+        mAuctionType = request;
+    } else if (mSelection == 2) {
+        u8 request = mSelection;
         mMoveState = daAuction_c::MOVE_START;
-        m821 = 0;
-        m838 = 6;
-        m822 = request;
+        mSelection = 0;
+        mOrderEvent = 6;
+        mAuctionType = request;
     }
-    s8 order = m838;
+    s8 order = mOrderEvent;
     if (order == 1 || order == 2) {
-        s8 current = m838;
+        s8 current = mOrderEvent;
         eventInfo.mCondition = eventInfo.mCondition | 1;
         if (current == 1)
             auction_fopAcM_orderSpeakEvent(this);
@@ -473,7 +473,7 @@ void daAuction_c::eventOrder() {
 void daAuction_c::eventMove() {
     if (auctionEventEnded(this, &mEvtStartIdx)) {
         auctionEventFlag();
-        m838 = m824 ? 5 : 4;
+        mOrderEvent = mCurrentNpc ? 5 : 4;
         return;
     }
     bool ended = auctionEventEnded(this, &mEvtGetItemIdx);
@@ -496,7 +496,7 @@ void daAuction_c::eventMove() {
     }
     if (auctionEventEnded(this, &mEvtStart2Idx)) {
         auctionEventFlag();
-        m838 = 7;
+        mOrderEvent = 7;
         return;
     }
     u8 attention = mNpcEvtInfo.mbAttention;
@@ -599,25 +599,25 @@ void daAuction_c::privateCut() {
         auction_dEvent_manager_c_cutEnd(&auctionGameInfo(play).play.mEvtManager, staff);
     }
     u32 camera = auction_dCam_getBody();
-    u8 flags = m835;
+    u8 flags = mCameraFlags;
     if (flags & 1) {
         auction_dCamera_c_Stop(gabi::at<void>(camera));
-        flags = ((u8)m835 & 0xFE) | 4;
-        m835 = flags;
+        flags = ((u8)mCameraFlags & 0xFE) | 4;
+        mCameraFlags = flags;
     }
     if (flags & 2) {
         auction_dCamera_c_Start(gabi::at<void>(camera));
-        flags = (u8)m835 & 0xF1;
-        m835 = flags;
+        flags = (u8)mCameraFlags & 0xF1;
+        mCameraFlags = flags;
     }
     if ((flags & 4) && (flags & 8)) {
         gabi::Local<cXyz> eye, center;
-        center->z = m798.z;
-        eye->x = m78C.x;
-        eye->y = m78C.y;
-        center->x = m798.x;
-        eye->z = m78C.z;
-        center->y = m798.y;
+        center->z = mCameraEye.z;
+        eye->x = mCameraCenter.x;
+        eye->y = mCameraCenter.y;
+        center->x = mCameraEye.x;
+        eye->z = mCameraCenter.z;
+        center->y = mCameraEye.y;
         auction_dCamera_c_Set(gabi::at<void>(camera), eye.get(), center.get());
     }
 }
@@ -649,9 +649,9 @@ BOOL daAuction_c::eventMesEnd() { return auction_fopNpc_npc_c_talk_abi2(this, 0)
 
 /* 02059544 */
 void daAuction_c::eventStartInit() {
-    u8 type = m822;
+    u8 type = mAuctionType;
     f32 y = l_timerY, x = l_timerX, w = l_timerWidth;
-    m820 = 0xFE;
+    mActiveNpcs = 0xFE;
     f32 h = l_timerHeight;
     s32 timer = auction_dTimer_createTimer(4, type == 2 ? 0x1E : 0x3C, 1, 0, x, y, w, h);
     mTimerID = timer;
@@ -663,7 +663,7 @@ void daAuction_c::eventStartInit() {
                               &l_createScreenTask);
     // HD: the auction screen is created through a queued task instead of a gauge process.
     mpTimer = 0;
-    m830 = 1;
+    mTauntShown = 1;
     u32 play = dComIfGp_ea();
     auctionGameInfo(play).play.mMiniGameRupee = 0;
     play = dComIfGp_ea();
@@ -712,15 +712,15 @@ void daAuction_c::eventMainInit() {
     f32 zero = l_zero;
     m804 = 0xE10;
     for (u32 i = 0; i < 7; ++i)
-        m7C4[i] = zero;
-    u8 type = m822;
-    m82A = 0;
-    m82B = 0;
-    m834 = 0;
-    m82E = 0;
-    m81F = type == 2;
+        mBidGauge[i] = zero;
+    u8 type = mAuctionType;
+    mRestMsgIdx = 0;
+    mAuctionEnded = 0;
+    mGestureFlags = 0;
+    mFirstBidMade = 0;
+    mMainState = type == 2;
     f32 one = l_one;
-    m835 = 0;
+    mCameraFlags = 0;
     m7E0 = zero;
     m7E4 = one;
     u32 play = dComIfGp_ea();
@@ -730,9 +730,9 @@ void daAuction_c::eventMainInit() {
         if (timer)
             auction_dTimer_start(gabi::at<void>(timer));
     }
-    if (m822 == 1)
+    if (mAuctionType == 1)
         auction_dAuction_screen_gaugeShow();
-    m836 = m836 | 1;
+    mEmitterFadeFlags = mEmitterFadeFlags | 1;
     play = dComIfGp_ea();
     u32 link = auctionGameInfo(play).play.mpPlayerPtr[0].v;
     auctionPlayer(link)->mDemo.mDemoType = 3;
@@ -742,9 +742,9 @@ void daAuction_c::eventMainInit() {
     auto* eventManager = &auctionGameInfo(play).play.mEvtCtrl;
     u32 index = auction_dEvt_control_c_getPId(eventManager, this);
     auctionGameInfo(play).play.mEvtCtrl.mPtTalk = index;
-    m82F = 0;
+    mCameraPosIdx = 0;
     for (u32 i = 0; i < 6; ++i)
-        auctionCameraWords(m78C).value[i] =
+        auctionCameraWords(mCameraCenter).value[i] =
             auctionCameraWords(l_camera_pos.positions[0][0]).value[i];
     auction_dAuction_screen_talkEnd();
 }
@@ -769,23 +769,23 @@ bool daAuction_c::eventMain() {
         if (timer)
             auction_dTimer_stop(gabi::at<void>(timer), 2);
     }
-    (this->*eventProc[(u8)m81F].fn)();
-    if (m832)
+    (this->*eventProc[(u8)mMainState].fn)();
+    if (mSetLinkFace)
         auctionPlayer(link)->mFace = (u8)mFace;
-    if (m822 == 1) {
-        s16 wait = (s16)gabi::ftoi(m7C4[0]);
+    if (mAuctionType == 1) {
+        s16 wait = (s16)gabi::ftoi(mBidGauge[0]);
         play = dComIfGp_ea();
         auctionGameInfo(play).play.mAuctionGauge = wait;
     }
-    if (m81F > MAIN_URI || !m82B)
+    if (mMainState > MAIN_URI || !mAuctionEnded)
         return false;
-    u8 kind = mAucMdlNo[(u8)m824];
+    u8 kind = mAucMdlNo[(u8)mCurrentNpc];
     if (kind >= 12) {
         auction_JUTAssertion_showAssert_abi2(gabi::at<void>(0x100078D8), 0x95A,
                                              gabi::at<void>(0x100078E8));
         kind = 0;
     }
-    s32 name = l_npc_msg_dat[kind].field_0x00;
+    s32 name = l_npc_msg_dat[kind].mNpcNameMsgID;
     play = dComIfGp_ea();
     auctionGameInfo(play).play.mNpcNameMessageID = name;
     play = dComIfGp_ea();
@@ -797,15 +797,15 @@ bool daAuction_c::eventMain() {
     }
     auction_dAuction_screen_slotHide();
     auction_dAuction_screen_gaugeHide_abi2();
-    u8 flags = m836;
-    m82B = 1;
-    m834 = 0;
-    m836 = flags | 2;
+    u8 flags = mEmitterFadeFlags;
+    mAuctionEnded = 1;
+    mGestureFlags = 0;
+    mEmitterFadeFlags = flags | 2;
     auctionPlayer(link)->mDemo.mDemoType = 2;
     auctionPlayer(link)->mDemo.mDemoMode = 1;
-    u8 camera = m835;
+    u8 camera = mCameraFlags;
     if (camera & 4)
-        m835 = (camera | 2) & 0xFE;
+        mCameraFlags = (camera | 2) & 0xFE;
     auction_mDoAud_seStart(0x8DE);
     s16 bid = mCurrBid;
     play = dComIfGp_ea();
@@ -817,7 +817,7 @@ bool daAuction_c::eventMain() {
 void daAuction_c::eventMainKai() {
     eventRestartTimer();
     if (eventTimeRemaining() <= 0)
-        m82B = 1;
+        mAuctionEnded = 1;
     else {
         s32 cancel = auction_checkTriggerB(0);
         f32 zero = l_zero;
@@ -840,62 +840,62 @@ void daAuction_c::eventMainKai() {
                 m7E0 = negative;
                 m7E4 = one;
             }
-            f32 gauge = m7C4[0];
+            f32 gauge = mBidGauge[0];
             if (gauge > zero && gauge < limit)
-                m7C4[0] = gauge + l_gaugeIdleStep;
+                mBidGauge[0] = gauge + l_gaugeIdleStep;
             if (auction_checkTriggerA(0)) {
-                f32 low = l_npc_dat[0].field_0x00;
-                f32 high = l_npc_dat[0].field_0x04;
+                f32 low = l_npc_dat[0].mGaugeIncMin;
+                f32 high = l_npc_dat[0].mGaugeIncMax;
                 f32 random = cM_rndF(high - low);
-                low = l_npc_dat[0].field_0x00;
-                gauge = m7C4[0];
+                low = l_npc_dat[0].mGaugeIncMin;
+                gauge = mBidGauge[0];
                 gauge = gauge + (random + low);
                 f32 unsignedBoundary = l_unsignedFloatBoundary;
-                m7C4[0] = gauge;
+                mBidGauge[0] = gauge;
                 u32 soundParameter =
                     gauge < unsignedBoundary
                         ? (u32)gabi::ftoi(gauge)
                         : (u32)gabi::ftoi(gauge - l_unsignedFloatBoundary) + 0x80000000;
                 auction_mDoAud_seStartWithParam(0x8E4, 0, soundParameter);
             }
-            if (m7C4[0] > limit)
-                m7C4[0] = limit;
-            s16 wait = m806;
+            if (mBidGauge[0] > limit)
+                mBidGauge[0] = limit;
+            s16 wait = mBidWaitTimer;
             if (wait) {
                 s16 nextWait = (s16)((u16)wait - 1);
-                m806 = nextWait;
+                mBidWaitTimer = nextWait;
                 if (!nextWait) {
-                    u8 flags = m834;
+                    u8 flags = mGestureFlags;
                     if (flags & 2) {
                         u32 camera = getRand(3) & 0xFF;
-                        m82F = camera;
+                        mCameraPosIdx = camera;
                         auto& source = auctionCameraWords(l_camera_pos.positions[camera][0]);
                         for (u32 i = 0; i < 3; ++i)
-                            auctionCameraWords(m78C).value[i] = source.value[i];
-                        flags = m834;
+                            auctionCameraWords(mCameraCenter).value[i] = source.value[i];
+                        flags = mGestureFlags;
                         for (u32 i = 3; i < 6; ++i)
-                            auctionCameraWords(m78C).value[i] = source.value[i];
+                            auctionCameraWords(mCameraCenter).value[i] = source.value[i];
                     }
-                    m834 = flags & 0xF9;
+                    mGestureFlags = flags & 0xF9;
                 }
             } else
                 for (u32 i = 1; i < 7; ++i) {
                     auto* row = &l_npc_dat[i];
-                    f32 low = row->field_0x00;
-                    f32 high = row->field_0x04;
+                    f32 low = row->mGaugeIncMin;
+                    f32 high = row->mGaugeIncMax;
                     f32 random = cM_rndF(high - low);
-                    low = row->field_0x00;
+                    low = row->mGaugeIncMin;
                     f32 addition = random + low;
-                    m7C4[i] = (f32)m7C4[i] + addition;
+                    mBidGauge[i] = (f32)mBidGauge[i] + addition;
                 }
-            u32 end = (m834 & 2) ? 1 : 7;
+            u32 end = (mGestureFlags & 2) ? 1 : 7;
             u32 bidder = 0;
             for (; bidder < end; ++bidder)
-                if (!(m7C4[bidder] < limit) && (s16)mCurrBid < l_npc_dat[bidder].mSpendingLimit)
+                if (!(mBidGauge[bidder] < limit) && (s16)mCurrBid < l_npc_dat[bidder].mSpendingLimit)
                     break;
             if (bidder < end) {
                 s16 previous = mCurrBid;
-                m828 = bidder;
+                mNewBidder = bidder;
                 u32 message;
                 if (bidder) {
                     f32 multiplier = one;
@@ -911,16 +911,16 @@ void daAuction_c::eventMainKai() {
                     s16 amount = (s16)gabi::ftoi(random + (f32)low);
                     s16 increase = (s16)gabi::ftoi((f32)amount * multiplier);
                     s16 current = mCurrBid;
-                    m82C = 4;
+                    mAfterBetIdx = 4;
                     s16 total = (s16)((u16)current + (u16)increase);
                     mCurrBid = total;
-                    m800 = total;
-                    m7C4[bidder] = zero;
+                    mDisplayBid = total;
+                    mBidGauge[bidder] = zero;
                     nextBet();
                     message = 0x1CF9;
                 } else {
                     s16 current = mCurrBid;
-                    m800 = (s16)((u16)previous + 1);
+                    mDisplayBid = (s16)((u16)previous + 1);
                     u32 play = dComIfGp_ea();
                     auctionGameInfo(play).play.mMsgSetNumber = (s16)((u16)current + 1);
                     setLinkAnm(72);
@@ -941,13 +941,13 @@ void daAuction_c::eventMainKai() {
                 }
                 f32 random = cM_rndF(zero);
                 f32 frames = (random + one) * l_framesPerSecond;
-                u8 shown = m830;
-                m81F = daAuction_c::MAIN_BIKON_C;
-                m7F0 = message;
-                m806 = (s16)gabi::ftoi(frames);
+                u8 shown = mTauntShown;
+                mMainState = daAuction_c::MAIN_BIKON_C;
+                mBidMsgNo = message;
+                mBidWaitTimer = (s16)gabi::ftoi(frames);
                 if (shown)
-                    m830 = 0;
-                else if (m826 != 0xFF && bidder && eventTimeRemaining() > l_rest_msg_time1[0] &&
+                    mTauntShown = 0;
+                else if (mTopBidder != 0xFF && bidder && eventTimeRemaining() > l_rest_msg_time1[0] &&
                          !getRand(3)) {
                     s16 bid = mCurrBid;
                     message = bid <= 100   ? 0x1CFD
@@ -956,69 +956,69 @@ void daAuction_c::eventMainKai() {
                                            : 0x1D00;
                     u32 play = dComIfGp_ea();
                     auctionGameInfo(play).play.mMsgCountNumber = previous;
-                    u32 kind = mAucMdlNo[(u8)m824];
+                    u32 kind = mAucMdlNo[(u8)mCurrentNpc];
                     if (kind >= 12) {
                         auction_JUTAssertion_showAssert(
                             "d_a_auction.cpp", 0x9FA,
                             "a_auc_mdl_no < sizeof(l_npc_msg_dat) / sizeof(l_npc_msg_dat[0])");
                         kind = 0;
                     }
-                    s16 name = l_npc_msg_dat[kind].field_0x00;
+                    s16 name = l_npc_msg_dat[kind].mNpcNameMsgID;
                     play = dComIfGp_ea();
                     auctionGameInfo(play).play.mNpcNameMessageID = name;
                     setMessage2(message);
-                    setCameraNpc((u32)m824, 0);
-                    if (!m824 && mCurLinkAnm != 29)
+                    setCameraNpc((u32)mCurrentNpc, 0);
+                    if (!mCurrentNpc && mCurLinkAnm != 29)
                         setLinkAnm(20);
-                    m834 = m834 | 0x20;
-                    m829 = (u8)m827;
-                    m830 = 1;
+                    mGestureFlags = mGestureFlags | 0x20;
+                    mSpeakingNpc = (u8)mResult;
+                    mTauntShown = 1;
                 }
-                if (m81F == daAuction_c::MAIN_BIKON_C) {
-                    u8 selected = m828;
-                    s16 bid = m800;
-                    m829 = selected;
-                    m827 = selected;
+                if (mMainState == daAuction_c::MAIN_BIKON_C) {
+                    u8 selected = mNewBidder;
+                    s16 bid = mDisplayBid;
+                    mSpeakingNpc = selected;
+                    mResult = selected;
                     u32 play = dComIfGp_ea();
                     auctionGameInfo(play).play.mMsgCountNumber = bid;
-                    u32 kind = mAucMdlNo[(u8)m827];
+                    u32 kind = mAucMdlNo[(u8)mResult];
                     if (kind >= 12) {
                         auction_JUTAssertion_showAssert(
                             "d_a_auction.cpp", 0xA13,
                             "a_auc_mdl_no < sizeof(l_npc_msg_dat) / sizeof(l_npc_msg_dat[0])");
                         kind = 0;
                     }
-                    s16 name = l_npc_msg_dat[kind].field_0x00;
+                    s16 name = l_npc_msg_dat[kind].mNpcNameMsgID;
                     play = dComIfGp_ea();
                     auctionGameInfo(play).play.mNpcNameMessageID = name;
                 }
-                m835 = (m835 | 9) & 0xFD;
+                mCameraFlags = (mCameraFlags | 9) & 0xFD;
             } else {
                 s32 remaining = eventTimeRemaining();
-                u8 next = m82A;
+                u8 next = mRestMsgIdx;
                 if (remaining < l_rest_msg_time1[next]) {
                     setMessage2((u32)l_rest_msg_no[next]);
-                    next = m82A;
+                    next = mRestMsgIdx;
                     auction_mDoAud_seStart_abi2((u32)l_rest_se_no[next]);
-                    m82A = (u8)m82A + 1;
+                    mRestMsgIdx = (u8)mRestMsgIdx + 1;
                 }
             }
         }
-        if (m834 & 2) {
-            m798.x = zero;
-            m798.y = l_lightY;
-            m798.z = l_paralyzedCameraZ;
-            m834 = m834 | 4;
+        if (mGestureFlags & 2) {
+            mCameraEye.x = zero;
+            mCameraEye.y = l_lightY;
+            mCameraEye.z = l_paralyzedCameraZ;
+            mGestureFlags = mGestureFlags | 4;
             u32 npc = auction_daAuction_c_getNpcActorP(this, 0);
             for (u32 i = 0; i < 3; ++i)
-                auctionCameraWords(m78C).value[i] =
+                auctionCameraWords(mCameraCenter).value[i] =
                     auctionWords(auctionActor(npc)->current.pos).value[i];
             // Native sine-table indexing and remaining effect reviewed before baseline.
-            s16 angle = m808;
+            s16 angle = mCameraSwayAngle;
             f32 sine = cM_ssin(angle);
-            m78C.x = gabi::fmadds(sine, l_paralyzedCameraRadius, (f32)m78C.x);
-            m78C.y = (f32)m78C.y + limit;
-            m808 = (s16)((u16)m808 + 200);
+            mCameraCenter.x = gabi::fmadds(sine, l_paralyzedCameraRadius, (f32)mCameraCenter.x);
+            mCameraCenter.y = (f32)mCameraCenter.y + limit;
+            mCameraSwayAngle = (s16)((u16)mCameraSwayAngle + 200);
             auction_mDoAud_seStart(0x5120);
         }
     }
@@ -1032,37 +1032,37 @@ void daAuction_c::eventMainKai() {
 void daAuction_c::eventMainUri() {
     eventRestartTimer();
     if (eventTimeRemaining() <= 0)
-        m82B = 1;
-    else if (m82E && auction_checkTriggerA(0))
+        mAuctionEnded = 1;
+    else if (mFirstBidMade && auction_checkTriggerA(0))
         setMessage2(0x1D1A);
     else {
         f32 doubleRate = l_lateBidMultiplier;
-        s16 wait = m806;
+        s16 wait = mBidWaitTimer;
         if (wait)
-            m806 = (s16)((u16)wait - 1);
+            mBidWaitTimer = (s16)((u16)wait - 1);
         else
             for (u32 i = 1; i < 7; ++i) {
                 auto* row = &l_npc_dat[i];
-                f32 low = row->field_0x00;
-                f32 high = row->field_0x04;
+                f32 low = row->mGaugeIncMin;
+                f32 high = row->mGaugeIncMax;
                 f32 random = cM_rndF(high - low);
-                low = row->field_0x00;
+                low = row->mGaugeIncMin;
                 f32 speed = random + low;
-                f32 value = m7C4[i];
-                m7C4[i] = value + (speed + speed);
+                f32 value = mBidGauge[i];
+                mBidGauge[i] = value + (speed + speed);
             }
         f32 limit = l_gaugeMaximum;
         f32 zero = l_zero;
         u32 bidder = 1;
         for (; bidder < 7; ++bidder) {
-            if (!(m7C4[bidder] < limit)) {
-                m7C4[bidder] = zero;
+            if (!(mBidGauge[bidder] < limit)) {
+                mBidGauge[bidder] = zero;
                 if ((s16)mCurrBid < l_npc_dat[bidder].mSpendingLimit)
                     break;
             }
         }
         if (bidder < 7) {
-            m828 = bidder;
+            mNewBidder = bidder;
             f32 unit = l_one;
             f32 multiplier = unit;
             if (eventTimeRemaining() < 30000)
@@ -1076,78 +1076,78 @@ void daAuction_c::eventMainUri() {
             low = row->mBidIncMin;
             s16 base = (s16)gabi::ftoi(random + (f32)low);
             f32 amount = (f32)((s32)base * 2) * multiplier;
-            m82C = 4;
-            m82E = 1;
-            m7F0 = 0x1CF9;
+            mAfterBetIdx = 4;
+            mFirstBidMade = 1;
+            mBidMsgNo = 0x1CF9;
             s16 old = mCurrBid;
             s16 increment = (s16)gabi::ftoi(amount);
             s16 total = (s16)((u16)old + (u16)increment);
             mCurrBid = total;
-            m800 = total;
+            mDisplayBid = total;
             random = cM_rndF(unit);
             f32 duration = random * l_framesPerSecond;
-            m81F = daAuction_c::MAIN_BIKON_C;
-            u8 shown = m830;
-            m806 = (s16)gabi::ftoi(duration);
+            mMainState = daAuction_c::MAIN_BIKON_C;
+            u8 shown = mTauntShown;
+            mBidWaitTimer = (s16)gabi::ftoi(duration);
             if (shown)
-                m830 = 0;
+                mTauntShown = 0;
             else if (eventTimeRemaining() > l_rest_msg_time1[0] && !getRand(3)) {
                 s16 bid = mCurrBid;
                 u32 message = bid <= 100   ? 0x1CFD
                               : bid <= 150 ? 0x1CFE
                               : bid <= 200 ? 0x1CFF
                                            : 0x1D00;
-                u32 kind = mAucMdlNo[(u8)m824];
+                u32 kind = mAucMdlNo[(u8)mCurrentNpc];
                 if (kind >= 12) {
                     auction_JUTAssertion_showAssert(
                         "d_a_auction.cpp", 0xAB3,
                         "a_auc_mdl_no < sizeof(l_npc_msg_dat) / sizeof(l_npc_msg_dat[0])");
                     kind = 0;
                 }
-                s16 name = l_npc_msg_dat[kind].field_0x00;
+                s16 name = l_npc_msg_dat[kind].mNpcNameMsgID;
                 u32 play = dComIfGp_ea();
                 auctionGameInfo(play).play.mNpcNameMessageID = name;
                 setMessage2(message);
-                setCameraNpc((u32)m824, 0);
-                if (!m824)
+                setCameraNpc((u32)mCurrentNpc, 0);
+                if (!mCurrentNpc)
                     setLinkAnm(20);
-                u8 flags = m834;
-                u8 camera = m827;
-                m834 = flags | 0x20;
-                m829 = camera;
-                m830 = 1;
+                u8 flags = mGestureFlags;
+                u8 camera = mResult;
+                mGestureFlags = flags | 0x20;
+                mSpeakingNpc = camera;
+                mTauntShown = 1;
             }
-            if (m81F == daAuction_c::MAIN_BIKON_C) {
-                u8 selected = m828;
-                s16 bid = m800;
-                m829 = selected;
-                m827 = selected;
+            if (mMainState == daAuction_c::MAIN_BIKON_C) {
+                u8 selected = mNewBidder;
+                s16 bid = mDisplayBid;
+                mSpeakingNpc = selected;
+                mResult = selected;
                 u32 play = dComIfGp_ea();
                 auctionGameInfo(play).play.mMsgCountNumber = bid;
-                u32 kind = mAucMdlNo[(u8)m827];
+                u32 kind = mAucMdlNo[(u8)mResult];
                 if (kind >= 12) {
                     auction_JUTAssertion_showAssert(
                         "d_a_auction.cpp", 0xACC,
                         "a_auc_mdl_no < sizeof(l_npc_msg_dat) / sizeof(l_npc_msg_dat[0])");
                     kind = 0;
                 }
-                s16 name = l_npc_msg_dat[kind].field_0x00;
+                s16 name = l_npc_msg_dat[kind].mNpcNameMsgID;
                 play = dComIfGp_ea();
                 auctionGameInfo(play).play.mNpcNameMessageID = name;
             }
-            m835 = (m835 | 9) & 0xFD;
+            mCameraFlags = (mCameraFlags | 9) & 0xFD;
         } else {
             s32 remaining = eventTimeRemaining();
-            u8 next = m82A;
+            u8 next = mRestMsgIdx;
             if (remaining < l_rest_msg_time2[next]) {
                 setMessage2((u32)l_rest_msg_no[next]);
-                next = m82A;
+                next = mRestMsgIdx;
                 auction_mDoAud_seStart_abi2((u32)l_rest_se_no[next]);
-                m82A = (u8)m82A + 1;
+                mRestMsgIdx = (u8)mRestMsgIdx + 1;
             }
         }
     }
-    if (m82E) {
+    if (mFirstBidMade) {
         u32 play = dComIfGp_ea();
         auctionGameInfo(play).play.mDoStatusForce = 0x25;
     }
@@ -1156,7 +1156,7 @@ void daAuction_c::eventMainUri() {
 /* 0205BFD8 */
 void daAuction_c::eventMainMsgSet() {
     if (eventMesSet())
-        m81F = daAuction_c::MAIN_MSG_END;
+        mMainState = daAuction_c::MAIN_MSG_END;
 }
 
 /* 0205C014 */
@@ -1165,75 +1165,75 @@ void daAuction_c::eventMainMsgEnd() {
         u8 animation = mCurLinkAnm;
         if (animation != 1 && animation != 29)
             setLinkAnm(1);
-        u8 flags = m834;
+        u8 flags = mGestureFlags;
         if (flags & 0x20) {
-            m81F = daAuction_c::MAIN_BIKON_C;
+            mMainState = daAuction_c::MAIN_BIKON_C;
             m7E0 = l_zero;
         } else {
             // Integer loads preserve vector bits, including signaling NaNs.
             u32 y = auctionWords(current.pos).value[1];
-            u8 mode = m822;
+            u8 mode = mAuctionType;
             auctionWords(eyePos).value[1] = y;
             u32 x = auctionWords(current.pos).value[0];
-            flags = m834;
+            flags = mGestureFlags;
             auctionWords(eyePos).value[0] = x;
             u32 z = auctionWords(current.pos).value[2];
-            m81F = mode == 2;
+            mMainState = mode == 2;
             auctionWords(eyePos).value[2] = z;
-            m832 = 0;
+            mSetLinkFace = 0;
             m7E0 = l_zero;
         }
         if (!(flags & 2)) {
             u32 camera = getRand(3) & 0xFF;
-            m82F = camera;
+            mCameraPosIdx = camera;
             auto& source = auctionCameraWords(l_camera_pos.positions[camera][0]);
             for (u32 i = 0; i < 6; ++i)
-                auctionCameraWords(m78C).value[i] = source.value[i];
+                auctionCameraWords(mCameraCenter).value[i] = source.value[i];
         }
         auction_dTimer_setShowType_abi2((u32)mpTimer, 0);
         auction_dAuction_screen_gaugeDown();
-        m834 = m834 & 0xD6;
+        mGestureFlags = mGestureFlags & 0xD6;
         auction_dAuction_screen_talkEnd();
         auction_dAuction_screen_gaugeShow();
         return;
     }
     u32 play = dComIfGp_ea();
     if (auctionGameInfo(play).play.mMesgSendButton) {
-        u32 message = m7EC;
+        u32 message = mNextMsgNo;
         if (message - 0x1D3Au < 0x12 || message - 0x339Du < 0xC) {
-            setCameraNpc((u32)m825, 0);
-            u8 flags = m834;
-            u8 camera = m825;
-            m834 = flags | 8;
-            m829 = camera;
+            setCameraNpc((u32)mReplyNpc, 0);
+            u8 flags = mGestureFlags;
+            u8 camera = mReplyNpc;
+            mGestureFlags = flags | 8;
+            mSpeakingNpc = camera;
         }
     }
 }
 
 /* 0205C248 */
 void daAuction_c::eventMainMsgBikonC() {
-    u8 bidder = m828;
-    s16 bid = m800;
-    m827 = bidder;
-    m829 = bidder;
+    u8 bidder = mNewBidder;
+    s16 bid = mDisplayBid;
+    mResult = bidder;
+    mSpeakingNpc = bidder;
     u32 play = dComIfGp_ea();
     auctionGameInfo(play).play.mMsgCountNumber = bid;
-    u32 kind = mAucMdlNo[(u8)m827];
+    u32 kind = mAucMdlNo[(u8)mResult];
     if (kind >= 12) {
         auction_JUTAssertion_showAssert(
             "d_a_auction.cpp", 0xB5D,
             "a_auc_mdl_no < sizeof(l_npc_msg_dat) / sizeof(l_npc_msg_dat[0])");
         kind = 0;
     }
-    s16 name = l_npc_msg_dat[kind].field_0x00;
+    s16 name = l_npc_msg_dat[kind].mNpcNameMsgID;
     play = dComIfGp_ea();
     auctionGameInfo(play).play.mNpcNameMessageID = name;
-    u32 npc = auction_daAuction_c_getNpcActorP_abi2(this, (u32)m827);
+    u32 npc = auction_daAuction_c_getNpcActorP_abi2(this, (u32)mResult);
     gabi::Local<cXyz> position;
     position->x = auctionActor(npc)->current.pos.x;
     f32 y = auctionActor(npc)->current.pos.y;
     position->y = y;
-    u8 index = m827;
+    u8 index = mResult;
     position->z = auctionActor(npc)->current.pos.z;
     f32 height = getPiconDispOfs((u32)index);
     f32 offset = height + l_piconCenterOffset;
@@ -1241,27 +1241,27 @@ void daAuction_c::eventMainMsgBikonC() {
     f32 maximum = l_cameraBlendMaximum;
     f32 minimum = l_cameraBlendMinimum;
     position->y = y + offset;
-    f32 distance = auction_cLib_addCalcPos(&m78C, position.get(), scale, maximum, minimum);
+    f32 distance = auction_cLib_addCalcPos(&mCameraCenter, position.get(), scale, maximum, minimum);
     if (distance == l_zero) {
-        m81F = daAuction_c::MAIN_BIKON_W;
-        npc = auction_daAuction_c_getNpcActorP_abi2(this, (u32)m827);
+        mMainState = daAuction_c::MAIN_BIKON_W;
+        npc = auction_daAuction_c_getNpcActorP_abi2(this, (u32)mResult);
         for (u32 i = 0; i < 3; ++i)
-            auctionWords(m7A8).value[i] = auctionWords(auctionActor(npc)->current.pos).value[i];
-        height = getPiconDispOfs((u32)m827);
-        f32 itemY = m7A8.y;
+            auctionWords(mBikonPos).value[i] = auctionWords(auctionActor(npc)->current.pos).value[i];
+        height = getPiconDispOfs((u32)mResult);
+        f32 itemY = mBikonPos.y;
         s8 room = current.roomNo;
-        m7A8.y = itemY + height;
+        mBikonPos.y = itemY + height;
         play = dComIfGp_ea();
         u32 particles = auctionGameInfo(play).play.mParticle.v;
-        auction_dPa_control_c_set(particles, 0, 0x8153, &m7A8, 0, 0, 0xFF, 0, (s32)room, 0, 0, 0);
+        auction_dPa_control_c_set(particles, 0, 0x8153, &mBikonPos, 0, 0, 0xFF, 0, (s32)room, 0, 0, 0);
         mTimer = 30;
-        if (!m827)
+        if (!mResult)
             auction_mDoAud_seStart(0x8EB);
         else {
             auction_mDoAud_seStart(0x591F);
-            m832 = 1;
+            mSetLinkFace = 1;
             u32 face = getRand(8);
-            u8 npcIndex = m827;
+            u8 npcIndex = mResult;
             mFace = l_link_face[face];
             npc = auction_daAuction_c_getNpcActorP_abi2(this, (u32)npcIndex);
             for (u32 i = 0; i < 3; ++i)
@@ -1272,7 +1272,7 @@ void daAuction_c::eventMainMsgBikonC() {
             auctionGameInfo(play).play.mAStatusForce = 0x3E;
             return;
         }
-        npc = auction_daAuction_c_getNpcActorP_abi2(this, (u32)m827);
+        npc = auction_daAuction_c_getNpcActorP_abi2(this, (u32)mResult);
         for (u32 i = 0; i < 3; ++i)
             auctionWords(eyePos).value[i] = auctionWords(auctionActor(npc)->eyePos).value[i];
     }
@@ -1288,11 +1288,11 @@ void daAuction_c::eventMainMsgBikonW() {
     if (timer)
         mTimer = (s16)((u16)timer - 1);
     else {
-        setMessage2((s32)m7F0);
-        setCameraNpc((u32)m827, 0);
+        setMessage2((s32)mBidMsgNo);
+        setCameraNpc((u32)mResult, 0);
         auction_dAuction_screen_talkStart();
-        if (m827)
-            m834 = m834 | 1;
+        if (mResult)
+            mGestureFlags = mGestureFlags | 1;
     }
     u32 play = dComIfGp_ea();
     auctionGameInfo(play).play.mDoStatusForce = 0;
@@ -1302,7 +1302,7 @@ void daAuction_c::eventMainMsgBikonW() {
 
 /* 02059A44 */
 void daAuction_c::eventGetItemInit() {
-    u8 type = m822, index = mCurrAuctionItemIndex;
+    u8 type = mAuctionType, index = mCurrAuctionItemIndex;
     u32 itemAddress = type == 2 ? gabi::ea(l_item_dat22) + (u32)index * 2 : gabi::ea(l_item_dat) + (u32)index * 8;
     u8 item = auctionItemLowByte(itemAddress);
     s32 id = auction_fopAcM_createItemForPresentDemo(&current.pos, item, 0, -1, -1, 0, 0);
@@ -1317,27 +1317,27 @@ void daAuction_c::eventGetItemInit() {
 }
 
 /* 02059B40 */
-void daAuction_c::offCamera() { m835 = (m835 | 2) & 0xFE; }
+void daAuction_c::offCamera() { mCameraFlags = (mCameraFlags | 2) & 0xFE; }
 
 /* 02059B54 */
 void daAuction_c::eventGetItemNpcInit(s32 staff) {
-    u8 npc = m824;
+    u8 npc = mCurrentNpc;
     setCameraNpc(npc, 0);
     u32 play = dComIfGp_ea();
     u32 data = auction_dEvent_manager_c_getMySubstanceP(&auctionGameInfo(play).play.mEvtManager,
                                                         staff, "Timer", 3);
     s16 timer = 0;
-    npc = m824;
+    npc = mCurrentNpc;
     if (data)
         timer = auctionIntegerWords(data)->low;
-    m829 = npc;
+    mSpeakingNpc = npc;
     mTimer = timer;
-    m834 = 0x10;
+    mGestureFlags = 0x10;
 }
 
 /* 02059BD4 */
 void daAuction_c::eventGetItemMesInit() {
-    u8 npc = m824;
+    u8 npc = mCurrentNpc;
     u32 kind = mAucMdlNo[npc];
     if (kind >= 12) {
         auction_JUTAssertion_showAssert(
@@ -1345,7 +1345,7 @@ void daAuction_c::eventGetItemMesInit() {
             "a_auc_mdl_no < sizeof(l_npc_msg_dat) / sizeof(l_npc_msg_dat[0])");
         kind = 0;
     }
-    s16 message = l_npc_msg_dat[kind].field_0x08;
+    s16 message = l_npc_msg_dat[kind].mWinMsgNo;
     auction_daAuction_c_setMessage_abi3(this, (s32)message);
 }
 
@@ -1353,9 +1353,9 @@ void daAuction_c::eventGetItemMesInit() {
 BOOL daAuction_c::eventCameraOffNpc() {
     if (!eventMesEnd())
         return false;
-    u8 flags = m835;
-    m834 = 0;
-    m835 = (flags | 2) & 0xFE;
+    u8 flags = mCameraFlags;
+    mGestureFlags = 0;
+    mCameraFlags = (flags | 2) & 0xFE;
     return true;
 }
 
@@ -1393,7 +1393,7 @@ u16 daAuction_c::next_msgStatus(be<u32>* message) {
         *message = 0x1CF3;
         break;
     case 0x1CF4:
-        if (m822 == 2)
+        if (mAuctionType == 2)
             *message = 0x1D1B;
         else {
             u32 save = l_saveInfo;
@@ -1406,7 +1406,7 @@ u16 daAuction_c::next_msgStatus(be<u32>* message) {
                         "a_auc_mdl_no < sizeof(l_npc_msg_dat) / sizeof(l_npc_msg_dat[0])");
                     kind = 0;
                 }
-                s16 name = l_npc_msg_dat[kind].field_0x00;
+                s16 name = l_npc_msg_dat[kind].mNpcNameMsgID;
                 u32 play = dComIfGp_ea();
                 auctionGameInfo(play).play.mNpcNameMessageID = name;
                 *message = 0x1CF6;
@@ -1427,30 +1427,30 @@ u16 daAuction_c::next_msgStatus(be<u32>* message) {
             *message = 0x1CF8;
             break;
         }
-        u32 after = m82C;
+        u32 after = mAfterBetIdx;
         if (after < 4)
             *message = l_after_bet_msg_no[after];
         else {
-            u32 kind = mAucMdlNo[(u8)m824];
+            u32 kind = mAucMdlNo[(u8)mCurrentNpc];
             if (kind >= 12) {
                 auction_JUTAssertion_showAssert(
                     "d_a_auction.cpp", 0xC9B,
                     "a_auc_mdl_no < sizeof(l_npc_msg_dat) / sizeof(l_npc_msg_dat[0])");
                 kind = 0;
             }
-            if (!m827 && l_npc_msg_dat[kind].field_0x02) {
+            if (!mResult && l_npc_msg_dat[kind].mOutbidMsgNo) {
                 auto* row = &l_npc_msg_dat[kind];
                 // HD: threshold is 10000ms, unlike the GC source's 60000ms.
                 u32 offset = eventTimeRemaining() < 10000 ? 4 : 2;
-                *message = (s32)(offset == 4 ? row->field_0x04 : row->field_0x02);
+                *message = (s32)(offset == 4 ? row->mOutbidLateMsgNo : row->mOutbidMsgNo);
             } else
                 status = 16;
         }
-        u8 previous = m824;
-        u8 selected = m827;
-        m825 = previous;
-        m826 = selected;
-        m824 = selected;
+        u8 previous = mCurrentNpc;
+        u8 selected = mResult;
+        mReplyNpc = previous;
+        mTopBidder = selected;
+        mCurrentNpc = selected;
         if (selected)
             setLinkAnm(1);
         break;
@@ -1466,22 +1466,22 @@ u16 daAuction_c::next_msgStatus(be<u32>* message) {
             auction_mDoAud_seStart(0x8E5);
             setLinkAnm(74);
             *message = insufficient ? 0x1CFB : 0x1D1E;
-            m7C4[0] = half;
+            mBidGauge[0] = half;
         } else {
             auction_mDoAud_seStart(0x8E3);
-            m7C4[0] = zero;
+            mBidGauge[0] = zero;
             if (bid == 999) {
                 *message = 0x1D24;
-                u8 previous = m824;
-                u8 selected = m827;
-                m825 = previous;
-                m826 = selected;
+                u8 previous = mCurrentNpc;
+                u8 selected = mResult;
+                mReplyNpc = previous;
+                mTopBidder = selected;
                 mCurrBid = bid;
-                m824 = selected;
+                mCurrentNpc = selected;
             } else {
                 f32 frames = l_framesPerSecond;
                 *message = 0x1CF9;
-                m82C = 0;
+                mAfterBetIdx = 0;
                 for (u32 i = 0; i < 4; ++i) {
                     f32 old = (f32)(s16)mCurrBid;
                     f32 rate = l_after_bet_rate[i];
@@ -1491,12 +1491,12 @@ u16 daAuction_c::next_msgStatus(be<u32>* message) {
                         s16 low = row->minimum;
                         s16 high = row->maximum;
                         f32 random = cM_rndF((f32)((s32)high - low));
-                        u32 selected = m82C;
+                        u32 selected = mAfterBetIdx;
                         low = l_after_bet_wait[selected].minimum;
-                        m806 = (s16)gabi::ftoi((random + (f32)low) * frames);
+                        mBidWaitTimer = (s16)gabi::ftoi((random + (f32)low) * frames);
                         break;
                     }
-                    m82C = i + 1;
+                    mAfterBetIdx = i + 1;
                 }
                 mCurrBid = bid;
             }
@@ -1513,7 +1513,7 @@ u16 daAuction_c::next_msgStatus(be<u32>* message) {
         break;
     case 0x1D1A:
         if (!auctionMessage(manager)->mSelectNum)
-            m82B = 1;
+            mAuctionEnded = 1;
         status = 16;
         break;
     case 0x1D1F:
@@ -1526,7 +1526,7 @@ u16 daAuction_c::next_msgStatus(be<u32>* message) {
         bid = mCurrBid;
         play = dComIfGp_ea();
         auctionGameInfo(play).play.mAuctionRupee = bid;
-        m82B = 1;
+        mAuctionEnded = 1;
         status = 16;
         break;
     }
@@ -1543,8 +1543,8 @@ u16 daAuction_c::next_msgStatus(be<u32>* message) {
                 "a_auc_mdl_no < sizeof(l_npc_msg_dat) / sizeof(l_npc_msg_dat[0])");
             kind = 0;
         }
-        *message = (s32)l_npc_msg_dat[kind].field_0x06;
-        m825 = selected;
+        *message = (s32)l_npc_msg_dat[kind].mAfterBetReplyMsgNo;
+        mReplyNpc = selected;
         break;
     }
     case 0x1D48:
@@ -1557,18 +1557,18 @@ u16 daAuction_c::next_msgStatus(be<u32>* message) {
     case 0x1D45:
     case 0x1D42:
     case 0x1D3C:
-        m808 = 0;
-        m834 = m834 | 2;
+        mCameraSwayAngle = 0;
+        mGestureFlags = mGestureFlags | 2;
         status = 16;
         break;
     case 0x1D05:
-        if (m822 == 2)
+        if (mAuctionType == 2)
             *message = 0x1D1C;
         else {
             u32 save = l_saveInfo;
-            if (m824) {
+            if (mCurrentNpc) {
                 auction_dSv_event_c_onEventBit_abi2(save + 0x644, 0x4008);
-                u8 selected = m824;
+                u8 selected = mCurrentNpc;
                 save = l_saveInfo;
                 u8 kind = mAucMdlNo[selected];
                 auction_dSv_event_c_setEventReg(save + 0x644, 0x790F, (u32)kind);
@@ -1602,7 +1602,7 @@ u16 daAuction_c::next_msgStatus(be<u32>* message) {
         status = 16;
         break;
     }
-    m7EC = status == 15 ? (u32)*message : 0;
+    mNextMsgNo = status == 15 ? (u32)*message : 0;
     return status;
 }
 
@@ -1617,7 +1617,7 @@ void daAuction_c::setMessage2(u32 message) {
     // HD: setMessage leaves r3 (this) unchanged; the original keeps using it.
     auction_daAuction_c_setMessage_abi2(this, message);
     u32 receiver = gabi::ea(this);
-    auctionActorController(receiver)->m81F = daAuction_c::MAIN_MSG_SET;
+    auctionActorController(receiver)->mMainState = daAuction_c::MAIN_MSG_SET;
     auction_dAuction_screen_gaugeHide(gabi::at<void>(receiver));
 }
 
@@ -1695,7 +1695,7 @@ fopAc_ac_c* daAuction_c::getNpcActorP(s32 index) {
         u32 play = dComIfGp_ea();
         return auctionGameInfo(play).play.mPlayerInfo[0].mpPlayer.get();
     }
-    u32 id = m738[(u32)index];
+    u32 id = mNpcIds[(u32)index];
     gabi::Local<be<u32>> query;
     query.get()->set(id);
     if (id == 0xFFFFFFFF)
@@ -1711,41 +1711,41 @@ void daAuction_c::setCameraNpc(s32 index, s16 angle) {
         return;
     }
     f32 x = auctionActor(npc)->current.pos.x;
-    m78C.x = x;
+    mCameraCenter.x = x;
     f32 y = auctionActor(npc)->current.pos.y;
-    m78C.y = y;
+    mCameraCenter.y = y;
     f32 z = auctionActor(npc)->current.pos.z;
     auto* data = &l_npc_camera_dat[(u32)index];
-    m78C.z = z;
-    f32 height = (f32)data->field_0x04;
-    m78C.y = gabi::fadds_ppc(y, height);
+    mCameraCenter.z = z;
+    f32 height = (f32)data->mCenterOffsetY;
+    mCameraCenter.y = gabi::fadds_ppc(y, height);
     u16 facing = auctionActor(npc)->current.angle.y;
-    f32 radius = (f32)data->field_0x00;
+    f32 radius = (f32)data->mEyeDistance;
     f32 sine = cM_ssin(facing);
     f32 offsetX = gabi::fmuls_ppc(sine, radius);
     f32 zero = l_zero;
-    m798.x = offsetX;
-    m798.y = zero;
+    mCameraEye.x = offsetX;
+    mCameraEye.y = zero;
     facing = auctionActor(npc)->current.angle.y;
     f32 cosine = cM_scos(facing);
-    radius = (f32)data->field_0x00;
-    m798.z = gabi::fmuls_ppc(cosine, radius);
-    s16 baseAngle = data->field_0x0A;
+    radius = (f32)data->mEyeDistance;
+    mCameraEye.z = gabi::fmuls_ppc(cosine, radius);
+    s16 baseAngle = data->mEyeAngleY;
     s32 extra = angle;
     if (!extra)
         extra = (s16)gabi::ftoi(cM_rndFX((f32)l_cameraRandomAngle));
     auction_mDoMtx_YrotS(mDoMtx_stack_c::get(), (s16)((u32)(s32)baseAngle + (u32)extra));
-    s16 tilt = data->field_0x08;
+    s16 tilt = data->mEyeAngleX;
     auction_mDoMtx_XrotM(mDoMtx_stack_c::get(), tilt);
-    auction_PSMTXMultVec(mDoMtx_stack_c::get(), &m798, &m798);
-    auction_PSVECAdd(&m798, &m78C, &m798);
-    m835 = (m835 | 9) & 0xFD;
+    auction_PSMTXMultVec(mDoMtx_stack_c::get(), &mCameraEye, &mCameraEye);
+    auction_PSVECAdd(&mCameraEye, &mCameraCenter, &mCameraEye);
+    mCameraFlags = (mCameraFlags | 9) & 0xFD;
 }
 
 /* 02059D50 */
 void daAuction_c::setLinkAnm(u8 animation) {
     u32 selected = animation;
-    if (selected == 1 && !m826)
+    if (selected == 1 && !mTopBidder)
         selected = 0x1D;
     u32 play = dComIfGp_ea();
     u32 link = auctionGameInfo(play).play.mpPlayerPtr[0].v;
@@ -1767,9 +1767,9 @@ f32 daAuction_c::getPiconDispOfs(s32 index) {
 
 /* 0205AD98 */
 void daAuction_c::nextBet() {
-    u8 delay = m831;
+    u8 delay = mNextBetDelay;
     if (delay) {
-        m831 = (u8)(delay - 1);
+        mNextBetDelay = (u8)(delay - 1);
         return;
     }
     f32 threshold = l_gaugeMaximum, maximum = l_lightY, scale = l_one;
@@ -1782,15 +1782,15 @@ void daAuction_c::nextBet() {
         s32 seconds = milliseconds / 30 / 1000;
         s32 random = getRand((s32)(60u - (u32)seconds));
         f32 addition = gabi::fmuls_ppc((f32)random, scale);
-        f32 wait = m7C4[i];
+        f32 wait = mBidGauge[i];
         if (addition > maximum)
             addition = maximum;
         f32 next = gabi::fadds_ppc(wait, addition);
-        m7C4[i] = next;
+        mBidGauge[i] = next;
         if (!(next < threshold))
-            m831 = (u8)((u8)m831 + 1);
+            mNextBetDelay = (u8)((u8)mNextBetDelay + 1);
     }
-    m831 = (u8)((u8)m831 + 2);
+    mNextBetDelay = (u8)((u8)mNextBetDelay + 2);
 }
 
 /* 02058E88 */

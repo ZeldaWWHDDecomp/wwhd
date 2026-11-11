@@ -368,7 +368,7 @@ void boomerang_setGeometryUniform(s16 a0, void *a1, u32 a2);
 void boomerang_bindSampler(void *a0, void *a1, s32 a2, s32 a3);
 void boomerang_updateUniformTransform(void *a0);
 void boomerang_bindVertexDeclaration(void *a0);
-void boomerang_drawIndexed(u32 a0, u32 a1, void *a2, u32 a3, s32 a4, s32 a5);
+void boomerang_drawIndexed(u32 a0, u32 a1, u32 a2, const void *a3, s32 a4, s32 a5); /* GX2DrawIndexedEx: r5 the index type (a value), r6 the indices */
 void boomerang_releaseVertexDeclaration(void *a0);
 u32 boomerang_findAllocationHeap(void *a0, void *a1);
 void boomerang_releaseUniform(void *a0);

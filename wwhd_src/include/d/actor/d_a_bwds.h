@@ -32,7 +32,7 @@ struct bwds_class : fopEn_enemy_c {
     /* 0x424 */ u8 m0308[4];
     /* 0x428 */ be<f32> mTurnSpeed;  /* was m030C: ug_move (in daBwds_Execute 0210602C) sets 3000 / 1000 (+ reg); pos_move: angle step = it * mTurnSpeedRate */
     /* 0x42C */ be<f32> mTurnSpeedRate;  /* was m0310: pos_move (in daBwds_Execute 0210602C) eases it to 1 and multiplies mTurnSpeed by it */
-    /* 0x430 */ be<s16> mTimers[5];  /* was m0314: daBwds_Execute 0210602C counts all 5 down each frame; ug_move / hook_chance / fail (in daBwds_Execute 0210602C) load them ([0] = 0x23, l_HIO.m014; [1] / [2] random waits) */
+    /* 0x430 */ be<s16> mTimers[5];  /* was m0314: daBwds_Execute 0210602C counts all 5 down each frame; ug_move / hook_chance / fail (in daBwds_Execute 0210602C) load them ([0] = 0x23, l_HIO.mHookChanceTime; [1] / [2] random waits) */
     /* 0x43A */ be<s16> mNoDamageTimer;  /* was m031E: damage_check (in daBwds_Execute 0210602C) runs only while it is 0 and sets 10 / 6 after a hit; hook_on / fail keep it at 3; daBwds_Execute 0210602C counts it down */
     /* 0x43C */ be<f32> mKnockbackDist;  /* was m0320: damage_check (in daBwds_Execute 0210602C) sets 40 (+ reg) on a hit; move moves the actor back by it along mKnockbackAngleY and eases it to 0; knockback speed */
     /* 0x440 */ be<s16> mKnockbackAngleY;  /* was m0324: damage_check (in daBwds_Execute 0210602C): fopAcM_searchPlayerAngleY; move (in daBwds_Execute 0210602C) YrotS by it for the knockback; knockback yaw (HD: no pitch m0326) */
@@ -51,7 +51,7 @@ struct bwds_class : fopEn_enemy_c {
     /* 0x61A */ be<s16> mBounceTurnY;  /* was m0502: hook_chance (in daBwds_Execute 0210602C): random +-2500 per bounce, added to current.angle.y every frame */
     /* 0x61C */ be<f32> mSandY;  /* was m0504: daBwds_Execute 0210602C: ground cross - 90 under the actor (sand surface level); ug_move / hook_chance / fail (in daBwds_Execute 0210602C) and move compare current.pos.y with it */
     /* 0x620 */ dCcD_Stts mStts;  /* was m0508: daBwds_Create 02108BF0: Init(0xFA, 0) and SetStts of every sphere; damage_check (in daBwds_Execute 0210602C) Move() */
-    /* 0x65C */ dCcD_Sph mHsSph;  /* was m0544: daBwds_Create 02108BF0: Set(hs_sph_src) (the hookshot target sphere); daBwds_Execute 0210602C sets its centre on the head and radius l_HIO.m01C * scale */
+    /* 0x65C */ dCcD_Sph mHsSph;  /* was m0544: daBwds_Create 02108BF0: Set(hs_sph_src) (the hookshot target sphere); daBwds_Execute 0210602C sets its centre on the head and radius l_HIO.mHsSphRadius * scale */
     /* 0x788 */ dCcD_Sph mBodySph[0xF];  /* was m0670: daBwds_Create 02108BF0: [0] Set(cc_sph_src) (head), [1..14] Set(body_sph_src); daBwds_Execute 0210602C / body_control place them on the head and mBodyPos; damage_check reads their Tg hits */
     /* 0x191C */ cXyz mSandSplashPos;  /* was m1804: daBwds_Execute 0210602C: y = ground cross under the actor, x / z the actor's position when it leaves or dives into the sand; the OUT / DIVE smoke and sand particles start there */
     /* 0x1928 */ cXyz mMoveSmokePos;  /* was m1810: daBwds_Execute 0210602C: the actor's x / z on the ground cross; the IDOU (moving) smoke and sand particles follow it */
@@ -82,18 +82,18 @@ WWHD_OFFSET(bwds_class, mSplashFrame, 0x19AC);
 WWHD_OFFSET(bwds_class, mHioOwner, 0x19E0);
 WWHD_SIZE(bwds_class, 0x19E4);
 
-/* l_HIO (0x10462C44): daBwds_HIO_c, HD layout {mNo, m005, m008.., vtable last} */
+/* l_HIO (0x10462C44): daBwds_HIO_c, HD layout {mNo, mNoMove, mBodyScale.., vtable last} */
 struct daBwds_HIO_c {
     /* 0x00 */ be<s8> mNo;
-    /* 0x01 */ be<u8> m005;
+    /* 0x01 */ be<u8> mNoMove;  /* was m005: daBwds_Execute 0210602C: the move / ground checks and the attack / push collision bits run only while it is 0 (tww the same); daBwds_HIO_c_ct sets the default, never written elsewhere in WWHD or tww (0) */
     /* 0x02 */ u8 _02[2];
-    /* 0x04 */ be<f32> m008;
-    /* 0x08 */ be<f32> m00C;
-    /* 0x0C */ be<f32> m010;
-    /* 0x10 */ be<s16> m014;
+    /* 0x04 */ be<f32> mBodyScale;  /* was m008: body_control / move (in daBwds_Execute 0210602C): scales the body model, the joint offsets and the body / hookshot sphere radii (tww the same); daBwds_HIO_c_ct sets the default, never written elsewhere in WWHD or tww (0.8) */
+    /* 0x08 */ be<f32> mSplashScale;  /* was m00C: daBwds_Execute 0210602C: scale of the sand splash models (tww the same); daBwds_HIO_c_ct sets the default, never written elsewhere in WWHD or tww (0.7) */
+    /* 0x0C */ be<f32> mMoveSpeed;  /* was m010: ug_move (in daBwds_Execute 0210602C): the speedF of each jump out of the sand (tww the same); daBwds_HIO_c_ct sets the default, never written elsewhere in WWHD or tww (7.0) */
+    /* 0x10 */ be<s16> mHookChanceTime;  /* was m014: hook_chance (in daBwds_Execute 0210602C): mTimers[0] at the start; at 0 the larva goes back to ug_move (tww the same); daBwds_HIO_c_ct sets the default, never written elsewhere in WWHD or tww (220) */
     /* 0x12 */ u8 _12[2];
-    /* 0x14 */ be<f32> m018;
-    /* 0x18 */ be<f32> m01C;
+    /* 0x14 */ be<f32> mSwayMax;  /* was m018: ug_move (in daBwds_Execute 0210602C): upper limit of the sway amplitude (distance * 7) (tww the same); daBwds_HIO_c_ct sets the default, never written elsewhere in WWHD or tww (2000) */
+    /* 0x18 */ be<f32> mHsSphRadius;  /* was m01C: daBwds_Execute 0210602C: radius of the hookshot sphere mHsSph (times mBodyScale) (tww the same); daBwds_HIO_c_ct sets the default, never written elsewhere in WWHD or tww (300) */
     /* 0x1C */ be<u32> __vtbl;
 };
 WWHD_SIZE(daBwds_HIO_c, 0x20);

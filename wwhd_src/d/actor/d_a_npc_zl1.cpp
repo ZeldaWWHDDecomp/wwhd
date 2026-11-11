@@ -168,7 +168,7 @@ bool daNpc_Zl1_c::init_ZL1_0() {
         gabi::Local<ProcFunc_l> pmf;
         zl1_main::copyAction(pmf, &demo_action1_record);
         set_action(pmf, nullptr);
-        field_0x7D2 = true;
+        mHideUntilDemo = true;
         actor_status &= ~0x3Fu; /* fopAcM_ClearStatusMap(this) */
         return true;
     }
@@ -181,7 +181,7 @@ bool daNpc_Zl1_c::init_ZL1_1() {
         gabi::Local<ProcFunc_l> pmf;
         zl1_main::copyAction(pmf, &demo_action1_record);
         set_action(pmf, nullptr);
-        field_0x7CE = true;
+        mOnTreeBranch = true;
         actor_status &= ~u32(fopAcStts_CULL_e | fopAcStts_NOCULLEXEC_e); /* fopAcM_OffStatus(this, fopAcStts_CULL_e | fopAcStts_NOCULLEXEC_e) */
         return true;
     }
@@ -208,8 +208,8 @@ bool daNpc_Zl1_c::init_ZL1_3() {
         temp->z = -100.0f;
         mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
         mDoMtx_stack_c::YrotM(current.angle.y);
-        PSMTXMultVec(mDoMtx_stack_c::get(), temp, &field_0x764);
-        field_0x764.y = 400.0f;
+        PSMTXMultVec(mDoMtx_stack_c::get(), temp, &mDemoAreaPos);
+        mDemoAreaPos.y = 400.0f;
         gabi::Local<ProcFunc_l> pmf;
         zl1_main::copyAction(pmf, &demo_action2_record);
         set_action(pmf, nullptr);
@@ -287,7 +287,7 @@ bool daNpc_Zl1_c::createInit() {
     attention_info.distances[fopAc_Attn_TYPE_TALK_e] = 0xAB;  /* attention_info.distances[TALK] */
     mAnmNo = 0x11;
     gravity = 0.0f;
-    field_0x7BC = -1;
+    mTurnStepMode = -1;
     attention_info.distances[fopAc_Attn_TYPE_SPEAK_e] = 0xAB;  /* attention_info.distances[SPEAK] */
     switch ((u32)(s32)mType) {
     case 0:
@@ -322,12 +322,12 @@ bool daNpc_Zl1_c::createInit() {
     if (!ret) {
         return false;
     }
-    field_0x73E.x = current.angle.x;
-    field_0x73E.y = current.angle.y;
-    field_0x73E.z = current.angle.z;
-    shape_angle.x = field_0x73E.x;
-    shape_angle.y = field_0x73E.y;
-    shape_angle.z = field_0x73E.z;
+    mMtxAngle.x = current.angle.x;
+    mMtxAngle.y = current.angle.y;
+    mMtxAngle.z = current.angle.z;
+    shape_angle.x = mMtxAngle.x;
+    shape_angle.y = mMtxAngle.y;
+    shape_angle.z = mMtxAngle.z;
     mStts.Init(temp, 0xFF, this);
     mCyl.SetStts(&mStts);
     mCyl.Set(zl1_main::npcCylinderSource() /* dNpc_cyl_src */);
@@ -342,13 +342,13 @@ bool daNpc_Zl1_c::createInit() {
 
 /* 0230607C */
 void daNpc_Zl1_c::setAnm_anm(anm_prm_c* param_1) {
-    s8 temp = param_1->field_0x0;
+    s8 temp = param_1->bckNum;
     if (temp < 0 || mAnmNo == temp) {
         return;
     }
     u32 name = bckResID(temp);
     dNpc_setAnmFNDirect(mpMorf, param_1->mLoopMode, param_1->mMorf, param_1->mPlaySpeed, name, 0, mArcName);
-    mAnmNo = param_1->field_0x0;
+    mAnmNo = param_1->bckNum;
     mFrame = 0.0f;
     mbMorfAnimStopped = 0;
     field_0x7C4 = 0;
@@ -358,7 +358,7 @@ void daNpc_Zl1_c::setAnm_anm(anm_prm_c* param_1) {
 void daNpc_Zl1_c::setAnm_NUM(int param_1, int param_2) {
     anm_prm_c* a_anm_prm_tbl = a_anm_prm_tbl_setAnm_NUM; /* [17] */
     if (param_2 != 0) {
-        init_texPttrnAnm(a_anm_prm_tbl[param_1].field_0x1, true);
+        init_texPttrnAnm(a_anm_prm_tbl[param_1].btpNum, true);
     }
     setAnm_anm(&a_anm_prm_tbl[param_1]);
 }
@@ -366,14 +366,14 @@ void daNpc_Zl1_c::setAnm_NUM(int param_1, int param_2) {
 /* 02306114 */
 void daNpc_Zl1_c::setAnm() {
     anm_prm_c* a_anm_prm_tbl = a_anm_prm_tbl_setAnm; /* [10] */
-    init_texPttrnAnm(a_anm_prm_tbl[mStt].field_0x1, true);
+    init_texPttrnAnm(a_anm_prm_tbl[mStt].btpNum, true);
     setAnm_anm(&a_anm_prm_tbl[mStt]);
 }
 
 /* 02306458 */
 void daNpc_Zl1_c::setAnm_ATR() {
     anm_prm_c* a_anm_prm_tbl = a_anm_prm_tbl_setAnm_ATR; /* [19] */
-    init_texPttrnAnm(a_anm_prm_tbl[mAnmAtrNo].field_0x1, true);
+    init_texPttrnAnm(a_anm_prm_tbl[mAnmAtrNo].btpNum, true);
     setAnm_anm(&a_anm_prm_tbl[mAnmAtrNo]);
 }
 
@@ -398,12 +398,12 @@ void daNpc_Zl1_c::checkOrder() {
         if (dComIfGp_evmng_startCheck(mEventIdx[mEventNo]) && mOrderEvent >= 3) {
             switch ((u32)(s32)mEventNo) {
             case 0:
-                field_0x7D3 = true;
+                mKeepShapeAngle = true;
                 break;
             case 2:
                 /* dComIfGs_setRestartRoom(a_start_pos, 0x4000, 0): dSv_restart_c::setRoom (save + 0x1148) */
                 Zl1main_setRestartRoom(zl1_main::restart(), &a_start_pos, 0x4000, 0);
-                field_0x7C9 = true;
+                mForceEventProc = true;
                 break;
             case 3:
                 zl1_main::player(dComIfGp_getPlayer(0))->mNoResetFlg0 |= 0x08000000;
@@ -475,7 +475,7 @@ void daNpc_Zl1_c::setEyeCtrl() {
     for (int i = 0; i < 2; i++) {
         daNpc_Zl1_matAnm_c* p = mpEyeMatAnm[i];
         if (p) {
-            p->field_0x7C = 1;
+            p->mMoveFlag = 1;
         }
     }
     mEyeCtrl = true;
@@ -486,7 +486,7 @@ void daNpc_Zl1_c::clrEyeCtrl() {
     for (int i = 0; i < 2; i++) {
         daNpc_Zl1_matAnm_c* p = mpEyeMatAnm[i];
         if (p) {
-            p->field_0x7C = 0;
+            p->mMoveFlag = 0;
         }
     }
     mEyeCtrl = false;
@@ -568,7 +568,7 @@ void daNpc_Zl1_c::incEnvironment() {
     r = (r - 1.0f >= 0.0f) ? 1.0f : r; /* cLib_maxLimit (fsel) */
     mRatio = r;
     if (!(r < 1.0f)) {
-        field_0x7C2 = 0;
+        mEnvRatioStep = 0;
     }
 }
 
@@ -643,7 +643,7 @@ void daNpc_Zl1_c::cut_init_MAJYU_START(int) {
     current.pos.x = -37927.0f;
     current.angle.y = cLib_targetAngleY(&current.pos, &mLookPos);
     mLookMode = 2;
-    field_0x7D0 = true;
+    mEyeFollow = true;
 }
 
 /* 023066B4 */
@@ -754,12 +754,12 @@ void daNpc_Zl1_c::setStt(s8 param_1) {
     case 3:
         speedF = 0.0f;
         speed.y = 0.0f;
-        field_0x7B8 = (s16)Zl1main_getRndValue(0x5A, 0xB4);
-        field_0x7BA = 0;
+        mIdleAnmTimer = (s16)Zl1main_getRndValue(0x5A, 0xB4);
+        mIdleAnmLoops = 0;
         break;
     case 5:
-        field_0x7CA = true;
-        field_0x7D3 = true;
+        mSwoonOnShip = true;
+        mKeepShapeAngle = true;
         break;
     }
     setAnm();

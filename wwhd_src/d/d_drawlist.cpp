@@ -220,9 +220,9 @@ void destroyDrawBase(u32 object, u32 flags) {
 void dDlstHD::cM_rnd_c::init(u32 a, u32 b, u32 c) {
     const u32 object = gabi::ea(this);
     auto* objectView = this;
-    objectView->mMultiplier = b;
-    objectView->mIncrement = c;
-    objectView->mSeed = a;
+    objectView->mSeed1 = b;
+    objectView->mSeed2 = c;
+    objectView->mSeed0 = a;
 }
 
 /* 0252CD20 */
@@ -237,14 +237,14 @@ u32 dDlst_effectLine_construct(u32 object) {
     drawHD_randomInitEntry(gabi::at<u8>(object + 4), 100, 100, 100);
     drawHD_bzero(gabi::at<u8>(object + 0x1C), 4);
     f32 zero = l_zero.get();
-    objectView->mLineSpeed = 0;
-    objectView->mWidth = zero;
-    objectView->mLineLength = 0;
-    objectView->mHeight = zero;
-    objectView->mLineCount = 0;
-    objectView->mDepth = zero;
-    objectView->mLineMode = 0;
-    objectView->mScale = zero;
+    objectView->mLineWidthMin = 0;
+    objectView->mStartRadiusMin = zero;
+    objectView->mLineNumRange = 0;
+    objectView->mStartRadiusRange = zero;
+    objectView->mLineNumMin = 0;
+    objectView->mLineLengthMin = zero;
+    objectView->mLineWidthRange = 0;
+    objectView->mLineLengthRange = zero;
     return object;
 }
 
@@ -258,14 +258,14 @@ void dDlstHD::dDlst_effectLine_c::update(u32 vector, u32 colour, u32 a, u32 b, u
     objectView->mPositionY = vectorView->y.get();
     objectView->mPositionZ = vectorView->z.get();
     objectView->mColor = (*gabi::at<be<u32>>(colour)).get();
-    objectView->mLineCount = a;
-    objectView->mDepth = z;
-    objectView->mLineSpeed = c;
-    objectView->mLineMode = d;
-    objectView->mScale = w;
-    objectView->mHeight = y;
-    objectView->mLineLength = b;
-    objectView->mWidth = x;
+    objectView->mLineNumMin = a;
+    objectView->mLineLengthMin = z;
+    objectView->mLineWidthMin = c;
+    objectView->mLineWidthRange = d;
+    objectView->mLineLengthRange = w;
+    objectView->mStartRadiusRange = y;
+    objectView->mLineNumRange = b;
+    objectView->mStartRadiusMin = x;
     u32 list = drawHD_getPlay() + 0x5D30;
     drawHD_listSetEntry(gabi::at<u8>(list), gabi::at<u8>(list + 0x1DC), gabi::at<u8>(list + 0x1E0),
                         gabi::at<u8>(object));
@@ -1244,9 +1244,9 @@ u32 constructRandomState(u32 object) {
         object = drawHD_operatorNew(12);
     if (object) {
         auto* objectView = gabi::at<cM_rnd_c>(object);
-        objectView->mSeed = 5;
-        objectView->mMultiplier = 20;
-        objectView->mIncrement = 10;
+        objectView->mSeed0 = 5;
+        objectView->mSeed1 = 20;
+        objectView->mSeed2 = 10;
     }
     return object;
 }

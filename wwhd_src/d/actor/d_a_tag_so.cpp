@@ -17,7 +17,7 @@ static daTag_So_HIO_c* daTag_So_HIO_c_ct(daTag_So_HIO_c* i_this) {
     }
     i_this->__vtbl = 0x1003FC74;
     i_this->mNo = -1;
-    i_this->m05 = 0;
+    i_this->mDebugDraw = 0;
     return i_this;
 }
 
@@ -51,7 +51,7 @@ void daTag_So_c::debugDraw() {
 
 /* 024B2C3C */
 bool daTag_So_c::_draw() {
-    if (l_HIO.m05)
+    if (l_HIO.mDebugDraw)
         debugDraw();
     return TRUE;
 }

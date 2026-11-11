@@ -262,7 +262,7 @@ BOOL daNpc_Os_c::eventProc() {
                 dComIfGp_event_setTalkPartner(link);
                 Os_controlSoundHD(os_a::JA_SE_CTRL_NPC_TO_LINK);
             } else {
-                m4E4 = m4E4 & ~1u;
+                mNpcFlags = mNpcFlags & ~1u;
                 mOrderEventNum = -1;
             }
         } else if (mOrderEventNum != 2 && mOrderEventNum != 4 && mOrderEventNum != 6) {
@@ -278,9 +278,9 @@ BOOL daNpc_Os_c::eventProc() {
             }
         }
         if (mOrderEventNum != -1) {
-            u32 f = m4E4;
+            u32 f = mNpcFlags;
             mOrderEventNum = -1;
-            m4E4 = f | 2;
+            mNpcFlags = f | 2;
         }
     }
     int staffIdx = getMyStaffId();
@@ -300,14 +300,14 @@ BOOL daNpc_Os_c::eventProc() {
                 }
             }
         }
-        if (m4E4 & 2) {
+        if (mNpcFlags & 2) {
             s16 id = mEventIdx[mEventNo];
             if (Os_endCheckHD(dComIfGp_getPEvtManager(), (s32)id)) {
                 dComIfGp_event_reset();
-                m4E4 = m4E4 & ~2u;
+                mNpcFlags = mNpcFlags & ~2u;
                 if (mEventNo == 0) {
                     returnLinkPlayer();
-                    m4E4 = m4E4 & ~1u;
+                    mNpcFlags = mNpcFlags & ~1u;
                 }
                 mEventNo = -1;
             }
@@ -329,7 +329,7 @@ void daNpc_Os_c::carryCheck() {
 
 /* 022AC160 */
 void daNpc_Os_c::eventOrder() {
-    if (m4E4 & 2) {
+    if (mNpcFlags & 2) {
         return;
     }
     if (mOrderEventNum == 0x12 || mOrderEventNum == 0x11) {
@@ -560,9 +560,9 @@ BOOL daNpc_Os_c::execute() {
         mGroundHit = (mAcch.m_flags >> 5) & 1;
         if (!(actor_status & fopAcStts_CARRY_e)) {
             if (os_groundH(this) == -1000000000.0f || Os_groundCodeHD(dComIfG_Bgsp(), os_gnd(this)) == 4) {
-                u8 c = m4E8;
+                u8 c = mFallTimer;
                 if (c < 30) {
-                    m4E8 = c + 1;
+                    mFallTimer = c + 1;
                 } else {
                     s8 room = home.roomNo;
                     dComIfGp_get();
@@ -577,7 +577,7 @@ BOOL daNpc_Os_c::execute() {
                         dst->mAnglesXY = (u32)src->mAnglesXY;
                         dst->mAngleZAndRoom = (u32)src->mAngleZAndRoom;
                         speedF = 0.0f;
-                        m4E8 = 0;
+                        mFallTimer = 0;
                         shape_angle.y = ay;
                         dst->mPosition.y = (u32)src->mPosition.y;
                         dst->mPosition.x = (u32)src->mPosition.x;
@@ -588,7 +588,7 @@ BOOL daNpc_Os_c::execute() {
                     }
                 }
             } else {
-                m4E8 = 0;
+                mFallTimer = 0;
             }
             if (mAcch.m_flags & 0x1000) {
                 Os_restartLinkHD(dComIfGp_getLinkPlayer(), 5, 0xC9, -1.0f, 0);
@@ -632,14 +632,14 @@ BOOL daNpc_Os_c::execute() {
         if (!finishCheck()) {
             if (dComIfGp_getPlayer(0) == this) {
                 u32 st = actor_status;
-                u32 flg = m4E4;
+                u32 flg = mNpcFlags;
                 actor_status = (st & ~0x3Fu) | 0x33;
                 if (flg & 1) {
                     mOrderEventNum = 0;
                 } else {
                     playerAction(nullptr);
                     if (returnLinkCheck()) {
-                        m4E4 = m4E4 | 1;
+                        mNpcFlags = mNpcFlags | 1;
                     }
                 }
             } else {

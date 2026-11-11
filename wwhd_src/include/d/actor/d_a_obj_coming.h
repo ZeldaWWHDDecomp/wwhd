@@ -9,7 +9,7 @@ struct Act_c;
 struct PrmBarrel2_c {
     cXyz mPos;
     be<s32> mType, mItem;
-    be<u8> m14;
+    be<u8> mHasBuoy;  /* was m14: Act_c::barrel2_get_param 023325C4 sets it from barrel2_get_buoy (tww daObjComing::Act_c::barrel2_get_buoy, a per-pattern bool table); mode_barrel2_wait 02332728 puts its inverse in bit 8 of the barrel's parameters */
     u8 padding;
     be<s16> mAngleY;
 };
@@ -20,8 +20,9 @@ struct Ctrl_c {
     void set_wait_timer(const Act_c*);
     void set_retry_timer(const Act_c*);
     void set_appear_timer(const Act_c*);
-    be<s32> m00, m04;
-    be<u32> m08;
+    be<s32> mMode;  /* was m00: the controller's Ctrl_c::Mode: Ctrl_c::init 02331A08 MODE_WAIT; mode_barrel2_wait 02332728 sets MODE_APPEAR after creating a barrel, mode_barrel2_appear 02332868 MODE_WAIT again; _execute 02331C94 dispatches on it (tww the same) */
+    be<s32> mTimer;  /* was m04: Ctrl_c::init_timer 0233194C / set_wait_timer 02331A44 / set_retry_timer 02331B00 / set_appear_timer 02331B4C set it; _execute 02331C94 counts it down; mode_barrel2_wait / appear act only once it is 0 (tww the same) */
+    be<u32> mBarrelId;  /* was m08: process id of the controller's barrel: mode_barrel2_wait 02332728 stores Coming_createBarrel's result, mode_barrel2_appear 02332868 / leave 02332960 look it up and clear it to fpcM_ERROR_PROCESS_ID_e; Ctrl_c::init 02331A08 clears it (tww the same) */
 };
 struct Act_c : fopAc_ac_c {
     enum Ptn_e {
@@ -39,7 +40,12 @@ struct Act_c : fopAc_ac_c {
         PRM_MAKENUM_W = 2, PRM_MAKENUM_S = 28,
         PRM_TYPE_W = 4, PRM_TYPE_S = 0
     };
-    struct MakeTmp_c { cXyz m00, m0C; be<f32> m18, m1C; };
+    struct MakeTmp_c {
+        cXyz mShipPos;  /* was m00: Act_c::barrel2_get_param 023325C4: the ship's position; chk_make_pos_wall 023322EC: start of the line check to mMakePos (tww the same) */
+        cXyz mMakePos;  /* was m0C: Act_c::barrel2_get_param 023325C4: the candidate barrel position from get_make_pos; chk_make_pos_gnd 0233211C, chk_make_pos_wall 023322EC and chk_make_pos_act 0233233C test it (tww the same) */
+        be<f32> mCheckRadius;  /* was m18: barrel2_get_param 023325C4 200; chk_make_pos_gnd 0233211C and chk_make_pos_act 0233233C use it + 100 as the radius around mMakePos (tww the same) */
+        be<f32> mCheckHeight;  /* was m1C: barrel2_get_param 023325C4 400; chk_make_pos_act 0233233C: an actor counts as in the way within it + 100 of mMakePos.y (tww the same) */
+    };
     s32 _create();
     s32 _execute();
     // HD: keep the full r3 result at guest call boundaries (GC uses bool/enums).
@@ -55,26 +61,26 @@ struct Act_c : fopAc_ac_c {
     void mode_barrel2_wait(Ctrl_c*);
     void mode_barrel2_appear(Ctrl_c*);
     void mode_barrel2_leave(Ctrl_c*);
-    /* GC 0x290 -> HD 0x3AC */ be<u32> m290;
-    /* GC 0x294 -> HD 0x3B0 */ Ctrl_c m294[5];
+    /* GC 0x290 -> HD 0x3AC */ be<u32> mPrmType;  /* was m290: _create 02331B98: parameter bits 0-3 (PRM_TYPE, tww prm_get_type()); _execute 02331C94 picks mode_proc[it][mode] (tww the same) */
+    /* GC 0x294 -> HD 0x3B0 */ Ctrl_c mCtrl[5];  /* was m294: the five Ctrl_c barrel controllers: _create 02331B98 inits them, _execute 02331C94 counts their timers and runs their mode (tww the same) */
     /* GC 0x2D0 -> HD 0x3EC */ be<s8> mRoomId;
     u8 padding[3];
 };
 WWHD_SIZE(PrmBarrel2_c, 0x18);
 WWHD_OFFSET(PrmBarrel2_c, mType, 0x0C);
 WWHD_OFFSET(PrmBarrel2_c, mItem, 0x10);
-WWHD_OFFSET(PrmBarrel2_c, m14, 0x14);
+WWHD_OFFSET(PrmBarrel2_c, mHasBuoy, 0x14);
 WWHD_OFFSET(PrmBarrel2_c, mAngleY, 0x16);
 WWHD_SIZE(Ctrl_c, 0x0C);
-WWHD_OFFSET(Ctrl_c, m04, 4);
-WWHD_OFFSET(Ctrl_c, m08, 8);
+WWHD_OFFSET(Ctrl_c, mTimer, 4);
+WWHD_OFFSET(Ctrl_c, mBarrelId, 8);
 WWHD_SIZE(Act_c::MakeTmp_c, 0x20);
-WWHD_OFFSET(Act_c::MakeTmp_c, m0C, 0x0C);
-WWHD_OFFSET(Act_c::MakeTmp_c, m18, 0x18);
-WWHD_OFFSET(Act_c::MakeTmp_c, m1C, 0x1C);
+WWHD_OFFSET(Act_c::MakeTmp_c, mMakePos, 0x0C);
+WWHD_OFFSET(Act_c::MakeTmp_c, mCheckRadius, 0x18);
+WWHD_OFFSET(Act_c::MakeTmp_c, mCheckHeight, 0x1C);
 WWHD_SIZE(Act_c, 0x3F0);
-WWHD_OFFSET(Act_c, m290, 0x3AC);
-WWHD_OFFSET(Act_c, m294, 0x3B0);
+WWHD_OFFSET(Act_c, mPrmType, 0x3AC);
+WWHD_OFFSET(Act_c, mCtrl, 0x3B0);
 WWHD_OFFSET(Act_c, mRoomId, 0x3EC);
 }
 

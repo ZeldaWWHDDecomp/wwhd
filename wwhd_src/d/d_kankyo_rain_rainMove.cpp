@@ -270,7 +270,7 @@ void dKyr_rain_move() {
                 }
                 position->y = gabi::fadds_ppc((f32)at<RAIN_EFF>(p)->mBasePos.channels[1],
                                               (f32)at<RAIN_EFF>(p)->mPos.channels[1]);
-                if ((f32)position->y < gabi::fadds_ppc((f32)at<RAIN_EFF>(p)->field_0x30, accel)) {
+                if ((f32)position->y < gabi::fadds_ppc((f32)at<RAIN_EFF>(p)->mGroundY, accel)) {
                     copyCenter(p);
                     at<RAIN_EFF>(p)->mPos.channels[0] = sdk::cM_rndFX<f32>(scatter);
                     at<RAIN_EFF>(p)->mPos.channels[1] = bottom;

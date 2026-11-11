@@ -394,12 +394,12 @@ BOOL daGhostship_c::_execute() {
         // HD: bge takes unordered inputs; only an ordered radius below 900 selects this target.
         if (radius < 900.0f) {
             target = gabi::fmadds((f32)i, 100.0f, 1500.0f);
-            this->field_0x6C4[i] = target;
+            this->mPathRadiusTarget[i] = target;
         } else if (radius > gabi::fmadds((f32)i, 100.0f, 1400.0f)) {
             target = 800.0f;
-            this->field_0x6C4[i] = target;
+            this->mPathRadiusTarget[i] = target;
         } else
-            target = this->field_0x6C4[i];
+            target = this->mPathRadiusTarget[i];
         s32 phase = (s32)(s16)circle.mAngle + (s32)(s16)circle.mAngleSpeed;
         s16 doubled = (s16)((phase * 2) & 0xFFFE);
         f32 vertical = gabi::fmuls_ppc(600.0f, cM_scos(doubled));
@@ -486,7 +486,7 @@ static void ghostCopyGuard(ghostshipHD::DebugWord* guard, ghostshipHD::DebugWord
 }
 /* 0214B4A8 */
 BOOL daGhostship_c::_draw() {
-    if (l_HIO.field_0x04) {
+    if (l_HIO.mDebugDraw) {
         ghostCopyGuard(&l_axisGuard, &l_axisColor, &l_axisColorSource);
         ghostCopyGuard(&l_fanGuard, &l_fanColor, &l_fanColorSource);
         ghostCopyGuard(&l_fanGuard, &l_fanColor, &l_fanColorSource);
@@ -568,7 +568,7 @@ static u8* ghostHioCtor(u8* self) {
     auto* hio = reinterpret_cast<ghostshipHD::Hio*>(self);
     hio->shipAlpha = 0.51f;
     hio->shipHideDist = 3000.0f;
-    hio->field_0x04 = 0;
+    hio->mDebugDraw = 0;
     hio->vtable = 0x1000FB38;
     hio->field_0x0C = 5.0f;
     hio->hideShip = 0;

@@ -92,7 +92,7 @@ BOOL daObjGryw00_c::CreateHeap() {
 /* 0234C768 */
 BOOL daObjGryw00_c::setup_high_water_level_btk_anm() {
     auto texture = static_cast<J3DAnmTextureSRTKey*>(objectResource(dRes_INDEX_GRYW00_BTK_GRYW00_e));
-    if (!texture) JUT_ASSERT_fail(__FILE_NAME__, 0xDF, "btk_anm_p != NULL");
+    if (!texture) JUT_ASSERT_fail(__FILE_NAME__, 0xDF, "btk_anm_p != (0)");
     J3DModelData* data = mpModel->getModelData();
     return mBtk.init(data, texture, true, 2, 1.0f, 401, -1, true, 0) ? TRUE : FALSE;
 }
@@ -343,7 +343,7 @@ str 10029938 "Gryw00"
 str 10029980 "d_a_obj_gryw00.cpp" in 0234C420
 str 10029994 "(phase_state == cPhs_COMPLEATE_e) || (phase_state == cPhs_ERROR_e)"
 str 100299E0 "d_a_obj_gryw00.cpp" in 0234C5DC
-str 100299DC "FALSE" renamed # HD: assert spells zero.
+str 100299DC "0"
 str 100299F8 "d_a_obj_gryw00.cpp" in 0234C768
-str 10029A0C "btk_anm_p != NULL"
+str 10029A0C "btk_anm_p != (0)"
 */

@@ -325,13 +325,13 @@ void daBigelf_c::darkEnd() {
 void daBigelf_c::darkProc() {
 
     if (this->mDarkActive) {
-        f32 target = this->m3A4;
+        f32 target = this->mDarkRatioTarget;
         f32 maximum = l_one, rate = l_animationRate;
-        bigelf_cLib_addCalc2(&this->m3A0, target, rate, maximum);
-        f32 gain = this->m3A0;
+        bigelf_cLib_addCalc2(&this->mDarkRatio, target, rate, maximum);
+        f32 gain = this->mDarkRatio;
         f32 scale = l_actorLightScale, base = l_actorLightBase;
         bigelf_setActColorRatio(gabi::fmadds(scale, gain, base));
-        gain = this->m3A0;
+        gain = this->mDarkRatio;
         scale = l_backgroundLightScale;
         base = l_backgroundLightBase;
         f32 factor = gabi::fmadds(scale, gain, base);
@@ -361,7 +361,7 @@ u32 daBigelf_c::demoProcFlDelete() {
         u16 effect = colorEffect(this, l_releaseEffects);
         particle(effect, &bigelf_view<fopAc_ac_c>(player)->current.pos);
         count = this->mDemoCounter;
-        this->m3A4 = l_one;
+        this->mDarkRatioTarget = l_one;
         if (count < 27) {
             return 1;
         }
@@ -475,8 +475,8 @@ void daBigelf_c::demoInitFlDmMd() {
     this->darkInit();
     u16 flags = this->mStateBits;
     f32 one = l_one;
-    this->m3A0 = one;
-    this->m3A4 = one;
+    this->mDarkRatio = one;
+    this->mDarkRatioTarget = one;
     this->mStateBits =
         (flags & ~FLAG_LIGHT_CREATED) | (FLAG_DIM_SOUND_PENDING | FLAG_CHIME_SOUND_PENDING);
 }
@@ -498,11 +498,11 @@ u32 daBigelf_c::demoProcFlDmMd() {
             f32 difference = (f32)((f64)lightFrame - (f64)frame);
             f32 rate = l_blendStep;
             flags = this->mStateBits;
-            this->m3A4 = (f32)((f64)difference * (f64)rate);
+            this->mDarkRatioTarget = (f32)((f64)difference * (f64)rate);
         } else {
             f32 zero = l_zero;
             flags = this->mStateBits;
-            this->m3A4 = zero;
+            this->mDarkRatioTarget = zero;
         }
     }
     if (!(flags & FLAG_LIGHT_CREATED) && !(frame < lightFrame)) {
@@ -695,7 +695,7 @@ u32 daBigelf_c::demoProcExit() {
         if (this->getType() != 6) {
             this->makeFa1S();
         }
-        this->m3A8 = one;
+        this->mColorBlendTarget = one;
     }
     return 1;
 }
@@ -763,7 +763,7 @@ void daBigelf_c::demoInitAppear() {
     if (this->getType() == 6) {
         this->mAttentionDelay = 15;
     }
-    this->m3A8 = zero;
+    this->mColorBlendTarget = zero;
     this->mLightState = 15;
     if (this->getType() == 6) {
         sound(this, 0x594D);
@@ -1346,7 +1346,7 @@ u32 daBigelf_c::ready0() {
         this->mState = STATE_EVENT;
         u32 staff = bigelf_getStaffId(&gameInfo()->play.mEvtManager, "BigElf", 0, 0);
         this->mStaffId = staff;
-        this->m3A8 = l_one;
+        this->mColorBlendTarget = l_one;
         this->demoProc();
     } else {
         bigelf_orderOtherEvent(this, (s32)(s16)this->eventID, 255, 0xFFFF, 0, 1);
@@ -1555,10 +1555,10 @@ BOOL daBigelf_c::_execute() {
         this->mLightInfluence.mColorB = (u8)gabi::ftoi(gb);
     }
     if (this->getType() != 6) {
-        bigelf_customColorSet(4, 0, (f32)this->m3AC);
+        bigelf_customColorSet(4, 0, (f32)this->mColorBlend);
     }
-    f32 speed = this->m3A8, minimum = l_blendMinimum, step = l_blendStep, factor = l_animationRate;
-    bigelf_cLib_addCalc(&this->m3AC, speed, factor, minimum, step);
+    f32 speed = this->mColorBlendTarget, minimum = l_blendMinimum, step = l_blendStep, factor = l_animationRate;
+    bigelf_cLib_addCalc(&this->mColorBlend, speed, factor, minimum, step);
     return 1;
 }
 
@@ -1722,9 +1722,9 @@ BOOL daBigelf_c::CreateHeap() {
         }
     }
     f32 zero = l_zero;
-    this->m3AC = one;
+    this->mColorBlend = one;
     this->mLightRadius = zero;
-    this->m3A8 = one;
+    this->mColorBlendTarget = one;
     return 1;
 }
 

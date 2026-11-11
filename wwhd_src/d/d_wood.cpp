@@ -1,6 +1,7 @@
 // Wood and bush animation, collision and HD GX2 rendering.
 #include "d/d_wood.h"
 #include "bindings.h"
+#include "sead/ElementAt.h"
 #include "gc_api/d/d_com_inf_game.h"
 #include "gc_api/m_Do/m_Do_audio.h"
 #include <bit>
@@ -75,7 +76,7 @@ s32 dWood::Packet_c::search_anm(u32 mode) {
     return AnmID_Norm_Invalid;
 }
 static s32 hdWood_searchAnimation(u32 self, u32 mode) {
-    return reinterpret_cast<dWood::Packet_c *>((uintptr_t)self)->search_anm(mode);
+    return gabi::at<dWood::Packet_c>(self)->search_anm(mode);
 }
 
 namespace d_wood_cpp {
@@ -108,7 +109,7 @@ void dWood::Anm_c::play(dWood::Packet_c *packet) {
     // HD: GHS stores compact guest descriptors, preserving virtual and adjusted-this dispatch.
     if ((s32)mMode == Mode_Max)
         return;
-    (this->*mode_proc[(u32)mMode].fn)(packet);
+    (this->*sead::elementAt<WoodModeProcEntry>(gabi::ea(mode_proc), (u32)mMode).fn)(packet); /* sibling: wraps at 32 bits as on the console */
 }
 
 /* 025CD380 */
@@ -460,7 +461,7 @@ s32 dWood::Unit_c::set_ground() {
 
 /* 025CE4F0 */
 void dWood::Unit_c::set_mtx(Anm_c *anim) {
-    Anm_c *animation = &anim[(u32)mAnmIdx];
+    Anm_c *animation = sead::elementPtr(anim, (u32)mAnmIdx); /* sibling: wraps at 32 bits as on the console */
     Mtx34 *stack = mDoMtx_stack_c::get();
     PSMTXCopy(gabi::ea(animation->mModelMtx), gabi::ea(stack));
     for (u32 i = 0; i < 3; ++i) {
@@ -503,15 +504,15 @@ static void pushHit(Unit_c *unit, Packet_c *packet, gptr<fopAc_ac_c> *actor, s32
             return;
     }
     checkAnimation(index);
-    if ((s32)packet->mAnm[(u32)index].mMode <= (s32)Anm_c::Mode_Cut)
+    if ((s32)sead::elementAt<Anm_c>(gabi::ea(packet->mAnm), (u32)index).mMode <= (s32)Anm_c::Mode_Cut) /* sibling: wraps at 32 bits as on the console */
         return;
     // HD: preserve the entire target-angle return register until the explicit s16 conversion.
     s32 targetAngle = woodTargetAngleY(&(*actor)->current.pos, &unit->mPos);
     s32 current = unit->mAnmIdx;
     checkAnimation(current);
-    Anm_c *to = &packet->mAnm[(u32)current];
+    Anm_c *to = &sead::elementAt<Anm_c>(gabi::ea(packet->mAnm), (u32)current); /* sibling: wraps at 32 bits as on the console */
     checkAnimation(oldAnimIdx);
-    to->mode_push_into_init(&packet->mAnm[(u32)oldAnimIdx], (s16)targetAngle);
+    to->mode_push_into_init(&sead::elementAt<Anm_c>(gabi::ea(packet->mAnm), (u32)oldAnimIdx), (s16)targetAngle); /* sibling: wraps at 32 bits as on the console */
 }
 
 /* 025CE5D0 */
@@ -563,14 +564,14 @@ void dWood::Unit_c::cc_hit_before_cut(Packet_c *packet) {
         }
     }
     checkAnimation(index);
-    if ((s32)packet->mAnm[(u32)index].mMode <= (s32)Anm_c::Mode_Cut)
+    if ((s32)sead::elementAt<Anm_c>(gabi::ea(packet->mAnm), (u32)index).mMode <= (s32)Anm_c::Mode_Cut) /* sibling: wraps at 32 bits as on the console */
         return;
     s32 targetAngle = woodTargetAngleY(&(*actor)->current.pos, &mPos);
     s32 current = mAnmIdx;
     checkAnimation(current);
-    Anm_c *to = &packet->mAnm[(u32)current];
+    Anm_c *to = &sead::elementAt<Anm_c>(gabi::ea(packet->mAnm), (u32)current); /* sibling: wraps at 32 bits as on the console */
     checkAnimation(oldAnimIdx);
-    to->mode_cut_init(&packet->mAnm[(u32)oldAnimIdx], (s16)targetAngle);
+    to->mode_cut_init(&sead::elementAt<Anm_c>(gabi::ea(packet->mAnm), (u32)oldAnimIdx), (s16)targetAngle); /* sibling: wraps at 32 bits as on the console */
     settingTevStruct(dKy_getEnvlight(), TEV_TYPE_BG0, &mPos,
                      reinterpret_cast<dKy_tevstr_c *>(&mTevStr));
     JPABaseEmitter *emitter =
@@ -605,7 +606,7 @@ void dWood::Unit_c::proc(Packet_c *packet) {
     if ((u32)index >= 72)
         wood_assert(gabi::guest_addr("d_wood.h"), 0xE7,
                     gabi::guest_addr("(int)id >= 0 && (int)id < AnmID_Max"));
-    Anm_c *animation = &packet->mAnm[(u32)index];
+    Anm_c *animation = &sead::elementAt<Anm_c>(gabi::ea(packet->mAnm), (u32)index); /* sibling: wraps at 32 bits as on the console */
     switch ((s32)animation->mMode) {
     case Anm_c::Mode_ToNorm:
         if ((s16)animation->mCountdown <= 0) {
@@ -639,7 +640,8 @@ dWood::Room_c::Room_c() {
 void dWood::Room_c::entry_unit(Unit_c *unit) {
     s32 count = mCount, capacity = mCapacity;
     if (count < capacity) {
-        mpUnits[(u32)count] = unit;
+        /* guest address arithmetic: mpUnits + count * 4 wraps at 32 bits as on the console */
+        sead::elementAt<gptr<Unit_c>>(mpUnits, (u32)count) = unit;
         mCount = (s32)((u32)mCount + 1);
     }
 }
@@ -659,7 +661,9 @@ void dWood::Room_c::delete_all_unit() {
 }
 
 /* 025D0738 */
-void dWood::Packet_c::delete_room(s32 room_no) { mRoom[(u32)room_no].delete_all_unit(); }
+void dWood::Packet_c::delete_room(s32 room_no) {
+    sead::elementAt<Room_c>(gabi::ea(mRoom), (u32)room_no).delete_all_unit(); /* sibling: wraps at 32 bits as on the console */
+}
 /* 025D074C */
 s32 dWood::Packet_c::search_empty_UnitID() {
     for (u32 i = 0; i < 200; ++i)
@@ -675,15 +679,17 @@ s32 dWood::Packet_c::put_unit(const cXyz *pos, u32 room) {
                     gabi::guest_addr("(room_no >= 0) && (room_no < L_Room_Max)"));
     const s32 index = search_empty_UnitID();
     if (index != 200) {
-        Unit_c *unit = &mUnit[(u32)index];
+        /* guest address arithmetic: mUnit + index * 0x248 wraps at 32 bits as on the console */
+        Unit_c *unit = &sead::elementAt<Unit_c>(gabi::ea(mUnit), (u32)index);
         unit->mFlags = Unit_c::STATE_ACTIVE;
         // HD: lfs/stfs copies retain floating-store footprints and the original bit representation.
         unit->mPos.x = pos->x;
         unit->mPos.y = pos->y;
         unit->mPos.z = pos->z;
         unit->mAnmIdx = search_anm(Anm_c::Mode_Norm);
+        /* guest address arithmetic: mRoom + room * 0x32C wraps at 32 bits as on the console */
         if (unit->set_ground())
-            mRoom[room].entry_unit(unit);
+            sead::elementAt<Room_c>(gabi::ea(mRoom), room).entry_unit(unit);
         else
             unit->clear();
     }
@@ -701,7 +707,7 @@ static void bindUniforms(ShaderMaterial *material, UniformShape *shape) {
     const u32 descriptorAddress =
         gabi::ea(shape->mDescriptors) + (u32)shape->mDescriptorIndex * sizeof(UniformDescriptor);
     UniformDescriptor *descriptor =
-        reinterpret_cast<UniformDescriptor *>((uintptr_t)descriptorAddress);
+        gabi::at<UniformDescriptor>(descriptorAddress);
     const u32 data = gabi::ea(descriptor->mpData), size = descriptor->mSize;
     if (pixel != -1)
         woodGX2PixelUniform((s32)pixel, size, data);
@@ -711,8 +717,8 @@ static void bindUniforms(ShaderMaterial *material, UniformShape *shape) {
         woodGX2GeometryUniform((s32)geometry, size, data);
 }
 static void bindUniforms(u32 material, u32 shape) {
-    bindUniforms(reinterpret_cast<ShaderMaterial *>((uintptr_t)material),
-                 reinterpret_cast<UniformShape *>((uintptr_t)shape));
+    bindUniforms(gabi::at<ShaderMaterial>(material),
+                 gabi::at<UniformShape>(shape));
 }
 /* inlined into dWood::Packet_c::draw_fade */
 static ShaderMaterial *selectMaterial(ShapeGroups *groups, u32 mode) {
@@ -726,8 +732,8 @@ static ShaderMaterial *selectMaterial(ShapeGroups *groups, u32 mode) {
 }
 /* inlined into dWood::Packet_c::draw_fade */
 static void bindProgram(ShaderMaterial *material) {
-    auto *cache = reinterpret_cast<ShaderCache *>(
-        (uintptr_t)woodGetShaderCache(gabi::ea(&shaderCacheContext)));
+    /* the returned guest address is viewed through the guest window (field offsets wrap at 32 bits as on the console) */
+    auto *cache = gabi::at<ShaderCache>(woodGetShaderCache(gabi::ea(&shaderCacheContext)));
     ShaderProgram *program = material->mpProgram;
     if (program != cache->mpProgram.get()) {
         const u8 flags = program->mFlags;
@@ -757,7 +763,7 @@ static void bindDrawUniforms(ShaderMaterial *material, DrawInfo *draw) {
         const u32 capacity = table->mCapacity, index = draw->mShapeIndex;
         const u32 shapeAddress =
             gabi::ea(table->mpShapes) + (index < capacity ? index * sizeof(UniformShape) : 0);
-        UniformShape *shape = reinterpret_cast<UniformShape *>((uintptr_t)shapeAddress);
+        UniformShape *shape = gabi::at<UniformShape>(shapeAddress);
         bindUniforms(material, shape);
     }
 }
@@ -809,9 +815,9 @@ void dWood::Packet_c::draw_fade(DrawInfo *draw) {
     const u32 begin = gabi::ea(mFadeUnits.mpUnits), end = begin + count * 4;
     u32 transformIndex = count - 1, textureIndex = count - 1;
     for (u32 item = begin; item != end; item += 4) {
-        applyUniform(reinterpret_cast<UniformObject *>(&mFadeTextures[textureIndex]), material);
+        applyUniform(reinterpret_cast<UniformObject *>(sead::elementPtr(mFadeTextures, textureIndex)), material); /* sibling: wraps at 32 bits as on the console */
         --textureIndex;
-        applyUniform(reinterpret_cast<UniformObject *>(&mFadeTransforms[transformIndex]), material);
+        applyUniform(reinterpret_cast<UniformObject *>(sead::elementPtr(mFadeTransforms, transformIndex)), material); /* sibling: wraps at 32 bits as on the console */
         --transformIndex;
         drawIndices(&mLeafIndices);
     }
@@ -819,19 +825,19 @@ void dWood::Packet_c::draw_fade(DrawInfo *draw) {
 }
 /* 025CF204 */
 void hdWood_drawMaterialThunk(u32 self, u32 draw) {
-    auto *packet = reinterpret_cast<FadePacket *>((uintptr_t)self);
-    packet->mpOwner->draw_fade(reinterpret_cast<DrawInfo *>((uintptr_t)draw));
+    auto *packet = gabi::at<FadePacket>(self); /* guest window view: field offsets wrap at 32 bits */
+    packet->mpOwner->draw_fade(gabi::at<DrawInfo>(draw));
 }
 
 static u32 heapManager;
 static void freeSlot(u32 slot) {
-    const u32 object = *reinterpret_cast<be<u32> *>((uintptr_t)slot);
-    auto *heap = reinterpret_cast<Heap *>((uintptr_t)woodFindHeap(heapManager, object));
+    const u32 object = *gabi::at<be<u32>>(slot);
+    auto *heap = gabi::at<Heap>(woodFindHeap(heapManager, object)); /* guest window view: field offsets wrap at 32 bits */
     gabi::call_ptr<void>(heap->mpVtable->mFree.get(), gabi::ea(heap),
-                         (u32) * reinterpret_cast<be<u32> *>((uintptr_t)slot));
+                         (u32) * gabi::at<be<u32>>(slot));
 }
 static void releaseMaterialBuffers(u32 address) {
-    auto *block = reinterpret_cast<MaterialBuffers *>((uintptr_t)address);
+    auto *block = gabi::at<MaterialBuffers>(address);
     for (u32 i = 0; i < 2; ++i) {
         for (u32 j = 0; j < 2; ++j) {
             MaterialPart *part = &block->mPart[i][j];
@@ -862,7 +868,7 @@ static void destroyShapeArray(ShapeArray *row) {
     row->mpShapes = nullptr;
 }
 static void destroyShapeGroups(u32 address) {
-    auto *header = reinterpret_cast<ShapeGroups *>((uintptr_t)address);
+    auto *header = gabi::at<ShapeGroups>(address);
     ShapeGroup *array = header->mpGroups;
     if (!array)
         return;
@@ -886,7 +892,7 @@ static void destroyShapeGroups(u32 address) {
 void hdWood_packetDelete(u32 self, u32 flags) {
     if (!self)
         return;
-    auto *packet = reinterpret_cast<Packet_c *>((uintptr_t)self);
+    auto *packet = gabi::at<Packet_c>(self);
     packet->mPacketBase.mVtable = WOOD_PACKET_VTABLE;
     u32 material = gabi::ea(&packet->mMaterials);
     releaseMaterialBuffers(material);
@@ -918,7 +924,8 @@ void dWood::Packet_c::calc_cc() {
     const s32 room = dComIfGp_roomControl_getStayNo();
     if ((u32)room >= 64)
         return;
-    auto *game = reinterpret_cast<WoodMassView *>((uintptr_t)woodGetGameInfo());
+    /* guest window views of the returned game info: field offsets wrap at 32 bits as on the console */
+    auto *game = gabi::at<WoodMassView>(woodGetGameInfo());
     f32 radius = collisionRadius;
     woodMassSetRadius(gabi::ea(game->mShape), radius);
     woodMassSetHeight(gabi::ea(game->mShape), radius);
@@ -928,11 +935,11 @@ void dWood::Packet_c::calc_cc() {
     gptr<Unit_c> *begin = header->mpUnits;
     const u32 end = gabi::ea(begin) + (u32)header->mCount * sizeof(*begin);
     for (u32 address = gabi::ea(begin); address != end; address += sizeof(*begin)) {
-        Unit_c *unit = *reinterpret_cast<gptr<Unit_c> *>((uintptr_t)address);
+        Unit_c *unit = *gabi::at<gptr<Unit_c>>(address);
         if (!((u32)unit->mFlags & Unit_c::STATE_CUT))
             unit->cc_hit_before_cut(this);
     }
-    game = reinterpret_cast<WoodMassView *>((uintptr_t)woodGetGameInfo());
+    game = gabi::at<WoodMassView>(woodGetGameInfo());
     radius = cutCollisionRadius;
     woodMassSetRadius(gabi::ea(game->mShape), radius);
     woodMassSetHeight(gabi::ea(game->mShape), radius);
@@ -944,7 +951,7 @@ void dWood::Packet_c::calc_cc() {
 /* 025D0994 */
 void dWood::Packet_c::calc() {
     calc_cc();
-    const cXyz *vector = reinterpret_cast<cXyz *>((uintptr_t)woodGetWindVector());
+    const cXyz *vector = gabi::at<cXyz>(woodGetWindVector());
     const f32 strength = woodGetWindPower();
     const s32 angle = woodAtan2(vector->x, vector->z);
     for (u32 i = 0; i < AnmID_Norm_Max; ++i)
@@ -1002,12 +1009,13 @@ void dWood::Packet_c::update() {
             unit.set_mtx(mAnm);
         }
     }
-    auto *game = reinterpret_cast<WoodDrawListsView *>((uintptr_t)woodGetGameInfo());
+    /* guest window views of the returned game info: field offsets wrap at 32 bits as on the console */
+    auto *game = gabi::at<WoodDrawListsView>(woodGetGameInfo());
     const u32 list = game->mRoomList;
     woodCurrentDrawList = list;
     woodDrawListEntry(woodDrawList, gabi::ea(this), 0);
     woodDrawListEntry(woodCurrentDrawList, gabi::ea(&mFadePacket), 0);
-    game = reinterpret_cast<WoodDrawListsView *>((uintptr_t)woodGetGameInfo());
+    game = gabi::at<WoodDrawListsView>(woodGetGameInfo());
     woodCurrentDrawList = game->mAfterDrawList;
     hdWood_prepareDraw(gabi::ea(this));
 }
@@ -1049,7 +1057,7 @@ u32 hdWood_createTransform(u32 self) {
     if (!self)
         self = woodAllocate(sizeof(Transform));
     if (self) {
-        auto *object = reinterpret_cast<Transform *>((uintptr_t)self);
+        auto *object = gabi::at<Transform>(self); /* guest window view: field offsets wrap at 32 bits */
         woodUniformConstruct(self);
         object->mpVtable = reinterpret_cast<UniformVtable *>((uintptr_t)TRANSFORM_VTABLE);
         woodClearUniformData(gabi::ea(&object->mMatrix), sizeof(Mtx34) + 4);
@@ -1072,7 +1080,7 @@ u32 hdWood_createTextureTransform(u32 self) {
     if (!self)
         self = woodAllocate(sizeof(TextureTransform));
     if (self) {
-        auto *object = reinterpret_cast<TextureTransform *>((uintptr_t)self);
+        auto *object = gabi::at<TextureTransform>(self); /* guest window view: field offsets wrap at 32 bits */
         woodUniformConstruct(self);
         object->mpVtable = reinterpret_cast<UniformVtable *>((uintptr_t)TEXTURE_TRANSFORM_VTABLE);
         woodClearUniformData(gabi::ea(&object->mData), sizeof(TextureUniformData));
@@ -1114,7 +1122,7 @@ u32 hdWood_createMaterial(u32 self) {
     if (!self)
         self = woodAllocate(sizeof(MaterialPart));
     if (self) {
-        auto *part = reinterpret_cast<MaterialPart *>((uintptr_t)self);
+        auto *part = gabi::at<MaterialPart>(self); /* guest window view: field offsets wrap at 32 bits */
         woodVertexBufferConstruct(gabi::ea(&part->mVertexBuffer));
         woodShapeConstruct(gabi::ea(&part->mShape));
         part->mpVertexStorage = nullptr;
@@ -1125,7 +1133,7 @@ u32 hdWood_createMaterial(u32 self) {
 /* 025D2294 */
 void hdWood_deleteMaterial(u32 self, u32 flags) {
     if (self) {
-        auto *part = reinterpret_cast<MaterialPart *>((uintptr_t)self);
+        auto *part = gabi::at<MaterialPart>(self);
         woodShapeDestroy(gabi::ea(&part->mShape), 2);
         woodVertexBufferDestroy(gabi::ea(&part->mVertexBuffer), 2);
         if (flags & 1)
@@ -1140,13 +1148,13 @@ static u32 materialInstance(u32 name) {
     gabi::Local<StringView> desc;
     desc->mString = name;
     desc->mVtable = safeStringVtable;
-    auto *manager = reinterpret_cast<MaterialManager *>((uintptr_t)woodGetMaterialManager());
+    auto *manager = gabi::at<MaterialManager>(woodGetMaterialManager()); /* guest window view: offsets wrap at 32 bits */
     const s32 index = woodFindMaterialIndex(gabi::ea(manager->mpResource), desc.a);
     if (index < 0)
         return 0;
     u32 result = gabi::ea(manager->mpInstances) +
                  ((u32)index < (u32)manager->mCount ? (u32)index * sizeof(MaterialInstance) : 0);
-    if (!(u8) reinterpret_cast<MaterialInstance *>((uintptr_t)result)->mReady) {
+    if (!(u8) gabi::at<MaterialInstance>(result)->mReady) {
         MaterialResource *resource = manager->mpResource;
         const u32 binding =
             (u32)index < (u32)resource->mCount
@@ -1159,12 +1167,12 @@ static u32 materialInstance(u32 name) {
     return result;
 }
 static u32 heapAllocate(u32 bytes, u32 align) {
-    auto *heap = reinterpret_cast<Heap *>((uintptr_t)woodGetHeap(heapManager));
+    auto *heap = gabi::at<Heap>(woodGetHeap(heapManager)); /* guest window view: field offsets wrap at 32 bits */
     return gabi::call_ptr<u32>(heap->mpVtable->mAllocate.get(), gabi::ea(heap), bytes, align);
 }
 static void createShapeGroups(u32 address, u32 material) {
-    auto *header = reinterpret_cast<ShapeGroups *>((uintptr_t)address);
-    auto *buffers = reinterpret_cast<MaterialBuffers *>((uintptr_t)material);
+    auto *header = gabi::at<ShapeGroups>(address);
+    auto *buffers = gabi::at<MaterialBuffers>(material);
     for (u32 i = 0; i < (u32)header->mCount; ++i) {
         ShapeGroup *row = &header->mpGroups[i < (u32)header->mCapacity ? i : 0];
         ShaderMaterial *original = row->mpMaterial;
@@ -1180,7 +1188,7 @@ static void createShapeGroups(u32 address, u32 material) {
                     woodShapeConstruct(shape);
             }
             if (array) {
-                row->mShapes[group].mpShapes = reinterpret_cast<Shape *>((uintptr_t)array);
+                row->mShapes[group].mpShapes = gabi::at<Shape>(array);
                 row->mShapes[group].mCount = 2;
             }
         }
@@ -1197,22 +1205,22 @@ static void createShapeGroups(u32 address, u32 material) {
 static void clearVertexBuffer(u32 buffer) {
     const u32 end = buffer + 98 * sizeof(Vertex);
     for (u32 address = buffer; address < end; address += sizeof(CacheLine)) {
-        auto *line = reinterpret_cast<CacheLine *>((uintptr_t)(address & ~31u));
+        auto *line = gabi::at<CacheLine>((address & ~31u));
         for (be<u32> &word : line->mWords)
             word = 0;
     }
 }
 static dWood::GeometrySource woodGeometry;
 static void fillVertices(u32 material, u32 group) {
-    auto *buffers = reinterpret_cast<MaterialBuffers *>((uintptr_t)material);
-    MaterialPart *part = &buffers->mPart[group][(u32)buffers->mFrameIndex];
+    auto *buffers = gabi::at<MaterialBuffers>(material);
+    MaterialPart *part = sead::elementPtr(&buffers->mPart[0][0], group * 2 + (u32)buffers->mFrameIndex); /* sibling: wraps at 32 bits as on the console */
     clearVertexBuffer(gabi::ea(part->mpVertices));
     const be<u32> *count = group ? &woodGeometry.mTrunkVertexCount : &woodGeometry.mLeafVertexCount;
     const Vector3 *position = group ? woodGeometry.mTrunkPosition : woodGeometry.mLeafPosition;
     const Vector3 *normal = group ? woodGeometry.mTrunkNormal : woodGeometry.mLeafNormal;
     const Vector4 *color = group ? woodGeometry.mTrunkColor : woodGeometry.mLeafColor;
     const Vector2 *uv = group ? woodGeometry.mTrunkUV : woodGeometry.mLeafUV;
-    part = &buffers->mPart[group][(u32)buffers->mFrameIndex];
+    part = sead::elementPtr(&buffers->mPart[0][0], group * 2 + (u32)buffers->mFrameIndex); /* sibling: wraps at 32 bits as on the console */
     Vertex *out = part->mpVertices;
     for (u32 i = 0; i < (u32)*count; ++i) {
         for (u32 j = 0; j < 3; ++j)
@@ -1234,7 +1242,7 @@ u32 hdWood_packetCreate(u32 self) {
         self = woodAllocate(0x7D3D0u);
     if (!self)
         return self;
-    auto *packet = reinterpret_cast<Packet_c *>((uintptr_t)self);
+    auto *packet = gabi::at<Packet_c>(self);
     woodPacketBaseConstruct(self);
     packet->mPacketBase.mVtable = WOOD_PACKET_VTABLE;
     woodArrayConstruct(gabi::ea(packet->mUnit), 200u, 0x248u, 0x025CE1B4u);
@@ -1247,22 +1255,22 @@ u32 hdWood_packetCreate(u32 self) {
     if (!header)
         header = woodAllocate(8u);
     if (header) {
-        reinterpret_cast<WoodWordPair *>((uintptr_t)header)->mSecond = 0;
-        reinterpret_cast<WoodWordPair *>((uintptr_t)header)->mFirst = 0;
+        gabi::at<WoodWordPair>(header)->mSecond = 0;
+        gabi::at<WoodWordPair>(header)->mFirst = 0;
     }
     u32 m = material;
     if (!m)
         m = woodAllocate(0x968u);
     if (m) {
         woodArrayConstruct(m, 4u, 0x254u, 0x025D2238u);
-        reinterpret_cast<MaterialBuffers *>((uintptr_t)m)->mFrameIndex = 0;
-        reinterpret_cast<MaterialBuffers *>((uintptr_t)m)->mState = 0;
-        reinterpret_cast<MaterialBuffers *>((uintptr_t)m)->mVertexSize = 0x30;
-        reinterpret_cast<MaterialBuffers *>((uintptr_t)m)->mReady = 0;
-        reinterpret_cast<MaterialBuffers *>((uintptr_t)m)->mVertexFormat = 0;
+        gabi::at<MaterialBuffers>(m)->mFrameIndex = 0;
+        gabi::at<MaterialBuffers>(m)->mState = 0;
+        gabi::at<MaterialBuffers>(m)->mVertexSize = 0x30;
+        gabi::at<MaterialBuffers>(m)->mReady = 0;
+        gabi::at<MaterialBuffers>(m)->mVertexFormat = 0;
         for (u32 i = 0; i < 2; ++i)
             for (u32 j = 0; j < 2; ++j)
-                reinterpret_cast<MaterialBuffers *>((uintptr_t)m)->mPart[j][i].mpVertices = nullptr;
+                gabi::at<MaterialBuffers>(m)->mPart[j][i].mpVertices = nullptr;
     }
     woodTransformSetConstruct(gabi::ea(&packet->mRoomTransformSet));
     woodArrayConstruct(gabi::ea(packet->mRoomTransforms), 400u, 0xA8u, 0x025D1E44u);
@@ -1277,9 +1285,9 @@ u32 hdWood_packetCreate(u32 self) {
     if (!header)
         header = woodAllocate(0x32Cu);
     if (header) {
-        reinterpret_cast<WoodWordPair *>((uintptr_t)header)->mFirst = 0;
-        reinterpret_cast<WoodWordPair *>((uintptr_t)header)->mSecond = 0;
-        reinterpret_cast<Room_c *>((uintptr_t)header)->mpUnits = nullptr;
+        gabi::at<WoodWordPair>(header)->mFirst = 0;
+        gabi::at<WoodWordPair>(header)->mSecond = 0;
+        gabi::at<Room_c>(header)->mpUnits = nullptr;
         woodCreatePointerArray(header, 200u, header + 12);
     }
     packet->mFadeShapes.mCount = 0;
@@ -1287,8 +1295,8 @@ u32 hdWood_packetCreate(u32 self) {
     if (!header)
         header = woodAllocate(8u);
     if (header) {
-        reinterpret_cast<WoodWordPair *>((uintptr_t)header)->mFirst = 0;
-        reinterpret_cast<WoodWordPair *>((uintptr_t)header)->mSecond = 0;
+        gabi::at<WoodWordPair>(header)->mFirst = 0;
+        gabi::at<WoodWordPair>(header)->mSecond = 0;
     }
     woodTransformSetConstruct(gabi::ea(&packet->mFadeTransformSet));
     woodArrayConstruct(gabi::ea(packet->mFadeTransforms), 200u, 0xA8u, 0x025D1E44u);
@@ -1303,17 +1311,17 @@ u32 hdWood_packetCreate(u32 self) {
     for (u32 i = 0; i < 2; ++i)
         for (u32 j = 0; j < 2; ++j) {
             u32 part = gabi::ea(&packet->mMaterials.mPart[j][i]);
-            if (!(u32) reinterpret_cast<MaterialPart *>((uintptr_t)part)->mpVertices.v) {
+            if (!(u32) gabi::at<MaterialPart>(part)->mpVertices.v) {
                 u32 buffer = heapAllocate(0x1260, 0x40);
                 if (buffer) {
-                    reinterpret_cast<MaterialPart *>((uintptr_t)part)->mpVertexStorage.v = buffer;
-                    reinterpret_cast<MaterialPart *>((uintptr_t)part)->mVertexCapacity = 98;
+                    gabi::at<MaterialPart>(part)->mpVertexStorage.v = buffer;
+                    gabi::at<MaterialPart>(part)->mVertexCapacity = 98;
                 }
-                reinterpret_cast<MaterialPart *>((uintptr_t)part)->mpVertices.v =
-                    (u32) reinterpret_cast<MaterialPart *>((uintptr_t)part)->mpVertexStorage.v;
+                gabi::at<MaterialPart>(part)->mpVertices.v =
+                    (u32) gabi::at<MaterialPart>(part)->mpVertexStorage.v;
             }
             woodConfigureVertexBuffer(
-                part + 4, (u32) reinterpret_cast<MaterialPart *>((uintptr_t)part)->mpVertices.v,
+                part + 4, (u32) gabi::at<MaterialPart>(part)->mpVertices.v,
                 98u, material + 0x954);
         }
     packet->mMaterials.mState = 0;
@@ -1345,9 +1353,9 @@ u32 hdWood_packetCreate(u32 self) {
             dst = material + ((index ? 0 : 1) + group * 2) * 0x254;
         for (u32 i = 0; i < 98; ++i) {
             const be<u32> *from = reinterpret_cast<const be<u32> *>(
-                reinterpret_cast<MaterialPart *>((uintptr_t)src)->mpVertices.get());
+                gabi::at<MaterialPart>(src)->mpVertices.get());
             be<f32> *to = reinterpret_cast<be<f32> *>(
-                reinterpret_cast<MaterialPart *>((uintptr_t)dst)->mpVertices.get());
+                gabi::at<MaterialPart>(dst)->mpVertices.get());
             for (u32 j = 0; j < 12; ++j)
                 to[i * 12 + j] = std::bit_cast<f32>((u32)from[i * 12 + j]);
         }
@@ -1355,7 +1363,7 @@ u32 hdWood_packetCreate(u32 self) {
     u32 part = material + (u32)packet->mMaterials.mFrameIndex * 0x254 + 4;
     for (u32 i = 0; i < 2; ++i) {
         woodVertexBufferFlush(part, 0,
-                              (u32) reinterpret_cast<VertexBuffer *>((uintptr_t)part)->mFlushSize);
+                              (u32) gabi::at<VertexBuffer>(part)->mFlushSize);
         part += 0x4A8;
     }
     packet->mMaterials.mFrameIndex = (u32)packet->mMaterials.mFrameIndex ? 0 : 1;
@@ -1446,7 +1454,7 @@ void dWood::Packet_c::draw_rooms(DrawInfo *draw) {
             ++textureIndex;
         }
         for (u32 address = begin; address != end; address += 4) {
-            auto *entry = reinterpret_cast<gptr<Unit_c> *>((uintptr_t)address);
+            auto *entry = gabi::at<gptr<Unit_c>>(address);
             Unit_c *unit = *entry;
             if ((u32)unit->mFlags & Unit_c::STATE_FRUSTUM_CULLED)
                 continue;
@@ -1516,7 +1524,7 @@ static void textureColors(TextureTransform *object, TevStr *tev, f32 alpha, f32 
 }
 /* 025D0BEC */
 void hdWood_prepareDraw(u32 self) {
-    auto *packet = reinterpret_cast<Packet_c *>((uintptr_t)self);
+    auto *packet = gabi::at<Packet_c>(self);
     // HD: one exact-sized frame keeps recorded library outputs in their original stack objects.
     gabi::Local<DrawFrame> frame;
     hdWood_copyMatrix(&frame->mView, &woodViewMatrix);
@@ -1571,7 +1579,7 @@ void hdWood_prepareDraw(u32 self) {
             ++textureIndex;
         }
         for (u32 address = begin; address != end; address += 4) {
-            auto *entry = reinterpret_cast<gptr<Unit_c> *>((uintptr_t)address);
+            auto *entry = gabi::at<gptr<Unit_c>>(address);
             Unit_c *unit = *entry;
             if ((u32)unit->mFlags & Unit_c::STATE_FRUSTUM_CULLED)
                 continue;
@@ -1581,7 +1589,8 @@ void hdWood_prepareDraw(u32 self) {
                             gabi::guest_addr("anmID > AnmID_Err && anmID < AnmID_Max"));
                 unit = *entry;
             }
-            const u8 alpha = packet->mAnm[index].mAlphaScale;
+            /* guest address arithmetic: mAnm + index * 0x8C wraps at 32 bits as on the console */
+            const u8 alpha = sead::elementAt<Anm_c>(gabi::ea(packet->mAnm), index).mAlphaScale;
             Transform *normalBase = packet->mRoomTransforms;
             if (alpha && alpha == 255 && !((u32)unit->mFlags & Unit_c::STATE_CUT)) {
                 copyTransform(&frame->mNormalMatrix, &unit->mModelViewMtx,
@@ -1602,7 +1611,7 @@ void hdWood_prepareDraw(u32 self) {
                               &packet->mFadeTransforms[fadeIndex]);
                 ++fadeIndex;
                 if ((s32)instanceHeader->mCount < (s32)instanceHeader->mCapacity) {
-                    instanceHeader->mpUnits[(u32)instanceHeader->mCount] = *entry;
+                    sead::elementAt<gptr<Unit_c>>(instanceHeader->mpUnits, (u32)instanceHeader->mCount) = *entry; /* sibling: wraps at 32 bits as on the console */
                     instanceHeader->mCount = (u32)instanceHeader->mCount + 1;
                 }
                 unit = *entry;

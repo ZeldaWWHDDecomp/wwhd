@@ -83,9 +83,12 @@ struct DebugStrings {
   EventSafeString a, b, c, d;
 };
 struct dStage_Event_dt_c {
-  be<u8> field_0x0;
+  be<u8> mNextEventNo;  /* was field_0x0: dEvent_manager_c::getToolId 02544708 follows the event entries through it (0xFF ends the chain) (tww the same); the event camera's next entry */
   be<char> mName[15];
-  be<u8> field_0x10, field_0x11, field_0x12, mSpawnSwitchNo;
+  be<u8> mMapToolCamId;  /* was field_0x10: the event camera map tool id: maptoolIdEvCamera 02535830 (d_ev_camera_3.cpp, through the StageEvent view) picks the camera type by it */
+  be<u8> mDuration;  /* was field_0x11: the event camera duration in units of 10 frames: maptoolIdEvCamera 02535830 (through the StageEvent view) */
+  be<u8> field_0x12;
+  be<u8> mSpawnSwitchNo;
   u8 tail[4];
 };
 struct dStage_EventInfo_c {

@@ -39,9 +39,9 @@ s32 lk05SetMoveAnime(daPy_lk_c* self, f32 ratio, f32 rate0, f32 rate1, s32 anm0,
 
 struct Link05AnmHeapHD {
     be<u16> mIdx;
-    be<u16> field_0x2;
-    be<u16> field_0x4;
-    be<u16> field_0x6;
+    be<u16> mPriIdx;  /* was field_0x2: view of daPy_anmHeap_c::mPriIdx (evidence in d_a_player_main_01.h) */
+    be<u16> mDemoIdx;  /* was field_0x4: view of daPy_anmHeap_c::mDemoIdx (evidence in d_a_player_main_01.h) */
+    be<u16> mDemoAnmNo;  /* was field_0x6: view of daPy_anmHeap_c::mDemoAnmNo (evidence in d_a_player_main_01.h) */
     be<u32> m_buffer;
     be<u32> mpAnimeHeap;
 };
@@ -448,7 +448,7 @@ inline mDoExt_bckAnm *lk05DemoSword(daPy_lk_c *self) {
       &reinterpret_cast<Link05EquipmentHD *>(self)->mpEquipItemModel + 1);
 }
 inline Link05DemoFollow *lk05DemoFollow(daPy_lk_c *self) {
-  return reinterpret_cast<Link05DemoFollow *>(self->m338C);
+  return reinterpret_cast<Link05DemoFollow *>(self->mTalismanFlashEcallBack);
 }
 inline u16 lk05DemoProcVar6Low(daPy_lk_c *self) {
   return reinterpret_cast<be<u16> *>(&self->mProcVar6)[1];

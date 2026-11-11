@@ -51,19 +51,24 @@ struct daStandItem_c : fopAc_ac_c {
     u8 m625[3];
     be<s16> mBckPlayTimer, mBckStopTimer;
     be<f32> mBckSpeed;
-    Mtx34 m630, m660;
-    gptr<StandItemEmitterHD> m690, m694, m698;
+    Mtx34 mBaseJointMtx;  /* was m630: daiItemNodeCallBack 02526580 copies the Fountain Idol's joint 0 (tuboko_base) animation matrix into it; actionFobj09 02118390 puts mpBaseEmitter on it (tww the same) */
+    Mtx34 mHeadJointMtx;  /* was m660: daiItemNodeCallBack 02526580 copies the Fountain Idol's joint 1 (tuboko_head) animation matrix into it; actionFobj09 02118390 puts mpWaitEmitter / mpHeadEmitter on it (tww the same) */
+    gptr<StandItemEmitterHD> mpWaitEmitter;  /* was m690: actionFobj09 02118390 (Fountain Idol): before the animation has played (mbBckDidPlay 0) and while the player is within 500 it keeps particle 0x82B3 on the tuboko_head joint matrix (mHeadJointMtx), else invalidates it; _delete 021177AC invalidates it (tww the same) */
+    gptr<StandItemEmitterHD> mpHeadEmitter;  /* was m694: actionFobj09 02118390 (Fountain Idol): once the animation has played it starts particle 0x82B4 and keeps it on the tuboko_head joint matrix (mHeadJointMtx); _delete 021177AC invalidates it (tww the same) */
+    gptr<StandItemEmitterHD> mpBaseEmitter;  /* was m698: actionFobj09 02118390 (Fountain Idol): once the animation has played it starts particle 0x82B5 (immortal) and keeps it on the tuboko_base joint matrix (mBaseJointMtx); _delete 021177AC invalidates it (tww the same) */
     gptr<StandItemClothHD> mpCloth;
     be<u8> mClothType;
     u8 m6A1;
-    be<s16> m6A2;
-    cXyz m6A4;
-    be<u8> mbBckDidPlay, m6B1;
-    be<s16> m6B2, m6B4;
+    be<s16> mClothAngleY;  /* was m6A2: CreateInit 02117168 sets it to the wind angle (atan2 of mClothWind); set_mtx 02116EA8 eases it toward the angle of mClothWind and turns the cloth matrix by it - current.angle.y (tww the same) */
+    cXyz mClothWind;  /* was m6A4: CreateInit 02117168 copies the wind vector; set_mtx 02116EA8 takes a stronger wind at once and eases toward a weaker one (cLib_addCalcPos2); its angle is mClothAngleY's target (tww the same) */
+    be<u8> mbBckDidPlay;
+    be<u8> mbBckDidPlayOld;  /* was m6B1: actionFobj09 02118390 copies mbBckDidPlay into it at the end; on the frame the animation has played and it is still 0 the head / base emitters are started (tww the same) */
+    be<s16> mSpinSpeed;  /* was m6B2: actionFobj06 02117F20 (pinwheel) sets it to 1536 * mSpinPower and adds it to the spin angle mSpinAngle (tww the same) */
+    be<s16> mSpinAngle;  /* was m6B4: the pinwheel's spin angle: actionFobj06 02117F20 adds mSpinSpeed to it; daiItemNodeCallBack 02526580 turns the pinwheel joints about X by it (tww the same) */
     u8 m6B6[6];
     be<f32> m6BC;
     u8 m6C0[4];
-    be<f32> m6C4;
+    be<f32> mSpinPower;  /* was m6C4: actionFobj06 02117F20 (pinwheel) adds the horizontal wind strength (at most 4), eases it to 0 by the wind power and sets mSpinSpeed from it (tww the same) */
 };
 WWHD_OFFSET(daStandItem_c, mPhsDai, 0x3AC);
 WWHD_OFFSET(daStandItem_c, mpModel, 0x3BC);
@@ -72,12 +77,12 @@ WWHD_OFFSET(daStandItem_c, mCyl, 0x400);
 WWHD_OFFSET(daStandItem_c, mAcch, 0x530);
 WWHD_OFFSET(daStandItem_c, mAcchCir, 0x6F4);
 WWHD_OFFSET(daStandItem_c, mClothType, 0x7BC);
-WWHD_OFFSET(daStandItem_c, m6A4, 0x7C0);
+WWHD_OFFSET(daStandItem_c, mClothWind, 0x7C0);
 WWHD_OFFSET(daStandItem_c, mItemNo, 0x734);
 WWHD_OFFSET(daStandItem_c, mMode, 0x73C);
 WWHD_OFFSET(daStandItem_c, mBckPlayTimer, 0x744);
 WWHD_OFFSET(daStandItem_c, mbBckDidPlay, 0x7CC);
-WWHD_OFFSET(daStandItem_c, m6C4, 0x7E0);
+WWHD_OFFSET(daStandItem_c, mSpinPower, 0x7E0);
 WWHD_SIZE(daStandItem_c, 0x7E4);
 
 // HD: views below describe only the fields used by this unit; no shared padding

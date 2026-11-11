@@ -183,9 +183,9 @@ cPhs_State daObjVgnfd_c::_create() {
     }
     fopAcM_setCullSizeBox(this, -260.f, -10.f, -50.f, 260.f, 510.f, 100.f);
     mSmoke.mTevstr = gabi::ea(&tevStr);
-    mSmoke.m11 = 0;
+    mSmoke.mRateOff = 0;
     mSmoke.mWindOff = 1;
-    mSmoke.m12 = 1;
+    mSmoke.mFollowOff = 1;
     auto* bg = dComIfG_Bgsp();
     dBgW* world = M_bgw;
     bg->Regist(world, this);

@@ -67,7 +67,7 @@ void damage_check(btd_class* self) {
             s8 remaining = (s8)(health - damage);
             i_this->mTotalDamage = (u8)(total + damage);
             actor->health = remaining;
-            if (remaining <= 0 || l_HIO.m06 != 0) {
+            if (remaining <= 0 || l_HIO.mDebugBreak != 0) {
                 // HD: reset precedes the pause and two independently fetched particle controls.
                 reinterpret_cast<BtdPlayDamageHD*>(dComIfGp_get())->mDeathReset = 0.0f;
                 s16 pause = l_pauseRegister;
@@ -98,7 +98,7 @@ void damage_check(btd_class* self) {
             }
             if (i_this->mAction == 2) {
                 s8 totalDamage = (s8)(u8)i_this->mTotalDamage;
-                s16 threshold = l_HIO.m0E;
+                s16 threshold = l_HIO.mDamageLimit;
                 if (totalDamage >= threshold) {
                     i_this->mTotalDamage = 0;
                     i_this->mGohmaState = 10;

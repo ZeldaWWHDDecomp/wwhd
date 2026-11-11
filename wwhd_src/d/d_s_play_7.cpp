@@ -83,8 +83,8 @@ static BOOL dScnPly_Delete(dScnPly::dScnPly_ply_c *i_this) {
     gabi::at<dScnPly_GameInfo>(play)->play.mAirMeter = 0; /* dComIfGp_clearItemTimeCount() */
     gabi::at<dScnPly_GameInfo>(play)->play.mItemSwimTimerStatus = 0;
     s32 darkNo = (s8)g_darkHIO.mNo;
-    g_msgDHIO.field_0x10 = (u32)-1;              /* g_msgDHIO.field_0x10 */
-    g_msgDHIO.field_0x06 = 0;                    /* g_msgDHIO.field_0x06 */
+    g_msgDHIO.mMsgId = (u32)-1;              /* g_msgDHIO.mMsgId */
+    g_msgDHIO.mShowMessage = 0;                    /* g_msgDHIO.mShowMessage */
     dScnPlyAPI_deleteHIOChild(darkNo);           /* mDoHIO_deleteChild(g_darkHIO.mNo) */
     dScnPlyAPI_destroyOceanHeap();               /* the HD ocean heap */
     dScnPly_gameInfo()->play.mDlstWindowNum = 0; /* dComIfGp_setWindowNum(0) */

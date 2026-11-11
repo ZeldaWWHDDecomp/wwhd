@@ -111,7 +111,7 @@ static s32 dStage_roomReadInit(dStage_dt_c* i_stage, dStage_nodeHeader* i_data, 
 static u32 dStage_roomRead_dt_c_GetReverbStage(u32 room, s32 index) {
     u32 entries = gabi::ea(gabi::at<roomRead_class>(room)->m_entries.get());
     if (index < 0 || index >= (s32)gabi::at<roomRead_class>(room)->num) index = 0;
-    return gabi::at<gptr<roomRead_data_class>>(entries)[index]->field_0x1 & 0x7F;
+    return gabi::at<gptr<roomRead_data_class>>(entries)[index]->mReverb & 0x7F;
 }
 
 // HD: dStage_ppntInfoInit

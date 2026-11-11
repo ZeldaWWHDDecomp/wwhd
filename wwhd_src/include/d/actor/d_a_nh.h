@@ -130,11 +130,15 @@ struct daNh_HIO_c {
     be<s8> mNo;
     u8 _01[3];
     struct hio_prm_c {
-        be<f32> field_0x08, field_0x0c, field_0x10;
+        be<f32> mCatchDist;  /* was field_0x08: checkBinCatch 021E0BC0 passes it to the attention catch request as the horizontal catch distance (tww dAttention_c::CatchRequest horizontalDist; l_HIO default 200) */
+        be<f32> mCatchUpDist;  /* was field_0x0c: checkBinCatch 021E0BC0 passes it to the attention catch request as the upward catch distance (tww CatchRequest upDist; default 100) */
+        be<f32> mCatchDownDist;  /* was field_0x10: checkBinCatch 021E0BC0 passes it to the attention catch request as the downward catch distance (tww CatchRequest downDist; default -50) */
         be<f32> mGlowOffsetY, mGlowScale, mMinFrightenSpeed;
         be<f32> mHeightAboveGround, mAscentSpeed, mDescentSpeed, mGravity;
         be<f32> mMaxHomeDist, field_0x34, mModelScale;
-        be<s16> field_0x3c, mDefaultGlowAlpha, mBottleLifetime;
+        be<s16> mCatchAngle;  /* was field_0x3c: checkBinCatch 021E0BC0 passes it to the attention catch request as the catch angle (tww CatchRequest angle; default 0x2000) */
+        be<s16> mDefaultGlowAlpha;
+        be<s16> mBottleLifetime;
         u8 padding[2];
     } prm;
     gptr<daNh_c> mpActor;

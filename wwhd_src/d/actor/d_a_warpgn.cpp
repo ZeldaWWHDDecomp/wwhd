@@ -386,10 +386,10 @@ s32 daWarpgn_c::_execute() {
     this->demo_proc();
     this->eventOrder();
   } else {
-    this->m2C4 = WarpgnOrder_NONE;
+    this->mWarpOrder = WarpgnOrder_NONE;
     this->demo_execute();
   }
-  bool sounding = this->m388 != 0;
+  bool sounding = this->mAppeared != 0;
   if (!sounding) {
     u32 save = l_saveInfo;
     sounding = Warpgn_isEvent(&Warpgn_view<WarpgnSave>(save)->mEvent, 0x3D02) != 0;
@@ -433,7 +433,7 @@ s32 daWarpgn_c::normal_execute() {
   save = l_saveInfo;
   if (!Warpgn_isEvent(&Warpgn_view<WarpgnSave>(save)->mEvent, 0x3D02)) {
     if (switched && !this->mIsSwitch)
-      this->m2C4 = WarpgnOrder_APPEAR;
+      this->mWarpOrder = WarpgnOrder_APPEAR;
   } else {
     this->anim_play(WarpgnAnim_OPEN);
     resumeEmitter(this->mpEmitter1);
@@ -443,7 +443,7 @@ s32 daWarpgn_c::normal_execute() {
   if (this->check_warp()) {
     u32 play = Warpgn_getPlay();
     if (!u8(Warpgn_view<WarpgnPlay>(play)->mEventRunning))
-      this->m2C4 = WarpgnOrder_WARP;
+      this->mWarpOrder = WarpgnOrder_WARP;
   }
   this->mIsSwitch = u8(switched);
   return 1;
@@ -579,13 +579,13 @@ s32 daWarpgn_c::actAppear() {
     done = 1;
   }
   this->anim_play(WarpgnAnim_APPEAR);
-  this->m388 = 1;
+  this->mAppeared = 1;
   return done;
 }
 
 /* 024D9CA4 */
 void daWarpgn_c::eventOrder() {
-  s32 state = this->m2C4;
+  s32 state = this->mWarpOrder;
   if (state == WarpgnOrder_WARP || state == WarpgnOrder_APPEAR) {
     s16 event = state == WarpgnOrder_WARP ? s16(this->mEvtToMajyuuWarpIdx) : s16(this->mEvtAppearWarpIdx);
     Warpgn_orderEvent(this, event, 0xFF, 0xFFFF, 0, 1);
@@ -598,12 +598,12 @@ void daWarpgn_c::checkOrder() {
   if (u16(this->eventInfo.mCommand) == 2) {
     s16 event = this->mEvtToMajyuuWarpIdx;
     void* manager = eventManager();
-    if (Warpgn_startCheck(manager, event) && this->m2C4)
-      this->m2C4 = WarpgnOrder_NONE;
+    if (Warpgn_startCheck(manager, event) && this->mWarpOrder)
+      this->mWarpOrder = WarpgnOrder_NONE;
     event = this->mEvtAppearWarpIdx;
     manager = eventManager();
-    if (Warpgn_startCheck(manager, event) && this->m2C4)
-      this->m2C4 = WarpgnOrder_NONE;
+    if (Warpgn_startCheck(manager, event) && this->mWarpOrder)
+      this->mWarpOrder = WarpgnOrder_NONE;
     event = this->mEvtToMajyuuWarpIdx;
     manager = eventManager();
     if (Warpgn_endCheck(manager, event)) {
@@ -620,7 +620,7 @@ void daWarpgn_c::checkOrder() {
       u32 play = Warpgn_getPlay();
       Warpgn_view<WarpgnPlay>(play)->mEventFlags = u16(Warpgn_view<WarpgnPlay>(play)->mEventFlags) | 8;
     }
-  } else if (!this->m2C4)
+  } else if (!this->mWarpOrder)
     this->normal_execute();
 }
 

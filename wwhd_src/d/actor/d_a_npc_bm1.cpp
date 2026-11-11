@@ -1373,12 +1373,12 @@ void daNpc_Bm1_c::eInit_FLY_(be<s32>* i_prm_0_p, be<f32>* i_speed_p, be<f32>* i_
     if (i_prm_0_p == nullptr) {
         return;
     }
-    mPassDist = hio_prm(mType).m30; /* m30 */
+    mPassDist = hio_prm(mType).mFlyPassDist;
     if (*i_prm_0_p != 2) {
-        mTargetFlySpeed = eInit_prmFloat(i_speed_p, hio_prm(mType).m20); /* m20 */
-        mFlySpeedY = eInit_prmFloat(i_spd_y_p, hio_prm(mType).m28);      /* m28 */
-        mTargetFlyStep = eInit_prmFloat(i_accel_p, hio_prm(mType).m24);  /* m24 */
-        mFlyAccelY = eInit_prmFloat(i_acc_y_p, hio_prm(mType).m2C);      /* m2C */
+        mTargetFlySpeed = eInit_prmFloat(i_speed_p, hio_prm(mType).mFlySpeed);
+        mFlySpeedY = eInit_prmFloat(i_spd_y_p, hio_prm(mType).mFlyUpSpeed);
+        mTargetFlyStep = eInit_prmFloat(i_accel_p, hio_prm(mType).mFlyAccel);
+        mFlyAccelY = eInit_prmFloat(i_acc_y_p, hio_prm(mType).mFlyUpAccel);
     }
     mFlyArrived = 0;
     mLookBackState = 0;
@@ -1455,9 +1455,9 @@ void daNpc_Bm1_c::eInit_WLK_(be<s32>* i_prm_0_p, be<f32>* i_speed_p, be<f32>* i_
         return;
     }
     eInit_setEvTimer(i_timer_p);
-    mTargetFlySpeed = eInit_prmFloat(i_speed_p, hio_prm(mType).m3C); /* m3C */
-    mTargetFlyStep = eInit_prmFloat(i_accel_p, hio_prm(mType).m40);  /* m40 */
-    f32 m44 = hio_prm(mType).m44;
+    mTargetFlySpeed = eInit_prmFloat(i_speed_p, hio_prm(mType).mWalkSpeed);
+    mTargetFlyStep = eInit_prmFloat(i_accel_p, hio_prm(mType).mWalkAccel);
+    f32 m44 = hio_prm(mType).mWalkPassDist;
     mLookBackState = 0;
     mPassDist = m44;
     setAnm_NUM(0xE, 1);

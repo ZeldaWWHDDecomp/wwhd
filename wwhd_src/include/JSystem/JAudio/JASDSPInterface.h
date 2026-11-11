@@ -19,10 +19,10 @@ namespace DSPInterface {
 struct FxlineConfig_ {
     be<u8> mActive;  /* was field_0x0: setFXLine 02816254 copies it to the FX buffer's mActive when a buffer is set */
     u8 pad1;
-    be<u16> field_0x2;
-    be<u16> field_0x4;
-    be<u16> field_0x6;
-    be<u16> field_0x8;
+    be<u16> mSend1Idx;  /* was field_0x2: setFXLine 02816254: FXBuffer mSend1 = SEND_TABLE[it] (tww FXBuffer::setFXLine the same) */
+    be<u16> mSend1Value;  /* was field_0x4: setFXLine 02816254 copies it into FXBuffer mSend1Value, next to mSend1 (tww FXBuffer::setFXLine the same) */
+    be<u16> mSend2Idx;  /* was field_0x6: setFXLine 02816254: FXBuffer mSend2 = SEND_TABLE[it] (tww FXBuffer::setFXLine the same) */
+    be<u16> mSend2Value;  /* was field_0x8: setFXLine 02816254 copies it into FXBuffer mSend2Value, next to mSend2 (tww FXBuffer::setFXLine the same) */
     u8 padA[2];
     be<u32> mBufferBlocks;  /* was field_0xc: setFXLine 02816254: buffer size = it * 160 bytes; copied to the FX buffer */
     be<u16> mFilterParams[8];  /* was field_0x10: setFXLine 02816254: 8 filter words copied with setFilterTable */
@@ -31,10 +31,10 @@ struct FXBuffer {
     be<u16> mActive;  /* was field_0x0: setFXLine 02816254: the line config's mActive when a buffer is set, else 0 */
     be<u16> mBufferBlocks;  /* was field_0x2: setFXLine 02816254: the config's mBufferBlocks (buffer bytes = blocks * 160) */
     gptr<void> mpBuffer;  /* was field_0x4: setFXLine 02816254: the FX line's sample buffer (kept when no new one is given) */
-    be<u16> field_0x8;
-    be<u16> field_0xa;
-    be<u16> field_0xc;
-    be<u16> field_0xe;
+    be<u16> mSend1;  /* was field_0x8: setFXLine 02816254: SEND_TABLE[FxlineConfig_ mSend1Idx], the first send entry of the FX line (tww FXBuffer::setFXLine the same) */
+    be<u16> mSend1Value;  /* was field_0xa: setFXLine 02816254: FxlineConfig_ mSend1Value, paired with mSend1 (tww FXBuffer::setFXLine the same) */
+    be<u16> mSend2;  /* was field_0xc: setFXLine 02816254: SEND_TABLE[FxlineConfig_ mSend2Idx], the second send entry of the FX line (tww FXBuffer::setFXLine the same) */
+    be<u16> mSend2Value;  /* was field_0xe: setFXLine 02816254: FxlineConfig_ mSend2Value, paired with mSend2 (tww FXBuffer::setFXLine the same) */
     be<u16> mFilterParams[8];  /* was field_0x10: setFXLine 02816254: setFilterTable of the config's 8 filter words */
 };
 // HD: IIR copies eight words, overlapping the distance-filter word.

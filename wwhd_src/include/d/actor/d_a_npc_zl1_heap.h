@@ -13,7 +13,7 @@
  * - the pointer-to-member mCurrActionFunc is 8 bytes (GHS) instead of 12: +0x244 from mProcId1
  *   up to mLightInfluence1;
  * - LIGHT_INFLUENCE grew from 0x20 to 0x24 (an HD f32 at +0x20, 1.0 by the constructor): +0x248
- *   for mLightInfluence2, +0x24C from field_0x830 to field_0x8A8;
+ *   for mLightInfluence2, +0x24C from mLightPos to mpMayuShape;
  * - HD: two s32 material indices at 0xB0C/0xB10 (bodyCreateHeap); the four
  *   mDoExt_*CupOn*AupPacket members grew from 0x10 to 0x98 each (0xB14..0xD74).
  * Field names are the GameCube ones (field_0xNNN = GameCube offset). */
@@ -35,7 +35,7 @@ struct daNpc_Zl1_matAnm_c {
     /* 0x68 */ be<u32> __vtbl;
     /* 0x6C */ cXy mOffset;
     /* 0x74 */ cXy field_0x74;
-    /* 0x7C */ be<u8> field_0x7C; /* move flag */
+    /* 0x7C */ be<u8> mMoveFlag;  /* was field_0x7C: daNpc_Zl1_matAnm_c_ct 0230242C clears it; daNpc_Zl1_matAnm_c_calc 023086FC writes mOffset into the texture SRT only while it is set; demo 02305778 clears it (tww clrMoveFlag / setMoveFlag); as d_a_pz.h's matAnm mMoveFlag; move flag */
     /* 0x7D */ u8 _7D[3];
 };
 WWHD_SIZE(daNpc_Zl1_matAnm_c, 0x80);
@@ -44,8 +44,8 @@ WWHD_SIZE(daNpc_Zl1_matAnm_c, 0x80);
 
 struct daNpc_Zl1_c : fopNpc_npc_c {
     struct anm_prm_c {
-        /* 0x00 */ be<s8> field_0x0; /* bck number */
-        /* 0x01 */ be<s8> field_0x1; /* btp number */
+        /* 0x00 */ be<s8> bckNum;  /* was field_0x0: setAnm_anm 0230607C: the entry's bck animation number (bckResID), stored to mAnmNo (tww); after tww daNpc_Ls1_c::anm_prm_c bckNum and our daNpc_Hi1_c; bck number */
+        /* 0x01 */ be<s8> btpNum;  /* was field_0x1: setAnm_NUM 023066D0 / setAnm / setAnm_ATR pass it to init_texPttrnAnm (tww); after tww daNpc_Ls1_c::anm_prm_c btpNum and our daNpc_Hi1_c; btp number */
         /* 0x02 */ u8 _02[2];
         /* 0x04 */ be<f32> mMorf;
         /* 0x08 */ be<f32> mPlaySpeed;
@@ -180,12 +180,12 @@ struct daNpc_Zl1_c : fopNpc_npc_c {
     /* 0x96C */ be<u32> mProcId2;
     /* 0x970 */ cXyz mInitialPos;  /* was field_0x72C: _execute 02307D18 copies current.pos on the first run (while mbRanExecute is 0); event_proc 023071C4 copies it again (tww the same); written only, but the same code as daNpc_Hi1_c::mInitialPos (with mInitialAngle) */
     /* 0x97C */ csXyz mInitialAngle;  /* was field_0x738: _execute 02307D18 copies current.angle on the first run, with mInitialPos, then mbRanExecute = 1; event_proc 023071C4 copies it again; wait_1 02309394 turns current.angle.y back to its y (type 4) (tww the same); same code as daNpc_Hi1_c::mInitialAngle */
-    /* 0x982 */ csXyz field_0x73E;
+    /* 0x982 */ csXyz mMtxAngle;  /* was field_0x73E: setMtx 02304C98 rotates the model matrix by it (mDoMtx_ZXYrotM) when she is not on the branch or ship; _execute 02307D18 copies current.angle into it each frame; createInit 0230503C sets it and shape_angle from current.angle (tww the same) */
     /* 0x988 */ csXyz mEffAngle;  /* was field_0x744: move_jmp 02306DB8 copies current.angle; setWaterSplash 023048F4 / set_simpleLand 0230498C pass it to createLandEmitter as the angle */
     /* 0x98E */ u8 field_0x74A[2];
     /* 0x990 */ cXyz mEyePos;  /* was field_0x74C: _nodeCB_Head 023020F8: the head matrix times a_eye_pos_off; setAttention 02304C44 copies it to eyePos */
     /* 0x99C */ cXyz mLookPos;  /* was field_0x758: lookBack 023075B0 / kyorokyoro 023074E4 look at it; cut_init_MAJYU_START 02306624 and chngAnmAtr 0230883C set it */
-    /* 0x9A8 */ cXyz field_0x764;
+    /* 0x9A8 */ cXyz mDemoAreaPos;  /* was field_0x764: init_ZL1_3 02303BBC: a point in front of the start position (y 400), event_proc 023071C4 / demo_action2 02309EB8 set its y; demo_2 02309640 orders event 4 when the player is in the chk_areaIN area around it, demo_3 023096CC event 5 when the player is nearer than mPrmTbl.field_28 (tww the same) */
     /* 0x9B4 */ cXyz mHeadPos;  /* was field_0x770: _nodeCB_Head 023020F8: translation of the head joint matrix */
     /* 0x9C0 */ cXyz mEffPos;  /* was field_0x77C: move_jmp 02306DB8 copies current.pos; setWaterSplash 023048F4 / set_simpleLand 0230498C pass it to createLandEmitter as the position */
     /* 0x9CC */ be<f32> mRatio;                           /* GameCube 0x788 */
@@ -197,34 +197,34 @@ struct daNpc_Zl1_c : fopNpc_npc_c {
     /* 0x9E4 */ be<s16> mEventIdx[4];                     /* GameCube 0x7A0 */
     /* 0x9EC */ be<s16> mEventNo;  /* was field_0x7A8: init_ZL1_5 02303E98 / eventOrder 02307988 set it and order mEventIdx[it] (fopAcM_orderOtherEventId) */
     /* 0x9EE */ u8 field_0x7AA[4];
-    /* 0x9F2 */ be<s16> field_0x7AE;
+    /* 0x9F2 */ be<s16> mLookPlayerTimer;  /* was field_0x7AE: optn_1 02309794 / kyorokyoro 023074E4 load it from mPrmTbl.field_30 / field_32 with mKyoroTimer; optn_2 023099F4 keeps look mode 1 (the player) while it counts down, then look mode 5 (look around) (tww the same) */
     /* 0x9F4 */ be<s16> mKyoroTimer;  /* was field_0x7B0: optn_1 02309794 sets HIO prm 0x2C / 0x2E; kyorokyoro 023074E4 counts it down, then picks the next look position */
     /* 0x9F6 */ be<s16> mKyoroPosNo;  /* was field_0x7B2: kyorokyoro 023074E4 passes it to kyoroPos and sets cLib_getRndValue(1, 10); optn_1 02309794 clears it */
     /* 0x9F8 */ u8 field_0x7B4[2];
     /* 0x9FA */ be<s16> mWaitTimer;  /* was field_0x7B6: wait_1 02309394 / talk_1 02309478 set a random 15..30 and count it down */
-    /* 0x9FC */ be<s16> field_0x7B8;
-    /* 0x9FE */ be<s16> field_0x7BA;
-    /* 0xA00 */ be<s16> field_0x7BC;
+    /* 0x9FC */ be<s16> mIdleAnmTimer;  /* was field_0x7B8: setStt 02306184 / optn_1 02309794: random 90..180; optn_1 counts it down and switches to the second idle animation (setAnm_NUM 0xC) at 0 (tww the same) */
+    /* 0x9FE */ be<s16> mIdleAnmLoops;  /* was field_0x7BA: optn_1 02309794: 1 or 2 when animation 0xC starts, counted down at each animation end, back to animation 8 at 0; setStt 02306184 clears it (tww the same) */
+    /* 0xA00 */ be<s16> mTurnStepMode;  /* was field_0x7BC: _execute 02307D18: the m_jnt turn step is mPrmTbl.mMaxTurnStep while it is < 0, else mPrmTbl.field_5C; createInit 0230503C -1, chngAnmAtr 0230883C 10 for message 0x15E3 and -1 for 0x15E4 (tww the same) */
     /* 0xA02 */ u8 field_0x7BE[2];
-    /* 0xA04 */ be<s16> field_0x7C0;
-    /* 0xA06 */ be<s8> field_0x7C2;                       /* GameCube 0x7C2 */
+    /* 0xA04 */ be<s16> mLookAngleY;  /* was field_0x7C0: lookBack 023075B0: the target angle of look mode 3; never written in WWHD or tww */
+    /* 0xA06 */ be<s8> mEnvRatioStep;  /* was field_0x7C2: cut_init_OMAMORI_ONOFF 02306BD8: -1 for OnOff 0 (darken, with the light at mLightPos) / 1 otherwise (brighten) / 0; darkProc 02307A58 runs decEnvironment / incEnvironment on mRatio for -1 / 1; incEnvironment 023079F8 clears it at ratio 1 (tww the same); GameCube 0x7C2 */
     /* 0xA07 */ be<s8> mbMorfAnimStopped;  /* was field_0x7C3: play_animation 023045E0: the morf's play() result, or 1 when the frame wrapped; setAnm_anm 0230607C / cut_init_OKIRU 023066B4 clear it; cut_move_OKIRU 02306D34 returns it, cut_move_OKIRU_2 02306D48 / optn_1 02309794 test it (tww the same); same code as daNpc_Hi1_c::mbMorfAnimStopped (tww daNpc_Ls1_c mbMorfAnimStopped) */
     /* 0xA08 */ be<s8> field_0x7C4;
     /* 0xA09 */ be<u8> mItemNo;
-    /* 0xA0A */ be<u8> field_0x7C6;
+    /* 0xA0A */ be<u8> mJmpLandEff;  /* was field_0x7C6: move_jmp 02306DB8 sets it when the jump lands in water or on ground, after storing mEffPos / mEffAngle; setEff 02304A6C keeps those while set, plays set_simpleLand(it) and clears it (tww the same) */
     /* 0xA0B */ be<u8> mbGroundHit;  /* was field_0x7C7: _execute 02307D18 stores mObjAcch.ChkGroundHit() (the flag of the previous CrrPos) each frame; move_jmp 02306DB8 lands when it was 0 and the acch now hits the ground; cut_init_JMP_OFF 0230684C sets 1 (tww it = mObjAcch.ChkGroundHit()) */
     /* 0xA0C */ be<u8> mbWaterIn;  /* was field_0x7C8: _execute 02307D18 stores mObjAcch.ChkWaterIn() each frame; move_jmp 02306DB8, setWaterRipple 02304824 and setEff 02304A6C test it (HD in place of ChkWaterIn()); cut_init_JMP_OFF 0230684C clears it, setMtx 02304C98 sets it in Demo37 (tww it = mObjAcch.ChkWaterIn()) */
-    /* 0xA0D */ be<u8> field_0x7C9;
-    /* 0xA0E */ be<u8> field_0x7CA;
-    /* 0xA0F */ be<u8> field_0x7CB;
-    /* 0xA10 */ be<u8> field_0x7CC;
+    /* 0xA0D */ be<u8> mForceEventProc;  /* was field_0x7C9: checkOrder 023055A4 sets it when event 2 starts; event_proc 023071C4 clears it at that event's end; _execute 02307D18 runs event_proc while set even without a staff index (tww the same) */
+    /* 0xA0E */ be<u8> mSwoonOnShip;  /* was field_0x7CA: setStt 02306184 (state 5) sets it, cut_init_JMP_OFF 0230684C clears it; setMtx 02304C98 places her by swoon_OnShip while set; setWaterRipple 02304824 skips and _execute 02307D18 skips the collision while set (tww the same) */
+    /* 0xA0F */ be<u8> mJumpingOff;  /* was field_0x7CB: cut_init_JMP_OFF 0230684C sets it, event_proc 023071C4 clears it when event 3 ends; _execute 02307D18 skips the collision while set (tww the same) */
+    /* 0xA10 */ be<u8> mJumping;  /* was field_0x7CC: optn_2 023099F4 sets it when she jumps a wall or a drop and, while set, only runs move_jmp and keeps its result (tww the same; tww's comment there suggests mIsMoveJumped) */
     /* 0xA11 */ u8 field_0x7CD;
-    /* 0xA12 */ be<u8> field_0x7CE;
+    /* 0xA12 */ be<u8> mOnTreeBranch;  /* was field_0x7CE: init_ZL1_1 02303A7C sets it; setMtx 02304C98 puts the model on the "wood2" branch of the mProcId1 actor while set; _draw 02308090 registers the snap figure at that matrix; demo 02305778 clears it once the demo moves her (tww the same) */
     /* 0xA13 */ be<u8> mStateIsComplaete;
-    /* 0xA14 */ be<u8> field_0x7D0;
+    /* 0xA14 */ be<u8> mEyeFollow;  /* was field_0x7D0: lookBack 023075B0 sets it in look modes 1 / 4 / 5 (a target position), clears it in 3 and the rest; play_btk_anm 02304548 runs eye_ctrl instead of the btk while set, play_animation 023045E0 turns the eye control on with btk 1; chngAnmAtr 0230883C / cut_init_MAJYU_START 02306624 set it (tww the same) */
     /* 0xA15 */ be<u8> mEyeCtrl;  /* was field_0x7D1: setEyeCtrl 023041F8 sets 1, clrEyeCtrl 02304230 sets 0; eye_ctrl 02304310 moves the eyes only while set */
-    /* 0xA16 */ be<u8> field_0x7D2;
-    /* 0xA17 */ be<u8> field_0x7D3;
+    /* 0xA16 */ be<u8> mHideUntilDemo;  /* was field_0x7D2: init_ZL1_0 023039E4 sets it; _execute 02307D18 returns early while it is set and no demo runs, then clears it in a demo; _draw 02308090 draws nothing while set (tww the same) */
+    /* 0xA17 */ be<u8> mKeepShapeAngle;  /* was field_0x7D3: _execute 02307D18 copies current.angle into shape_angle only while it is 0; checkOrder 023055A4 (event 0) / setStt 02306184 (state 5) set it, cut_init_JMP_OFF 0230684C / event_proc 023071C4 / demo 02305778 clear it (tww the same) */
     /* 0xA18 */ be<u8> mNoDraw;  /* was field_0x7D4: cut_init_DRW_ONOFF 0230674C sets it when the event's OnOff is 0; demo 02305778 sets it for frame ranges; _draw 02308090 skips drawing while set */
     /* 0xA19 */ be<u8> mbRanExecute;  /* was field_0x7D5: _execute 02307D18: 0 on the first run, when mInitialPos and mInitialAngle are taken, then 1 (tww if (!it) { ..; it = true; }); same code as daNpc_Hi1_c::mbRanExecute */
     /* 0xA1A */ be<u8> mHasAttention;
@@ -235,7 +235,7 @@ struct daNpc_Zl1_c : fopNpc_npc_c {
     /* 0xA20 */ u8 mRippleCallBack[0x14];                 /* dPa_rippleEcallBack, GameCube 0x7DC */
     /* 0xA34 */ LIGHT_INFLUENCE mLightInfluence1;       /* GameCube 0x7F0 */
     /* 0xA58 */ LIGHT_INFLUENCE mLightInfluence2;       /* GameCube 0x810 */
-    /* 0xA7C */ cXyz field_0x830;                         /* GameCube 0x830 */
+    /* 0xA7C */ cXyz mLightPos;  /* was field_0x830: cut_init_OMAMORI_ONOFF 02306BD8: set_LightPos, copied into mLightInfluence1 / 2 .mPos (tww the same); chngAnmAtr 0230883C: message 0x15E7 looks at a point beside it; GameCube 0x830 */
     /* 0xA88 */ be<s16> mHeadAngleY;  /* was field_0x83C: lookBack 023075B0 stores the head Y angle; _nodeCB_Head 023020F8 Y-rotates the head by -it */
     /* 0xA8A */ be<s16> mHeadAngleZ;  /* was field_0x83E: lookBack 023075B0 stores the head X angle; _nodeCB_Head 023020F8 Z-rotates the head by -it */
     /* 0xA8C */ be<s16> mEyeAngleY;  /* was field_0x840: lookBack 023075B0 stores the head Y angle; eye_ctrl 02304310 moves the eye texture by it / div * 0.1 */
@@ -258,10 +258,10 @@ struct daNpc_Zl1_c : fopNpc_npc_c {
     /* 0xAA0 */ gptr<J3DJoint> mJoint1;                   /* GameCube 0x854 */
     /* 0xAA4 */ gptr<J3DJoint> mJoint2;
     /* 0xAA8 */ gptr<J3DJoint> mJoint3;
-    /* 0xAAC */ be<u32> field_0x860[6];                   /* J3DMaterial* */
-    /* 0xAC4 */ be<u32> field_0x878[6];                   /* J3DMaterial* */
-    /* 0xADC */ be<u32> field_0x890[6];                   /* J3DShape* */
-    /* 0xAF4 */ be<u32> field_0x8A8[6];                   /* J3DShape* */
+    /* 0xAAC */ be<u32> mpEyeMat[6];  /* was field_0x860: J3DMaterial* [6]: bodyCreateHeap 02302B08 stores the materials eyeLdamB, eyeLdamA, eyeL, eyeRdamB, eyeRdamA, eyeR (HD: found by name; tww walks the zl_eye joint's meshes); the GameCube material animation sharing in _draw is absent in HD */
+    /* 0xAC4 */ be<u32> mpMayuMat[6];  /* was field_0x878: J3DMaterial* [6]: bodyCreateHeap 02302B08 stores the eyebrow materials mayuLdamB, mayuLdamA, mayuL, mayuRdamB, mayuRdamA, mayuR (HD: found by name; tww walks the zl_mayu joint's meshes) */
+    /* 0xADC */ be<u32> mpEyeShape[6];  /* was field_0x890: J3DShape* [6]: bodyCreateHeap 02302B08 stores the shapes of mpEyeMat[i]; _draw 02308090 shows / hides them (shape_vis) around the zl_eye joint's two draw passes (tww the same) */
+    /* 0xAF4 */ be<u32> mpMayuShape[6];  /* was field_0x8A8: J3DShape* [6]: bodyCreateHeap 02302B08 stores the shapes of mpMayuMat[i]; _draw 02308090 shows / hides them (shape_vis) around the zl_mayu joint's two draw passes (tww the same) */
     /* 0xB0C */ be<s32> mHeadMaterialIndex;                             /* HD: material index (bodyCreateHeap) */
     /* 0xB10 */ be<s32> mHeadOverlayMaterialIndex;                             /* HD: material index (bodyCreateHeap) */
     /* 0xB14 */ u8 mOffCupOnAupPacket1[0x98];             /* GameCube 0x8C0 (0x10) */
@@ -278,14 +278,14 @@ WWHD_OFFSET(daNpc_Zl1_c, mProcId1, 0x968);
 WWHD_OFFSET(daNpc_Zl1_c, mEyePos, 0x990);
 WWHD_OFFSET(daNpc_Zl1_c, mRatio, 0x9CC);
 WWHD_OFFSET(daNpc_Zl1_c, mbSetEyePos, 0x9E0);
-WWHD_OFFSET(daNpc_Zl1_c, field_0x7B8, 0x9FC);
-WWHD_OFFSET(daNpc_Zl1_c, field_0x7C2, 0xA06);
+WWHD_OFFSET(daNpc_Zl1_c, mIdleAnmTimer, 0x9FC);
+WWHD_OFFSET(daNpc_Zl1_c, mEnvRatioStep, 0xA06);
 WWHD_OFFSET(daNpc_Zl1_c, mStateIsComplaete, 0xA13);
 WWHD_OFFSET(daNpc_Zl1_c, mInDemo, 0xA1D);
 WWHD_OFFSET(daNpc_Zl1_c, mRippleCallBack, 0xA20);
 WWHD_OFFSET(daNpc_Zl1_c, mLightInfluence1, 0xA34);
 WWHD_OFFSET(daNpc_Zl1_c, mLightInfluence2, 0xA58);
-WWHD_OFFSET(daNpc_Zl1_c, field_0x830, 0xA7C);
+WWHD_OFFSET(daNpc_Zl1_c, mLightPos, 0xA7C);
 WWHD_OFFSET(daNpc_Zl1_c, mOrderEvent, 0xA96);
 WWHD_OFFSET(daNpc_Zl1_c, mType, 0xA9B);
 WWHD_OFFSET(daNpc_Zl1_c, mJoint1, 0xAA0);
@@ -333,7 +333,7 @@ struct daNpc_Zl1_HIO_c {
     /* 0x00 */ be<u32> __vtbl; /* HD: vtable first */
     /* 0x04 */ be<s8> mNo;
     /* 0x05 */ u8 _05[3];
-    /* 0x08 */ be<s32> field_0x8;
+    /* 0x08 */ be<s32> mRefCount;  /* was field_0x8: daNpc_Zl1_HIO_c_ct 0230A0EC -1; never read in WWHD or tww; after our decomp's daNpc_Hi1_HIO_c / daNpc_Ba1_HIO_c mRefCount: the same HIO layout (mNo, then the s32 instance counter) */
     /* 0x0C */ hio_prm_c mPrmTbl;
 };
 WWHD_SIZE(daNpc_Zl1_HIO_c, 0x64);

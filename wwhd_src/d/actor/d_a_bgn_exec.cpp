@@ -116,8 +116,8 @@ BOOL daBgn_Execute(bgn_class *i_this) {
     fpcM_Search(bgn_exec::s_b_sub, i_this);
     bgn2_g() = gabi::ea(fpcM_Search(bgn_exec::bgn2_s_sub, i_this));
     bgn3_g() = gabi::ea(fpcM_Search(bgn_exec::bgn3_s_sub, i_this));
-    if (l_HIO().m027 != 0)
-        actor->health = l_HIO().m027;
+    if (l_HIO().mDebugHealth != 0)
+        actor->health = l_HIO().mDebugHealth;
     if (i_this->mFormRequest == 1) {
         i_this->mFormRequest = 0;
         i_this->mForm = 2;

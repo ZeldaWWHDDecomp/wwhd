@@ -25,7 +25,7 @@ struct Hint {
 };
 struct Catch {
     be<u32> mRequestActorID;
-    be<s32> field_0x4;
+    be<s32> mRequestPriority;  /* was field_0x4: dAttCatch_c_request 024EBB70 refuses a request whose priority argument is above it and stores the argument when it is lower (or the actor is nearer); init 024EBB24 / proc 024EBB44 reset it to 3 (tww the same) */
     be<f32> mDistance;
     be<u8> mCatchItemNo, field_0xd, field_0xe, field_0xf;
     be<u32> mCatghTargetID;
@@ -34,7 +34,7 @@ struct Catch {
 };
 struct Look {
     be<u32> mRequestActorID;
-    be<s32> field_0x4;
+    be<s32> mRequestPriority;  /* was field_0x4: dAttLook_c_request 024EBD80 / requestF 024EBF40 refuse a request whose priority argument is above it and store the argument when it is lower (or the actor is nearer); init 024EBD4C / proc 024EBD64 reset it to 3 (tww the same) */
     be<f32> mDistance;
     be<u32> mLookTargetID;
 };
@@ -52,11 +52,11 @@ struct Draw {
 struct Attention {
     be<u32> mpPlayer, mLockonTargetID, mCallBack, mPadNo, mFlagMask;
     u8 field_0x014[4];
-    be<u8> mLockOnState, field_0x019, field_0x01a, field_0x01b;
+    be<u8> mLockOnState, mLockOnStateCopy, mLockButtonState, field_0x01b;  /* was field_0x019: dAttention_c_Run 024EDB80 copies mLockOnState into it every frame after the judgement (at the L release or at the end); the constructors 024ED630 / 024ED73C clear it; never read in WWHD or tww (tww the same); was field_0x01a: judgementButton 024ECCFC: 0 released, 1 on the frame L (mDoCPd_L_LOCK_BUTTON) is pressed, 2 while held, 0 again when released or the player is busy; judgementStatusSw 024ECED4 / Hd 024ED0A4 lock on, switch or release on 1 / 0; Run 024EDB80 clears it during events (tww the same) */
     be<s16> field_0x01c;
     u8 padding[2];
     be<u32> mFlags, heap;
-    be<s8> field_0x028;
+    be<s8> mCursorDrawState;  /* was field_0x028: Draw 024EDDF8 sets 0 while it draws the cursor on a lock-on target and, with no target, keeps drawing it at mDrawLockonTargetID / mDrawAttnPos while it is > 0; runDrawProc 024ED2A0 sets 1 when the release (yj_out) or yj_delete animation starts and -1 when it has ended; ct 024ED73C -1 (tww the same) */
     u8 padding2[3];
     cXyz mDrawAttnPos;
     Draw draw[2];

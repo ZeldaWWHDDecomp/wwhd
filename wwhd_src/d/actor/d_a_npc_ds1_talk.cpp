@@ -13,7 +13,7 @@
 /* getSelectItemPos / getSelectItemBasePos return a cXyz through a hidden result pointer */
 
 /* ShopCursor_c (HD): show/hide flag byte at +0xB4; setScale's m48/m4C/m50 at +0xA8.., m38/m3C at +0x98.. */
-static inline void ShopCursor_setShow(u32 c, u8 v) { gabi::at<ShopCursor_c>(c)->m54 = v; }
+static inline void ShopCursor_setShow(u32 c, u8 v) { gabi::at<ShopCursor_c>(c)->mbShow = v; }
 
 static inline void cp_int(cXyz* dst, cXyz* src) { /* GHS struct copy: integer words */
     ds1VectorWords(dst).x = ds1VectorWords(src).x;
@@ -26,11 +26,11 @@ static void getItemZoomPos(daNpc_Ds1_c* t, cXyz* out) {
     gabi::Local<cXyz> dir;
     gabi::Local<cXyz> scaled;
     gabi::Local<cXyz> sum;
-    cXyz_mi(&t->mShopCam.m18, dir, &t->mShopCam.m24);
+    cXyz_mi(&t->mShopCam.mCenter, dir, &t->mShopCam.mEye);
     if (!ds1Guest_cXyz_normalizeRS(dir))
         dir->set(0.0f, 0.0f, 1.0f);
     cXyz_ml(dir, scaled, 100.0f);
-    cXyz_pl(&t->mShopCam.m24, sum, scaled);
+    cXyz_pl(&t->mShopCam.mEye, sum, scaled);
     f32 x = sum->x, y = sum->y, z = sum->z;
     out->x = x;
     out->y = y;
@@ -89,8 +89,8 @@ bool daNpc_Ds1_c::chkAttention(cXyz* pos, s16 angle) {
     u32 play = dComIfGp_ea();
     daNpc_Ds1_childHIO_c& hio = l_HIO.mChild[mType];
     fopAc_ac_c* player = gabi::at<dComIfG_inf_c>(play)->play.mPlayerInfo[0].mpPlayer;
-    f32 maxX = hio.m2C;
-    f32 maxZ = hio.m30;
+    f32 maxX = hio.mAttnMaxX;
+    f32 maxZ = hio.mAttnMaxZ;
     gabi::Local<cXyz> diff;
     cXyz_mi(&player->current.pos, diff, pos);
     gabi::Local<cXyz> axisZ;
@@ -330,13 +330,13 @@ u16 daNpc_Ds1_c::talk() {
         l_messageID.mValue = -1;
         mMsgNo = getMsg();
         mTalkState = 1;
-        mShopCam.m54 = mShopItems.mSelectedItemIdx;
+        mShopCam.mSelectIdx = mShopItems.mSelectedItemIdx;
         mNextMsgNo = 0;
         mBoughtItemNo = 0xFF;
         return ret;
     }
     if (st == -1) {
-        mShopCam.m54 = mShopItems.mSelectedItemIdx;
+        mShopCam.mSelectIdx = mShopItems.mSelectedItemIdx;
         return ret;
     }
     if (l_messageID.mValue == -1) {
@@ -350,7 +350,7 @@ u16 daNpc_Ds1_c::talk() {
             else
                 mTalkState = 3;
         }
-        mShopCam.m54 = mShopItems.mSelectedItemIdx;
+        mShopCam.mSelectIdx = mShopItems.mSelectedItemIdx;
         return ret;
     }
     setAnmFromMsgTag();
@@ -380,7 +380,7 @@ u16 daNpc_Ds1_c::talk() {
             mTalkState = 2;
         }
     }
-    mShopCam.m54 = mShopItems.mSelectedItemIdx;
+    mShopCam.mSelectIdx = mShopItems.mSelectedItemIdx;
     return ret;
 }
 
@@ -405,7 +405,7 @@ void daNpc_Ds1_c::lookBack() {
     if ((u32)(s32)st == 1) {
         if (mPlayerInRange != 0) {
             gabi::Local<cXyz> eye;
-            ds1Guest_dNpc_playerEyePos(eye, l_HIO.mChild[mType].mNpc.m04);
+            ds1Guest_dNpc_playerEyePos(eye, l_HIO.mChild[mType].mNpc.mPlayerEyeOffsetY);
             cp_int(dst, eye);
             target = dst;
             eyeZ = current.pos.z;
@@ -419,7 +419,7 @@ void daNpc_Ds1_c::lookBack() {
     } else if ((u32)(s32)st == 2) {
         if (mShopCam.mCurrActionFunc.mVtableIndex == 0) {
             gabi::Local<cXyz> eye;
-            ds1Guest_dNpc_playerEyePos(eye, l_HIO.mChild[mType].mNpc.m04);
+            ds1Guest_dNpc_playerEyePos(eye, l_HIO.mChild[mType].mNpc.mPlayerEyeOffsetY);
             eyeY = eyePos.y;
             cp_int(dst, eye);
             eyeZ = current.pos.z;
@@ -440,12 +440,12 @@ void daNpc_Ds1_c::lookBack() {
             ds1Guest_ShopCursor_setPos(mpShopCursor, itemPos);
             daNpc_Ds1_childHIO_c& hio = l_HIO.mChild[mType];
             u32 c = mpShopCursor;
-            f32 s4 = hio.m40, s2 = hio.m38, s3 = hio.m3C, s1 = hio.mCursorScale, s5 = hio.m44;
-            gabi::at<ShopCursor_c>(c)->m48 = s1;
-            gabi::at<ShopCursor_c>(c)->m4C = s2;
-            gabi::at<ShopCursor_c>(c)->m50 = s3;
-            gabi::at<ShopCursor_c>(c)->m38 = s4;
-            gabi::at<ShopCursor_c>(c)->m3C = s5;
+            f32 s4 = hio.mCursorDistFar, s2 = hio.mCursorScaleYFar, s3 = hio.mCursorScaleYNear, s1 = hio.mCursorScale, s5 = hio.mCursorDistNear;
+            gabi::at<ShopCursor_c>(c)->mPieceScale = s1;
+            gabi::at<ShopCursor_c>(c)->mPieceScaleYFar = s2;
+            gabi::at<ShopCursor_c>(c)->mPieceScaleYNear = s3;
+            gabi::at<ShopCursor_c>(c)->mPieceDistFar = s4;
+            gabi::at<ShopCursor_c>(c)->mPieceDistNear = s5;
             ds1Guest_ShopCursor_anm_play(mpShopCursor);
             eyeX = current.pos.x;
             eyeY = eyePos.y;
@@ -455,7 +455,7 @@ void daNpc_Ds1_c::lookBack() {
     }
     if (mAction.idx == -1 && mAction.delta == 0 && mAction.fn == ds1_tu.mEventAction) {
         gabi::Local<cXyz> eye;
-        ds1Guest_dNpc_playerEyePos(eye, l_HIO.mChild[mType].mNpc.m04);
+        ds1Guest_dNpc_playerEyePos(eye, l_HIO.mChild[mType].mNpc.mPlayerEyeOffsetY);
         eyeX = current.pos.x;
         cp_int(dst, eye);
         eyeY = eyePos.y;
@@ -525,7 +525,7 @@ BOOL daNpc_Ds1_c::talk01() {
         if (ds1Guest_daNpc_Ds1_shopMsgCheck(mMsgNo))
             ds1Guest_ShopItems_getSelectItemBuyMsg(&mShopItems);
     }
-    if (gabi::at<ShopCursor_c>(mpShopCursor)->m54 != 0) {
+    if (gabi::at<ShopCursor_c>(mpShopCursor)->mbShow != 0) {
         ((dComIfG_inf_c*)dComIfGp_get())->play.mDoStatusForce = 0x17;
         ((dComIfG_inf_c*)dComIfGp_get())->play.mAStatusForce = 0x27;
     }

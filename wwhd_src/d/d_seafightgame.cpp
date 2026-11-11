@@ -59,23 +59,23 @@ s32 dSeaFightGame_info_c::put_ship(u32 i_shipNo, u32 i_shipSize) {
             gridCell(x * 8 + y + i) = i_shipNo + SEA_SHIP_BASE;
         }
         // HD: The direction-size byte is stored before the origin coordinates.
-        shipData->field_0xd = 0;
-        shipData->field_0xb = x;
-        shipData->field_0xc = y;
-        shipData->field_0xe = i_shipSize;
+        shipData->mLengthX = 0;
+        shipData->mX = x;
+        shipData->mY = y;
+        shipData->mLengthY = i_shipSize;
     } else {
         for (u32 i = 0; i < i_shipSize && (s32)i_shipSize > 0; i++) {
             shipData->position(i)->x = x + i;
             shipData->position(i)->y = y;
             gridCell((x + i) * 8 + y) = i_shipNo + SEA_SHIP_BASE;
         }
-        shipData->field_0xd = i_shipSize;
-        shipData->field_0xb = x;
-        shipData->field_0xc = y;
-        shipData->field_0xe = 0;
+        shipData->mLengthX = i_shipSize;
+        shipData->mX = x;
+        shipData->mY = y;
+        shipData->mLengthY = 0;
     }
-    shipData->field_0x8 = i_shipSize;
-    shipData->field_0x9 = i_shipSize;
+    shipData->mLength = i_shipSize;
+    shipData->mLife = i_shipSize;
     return TRUE;
 }
 
@@ -117,8 +117,8 @@ s32 dSeaFightGame_info_c::attack(u32 i_x, u32 i_y) {
         }
         rt = ship_no;
         auto* shipData = ship(ship_no);
-        u8 remaining = shipData->field_0x9 - 1;
-        shipData->field_0x9 = remaining;
+        u8 remaining = shipData->mLife - 1;
+        shipData->mLife = remaining;
         if (remaining == 0) {
             u8 alive = mAliveShipNum;
             u32 dead = mDeadShipNum;

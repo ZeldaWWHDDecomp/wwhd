@@ -110,9 +110,9 @@ void daWbird_c::setStartPos() {
     current.angle.y = windAngle;
     current.pos.z = gabi::fnmsubs(halfFlightTime, velocityZ, pz);
     current.pos.x = gabi::fnmsubs(halfFlightTime, velocityX, startX);
-    field_0x29E = 60 + 30;
+    mTimer = 60 + 30;
     shape_angle.y = windAngle;
-    field_0x2A0 = 1.0f;
+    mAccelY = 1.0f;
     current.pos.y = gabi::fmadds(halfFlightTime * halfFlightTime, 0.5f, py);
     speed.y = -g;
 }
@@ -123,7 +123,7 @@ BOOL daWbird_c::CreateInit() {
     setAction(ACTION_SELECT);
     tevStr.mRoomNo = room;
     Wbird_orderChangeEvent(this, "TACT_WINDOW", 0, 0xFFFF);
-    field_0x29E = 0;
+    mTimer = 0;
     calcMtx();
     return TRUE;
 }
@@ -163,19 +163,19 @@ void daWbird_c::actionEnd() {
 /* 024DE768 */
 void daWbird_c::actionMove() {
     WbirdPlayerHD *player = static_cast<WbirdPlayerHD *>(dComIfGp_getPlayer(0));
-    if (field_0x29D) {
-        field_0x29D = false;
+    if (mStartWindSe) {
+        mStartWindSe = false;
         mDoAud_seStartWind(JA_SE_TAKT_WIND_DEMO);
     }
-    if (field_0x29E > 0) {
-        field_0x29E = field_0x29E - 1;
+    if (mTimer > 0) {
+        mTimer = mTimer - 1;
         // HD: thresholds are 30 / 20; GameCube uses 60 / 70 and fades wind below 15.
-        if (field_0x29E > 30) {
+        if (mTimer > 30) {
             fopAcM_posMove(this, nullptr);
-            f32 g = field_0x2A0;
+            f32 g = mAccelY;
             speed.y = speed.y + g;
         }
-        if (field_0x29E == 20) {
+        if (mTimer == 20) {
             dKyw_tact_wind_set_go();
         }
     } else {
@@ -190,12 +190,12 @@ void daWbird_c::actionMove() {
 
 /* 024DE55C */
 void daWbird_c::actionSelect() {
-    s16 timer = field_0x29E;
+    s16 timer = mTimer;
     if (timer == 10) {
         /* dComIfGp_setOperateWindOn() */
         ((dComIfG_inf_c *)dComIfGp_get())->play.mOperateWind = 2;
         mDoAud_seStartWind(JA_SE_TAKT_WIND_DISP);
-        field_0x29E = field_0x29E + 1;
+        mTimer = mTimer + 1;
     } else if (timer > 10) {
         mDoAud_seStartWind(JA_SE_SYS_WTAKT_WIND_AMB);
         u8 op = ((dComIfG_inf_c *)dComIfGp_get())->play.mOperateWind; /* dComIfGp_getOperateWind() */
@@ -223,7 +223,7 @@ void daWbird_c::actionSelect() {
             demoPlayer->mDemo.mDemoType = DEMO_TYPE_SYSTEM;
             demoPlayer->mDemo.mDemoMode = DEMO_WAIT;
             dKyw_custom_windpower(1.0f);
-            field_0x29D = true;
+            mStartWindSe = true;
         } else if (op < 1) {
             mDoAud_seStartWind(JA_SE_TAKT_WIND_CANCEL);
             dComIfG_inf_c *play = (dComIfG_inf_c *)dComIfGp_get();
@@ -231,7 +231,7 @@ void daWbird_c::actionSelect() {
             fopAcM_delete(this);
         }
     } else {
-        field_0x29E = timer + 1;
+        mTimer = timer + 1;
     }
 }
 

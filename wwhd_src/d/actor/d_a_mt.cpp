@@ -45,7 +45,7 @@ static daMt_HIO_c *daMt_HIO_c_ct(daMt_HIO_c *self) {
     self->m10 = 15;
     self->m14 = 0.5f;
     self->m18 = 21.0f;
-    self->m1C = 0.8f;
+    self->mRubbleScale = 0.8f;
     self->m20 = 0.8f;
     self->m24 = 450.0f;
     self->m28 = 350.0f;
@@ -61,7 +61,7 @@ static daMt_HIO_c *daMt_HIO_c_ct(daMt_HIO_c *self) {
     self->m44 = 30.0f;
     self->m48 = 25.0f;
     self->m4C = 0.65f;
-    self->m50 = -5;
+    self->mSegmentFrameStep = -5;
     self->m52 = 0x2AF8;
     self->m54 = 600;
     self->m58 = 1.0f;
@@ -254,7 +254,7 @@ static inline void br_draw(mt_class *i_this) {
     mDoMtx_YrotM(calc_mtx(), i_this->shape_angle.y);
     mDoMtx_XrotM(calc_mtx(), i_this->shape_angle.x);
     mDoMtx_ZrotM(calc_mtx(), i_this->shape_angle.z);
-    f32 scale = l_HIO().m1C * (REG0_F(4) + 2.0f);
+    f32 scale = l_HIO().mRubbleScale * (REG0_F(4) + 2.0f);
     MtxPush();
     mDoMtx_YrotM(calc_mtx(), l_br_angle[n]);
     mDoMtx_XrotM(calc_mtx(), -0x4000);
@@ -307,11 +307,11 @@ static BOOL daMt_Draw(mt_class *i_this) {
         mDoExt_brkAnm *brk = i_this->mpBrk[i];
         mDoExt_brkAnm_entry(brk, J3DModel_getModelData(model), ((mDoExt_baseAnm *)brk)->getFrame());
         if (i_this->mMaterialMode == 0) {
-            s32 f = i_this->mBrkFrame + i * l_HIO().m50;
+            s32 f = i_this->mBrkFrame + i * l_HIO().mSegmentFrameStep;
             while (f < 0)
                 f += 41;
             ((mDoExt_baseAnm *)i_this->mpBrk[i].get())->mFrameCtrl.setFrame((f32)f);
-            f = i_this->mBtkFrame + i * l_HIO().m50;
+            f = i_this->mBtkFrame + i * l_HIO().mSegmentFrameStep;
             while (f < 0)
                 f += 31;
             i_this->mpBtk[i]->mFrameCtrl.setFrame((f32)f);

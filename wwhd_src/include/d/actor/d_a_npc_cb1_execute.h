@@ -9,7 +9,7 @@ struct daNpc_Cb1_HIO_c {
     /* 0x04 */ be<s8> mNo;
     /* 0x05 */ u8 _05[3];
     /* 0x08 */ dNpc_HIO_l mNpc;
-    /* 0x30 */ be<f32> field_0x30;
+    /* 0x30 */ be<f32> mEyePosOffsetY;  /* was field_0x30: setBaseMtx 0221ED08 puts eyePos this far above current.pos (cLib_offsetPos), next to attention_info.position at mNpc.mAttnYOffset; daNpc_Cb1_HIO_c ctor 02226B9C 50.0 (tww execute the same) */
     /* 0x34 */ be<f32> mPlayerChaseDistance;
     /* 0x38 */ be<f32> mChaseDistScale;
     /* 0x3C */ be<f32> mMaxWalkSpeed;
@@ -22,50 +22,50 @@ struct daNpc_Cb1_HIO_c {
     /* 0x58 */ be<f32> mMaxWalkAnmSpeed;
     /* 0x5C */ be<f32> mNpcFlyLaunchSpeedF;
     /* 0x60 */ be<f32> mNpcFlyLaunchSpeedY;
-    /* 0x64 */ be<f32> field_0x64;
+    /* 0x64 */ be<f32> mFlyLandSpeedY;  /* was field_0x64: flyAction 022222D0: speed.y on touching down from the flight (not on ground special code 1), before checkLanding (tww the same); ctor 8.0 */
     /* 0x68 */ be<f32> mHitSpeedScaleF;
     /* 0x6C */ be<f32> mHitSpeedScaleY;
-    /* 0x70 */ be<f32> field_0x70;
-    /* 0x74 */ be<f32> field_0x74;
-    /* 0x78 */ be<f32> field_0x78;
-    /* 0x7C */ be<f32> field_0x7C;
-    /* 0x80 */ be<f32> field_0x80;
-    /* 0x84 */ be<f32> field_0x84;
+    /* 0x70 */ be<f32> mGravity;  /* was field_0x70: init 0221F3C0 and execute 0222091C (cb1_execRoom, the walking position move) gravity (tww the same); ctor -4.0 */
+    /* 0x74 */ be<f32> mCarryOffsetX;  /* was field_0x74: carryNpcAction 02223694 chases mCarryOffset.x to it (tww the same); ctor -1.5 */
+    /* 0x78 */ be<f32> mCarryOffsetY;  /* was field_0x78: carryNpcAction 02223694 chases mCarryOffset.y to it (tww the same); ctor -6.0 */
+    /* 0x7C */ be<f32> mCarryOffsetZ;  /* was field_0x7C: carryNpcAction 02223694 chases mCarryOffset.z to it (tww the same); ctor -7.6 */
+    /* 0x80 */ be<f32> mStickTurnMin;  /* was field_0x80: waitPlayerAction 02224E38 turns Makar only with the stick at or above it (or a lock-on); flyAction 022222D0 ends a grounded flight at it (tww CPad_GET_STICK_VALUE(0) >= it); ctor 0.1 */
+    /* 0x84 */ be<f32> mStickWalkMin;  /* was field_0x84: waitPlayerAction 02224E38 switches to walkPlayerAction with the stick at or above it (tww the same); ctor 0.2 */
     /* 0x88 */ be<f32> mStickWalkSpeedScale;
-    /* 0x8C */ be<f32> field_0x8C;
-    /* 0x90 */ be<f32> field_0x90;
+    /* 0x8C */ be<f32> mPropellerLiftScale;  /* was field_0x8C: flyAction 022222D0: the lift is mPropellerSpeed times it (tww temp3 = m8F8 * it); ctor 0.0002 */
+    /* 0x90 */ be<f32> mFlyMaxFallSpeed;  /* was field_0x90: flyAction 022222D0 maxFallSpeed while the propeller turns (tww the same); ctor -15.0 */
     /* 0x94 */ u8 field_0x94[4];
-    /* 0x98 */ be<f32> field_0x98;
-    /* 0x9C */ be<f32> field_0x9C;
-    /* 0xA0 */ be<f32> field_0xA0;
-    /* 0xA4 */ be<f32> field_0xA4;
-    /* 0xA8 */ be<f32> field_0xA8;
+    /* 0x98 */ be<f32> mFlyMaxSpeedY;  /* was field_0x98: flyAction 022222D0 caps speed.y at it in the air (tww ySpeedLimit = it, raised by the wind); ctor 10.0 */
+    /* 0x9C */ be<f32> mFlyMaxSpeed;  /* was field_0x9C: flyAction 022222D0 (cb1_flyAir): the airborne speed limit the speed is chased down to (tww temp5 = it, raised by the wind); ctor 10.0 */
+    /* 0xA0 */ be<f32> mFlyGravity;  /* was field_0xA0: flyAction 022222D0: added to the propeller lift as the vertical acceleration (gravity on the ground, speed.y in the air) (tww the same); ctor -2.5 */
+    /* 0xA4 */ be<f32> mFlyDriftHeight;  /* was field_0xA4: flyAction 022222D0 sets m8F2 (the sideways drift) once mFlyHeight passes it (tww the same); ctor 100.0 */
+    /* 0xA8 */ be<f32> mFlyTiltScale;  /* was field_0xA8: flyAction 022222D0 (cb1_flyAir): the body tilt is the horizontal push times it, at most 14000 (tww the same); ctor 6000.0 */
     /* 0xAC */ be<f32> mStickFlySpeedScale;
-    /* 0xB0 */ be<f32> field_0xB0;
+    /* 0xB0 */ be<f32> mFlyOpenSpeedY;  /* was field_0xB0: flyAction 022222D0: added to speed.y when the propeller opens in the air (tww the same); ctor 34.0 */
     /* 0xB4 */ be<f32> field_0xB4;
-    /* 0xB8 */ be<f32> field_0xB8;
+    /* 0xB8 */ be<f32> mFlyWindScale;  /* was field_0xB8: flyAction 022222D0 (cb1_flyAir) scales the wind power by it (tww power *= it); ctor 2.0 */
     /* 0xBC */ be<f32> mFlyLaunchSpeedY;
-    /* 0xC0 */ be<f32> field_0xC0;
-    /* 0xC4 */ be<f32> field_0xC4;
+    /* 0xC0 */ be<f32> mNpcCallDist;  /* was field_0xC0: waitNpcAction 02223048: with event bit 0x1610 set and Link nearer than it, Link's NPC call turns on (tww daPy onNpcCall()); ctor 400.0 */
+    /* 0xC4 */ be<f32> mDamageSpeedF;  /* was field_0xC4: execute 0222091C (cb1_execDamage): speedF away from the hit before the hit action (tww the same); ctor 20.0 */
     /* 0xC8 */ be<s16> field_0xC8;
     /* 0xCA */ be<s16> mPlayerFlyTimer;
-    /* 0xCC */ be<s16> field_0xCC;
-    /* 0xCE */ be<s16> field_0xCE;
-    /* 0xD0 */ be<s16> field_0xD0;
-    /* 0xD2 */ be<s16> field_0xD2;
-    /* 0xD4 */ be<s16> field_0xD4;
-    /* 0xD6 */ be<s16> field_0xD6;
-    /* 0xD8 */ be<s16> field_0xD8;
-    /* 0xDA */ be<s16> field_0xDA;
+    /* 0xCC */ be<s16> mLandIdleMax;  /* was field_0xCC: flyAction 022222D0 ends a grounded flight once mLandIdleCount passes it (tww ++m8F6 > it); ctor 100 */
+    /* 0xCE */ be<s16> mFlyEndWarnTime;  /* was field_0xCE: flyAction 022222D0: Makar as the player plays the fly-end animation (ANM_15) while the flying timer is below it (tww getFlyingTimer() < it); ctor 15 */
+    /* 0xD0 */ be<s16> mPropellerSpeedMax;  /* was field_0xD0: flyAction 022222D0 chases mPropellerSpeed up to it while lifting and scales the rolling sound by 100 / it (tww the same); ctor 20000 */
+    /* 0xD2 */ be<s16> mPropellerIdleSpeed;  /* was field_0xD2: flyAction 022222D0 chases mPropellerSpeed to it on the ground (0 in the air) when not lifting, and a grounded flight may end at or below it (tww the same); ctor 400 */
+    /* 0xD4 */ be<s16> mPropellerAccel;  /* was field_0xD4: flyAction 022222D0: the chase step toward mPropellerSpeedMax (tww cLib_chaseS(&m8F8, field_0xD0, it)); ctor 2500 */
+    /* 0xD6 */ be<s16> mPropellerDecel;  /* was field_0xD6: flyAction 022222D0: the chase step toward mPropellerIdleSpeed / 0 (tww the same); ctor 200 */
+    /* 0xD8 */ be<s16> mFlyAnmHeight;  /* was field_0xD8: flyAction 022222D0 plays the flying animation (ANM_07) once mFlyHeight passes it; flyNpcAction 02223A88 starts mFlyHeight at it + 1 (tww the same); ctor 1 */
+    /* 0xDA */ be<s16> mPropellerOpenSpeed;  /* was field_0xDA: flyAction 022222D0: mPropellerSpeed when the propeller opens in the air (tww the same); ctor 0x2968 */
     /* 0xDC */ be<s16> mNpcFlyTimer;
-    /* 0xDE */ be<s16> field_0xDE;
-    /* 0xE0 */ be<s16> field_0xE0;
-    /* 0xE2 */ be<s16> field_0xE2;
-    /* 0xE4 */ be<s16> field_0xE4;
-    /* 0xE6 */ be<s16> field_0xE6;
-    /* 0xE8 */ be<s16> field_0xE8;
-    /* 0xEA */ be<s16> field_0xEA;
-    /* 0xEC */ be<s16> field_0xEC;
+    /* 0xDE */ be<s16> mFlyLiftPeriod;  /* was field_0xDE: flyNpcAction 02223A88: mFlyLiftCycle = (mFlyLiftCycle + 1) % it, lift only at 0 (tww the same); ctor 13 */
+    /* 0xE0 */ be<s16> mFlyTiltStep;  /* was field_0xE0: flyAction 022222D0: cLib_chaseAngleS step of shape_angle.x / z toward the tilt (or 0 on the ground) (tww the same); ctor 200 */
+    /* 0xE2 */ be<s16> mSearchTimeBase;  /* was field_0xE2: searchNpcAction 022244A0 reloads mSearchTimer with cLib_getRndValue(it, mSearchTimeRange) (tww the same); ctor 5 */
+    /* 0xE4 */ be<s16> mSearchTimeRange;  /* was field_0xE4: searchNpcAction 022244A0: the cLib_getRndValue range for mSearchTimer (tww the same); ctor 20 */
+    /* 0xE6 */ be<s16> mSearchTurnAngle;  /* was field_0xE6: searchNpcAction 022244A0 turns by -/+ it by mSearchSide (tww the same); ctor 3000 */
+    /* 0xE8 */ be<s16> mWalkTurnMaxStep;  /* was field_0xE8: walkPlayerAction 022250AC: cLib_addCalcAngleS maxStep toward the stick angle (tww the same); ctor 0x8FC */
+    /* 0xEA */ be<s16> mWalkTurnMinStep;  /* was field_0xEA: walkPlayerAction 022250AC: cLib_addCalcAngleS minStep (tww the same); ctor 800 */
+    /* 0xEC */ be<s16> mWalkTurnScale;  /* was field_0xEC: walkPlayerAction 022250AC: cLib_addCalcAngleS scale (tww the same); ctor 3 */
     /* 0xEE */ be<u8> mDamageTimer;
     /* 0xEF */ be<u8> field_0xEF;
 };
@@ -73,7 +73,7 @@ WWHD_OFFSET(daNpc_Cb1_HIO_c, __vtbl, 0x00);
 WWHD_OFFSET(daNpc_Cb1_HIO_c, mNo, 0x04);
 WWHD_OFFSET(daNpc_Cb1_HIO_c, _05, 0x05);
 WWHD_OFFSET(daNpc_Cb1_HIO_c, mNpc, 0x08);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0x30, 0x30);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mEyePosOffsetY, 0x30);
 WWHD_OFFSET(daNpc_Cb1_HIO_c, mPlayerChaseDistance, 0x34);
 WWHD_OFFSET(daNpc_Cb1_HIO_c, mChaseDistScale, 0x38);
 WWHD_OFFSET(daNpc_Cb1_HIO_c, mMaxWalkSpeed, 0x3C);
@@ -86,60 +86,60 @@ WWHD_OFFSET(daNpc_Cb1_HIO_c, mWalkAnmSpeedScale, 0x54);
 WWHD_OFFSET(daNpc_Cb1_HIO_c, mMaxWalkAnmSpeed, 0x58);
 WWHD_OFFSET(daNpc_Cb1_HIO_c, mNpcFlyLaunchSpeedF, 0x5C);
 WWHD_OFFSET(daNpc_Cb1_HIO_c, mNpcFlyLaunchSpeedY, 0x60);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0x64, 0x64);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mFlyLandSpeedY, 0x64);
 WWHD_OFFSET(daNpc_Cb1_HIO_c, mHitSpeedScaleF, 0x68);
 WWHD_OFFSET(daNpc_Cb1_HIO_c, mHitSpeedScaleY, 0x6C);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0x70, 0x70);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0x74, 0x74);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0x78, 0x78);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0x7C, 0x7C);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0x80, 0x80);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0x84, 0x84);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mGravity, 0x70);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mCarryOffsetX, 0x74);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mCarryOffsetY, 0x78);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mCarryOffsetZ, 0x7C);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mStickTurnMin, 0x80);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mStickWalkMin, 0x84);
 WWHD_OFFSET(daNpc_Cb1_HIO_c, mStickWalkSpeedScale, 0x88);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0x8C, 0x8C);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0x90, 0x90);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mPropellerLiftScale, 0x8C);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mFlyMaxFallSpeed, 0x90);
 WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0x94, 0x94);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0x98, 0x98);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0x9C, 0x9C);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0xA0, 0xA0);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0xA4, 0xA4);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0xA8, 0xA8);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mFlyMaxSpeedY, 0x98);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mFlyMaxSpeed, 0x9C);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mFlyGravity, 0xA0);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mFlyDriftHeight, 0xA4);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mFlyTiltScale, 0xA8);
 WWHD_OFFSET(daNpc_Cb1_HIO_c, mStickFlySpeedScale, 0xAC);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0xB0, 0xB0);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mFlyOpenSpeedY, 0xB0);
 WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0xB4, 0xB4);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0xB8, 0xB8);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mFlyWindScale, 0xB8);
 WWHD_OFFSET(daNpc_Cb1_HIO_c, mFlyLaunchSpeedY, 0xBC);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0xC0, 0xC0);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0xC4, 0xC4);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mNpcCallDist, 0xC0);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mDamageSpeedF, 0xC4);
 WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0xC8, 0xC8);
 WWHD_OFFSET(daNpc_Cb1_HIO_c, mPlayerFlyTimer, 0xCA);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0xCC, 0xCC);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0xCE, 0xCE);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0xD0, 0xD0);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0xD2, 0xD2);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0xD4, 0xD4);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0xD6, 0xD6);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0xD8, 0xD8);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0xDA, 0xDA);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mLandIdleMax, 0xCC);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mFlyEndWarnTime, 0xCE);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mPropellerSpeedMax, 0xD0);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mPropellerIdleSpeed, 0xD2);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mPropellerAccel, 0xD4);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mPropellerDecel, 0xD6);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mFlyAnmHeight, 0xD8);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mPropellerOpenSpeed, 0xDA);
 WWHD_OFFSET(daNpc_Cb1_HIO_c, mNpcFlyTimer, 0xDC);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0xDE, 0xDE);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0xE0, 0xE0);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0xE2, 0xE2);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0xE4, 0xE4);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0xE6, 0xE6);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0xE8, 0xE8);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0xEA, 0xEA);
-WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0xEC, 0xEC);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mFlyLiftPeriod, 0xDE);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mFlyTiltStep, 0xE0);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mSearchTimeBase, 0xE2);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mSearchTimeRange, 0xE4);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mSearchTurnAngle, 0xE6);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mWalkTurnMaxStep, 0xE8);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mWalkTurnMinStep, 0xEA);
+WWHD_OFFSET(daNpc_Cb1_HIO_c, mWalkTurnScale, 0xEC);
 WWHD_OFFSET(daNpc_Cb1_HIO_c, mDamageTimer, 0xEE);
 WWHD_OFFSET(daNpc_Cb1_HIO_c, field_0xEF, 0xEF);
 WWHD_SIZE(daNpc_Cb1_HIO_c, 0xF0);
 struct AnmData {
     /* 0x00 */ be<s8> mAnmFileIdx;
     /* 0x01 */ be<u8> mLoopMode;
-    /* 0x02 */ be<s8> field_0x02;
+    /* 0x02 */ be<s8> mMorf;  /* was field_0x02: initAnm 0221FEFC passes it to dNpc_setAnm as the morf frames when morphing (tww data.field_0x02 the same) */
     /* 0x03 */ be<s8> mSpeed;
-    /* 0x04 */ be<s8> field_0x04;
-    /* 0x05 */ be<s8> field_0x05;
+    /* 0x04 */ be<s8> mLoopCount;  /* was field_0x04: playAnm 02220024 switches the animation once mAnmLoopCount reaches it (tww the same) */
+    /* 0x05 */ be<s8> mNextAnmTblIdx;  /* was field_0x05: playAnm 02220024 then starts table entry it (initAnm(it, 1)); 0x13 / 0x11 also call musicStop / musicPlay (tww the same) */
 };
 WWHD_SIZE(AnmData, 6);
 enum : u32 {

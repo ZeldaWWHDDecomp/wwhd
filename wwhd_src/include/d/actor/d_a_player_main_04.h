@@ -34,9 +34,9 @@ struct LinkPoseApi {
 // HD: the shared declaration stores these animation and collision blocks opaquely.
 struct LinkPoseAnmHeap {
     /* 0x00 */ be<u16> mIdx;
-    /* 0x02 */ be<u16> field_0x2;
-    /* 0x04 */ be<u16> field_0x4;
-    /* 0x06 */ be<u16> field_0x6;
+    /* 0x02 */ be<u16> mPriIdx;  /* was field_0x2: view of daPy_anmHeap_c::mPriIdx (evidence in d_a_player_main_01.h) */
+    /* 0x04 */ be<u16> mDemoIdx;  /* was field_0x4: view of daPy_anmHeap_c::mDemoIdx (evidence in d_a_player_main_01.h) */
+    /* 0x06 */ be<u16> mDemoAnmNo;  /* was field_0x6: view of daPy_anmHeap_c::mDemoAnmNo (evidence in d_a_player_main_01.h) */
     /* 0x08 */ gptr<void> m_buffer;
     /* 0x0C */ gptr<JKRSolidHeap> mpAnimeHeap;
 };
@@ -55,10 +55,10 @@ struct LinkPoseOldFrame {
     /* 0x01 */ be<u8> field_0x1;
     /* 0x02 */ u8 _02[2];
     /* 0x04 */ be<f32> mOldFrameMorfCounter;
-    /* 0x08 */ be<f32> field_0x8;
+    /* 0x08 */ be<f32> mOldFrameMorfStep;  /* was field_0x8: view of mDoExt_MtxCalcOldFrame::mOldFrameMorfStep (m_Do/m_Do_ext_animation.h: initOldFrameMorf 025E3F3C 1 / duration) */
     /* 0x0C */ be<f32> mOldFrameRate;
-    /* 0x10 */ be<f32> field_0x10;
-    /* 0x14 */ be<f32> field_0x14;
+    /* 0x10 */ be<f32> mOldFrameMorfRemain;  /* was field_0x10: view of mDoExt_MtxCalcOldFrame::mOldFrameMorfRemain (m_Do/m_Do_ext_animation.h: decOldFrameMorfCounter 025E3EC8) */
+    /* 0x14 */ be<f32> mOldFrameMorfRemainOld;  /* was field_0x14: view of mDoExt_MtxCalcOldFrame::mOldFrameMorfRemainOld (m_Do/m_Do_ext_animation.h: decOldFrameMorfCounter 025E3EC8) */
     /* 0x18 */ be<u16> mOldFrameStartJoint;
     /* 0x1A */ be<u16> mOldFrameEndJoint;
     /* 0x1C */ gptr<LinkPoseTransformInfo> mOldFrameTransInfo;
@@ -68,23 +68,23 @@ WWHD_SIZE(LinkPoseOldFrame, 0x24);
 WWHD_OFFSET(LinkPoseOldFrame, mOldFrameTransInfo, 0x1C);
 WWHD_OFFSET(LinkPoseOldFrame, mOldFrameQuaternion, 0x20);
 struct LinkPoseFootData {
-    /* 0x000 */ be<u8> field_0x000;
-    /* 0x001 */ be<u8> field_0x001;
-    /* 0x002 */ be<s16> field_0x002;
+    /* 0x000 */ be<u8> mGroundHit;  /* was field_0x000: view of daPy_footData_c::mGroundHit (evidence in d_a_player_main_01.h) */
+    /* 0x001 */ be<u8> mStopTimer;  /* was field_0x001: view of daPy_footData_c::mStopTimer (evidence in d_a_player_main_01.h) */
+    /* 0x002 */ be<s16> mFootAngle;  /* was field_0x002: view of daPy_footData_c::mFootAngle (evidence in d_a_player_main_01.h) */
     /* 0x004 */ be<s16> field_0x004;
-    /* 0x006 */ be<s16> field_0x006;
-    /* 0x008 */ be<s16> field_0x008;
-    /* 0x00A */ be<s16> field_0x00A;
-    /* 0x00C */ cXyz field_0x00C;
-    /* 0x018 */ cXyz field_0x018;
-    /* 0x024 */ cXyz field_0x024;
-    /* 0x030 */ be<f32> field_0x030;
-    /* 0x034 */ u8 field_0x034[0x54];
-    /* 0x088 */ Mtx34 field_0x088[3];
+    /* 0x006 */ be<s16> mLegBAngle;  /* was field_0x006: view of daPy_footData_c::mLegBAngle (evidence in d_a_player_main_01.h) */
+    /* 0x008 */ be<s16> mLegAAngle;  /* was field_0x008: view of daPy_footData_c::mLegAAngle (evidence in d_a_player_main_01.h) */
+    /* 0x00A */ be<s16> mLegBJointAngle;  /* was field_0x00A: view of daPy_footData_c::mLegBJointAngle (evidence in d_a_player_main_01.h) */
+    /* 0x00C */ cXyz mHeelPos;  /* was field_0x00C: view of daPy_footData_c::mHeelPos (evidence in d_a_player_main_01.h) */
+    /* 0x018 */ cXyz mToePos;  /* was field_0x018: view of daPy_footData_c::mToePos (evidence in d_a_player_main_01.h) */
+    /* 0x024 */ cXyz mFootPos;  /* was field_0x024: view of daPy_footData_c::mFootPos (evidence in d_a_player_main_01.h) */
+    /* 0x030 */ be<f32> mClotchShiftX;  /* was field_0x030: view of daPy_footData_c::mClotchShiftX (evidence in d_a_player_main_01.h) */
+    /* 0x034 */ u8 mGndChk[0x54];  /* was field_0x034: view of daPy_footData_c::mGndChk (evidence in d_a_player_main_01.h) */
+    /* 0x088 */ Mtx34 mLegMtx[3];  /* was field_0x088: view of daPy_footData_c::mLegMtx (evidence in d_a_player_main_01.h) */
 };
 WWHD_SIZE(LinkPoseFootData, 0x118);
-WWHD_OFFSET(LinkPoseFootData, field_0x008, 8);
-WWHD_OFFSET(LinkPoseFootData, field_0x00A, 0xA);
+WWHD_OFFSET(LinkPoseFootData, mLegAAngle, 8);
+WWHD_OFFSET(LinkPoseFootData, mLegBJointAngle, 0xA);
 struct LinkPoseMatAnm {
     /* 0x00 */ u8 _00[0x74];
     /* 0x74 */ be<f32> mNowOffsetX;
@@ -189,7 +189,7 @@ struct LinkPoseConstants {
 
 struct LinkPoseLook {
     /* 0x00 */ be<u32> mRequestActorID;
-    /* 0x04 */ be<s32> field_0x4;
+    /* 0x04 */ be<s32> mRequestPriority;  /* was field_0x4: view of dAttLook_c (AttentionHD::Look)::mRequestPriority (d/d_attention.h) */
     /* 0x08 */ be<f32> mDistance;
     /* 0x0C */ be<u32> mLookTargetID;
 };

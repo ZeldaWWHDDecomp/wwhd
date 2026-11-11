@@ -89,9 +89,9 @@ void attachJointCallback(Actor *a, const char *name) {
 
 /* 021177AC */
 BOOL daStandItem_c::_delete() {
-    invalidateEmitter(m694);
-    invalidateEmitter(m690);
-    invalidateEmitter(m698, true);
+    invalidateEmitter(mpHeadEmitter);
+    invalidateEmitter(mpWaitEmitter);
+    invalidateEmitter(mpBaseEmitter, true);
     standItemResourceDelete(&mPhsDai, "Fdai");
     standItemResourceDelete(&mPhsCloth, "Cloth");
     return 1;
@@ -181,11 +181,11 @@ void daStandItem_c::CreateInit() {
         mode_wait_init();
     mCarry = 0;
     u32 wind = standItemWindVector();
-    standItemWord(&m6A4.x) = gabi::at<StandItemPointWordsHD>(wind)->x;
-    standItemWord(&m6A4.y) = gabi::at<StandItemPointWordsHD>(wind)->y;
-    standItemWord(&m6A4.z) = gabi::at<StandItemPointWordsHD>(wind)->z;
-    s16 angle = standItemAtan2s((f32)m6A4.x, (f32)m6A4.z);
-    m6A2 = angle;
+    standItemWord(&mClothWind.x) = gabi::at<StandItemPointWordsHD>(wind)->x;
+    standItemWord(&mClothWind.y) = gabi::at<StandItemPointWordsHD>(wind)->y;
+    standItemWord(&mClothWind.z) = gabi::at<StandItemPointWordsHD>(wind)->z;
+    s16 angle = standItemAtan2s((f32)mClothWind.x, (f32)mClothWind.z);
+    mClothAngleY = angle;
     set_mtx();
     model = gabi::ea(mpModel.get());
     gabi::at<J3DModel>(model)->mUserArea = 0;
@@ -215,9 +215,9 @@ void daStandItem_c::CreateInit() {
         f32 deviation = standItemRandomFX((f32)width);
         mBckPlayTimer = (s16)gabi::ftoi((f32)mid + deviation);
     }
-    m690 = nullptr;
-    m694 = nullptr;
-    m698 = nullptr;
+    mpWaitEmitter = nullptr;
+    mpHeadEmitter = nullptr;
+    mpBaseEmitter = nullptr;
     u32 light = gabi::ea(dKy_getEnvlight());
     standItemSettingTevStruct(gabi::at<u8>(light), 0, &current.pos, &tevStr);
 }
@@ -301,24 +301,24 @@ void daStandItem_c::set_mtx() {
     copiedWind->copy(*wind.get());
     f32 windSq = standItemSquareMagnitude(copiedWind.get());
     f32 strength = standItemSquareRoot(windSq);
-    f32 currentSq = standItemSquareMagnitude(&m6A4);
+    f32 currentSq = standItemSquareMagnitude(&mClothWind);
     f32 currentStrength = standItemSquareRoot(currentSq);
     if (strength - currentStrength > 0.25f) {
         f32 z = copiedWind->z, y = copiedWind->y;
-        m6A4.z = z;
+        mClothWind.z = z;
         f32 x = copiedWind->x;
-        m6A4.y = y;
-        m6A4.x = x;
+        mClothWind.y = y;
+        mClothWind.x = x;
         s16 angle = standItemAtan2s(x, z);
-        standItemAddCalcAngle(&m6A2, angle, 4, 0x1000);
+        standItemAddCalcAngle(&mClothAngleY, angle, 4, 0x1000);
     } else {
-        standItemAddCalcPos(&m6A4, copiedWind.get(), 0.1f, 0.1f);
-        s16 angle = standItemAtan2s((f32)m6A4.x, (f32)m6A4.z);
-        standItemAddCalcAngle(&m6A2, angle, 16, 0x400);
+        standItemAddCalcPos(&mClothWind, copiedWind.get(), 0.1f, 0.1f);
+        s16 angle = standItemAtan2s((f32)mClothWind.x, (f32)mClothWind.z);
+        standItemAddCalcAngle(&mClothAngleY, angle, 16, 0x400);
     }
     const cXyz *offset = &offsets->entries[(u8)mClothType];
     standItemMatrixTranslate(offset->x, offset->y, offset->z);
-    standItemMatrixYRotate(matrix, (s16)((s16)m6A2 - (s16)current.angle.y));
+    standItemMatrixYRotate(matrix, (s16)((s16)mClothAngleY - (s16)current.angle.y));
     standItemClothSetMatrix(mpCloth.get(), matrix);
 }
 
@@ -388,15 +388,15 @@ BOOL daStandItem_c::actionFobj06() {
     zero->set(0.0f, 0.0f, 0.0f);
     s16 angle = standItemTargetAngle(zero.get(), wind.get());
     standItemDistanceAngle(angle, (s16)current.angle.y);
-    f32 spin = (f32)m6C4 + __builtin_fabsf(strength);
+    f32 spin = (f32)mSpinPower + __builtin_fabsf(strength);
     if (spin > 4.0f)
         spin = 4.0f;
-    m6C4 = spin;
-    m6B2 = (s16)gabi::ftoi(1536.0f * spin);
+    mSpinPower = spin;
+    mSpinSpeed = (s16)gabi::ftoi(1536.0f * spin);
     f32 maxStep = standItemWindPower() + 0.3f;
     f32 minStep = standItemWindPower() + 0.1f;
-    standItemAddCalc(&m6C4, 0.0f, 0.08f, maxStep, minStep);
-    m6B4 = (s16)((u16)m6B4 + (u16)m6B2);
+    standItemAddCalc(&mSpinPower, 0.0f, 0.08f, maxStep, minStep);
+    mSpinAngle = (s16)((u16)mSpinAngle + (u16)mSpinSpeed);
     return 1;
 }
 
@@ -426,40 +426,40 @@ BOOL daStandItem_c::actionFobj09() {
     animTestForOneTime();
     if (!mbBckDidPlay) {
         if (distance < 500.0f) {
-            invalidateEmitter(m694);
-            invalidateEmitter(m698, true);
-            u32 emitter = gabi::ea(m690.get());
+            invalidateEmitter(mpHeadEmitter);
+            invalidateEmitter(mpBaseEmitter, true);
+            u32 emitter = gabi::ea(mpWaitEmitter.get());
             if (!emitter)
-                m690 = gabi::at<StandItemEmitterHD>(createParticle(this, 0x82B3, true));
+                mpWaitEmitter = gabi::at<StandItemEmitterHD>(createParticle(this, 0x82B3, true));
             else
-                setEmitterMatrix(emitter, &m660);
+                setEmitterMatrix(emitter, &mHeadJointMtx);
         } else {
-            invalidateEmitter(m690);
-            invalidateEmitter(m694);
-            invalidateEmitter(m698, true);
+            invalidateEmitter(mpWaitEmitter);
+            invalidateEmitter(mpHeadEmitter);
+            invalidateEmitter(mpBaseEmitter, true);
         }
     } else {
-        if (!m6B1) {
-            invalidateEmitter(m690);
-            if (!gabi::ea(m694.get()))
-                m694 = gabi::at<StandItemEmitterHD>(createParticle(this, 0x82B4, true));
-            u32 emitter = gabi::ea(m698.get());
+        if (!mbBckDidPlayOld) {
+            invalidateEmitter(mpWaitEmitter);
+            if (!gabi::ea(mpHeadEmitter.get()))
+                mpHeadEmitter = gabi::at<StandItemEmitterHD>(createParticle(this, 0x82B4, true));
+            u32 emitter = gabi::ea(mpBaseEmitter.get());
             if (!emitter) {
                 emitter = createParticle(this, 0x82B5, false);
-                m698 = gabi::at<StandItemEmitterHD>(emitter);
+                mpBaseEmitter = gabi::at<StandItemEmitterHD>(emitter);
             }
             if (emitter)
                 gabi::at<StandItemEmitterHD>(emitter)->mFlags =
                     (u32)gabi::at<StandItemEmitterHD>(emitter)->mFlags | EMITTER_IMMORTAL;
         }
-        u32 first = gabi::ea(m694.get());
+        u32 first = gabi::ea(mpHeadEmitter.get());
         if (first)
-            setEmitterMatrix(first, &m660);
-        u32 second = gabi::ea(m698.get());
+            setEmitterMatrix(first, &mHeadJointMtx);
+        u32 second = gabi::ea(mpBaseEmitter.get());
         if (second)
-            setEmitterMatrix(second, &m630);
+            setEmitterMatrix(second, &mBaseJointMtx);
     }
-    m6B1 = (u8)mbBckDidPlay;
+    mbBckDidPlayOld = (u8)mbBckDidPlay;
     return 1;
 }
 

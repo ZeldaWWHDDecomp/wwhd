@@ -1,5 +1,6 @@
 /** WindowPart layouts and named character-animation configurations. */
 #include "d/hd_parts_window.h"
+#include "sead/ElementAt.h"
 void hdWindow_getPaneVector(hdWindowVector_l*, hdWindowPane_l*);
 static hdWindowTreeNode_l* hdWindow_findConfig(hdWindowPart_c* part, hdUiSafeString* name);
 void hdWindow_destroyArray(void*);
@@ -77,7 +78,7 @@ f32 hdWindowPart_c::lineWidth(s32 first, s32 count) {
         do {
             hdWindowPane_l* character = NULL;
             if (u32(first) < mCharacters.mCount)
-                character = mCharacters.mpItems[u32(first)];
+                character = sead::elementAt(mCharacters.mpItems, u32(first)); /* sibling: wrapped at 32 bits as on the console */
             f32 value = characterWidth(character);
             f32 spacing = mSettings.mSpacing;
             width = width + (value + spacing);
@@ -155,7 +156,7 @@ BOOL hdWindowPart_c::isAnimatorFlagged(hdUiSafeString* name, u32 index) {
     hdWindowConfig_l* config = node->mpConfig;
     hdWindowAnimator_l* animator = NULL;
     if (index < config->mAnimatorCount)
-        animator = config->mpAnimators[index];
+        animator = sead::elementAt(config->mpAnimators, index); /* animators + index * 4, wrapped at 32 bits as on the console */
     // Failed array lookup deliberately reads the flag through guest page zero.
     return (u32(hdPartsView(animator)->mFlags) & 1) != 0;
 }
@@ -168,7 +169,7 @@ BOOL hdWindowPart_c::isLastAnimatorFlagged(hdUiSafeString* name) {
     hdWindowConfig_l* config = node->mpConfig;
     hdWindowAnimator_l* animator = NULL;
     if (u32(count - 1) < config->mAnimatorCount)
-        animator = config->mpAnimators[count - 1];
+        animator = sead::elementAt(config->mpAnimators, u32(count - 1)); /* sibling: wrapped at 32 bits as on the console */
     // Failed array lookup deliberately reads the flag through guest page zero.
     return (u32(hdPartsView(animator)->mFlags) & 1) != 0;
 }
@@ -216,7 +217,7 @@ void hdWindowPart_c::updateItem(s32 index) {
     hdWindowConfig_l* config = mpConfig;
     hdWindowAnimator_l* animator = NULL;
     if (u32(index) < config->mAnimatorCount)
-        animator = config->mpAnimators[u32(index)];
+        animator = sead::elementAt(config->mpAnimators, u32(index)); /* sibling: wrapped at 32 bits as on the console */
     if (animator->mProgress == 0.0f) {
         u32 frames = hdWindow_frameCount(animator);
         f32 frame = animator->mFrame;
@@ -302,7 +303,7 @@ void hdWindowPart_c::shuffleOrder() {
         s32 second = gabi::ftoi(hdWindow_randomFloat(f32(visible)));
         if (second >= visible)
             second = s32(u32(visible) - 1);
-        s32 a = mpOrder[u32(first)], b = mpOrder[u32(second)];
+        s32 a = sead::elementAt(mpOrder, u32(first)), b = sead::elementAt(mpOrder, u32(second)); /* sibling: wrapped at 32 bits as on the console */
         mpOrder[u32(first)] = b;
         mpOrder[u32(second)] = a;
     }
@@ -564,7 +565,7 @@ static hdWindowConfig_l* hdWindow_configConstruct(hdWindowConfig_l* config) {
 static void hdWindow_characterVector(hdWindowVector_l* output, hdWindowPart_c* part, u32 index) {
     hdWindowPane_l* pane = NULL;
     if (index < part->mCharacters.mCount)
-        pane = part->mCharacters.mpItems[index];
+        pane = sead::elementAt(part->mCharacters.mpItems, index); /* items + index * 4, wrapped at 32 bits as on the console */
     hdWindowVector_l vector;
     hdWindow_getPaneVector(&vector, pane);
     output->mX = vector.mX;
@@ -819,7 +820,7 @@ static void hdWindow_loadConfig(hdWindowConfig_l* config, hdWindowPane_l* pane,
         hdWindowAnimator_l* animator = hdWindow_createAnimator(pane, name->mText, items[i], 0);
         s32 size = config->mAnimatorCount, capacity = config->mAnimatorCapacity;
         if (size < capacity) {
-            config->mpAnimators[u32(size)] = animator;
+            sead::elementAt(config->mpAnimators, u32(size)) = animator; /* sibling: wrapped at 32 bits as on the console */
             ++config->mAnimatorCount;
         }
     }

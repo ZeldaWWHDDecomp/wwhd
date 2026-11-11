@@ -37,7 +37,7 @@ static ResourceName m_arcname;
 struct AnmTableEntry {
     be<s32> loopMode;
     be<f32> speed;
-    be<s32> unk_4;
+    be<s32> mStartAtEnd;  /* was unk_4: initBrkAnm 023C85F8: when it is negative the new brk starts at its end frame (setFrame(getEndFrame())); static brkAnmTbl (0, 0, 0, -1), never written (tww daPds_c::initBrkAnm the same; as OsMainBrkEntry::mStartAtEnd) */
 };
 struct AnmTable {
     AnmTableEntry entries[4];
@@ -155,17 +155,17 @@ BOOL daPds_c::initBrkAnm(u8 index, BOOL force) {
     name->__vtbl = 0x10034318;
     auto *animation = static_cast<J3DAnmTevRegKey *>(getResource(dComIfG_resControl(), name.get(), 8));
     if (!animation)
-        JUT_ASSERT_fail("d_a_pedestal.cpp", 0x28C, "a_brk != NULL");
+        JUT_ASSERT_fail("d_a_pedestal.cpp", 0x28C, "a_brk != (0)");
     AnmTableEntry *entry = &brkAnmTbl.entries[index];
     s32 loop = entry->loopMode;
     f32 speed = entry->speed;
     BOOL ok = initBrk(&mBrk, data, animation, 1, loop, speed, 0, -1, force, 0);
     if (!ok)
         return FALSE;
-    unk30E = index;
-    if (entry->unk_4 < 0)
+    mBrkAnmIdx = index;
+    if (entry->mStartAtEnd < 0)
         mBrk.setFrame(mBrk.getEndFrame());
-    unk308 = mBrk.getFrame();
+    mBrkFrame = mBrk.getFrame();
     return TRUE;
 }
 /* 023C8718 */
@@ -175,7 +175,7 @@ BOOL daPds_c::CreateHeap() {
     name->__vtbl = 0x10034318;
     auto *data = static_cast<J3DModelData *>(getResource(dComIfG_resControl(), name.get(), 5));
     if (!data)
-        JUT_ASSERT_fail("d_a_pedestal.cpp", 0xC1, "modelData != NULL");
+        JUT_ASSERT_fail("d_a_pedestal.cpp", 0xC1, "modelData != (0)");
     mpModel = mDoExt_J3DModel__create(data, 0, 0x11020203);
     if (!mpModel || !initBrkAnm(3, FALSE))
         return FALSE;
@@ -301,8 +301,8 @@ BOOL daPds_c::_delete() {
 void daPds_c::playBrkAnm() {
     s32 result = playBrk(&mBrk);
     f32 frame = mBrk.getFrame();
-    unk30F = result;
-    unk308 = frame;
+    mBrkAnmEnd = result;
+    mBrkFrame = frame;
 }
 /* 023C8D54 */
 s32 daPds_c::getMyStaffId() {
@@ -532,8 +532,8 @@ str 100343D4 "Speed"
 str 100343DC "Dist"
 str 10034348 "d_a_pedestal.cpp" in 023C85F8
 str 1003436C "d_a_pedestal.cpp" in 023C8718
-str 1003435C "a_brk != NULL"
-str 10034380 "modelData != NULL"
+str 1003435C "a_brk != (0)"
+str 10034380 "modelData != (0)"
 ext 026066C4 void* getResource(dRes_control_c*,SafeString*,s32)
 ext 025E8154 BOOL initBrk(mDoExt_brkAnm*,J3DModelData*,J3DAnmTevRegKey*,u32,s32,f32,s32,s32,BOOL,s32)
 ext 0200A030 s32 setBackground(dBgW*,cBgD_t*,u32,Mtx34*)

@@ -110,25 +110,25 @@ struct daNpc_Fa1_c : fopNpc_npc_c {
     /* 0x804 */ gptr<void> mpEmitter;
     /* 0x808 */ fa1_hd::dBgS_ObjGndChk_All mGndChk;
     /* 0x85C */ LIGHT_INFLUENCE mPointLight;
-    /* 0x880 */ gptr<fopAc_ac_c> m764;
-    /* 0x884 */ cXyz m768;
-    /* 0x890 */ cXyz m774;
+    /* 0x880 */ gptr<fopAc_ac_c> mpTargetActor;  /* was m764: init_bottle_baba_move 022347F4 searches Grandma (fpcNm_NPC_BA1_e) into it, init_bottle_baba_move2 02234778 the player; bottle_baba_move 02234894 / bottle_baba_move2 02234A60 head the fairy at it and turn back above it, baba_down 02234CA0 turns up below it; createInit 0223350C null (tww the same) */
+    /* 0x884 */ cXyz mPlayerOffset;  /* was m768: init_up1 02233154 sets it to current.pos minus the player's position; get_player_move 02234204 and bottle_appear_move 022344EC turn it round the player (radius mPlayerR), raise it and put current.pos at the player's position plus it; down 02235238 tests its y (tww the same) */
+    /* 0x890 */ cXyz mGroundNormal;  /* was m774: BGCheck 02233CD8 copies the ground polygon's normal into it (0, 1, 0 without ground); tww _draw passes it to dComIfGd_setSimpleShadow, a submission the WWHD _draw 02233B58 no longer makes */
     /* 0x89C */ be<f32> mPlayerR;
     /* 0x8A0 */ be<f32> mGroundY;
     /* 0x8A4 */ be<u16> mTimer;
-    /* 0x8A6 */ be<s16> m78A;
-    /* 0x8A8 */ be<s16> m78C;
-    /* 0x8AA */ be<s16> m78E;
+    /* 0x8A6 */ be<s16> mOrbitSpeed;  /* was m78A: get_player_move 02234204 and bottle_appear_move 022344EC subtract it from current.angle.y each frame (the turn round the player) and raise it by the acceleration up to the limit; init_get_player_move 02233EA8 HIO mGetOrbitSpeed, init_up1 02233154 0 (tww the same) */
+    /* 0x8A8 */ be<s16> mOrbitSpeedMax;  /* was m78C: bottle_appear_move 022344EC caps mOrbitSpeed at it; init_up1 02233154 0, init_down 022351A0 HIO mDownOrbitSpeedMax (tww the same) */
+    /* 0x8AA */ be<s16> mOrbitAccel;  /* was m78E: bottle_appear_move 022344EC adds it to mOrbitSpeed each frame; init_up1 02233154 0, init_down 022351A0 HIO mDownOrbitAccel (tww the same) */
     /* 0x8AC */ be<u8> mMode;
     /* 0x8AD */ be<u8> mMoveTimer;
     /* 0x8AE */ be<u8> mSubMode;
     /* 0x8AF */ be<u8> mStatus;
     /* 0x8B0 */ be<s8> mType;
     /* 0x8B1 */ u8 m795[3];
-    /* 0x8B4 */ be<s16> m798;
-    /* 0x8B6 */ be<s16> m79A;
-    /* 0x8B8 */ be<f32> m79C;
-    /* 0x8BC */ be<f32> m7A0;
+    /* 0x8B4 */ be<s16> mWanderTimer;  /* was m798: areaMove 02234FA4 / areaOutMove 0223509C count it down and, at 0, flip mWanderDir and restart it at a random 15-35 frames; init_areaMove 022332A0 / init_areaOutMove 02234F80 0; the bottle-baba inits 022347F4 / 02234778 store 1 / 0 that those modes never read (tww the same) */
+    /* 0x8B6 */ be<s16> mWanderDir;  /* was m79A: areaMove 02234FA4 / areaOutMove 0223509C toggle it when mWanderTimer runs out and steer -0x2000 / +0x2000 off the course by it; init_areaMove 022332A0 / init_areaOutMove 02234F80 0 (tww the same) */
+    /* 0x8B8 */ be<f32> mBabaDownMaxSpeed;  /* was m79C: init_bottle_baba_move 022347F4 / init_bottle_baba_move2 02234778 set it from the bottle-baba HIO; init_baba_down 022346FC makes it maxFallSpeed for the downward phase (tww the same) */
+    /* 0x8BC */ be<f32> mBabaUpMaxSpeed;  /* was m7A0: init_bottle_baba_move 022347F4 / init_bottle_baba_move2 02234778 set it from the bottle-baba HIO; init_baba_up 02234C3C makes it maxFallSpeed for the upward phase (tww the same) */
 };
 WWHD_SIZE(daNpc_Fa1_McaMorfCallBack1_c, 8);
 WWHD_OFFSET(daNpc_Fa1_c, mpMorf, 0x7E4);
@@ -155,8 +155,13 @@ f32 fa1_yuragiRatio(f32 value);
 
 struct daNpc_Fa1_HIO3_c {
     struct hio_prm_c {
-        be<f32> m08, m0C, m10, m14;
-        be<s16> m18;
+        /* mHoverSpeedY (+0x04) was m08: init_hover_move 0223326C maxFallSpeed = -it; hover_move 0223447C passes it to position_move as the vertical speed (tww the same) */
+        /* mHoverGravity (+0x08) was m0C: init_hover_move 0223326C gravity (tww the same) */
+        /* mHoverHeight (+0x0C) was m10: hover_move 0223447C passes it to position_move, which turns the vertical speed round this far above / below home.pos.y (tww the same) */
+        /* mBigelfSpeed (+0x10) was m14: init_bigelf_change 02234CB8 speedF (tww the same) */
+        be<f32> mHoverSpeedY, mHoverGravity, mHoverHeight, mBigelfSpeed;
+        /* mBigelfAngleOffset (+0x14) was m18: bigelf_change 02234D1C: current.angle.y = the angle to home.pos plus it (tww the same) */
+        be<s16> mBigelfAngleOffset;
         u8 _1A[2];
     };
     be<s8> mNo;
@@ -166,8 +171,17 @@ struct daNpc_Fa1_HIO3_c {
 };
 struct daNpc_Fa1_HIO2_c {
     struct hio_prm_c {
-        be<f32> m08, m0C, m10, m14, m18, m1C;
-        be<s16> m20, m22, m24;
+        /* mBabaSpeed (+0x04) was m08: init_bottle_baba_move 022347F4 / init_bottle_baba_move2 02234778 and every bottle_baba_move frame (Fa1_babaPosition) speedF (tww the same) */
+        /* mBabaMoveUpMaxSpeed (+0x08) was m0C: init_bottle_baba_move 022347F4 mBabaUpMaxSpeed (tww the same) */
+        /* mBabaMoveDownMaxSpeed (+0x0C) was m10: init_bottle_baba_move 022347F4 mBabaDownMaxSpeed (tww the same) */
+        /* mBabaMove2UpMaxSpeed (+0x10) was m14: init_bottle_baba_move2 02234778 mBabaUpMaxSpeed (tww the same) */
+        /* mBabaMove2DownMaxSpeed (+0x14) was m18: init_bottle_baba_move2 02234778 mBabaDownMaxSpeed (tww the same) */
+        /* mBabaGravity (+0x18) was m1C: init_baba_down 022346FC gravity (tww the same) */
+        be<f32> mBabaSpeed, mBabaMoveUpMaxSpeed, mBabaMoveDownMaxSpeed, mBabaMove2UpMaxSpeed, mBabaMove2DownMaxSpeed, mBabaGravity;
+        /* mBabaAngleOffset (+0x1C) was m20: bottle_baba_move (Fa1_babaPosition) / bottle_baba_move2: current.angle.y = the angle to mpTargetActor plus it (tww the same) */
+        /* mBabaMoveTimer (+0x1E) was m22: init_bottle_baba_move 022347F4 mTimer (tww the same) */
+        /* mBabaWaitTimer (+0x20) was m24: init_bottle_baba_wait 0223311C mTimer; bottle_baba_wait 022347E4 starts bottle_baba_move2 at 0 (tww the same) */
+        be<s16> mBabaAngleOffset, mBabaMoveTimer, mBabaWaitTimer;
         u8 _26[2];
     };
     be<s8> mNo;
@@ -177,21 +191,44 @@ struct daNpc_Fa1_HIO2_c {
 };
 struct daNpc_Fa1_HIO_c {
     struct hio_prm_c {
-        be<f32> m08, m0C, m10, m14, m18, m1C, m20, m24, m28, m2C, m30, m34, m38;
-        be<s16> m3C, m3E, m40, m42, m44, m46, m48, m4A, m4C, m4E;
+        /* mNormalSpeed (+0x04) was m08: init_normal_move 022332E0 / normal_move 02234078 speedF (tww the same) */
+        /* mGetRiseSpeed (+0x08) was m0C: get_player_move 02234204 adds it to mPlayerOffset.y each frame while the fairy circles the player (tww the same) */
+        /* mMoveRadius (+0x0C) was m10: createInit 0223350C / straight 02234E60 scale.x, the distance from home.pos past which straight turns back (tww the same) */
+        /* mEscapeMaxSpeed (+0x10) was m14: init_escape_move 0223404C maxFallSpeed, the rise speed escape_move climbs to (tww the same) */
+        /* mEscapeGravity (+0x14) was m18: init_escape_move 0223404C gravity, escape_move's upward acceleration (tww the same) */
+        /* mCatchHorizontalDist (+0x18) was m1C: checkBinCatch 02233F40 bottle catch request (tww dComIfGp_att_CatchRequest horizontalDist) */
+        /* mCatchUpDist (+0x1C) was m20: checkBinCatch 02233F40 bottle catch request (tww dComIfGp_att_CatchRequest upDist) */
+        /* mCatchDownDist (+0x20) was m24: checkBinCatch 02233F40 bottle catch request (tww dComIfGp_att_CatchRequest downDist) */
+        /* mUp1SpeedY (+0x24) was m28: init_up1 02233154 speed.y, the bottle fairy's first rise (tww the same) */
+        /* mUp2MaxSpeed (+0x28) was m2C: init_up2 022351DC maxFallSpeed (tww the same) */
+        /* mUp1MaxSpeed (+0x2C) was m30: init_up1 02233154 maxFallSpeed (tww the same) */
+        /* mUp1Gravity (+0x30) was m34: init_up1 02233154 gravity (tww the same) */
+        /* mDownEndY (+0x34) was m38: down 02235238 starts up2 once mPlayerOffset.y is below it (tww the same) */
+        be<f32> mNormalSpeed, mGetRiseSpeed, mMoveRadius, mEscapeMaxSpeed, mEscapeGravity, mCatchHorizontalDist, mCatchUpDist, mCatchDownDist, mUp1SpeedY, mUp2MaxSpeed, mUp1MaxSpeed, mUp1Gravity, mDownEndY;
+        /* mGetOrbitSpeed (+0x38) was m3C: init_get_player_move 02233EA8 mOrbitSpeed (tww the same) */
+        /* mGetOrbitSpeedMax (+0x3A) was m3E: get_player_move 02234204 caps mOrbitSpeed at it (tww the same) */
+        /* mGetOrbitAccel (+0x3C) was m40: get_player_move 02234204 adds it to mOrbitSpeed each frame (tww the same) */
+        /* mGetTimer (+0x3E) was m42: init_get_player_move 02233EA8 mTimer; get_player_move 02234204 gives the recovery fairy and deletes at 0 (tww the same) */
+        /* mNormalTimer (+0x40) was m44: init_normal_move 022332E0 mTimer = a random value from it (+0-60); normal_move 02234078 escapes at 0 when status bit 1 is set (tww the same) */
+        /* mEscapeTimer (+0x42) was m46: init_escape_move 0223404C mTimer; escape_move 0223434C deletes the fairy at 0 (tww init_turn also reloads it; the WWHD init_turn 02234E14 does not) */
+        /* mCatchAngle (+0x44) was m48: checkBinCatch 02233F40 bottle catch request (tww dComIfGp_att_CatchRequest angle) */
+        /* mBottleTimer (+0x46) was m4A: init_up1 02233154 mTimer; bottle_appear_move 022344EC gives the item and deletes at 0 (tww the same) */
+        /* mDownOrbitSpeedMax (+0x48) was m4C: init_down 022351A0 mOrbitSpeedMax (tww the same) */
+        /* mDownOrbitAccel (+0x4A) was m4E: init_down 022351A0 mOrbitAccel (tww the same) */
+        be<s16> mGetOrbitSpeed, mGetOrbitSpeedMax, mGetOrbitAccel, mGetTimer, mNormalTimer, mEscapeTimer, mCatchAngle, mBottleTimer, mDownOrbitSpeedMax, mDownOrbitAccel;
     };
     // HD: all three HIO vtables move to the end of their respective objects.
     be<s8> mNo;
     u8 _01[3];
     hio_prm_c prm;
-    daNpc_Fa1_HIO2_c m50;
-    daNpc_Fa1_HIO3_c m78;
+    daNpc_Fa1_HIO2_c mBottleBabaHio;  /* was m50: the daNpc_Fa1_HIO2_c whose prm only the bottle-baba modes read (init_bottle_baba_wait 0223311C .. init_baba_down 022346FC); daNpc_Fa1_HIO_c__ct 02235350 constructs it (tww l_HIO.m50) */
+    daNpc_Fa1_HIO3_c mHoverHio;  /* was m78: the daNpc_Fa1_HIO3_c whose prm hover_move 0223447C and bigelf_change 02234D1C read; daNpc_Fa1_HIO_c__ct 02235350 constructs it (tww l_HIO.m78) */
     be<u32> __vtbl;
 };
 WWHD_SIZE(daNpc_Fa1_HIO3_c, 0x1C);
 WWHD_SIZE(daNpc_Fa1_HIO2_c, 0x28);
-WWHD_OFFSET(daNpc_Fa1_HIO_c, m50, 0x4C);
-WWHD_OFFSET(daNpc_Fa1_HIO_c, m78, 0x74);
+WWHD_OFFSET(daNpc_Fa1_HIO_c, mBottleBabaHio, 0x4C);
+WWHD_OFFSET(daNpc_Fa1_HIO_c, mHoverHio, 0x74);
 WWHD_SIZE(daNpc_Fa1_HIO_c, 0x94);
 namespace fa1_hd {
 using MoveFunction = void (daNpc_Fa1_c::*)();
@@ -433,9 +470,9 @@ WWHD_OFFSET(daNpc_Fa1_c, mMcaMorfCallback1, 0x7E8);
 WWHD_OFFSET(daNpc_Fa1_c, mSparklePtclCallback, 0x7F0);
 WWHD_OFFSET(daNpc_Fa1_c, mpEmitter, 0x804);
 WWHD_OFFSET(daNpc_Fa1_c, mGndChk, 0x808);
-WWHD_OFFSET(daNpc_Fa1_c, m764, 0x880);
-WWHD_OFFSET(daNpc_Fa1_c, m768, 0x884);
-WWHD_OFFSET(daNpc_Fa1_c, m774, 0x890);
+WWHD_OFFSET(daNpc_Fa1_c, mpTargetActor, 0x880);
+WWHD_OFFSET(daNpc_Fa1_c, mPlayerOffset, 0x884);
+WWHD_OFFSET(daNpc_Fa1_c, mGroundNormal, 0x890);
 WWHD_OFFSET(daNpc_Fa1_c, mPlayerR, 0x89C);
-WWHD_OFFSET(daNpc_Fa1_c, m798, 0x8B4);
-WWHD_OFFSET(daNpc_Fa1_c, m7A0, 0x8BC);
+WWHD_OFFSET(daNpc_Fa1_c, mWanderTimer, 0x8B4);
+WWHD_OFFSET(daNpc_Fa1_c, mBabaUpMaxSpeed, 0x8BC);

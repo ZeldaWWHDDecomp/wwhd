@@ -143,14 +143,14 @@ s32 daPy_npc_c::check_moveStop() {
     dComIfGp_ea();
     const bool loaded = (static_cast<u8>(npcRoomStatusAt(room)->mFlags) & 0x10) != 0;
     if (loaded && room >= 0) return 0;
-    if (!loaded || m4E8 >= 30) {
+    if (!loaded || mFallTimer >= 30) {
         const u16 yaw = static_cast<u16>(npcWord<u16>(home.angle.y));
         const u32 y = static_cast<u32>(npcWord<u32>(home.pos.y));
         npcWord<u16>(shape_angle.y) = yaw;
         npcWord<u32>(current.pos.y) = y;
         const u32 z = static_cast<u32>(npcWord<u32>(home.pos.z)), x = static_cast<u32>(npcWord<u32>(home.pos.x));
         const f32 zero = l_zero;
-        npcWord<u32>(current.pos.x) = x; speedF = zero; m4E8 = 0;
+        npcWord<u32>(current.pos.x) = x; speedF = zero; mFallTimer = 0;
         const u32 xyAngle = static_cast<u32>(npcWord<u32>(home.angle.x)); const u16 pitch = static_cast<u16>(npcWord<u16>(home.angle.x));
         npcWord<u32>(current.angle.x) = xyAngle; const u16 roll = static_cast<u16>(npcWord<u16>(home.angle.z));
         npcWord<u32>(current.pos.z) = z;
@@ -203,12 +203,12 @@ void daPy_npc_c::setOffsetHomePos() {
 /* 02445518 */
 void daPy_npc_c::setPointRestart(s16 point, s8 option) {
     const u32 a = gabi::ea(this);
-    if (!npcStage()->getPlayer()) npcAssert(0xAD, "dComIfGp_getStagePlayer() != NULL");
+    if (!npcStage()->getPlayer()) npcAssert(0xAD, "dComIfGp_getStagePlayer() != (0)");
     u32 scene = npcStage()->getSclsInfo();
-    if (!scene) npcAssert(0xAF, "sclsinfo != NULL");
+    if (!scene) npcAssert(0xAF, "sclsinfo != (0)");
     if (point < 0 || static_cast<s32>(point) >= static_cast<s32>(npcWord<s32>(npcScene(scene)->num))) npcAssert(0xB0, "0 <= i_point && i_point < sclsinfo->num");
     scene = static_cast<u32>(npcScene(scene)->entries);
-    if (!scene) npcAssert(0xB3, "scls_data != NULL");
+    if (!scene) npcAssert(0xB3, "scls_data != (0)");
     const u32 playerInfo = npcStage()->getPlayer();
     u32 entry = static_cast<u32>(npcPlayerInfo(playerInfo)->entries);
     const u32 sceneEntry = gabi::ea(npcSceneEntry(scene) + static_cast<u32>(static_cast<s32>(point)));
@@ -307,7 +307,7 @@ s32 daPy_npc_c::checkNowPosMove(const char* name) {
     const u32 n = gabi::ea(name);
     if (!static_cast<u8>(npcWord<u8>(npcPlay()->play.mEvtCtrl.mMode))) return 1;
     if (static_cast<u16>(npcWord<u16>(eventInfo.mCommand)) == dEvtCmd_INTALK_e) return 1;
-    const u32 flags = m4E4;
+    const u32 flags = mNpcFlags;
     if ((flags & 2) && !(flags & 1)) return 1;
     const u32 game = dComIfGp_ea();
     if (npcMyStaffId(gabi::ea(&npcGame(game)->play.mEvtManager), n, 0u, 0u) != -1) return 1;
@@ -595,10 +595,10 @@ ext 0201B080 void npcCross(u32, u32, u32)
 ext 028F026C void npcRegisterGlobal(u32)
 ext 028ED6F8 void npcInitHeaderFlag(u32)
 ext 028EAB2C void npcInitHeaderByte(u32)
-str 10037EF0 "dComIfGp_getStagePlayer() != NULL"
-str 10037E80 "sclsinfo != NULL"
+str 10037EF0 "dComIfGp_getStagePlayer() != (0)"
+str 10037E80 "sclsinfo != (0)"
 str 10037E90 "0 <= i_point && i_point < sclsinfo->num"
-str 10037F14 "scls_data != NULL"
+str 10037F14 "scls_data != (0)"
 str 10037EB8 "i != dComIfGp_getStagePlayerNum()"
 str 10037EDC "d_a_player_npc.cpp"
 */

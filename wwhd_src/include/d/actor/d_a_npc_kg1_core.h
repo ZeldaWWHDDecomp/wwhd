@@ -9,36 +9,36 @@
 #include "gc_api/f_op/f_op_msg.h"
 namespace kg1_core {
 struct daNpc_Kg1_c : fopNpc_npc_c {
-    /* 0x7DC */ gptr<J3DModel> m6C4;
+    /* 0x7DC */ gptr<J3DModel> mpPropModel;  /* was m6C4: CreateHeap 02265978 creates it from object resource 6; daNpc_Kg1_nodeCallBack 0226559C puts it on joint 8; daNpc_Kg1Draw 02266B24 draws it with mBtpAnm while mSpecialAnimation is set; same name as the views daNpc_Kg1_c (d_a_npc_kg1.h) / Kg1Actor (d_a_npc_kg1_anim.h) */
     /* 0x7E0 */ mDoExt_btpAnm mBtpAnm;
     /* 0x854 */ request_of_phase_process_class mPhs;
     /* 0x85C */ gabi::ptmf<void (daNpc_Kg1_c::*)()> mAction;
     /* 0x864 */ u8 _864[4];
     /* 0x868 */ gptr<J3DAnmTexPattern> m_eye_tex_pattern;
-    /* 0x86C */ mDoExt_btpAnm m6F8;
+    /* 0x86C */ mDoExt_btpAnm mEyeBtpAnm;  /* was m6F8: initTexPatternAnm 0226586C sets it up with m_eye_tex_pattern (the assert text "m_eye_tex_pattern != (0)" names that pattern); daNpc_Kg1Draw 02266B24 enters it at mBtpFrame */
     /* 0x8E0 */ mDoExt_btpAnm m70C;
-    /* 0x954 */ be<u8> m720;
+    /* 0x954 */ be<u8> mBtpFrame;  /* was m720: initTexPatternAnm 0226586C 0; playTexPatternAnm 022665C8 steps it through m_eye_tex_pattern's frames (wraps and starts mBlinkTimer at the end); daNpc_Kg1Draw 02266B24 enters mEyeBtpAnm at it; same role as daNpc_Btsw2_c::mBtpFrame */
     /* 0x955 */ u8 _955;
-    /* 0x956 */ be<s16> m72C;
-    /* 0x958 */ be<s16> m72E;
-    /* 0x95A */ be<u8> m730;
-    /* 0x95B */ be<u8> m731;
-    /* 0x95C */ be<u8> m732;
+    /* 0x956 */ be<s16> mBlinkTimer;  /* was m72C: initTexPatternAnm 0226586C 0; playTexPatternAnm 022665C8 holds the eye frame while it counts down and sets 120 when the pattern wraps; same role as daNpc_Ba1_c::mBlinkTimer */
+    /* 0x958 */ be<s16> mLookAtMaxVel;  /* was m72E: lookBack 0226676C: cLib_addCalcAngleS2 moves it toward mEventCut.mTurnSpeed (or the HIO mMaxHeadTurnVel) and passes it as the look-at speed; 0 for an immediate turn; CreateInit 022660C4 0; same code as daNpc_Ba1_c::mLookAtMaxVel */
+    /* 0x95A */ be<u8> mTalking;  /* was m730: checkOrder 022663A4 sets 1 on the talk command while mOrderEvent is 1 / 2; CreateInit 022660C4 0; d_a_npc_kg1_dialogue.cpp tests 1 and clears it (through the view's mTalkActive); same code as daNpc_Ba1_c / daNpc_Btsw2_c::mTalking */
+    /* 0x95B */ be<u8> mbAttention;  /* was m731: lookBack 0226676C stores chkAttention()'s result (0 out of range, 1 while the event cut looks); CreateInit 022660C4 0; same name as the view Kg1Actor (d_a_npc_kg1_anim.h) and daNpc_Ba1_c::mbAttention */
+    /* 0x95C */ be<u8> mOrderEvent;  /* was m732: eventOrder 022664A4: 1 / 2 the talk (2 orders the speak event), 3-5 order mEventIds[it - 3]; checkOrder 022663A4 clears it when those events start / end; same code as daNpc_Ba1_c::mOrderEvent */
     /* 0x95D */ u8 _95D[3];
     /* 0x960 */ cXyz mEyePos;
     /* 0x96C */ cXyz mHeadPos;
     /* 0x978 */ be<s8> mAnimation;
-    /* 0x979 */ be<s8> m74D;
+    /* 0x979 */ be<s8> mRequestedAnimation;  /* was m74D: CreateInit 022660C4 2; anmAtr 02266C34 sets it from the message animation table; next_msgStatus 022675BC 1 (game paid); lookBack 0226676C looks at the camera while it is 8; same name as the views daNpc_Kg1_c (d_a_npc_kg1.h) / Kg1Actor, whose setAnm code plays it */
     /* 0x97A */ be<s8> mPreviousAnimation;
     /* 0x97B */ be<u8> mSpecialAnimation;
-    /* 0x97C */ be<u8> m750;
-    /* 0x97D */ be<u8> m751;
+    /* 0x97C */ be<u8> mbPlayMorf;  /* was m750: CreateInit 022660C4 sets 1; daNpc_Kg1Execute 02266990 plays mpMorf only while it is set; never cleared in WWHD */
+    /* 0x97D */ be<u8> mbTalkCamera;  /* was m751: next_msgStatus 022675BC sets 1 when the player pays for the game; kg1_talk_camera 02266C90 drives the talk camera only while it is set; never cleared in WWHD */
     /* 0x97E */ u8 _97E[0x99C - 0x97E];
     /* 0x99C */ be<u8> mbDidClearGame;
     /* 0x99D */ be<u8> mbGameEnd;
     /* 0x99E */ be<u8> mSequenceFlags[6];
     /* 0x9A4 */ be<u8> m778;
-    /* 0x9A5 */ be<u8> m779;
+    /* 0x9A5 */ be<u8> mbForceNextStatus;  /* was m779: wait_action 02266D60 sets 1 once the minigame result is decided (score / failure taken, mEvtCtrl.mHindFlag bit 0x2 cleared) and 0 when the reward message is ready; daNpc_Kg1Draw 02266B24 forces the A-button status to dActStts_NEXT_e (25, "Next") through mDoStatusForce while it is set; tww has only stubs */
     /* 0x9A6 */ be<u8> mGameBoardScore;
     /* 0x9A7 */ be<u8> mEndGameTimer;
     /* 0x9A8 */ be<u32> mPresentActor;
@@ -65,15 +65,15 @@ struct daNpc_Kg1_c : fopNpc_npc_c {
 };
 } // namespace kg1_core
 WWHD_SIZE(kg1_core::daNpc_Kg1_c, 0x9B8);
-WWHD_OFFSET(kg1_core::daNpc_Kg1_c, m6C4, 0x7DC);
+WWHD_OFFSET(kg1_core::daNpc_Kg1_c, mpPropModel, 0x7DC);
 WWHD_OFFSET(kg1_core::daNpc_Kg1_c, mBtpAnm, 0x7E0);
 WWHD_OFFSET(kg1_core::daNpc_Kg1_c, mPhs, 0x854);
 WWHD_OFFSET(kg1_core::daNpc_Kg1_c, mAction, 0x85C);
-WWHD_OFFSET(kg1_core::daNpc_Kg1_c, m6F8, 0x86C);
+WWHD_OFFSET(kg1_core::daNpc_Kg1_c, mEyeBtpAnm, 0x86C);
 WWHD_OFFSET(kg1_core::daNpc_Kg1_c, m70C, 0x8E0);
-WWHD_OFFSET(kg1_core::daNpc_Kg1_c, m72E, 0x958);
+WWHD_OFFSET(kg1_core::daNpc_Kg1_c, mLookAtMaxVel, 0x958);
 WWHD_OFFSET(kg1_core::daNpc_Kg1_c, mEyePos, 0x960);
-WWHD_OFFSET(kg1_core::daNpc_Kg1_c, m74D, 0x979);
+WWHD_OFFSET(kg1_core::daNpc_Kg1_c, mRequestedAnimation, 0x979);
 WWHD_OFFSET(kg1_core::daNpc_Kg1_c, mbDidClearGame, 0x99C);
 WWHD_OFFSET(kg1_core::daNpc_Kg1_c, mGameBoardScore, 0x9A6);
 WWHD_OFFSET(kg1_core::daNpc_Kg1_c, mEventIds, 0x9B0);

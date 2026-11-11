@@ -56,12 +56,12 @@ public:
     /* 0x3B4 */ gptr<TpotaEmitterView> mpEmitters[2];
     /* 0x3BC */ cXyz mPositions[2];
     /* 0x3D4 */ csXyz mAngles[2];
-    /* 0x3E0 */ unknown_struct field_0x2C4[30];
+    /* 0x3E0 */ unknown_struct mSplash[30];  /* was field_0x2C4: clear_splash 024C9F44 clears the 30 entries, renew_splash 024C9F6C fills them with the particles of mpEmitters[1] and their y; check_water_h 024C9E8C looks a particle up in it to see whether it was above the water (-230) (tww the same) */
     /* 0x4D0 */ u8 field_0x3B4[0x500 - 0x4D0];
 };
 WWHD_OFFSET(daTpota_c, mpEmitters, 0x3B4);
 WWHD_OFFSET(daTpota_c, mAngles, 0x3D4);
-WWHD_OFFSET(daTpota_c, field_0x2C4, 0x3E0);
+WWHD_OFFSET(daTpota_c, mSplash, 0x3E0);
 
 
 enum { ID_IT_SN_TAKIURA_HAMON00 = 0x82B0 };

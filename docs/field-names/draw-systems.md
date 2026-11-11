@@ -72,3 +72,43 @@ Types (separate commits, objcmp identical): d_wood's mPrimitiveMode is now `be<u
 mode), mStorage `gptr<void>` (was `be<u32>`, holds the index pointer); d_flower's mStorage is now `gptr<void>` (was
 `be<u32>`). The GX2DrawIndexedEx glue keeps its u32 parameters; d_wood's draw keeps the old mode round trip explicit. The `mOffset`
 member at 0x10 of both (agl's mIndexBytes) has no use in these sources and keeps its name.
+
+## dTree_data_c (d_tree.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+| 0x001 | `field_0x001` | `mCut` | setData 025CA9F8 stores the state argument (1: placed already cut); WorkAt 025C6A58 sets 1 when the tree is cut (and refuses a second cut); WorkCo 025C65CC / WorkAt_NoCutAnim 025C6784 skip a cut tree; animation 025C6D40 swings an uncut tree and drops the top of a cut one; TreePacketState::draw 025C91FC picks the model part status by it |
+| 0x003 | `field_0x003` | `mTopAlpha` | setData 025CA9F8: 0 for a tree placed cut, else 255; update 025CA6EC fades it to 0 once the top has landed; TreePacketState::draw 025C91FC passes it as the top alpha (255: the opaque path), the native draw scales the top by it |
+| 0x010 | `field_0x010` | `mTopDrawMtx` | update 025CA6EC copies the animation's mTopMtx (or mFallenTopMtx once landed) into it; the native draw (tree_matrixUniform) uses it for the top part |
+| 0x040 | `field_0x040` | `mTrunkDrawMtx` | update 025CA6EC copies the animation's mTrunkMtx into it; the native draw (tree_matrixUniform) uses it for the trunk; Tree_dataCtor 025C64C4 clears it |
+| 0x070 | `field_0x070` | `mFallenTopMtx` | animation 025C6D40 stores the top's final matrix (with mTopOffset) once the falling top has landed (mState bit 8); update 025CA6EC then draws the top with it; Tree_dataCtor 025C64C4 clears it |
+
+
+## dTree_anm_c (d_tree.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+| 0x002 | `field_0x02` | `mTrunkAngleY` | setAnm 025C79D0 / newAnm 025C6558 store the tree's Y angle; update 025CA6EC builds mTrunkMtx with Y rotation it - mCutAngleY; its top 3 bits (>> 13) are the wind animation an uncut swinging tree returns to (animation 025C6D40) or a fallen one keeps; calc 025C9948 sways the 8 wind animations around it |
+| 0x004 | `field_0x04` | `mTopAngleX` | the X tilt of the top: calc 025C9948 sways it with the wind; animation 025C6D40 stores the swing angle for a hit tree and tilts a cut top to 13600; update 025CA6EC builds mTopMtx with it |
+| 0x006 | `field_0x06` | `mTopAngleY` | the Y rotation of the top: calc 025C9948 sways it with the wind; setAnm 025C79D0 / newAnm 025C6558 set the tree's angle; update 025CA6EC builds mTopMtx with it - mCutAngleY |
+| 0x008 | `field_0x08` | `mTrunkAngleX` | the swing of a hit tree: animation 025C6D40 runs it as a damped oscillation (with mAnimTimer) and clears it when it settles; update 025CA6EC builds mTrunkMtx with it |
+| 0x00A | `field_0x0a` | `mCutAngleY` | WorkAt 025C6A58 stores Link's sword move angle; animation 025C6D40 moves the falling top along it; update 025CA6EC rotates both matrices by it; WorkCo 025C65CC / WorkAt_NoCutAnim 025C6784 store the push / hit direction |
+| 0x010 | `field_0x10` | `mFallSpeedXZ` | WorkAt 025C6A58 sets the cut top's horizontal speed; animation 025C6D40 moves the top by it along mCutAngleY and clears it on landing (which ends the fall) |
+| 0x014 | `field_0x14` | `mFallSpeedY` | WorkAt 025C6A58 sets the cut top's initial vertical speed; animation 025C6D40 adds gravity (down to the terminal speed) and moves the top by it |
+| 0x018 | `field_0x18` | `mTopOffsetX` | animation 025C6D40 moves the falling top along x; update 025CA6EC adds it to mPos.x for mTopMtx; animation adds it for mFallenTopMtx |
+| 0x01C | `field_0x1c` | `mTopOffsetY` | animation 025C6D40 moves the falling top along y (not below the ground offset); update 025CA6EC adds it to mPos.y for mTopMtx |
+| 0x020 | `field_0x20` | `mTopOffsetZ` | animation 025C6D40 moves the falling top along z; update 025CA6EC adds it to mPos.z for mTopMtx |
+| 0x024 | `field_0x24` | `mTopMtx` | update 025CA6EC builds the top's matrix (Y mCutAngleY, X mTopAngleX, Y mTopAngleY, translation mPos + mTopOffset) into it; animation 025C6D40 places the cut smoke with it and copies it into mFallenTopMtx |
+| 0x054 | `field_0x54` | `mTrunkMtx` | update 025CA6EC builds the trunk's matrix (Y mCutAngleY, X mTrunkAngleX, Y mTrunkAngleY, translation mPos) into it and copies it into dTree_data_c::mTrunkDrawMtx |
+
+## d_kankyo_rain_drawSibuki.h views (round 2)
+
+Views take their class's names (a view of another class's layout is renamed with that class).
+
+| View / offset | Old | New | Class member | Uses |
+|---|---|---|---|---|
+| SunPacket 0xC4 | `field_0x3c` | `mOcclusionDelayHD` | dKankyo_sun_Packet::mOcclusionDelayHD (d_kankyo_wether.h) | dKyr_drawSun 0256F1C4 raises it by 2 (below 5) |
+| SunPacket 0xC5 | `field_0x3d` | `mHasVisiblePointHD` | dKankyo_sun_Packet::mHasVisiblePointHD | dKyr_drawSun 0256F1C4 sets 1 |
+| HousiPacket 0x5E64 | `field_0x5ddc` | `mAlpha` | dKankyo_housi_Packet::mAlpha (d_kankyo_wether.h) | dKyr_housi_move 02567F68 eases it toward 1 / 0 by the environment's mHousiCount and fades the effects by it |
+
+Open: HOUSI_EFF `field_0x34`, `field_0x38`, `field_0x3c`, `field_0x44`, `field_0x48`, `field_0x4c` and WAVE_EFF `field_0x30`, `field_0x32` (their classes in d_kankyo_wether.h are unnamed at these offsets too; the views follow when the classes get names).

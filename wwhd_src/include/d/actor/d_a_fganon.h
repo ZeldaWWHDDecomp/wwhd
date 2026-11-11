@@ -29,7 +29,7 @@ struct fganon_class : fopEn_enemy_c {
     /* 0x5CE */ be<s16> m39A;
     /* 0x5D0 */ be<f32> mTurnSpeed;  /* was m39C: fly_common (in move 0213B3AC) sets 1500 (+ reg); pos_move 02134840: angle step = it * mTurnSpeedRate */
     /* 0x5D4 */ be<f32> mTurnSpeedRate;  /* was m3A0: fly_common (in move 0213B3AC) clears it, pos_move 02134840 eases it to 1 and multiplies mTurnSpeed by it */
-    /* 0x5D8 */ be<s16> mTimers[5];  /* was m3A4: daFganon_Execute 02134B28 counts all 5 down each frame; the actions load them (start 02139AA0 [0] = 0x50, down 02139680 [0] = l_HIO.m48, spinattack2 02139194 [0] = 40) */
+    /* 0x5D8 */ be<s16> mTimers[5];  /* was m3A4: daFganon_Execute 02134B28 counts all 5 down each frame; the actions load them (start 02139AA0 [0] = 0x50, down 02139680 [0] = l_HIO.mDownTime, spinattack2 02139194 [0] = 40) */
     /* 0x5E2 */ be<s16> mNoDamageTimer;  /* was m3AE: damage_check 0213A6FC returns while it is not 0 and sets 6 / 2 / 1000 after a hit; the demo and vanish actions (start 02139AA0, down 02139680, deru in move 0213B3AC) keep it at 3 / 5; execute_model (in daFganon_Execute 02134B28) counts it down */
     /* 0x5E4 */ be<f32> mKnockbackDist;  /* was m3B0: knockDown (in damage_check 0213A6FC) sets 80 (+ reg); move 0213B3AC moves the actor by it along mKnockbackAngleY / X and eases it to 0 */
     /* 0x5E8 */ be<s16> mKnockbackAngleY;  /* was m3B4: knockDown (in damage_check 0213A6FC): atan2 from the player to the actor; move 0213B3AC YrotS by it for the knockback */
@@ -45,7 +45,7 @@ struct fganon_class : fopEn_enemy_c {
     /* 0x614 */ cXyz mBallPos;  /* was m3E0: energy_ball_move (in daFganon_Execute 02134B28): the energy ball's position (hand joint, then + mBallVelocity); ball_bg_check line-checks from it; shot (in move 0213B3AC) plays the ball sound there */
     /* 0x620 */ cXyz mBallPosOld;  /* was m3EC: energy_ball_move (in daFganon_Execute 02134B28) copies mBallPos before moving it; ball_bg_check checks the line from it */
     /* 0x62C */ cXyz mBallVelocity;  /* was m3F8: aimEnergyBall (in daFganon_Execute 02134B28): MtxPosition of (0, 0, mBallSpeed) toward the target; energy_ball_move adds it to mBallPos and takes the effect angle from it */
-    /* 0x638 */ be<f32> mBallSpeed;  /* was m404: aimEnergyBall (in daFganon_Execute 02134B28): l_HIO.m1C / m20 when thrown, kept on each return; energy_ball_move adds l_HIO.m24 / m28 per return; shot (in move 0213B3AC) scales the swing distance by it */
+    /* 0x638 */ be<f32> mBallSpeed;  /* was m404: aimEnergyBall (in daFganon_Execute 02134B28): l_HIO.mBallSpeedType0 / mBallSpeedOtherType when thrown, kept on each return; energy_ball_move adds l_HIO.mBallSpeedUpType0 / mBallSpeedUpOtherType per return; shot (in move 0213B3AC) scales the swing distance by it */
     /* 0x63C */ be<s8> mBallState;  /* was m408: energy_ball_move (in daFganon_Execute 02134B28): 0 none, 1 create the ball effects, 2 held in the hand, 3 thrown, 4 flying at the player, 5 sent back at Phantom Ganon, 35 remove; shot (in move 0213B3AC) / start 02139AA0 set 1, damage_check 0213A6FC / kieru set 35 */
     /* 0x63D */ be<s8> mBallThrow;  /* was m409: shot (in move 0213B3AC) sets 1 at the throw frame; energy_ball_move (in daFganon_Execute 02134B28) then aims the ball, sets mBallState 3 and clears it */
     /* 0x63E */ be<s8> mBallNoHitTimer;  /* was m40A: energy_ball_move (in daFganon_Execute 02134B28) sets 5 after each return (50 when the third form vanishes) and counts it down; while it runs the ball's colliders are moved away and hits are ignored */
@@ -83,7 +83,7 @@ struct fganon_class : fopEn_enemy_c {
     /* 0x8D8 */ be<s16> mSwordTiltStep;  /* was m6A4: fail (in move 0213B3AC): 0x80, 0x800 once the sword lies flat; added to the cLib_addCalcAngleS2 step of mSwordTilt */
     /* 0x8DA */ be<s16> mSwordShakeTimer;  /* was m6A6: fail (in move 0213B3AC) sets 30 (+ reg) on a bounce; execute_model (in daFganon_Execute 02134B28) shakes the sword by it * sin and counts it down */
     /* 0x8DC */ be<u32> mSwordFallSeVolume;  /* was m6A8: fail (in move 0213B3AC): 100, passed to the sword-fall sound 0x6998 on each bounce, -20 per bounce down to 30 */
-    /* 0x8E0 */ be<s8> mBtAttackTimer;  /* was m6AC: spinattack2 02139194 / spinattack (in move 0213B3AC) set l_HIO.m40 - m3E; execute_collision (in daFganon_Execute 02134B28) counts it down and sets the bt attack data (frames 0..10) while it runs */
+    /* 0x8E0 */ be<s8> mBtAttackTimer;  /* was m6AC: spinattack2 02139194 / spinattack (in move 0213B3AC) set l_HIO.mSwingHitEndFrame - mSwingHitFrame; execute_collision (in daFganon_Execute 02134B28) counts it down and sets the bt attack data (frames 0..10) while it runs */
     /* 0x8E1 */ be<u8> m6AD[0x6B0 - 0x6AD];
     /* 0x8E4 */ be<u32> mBokoID;
     /* 0x8E8 */ be<u32> mCapeID;
@@ -119,29 +119,29 @@ WWHD_OFFSET(fganon_class, mWeponSph, 0xC5C);
 // HD: HIO data starts before its vtable; GC member names retain their original suffixes.
 struct daFganon_HIO_c {
     be<s8> mNo;
-    be<u8> m05;
-    be<u8> m06;
+    be<u8> mNoMove;  /* was m05: execute_model (in daFganon_Execute 02134B28): move, the background check and the animations run only while it is 0 (tww daFganon_Execute the same); hioCtor 0213846C sets the default, never written elsewhere in WWHD or tww (0) */
+    be<u8> mDebugAppearAction;  /* was m06: deru (in move 0213B3AC): when not 0, picks the action after appearing instead of the random choice: 1 fly, 2 spinattack, 3 fly2, 4 spinattack2 (tww the same); hioCtor 0213846C sets the default, never written elsewhere in WWHD or tww (0) */
     be<u8> m07;
-    be<s16> m08;
-    be<s16> m0A;
-    be<f32> m0C;
-    be<f32> m10;
-    be<f32> m14;
-    be<f32> m18;
-    be<f32> m1C;
-    be<f32> m20;
-    be<f32> m24;
-    be<f32> m28;
-    be<f32> m2C;
-    be<f32> m30;
-    be<f32> m34;
-    be<f32> m38;
-    be<s16> m3C;
-    be<s16> m3E;
-    be<s16> m40;
+    be<s16> mStandbyTime;  /* was m08: standby (in move 0213B3AC): mTimers[0] when standby starts or the player comes within mStartDist; at 0 the action becomes deru (tww the same); hioCtor 0213846C sets the default, never written elsewhere in WWHD or tww (60) */
+    be<s16> mFlyTime;  /* was m0A: deru (in move 0213B3AC): mTimers[2] when fly / fly2 start; fly_common (in move 0213B3AC) changes to kieru when it reaches 0 (tww the same); hioCtor 0213846C sets the default, never written elsewhere in WWHD or tww (500) */
+    be<f32> mFlyDistance;  /* was m0C: fly_common (in move 0213B3AC), fly: the target position's z offset from the player in the turned frame (tww fly the same); hioCtor 0213846C sets the default, never written elsewhere in WWHD or tww (1500) */
+    be<f32> mFlyHeight;  /* was m10: fly_common (in move 0213B3AC), fly: the height above the player on appearing and the target's y offset (tww fly the same); hioCtor 0213846C sets the default, never written elsewhere in WWHD or tww (400) */
+    be<f32> mFly2Distance;  /* was m14: fly_common (in move 0213B3AC), fly2: the target position's z offset from the player (tww fly2 the same); hioCtor 0213846C sets the default, never written elsewhere in WWHD or tww (1500) */
+    be<f32> mFly2Height;  /* was m18: fly_common (in move 0213B3AC), fly2: the height above the player on appearing and the target's y offset (tww fly2 the same); hioCtor 0213846C sets the default, never written elsewhere in WWHD or tww (400) */
+    be<f32> mBallSpeedType0;  /* was m1C: aimEnergyBall (in daFganon_Execute 02134B28): the energy ball's first speed (mBallSpeed) when mType is 0 (tww energy_ball_move the same); hioCtor 0213846C sets the default, never written elsewhere in WWHD or tww (45) */
+    be<f32> mBallSpeedOtherType;  /* was m20: aimEnergyBall (in daFganon_Execute 02134B28): the energy ball's first speed (mBallSpeed) when mType is not 0 (tww energy_ball_move the same); hioCtor 0213846C sets the default, never written elsewhere in WWHD or tww (45) */
+    be<f32> mBallSpeedUpType0;  /* was m24: energy_ball_move (in daFganon_Execute 02134B28): added to mBallSpeed on each reflect when mType is 0 (tww the same); hioCtor 0213846C sets the default, never written elsewhere in WWHD or tww (2) */
+    be<f32> mBallSpeedUpOtherType;  /* was m28: energy_ball_move (in daFganon_Execute 02134B28): added to mBallSpeed on each reflect when mType is not 0 (tww the same); hioCtor 0213846C sets the default, never written elsewhere in WWHD or tww (2) */
+    be<f32> mSpinHeight;  /* was m2C: spinattack (in move 0213B3AC) / spinattack2 02139194: the y offset from the player where the spin attack starts (spinattack adds 100) (tww the same); hioCtor 0213846C sets the default, never written elsewhere in WWHD or tww (30) */
+    be<f32> mSpinDistance;  /* was m30: spinattack (in move 0213B3AC): the z offset from the player where the spin attack starts (tww the same); hioCtor 0213846C sets the default, never written elsewhere in WWHD or tww (-270) */
+    be<f32> mSpin2Distance;  /* was m34: spinattack2 02139194: the z offset from the player where the second spin attack starts; kabe_check (in move 0213B3AC) tests lines of it + 100 for walls before choosing it (tww the same); hioCtor 0213846C sets the default, never written elsewhere in WWHD or tww (-600) */
+    be<f32> mSpin2SwingDistance;  /* was m38: spinattack2 02139194: the swing starts once the distance to the stored player position is below it (tww the same); hioCtor 0213846C sets the default, never written elsewhere in WWHD or tww (270) */
+    be<s16> mShot2ChargeTime;  /* was m3C: shot2 02138670: mTimers[0] after the charge animation; the throw starts at 0 (tww the same); hioCtor 0213846C sets the default, never written elsewhere in WWHD or tww (50) */
+    be<s16> mSwingHitFrame;  /* was m3E: spinattack (in move 0213B3AC) / spinattack2 02139194: at this swing frame mBtAttackTimer is started (tww the same); hioCtor 0213846C sets the default, never written elsewhere in WWHD or tww (1) */
+    be<s16> mSwingHitEndFrame;  /* was m40: spinattack (in move 0213B3AC) / spinattack2 02139194: mBtAttackTimer = it - mSwingHitFrame (tww the same); hioCtor 0213846C sets the default, never written elsewhere in WWHD or tww (32) */
     be<s16> m42;
-    be<f32> m44;
-    be<s16> m48;
+    be<f32> mSwingBtMaxDis;  /* was m44: execute_collision (in daFganon_Execute 02134B28): mBtMaxDis while mBtAttackTimer runs (tww setBtMaxDis the same); hioCtor 0213846C sets the default, never written elsewhere in WWHD or tww (600) */
+    be<s16> mDownTime;  /* was m48: down 02139680: mTimers[0] while falling; after landing the action becomes kieru when it reaches 0 (tww the same); hioCtor 0213846C sets the default, never written elsewhere in WWHD or tww (150) */
     u8 _pad46[2];
     be<u32> __vtbl;
 };

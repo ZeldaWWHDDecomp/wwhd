@@ -644,11 +644,11 @@ void mt_move_maru(mt_class* actor) {
         }
         cLib_addCalcAngleS2(&i_this->mRollPitchStep, step, 4, 0x1000);
         cLib_addCalc2(&i_this->mRollBodyOffset, 1000.0f, 1.0f, 5.0f);
-        cLib_addCalc2(&i_this->m454, 0.3f, 1.0f, 0.01f);
+        cLib_addCalc2(&i_this->mSegmentPulseAmp, 0.3f, 1.0f, 0.01f);
     } else {
         if (t == 0x46) {
             i_this->mBodyWaveAmplitude = REG0_F(3) + 2500.0f;
-            i_this->m454 = 0.5f;
+            i_this->mSegmentPulseAmp = 0.5f;
             if (i_this->mInLava == 0) {
                 i_this->speed.y = REG0_F(11) + 30.0f;
             }

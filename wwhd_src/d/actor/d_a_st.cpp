@@ -252,7 +252,7 @@ u32 find_actor(u32 id) {
 
 /* inlined into part_move */
 void scatter_part(st_p *part) {
-    part->m05 = 1;
+    part->mDetached = 1;
     part->mPartVelocity.x = random_signed(20.0f);
     part->mPartVelocity.y = (f32)(random_positive(20.0f) + 40.0f);
     part->mPartVelocity.z = random_signed(20.0f);
@@ -400,13 +400,13 @@ void ke_control(st_class *i_this) {
             ground->check.mGrpPassChk = gabi::ea(static_cast<dBgS_GrpPassChk *>(&ground->check));
             ground->check.cBgS_Chk::__vtbl = 0x1003D50C;
             ground->check.mPolyPassChk = gabi::ea(static_cast<dBgS_PolyPassChk *>(&ground->check));
-            ground->check.m_pos.z = chain->m000[1].z;
-            ground->check.m_pos.x = chain->m000[1].x;
-            ground->check.m_pos.y = (f32)chain->m000[1].y + 50.0f;
+            ground->check.m_pos.z = chain->mPos[1].z;
+            ground->check.m_pos.x = chain->mPos[1].x;
+            ground->check.m_pos.y = (f32)chain->mPos[1].y + 50.0f;
             u32 play = stGetGameInfoWithLinkage<u32>();
             f64 height = cBgS_GroundCross<f64>(at<StGameInfoView>(play)->mBgS, at<void>(check));
             floor = (f32)(height + 3.0f);
-            f32 currentY = chain->m000[1].y;
+            f32 currentY = chain->mPos[1].y;
             if (floor - currentY > 50.0f)
                 floor = currentY;
             ground->check.cBgS_PolyInfo::__vtbl = 0x1003D51C;
@@ -414,8 +414,8 @@ void ke_control(st_class *i_this) {
             ground->check.dBgS_GrpPassChk::__vtbl = 0x1003D4FC;
             cBgS_Chk_destroy_cBgS_Chk(at<void>(check), 0);
         }
-        mDoMtx_YrotS(stCalcMatrix().get(), (s16)chain->m0F0.y);
-        mDoMtx_XrotM(stCalcMatrix().get(), (s16)chain->m0F0.x);
+        mDoMtx_YrotS(stCalcMatrix().get(), (s16)chain->mRootAngle.y);
+        mDoMtx_XrotM(stCalcMatrix().get(), (s16)chain->mRootAngle.x);
         direction->value.x = 0.0f;
         direction->value.y = 30.0f;
         direction->value.z = -20.0f;
@@ -432,9 +432,9 @@ void ke_control(st_class *i_this) {
                 by = ((f32)bias->value.y * weight) * 0.1f;
                 bx = ((f32)bias->value.x * weight) * 0.1f;
             }
-            auto &position = chain->m000[i];
-            auto &previous = chain->m000[i - 1];
-            auto &velocity = chain->m078[i];
+            auto &position = chain->mPos[i];
+            auto &previous = chain->mPos[i - 1];
+            auto &velocity = chain->mSpeed[i];
             f32 x = (((f32)position.x - (f32)previous.x) + (f32)velocity.x) + bx;
             f32 y = (((f32)position.y + (f32)velocity.y) + by) - 10.0f;
             y = y + REG0_F(2);
@@ -467,7 +467,7 @@ void ke_control(st_class *i_this) {
         for (u32 point = 0; point < 10; ++point)
             for (u32 component = 0; component < 3; ++component)
                 *at<be<u32>>(output + point * 12, component * 4) =
-                    word(gabi::ea(&chain->m000[point]) + component * 4);
+                    word(gabi::ea(&chain->mPos[point]) + component * 4);
     }
 }
 
@@ -499,7 +499,7 @@ void nun_control(st_class *i_this) {
     direction->value.z = REG0_F(12);
     direction->value.y = REG0_F(11);
     direction->value.x = REG0_F(10);
-    MtxPosition(&direction->value, &chain->m00[1]);
+    MtxPosition(&direction->value, &chain->mPos[1]);
     if (i_this->mNunMode == 2) {
         bias->value.x = 0.0f;
         bias->value.y = 0.0f;
@@ -530,9 +530,9 @@ void nun_control(st_class *i_this) {
         damping = 0.3f;
     else if (state == 3)
         damping = REG8_F(14) + 2.5f;
-    auto &position = chain->m00[2];
-    auto &previous = chain->m00[1];
-    auto &velocity = chain->m38[2];
+    auto &position = chain->mPos[2];
+    auto &previous = chain->mPos[1];
+    auto &velocity = chain->mSpeed[2];
     f32 y = (((f32)position.y - (f32)previous.y) + (f32)velocity.y) - 20.0f;
     y = y + (f32)bias->value.y;
     f32 z = (((f32)position.z - (f32)previous.z) + (f32)velocity.z) + (f32)bias->value.z;
@@ -543,8 +543,8 @@ void nun_control(st_class *i_this) {
     mDoMtx_XrotS(stCalcMatrix().get(), angleX);
     mDoMtx_YrotM(stCalcMatrix().get(), angleY);
     MtxPosition(&direction->value, &rotated->value);
-    chain->m24[1].y = angleY;
-    chain->m24[1].x = angleX;
+    chain->mAngle[1].y = angleY;
+    chain->mAngle[1].x = angleX;
     MtxPosition(&direction->value, &rotated->value);
     for (u32 i = 0; i < 3; ++i)
         *at<be<u32>>(gabi::ea(&velocity), i * 4) = word(gabi::ea(&position) + i * 4);
@@ -555,9 +555,9 @@ void nun_control(st_class *i_this) {
     velocity.x = gabi::fmuls_ppc(gabi::fsubs_ppc(newX, (f32)velocity.x), damping);
     velocity.y = gabi::fmuls_ppc(gabi::fsubs_ppc((f32)position.y, (f32)velocity.y), damping);
     velocity.z = gabi::fmuls_ppc(gabi::fsubs_ppc((f32)position.z, (f32)velocity.z), damping);
-    MtxTrans(0, (f32)chain->m00[1].x, (f32)chain->m00[1].y, (f32)chain->m00[1].z);
-    mDoMtx_XrotM(stCalcMatrix().get(), (s16)chain->m24[1].x);
-    mDoMtx_YrotM(stCalcMatrix().get(), (s16)chain->m24[1].y);
+    MtxTrans(0, (f32)chain->mPos[1].x, (f32)chain->mPos[1].y, (f32)chain->mPos[1].z);
+    mDoMtx_XrotM(stCalcMatrix().get(), (s16)chain->mAngle[1].x);
+    mDoMtx_YrotM(stCalcMatrix().get(), (s16)chain->mAngle[1].y);
     s16 angle = (s16)(REG8_S(7) - 0x4000);
     mDoMtx_YrotM(stCalcMatrix().get(), angle);
     tx = REG6_F(10) + 80.0f;
@@ -690,9 +690,9 @@ void jyunkai(st_class *i_this) {
     case 0: {
         i_this->mDragSmokeMode = 2;
         s32 frame = gabi::ftoi(stMorf(gabi::ea((void *)i_this->mpMorf)).mFrame);
-        s16 start1 = l_HIO.m06, start2 = l_HIO.m08;
-        if ((frame >= start1 && frame <= l_HIO.m0A) || (frame >= start2 && frame <= l_HIO.m0C)) {
-            i_this->mTargetSpeed = l_HIO.m10;
+        s16 start1 = l_HIO.mStepStartFrame1, start2 = l_HIO.mStepStartFrame2;
+        if ((frame >= start1 && frame <= l_HIO.mStepEndFrame1) || (frame >= start2 && frame <= l_HIO.mStepEndFrame2)) {
+            i_this->mTargetSpeed = l_HIO.mPatrolSpeed;
             i_this->mTurnStep = 0x800;
             if (frame == start1 || frame == start2)
                 sound_at_level(i_this, 0x3832, 0);
@@ -1269,7 +1269,7 @@ void kan_wait(st_class *i_this) {
                  0, 0.0f, -1);
         i_this->mMode = 2;
         i_this->mAmbushTrigger = 0;
-        i_this->mTimers[0] = l_HIO.m18;
+        i_this->mTimers[0] = l_HIO.mCoffinWaitTime;
         i_this->mTimers[2] = (s16)i_this->mTimers[0] + 20;
         [[fallthrough]];
     case 2:
@@ -1302,8 +1302,8 @@ void st_break_wait(st_class *i_this) {
     case 0:
         anm_init(i_this, dRes_INDEX_ST_BCK_FUKKI_WAIT_e, 10.0f, 2, 1.0f, -1);
         state = 1;
-        recoverTimer = l_HIO.m1A;
-        i_this->mReassembleWait = l_HIO.m1A;
+        recoverTimer = l_HIO.mReassembleTime;
+        i_this->mReassembleWait = l_HIO.mReassembleTime;
         [[fallthrough]];
     case 1:
         if (!recoverTimer) {
@@ -1692,7 +1692,7 @@ void damage_check(st_class *i_this) {
                 i_this->stealItemLeft = 0;
                 cc_at_check(i_this, &atInfo);
                 i_this->stealItemLeft = remaining;
-                if (atInfo.mResultingAttackType == 1 && stPlayer(player).mJumpCutExtraDamage)
+                if (atInfo.mResultingAttackType == 1 && stPlayer(player).mStrongJumpCut)
                     i_this->mNoHitTimer = 2;
                 auto *head = &i_this->mParts[15];
                 if (i_this->health <= 0 || atInfo.mResultingAttackType == 9 ||
@@ -1752,7 +1752,7 @@ void damage_check(st_class *i_this) {
                     i_this->mBreakHealth = (s8)i_this->mBreakHealth - (u8)atInfo.mDamage;
                     i_this->mShakeTimer = REG6_S(atInfo.mResultingAttackType == 9 ? 7 : 6) +
                                     (atInfo.mResultingAttackType == 9 ? 20 : 10);
-                    if (atInfo.mResultingAttackType == 1 && stPlayer(player).mJumpCutExtraDamage) {
+                    if (atInfo.mResultingAttackType == 1 && stPlayer(player).mStrongJumpCut) {
                         i_this->mNoHitTimer = 2;
                         u8 cut = stPlayer(player).mCutType;
                         if (cut == 8 || cut == 9)
@@ -1899,7 +1899,7 @@ void part_move(st_class *i_this, s32 joint) {
     direction->value.y = 0.0f;
     direction->value.z = 0.0f;
     u32 weapon = joint == 11 ? find_actor(i_this->mHeldWeaponEntityId) : 0;
-    ++part->m3E;
+    ++part->mWobbleCount;
     if (part->mWaitTimer)
         --part->mWaitTimer;
     if (!i_this->mEnemyIce.mLightShrinkTimer) {
@@ -1961,7 +1961,7 @@ void part_move(st_class *i_this, s32 joint) {
                     f32 amplitude = (f32)(distance - 50.0f) * (REG8_F(8) + 1.0f);
                     if (amplitude > REG8_F(9) + 300.0f)
                         amplitude = REG8_F(10) + 300.0f;
-                    s16 count = part->m3E;
+                    s16 count = part->mWobbleCount;
                     direction->value.x =
                         gabi::fmadds(amplitude, angle_sine(count * 1000), direction->value.x);
                     f32 oscillation = (amplitude * angle_cosine(count * 1100)) * 0.7f;
@@ -1970,25 +1970,25 @@ void part_move(st_class *i_this, s32 joint) {
                     direction->value.z =
                         gabi::fmadds(amplitude, angle_cosine(count * 1200), direction->value.z);
                     s16 angle = cM_atan2s<s16>((f32)direction->value.x, (f32)direction->value.z);
-                    cLib_addCalcAngleS2(&part->m3A, angle, 4, 0x2000);
+                    cLib_addCalcAngleS2(&part->mFlyAngleY, angle, 4, 0x2000);
                     f32 x = direction->value.x, z = direction->value.z;
                     f64 horizontal = sqrtHD<f64>(gabi::fmadds(x, x, z * z));
                     s16 elevation = (s16)-cM_atan2s<s32>((f32)direction->value.y, horizontal);
-                    cLib_addCalcAngleS2(&part->m38, elevation, 4, 0x2000);
-                    mDoMtx_YrotS(stCalcMatrix().get(), (s16)part->m3A);
-                    mDoMtx_XrotM(stCalcMatrix().get(), (s16)part->m38);
+                    cLib_addCalcAngleS2(&part->mFlyAngleX, elevation, 4, 0x2000);
+                    mDoMtx_YrotS(stCalcMatrix().get(), (s16)part->mFlyAngleY);
+                    mDoMtx_XrotM(stCalcMatrix().get(), (s16)part->mFlyAngleX);
                     direction->value.x = 0.0f;
                     direction->value.y = 0.0f;
-                    direction->value.z = (f32)part->m44 * 20.0f;
+                    direction->value.z = (f32)part->mFlySpeed * 20.0f;
                     MtxPosition(&direction->value, &part->mPartVelocity);
                     PSVECAdd(&part->mPartPos, &part->mPartVelocity, &part->mPartPos);
                     if (joint == 15) {
-                        part->mPartRot.x = part->m38;
-                        part->mPartRot.y = part->m3A;
-                        part->mPartRot.z = part->m3C;
+                        part->mPartRot.x = part->mFlyAngleX;
+                        part->mPartRot.y = part->mFlyAngleY;
+                        part->mPartRot.z = part->mFlyAngleZ;
                     } else
                         csXyz___apl(&part->mPartRot, &part->mPartRotAdd);
-                    cLib_addCalc2(&part->m44, 1.0f, 1.0f, 0.01f);
+                    cLib_addCalc2(&part->mFlySpeed, 1.0f, 1.0f, 0.01f);
                 }
             }
             break;
@@ -2008,7 +2008,7 @@ void part_move(st_class *i_this, s32 joint) {
             csXyz___apl(&part->mPartRot, &part->mPartRotAdd);
             if (!(magnitude(&direction->value) > 5.0f)) {
                 part->mPartState = 0;
-                part->m05 = 0;
+                part->mDetached = 0;
                 if (i_this->mPartsAttached < 25 && joint != 11)
                     ++i_this->mPartsAttached;
                 if (joint == 11)
@@ -2049,8 +2049,8 @@ void part_move(st_class *i_this, s32 joint) {
             }
             s8 command = i_this->mPartCommand;
             if (command == 2 || command == 11) {
-                part->m3E = (s16)gabi::ftoi(random_positive(65536.0f));
-                part->m44 = 0.0f;
+                part->mWobbleCount = (s16)gabi::ftoi(random_positive(65536.0f));
+                part->mFlySpeed = 0.0f;
                 if (joint == 11) {
                     if (weapon && !((u32)stActor(weapon).actor_status & 0x2000)) {
                         fopAcM_setCarryNow(at<void>(weapon), 0);
@@ -2082,8 +2082,8 @@ void part_move(st_class *i_this, s32 joint) {
         }
         case 6: {
             if (!i_this->mReassembleWait && !(part->mPartVelocity.y > 0.0f)) {
-                part->m3E = (s16)gabi::ftoi(random_positive(65536.0f));
-                part->m44 = 0.0f;
+                part->mWobbleCount = (s16)gabi::ftoi(random_positive(65536.0f));
+                part->mFlySpeed = 0.0f;
                 part->mPartState = 1;
                 part->mWaitTimer = 0;
                 break;
@@ -2141,8 +2141,8 @@ void part_move(st_class *i_this, s32 joint) {
         }
         case 7: {
             if (!i_this->mReassembleWait && !(part->mPartVelocity.y > 0.0f)) {
-                part->m3E = (s16)gabi::ftoi(random_positive(65536.0f));
-                part->m44 = 0.0f;
+                part->mWobbleCount = (s16)gabi::ftoi(random_positive(65536.0f));
+                part->mFlySpeed = 0.0f;
                 part->mPartState = 1;
                 part->mWaitTimer = 0;
             } else {
@@ -2213,16 +2213,16 @@ void part_move(st_class *i_this, s32 joint) {
                         part->mPartRot.y = y;
                         part->mPartRot.z = z;
                     }
-                    part->m3E = (s16)gabi::ftoi(random_positive(65536.0f));
+                    part->mWobbleCount = (s16)gabi::ftoi(random_positive(65536.0f));
                     part->mWaitTimer = 0;
-                    part->m44 = 0.5f;
-                    part->m05 = 1;
+                    part->mFlySpeed = 0.5f;
+                    part->mDetached = 1;
                 }
             }
             break;
         }
     }
-    switch ((s8)part->m05) {
+    switch ((s8)part->mDetached) {
     case 0: {
         joint_matrix(i_this, joint);
         s8 shake = i_this->mShakeTimer;
@@ -2318,13 +2318,13 @@ void part_move(st_class *i_this, s32 joint) {
         }
         for (u32 i = 0; i < 3; ++i) {
             auto *chain = &i_this->mKe[i];
-            MtxPosition(&direction->value, &chain->m000[0]);
+            MtxPosition(&direction->value, &chain->mPos[0]);
             for (u32 k = 0; k < 3; ++k)
-                *at<be<u16>>(gabi::ea(&chain->m0F0), k * 2) =
+                *at<be<u16>>(gabi::ea(&chain->mRootAngle), k * 2) =
                     *at<be<u16>>(gabi::ea(&part->mPartRot), k * 2);
-            chain->m0F0.y = (s16)((s16)chain->m0F0.y + ((s32)i - 1) * 0x800);
+            chain->mRootAngle.y = (s16)((s16)chain->mRootAngle.y + ((s32)i - 1) * 0x800);
             if (i == 1)
-                chain->m0F0.x = (s16)((s16)chain->m0F0.x + 0x500);
+                chain->mRootAngle.x = (s16)((s16)chain->mRootAngle.x + 0x500);
         }
     }
 }
@@ -2610,7 +2610,7 @@ cPhs_State daSt_Create(st_class *i_this) {
     if (phase != 4)
         return phase;
     for (u32 i = 0; i < 2; ++i)
-        i_this->mSmokeCallBack[i].m12 = 1;
+        i_this->mSmokeCallBack[i].mFollowOff = 1;
     u32 parameters = i_this->mParameters;
     s16 deathSwitch = i_this->current.angle.z;
     i_this->gbaName = 4;
@@ -2820,15 +2820,15 @@ void static_initialize() {
     __register_global_object(&stRegisterByteGuard);
     runtime_initializeGuardWord(&l_staticState.mWordGuard);
     __register_global_object(&stRegisterWordGuard);
-    l_HIO.m10 = 6.0f;
-    l_HIO.m06 = 9;
+    l_HIO.mPatrolSpeed = 6.0f;
+    l_HIO.mStepStartFrame1 = 9;
     l_HIO.__vtbl = 0x1003D5CC;
-    l_HIO.m08 = 0x2C;
-    l_HIO.m0A = 0x15;
+    l_HIO.mStepStartFrame2 = 0x2C;
+    l_HIO.mStepEndFrame1 = 0x15;
     l_HIO.m14 = 7.0f;
-    l_HIO.m0C = 0x35;
-    l_HIO.m18 = 0x46;
-    l_HIO.m1A = 200;
+    l_HIO.mStepEndFrame2 = 0x35;
+    l_HIO.mCoffinWaitTime = 0x46;
+    l_HIO.mReassembleTime = 200;
 }
 
 } // namespace Stalfos

@@ -74,7 +74,7 @@ static void hand_mtx_set(sss_class* i_this) {
 // HD: GameCube debug tuning terms in the vine controls are folded into their defaults.
 /* inlined into hand_move */
 static void control1(sss_class* i_this) {
-    i_this->mVine[0].field_0x00.copy(i_this->current.pos);
+    i_this->mVine[0].mPos.copy(i_this->current.pos);
     mDoMtx_YrotS(calc_mtx(), i_this->current.angle.y);
     mDoMtx_XrotM(calc_mtx(), i_this->current.angle.x);
     gabi::Local<cXyz> sp3C, sp30, sp24, sp18, tmp;
@@ -92,9 +92,9 @@ static void control1(sss_class* i_this) {
         MtxPosition(sp30, sp18);
         sss_s* cur = &i_this->mVine[i];
         sss_s* prev = &i_this->mVine[i - 1];
-        f32 x = ((cur->field_0x00.x - prev->field_0x00.x) + sp24->x) + sp18->x;
-        f32 y = ((cur->field_0x00.y - prev->field_0x00.y) + sp24->y) + sp18->y;
-        f32 z = ((cur->field_0x00.z - prev->field_0x00.z) + sp24->z) + sp18->z;
+        f32 x = ((cur->mPos.x - prev->mPos.x) + sp24->x) + sp18->x;
+        f32 y = ((cur->mPos.y - prev->mPos.y) + sp24->y) + sp18->y;
+        f32 z = ((cur->mPos.z - prev->mPos.z) + sp24->z) + sp18->z;
         s16 xz = cM_atan2s(x, z);
         s16 ya = (s16)-cM_atan2s(y, std_sqrtf(gabi::fmadds(x, x, z * z)));
         MtxPush();
@@ -102,14 +102,14 @@ static void control1(sss_class* i_this) {
         mDoMtx_XrotM(calc_mtx(), ya);
         MtxPosition(sp3C, sp30);
         MtxPull();
-        cXyz_pl(&prev->field_0x00, tmp, sp30);
-        cur->field_0x00.copy(*tmp.get());
+        cXyz_pl(&prev->mPos, tmp, sp30);
+        cur->mPos.copy(*tmp.get());
     }
 }
 
 /* inlined into hand_move */
 static void control2(sss_class* i_this) {
-    i_this->mVine[9].field_0x00.copy(i_this->mHandPos);
+    i_this->mVine[9].mPos.copy(i_this->mHandPos);
     gabi::Local<cXyz> sp34, sp28, tmp;
     f32 e0 = i_this->mSegmentLen;
     sp34->y = 0.0f;
@@ -118,9 +118,9 @@ static void control2(sss_class* i_this) {
     for (s32 i = 8; i >= 1; i--) {
         sss_s* cur = &i_this->mVine[i];
         sss_s* next = &i_this->mVine[i + 1];
-        f32 x = cur->field_0x00.x - next->field_0x00.x;
-        f32 z = cur->field_0x00.z - next->field_0x00.z;
-        f32 y = cur->field_0x00.y - next->field_0x00.y;
+        f32 x = cur->mPos.x - next->mPos.x;
+        f32 z = cur->mPos.z - next->mPos.z;
+        f32 y = cur->mPos.y - next->mPos.y;
         s16 r27 = cM_atan2s(x, z);
         s16 r28 = (s16)-cM_atan2s(y, std_sqrtf(gabi::fmadds(x, x, z * z)));
         mDoMtx_YrotS(calc_mtx(), r27);
@@ -135,11 +135,11 @@ static void control2(sss_class* i_this) {
             sp34->z = e;
         }
         MtxPosition(sp34, sp28);
-        cXyz_pl(&next->field_0x00, tmp, sp28);
-        cur->field_0x00.copy(*tmp.get());
+        cXyz_pl(&next->mPos, tmp, sp28);
+        cur->mPos.copy(*tmp.get());
     }
-    i_this->mHandMtxPos.copy(i_this->mVine[9].field_0x00);
-    cXyz_mi(&i_this->mVine[8].field_0x00, tmp, &i_this->mVine[9].field_0x00);
+    i_this->mHandMtxPos.copy(i_this->mVine[9].mPos);
+    cXyz_mi(&i_this->mVine[8].mPos, tmp, &i_this->mVine[9].mPos);
     f32 x = tmp->x, y = tmp->y, z = tmp->z;
     sp34->x = x;
     sp34->y = y;
@@ -153,7 +153,7 @@ static void control2(sss_class* i_this) {
 // HD: the phase terms are subtracted; GameCube adds them.
 /* inlined into hand_move */
 static void cut_control1(sss_class* i_this) {
-    i_this->mCutVine[0].field_0x00.copy(i_this->current.pos);
+    i_this->mCutVine[0].mPos.copy(i_this->current.pos);
     mDoMtx_YrotS(calc_mtx(), i_this->current.angle.y);
     mDoMtx_XrotM(calc_mtx(), i_this->current.angle.x);
     gabi::Local<cXyz> sp50, sp44, sp38, tmp;
@@ -169,9 +169,9 @@ static void cut_control1(sss_class* i_this) {
         MtxPosition(sp44, sp38);
         sss_s* cur = &i_this->mCutVine[i];
         sss_s* prev = &i_this->mCutVine[i - 1];
-        f32 x = (cur->field_0x00.x - prev->field_0x00.x) + sp38->x;
-        f32 y = (cur->field_0x00.y - prev->field_0x00.y) + sp38->y;
-        f32 z = (cur->field_0x00.z - prev->field_0x00.z) + sp38->z;
+        f32 x = (cur->mPos.x - prev->mPos.x) + sp38->x;
+        f32 y = (cur->mPos.y - prev->mPos.y) + sp38->y;
+        f32 z = (cur->mPos.z - prev->mPos.z) + sp38->z;
         s16 xz = cM_atan2s(x, z);
         s16 ya = (s16)-cM_atan2s(y, std_sqrtf(gabi::fmadds(x, x, z * z)));
         MtxPush();
@@ -179,20 +179,20 @@ static void cut_control1(sss_class* i_this) {
         mDoMtx_XrotM(calc_mtx(), ya);
         MtxPosition(sp50, sp44);
         MtxPull();
-        cXyz_pl(&prev->field_0x00, tmp, sp44);
-        cur->field_0x00.copy(*tmp.get());
+        cXyz_pl(&prev->mPos, tmp, sp44);
+        cur->mPos.copy(*tmp.get());
     }
     if (i_this->mpEmitter1 == nullptr) {
         if ((s8)i_this->mCutEffectOn == 0)
             return;
         JPABaseEmitter* e =
-            dComIfGp_particle_set(sss::ID_IT_SN_TSURU_TAIEKI00, &i_this->mCutVine[4].field_0x00);
+            dComIfGp_particle_set(sss::ID_IT_SN_TSURU_TAIEKI00, &i_this->mCutVine[4].mPos);
         i_this->mpEmitter1 = reinterpret_cast<SssEmitter*>(e);
         i_this->mTimers[SSS_EMITTER_TIMER_e] = 60;
         if (e == nullptr)
             return;
     }
-    cXyz_mi(&i_this->mCutVine[4].field_0x00, tmp, &i_this->mCutVine[3].field_0x00);
+    cXyz_mi(&i_this->mCutVine[4].mPos, tmp, &i_this->mCutVine[3].mPos);
     f32 x = tmp->x, y = tmp->y, z = tmp->z;
     sp50->x = x;
     sp50->y = y;
@@ -201,8 +201,8 @@ static void cut_control1(sss_class* i_this) {
     s16 rot_x =
         (s16)-cM_atan2s(sp50->y, std_sqrtf(gabi::fmadds(sp50->x, sp50->x, sp50->z * sp50->z)));
     SssEmitter* e = i_this->mpEmitter1;
-    f32 tx = i_this->mCutVine[4].field_0x00.x, ty = i_this->mCutVine[4].field_0x00.y,
-        tz = i_this->mCutVine[4].field_0x00.z;
+    f32 tx = i_this->mCutVine[4].mPos.x, ty = i_this->mCutVine[4].mPos.y,
+        tz = i_this->mCutVine[4].mPos.z;
     e->setGlobalTranslation(tx, ty, tz);
     JPAGetXYZRotateMtx(rot_x, rot_y, 0, &i_this->mpEmitter1->mGlobalRotation);
     if (i_this->mTimers[SSS_EMITTER_TIMER_e] == 1) {
@@ -216,7 +216,7 @@ static void cut_control1(sss_class* i_this) {
 static void cut_control2(sss_class* i_this) {
     gabi::Local<cXyz> sp60, sp54, tmp;
     sp60->x = 0.0f;
-    i_this->mVine[9].field_0x00.copy(i_this->mHandPos);
+    i_this->mVine[9].mPos.copy(i_this->mHandPos);
     f32 f27 = i_this->mSwayAmp;
     sp60->z = i_this->mSegmentLen;
     sp60->y = 0.0f;
@@ -227,13 +227,13 @@ static void cut_control2(sss_class* i_this) {
         f32 sA = cM_ssin(t * 2500 - i * 3000);
         f32 sB = cM_ssin(t * 2950 - i * 4000);
         f32 cC = cM_scos(t * 2800 - i * 3500);
-        f32 x_val = gabi::fmadds(sA, f27, cur->field_0x00.x - next->field_0x00.x);
-        f32 y_val = gabi::fmadds(sB, f27, cur->field_0x00.y - 10.0f);
+        f32 x_val = gabi::fmadds(sA, f27, cur->mPos.x - next->mPos.x);
+        f32 y_val = gabi::fmadds(sB, f27, cur->mPos.y - 10.0f);
         f32 f0 = i_this->mCutGroundY + 5.0f;
         if (y_val < f0)
             y_val = f0;
-        f32 z_val = (cur->field_0x00.z - next->field_0x00.z) + cC * f27;
-        f32 f28 = y_val - next->field_0x00.y;
+        f32 z_val = (cur->mPos.z - next->mPos.z) + cC * f27;
+        f32 f28 = y_val - next->mPos.y;
         s16 xz = cM_atan2s(x_val, z_val);
         s16 ya = (s16)-cM_atan2s(f28, std_sqrtf(gabi::fmadds(x_val, x_val, z_val * z_val)));
         mDoMtx_YrotS(calc_mtx(), xz);
@@ -248,11 +248,11 @@ static void cut_control2(sss_class* i_this) {
             sp60->z = e;
         }
         MtxPosition(sp60, sp54);
-        cXyz_pl(&next->field_0x00, tmp, sp54);
-        cur->field_0x00.copy(*tmp.get());
+        cXyz_pl(&next->mPos, tmp, sp54);
+        cur->mPos.copy(*tmp.get());
     }
-    i_this->mHandMtxPos.copy(i_this->mVine[9].field_0x00);
-    cXyz_mi(&i_this->mVine[8].field_0x00, tmp, &i_this->mVine[9].field_0x00);
+    i_this->mHandMtxPos.copy(i_this->mVine[9].mPos);
+    cXyz_mi(&i_this->mVine[8].mPos, tmp, &i_this->mVine[9].mPos);
     {
         f32 x = tmp->x, y = tmp->y, z = tmp->z;
         sp60->x = x;
@@ -267,12 +267,12 @@ static void cut_control2(sss_class* i_this) {
         if ((s8)i_this->mCutEffectOn == 0)
             return;
         JPABaseEmitter* e =
-            dComIfGp_particle_set(sss::ID_IT_SN_TSURU_TAIEKI00, &i_this->mVine[0].field_0x00);
+            dComIfGp_particle_set(sss::ID_IT_SN_TSURU_TAIEKI00, &i_this->mVine[0].mPos);
         i_this->mpEmitter2 = reinterpret_cast<SssEmitter*>(e);
         if (e == nullptr)
             return;
     }
-    cXyz_mi(&i_this->mVine[0].field_0x00, tmp, &i_this->mVine[1].field_0x00);
+    cXyz_mi(&i_this->mVine[0].mPos, tmp, &i_this->mVine[1].mPos);
     f32 x = tmp->x, y = tmp->y, z = tmp->z;
     sp60->x = x;
     sp60->y = y;
@@ -281,8 +281,8 @@ static void cut_control2(sss_class* i_this) {
     s16 rot_x =
         (s16)-cM_atan2s(sp60->y, std_sqrtf(gabi::fmadds(sp60->x, sp60->x, sp60->z * sp60->z)));
     SssEmitter* e = i_this->mpEmitter2;
-    f32 tx = i_this->mVine[0].field_0x00.x, ty = i_this->mVine[0].field_0x00.y,
-        tz = i_this->mVine[0].field_0x00.z;
+    f32 tx = i_this->mVine[0].mPos.x, ty = i_this->mVine[0].mPos.y,
+        tz = i_this->mVine[0].mPos.z;
     e->setGlobalTranslation(tx, ty, tz);
     JPAGetXYZRotateMtx(rot_x, rot_y, 0, &i_this->mpEmitter2->mGlobalRotation);
     if (i_this->mTimers[SSS_EMITTER_TIMER_e] == 1) {
@@ -298,8 +298,8 @@ static void lines_copy(SssLineMaterial* l, sss_s* s, s32 n) {
     be<u8>* sizes = line->mpSize;
     cXyz* segs = line->mpSegments;
     for (s32 i = 0; i < n; i++) {
-        segs[i].copy(s[i].field_0x00);
-        sizes[i] = (u8)gabi::ftoi(s[i].field_0x18);
+        segs[i].copy(s[i].mPos);
+        sizes[i] = (u8)gabi::ftoi(s[i].mSize);
     }
 }
 
@@ -539,7 +539,7 @@ static void hand_move(sss_class* i_this) {
     /* control3 */
     for (s32 i = 0; i < 10; i++) {
         f32 temp = gabi::fmadds(cM_ssin(i_this->mFrameCounter * 500 + i * 100), 0.1f, 0.8f);
-        i_this->mVine[i].field_0x18 = size_d[i] * temp;
+        i_this->mVine[i].mSize = size_d[i] * temp;
     }
     i_this->mpMorf->play(nullptr, 0, 0);
     lines_copy(&i_this->mVineLine, i_this->mVine, 10);
@@ -604,11 +604,11 @@ static void hand_move(sss_class* i_this) {
         for (s32 i = 0; i < 5; i++) {
             sss_s* r18 = &i_this->mVine[i];
             sss_s* r19 = &i_this->mCutVine[i];
-            r19->field_0x00.copy(r18->field_0x00);
-            r19->field_0x18 = (f32)r18->field_0x18;
+            r19->mPos.copy(r18->mPos);
+            r19->mSize = (f32)r18->mSize;
             if (i == 4) {
                 gabi::Local<cXyz> d;
-                cXyz_mi(&r19[0].field_0x00, d, &r19[-1].field_0x00);
+                cXyz_mi(&r19[0].mPos, d, &r19[-1].mPos);
                 i_this->mCutSegmentLen = std_sqrtf(PSVECSquareMag(d)) * 1.5f;
             }
         }

@@ -68,10 +68,10 @@ u32 maptoolIdEvCamera(u32 i_this) {
         if (!event)
             return 1;
     }
-    s32 room = event->field_0x14;
+    s32 room = event->mRoomNo;
     u32 flags = event->field_0x12;
     u32 soundFrame = 0xFFFFFFFF;
-    u32 type = event->field_0x10;
+    u32 type = event->mMapToolCamId;
     if (flags != MAP_KEEP_EVENT) {
         if (flags & MAP_CLEAR_EVENT_FLAG) {
             camera->mEventFlags &= ~0x200000u;
@@ -99,7 +99,7 @@ u32 maptoolIdEvCamera(u32 i_this) {
     s32 style = camTypeStyle(cameraType, 0);
     runStyleEngine(camera, style);
     event = gabi::at<StageEvent>(camera->mEventData.field_0xcc);
-    u32 duration = event->field_0x11;
+    u32 duration = event->mDuration;
     if (duration != MAP_KEEP_EVENT && camera->mCurStyleTimer <= duration * 10)
         return !event ? 1 : 0;
     auto* play = &reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get())->play;

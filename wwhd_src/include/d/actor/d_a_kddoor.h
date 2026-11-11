@@ -79,7 +79,8 @@ struct KddoorDoorSmoke {
     csXyz mRot;
     u8 pad26[2];
     cXyz mPos;
-    be<u8> m34, m35;
+    be<u8> mWaveStep;  /* was m34: view of dDoor_smoke_c; see d/d_door_smoke.h */
+    be<u8> mbStarted;  /* was m35: view of dDoor_smoke_c; see d/d_door_smoke.h */
     u8 pad36[2];
 };
 WWHD_SIZE(KddoorDoorSmoke, 0x38);

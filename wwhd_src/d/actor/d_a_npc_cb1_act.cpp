@@ -847,10 +847,10 @@ BOOL daNpc_Cb1_c::searchNpcAction(void *) {
             if (CbAction_calcTimerU8(&mSearchTimer) == 0) { /* cLib_calcTimer<u8> */
                 mSearchSide = mSearchSide ^ 1;
                 mSearchTimer = (u8)CbAction_getRndValue(
-                    cbAction_HIO.field_0xE2, cbAction_HIO.field_0xE4); /* cLib_getRndValue<s16> */
+                    cbAction_HIO.mSearchTimeBase, cbAction_HIO.mSearchTimeRange); /* cLib_getRndValue<s16> */
             }
             u8 side = mSearchSide;
-            s16 d = cbAction_HIO.field_0xE6;
+            s16 d = cbAction_HIO.mSearchTurnAngle;
             if (side != 0) {
                 d = -d;
             }
@@ -1057,7 +1057,7 @@ BOOL daNpc_Cb1_c::waitPlayerAction(void *) {
         return TRUE;
     }
     auto *att = reinterpret_cast<cb1_action::Attention *>(dComIfGp_getAttention());
-    bool active = !(cb1_stickValue() < cbAction_HIO.field_0x80);
+    bool active = !(cb1_stickValue() < cbAction_HIO.mStickTurnMin);
     if (!active) {
         active = CbAction_lockonTruth(gabi::ea(att)) /* LockonTruth */ ||
                  ((u32)att->mFlags & 0x20000000);
@@ -1069,7 +1069,7 @@ BOOL daNpc_Cb1_c::waitPlayerAction(void *) {
         int stickPos = calcStickPos(target, temp);
         gabi::Local<be<s16>> temp3;
         gabi::Local<cXyz> eye;
-        if (stickPos != 0 && cb1_stickValue() < cbAction_HIO.field_0x84) {
+        if (stickPos != 0 && cb1_stickValue() < cbAction_HIO.mStickWalkMin) {
             cb1_posCopy(this, eye);
             s16 sy = shape_angle.y;
             s16 vel = cbAction_HIO.mNpc.mMaxTurnStep /* l_HIO.mNpc.mMaxTurnStep */;
@@ -1090,7 +1090,7 @@ BOOL daNpc_Cb1_c::waitPlayerAction(void *) {
         } else {
             current.angle.y = shape_angle.y;
         }
-        if (!(cb1_stickValue() < cbAction_HIO.field_0x84) && stickPos == 0) {
+        if (!(cb1_stickValue() < cbAction_HIO.mStickWalkMin) && stickPos == 0) {
             current.angle.y = target;
             cb1_setPlayerActionPmf(this, gabi::ea(&cbAct_walkPlayerAction), nullptr);
         }
@@ -1138,8 +1138,8 @@ BOOL daNpc_Cb1_c::walkPlayerAction(void *) {
         temp = 0.0f;
         accel = 2.0f;
     }
-    cLib_addCalcAngleS(&current.angle.y, temp7, cbAction_HIO.field_0xEC, cbAction_HIO.field_0xE8,
-                       cbAction_HIO.field_0xEA);
+    cLib_addCalcAngleS(&current.angle.y, temp7, cbAction_HIO.mWalkTurnScale, cbAction_HIO.mWalkTurnMaxStep,
+                       cbAction_HIO.mWalkTurnMinStep);
     gabi::Local<cXyz> temp4;
     int stickPos = calcStickPos(temp7, temp4);
     if (stickPos == 0) {
@@ -1186,7 +1186,7 @@ BOOL daNpc_Cb1_c::hitPlayerAction(void *) {
     if (mActionStatus == 0) {
         cb1_hitStart(this);
     } else if (mActionStatus != -1 && (mAcch.ChkGroundHit())) {
-        m4E4 = m4E4 | 1; /* returnLink() */
+        mNpcFlags = mNpcFlags | 1; /* returnLink() */
         speedF = 0.0f;
     }
     return TRUE;

@@ -118,7 +118,7 @@ void daObjRcloud_c::setup_action(s32 action) {
     mCurrentActProc.d = act_proc[action].proc.d;
     mCurrentActProc.i = act_proc[action].proc.i;
     u32 target = act_proc[action].proc.f;
-    m2BC = action;
+    mAction = action;
     mCurrentActProc.f = target;
 }
 
@@ -143,7 +143,7 @@ void daObjRcloud_c::setTexMtx() {
                 // HD: packet texture translation is doubled directly; no GameCube matrix access.
                 f32 x = pTexMtx->mTranslationX;
                 pTexMtx->mTranslationX = x + x;
-                if (m2BC == 2) {
+                if (mAction == 2) {
                     f32 y = pTexMtx->mTranslationY;
                     pTexMtx->mTranslationY = y + (f32)mCloudAnimProgress;
                 }
@@ -219,7 +219,7 @@ int daObjRcloud_c::param_get_arg() { return PrmAbstract(this, PRM_ARG_W, PRM_ARG
 str 1002EC44
 str 1002EC4C
 str 1002EC8C
-str 1002EC88 "FALSE" renamed
+str 1002EC88 "0"
 data l_demo_name 101CC7C8
 data act_proc 101CC78C
 data l_demoFrame 101D6008

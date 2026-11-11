@@ -120,8 +120,8 @@ struct daShand_HIO_c {
     enum : u32 { __vt = 0x1003A0E4 };
     /* 0x0 */ be<s8> mNo;
     /* 0x1 */ u8 _1;
-    /* 0x2 */ be<s16> field_6;
-    /* 0x4 */ be<s16> field_8;
+    /* 0x2 */ be<s16> mEyeSegment;  /* was field_6: daShand_HIO_c_ct sets -3; hand_move 0246FAEC: eyePos is the hand line segment it + 10 (tww the same) */
+    /* 0x4 */ be<s16> mHitHoldTime;  /* was field_8: daShand_HIO_c_ct sets 50; hand_move 0246FAEC: mTimers[0] after the hand hits while it has a parent, mTimers[1] it + 90 (tww field_2BC[0] the same) */
     /* 0x6 */ u8 _6[2];
     /* 0x8 */ be<u32> __vtbl;
 };

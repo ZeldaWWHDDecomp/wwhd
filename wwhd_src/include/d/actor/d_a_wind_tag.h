@@ -211,7 +211,7 @@ struct daWindTag_c : fopAc_ac_c {
     /* 0x6EC */ be<u8> mType;
     /* 0x6ED */ u8 _6ED[3];
     /* 0x6F0 */ be<f32> mOffsY;
-    /* 0x6F4 */ be<f32> field_0x49c;
+    /* 0x6F4 */ be<f32> mHeightScale;  /* was field_0x49c: CreateInit 024DF548: copy of scale.y; _execute 024E065C / CreateInit scale the type's height (mData[type * 2 + 1]) by it for mOffsY (tww the same) */
     /* 0x6F8 */ gptr<WindTagHD::Emitter> mpEmitter;
     /* 0x6FC */ be<u8> mEfColor[4];
     /* 0x700 */ dKy_tevstr_c mEfTevStr;
@@ -221,12 +221,12 @@ struct daWindTag_c : fopAc_ac_c {
     /* 0x8E4 */ be<u8> mPathId;
     /* 0x8E5 */ be<s8> mCurPathPoint;
     /* 0x8E6 */ be<s8> mPathPointDir;
-    /* 0x8E7 */ be<u8> field_0x577;
+    /* 0x8E7 */ be<u8> mSwitchLatch;  /* was field_0x577: _execute 024E065C: set when the switch changes (and the switch type allows it), cleared when the schedule bits turn off again (mPrevSchActive); while it is set the wind blows regardless of the switch / schedule (tww the same) */
     /* 0x8E8 */ be<s32> mSwNo;
-    /* 0x8EC */ be<u8> field_0x57c;
-    /* 0x8ED */ be<u8> field_0x57d;
+    /* 0x8EC */ be<u8> mPrevSwitch;  /* was field_0x57c: CreateInit 024DF548 / _execute 024E065C: fopAcM_isSwitch(mSwNo) of the last frame; _execute 024E065C compares it with the current state to latch mSwitchLatch (tww the same) */
+    /* 0x8ED */ be<u8> mPrevSchActive;  /* was field_0x57d: _execute 024E065C: the last frame's getSch & dKy_get_schbit (schedule active); clears mSwitchLatch when it falls to 0 (tww the same) */
     /* 0x8EE */ be<u8> mbDraw;
-    /* 0x8EF */ be<u8> field_0x57f;
+    /* 0x8EF */ be<u8> mSplash;  /* was field_0x57f: CreateInit 024DF548: daWindTag_prm::getSplashFlag == 1; CreateInit sets up the splash effect colour and emitter only while it is set (tww the same) */
     /* 0x8F0 */ be<u32> mLevelSeID;
 };
 WWHD_OFFSET(daWindTag_c, mCpsS, 0x520);

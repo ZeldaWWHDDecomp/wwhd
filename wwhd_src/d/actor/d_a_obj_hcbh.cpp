@@ -351,9 +351,9 @@ cPhs_State daObjHcbh_c::_create() {
         f32 height = current.pos.y, yOffset = l_sphereCenters.mValues[i].y, x = current.pos.x, z = current.pos.z;
         Hcbh_SphSetC(&mSph[i].mSph, x, height + yOffset, z);
     }
-    mSmoke.m11 = 0;
+    mSmoke.mRateOff = 0;
     mAction.d = 0;
-    mSmoke.m12 = 1;
+    mSmoke.mFollowOff = 1;
     mAction.f = gabi::guest_fn(reinterpret_cast<const void*>(Hcbh_waitProc));
     mAction.i = -1;
     mSmoke.mTevstr = gabi::ea(&tevStr);

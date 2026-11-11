@@ -213,12 +213,12 @@ static s16 tn_randomPartRotation(f32 magnitude) {
 
 static void tn_moveFlyingPart(tn_class* actor, tn_p* part, int index, tn_groundcheck* ground,
                               f32 zero, f32 horizontalBounce, f32 randomRotation) {
-    part->m18.x = part->m0C.x; part->m18.y = part->m0C.y; part->m18.z = part->m0C.z;
-    tn_VECAdd(&part->m0C, &part->m24, &part->m0C);
-    part->m24.y = static_cast<f32>(part->m24.y) - 5.0f;
-    tn_abi::addAngles(&part->m30, &part->m36);
+    part->mOldPos.x = part->mPos.x; part->mOldPos.y = part->mPos.y; part->mOldPos.z = part->mPos.z;
+    tn_VECAdd(&part->mPos, &part->mSpeed, &part->mPos);
+    part->mSpeed.y = static_cast<f32>(part->mSpeed.y) - 5.0f;
+    tn_abi::addAngles(&part->mAngle, &part->mAngleSpeed);
     gabi::Local<cXyz> motion;
-    tn_abi::subtractPosition(&part->m0C, motion.get(), &part->m18);
+    tn_abi::subtractPosition(&part->mPos, motion.get(), &part->mOldPos);
     gabi::Local<cXyz> probeOffset;
     *probeOffset = *motion;
     const f32 motionSquared = tn_abi::VECSquareMag(probeOffset.get());
@@ -234,34 +234,34 @@ static void tn_moveFlyingPart(tn_class* actor, tn_p* part, int index, tn_groundc
         probeOffset->y = 30.0f;
         gabi::Local<cXyz> endpoint;
         MtxPosition(probeOffset.get(), endpoint.get());
-        probeOffset->x = part->m0C.x;
-        const f32 y = part->m0C.y;
+        probeOffset->x = part->mPos.x;
+        const f32 y = part->mPos.y;
         const f32 height = 30.0f;
         probeOffset->y = y;
-        probeOffset->z = part->m0C.z;
+        probeOffset->z = part->mPos.z;
         probeOffset->y = y + height;
-        tn_VECAdd(endpoint.get(), &part->m0C, endpoint.get());
+        tn_VECAdd(endpoint.get(), &part->mPos, endpoint.get());
         tn_abi::dBgS_LinChk_Set(line.get(), probeOffset.get(), endpoint.get(), actor);
         const u32 play = gabi::ea(dComIfGp_get());
         if (tn_abi::LineCross(gabi::at<u8>(play + 0x12A0u), line.get()) != 0) {
             const f32 factor = -0.3f;
-            const f32 vx = part->m24.x;
-            const f32 oldX = part->m18.x;
-            const f32 vz = part->m24.z;
-            const f32 oldZ = part->m18.z;
-            part->m0C.x = oldX;
-            part->m0C.z = oldZ;
-            part->m24.x = vx * factor;
-            part->m24.z = vz * factor;
+            const f32 vx = part->mSpeed.x;
+            const f32 oldX = part->mOldPos.x;
+            const f32 vz = part->mSpeed.z;
+            const f32 oldZ = part->mOldPos.z;
+            part->mPos.x = oldX;
+            part->mPos.z = oldZ;
+            part->mSpeed.x = vx * factor;
+            part->mSpeed.z = vz * factor;
         }
         tn_prepareLineCheckDestruction(line.get());
         cBgS_LinChk_dt(line.get(), 0);
     }
-    probeOffset->x = part->m0C.x;
-    const f32 partY = part->m0C.y;
+    probeOffset->x = part->mPos.x;
+    const f32 partY = part->mPos.y;
     const f32 probeHeight = 100.0f;
     probeOffset->y = partY;
-    probeOffset->z = part->m0C.z;
+    probeOffset->z = part->mPos.z;
     ground->mPosition.x = probeOffset->x;
     ground->mPosition.y = partY + probeHeight;
     ground->mPosition.z = probeOffset->z;
@@ -272,43 +272,43 @@ static void tn_moveFlyingPart(tn_class* actor, tn_p* part, int index, tn_groundc
     else if (index == 1) groundHeight += REG0_F(1);
     else if (index == 2) groundHeight += -15.0f;
     else if (index == 3) groundHeight += REG0_F(3);
-    if (!(static_cast<f32>(part->m0C.y) > groundHeight)) {
-        const f32 vy = part->m24.y;
+    if (!(static_cast<f32>(part->mPos.y) > groundHeight)) {
+        const f32 vy = part->mSpeed.y;
         const f32 bounceThreshold = -30.0f;
-        part->m0C.y = groundHeight;
+        part->mPos.y = groundHeight;
         if (vy < bounceThreshold) {
             if (index == 1) {
-                part->m24.y = horizontalBounce;
-                part->m24.x = cM_rndFX(horizontalBounce);
-                part->m24.z = cM_rndFX(horizontalBounce);
-                part->m36.x = tn_randomPartRotation(randomRotation);
-                part->m36.y = tn_randomPartRotation(randomRotation);
+                part->mSpeed.y = horizontalBounce;
+                part->mSpeed.x = cM_rndFX(horizontalBounce);
+                part->mSpeed.z = cM_rndFX(horizontalBounce);
+                part->mAngleSpeed.x = tn_randomPartRotation(randomRotation);
+                part->mAngleSpeed.y = tn_randomPartRotation(randomRotation);
                 tn_playPartImpact(actor, 0x6996);
             } else {
-                const f32 vx = part->m24.x;
+                const f32 vx = part->mSpeed.x;
                 const f32 factor = 0.5f;
-                const f32 vz = part->m24.z;
+                const f32 vz = part->mSpeed.z;
                 const f32 verticalBounce = 10.0f;
-                part->m24.y = verticalBounce;
-                part->m24.x = vx * factor;
-                part->m24.z = vz * factor;
+                part->mSpeed.y = verticalBounce;
+                part->mSpeed.x = vx * factor;
+                part->mSpeed.z = vz * factor;
                 tn_playPartImpact(actor, 0x6997);
             }
-            part->m44 = 20;
+            part->mTimer = 20;
         } else {
-            part->m36.z = 0;
-            part->m36.y = 0;
-            part->m24.z = zero;
-            part->m24.y = zero;
-            part->m36.x = 0;
-            part->m24.x = zero;
-            cLib_addCalcAngleS2(&part->m30.x, 0, 1, 0xC00);
-            cLib_addCalcAngleS2(&part->m30.z, 0x4000, 1, 0xC00);
+            part->mAngleSpeed.z = 0;
+            part->mAngleSpeed.y = 0;
+            part->mSpeed.z = zero;
+            part->mSpeed.y = zero;
+            part->mAngleSpeed.x = 0;
+            part->mSpeed.x = zero;
+            cLib_addCalcAngleS2(&part->mAngle.x, 0, 1, 0xC00);
+            cLib_addCalcAngleS2(&part->mAngle.z, 0x4000, 1, 0xC00);
         }
     }
-    if (part->m44 == 1) {
-        part->m08 = -1;
-        yoroi_break(actor, &part->m0C, static_cast<u8>(index));
+    if (part->mTimer == 1) {
+        part->mPartState = -1;
+        yoroi_break(actor, &part->mPos, static_cast<u8>(index));
         if (index == 0) {
             const u32 mantleId = actor->mMantPcId;
             if (mantleId != 0xFFFFu) {
@@ -655,13 +655,13 @@ static void tn_moveReturnHome(tn_class* actor, f32 zero, f32 one, f32 rangeScale
         const s16 heading = cM_atan2s(dx, dz);
         actor->mDamageReaction.mTurnTargetY = static_cast<s16>(heading);
         const f32 distance = tn_sqrtf(gabi::fmadds(dx, dx, dz * dz));
-        const f32 runSpeed = static_cast<f32>(l_tnHIO.m054);
+        const f32 runSpeed = static_cast<f32>(l_tnHIO.mRunSpeed);
         const f32 stepScale = 0.25f;
         const f32 closeDistance = (runSpeed * stepScale) * acceleration;
         const s16 targetHeading = static_cast<s16>(actor->mDamageReaction.mTurnTargetY);
         if (distance < closeDistance) actor->mDamageReaction.mMode = 0;
         cLib_addCalcAngleS2(&actor->current.angle.y, targetHeading, 4, 0x1000);
-        cLib_addCalc2(&actor->speedF, static_cast<f32>(l_tnHIO.m054), one, acceleration);
+        cLib_addCalc2(&actor->speedF, static_cast<f32>(l_tnHIO.mRunSpeed), one, acceleration);
         break;
     }
     default: break;
@@ -788,7 +788,7 @@ static void tn_patrolLocomotion(tn_class* actor, f32 one, f32 acceleration) {
     const f32 currentZ = actor->current.pos.z;
     const f32 dx = targetX - currentX;
     const f32 dz = static_cast<f32>(actor->mPathXyz.z) - currentZ;
-    const f32 speed = (usePath ? static_cast<f32>(l_tnHIO.m04C) : static_cast<f32>(l_tnHIO.m050));
+    const f32 speed = (usePath ? static_cast<f32>(l_tnHIO.mPathWalkSpeed) : static_cast<f32>(l_tnHIO.mWalkSpeed));
     const s32 turnLimit = usePath ? 0x400 : 0x1000;
     const s16 heading = cM_atan2s(dx, dz);
     const s8 activePath = static_cast<s8>(actor->mPathNo);
@@ -908,7 +908,7 @@ static void tn_movePatrol(tn_class* actor, f32 zero, f32 one, f32 blend, f32 acc
         bool notice = reaction != 0;
         if (!notice) {
             const f32 distance = static_cast<f32>(actor->mPlayerDistance);
-            const f32 detectionRange = static_cast<f32>(l_tnHIO.m028);
+            const f32 detectionRange = static_cast<f32>(l_tnHIO.mNoticeRange);
             if (distance < detectionRange) {
                 const s16 viewLimit = get_view_H(actor);
                 const u32 target = gabi::ea(static_cast<fopAc_ac_c*>(actor->mDamageReaction.mpLookTarget));
@@ -969,16 +969,16 @@ static tn_combat_step tn_combatLocomotion(tn_class* actor, f32 steering, f32 zer
         [[fallthrough]];
     case 1: {
         const bool armor = (static_cast<u8>(actor->mRemainingEquipmentPieces) & 1u) != 0;
-        const f32 speed = armor ? static_cast<f32>(l_tnHIO.m04C) * 1.5f : static_cast<f32>(l_tnHIO.m054);
+        const f32 speed = armor ? static_cast<f32>(l_tnHIO.mPathWalkSpeed) * 1.5f : static_cast<f32>(l_tnHIO.mRunSpeed);
         cLib_addCalc2(&actor->speedF, speed, one, acceleration);
         const BOOL way = daTn_player_way_check(actor);
         const f32 distance = static_cast<f32>(actor->mPlayerDistance);
         if (way != 0) {
-            if (distance < static_cast<f32>(l_tnHIO.m02C)) {
+            if (distance < static_cast<f32>(l_tnHIO.mFightRange)) {
                 actor->mDamageReaction.mMode = 2;
                 actor->mCountDownTimers[3] = static_cast<s16>(40);
             }
-        } else if (distance < static_cast<f32>(l_tnHIO.m030)) {
+        } else if (distance < static_cast<f32>(l_tnHIO.mAttackRange)) {
             const f32 heightTuning = REG_F(10, 3);
             const f32 heightBase = 250.0f;
             if (static_cast<f32>(actor->mPlayerHeightDistance) < heightTuning + heightBase) return tn_combat_step::beginAttack;
@@ -994,7 +994,7 @@ static tn_combat_step tn_combatLocomotion(tn_class* actor, f32 steering, f32 zer
             nextMode = steering > zero ? 5 : 6;
         } else {
             anm_init(actor, pathDriven != 0 ? 0x3A : 0x52, blend, J3DFrameCtrl::EMode_LOOP, one, pathDriven != 0 ? 0x0F : 0x22);
-            const f32 closeRange = static_cast<f32>(l_tnHIO.m030);
+            const f32 closeRange = static_cast<f32>(l_tnHIO.mAttackRange);
             const f32 distance = static_cast<f32>(actor->mPlayerDistance);
             nextMode = distance < closeRange ? 4 : 3;
         }
@@ -1006,7 +1006,7 @@ static tn_combat_step tn_combatLocomotion(tn_class* actor, f32 steering, f32 zer
         break;
     }
     case 3:
-        cLib_addCalc2(&actor->speedF, static_cast<f32>(l_tnHIO.m05C), one, 20.0f);
+        cLib_addCalc2(&actor->speedF, static_cast<f32>(l_tnHIO.mFightStepSpeed), one, 20.0f);
         if (static_cast<s16>(actor->mCountDownTimers[1]) == 0) actor->mDamageReaction.mMode = 2;
         break;
     case 4:
@@ -1014,7 +1014,7 @@ static tn_combat_step tn_combatLocomotion(tn_class* actor, f32 steering, f32 zer
             actor->mDamageReaction.mMode = 3;
             anm_init(actor, dRes_INDEX_TN_BCK_AWALK1_e, blend, J3DFrameCtrl::EMode_LOOP, one, dRes_INDEX_TN_BAS_AWALK1_e);
         } else {
-            cLib_addCalc2(&actor->speedF, -static_cast<f32>(l_tnHIO.m05C), one, 20.0f);
+            cLib_addCalc2(&actor->speedF, -static_cast<f32>(l_tnHIO.mFightStepSpeed), one, 20.0f);
             if (static_cast<s16>(actor->mCountDownTimers[1]) == 0) actor->mDamageReaction.mMode = 2;
         }
         break;
@@ -1029,7 +1029,7 @@ static tn_combat_step tn_combatLocomotion(tn_class* actor, f32 steering, f32 zer
             actor->mDamageReaction.mMode = 5;
         }
         actor->mSideStepAngle = static_cast<u16>(side == 5 ? 0x4000 : 0xC000);
-        cLib_addCalc2(&actor->speedF, static_cast<f32>(l_tnHIO.m060), one, 30.0f);
+        cLib_addCalc2(&actor->speedF, static_cast<f32>(l_tnHIO.mSideStepSpeed), one, 30.0f);
         if (static_cast<s16>(actor->mCountDownTimers[1]) == 0) actor->mDamageReaction.mMode = 2;
         break;
     }
@@ -1049,7 +1049,7 @@ static void tn_beginCombatAttack(tn_class* actor) {
 
 // an attack has been selected and the rest of the combat action is skipped.
 static bool tn_combatRangeTransition(tn_class* actor, fopAc_ac_c* player) {
-    const f32 closeRange = static_cast<f32>(l_tnHIO.m02C);
+    const f32 closeRange = static_cast<f32>(l_tnHIO.mFightRange);
     const f32 lostTargetMargin = 75.0f;
     f32 distance = static_cast<f32>(actor->mPlayerDistance);
     if (distance > closeRange + lostTargetMargin) {
@@ -1065,25 +1065,25 @@ static bool tn_combatRangeTransition(tn_class* actor, fopAc_ac_c* player) {
             actor->mDamageReaction.mMode = 10;
             return true;
         }
-        const f32 attackRange = static_cast<f32>(l_tnHIO.m030);
+        const f32 attackRange = static_cast<f32>(l_tnHIO.mAttackRange);
         const f32 rangeMargin = 62.5f;
         distance = static_cast<f32>(actor->mPlayerDistance);
         if (!(distance < attackRange + rangeMargin)) return false;
         const f32 reloadedMargin = 62.5f;
         if (!(distance > attackRange - reloadedMargin)) return false;
     } else {
-        const f32 attackRange = static_cast<f32>(l_tnHIO.m030);
+        const f32 attackRange = static_cast<f32>(l_tnHIO.mAttackRange);
         const f32 rangeMargin = 62.5f;
         if (!(distance < attackRange + rangeMargin)) return false;
         const f32 reloadedMargin = 62.5f;
         if (!(distance > attackRange - reloadedMargin)) return false;
     }
     if (static_cast<s16>(actor->mCountDownTimers[3]) != 0) return false;
-    const s16 delay = static_cast<s16>(l_tnHIO.m06C);
+    const s16 delay = static_cast<s16>(l_tnHIO.mAttackCheckDelay);
     const f32 randomRange = 100.0f;
     actor->mCountDownTimers[3] = static_cast<s16>(delay);
     const f32 random = cM_rndF(randomRange);
-    if (!(random < static_cast<f32>(l_tnHIO.m070))) return false;
+    if (!(random < static_cast<f32>(l_tnHIO.mAttackChance))) return false;
     const f32 heightTuning = REG_F(10, 3);
     const f32 heightBase = 250.0f;
     if (!(static_cast<f32>(actor->mPlayerHeightDistance) < heightTuning + heightBase)) return false;
@@ -1205,7 +1205,7 @@ static void tn_chooseAttack(tn_class* actor, f32 one, f32 armorBlend) {
     const s32 pathDriven = actor->mHasWepon;
     const f32 random = cM_rndF(100.0f);
     if (pathDriven != 0) {
-        if (random < static_cast<f32>(l_tnHIO.m078)) {
+        if (random < static_cast<f32>(l_tnHIO.mVerticalCutChance)) {
             const bool armor = (static_cast<u8>(actor->mRemainingEquipmentPieces) & 1u) != 0;
             anm_init(actor, armor ? 0x2E : 0x46, armorBlend, J3DFrameCtrl::EMode_NONE, one, armor ? 0x0B : 0x19);
             yoroi_anm_init(actor, dRes_INDEX_TN_BCK_YAT_TATE1_e, armorBlend, J3DFrameCtrl::EMode_NONE, one);
@@ -1218,7 +1218,7 @@ static void tn_chooseAttack(tn_class* actor, f32 one, f32 armorBlend) {
             if (base != 0) tn_playBombReactionSound(actor, 0x4886);
         }
     } else {
-        const f32 threshold = static_cast<f32>(l_tnHIO.m07C);
+        const f32 threshold = static_cast<f32>(l_tnHIO.mPalmStrikeChance);
         if (random < threshold || (static_cast<u8>(actor->mRemainingEquipmentPieces) & 1u) != 0) {
             anm_init(actor, dRes_INDEX_TN_BCK_BAT_SYOUTEI_S1_e, 3.0f, J3DFrameCtrl::EMode_NONE, one, dRes_INDEX_TN_BAS_BAT_SYOUTEI_S1_e);
             actor->mAttackType = 2;
@@ -1287,7 +1287,7 @@ static bool tn_attackAnimation(tn_class* actor, fopAc_ac_c* player, f32 zero,
             end = 25.0f;
             if (frame == static_cast<u32>(static_cast<s32>(REG0_S(2)) + 13)) {
                 actor->mGroundSmokeType = static_cast<u8>(0);
-                const s32 timing = static_cast<s32>(REG0_S(3)) + static_cast<s16>(l_tnHIO.m020) + 14;
+                const s32 timing = static_cast<s32>(REG0_S(3)) + static_cast<s16>(l_tnHIO.mGroundSmokeEnd) + 14;
                 actor->mGroundSmokeTimer = static_cast<u16>(timing);
                 const s32 angle = static_cast<s32>(static_cast<s16>(actor->current.angle.y)) + REG0_S(8) + 0x2000;
                 actor->mSmokeAngle = static_cast<u16>(angle);
@@ -1314,7 +1314,7 @@ static bool tn_attackAnimation(tn_class* actor, fopAc_ac_c* player, f32 zero,
     actor->mBtAttackType = static_cast<u8>(attackClass);
     actor->mBtEndFrame = static_cast<f32>(end);
     actor->mBtMaxDis = static_cast<f32>(10000.0f);
-    actor->mBtMaxDis = static_cast<f32>(l_tnHIO.m0D4);
+    actor->mBtMaxDis = static_cast<f32>(l_tnHIO.mWeponHitMaxDis);
     body = gabi::ea(static_cast<mDoExt_McaMorf*>(actor->mpBodyMorf));
     actor->mBtNowFrame = static_cast<f32>(static_cast<f32>(gabi::at<mDoExt_McaMorf>(body)->mFrameCtrl.mFrame));
     fopAc_ac_c* hit = wepon_hit_check(actor);
@@ -1357,7 +1357,7 @@ static bool tn_attackCircle(tn_class* actor, fopAc_ac_c* player, f32 steering,
             anm_init(actor, dRes_INDEX_TN_BCK_AAT_KAITEN_LR1_e, acceleration, J3DFrameCtrl::EMode_LOOP, one, dRes_INDEX_TN_BAS_AAT_KAITEN_LR1_e);
             actor->mDamageReaction.mMode = steering > zero ? 15 : 16;
         } else {
-            const f32 attackDistance = static_cast<f32>(l_tnHIO.m030);
+            const f32 attackDistance = static_cast<f32>(l_tnHIO.mAttackRange);
             const f32 distance = static_cast<f32>(actor->mPlayerDistance);
             if (distance < attackDistance + 25.0f &&
                 distance > attackDistance - 25.0f) {
@@ -1371,15 +1371,15 @@ static bool tn_attackCircle(tn_class* actor, fopAc_ac_c* player, f32 steering,
         yoroi_anm_init(actor, dRes_INDEX_TN_BCK_YAT_KAITEN1_e, acceleration, J3DFrameCtrl::EMode_LOOP, one);
         const f32 random = cM_rndF(20.0f);
         actor->mCountDownTimers[1] = static_cast<u16>(static_cast<u16>(gabi::ftoi(random + 20.0f)));
-        cLib_addCalc2(&actor->speedF, static_cast<f32>(l_tnHIO.m05C), one,
+        cLib_addCalc2(&actor->speedF, static_cast<f32>(l_tnHIO.mFightStepSpeed), one,
                      20.0f);
     } else if (mode == 13 || mode == 14) {
-        const f32 speed = static_cast<f32>(l_tnHIO.m05C);
+        const f32 speed = static_cast<f32>(l_tnHIO.mFightStepSpeed);
         cLib_addCalc2(&actor->speedF, mode == 14 ? -speed : speed, one,
                      20.0f);
     } else if (mode == 15 || mode == 16) {
         actor->mSideStepAngle = static_cast<s16>(mode == 15 ? 0x4000 : -0x4000);
-        cLib_addCalc2(&actor->speedF, static_cast<f32>(l_tnHIO.m060), one,
+        cLib_addCalc2(&actor->speedF, static_cast<f32>(l_tnHIO.mSideStepSpeed), one,
                      30.0f);
     } else {
         actor->speedF = static_cast<f32>(zero);
@@ -1397,7 +1397,7 @@ static bool tn_attackCircle(tn_class* actor, fopAc_ac_c* player, f32 steering,
 }
 
 static void tn_finishAttack(tn_class* actor, f32 one, f32 blend) {
-    if (static_cast<f32>(actor->mPlayerDistance) < static_cast<f32>(l_tnHIO.m02C)) {
+    if (static_cast<f32>(actor->mPlayerDistance) < static_cast<f32>(l_tnHIO.mFightRange)) {
         const s16 limit = get_view_H(actor);
         const u32 target = gabi::ea(static_cast<fopAc_ac_c*>(actor->mDamageReaction.mpLookTarget));
         const s16 heading = static_cast<s16>(actor->mTargetAngle);
@@ -1541,7 +1541,7 @@ static void playShield(tn_class* actor) {
 }
 static void moveDetachedParts(tn_class* actor) {
     for (int index = 0; index < 3; ++index) {
-        if (actor->mParts[index].m08 >= 0)
+        if (actor->mParts[index].mPartState >= 0)
             part_move(actor, index);
     }
 }
@@ -1746,7 +1746,7 @@ static void updateDemoCameraAndSmoke(tn_class* actor) {
     if (static_cast<s16>(actor->mGroundSmokeTimer) != 0) {
         const s16 remaining = static_cast<s16>(static_cast<s16>(actor->mGroundSmokeTimer) - 1);
         actor->mGroundSmokeTimer = static_cast<s16>(remaining);
-        if (remaining >= static_cast<s16>(l_tnHIO.m020)) {
+        if (remaining >= static_cast<s16>(l_tnHIO.mGroundSmokeEnd)) {
             smokeOffset->x = 0.0f;
             smokeOffset->y = 0.0f;
             actor->mEffectAngle.x = static_cast<s16>(0); actor->mEffectAngle.z = static_cast<s16>(0);
@@ -1935,7 +1935,7 @@ static void updateHeldWeapon(tn_class* actor) {
         tn_abi::cancelCarry(gabi::at<void>(weapon));
         if (static_cast<u32>(actor->mWeponDropMode) != 2) {
             const f32 spin = cM_rndFX(2000.0f);
-            gabi::at<TnBoko>(weapon)->m2C2 = static_cast<s16>(gabi::ftoi(spin));
+            gabi::at<TnBoko>(weapon)->mRotAngleSpeed = static_cast<s16>(gabi::ftoi(spin));
             const s32 baseYaw = static_cast<s16>(actor->shape_angle.y) + 0x8000;
             const f32 spread = cM_rndFX(8000.0f);
             const s32 yaw = baseYaw + static_cast<s16>(gabi::ftoi(spread));
@@ -2089,13 +2089,13 @@ static void updateDamageAnimation(tn_class* actor, u32 damagePower) {
             break;
         case 20:
             actor->mTubaEffectTimer = static_cast<s16>(1); actor->mEffectAngle.x = static_cast<s16>(-0x4000);
-            actor->mGroundSmokeTimer = static_cast<s16>(static_cast<s16>(static_cast<s16>(l_tnHIO.m020) + 16));
+            actor->mGroundSmokeTimer = static_cast<s16>(static_cast<s16>(static_cast<s16>(l_tnHIO.mGroundSmokeEnd) + 16));
             actor->mGroundSmokeType = static_cast<u8>(1);
-            actor->mDamageReaction.mDownTimers[2] = static_cast<s16>(l_tnHIO.m080);
+            actor->mDamageReaction.mDownTimers[2] = static_cast<s16>(l_tnHIO.mDownRecoverDelay);
             break;
         case 21:
             actor->mTubaEffectTimer = static_cast<s16>(1); actor->mEffectAngle.x = static_cast<s16>(0);
-            actor->mDamageReaction.mDownTimers[2] = static_cast<s16>(l_tnHIO.m080);
+            actor->mDamageReaction.mDownTimers[2] = static_cast<s16>(l_tnHIO.mDownRecoverDelay);
             break;
         case 30:
             anm_init(actor, dRes_INDEX_TN_BCK_BDOWN_U1_e, 5.0f, J3DFrameCtrl::EMode_NONE, 1.0f, -1);
@@ -2202,7 +2202,7 @@ static bool applyIceOrShatter(tn_class* actor, u32 hitObject, int hitPart) {
         const u8 equipment = static_cast<u8>(actor->mRemainingEquipmentPieces);
         if (!((hitPart == 2 && (equipment & 1) == 0) ||
               (hitPart == 1 && (equipment & 2) == 0))) return false;
-        actor->mEnemyIce.m00C = static_cast<u8>(1);
+        actor->mEnemyIce.mFreezeType = static_cast<u8>(1);
         actor->mDamageReaction.mAction = ACTION_JYUNKAI; actor->mDamageReaction.mMode = static_cast<s16>(-10);
         actor->health = static_cast<u8>(static_cast<u8>(static_cast<u8>(actor->health) + 4));
         actor->mEnemyIce.mFreezeDuration = static_cast<s16>(static_cast<s16>(REG0_S(4) + 60));
@@ -2214,9 +2214,9 @@ static bool applyIceOrShatter(tn_class* actor, u32 hitObject, int hitPart) {
         actor->mEnemyIce.mLightShrinkTimer = static_cast<u8>(1);
         for (int i = 0; i < 3; ++i) {
             const u32 part = a + 0x3F8 + 0x4C*i;
-            if (i <= 1 && static_cast<s8>(gabi::at<tn_p>(part)->m08) >= 0)
+            if (i <= 1 && static_cast<s8>(gabi::at<tn_p>(part)->mPartState) >= 0)
                 yoroi_break(actor, gabi::at<cXyz>(part + 0xC), static_cast<u8>(i));
-            gabi::at<tn_p>(part)->m08 = -1;
+            gabi::at<tn_p>(part)->mPartState = -1;
         }
     }
     tn_abi::enemy_fire_remove(reinterpret_cast<void*>(&actor->mEnemyFire));
@@ -2295,7 +2295,7 @@ static void updateKnockback(tn_class* actor, DamageInfo* info, int reaction) {
         offset->z = -10.0f;
         MtxPosition(offset.get(), &actor->mDamageReaction.mHitVec);
         if (static_cast<f32>(actor->mDamageReaction.mKnockbackPower) < 25.0f) {
-            actor->mDamageReaction.mPushback = static_cast<f32>(-static_cast<f32>(l_tnHIO.m0D0));
+            actor->mDamageReaction.mPushback = static_cast<f32>(-static_cast<f32>(l_tnHIO.mWeakHitPushback));
         } else {
             const f32 random = cM_rndF(10.0f);
             actor->mDamageReaction.mKnockbackPower = static_cast<f32>(gabi::fadds_ppc(random, 70.0f));
@@ -2388,8 +2388,8 @@ static bool applyArmoredHit(tn_class* actor, DamageInfo* info, const DamageSetup
         actor->mNoDamageTimer = static_cast<s16>(20);
         actor->actor_status = static_cast<u32>(static_cast<u32>(actor->actor_status) | 0x200000);
         l_pauseTimer = static_cast<u8>(REG0_S(7) + 6);
-        actor->mParts[0].m08 = -1;
-        yoroi_break(actor, &actor->mParts[0].m0C, 0);
+        actor->mParts[0].mPartState = -1;
+        yoroi_break(actor, &actor->mParts[0].mPos, 0);
         actor->health = static_cast<s8>((static_cast<u8>(actor->mEquipmentType) & 1) ? 20 : 10);
         deleteMantle(actor);
     }
@@ -2480,7 +2480,7 @@ void smoke_set_s(tn_class* i_this, f32 scale) {
         if (groundType < 4 || groundType == 11) {
             dPa_smokeEcallBack_end(reinterpret_cast<dPa_smokeEcallBack*>(&i_this->mSmokeCb1));
             const s8 room = i_this->current.roomNo;
-            const u8 alpha = static_cast<u8>(l_tnHIO.m01E);
+            const u8 alpha = static_cast<u8>(l_tnHIO.mSmokeAlpha);
             dPa_control_c* particle = dComIfGp_getParticle();
             JPABaseEmitter* emitter = dPa_control_set(
                 particle, 2, 0x2022, &i_this->mSmokePos, &i_this->mEffectAngle, nullptr, alpha,
@@ -2576,7 +2576,7 @@ BOOL nodeCallBack(J3DNode* node, int calcTiming) {
         i_this->attention_info.position.y = eyeY;
         i_this->attention_info.position.z = eyeZ;
         i_this->attention_info.position.x = eyeX;
-        i_this->attention_info.position.y = eyeY + l_tnHIO.m024;
+        i_this->attention_info.position.y = eyeY + l_tnHIO.mAttentionOffsetY;
         const f32 headingX = static_cast<f32>(forwardPoint->x) - eyeX;
         const f32 headingZ = static_cast<f32>(forwardPoint->z) - eyeZ;
         const s16 heading = cM_atan2s(headingX, headingZ);
@@ -2725,7 +2725,7 @@ void part_draw(tn_class* i_this, int frozen) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     for (int index = 0; index < 3; ++index) {
         tn_p* part = &i_this->mParts[index];
-        if (part->m08 < 0)
+        if (part->mPartState < 0)
             continue;
         if (index == 0) {
             mDoExt_McaMorf* armor = i_this->mpArmorMorf;
@@ -2939,7 +2939,7 @@ BOOL daTn_other_bg_check(tn_class* i_this, fopAc_ac_c* target) {
 s16 get_view_H(tn_class* i_this) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     const bool helmet = (static_cast<u8>(i_this->mRemainingEquipmentPieces) & EQUIPMENT_PIECE_HELMET) != 0;
-    return static_cast<s16>(helmet ? l_tnHIO.m036 : l_tnHIO.m034);
+    return static_cast<s16>(helmet ? l_tnHIO.mViewAngleHelmet : l_tnHIO.mViewAngle);
 }
 
 /* 024BAA8C */
@@ -2990,7 +2990,7 @@ BOOL search_wepon(tn_class* i_this) {
         bool visible = false;
         if (distance < radius && daTn_other_bg_check(i_this, candidate) == 0) {
             const f32 height = (candidate->current.pos.y + radiusStep) - i_this->eyePos.y;
-            if (!(std::fabs(height) > l_tnHIO.m038)) {
+            if (!(std::fabs(height) > l_tnHIO.mViewHeight)) {
                 const s16 heading = cM_atan2s(dx, dz);
                 const s16 actorHeading = i_this->mHeadAngleY;
                 const s16 difference = static_cast<s16>(static_cast<s32>(actorHeading) - heading);
@@ -3002,10 +3002,10 @@ BOOL search_wepon(tn_class* i_this) {
                     const s16 angle = i_this->current.angle.y;
                     cMtx_YrotS(calc_mtx(), static_cast<s16>(-static_cast<s32>(angle)));
                     MtxPosition(delta.get(), relative.get());
-                    if (std::fabs(static_cast<f32>(relative->x)) < l_tnHIO.m03C &&
-                        std::fabs(static_cast<f32>(relative->y)) < l_tnHIO.m040) {
+                    if (std::fabs(static_cast<f32>(relative->x)) < l_tnHIO.mViewBoxX &&
+                        std::fabs(static_cast<f32>(relative->y)) < l_tnHIO.mViewBoxY) {
                         const f32 z = relative->z;
-                        visible = z > l_tnHIO.m048 && z < l_tnHIO.m044;
+                        visible = z > l_tnHIO.mViewBoxBack && z < l_tnHIO.mViewBoxFront;
                     }
                 }
             }
@@ -3088,7 +3088,7 @@ fopAc_ac_c* search_bomb(tn_class* i_this, int requireView) {
                     return candidate;
                 if (blocked == 0) {
                     const f32 height = (candidate->current.pos.y + radiusStep) - i_this->eyePos.y;
-                    if (!(std::fabs(height) > l_tnHIO.m038)) {
+                    if (!(std::fabs(height) > l_tnHIO.mViewHeight)) {
                         const s16 heading = cM_atan2s(dx, dz);
                         const s16 actorHeading = i_this->mHeadAngleY;
                         const s16 difference = static_cast<s16>(static_cast<s32>(actorHeading) - heading);
@@ -3100,10 +3100,10 @@ fopAc_ac_c* search_bomb(tn_class* i_this, int requireView) {
                         const s16 angle = i_this->current.angle.y;
                         cMtx_YrotS(calc_mtx(), static_cast<s16>(-static_cast<s32>(angle)));
                         MtxPosition(delta.get(), relative.get());
-                        if (std::fabs(static_cast<f32>(relative->x)) < l_tnHIO.m03C &&
-                            std::fabs(static_cast<f32>(relative->y)) < l_tnHIO.m040) {
+                        if (std::fabs(static_cast<f32>(relative->x)) < l_tnHIO.mViewBoxX &&
+                            std::fabs(static_cast<f32>(relative->y)) < l_tnHIO.mViewBoxY) {
                             const f32 z = relative->z;
-                            if (z > l_tnHIO.m048 && z < l_tnHIO.m044)
+                            if (z > l_tnHIO.mViewBoxBack && z < l_tnHIO.mViewBoxFront)
                                 return candidate;
                         }
                     }
@@ -3165,7 +3165,7 @@ BOOL daTn_player_view_check(tn_class* i_this, cXyz* target, s16 heading, s16 ang
     const f32 playerY = player->current.pos.y;
     const f32 eyeY = i_this->eyePos.y;
     const f32 heightDifference = (playerY + 50.0f) - eyeY;
-    if (std::fabs(heightDifference) > l_tnHIO.m038)
+    if (std::fabs(heightDifference) > l_tnHIO.mViewHeight)
         return 0;
 
     const s16 actorHeading = i_this->mHeadAngleY;
@@ -3186,10 +3186,10 @@ BOOL daTn_player_view_check(tn_class* i_this, cXyz* target, s16 heading, s16 ang
     delta->z = static_cast<f32>(target->z) - i_this->current.pos.z;
     gabi::Local<cXyz> relative;
     MtxPosition(delta.get(), relative.get());
-    if (std::fabs(static_cast<f32>(relative->x)) < l_tnHIO.m03C &&
-        std::fabs(static_cast<f32>(relative->y)) < l_tnHIO.m040) {
+    if (std::fabs(static_cast<f32>(relative->x)) < l_tnHIO.mViewBoxX &&
+        std::fabs(static_cast<f32>(relative->y)) < l_tnHIO.mViewBoxY) {
         const f32 z = relative->z;
-        if (z > l_tnHIO.m048 && z < l_tnHIO.m044) {
+        if (z > l_tnHIO.mViewBoxBack && z < l_tnHIO.mViewBoxFront) {
             i_this->mDamageReaction.mPlayerInView = 2;
             return 1;
         }
@@ -3532,12 +3532,12 @@ void wepon_search(tn_class* i_this) {
             static_cast<f32>(body->mFrameCtrl.mRate) != zero &&
             static_cast<s16>(i_this->mCountDownTimers[1]) != 0) return;
         i_this->mDamageReaction.mMode = 1;
-        i_this->mWeponRunTimer = static_cast<s16>(l_tnHIO.m082);
+        i_this->mWeponRunTimer = static_cast<s16>(l_tnHIO.mWeponRunTime);
         fight_run_set(i_this);
         return;
     }
     case 1: {
-        cLib_addCalc2(&i_this->speedF, static_cast<f32>(l_tnHIO.m058),
+        cLib_addCalc2(&i_this->speedF, static_cast<f32>(l_tnHIO.mWeponRunSpeed),
                       one, 10.0f);
         cLib_addCalcAngleS2(&i_this->current.angle.y,
                    static_cast<s16>(i_this->mDamageReaction.mTurnTargetY), 4, 0x1000);
@@ -3651,7 +3651,7 @@ void b_nige(tn_class* i_this) {
         break;
     }
     case 3: {
-        const f32 speed = static_cast<f32>(l_tnHIO.m058);
+        const f32 speed = static_cast<f32>(l_tnHIO.mWeponRunSpeed);
         const s16 target = static_cast<s16>(i_this->mDamageReaction.mTurnTargetY);
         i_this->speedF = static_cast<f32>(speed);
         cLib_addCalcAngleS2(&i_this->current.angle.y, target, 4, 0x1000);
@@ -3786,8 +3786,8 @@ void hukki(tn_class* i_this) {
     mDoExt_McaMorf* body = i_this->mpBodyMorf;
     if ((static_cast<u8>(body->mFrameCtrl.mState) & 1u) == 0 &&
         static_cast<f32>(body->mFrameCtrl.mRate) != zero) return;
-    if (!(static_cast<f32>(gabi::at<TnPlayer>(player)->field_0x2b0) < zero) &&
-        static_cast<f32>(i_this->mPlayerDistance) < static_cast<f32>(l_tnHIO.m02C)) {
+    if (!(static_cast<f32>(gabi::at<TnPlayer>(player)->mGrabItemOffsetY) < zero) &&
+        static_cast<f32>(i_this->mPlayerDistance) < static_cast<f32>(l_tnHIO.mFightRange)) {
         i_this->mDamageReaction.mMode = 14;
         i_this->mCountDownTimers[1] = static_cast<s16>(10);
         i_this->mDamageReaction.mKnockedDown = static_cast<s16>(0);
@@ -3841,7 +3841,7 @@ void fail(tn_class* i_this) {
 
     gabi::Local<cXyz> dropPosition;
     dropPosition->x = i_this->current.pos.x;
-    const f32 height = static_cast<f32>(l_tnHIO.m018) + 100.0f;
+    const f32 height = static_cast<f32>(l_tnHIO.mDropOffsetY) + 100.0f;
     const f32 actorY = i_this->current.pos.y;
     dropPosition->y = actorY + height;
     dropPosition->z = i_this->current.pos.z;
@@ -4258,41 +4258,41 @@ void part_move(tn_class* i_this, int index) {
     offset->y = zero;
     offset->z = zero;
     part->m42 = static_cast<s16>(static_cast<s32>(part->m42) + 1);
-    const s8 timer = part->m44;
+    const s8 timer = part->mTimer;
     // HD: part index 3 also reads the adjacent guest table bytes.
     const u32 joint = gabi::load<u32>(gabi::ea(&j_dt) + static_cast<u32>(index) * 4u);
-    if (timer != 0) part->m44 = static_cast<s8>(static_cast<s32>(timer) - 1);
-    const s8 state = part->m08;
+    if (timer != 0) part->mTimer = static_cast<s8>(static_cast<s32>(timer) - 1);
+    const s8 state = part->mPartState;
     const f32 launchSpeed = 15.0f;
     const f32 randomRotation = 3000.0f;
     const f32 horizontalBounce = 20.0f;
     if (state == 0) {
         tn_selectJointMatrix(i_this->mpBodyMorf, joint);
-        MtxPosition(offset.get(), &part->m0C);
+        MtxPosition(offset.get(), &part->mPos);
         const u8 detachFlags = static_cast<u8>(i_this->mPartDetachFlags);
         if ((index == 0 && (detachFlags & 1u) != 0) ||
             (index == 1 && (detachFlags & 2u) != 0) ||
             (index == 2 && (detachFlags & 4u) != 0)) {
-            part->m08 = 1;
+            part->mPartState = 1;
             if (index == 0) {
-                part->m44 = 13;
+                part->mTimer = 13;
                 tn_abi::cMtx_YrotS(calc_mtx(), static_cast<s16>(i_this->current.angle.y));
                 offset->x = zero;
                 offset->y = zero;
                 offset->z = REG0_F(7) + launchSpeed;
-                MtxPosition(offset.get(), &part->m24);
-            } else part->m44 = 0;
+                MtxPosition(offset.get(), &part->mSpeed);
+            } else part->mTimer = 0;
         }
     } else if (state == 1) {
         tn_selectJointMatrix(i_this->mpBodyMorf, joint);
-        MtxPosition(offset.get(), &part->m0C);
-        if (part->m44 == 0) {
+        MtxPosition(offset.get(), &part->mPos);
+        if (part->mTimer == 0) {
             tn_playBombReactionSound(i_this, 0x488C);
-            part->m08 = 5;
-            part->m44 = 30;
-            part->m09 = 1;
-            part->m30.y = static_cast<s16>(static_cast<s32>(i_this->current.angle.y) + REG0_S(5));
-            part->m30.z = 0x4000;
+            part->mPartState = 5;
+            part->mTimer = 30;
+            part->mbDetached = 1;
+            part->mAngle.y = static_cast<s16>(static_cast<s32>(i_this->current.angle.y) + REG0_S(5));
+            part->mAngle.z = 0x4000;
             if (index == 0) {
                 const u32 status = static_cast<u32>(i_this->actor_status);
                 const u8 equipment = i_this->mRemainingEquipmentPieces;
@@ -4306,9 +4306,9 @@ void part_move(tn_class* i_this, int index) {
                 offset->x = zero;
                 offset->y = horizontalBounce;
                 offset->z = -20.0f;
-                MtxPosition(offset.get(), &part->m24);
-                part->m36.x = tn_randomPartRotation(randomRotation);
-                part->m36.y = tn_randomPartRotation(randomRotation);
+                MtxPosition(offset.get(), &part->mSpeed);
+                part->mAngleSpeed.x = tn_randomPartRotation(randomRotation);
+                part->mAngleSpeed.y = tn_randomPartRotation(randomRotation);
                 i_this->mPartsAttached = static_cast<u8>(static_cast<u8>(i_this->mPartsAttached) - 1u);
             } else {
                 if (index == 2) i_this->mRemainingEquipmentPieces = static_cast<u8>(i_this->mRemainingEquipmentPieces) & 0xFBu;
@@ -4319,12 +4319,12 @@ void part_move(tn_class* i_this, int index) {
         tn_moveFlyingPart(i_this, part, index, ground.get(), zero, horizontalBounce, randomRotation);
     }
     J3DModel* model = index == 0 ? i_this->mpArmorMorf->getModel() : static_cast<J3DModel*>(part->mpPartModel);
-    const s8 transformMode = part->m09;
+    const s8 transformMode = part->mbDetached;
     if (transformMode == 1) {
-        MtxTrans(static_cast<f32>(part->m0C.x), static_cast<f32>(part->m0C.y), static_cast<f32>(part->m0C.z), 0);
-        tn_abi::cMtx_YrotM(calc_mtx(), static_cast<s16>(part->m30.y));
-        tn_abi::cMtx_XrotM(calc_mtx(), static_cast<s16>(part->m30.x));
-        tn_abi::cMtx_ZrotM(calc_mtx(), static_cast<s16>(part->m30.z));
+        MtxTrans(static_cast<f32>(part->mPos.x), static_cast<f32>(part->mPos.y), static_cast<f32>(part->mPos.z), 0);
+        tn_abi::cMtx_YrotM(calc_mtx(), static_cast<s16>(part->mAngle.y));
+        tn_abi::cMtx_XrotM(calc_mtx(), static_cast<s16>(part->mAngle.x));
+        tn_abi::cMtx_ZrotM(calc_mtx(), static_cast<s16>(part->mAngle.z));
         mtx_copy(&model->mBaseTransformMtx, calc_mtx());
     } else if (transformMode == 0) {
         tn_selectJointMatrix(i_this->mpBodyMorf, joint);
@@ -4539,7 +4539,7 @@ int daTn_Create(tn_class* i_this) {
     if (phase != 4) return phase;
     phase = dComIfG_resLoad(&i_this->mPhaseTn, STR(0x100406F0));
     if (phase != 4) return phase;
-    i_this->mSmokeCb2.m12 = 1;
+    i_this->mSmokeCb2.mFollowOff = 1;
     i_this->gbaName = static_cast<u8>(3);
     bool specialStage = tn_stageEquals(0x100406D8);
     if (!specialStage) specialStage = tn_stageEquals(0x100406F4);
@@ -4818,43 +4818,43 @@ void tn_staticInit() {
     l_tnHIOVtable = 0x10040480;
     tn_abi::JntHit_HIO_construct(l_tnHIO.mJntHitHIO);
     l_tnHIO.m005 = 0;
-    l_tnHIO.m01E = 0xB9;
-    l_tnHIO.m020 = 12;
+    l_tnHIO.mSmokeAlpha = 0xB9;
+    l_tnHIO.mGroundSmokeEnd = 12;
     l_tnHIO.m014 = 1.0f;
-    l_tnHIO.m018 = 25.0f;
+    l_tnHIO.mDropOffsetY = 25.0f;
     l_tnHIO.m01C = 0;
 
     l_tnHIO.m00C = 1.0f;
-    l_tnHIO.m024 = 50.0f;
-    l_tnHIO.m028 = 1000.0f;
-    l_tnHIO.m02C = 400.0f;
-    l_tnHIO.m030 = 250.0f;
-    l_tnHIO.m038 = 400.0f;
-    l_tnHIO.m03C = 500.0f;
-    l_tnHIO.m040 = 130.0f;
-    l_tnHIO.m044 = 500.0f;
-    l_tnHIO.m048 = -125.0f;
-    l_tnHIO.m04C = 20.0f;
-    l_tnHIO.m006 = 0;
-    l_tnHIO.m007 = 0;
-    l_tnHIO.m050 = 20.0f;
+    l_tnHIO.mAttentionOffsetY = 50.0f;
+    l_tnHIO.mNoticeRange = 1000.0f;
+    l_tnHIO.mFightRange = 400.0f;
+    l_tnHIO.mAttackRange = 250.0f;
+    l_tnHIO.mViewHeight = 400.0f;
+    l_tnHIO.mViewBoxX = 500.0f;
+    l_tnHIO.mViewBoxY = 130.0f;
+    l_tnHIO.mViewBoxFront = 500.0f;
+    l_tnHIO.mViewBoxBack = -125.0f;
+    l_tnHIO.mPathWalkSpeed = 20.0f;
+    l_tnHIO.mPadStep = 0;
+    l_tnHIO.mDebugHealth = 0;
+    l_tnHIO.mWalkSpeed = 20.0f;
     l_tnHIO.m00A = 50;
-    l_tnHIO.m054 = 70.0f;
-    l_tnHIO.m034 = 23000;
-    l_tnHIO.m058 = 90.0f;
-    l_tnHIO.m05C = 10.0f;
-    l_tnHIO.m036 = 11000;
-    l_tnHIO.m06C = 30;
-    l_tnHIO.m080 = 30;
-    l_tnHIO.m082 = 300;
-    l_tnHIO.m060 = 10.0f;
+    l_tnHIO.mRunSpeed = 70.0f;
+    l_tnHIO.mViewAngle = 23000;
+    l_tnHIO.mWeponRunSpeed = 90.0f;
+    l_tnHIO.mFightStepSpeed = 10.0f;
+    l_tnHIO.mViewAngleHelmet = 11000;
+    l_tnHIO.mAttackCheckDelay = 30;
+    l_tnHIO.mDownRecoverDelay = 30;
+    l_tnHIO.mWeponRunTime = 300;
+    l_tnHIO.mSideStepSpeed = 10.0f;
     l_tnHIO.m064 = 70.0f;
     l_tnHIO.m068 = 1.0f;
-    l_tnHIO.m070 = 75.0f;
+    l_tnHIO.mAttackChance = 75.0f;
     l_tnHIO.m008 = 0;
     l_tnHIO.m074 = 40.0f;
-    l_tnHIO.m078 = 40.0f;
-    l_tnHIO.m07C = 70.0f;
+    l_tnHIO.mVerticalCutChance = 40.0f;
+    l_tnHIO.mPalmStrikeChance = 70.0f;
     l_tnHIO.m084 = 0.9f;
     l_tnHIO.m088 = 1.0f;
     l_tnHIO.m08C = 1.0f;
@@ -4876,8 +4876,8 @@ void tn_staticInit() {
     l_tnHIO.m0CC = 100;
     l_tnHIO.m0BC = 1.0f;
     l_tnHIO.m0C0 = 1.0f;
-    l_tnHIO.m0D0 = 0.0f;
-    l_tnHIO.m0D4 = 500.0f;
+    l_tnHIO.mWeakHitPushback = 0.0f;
+    l_tnHIO.mWeponHitMaxDis = 500.0f;
     l_tnHIO.m0CE = 28;
 }
 

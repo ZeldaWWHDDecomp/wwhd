@@ -97,8 +97,8 @@ static inline void ki_set(bgn2_class* i_this) {
     if (i_this->mKiSetTimer != 0) {
         return;
     }
-    i_this->mKiSetCount = (s8)l_HIO.m2E;
-    i_this->mKiSetTimer = l_HIO.m2C;
+    i_this->mKiSetCount = (s8)l_HIO.mKiPerLanding;
+    i_this->mKiSetTimer = l_HIO.mKiSetInterval;
 }
 
 /* plesattack (inlined) */
@@ -110,8 +110,8 @@ static inline void plesattack(bgn2_class* i_this) {
     s8 bVar1 = false;
     switch (i_this->mMode) {
     case 0:
-        if (actor->current.pos.y > l_HIO.m0C + 2.0f) {
-            cLib_addCalc2(&actor->current.pos.y, l_HIO.m0C, 0.1f, l_HIO.m10);
+        if (actor->current.pos.y > l_HIO.mPressHeight + 2.0f) {
+            cLib_addCalc2(&actor->current.pos.y, l_HIO.mPressHeight, 0.1f, l_HIO.mPressRiseStep);
             actor->speed.y = 0.0f;
             actor->speedF = REG0_F(9) + 30.0f;
             break;
@@ -120,11 +120,11 @@ static inline void plesattack(bgn2_class* i_this) {
         anm_init(i_this, dRes_INDEX_BGN_BCK_RAKKA1_e, 10.0f, J3DFrameCtrl::EMode_NONE, 1.0f, -1);
         i_this->mMode = 1;
         if (actor->health == 3) {
-            i_this->mTimers[0] = l_HIO.m1E;
+            i_this->mTimers[0] = l_HIO.mPressHangTimeHealth3;
         } else if (actor->health == 2) {
-            i_this->mTimers[0] = l_HIO.m20;
+            i_this->mTimers[0] = l_HIO.mPressHangTimeHealth2;
         } else {
-            i_this->mTimers[0] = l_HIO.m22;
+            i_this->mTimers[0] = l_HIO.mPressHangTimeHealth1;
         }
         // fallthrough
     case 1:
@@ -135,7 +135,7 @@ static inline void plesattack(bgn2_class* i_this) {
         // fallthrough
     case 2:
         if (i_this->mTimers[0] != 0) {
-            actor->speed.y = actor->speed.y - l_HIO.m14;
+            actor->speed.y = actor->speed.y - l_HIO.mGravity;
             if (i_this->mTimers[0] == 1) {
                 fopAcM_seStart(actor, JA_SE_CM_BGN_T_FALL_WIND, 0);
             }
@@ -148,11 +148,11 @@ static inline void plesattack(bgn2_class* i_this) {
             i_this->mMode = 3;
             bgn2_StartShock(5);
             if (actor->health == 3) {
-                i_this->mTimers[0] = l_HIO.m24;
+                i_this->mTimers[0] = l_HIO.mPressLandTimeHealth3;
             } else if (actor->health == 2) {
-                i_this->mTimers[0] = l_HIO.m26;
+                i_this->mTimers[0] = l_HIO.mPressLandTimeHealth2;
             } else {
-                i_this->mTimers[0] = l_HIO.m28;
+                i_this->mTimers[0] = l_HIO.mPressLandTimeHealth1;
             }
             gabi::Local<cXyz> pos;
             pos->x = actor->current.pos.x;
@@ -181,7 +181,7 @@ static inline void plesattack(bgn2_class* i_this) {
     pos_move(i_this);
     cLib_addCalc0(&actor->speedF, 1.0f, 2.0f);
     actor->current.pos.y = actor->current.pos.y + actor->speed.y;
-    actor->speed.y = actor->speed.y + l_HIO.m14;
+    actor->speed.y = actor->speed.y + l_HIO.mGravity;
     checkGround(i_this);
     if (bVar1) {
         cLib_addCalc2(&i_this->mRopeSway, REG0_F(9) + 250.0f, 1.0f, REG0_F(10) + 50.0f);
@@ -252,11 +252,11 @@ static inline void jumpattack(bgn2_class* i_this) {
                 i_this->mAction = 1;
                 i_this->mMode = 0;
                 if (actor->health == 3) {
-                    i_this->mSpinSpeedTarget = l_HIO.m18;
+                    i_this->mSpinSpeedTarget = l_HIO.mSpinSpeedHealth3;
                 } else if (actor->health == 2) {
-                    i_this->mSpinSpeedTarget = l_HIO.m1A;
+                    i_this->mSpinSpeedTarget = l_HIO.mSpinSpeedHealth2;
                 } else {
-                    i_this->mSpinSpeedTarget = l_HIO.m1C;
+                    i_this->mSpinSpeedTarget = l_HIO.mSpinSpeedHealth1;
                 }
                 if (cM_rndF(1.0f) < 0.5f) {
                     i_this->mSpinSpeedTarget = (s16)-i_this->mSpinSpeedTarget;
@@ -275,7 +275,7 @@ static inline void mahi(bgn2_class* i_this) {
     switch (i_this->mMode) {
     case 0:
         fopAcM_monsSeStart(actor, JA_SE_CV_BGN_HIT_2, 0);
-        i_this->mTimers[0] = l_HIO.m2A;
+        i_this->mTimers[0] = l_HIO.mMahiTime;
         i_this->mMode = 1;
         // fallthrough
     case 1:
@@ -410,7 +410,7 @@ static inline void hensin(bgn2_class* i_this) {
         break;
     }
     actor->current.pos.y = actor->current.pos.y + actor->speed.y;
-    actor->speed.y = actor->speed.y + l_HIO.m14;
+    actor->speed.y = actor->speed.y + l_HIO.mGravity;
     asi_hamon_set(i_this);
     checkGround(i_this);
 }
@@ -635,15 +635,15 @@ BOOL daBgn2_Execute(bgn2_class* i_this) {
     if (bgn3 == nullptr) {
         return TRUE;
     }
-    if (l_HIO.m06 != 0) {
-        actor->health = (s8)l_HIO.m06;
+    if (l_HIO.mDebugHealth != 0) {
+        actor->health = (s8)l_HIO.mDebugHealth;
     }
     if (bgn.get()->mForm != 1) {
         i_this->mAction = 10;
         actor->current.pos.set(0.0f, 2000.0f, 0.0f);
         /* fopAcM_OffStatus(actor, 0) */
         actor->attention_info.flags = 0;
-        i_this->mKiSetTimer = l_HIO.m2C;
+        i_this->mKiSetTimer = l_HIO.mKiSetInterval;
         return TRUE;
     }
     if (i_this->mAction == 10) {
@@ -669,7 +669,7 @@ BOOL daBgn2_Execute(bgn2_class* i_this) {
     if (i_this->mKiSetTimer != 0) {
         i_this->mKiSetTimer = (s16)(i_this->mKiSetTimer - 1);
     }
-    if (l_HIO.m05 == 0) {
+    if (l_HIO.mNoMove == 0) {
         move(i_this);
     }
     i_this->mpHeadMorf->play(&actor->current.pos, 0, 0);
@@ -821,7 +821,7 @@ BOOL daBgn2_Execute(bgn2_class* i_this) {
     damage_check(i_this);
     if (i_this->mKiSetCount != 0) {
         i_this->mKiSetCount = (s8)(i_this->mKiSetCount - 1);
-        if (ki_check(i_this) < l_HIO.m30) {
+        if (ki_check(i_this) < l_HIO.mKiMax) {
             local_b8->x = cM_rndFX(2500.0f);
             local_b8->y = cM_rndF(500.0f) + 3500.0f;
             local_b8->z = cM_rndFX(2500.0f);

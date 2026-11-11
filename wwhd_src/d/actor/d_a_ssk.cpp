@@ -387,7 +387,7 @@ static cPhs_State daSsk_Create(fopAc_ac_c* a_this) {
     }
     cPhs_State PVar2 = dComIfG_resLoad(&i_this->mPhase, "Ssk");
     if (PVar2 == cPhs_COMPLEATE_e) {
-        i_this->mSmokeCb.m11 = 0;
+        i_this->mSmokeCb.mRateOff = 0;
         u32 prm = fopAcM_GetParam(a_this);
         i_this->mType = (u8)prm;
         i_this->mRadiusPrm = (u8)(prm >> 8);

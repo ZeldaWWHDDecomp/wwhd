@@ -88,9 +88,9 @@ void control3(bmdhand_class* i_this) {
     hand_s* hand_i = &i_this->mChain[0];
     for (int i = 0; i < 20; i++, hand_i++) {
         if (i < 10) {
-            hand_i->m18 = 10.5f;
+            hand_i->mLineSize = 10.5f;
         } else {
-            hand_i->m18 = (15.0f - (f32)(int)(i - 10)) * 0.7f;
+            hand_i->mLineSize = (15.0f - (f32)(int)(i - 10)) * 0.7f;
         }
     }
 }
@@ -99,7 +99,7 @@ void control3(bmdhand_class* i_this) {
 
 static inline void control1(bmdhand_class* i_this) {
     fopAc_ac_c* actor = i_this;
-    i_this->mChain[0].m00.copy(actor->current.pos);
+    i_this->mChain[0].mPos.copy(actor->current.pos);
     hand_s* hand_i = &i_this->mChain[1];
     cMtx_YrotS(calc_mtx(), actor->current.angle.y);
     gabi::Local<cXyz> local_94;
@@ -120,25 +120,25 @@ static inline void control1(bmdhand_class* i_this) {
         f32 c4z = cM_scos(t * 800 + i * 4000) * dVar9;
         f32 fVar1 = (i < 15) ? 1.0f : gabi::fnmsubs((f32)(i - 15), 0.2f, 1.0f);
         f32 dVar8 =
-            gabi::fmadds(c4x, fVar1, gabi::fmadds(local_ac->x, fVar1, hand_i->m00.x - hand_i[-1].m00.x));
+            gabi::fmadds(c4x, fVar1, gabi::fmadds(local_ac->x, fVar1, hand_i->mPos.x - hand_i[-1].mPos.x));
         f32 dVar7 =
-            gabi::fmadds(c4z, fVar1, gabi::fmadds(local_ac->z, fVar1, hand_i->m00.z - hand_i[-1].m00.z));
-        f32 dVar10 = (hand_i->m00.y - hand_i[-1].m00.y) + local_ac->y;
+            gabi::fmadds(c4z, fVar1, gabi::fmadds(local_ac->z, fVar1, hand_i->mPos.z - hand_i[-1].mPos.z));
+        f32 dVar10 = (hand_i->mPos.y - hand_i[-1].mPos.y) + local_ac->y;
         s16 iVar3 = cM_atan2s(dVar8, dVar7);
         s16 iVar4 = -cM_atan2s(dVar10, std_sqrtf(gabi::fmadds(dVar8, dVar8, dVar7 * dVar7)));
         cMtx_YrotS(calc_mtx(), iVar3);
         cMtx_XrotM(calc_mtx(), iVar4);
         MtxPosition(local_94, cStack_a0);
-        cXyz_pl(&hand_i[-1].m00, sum, cStack_a0);
-        hand_i->m00.copy(*sum);
+        cXyz_pl(&hand_i[-1].mPos, sum, cStack_a0);
+        hand_i->mPos.copy(*sum);
     }
 }
 
 /* the base of the tentacle (hand 0x13) and the joint angles of the hand model */
 static inline void control_tail(bmdhand_class* i_this, cXyz* local_7c) {
-    i_this->mHandModelPos.copy(i_this->mChain[0x13].m00);
+    i_this->mHandModelPos.copy(i_this->mChain[0x13].mPos);
     gabi::Local<cXyz> d;
-    cXyz_mi(&i_this->mChain[0x12].m00, d, &i_this->mChain[0x13].m00);
+    cXyz_mi(&i_this->mChain[0x12].mPos, d, &i_this->mChain[0x13].mPos);
     local_7c->x = d->x;
     local_7c->y = d->y;
     local_7c->z = d->z;
@@ -156,15 +156,15 @@ static inline void control2(bmdhand_class* i_this) {
     local_7c->x = 0.0f;
     local_7c->y = 0.0f;
     local_7c->z = i_this->mSegmentLength;
-    cLib_addCalc2(&i_this->mChain[0x13].m00.x, i_this->mHandPos.x, 1.0f, 50.0f * i_this->mAttachRate);
-    cLib_addCalc2(&i_this->mChain[0x13].m00.y, i_this->mHandPos.y, 1.0f, 50.0f * i_this->mAttachRate);
-    cLib_addCalc2(&i_this->mChain[0x13].m00.z, i_this->mHandPos.z, 1.0f, 50.0f * i_this->mAttachRate);
+    cLib_addCalc2(&i_this->mChain[0x13].mPos.x, i_this->mHandPos.x, 1.0f, 50.0f * i_this->mAttachRate);
+    cLib_addCalc2(&i_this->mChain[0x13].mPos.y, i_this->mHandPos.y, 1.0f, 50.0f * i_this->mAttachRate);
+    cLib_addCalc2(&i_this->mChain[0x13].mPos.z, i_this->mHandPos.z, 1.0f, 50.0f * i_this->mAttachRate);
     cLib_addCalc2(&i_this->mAttachRate, 1.0f, 1.0f, 0.01f);
     hand_s* hand_i = &i_this->mChain[0x12];
     for (int i = 0x12; i >= 1; i--, hand_i--) {
-        f32 fVar1 = hand_i->m00.x - hand_i[1].m00.x;
-        f32 dVar9 = (hand_i->m00.y - hand_i[1].m00.y) - 10.0f;
-        f32 fVar2 = hand_i->m00.z - hand_i[1].m00.z;
+        f32 fVar1 = hand_i->mPos.x - hand_i[1].mPos.x;
+        f32 dVar9 = (hand_i->mPos.y - hand_i[1].mPos.y) - 10.0f;
+        f32 fVar2 = hand_i->mPos.z - hand_i[1].mPos.z;
         s16 iVar3 = cM_atan2s(fVar1, fVar2);
         s16 iVar4 = -cM_atan2s(dVar9, std_sqrtf(gabi::fmadds(fVar1, fVar1, fVar2 * fVar2)));
         cMtx_YrotS(calc_mtx(), iVar3);
@@ -175,8 +175,8 @@ static inline void control2(bmdhand_class* i_this) {
             local_7c->z = i_this->mSegmentLength;
         }
         MtxPosition(local_7c, cStack_88);
-        cXyz_pl(&hand_i[1].m00, sum, cStack_88);
-        hand_i->m00.copy(*sum);
+        cXyz_pl(&hand_i[1].mPos, sum, cStack_88);
+        hand_i->mPos.copy(*sum);
     }
     control_tail(i_this, local_7c);
 }
@@ -186,7 +186,7 @@ void cut_control(bmdhand_class* i_this) {
 
     fopAc_ac_c* actor = i_this;
 
-    i_this->mChain[0].m00.copy(actor->current.pos);
+    i_this->mChain[0].mPos.copy(actor->current.pos);
     hand_s* hand_i = &i_this->mChain[1];
     gabi::Local<cXyz> local_e8;
     gabi::Local<cXyz> cStack_f4;
@@ -210,31 +210,31 @@ void cut_control(bmdhand_class* i_this) {
         f32 c124z = cM_scos(t * 0xED8 + i * 4000);
         f32 factor = gabi::fnmsubs((f32)i, 0.03763158f, 1.0f);
         f32 fVar_x =
-            hand_i->m0C.x +
-            gabi::fmadds(c124x, mSwayAmp, gabi::fmadds(local_100->x, factor, hand_i->m00.x - hand_i[-1].m00.x));
-        f32 fVar_y = hand_i->m0C.y + gabi::fmadds(c124y, mSwayAmp, hand_i->m00.y + local_100->y);
+            hand_i->mSpeed.x +
+            gabi::fmadds(c124x, mSwayAmp, gabi::fmadds(local_100->x, factor, hand_i->mPos.x - hand_i[-1].mPos.x));
+        f32 fVar_y = hand_i->mSpeed.y + gabi::fmadds(c124y, mSwayAmp, hand_i->mPos.y + local_100->y);
         f32 lim = 5.0f + boss->mGroundY;
         if (fVar_y < lim) {
             fVar_y = lim;
         }
-        f32 delta_y = fVar_y - hand_i[-1].m00.y;
+        f32 delta_y = fVar_y - hand_i[-1].mPos.y;
         f32 fVar_z =
-            hand_i->m0C.z + ((hand_i->m00.z - hand_i[-1].m00.z + local_100->z * factor) + c124z * mSwayAmp);
+            hand_i->mSpeed.z + ((hand_i->mPos.z - hand_i[-1].mPos.z + local_100->z * factor) + c124z * mSwayAmp);
         s16 iVar4 = cM_atan2s(fVar_x, fVar_z);
         s16 iVar5 = -cM_atan2s(delta_y, std_sqrtf(gabi::fmadds(fVar_x, fVar_x, fVar_z * fVar_z)));
         cMtx_YrotS(calc_mtx(), iVar4);
         cMtx_XrotM(calc_mtx(), iVar5);
         MtxPosition(local_e8, cStack_f4);
-        hand_i->m0C.copy(hand_i->m00);
-        cXyz_pl(&hand_i[-1].m00, sum, cStack_f4);
-        hand_i->m00.x = sum->x;
-        hand_i->m00.y = sum->y;
-        hand_i->m00.z = sum->z;
-        hand_i->m0C.x = (hand_i->m00.x - hand_i->m0C.x) * dVar9;
-        hand_i->m0C.y = (hand_i->m00.y - hand_i->m0C.y) * dVar9;
-        hand_i->m0C.z = (hand_i->m00.z - hand_i->m0C.z) * dVar9;
+        hand_i->mSpeed.copy(hand_i->mPos);
+        cXyz_pl(&hand_i[-1].mPos, sum, cStack_f4);
+        hand_i->mPos.x = sum->x;
+        hand_i->mPos.y = sum->y;
+        hand_i->mPos.z = sum->z;
+        hand_i->mSpeed.x = (hand_i->mPos.x - hand_i->mSpeed.x) * dVar9;
+        hand_i->mSpeed.y = (hand_i->mPos.y - hand_i->mSpeed.y) * dVar9;
+        hand_i->mSpeed.z = (hand_i->mPos.z - hand_i->mSpeed.z) * dVar9;
         if ((i == 0x13) && (i_this->mBloodTimer != 0)) {
-            dComIfGp_particle_setSimple(ID_AK_SN_O_BKMTENTACLEBLOOD00, &hand_i->m00, 0xFF);
+            dComIfGp_particle_setSimple(ID_AK_SN_O_BKMTENTACLEBLOOD00, &hand_i->mPos, 0xFF);
         }
     }
 }
@@ -245,9 +245,9 @@ void cut_control3(bmdhand_class* i_this) {
     hand_s* hand_i = &i_this->mChain[0];
     for (int i = 0; i < 20; i++, hand_i++) {
         if (i < 10) {
-            hand_i->m18 = 10.5f;
+            hand_i->mLineSize = 10.5f;
         } else {
-            hand_i->m18 = (15.0f - (f32)(int)(i - 10)) * 0.7f;
+            hand_i->mLineSize = (15.0f - (f32)(int)(i - 10)) * 0.7f;
         }
     }
     cLib_addCalc2(&i_this->mHandModelPos.y, i_this->mCeilingPos.y, 1.0f, 10.0f);
@@ -261,7 +261,7 @@ static inline void start_control1(bmdhand_class* i_this) {
     gabi::Local<cXyz> local_ac;
     gabi::Local<cXyz> sum;
 
-    i_this->mChain[0].m00.copy(actor->current.pos);
+    i_this->mChain[0].mPos.copy(actor->current.pos);
     hand_s* hand_i = &i_this->mChain[1];
     cMtx_YrotS(calc_mtx(), actor->current.angle.y);
     local_94->x = 0.0f;
@@ -275,18 +275,18 @@ static inline void start_control1(bmdhand_class* i_this) {
     for (int i = 1; i < 0x13; i++, hand_i++) {
         s16 t = i_this->mFrameCounter;
         f32 fVar1 = gabi::fmadds(cM_ssin(t * 0x640 + i * 3000), dVar9,
-                                 (hand_i->m00.x - hand_i[-1].m00.x) + local_ac->x);
+                                 (hand_i->mPos.x - hand_i[-1].mPos.x) + local_ac->x);
         f32 fVar2 = gabi::fmadds(cM_scos(t * 0x578 + i * 0xDAC), dVar9,
-                                 (hand_i->m00.z - hand_i[-1].m00.z) + local_ac->z);
+                                 (hand_i->mPos.z - hand_i[-1].mPos.z) + local_ac->z);
         f32 dVar10 = gabi::fmadds(cM_ssin(t * 0x6A4 + i * 4000), dVar9,
-                                  (hand_i->m00.y - hand_i[-1].m00.y) + local_ac->y);
+                                  (hand_i->mPos.y - hand_i[-1].mPos.y) + local_ac->y);
         s16 iVar3 = cM_atan2s(fVar1, fVar2);
         s16 iVar4 = -cM_atan2s(dVar10, std_sqrtf(gabi::fmadds(fVar1, fVar1, fVar2 * fVar2)));
         cMtx_YrotS(calc_mtx(), iVar3);
         cMtx_XrotM(calc_mtx(), iVar4);
         MtxPosition(local_94, cStack_a0);
-        cXyz_pl(&hand_i[-1].m00, sum, cStack_a0);
-        hand_i->m00.copy(*sum);
+        cXyz_pl(&hand_i[-1].mPos, sum, cStack_a0);
+        hand_i->mPos.copy(*sum);
     }
 }
 
@@ -298,19 +298,19 @@ static inline void start_control2(bmdhand_class* i_this) {
     local_7c->x = 0.0f;
     local_7c->y = 0.0f;
     local_7c->z = i_this->mSegmentLength;
-    i_this->mChain[0x13].m00.copy(i_this->mHandPos);
+    i_this->mChain[0x13].mPos.copy(i_this->mHandPos);
     hand_s* hand_i = &i_this->mChain[0x12];
     for (int i = 0x12; i >= 1; i--, hand_i--) {
-        f32 fVar1 = hand_i->m00.x - hand_i[1].m00.x;
-        f32 dVar9 = (hand_i->m00.y - hand_i[1].m00.y) - 5.0f;
-        f32 fVar2 = hand_i->m00.z - hand_i[1].m00.z;
+        f32 fVar1 = hand_i->mPos.x - hand_i[1].mPos.x;
+        f32 dVar9 = (hand_i->mPos.y - hand_i[1].mPos.y) - 5.0f;
+        f32 fVar2 = hand_i->mPos.z - hand_i[1].mPos.z;
         s16 iVar3 = cM_atan2s(fVar1, fVar2);
         s16 iVar4 = -cM_atan2s(dVar9, std_sqrtf(gabi::fmadds(fVar1, fVar1, fVar2 * fVar2)));
         cMtx_YrotS(calc_mtx(), iVar3);
         cMtx_XrotM(calc_mtx(), iVar4);
         MtxPosition(local_7c, cStack_88);
-        cXyz_pl(&hand_i[1].m00, sum, cStack_88);
-        hand_i->m00.copy(*sum);
+        cXyz_pl(&hand_i[1].mPos, sum, cStack_88);
+        hand_i->mPos.copy(*sum);
     }
     control_tail(i_this, local_7c);
 }
@@ -329,7 +329,7 @@ static inline void hand_ceiling_check(bmdhand_class* i_this, BmdhandLineCheck* l
         i_this->mCeilingPos.x = linChk->mCross.x;
         i_this->mCeilingPos.y = linChk->mCross.y;
         i_this->mCeilingPos.z = linChk->mCross.z;
-        i_this->mCeilingPos.y = i_this->mCeilingPos.y + l_HIO.m08;
+        i_this->mCeilingPos.y = i_this->mCeilingPos.y + l_HIO.mCeilingOffsetY;
     }
 }
 
@@ -533,7 +533,7 @@ static inline void hand_move(bmdhand_class* i_this) {
                     boss->mVineCount = boss->mVineCount - 1;
                     boss->mVineCutTimer = 3;
                 }
-                i_this->mTimers[0] = l_HIO.m0C;
+                i_this->mTimers[0] = l_HIO.mRegrowTime;
                 i_this->mDriftY = 3.0f;
                 i_this->mDriftZ = 40.0f;
                 f32 r = cM_rndF(20.0f);
@@ -637,18 +637,18 @@ static inline void hand_move(bmdhand_class* i_this) {
     cXyz* line_data = line->positions;
     u32 line_size = line->sizes;
     for (int i = 0; i < 20; i++, hand_i++, line_data++, line_size++) {
-        line_data->copy(hand_i->m00);
-        Bmdhand_setLineSize(line_size, (u8)gabi::ftoi(hand_i->m18));
+        line_data->copy(hand_i->mPos);
+        Bmdhand_setLineSize(line_size, (u8)gabi::ftoi(hand_i->mLineSize));
 
         if (i == 6) { /* HD: 6 (GameCube 10) */
-            actor->eyePos.copy(hand_i->m00);
-            actor->attention_info.position.copy(hand_i->m00);
+            actor->eyePos.copy(hand_i->mPos);
+            actor->attention_info.position.copy(hand_i->mPos);
             i_this->mEyeSph.SetC(&actor->eyePos);
             dComIfG_Ccsp_Set(&i_this->mEyeSph);
         } else {
             u32 r0 = ((i_this->mFrameCounter & 3) * 4) + 3;
             if (r0 == (u32)i) {
-                i_this->mChainSph.SetC(&hand_i->m00);
+                i_this->mChainSph.SetC(&hand_i->mPos);
                 dComIfG_Ccsp_Set(&i_this->mChainSph);
             }
         }
@@ -814,8 +814,8 @@ static daBmdhand_HIO_c* daBmdhand_HIO_c_ct(daBmdhand_HIO_c* h) {
             return h;
     }
     h->mNo = -1;
-    h->m08 = -20.0f;
-    h->m0C = 1000;
+    h->mCeilingOffsetY = -20.0f;
+    h->mRegrowTime = 1000;
     h->__vtbl = BmdhandVtable_Hio;
     return h;
 }

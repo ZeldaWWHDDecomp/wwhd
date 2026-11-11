@@ -185,7 +185,7 @@ field 0243A094 r3+0x69C0 i32 -5,-4,-3,-2,-1,0,6,7
 field 0243A094 r3+0x69C4 i32 0,1,-1
 field 0243A094 r3+0x691E s16 4,5,0
 field 0243A094 r3+0x6918 s16 0,1,-1
-# mutation follow-up: boundary values (procFanGlide m34E0 clamp, procRopeSwing swing angles, procHammerSideSwing frame window)
+# mutation follow-up: boundary values (procFanGlide mWaistAngleZ clamp, procRopeSwing swing angles, procHammerSideSwing frame window)
 field 02438E78 r3+0x6928 s16 0x2000,0x2001,0
 field 02435580 r3+0x69FC f32 1.0,0.5
 field 02435580 r3+0x6A04 f32 2.0,-2.0,1.0,0.0

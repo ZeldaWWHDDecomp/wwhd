@@ -40,7 +40,7 @@ struct dSv_event_flag_c {
 struct daTag_Gship_HIO_c {
     enum : u32 { __vt = 0x1003F0FC };
     /* 0x00 */ be<s8> mNo;
-    /* 0x01 */ be<u8> field_0x05;
+    /* 0x01 */ be<u8> mForceClear;  /* was field_0x05: modeClearWait 024A878C goes to the clear event while it is set, as when a DEFAULT_TREASURE event ends (debug switch); daTag_Gship_HIO_ct 024A8A70 sets 0 (tww the same) */
     /* 0x02 */ u8 _02[0xC - 0x2];
     /* 0x0C */ be<u32> __vtbl;
 };

@@ -145,7 +145,7 @@ static bool btsw_mailCheckProc(u32 m, u32 fn) {
     auto& action = gabi::object_at<SwMail2_c>(m).mFunc;
     return action.i == -1 && action.d == 0 && action.f == fn;
 }
-/* calls through the mail pointers (field_0x920[i]->fn()) */
+/* calls through the mail pointers (mpMails[i]->fn()) */
 static inline void btsw_mailCall(u32 fn, u32 mail) { gabi::call(fn, mail); }
 static inline void btsw_mailCall2(u32 fn, u32 mail, u32 arg) { gabi::call(fn, mail, arg); }
 #define MAIL_init 0x02217E74u
@@ -170,14 +170,14 @@ static void btsw_endMiniGame() {
 }
 
 static void btsw_moveMails(u32 a) {
-    btsw_mailCall(MAIL_move, gabi::object_at<daNpc_Btsw_c>(a).field_0x920[0].v.get());
-    btsw_mailCall(MAIL_move, gabi::object_at<daNpc_Btsw_c>(a).field_0x920[1].v.get());
-    btsw_mailCall(MAIL_move, gabi::object_at<daNpc_Btsw_c>(a).field_0x920[2].v.get());
+    btsw_mailCall(MAIL_move, gabi::object_at<daNpc_Btsw_c>(a).mpMails[0].v.get());
+    btsw_mailCall(MAIL_move, gabi::object_at<daNpc_Btsw_c>(a).mpMails[1].v.get());
+    btsw_mailCall(MAIL_move, gabi::object_at<daNpc_Btsw_c>(a).mpMails[2].v.get());
 }
 
 /* dComIfGp_endMiniGame(7) (HD inline) */
 
-/* field_0x920[0..2]->move() */
+/* mpMails[0..2]->move() */
 
 // HD: Load the matrix-array pointer before marking the buffer dirty; retain the explicit vector guard store order.
 /* 0221798C */
@@ -247,7 +247,7 @@ static BOOL nodeCallBack(J3DNode* node, int calcTiming) {
 BOOL daNpc_Btsw_c::initTexPatternAnm(u32 i_modify) {
     u32 a = A(this);
     u32 model = mpMorf->mpModel.v.get();
-    s32 btp = l_btp_ix_tbl[0]; /* HD: l_btp_ix_tbl[0] (GameCube l_btp_ix_tbl[field_0x9C4]) */
+    s32 btp = l_btp_ix_tbl[0]; /* HD: l_btp_ix_tbl[0] (GameCube l_btp_ix_tbl[mBtpIdx]) */
     u32 modelData = gabi::object_at<J3DModel>(model).mModelData.v.get();
     u32 pattern = btsw_getIDRes("Btsw" /* "Btsw" */, btp);
     m_head_tex_pattern.v = pattern;
@@ -257,47 +257,47 @@ BOOL daNpc_Btsw_c::initTexPatternAnm(u32 i_modify) {
         pattern = m_head_tex_pattern.v.get();
     }
     /* mDoExt_btpAnm::init(modelData, pattern, TRUE, EMode_LOOP, 1.0f, 0, -1, i_modify, FALSE) */
-    if (!Btsw_btpInit(gabi::ea(&field_0x7E8), modelData, pattern, 1, 2, 0, -1, i_modify, 0, 1.0f))
+    if (!Btsw_btpInit(gabi::ea(&mBtpAnm), modelData, pattern, 1, 2, 0, -1, i_modify, 0, 1.0f))
         return FALSE;
-    field_0x7FC = 0;
-    field_0x954 = 0;
+    mBtpFrame = 0;
+    mBlinkTimer = 0;
     return TRUE;
 }
 
 /* 0221914C */
 void daNpc_Btsw_c::playTexPatternAnm() {
     u32 a = A(this);
-    if (Btsw_cLib_calcTimer(gabi::ea(&field_0x954)) != 0)
-        return; /* cLib_calcTimer(&field_0x954) */
+    if (Btsw_cLib_calcTimer(gabi::ea(&mBlinkTimer)) != 0)
+        return; /* cLib_calcTimer(&mBlinkTimer) */
     u32 pattern = m_head_tex_pattern.v.get();
     s32 frameMax = gabi::call_ptr<s32>(
         gabi::object_at<BtswPatternWork>(pattern).mpVtable->mGetFrameMax.get(), pattern);
-    if ((s32)(u32)field_0x7FC < frameMax) {
-        field_0x7FC = (u8)(field_0x7FC + 1);
+    if ((s32)(u32)mBtpFrame < frameMax) {
+        mBtpFrame = (u8)(mBtpFrame + 1);
         return;
     }
     pattern = m_head_tex_pattern.v.get();
     frameMax = gabi::call_ptr<s32>(
         gabi::object_at<BtswPatternWork>(pattern).mpVtable->mGetFrameMax.get(), pattern);
-    field_0x7FC = (u8)(field_0x7FC - (u32)frameMax);
+    mBtpFrame = (u8)(mBtpFrame - (u32)frameMax);
     f32 random = Btsw_cM_rndF(100.0f);
-    field_0x954 = (s16)gabi::ftoi(gabi::fadds_ppc(random, 30.0f));
+    mBlinkTimer = (s16)gabi::ftoi(gabi::fadds_ppc(random, 30.0f));
 }
 
 /* 0221A3CC */
 void daNpc_Btsw_c::setAnm(s8 idx) {
     u32 a = A(this);
-    s8 cur = field_0x9C5;
+    s8 cur = mAnmIdx;
     f32 morf = a_morf_frame_tbl[idx]; /* a_morf_frame_tbl[idx] */
     if (cur == 6 || cur == 5)
-        morf = l_HIO.field_0x5C.get(); /* l_HIO.field_0x5C */
+        morf = l_HIO.mAnm56MorfFrames.get(); /* l_HIO.mAnm56MorfFrames */
     if ((s32)idx == (s32)cur)
         return;
-    field_0x9C5 = idx;
+    mAnmIdx = idx;
     /* dNpc_setAnmIDRes(mpMorf, a_play_mode_tbl[idx], morf, a_play_speed_tbl[idx], l_bck_ix_tbl[idx], -1, "Btsw") */
     Btsw_dNpc_setAnmIDRes(mpMorf.v.get(), a_play_mode_tbl[idx], morf, a_play_speed_tbl[idx],
                           l_bck_ix_tbl[idx], -1, gabi::guest_addr("Btsw"));
-    s8 anm = field_0x9C5;
+    s8 anm = mAnmIdx;
     if (anm == 9 || anm == 10 || anm == 6 || anm == 5) {
         m_jnt.mbBackBoneLock = 1; /* onHeadLock(), onBackBoneLock() */
         m_jnt.mbHeadLock = 1;
@@ -333,16 +333,16 @@ bool daNpc_Btsw_c::chkAttention(cXyz* pos, s16 angle) {
 
 /* 022195A4 */
 void daNpc_Btsw_c::eventOrder() {
-    s8 order = field_0x9C7;
+    s8 order = mOrderEvent;
     if (order == 3) {
         Btsw_fopAcM_orderOtherEvent2(this,
                                      gabi::guest_addr("GETMOTHERLETTER") /* "GETMOTHERLETTER" */, 1,
                                      0xFFFF); /* fopAcM_orderOtherEvent */
     } else if (order == 4) {
-        Btsw_fopAcM_orderOtherEventId(this, (s32)field_0x9C8, 0xFF, 0xFFFF, 0,
+        Btsw_fopAcM_orderOtherEventId(this, (s32)mEventIdx, 0xFF, 0xFFFF, 0,
                                       1); /* fopAcM_orderOtherEventId */
     } else if (order == 1 || order == 2) {
-        s8 o = field_0x9C7;
+        s8 o = mOrderEvent;
         u32 a = A(this);
         eventInfo.mCondition =
             (u16)(eventInfo.mCondition.get() | 0x21); /* onCondition(CANTALK | CANTALKITEM) */
@@ -355,23 +355,23 @@ void daNpc_Btsw_c::eventOrder() {
 void daNpc_Btsw_c::checkOrder() {
     u16 command = eventInfo.mCommand.get();
     if (command == 2) { /* eventInfo.checkCommandDemoAccrpt() */
-        s8 order = field_0x9C7;
+        s8 order = mOrderEvent;
         if (order == 3) {
-            field_0x9C7 = 0;
+            mOrderEvent = 0;
             btsw_setAction(this, BTSW_getdemo_action);
         } else if (order == 4) {
-            field_0x9C7 = 0;
+            mOrderEvent = 0;
             btsw_setAction(this, BTSW_dummy_event_action);
         }
         return;
     }
     if (command != 1)
         return; /* eventInfo.checkCommandTalk() */
-    s8 order = field_0x9C7;
+    s8 order = mOrderEvent;
     if (order != 1 && order != 2)
         return;
-    field_0x9C7 = 0;
-    field_0x9A9 = 1;
+    mOrderEvent = 0;
+    mTalking = 1;
 }
 
 /* 0221A5C8 */
@@ -445,9 +445,9 @@ u16 daNpc_Btsw_c::next_msgStatus(be<u32>* pMsgNo) {
 // HD: The cached save address includes the HD header; keep the final event-register write on that same save object.
 /* 0221A840 */
 u32 daNpc_Btsw_c::getMsg() {
-    u32 previous = field_0x9B0;
+    u32 previous = mPendingMsgNo;
     if (previous != fpcM_ERROR_PROCESS_ID_e) {
-        field_0x9B0 = fpcM_ERROR_PROCESS_ID_e;
+        mPendingMsgNo = fpcM_ERROR_PROCESS_ID_e;
         return previous;
     }
     if ((u32)(dComIfGp_event_getTalkXYBtn() - 1) <= 3)
@@ -483,7 +483,7 @@ void daNpc_Btsw_c::anmAtr(u16 i_msgStatus) {
     f32 frame = (f32)gabi::object_at<mDoExt_McaMorf>(morf).mFrameCtrl.mEnd.get() -
                 1.0f;                                      /* getEndFrame() - 1.0f */
     if (Btsw_J3DFrameCtrl_checkPass(morf + 0x98, frame)) { /* checkFrame */
-        s8 anm = field_0x9C5;
+        s8 anm = mAnmIdx;
         if (anm == 4 || anm == 6)
             setAnm(1);
     }
@@ -522,18 +522,18 @@ BOOL daNpc_Btsw_c::CreateInit() {
         (const void*)&daNpc_Btsw_XyCheckCB); /* eventInfo.setXyCheckCB(daNpc_Btsw_XyCheckCB) */
     Btsw_dNpc_EventCut_c_setActorInfo2(gabi::ea(&mEventCut), gabi::guest_addr("Btsw") /* "Btsw" */,
                                        a); /* mEventCut.setActorInfo2 */
-    field_0x953 = 0;
-    field_0x9C8 = -1;
-    field_0x9B0 = fpcM_ERROR_PROCESS_ID_e;
+    mbDrawMails = 0;
+    mEventIdx = -1;
+    mPendingMsgNo = fpcM_ERROR_PROCESS_ID_e;
     attention_info.distances[1] = 0x6F; /* attention_info.distances[TALK] */
-    field_0x952 = 0;
+    mbTimerCreated = 0;
     attention_info.distances[3] = 0x6F; /* attention_info.distances[SPEAK] */
-    Btsw_STControl_setWaitParm(gabi::ea(&field_0x978), 5, 2, 3, 2, 0, 0x2000, 1.0f,
-                               0.9f); /* field_0x978.setWaitParm */
+    Btsw_STControl_setWaitParm(gabi::ea(&mStickControl), 5, 2, 3, 2, 0, 0x2000, 1.0f,
+                               0.9f); /* mStickControl.setWaitParm */
     set_mtx();
     Btsw_mDoExt_McaMorf_calc(mpMorf.v.get()); /* mpMorf->calc() */
-    Btsw_dKy_tevstr_init(gabi::ea(&field_0x6D4), (s32)home.roomNo.get(),
-                         0xFF); /* dKy_tevstr_init(&field_0x6D4, home.roomNo, 0xFF) */
+    Btsw_dKy_tevstr_init(gabi::ea(&mLetterTevStr), (s32)home.roomNo.get(),
+                         0xFF); /* dKy_tevstr_init(&mLetterTevStr, home.roomNo, 0xFF) */
     return TRUE;
 }
 
@@ -547,7 +547,7 @@ void daNpc_Btsw_c::set_mtx() {
     Btsw_PSMTXTrans(stack, x, y, z);                      /* transS(current.pos) */
     Btsw_mDoMtx_YrotM(stack, (s32)current.angle.y.get()); /* YrotM(current.angle.y) */
     mtx_copy(&gabi::object_at<J3DModel>(model).mBaseTransformMtx, &gabi::object_at<Mtx34>(stack));
-    s8 anm = field_0x9C5;
+    s8 anm = mAnmIdx;
     if (anm == 10 || anm == 9) {
         u32 morf = mpMorf.v.get();
         f32 vx, vy, vz;
@@ -593,7 +593,7 @@ void daNpc_Btsw_c::set_mtx() {
                        stack);                                 /* copy(getAnmMtx(jnt)) */
         Btsw_mDoMtx_stack_c_transM(vx, vy, vz);                /* transM(vec) */
         Btsw_mDoMtx_XYZrotM(stack, (s32)rx, (s32)ry, (s32)rz); /* XYZrotM */
-        mtx_copy(&field_0x6D0->mBaseTransformMtx, &gabi::object_at<Mtx34>(stack));
+        mtx_copy(&mpLetterModel->mBaseTransformMtx, &gabi::object_at<Mtx34>(stack));
     }
 }
 
@@ -611,7 +611,7 @@ void daNpc_Btsw_c::setAttention() {
 /* 0221AA40 */
 void daNpc_Btsw_c::lookBack() {
     u32 a = A(this);
-    s8 mode = field_0x9CA;
+    s8 mode = mMode;
     f32 vx = 0.0f, vy = 0.0f, vz = 0.0f;
     u32 dstPos = 0;
     s16 desired_y_rot = current.angle.y.get();
@@ -622,7 +622,7 @@ void daNpc_Btsw_c::lookBack() {
             m_jnt.mbTrn = 1; /* setTrn() */
         if (mHasAttention) {
             Btsw_dNpc_playerEyePos(&eye,
-                                   l_HIO.mNpc.m04.get()); /* dNpc_playerEyePos(l_HIO.mNpc.m04) */
+                                   l_HIO.mNpc.mPlayerEyeOffsetY.get()); /* dNpc_playerEyePos(l_HIO.mNpc.m04) */
             vec2.copy(*&eye);
             dstPos = A(&vec2);
             vx = current.pos.x.get();
@@ -634,46 +634,46 @@ void daNpc_Btsw_c::lookBack() {
     s16 vel;
     if (m_jnt.mbTrn != 0) { /* trnChk() */
         Btsw_cLib_addCalcAngleS2(
-            gabi::ea(&field_0x96A), (s32)l_HIO.mNpc.mMaxHeadTurnVel.get(), 4,
-            0x800); /* cLib_addCalcAngleS2(&field_0x96A, mMaxHeadTurnVel, 4, 0x800) */
-        vel = field_0x96A;
+            gabi::ea(&mLookAtMaxVel), (s32)l_HIO.mNpc.mMaxHeadTurnVel.get(), 4,
+            0x800); /* cLib_addCalcAngleS2(&mLookAtMaxVel, mMaxHeadTurnVel, 4, 0x800) */
+        vel = mLookAtMaxVel;
     } else {
-        field_0x96A = 0;
+        mLookAtMaxVel = 0;
         vel = 0;
     }
     vec.x = vx;
     vec.y = vy;
     vec.z = vz;
-    /* m_jnt.lookAtTarget(&current.angle.y, dstPos, vec, desired_y_rot, field_0x96A, true) */
+    /* m_jnt.lookAtTarget(&current.angle.y, dstPos, vec, desired_y_rot, mLookAtMaxVel, true) */
     Btsw_dNpc_JntCtrl_c_lookAtTarget(gabi::ea(&m_jnt), gabi::ea(&current.angle.y), dstPos, &vec,
                                      (s32)desired_y_rot, (s32)vel, 1);
 }
 
 /* 0221ABCC */
 void daNpc_Btsw_c::wait01() {
-    if (field_0x9A9) {
-        field_0x9CA = 2;
+    if (mTalking) {
+        mMode = 2;
         return;
     }
     u32 morf = mpMorf.v.get();
     f32 frame = (f32)gabi::object_at<mDoExt_McaMorf>(morf).mFrameCtrl.mEnd.get() - 1.0f;
     if (Btsw_J3DFrameCtrl_checkPass(morf + 0x98,
                                     frame)) { /* mpMorf->checkFrame(getEndFrame() - 1.0f) */
-        s8 count = (s8)(field_0x9C6 - 1);
-        field_0x9C6 = count;
+        s8 count = (s8)(mIdleLoopCount - 1);
+        mIdleLoopCount = count;
         if (count <= 0) {
-            if (field_0x9C5 == 9) {
-                field_0x9C6 = 1;
+            if (mAnmIdx == 9) {
+                mIdleLoopCount = 1;
                 setAnm(10);
             } else {
                 f32 random = Btsw_cM_rndF(4.0f);
-                field_0x9C6 = (s8)gabi::ftoi(gabi::fadds_ppc(random, 2.0f));
+                mIdleLoopCount = (s8)gabi::ftoi(gabi::fadds_ppc(random, 2.0f));
                 setAnm(9);
             }
         }
     }
     if (mHasAttention)
-        field_0x9C7 = 2;
+        mOrderEvent = 2;
 }
 
 /* 0221ACDC */
@@ -690,27 +690,27 @@ void daNpc_Btsw_c::talk01() {
         u32 msg = mCurrMsgNo;
         if (msg == 0x1A96 || msg == 0x1AA9 || msg == 0x1A97) {
             /* mSwCam.ActiveOn() */
-            mSwCam.field_0x1E = 1;
-            mSwCam.field_0x00.copy(
+            mSwCam.mbActive = 1;
+            mSwCam.mCenter.copy(
                 camera_center_data.mPositions[0][1]); /* camera_center_data[0][1] */
-            mSwCam.field_0x0C.copy(camera_eye);       /* camera_eye */
-            mSwCam.field_0x1D = 0;
-            mSwCam.field_0x18 = 58.0f;
-            mSwCam.field_0x1C = 0;
+            mSwCam.mEye.copy(camera_eye);       /* camera_eye */
+            mSwCam.mAimY = 0;
+            mSwCam.mFovy = 58.0f;
+            mSwCam.mAimX = 0;
         }
     }
     if (talk_res != 0x12 /* fopMsgStts_BOX_CLOSED_e */)
         return;
-    field_0x9CA = 1;
+    mMode = 1;
     dComIfGp_event_reset();
     setAnm(1);
     u32 msg = mCurrMsgNo;
-    field_0x9C6 = 1;
-    field_0x9A9 = 0;
+    mIdleLoopCount = 1;
+    mTalking = 0;
     if (msg == 0x1A97) {
         btsw_setAction(this, BTSW_shiwake_game_action);
     } else if (msg == 0x1A9B) {
-        field_0x9C7 = 3;
+        mOrderEvent = 3;
     }
 }
 
@@ -719,8 +719,8 @@ BOOL daNpc_Btsw_c::wait_action(void* arg) {
     u32 a = A(this);
     s8 status = mActionStatus;
     if (status == ACTION_STARTING) {
-        field_0x9CA = 1;
-        field_0x9C6 = 1;
+        mMode = 1;
+        mIdleLoopCount = 1;
         setAnm(1);
         mActionStatus = (s8)(mActionStatus + 1);
         return TRUE;
@@ -739,9 +739,9 @@ BOOL daNpc_Btsw_c::wait_action(void* arg) {
     pos.y = py;
     u8 att = Btsw_daNpc_Btsw_c_chkAttention(
         a, &pos, (s32)(s16)(angle_y + head_y + backbone_y)); /* chkAttention */
-    s8 mode = field_0x9CA;
+    s8 mode = mMode;
     mHasAttention = att;
-    field_0x9C7 = 0;
+    mOrderEvent = 0;
     if (mode == 1)
         wait01();
     else if (mode == 2)
@@ -757,7 +757,7 @@ BOOL daNpc_Btsw_c::dummy_event_action(void* arg) {
     s8 status = mActionStatus;
     if (status == ACTION_STARTING) {
         s8 st = mActionStatus;
-        field_0x9CA = 2;
+        mMode = 2;
         mActionStatus = (s8)(st + 1);
         return TRUE;
     }
@@ -780,12 +780,12 @@ BOOL daNpc_Btsw_c::dummy_event_action(void* arg) {
     pos.z = pz;
     u8 att = Btsw_daNpc_Btsw_c_chkAttention(
         a, &pos, (s32)(s16)(angle_y + head_y + backbone_y)); /* chkAttention */
-    s16 eventIdx = field_0x9C8;
+    s16 eventIdx = mEventIdx;
     mHasAttention = att;
     if (Btsw_dEvent_manager_c_endCheck(dComIfGp_ea() + 0x52C4,
-                                       (s32)eventIdx)) { /* dComIfGp_evmng_endCheck(field_0x9C8) */
-        field_0x9C8 = -1;
-        field_0x9C7 = 3;
+                                       (s32)eventIdx)) { /* dComIfGp_evmng_endCheck(mEventIdx) */
+        mEventIdx = -1;
+        mOrderEvent = 3;
         dComIfGp_event_reset();
         btsw_setAction(this, BTSW_wait_action);
     }
@@ -797,12 +797,12 @@ BOOL daNpc_Btsw_c::dummy_event_action(void* arg) {
 /* 0221B300 */
 BOOL daNpc_Btsw_c::checkNextMailThrowOK() {
     u32 a = A(this);
-    u8 mailIdx = field_0x92C;
+    u8 mailIdx = mMailIdx;
     if (mailIdx < 2)
         mailIdx++;
     else
         mailIdx = 0;
-    u32 mail = gabi::object_at<daNpc_Btsw_c>(a).field_0x920[mailIdx].v.get();
+    u32 mail = gabi::object_at<daNpc_Btsw_c>(a).mpMails[mailIdx].v.get();
     if (btsw_mailCheckProc(mail, BTSW_MAIL_Dummy))
         return TRUE;
     if (btsw_mailCheckProc(mail, BTSW_MAIL_End))
@@ -813,14 +813,14 @@ BOOL daNpc_Btsw_c::checkNextMailThrowOK() {
 /* 0221B254 */
 void daNpc_Btsw_c::TimerCountDown() {
     s32 rest = dComIfG_getTimerRestTimeMs();
-    s32 next = field_0x9A4;
+    s32 next = mNextTimerSeMs;
     if (next > rest) {
         if (next <= 10000) {
             btsw_seStart(0x8AD); /* JA_SE_MINIGAME_TIMER_30 */
-            field_0x9A4 = field_0x9A4 - 1000;
+            mNextTimerSeMs = mNextTimerSeMs - 1000;
         } else {
             btsw_seStart(0x8AE); /* JA_SE_MINIGAME_TIMER_10 */
-            field_0x9A4 = field_0x9A4 - 10000;
+            mNextTimerSeMs = mNextTimerSeMs - 10000;
         }
     }
 }
@@ -859,9 +859,9 @@ BOOL daNpc_Btsw_c::shiwake_game_action(void* arg) {
     s8 status = mActionStatus;
     if (status == ACTION_STARTING) {
         u16 command = eventInfo.mCommand.get();
-        field_0x9A0 = 0;
-        field_0x9CA = 3;
-        field_0x9A1 = 0;
+        mCursorX = 0;
+        mMode = 3;
+        mCursorY = 0;
         if (command != 2) { /* !eventInfo.checkCommandDemoAccrpt() */
             Btsw_fopAcM_orderOtherEvent2(a, gabi::guest_addr("SHIWAKEGAME") /* "SHIWAKEGAME" */, 1,
                                          0xFFFF); /* fopAcM_orderOtherEvent */
@@ -869,11 +869,11 @@ BOOL daNpc_Btsw_c::shiwake_game_action(void* arg) {
                 (u16)(eventInfo.mCondition.get() | 2); /* onCondition(dEvtCnd_UNK2_e) */
             return FALSE;
         }
-        if (!field_0x952) {
-            /* dTimer_createTimer(6, l_HIO.field_0x30, 3, 4, 221.0f, l_HIO.field_0x48, 32.0f, l_HIO.field_0x4C) */
-            Btsw_dTimer_createTimer(6, (u32)(u16)l_HIO.field_0x30.get(), 3, 4, 221.0f,
+        if (!mbTimerCreated) {
+            /* dTimer_createTimer(6, l_HIO.mTimerLimit, 3, 4, 221.0f, l_HIO.field_0x48, 32.0f, l_HIO.field_0x4C) */
+            Btsw_dTimer_createTimer(6, (u32)(u16)l_HIO.mTimerLimit.get(), 3, 4, 221.0f,
                                     l_HIO.field_0x48.get(), 32.0f, l_HIO.field_0x4C.get());
-            field_0x952 = 1;
+            mbTimerCreated = 1;
             dComIfGp_setMiniGameRupee(0); /* dComIfGp_setMiniGameRupee(0) */
             /* dComIfGp_startMiniGame(7) (HD inline) */
             u32 p = dComIfGp_ea();
@@ -898,65 +898,65 @@ BOOL daNpc_Btsw_c::shiwake_game_action(void* arg) {
                     Btsw_dTimer_c_start(timer, (s32)time); /* dTimer_c::start */
             }
         }
-        field_0x953 = 1;
-        btsw_mailCall(MAIL_init, field_0x920[0].v.get());
-        btsw_mailCall(MAIL_AppearInit, field_0x920[0].v.get());
-        btsw_mailCall(MAIL_init, field_0x920[1].v.get());
-        btsw_mailCall(MAIL_DummyInit, field_0x920[1].v.get());
-        btsw_mailCall(MAIL_init, field_0x920[2].v.get());
-        btsw_mailCall(MAIL_DummyInit, field_0x920[2].v.get());
-        s8 cy = field_0x9A1, cx = field_0x9A0;
-        field_0x92C = 0;
+        mbDrawMails = 1;
+        btsw_mailCall(MAIL_init, mpMails[0].v.get());
+        btsw_mailCall(MAIL_AppearInit, mpMails[0].v.get());
+        btsw_mailCall(MAIL_init, mpMails[1].v.get());
+        btsw_mailCall(MAIL_DummyInit, mpMails[1].v.get());
+        btsw_mailCall(MAIL_init, mpMails[2].v.get());
+        btsw_mailCall(MAIL_DummyInit, mpMails[2].v.get());
+        s8 cy = mCursorY, cx = mCursorX;
+        mMailIdx = 0;
         mActionStatus = (s8)(mActionStatus + 1);
-        /* mpShopCursor->setPos(cursor_pos_data[field_0x9A1][1 + field_0x9A0]); show() */
+        /* mpShopCursor->setPos(cursor_pos_data[mCursorY][1 + mCursorX]); show() */
         Btsw_ShopCursor_setPos((u32)mpShopCursor, 0x10466A0Cu + (u32)((cy * 3 + cx) * 0xC));
-        gabi::object_at<ShopCursor_c>((u32)mpShopCursor).m54 = 1;
-        field_0x9A4 = 20000;
+        gabi::object_at<ShopCursor_c>((u32)mpShopCursor).mbShow = 1;
+        mNextTimerSeMs = 20000;
         Btsw_padSetRepeat(l_pad.get(), 5, 5); /* HD: pad repeat settings for the game */
         return TRUE;
     }
     if (status == ACTION_ENDING) {
-        field_0x952 = 0;
-        field_0x953 = 0;
+        mbTimerCreated = 0;
+        mbDrawMails = 0;
         Btsw_padResetRepeat(l_pad.get()); /* HD: pad repeat reset */
         return TRUE;
     }
     if (dComIfG_getTimerRestTimeMs() > 0) {
         TimerCountDown();
-        /* HD: field_0x978.checkTrigger() / check*Trigger() replaced by the pad's trigger words */
+        /* HD: mStickControl.checkTrigger() / check*Trigger() replaced by the pad's trigger words */
         u32 pad = l_pad.get();
         u32 hold = gabi::object_at<BtswPadState>(pad).mHold.get();
         u32 trig = gabi::object_at<BtswPadState>(pad).mTrigger.get() |
                    gabi::object_at<BtswPadState>(pad).mRepeatTrigger.get();
         if (hold & 0x00F00000)
             trig &= 0x00F00000;
-        s8 cx = field_0x9A0;
+        s8 cx = mCursorX;
         if (cx > -1 && (trig & 0x00440000)) { /* left */
             btsw_seStart(0x8B0);              /* JA_SE_LETTER_GAME_CURSOR */
-            field_0x9A0 = (s8)(field_0x9A0 - 1);
+            mCursorX = (s8)(mCursorX - 1);
         } else if (cx < 1 && (trig & 0x00880000)) { /* right */
             btsw_seStart(0x8B0);
-            field_0x9A0 = (s8)(field_0x9A0 + 1);
+            mCursorX = (s8)(mCursorX + 1);
         }
-        s8 cy = field_0x9A1;
+        s8 cy = mCursorY;
         if (cy < 1 && (trig & 0x00110000)) { /* up */
             btsw_seStart(0x8B0);
-            field_0x9A1 = (s8)(field_0x9A1 + 1);
+            mCursorY = (s8)(mCursorY + 1);
         } else if (cy > 0 && (trig & 0x00220000)) { /* down */
             btsw_seStart(0x8B0);
-            field_0x9A1 = (s8)(field_0x9A1 - 1);
+            mCursorY = (s8)(mCursorY - 1);
         }
         if (btsw_mailCheckProc(
-                gabi::object_at<daNpc_Btsw_c>(a).field_0x920[(u32)field_0x92C].v.get(),
+                gabi::object_at<daNpc_Btsw_c>(a).mpMails[(u32)mMailIdx].v.get(),
                 BTSW_MAIL_Wait) &&
             gabi::object_at<BtswTimerState>(gabi::ea(dComIfG_getTimerPtr())).mStatus.get() !=
                 1 /* dComIfG_getTimerPtr()->getStatus() */
             && Btsw_padCheckTriggerA(0) /* CPad_CHECK_TRIG_A(0) */ && checkNextMailThrowOK()) {
-            s8 col = field_0x9A1;
-            s8 row = field_0x9A0;
-            u32 mail = gabi::object_at<daNpc_Btsw_c>(a).field_0x920[(u32)field_0x92C].v.get();
+            s8 col = mCursorY;
+            s8 row = mCursorX;
+            u32 mail = gabi::object_at<daNpc_Btsw_c>(a).mpMails[(u32)mMailIdx].v.get();
             auto& targetAim = aim_pos_data.entry(
-                col, s32(row) + 1); /* aim_pos_data[field_0x9A1][field_0x9A0 + 1] */
+                col, s32(row) + 1); /* aim_pos_data[mCursorY][mCursorX + 1] */
             cXyz aim_pos;
             f32 ax = targetAim.x, az = targetAim.z, ay = targetAim.y;
             aim_pos.z = az;
@@ -964,31 +964,31 @@ BOOL daNpc_Btsw_c::shiwake_game_action(void* arg) {
             aim_pos.y = ay;
             gabi::call(MAIL_ThrowInit, mail, &aim_pos,
                        (u32)(u8)(row - col * 3 + 4)); /* idx = row + 1 + (1 - col) * 3 */
-            u8 mailIdx = field_0x92C;
+            u8 mailIdx = mMailIdx;
             if (mailIdx < 2) {
-                field_0x92C = (u8)(mailIdx + 1);
+                mMailIdx = (u8)(mailIdx + 1);
                 btsw_seStart(0x8B1); /* JA_SE_LETTER_GAME_OK */
             } else {
-                field_0x92C = 0;
+                mMailIdx = 0;
                 btsw_seStart(0x8B1);
             }
             btsw_mailCall(MAIL_AppearInit,
-                          gabi::object_at<daNpc_Btsw_c>(a).field_0x920[(u32)field_0x92C].v.get());
+                          gabi::object_at<daNpc_Btsw_c>(a).mpMails[(u32)mMailIdx].v.get());
         }
-        /* mSwCam.setAimIdx(field_0x9A0, field_0x9A1) */
-        s8 cy2 = field_0x9A1;
-        s8 cx2 = field_0x9A0;
-        mSwCam.field_0x1D = cy2;
-        mSwCam.field_0x1C = cx2;
+        /* mSwCam.setAimIdx(mCursorX, mCursorY) */
+        s8 cy2 = mCursorY;
+        s8 cx2 = mCursorX;
+        mSwCam.mAimY = cy2;
+        mSwCam.mAimX = cx2;
         Btsw_ShopCursor_setPos((u32)mpShopCursor,
                                0x10466A0Cu + (u32)((cy2 * 3 + cx2) * 0xC)); /* setPos */
         /* mpShopCursor->setScale(0.65f, 0.9f, 0.5f, 27.0f, 20.0f) */
         u32 cursor = mpShopCursor;
-        gabi::object_at<ShopCursor_c>((u32)cursor).m50 = 0.5f;
-        gabi::object_at<ShopCursor_c>((u32)cursor).m48 = 0.65f;
-        gabi::object_at<ShopCursor_c>((u32)cursor).m4C = 0.9f;
-        gabi::object_at<ShopCursor_c>((u32)cursor).m38 = 27.0f;
-        gabi::object_at<ShopCursor_c>((u32)cursor).m3C = 20.0f;
+        gabi::object_at<ShopCursor_c>((u32)cursor).mPieceScaleYNear = 0.5f;
+        gabi::object_at<ShopCursor_c>((u32)cursor).mPieceScale = 0.65f;
+        gabi::object_at<ShopCursor_c>((u32)cursor).mPieceScaleYFar = 0.9f;
+        gabi::object_at<ShopCursor_c>((u32)cursor).mPieceDistFar = 27.0f;
+        gabi::object_at<ShopCursor_c>((u32)cursor).mPieceDistNear = 20.0f;
         Btsw_ShopCursor_c_anm_play((u32)mpShopCursor); /* anm_play */
         btsw_moveMails(a);
         return TRUE;
@@ -999,7 +999,7 @@ BOOL daNpc_Btsw_c::shiwake_game_action(void* arg) {
         u32 timer = gabi::ea(dComIfG_getTimerPtr());
         Btsw_dTimer_c_end(
             timer, (s32)l_HIO.field_0x34.get()); /* dComIfG_getTimerPtr()->end(l_HIO.field_0x34) */
-        gabi::object_at<ShopCursor_c>((u32)mpShopCursor).m54 = 0; /* hide() */
+        gabi::object_at<ShopCursor_c>((u32)mpShopCursor).mbShow = 0; /* hide() */
         mActionStatus = (s8)(mActionStatus + 1);
         btsw_moveMails(a);
         return TRUE;
@@ -1030,20 +1030,20 @@ BOOL daNpc_Btsw_c::shiwake_game_action(void* arg) {
             msgNo = 0x1A9F;
         else
             msgNo = 0x1A98;
-        field_0x9B0 = msgNo;
+        mPendingMsgNo = msgNo;
         if (rupees < 25) {
-            field_0x9C7 = 1;
+            mOrderEvent = 1;
             btsw_setAction(this, BTSW_wait_action);
-            mSwCam.field_0x1E = 0; /* ActiveOff() */
-            field_0x9C8 = -1;
+            mSwCam.mbActive = 0; /* ActiveOff() */
+            mEventIdx = -1;
         } else {
-            field_0x9C7 = 4;
+            mOrderEvent = 4;
             u32 idx = Btsw_dEvent_manager_c_getEventIdx(
                 dComIfGp_ea() + 0x52C4, gabi::guest_addr("BTSW_TALK_SUGOI") /* "BTSW_TALK_SUGOI" */,
                 0xFF);
-            field_0x9C8 = (s16)idx;
+            mEventIdx = (s16)idx;
             btsw_setAction(this, BTSW_dummy_event_action);
-            mSwCam.field_0x1E = 0;
+            mSwCam.mbActive = 0;
         }
         if (dComIfGp_getMiniGameType() == 7)
             btsw_endMiniGame(); /* dComIfGp_getMiniGameType() == 7 */
@@ -1065,8 +1065,8 @@ BOOL daNpc_Btsw_c::getdemo_action(void* arg) {
             dComIfGp_ea() + 0x52C4, gabi::guest_addr("GETMOTHERLETTER") /* "GETMOTHERLETTER" */))
         return TRUE; /* dComIfGp_evmng_endCheck */
     dComIfGp_event_reset();
-    field_0x9C7 = 1;
-    field_0x9B0 = 0x1A9C;
+    mOrderEvent = 1;
+    mPendingMsgNo = 0x1A9C;
     dComIfGs_onEventBit(0x2701);
     Btsw_dSv_event_c_setEventReg(dComIfGs_ea() + 0x644, 0x8AFF,
                                  25); /* dComIfGs_setEventReg(UNK_8AFF, 25) */
@@ -1086,30 +1086,30 @@ BOOL daNpc_Btsw_c::_draw() {
     env = Btsw_dKy_getEnvlight();
     Btsw_setLightTevColorType(env, model,
                               gabi::ea(&tevStr)); /* setLightTevColorType(model, &tevStr) */
-    Btsw_mDoExt_btpAnm_entry(gabi::ea(&field_0x7E8), modelData,
-                             (u32)field_0x7FC);  /* field_0x7E8.entry */
+    Btsw_mDoExt_btpAnm_entry(gabi::ea(&mBtpAnm), modelData,
+                             (u32)mBtpFrame);  /* mBtpAnm.entry */
     Btsw_mDoExt_McaMorf_entryDL(mpMorf.v.get()); /* mpMorf->entryDL() */
-    s8 anm = field_0x9C5;
+    s8 anm = mAnmIdx;
     if (anm == 10 || anm == 9) {
         env = Btsw_dKy_getEnvlight();
         Btsw_dScnKy_env_light_c_settingTevStruct(env, 0, gabi::ea(&current.pos),
-                                                 gabi::ea(&field_0x6D4));
-        /* field_0x6D4.mColorK0 / mColorC0 */
-        field_0x6D4.mColorC0.b = 0xC0;
-        field_0x6D4.mColorK0.g = 0xAE;
-        field_0x6D4.mColorK0.b = 0xC0;
-        field_0x6D4.mColorC0.g = 0xAE;
-        field_0x6D4.mColorK0.r = 0xC0;
-        field_0x6D4.mColorC0.r = 0xC0;
+                                                 gabi::ea(&mLetterTevStr));
+        /* mLetterTevStr.mColorK0 / mColorC0 */
+        mLetterTevStr.mColorC0.b = 0xC0;
+        mLetterTevStr.mColorK0.g = 0xAE;
+        mLetterTevStr.mColorK0.b = 0xC0;
+        mLetterTevStr.mColorC0.g = 0xAE;
+        mLetterTevStr.mColorK0.r = 0xC0;
+        mLetterTevStr.mColorC0.r = 0xC0;
         env = Btsw_dKy_getEnvlight();
-        Btsw_setLightTevColorType(env, field_0x6D0.v.get(), gabi::ea(&field_0x6D4));
-        Btsw_mDoExt_modelUpdateDL(field_0x6D0.v.get(), 0); /* mDoExt_modelUpdateDL(field_0x6D0) */
+        Btsw_setLightTevColorType(env, mpLetterModel.v.get(), gabi::ea(&mLetterTevStr));
+        Btsw_mDoExt_modelUpdateDL(mpLetterModel.v.get(), 0); /* mDoExt_modelUpdateDL(mpLetterModel) */
     }
     gabi::object_at<BtswModelDataWork>(modelData).mpTexPatternAnimation =
-        0; /* field_0x7E8.remove(modelData) */
-    if (field_0x953 != 0) {
+        0; /* mBtpAnm.remove(modelData) */
+    if (mbDrawMails != 0) {
         for (s32 i = 0; i < 3; i++)
-            btsw_mailCall2(MAIL_draw, gabi::object_at<daNpc_Btsw_c>(a).field_0x920[i].v.get(),
+            btsw_mailCall2(MAIL_draw, gabi::object_at<daNpc_Btsw_c>(a).mpMails[i].v.get(),
                            gabi::ea(&tevStr));
     }
     Btsw_ShopCursor_c_draw((u32)mpShopCursor); /* mpShopCursor->draw() */
@@ -1117,7 +1117,7 @@ BOOL daNpc_Btsw_c::_draw() {
                          (s32)current.angle.y.get(), 1.0f, 1.0f, 1.0f);
     /* HD: function-local statics (the GameCube's unused GXColor table), initialised on first use
      * behind an HIO flag */
-    if (l_HIO.mNpc.m22.get() != 0) {
+    if (l_HIO.mNpc.mDebugDraw.get() != 0) {
         if (l_debugColorOneGuard.get() == 0) {
             l_debugColorOneGuard = 1;
             Btsw_copyDebugColor(/* memcpy */ 0x101FEBF4u, 0x100186B0u, 4);
@@ -1142,7 +1142,7 @@ BOOL daNpc_Btsw_c::_execute() {
     s16 p9 = l_HIO.mNpc.mMaxTurnStep.get();
     Btsw_dNpc_JntCtrl_c_setParam(gabi::ea(&m_jnt), (s32)p1, (s32)p2, (s32)p3, (s32)p4, (s32)p5,
                                  (s32)p6, (s32)p7, (s32)p8, (s32)p9);
-    Btsw_STControl_setWaitParm(gabi::ea(&field_0x978), 5, 2, 3, 2, 0, 0x2000,
+    Btsw_STControl_setWaitParm(gabi::ea(&mStickControl), 5, 2, 3, 2, 0, 0x2000,
                                l_HIO.field_0x50.get(), l_HIO.field_0x54.get()); /* setWaitParm */
     playTexPatternAnm();
     Btsw_mDoExt_McaMorf_play(mpMorf.v.get(), gabi::ea(&eyePos), 0,
@@ -1150,7 +1150,7 @@ BOOL daNpc_Btsw_c::_execute() {
     Btsw_mDoExt_McaMorf_calc(mpMorf.v.get()); /* mpMorf->calc() */
     checkOrder();
     btsw_actionCall(this, 0);                         /* (this->*mCurrActionFunc)(NULL) */
-    Btsw_SwCam2_c_Move(gabi::ea(&mSwCam.field_0x00)); /* mSwCam.Move() */
+    Btsw_SwCam2_c_Move(gabi::ea(&mSwCam.mCenter)); /* mSwCam.Move() */
     eventOrder();
     Btsw_fopAcM_posMoveF(a, gabi::ea(&mStts)); /* fopAcM_posMoveF(this, mStts.GetCCMoveP()) */
     u32 play = dComIfGp_ea();
@@ -1250,10 +1250,10 @@ BOOL daNpc_Btsw_c::CreateHeap() {
     m_handR = (s8)btsw_jointIndex(modelData, gabi::guest_addr("handR") /* "handR" */);
     u32 letterData = btsw_getIDRes("Btsw", dRes_ID_BTSW_BDL_BM_LETTER_e);
     u32 letter = Btsw_mDoExt_J3DModel__create(letterData, 0, 0x11020203);
-    field_0x6D0.v = letter;
+    mpLetterModel.v = letter;
     if (letter == 0)
         return FALSE;
-    field_0x9C4 = 0;
+    mBtpIdx = 0;
     if (!initTexPatternAnm(0))
         return FALSE;
     /* HD: getJointNum() through HD entry (named __nw by the matcher) */
@@ -1270,16 +1270,16 @@ BOOL daNpc_Btsw_c::CreateHeap() {
         }
     }
     mpMorf->mpModel->mUserArea = a; /* setUserArea(this) */
-    field_0x920[0].v = gabi::ea(&mSwMail0);
-    field_0x920[2].v = gabi::ea(&mSwMail2);
-    field_0x92C = 0;
-    field_0x920[1].v = gabi::ea(&mSwMail1);
-    u32 eyeP = gabi::ea(&mSwCam.field_0x00), centerP = gabi::ea(&mSwCam.field_0x0C);
-    if (!gabi::call<BOOL>(MAIL_MailCreateInit, gabi::ea(&mSwMail0), eyeP, centerP))
+    mpMails[0].v = gabi::ea(&mSwMail0);
+    mpMails[2].v = gabi::ea(&mSwMail2);
+    mMailIdx = 0;
+    mpMails[1].v = gabi::ea(&mSwMail1);
+    u32 centerP = gabi::ea(&mSwCam.mCenter), eyeP = gabi::ea(&mSwCam.mEye);
+    if (!gabi::call<BOOL>(MAIL_MailCreateInit, gabi::ea(&mSwMail0), centerP, eyeP))
         return FALSE;
-    if (!gabi::call<BOOL>(MAIL_MailCreateInit, field_0x920[1].v.get(), eyeP, centerP))
+    if (!gabi::call<BOOL>(MAIL_MailCreateInit, mpMails[1].v.get(), centerP, eyeP))
         return FALSE;
-    if (!gabi::call<BOOL>(MAIL_MailCreateInit, field_0x920[2].v.get(), eyeP, centerP))
+    if (!gabi::call<BOOL>(MAIL_MailCreateInit, mpMails[2].v.get(), centerP, eyeP))
         return FALSE;
     u32 tevRegKey = btsw_getIDRes("Btsw", dRes_ID_BTSW_BRK_SHOP_CURSOR01_e);
     u32 cursorData = btsw_getIDRes("Btsw", dRes_ID_BTSW_BMD_SHOP_CURSOR01_e);
@@ -1287,7 +1287,7 @@ BOOL daNpc_Btsw_c::CreateHeap() {
     mpShopCursor = cursor;
     if (cursor == 0)
         return FALSE;
-    gabi::object_at<ShopCursor_c>((u32)cursor).m54 = 0;          /* m54 */
+    gabi::object_at<ShopCursor_c>((u32)cursor).mbShow = 0;          /* mbShow */
     Btsw_dBgS_AcchCir_SetWall(gabi::ea(&mAcchCir), 30.0f, 0.0f); /* mAcchCir.SetWall */
     Btsw_dBgS_Acch_Set(gabi::ea(&mObjAcch), gabi::ea(&current.pos), gabi::ea(&old.pos), a, 1,
                        gabi::ea(&mAcchCir), gabi::ea(&speed), 0u, 0u); /* mObjAcch.Set */
@@ -1295,7 +1295,7 @@ BOOL daNpc_Btsw_c::CreateHeap() {
 }
 
 /* 022181EC */
-BOOL SwMail2_c::MailCreateInit(cXyz* eye, cXyz* center) {
+BOOL SwMail2_c::MailCreateInit(cXyz* center, cXyz* eye) {
     u32 m = A(this);
     u32 modelData = btsw_getIDRes("Btsw", dRes_ID_BTSW_BDL_QMAIL_e);
     u32 model =
@@ -1304,12 +1304,12 @@ BOOL SwMail2_c::MailCreateInit(cXyz* eye, cXyz* center) {
     if (model == 0)
         return FALSE;
     u32 pattern = btsw_getIDRes("Btsw", dRes_ID_BTSW_BTP_QMAIL_e);
-    /* field_0x10.init(modelData, texPattern, TRUE, EMode_LOOP, 0.0f, 0, -1, false, FALSE) */
-    if (!Btsw_btpInit(gabi::ea(&field_0x10), modelData, pattern, 1, 2, 0, -1, 0, 0, 0.0f))
+    /* mMailBtpAnm.init(modelData, texPattern, TRUE, EMode_LOOP, 0.0f, 0, -1, false, FALSE) */
+    if (!Btsw_btpInit(gabi::ea(&mMailBtpAnm), modelData, pattern, 1, 2, 0, -1, 0, 0, 0.0f))
         return FALSE;
-    field_0x5C.v = A(center);
-    field_0x54 = 0;
-    field_0x58.v = A(eye);
+    mpCamEye.v = A(eye);
+    mBoxNo = 0;
+    mpCamCenter.v = A(center);
     init();
     DummyInit();
     return TRUE;
@@ -1379,63 +1379,63 @@ u8 Btsw_getNextNo(u8 previous_no) {
 /* 02217E74 */
 void SwMail2_c::init() {
     u32 m = A(this);
-    field_0x56 = 0;
-    field_0x54 = 0;
+    mThrowPhase = 0;
+    mBoxNo = 0;
     field_0x30.copy(cXyz::Zero); /* cXyz::Zero */
-    field_0x3C.copy(cXyz::Zero);
-    field_0x55 = 0;
-    u32 c = field_0x5C.v.get();
+    mPosOffset.copy(cXyz::Zero);
+    mThrownBoxNo = 0;
+    u32 c = mpCamEye.v.get();
     f32 cx = gabi::object_at<cXyz>(c).x.get(), cy = gabi::object_at<cXyz>(c).y.get(),
         cz = gabi::object_at<cXyz>(c).z.get();
-    field_0x24.x = cx;
-    field_0x24.z = cz;
-    field_0x24.y = gabi::fsubs_ppc(cy, 200.0f);
+    mPos.x = cx;
+    mPos.z = cz;
+    mPos.y = gabi::fsubs_ppc(cy, 200.0f);
     set_mtx();
 }
 
 /* 02217D98 */
 void SwMail2_c::set_mtx() {
     u32 m = A(this);
-    f32 x = gabi::fadds_ppc(field_0x24.x, field_0x3C.x);
-    f32 y = gabi::fadds_ppc(field_0x24.y, field_0x3C.y);
-    f32 z = gabi::fadds_ppc(field_0x24.z, field_0x3C.z);
+    f32 x = gabi::fadds_ppc(mPos.x, mPosOffset.x);
+    f32 y = gabi::fadds_ppc(mPos.y, mPosOffset.y);
+    f32 z = gabi::fadds_ppc(mPos.z, mPosOffset.z);
     Btsw_PSMTXTrans(0x1048D0CCu, x, y, z); /* transS */
-    Btsw_mDoMtx_ZXYrotM(0x1048D0CCu, (s32)field_0x48.x, (s32)field_0x48.y,
-                        (s32)field_0x48.z);                                     /* ZXYrotM */
+    Btsw_mDoMtx_ZXYrotM(0x1048D0CCu, (s32)mAngle.x, (s32)mAngle.y,
+                        (s32)mAngle.z);                                     /* ZXYrotM */
     mtx_copy(&mpModel->mBaseTransformMtx, &gabi::object_at<Mtx34>(0x1048D0CC)); /* setBaseTRMtx */
 }
 
 /* 022199FC */
 void SwMail2_c::set_mtx_throw() {
     u32 m = A(this);
-    f32 x = gabi::fadds_ppc(field_0x24.x, field_0x3C.x);
-    f32 y = gabi::fadds_ppc(field_0x24.y, field_0x3C.y);
-    f32 z = gabi::fadds_ppc(field_0x24.z, field_0x3C.z);
+    f32 x = gabi::fadds_ppc(mPos.x, mPosOffset.x);
+    f32 y = gabi::fadds_ppc(mPos.y, mPosOffset.y);
+    f32 z = gabi::fadds_ppc(mPos.z, mPosOffset.z);
     Btsw_PSMTXTrans(0x1048D0CCu, x, y, z);             /* transS */
-    Btsw_mDoMtx_XrotM(0x1048D0CCu, (s32)field_0x48.x); /* XrotM */
-    Btsw_mDoMtx_YrotM(0x1048D0CCu, (s32)field_0x48.y); /* YrotM */
+    Btsw_mDoMtx_XrotM(0x1048D0CCu, (s32)mAngle.x); /* XrotM */
+    Btsw_mDoMtx_YrotM(0x1048D0CCu, (s32)mAngle.y); /* YrotM */
     mtx_copy(&mpModel->mBaseTransformMtx, &gabi::object_at<Mtx34>(0x1048D0CC));
 }
 
 /* 02218114 */
 void SwMail2_c::DummyInit() {
     u32 m = A(this);
-    Btsw_cLib_targetAngleY(field_0x58.v.get(), field_0x5C.v.get()); /* cLib_targetAngleY (unused) */
-    field_0x48.y = -0x4000;
-    field_0x48.z = 0;
-    field_0x48.x = 0;
-    u32 c = field_0x5C.v.get();
+    Btsw_cLib_targetAngleY(mpCamCenter.v.get(), mpCamEye.v.get()); /* cLib_targetAngleY (unused) */
+    mAngle.y = -0x4000;
+    mAngle.z = 0;
+    mAngle.x = 0;
+    u32 c = mpCamEye.v.get();
     f32 cy = gabi::object_at<cXyz>(c).y.get(), cx = gabi::object_at<cXyz>(c).x.get(),
         cz = gabi::object_at<cXyz>(c).z.get();
-    field_0x24.z = cz;
-    field_0x24.y = gabi::fsubs_ppc(cy, 200.0f);
-    field_0x24.x = gabi::fsubs_ppc(cx, 150.0f);
-    u8 no = getNextNo(field_0x54);
-    field_0x54 = no;
+    mPos.z = cz;
+    mPos.y = gabi::fsubs_ppc(cy, 200.0f);
+    mPos.x = gabi::fsubs_ppc(cx, 150.0f);
+    u8 no = getNextNo(mBoxNo);
+    mBoxNo = no;
     field_0x4E.z = -0x4000;
     field_0x4E.x = 0;
     field_0x4E.y = -0x4000;
-    field_0x3C.copy(cXyz::Zero);
+    mPosOffset.copy(cXyz::Zero);
     btsw_mailSetProc(m, BTSW_MAIL_Dummy);
 }
 
@@ -1445,24 +1445,24 @@ void SwMail2_c::Dummy() { set_mtx(); }
 /* 02219B24 */
 void SwMail2_c::AppearInit() {
     u32 m = A(this);
-    Btsw_cLib_targetAngleY(field_0x58.v.get(), field_0x5C.v.get()); /* cLib_targetAngleY (unused) */
-    u32 c = field_0x5C.v.get();
-    u8 no = field_0x54;
-    field_0x48.y = -0x4000;
-    field_0x48.x = 0;
-    field_0x48.z = 0;
+    Btsw_cLib_targetAngleY(mpCamCenter.v.get(), mpCamEye.v.get()); /* cLib_targetAngleY (unused) */
+    u32 c = mpCamEye.v.get();
+    u8 no = mBoxNo;
+    mAngle.y = -0x4000;
+    mAngle.x = 0;
+    mAngle.z = 0;
     f32 cy = gabi::object_at<cXyz>(c).y.get(), cx = gabi::object_at<cXyz>(c).x.get(),
         cz = gabi::object_at<cXyz>(c).z.get();
-    field_0x24.x = cx;
-    field_0x24.y = gabi::fsubs_ppc(cy, 200.0f);
-    field_0x24.z = cz;
+    mPos.x = cx;
+    mPos.y = gabi::fsubs_ppc(cy, 200.0f);
+    mPos.z = cz;
     no = getNextNo(no);
     field_0x4E.z = -0x4000;
     field_0x4E.x = 0;
     field_0x4E.y = -0x4000;
-    field_0x54 = no;
-    field_0x3C.copy(cXyz::Zero);
-    field_0x56 = 0;
+    mBoxNo = no;
+    mPosOffset.copy(cXyz::Zero);
+    mThrowPhase = 0;
     btsw_seStart(0x69A5); /* JA_SE_LETTER_GAME_NEW */
     btsw_mailSetProc(m, BTSW_MAIL_Appear);
 }
@@ -1470,19 +1470,19 @@ void SwMail2_c::AppearInit() {
 /* 02219C1C */
 void SwMail2_c::Appear() {
     u32 m = A(this);
-    s16 new_y = Btsw_cLib_targetAngleY(field_0x58.v.get(), field_0x5C.v.get());
-    /* cXyz diff = *field_0x58 - *field_0x5C */
+    s16 new_y = Btsw_cLib_targetAngleY(mpCamCenter.v.get(), mpCamEye.v.get());
+    /* cXyz diff = *mpCamCenter - *mpCamEye */
     cXyz diff;
-    u32 rhs = field_0x5C.v.get();
-    Btsw_cXyz___mi(field_0x58.v.get(), &diff, rhs);
+    u32 rhs = mpCamEye.v.get();
+    Btsw_cXyz___mi(mpCamCenter.v.get(), &diff, rhs);
     BOOL ok = Btsw_cXyz_normalizeRS(&diff); /* normalizeRS */
-    u32 c = field_0x5C.v.get();
+    u32 c = mpCamEye.v.get();
     if (!ok) {
         diff.x = 0.0f;
         diff.z = 1.0f;
         diff.y = 0.0f;
     }
-    cXyz vec; /* cXyz vec = *field_0x5C */
+    cXyz vec; /* cXyz vec = *mpCamEye */
     vec.copy(gabi::object_at<cXyz>(c));
     cXyz scaled;
     Btsw_cXyz___ml(&diff, &scaled, 120.0f); /* diff * 120.0f */
@@ -1491,13 +1491,13 @@ void SwMail2_c::Appear() {
     s16 bx = field_0x4E.x, by = field_0x4E.y;
     f32 vy = gabi::fsubs_ppc(vec.y, 40.0f);
     s16 bz = field_0x4E.z;
-    field_0x48.x = bx;
-    field_0x48.y = (s16)(by + new_y);
+    mAngle.x = bx;
+    mAngle.y = (s16)(by + new_y);
     vec.y = vy;
     Btsw_cLib_addCalcAngleS2(
-        gabi::ea(&field_0x48.z), (s32)bz, 4,
-        0x1000); /* cLib_addCalcAngleS2(&field_0x48.z, field_0x4E.z, 4, 0x1000) */
-    f32 step = Btsw_cLib_addCalcPos(gabi::ea(&field_0x24), &vec, 0.25f, 30.0f, 2.5f);
+        gabi::ea(&mAngle.z), (s32)bz, 4,
+        0x1000); /* cLib_addCalcAngleS2(&mAngle.z, field_0x4E.z, 4, 0x1000) */
+    f32 step = Btsw_cLib_addCalcPos(gabi::ea(&mPos), &vec, 0.25f, 30.0f, 2.5f);
     if (std::fabs(step) < 2.5f)
         WaitInit();
     set_mtx();
@@ -1509,30 +1509,30 @@ void SwMail2_c::WaitInit() { btsw_mailSetProc(A(this), BTSW_MAIL_Wait); }
 /* 02219D88 */
 void SwMail2_c::Wait() {
     u32 m = A(this);
-    s16 new_y = Btsw_cLib_targetAngleY(field_0x58.v.get(), field_0x5C.v.get());
+    s16 new_y = Btsw_cLib_targetAngleY(mpCamCenter.v.get(), mpCamEye.v.get());
     cXyz diff;
-    u32 rhs = field_0x5C.v.get();
-    Btsw_cXyz___mi(field_0x58.v.get(), &diff, rhs);
+    u32 rhs = mpCamEye.v.get();
+    Btsw_cXyz___mi(mpCamCenter.v.get(), &diff, rhs);
     BOOL ok = Btsw_cXyz_normalizeRS(&diff);
-    u32 c = field_0x5C.v.get();
+    u32 c = mpCamEye.v.get();
     if (!ok) {
         diff.x = 0.0f;
         diff.z = 1.0f;
         diff.y = 0.0f;
     }
-    field_0x24.copy(gabi::object_at<cXyz>(c)); /* field_0x24 = *field_0x5C */
+    mPos.copy(gabi::object_at<cXyz>(c)); /* mPos = *mpCamEye */
     cXyz scaled;
     Btsw_cXyz___ml(&diff, &scaled, 120.0f);
     diff.copy(*&scaled);
-    Btsw_PSVECAdd(gabi::ea(&field_0x24), &diff, gabi::ea(&field_0x24)); /* field_0x24 += diff */
+    Btsw_PSVECAdd(gabi::ea(&mPos), &diff, gabi::ea(&mPos)); /* mPos += diff */
     s16 by = field_0x4E.y;
-    f32 py = field_0x24.y;
+    f32 py = mPos.y;
     s16 bz = field_0x4E.z;
     s16 bx = field_0x4E.x;
-    field_0x48.y = (s16)(by + new_y);
-    field_0x48.z = bz;
-    field_0x48.x = bx;
-    field_0x24.y = gabi::fsubs_ppc(py, 40.0f);
+    mAngle.y = (s16)(by + new_y);
+    mAngle.z = bz;
+    mAngle.x = bx;
+    mPos.y = gabi::fsubs_ppc(py, 40.0f);
     set_mtx();
 }
 
@@ -1546,24 +1546,24 @@ void SwMail2_c::ThrowInit(cXyz* aim, u8 no) {
     u32 z = gabi::object_at<BtswVectorWords>(p).z.get();
     mFunc.d = 0;
     gabi::object_at<BtswVectorWords>(gabi::ea(&field_0x30)).z = z;
-    field_0x56 = 0;
+    mThrowPhase = 0;
     mFunc.i = -1;
     mFunc.f = BTSW_MAIL_Throw;
-    field_0x55 = no;
+    mThrownBoxNo = no;
 }
 
 // HD: The target angle is calculated before the branch, and scoring retains the cached play object.
 /* 02219F20 */
 void SwMail2_c::Throw() {
     u32 m = A(this);
-    u32 center = field_0x5C.v.get();
-    u8 step = field_0x56;
+    u32 center = mpCamEye.v.get();
+    u8 step = mThrowPhase;
     /* HD: x_angle computed once before the branch */
     s16 x_angle = Btsw_cLib_targetAngleX(gabi::ea(&field_0x30),
-                                         center); /* cLib_targetAngleX(&field_0x30, field_0x5C) */
+                                         center); /* cLib_targetAngleX(&field_0x30, mpCamEye) */
     if (step == 0) {
-        u32 rhs = field_0x5C.v.get();
-        s16 y_angle = Btsw_cLib_targetAngleY(field_0x58.v.get(), rhs);
+        u32 rhs = mpCamEye.v.get();
+        s16 y_angle = Btsw_cLib_targetAngleY(mpCamCenter.v.get(), rhs);
         cXyz vec;
         vec.z = 0.0f;
         vec.x = -40.0f;
@@ -1571,33 +1571,33 @@ void SwMail2_c::Throw() {
         Btsw_mDoMtx_ZXYrotS(0x1048D0CCu, (s32)x_angle, (s32)y_angle, 0); /* ZXYrotS */
         cXyz multVec;
         Btsw_PSMTXMultVec(0x1048D0CCu, &vec, &multVec);        /* multVec */
-        Btsw_PSVECAdd(&multVec, field_0x5C.v.get(), &multVec); /* multVec += *field_0x5C */
-        f32 r = Btsw_cLib_addCalcPos(gabi::ea(&field_0x24), &multVec, 0.5f, 30.0f, 2.0f);
+        Btsw_PSVECAdd(&multVec, mpCamEye.v.get(), &multVec); /* multVec += *mpCamEye */
+        f32 r = Btsw_cLib_addCalcPos(gabi::ea(&mPos), &multVec, 0.5f, 30.0f, 2.0f);
         if (r < 1.0f) {
-            field_0x48.y = 0;
+            mAngle.y = 0;
             field_0x4E.x = 0;
             btsw_seStart(0x2800); /* JA_SE_LK_SW_KAZEKIRI_S */
-            field_0x56 = (u8)(field_0x56 + 1);
+            mThrowPhase = (u8)(mThrowPhase + 1);
         }
         set_mtx();
         return;
     }
-    u8 no = field_0x54;
-    s16 ay = field_0x48.y;
-    field_0x48.z = 0;
-    field_0x48.x = (s16)-x_angle;
-    field_0x48.y = (s16)(ay + (s32)no * 0x80 + 0x1000);
-    f32 pos_step = Btsw_cLib_addCalcPos(gabi::ea(&field_0x24), gabi::ea(&field_0x30), 0.5f,
-                                        l_HIO.field_0x44.get(), 1.0f);
+    u8 no = mBoxNo;
+    s16 ay = mAngle.y;
+    mAngle.z = 0;
+    mAngle.x = (s16)-x_angle;
+    mAngle.y = (s16)(ay + (s32)no * 0x80 + 0x1000);
+    f32 pos_step = Btsw_cLib_addCalcPos(gabi::ea(&mPos), gabi::ea(&field_0x30), 0.5f,
+                                        l_HIO.mMailThrowSpeed.get(), 1.0f);
     s16 bx = (s16)(field_0x4E.x + 4000);
     field_0x4E.x = bx;
     f32 cosv = cM_scos(bx); /* cM_scos */
-    field_0x3C.y = gabi::fmuls_ppc(20.0f, gabi::fsubs_ppc(1.0f, cosv));
+    mPosOffset.y = gabi::fmuls_ppc(20.0f, gabi::fsubs_ppc(1.0f, cosv));
     if (pos_step < 1.0f) {
         Btsw_seStartAt(
-            0x69A6, gabi::ea(&field_0x24)); /* mDoAud_seStart(JA_SE_LETTER_IN_BOX, &field_0x24) */
-        u8 aim = field_0x55;
-        u8 cur = field_0x54;
+            0x69A6, gabi::ea(&mPos)); /* mDoAud_seStart(JA_SE_LETTER_IN_BOX, &mPos) */
+        u8 aim = mThrownBoxNo;
+        u8 cur = mBoxNo;
         u32 p = dComIfGp_ea() + 0x12A0;
         if (aim == cur) {
             /* dComIfGp_plusMiniGameRupee(1) (HD: clamped at 0) */
@@ -1636,28 +1636,28 @@ void SwMail2_c::EndInit() {
 /* 0221A1E0 */
 void SwMail2_c::End() {
     u32 m = A(this);
-    u8 no = field_0x54;
-    u8 aim = field_0x55;
+    u8 no = mBoxNo;
+    u8 aim = mThrownBoxNo;
     if (aim == no) {
-        Btsw_cLib_addCalcAngleS2(gabi::ea(&field_0x48.y), 0, 4, 0x1000);
+        Btsw_cLib_addCalcAngleS2(gabi::ea(&mAngle.y), 0, 4, 0x1000);
         cXyz target;
         f32 zx = l_cXyzZeroX.get(), zz = l_cXyzZeroZ.get(), zy = l_cXyzZeroY.get();
         target.x = zx;
         target.z = zz;
         target.y = zy;
-        Btsw_cLib_addCalcPos2(gabi::ea(&field_0x3C), &target, 0.25f, 5.0f); /* cLib_addCalcPos2 */
+        Btsw_cLib_addCalcPos2(gabi::ea(&mPosOffset), &target, 0.25f, 5.0f); /* cLib_addCalcPos2 */
         set_mtx_throw();
         return;
     }
-    Btsw_cLib_addCalcAngleS2(gabi::ea(&field_0x48.y), -0x8000, 4, 0x1000);
+    Btsw_cLib_addCalcAngleS2(gabi::ea(&mAngle.y), -0x8000, 4, 0x1000);
     cXyz target;
     f32 zx = l_cXyzZeroX.get(), zy = l_cXyzZeroY.get(), zz = l_cXyzZeroZ.get();
     target.x = zx;
     target.y = zy;
     target.z = zz;
-    Btsw_cLib_addCalcPos2(gabi::ea(&field_0x3C), &target, 0.25f, 5.0f);
-    if (field_0x24.z < 995.0f) {
-        f32 y = field_0x24.y;
+    Btsw_cLib_addCalcPos2(gabi::ea(&mPosOffset), &target, 0.25f, 5.0f);
+    if (mPos.z < 995.0f) {
+        f32 y = mPos.y;
         s16 targetAngle;
         if (y > 720.0f) {
             field_0x30.y = gabi::fsubs_ppc(field_0x30.y, 3.0f);
@@ -1672,21 +1672,21 @@ void SwMail2_c::End() {
             field_0x30.z = nz;
             targetAngle = 0;
         }
-        if (!(field_0x24.y > 700.0f)) {
-            field_0x24.y = 700.0f;
+        if (!(mPos.y > 700.0f)) {
+            mPos.y = 700.0f;
             field_0x30.y = 0.0f;
         }
-        Btsw_cLib_addCalcAngleS2(gabi::ea(&field_0x48.x), (s32)targetAngle, 2, 0x800);
+        Btsw_cLib_addCalcAngleS2(gabi::ea(&mAngle.x), (s32)targetAngle, 2, 0x800);
     }
     Btsw_PSVECScale(gabi::ea(&field_0x30), gabi::ea(&field_0x30), 0.9f); /* field_0x30 *= 0.9f */
-    Btsw_PSVECAdd(gabi::ea(&field_0x24), gabi::ea(&field_0x30),
-                  gabi::ea(&field_0x24)); /* field_0x24 += field_0x30 */
+    Btsw_PSVECAdd(gabi::ea(&mPos), gabi::ea(&field_0x30),
+                  gabi::ea(&mPos)); /* mPos += field_0x30 */
     set_mtx_throw();
 }
 
 /* 022190B4 */
 void SwMail2_c::SeDelete() {
-    Btsw_JAIZelBasic_seDeleteObject(A(this) + 0x80); /* mDoAud_seDeleteObject(&field_0x24) */
+    Btsw_JAIZelBasic_seDeleteObject(A(this) + 0x80); /* mDoAud_seDeleteObject(&mPos) */
 }
 
 /* 02219ADC */
@@ -1709,29 +1709,29 @@ void SwMail2_c::move() {
 void SwMail2_c::draw(void* tevStr) {
     u32 m = A(this);
     u32 modelData = mpModel->mModelData.v.get();
-    Btsw_mDoExt_btpAnm_entry(gabi::ea(&field_0x10), modelData,
-                             (u32)field_0x54); /* field_0x10.entry(modelData, field_0x54) */
+    Btsw_mDoExt_btpAnm_entry(gabi::ea(&mMailBtpAnm), modelData,
+                             (u32)mBoxNo); /* mMailBtpAnm.entry(modelData, mBoxNo) */
     u32 env = Btsw_dKy_getEnvlight();          /* g_env_light */
     Btsw_setLightTevColorType(env, mpModel.v.get(),
                               tevStr);             /* setLightTevColorType(mpModel, tevStr) */
     Btsw_mDoExt_modelUpdateDL(mpModel.v.get(), 0); /* mDoExt_modelUpdateDL(mpModel) */
     gabi::object_at<BtswModelDataWork>(modelData).mpTexPatternAnimation =
-        0; /* field_0x10.remove(modelData) */
+        0; /* mMailBtpAnm.remove(modelData) */
 }
 
 /* 0221949C */
 void SwCam2_c::Move() {
     u32 c = A(this);
-    if (field_0x1E == 0)
+    if (mbActive == 0)
         return;
     /* camera_process_class* camera = dComIfGp_getCamera(dComIfGp_getPlayerCameraID(0)) */
     s32 camId = dComIfGp_getPlayerCameraID(0);
     u32 play = dComIfGp_ea();
-    s8 aimY = field_0x1D;
-    s8 aimX = field_0x1C;
+    s8 aimY = mAimY;
+    s8 aimX = mAimX;
     u32 camera = gabi::object_at<dComIfG_camera_info_class>(play + 0x5AF8 + u32(camId * 0x34))
                      .mpCamera.get();
-    /* cXyz center = camera_center_data[field_0x1D][field_0x1C + 1] */
+    /* cXyz center = camera_center_data[mAimY][mAimX + 1] */
     auto& targetCenter = camera_center_data.entry(aimY, s32(aimX) + 1);
     cXyz center;
     f32 cy = targetCenter.y, cx = targetCenter.x, cz = targetCenter.z;
@@ -1739,23 +1739,23 @@ void SwCam2_c::Move() {
     center.z = cz;
     center.y = cy;
     Btsw_cLib_addCalcPos(c, &center, 0.25f, 10.0f,
-                         1.0f);      /* cLib_addCalcPos(&field_0x00, center, ...) */
+                         1.0f);      /* cLib_addCalcPos(&mCenter, center, ...) */
     Btsw_cameraStay(camera + 0x248); /* camera->mCamera.Stay() */
-    cXyz eye;
     cXyz ctr;
-    f32 e1 = gabi::object_at<cXyz>(c).y.get(), c0 = field_0x0C.x.get();
-    eye.y = e1;
-    f32 c1 = field_0x0C.y.get();
-    ctr.x = c0;
-    f32 e0 = field_0x00.x.get();
+    cXyz eye;
+    f32 c1 = gabi::object_at<cXyz>(c).y.get(), e0 = mEye.x.get();
     ctr.y = c1;
+    f32 e1 = mEye.y.get();
     eye.x = e0;
-    f32 c2 = field_0x0C.z.get(), e2 = gabi::object_at<cXyz>(c).z.get();
-    f32 fovy = field_0x18;
-    eye.z = e2;
+    f32 c0 = mCenter.x.get();
+    eye.y = e1;
+    ctr.x = c0;
+    f32 e2 = mEye.z.get(), c2 = gabi::object_at<cXyz>(c).z.get();
+    f32 fovy = mFovy;
     ctr.z = c2;
-    Btsw_dCamera_c_Set(camera + 0x248, &eye, &ctr, fovy,
-                       0); /* camera->mCamera.Set(*getEyeP(), *getCenterP(), field_0x18, 0) */
+    eye.z = e2;
+    Btsw_dCamera_c_Set(camera + 0x248, &ctr, &eye, fovy,
+                       0); /* camera->mCamera.Set(*getEyeP(), *getCenterP(), mFovy, 0): tww's accessor names are swapped, Set takes (center, eye) */
 }
 
 /* 022190B0 */
@@ -1790,25 +1790,25 @@ static daNpc_Btsw_c* daNpc_Btsw_c_ct(daNpc_Btsw_c* i_this) {
     gabi::object_at<daNpc_Btsw_c>(a).__vtbl = BTSW_VTBL;
     /* dKy_tevstr_c constructor (HD): three copies of a 0x44-byte default block at +0, +0xC0, +0x144 */
     auto& actor = gabi::object_at<daNpc_Btsw_c>(a);
-    actor.field_0x6D4.copyDefaults(gabi::object_at<BtswLightDefaultBlock>(0x1016E414));
+    actor.mLetterTevStr.copyDefaults(gabi::object_at<BtswLightDefaultBlock>(0x1016E414));
     Btsw_btpConstruct(
-        gabi::ea(&gabi::object_at<daNpc_Btsw_c>(a).field_0x7E8)); /* mDoExt_btpAnm constructors */
-    Btsw_btpConstruct(gabi::ea(&actor.mSwMail0.field_0x10));
-    Btsw_btpConstruct(gabi::ea(&actor.mSwMail1.field_0x10));
-    Btsw_btpConstruct(gabi::ea(&actor.mSwMail2.field_0x10));
+        gabi::ea(&gabi::object_at<daNpc_Btsw_c>(a).mBtpAnm)); /* mDoExt_btpAnm constructors */
+    Btsw_btpConstruct(gabi::ea(&actor.mSwMail0.mMailBtpAnm));
+    Btsw_btpConstruct(gabi::ea(&actor.mSwMail1.mMailBtpAnm));
+    Btsw_btpConstruct(gabi::ea(&actor.mSwMail2.mMailBtpAnm));
     /* SwCam2_c() */
-    actor.mSwCam.field_0x1E = 0;
-    actor.mSwCam.field_0x1C = 0;
-    actor.mSwCam.field_0x1D = 0;
-    actor.mSwCam.field_0x00.copy(
+    actor.mSwCam.mbActive = 0;
+    actor.mSwCam.mAimX = 0;
+    actor.mSwCam.mAimY = 0;
+    actor.mSwCam.mCenter.copy(
         camera_center_data.mPositions[0][1]); /* camera_center_data[0][1] */
-    actor.mSwCam.field_0x0C.copy(camera_eye); /* camera_eye */
-    actor.mSwCam.field_0x18 = 58.0f;
+    actor.mSwCam.mEye.copy(camera_eye); /* camera_eye */
+    actor.mSwCam.mFovy = 58.0f;
     /* STControl() */
-    actor.field_0x978.__vtbl = 0x10050788;
-    Btsw_STControl_setWaitParm(gabi::ea(&gabi::object_at<daNpc_Btsw_c>(a).field_0x978), 0xF, 0xF, 0,
+    actor.mStickControl.__vtbl = 0x10050788;
+    Btsw_STControl_setWaitParm(gabi::ea(&gabi::object_at<daNpc_Btsw_c>(a).mStickControl), 0xF, 0xF, 0,
                                0, 0, 0x2000, 0.9f, 0.5f);                         /* setWaitParm */
-    Btsw_STControl_init(gabi::ea(&gabi::object_at<daNpc_Btsw_c>(a).field_0x978)); /* init */
+    Btsw_STControl_init(gabi::ea(&gabi::object_at<daNpc_Btsw_c>(a).mStickControl)); /* init */
     return gabi::at<daNpc_Btsw_c>(a);
 }
 
@@ -1824,7 +1824,7 @@ static void* daNpc_Btsw_HIO_ct(void* obj) {
     params.__vtbl = 0x10018708;     /* vtable */
     Btsw_dNpc_HIO_construct(h + 4); /* dNpc_HIO_c::dNpc_HIO_c */
     /* mNpc */
-    params.mNpc.m04 = 0.0f;       /* m04 */
+    params.mNpc.mPlayerEyeOffsetY = 0.0f;       /* m04 */
     params.mNpc.mMaxHeadX = 8000; /* mMaxHeadX */
     params.mNpc.mMaxBackboneX = 0;
     params.mNpc.mMaxHeadY = 2000;
@@ -1837,9 +1837,9 @@ static void* daNpc_Btsw_HIO_ct(void* obj) {
     params.mNpc.mMaxHeadTurnVel = 0x640; /* mMaxHeadTurnVel */
     params.mNpc.mAttnYOffset = 40.0f;    /* mAttnYOffset */
     params.mNpc.mMaxAttnAngleY = 0x2000; /* mMaxAttnAngleY */
-    params.mNpc.m22 = 0;                 /* m22 */
+    params.mNpc.mDebugDraw = 0;                 /* m22 */
     params.mNpc.mMaxAttnDistXZ = 300.0f; /* mMaxAttnDistXZ */
-    params.field_0x30 = 0x1E;
+    params.mTimerLimit = 0x1E;
     params.field_0x32 = 0xF;
     params.field_0x34 = 0x3C;
     params.r_1 = 192; /* r_1, g_1, b_1, r_2, g_2, b_2 */
@@ -1848,13 +1848,13 @@ static void* daNpc_Btsw_HIO_ct(void* obj) {
     params.r_2 = 192;
     params.g_2 = 174;
     params.b_2 = 192;
-    params.field_0x44 = 40.0f;
+    params.mMailThrowSpeed = 40.0f;
     params.field_0x48 = 80.0f;
     params.field_0x4C = 50.0f;
     params.field_0x50 = 0.8f;
     params.field_0x54 = 0.75f;
     params.field_0x58 = 0;
-    params.field_0x5C = 10.0f;
+    params.mAnm56MorfFrames = 10.0f;
     params.mNo = -1; /* mNo */
     return gabi::at<void>(h);
 }
@@ -1903,7 +1903,7 @@ static void daNpc_Btsw_dtor(daNpc_Btsw_c* i_this, int flags) {
     u32 a = A(i_this);
     if (a == 0)
         return;
-    Btsw_STControl_destroy(gabi::ea(&i_this->field_0x978), 2); /* STControl::~STControl */
+    Btsw_STControl_destroy(gabi::ea(&i_this->mStickControl), 2); /* STControl::~STControl */
     Btsw_dCcD_Cyl_destroy(gabi::ea(&i_this->mCyl), 2);         /* dCcD_Cyl::~dCcD_Cyl */
     Btsw_dCcD_Stts_destroy(gabi::ea(&i_this->mStts), 2);       /* dCcD_Stts::~dCcD_Stts */
     Btsw_cM3dGCir_destroy(a + 0x628, 2); /* dBgS_AcchCir: cM3dGCir::~cM3dGCir */

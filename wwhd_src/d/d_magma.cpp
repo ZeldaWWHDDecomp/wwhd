@@ -2,6 +2,12 @@
  * Verification preserves GameCube simulation names and HD call/evaluation order.
  */
 #include "d/d_magma.h"
+#include "sead/ElementAt.h"
+// Guest EA arithmetic: array + index * sizeof(T) of an inline guest array wraps at 32 bits as on the console (a host index
+// from a guest field or a parameter reached host addresses outside the guest window).
+template <class T, unsigned N> static inline T &guestSlot(T (&array)[N], u32 index) {
+    return sead::elementAt<T>(gabi::ea(array), index);
+}
 #include "d/d_path.h"
 #include "gc_api/d/d_com_inf_game.h"
 #include "gabi.h"
@@ -541,15 +547,17 @@ static MagmaShaderEntry *magmaLookupShader(void *object, MagmaStringRef *name) {
     if (index >= 0) {
         u32 count = archive->mCount;
         auto *entries = archive->mpEntries.get();
-        auto *entry = entries + (u32(index) < count ? u32(index) : 0);
+        // Guest EA arithmetic: entries/records + index * size wrap at 32 bits as on the console (a host index on a NULL table
+        // reached host addresses past 4 GB).
+        auto *entry = sead::elementPtr(entries, u32(index) < count ? u32(index) : 0);
         if (!u8(entry->mLoaded)) {
             auto *file = archive->mpFile.get();
-            auto *data = u32(index) < u32(file->mCount) ? file->mpRecords.get() + u32(index) : nullptr;
+            auto *data = u32(index) < u32(file->mCount) ? sead::elementPtr(file->mpRecords.get(), u32(index)) : nullptr;
             magmaLoadShader(entry, data, 0);
             count = archive->mCount;
             entries = archive->mpEntries.get();
         }
-        shader = entries + (u32(index) < count ? u32(index) : 0);
+        shader = sead::elementPtr(entries, u32(index) < count ? u32(index) : 0);
     }
     return shader;
 }
@@ -610,7 +618,7 @@ static void magmaClearCacheLines(u32 data, u32 size) {
 }
 static void magmaFlushResources(dMagma::HdResources *resources) {
     u32 active = resources->mActiveBuffer;
-    auto &item = resources->mBuffer[active];
+    auto &item = guestSlot(resources->mBuffer, active);
     magmaFlushVertexBuffer(&item.mVertexBuffer, 0, item.mVertexBuffer.mFlushSize);
     resources->mActiveBuffer = u32(resources->mActiveBuffer) == 0 ? 1 : 0;
 }
@@ -671,11 +679,11 @@ void MagmaBallPath::setup(f32 offsY, u32 pathNo, s32 roomNo) {
     MagmaPath *path = magmaGetRoomPath(pathNo, roomNo);
     // HD assert text: path != (0).
     if (!path)
-        magmaAssert("d_magma.cpp", 750, "path != NULL");
+        magmaAssert("d_magma.cpp", 750, "path != (0)");
     MagmaPoint *points = path->m_points;
     // HD assert text: path->m_pnt != (0).
     if (!points) {
-        magmaAssert("d_magma.cpp", 751, "path->m_points != NULL");
+        magmaAssert("d_magma.cpp", 751, "path->m_pnt != (0)");
         points = path->m_points;
     }
     f32 choice = magmaRandom(f32(s32(u16(path->m_num)) - 1));
@@ -775,7 +783,7 @@ void *MagmaFloor::create(void *position, void *scale, s32 path, u32 count, s32 r
     mPos.y = y + f32(magmaFloorSpawnOffset);
     Local<u32> allocator;
     // HD: ASCII spelling of the original Shift-JIS allocator label; the guest string is retained.
-    magmaConstructAllocator(allocator.get(), "(magma surface)dMagma_ball_c", 0, 0);
+    magmaConstructAllocator(allocator.get(), "(マグマ板)dMagma_ball_c", 0, 0);
     auto *balls = static_cast<gptr<MagmaBall> *>(magmaNewArray(count * 4));
     mpBalls = balls;
     if (!balls) {
@@ -975,7 +983,7 @@ f32 MagmaPacket::checkYpos(cXyz *pos) {
 MagmaFloor *MagmaPacket::newFloor(cXyz *pos, cXyz *scale, u32 roomNo, s32 pathNo) {
     // HD assert text: 0 <= i_roomNo && i_roomNo < 64; the argument is unsigned here.
     if (roomNo >= 64)
-        magmaAssert("d_magma.cpp", 1723, "roomNo < 64");
+        magmaAssert("d_magma.cpp", 1723, "0 <= i_roomNo && i_roomNo < 64");
     f32 multiplier = magmaBallDensity;
     for (auto &floor : mFloor) {
         if (floor.mpBalls.get() || floor.mpNext.get() || floor.mpRoom.get())
@@ -997,7 +1005,7 @@ MagmaFloor *MagmaPacket::newFloor(cXyz *pos, cXyz *scale, u32 roomNo, s32 pathNo
         }
         if (!magmaCreateFloor(&floor, pos, scale, pathNo, ballNum, s32(roomNo)))
             return nullptr;
-        mRoom[roomNo].newFloor(&floor);
+        guestSlot(mRoom, roomNo).newFloor(&floor);
         return &floor;
     }
     return nullptr;
@@ -1021,10 +1029,10 @@ void MagmaBall::createResources() {
     magmaSetIndexBuffer(&material.mIndexBuffer, &magmaBallIndexData, 4, magmaBallVertexCount.value);
     material.mIndexBuffer.mPrimitiveType = 6;
     u32 active = resources.mActiveBuffer;
-    u32 data = ea(resources.mBuffer[active].mpVertices.get());
+    u32 data = ea(guestSlot(resources.mBuffer, active).mpVertices.get());
     magmaClearCacheLines(data, 0x180);
     active = resources.mActiveBuffer;
-    data = ea(resources.mBuffer[active].mpVertices.get());
+    data = ea(guestSlot(resources.mBuffer, active).mpVertices.get());
     auto *vertices = at<cXyz>(data);
     for (u32 i = 0; i < 33; ++i) {
         f32 x = magmaBallPositions.pos[i].x, z = magmaBallPositions.pos[i].z, y = magmaBallPositions.pos[i].y;
@@ -1034,7 +1042,7 @@ void MagmaBall::createResources() {
     }
     active = resources.mActiveBuffer;
     for (u32 i = 0; i < 33; ++i) {
-        auto *from = static_cast<cXyz *>(resources.mBuffer[active].mpVertices.get()) + i;
+        auto *from = static_cast<cXyz *>(guestSlot(resources.mBuffer, active).mpVertices.get()) + i;
         auto *to = static_cast<cXyz *>(resources.mBuffer[active == 0 ? 1 : 0].mpVertices.get()) + i;
         to->x = f32(from->x);
         to->y = f32(from->y);
@@ -1316,10 +1324,10 @@ void MagmaFloor::createResources() {
     magmaSetIndexBuffer(&material.mIndexBuffer, &mRender.mIndices, 4, 4);
     material.mIndexBuffer.mPrimitiveType = 6;
     u32 active = resources.mActiveBuffer;
-    u32 data = ea(resources.mBuffer[active].mpVertices.get());
+    u32 data = ea(guestSlot(resources.mBuffer, active).mpVertices.get());
     magmaClearCacheLines(data, 0x80);
     active = resources.mActiveBuffer;
-    data = ea(resources.mBuffer[active].mpVertices.get());
+    data = ea(guestSlot(resources.mBuffer, active).mpVertices.get());
     auto *vertices = at<be<f32>[8]>(data);
     for (u32 i = 0; i < 4; ++i)
         for (u32 j = 0; j < 3; ++j)
@@ -1333,7 +1341,7 @@ void MagmaFloor::createResources() {
         components[index] = one;
     active = resources.mActiveBuffer;
     for (u32 i = 0; i < 4; ++i) {
-        auto *from = static_cast<be<f32> *>(resources.mBuffer[active].mpVertices.get()) + i * 8;
+        auto *from = static_cast<be<f32> *>(guestSlot(resources.mBuffer, active).mpVertices.get()) + i * 8;
         auto *to = static_cast<be<f32> *>(resources.mBuffer[active == 0 ? 1 : 0].mpVertices.get()) + i * 8;
         for (u32 j = 0; j < 8; ++j)
             to[j] = f32(from[j]);
@@ -1490,7 +1498,7 @@ void magmaDestroyRoom(void *self, u32 flag) {
         return;
     if (static_cast<MagmaRoom *>(self)->mpFirst.get())
         // HD assert text: mFloor == (0), renamed to the GameCube member.
-        magmaAssert("d_magma.h", 231, "mpFirst == NULL");
+        magmaAssert("d_magma.h", 231, "mFloor == (0)");
     if (flag & 1)
         magmaDelete(self);
 }
@@ -1506,7 +1514,7 @@ str 1005081C "Magma" in 02589380
 str 10050908 "Magma" in 0258B11C
 str 1005095C "Magma" in 0258C4C0
 str 10050964 "Magma" in 0258C674
-str 1005093C "(magma surface)dMagma_ball_c" renamed
+str 1005093C "(マグマ板)dMagma_ball_c"
 str 10050824 "d_magma.cpp" in 02589380
 str 1005083C "tmp_img != (0)" in 02589380
 str 1005091C "d_magma.cpp" in 0258B11C
@@ -1529,7 +1537,7 @@ data magmaKeyColors 101E9F00
 str 100508F8 "M_DragB"
 str 10050900 "Xboss0"
 str 100507EC "d_magma.h" in 0258D858
-str 100507F8 "mpFirst == NULL" renamed
+str 100507F8 "mFloor == (0)"
 data magmaSamplerParameter 10050818
 data magmaColorMaximum 10050858
 data magmaColorExponent 1005085C
@@ -1656,7 +1664,7 @@ data magmaOpaDrawBuffer 104B4634
 data magmaColor 101E9C48
 data magmaBallDensity 10050990
 str 10050994 "d_magma.cpp" in 0258CC64
-str 100509A0 "roomNo < 64" renamed
+str 100509A0 "0 <= i_roomNo && i_roomNo < 64"
 ext 028E8DE8 f32 magmaSquareDistance(cXyz*, cXyz*)
 ext 028F4384 f32 magmaSqrt(f32)
 ext 0207A9A0 s32 magmaCalcTimer(be<u8>*)
@@ -1685,6 +1693,6 @@ data magmaSinCos 104A44F8
 data magmaViewMtx 104B45F8
 data magmaMatrixStack 1048D0CC
 str 1005087C "d_magma.cpp" in 02589F8C
-str 10050888 "path != NULL" renamed
-str 10050894 "path->m_points != NULL" renamed
+str 10050888 "path != (0)"
+str 10050894 "path->m_pnt != (0)"
 */

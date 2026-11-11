@@ -8,7 +8,7 @@ callee 02288240 r4=8          # setPlayerAction(&func copy)
 
 # action state
 field * r3+0x424E i8 -1 4
-field * r3+0x4246 i8 0 1      # m312A (animation end flag)
+field * r3+0x4246 i8 0 1      # mAnmEnd (animation end flag)
 callee 0228DAF4 r4=12         # chkAttention(cXyz copy)
 ret 025B8B94 0 1              # dSv_event_c::isEventBit
 # harpWait

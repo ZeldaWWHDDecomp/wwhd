@@ -23,11 +23,11 @@ void dKyr_housi_move() {
     work->ground.pass.__vtbl = PolyPassVtable;
     work->ground.pass.flags[6] = 0;
     if ((u32)(at<Environment>(getEnvironment())->mHousiCount) != 0 ||
-        (u32)(at<Environment>(getEnvironment())->mHousiCount) != 0 || !((f32)(packet->field_0x5ddc) > zero))
+        (u32)(at<Environment>(getEnvironment())->mHousiCount) != 0 || !((f32)(packet->mAlpha) > zero))
         packet->mCount = (u32)(at<Environment>(getEnvironment())->mHousiCount);
     u32 wanted = (u32)(at<Environment>(getEnvironment())->mHousiCount);
     f32 rate = (f32)(*at<be<f32>>(Rate)), inc = (f32)(*at<be<f32>>(Increment));
-    cLib_addCalc(ea(&packet->field_0x5ddc), wanted ? (f32)(*at<be<f32>>(One)) : zero, rate,
+    cLib_addCalc(ea(&packet->mAlpha), wanted ? (f32)(*at<be<f32>>(One)) : zero, rate,
                  (f32)(*at<be<f32>>(AlphaStep)), inc);
     s32 count = (s16)(packet->mCount);
     if (count != 0) {
@@ -45,7 +45,7 @@ void dKyr_housi_move() {
             HOUSI_EFF *effect = at<HOUSI_EFF>(ea(packet) + u32(offsetof(HousiPacket, mEffect)) +
                                               u32(i) * u32(sizeof(HOUSI_EFF)));
             u8 state = (u8)(effect->mStatus);
-            f32 alpha = (f32)(packet->field_0x5ddc);
+            f32 alpha = (f32)(packet->mAlpha);
             auto position = [&]() {
                 for (u32 k = 0; k < 12; k += 4)
                     work->position.channels[0 + k / 4] =

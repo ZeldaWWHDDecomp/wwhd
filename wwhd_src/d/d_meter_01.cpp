@@ -52,52 +52,52 @@ static u32 dMeter_HIO_c__ct(u32 self) {
     i_this->mBossLifeRatioDefault = l_zero;
     i_this->mVtable = 0x100510b4;
     i_this->mReserved6 = 0x0;
-    i_this->field_0x10 = l_zero;
+    i_this->mHeartScale = l_zero;
     i_this->mScopeWipeAlpha = 0x0;
     i_this->field_0x14 = l_zero;
     i_this->field_0x2e = 0x0;
     i_this->field_0x18 = l_zero;
     i_this->field_0x30 = 0x0;
     i_this->field_0x1c = l_zero;
-    i_this->field_0x46 = 0x0;
+    i_this->mButtonIconScale = 0x0;
     i_this->field_0x6a = 0x0;
-    i_this->field_0x44 = 0x0;
+    i_this->mButtonTextScale = 0x0;
     i_this->field_0x42 = 0x0;
-    i_this->field_0x50 = 0x0;
-    i_this->field_0x4c = l_zero;
+    i_this->mButtonOffsetX = 0x0;
+    i_this->mBattleLifePosX = l_zero;
     i_this->mReserved8 = 0x0;
-    i_this->field_0x40 = 0x0;
-    i_this->field_0x52 = 0x0;
-    i_this->field_0x48 = l_zero;
+    i_this->mButtonScale = 0x0;
+    i_this->mButtonOffsetY = 0x0;
+    i_this->mBattleHeartScale = l_zero;
     i_this->field_0x54 = 0x0;
     i_this->field_0x38 = 0x0;
     i_this->field_0x56 = 0x0;
-    i_this->field_0x3c = l_zero;
-    i_this->field_0x58 = l_zero;
+    i_this->mHeartLightScale = l_zero;
+    i_this->mBattleLifeStepX = l_zero;
     i_this->field_0x36 = 0x0;
-    i_this->field_0x5c = l_zero;
+    i_this->mBattleLifePosY = l_zero;
     i_this->mScopeWipeMaxScale = l_zero;
     i_this->field_0x60 = 0x0;
     i_this->field_0x34 = 0x0;
     i_this->field_0x61 = 0x0;
-    i_this->field_0x24 = l_zero;
+    i_this->mShutterBladeAngle = l_zero;
     i_this->mIgnoreArrowNumCount = 0x0;
     i_this->field_0x32 = 0x0;
     i_this->mIgnoreBombNumCount = 0x0;
     i_this->field_0x20 = l_zero;
     i_this->field_0x68 = 0x0;
-    i_this->field_0x66 = 0x0;
+    i_this->mMapWindArrowOffsetY = 0x0;
     i_this->field_0x2d = 0x0;
-    i_this->field_0x64 = 0x0;
-    meter01_clear(&i_this->field_0x6c[0], 0x6);
-    meter01_clear(&i_this->field_0x72[0], 0x6);
-    meter01_clear(&i_this->field_0x78[0], 0x6);
+    i_this->mMapWindArrowOffsetX = 0x0;
+    meter01_clear(&i_this->mClockCloudPosX[0], 0x6);
+    meter01_clear(&i_this->mClockCloudPosY[0], 0x6);
+    meter01_clear(&i_this->mClockCloudScale[0], 0x6);
     i_this->mReserved86 = 0x0;
     i_this->mKeyLightStep2 = 0x0;
     i_this->mKeyLightStep0 = 0x0;
     i_this->mReserved82 = 0x0;
-    i_this->field_0x7e = 0x0;
-    i_this->field_0x9c = 0x0;
+    i_this->mSwimLightSize = 0x0;
+    i_this->mMapCrossKeyPosX = 0x0;
     i_this->mKeyLightStepRange0 = 0x0;
     i_this->mKeyLightStart = 0x0;
     i_this->mKeyLightStartRange = 0x0;
@@ -106,205 +106,205 @@ static u32 dMeter_HIO_c__ct(u32 self) {
     i_this->mKeyLightStepRange2 = 0x0;
     i_this->mReserved80 = 0x0;
     i_this->mKeyLightStep1 = 0x0;
-    i_this->field_0x9e = 0x0;
+    i_this->mMapCrossKeyPosY = 0x0;
     i_this->mReserved84 = 0x0;
     i_this->mKeyLightEndStep = 0x0;
-    meter01_clear(&i_this->field_0xa0, 0x8);
-    meter01_clear(&i_this->field_0xa8, 0x8);
-    meter01_clear(&i_this->field_0xb0, 0x8);
-    meter01_clear(&i_this->field_0xb8, 0x8);
-    meter01_clear(&i_this->field_0xc0, 0x8);
-    meter01_clear(&i_this->field_0xc8, 0x8);
-    meter01_clear(&i_this->field_0xd0, 0x8);
-    meter01_clear(&i_this->field_0xd8, 0x8);
-    meter01_clear(&i_this->field_0xe0, 0x8);
-    meter01_clear(&i_this->field_0xe8, 0x8);
-    meter01_clear(&i_this->field_0xf0, 0x8);
-    meter01_clear(&i_this->field_0xf8, 0x8);
-    meter01_clear(&i_this->field_0x100, 0x8);
-    meter01_clear(&i_this->field_0x108, 0x8);
-    meter01_clear(&i_this->field_0x110, 0x8);
-    meter01_clear(&i_this->field_0x118, 0x8);
+    meter01_clear(&i_this->mButtonPos[0][0][0], 0x8);
+    meter01_clear(&i_this->mButtonPos[0][1][0], 0x8);
+    meter01_clear(&i_this->mButtonPos[1][0][0], 0x8);
+    meter01_clear(&i_this->mButtonPos[1][1][0], 0x8);
+    meter01_clear(&i_this->mButtonPos[2][0][0], 0x8);
+    meter01_clear(&i_this->mButtonPos[2][1][0], 0x8);
+    meter01_clear(&i_this->mButtonPos[3][0][0], 0x8);
+    meter01_clear(&i_this->mButtonPos[3][1][0], 0x8);
+    meter01_clear(&i_this->mButtonPos[4][0][0], 0x8);
+    meter01_clear(&i_this->mButtonPos[4][1][0], 0x8);
+    meter01_clear(&i_this->mButtonPos[5][0][0], 0x8);
+    meter01_clear(&i_this->mButtonPos[5][1][0], 0x8);
+    meter01_clear(&i_this->mButtonPos[6][0][0], 0x8);
+    meter01_clear(&i_this->mButtonPos[6][1][0], 0x8);
+    meter01_clear(&i_this->mButtonPos[7][0][0], 0x8);
+    meter01_clear(&i_this->mButtonPos[7][1][0], 0x8);
     i_this->field_0x12a = 0x0;
     i_this->field_0x13e = 0x0;
     i_this->field_0x121 = 0x0;
     i_this->field_0x128 = 0x0;
     i_this->field_0x122 = 0x0;
-    i_this->field_0x136 = 0x0;
-    i_this->field_0x130 = 0x0;
+    i_this->mSwimLightFadeFrames = 0x0;
+    i_this->mSwimBlinkPeriodStart = 0x0;
     i_this->field_0x12c = 0x0;
     i_this->field_0x140 = 0x0;
-    i_this->field_0x132 = 0x0;
+    i_this->mSwimSoulTurnFrames = 0x0;
     i_this->field_0x138 = 0x0;
-    i_this->field_0x124 = 0x0;
+    i_this->mShutterFrames = 0x0;
     i_this->field_0x12e = 0x0;
     i_this->field_0x126 = 0x0;
-    i_this->field_0x134 = 0x0;
-    i_this->field_0x13a = 0x0;
+    i_this->mSwimBlinkPeriodEnd = 0x0;
+    i_this->mSwimTimerOffsetY = 0x0;
     i_this->field_0x123 = 0x0;
-    i_this->field_0x120 = 0x0;
-    i_this->field_0x13c = 0x0;
+    i_this->mShutterLineAlpha = 0x0;
+    i_this->mSwimLightStartY = 0x0;
     meter01_clear(&i_this->field_0x142, 0x4);
     meter01_clear(&i_this->field_0x146, 0x4);
-    meter01_clear(&i_this->field_0x14a, 0x4);
+    meter01_clear(&i_this->mSwimLowTimeR, 0x4);
     i_this->field_0x30 = 0x0;
     i_this->mIgnoreBombNumCount = 0x0;
     i_this->field_0x14 = l_zero;
     i_this->field_0x38 = 0x0;
     i_this->field_0x36 = 0x16;
-    i_this->field_0x5c = l_hioValues.mValues[6];
+    i_this->mBattleLifePosY = l_hioValues.mValues[6];
     i_this->mBossLifeRatioDefault = l_one;
     i_this->field_0x1c = l_one;
     i_this->field_0x32 = 0x0;
-    i_this->field_0x40 = 0x5a;
+    i_this->mButtonScale = 0x5a;
     i_this->field_0x18 = l_hioValues.mValues[1];
     i_this->mScopeWipeAlpha = 0xff;
-    i_this->field_0x3c = l_hioValues.mValues[2];
+    i_this->mHeartLightScale = l_hioValues.mValues[2];
     i_this->field_0x20 = l_hioValues.mValues[3];
     i_this->mIgnoreArrowNumCount = 0x0;
-    i_this->field_0x64 = 0x0;
+    i_this->mMapWindArrowOffsetX = 0x0;
     i_this->mCompassFadeFrames = 0xa;
-    i_this->field_0x48 = l_hioValues.mValues[5];
+    i_this->mBattleHeartScale = l_hioValues.mValues[5];
     i_this->field_0x68 = 0x0;
-    i_this->field_0x44 = 0x64;
+    i_this->mButtonTextScale = 0x64;
     i_this->field_0x2e = 0x0;
-    i_this->field_0x24 = l_hioValues.mValues[4];
-    i_this->field_0x58 = l_hioValues.mValues[7];
+    i_this->mShutterBladeAngle = l_hioValues.mValues[4];
+    i_this->mBattleLifeStepX = l_hioValues.mValues[7];
     i_this->field_0x61 = 0x64;
     i_this->field_0x34 = 0x0;
     i_this->field_0x6a = 0x0;
-    i_this->field_0x10 = l_hioValues.mValues[0];
+    i_this->mHeartScale = l_hioValues.mValues[0];
     i_this->field_0x42 = 0x64;
-    i_this->field_0x52 = 0xfff4;
-    i_this->field_0x50 = 0x7;
+    i_this->mButtonOffsetY = 0xfff4;
+    i_this->mButtonOffsetX = 0x7;
     i_this->field_0x56 = 0xffa8;
-    i_this->field_0x4c = l_hioValues.mValues[6];
+    i_this->mBattleLifePosX = l_hioValues.mValues[6];
     i_this->field_0x2d = 0x8c;
-    i_this->field_0x66 = 0x0;
+    i_this->mMapWindArrowOffsetY = 0x0;
     i_this->field_0x60 = 0x96;
     i_this->field_0x54 = 0x0;
     i_this->mKeyLightStep0 = 0xf;
-    i_this->field_0x46 = 0x5a;
+    i_this->mButtonIconScale = 0x5a;
     i_this->mKeyLightStepRange2 = 0x3;
-    i_this->field_0x132 = 0x27;
-    i_this->field_0x13c = 0xa;
+    i_this->mSwimSoulTurnFrames = 0x27;
+    i_this->mSwimLightStartY = 0xa;
     i_this->field_0x12e = 0x2;
     i_this->field_0x13e = 0x0;
     i_this->mKeyLightEndStep = 0x5;
     i_this->mKeyLightStepRange0 = 0xc;
     i_this->field_0x147 = 0x0;
-    i_this->field_0x14c = 0x32;
+    i_this->mSwimLowTimeB = 0x32;
     i_this->field_0x123 = 0x1;
     i_this->field_0x143 = 0x0;
     i_this->mKeyLightStartRange = 0x0;
-    i_this->field_0x14a = 0xff;
+    i_this->mSwimLowTimeR = 0xff;
     i_this->field_0x121 = 0xc8;
-    i_this->field_0x14e = 0xa;
-    i_this->field_0x13a = 0x0;
-    i_this->field_0x130 = 0x14;
+    i_this->mSwimTekariSweepFrames = 0xa;
+    i_this->mSwimTimerOffsetY = 0x0;
+    i_this->mSwimBlinkPeriodStart = 0x14;
     i_this->field_0x144 = 0x0;
     i_this->field_0x122 = 0x96;
     i_this->field_0x149 = 0x0;
-    i_this->field_0xac = 0x0;
-    i_this->field_0x136 = 0x4;
+    i_this->mButtonPos[0][1][2] = 0x0;
+    i_this->mSwimLightFadeFrames = 0x4;
     i_this->mScopeWipeMaxScale = l_hioValues.mValues[8];
     i_this->mKeyLightStep1 = 0x5;
     i_this->mKeyLightStart = 0x14;
     i_this->field_0x145 = 0xff;
     i_this->field_0x148 = 0x0;
-    i_this->field_0x134 = 0x3;
-    i_this->field_0x7e = 0x14;
+    i_this->mSwimBlinkPeriodEnd = 0x3;
+    i_this->mSwimLightSize = 0x14;
     i_this->field_0x12c = 0x3;
     i_this->field_0x126 = 0xa;
-    i_this->field_0x120 = 0x8c;
+    i_this->mShutterLineAlpha = 0x8c;
     i_this->field_0x138 = 0xa;
     i_this->field_0x140 = 0x0;
     i_this->mKeyLightEndRange = 0x3;
-    i_this->field_0xa0 = 0x0;
+    i_this->mButtonPos[0][0][0] = 0x0;
     i_this->mKeyLightStep2 = 0x5;
     i_this->field_0x12a = 0x3;
-    i_this->field_0x124 = 0x5;
+    i_this->mShutterFrames = 0x5;
     i_this->field_0x142 = 0xb4;
-    i_this->field_0xa4 = 0x0;
+    i_this->mButtonPos[0][0][2] = 0x0;
     i_this->field_0x128 = 0x6;
-    i_this->field_0xa6 = 0x0;
+    i_this->mButtonPos[0][0][3] = 0x0;
     i_this->field_0x146 = 0x0;
-    i_this->field_0x152 = 0x4;
-    i_this->field_0x14b = 0x32;
-    i_this->field_0xa8 = 0x0;
-    i_this->field_0xc6 = 0x0;
-    i_this->field_0xb0 = 0x19;
-    i_this->field_0xb8 = 0xffe2;
-    i_this->field_0xb2 = 0x23;
-    i_this->field_0xba = 0xffea;
-    i_this->field_0xf8 = 0x0;
-    i_this->field_0xd2 = 0x28;
-    i_this->field_0xb4 = 0xffdf;
-    i_this->field_0xae = 0x0;
-    i_this->field_0xa2 = 0x3c;
-    i_this->field_0xda = 0xffc4;
-    i_this->field_0xc2 = 0x0;
-    i_this->field_0xfe = 0x0;
-    i_this->field_0xbe = 0x0;
-    i_this->field_0xc4 = 0x0;
+    i_this->mSwimTekariPause2 = 0x4;
+    i_this->mSwimLowTimeG = 0x32;
+    i_this->mButtonPos[0][1][0] = 0x0;
+    i_this->mButtonPos[2][0][3] = 0x0;
+    i_this->mButtonPos[1][0][0] = 0x19;
+    i_this->mButtonPos[1][1][0] = 0xffe2;
+    i_this->mButtonPos[1][0][1] = 0x23;
+    i_this->mButtonPos[1][1][1] = 0xffea;
+    i_this->mButtonPos[5][1][0] = 0x0;
+    i_this->mButtonPos[3][0][1] = 0x28;
+    i_this->mButtonPos[1][0][2] = 0xffdf;
+    i_this->mButtonPos[0][1][3] = 0x0;
+    i_this->mButtonPos[0][0][1] = 0x3c;
+    i_this->mButtonPos[3][1][1] = 0xffc4;
+    i_this->mButtonPos[2][0][1] = 0x0;
+    i_this->mButtonPos[5][1][3] = 0x0;
+    i_this->mButtonPos[1][1][3] = 0x0;
+    i_this->mButtonPos[2][0][2] = 0x0;
     i_this->mKeyLightStepRange1 = 0x3;
-    i_this->field_0xbc = 0xfffb;
-    i_this->field_0xb6 = 0xfffa;
-    i_this->field_0xe0 = 0x19;
-    i_this->field_0x10c = 0xffb8;
-    i_this->field_0xe4 = 0x0;
-    i_this->field_0xc0 = 0x0;
-    i_this->field_0x102 = 0x0;
-    i_this->field_0xd8 = 0xffc4;
-    i_this->field_0xfc = 0x0;
-    i_this->field_0xcc = 0xffec;
-    i_this->field_0xde = 0x0;
-    i_this->field_0xaa = 0xffc4;
-    i_this->field_0xec = 0xffc4;
-    i_this->field_0xca = 0xffec;
-    i_this->field_0x10a = 0xffc4;
-    i_this->field_0x150 = 0x14;
-    i_this->field_0xea = 0xffea;
-    i_this->field_0x6c[0] = 0xffea;
-    i_this->field_0xee = 0x0;
-    i_this->field_0xd0 = 0x28;
-    i_this->field_0x72[1] = 0xfffd;
-    i_this->field_0xf4 = 0x0;
-    i_this->field_0x6c[1] = 0xffdd;
-    i_this->field_0x154 = 0x32;
-    i_this->field_0x72[2] = 0xfff3;
-    i_this->field_0x78[1] = 0x82;
-    i_this->field_0xe6 = 0xfffa;
-    i_this->field_0x11c = 0xfff5;
-    i_this->field_0xf0 = 0x0;
-    i_this->field_0x9e = 0x0;
-    i_this->field_0xce = 0x0;
-    i_this->field_0x104 = 0x32;
-    i_this->field_0xfa = 0x0;
-    i_this->field_0x78[0] = 0x8c;
-    i_this->field_0xd6 = 0x0;
-    i_this->field_0xc8 = 0xffec;
-    i_this->field_0x11e = 0x7;
-    i_this->field_0x106 = 0x32;
-    i_this->field_0x72[0] = 0xffd5;
-    i_this->field_0x6c[2] = 0xfffa;
-    i_this->field_0x9c = 0x0;
-    i_this->field_0x100 = 0x0;
-    i_this->field_0xdc = 0x0;
-    i_this->field_0x10e = 0xffaf;
-    i_this->field_0xf6 = 0x0;
-    i_this->field_0x110 = 0x0;
-    i_this->field_0x11a = 0xfff4;
-    i_this->field_0xe2 = 0x23;
-    i_this->field_0x78[2] = 0x8c;
-    i_this->field_0xd4 = 0x0;
-    i_this->field_0x116 = 0xff9e;
-    i_this->field_0xf2 = 0x0;
-    i_this->field_0x114 = 0xffe2;
-    i_this->field_0x112 = 0x11;
-    i_this->field_0x108 = 0xffc4;
-    i_this->field_0xe8 = 0xffe2;
-    i_this->field_0x118 = 0xffeb;
+    i_this->mButtonPos[1][1][2] = 0xfffb;
+    i_this->mButtonPos[1][0][3] = 0xfffa;
+    i_this->mButtonPos[4][0][0] = 0x19;
+    i_this->mButtonPos[6][1][2] = 0xffb8;
+    i_this->mButtonPos[4][0][2] = 0x0;
+    i_this->mButtonPos[2][0][0] = 0x0;
+    i_this->mButtonPos[6][0][1] = 0x0;
+    i_this->mButtonPos[3][1][0] = 0xffc4;
+    i_this->mButtonPos[5][1][2] = 0x0;
+    i_this->mButtonPos[2][1][2] = 0xffec;
+    i_this->mButtonPos[3][1][3] = 0x0;
+    i_this->mButtonPos[0][1][1] = 0xffc4;
+    i_this->mButtonPos[4][1][2] = 0xffc4;
+    i_this->mButtonPos[2][1][1] = 0xffec;
+    i_this->mButtonPos[6][1][1] = 0xffc4;
+    i_this->mSwimTekariPause1 = 0x14;
+    i_this->mButtonPos[4][1][1] = 0xffea;
+    i_this->mClockCloudPosX[0] = 0xffea;
+    i_this->mButtonPos[4][1][3] = 0x0;
+    i_this->mButtonPos[3][0][0] = 0x28;
+    i_this->mClockCloudPosY[1] = 0xfffd;
+    i_this->mButtonPos[5][0][2] = 0x0;
+    i_this->mClockCloudPosX[1] = 0xffdd;
+    i_this->mSwimTekariPauseEnd = 0x32;
+    i_this->mClockCloudPosY[2] = 0xfff3;
+    i_this->mClockCloudScale[1] = 0x82;
+    i_this->mButtonPos[4][0][3] = 0xfffa;
+    i_this->mButtonPos[7][1][2] = 0xfff5;
+    i_this->mButtonPos[5][0][0] = 0x0;
+    i_this->mMapCrossKeyPosY = 0x0;
+    i_this->mButtonPos[2][1][3] = 0x0;
+    i_this->mButtonPos[6][0][2] = 0x32;
+    i_this->mButtonPos[5][1][1] = 0x0;
+    i_this->mClockCloudScale[0] = 0x8c;
+    i_this->mButtonPos[3][0][3] = 0x0;
+    i_this->mButtonPos[2][1][0] = 0xffec;
+    i_this->mButtonPos[7][1][3] = 0x7;
+    i_this->mButtonPos[6][0][3] = 0x32;
+    i_this->mClockCloudPosY[0] = 0xffd5;
+    i_this->mClockCloudPosX[2] = 0xfffa;
+    i_this->mMapCrossKeyPosX = 0x0;
+    i_this->mButtonPos[6][0][0] = 0x0;
+    i_this->mButtonPos[3][1][2] = 0x0;
+    i_this->mButtonPos[6][1][3] = 0xffaf;
+    i_this->mButtonPos[5][0][3] = 0x0;
+    i_this->mButtonPos[7][0][0] = 0x0;
+    i_this->mButtonPos[7][1][1] = 0xfff4;
+    i_this->mButtonPos[4][0][1] = 0x23;
+    i_this->mClockCloudScale[2] = 0x8c;
+    i_this->mButtonPos[3][0][2] = 0x0;
+    i_this->mButtonPos[7][0][3] = 0xff9e;
+    i_this->mButtonPos[5][0][1] = 0x0;
+    i_this->mButtonPos[7][0][2] = 0xffe2;
+    i_this->mButtonPos[7][0][1] = 0x11;
+    i_this->mButtonPos[6][1][0] = 0xffc4;
+    i_this->mButtonPos[4][1][0] = 0xffe2;
+    i_this->mButtonPos[7][1][0] = 0xffeb;
     return self;
 }
 
@@ -329,12 +329,12 @@ static u32 dMeter_menuHIO_c__ct(u32 self) {
     i_this->field_0x38 = 0x0;
     i_this->field_0x2e = 0x0;
     i_this->field_0x34 = 0x0;
-    i_this->field_0x8 = l_zero;
+    i_this->mItemScale = l_zero;
     i_this->field_0x20 = l_zero;
     i_this->field_0x32 = 0x0;
     i_this->field_0x36 = 0x0;
     i_this->field_0x2c = 0x0;
-    i_this->field_0x14 = l_zero;
+    i_this->mStarterScale = l_zero;
     i_this->field_0x10 = l_zero;
     i_this->field_0x24 = l_zero;
     meter01_clear(&i_this->field_0x6c, 0x4);
@@ -342,7 +342,7 @@ static u32 dMeter_menuHIO_c__ct(u32 self) {
     meter01_clear(&i_this->field_0x74, 0x4);
     meter01_clear(&i_this->field_0x78, 0x4);
     i_this->field_0xbe = 0x0;
-    i_this->field_0x9c = 0x0;
+    i_this->mTimerRupeePosY = 0x0;
     i_this->field_0x4c = l_zero;
     i_this->field_0x7e = 0x3;
     i_this->field_0x10 = l_hioValues.mValues[9];
@@ -350,7 +350,7 @@ static u32 dMeter_menuHIO_c__ct(u32 self) {
     i_this->field_0xc = l_mapRange;
     i_this->field_0x40 = l_hioValues.mValues[10];
     i_this->field_0x54 = l_hioValues.mValues[13];
-    i_this->field_0x8 = l_hioValues.mValues[0];
+    i_this->mItemScale = l_hioValues.mValues[0];
     i_this->field_0x44 = l_hioValues.mValues[11];
     i_this->field_0x58 = l_hioValues.mValues[14];
     i_this->field_0x76 = 0xff;
@@ -383,16 +383,16 @@ static u32 dMeter_menuHIO_c__ct(u32 self) {
     i_this->field_0x8a = 0x0;
     i_this->field_0x84 = 0x5;
     i_this->field_0x78 = 0xc8;
-    i_this->field_0x14 = l_hioValues.mValues[19];
+    i_this->mStarterScale = l_hioValues.mValues[19];
     i_this->field_0x7a = 0xc8;
     i_this->field_0x79 = 0xc8;
     i_this->field_0xc5 = 0x2;
-    i_this->field_0xc9 = 0x0;
+    i_this->mItemMoveScaleMode = 0x0;
     i_this->field_0x1c = l_hioValues.mValues[18];
     i_this->field_0x82 = 0x8;
     i_this->field_0xc6 = 0x0;
     i_this->field_0x88 = 0x3;
-    i_this->field_0x92 = 0x7;
+    i_this->mMenuOpenFrames = 0x7;
     i_this->field_0xb4 = 0x6;
     i_this->field_0x75 = 0xff;
     i_this->field_0x38 = 0x1a;
@@ -403,14 +403,14 @@ static u32 dMeter_menuHIO_c__ct(u32 self) {
     i_this->field_0x8c = 0xff38;
     i_this->field_0x30 = 0x0;
     i_this->mReserved82 = 0x0;
-    i_this->field_0xc8 = 0x9;
-    i_this->field_0x9a = 0x0;
+    i_this->mItemMoveFrames = 0x9;
+    i_this->mTimerRupeePosX = 0x0;
     i_this->field_0x20 = l_half;
     i_this->field_0xca = 0x0;
-    i_this->field_0x94 = l_one;
-    i_this->field_0xb6 = 0x46;
+    i_this->mTimerClockScale = l_one;
+    i_this->mGameOverDelay = 0x46;
     i_this->field_0x3a = 0xfffd;
-    i_this->field_0x90 = 0x3;
+    i_this->mMenuOpenDelay = 0x3;
     i_this->field_0x36 = 0x7;
     i_this->field_0x34 = 0x5;
     i_this->field_0xbf = 0x0;
@@ -427,7 +427,7 @@ static u32 dMeter_menuHIO_c__ct(u32 self) {
     i_this->field_0x32 = 0x8;
     i_this->field_0x8e = 0x15e;
     i_this->field_0xaa = 0x2;
-    i_this->field_0xa0 = l_one;
+    i_this->mTimerRupeeScale = l_one;
     i_this->field_0x2c = 0x18;
     i_this->field_0x2e = 0x17;
     i_this->field_0xa6 = 0x2;
@@ -444,91 +444,91 @@ static u32 dMeter_msg_HIO_c__ct(u32 self) {
             return 0;
     }
     dMeter_msg_HIO_c* i_this = gabi::at<dMeter_msg_HIO_c>(self);
-    i_this->field_0x5.g = 0x1e;
+    i_this->mTalkWindowWhite.g = 0x1e;
     i_this->field_0x12 = 0x1e;
     i_this->mVtable = 0x100510e4;
-    i_this->field_0x9.b = 0x4b;
+    i_this->mTalkWindowBlack.b = 0x4b;
     i_this->field_0x20 = 0xff;
     i_this->field_0x14 = 0x0;
-    i_this->field_0x5.a = 0xd7;
-    i_this->field_0x5c = 0x0;
+    i_this->mTalkWindowWhite.a = 0xd7;
+    i_this->mRubyCharSpace = 0x0;
     i_this->field_0x19 = 0x78;
     i_this->field_0xd = 0x1e;
     i_this->field_0x8a = 0x0;
     i_this->field_0x10 = 0xdc;
     i_this->field_0x13 = 0xb4;
     i_this->field_0x11 = 0x1e;
-    i_this->field_0x68 = 0xf;
-    i_this->field_0x5.b = 0x1e;
+    i_this->mRubyFontSize = 0xf;
+    i_this->mTalkWindowWhite.b = 0x1e;
     i_this->field_0x1f = 0x3c;
     i_this->field_0xf = 0x1e;
     i_this->field_0x23 = 0xff;
-    i_this->field_0x9.r = 0x1e;
+    i_this->mTalkWindowBlack.r = 0x1e;
     i_this->field_0x1a = 0x78;
     i_this->field_0x28 = 0xff;
     i_this->field_0x22 = 0xff;
-    i_this->field_0x88 = 0x0;
+    i_this->mStickStartDelay = 0x0;
     i_this->field_0x17 = 0x0;
-    i_this->field_0x5a = 0x0;
-    i_this->field_0x66 = 0x0;
-    i_this->field_0x5.r = 0x1e;
+    i_this->mCharSpace = 0x0;
+    i_this->mTalkWindowOffsetY = 0x0;
+    i_this->mTalkWindowWhite.r = 0x1e;
     i_this->field_0x15 = 0x0;
     i_this->field_0x18 = 0xff;
     i_this->field_0x86 = 0x0;
     i_this->field_0xe = 0x1e;
     i_this->field_0x21 = 0x0;
-    i_this->field_0x9.g = 0x1e;
+    i_this->mTalkWindowBlack.g = 0x1e;
     i_this->field_0x1d = 0xff;
     i_this->field_0x27 = 0xff;
     i_this->field_0x16 = 0xff;
     i_this->field_0x64 = 0x0;
-    i_this->field_0x9.a = 0x0;
-    i_this->field_0x89 = 0x0;
-    i_this->field_0x82 = 0x2;
-    i_this->field_0x5e = 0x1e;
+    i_this->mTalkWindowBlack.a = 0x0;
+    i_this->mStickHoldFrames = 0x0;
+    i_this->mSendSpeed = 0x2;
+    i_this->mLineSpace = 0x1e;
     i_this->field_0x26 = 0x0;
     i_this->field_0x72 = 0x0;
-    i_this->field_0x6c = 0x0;
+    i_this->mSpaceTimer = 0x0;
     i_this->field_0x7e = 0xa;
-    i_this->field_0x70 = 0x17;
-    i_this->field_0x83 = 0x0;
+    i_this->mFontSize = 0x17;
+    i_this->mSpaceFlag = 0x0;
     i_this->field_0x85 = 0x0;
     i_this->field_0x25 = 0xff;
     i_this->field_0x1e = 0xff;
-    i_this->field_0x80 = 0xb4;
+    i_this->mSelectWindowAlpha = 0xb4;
     i_this->field_0x24 = 0xff;
-    i_this->field_0x78 = 0x0;
-    i_this->field_0x60 = 0xd;
+    i_this->mSelectWidthAdd = 0x0;
+    i_this->mRubyOffsetY = 0xd;
     i_this->field_0x1b = 0xff;
     i_this->field_0x84 = 0x1;
-    i_this->field_0x7f = 0xaa;
+    i_this->mCornerColorFrames = 0xaa;
     i_this->field_0x54 = l_hioValues.mValues[21];
-    i_this->field_0x58 = 0x1d;
-    i_this->field_0x87 = 0xa;
-    i_this->field_0x6a = 0x0;
+    i_this->mDemoFontSize = 0x1d;
+    i_this->mStickBlendFrames = 0xa;
+    i_this->mOutFontOffsetY = 0x0;
     i_this->field_0x1c = 0xff;
-    i_this->field_0x6e = 0xf0;
+    i_this->mTalkWindowSplitY = 0xf0;
     i_this->field_0x4c = 0x4;
-    i_this->field_0x48 = 0x4;
-    i_this->field_0x62 = 0x0;
+    i_this->mSelectCloseFrames = 0x4;
+    i_this->mTextOffsetY = 0x0;
     i_this->field_0x2d = 0xff;
     i_this->field_0x2b = 0x50;
-    i_this->field_0x7c = 0x46;
+    i_this->mSelectOffsetY = 0x46;
     i_this->field_0x4a = 0x2;
     i_this->field_0x2f = 0x96;
-    i_this->field_0x7a = 0x0;
+    i_this->mSelectHeightAdd = 0x0;
     i_this->field_0x74 = 0x80;
     i_this->field_0x2a = 0x50;
     i_this->field_0x38 = l_hioValues.mValues[22];
     i_this->field_0x3c = l_hioValues.mValues[23];
     i_this->field_0x81 = 0x46;
     i_this->field_0x2e = 0x96;
-    i_this->field_0x40 = l_half;
-    i_this->field_0x46 = 0x3;
-    i_this->field_0x2c = 0x96;
+    i_this->mSelectCloseScale = l_half;
+    i_this->mSelectOpenFrames = 0x3;
+    i_this->mMsgArrowAlphaA = 0x96;
     i_this->field_0x50 = l_hioValues.mValues[20];
-    i_this->field_0x44 = 0x5;
-    i_this->field_0x30 = 0xff;
+    i_this->mSelectOpenDelay = 0x5;
+    i_this->mMsgArrowAlphaB = 0xff;
     i_this->field_0x29 = 0xff;
     i_this->field_0x76 = 0xa;
     return self;
@@ -539,13 +539,13 @@ static s32 dMeter_Draw(sub_meter_class* i_Meter) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     auto* prefix = reinterpret_cast<MeterPrefixHD*>(i_Meter);
     fopMsgM_pane_class* panes[] = {
-        &prefix->field_0x02f8,      &prefix->field_0x0100[0],   &prefix->field_0x0100[1],
-        &prefix->field_0x0100[2],   &prefix->field_0x0250,      &prefix->field_0x0288,
-        &prefix->field_0x02c0,      &prefix->field_0x0368,      &prefix->field_0x03a0,
-        &prefix->field_0x03d8,      &prefix->field_0x0410,      &prefix->field_0x0448[0],
-        &prefix->field_0x0448[1],   &prefix->field_0x0448[2],   &prefix->field_0x0448[3],
-        &prefix->field_0x0528,      &prefix->field_0x0560,      &prefix->field_0x0598,
-        &prefix->field_0x0608,      &i_Meter->mHeart[0],        &i_Meter->mHeartShadow[0],
+        &prefix->mMapWindArrow,      &prefix->mMapCrossArrow[0],   &prefix->mMapCrossArrow[1],
+        &prefix->mMapCrossArrow[2],   &prefix->mMenuArrowR,      &prefix->mMenuArrowL,
+        &prefix->mMapCrossKey,      &prefix->mBossIconEye1,      &prefix->mBossIconEye2,
+        &prefix->mBossIconTop,      &prefix->mBossIconBottom,      &prefix->mBossLifeBar[0],
+        &prefix->mBossLifeBar[1],   &prefix->mBossLifeBar[2],   &prefix->mBossLifeBar[3],
+        &prefix->mEnemyLifePart3,      &prefix->mEnemyLifeBar,      &prefix->mEnemyLifePart1,
+        &prefix->mEnemyLifeShadow,      &i_Meter->mHeart[0],        &i_Meter->mHeartShadow[0],
         &i_Meter->mHeart[1],        &i_Meter->mHeartShadow[1],  &i_Meter->mHeart[2],
         &i_Meter->mHeartShadow[2],  &i_Meter->mHeart[3],        &i_Meter->mHeartShadow[3],
         &i_Meter->mHeart[4],        &i_Meter->mHeartShadow[4],  &i_Meter->mHeart[5],
@@ -562,34 +562,34 @@ static s32 dMeter_Draw(sub_meter_class* i_Meter) {
         &i_Meter->mMagicBar[1],  &i_Meter->mMagicBar[2],  &i_Meter->mMagicBar[3],
         &i_Meter->mMagicBar[4],  &i_Meter->mMagicBar[5],  &i_Meter->mMagicBar[6],
         &i_Meter->mMagicBar[7],  &i_Meter->mMagicGauge3,     &i_Meter->mMagicGauge1,
-        &i_Meter->mMagicGaugeShadow1,     &i_Meter->field_0x1210,     &i_Meter->field_0x12f0,
-        &i_Meter->field_0x1398,     &i_Meter->field_0x13d0,     &i_Meter->field_0x1408,
-        &i_Meter->field_0x1440,     &i_Meter->field_0x1478[0],  &i_Meter->field_0x1868[0],
-        &i_Meter->field_0x1478[1],  &i_Meter->field_0x1868[0],  &i_Meter->field_0x1478[2],
-        &i_Meter->field_0x1868[0],  &i_Meter->field_0x1520,     &i_Meter->field_0x1558,
-        &i_Meter->field_0x1590[0],  &i_Meter->field_0x1718[0],  &i_Meter->field_0x1590[1],
-        &i_Meter->field_0x1718[0],  &i_Meter->field_0x1590[2],  &i_Meter->field_0x1718[0],
-        &i_Meter->field_0x1590[3],  &i_Meter->field_0x1718[0],  &i_Meter->field_0x1670,
-        &i_Meter->field_0x16a8,     &i_Meter->field_0x16e0,     &i_Meter->field_0x17f8,
-        &i_Meter->field_0x1830,     &i_Meter->field_0x1910,     &i_Meter->field_0x1948,
+        &i_Meter->mMagicGaugeShadow1,     &i_Meter->field_0x1210,     &i_Meter->mCompassBase,
+        &i_Meter->mClockBar,     &i_Meter->mClockRing,     &i_Meter->mClockHorizon1,
+        &i_Meter->mClockHorizon2,     &i_Meter->mClockStar[0],  &i_Meter->mFixedClockCloud[0],
+        &i_Meter->mClockStar[1],  &i_Meter->mFixedClockCloud[0],  &i_Meter->mClockStar[2],
+        &i_Meter->mFixedClockCloud[0],  &i_Meter->mClockMoon,     &i_Meter->mClockSun,
+        &i_Meter->mClockCircle[0],  &i_Meter->mFixedClockStar[0],  &i_Meter->mClockCircle[1],
+        &i_Meter->mFixedClockStar[0],  &i_Meter->mClockCircle[2],  &i_Meter->mFixedClockStar[0],
+        &i_Meter->mClockCircle[3],  &i_Meter->mFixedClockStar[0],  &i_Meter->mClockTimeDial,
+        &i_Meter->mClockCenter,     &i_Meter->mFixedClockRing,     &i_Meter->mFixedClockMoon,
+        &i_Meter->mFixedClockCloudClip,     &i_Meter->mFixedClockSun,     &i_Meter->mCompassClock,
         &i_Meter->mKeyLight1,     &i_Meter->mKeyLight2,     &i_Meter->mKeyDigitA[0],
         &i_Meter->mKeyDigitB[0],  &i_Meter->mKeyDigitA[1],  &i_Meter->mKeyDigitB[1],
-        &i_Meter->mKeyIcon,     &i_Meter->field_0x1d00,     &i_Meter->field_0x2828,
-        &i_Meter->field_0x2860,     &i_Meter->field_0x2898,     &i_Meter->field_0x28d0,
-        &i_Meter->field_0x1d38,     &i_Meter->field_0x1e18[0],  &i_Meter->field_0x1da8[0],
-        &i_Meter->field_0x1e18[1],  &i_Meter->field_0x1da8[1],  &i_Meter->field_0x2748,
-        &i_Meter->field_0x2780,     &i_Meter->field_0x27b8,     &i_Meter->field_0x27f0,
-        &i_Meter->field_0x2908,     &i_Meter->field_0x1fd8[0],  &i_Meter->field_0x1f30[0],
-        &i_Meter->field_0x2080[0],  &i_Meter->field_0x2128[0],  &i_Meter->field_0x2320[0],
-        &i_Meter->field_0x23c8[0],  &i_Meter->field_0x2470[0],  &i_Meter->field_0x1fd8[1],
-        &i_Meter->field_0x1f30[1],  &i_Meter->field_0x2080[1],  &i_Meter->field_0x2128[1],
-        &i_Meter->field_0x2320[1],  &i_Meter->field_0x23c8[1],  &i_Meter->field_0x2470[1],
-        &i_Meter->field_0x1fd8[2],  &i_Meter->field_0x1f30[2],  &i_Meter->field_0x2080[2],
-        &i_Meter->field_0x2128[2],  &i_Meter->field_0x2320[2],  &i_Meter->field_0x23c8[2],
-        &i_Meter->field_0x2470[2],  &i_Meter->field_0x2518,     &i_Meter->field_0x2550[0],
-        &i_Meter->field_0x25c0[0],  &i_Meter->field_0x2630[0],  &i_Meter->field_0x2550[1],
-        &i_Meter->field_0x25c0[1],  &i_Meter->field_0x2630[1],  &i_Meter->field_0x1cc8,
-        &i_Meter->field_0x26a0,     &i_Meter->field_0x26d8,     &i_Meter->mRupyDigitA[0],
+        &i_Meter->mKeyIcon,     &i_Meter->mWeaponText,     &i_Meter->mWeaponIcon,
+        &i_Meter->mWeaponIconShadow,     &i_Meter->mWeaponButton,     &i_Meter->mWeaponButton2,
+        &i_Meter->mActionText,     &i_Meter->mActionButton2[0],  &i_Meter->mActionButton[0],
+        &i_Meter->mActionButton2[1],  &i_Meter->mActionButton[1],  &i_Meter->mArrowDigit10,
+        &i_Meter->mArrowDigit1,     &i_Meter->mActionBowIcon,     &i_Meter->mActionBowIconShadow,
+        &i_Meter->mButtonCenter,     &i_Meter->mItemDigit1[0],  &i_Meter->mItemDigit10[0],
+        &i_Meter->mItemIcon[0],  &i_Meter->mItemIconShadow[0],  &i_Meter->mBowLight1[0],
+        &i_Meter->mBowLight2[0],  &i_Meter->mBowLight3[0],  &i_Meter->mItemDigit1[1],
+        &i_Meter->mItemDigit10[1],  &i_Meter->mItemIcon[1],  &i_Meter->mItemIconShadow[1],
+        &i_Meter->mBowLight1[1],  &i_Meter->mBowLight2[1],  &i_Meter->mBowLight3[1],
+        &i_Meter->mItemDigit1[2],  &i_Meter->mItemDigit10[2],  &i_Meter->mItemIcon[2],
+        &i_Meter->mItemIconShadow[2],  &i_Meter->mBowLight1[2],  &i_Meter->mBowLight2[2],
+        &i_Meter->mBowLight3[2],  &i_Meter->mZButton,     &i_Meter->mXYButton[0],
+        &i_Meter->field_0x25c0[0],  &i_Meter->field_0x2630[0],  &i_Meter->mXYButton[1],
+        &i_Meter->field_0x25c0[1],  &i_Meter->field_0x2630[1],  &i_Meter->mRActionIcon,
+        &i_Meter->mRButton,     &i_Meter->field_0x26d8,     &i_Meter->mRupyDigitA[0],
         &i_Meter->mRupyDigitB[0],  &i_Meter->mRupyDigitA[1],  &i_Meter->mRupyDigitB[1],
         &i_Meter->mRupyDigitA[2],  &i_Meter->mRupyDigitB[2],  &i_Meter->mRupyDigitA[3],
         &i_Meter->mRupyDigitB[3],  &i_Meter->mRupyIcon,     &i_Meter->mRupyIconB};
@@ -597,18 +597,18 @@ static s32 dMeter_Draw(sub_meter_class* i_Meter) {
         meter01_setAlpha(pane);
     if (sScrTimer2) {
         for (int i = 0; i < 9; i++)
-            meter01_setAlpha(&i_Meter->field_0x2a90[i]);
-        meter01_setAlpha(&i_Meter->field_0x2c88);
-        meter01_setAlpha(&i_Meter->field_0x2cc0);
+            meter01_setAlpha(&i_Meter->mSwimTimerLight[i]);
+        meter01_setAlpha(&i_Meter->mSwimTimerFrame);
+        meter01_setAlpha(&i_Meter->mSwimTimerMask2);
     }
     if (sScrTimer1) {
-        meter01_setAlpha(&i_Meter->field_0x2cf8);
-        meter01_setAlpha(&i_Meter->field_0x2da0);
-        meter01_setAlpha(&i_Meter->field_0x2d30);
-        meter01_setAlpha(&i_Meter->field_0x2dd8);
+        meter01_setAlpha(&i_Meter->mSwimTimerSoul);
+        meter01_setAlpha(&i_Meter->mSwimTimerMain);
+        meter01_setAlpha(&i_Meter->mSwimTimerGauge);
+        meter01_setAlpha(&i_Meter->mSwimTimerShadow);
     }
     for (int i = 0; i < 4; i++)
-        meter01_setAlpha(&i_Meter->field_0x2e10[i]);
+        meter01_setAlpha(&i_Meter->mRoadArrow[i]);
     if (!meter01_isOverlapRequest()) {
         meter01_setDrawList(0x1047A994, 0x1DC);
         for (int i = 0; i < 3; i++)
@@ -644,8 +644,8 @@ static s32 dMeter_Delete(sub_meter_class* i_Meter) {
         dMeter_windStatus = 0;
         dMeter_windID = 0xFFFFFFFF;
     }
-    be<u32>* emitters[] = {&i_Meter->mpRupyParticle, &i_Meter->field_0x2f24[0], &i_Meter->field_0x2f24[1],
-                           &i_Meter->field_0x2f2c[0], &i_Meter->field_0x2f2c[1]};
+    be<u32>* emitters[] = {&i_Meter->mpRupyParticle, &i_Meter->mpArrowTypeParticle[0], &i_Meter->mpArrowTypeParticle[1],
+                           &i_Meter->mpForestWaterParticle[0], &i_Meter->mpForestWaterParticle[1]};
     for (auto* emitterSlot : emitters) {
         auto* emitter = gabi::at<meter_detail::Particle>(*emitterSlot);
         if (emitter) {
@@ -690,11 +690,11 @@ void mapCtrlDisp_c::initMapCtrlDisp() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     l_mapState.mAlpha = 0;
     l_mapState.mIconFreeAlpha = 0;
-    l_mapState.mIconFreePosX = g_meter_mapHIO.field_0x14;
+    l_mapState.mIconFreePosX = g_meter_mapHIO.mIconFreePosX;
     l_mapState.mIconDisplayMode = 0;
-    l_mapState.mPosLeftUpY = g_meter_mapHIO.field_0xa;
-    l_mapState.mIconFreePosY = g_meter_mapHIO.field_0x16;
-    l_mapState.mPosLeftUpX = g_meter_mapHIO.field_0x8;
+    l_mapState.mPosLeftUpY = g_meter_mapHIO.mMapPosY;
+    l_mapState.mIconFreePosY = g_meter_mapHIO.mIconFreePosY;
+    l_mapState.mPosLeftUpX = g_meter_mapHIO.mMapPosX;
     l_mapState.mDisplayMode = 1;
     f32 zero = l_zero;
     l_iconFreeScale = zero;
@@ -722,19 +722,19 @@ static u32 dMeter_map_HIO_c__ct(u32 self) {
             return 0;
     }
     auto i_this = gabi::at<dMeter_map_HIO_c>(self);
-    i_this->field_0xc = -180;
+    i_this->mMapHiddenPosX = -180;
     i_this->mHDScale = l_zero;
-    i_this->field_0x16 = 150;
+    i_this->mIconFreePosY = 150;
     i_this->field_0x7 = 1;
     i_this->mVtable = 0x10051114;
-    i_this->field_0x8 = 35;
+    i_this->mMapPosX = 35;
     reinterpret_cast<MeterWeaponMapHD *>(i_this)->mHDDisplay = 0;
-    i_this->field_0xa = 338;
+    i_this->mMapPosY = 338;
     i_this->field_0x5 = 0;
-    i_this->field_0x6 = 200;
-    i_this->field_0x10 = l_mapIconScale;
+    i_this->mIconFreeAlpha = 200;
+    i_this->mIconFreeScale = l_mapIconScale;
     i_this->mNo = 0;
-    i_this->field_0x14 = 590;
+    i_this->mIconFreePosX = 590;
     return self;
 }
 // HD: the draw-list receiver is unused in these two generated adapters.
@@ -789,59 +789,59 @@ static u32 dMeter_message_HIO_c__ct(u32 self) {
             return 0;
     }
     auto i_this = gabi::at<dMeter_message_HIO_c>(self);
-    i_this->field_0x5.r = 0x0;
+    i_this->mTextColor.r = 0x0;
     i_this->field_0x2c = 0xff;
-    i_this->field_0x11.b = 0xff;
+    i_this->mShadowColor.b = 0xff;
     i_this->mVtable = 0x100510fc;
-    i_this->field_0x9.g = 0xff;
-    i_this->field_0x29 = 0x80;
-    i_this->field_0x9.b = 0xff;
+    i_this->mTextWhite.g = 0xff;
+    i_this->mAimBrightness = 0x80;
+    i_this->mTextWhite.b = 0xff;
     i_this->field_0x2e = 0xb4;
-    i_this->field_0x21.a = 0xff;
-    i_this->field_0x5.g = 0x0;
-    i_this->field_0x11.g = 0xff;
-    i_this->field_0x25.a = 0x0;
-    i_this->field_0x9.r = 0xff;
-    i_this->field_0x1d.r = 0x0;
+    i_this->mRubyWhite.a = 0xff;
+    i_this->mTextColor.g = 0x0;
+    i_this->mShadowColor.g = 0xff;
+    i_this->mRubyBlack.a = 0x0;
+    i_this->mTextWhite.r = 0xff;
+    i_this->mRubyColor.r = 0x0;
     i_this->field_0x2b = 0xff;
     i_this->field_0x36 = 0x2a;
     i_this->field_0x2a = 0xff;
-    i_this->field_0x21.b = 0xff;
-    i_this->field_0x25.r = 0xff;
-    i_this->field_0x25.g = 0xff;
-    i_this->field_0x15.b = 0xff;
-    i_this->field_0x11.r = 0xff;
-    i_this->field_0x15.r = 0xff;
-    i_this->field_0x11.a = 0xff;
-    i_this->field_0x5.a = 0xff;
-    i_this->field_0xd.r = 0xff;
-    i_this->field_0x21.r = 0xff;
-    i_this->field_0x15.a = 0xff;
-    i_this->field_0x21.g = 0xff;
+    i_this->mRubyWhite.b = 0xff;
+    i_this->mRubyBlack.r = 0xff;
+    i_this->mRubyBlack.g = 0xff;
+    i_this->mShadowWhite.b = 0xff;
+    i_this->mShadowColor.r = 0xff;
+    i_this->mShadowWhite.r = 0xff;
+    i_this->mShadowColor.a = 0xff;
+    i_this->mTextColor.a = 0xff;
+    i_this->mTextBlack.r = 0xff;
+    i_this->mRubyWhite.r = 0xff;
+    i_this->mShadowWhite.a = 0xff;
+    i_this->mRubyWhite.g = 0xff;
     i_this->field_0x2d = 0xff;
-    i_this->field_0x1d.a = 0xff;
-    i_this->field_0xd.b = 0xff;
+    i_this->mRubyColor.a = 0xff;
+    i_this->mTextBlack.b = 0xff;
     i_this->field_0x30 = 0x4b;
-    i_this->field_0x9.a = 0xff;
-    i_this->field_0xd.g = 0xff;
+    i_this->mTextWhite.a = 0xff;
+    i_this->mTextBlack.g = 0xff;
     i_this->field_0x3a = 0x1;
-    i_this->field_0x25.b = 0xff;
-    i_this->field_0x19.g = 0xff;
-    i_this->field_0xd.a = 0x0;
+    i_this->mRubyBlack.b = 0xff;
+    i_this->mShadowBlack.g = 0xff;
+    i_this->mTextBlack.a = 0x0;
     i_this->field_0x34 = 0xfffe;
-    i_this->field_0x38 = 0xf;
-    i_this->field_0x3c = 0x16;
-    i_this->field_0x1d.b = 0x0;
-    i_this->field_0x5.b = 0x0;
+    i_this->mMsg2RubyOffsetY = 0xf;
+    i_this->mLineHeightAdd = 0x16;
+    i_this->mRubyColor.b = 0x0;
+    i_this->mTextColor.b = 0x0;
     i_this->field_0x2f = 0xa0;
-    i_this->field_0x19.a = 0x0;
+    i_this->mShadowBlack.a = 0x0;
     i_this->field_0x4a = 0x0;
-    i_this->field_0x15.g = 0xff;
-    i_this->field_0x3b = 0xa;
+    i_this->mShadowWhite.g = 0xff;
+    i_this->mPopSpeed = 0xa;
     i_this->field_0x44 = 0x0;
     i_this->field_0x40 = l_messageScale;
-    i_this->field_0x19.r = 0xff;
-    i_this->field_0x32 = 0x1b;
+    i_this->mShadowBlack.r = 0xff;
+    i_this->mMsg2FontSize = 0x1b;
     i_this->field_0x76 = 0x1;
     i_this->field_0x7a = 0x4;
     i_this->field_0x7c = 0x4;
@@ -869,19 +869,19 @@ static u32 dMeter_message_HIO_c__ct(u32 self) {
     i_this->field_0x68 = 0x0;
     i_this->field_0x48 = 0x0;
     i_this->field_0x60 = 0x0;
-    i_this->field_0x19.b = 0xff;
-    i_this->field_0x58 = 0x0;
+    i_this->mShadowBlack.b = 0xff;
+    i_this->mTextOffsetX = 0x0;
     i_this->field_0x6a = 0x0;
     i_this->field_0x6c = 0x1;
     i_this->field_0x64 = 0x0;
     i_this->field_0x6e = 0x1;
-    i_this->field_0x4b = 0x1;
+    i_this->mShowRuby = 0x1;
     i_this->field_0x66 = 0x0;
-    i_this->field_0x1d.g = 0x0;
+    i_this->mRubyColor.g = 0x0;
     i_this->field_0x56 = 0x0;
     i_this->field_0x4f = 0xff;
     i_this->field_0x52 = 0x0;
-    i_this->field_0x5b = 0xff;
+    i_this->mMultiTexAlpha = 0xff;
 
     return self;
 }
@@ -1201,12 +1201,12 @@ static void meterUpdateHeartMove(sub_meter_class *i_Meter,
         u8 oldMax = i_Meter->mMaxHP;
         if (maxHP > 80) {
           maxHP = 80;
-          i_Meter->field_0x300c = maxHP - oldMax;
+          i_Meter->mMaxLifeChange = maxHP - oldMax;
           meterUpdatePlayerStatus()->mMaxLife = maxHP;
         } else {
           if (maxHP < 0)
             maxHP = 0;
-          i_Meter->field_0x300c = maxHP - oldMax;
+          i_Meter->mMaxLifeChange = maxHP - oldMax;
           meterUpdatePlayerStatus()->mMaxLife = static_cast<u8>(maxHP);
         }
         meterUpdatePlay()->mItemMaxLifeCount = 0;
@@ -1228,18 +1228,18 @@ static void meterUpdateHeartMove(sub_meter_class *i_Meter,
       if (i_Meter->mAdjustHp >= 4)
         meterUpdateHeartSoundFlag() = 1;
     }
-    s16 maxAdjust = i_Meter->field_0x300c;
+    s16 maxAdjust = i_Meter->mMaxLifeChange;
     s16 lifeAdjust = i_Meter->mAdjustHp;
     if (maxAdjust < 0) {
       u8 maxHP = i_Meter->mMaxHP;
-      maxAdjust = i_Meter->field_0x300c;
+      maxAdjust = i_Meter->mMaxLifeChange;
       i_Meter->mMaxHP = maxHP - 1;
-      i_Meter->field_0x300c = maxAdjust + 1;
+      i_Meter->mMaxLifeChange = maxAdjust + 1;
     } else if (maxAdjust > 0) {
       u8 maxHP = i_Meter->mMaxHP;
-      maxAdjust = i_Meter->field_0x300c;
+      maxAdjust = i_Meter->mMaxLifeChange;
       i_Meter->mMaxHP = maxHP + 1;
-      i_Meter->field_0x300c = maxAdjust - 1;
+      i_Meter->mMaxLifeChange = maxAdjust - 1;
     }
     if (lifeAdjust != 0) {
       if (lifeAdjust > 0) {
@@ -1406,9 +1406,9 @@ static void meterUpdateActionForce(sub_meter_class *meter) {
 
 /* inlined into dMeter_Execute */
 static void meterUpdateActionChange(sub_meter_class *meter) {
-  if (meter->field_0x27b8.mUserArea != 0) {
+  if (meter->mActionBowIcon.mUserArea != 0) {
     if (meterUpdatePlay()->mDoStatus == MeterUpdate::dActStts_BLANK_e) {
-      meter->field_0x1e18[0].mUserArea = 1;
+      meter->mActionButton2[0].mUserArea = 1;
     } else if (meterUpdatePlay()->mDoStatus == MeterUpdate::dActStts_PARRY_e) {
       meter01_soundStart(0x85F);
     } else if (meterUpdatePlay()->mDoStatus !=
@@ -1424,17 +1424,17 @@ static void meterUpdateActionChange(sub_meter_class *meter) {
       if (status != 7)
         meterUpdatePlay();
       meterUpdatePlay();
-      meter->field_0x1e18[0].mUserArea = 1;
+      meter->mActionButton2[0].mUserArea = 1;
     }
     u8 status = meterUpdatePlay()->mDoStatus;
-    meter->field_0x27b8.mUserArea = 0;
-    meter->field_0x301b = status;
+    meter->mActionBowIcon.mUserArea = 0;
+    meter->mLastDoStatus = status;
   }
   dComIfG_play_c *play = meterUpdatePlay();
-  u8 oldStatus = meter->field_0x301b;
+  u8 oldStatus = meter->mLastDoStatus;
   u8 status = play->mDoStatus;
   if (oldStatus != status)
-    meter->field_0x27b8.mUserArea = 1;
+    meter->mActionBowIcon.mUserArea = 1;
 }
 
 /* inlined into dMeter_Execute */
@@ -1442,7 +1442,7 @@ static void meterUpdateSetActionMode(sub_meter_class *meter, s16 mode,
                                      MeterUpdateScratch *scratch,
                                      bool clearButtons = false) {
   if (meterUpdateActionMode() != mode) {
-    meterUpdateOffBit(&meter->field_0x3026, 1);
+    meterUpdateOffBit(&meter->mButtonMoveFlags, 1);
     if (clearButtons)
       meterUpdateOffBit(&scratch->mButtonFlags, 1);
   }
@@ -1541,17 +1541,17 @@ static void meterUpdateActionTrans(sub_meter_class *meter,
                                    MeterUpdateScratch *scratch) {
   scratch->mButtonFlags = meterUpdateButtonFlags();
   meterUpdateSelectActionMode(meter, scratch);
-  u8 flags = meter->field_0x3026;
+  u8 flags = meter->mButtonMoveFlags;
   if (flags == 15) {
     s16 frame = meterUpdateActionFrame();
     meterUpdateActionFrame() = frame > 0 ? s16(frame - 1) : 0;
-  } else if (!meterUpdateIsBit(&meter->field_0x3026, 1)) {
+  } else if (!meterUpdateIsBit(&meter->mButtonMoveFlags, 1)) {
     if (meterUpdateActionMode() != 1)
       meterUpdateOnBit(&scratch->mButtonFlags, 1);
     s16 frame = meterUpdateActionFrame();
     if (frame >= 5) {
       meterUpdateActionFrame() = 5;
-      meterUpdateOnBit(&meter->field_0x3026, 1);
+      meterUpdateOnBit(&meter->mButtonMoveFlags, 1);
     } else {
       // HD: keep the scratch-byte load before incrementing the shared frame.
       u8 buttonFlags = scratch->mButtonFlags;
@@ -1588,7 +1588,7 @@ static f32 meterUpdateActionAlpha(sub_meter_class *meter,
       frame = 3;
     meterUpdateActionAlphaFrame() = frame;
   } else {
-    meter->field_0x3024 = meter->field_0x3024 | 1;
+    meter->mButtonActionMode = meter->mButtonActionMode | 1;
     frame = meterUpdateActionAlphaFrame();
     meterUpdateActionAlphaFrame() = frame < 5 ? s16(frame + 1) : 5;
     meter->mButtonShowFlags = meter->mButtonShowFlags | 1;
@@ -1605,15 +1605,15 @@ static f32 meterUpdateActionAlpha(sub_meter_class *meter,
 /* inlined into dMeter_Execute */
 static void meterUpdateActionPanes(sub_meter_class *meter, f32 alpha) {
   if (meterUpdatePlay()->mDoStatus == MeterUpdate::dActStts_BLANK_e) {
-    meterUpdateSetAlphaZero(&meter->field_0x1d38);
-    meterUpdateSetAlphaZero(&meter->field_0x1e18[1]);
-    meterUpdateSetAlphaZero(&meter->field_0x1da8[1]);
-    meterUpdateSetAlphaZero(&meter->field_0x2748);
-    meterUpdateSetAlphaZero(&meter->field_0x2780);
-    meterUpdateSetAlphaZero(&meter->field_0x27b8);
-    meterUpdateSetAlphaZero(&meter->field_0x27f0);
-    meterUpdateSetAlpha(&meter->field_0x1e18[0], alpha);
-    meterUpdateSetAlpha(&meter->field_0x1da8[0], alpha);
+    meterUpdateSetAlphaZero(&meter->mActionText);
+    meterUpdateSetAlphaZero(&meter->mActionButton2[1]);
+    meterUpdateSetAlphaZero(&meter->mActionButton[1]);
+    meterUpdateSetAlphaZero(&meter->mArrowDigit10);
+    meterUpdateSetAlphaZero(&meter->mArrowDigit1);
+    meterUpdateSetAlphaZero(&meter->mActionBowIcon);
+    meterUpdateSetAlphaZero(&meter->mActionBowIconShadow);
+    meterUpdateSetAlpha(&meter->mActionButton2[0], alpha);
+    meterUpdateSetAlpha(&meter->mActionButton[0], alpha);
   } else if (meterUpdatePlay()->mDoStatus == MeterUpdate::dActStts_PARRY_e ||
              meterUpdatePlay()->mDoStatus ==
                  MeterUpdate::dActStts_ba_sake__dupe_31 ||
@@ -1621,37 +1621,37 @@ static void meterUpdateActionPanes(sub_meter_class *meter, f32 alpha) {
                  MeterUpdate::dActStts_ba_nageru__dupe_2D ||
              meterUpdatePlay()->mDoStatus ==
                  MeterUpdate::dActStts_ba_motu__dupe_2E) {
-    meterUpdateSetAlphaZero(&meter->field_0x1d38);
-    meterUpdateSetAlpha(&meter->field_0x1e18[1], alpha);
-    meterUpdateSetAlpha(&meter->field_0x1da8[1], alpha);
-    meterUpdateSetAlphaZero(&meter->field_0x1e18[0]);
-    meterUpdateSetAlphaZero(&meter->field_0x1da8[0]);
-    meterUpdateSetAlphaZero(&meter->field_0x2748);
-    meterUpdateSetAlphaZero(&meter->field_0x2780);
-    meterUpdateSetAlphaZero(&meter->field_0x27b8);
-    meterUpdateSetAlphaZero(&meter->field_0x27f0);
+    meterUpdateSetAlphaZero(&meter->mActionText);
+    meterUpdateSetAlpha(&meter->mActionButton2[1], alpha);
+    meterUpdateSetAlpha(&meter->mActionButton[1], alpha);
+    meterUpdateSetAlphaZero(&meter->mActionButton2[0]);
+    meterUpdateSetAlphaZero(&meter->mActionButton[0]);
+    meterUpdateSetAlphaZero(&meter->mArrowDigit10);
+    meterUpdateSetAlphaZero(&meter->mArrowDigit1);
+    meterUpdateSetAlphaZero(&meter->mActionBowIcon);
+    meterUpdateSetAlphaZero(&meter->mActionBowIconShadow);
   } else if (meterUpdatePlay()->mDoStatus == MeterUpdate::dActStts_bow_01) {
-    meterUpdateSetAlphaZero(&meter->field_0x1d38);
-    meterUpdateSetAlphaZero(&meter->field_0x1e18[1]);
-    meterUpdateSetAlphaZero(&meter->field_0x1da8[1]);
-    meterUpdateSetAlpha(&meter->field_0x1e18[0], alpha);
-    meterUpdateSetAlpha(&meter->field_0x1da8[0], alpha);
-    meterUpdateSetAlpha(&meter->field_0x2748, alpha);
-    meterUpdateSetAlpha(&meter->field_0x2780, alpha);
-    meterUpdateSetAlpha(&meter->field_0x27b8, alpha);
-    meterUpdateSetAlpha(&meter->field_0x27f0, alpha);
+    meterUpdateSetAlphaZero(&meter->mActionText);
+    meterUpdateSetAlphaZero(&meter->mActionButton2[1]);
+    meterUpdateSetAlphaZero(&meter->mActionButton[1]);
+    meterUpdateSetAlpha(&meter->mActionButton2[0], alpha);
+    meterUpdateSetAlpha(&meter->mActionButton[0], alpha);
+    meterUpdateSetAlpha(&meter->mArrowDigit10, alpha);
+    meterUpdateSetAlpha(&meter->mArrowDigit1, alpha);
+    meterUpdateSetAlpha(&meter->mActionBowIcon, alpha);
+    meterUpdateSetAlpha(&meter->mActionBowIconShadow, alpha);
   } else {
-    meterUpdateSetAlpha(&meter->field_0x1d38, alpha);
-    meterUpdateSetAlphaZero(&meter->field_0x1e18[1]);
-    meterUpdateSetAlphaZero(&meter->field_0x1da8[1]);
-    meterUpdateSetAlpha(&meter->field_0x1e18[0], alpha);
-    meterUpdateSetAlpha(&meter->field_0x1da8[0], alpha);
-    meterUpdateSetAlphaZero(&meter->field_0x2748);
-    meterUpdateSetAlphaZero(&meter->field_0x2780);
-    meterUpdateSetAlphaZero(&meter->field_0x27b8);
-    meterUpdateSetAlphaZero(&meter->field_0x27f0);
+    meterUpdateSetAlpha(&meter->mActionText, alpha);
+    meterUpdateSetAlphaZero(&meter->mActionButton2[1]);
+    meterUpdateSetAlphaZero(&meter->mActionButton[1]);
+    meterUpdateSetAlpha(&meter->mActionButton2[0], alpha);
+    meterUpdateSetAlpha(&meter->mActionButton[0], alpha);
+    meterUpdateSetAlphaZero(&meter->mArrowDigit10);
+    meterUpdateSetAlphaZero(&meter->mArrowDigit1);
+    meterUpdateSetAlphaZero(&meter->mActionBowIcon);
+    meterUpdateSetAlphaZero(&meter->mActionBowIconShadow);
   }
-  meterUpdateSetAlpha(&meter->field_0x2908, alpha);
+  meterUpdateSetAlpha(&meter->mButtonCenter, alpha);
   meterUpdatePlay()->mDoStatusForce = MeterUpdate::dActStts_BLANK_e;
 }
 
@@ -1662,7 +1662,7 @@ static void dMeter_Execute(sub_meter_class *meter) {
   auto *work = gabi::at<MeterUpdateScratch>(scratch.a);
   u32 previousHeap =
       meter01_setCurrentHeap(gabi::at<MeterPrefixHD>(self)->heap);
-  meter->field_0x3024 = 0;
+  meter->mButtonActionMode = 0;
   meter->mButtonShowFlags = 0;
   meterUpdateStatusCheck(meter);
   f32 zero = meterUpdateAlphaControl(meter);
@@ -1694,26 +1694,26 @@ static void dMeter_Execute(sub_meter_class *meter) {
   }
   auto *buttonState = gabi::at<MeterUpdateButtonState>(self);
   if (maskButtons) {
-    u8 mode = meter->field_0x3024;
+    u8 mode = meter->mButtonActionMode;
     buttonState->mMaskFrames = 2;
     u8 flags = meter->mButtonShowFlags;
-    meter->field_0x3024 = mode & 0x13;
+    meter->mButtonActionMode = mode & 0x13;
     meter->mButtonShowFlags =
         flags & (meter_detail::dMtrStts_UNK1_e | meter_detail::dMtrStts_UNK2_e |
                  meter_detail::dMtrStts_UNK10_e);
   } else {
     u8 frames = buttonState->mMaskFrames;
     if (frames != 0) {
-      u8 mode = meter->field_0x3024;
+      u8 mode = meter->mButtonActionMode;
       buttonState->mMaskFrames = frames - 1;
       u8 flags = meter->mButtonShowFlags;
-      meter->field_0x3024 = mode & 0x13;
+      meter->mButtonActionMode = mode & 0x13;
       meter->mButtonShowFlags = flags & (meter_detail::dMtrStts_UNK1_e |
                                          meter_detail::dMtrStts_UNK2_e |
                                          meter_detail::dMtrStts_UNK10_e);
     }
   }
-  u8 mode = meter->field_0x3024;
+  u8 mode = meter->mButtonActionMode;
   meterUpdatePlay()->mButtonMode = mode;
   meterUpdateWindMove(meter);
   if (!meterUpdateGetterB() && !meterUpdateIsPause() &&
@@ -1748,27 +1748,27 @@ static void dMeter_Execute(sub_meter_class *meter) {
 
 /* inlined into dMeter_Create */
 static void dMeter_weponInit(sub_meter_class *i_Meter) {
-    i_Meter->field_0x28d0.mUserArea = 0;
-    i_Meter->field_0x301a = 0;
+    i_Meter->mWeaponButton2.mUserArea = 0;
+    i_Meter->mLastAStatus = 0;
     dComIfGp_setAStatus(0);
     if (dComIfGp_getAStatus() != 7) dComIfGp_get();
     dComIfGp_get();
-    i_Meter->field_0x2828.mUserArea = 0;
+    i_Meter->mWeaponIcon.mUserArea = 0;
 }
 
 /* inlined into dMeter_Create */
 static void dMeter_actionInit(sub_meter_class *i_Meter) {
-    i_Meter->field_0x1e18[0].mUserArea = 0;
-    i_Meter->field_0x27b8.mUserArea = 0;
-    i_Meter->field_0x301b = 0;
+    i_Meter->mActionButton2[0].mUserArea = 0;
+    i_Meter->mActionBowIcon.mUserArea = 0;
+    i_Meter->mLastDoStatus = 0;
     dComIfGp_setDoStatus(0);
 }
 
 /* inlined into dMeter_Create */
 static void dMeter_xyInit(sub_meter_class *i_Meter) {
-    i_Meter->field_0x2550[0].mUserArea = 0;
-    i_Meter->field_0x2f2c[0] = 0;
-    i_Meter->field_0x2f2c[1] = 0;
+    i_Meter->mXYButton[0].mUserArea = 0;
+    i_Meter->mpForestWaterParticle[0] = 0;
+    i_Meter->mpForestWaterParticle[1] = 0;
     for (s32 i = 0; i < 8; i++)
         meterCreateBaitNum(i) = meterCreateSave()->mSavedata.mPlayer.mBagItemRecord.mBaitNum[i];
     for (s32 itemBtn = 0; itemBtn < 3; itemBtn++) {
@@ -1783,15 +1783,15 @@ static void dMeter_xyInit(sub_meter_class *i_Meter) {
             if (meterCreateSelectedItem(slot) == 0xFF)
                 meterCreateSave()->mSavedata.mPlayer.mPlayerStatusA.mSelectItem[itemBtn] = 0xFF;
         }
-        i_Meter->field_0x3021[itemBtn] = dComIfGp_getSelectItem(itemBtn);
+        i_Meter->mLastSelectItem[itemBtn] = dComIfGp_getSelectItem(itemBtn);
         meterCreateXYItemChange(i_Meter, itemBtn);
     }
 }
 
 /* inlined into dMeter_Create */
 static void dMeter_rInit(sub_meter_class *i_Meter) {
-    i_Meter->field_0x1cc8.mUserArea = 0;
-    i_Meter->field_0x301c = 0;
+    i_Meter->mRActionIcon.mUserArea = 0;
+    i_Meter->mRStatusShown = 0;
     i_Meter->field_0x26d8.mUserArea = 0;
     dComIfGp_setRStatus(0);
     if (dComIfGp_getRStatus() != 7) dComIfGp_get();
@@ -1802,18 +1802,18 @@ static void dMeter_rInit(sub_meter_class *i_Meter) {
 static void dMeter_enemyInit(sub_meter_class *i_Meter, MeterCreateScratch *scratch, f32 &magicScale) {
     auto *prefix = reinterpret_cast<MeterPrefixHD *>(i_Meter);
     // HD: GHS caches the following magic scale during enemy initialization.
-    prefix->field_0x03d8.mUserArea = 0;
-    prefix->field_0x0560.mUserArea = 0;
-    prefix->field_0x0448[1].mUserArea = 0;
+    prefix->mBossIconTop.mUserArea = 0;
+    prefix->mEnemyLifeBar.mUserArea = 0;
+    prefix->mBossLifeBar[1].mUserArea = 0;
     f32 enemyFrame = meterCreateRndF(l_createEnemyRange) + l_createEnemyBase;
-    prefix->field_0x0368.mUserArea = 0;
+    prefix->mBossIconEye1.mUserArea = 0;
     scratch->mInteger = static_cast<u32>(ppc_fctiwz(enemyFrame));
-    prefix->field_0x0410.mUserArea = scratch->mIntegerLow;
+    prefix->mBossIconBottom.mUserArea = scratch->mIntegerLow;
     f32 blinkFrame = meterCreateRndF(l_mapRange) + l_createBlinkBase;
     magicScale = l_createMagicScale;
     scratch->mInteger = static_cast<u32>(ppc_fctiwz(blinkFrame));
     i_Meter->mMagicBar[0].mSizeOrig.x = magicScale;
-    prefix->field_0x03a0.mUserArea = static_cast<u32>(scratch->mInteger) << 1;
+    prefix->mBossIconEye2.mUserArea = static_cast<u32>(scratch->mInteger) << 1;
 }
 
 /* inlined into dMeter_Create */
@@ -1857,10 +1857,10 @@ static void dMeter_magicInit(sub_meter_class *i_Meter, MeterCreateScratch *scrat
 /* inlined into dMeter_Create */
 static void dMeter_menuInit(sub_meter_class *i_Meter) {
     auto *prefix = reinterpret_cast<MeterPrefixHD *>(i_Meter);
-    prefix->field_0x0250.mUserArea = 10;
-    prefix->field_0x0288.mUserArea = 0;
-    prefix->field_0x02c0.mUserArea = 0;
-    prefix->field_0x0100[0].mUserArea = meterCreateIsDungeonItemCompass(meterCreateDungeonMemory(), 1);
+    prefix->mMenuArrowR.mUserArea = 10;
+    prefix->mMenuArrowL.mUserArea = 0;
+    prefix->mMapCrossKey.mUserArea = 0;
+    prefix->mMapCrossArrow[0].mUserArea = meterCreateIsDungeonItemCompass(meterCreateDungeonMemory(), 1);
 }
 
 /* inlined into dMeter_Create */
@@ -1900,11 +1900,11 @@ static void dMeter_arwInit(sub_meter_class *i_Meter) {
         u32 archive = meterCreateItemIconArchive();
         meterCreateReadTexture(texture, 0xC00, 'TIMG', filename, archive);
         meterCreateStoreTexture(i_Meter->arrowTex[i], 0xC00);
-        meterUpdateSetAlphaZero(&i_Meter->field_0x2940[i]);
-        meterUpdateSetAlphaZero(&i_Meter->field_0x29b0[i]);
-        meter01_setAlpha(&i_Meter->field_0x2940[i]);
-        meter01_setAlpha(&i_Meter->field_0x29b0[i]);
-        i_Meter->field_0x2f24[i] = 0;
+        meterUpdateSetAlphaZero(&i_Meter->mArrowTypeIcon[i]);
+        meterUpdateSetAlphaZero(&i_Meter->mArrowTypeSlot[i]);
+        meter01_setAlpha(&i_Meter->mArrowTypeIcon[i]);
+        meter01_setAlpha(&i_Meter->mArrowTypeSlot[i]);
+        i_Meter->mpArrowTypeParticle[i] = 0;
     }
 }
 
@@ -1912,29 +1912,29 @@ static void dMeter_arwInit(sub_meter_class *i_Meter) {
 static void dMeter_screenDataSet(sub_meter_class* i_Meter, MeterCreateScratch *scratch) {
     auto *prefix = reinterpret_cast<MeterPrefixHD *>(i_Meter);
     // HD: pane hiding and picture-color changes are omitted here.
-    meterCreateSetPaneData(&prefix->field_0x02f8, sMainParts1, 'wiy1');
-    meterCreateSetPaneData(&prefix->field_0x0100[0], sMainParts1, 'yrig');
-    meterCreateSetPaneData(&prefix->field_0x0100[1], sMainParts1, 'yup');
-    meterCreateSetPaneData(&prefix->field_0x0100[2], sMainParts1, 'ylef');
-    meterCreateSetPaneData(&prefix->field_0x0250, sMainParts1, 'r');
-    meterCreateSetPaneData(&prefix->field_0x0288, sMainParts1, 'l');
-    meterCreateSetPaneData(&prefix->field_0x02c0, sMainParts1, 'crs1');
-    prefix->field_0x0100[0].mPosCenterOrig.x -= 2.0f;
-    prefix->field_0x0100[1].mPosCenterOrig.y -= 2.0f;
-    prefix->field_0x0100[2].mPosCenterOrig.x -= 1.0f;
-    meterCreateSetPaneData(&prefix->field_0x0368, sMainParts1, 'bey1');
-    meterCreateSetPaneData(&prefix->field_0x03a0, sMainParts1, 'bey2');
-    meterCreateSetPaneData(&prefix->field_0x03d8, sMainParts1, 'enem');
-    meterCreateSetPaneData(&prefix->field_0x0410, sMainParts1, 'enm2');
-    meterCreateSetPaneData(&prefix->field_0x0448[0], sMainParts1, 'ben1');
-    meterCreateSetPaneData(&prefix->field_0x0448[1], sMainParts1, 'ben2');
-    meterCreateSetPaneData(&prefix->field_0x0448[2], sMainParts1, 'ben3');
-    meterCreateSetPaneData(&prefix->field_0x0448[3], sMainParts1, 'ben4');
-    meterCreateSetPaneData(&prefix->field_0x0528, sMainParts1, 'ene3');
-    meterCreateSetPaneData(&prefix->field_0x0560, sMainParts1, 'ene2');
-    meterCreateSetPaneData(&prefix->field_0x0598, sMainParts1, 'ene1');
-    meterCreateSetPaneData(&prefix->field_0x05d0, sMainParts1, 'enk2');
-    meterCreateSetPaneData(&prefix->field_0x0608, sMainParts1, 'enek');
+    meterCreateSetPaneData(&prefix->mMapWindArrow, sMainParts1, 'wiy1');
+    meterCreateSetPaneData(&prefix->mMapCrossArrow[0], sMainParts1, 'yrig');
+    meterCreateSetPaneData(&prefix->mMapCrossArrow[1], sMainParts1, 'yup');
+    meterCreateSetPaneData(&prefix->mMapCrossArrow[2], sMainParts1, 'ylef');
+    meterCreateSetPaneData(&prefix->mMenuArrowR, sMainParts1, 'r');
+    meterCreateSetPaneData(&prefix->mMenuArrowL, sMainParts1, 'l');
+    meterCreateSetPaneData(&prefix->mMapCrossKey, sMainParts1, 'crs1');
+    prefix->mMapCrossArrow[0].mPosCenterOrig.x -= 2.0f;
+    prefix->mMapCrossArrow[1].mPosCenterOrig.y -= 2.0f;
+    prefix->mMapCrossArrow[2].mPosCenterOrig.x -= 1.0f;
+    meterCreateSetPaneData(&prefix->mBossIconEye1, sMainParts1, 'bey1');
+    meterCreateSetPaneData(&prefix->mBossIconEye2, sMainParts1, 'bey2');
+    meterCreateSetPaneData(&prefix->mBossIconTop, sMainParts1, 'enem');
+    meterCreateSetPaneData(&prefix->mBossIconBottom, sMainParts1, 'enm2');
+    meterCreateSetPaneData(&prefix->mBossLifeBar[0], sMainParts1, 'ben1');
+    meterCreateSetPaneData(&prefix->mBossLifeBar[1], sMainParts1, 'ben2');
+    meterCreateSetPaneData(&prefix->mBossLifeBar[2], sMainParts1, 'ben3');
+    meterCreateSetPaneData(&prefix->mBossLifeBar[3], sMainParts1, 'ben4');
+    meterCreateSetPaneData(&prefix->mEnemyLifePart3, sMainParts1, 'ene3');
+    meterCreateSetPaneData(&prefix->mEnemyLifeBar, sMainParts1, 'ene2');
+    meterCreateSetPaneData(&prefix->mEnemyLifePart1, sMainParts1, 'ene1');
+    meterCreateSetPaneData(&prefix->mEnemyLifeShadow2, sMainParts1, 'enk2');
+    meterCreateSetPaneData(&prefix->mEnemyLifeShadow, sMainParts1, 'enek');
     // HD: copy both native tag tables into the original guest stack slots.
     for (int i = 0; i < 20; i++) scratch->mHeartTags[i] = l_createHeartTags[i];
     for (int i = 0; i < 20; i++) scratch->mHeartShadowTags[i] = l_createHeartShadowTags[i];
@@ -1957,37 +1957,37 @@ static void dMeter_screenDataSet(sub_meter_class* i_Meter, MeterCreateScratch *s
     meterCreateSetPaneData(&i_Meter->mMagicGaugeShadow2, sMainParts1, 'mbk2');
     meterCreateSetPaneData(&i_Meter->mMagicGaugeShadow1, sMainParts1, 'mbk1');
     meterCreateSetPaneData(&i_Meter->field_0x1210, sMainParts1, 'cmcv');
-    meterCreateSetPaneData(&i_Meter->field_0x1248, sMainParts1, 'cmmg');
-    meterCreateSetPaneData(&i_Meter->field_0x1280, sMainParts1, 'cmmk');
+    meterCreateSetPaneData(&i_Meter->mCompassNeedle, sMainParts1, 'cmmg');
+    meterCreateSetPaneData(&i_Meter->mCompassNeedleShadow, sMainParts1, 'cmmk');
     meterCreateSetPaneData(&i_Meter->field_0x12b8, sMainParts1, 'cmrg');
-    meterCreateSetPaneData(&i_Meter->field_0x12f0, sMainParts1, 'cmb1');
-    meterCreateSetPaneData(&i_Meter->field_0x1398, sMainParts3, 'bar');
-    meterCreateSetPaneData(&i_Meter->field_0x13d0, sMainParts3, 'rng2');
-    meterCreateSetPaneData(&i_Meter->field_0x1408, sMainParts3, 'hrz1');
-    meterCreateSetPaneData(&i_Meter->field_0x1440, sMainParts3, 'hrz2');
-    meterCreateSetPaneData(&i_Meter->field_0x1478[0], sMainParts3, 'str5');
-    meterCreateSetPaneData(&i_Meter->field_0x1478[1], sMainParts3, 'str6');
-    meterCreateSetPaneData(&i_Meter->field_0x1478[2], sMainParts3, 'str7');
-    meterCreateSetPaneData(&i_Meter->field_0x1520, sMainParts3, 'mon2');
-    meterCreateSetPaneData(&i_Meter->field_0x1558, sMainParts3, 'sun2');
-    meterCreateSetPaneData(&i_Meter->field_0x1590[0], sMainParts3, 'cir1');
-    meterCreateSetPaneData(&i_Meter->field_0x1590[1], sMainParts3, 'cir2');
-    meterCreateSetPaneData(&i_Meter->field_0x1590[2], sMainParts3, 'cir3');
-    meterCreateSetPaneData(&i_Meter->field_0x1590[3], sMainParts3, 'cir4');
-    meterCreateSetPaneData(&i_Meter->field_0x1670, sMainParts3, 'cnt2');
-    meterCreateSetPaneData(&i_Meter->field_0x16a8, sMainParts3, 'cnt1');
-    meterCreateSetPaneData(&i_Meter->field_0x16e0, sMainParts3, 'rng1');
-    meterCreateSetPaneData(&i_Meter->field_0x1718[0], sMainParts3, 'str1');
-    meterCreateSetPaneData(&i_Meter->field_0x1718[1], sMainParts3, 'str2');
-    meterCreateSetPaneData(&i_Meter->field_0x1718[2], sMainParts3, 'str3');
-    meterCreateSetPaneData(&i_Meter->field_0x1718[3], sMainParts3, 'str4');
-    meterCreateSetPaneData(&i_Meter->field_0x17f8, sMainParts3, 'mon1');
-    meterCreateSetPaneData(&i_Meter->field_0x1830, sMainParts3, 'clp');
-    meterCreateSetPaneData(&i_Meter->field_0x1868[0], sMainParts3, 'cld1');
-    meterCreateSetPaneData(&i_Meter->field_0x1868[1], sMainParts3, 'cld2');
-    meterCreateSetPaneData(&i_Meter->field_0x1868[2], sMainParts3, 'cld3');
-    meterCreateSetPaneData(&i_Meter->field_0x1910, sMainParts3, 'sun1');
-    meterCreateSetPaneData(&i_Meter->field_0x1948, sMainParts3, 'cmtm');
+    meterCreateSetPaneData(&i_Meter->mCompassBase, sMainParts1, 'cmb1');
+    meterCreateSetPaneData(&i_Meter->mClockBar, sMainParts3, 'bar');
+    meterCreateSetPaneData(&i_Meter->mClockRing, sMainParts3, 'rng2');
+    meterCreateSetPaneData(&i_Meter->mClockHorizon1, sMainParts3, 'hrz1');
+    meterCreateSetPaneData(&i_Meter->mClockHorizon2, sMainParts3, 'hrz2');
+    meterCreateSetPaneData(&i_Meter->mClockStar[0], sMainParts3, 'str5');
+    meterCreateSetPaneData(&i_Meter->mClockStar[1], sMainParts3, 'str6');
+    meterCreateSetPaneData(&i_Meter->mClockStar[2], sMainParts3, 'str7');
+    meterCreateSetPaneData(&i_Meter->mClockMoon, sMainParts3, 'mon2');
+    meterCreateSetPaneData(&i_Meter->mClockSun, sMainParts3, 'sun2');
+    meterCreateSetPaneData(&i_Meter->mClockCircle[0], sMainParts3, 'cir1');
+    meterCreateSetPaneData(&i_Meter->mClockCircle[1], sMainParts3, 'cir2');
+    meterCreateSetPaneData(&i_Meter->mClockCircle[2], sMainParts3, 'cir3');
+    meterCreateSetPaneData(&i_Meter->mClockCircle[3], sMainParts3, 'cir4');
+    meterCreateSetPaneData(&i_Meter->mClockTimeDial, sMainParts3, 'cnt2');
+    meterCreateSetPaneData(&i_Meter->mClockCenter, sMainParts3, 'cnt1');
+    meterCreateSetPaneData(&i_Meter->mFixedClockRing, sMainParts3, 'rng1');
+    meterCreateSetPaneData(&i_Meter->mFixedClockStar[0], sMainParts3, 'str1');
+    meterCreateSetPaneData(&i_Meter->mFixedClockStar[1], sMainParts3, 'str2');
+    meterCreateSetPaneData(&i_Meter->mFixedClockStar[2], sMainParts3, 'str3');
+    meterCreateSetPaneData(&i_Meter->mFixedClockStar[3], sMainParts3, 'str4');
+    meterCreateSetPaneData(&i_Meter->mFixedClockMoon, sMainParts3, 'mon1');
+    meterCreateSetPaneData(&i_Meter->mFixedClockCloudClip, sMainParts3, 'clp');
+    meterCreateSetPaneData(&i_Meter->mFixedClockCloud[0], sMainParts3, 'cld1');
+    meterCreateSetPaneData(&i_Meter->mFixedClockCloud[1], sMainParts3, 'cld2');
+    meterCreateSetPaneData(&i_Meter->mFixedClockCloud[2], sMainParts3, 'cld3');
+    meterCreateSetPaneData(&i_Meter->mFixedClockSun, sMainParts3, 'sun1');
+    meterCreateSetPaneData(&i_Meter->mCompassClock, sMainParts3, 'cmtm');
     meterCreateSetPaneData(&i_Meter->mKeyLight1, sMainParts1, 'kyl1');
     meterCreateSetPaneData(&i_Meter->mKeyLight2, sMainParts1, 'kyl2');
     meterCreateSetPaneData(&i_Meter->mKeyDigitA[0], sMainParts1, 'nm03');
@@ -1995,56 +1995,56 @@ static void dMeter_screenDataSet(sub_meter_class* i_Meter, MeterCreateScratch *s
     meterCreateSetPaneData(&i_Meter->mKeyDigitB[0], sMainParts1, 'nm08');
     meterCreateSetPaneData(&i_Meter->mKeyDigitB[1], sMainParts1, 'nm09');
     meterCreateSetPaneData(&i_Meter->mKeyIcon, sMainParts1, 'key0');
-    meterCreateSetPaneData(&i_Meter->field_0x1cc8, sMainParts1, 'basv');
-    meterCreateSetPaneData(&i_Meter->field_0x1d00, sMainParts1, 'bawd');
-    meterCreateSetPaneData(&i_Meter->field_0x1d38, sMainParts1, 'bawp');
-    meterCreateSetPaneData(&i_Meter->field_0x1da8[1], sMainParts1, 'baa2');
-    meterCreateSetPaneData(&i_Meter->field_0x1e18[1], sMainParts1, 'bat2');
-    meterCreateSetPaneData(&i_Meter->field_0x1fd8[1], sMainParts1, 'y01');
-    meterCreateSetPaneData(&i_Meter->field_0x1f30[1], sMainParts1, 'y10');
-    meterCreateSetPaneData(&i_Meter->field_0x2080[1], sMainParts1, 'yitm');
-    meterCreateSetPaneData(&i_Meter->field_0x2128[1], sMainParts1, 'yitk');
-    meterCreateSetPaneData(&i_Meter->field_0x2320[1], sMainParts1, 'bly1');
-    meterCreateSetPaneData(&i_Meter->field_0x23c8[1], sMainParts1, 'bly2');
-    meterCreateSetPaneData(&i_Meter->field_0x2470[1], sMainParts1, 'bly3');
-    meterCreateSetPaneData(&i_Meter->field_0x1fd8[0], sMainParts1, 'x01');
-    meterCreateSetPaneData(&i_Meter->field_0x1f30[0], sMainParts1, 'x10');
-    meterCreateSetPaneData(&i_Meter->field_0x2080[0], sMainParts1, 'xitm');
-    meterCreateSetPaneData(&i_Meter->field_0x2128[0], sMainParts1, 'xitk');
-    meterCreateSetPaneData(&i_Meter->field_0x2320[0], sMainParts1, 'blx1');
-    meterCreateSetPaneData(&i_Meter->field_0x23c8[0], sMainParts1, 'blx2');
-    meterCreateSetPaneData(&i_Meter->field_0x2470[0], sMainParts1, 'blx3');
-    meterCreateSetPaneData(&i_Meter->field_0x1fd8[2], sMainParts1, 'z01');
-    meterCreateSetPaneData(&i_Meter->field_0x1f30[2], sMainParts1, 'z10');
-    meterCreateSetPaneData(&i_Meter->field_0x2080[2], sMainParts1, 'zitm');
-    meterCreateSetPaneData(&i_Meter->field_0x2128[2], sMainParts1, 'zitk');
-    meterCreateSetPaneData(&i_Meter->field_0x2320[2], sMainParts1, 'blz1');
-    meterCreateSetPaneData(&i_Meter->field_0x23c8[2], sMainParts1, 'blz2');
-    meterCreateSetPaneData(&i_Meter->field_0x2470[2], sMainParts1, 'blz3');
-    meterCreateSetPaneData(&i_Meter->field_0x2518, sMainParts1, 'baz');
-    meterCreateSetPaneData(&i_Meter->field_0x2550[1], sMainParts1, 'bay');
+    meterCreateSetPaneData(&i_Meter->mRActionIcon, sMainParts1, 'basv');
+    meterCreateSetPaneData(&i_Meter->mWeaponText, sMainParts1, 'bawd');
+    meterCreateSetPaneData(&i_Meter->mActionText, sMainParts1, 'bawp');
+    meterCreateSetPaneData(&i_Meter->mActionButton[1], sMainParts1, 'baa2');
+    meterCreateSetPaneData(&i_Meter->mActionButton2[1], sMainParts1, 'bat2');
+    meterCreateSetPaneData(&i_Meter->mItemDigit1[1], sMainParts1, 'y01');
+    meterCreateSetPaneData(&i_Meter->mItemDigit10[1], sMainParts1, 'y10');
+    meterCreateSetPaneData(&i_Meter->mItemIcon[1], sMainParts1, 'yitm');
+    meterCreateSetPaneData(&i_Meter->mItemIconShadow[1], sMainParts1, 'yitk');
+    meterCreateSetPaneData(&i_Meter->mBowLight1[1], sMainParts1, 'bly1');
+    meterCreateSetPaneData(&i_Meter->mBowLight2[1], sMainParts1, 'bly2');
+    meterCreateSetPaneData(&i_Meter->mBowLight3[1], sMainParts1, 'bly3');
+    meterCreateSetPaneData(&i_Meter->mItemDigit1[0], sMainParts1, 'x01');
+    meterCreateSetPaneData(&i_Meter->mItemDigit10[0], sMainParts1, 'x10');
+    meterCreateSetPaneData(&i_Meter->mItemIcon[0], sMainParts1, 'xitm');
+    meterCreateSetPaneData(&i_Meter->mItemIconShadow[0], sMainParts1, 'xitk');
+    meterCreateSetPaneData(&i_Meter->mBowLight1[0], sMainParts1, 'blx1');
+    meterCreateSetPaneData(&i_Meter->mBowLight2[0], sMainParts1, 'blx2');
+    meterCreateSetPaneData(&i_Meter->mBowLight3[0], sMainParts1, 'blx3');
+    meterCreateSetPaneData(&i_Meter->mItemDigit1[2], sMainParts1, 'z01');
+    meterCreateSetPaneData(&i_Meter->mItemDigit10[2], sMainParts1, 'z10');
+    meterCreateSetPaneData(&i_Meter->mItemIcon[2], sMainParts1, 'zitm');
+    meterCreateSetPaneData(&i_Meter->mItemIconShadow[2], sMainParts1, 'zitk');
+    meterCreateSetPaneData(&i_Meter->mBowLight1[2], sMainParts1, 'blz1');
+    meterCreateSetPaneData(&i_Meter->mBowLight2[2], sMainParts1, 'blz2');
+    meterCreateSetPaneData(&i_Meter->mBowLight3[2], sMainParts1, 'blz3');
+    meterCreateSetPaneData(&i_Meter->mZButton, sMainParts1, 'baz');
+    meterCreateSetPaneData(&i_Meter->mXYButton[1], sMainParts1, 'bay');
     meterCreateSetPaneData(&i_Meter->field_0x25c0[1], sMainParts1, 'b002');
     meterCreateSetPaneData(&i_Meter->field_0x2630[1], sMainParts1, 'ba02');
-    meterCreateSetPaneData(&i_Meter->field_0x2550[0], sMainParts1, 'bax1');
+    meterCreateSetPaneData(&i_Meter->mXYButton[0], sMainParts1, 'bax1');
     meterCreateSetPaneData(&i_Meter->field_0x25c0[0], sMainParts1, 'b001');
     meterCreateSetPaneData(&i_Meter->field_0x2630[0], sMainParts1, 'ba01');
-    meterCreateSetPaneData(&i_Meter->field_0x1da8[0], sMainParts1, 'baa');
-    meterCreateSetPaneData(&i_Meter->field_0x1e18[0], sMainParts1, 'bawe');
-    meterCreateSetPaneData(&i_Meter->field_0x26a0, sMainParts1, 'bar1');
+    meterCreateSetPaneData(&i_Meter->mActionButton[0], sMainParts1, 'baa');
+    meterCreateSetPaneData(&i_Meter->mActionButton2[0], sMainParts1, 'bawe');
+    meterCreateSetPaneData(&i_Meter->mRButton, sMainParts1, 'bar1');
     meterCreateSetPaneData(&i_Meter->field_0x26d8, sMainParts1, 'ba0r');
-    meterCreateSetPaneData(&i_Meter->field_0x2748, sMainParts1, 'a10');
-    meterCreateSetPaneData(&i_Meter->field_0x2780, sMainParts1, 'a01');
-    meterCreateSetPaneData(&i_Meter->field_0x27b8, sMainParts1, 'yum');
-    meterCreateSetPaneData(&i_Meter->field_0x27f0, sMainParts1, 'yumk');
-    meterCreateSetPaneData(&i_Meter->field_0x2828, sMainParts1, 'weit');
-    meterCreateSetPaneData(&i_Meter->field_0x2860, sMainParts1, 'witk');
-    meterCreateSetPaneData(&i_Meter->field_0x2898, sMainParts1, 'bab');
-    meterCreateSetPaneData(&i_Meter->field_0x28d0, sMainParts1, 'baat');
-    meterCreateSetPaneData(&i_Meter->field_0x2908, sMainParts1, 'cent');
-    meterCreateSetPaneData(&i_Meter->field_0x2940[0], sMainParts1, 'arw1');
-    meterCreateSetPaneData(&i_Meter->field_0x29b0[0], sMainParts1, 'ip00');
-    meterCreateSetPaneData(&i_Meter->field_0x2940[1], sMainParts1, 'arw2');
-    meterCreateSetPaneData(&i_Meter->field_0x29b0[1], sMainParts1, 'ip02');
+    meterCreateSetPaneData(&i_Meter->mArrowDigit10, sMainParts1, 'a10');
+    meterCreateSetPaneData(&i_Meter->mArrowDigit1, sMainParts1, 'a01');
+    meterCreateSetPaneData(&i_Meter->mActionBowIcon, sMainParts1, 'yum');
+    meterCreateSetPaneData(&i_Meter->mActionBowIconShadow, sMainParts1, 'yumk');
+    meterCreateSetPaneData(&i_Meter->mWeaponIcon, sMainParts1, 'weit');
+    meterCreateSetPaneData(&i_Meter->mWeaponIconShadow, sMainParts1, 'witk');
+    meterCreateSetPaneData(&i_Meter->mWeaponButton, sMainParts1, 'bab');
+    meterCreateSetPaneData(&i_Meter->mWeaponButton2, sMainParts1, 'baat');
+    meterCreateSetPaneData(&i_Meter->mButtonCenter, sMainParts1, 'cent');
+    meterCreateSetPaneData(&i_Meter->mArrowTypeIcon[0], sMainParts1, 'arw1');
+    meterCreateSetPaneData(&i_Meter->mArrowTypeSlot[0], sMainParts1, 'ip00');
+    meterCreateSetPaneData(&i_Meter->mArrowTypeIcon[1], sMainParts1, 'arw2');
+    meterCreateSetPaneData(&i_Meter->mArrowTypeSlot[1], sMainParts1, 'ip02');
     meterCreateSetPaneData(&i_Meter->mRupyIcon, sMainParts2, 'rup1');
     meterCreateSetPaneData(&i_Meter->mRupyIconB, sMainParts2, 'rup2');
     meterCreateSetPaneData(&i_Meter->mRupyDigitA[0], sMainParts2, 'nm00');
@@ -2060,10 +2060,10 @@ static void dMeter_screenDataSet(sub_meter_class* i_Meter, MeterCreateScratch *s
 }
 /* inlined into dMeter_Create */
 static void dMeter_screenDataArrowSet(sub_meter_class *i_Meter) {
-    meterCreateSetPaneData(&i_Meter->field_0x2e10[0], sChoiceRoad, 'yaz4');
-    meterCreateSetPaneData(&i_Meter->field_0x2e10[1], sChoiceRoad, 'yaz3');
-    meterCreateSetPaneData(&i_Meter->field_0x2e10[2], sChoiceRoad, 'yaz2');
-    meterCreateSetPaneData(&i_Meter->field_0x2e10[3], sChoiceRoad, 'yaz1');
+    meterCreateSetPaneData(&i_Meter->mRoadArrow[0], sChoiceRoad, 'yaz4');
+    meterCreateSetPaneData(&i_Meter->mRoadArrow[1], sChoiceRoad, 'yaz3');
+    meterCreateSetPaneData(&i_Meter->mRoadArrow[2], sChoiceRoad, 'yaz2');
+    meterCreateSetPaneData(&i_Meter->mRoadArrow[3], sChoiceRoad, 'yaz1');
 }
 /* inlined into dMeter_Create */
 static void meterCreateClearSharedState(f32 zero) {
@@ -2196,15 +2196,15 @@ static s32 dMeter_Create(sub_meter_class *i_Meter) {
     i_Meter->field_0x3027 = 0xFF;
     i_Meter->mCompassFadeTimer = meterUpdateHIO()->mCompassFadeFrames;
     u32 compass = meterCreateIsDungeonItemCompass(meterCreateDungeonMemory(), 1);
-    prefix->field_0x0100[0].mUserArea = compass;
-    s16 mapStart = g_meter_mapHIO.field_0x8;
-    s16 mapEnd = g_meter_mapHIO.field_0xc;
+    prefix->mMapCrossArrow[0].mUserArea = compass;
+    s16 mapStart = g_meter_mapHIO.mMapPosX;
+    s16 mapEnd = g_meter_mapHIO.mMapHiddenPosX;
     meterCreateMapControl()->field_0x0 = 0;
     meterCreateMapControl()->field_0x4 = mapEnd - mapStart;
     meterCreateMapControl()->initMapCtrlDisp();
     meterCreateCompassInit(i_Meter);
-    for (int i = 0; i < 4; i++) i_Meter->field_0x2e10[i].mUserArea = 0;
-    i_Meter->field_0x3025 = 0;
+    for (int i = 0; i < 4; i++) i_Meter->mRoadArrow[i].mUserArea = 0;
+    i_Meter->mRoadArrowFrame = 0;
     meter01_setCurrentHeap(prefix->heap);
     meterCreateHeartInit(i_Meter);
 
@@ -2218,7 +2218,7 @@ static s32 dMeter_Create(sub_meter_class *i_Meter) {
     dMeter_magicInit(i_Meter, scratch, zero, magicScale);
     dMeter_menuInit(i_Meter);
     dMeter_windInit(i_Meter);
-    i_Meter->field_0x3028 = 0;
+    i_Meter->mMetronomeState = 0;
     dMeter_rupyInit(i_Meter, zero);
     dMeter_keyInit(i_Meter, zero);
     dMeter_arwInit(i_Meter);
@@ -2266,7 +2266,7 @@ static bool meterWeaponStageEquals(MeterWeaponScratch *scratch, int pair, u32 na
 
 /* inlined into dMeter_weponMove */
 static void meterWeaponBlink(MeterWeaponScratch *scratch, sub_meter_class *i_Meter, f32 ratio) {
-    u8 alpha = i_Meter->field_0x1d00.mInitAlpha;
+    u8 alpha = i_Meter->mWeaponText.mInitAlpha;
     f64 unsignedBias = l_weaponUnsignedBias;
     u32 difference = (u32)alpha - 120;
     scratch->mConversionHigh = 0x43300000;
@@ -2281,13 +2281,13 @@ static void meterWeaponBlink(MeterWeaponScratch *scratch, sub_meter_class *i_Met
     // HD: GHS keeps the rounded multiply and subtract separate here.
     f32 result = to_single(-(delta * round25(ratio) - base));
     scratch->mConversionHigh = (u32)ppc_fctiwz(result);
-    i_Meter->field_0x1d38.mNowAlpha = scratch->mConversionBytes[3];
+    i_Meter->mActionText.mNowAlpha = scratch->mConversionBytes[3];
 }
 
 /* inlined into dMeter_weponMove */
 static void meterWeaponMoveStatus(sub_meter_class *i_Meter, MeterWeaponScratch *scratch, s16 status) {
     if (l_weaponMoveStatus != status) {
-        dMeter_alphaFlagOff(&i_Meter->field_0x3026, 2);
+        dMeter_alphaFlagOff(&i_Meter->mButtonMoveFlags, 2);
         if (status == 1)
             dMeter_alphaFlagOff(&scratch->mMoveFlag, 2);
     }
@@ -2302,9 +2302,9 @@ static void dMeter_weponMove(sub_meter_class *i_Meter) {
         u8 force = MeterWeaponApi::getAStatusForce();
         dComIfGp_setAStatus(force);
     }
-    if (i_Meter->field_0x2828.mUserArea != 0) {
-        if (i_Meter->field_0x301a == meter_weapon::dActStts_BID_e)
-            i_Meter->field_0x1d00.mUserArea = 0;
+    if (i_Meter->mWeaponIcon.mUserArea != 0) {
+        if (i_Meter->mLastAStatus == meter_weapon::dActStts_BID_e)
+            i_Meter->mWeaponText.mUserArea = 0;
         if (dComIfGp_getAStatus() != meter_weapon::dActStts_BLANK_e &&
             dComIfGp_getAStatus() != meter_weapon::dActStts_sword_01 &&
             dComIfGp_getAStatus() != meter_weapon::dActStts_boko_stick &&
@@ -2318,54 +2318,54 @@ static void dMeter_weponMove(sub_meter_class *i_Meter) {
             dComIfGp_ea(); // HD: retained resource-archive lookups, even though this path has no texture
                            // calls.
         }
-        i_Meter->field_0x2828.mUserArea = 0;
+        i_Meter->mWeaponIcon.mUserArea = 0;
     }
     u32 state = dComIfGp_ea();
-    u8 oldStatus = i_Meter->field_0x301a;
+    u8 oldStatus = i_Meter->mLastAStatus;
     u8 newStatus = gabi::at<dComIfG_inf_c>(state)->play.mAStatus;
     if (oldStatus != newStatus) {
-        i_Meter->field_0x2828.mUserArea = 1;
-        i_Meter->field_0x28d0.mUserArea = 1;
-        i_Meter->field_0x301a = dComIfGp_getAStatus();
+        i_Meter->mWeaponIcon.mUserArea = 1;
+        i_Meter->mWeaponButton2.mUserArea = 1;
+        i_Meter->mLastAStatus = dComIfGp_getAStatus();
     }
     u8 doStatus = dComIfGp_getDoStatus();
-    s16 timer = i_Meter->field_0x1d38.mUserArea;
+    s16 timer = i_Meter->mActionText.mUserArea;
     if (doStatus == meter_weapon::dActStts_BID_e) {
         timer = (s16)(timer + 1);
         if (timer >= 20)
             timer = 0;
-        i_Meter->field_0x1d38.mUserArea = timer;
+        i_Meter->mActionText.mUserArea = timer;
         f32 ratio = fopMsgM_valueIncrease(10, timer < 10 ? timer : 20 - timer, 0);
         meterWeaponBlink(scratch.get(), i_Meter, ratio);
     } else if (timer != 0) {
-        u8 alpha = i_Meter->field_0x1d00.mInitAlpha;
-        i_Meter->field_0x1d38.mUserArea = 0;
-        i_Meter->field_0x1d38.mNowAlpha = alpha;
+        u8 alpha = i_Meter->mWeaponText.mInitAlpha;
+        i_Meter->mActionText.mUserArea = 0;
+        i_Meter->mActionText.mNowAlpha = alpha;
     }
     if (dComIfGp_getDoStatus() == meter_weapon::dActStts_ba_sake__dupe_31 ||
         dComIfGp_getDoStatus() == meter_weapon::dActStts_ba_nageru__dupe_2D ||
         dComIfGp_getDoStatus() == meter_weapon::dActStts_ba_motu__dupe_2E) {
-        timer = (s16)((s16)i_Meter->field_0x1e18[1].mUserArea + 1);
+        timer = (s16)((s16)i_Meter->mActionButton2[1].mUserArea + 1);
         if (timer < 20) {
-            i_Meter->field_0x1e18[1].mUserArea = timer;
+            i_Meter->mActionButton2[1].mUserArea = timer;
         } else {
-            i_Meter->field_0x1e18[1].mUserArea = 0;
+            i_Meter->mActionButton2[1].mUserArea = 0;
             if (dComIfGp_getDoStatus() == meter_weapon::dActStts_ba_nageru__dupe_2D) {
                 mDoAud_seStart(0x8F8);
             } else {
                 u8 status = dComIfGp_getDoStatus();
                 mDoAud_seStart(status == meter_weapon::dActStts_ba_motu__dupe_2E ? 0x90A : 0x852);
             }
-            timer = i_Meter->field_0x1e18[1].mUserArea;
+            timer = i_Meter->mActionButton2[1].mUserArea;
         }
         fopMsgM_valueIncrease(10, timer < 10 ? timer : 20 - timer, 0);
     } else {
         dComIfGp_ea(); // HD: the PARRY-status lookup remains even though its color write was removed.
     }
-    s16 animation = i_Meter->field_0x28d0.mUserArea;
+    s16 animation = i_Meter->mWeaponButton2.mUserArea;
     if (animation != 0 && animation <= 12) {
         animation = (s16)(animation + 1);
-        i_Meter->field_0x28d0.mUserArea = animation > 12 ? 0 : animation;
+        i_Meter->mWeaponButton2.mUserArea = animation > 12 ? 0 : animation;
     }
     u32 flags = i_Meter->mStatusFlags;
     scratch->mMoveFlag = l_hdState.mStateBytes[0];
@@ -2442,14 +2442,14 @@ static void dMeter_weponMove(sub_meter_class *i_Meter) {
                 meterWeaponMoveStatus(i_Meter, scratch.get(), 0);
         }
     }
-    if (i_Meter->field_0x3026 != 15) {
-        if (!dMeter_alphaFlagCheck(&i_Meter->field_0x3026, 2)) {
+    if (i_Meter->mButtonMoveFlags != 15) {
+        if (!dMeter_alphaFlagCheck(&i_Meter->mButtonMoveFlags, 2)) {
             if (l_weaponMoveStatus != 1)
                 dMeter_alphaFlagOn(&scratch->mMoveFlag, 2);
             s16 frame = l_weaponMoveFrame;
             if (frame >= 5) {
                 l_weaponMoveFrame = 5;
-                dMeter_alphaFlagOn(&i_Meter->field_0x3026, 2);
+                dMeter_alphaFlagOn(&i_Meter->mButtonMoveFlags, 2);
             } else
                 l_weaponMoveFrame = frame + 1;
         }
@@ -2503,18 +2503,18 @@ static void dMeter_weponMove(sub_meter_class *i_Meter) {
                          !meterWeaponStageEquals(scratch.get(), 3, gabi::guest_addr("Orichh"));
         }
         if (!restricted)
-            i_Meter->field_0x3024 |= 2;
+            i_Meter->mButtonActionMode |= 2;
         s16 frame = l_weaponAlphaFrame;
         l_weaponAlphaFrame = frame < 5 ? frame + 1 : 5;
         i_Meter->mButtonShowFlags |= 2;
         alpha = fopMsgM_valueIncrease(5, l_weaponAlphaFrame, 0);
     }
     if (dComIfGp_getAStatus() == meter_weapon::dActStts_BLANK_e) {
-        fopMsgM_setNowAlphaZero(&i_Meter->field_0x1d00);
-        fopMsgM_setNowAlphaZero(&i_Meter->field_0x2828);
-        fopMsgM_setNowAlphaZero(&i_Meter->field_0x2860);
-        fopMsgM_setNowAlpha(&i_Meter->field_0x2898, alpha);
-        fopMsgM_setNowAlpha(&i_Meter->field_0x28d0, alpha);
+        fopMsgM_setNowAlphaZero(&i_Meter->mWeaponText);
+        fopMsgM_setNowAlphaZero(&i_Meter->mWeaponIcon);
+        fopMsgM_setNowAlphaZero(&i_Meter->mWeaponIconShadow);
+        fopMsgM_setNowAlpha(&i_Meter->mWeaponButton, alpha);
+        fopMsgM_setNowAlpha(&i_Meter->mWeaponButton2, alpha);
     } else if (dComIfGp_getAStatus() == meter_weapon::dActStts_sword_01 ||
                dComIfGp_getAStatus() == meter_weapon::dActStts_boko_stick ||
                dComIfGp_getAStatus() == meter_weapon::dActStts_hatchet ||
@@ -2522,19 +2522,19 @@ static void dMeter_weponMove(sub_meter_class *i_Meter) {
                dComIfGp_getAStatus() == meter_weapon::dActStts_longsword ||
                dComIfGp_getAStatus() == meter_weapon::dActStts_spear ||
                dComIfGp_getAStatus() == meter_weapon::dActStts_spear__dupe_3C) {
-        fopMsgM_setNowAlphaZero(&i_Meter->field_0x1d00);
-        fopMsgM_setNowAlpha(&i_Meter->field_0x2828, alpha);
-        fopMsgM_setNowAlpha(&i_Meter->field_0x2860, alpha);
-        fopMsgM_setNowAlpha(&i_Meter->field_0x2898, alpha);
-        fopMsgM_setNowAlpha(&i_Meter->field_0x28d0, alpha);
-        fopMsgM_setNowAlpha(&i_Meter->field_0x2908, alpha);
+        fopMsgM_setNowAlphaZero(&i_Meter->mWeaponText);
+        fopMsgM_setNowAlpha(&i_Meter->mWeaponIcon, alpha);
+        fopMsgM_setNowAlpha(&i_Meter->mWeaponIconShadow, alpha);
+        fopMsgM_setNowAlpha(&i_Meter->mWeaponButton, alpha);
+        fopMsgM_setNowAlpha(&i_Meter->mWeaponButton2, alpha);
+        fopMsgM_setNowAlpha(&i_Meter->mButtonCenter, alpha);
     } else {
-        fopMsgM_setNowAlpha(&i_Meter->field_0x1d00, alpha);
-        fopMsgM_setNowAlphaZero(&i_Meter->field_0x2828);
-        fopMsgM_setNowAlphaZero(&i_Meter->field_0x2860);
-        fopMsgM_setNowAlpha(&i_Meter->field_0x2898, alpha);
-        fopMsgM_setNowAlpha(&i_Meter->field_0x28d0, alpha);
-        fopMsgM_setNowAlpha(&i_Meter->field_0x2908, alpha);
+        fopMsgM_setNowAlpha(&i_Meter->mWeaponText, alpha);
+        fopMsgM_setNowAlphaZero(&i_Meter->mWeaponIcon);
+        fopMsgM_setNowAlphaZero(&i_Meter->mWeaponIconShadow);
+        fopMsgM_setNowAlpha(&i_Meter->mWeaponButton, alpha);
+        fopMsgM_setNowAlpha(&i_Meter->mWeaponButton2, alpha);
+        fopMsgM_setNowAlpha(&i_Meter->mButtonCenter, alpha);
     }
     dComIfGp_setAStatusForce(meter_weapon::dActStts_BLANK_e);
 }

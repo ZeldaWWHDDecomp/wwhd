@@ -46,7 +46,7 @@ u32 Act_c::prm_get_objNo() { return PrmAbstract(this, PRM_OBJNO_W, PRM_OBJNO_S);
 /* 0237C64C */
 BOOL Act_c::CreateHeap() {
     J3DModelData* model_data = (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_MSDAN_BDL_MSDAN_e);
-    JUT_ASSERT(0x57, model_data != NULL);
+    JUT_ASSERT_MSG(0x57, model_data != NULL, "model_data != 0");
     J3DModel* model = mDoExt_J3DModel__create(model_data, 0, 0x11020203);
     mModel = model;
     return model != nullptr;
@@ -262,7 +262,7 @@ static void Act_c_dt(Act_c* p, s32 flags) {
 str 1002DA50
 str 1002DA0C
 str 1002D9A0 in 0237C4D0
-str 1002D9FC "model_data != NULL" renamed # HD: 0 rather than NULL.
+str 1002D9FC "model_data != 0" # HD: 0 rather than NULL.
 str 1002D9B8 "(phase_state == cPhs_COMPLEATE_e) || (phase_state == cPhs_ERROR_e)"
 data M_tmp_mtx 1046B9AC
 */

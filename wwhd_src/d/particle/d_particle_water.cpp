@@ -154,16 +154,16 @@ void pa::dPa_splashEcallBack::setup(void* emitter, void* pos, void* angle, u32 i
 /* 025A9C20 */
 void pa::dPa_cutTurnEcallBack_c::setup(void* emitter, void* pos, void* angle, u32 info) {
     this->mpBaseEmitter = gabi::ea(emitter);
-    this->field_0x6 = 0;
+    this->mPosNum = 0;
     this->mAlpha = 255;
-    this->field_0x5 = 0;
+    this->mEndRequest = 0;
 }
 /* 025A9D64 */
 void pa::dPa_cutTurnEcallBack_c::end() {
     if (!(u32)this->mpBaseEmitter)
         return;
     removeEmitter(this, 12);
-    this->field_0x5 = 1;
+    this->mEndRequest = 1;
 }
 /* 025A9DA0 */
 void pa::dPa_trackEcallBack::getMaxWaterY(void* pos) {

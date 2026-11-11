@@ -394,7 +394,7 @@ struct daDekuItem_c : fopAc_ac_c {
   DekuItem::AcchCir mAcchCir;
   DekuItem::Status mStts;
   DekuItem::Cylinder mCyl;
-  be<s32> mMode, unk630, mItemBitNo;
+  be<s32> mMode, mGetEventOrder, mItemBitNo;  /* was unk630: mode_getdemo_init 0211F0CC sets 1; eventOrder 0211EE80 orders the get-item event while 1; checkOrder 0211ED7C clears it when the event starts; mode_getdemo_wait 0211F134 creates the item once 0 (tww the same) */
   be<u32> mItemPID;
   gptr<DekuItem::Emitter> mpEmitter;
   BOOL CreateHeap();

@@ -88,7 +88,7 @@ BOOL daNpc_Ji1_c::teachSpRollCutMove(f32 param_1) {
       setAnm(Ji1Teachsp_KROT, 4.0f, 0);
     }
     if (mAnimation == Ji1Teachsp_KROT) {
-      mpOrcaMorf->setPlaySpeed(l_hio.field_0x48 * param_1);
+      mpOrcaMorf->setPlaySpeed(l_hio.mKrotAnmSpeed * param_1);
     }
     return TRUE;
   }
@@ -105,8 +105,8 @@ BOOL daNpc_Ji1_c::teachSPRollCutAction(void *arg) {
     setAnm(Ji1Teachsp_KAMAE, 0.0f, 0);
     attention_info.flags |= fopAc_Attn_LOCKON_MISC_e;
     mBattleTimer = 0;
-    field_0xD34 = 0;
-    field_0xC90 = 0;
+    mRollTeachResult = 0;
+    mTeachResult = 0;
     dComIfGs_onTmpBit(Ji1TeachspTmpFlag::UNK_0402);
     mTeachStep = 6;
     mActionPhase += 1;
@@ -181,7 +181,7 @@ BOOL daNpc_Ji1_c::teachSPRollCutAction(void *arg) {
     if (mSubActionPhase == 1) {
       if (!static_cast<Ji1TeachspPlayerHD *>(player)->getCutAtFlg() ||
           mpOrcaMorf->getFrame() > endFrame(this) - 2.0f) {
-        if (field_0xC90 == 0) {
+        if (mTeachResult == 0) {
           if (mTeachCutType == CUT_TYPE_CUT_ROLL) {
             mEventNo = Ji1Teachsp_CUT_SPIN_SUCCESS;
             ji1_setAction(this, ACT_eventAction, nullptr);
@@ -190,14 +190,14 @@ BOOL daNpc_Ji1_c::teachSPRollCutAction(void *arg) {
           }
           orderOtherEvent(this, mEventIdx[Ji1Teachsp_EVENT_BAD_CUT]);
           eventInfo.onCondition(dEvtCnd_UNK2_e);
-          field_0xC90 = 2;
+          mTeachResult = 2;
         }
       }
 
       if (mAnimation == Ji1Teachsp_JPGUARD &&
           mTeachCutType == CUT_TYPE_CUT_ROLL) {
-        f32 h34 = l_hio.field_0x34;
-        cLib_addCalc2(&mBackSlideDist, h34 + h34, 0.25f, l_hio.field_0x38);
+        f32 h34 = l_hio.mJpGuardSlideDist;
+        cLib_addCalc2(&mBackSlideDist, h34 + h34, 0.25f, l_hio.mJpGuardSlideStep);
         gabi::Local<cXyz> temp3;
         f32 x = mBackSlideStartPos.x;
         f32 c9c = mBackSlideDist;
@@ -221,7 +221,7 @@ BOOL daNpc_Ji1_c::teachSPRollCutAction(void *arg) {
         OnTgShield(&mGuardCyl);
         mBackSlideDist = 0.0f;
         mSubActionPhase = 0;
-        if (field_0xC90 == 2) {
+        if (mTeachResult == 2) {
           mBackSlideStartPos.copy(current.pos);
           mCoCorrectSum = 0.0f;
           mBgCorrectSum = 0.0f;
@@ -229,7 +229,7 @@ BOOL daNpc_Ji1_c::teachSPRollCutAction(void *arg) {
           ji1_setAction(this, ACT_speakBadAction, nullptr);
         } else {
           mBackSlideStartPos.copy(current.pos);
-          field_0xC90 = 0;
+          mTeachResult = 0;
           ji1_setAction(this, ACT_speakAction, nullptr);
         }
       }
@@ -327,7 +327,7 @@ BOOL daNpc_Ji1_c::battleGuardCheck() {
         } else {
           setHitParticle(scale, JA_SE_CV_JI_DEFENCE);
         }
-        s32 lim = l_hio.field_0x60[3] - 1;
+        s32 lim = l_hio.mLevelHits[3] - 1;
         if (mTeachStep < lim) {
           mTeachStep += 2;
           dComIfGp_plusMiniGameRupee(2);
@@ -341,7 +341,7 @@ BOOL daNpc_Ji1_c::battleGuardCheck() {
         dComIfGp_plusMiniGameRupee(1);
       }
 
-      if (mTeachStep >= l_hio.field_0x60[3]) {
+      if (mTeachStep >= l_hio.mLevelHits[3]) {
         mEventNo = Ji1Teachsp_CUT_HIT_LIMIT;
         s32 c38;
         if (dComIfGs_isEventBit(Ji1TeachspEventFlag::UNK_0F20)) {

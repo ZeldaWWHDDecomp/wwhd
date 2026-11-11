@@ -86,7 +86,7 @@ data l_scnRqID 101F3794
 data l_headerStatics 1048A5DC
 data l_piPair 10057D84
 str 10057D68 "f_op_scene_mng.cpp"
-str 10057D64 "FALSE" renamed
+str 10057D64 "0"
 ext 025DC73C scene_class* fopScnIt_Judge(u32 callback, SceneSearchKey* key)
 ext 025DCE04 u32 fopScnRq_Request(u32 kind, scene_class* scene, u32 procName, u32 user, u32 fadeProcName, u32 fadePeekTime, u32 flags)
 ext 025DCF08 u32 fopScnRq_ReRequest(u32 id, u32 procName, u32 user)

@@ -24,7 +24,7 @@ static daTag_Gship_HIO_c* daTag_Gship_HIO_ct(daTag_Gship_HIO_c* p) {
     }
     p->__vtbl = daTag_Gship_HIO_c::__vt;
     p->mNo = -1;
-    p->field_0x05 = 0;
+    p->mForceClear = 0;
     return p;
 }
 
@@ -37,7 +37,7 @@ void daTag_Gship_c::modeClearWaitInit() {
 void daTag_Gship_c::modeClearWait() {
     if (dComIfGp_evmng_endCheck("DEFAULT_TREASURE") ||
         dComIfGp_evmng_endCheck("DEFAULT_TREASURE2") ||
-        dComIfGp_evmng_endCheck("DEFAULT_TREASURE_A") || l_HIO.field_0x05) {
+        dComIfGp_evmng_endCheck("DEFAULT_TREASURE_A") || l_HIO.mForceClear) {
         modeProc(PROC_INIT_e, 1);
     }
 }

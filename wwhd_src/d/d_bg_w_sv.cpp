@@ -1,5 +1,6 @@
 /** Saved-vertex world collision correction. */
 #include "d/d_bg_w_sv.h"
+#include "sead/ElementAt.h"
 #include <cmath>
 
 static const f32 normalEpsilon = 0.000003814697265625f;
@@ -61,16 +62,18 @@ void dBgWSv::CopyBackVtx() {
     }
 }
 
+/* guest address arithmetic: table + index * 12 wraps at 32 bits as on the console */
+static inline cXyz &vertexAt(cXyz *table, u32 index) { return sead::elementAt<cXyz>(gabi::ea(table), index); }
 /* 024F5B78 */
 // HD: preserve fused arithmetic and pointer reloads when pos aliases the vertex-table field.
 BOOL dBgWSv::CrrPosWork(cXyz *pos, u32 v0, u32 v1, u32 v2) {
     cXyz *back = mBackVtx.get();
-    f32 z0 = (f32)back[v0].z;
-    f32 x0 = (f32)back[v0].x;
-    f32 bz = (f32)back[v1].z - z0;
-    f32 bx = (f32)back[v1].x - x0;
-    f32 cx = (f32)back[v2].x - x0;
-    f32 cz = (f32)back[v2].z - z0;
+    f32 z0 = (f32)vertexAt(back, v0).z;
+    f32 x0 = (f32)vertexAt(back, v0).x;
+    f32 bz = (f32)vertexAt(back, v1).z - z0;
+    f32 bx = (f32)vertexAt(back, v1).x - x0;
+    f32 cx = (f32)vertexAt(back, v2).x - x0;
+    f32 cz = (f32)vertexAt(back, v2).z - z0;
     f32 epsilon = normalEpsilon;
     if (std::fabs(bz) < epsilon || std::fabs(cz) < epsilon)
         return 1;
@@ -83,19 +86,19 @@ BOOL dBgWSv::CrrPosWork(cXyz *pos, u32 v0, u32 v1, u32 v2) {
     f32 px = (f32)pos->x - x0;
     pos->x = px;
     back = mBackVtx.get();
-    f32 pz = (f32)pos->z - (f32)back[v0].z;
+    f32 pz = (f32)pos->z - (f32)vertexAt(back, v0).z;
     f32 numC = gabi::fnmsubs(ratioB, pz, px);
     pos->z = pz;
     f32 numB = gabi::fnmsubs(ratioC, pz, px);
     cXyz *current = pm_vtx_tbl.get();
     f32 wC = numC / denC;
-    f32 ax = (f32)current[v0].x;
-    f32 tx = (f32)current[v2].x;
+    f32 ax = (f32)vertexAt(current, v0).x;
+    f32 tx = (f32)vertexAt(current, v2).x;
     f32 wB = numB / denB;
-    f32 sx = (f32)current[v1].x;
-    f32 az = (f32)current[v0].z;
-    f32 sz = (f32)current[v1].z;
-    f32 tz = (f32)current[v2].z;
+    f32 sx = (f32)vertexAt(current, v1).x;
+    f32 az = (f32)vertexAt(current, v0).z;
+    f32 sz = (f32)vertexAt(current, v1).z;
+    f32 tz = (f32)vertexAt(current, v2).z;
     f32 dxB = sx - ax, dzB = sz - az;
     f32 dxC = tx - ax, dzC = tz - az;
     f32 resultX = gabi::fmadds(wB, dxB, wC * dxC);
@@ -103,9 +106,9 @@ BOOL dBgWSv::CrrPosWork(cXyz *pos, u32 v0, u32 v1, u32 v2) {
     pos->x = resultX;
     pos->z = resultZ;
     current = pm_vtx_tbl.get();
-    pos->x = resultX + (f32)current[v0].x;
+    pos->x = resultX + (f32)vertexAt(current, v0).x;
     current = pm_vtx_tbl.get();
-    pos->z = resultZ + (f32)current[v0].z;
+    pos->z = resultZ + (f32)vertexAt(current, v0).z;
     return 0;
 }
 
@@ -129,11 +132,11 @@ void dBgWSv::CrrPos(BgSvPolyInfo *poly, void *user, u32 accept, cXyz *pos, csXyz
 // HD: preserve fused interpolation and each position store before reloading the table.
 BOOL dBgWSv::TransPosWork(cXyz *pos, u32 v0, u32 v1, u32 v2) {
     cXyz *back = mBackVtx.get();
-    f32 x0 = (f32)back[v0].x, z0 = (f32)back[v0].z;
-    f32 bz = (f32)back[v1].z - z0;
-    f32 bx = (f32)back[v1].x - x0;
-    f32 cx = (f32)back[v2].x - x0;
-    f32 cz = (f32)back[v2].z - z0;
+    f32 x0 = (f32)vertexAt(back, v0).x, z0 = (f32)vertexAt(back, v0).z;
+    f32 bz = (f32)vertexAt(back, v1).z - z0;
+    f32 bx = (f32)vertexAt(back, v1).x - x0;
+    f32 cx = (f32)vertexAt(back, v2).x - x0;
+    f32 cz = (f32)vertexAt(back, v2).z - z0;
     f32 epsilon = normalEpsilon;
     if (std::fabs(bz) < epsilon || std::fabs(cz) < epsilon)
         return 1;
@@ -150,12 +153,12 @@ BOOL dBgWSv::TransPosWork(cXyz *pos, u32 v0, u32 v1, u32 v2) {
     if (wB < zero || wB > one || wC < zero || wC > one)
         return 1;
     cXyz *current = pm_vtx_tbl.get();
-    f32 ax = (f32)current[v0].x, bxNew = (f32)current[v1].x - ax;
-    f32 ay = (f32)current[v0].y, byNew = (f32)current[v1].y - ay;
-    f32 az = (f32)current[v0].z, bzNew = (f32)current[v1].z - az;
-    f32 cxNew = (f32)current[v2].x - ax;
-    f32 cyNew = (f32)current[v2].y - ay;
-    f32 czNew = (f32)current[v2].z - az;
+    f32 ax = (f32)vertexAt(current, v0).x, bxNew = (f32)vertexAt(current, v1).x - ax;
+    f32 ay = (f32)vertexAt(current, v0).y, byNew = (f32)vertexAt(current, v1).y - ay;
+    f32 az = (f32)vertexAt(current, v0).z, bzNew = (f32)vertexAt(current, v1).z - az;
+    f32 cxNew = (f32)vertexAt(current, v2).x - ax;
+    f32 cyNew = (f32)vertexAt(current, v2).y - ay;
+    f32 czNew = (f32)vertexAt(current, v2).z - az;
     f32 resultX = gabi::fmadds(wB, bxNew, wC * cxNew);
     f32 resultY = gabi::fmadds(wB, byNew, wC * cyNew);
     f32 resultZ = gabi::fmadds(wB, bzNew, wC * czNew);
@@ -163,11 +166,11 @@ BOOL dBgWSv::TransPosWork(cXyz *pos, u32 v0, u32 v1, u32 v2) {
     pos->y = resultY;
     pos->z = resultZ;
     current = pm_vtx_tbl.get();
-    pos->x = resultX + (f32)current[v0].x;
+    pos->x = resultX + (f32)vertexAt(current, v0).x;
     current = pm_vtx_tbl.get();
-    pos->y = resultY + (f32)current[v0].y;
+    pos->y = resultY + (f32)vertexAt(current, v0).y;
     current = pm_vtx_tbl.get();
-    pos->z = resultZ + (f32)current[v0].z;
+    pos->z = resultZ + (f32)vertexAt(current, v0).z;
     return 0;
 }
 

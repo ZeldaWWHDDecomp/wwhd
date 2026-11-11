@@ -14,7 +14,7 @@ struct enemyice {
     /* 0x006 */ be<s8> mLightShrinkTimer;
     /* 0x007 */ u8 _007;
     /* 0x008 */ be<f32> mYOffset;
-    /* 0x00C */ be<s8> m00C;
+    /* 0x00C */ be<s8> mFreezeType;  /* was m00C: the freeze behaviour: enemy_ice 020402C8 makes the frozen enemy hop (speed.y 30, random spin) only while it is 0; while it is 1 the block stays in place and is not made liftable (no carry attention flag 0x10); at 2 the slide has no gravity and it returns to 0 once the block is carried; d_a_fm, d_a_tn, d_a_rd, d_a_bo and d_a_pz set 1 (tww the same) */
     /* 0x00D */ be<s8> mMode;
     /* 0x00E */ be<s16> mFreezeTimer;
     /* 0x010 */ be<s16> mMoveDelayTimer;
@@ -23,8 +23,8 @@ struct enemyice {
     /* 0x016 */ u8 _016[2];
     /* 0x018 */ cXyz mSpeed;
     /* 0x024 */ be<f32> mSpeedF;
-    /* 0x028 */ be<f32> m028;
-    /* 0x02C */ be<f32> m02C;
+    /* 0x028 */ be<f32> mBodyLiftY;  /* was m028: the frozen body's lift: ice_render (in enemy_ice 020402C8) eases it toward mIceOffsetY while frozen and to 0 otherwise; daBb_Execute 0205EA58 raises the Kargaroc body matrix by it (tww the same) */
+    /* 0x02C */ be<f32> mIceOffsetY;  /* was m02C: the ice block's height offset: ice_render (in enemy_ice 020402C8) places the block matrix at current.pos.y + it and eases mBodyLiftY toward it; daBb_Execute 0205EA58 sets 50 (tww the same) */
     /* 0x030 */ dCcD_Stts mStts;
     /* 0x06C */ dCcD_Cyl mCyl;
     /* 0x19C */ be<f32> mCylHeight;

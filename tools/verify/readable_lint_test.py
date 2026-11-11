@@ -4,7 +4,9 @@ framenoauto: a FrameLocal in a function without gabi::AutoFrame / WWHD_FUNC is c
 back to a Local below r1), one with the automatic frame is not.
 fieldnum: offset names with 3 to 5 hex digits (m2C4, m3522, m0FD7C) are counted; 6 digits, lower-case
 hex and real names are not. field_XXX without 0x (2 to 5 hex digits) and unk_0xNN are
-counted too, u8 padding arrays with those names (u8 field_48[8]) and real names (field_count) are not."""
+counted too, u8 padding arrays with those names (u8 field_48[8]) and real names (field_count) are not.
+Two-digit mXX (m1C, mBC) and one-digit field_X / unk_X offset names are counted; locals of that shape
+(matrix elements f32 m10 = m[1][0]), enum values, mAA and one-digit mX names are not."""
 import os
 import sys
 import tempfile
@@ -57,6 +59,27 @@ FIELD2_SRC = """struct t {
 void f(t* p) { p->field_2BA = 1; }
 """
 
+# two-digit offset names (m1C, m00, mBC) and one-digit field_X / unk_X; not matrix-element locals, mAA (GX2 AA
+# mode), enum values or one-digit mX names
+FIELD3_SRC = """struct u {
+    /* 0x00 */ be<s16> m00;
+    /* 0x1C */ be<f32> m1C, m20;
+    /* 0xBC */ be<f32> mBC;
+    /* 0x08 */ be<s16> field_8;
+    /* 0x04 */ be<s32> unk_4;
+    /* 0x0C */ u8 m0C[4];
+    be<u32> mAA;
+    be<u32> mA, m0, mBlend;
+};
+WWHD_OFFSET(u, m1C, 0x1C);
+enum { m40 = 1 };
+void g(u* p, Mtx m) {
+    f32 m10 = m[1][0], m20 = m[2][0];
+    f32 m04 = p->m00;
+    p->m1C = m10 + m20 + m04 + p->mAA;
+}
+"""
+
 
 def lint_text(text, column):
     with tempfile.NamedTemporaryFile("w", suffix=".cpp", delete=False) as f:
@@ -78,6 +101,12 @@ def main():
         sys.exit("readable_lint_test: FAIL fieldnum = %d, expected 6 (field_2BA x2, field_31C, field_18, "
                  "unk_0x60, field_0x10)" % n)
     print("readable_lint_test: PASS (fieldnum counts field_XXX / unk_0xNN offset names, not u8 padding arrays)")
+    n = lint_text(FIELD3_SRC, "fieldnum")
+    if n != 10:
+        sys.exit("readable_lint_test: FAIL fieldnum = %d, expected 10 (m00 x2, m1C x3, m20, mBC, field_8, unk_4, "
+                 "m0C; not the locals m10/m20/m04, mAA, the enum value m40, mA/m0)" % n)
+    print("readable_lint_test: PASS (fieldnum counts two-digit mXX and one-digit field_X / unk_X offset names, "
+          "not matrix locals, enum values or real names)")
     with tempfile.NamedTemporaryFile("w", suffix=".cpp", delete=False) as f:
         f.write(SRC)
         path = f.name

@@ -197,7 +197,7 @@ BOOL daObjTide::Act_c::CreateHeap() {
         if (brk)
             brk = tideConstructBrk(brk);
         mBrk2 = brk;
-        if (!brk || !tideInitBrk(brk, secondData, animation, 1, 0, 0, -1, 0, 0, attr(this)->m44))
+        if (!brk || !tideInitBrk(brk, secondData, animation, 1, 0, 0, -1, 0, 0, attr(this)->mNureBrkRate))
             secondBrkOK = false;
         else {
             mDoExt_brkAnm* result = mBrk2;
@@ -253,7 +253,7 @@ s32 daObjTide::Act_c::Mthd_Create() {
         daObjTide::Attr_c* data = attr(this);
         if (data->sch_flag) {
             f32 factor = 1.f - tideWaterLevel;
-            f32 height = (f32)data->m20;
+            f32 height = (f32)data->mLevelHeight;
             current.pos.y = gabi::fmadds(factor, height, home.pos.y);
             data = attr(this);
         }
@@ -319,22 +319,22 @@ void daObjTide::Act_c::move_to_aim(BOOL sound, f32 aim) {
         return;
     }
     daObjTide::Attr_c* data = attr(this);
-    f32 step = (f32)mMoveSpeed + data->m24;
+    f32 step = (f32)mMoveSpeed + data->mMoveAccel;
     mMoveSpeed = step;
-    f32 maximum = data->m28;
+    f32 maximum = data->mMoveSpeedMax;
     if (step > maximum) {
         step = maximum;
         mMoveSpeed = step;
         data = attr(this);
     }
-    f32 minimum = data->m2C;
+    f32 minimum = data->mMoveSpeedMin;
     if (!(step > minimum)) {
         step = minimum + .001f;
         mMoveSpeed = step;
         data = attr(this);
-        minimum = data->m2C;
+        minimum = data->mMoveSpeedMin;
     }
-    tideAddCalc(&current.pos.y, aim, data->m30, step, minimum);
+    tideAddCalc(&current.pos.y, aim, data->mMoveScale, step, minimum);
     if (sound)
         tideStartSound(difference > 0.f ? tideHD::JA_SE_ATM_SHIREN_SEA_UP
                                         : tideHD::JA_SE_ATM_SHIREN_SEA_DOWN);
@@ -374,19 +374,19 @@ void daObjTide::Act_c::mode_norm() {
     daObjTide::Attr_c* data = attr(this);
     f32 level = tideWaterLevel, homeHeight = home.pos.y;
     u32 flags = tideWaterState, low = flags & tideHD::STATE_1;
-    current.pos.y = gabi::fmadds(1.f - level, (f32)data->m20, homeHeight);
+    current.pos.y = gabi::fmadds(1.f - level, (f32)data->mLevelHeight, homeHeight);
     s16 timer = mTimer;
     if (timer > 0) {
         timer = (s16)(timer - 1);
         mTimer = timer;
         if (!timer) {
             mBrk2->mFrameCtrl.mFrame = 0.f;
-            mBrk2->mFrameCtrl.mRate = attr(this)->m44;
+            mBrk2->mFrameCtrl.mRate = attr(this)->mNureBrkRate;
         }
     }
     mDoExt_baseAnm* animation = mBrk2;
     if (!low && (flags & tideHD::STATE_2))
-        mTimer = data->m42;
+        mTimer = data->mNureBrkDelay;
     if (animation)
         tidePlayAnimation(animation);
     animation = mBtk;

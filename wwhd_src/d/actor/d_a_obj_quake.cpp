@@ -51,7 +51,7 @@ cPhs_State daObjQuake_c::_create() {
         mEnd = 6.0f;
     }
     if (l_HIO.mNo < 0)
-        l_HIO.mNo = mDoHIO_createChild("Vibration Effect", &l_HIO); // "振動効果" (Vibration Effect)
+        l_HIO.mNo = mDoHIO_createChild("振動効果", &l_HIO); // "振動効果" (Vibration Effect)
     l_HIO.mCount = (u32)l_HIO.mCount + 1u;
     return cPhs_COMPLEATE_e;
 }
@@ -227,7 +227,7 @@ void daObjQuake_c__dt(daObjQuake_c *actor, s32 flags) {
   data l_zero 1002EC00
   data l_cycleLength 1002EC04
   data l_one 1002EC20
-  str 1002EC08 "Vibration Effect" renamed # HD: Shift-JIS "振動効果", translated source label; guest bytes unchanged.
+  str 1002EC08 "振動効果" # HD: Shift-JIS "振動効果", translated source label; guest bytes unchanged.
   ext 025DA884 void fopDwTg_DrawQTo(void*)
   ext 025602CC s32 dKy_get_schbit_timer()
   ext 025602A8 u32 dKy_get_schbit()

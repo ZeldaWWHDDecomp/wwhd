@@ -74,7 +74,7 @@ struct CameraSetupView {
     be<f32> m098, mManualStartCThreshold;
     u8 _A8[0xF4 - 0xA8];
     struct {
-        be<f32> m00;
+        be<f32> mUpReleaseY;  /* was m00: view of dCstick_c::mUpReleaseY (d/d_cam_param.h), see there */
     } mCstick;
 };
 WWHD_OFFSET(CameraSetupView, m098, 0xA0);

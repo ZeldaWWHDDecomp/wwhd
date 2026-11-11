@@ -87,16 +87,16 @@ BOOL daRaceItem_c::CreateInit() {
     mAcchCir.SetWall(30.0f, 30.0f);
     mAcch.Set(&current.pos, &old.pos, this, 1, &mAcchCir, &speed);
     u32 flags = mAcch.m_flags;
-    field_0x640 = RaceItem_Wait;
+    mState = RaceItem_Wait;
     u32 params = mParameters;
     mAcch.m_flags = flags & ~(dBgS_Acch::WATER_NONE | dBgS_Acch::ROOF_NONE);
-    field_0x644 = (params >> 15) & 15;
+    mType = (params >> 15) & 15;
     return true;
 }
 
 /* 0245910C */
 void daRaceItem_c::checkGet() {
-    if (field_0x644 == RaceItem_Normal && mCyl.ChkCoHit())
+    if (mType == RaceItem_Normal && mCyl.ChkCoHit())
         normalItemGet();
 }
 
@@ -116,7 +116,7 @@ BOOL daRaceItem_c::execute() {
     eyePos.z = z;
     eyePos.x = x;
     f32 h = f32(dItemDataView::getH(item));
-    u32 state = field_0x640;
+    u32 state = mState;
     eyePos.y = gabi::fmadds(h * f32(scale.x), 0.5f, y);
     switch (state) {
     case RaceItem_Wait: {
@@ -141,7 +141,7 @@ BOOL daRaceItem_c::execute() {
         scale.x = 1.0f;
         scale.y = 1.0f;
         scale.z = 1.0f;
-        field_0x63C = 13;
+        mGetTimer = 13;
         speed.x = 0.0f;
         speed.y = 23.0f;
         shape_angle.z = 0;
@@ -151,15 +151,15 @@ BOOL daRaceItem_c::execute() {
         mCyl.ClrTgHit();
         RaceItem_ClrCoHit(&mCyl);
         u32 co = mCyl.mObjCo.mSPrm, tg = mCyl.mObjTg.mSPrm;
-        u8 flags = field_0x645;
-        field_0x640 = RaceItem_Get;
+        u8 flags = mFlags;
+        mState = RaceItem_Get;
         mCyl.mObjCo.mSPrm = co & ~1u;
         mCyl.mObjTg.mSPrm = tg & ~1u;
-        field_0x645 = flags & ~u32(RaceItem_BoomerangCarry);
+        mFlags = flags & ~u32(RaceItem_BoomerangCarry);
         [[fallthrough]];
     }
     case RaceItem_Get: {
-        field_0x63C = u32(field_0x63C) - 1;
+        mGetTimer = u32(mGetTimer) - 1;
         auto* player = static_cast<daPy_py_c*>(dComIfGp_getLinkPlayer());
         f32 hz = (f32)player->mHeadTopPos.z, hx = (f32)player->mHeadTopPos.x;
         f32 hy = (f32)player->mHeadTopPos.y + 15.0f;
@@ -168,18 +168,18 @@ BOOL daRaceItem_c::execute() {
         fopAcM_posMoveF(this, nullptr);
         if (f32(current.pos.y) < hy)
             current.pos.y = hy;
-        if (field_0x63C < 0)
+        if (mGetTimer < 0)
             fopAcM_delete(this);
         break;
     }
     case RaceItem_DropStart:
-        field_0x640 = RaceItem_Drop;
+        mState = RaceItem_Drop;
         [[fallthrough]];
     case RaceItem_Drop: {
         checkGet();
         fopAcM_posMoveF(this, &mStts.m_cc_move);
         mAcch.CrrPos(dComIfG_Bgsp());
-        if (!(field_0x645 & RaceItem_BoomerangCarry) && !(actor_status & fopAcStts_HOOK_CARRY_e)) {
+        if (!(mFlags & RaceItem_BoomerangCarry) && !(actor_status & fopAcStts_HOOK_CARRY_e)) {
             if (mAcch.m_flags & dBgS_Acch::WATER_IN) {
                 s32 reverb = dComIfGp_getReverb(s32(current.roomNo));
                 mDoAud_seStart(JA_SE_OBJ_FALL_WATER_S, &eyePos, 0, reverb);
@@ -205,12 +205,12 @@ BOOL daRaceItem_c::execute() {
         break;
     }
     }
-    if (mCyl.ChkTgHit() && field_0x644 == RaceItem_Normal) {
+    if (mCyl.ChkTgHit() && mType == RaceItem_Normal) {
         void* obj = mCyl.GetTgHitObj();
         if (obj) {
             u32 type = static_cast<dCcD_GObjInf*>(obj)->mAtType;
             if (type & AT_TYPE_BOOMERANG)
-                field_0x645 = u8(field_0x645) | RaceItem_BoomerangCarry;
+                mFlags = u8(mFlags) | RaceItem_BoomerangCarry;
             else if (type & AT_TYPE_HOOKSHOT) {
                 f32 height = f32(dItemDataView::getH(u32(m_itemNo)));
                 gabi::Local<cXyz> offset;
@@ -225,14 +225,14 @@ BOOL daRaceItem_c::execute() {
             }
         }
     }
-    if (field_0x645 & RaceItem_BoomerangCarry) {
+    if (mFlags & RaceItem_BoomerangCarry) {
         gabi::Local<be<s16>> name;
         *name = fpcNm_BOOMERANG_e;
         fopAc_ac_c* boom = static_cast<fopAc_ac_c*>(fopAcM_Search(fpcSch_JudgeForPName, name.get()));
         if (boom)
             current.pos.copy(boom->current.pos);
         else
-            field_0x645 = u8(field_0x645) & ~u32(RaceItem_BoomerangCarry);
+            mFlags = u8(mFlags) & ~u32(RaceItem_BoomerangCarry);
     }
     if (!checkOffsetPos()) {
         scale.x = 1.0f;

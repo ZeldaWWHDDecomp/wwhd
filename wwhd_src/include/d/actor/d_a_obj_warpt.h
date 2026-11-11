@@ -78,14 +78,22 @@ WWHD_SIZE(WarptShapeAttribute, 0x20);
 WWHD_OFFSET(WarptShapeAttribute, mBoundsVtable, 0x18);
 WWHD_OFFSET(WarptShapeAttribute, mVtable, 0x1C);
 struct daObj_Warpt_HIO_c {
-    be<u32> mVtable; be<u8> m04, m05, m06; u8 mPadding7;
-    be<f32> m08, m0C, m10; be<u32> m14, m18;
+    /* 0x00 */ be<u32> mVtable;
+    /* 0x04 */ be<u8> mBreakHutaReq;  /* was m04: _execute 023BAD74: while set it is cleared, breakHuta(0) runs and the mode goes to 2 (MODE_BREAK_FIRE), a one-shot request; warptHioConstruct 023BBA6C 0 (tww the same) */
+    /* 0x05 */ be<u8> m05;
+    /* 0x06 */ be<u8> mNoRide;  /* was m06: _ride 023B9D5C returns before the warp check while it is set (tww the warp check runs only while it is 0); warptHioConstruct 023BBA6C 0 (tww the same) */
+    /* 0x07 */ u8 mPadding7;
+    /* 0x08 */ be<f32> mLidOffsetY;  /* was m08: setMtx 023BA250: mLidPos.y = current.pos.y + it, the height where the lid models are put; warptHioConstruct 023BBA6C 150 (tww m830.y += it) */
+    /* 0x0C */ be<f32> mWarpRadius;  /* was m0C: _ride 023B9D5C: Link inside a circle of this radius (height 20) around mLidPos starts mode 3, MODE_EVENT_WARP; warptHioConstruct 023BBA6C 30 (tww dLib_checkPlayerInCircle(m830, it, 20)) */
+    /* 0x10 */ be<f32> m10;
+    /* 0x14 */ be<u32> mSmokePrmColorOverride;  /* was m14: _execute 023BAD74: when its r/g/b is not all 0 it becomes the open / close smoke emitters' prim colour (tww setGlobalPrmColor); warptHioConstruct 023BBA6C the default colour (tww {0, 0, 0, 128}) */
+    /* 0x18 */ be<u32> mSmokeEnvColorOverride;  /* was m18: _execute 023BAD74: when its r/g/b is not all 0 it becomes the open / close smoke emitters' env colour (tww setGlobalEnvColor); warptHioConstruct 023BBA6C the default colour (tww {0, 0, 0, 128}) */
 };
 WWHD_SIZE(daObj_Warpt_HIO_c, 0x1C);
-WWHD_OFFSET(daObj_Warpt_HIO_c, m04, 4);
-WWHD_OFFSET(daObj_Warpt_HIO_c, m08, 8);
-WWHD_OFFSET(daObj_Warpt_HIO_c, m14, 0x14);
-WWHD_OFFSET(daObj_Warpt_HIO_c, m18, 0x18);
+WWHD_OFFSET(daObj_Warpt_HIO_c, mBreakHutaReq, 4);
+WWHD_OFFSET(daObj_Warpt_HIO_c, mLidOffsetY, 8);
+WWHD_OFFSET(daObj_Warpt_HIO_c, mSmokePrmColorOverride, 0x14);
+WWHD_OFFSET(daObj_Warpt_HIO_c, mSmokeEnvColorOverride, 0x18);
 struct WarptSafeString { be<u32> mText, mVtable; };
 WWHD_SIZE(WarptSafeString, 8);
 template<class T> inline T* Warpt_guest(u32 address) { return gabi::at<T>(address); }
@@ -112,7 +120,7 @@ struct daObj_Warpt_c : fopAc_ac_c {
   /* 0x3D0 */ be<s32> mPotType;  /* was m2B4: getArg 023B9F74: parameter bits 0-3 (tww); isSp 023B9864: 2 .. 4 are the special pots (tww it == 2 || 3 || 4); spWarp 023BB6A4 switches on it; createInit 023BA4E0 picks the smoke colours by it (tww m_def_smoke_prm_color[it]) */
   /* 0x3D4 */ be<s32> mEventRegNo;  /* was m2B8: getArg 023B9F74: parameter bits 4-7 for the special pots (tww); onWarpBit 023B9E94 / isWarpBit 023B9F1C use the event register m_event_reg[it] (tww) */
   /* 0x3D8 */ be<s32> m2BC;
-  /* 0x3DC */ be<s32> m2C0;
+  /* 0x3DC */ be<s32> mOpenPrm;  /* was m2C0: getArg 023B9F74 (sp pots): home.angle.z bits 8-15; when not 0xFF getArg sets the pot's warp bit at once, so the lid starts open (mLidClosed = !isWarpBit) (tww the same) */
   /* 0x3E0 */ be<u8> mWarpBit;  /* was m2C4: getArg 023B9F74: 1, 2 or 4 by mPotType (tww); openHuta 023BB400 sets it in the event register (tww onWarpBit(it)); getArg sets mLidClosed from isWarpBit(it) (tww) */
   /* 0x3E1 */ be<u8> m2C5;
   /* 0x3E2 */ be<u8> mLidClosed;  /* was m2C6: tww accessor isHuta() { return it; } (our isHuta 023B985C); getArg 023B9F74: set while the lid switch / warp bit is off (tww); openHuta 023BB400 clears it */
@@ -133,7 +141,7 @@ struct daObj_Warpt_c : fopAc_ac_c {
   /* 0x678 */ dCcD_Cyl mCyl2;
   /* 0x7A8 */ WarptAcch mAcch;
   /* 0x96C */ WarptAcchCir mAcchCir;
-  /* 0x9AC */ cXyz mLidPos;  /* was m830: setMtx 023BA250: current.pos raised by l_HIO.m08 (tww it = current.pos; it.y += l_HIO.m08), where the lid models are put; setCollision 023BA1BC mCyl2 centre; breakHuta 023BAA28 particles; _draw 023BB074 tev position (tww) */
+  /* 0x9AC */ cXyz mLidPos;  /* was m830: setMtx 023BA250: current.pos raised by l_HIO.mLidOffsetY (tww it = current.pos; it.y += l_HIO.m08), where the lid models are put; setCollision 023BA1BC mCyl2 centre; breakHuta 023BAA28 particles; _draw 023BB074 tev position (tww) */
   /* 0x9B8 */ be<s32> mBreakFireTimer;  /* was m83C: modeBreakFireInit 023BB57C 60; modeBreakFire 023BB5CC acts when cLib_calcTimer(&it) reaches 0 (tww) */
   /* 0x9BC */ be<s8> mBgW2RegistTimer;  /* was m840: createInit 023BA4E0 30 or 5, modeEventWarp 023BB820 30 (tww); _execute 023BAD74 counts it down (tww cLib_calcTimer(&it)); setMtx 023BA250 registers mpBodyBgW2 when it is 1 (tww if (it == 1) .. Regist(mpBodyBgW2, this)) */
   /* 0x9BD */ u8 _9BD[3];
@@ -350,7 +358,7 @@ WWHD_OFFSET(daObj_Warpt_c, mWarpSwNo, 0x3CC);
 WWHD_OFFSET(daObj_Warpt_c, mPotType, 0x3D0);
 WWHD_OFFSET(daObj_Warpt_c, mEventRegNo, 0x3D4);
 WWHD_OFFSET(daObj_Warpt_c, m2BC, 0x3D8);
-WWHD_OFFSET(daObj_Warpt_c, m2C0, 0x3DC);
+WWHD_OFFSET(daObj_Warpt_c, mOpenPrm, 0x3DC);
 WWHD_OFFSET(daObj_Warpt_c, mWarpBit, 0x3E0);
 WWHD_OFFSET(daObj_Warpt_c, m2C5, 0x3E1);
 WWHD_OFFSET(daObj_Warpt_c, mLidClosed, 0x3E2);

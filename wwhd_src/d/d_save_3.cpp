@@ -27,13 +27,13 @@ static inline BOOL testMapBit(u32 a, u32 no, const char* file, s32 line, const c
 /* 025B7E74 */
 void d_save_cpp::dSv_player_map_c::init() {
     for (u32 i = 0; i < 4; i++) {
-        indexed(field_0x0[0], i) = 0;
-        indexed(field_0x0[1], i) = 0;
-        indexed(field_0x0[2], i) = 0;
-        indexed(field_0x0[3], i) = 0;
+        indexed(mMapFlags[0], i) = 0;
+        indexed(mMapFlags[1], i) = 0;
+        indexed(mMapFlags[2], i) = 0;
+        indexed(mMapFlags[3], i) = 0;
     }
     for (u32 i = 0; i < 0x31; i++) indexed(mFmapBits, i) = 0;
-    field_0x81 = 0xEA;
+    mTriforceBits = 0xEA;
     indexed(mFmapBits, 0xA) = 3;
     indexed(mFmapBits, 0) = 3;
     indexed(mFmapBits, 0x2B) = 3;
@@ -42,52 +42,52 @@ void d_save_cpp::dSv_player_map_c::init() {
 
 /* 025B7EF4 */
 void d_save_cpp::dSv_player_map_c::onGetMap(u32 no) {
-    setMapBit(gabi::ea(field_0x0[1]), no, "d_save.cpp", 0x6C9, "0 <= i_no && i_no < 128");
+    setMapBit(gabi::ea(mMapFlags[1]), no, "d_save.cpp", 0x6C9, "0 <= i_no && i_no < 128");
 }
 
 /* 025B7F68 */
 BOOL d_save_cpp::dSv_player_map_c::isGetMap(u32 no) {
-    return testMapBit(gabi::ea(field_0x0[1]), no, "d_save.cpp", 0x6E5, "0 <= i_no && i_no < 128");
+    return testMapBit(gabi::ea(mMapFlags[1]), no, "d_save.cpp", 0x6E5, "0 <= i_no && i_no < 128");
 }
 
 /* 025B7FE0 */
 void d_save_cpp::dSv_player_map_c::onOpenMap(u32 no) {
-    setMapBit(gabi::ea(field_0x0[2]), no, "d_save.cpp", 0x706, "0 <= i_no && i_no < 128");
+    setMapBit(gabi::ea(mMapFlags[2]), no, "d_save.cpp", 0x706, "0 <= i_no && i_no < 128");
 }
 
 /* 025B8054 */
 void d_save_cpp::dSv_player_map_c::offOpenMap(u32 no) {
-    clearMapBit(gabi::ea(field_0x0[2]), no, "d_save.cpp", 0x714, "0 <= i_no && i_no < 128");
+    clearMapBit(gabi::ea(mMapFlags[2]), no, "d_save.cpp", 0x714, "0 <= i_no && i_no < 128");
 }
 
 /* 025B80C8 */
 BOOL d_save_cpp::dSv_player_map_c::isOpenMap(u32 no) {
-    return testMapBit(gabi::ea(field_0x0[2]), no, "d_save.cpp", 0x722, "0 <= i_no && i_no < 128");
+    return testMapBit(gabi::ea(mMapFlags[2]), no, "d_save.cpp", 0x722, "0 <= i_no && i_no < 128");
 }
 
 /* 025B8140 */
 void d_save_cpp::dSv_player_map_c::onCompleteMap(u32 no) {
-    setMapBit(gabi::ea(field_0x0[3]), no, "d_save.cpp", 0x743, "0 <= i_no && i_no < 128");
+    setMapBit(gabi::ea(mMapFlags[3]), no, "d_save.cpp", 0x743, "0 <= i_no && i_no < 128");
 }
 
 /* 025B81B4 */
 void d_save_cpp::dSv_player_map_c::offCompleteMap(u32 no) {
-    clearMapBit(gabi::ea(field_0x0[3]), no, "d_save.cpp", 0x751, "0 <= i_no && i_no < 128");
+    clearMapBit(gabi::ea(mMapFlags[3]), no, "d_save.cpp", 0x751, "0 <= i_no && i_no < 128");
 }
 
 /* 025B8228 */
 BOOL d_save_cpp::dSv_player_map_c::isCompleteMap(u32 no) {
-    return testMapBit(gabi::ea(field_0x0[3]), no, "d_save.cpp", 0x75F, "0 <= i_no && i_no < 128");
+    return testMapBit(gabi::ea(mMapFlags[3]), no, "d_save.cpp", 0x75F, "0 <= i_no && i_no < 128");
 }
 
 /* 025B82A0 */
 void d_save_cpp::dSv_player_map_c::onTriforce(u32 no) {
-    setByteBit(gabi::ea(&field_0x81), no, 8, "d_save.cpp", 0x781, "0 <= i_no && i_no < 8");
+    setByteBit(gabi::ea(&mTriforceBits), no, 8, "d_save.cpp", 0x781, "0 <= i_no && i_no < 8");
 }
 
 /* 025B8308 */
 BOOL d_save_cpp::dSv_player_map_c::isTriforce(u32 no) {
-    return testByteBit(gabi::ea(&field_0x81), no, 8, "d_save.cpp", 0x79D, "0 <= i_no && i_no < 8");
+    return testByteBit(gabi::ea(&mTriforceBits), no, 8, "d_save.cpp", 0x79D, "0 <= i_no && i_no < 8");
 }
 
 /* 025B8378 */
@@ -171,18 +171,18 @@ u8 d_save_cpp::dSv_player_config_c::checkVibration() {
 
 /* 025B8874 */
 void d_save_cpp::dSv_player_priest_c::init() {
-    field_0xf = 0;
+    mFlag = 0;
 }
 
 /* 025B8880 */
 void d_save_cpp::dSv_player_priest_c::set(u32 a, const cXyz* pos, u32 angle, u32 roomNo) {
-    field_0xf = (u8)a;
-    wordPosition(&field_0x0).x = wordPosition(pos).x;
-    wordPosition(&field_0x0).y = wordPosition(pos).y;
+    mFlag = (u8)a;
+    wordPosition(&mPos).x = wordPosition(pos).x;
+    wordPosition(&mPos).y = wordPosition(pos).y;
     u32 z = wordPosition(pos).z;
-    field_0xe = (s8)roomNo;
-    wordPosition(&field_0x0).z = z;
-    field_0xc = (s16)angle;
+    mRoomNo = (s8)roomNo;
+    wordPosition(&mPos).z = z;
+    mRotate = (s16)angle;
 }
 
 // HD: initializes all seven components of the compact player-state copy.
@@ -217,14 +217,14 @@ void d_save_cpp::dSv_player_c::init() {
 
 /* 025B8998 */
 void d_save_cpp::dSv_ocean_c::init() {
-    for (u32 i = 0; i < 50; i++) indexed(field_0x0, i) = 0;
+    for (u32 i = 0; i < 50; i++) indexed(mOceanSvBits, i) = 0;
 }
 
 /* 025B89B4 */
 void d_save_cpp::dSv_ocean_c::onOceanSvBit(u32 grid, u32 bit) {
     if (grid > 0x31) saveAssert("d_save.cpp", 0xA96, "(0 <= i_grid) && (i_grid <= 0x31)");
     if (bit >= 0x10) saveAssert("d_save.cpp", 0xA97, "(0 <= i_bit) && (i_bit < 16)");
-    be<u16>& flags = indexed(field_0x0, grid);
+    be<u16>& flags = indexed(mOceanSvBits, grid);
     flags = (u16)((u16)flags | slw(1, bit));
 }
 
@@ -232,7 +232,7 @@ void d_save_cpp::dSv_ocean_c::onOceanSvBit(u32 grid, u32 bit) {
 BOOL d_save_cpp::dSv_ocean_c::isOceanSvBit(u32 grid, u32 bit) {
     if (grid > 0x31) saveAssert("d_save.cpp", 0xAB6, "(0 <= i_grid) && (i_grid <= 0x31)");
     if (bit >= 0x10) saveAssert("d_save.cpp", 0xAB7, "(0 <= i_bit) && (i_bit < 16)");
-    return ((u16)indexed(field_0x0, grid) & (u16)slw(1, bit)) ? TRUE : FALSE;
+    return ((u16)indexed(mOceanSvBits, grid) & (u16)slw(1, bit)) ? TRUE : FALSE;
 }
 
 static inline u32 eventByteIndex(u32 no) { return (u32)((s32)no >> 8); }

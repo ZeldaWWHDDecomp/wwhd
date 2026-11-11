@@ -117,15 +117,15 @@ BOOL executeShip(Ship* ship) {
     }
     bool demo = ship->demo_move() != 0;
     if (!demo) {
-        if (!(u8)l_HIO.m05 && ship->mpPath) {
+        if (!(u8)l_HIO.mNoPathMove && ship->mpPath) {
             dLib_pathMove(&ship->current.pos, &ship->mPathPntNo, ship->mpPath.get(), 3.f,
                           gabi::guest_fn(reinterpret_cast<const void*>(path_move_call_back)), ship);
             s16 bob = ship->mSwayAngle;
-            s16 target = ((u32)((s32)bob + 0x4000) >= 0x8001) ? (s16)l_HIO.m12 : (s16)l_HIO.m10;
+            s16 target = ((u32)((s32)bob + 0x4000) >= 0x8001) ? (s16)l_HIO.mSwaySpeedFalling : (s16)l_HIO.mSwaySpeedRising;
             cLib_addCalcAngleS2(&ship->mSwaySpeed, target, 0x10, 0x300);
             u16 angle = (s16)ship->mSwayAngle + (s16)ship->mSwaySpeed;
             ship->mSwayAngle = (s16)angle;
-            f32 amplitude = (f32)l_HIO.m0C + 10.f;
+            f32 amplitude = (f32)l_HIO.mSwayHeight + 10.f;
             ship->current.pos.y =
                 gabi::fmadds(amplitude, cM_ssin((s16)angle), (f32)ship->home.pos.y);
         }
@@ -177,7 +177,7 @@ BOOL path_move_call_back(cXyz* position, cXyz* from, cXyz* to, Ship* ship) {
     s16 turn = cLib_addCalcAngleS(&ship->current.angle.y, heading, 0x40, 0x40, 8);
     ship->shape_angle.y = ship->current.angle.y;
     f32 cosine = cM_scos(turn);
-    f32 speed = ((f32)l_HIO.m08 + 5.0f) * std::fabs(cosine);
+    f32 speed = ((f32)l_HIO.mPathSpeed + 5.0f) * std::fabs(cosine);
     return cLib_chasePos(position, end.get(), speed) ? 1 : 0;
 }
 
@@ -321,7 +321,7 @@ BOOL daObjPirateship::Act_c::CreateHeap() {
     mModel = mDoExt_J3DModel__create(static_cast<J3DModelData*>(data), 0x80000, 0x11000002);
     if ((s8)l_HIO.mNo < 0)
         // HD: ASCII HIO label maps to the original Shift-JIS guest label, 海賊船.
-        l_HIO.mNo = mDoHIO_createChild("Pirate Ship", &l_HIO);
+        l_HIO.mNo = mDoHIO_createChild("海賊船", &l_HIO);
     if (!mModel)
         return 0;
     // HD: animated sea surface is a separate model absent from the GameCube actor.
@@ -382,7 +382,7 @@ void daObjPirateship::Act_c::CreateWave() {
 void daObjPirateship::Act_c::SetWave() {
     PirateshipEmitter* emitter = mWakeCb.mpEmitter;
     if (emitter) {
-        f32 scale = (f32)l_HIO.m24;
+        f32 scale = (f32)l_HIO.mWakeScale;
         emitter->mGlobalDynamicsScale.y = scale;
         emitter->mGlobalParticleScale.x = scale;
         emitter->mGlobalParticleScale.z = scale;
@@ -390,18 +390,18 @@ void daObjPirateship::Act_c::SetWave() {
         emitter->mGlobalDynamicsScale.z = scale;
         emitter->mGlobalDynamicsScale.x = scale;
         PSMTXCopy(mModel->getBaseTRMtx(), mDoMtx_stack_c::get());
-        PSMTXMultVec(mDoMtx_stack_c::get(), &l_HIO.m18, &mWakePos);
+        PSMTXMultVec(mDoMtx_stack_c::get(), &l_HIO.mWakeOffset, &mWakePos);
         f32 waterY = mWakePos.y;
         u32 flags = (u32)mAcch.m_flags;
         mWakeCb.mWaterY = waterY;
-        f32 indirect = (f32)l_HIO.m28, size = (f32)l_HIO.m2C;
+        f32 indirect = (f32)l_HIO.mWakeIndirectOffset, size = (f32)l_HIO.mWakeIndirectScale;
         mWakeCb.mIndirectOffset = indirect;
         mWakeCb.mIndirectScale = size;
-        mWakeCb.mSpeed = (f32)l_HIO.m30;
+        mWakeCb.mSpeed = (f32)l_HIO.mWakeSpeed;
         mWakeCb.mWaterFlatY = (flags & 0x800) ? (f32)mAcch.m_wtr.m_height : (f32)mWakePos.y;
-        mWakeCb.mLimitSpeed = (f32)l_HIO.m34;
+        mWakeCb.mLimitSpeed = (f32)l_HIO.mWakeLimitSpeed;
         emitter = mWakeCb.mpEmitter;
-        emitter->mInitialVelDir = (f32)l_HIO.m38;
+        emitter->mInitialVelDir = (f32)l_HIO.mWakeDirectionalSpeed;
     }
     if (mpSplashEmitter) {
         gabi::Local<GXColor> secondary;
@@ -676,28 +676,28 @@ void pirateship_sinit() {
     pirateshipInitDescriptor(&l_descriptors.words[3]);
     pirateshipInitAtanTable(&l_math.atanInit);
     pirateshipInitDescriptor(&l_descriptors.words[6]);
-    l_HIO.m08 = 2;
-    l_HIO.m0C = 100;
-    l_HIO.m24 = 4;
-    l_HIO.m28 = -0.02f;
-    l_HIO.m2C = 5;
-    l_HIO.m30 = 300;
+    l_HIO.mPathSpeed = 2;
+    l_HIO.mSwayHeight = 100;
+    l_HIO.mWakeScale = 4;
+    l_HIO.mWakeIndirectOffset = -0.02f;
+    l_HIO.mWakeIndirectScale = 5;
+    l_HIO.mWakeSpeed = 300;
     l_HIO.__vtbl = VT_HIO;
     // HD: static construction copies raw words, including NaN payloads, in GHS order.
     const be<u32>* zero = reinterpret_cast<const be<u32>*>(&cXyz::Zero);
-    be<u32>* offset = reinterpret_cast<be<u32>*>(&l_HIO.m18);
+    be<u32>* offset = reinterpret_cast<be<u32>*>(&l_HIO.mWakeOffset);
     u32 yz = zero[1], x = zero[0];
     offset[0] = x;
     offset[1] = yz;
     l_HIO.m06 = 0;
-    l_HIO.m10 = 250;
-    l_HIO.m12 = 500;
+    l_HIO.mSwaySpeedRising = 250;
+    l_HIO.mSwaySpeedFalling = 500;
     u32 z = zero[2];
     l_HIO.mNo = -1;
-    l_HIO.m05 = 0;
+    l_HIO.mNoPathMove = 0;
     l_HIO.m14 = 0;
-    l_HIO.m34 = 3;
-    l_HIO.m38 = 17;
+    l_HIO.mWakeLimitSpeed = 3;
+    l_HIO.mWakeDirectionalSpeed = 17;
     offset[2] = z;
 }
 
@@ -723,8 +723,8 @@ static void pirateship_Act_c_dt(void* p, s32 flags) {
         Ship* actor = static_cast<Ship*>(p);
         actor->mAcch.dBgS_GrpPassChk::__vtbl = VT_ACCH_GROUP_PASS;
         actor->mAcch.dBgS_PolyPassChk::__vtbl = VT_ACCH_POLY_PASS;
-        pirateshipLineDestruct(&actor->mAcch, 0);   /* line check */
-        pirateshipAcchDestruct(&actor->mCyl, 2);   /* dBgS_Acch::~dBgS_Acch */
+        pirateshipBgAcchDestruct(&actor->mAcch, 0); /* dBgS_Acch::~dBgS_Acch */
+        pirateshipCylDestruct(&actor->mCyl, 2);    /* dCcD_Cyl::~dCcD_Cyl */
         pirateshipStatusDestruct(&actor->mStts, 2); /* dCcD_Stts */
         pirateshipActorDestruct(p, 0);             /* fopAc_ac_c::~fopAc_ac_c */
         if (flags & 1)
@@ -744,7 +744,7 @@ str 1002E9DC "Pirates"
 str 1002EAB0 "Kaizokusen"
 str 1002EA04 "d_a_obj_pirateship.cpp" in 02384DA0
 str 1002EA1C "modelData != (0)"
-str 1002E9FC "Pirate Ship" renamed
+str 1002E9FC "海賊船"
 str 1002EA30 "kaizoku_minamo.bdl"
 str 1002EA44 "kaizoku_minamo.btk"
 str 1002E944 "Psail"
@@ -772,14 +772,14 @@ ext 02008DAC void cBgS_GndChk__dt(void*, s32)
 ext 0200BD2C void cCcD_Stts__ct(void*)
 ext 02018590 void cM3dGCyl__ct(void*)
 ext 0201A478 void csXyz__ct(csXyz*, s32, s32, s32)
-ext 024EFD9C void pirateshipLineDestruct(void*, s32)
+ext 024EFD9C void pirateshipBgAcchDestruct(void*, s32)
 ext 024F0474 void pirateshipAcchConstruct(void*)
 ext 024F1D40 void dBgS_MoveBgActor__ct(Ship*)
 ext 024F1D9C s32 pirateshipMoveBGCreate(Ship*, const char*, s32, u32, u32)
 ext 024F1E9C s32 pirateshipMoveBGExecute(Ship*)
 ext 024F1F64 s32 pirateshipMoveBGDelete(Ship*)
 ext 02515860 void pirateshipStatusDestruct(void*, s32)
-ext 02515A70 void pirateshipAcchDestruct(void*, s32)
+ext 02515A70 void pirateshipCylDestruct(void*, s32)
 ext 02515DA0 void dCcD_GStts__ct(void*)
 ext 02515FB8 void dCcD_GObjInf__ct(void*)
 ext 02520488 void dComIfG_deleteObjectRes(const char*)

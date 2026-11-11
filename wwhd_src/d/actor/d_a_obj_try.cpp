@@ -382,8 +382,8 @@ s32 daObjTry::Act_c::_create() {
     this->restartDelay = 0;
     this->init_mtx();
     this->bingoActive = 0;
-    this->field_0x64C = 0;
-    this->field_0x64D = 0;
+    this->correctEnabled = 0;
+    this->correctImmediate = 0;
     this->mCorrecting = 1;
     this->mLeftHomeRoom = 0;
     this->mUnused = 0;
@@ -512,32 +512,32 @@ void daObjTry::Act_c::mode_wait_init() {
 void daObjTry::Act_c::mode_wait() {
 
     u32 type = checkedType(this);
-    bool corrected = u8(tryAttributes.mRows[type].mAllowCorrection) && this->field_0x64C;
+    bool corrected = u8(tryAttributes.mRows[type].mAllowCorrection) && this->correctEnabled;
     if (type >= daObjTry::Type_Max)
         type = checkedType(this);
-    bool chase = u8(tryAttributes.mRows[type].mChaseCorrection) && this->field_0x64D;
+    bool chase = u8(tryAttributes.mRows[type].mChaseCorrection) && this->correctImmediate;
     if (chase) {
         u32 y = u32(bits(this->current.pos.y));
-        tryChasePosition(&this->current.pos, &this->field_0x63C, 10.0f);
+        tryChasePosition(&this->current.pos, &this->correctPosition, 10.0f);
         gabi::Local<cXyz> target, current;
         gabi::Local<cXyz> callLinkage; // Reserve the 16-byte caller linkage area below live locals.
-        bits(target->x) = u32(bits(this->field_0x63C.x));
+        bits(target->x) = u32(bits(this->correctPosition.x));
         bits(target->y) = 0;
         bits(current->x) = u32(bits(this->current.pos.x));
         bits(this->current.pos.y) = y;
         bits(current->y) = 0;
         bits(current->z) = u32(bits(this->current.pos.z));
-        bits(target->z) = u32(bits(this->field_0x63C.z));
+        bits(target->z) = u32(bits(this->correctPosition.z));
         f64 distance = trySquareDistance(target.get(), current.get());
         if (distance < 25.0) {
-            u32 x = u32(bits(this->field_0x63C.x)), z = u32(bits(this->field_0x63C.z));
+            u32 x = u32(bits(this->correctPosition.x)), z = u32(bits(this->correctPosition.z));
             bits(this->current.pos.x) = x;
             bits(this->current.pos.z) = z;
-            distance = trySquareDistance(&this->field_0x63C, &this->current.pos);
+            distance = trySquareDistance(&this->correctPosition, &this->current.pos);
             if (distance < 1.0)
                 tryBingo.mValue = 1;
         }
-        s32 yaw = s16(this->shape_angle.y), targetYaw = s16(this->field_0x648);
+        s32 yaw = s16(this->shape_angle.y), targetYaw = s16(this->correctYaw);
         s16 goal = s16(u16((u32(yaw - targetYaw + 0x2000) & 0xC000) + u32(targetYaw)));
         this->mCorrectionYaw = goal;
         cLib_addCalcAngleS(&this->shape_angle.y, goal, 3, 0x1800, 0x800);
@@ -547,7 +547,7 @@ void daObjTry::Act_c::mode_wait() {
     bool useStream = false;
     if (grounded && !corrected) {
         u32 status = u32(this->attention_info.flags);
-        u8 immediate = this->field_0x64D;
+        u8 immediate = this->correctImmediate;
         this->attention_info.flags = status | 0x10;
         useStream = immediate != 0;
     } else {
@@ -555,7 +555,7 @@ void daObjTry::Act_c::mode_wait() {
         if (corrected)
             this->mCorrecting = 1;
         if (grounded)
-            useStream = corrected || this->field_0x64D;
+            useStream = corrected || this->correctImmediate;
     }
     void* movement = useStream ? static_cast<void*>(&tryZero) : static_cast<void*>(&this->mStts);
     u32 flags = u32(this->mAcch.m_flags);
@@ -1306,8 +1306,8 @@ s32 daObjTry::Act_c::_execute() {
     }
     u32 type = checkedType(this);
     if (!u8(tryAttributes.mRows[type].mAllowCorrection))
-        this->field_0x64C = 0;
-    this->field_0x64D = 0;
+        this->correctEnabled = 0;
+    this->correctImmediate = 0;
     this->cull_set_draw();
     return 1;
 }

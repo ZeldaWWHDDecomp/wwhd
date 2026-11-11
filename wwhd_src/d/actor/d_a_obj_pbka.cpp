@@ -22,7 +22,7 @@ static BOOL CheckCreateHeap(fopAc_ac_c* i_this) {
 /* 023824B4 */
 BOOL daObjPbka_c::CreateHeap() {
     J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes("Pbka", dRes_INDEX_PBKA_BDL_PBKA_e);
-    JUT_ASSERT(0x51, modelData != NULL);
+    JUT_ASSERT_MSG(0x51, modelData != NULL, "modelData != (0)");
     J3DModel* model = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
     mpModel = model;
     return model != nullptr; // HD: tests the returned pointer
@@ -120,5 +120,5 @@ str 1002E604 in 023824B4 # "Pbka"
 str 1002E5D4 in 023826A4 # "Pbka"
 str 1002E640 in 02382768 # "Pbka"
 str 1002E60C # "d_a_obj_pbka.cpp"
-str 1002E620 "modelData != NULL"
+str 1002E620 "modelData != (0)"
 */

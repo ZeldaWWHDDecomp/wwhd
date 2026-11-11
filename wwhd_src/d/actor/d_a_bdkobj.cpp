@@ -635,7 +635,7 @@ static cPhs_State daBdkobj_Create(fopAc_ac_c *a_this) {
     if (res != cPhs_COMPLEATE_e) {
         return res;
     }
-    i_this->mSmokeCb.m12 = 1; /* mSmokeCb.setFollowOff() */
+    i_this->mSmokeCb.mFollowOff = 1; /* mSmokeCb.setFollowOff() */
     u8 prm = fopAcM_GetParam(i_this) & 0xFF;
     i_this->mType = (prm == 0xFF) ? 0 : prm;
 

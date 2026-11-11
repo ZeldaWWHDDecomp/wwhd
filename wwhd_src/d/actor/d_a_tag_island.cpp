@@ -59,8 +59,8 @@ u8 daTag_Island_c::getType() {
 
 /* 024AA744 */
 BOOL daTag_Island_c::checkArea() {
-  u32 p = dComIfGp_ea();
-  fopAc_ac_c* player = ((dComIfG_inf_c*)(uintptr_t)p)->play.mpPlayerPtr[0];
+  u32 p = dComIfGp_ea(); /* viewed through the guest window: field offsets wrap at 32 bits as on the console */
+  fopAc_ac_c* player = gabi::at<dComIfG_inf_c>(p)->play.mpPlayerPtr[0];
   cXyz delta;
   cXyz horizontal;
   subtractPosition( &player->current.pos, &delta,
@@ -83,10 +83,10 @@ BOOL daTag_Island_c::checkArea() {
 /* 024AA814 */
 void daTag_Island_c::makeEvId() {
   u32 event = getEventNo();
-  u32 p = dComIfGp_ea();
-  mEventId = eventIndex(&((dComIfG_inf_c*)(uintptr_t)p)->play.mEvtManager, nullptr, event);
+  u32 p = dComIfGp_ea(); /* viewed through the guest window: field offsets wrap at 32 bits as on the console */
+  mEventId = eventIndex(&gabi::at<dComIfG_inf_c>(p)->play.mEvtManager, nullptr, event);
   p = dComIfGp_ea();
-  if (u32(((dComIfG_inf_c*)(uintptr_t)p)->play.mPlayerStatus[0][0]) & 0x10000)
+  if (u32(gabi::at<dComIfG_inf_c>(p)->play.mPlayerStatus[0][0]) & 0x10000)
     return;
   u32 type = getType();
   const char* name;
@@ -223,8 +223,8 @@ void daTag_Island_c::demoInitTact_Bf() {
   }
   // HD: the melody byte is read before the play lookup and the full message parameter after it.
   u8 melody = u8(*param);
-  u32 p = dComIfGp_ea();
-  ((dComIfG_inf_c*)(uintptr_t)p)->play.mMelodyNum = melody;
+  u32 p = dComIfGp_ea(); /* viewed through the guest window: field offsets wrap at 32 bits as on the console */
+  gabi::at<dComIfG_inf_c>(p)->play.mMelodyNum = melody;
   m2AC = u32(*param) == 6 ? 0x5B4 : 0x5B3;
 }
 
@@ -237,10 +237,10 @@ BOOL daTag_Island_c::demoProcTact_Bf() {
 
 /* 024AAFD8 */
 void daTag_Island_c::demoInitTact_Af() {
-  u32 p = dComIfGp_ea();
+  u32 p = dComIfGp_ea(); /* viewed through the guest window: field offsets wrap at 32 bits as on the console */
   // HD: snapshot the manager before any message calls.
   IslandMessageManager* messages = l_msgManager;
-  IslandPlayer* player = static_cast<IslandPlayer*>(((dComIfG_inf_c*)(uintptr_t)p)->play.mpPlayerPtr[0].get());
+  IslandPlayer* player = static_cast<IslandPlayer*>(gabi::at<dComIfG_inf_c>(p)->play.mpPlayerPtr[0].get());
   setMessageStatus(messages, 0x10);
   messages->mSendOn = 1;
   s32 cancel = player->getTactTimerCancel();
@@ -261,7 +261,7 @@ BOOL daTag_Island_c::demoProcTact_Af() {
         u8 stage = m2A0;
         u32 p = dComIfGp_ea();
         name = stage == 1 ? "TACT_TEARCH4" : "TACT_TEARCH1";
-        mEventId = eventIndex(&((dComIfG_inf_c*)(uintptr_t)p)->play.mEvtManager, name, 0xFF);
+        mEventId = eventIndex(&gabi::at<dComIfG_inf_c>(p) /* sibling: guest window view */->play.mEvtManager, name, 0xFF);
       } else {
         if (u8(m2A0) == 0) {
           m2A0 = 1;
@@ -349,20 +349,20 @@ void daTag_Island_c::demoProcCom_ikada() {
 s32 daTag_Island_c::getNowEventAction() {
   s32 staff = mStaffId;
   u32 p = dComIfGp_ea();
-  return eventAction(&((dComIfG_inf_c*)(uintptr_t)p)->play.mEvtManager, staff, action_table, 5, 0, 1);
+  return eventAction(&gabi::at<dComIfG_inf_c>(p) /* sibling: guest window view */->play.mEvtManager, staff, action_table, 5, 0, 1);
 }
 
 /* 024AB4B4 */
 BOOL daTag_Island_c::demoProc() {
   if (u16(mFlag) & daTagIsl_UNK_02) {
     u32 p = dComIfGp_ea();
-    mStaffId = eventStaff(&((dComIfG_inf_c*)(uintptr_t)p)->play.mEvtManager, "TagIsl", nullptr, 0);
+    mStaffId = eventStaff(&gabi::at<dComIfG_inf_c>(p) /* sibling: guest window view */->play.mEvtManager, "TagIsl", nullptr, 0);
     mFlag = u16(mFlag) & 0xFFFD;
     setTalkPartner();
   }
   s32 action = getNowEventAction(), staff = mStaffId;
   u32 p = dComIfGp_ea();
-  if (eventAdvance(&((dComIfG_inf_c*)(uintptr_t)p)->play.mEvtManager, staff)) {
+  if (eventAdvance(&gabi::at<dComIfG_inf_c>(p) /* sibling: guest window view */->play.mEvtManager, staff)) {
     demoInitCom();
     switch (action) {
     case EVENT_WAIT:
@@ -399,7 +399,7 @@ BOOL daTag_Island_c::demoProc() {
 BOOL daTag_Island_c::actionTact() {
   s16 event = mEventId;
   u32 p = dComIfGp_ea();
-  if (eventEndCheck(&((dComIfG_inf_c*)(uintptr_t)p)->play.mEvtManager, event)) {
+  if (eventEndCheck(&gabi::at<dComIfG_inf_c>(p) /* sibling: guest window view */->play.mEvtManager, event)) {
     mAction = ACT_WAIT;
     dComIfGp_event_reset();
   } else
@@ -411,7 +411,7 @@ BOOL daTag_Island_c::actionTact() {
 BOOL daTag_Island_c::actionEvent() {
   s16 event = mEventId;
   u32 p = dComIfGp_ea();
-  if (eventEndCheck(&((dComIfG_inf_c*)(uintptr_t)p)->play.mEvtManager, event)) {
+  if (eventEndCheck(&gabi::at<dComIfG_inf_c>(p) /* sibling: guest window view */->play.mEvtManager, event)) {
     if (getType() == 1) {
       mAction = ACT_TACT;
       mFlag = u16(mFlag) | daTagIsl_UNK_02;

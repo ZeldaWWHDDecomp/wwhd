@@ -158,16 +158,16 @@ struct dMat_control_c {
 // GameCube animation-heap member order and size are retained in HD.
 struct daPy_anmHeap_c {
     /* 0x00 */ be<u16> mIdx;
-    /* 0x02 */ be<u16> field_0x2;
-    /* 0x04 */ be<u16> field_0x4;
-    /* 0x06 */ be<u16> field_0x6;
+    /* 0x02 */ be<u16> mPriIdx;  /* was field_0x2: setPriTextureAnime 023E7B24 (d_a_player_main_02) stores the btp / btk index of the priority texture animation; resetPriTextureAnime 023DC58C clears it (0xFFFF) and reloads mIdx unless mDemoIdx is set; setTextureAnime 023DD768 loads mIdx only while it and mDemoIdx are 0xFFFF; getAnimeResource 023DE71C 0xFFFF for bck heaps (tww the same) */
+    /* 0x04 */ be<u16> mDemoIdx;  /* was field_0x4: the event animation index, which wins over mPriIdx and mIdx: setDemoTextureAnime 0241FCB4 / changeTextureAnime 02443DA0 / dProcTool 0241FD7C (bck from the demo archive) set it; resetDemoTextureAnime 023DDD48 clears it (0xFFFF) and reloads mPriIdx or mIdx (tww the same) */
+    /* 0x06 */ be<u16> mDemoAnmNo;  /* was field_0x6: the demo animation number paired with mDemoIdx: setDemoTextureAnime 0241FCB4 / dProcTool 0241FD7C store theirs (tww getDemoMode() / DEMO_NEW_ANM0_e - 1), changeTextureAnime 02443DA0 0xFFFE; they reload only when it or mDemoIdx changes; setSeAnime 023E07E4 keeps it with mSeAnmIdx; resetDemoTextureAnime 023DDD48 0xFFFF (tww the same) */
     /* 0x08 */ gptr<void> m_buffer;
     /* 0x0C */ gptr<void> mpAnimeHeap;
 };
 WWHD_OFFSET(daPy_anmHeap_c, mIdx, 0);
-WWHD_OFFSET(daPy_anmHeap_c, field_0x2, 2);
-WWHD_OFFSET(daPy_anmHeap_c, field_0x4, 4);
-WWHD_OFFSET(daPy_anmHeap_c, field_0x6, 6);
+WWHD_OFFSET(daPy_anmHeap_c, mPriIdx, 2);
+WWHD_OFFSET(daPy_anmHeap_c, mDemoIdx, 4);
+WWHD_OFFSET(daPy_anmHeap_c, mDemoAnmNo, 6);
 WWHD_OFFSET(daPy_anmHeap_c, m_buffer, 8);
 WWHD_OFFSET(daPy_anmHeap_c, mpAnimeHeap, 0xC);
 WWHD_SIZE(daPy_anmHeap_c, 0x10);
@@ -243,23 +243,23 @@ WWHD_SIZE(PlayerJointState, 0x7E0);
 
 // GameCube foot records retain their size and member offsets in HD.
 struct daPy_footData_c {
-    /* 0x000 */ be<u8> field_0x000;
-    /* 0x001 */ be<u8> field_0x001;
-    /* 0x002 */ be<s16> field_0x002;
+    /* 0x000 */ be<u8> mGroundHit;  /* was field_0x000: footBgCheck 0240005C (d_a_player_main_03): 1 when the ground cross under the foot is within 60.2 of the probe, else 0; the foot is tilted by the ground angle only while it is set (tww the same) */
+    /* 0x001 */ be<u8> mStopTimer;  /* was field_0x001: footBgCheck 0240005C: set to 5 whenever the foot centre moves 10 or more (XZ); while it counts down the centre follows the foot, at 0 the stored mFootPos is kept (tww the same) */
+    /* 0x002 */ be<s16> mFootAngle;  /* was field_0x002: jointCB1 02403150: ZrotM of the foot joint; footBgCheck 0240005C sets -(mWaistAngleZ + mLegBAngle) plus the ground angle along shape_angle.y (tww the same) */
     /* 0x004 */ be<s16> field_0x004;
-    /* 0x006 */ be<s16> field_0x006;
-    /* 0x008 */ be<s16> field_0x008;
-    /* 0x00A */ be<s16> field_0x00A;
-    /* 0x00C */ cXyz field_0x00C;
-    /* 0x018 */ cXyz field_0x018;
-    /* 0x024 */ cXyz field_0x024;
-    /* 0x030 */ be<f32> field_0x030;
-    /* 0x034 */ u8 field_0x034[0x54];
-    /* 0x088 */ Mtx34 field_0x088[3];
+    /* 0x006 */ be<s16> mLegBAngle;  /* was field_0x006: footBgCheck 0240005C eases it (cLib_addCalcAngleS) toward the lower-leg angle from setLegAngle 023FFBE0; mLegBJointAngle = it - mLegAAngle, mFootAngle starts from -(mWaistAngleZ + it) (tww the same) */
+    /* 0x008 */ be<s16> mLegAAngle;  /* was field_0x008: jointCB1 02403150: ZrotS of the upper leg joint (LLEGA / RLEGA); footBgCheck 0240005C eases it toward the upper-leg angle from setLegAngle 023FFBE0 (tww the same) */
+    /* 0x00A */ be<s16> mLegBJointAngle;  /* was field_0x00A: jointCB1 02403150: ZrotM of the lower leg joint (LLEGB / RLEGB); footBgCheck 0240005C sets mLegBAngle - mLegAAngle (tww the same) */
+    /* 0x00C */ cXyz mHeelPos;  /* was field_0x00C: posMoveFromFootPos 023FCB9C: the heel position (default rheel_pos_offset (-10.85, 0, -6.52), x mirrored for the left foot); footBgCheck 0240005C probes at the midpoint of it and mToePos (tww the same) */
+    /* 0x018 */ cXyz mToePos;  /* was field_0x018: posMoveFromFootPos 023FCB9C: the toe position (default rtoe_pos_offset (-14.05, 0, 5.02), x mirrored for the left foot); footBgCheck 0240005C probes at the midpoint of it and mHeelPos; changeHangEndProc 02428230 compares mHangGroundH with its y (tww the same) */
+    /* 0x024 */ cXyz mFootPos;  /* was field_0x024: footBgCheck 0240005C: the foot centre (midpoint of mToePos and mHeelPos) of the last frame; kept instead of the new one once mStopTimer is 0 and the foot moved less than 10 (tww the same) */
+    /* 0x030 */ be<f32> mClotchShiftX;  /* was field_0x030: footBgCheck 0240005C: 0.3 x the height difference for the higher foot, 0 otherwise; jointBeforeCB 023D6B30 subtracts it from the translate x of the CLOTCH joint (tww jointCB0 the same) */
+    /* 0x034 */ u8 mGndChk[0x54];  /* was field_0x034: footBgCheck 0240005C: SetPos / GroundCross of the ground check under the foot, then getGroundAngle on it (tww the same) */
+    /* 0x088 */ Mtx34 mLegMtx[3];  /* was field_0x088: jointAfterCB 023D7564 copies the LEGA, LEGB and FOOT joint matrices into [0] / [1] / [2]; setLegAngle 023FFBE0 reads them (tww the same) */
 };
-WWHD_OFFSET(daPy_footData_c, field_0x030, 0x30);
-WWHD_OFFSET(daPy_footData_c, field_0x034, 0x34);
-WWHD_OFFSET(daPy_footData_c, field_0x088, 0x88);
+WWHD_OFFSET(daPy_footData_c, mClotchShiftX, 0x30);
+WWHD_OFFSET(daPy_footData_c, mGndChk, 0x34);
+WWHD_OFFSET(daPy_footData_c, mLegMtx, 0x88);
 WWHD_SIZE(daPy_footData_c, 0x118);
 
 // HD: keep full native argument registers at the quaternion call boundary.

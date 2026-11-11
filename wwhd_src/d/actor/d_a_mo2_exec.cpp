@@ -39,7 +39,7 @@ static inline bool fopAcM_CheckStatus(fopAc_ac_c* actor, u32 mask) {
 static inline void yari_off_check(mo2_class* i_this) {
     fopAc_ac_c* actor = i_this;
     if (i_this->mSpawnWeaponActor != 0) {
-        i_this->mWeaponRunTimer = l_mo2HIO().m08A;
+        i_this->mWeaponRunTimer = l_mo2HIO().mWeaponRunTime;
         PSMTXCopy(model_getAnmMtx((Mo2ExecModel*)i_this->mpMorf->getModel(), MO_JNT_MO_YARI_e),
                   calc_mtx());
         gabi::Local<cXyz> local_48;
@@ -81,7 +81,7 @@ static inline void ground_smoke_set(mo2_class* i_this) {
         return;
     }
     i_this->mSmokeTimer--;
-    if (i_this->mSmokeTimer >= l_mo2HIO().m024) {
+    if (i_this->mSmokeTimer >= l_mo2HIO().mSmokeTimerBase) {
         gabi::Local<cXyz> sp8;
         sp8->x = 0.0f;
         sp8->y = 0.0f;
@@ -289,7 +289,7 @@ static inline u8 damage_check(mo2_class* i_this) {
             i_this->mParalyzeDelay = REG_S(13, 3) + 8;
             atInfo->mDamage = 1;
             iVar11 = atInfo->mbDead != 0 ? 7 : 4;
-            cMtx_YrotS(calc_mtx(), atInfo->m0C.y);
+            cMtx_YrotS(calc_mtx(), atInfo->mHitAngle.y);
         } else {
             i_this->mParalyzeDelay = 0;
             if (atInfo->mResultingAttackType == 1) {
@@ -316,10 +316,10 @@ static inline u8 damage_check(mo2_class* i_this) {
                 }
             } else if (atInfo->mResultingAttackType == 2) {
                 iVar11 = 7;
-                cMtx_YrotS(calc_mtx(), atInfo->m0C.y);
+                cMtx_YrotS(calc_mtx(), atInfo->mHitAngle.y);
             } else {
                 iVar11 = atInfo->mbDead != 0 ? 7 : 4;
-                cMtx_YrotS(calc_mtx(), atInfo->m0C.y);
+                cMtx_YrotS(calc_mtx(), atInfo->mHitAngle.y);
             }
         }
     }
@@ -397,7 +397,7 @@ static inline u8 damage_check(mo2_class* i_this) {
         local_54->z = -10.0f;
         MtxPosition(local_54, &i_this->mDamageReaction.mHitVec);
         if (i_this->mDamageReaction.mKnockbackPower < 25.0f) {
-            i_this->mDamageReaction.mPushback = -l_mo2HIO().m13C;
+            i_this->mDamageReaction.mPushback = -l_mo2HIO().mHitPushback;
         } else {
             i_this->mDamageReaction.mKnockbackPower = cM_rndF(10.0f) + 70.0f;
         }
@@ -564,17 +564,17 @@ static BOOL daMo2_Execute(mo2_class* i_this) {
     if (i_this->mDamageReaction.mAction == ACTION_JYUNKAI &&
         (reinterpret_cast<Mo2ExecPlayer*>(player)->mGrabWear < 0.0f)) {
         if (i_this->mDamageReaction.mMode < 2) {
-            l_mo2HIO().m02C = REG0_F(10) + 800.0f;
+            l_mo2HIO().mSearchDist = REG0_F(10) + 800.0f;
         } else {
-            l_mo2HIO().m02C = REG0_F(0xb) + 1200.0f;
+            l_mo2HIO().mSearchDist = REG0_F(0xb) + 1200.0f;
         }
-        l_mo2HIO().m038 = 0x1932;
-        l_mo2HIO().m040.x = 340.0f;
-        l_mo2HIO().m040.z = 340.0f;
-        l_mo2HIO().m04C = -200.0f;
+        l_mo2HIO().mViewAngle = 0x1932;
+        l_mo2HIO().mViewBox.x = 340.0f;
+        l_mo2HIO().mViewBox.z = 340.0f;
+        l_mo2HIO().mViewBoxBackZ = -200.0f;
     }
     u8 r23 = 0;
-    if (l_mo2HIO().m006 == 0 || CPad_CHECK_TRIG_B(0) || CPad_CHECK_HOLD_Y(0)) {
+    if (l_mo2HIO().mFrameStep == 0 || CPad_CHECK_TRIG_B(0) || CPad_CHECK_HOLD_Y(0)) {
         i_this->mFrameCounter++;
         for (s32 i = 0; i < 5; i++) {
             if (i_this->mTimers[i] != 0) {
@@ -595,7 +595,7 @@ static BOOL daMo2_Execute(mo2_class* i_this) {
         }
         if (i_this->mDashStopTimer != 0) {
             i_this->mDashStopTimer--;
-            i_this->mSmokeTimer = l_mo2HIO().m024 + 4;
+            i_this->mSmokeTimer = l_mo2HIO().mSmokeTimerBase + 4;
             i_this->mSmokeType = 4;
         }
         if (i_this->mDamageReaction.mHitStunTimer != 0) {
@@ -692,13 +692,13 @@ static BOOL daMo2_Execute(mo2_class* i_this) {
             i_this->mSpitTimer = 1;
             i_this->mEffectAngle.x = -0x4000;
             i_this->mSmokeType = 1;
-            i_this->mSmokeTimer = l_mo2HIO().m024 + 0x10;
-            i_this->mDamageReaction.mDownTimers[2] = l_mo2HIO().m088;
+            i_this->mSmokeTimer = l_mo2HIO().mSmokeTimerBase + 0x10;
+            i_this->mDamageReaction.mDownTimers[2] = l_mo2HIO().mDownRecoverDelay;
             break;
         case 0x15:
             i_this->mSpitTimer = 1;
             i_this->mEffectAngle.x = 0;
-            i_this->mDamageReaction.mDownTimers[2] = l_mo2HIO().m088;
+            i_this->mDamageReaction.mDownTimers[2] = l_mo2HIO().mDownRecoverDelay;
             break;
         case 0x1E:
             anm_init(i_this, dRes_INDEX_MO2_BCK_PAOMUKE_e, 2.0f, J3DFrameCtrl::EMode_NONE, 1.0f,
@@ -713,7 +713,7 @@ static BOOL daMo2_Execute(mo2_class* i_this) {
             break;
         }
     }
-    f32 sc = l_mo2HIO().m010;
+    f32 sc = l_mo2HIO().mModelScale;
     J3DModel* model = i_this->mpMorf->getModel();
     MtxScale(sc, sc, sc, 1);
     J3DModel_setBaseTRMtx(model, calc_mtx());
@@ -840,12 +840,12 @@ static BOOL daMo2_Execute(mo2_class* i_this) {
             i_this->mBtCounter = -1;
         }
     }
-    /* setBtAttackData(0, 10, 10000, type); setBtMaxDis(m140) */
+    /* setBtAttackData(0, 10, 10000, type); setBtMaxDis(mBtMaxDistance) */
     i_this->mBtStartFrame = 0.0f;
     i_this->mBtEndFrame = 10.0f;
     i_this->mBtMaxDis = 10000.0f;
     i_this->mBtAttackType = i_this->mParryOpeningType;
-    i_this->mBtMaxDis = l_mo2HIO().m140;
+    i_this->mBtMaxDis = l_mo2HIO().mBtMaxDistance;
     if (i_this->mBtWindowTimer != 0) {
         i_this->mBtWindowTimer--;
         i_this->mBtNowFrame = 5.0f;

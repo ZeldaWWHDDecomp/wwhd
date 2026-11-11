@@ -41,22 +41,31 @@ struct daObjTpost_c : fopNpc_npc_c {
         gptr<const char> name;
     };
     /* 0x7DC */ be<u32> mCurMode;
-    /* 0x7E0 */ be<s8> mBckIdx, mAnmPrmIdx, mOldAnmPrmIdx;
+    /* 0x7E0 */ be<s8> mBckIdx;
+    /* 0x7E1 */ be<s8> mAnmPrmIdx;
+    /* 0x7E2 */ be<s8> mOldAnmPrmIdx;
     u8 _7E3;
     /* 0x7E4 */ request_of_phase_process_class mPhs;
     /* 0x7EC */ gptr<mDoExt_McaMorf> mMorf;
     /* 0x7F0 */ dBgS_ObjAcch mAcch;
     /* 0x9B4 */ dBgS_AcchCir mAcchCir;
-    /* 0x9F4 */ be<s32> field_0x8DC, field_0x8E0, field_0x8E4;
-    /* 0xA00 */ be<u8> mPayType, field_0x8E9, field_0x8EA, field_0x8EB;
+    /* 0x9F4 */ be<s32> mXYEndTimer;  /* was field_0x8DC: modeTalkXYInit 023A4E34 loads l_HIO mXYEndWaitTime; modeTalkXY 023A4E8C ends the item-show talk (back to MODE_WAIT) only once it has counted down and the animation has stopped (tww the same) */
+    /* 0x9F8 */ be<s32> mPresentTimer;  /* was field_0x8E0: modeTalkXYInit 023A4E34 loads l_HIO mPresentWaitTime; modeTalkXY 023A4E8C cancels the present and plays animation 2 once the present has ended and it has counted down (tww the same) */
+    /* 0x9FC */ be<s32> mPutOutDemoTimer;  /* was field_0x8E4: modeTalkXY 023A4E8C sets 10 when the put-out animation starts (mPutOutStart) and at 0 puts the player into demo mode 24, then -1 (tww the same) */
+    /* 0xA00 */ be<u8> mPayType;
+    /* 0xA01 */ be<u8> mReceiveReq;  /* was field_0x8E9: next_msgStatus 023A55BC sets 1 when the letter is to be received (no postage due, or paid); modeTalk 023A4D9C then goes to MODE_RECEIVE instead of MODE_WAIT and clears it (tww the same) */
+    /* 0xA02 */ be<u8> mPutOutStart;  /* was field_0x8EA: getMsgXY 023A52B8 and next_msgStatus 023A55BC set it with the POST_PUTOUT animation; modeTalkXY 023A4E8C clears it and starts mPutOutDemoTimer (tww the same) */
+    /* 0xA03 */ be<u8> mNextLetterMsg;  /* was field_0x8EB: modeReceiveDemo 023A50CC sets it when more readable letters wait; getMsgNormal 023A5500 then opens with message 0xCF7 for the next letter (count mLetterOrdinal) and clears it (tww the same) */
     /* 0xA04 */ be<s32> mNumReadable;
     union {
-        /* 0xA08 */ be<u32> field_0x8F0;
+        /* 0xA08 */ be<u32> mLetterOrdinal;  /* was field_0x8F0: the ordinal of the letter being handed out (its low half is mLetterOrdinalLow, the message count number): createInit 023A418C / modeWaitInit 023A4C68 set 1, modeReceiveDemo 023A50CC and next_msgStatus 023A55BC add 1 per letter (tww dComIfGp_setMessageCountNumber(it)) */
         struct {
             be<s16> mLetterOrdinalHigh, mLetterOrdinalLow;
         };
     };
-    /* 0xA0C */ be<u8> field_0x8F4, field_0x8F5, mPreItemNo;
+    /* 0xA0C */ be<u8> mTalkReq;  /* was field_0x8F4: checkOrder 023A4548 sets it when the normal talk event starts; modeWait 023A4CD8 goes to MODE_TALK while it is set; modeTalk 023A4D9C clears it at the end (tww the same) */
+    /* 0xA0D */ be<u8> mTalkXYReq;  /* was field_0x8F5: checkOrder 023A4548 sets it when the item-show (XY) talk event starts; modeWait 023A4CD8 goes to MODE_TALK_XY; modeTalkXY 023A4E8C clears it at the end (tww the same) */
+    /* 0xA0E */ be<u8> mPreItemNo;
     /* 0xA0F */ be<s8> mEventIdx;
     BOOL _createHeap();
     void setAnm(s32, BOOL);
@@ -98,23 +107,26 @@ struct daObjTpost_c : fopNpc_npc_c {
 };
 WWHD_OFFSET(daObjTpost_c, mMorf, 0x7EC);
 WWHD_OFFSET(daObjTpost_c, mAcchCir, 0x9B4);
-WWHD_OFFSET(daObjTpost_c, field_0x8DC, 0x9F4);
-WWHD_OFFSET(daObjTpost_c, field_0x8F0, 0xA08);
+WWHD_OFFSET(daObjTpost_c, mXYEndTimer, 0x9F4);
+WWHD_OFFSET(daObjTpost_c, mLetterOrdinal, 0xA08);
 WWHD_OFFSET(daObjTpost_c, mNumReadable, 0xA04);
 WWHD_SIZE(daObjTpost_c, 0xA10);
 
 struct daObjTpost_HIO_c {
     be<s8> mNo;
-    be<u8> debug_draw, field_0x06, field_0x07;
+    be<u8> debug_draw;
+    be<u8> field_0x06;
+    be<u8> mForcePay;  /* was field_0x07: next_msgStatus 023A55BC asks for postage (message 0xCF3) for every letter while it is set, else only for a letter with mPayOnReceive; createHIO 023A5AB4 sets 0 (tww the same) */
     be<f32> attn_pos_offset, eye_pos_offset, talk_distance;
-    be<s16> field_0x14, field_0x16;
+    be<s16> mXYEndWaitTime;  /* was field_0x14: modeTalkXYInit 023A4E34 loads it into mXYEndTimer; createHIO 023A5AB4 sets 30 (tww the same) */
+    be<s16> mPresentWaitTime;  /* was field_0x16: modeTalkXYInit 023A4E34 loads it into mPresentTimer; createHIO 023A5AB4 sets 30 (tww the same) */
     be<u32> vt;
 };
 
 WWHD_SIZE(daObjTpost_HIO_c, 0x18);
 
 struct daObjTpost_c__letter_data {
-    be<u8> field_0x00;
+    be<u8> mPayOnReceive;  /* was field_0x00: next_msgStatus 023A55BC: a letter with it set asks for postage on delivery (message 0xCF3 -> 0xCF4 / 0xCF8, 10 or 201 rupees) before it is received (tww m_letter[i].mPayOnReceive the same) */
     u8 _01[3];
     be<u32> mMsgNo;
     be<u8> mItemNo;

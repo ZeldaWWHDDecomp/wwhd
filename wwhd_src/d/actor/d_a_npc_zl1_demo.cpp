@@ -116,7 +116,7 @@ void daNpc_Zl1_c::lookBack() {
     case 1: {
         gabi::Local<cXyz> eye;
         Zl1Demo_playerEyePos(eye, -20.0f);
-        field_0x7D0 = true;
+        mEyeFollow = true;
         mLookPos.copy(*eye);
         temp3->copy(*eye);
         temp4 = temp3;
@@ -127,8 +127,8 @@ void daNpc_Zl1_c::lookBack() {
         temp4 = temp3;
         break;
     case 3:
-        targetY = field_0x7C0;
-        field_0x7D0 = false;
+        targetY = mLookAngleY;
+        mEyeFollow = false;
         break;
     case 4: {
         gabi::Local<be<s32>> wasDeleted;
@@ -142,7 +142,7 @@ void daNpc_Zl1_c::lookBack() {
             temp3->y = y;
             mLookPos.y = y;
             temp3->x = x;
-            field_0x7D0 = true;
+            mEyeFollow = true;
             temp4 = temp3;
         }
         break;
@@ -150,11 +150,11 @@ void daNpc_Zl1_c::lookBack() {
     case 5:
         kyorokyoro();
         temp3->copy(mLookPos);
-        field_0x7D0 = true;
+        mEyeFollow = true;
         temp4 = temp3;
         break;
     default:
-        field_0x7D0 = false;
+        mEyeFollow = false;
         break;
     }
     temp->x = srcX;
@@ -200,7 +200,7 @@ void daNpc_Zl1_c::darkProc() {
     if (isStartStage("Hyrule")) {
         return;
     }
-    switch ((u32)(s32)field_0x7C2) {
+    switch ((u32)(s32)mEnvRatioStep) {
     case 1:
         incEnvironment();
         dKy_set_vrboxcol_ratio(mRatio);
@@ -245,8 +245,8 @@ void daNpc_Zl1_c::cut_init_JMP_OFF(int i_staffIdx) {
     f32 grvty = get_prmFloat(pGrvty, 0.0f);
     setAnm_NUM(10, 1);
     mbWaterIn = false;
-    field_0x7CA = false;
-    field_0x7CB = true;
+    mSwoonOnShip = false;
+    mJumpingOff = true;
     gravity = grvty;
     mbGroundHit = true;
     speed.y = speedY;
@@ -255,7 +255,7 @@ void daNpc_Zl1_c::cut_init_JMP_OFF(int i_staffIdx) {
     /* daPy_getPlayerActorClass()->onPlayerNoDraw() */
     static_cast<daPy_py_c*>(dComIfGp_getPlayer(0))->onNoResetFlg0(daPy_py_c::daPyFlg0_NO_DRAW);
     m_jnt.mAngles[1][0] = 0; /* setBackBone_x(0) */
-    field_0x7D3 = false;
+    mKeepShapeAngle = false;
     m_jnt.mAngles[1][1] = 0;  /* setBackBone_y(0) */
     m_jnt.mbBackBoneLock = 0; /* offBackBoneLock() */
     mLookMode = 0;
@@ -275,18 +275,18 @@ u32 daNpc_Zl1_c::cut_move_JMP_OFF() {
 /* 02306BD8 */
 void daNpc_Zl1_c::cut_init_OMAMORI_ONOFF(int i_staffIdx) {
     be<s32>* pOnOff = (be<s32>*)dComIfGp_evmng_getMyIntegerP(i_staffIdx, "OnOff");
-    field_0x7C2 = 0;
+    mEnvRatioStep = 0;
     if (pOnOff != nullptr) {
         if (*pOnOff == 0) {
             Zl1Demo_seStart(JA_SE_ITM_OMAMORI_TETLA);
-            field_0x7C2 = -1;
+            mEnvRatioStep = -1;
             mRatio = 1.0f;
             init_Light();
             gabi::Local<cXyz> pos;
             set_LightPos(pos);
             // GHS interleaves the three word copies; retain that order for aliased destinations.
             auto* words = reinterpret_cast<be<u32>*>(pos.get());
-            auto* saved = reinterpret_cast<be<u32>*>(&field_0x830);
+            auto* saved = reinterpret_cast<be<u32>*>(&mLightPos);
             auto* light1 = reinterpret_cast<be<u32>*>(&mLightInfluence1.mPos);
             auto* light2 = reinterpret_cast<be<u32>*>(&mLightInfluence2.mPos);
             for (u32 i = 0; i < 3; i++) {
@@ -296,7 +296,7 @@ void daNpc_Zl1_c::cut_init_OMAMORI_ONOFF(int i_staffIdx) {
                 light2[i] = word;
             }
         } else {
-            field_0x7C2 = 1;
+            mEnvRatioStep = 1;
             mLightInfluence1.mPower = 0.0f;
             mRatio = 0.15f;
             mLightInfluence2.mPower = 0.0f;
@@ -396,7 +396,7 @@ void daNpc_Zl1_c::event_proc(int i_staffIdx) {
     if (dComIfGp_evmng_endCheck(mEventIdx[mEventNo])) {
         switch ((u32)(s32)mEventNo) {
         case 0:
-            field_0x7D3 = false;
+            mKeepShapeAngle = false;
             dComIfGs_onEventBit(EVENT_0802);
             mInitialAngle.z = current.angle.z;
             mInitialAngle.x = current.angle.x;
@@ -411,7 +411,7 @@ void daNpc_Zl1_c::event_proc(int i_staffIdx) {
             current.angle.y = -0x5C72;
             current.pos.z = 8016.0f;
             current.pos.y = 2200.0f;
-            field_0x764.y = 2200.0f;
+            mDemoAreaPos.y = 2200.0f;
             mInitialAngle.y = current.angle.y;
             mInitialAngle.x = current.angle.x;
             mLookMode = 0;
@@ -420,12 +420,12 @@ void daNpc_Zl1_c::event_proc(int i_staffIdx) {
             break;
         case 2:
             dComIfGs_onEventBit(EVENT_0801);
-            field_0x7C9 = false;
+            mForceEventProc = false;
             break;
         case 3:
             dComIfGs_onEventBit(HYRULE_COURTYARD_CUTSCENE); /* HYRULE_COURTYARD_CUTSCENE */
             setStt(3);
-            field_0x7CB = false;
+            mJumpingOff = false;
             break;
         }
         endEvent();
@@ -459,7 +459,7 @@ u8 daNpc_Zl1_c::move_jmp() {
     mEffAngle.y = current.angle.y;
     mEffAngle.z = current.angle.z;
     mEffPos.copy(current.pos);
-    field_0x7C6 = true;
+    mJmpLandEff = true;
     return true;
 }
 
@@ -498,10 +498,10 @@ BOOL daNpc_Zl1_c::kyorokyoro() {
     mKyoroPosNo = (s16)cLib_getRndValue(1, 10);
     if (mAnmNo == 0xB) {
         mKyoroTimer = l_demoHIO.mPrmTbl.field_2E;
-        field_0x7AE = l_demoHIO.mPrmTbl.field_32;
+        mLookPlayerTimer = l_demoHIO.mPrmTbl.field_32;
     } else {
         mKyoroTimer = l_demoHIO.mPrmTbl.field_2C;
-        field_0x7AE = l_demoHIO.mPrmTbl.field_30;
+        mLookPlayerTimer = l_demoHIO.mPrmTbl.field_30;
     }
     return FALSE;
 }
@@ -518,14 +518,14 @@ u8 daNpc_Zl1_c::demo() {
     if (!mInDemo) {
         for (int i = 0; i < 2; i++) {
             if (mpEyeMatAnm[i].get() != nullptr) {
-                mpEyeMatAnm[i]->field_0x7C = 0; /* clrMoveFlag() */
+                mpEyeMatAnm[i]->mMoveFlag = 0; /* clrMoveFlag() */
             }
         }
         m_jnt.mAngles[0][1] = 0; /* setHead_y(0) */
         m_jnt.mAngles[0][0] = 0; /* setHead_x(0) */
         m_jnt.mAngles[1][1] = 0; /* setBackBone_y(0) */
         mInDemo = TRUE;
-        field_0x7D3 = false;
+        mKeepShapeAngle = false;
         id = demoActorID;
         m_jnt.mAngles[1][0] = 0; /* setBackBone_x(0) */
     }
@@ -625,12 +625,12 @@ u8 daNpc_Zl1_c::demo() {
             mBtkAnmFrame = 0;
             mBtkNum = 10;
         }
-        if (field_0x7CE) {
+        if (mOnTreeBranch) {
             f32 x = demo_actor->mTrans.x; /* *demo_actor->getTrans() */
             f32 y = demo_actor->mTrans.y;
             f32 z = demo_actor->mTrans.z;
             if (gabi::ftoi(x) != 0 || gabi::ftoi(y) != 0 || gabi::ftoi(z) != 0) {
-                field_0x7CE = false;
+                mOnTreeBranch = false;
                 mpModel = nullptr;
             }
         }
@@ -676,10 +676,10 @@ BOOL daNpc_Zl1_c::_execute() {
         mbRanExecute = true;
     }
     daNpc_Zl1_HIO_c::hio_prm_c& prm = l_demoHIO.mPrmTbl;
-    s16 temp = field_0x7BC < 0 ? (s16)prm.mMaxTurnStep : (s16)prm.field_5C;
+    s16 temp = mTurnStepMode < 0 ? (s16)prm.mMaxTurnStep : (s16)prm.field_5C;
     m_jnt.setParam(prm.mMaxBackboneX, prm.mMaxBackboneY, prm.mMinBackboneX, prm.mMinBackboneY,
                    prm.mMaxHeadX, prm.mMaxHeadY, prm.mMinHeadX, prm.mMinHeadY, temp);
-    if (field_0x7D2 && demoActorID == 0) {
+    if (mHideUntilDemo && demoActorID == 0) {
         return TRUE;
     }
     partner_search();
@@ -689,7 +689,7 @@ BOOL daNpc_Zl1_c::_execute() {
         if (dComIfGp_event_runCheck() && !eventInfo.checkCommandTalk()) {
             staff_id = isEventEntry();
         }
-        if (staff_id >= 0 || field_0x7C9) {
+        if (staff_id >= 0 || mForceEventProc) {
             event_proc(staff_id);
         } else {
             pmf_call(this, &mCurrActionFunc, nullptr); /* (this->*mCurrActionFunc)(NULL) */
@@ -705,15 +705,15 @@ BOOL daNpc_Zl1_c::_execute() {
         // HD: as GameCube USA/PAL: CrrPos and the ground/water flags while in a demo
         mObjAcch.CrrPos(dComIfG_Bgsp());
         u32 flags = mObjAcch.m_flags;
-        field_0x7D2 = false;
+        mHideUntilDemo = false;
         mbGroundHit = (flags >> 5) & 1;
         mbWaterIn = (flags >> 12) & 1;
     }
     eventOrder();
-    field_0x73E.x = current.angle.x;
-    field_0x73E.y = current.angle.y;
-    field_0x73E.z = current.angle.z;
-    if (!field_0x7D3) {
+    mMtxAngle.x = current.angle.x;
+    mMtxAngle.y = current.angle.y;
+    mMtxAngle.z = current.angle.z;
+    if (!mKeepShapeAngle) {
         shape_angle.z = current.angle.z;
         shape_angle.y = current.angle.y;
         shape_angle.x = current.angle.x;
@@ -722,7 +722,7 @@ BOOL daNpc_Zl1_c::_execute() {
     tevStr.mEnvrIdxOverride = dBgS_GetPolyColor(dComIfG_Bgsp(), daNpc_gndPoly(this));
     darkProc();
     setMtx(false);
-    if (!mInDemo && !field_0x7CA && !field_0x7CB) {
+    if (!mInDemo && !mSwoonOnShip && !mJumpingOff) {
         setCollision(50.0f, 140.0f);
     }
     return TRUE;

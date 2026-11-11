@@ -177,13 +177,13 @@ void* dPa_followCtor(void* obj, u8 rate, u8 fixed) {
     obj = allocate(obj, 20);
     if (obj) {
         pa::dPa_followEcallBack* self = gabi::at<pa::dPa_followEcallBack>(gabi::ea(obj));
-        self->field_0x12 = fixed;
+        self->mFollowOff = fixed;
         self->mRateOff = rate;
         self->mpEmitter = 0;
         self->__vtbl = gabi::ea(l_particleFollowVtable);
         self->mAngle = 0;
         self->mFlag = 0;
-        self->field_0x13 = 0;
+        self->mTemporary = 0;
         self->mPos = 0;
     }
     return obj;
@@ -191,7 +191,7 @@ void* dPa_followCtor(void* obj, u8 rate, u8 fixed) {
 /* 025A590C */
 void pa::dPa_followEcallBack::execute(void* emitter) {
     u32 e = gabi::ea(emitter);
-    if (!(u8)this->field_0x12 && !((u8)this->mFlag & 2)) {
+    if (!(u8)this->mFollowOff && !((u8)this->mFlag & 2)) {
         u32 pos = (u32)this->mPos;
         u8 group = (u8)gabi::at<pa::JPABaseEmitter>(e)->mGroupID;
         f32 x = (f32)gabi::at<pa::Vec>(pos)->x, y = (f32)gabi::at<pa::Vec>(pos)->y,
@@ -227,12 +227,12 @@ void pa::dPa_followEcallBack::setup(void* emitter, void* pos, void* angle, s8 in
     u32 e = gabi::ea(emitter);
     u32 fn = w((u32)this->__vtbl + 0x44);
     gabi::call_ptr<void>(fn, this);
-    if (!(u8)this->field_0x13) {
+    if (!(u8)this->mTemporary) {
         this->mpEmitter = e;
         gabi::at<pa::JPABaseEmitter>(e)->mFlags =
             (u32)gabi::at<pa::JPABaseEmitter>(e)->mFlags | JPAEmtrStts_Immortal;
     }
-    if (!(u8)this->field_0x12) {
+    if (!(u8)this->mFollowOff) {
         if ((u8)this->mRateOff)
             gabi::at<pa::JPABaseEmitter>(e)->mMaxFrame = 0;
         this->mAngle = gabi::ea(angle);
@@ -286,8 +286,8 @@ void* dPa_smokeCtorRate(void* obj, u8 rate) {
         smokeColor(obj);
         self->mWindOff = 0;
         self->mRateOff = rate;
-        self->field_0x14 = 0xFF;
-        self->field_0x12 = 0;
+        self->mSetupInfo = 0xFF;
+        self->mFollowOff = 0;
         self->mTevstr = 0;
     }
     return obj;
@@ -300,11 +300,11 @@ void* dPa_smokeCtorFlags(void* obj, u8 rate, u8 fixed, u8 flag, u8 temporary) {
         smokeBase(obj);
         smokeColor(obj);
         self->mFlag = flag;
-        self->field_0x14 = 0xFF;
+        self->mSetupInfo = 0xFF;
         self->mRateOff = rate;
         self->mWindOff = 0;
-        self->field_0x12 = fixed;
-        self->field_0x13 = temporary;
+        self->mFollowOff = fixed;
+        self->mTemporary = temporary;
         self->mTevstr = 0;
     }
     return obj;
@@ -318,9 +318,9 @@ void* dPa_smokeCtorColor(void* obj, void* color, void* tev, u8 rate) {
         smokeBase(obj);
         copy(gabi::ea(color), a + 22, 4);
         self->mRateOff = rate;
-        self->field_0x14 = 0xFF;
+        self->mSetupInfo = 0xFF;
         self->mTevstr = gabi::ea(tev);
-        self->field_0x12 = 0;
+        self->mFollowOff = 0;
     }
     return obj;
 }
@@ -329,7 +329,7 @@ void pa::dPa_smokeEcallBack::execute(void* emitter) {
     u32 a = gabi::ea(this);
     gabi::Local<Color> color;
     copy(a + 22, gabi::ea(color.get()), 4);
-    s8 info = s8((u8)this->field_0x14);
+    s8 info = s8((u8)this->mSetupInfo);
     u32 tev = (u32)this->mTevstr;
     pa_applyLighting(emitter, p(tev), info, color.get());
 }
@@ -509,7 +509,7 @@ void dPa_applyLighting(void* emitter, void* tev, s32 info, void* color) {
 /* 025A9C3C */
 void pa::dPa_cutTurnEcallBack_c::executeAfter(void* emitter) {
     u32 e = gabi::ea(emitter);
-    if ((u8)this->field_0x5) {
+    if ((u8)this->mEndRequest) {
         u32 flags = (u32)gabi::at<pa::JPABaseEmitter>(e)->mFlags;
         gabi::at<pa::JPABaseEmitter>(e)->mpEmitterCallBack = 0;
         gabi::at<pa::JPABaseEmitter>(e)->mMaxFrame = ~u32(0);
@@ -517,7 +517,7 @@ void pa::dPa_cutTurnEcallBack_c::executeAfter(void* emitter) {
         this->mpBaseEmitter = 0;
         return;
     }
-    s16 count = (s16)this->field_0x6;
+    s16 count = (s16)this->mPosNum;
     if (count <= 0)
         return;
     u32 positions = (u32)this->mPosArray;
@@ -555,7 +555,7 @@ void pa::dPa_cutTurnEcallBack_c::executeAfter(void* emitter) {
     gabi::at<pa::JPABaseEmitter>(e)->mGlobalTranslation.y = y;
     gabi::at<pa::JPABaseEmitter>(e)->mGlobalTranslation.z = z;
     gabi::at<pa::JPABaseEmitter>(e)->mGlobalPrmColor.a = (u8)this->mAlpha;
-    this->field_0x6 = 0;
+    this->mPosNum = 0;
 }
 /* WWHD glue
 data l_particleSimpleVtable 10052070

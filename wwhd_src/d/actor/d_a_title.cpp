@@ -79,7 +79,7 @@ void daTitle_proc_c::proc_init3D() {
         JUT_ASSERT_fail("d_a_title.cpp", 0xC0, "m_solid_heap != (0)");
     // HD: the guest heap name is Shift-JIS for "for the title"; this glue alias
     // keeps its original bytes.
-    m_solid_heap->mName.v = gabi::guest_addr("title");
+    m_solid_heap->mName.v = gabi::guest_addr("タイトル用");
 
     J3DModelData* modelData_ship =
         (J3DModelData*)dComIfG_getObjectRes("Tlogo", dRes_INDEX_TLOGO_BDL_TITLE_SHIP_e);
@@ -167,16 +167,16 @@ void daTitle_proc_c::setEnterMode() {
 
 /* 024B83F4 */
 void daTitle_proc_c::set_mtx() {
-    f32 s = mAttr.field_0x08;
+    f32 s = mAttr.mShipScale;
     J3DModel* model = mModel_ship;
     model->mBaseScale.z = s;
     model->mBaseScale.y = s;
     model->mBaseScale.x = s;
     // HD: ship depth 100, reversed quarter-turn, and the quadratic offset.
-    mDoMtx_stack_c::transS(mAttr.field_0x00 + m094, mAttr.field_0x04, 100.0f);
+    mDoMtx_stack_c::transS(mAttr.mShipPosX + mShipOffsetX, mAttr.mShipPosY, 100.0f);
     mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), 0, -0x4000, 0);
     J3DModel_setBaseTRMtx(mModel_ship, mDoMtx_stack_c::get());
-    f32 sx = mAttr.field_0x18, sy = mAttr.field_0x1C;
+    f32 sx = mAttr.mSubtitleScaleX, sy = mAttr.mSubtitleScaleY;
     model = mModel_subtitle;
     model->mBaseScale.x = sx;
     model->mBaseScale.y = sy;
@@ -185,7 +185,7 @@ void daTitle_proc_c::set_mtx() {
     model->mBaseScale.x = sx;
     model->mBaseScale.y = sy;
     model->mBaseScale.z = 1;
-    f32 px = mAttr.field_0x10, py = mAttr.field_0x14;
+    f32 px = mAttr.mSubtitlePosX, py = mAttr.mSubtitlePosY;
     mDoMtx_stack_c::transS(px, py, -10000.0f);
     mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), 0, -0x8000, 0);
     J3DModel_setBaseTRMtx(mModel_subtitle, mDoMtx_stack_c::get());
@@ -194,8 +194,8 @@ void daTitle_proc_c::set_mtx() {
     J3DModel_setBaseTRMtx(mModel_kirari, mDoMtx_stack_c::get());
 }
 
-/* m018 > v, with v computed first (m018 is loaded after the call) */
-static inline bool seq_gt(s32 v, be<s32>& m018) { return m018 > v; }
+/* mFrameCount > v, with v computed first (mFrameCount is loaded after the call) */
+static inline bool seq_gt(s32 v, be<s32>& mFrameCount) { return mFrameCount > v; }
 
 // HD: emitter kinds seven and above negate the global Y translation.
 static void emitter_setGlobalTranslation(EmitterHD* e, f32 x, f32 y, f32 z) {
@@ -208,18 +208,18 @@ static void emitter_setGlobalTranslation(EmitterHD* e, f32 x, f32 y, f32 z) {
 
 /* 024B7CFC */
 void daTitle_proc_c::calc_2d_alpha() {
-    s32 cnt = m018 + 1;
+    s32 cnt = mFrameCount + 1;
     s32 mode = mEnterMode;
     LayoutHD* t2d = titleLayout;
-    m018 = cnt;
+    mFrameCount = cnt;
     if (mode == ENTER_INTRO) {
         if (cnt >= 200) {
             mEnterMode = ENTER_WAIT;
         } else {
             if (cnt == 30)
                 titleLayoutStartIntro(titleLayout.get());
-            if (m098 < 0) {
-                m098 = m098 + 1;
+            if (mShipMoveFrame < 0) {
+                mShipMoveFrame = mShipMoveFrame + 1;
             }
         }
     }
@@ -231,11 +231,11 @@ void daTitle_proc_c::calc_2d_alpha() {
         m028 = m028 + 1;
     }
 
-    if (m020 == 0) {
-        f32 r = cM_rndF(mAttr.field_0x28);
-        m020 = gabi::ftoi(r + mAttr.field_0x2C);
+    if (mWindTimer == 0) {
+        f32 r = cM_rndF(mAttr.mWindIntervalRnd);
+        mWindTimer = gabi::ftoi(r + mAttr.mWindIntervalBase);
         if (titleLayoutWindInterval(t2d) != 0)
-            m020 = titleLayoutWindInterval(t2d);
+            mWindTimer = titleLayoutWindInterval(t2d);
         f32 x = titleLayoutWindPosition(t2d)->x;
         f32 y = titleLayoutWindPosition(t2d)->y;
         f32 z = titleLayoutParticleDepth(t2d);
@@ -260,26 +260,26 @@ void daTitle_proc_c::calc_2d_alpha() {
         e->mGlobalParticleScale.y = s;
         e->mGlobalParticleScale.z = s;
     } else {
-        m020 = m020 - 1;
+        mWindTimer = mWindTimer - 1;
     }
 
-    /* HD: no kirari animation; m094 sign flipped against GameCube */
-    s32 sq = m098 * m098;
-    if (m098 > 0) {
-        m094 = -((f32)sq * mAttr.field_0x0C);
-        bpkFrameCtrl().setFrame(100.0f - (f32)(m098 * 2));
+    /* HD: no kirari animation; mShipOffsetX sign flipped against GameCube */
+    s32 sq = mShipMoveFrame * mShipMoveFrame;
+    if (mShipMoveFrame > 0) {
+        mShipOffsetX = -((f32)sq * mAttr.mShipMoveRate);
+        bpkFrameCtrl().setFrame(100.0f - (f32)(mShipMoveFrame * 2));
     } else {
-        m094 = (f32)sq * mAttr.field_0x0C;
-        bpkFrameCtrl().setFrame((f32)(m098 * 2) + 100.0f);
+        mShipOffsetX = (f32)sq * mAttr.mShipMoveRate;
+        bpkFrameCtrl().setFrame((f32)(mShipMoveFrame * 2) + 100.0f);
     }
 
     if (mEnterMode == ENTER_INTRO) {
         EmitterHD* e = mpEmitter;
         f32 x = titleLayoutSmokePosition(t2d)->x;
-        x = x + m094;
-        x = x + mAttr.field_0x30;
+        x = x + mShipOffsetX;
+        x = x + mAttr.mSmokeOffsetX;
         f32 y = titleLayoutSmokePosition(t2d)->y;
-        y = y + mAttr.field_0x34;
+        y = y + mAttr.mSmokeOffsetY;
         f32 z = titleLayoutParticleDepth(t2d);
         cXyz pos;
         pos.x = x;
@@ -303,18 +303,18 @@ void daTitle_proc_c::calc_2d_alpha() {
         }
 
         s32 kiraStart = titleLayoutKiraStart(t2d);
-        if ((u32)m018 == (u32)kiraStart) {
+        if ((u32)mFrameCount == (u32)kiraStart) {
             if (u8(titleKirakiraSoundFlag) == 1) { /* daTitle_Kirakira_Sound_flag */
                 titleStartSound(JA_SE_TITLE_KIRA);
                 titleKirakiraSoundFlag = 0;
             }
             f32 kx = titleLayoutKiraPosition(t2d)->x;
             f32 ky = titleLayoutKiraPosition(t2d)->y;
-            m00C.x = kx;
-            m00C.y = ky;
-            m00C.z = 0.0f;
+            mKiraPos.x = kx;
+            mKiraPos.y = ky;
+            mKiraPos.z = 0.0f;
             mpEmitter2 = reinterpret_cast<EmitterHD*>(
-                dPa_control_set(dComIfGp_getParticle(), 7, ID_AK_S2_TITLEKIRAKIRA00, &m00C, nullptr,
+                dPa_control_set(dComIfGp_getParticle(), 7, ID_AK_S2_TITLEKIRAKIRA00, &mKiraPos, nullptr,
                                 nullptr, 0xFF, nullptr, -1, nullptr, nullptr, nullptr));
             f32 s = titleLayoutKiraScale(t2d);
             EmitterHD* e2 = mpEmitter2;
@@ -326,12 +326,12 @@ void daTitle_proc_c::calc_2d_alpha() {
             e2->mGlobalParticleScale.x = s;
             e2->mGlobalParticleScale.y = s;
             e2->mGlobalParticleScale.z = 1.0f;
-        } else if (seq_gt(titleLayoutKiraStart(t2d), m018) &&
-                   !seq_gt(titleLayoutKiraEnd(t2d), m018) && mpEmitter2 != 0) {
+        } else if (seq_gt(titleLayoutKiraStart(t2d), mFrameCount) &&
+                   !seq_gt(titleLayoutKiraEnd(t2d), mFrameCount) && mpEmitter2 != 0) {
             s32 end = titleLayoutKiraEnd(t2d);
             s32 start = titleLayoutKiraStart(t2d);
-            m00C.x = m00C.x + 320.0f / (f32)(end - start);
-            emitter_setGlobalTranslation(mpEmitter2.get(), m00C.x, m00C.y, m00C.z);
+            mKiraPos.x = mKiraPos.x + 320.0f / (f32)(end - start);
+            emitter_setGlobalTranslation(mpEmitter2.get(), mKiraPos.x, mKiraPos.y, mKiraPos.z);
         }
     } else {
         if (mpEmitter == 0) {
@@ -351,10 +351,10 @@ void daTitle_proc_c::calc_2d_alpha() {
                 return;
         } else {
             f32 x = titleLayoutSmokePosition(t2d)->x;
-            x = x - m094;
-            x = x + mAttr.field_0x30;
+            x = x - mShipOffsetX;
+            x = x + mAttr.mSmokeOffsetX;
             f32 y = titleLayoutSmokePosition(t2d)->y;
-            y = y + mAttr.field_0x34;
+            y = y + mAttr.mSmokeOffsetY;
             f32 z = titleLayoutParticleDepth(t2d);
             emitter_setGlobalTranslation(mpEmitter.get(), x, y, z);
             if (mpEmitter2 == 0)
@@ -371,10 +371,10 @@ void daTitle_proc_c::calc_2d_alpha() {
 /* 024B8670 */
 void daTitle_proc_c::proc_execute() {
     /* HD: no expanded-heap switch */
-    if (m01C > 0) {
-        m01C = m01C - 1;
+    if (mStartDelay > 0) {
+        mStartDelay = mStartDelay - 1;
 
-        if (m01C == 0) {
+        if (mStartDelay == 0) {
             titleStartSound(JA_SE_TITLE_WIND);
         }
     } else {
@@ -384,8 +384,8 @@ void daTitle_proc_c::proc_execute() {
     PadHD* pad = titlePad;
     if (mEnterMode == ENTER_INTRO &&
         (u32(pad->mTrigger) & TITLE_TRIGGER_MASK) != 0) { /* trigger A / B / START / ... */
-        m098 = 0;
-        m01C = 0;
+        mShipMoveFrame = 0;
+        mStartDelay = 0;
         PadStatusHD* o = titlePadStatus;
         o->mTriggerConsumed = (u8)titleConsumeTrigger(pad, TITLE_TRIGGER_MASK);
         mEnterMode = ENTER_LEAVING; /* HD: skips mode 1/2 */
@@ -398,7 +398,7 @@ void daTitle_proc_c::proc_execute() {
     if (mEnterMode == ENTER_REQUEST) {
         mEnterMode = ENTER_LEAVING;
     } else if (mEnterMode == ENTER_LEAVING) {
-        m098 = m098 + 1;
+        mShipMoveFrame = mShipMoveFrame + 1;
     }
 
     mBckShip.play();
@@ -493,10 +493,10 @@ static BOOL daTitle_Execute(daTitle_c* i_this) {
             if (stageProc == NULL)
                 JUT_ASSERT_fail("d_a_title.cpp", 0x44A, "stageProc != (0)");
 
-            if (!i_this->m29C && titleChangeScene(stageProc, TITLE_NAME_SCENE, 0, 5, 1)) {
+            if (!i_this->mSceneChangeReq && titleChangeScene(stageProc, TITLE_NAME_SCENE, 0, 5, 1)) {
                 titleLayoutEnterGame(titleLayout.get()); /* HD */
                 titleStartSound(JA_SE_OP_ENTER_GAME);
-                i_this->m29C = true;
+                i_this->mSceneChangeReq = true;
             }
         } else if (u32(titleReset->mReset) == 0 /* !mDoRst::isReset() */ &&
                    titleGameInfo()->mEnableNextStage != 0 /* dComIfGp_isEnableNextStage() */) {
@@ -504,10 +504,10 @@ static BOOL daTitle_Execute(daTitle_c* i_this) {
             if (stageProc == NULL)
                 JUT_ASSERT_fail("d_a_title.cpp", 0x4A2, "stageProc != (0)");
 
-            if (!i_this->m29C) {
+            if (!i_this->mSceneChangeReq) {
                 titleChangeScene(stageProc,
                                  TITLE_SCENE /* HD: always returns to the title scene. */, 1, 5, 1);
-                i_this->m29C = true;
+                i_this->mSceneChangeReq = true;
             }
         }
     }
@@ -547,7 +547,7 @@ static cPhs_State daTitle_Create(fopAc_ac_c* a) {
 
         /* HD: no proc_init2D */
         p->proc_init3D();
-        i_this->m29C = false;
+        i_this->mSceneChangeReq = false;
     }
 
     return phase_state;
@@ -603,20 +603,20 @@ static daTitle_proc_c* daTitle_proc_ct(daTitle_proc_c* p) {
     mDoExt_btkAnm::ct(&p->mBtkSub);
     mDoExt_btkAnm::ct(&p->mBtkKirari);
     p->m_solid_heap = 0;
-    p->m098 = -50;
-    p->m01C = 120;
+    p->mShipMoveFrame = -50;
+    p->mStartDelay = 120;
     p->m_exp_heap = 0;
-    /* HD: m094 = (m098 * m098) * attr().field_0x0C (GameCube: * -field_0x0C) */
-    p->m094 = 2500.0f * p->mAttr.field_0x0C;
+    /* HD: mShipOffsetX = (mShipMoveFrame * mShipMoveFrame) * attr().mShipMoveRate (GameCube: * -mShipMoveRate) */
+    p->mShipOffsetX = 2500.0f * p->mAttr.mShipMoveRate;
     p->mEnterMode = ENTER_INTRO;
-    f32 r = cM_rndF(p->mAttr.field_0x28);
-    p->m020 = gabi::ftoi(r + p->mAttr.field_0x2C);
-    r = cM_rndF(p->mAttr.field_0x20);
-    f32 v = r + p->mAttr.field_0x24 + 130.0f;
+    f32 r = cM_rndF(p->mAttr.mWindIntervalRnd);
+    p->mWindTimer = gabi::ftoi(r + p->mAttr.mWindIntervalBase);
+    r = cM_rndF(p->mAttr.mKirariIntervalRnd);
+    f32 v = r + p->mAttr.mKirariIntervalBase + 130.0f;
     p->m090 = 0;
-    p->m024 = gabi::ftoi(v);
-    p->m02C = 0;
-    p->m018 = 0;
+    p->mKirariTimer = gabi::ftoi(v);
+    p->mKirariFrame = 0;
+    p->mFrameCount = 0;
     p->mpEmitter2 = 0;
     p->mpEmitter = 0;
     return p;
@@ -668,7 +668,7 @@ static void SafeString_assureTerminationImpl(void*) {}
 str 100401F0 "Tlogo"
 str 100400B4 "Tlogo" in 024B8F44
 str 100400BC "Tlogo" in 024B9150
-str 10040294 "title" renamed
+str 10040294 "タイトル用"
 str 1004024C "d_a_title.cpp"
 str 10040220 "m_solid_heap != (0)"
 str 1004025C "modelData_ship != (0)"

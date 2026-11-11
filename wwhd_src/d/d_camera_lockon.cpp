@@ -64,7 +64,7 @@ bool dCamera_c::lockonCamera(s32 style) {
     }
     if (mFollowMoveBg != 0)
         lockon_MoveBgMatrixCrrPos(gabi::ea(dComIfG_Bgsp()),
-                                  gabi::ea(static_cast<cBgS_PolyInfo*>(&mBG.m5C.m04)), 1,
+                                  gabi::ea(static_cast<cBgS_PolyInfo*>(&mBG.mCameraGround.mGndChk)), 1,
                                   &work->m390, 0, 0); /* MoveBgMatrixCrrPos */
     if (!lockon_LockonTruth(attn) &&
         (dComIfGp_getPlayerStatus0(mPadId) & daPyStts0_BOOMERANG_WAIT_e))

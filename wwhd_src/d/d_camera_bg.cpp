@@ -1037,24 +1037,24 @@ void dCamera_c::checkGroundInfo() {
                         fieldRead<u16>(gabi::at<dBgS_GndChk>(o)->cBgS_PolyInfo::mBgIndex));
         fieldWrite<u32>(gabi::at<dBgS_GndChk>(m)->mNowY,
                         fieldRead<u32>(gabi::at<dBgS_GndChk>(o)->mNowY));
-        mBG.m5C.m58 = groundY;
+        mBG.mCameraGround.mGroundY = groundY;
         m5C = groundY;
     } else {
-        mBG.m5C.m58 = camY;
+        mBG.mCameraGround.mGroundY = camY;
         m5C = camY;
     }
-    fieldWrite<u32>(mBG.m00.m04.m_pos.x, gxBits); /* mBG.m00.m04.SetPos(&gnd_chk_pos) */
-    fieldWrite<u32>(mBG.m00.m04.m_pos.y, gyBits);
-    fieldWrite<u32>(mBG.m00.m04.m_pos.z, gzBits);
-    mBG.m5C.m00 = m5C != -1000000000.0f;
+    fieldWrite<u32>(mBG.mPlayerGround.mGndChk.m_pos.x, gxBits); /* mBG.m00.m04.SetPos(&gnd_chk_pos) */
+    fieldWrite<u32>(mBG.mPlayerGround.mGndChk.m_pos.y, gyBits);
+    fieldWrite<u32>(mBG.mPlayerGround.mGndChk.m_pos.z, gzBits);
+    mBG.mCameraGround.mbFound = m5C != -1000000000.0f;
     f32 m00 = backgroundGroundCross(cameraArgument(dComIfGp_ea() + PLAY_BGS),
                                     cameraArgument(ea() + 0x264));
-    mBG.m00.m58 = m00;
+    mBG.mPlayerGround.mGroundY = m00;
     mGroundHeight = m00;
-    mBG.m00.m00 = m00 != -1000000000.0f;
+    mBG.mPlayerGround.mbFound = m00 != -1000000000.0f;
     f32 foot = footHeightOf(mpPlayerActor.get());
     mPlayerOnFloor =
-        !(foot - mBG.m5C.m58 > fieldRead<f32>(cameraSetup(this)->mFloorMargin) /* FloorMargin */);
+        !(foot - mBG.mCameraGround.mGroundY > fieldRead<f32>(cameraSetup(this)->mFloorMargin) /* FloorMargin */);
 
     mFollowMoveBg = 0;
     mpMoveBgActor = nullptr;
@@ -1062,7 +1062,7 @@ void dCamera_c::checkGroundInfo() {
                            cameraArgument(ea() + 0x2D4))) { /* ChkMoveBG */
         fopAc_ac_c* a = gabi::at<fopAc_ac_c>(backgroundActor(
             cameraArgument(dComIfGp_ea() + PLAY_BGS),
-            cameraArgument((u32)fieldRead<u16>(mBG.m5C.m04.mBgIndex)))); /* GetActorPointer */
+            cameraArgument((u32)fieldRead<u16>(mBG.mCameraGround.mGndChk.mBgIndex)))); /* GetActorPointer */
         mpMoveBgActor = a;
         if (a != nullptr) {
             positionOf(pos, a);
@@ -1101,31 +1101,31 @@ void dCamera_c::checkGroundInfo() {
     } else {
         mOnMoveBg = 0;
     }
-    mCamMoveBg = mBG.m5C.m00 != 0 ? backgroundMoveCamera(cameraArgument(dComIfGp_ea() + PLAY_BGS),
+    mCamMoveBg = mBG.mCameraGround.mbFound != 0 ? backgroundMoveCamera(cameraArgument(dComIfGp_ea() + PLAY_BGS),
                                                    cameraArgument(ea() + 0x2D4)) /* GetCamMoveBG */
                             : 0;
     mRoomNo = -1;
     bool swim = false;
-    if (mBG.m00.m00 != 0) {
+    if (mBG.mPlayerGround.mbFound != 0) {
         s32 pad = mPadId;
         swim = (dComIfGp_getPlayerStatus0(pad) & 0x100000) != 0; /* SWIM */
     }
     if (swim) {
         mRoomMapToolCameraIdx = backgroundPolyCamera(
             cameraArgument(dComIfGp_ea() + PLAY_BGS),
-            cameraArgument((u32)fieldRead<u16>(mBG.m00.m04.mBgIndex)),
-            cameraArgument((u32)fieldRead<u16>(mBG.m00.m04.mPolyIndex))); /* GetPolyCamId */
+            cameraArgument((u32)fieldRead<u16>(mBG.mPlayerGround.mGndChk.mBgIndex)),
+            cameraArgument((u32)fieldRead<u16>(mBG.mPlayerGround.mGndChk.mPolyIndex))); /* GetPolyCamId */
     } else if (mPlayerOnFloor == 0) {
         mRoomMapToolCameraIdx = 0x1FF;
-    } else if (mBG.m5C.m00 != 0) {
+    } else if (mBG.mCameraGround.mbFound != 0) {
         s32 idx = backgroundRoomCamera(cameraArgument(dComIfGp_ea() + PLAY_BGS),
                                        cameraArgument(ea() + 0x2D4)); /* GetRoomCamId */
         mRoomMapToolCameraIdx = idx;
         if (idx == 0xFF) {
             mRoomMapToolCameraIdx =
                 backgroundPolyCamera(cameraArgument(dComIfGp_ea() + PLAY_BGS),
-                                     cameraArgument((u32)fieldRead<u16>(mBG.m5C.m04.mBgIndex)),
-                                     cameraArgument((u32)fieldRead<u16>(mBG.m5C.m04.mPolyIndex)));
+                                     cameraArgument((u32)fieldRead<u16>(mBG.mCameraGround.mGndChk.mBgIndex)),
+                                     cameraArgument((u32)fieldRead<u16>(mBG.mCameraGround.mGndChk.mPolyIndex)));
         } else {
             mRoomNo = backgroundRoom(cameraArgument(dComIfGp_ea() + PLAY_BGS),
                                      cameraArgument(ea() + 0x2D4)); /* GetRoomId */
@@ -1148,7 +1148,7 @@ void dCamera_c::checkGroundInfo() {
     gndChk_ct(o2, &mEye); /* dBgS_GndChk gnd_chk_2; SetPos(&mEye) */
     f32 eyeGround =
         backgroundGroundCross(cameraArgument(dComIfGp_ea() + PLAY_BGS), cameraArgument(o2));
-    if (eyeGround < mBG.m5C.m58 + 40.0f) {
+    if (eyeGround < mBG.mCameraGround.mGroundY + 40.0f) {
         A->copy(mEye);
         attentionPos(t, mpPlayerActor.get());
         B->copy(*t);
@@ -1357,8 +1357,8 @@ bool dCamera_c::bumpCheck(u32 flags) {
                     n2->copy(*nsum);
                     cXyz_ml(n2, s, 2.0f);
                     cXyz_pl(out, nsum, s);
-                    m070.copy(*nsum);
-                    cXyz_mi(&m070, s, &mCenter);
+                    mCornerPos.copy(*nsum);
+                    cXyz_mi(&mCornerPos, s, &mCenter);
                     cSGlobe_Val(globe, s);
                     gabi::Local<CameraAngle> t1, t2, t3, tv;
                     fieldWrite<u32>(mDirection.mRadius,
@@ -1390,7 +1390,7 @@ bool dCamera_c::bumpCheck(u32 flags) {
                             cameraArgument(this), cameraArgument(&mCenter),
                             cameraArgument(p2.get()),
                             cameraArgument(0x7F))) { /* lineBGCheck(&mCenter, &p2, 0x7f) */
-                        if (lineBGCheck(&m070, p, (u8*)lc1.get(), 0x7F)) {
+                        if (lineBGCheck(&mCornerPos, p, (u8*)lc1.get(), 0x7F)) {
                             gabi::Local<cXyz> cc, o;
                             cc->copy(*(&gabi::at<LineCheck>(o1)->mLine.mLin.mEnd));
                             compWallMargin(o, cc, gaze);

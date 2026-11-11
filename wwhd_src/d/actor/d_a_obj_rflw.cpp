@@ -23,7 +23,7 @@ static BOOL CheckCreateHeap(fopAc_ac_c* i_this) {
 /* 02387BB8 */
 BOOL daObjRflw_c::CreateHeap() {
     J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes("Rflw", dRes_INDEX_RFLW_BDL_PHANA_e);
-    JUT_ASSERT(0xAA, modelData != NULL);
+    JUT_ASSERT_MSG(0xAA, modelData != NULL, "modelData != (0)");
 
     mpModel = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
     if (mpModel != nullptr) {
@@ -47,7 +47,7 @@ void daObjRflw_c::CreateInit() {
     mStts.Init(0xFF, 0xFF, this);
     mCyl.Set(&l_cyl_src);
     mCyl.SetStts(&mStts);
-    m408 = 0;
+    mSwingAngle = 0;
     set_mtx();
 }
 
@@ -61,7 +61,7 @@ cPhs_State daObjRflw_c::_create() {
             return cPhs_ERROR_e;
         CreateInit();
     }
-    m410 = 0;
+    mIsSwinging = 0;
     return phase_state;
 }
 
@@ -87,31 +87,31 @@ BOOL daObjRflw_c::_execute() {
     mCyl.SetC(&current.pos);
     dComIfG_Ccsp_Set(&mCyl);
 
-    if ((m40C > 0x38 || m410 == 0) && mCyl.ChkCoHit()) {
+    if ((mHitTimer > 0x38 || mIsSwinging == 0) && mCyl.ChkCoHit()) {
         fopAc_ac_c* hitAc = mCyl.GetCoHitAc();
         cXyz dir_to_obj;
         dir_to_obj = current.pos - hitAc->current.pos;
         s16 dir_angle = cM_atan2s(dir_to_obj.x, dir_to_obj.z);
-        m40E = (s16)(dir_angle - 0x4000);
-        m410 = 1;
-        m40C = 0;
-        m40A = 0;
+        mSwingDirAngle = (s16)(dir_angle - 0x4000);
+        mIsSwinging = 1;
+        mHitTimer = 0;
+        mSwingPhase = 0;
         fopAcM_seStart(this, JA_SE_OBJ_TREE_SWING_S, 0);
     }
 
-    if (m410 != 0) {
-        m40C = m40C + 1;
-        if (m40C < 8) {
-            m408 = (s16)ftoi(cM_ssin(m40A) * (f32)(0x100 - m40C) * 4.0f);
-            m40A = m40A + 0x1000;
+    if (mIsSwinging != 0) {
+        mHitTimer = mHitTimer + 1;
+        if (mHitTimer < 8) {
+            mSwingAngle = (s16)ftoi(cM_ssin(mSwingPhase) * (f32)(0x100 - mHitTimer) * 4.0f);
+            mSwingPhase = mSwingPhase + 0x1000;
         } else {
-            m408 = (s16)ftoi(cM_ssin(m40A) * (f32)(0x100 - m40C) * 2.0f);
-            m40A = m40A + 0x0800;
+            mSwingAngle = (s16)ftoi(cM_ssin(mSwingPhase) * (f32)(0x100 - mHitTimer) * 2.0f);
+            mSwingPhase = mSwingPhase + 0x0800;
         }
-        if (m40C > 0x100) {
-            m410 = 0;
-            m40C = 0;
-            m408 = 0;
+        if (mHitTimer > 0x100) {
+            mIsSwinging = 0;
+            mHitTimer = 0;
+            mSwingAngle = 0;
         }
     }
 
@@ -127,9 +127,9 @@ static BOOL nodeCallBack(J3DNode* node, s32 calcTiming) {
         daObjRflw_c* plant = (daObjRflw_c*)model->getUserArea();
         if (plant != nullptr) {
             PSMTXCopy(((J3DModel_rflw_view*)model)->getAnmMtx(jntNo), calc_mtx());
-            cMtx_XrotM(calc_mtx(), plant->m40E);
-            cMtx_YrotM(calc_mtx(), plant->m408);
-            cMtx_XrotM(calc_mtx(), (s16)-plant->m40E);
+            cMtx_XrotM(calc_mtx(), plant->mSwingDirAngle);
+            cMtx_YrotM(calc_mtx(), plant->mSwingAngle);
+            cMtx_XrotM(calc_mtx(), (s16)-plant->mSwingDirAngle);
             model->setAnmMtx(jntNo, calc_mtx());
             PSMTXCopy(calc_mtx(), J3DSys::mCurrentMtx);
         }
@@ -204,7 +204,7 @@ str 1002ECC4 "Rflw" in 02387E5C
 str 1002ED04 "Rflw" in 02387BB8
 str 1002ED50 "Rflw" in 02387F9C
 str 1002ED14
-str 1002ED28 "modelData != NULL" renamed
+str 1002ED28 "modelData != (0)"
 str 1002ED0C "joint2"
 data l_cyl_src 101CC820
 */

@@ -174,11 +174,11 @@ WWHD_OFFSET(AnmPrm, morf, 0x8);
 WWHD_OFFSET(AnmPrm, speed, 0xC);
 WWHD_SIZE(AnmPrm, 0x10);
 struct AnmTbl {
-    /* 0x000 */ char m00[32];
-    /* 0x020 */ char m20[32];
+    /* 0x000 */ char mBckName[32];  /* was m00: setAnm 02286D7C passes it to dNpc_Md_setAnm as the bck file of the body / arm morf (the only one of the wing morf); static l_anmTbl / armAnmTbl / wingAnmTbl, never written (tww setAnm anm_tbl the same) */
+    /* 0x020 */ char mBlendBckName[32];  /* was m20: setAnm 02286D7C passes it to dNpc_Md_setAnm as the second bck, which the McaMorf2 blends in by mRunRate when it is not "" (md_walk / md_run); static tables, never written (tww the same) */
 };
-WWHD_OFFSET(AnmTbl, m00, 0x0);
-WWHD_OFFSET(AnmTbl, m20, 0x20);
+WWHD_OFFSET(AnmTbl, mBckName, 0x0);
+WWHD_OFFSET(AnmTbl, mBlendBckName, 0x20);
 WWHD_SIZE(AnmTbl, 0x40);
 inline Emitter* emitter(JPABaseEmitter* value) { return reinterpret_cast<Emitter*>(value); }
 inline Emitter* emitter(u32 value) { return gabi::at<Emitter>(value); }

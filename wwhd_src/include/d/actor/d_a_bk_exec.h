@@ -185,13 +185,13 @@ struct bkExecAtInfo {
     /* 0x09 */ be<u8> mbDead;
     /* 0x0A */ be<u8> mResultingAttackType;
     /* 0x0B */ u8 _0B;
-    /* 0x0C */ csXyz m0C;
+    /* 0x0C */ csXyz mHitAngle;  /* was m0C: the CcAtInfo copy of this unit; see d/d_cc_uty.h */
     /* 0x12 */ be<u16> mPlCutBit;
     /* 0x14 */ be<u32> pParticlePos;
     /* 0x18 */ be<s32> mHitSoundId;
 };
 WWHD_OFFSET(bkExecAtInfo, mDamage, 8);
-WWHD_OFFSET(bkExecAtInfo, m0C, 0xC);
+WWHD_OFFSET(bkExecAtInfo, mHitAngle, 0xC);
 WWHD_OFFSET(bkExecAtInfo, pParticlePos, 0x14);
 WWHD_SIZE(bkExecAtInfo, 0x1C);
 static inline void at_power_check(bkExecAtInfo* i) { gabi::call(0x02518DB0, i); }

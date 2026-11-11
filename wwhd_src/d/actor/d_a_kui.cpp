@@ -444,7 +444,7 @@ static BOOL daKui_CreateHeap(fopAc_ac_c* a_this) {
     if (i_this->type == 3) {
         /* Bell body */
         modelData = (J3DModelData*)dComIfG_getObjectRes("Kui", dRes_INDEX_KUI_BDL_HKANE1_e);
-        JUT_ASSERT(0x391, modelData != NULL);
+        JUT_ASSERT_MSG(0x391, modelData != NULL, "modelData != (0)");
 
         i_this->mpModel = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
         if (!i_this->mpModel) {
@@ -453,7 +453,7 @@ static BOOL daKui_CreateHeap(fopAc_ac_c* a_this) {
 
         /* Bell handle */
         modelData = (J3DModelData*)dComIfG_getObjectRes("Kui", dRes_INDEX_KUI_BDL_HKANE2_e);
-        JUT_ASSERT(0x39D, modelData != NULL);
+        JUT_ASSERT_MSG(0x39D, modelData != NULL, "modelData != (0)");
 
         i_this->mpModel2 = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
         if (!i_this->mpModel2) {
@@ -462,7 +462,7 @@ static BOOL daKui_CreateHeap(fopAc_ac_c* a_this) {
     } else {
         /* Wooden post */
         modelData = (J3DModelData*)dComIfG_getObjectRes("Kui", dRes_INDEX_KUI_BDL_OBI_ROPETAG_e);
-        JUT_ASSERT(0x3A9, modelData != NULL);
+        JUT_ASSERT_MSG(0x3A9, modelData != NULL, "modelData != (0)");
 
         i_this->mpModel2 = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000002);
         if (!i_this->mpModel2) {
@@ -472,7 +472,7 @@ static BOOL daKui_CreateHeap(fopAc_ac_c* a_this) {
         if (i_this->type == 2 || i_this->type == 4) {
             /* Device that holds the post */
             modelData = (J3DModelData*)dComIfG_getObjectRes("Kui", dRes_INDEX_KUI_BDL_MROPESW_e);
-            JUT_ASSERT(0x3B5, modelData != NULL);
+            JUT_ASSERT_MSG(0x3B5, modelData != NULL, "modelData != (0)");
 
             i_this->mpModel = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000002);
             if (!i_this->mpModel) {
@@ -617,7 +617,7 @@ str 1001390C "K SUB  COUNT  %d"
 str 10013968 "Kui" in 021ADAFC
 str 1001396C "Kui" in 021ADB48
 str 10013970 "d_a_kui.cpp"
-str 1001397C "modelData != NULL" renamed
+str 1001397C "modelData != (0)"
 str 100139A4 "Kui" in 021ADD6C
 data mtx_adj 101B8A20
 data bure_xa_d 101B8A50

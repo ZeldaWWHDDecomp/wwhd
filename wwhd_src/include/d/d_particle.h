@@ -29,12 +29,12 @@ struct dPa_rippleEcallBack {
 struct dPa_followEcallBack {
     /* 0x00 */ be<u32> __vtbl;
     /* 0x04 */ gptr<JPABaseEmitter> mpEmitter;
-    /* 0x08 */ be<u32> m08;
-    /* 0x0C */ be<u32> m0C;
-    /* 0x10 */ be<u8> m10;
-    /* 0x11 */ be<u8> m11;
-    /* 0x12 */ be<u8> m12;
-    /* 0x13 */ be<u8> m13;
+    /* 0x08 */ be<u32> mPos;  /* was m08: view of dPa_followEcallBack::mPos (d/particle/d_particle_local.h) */
+    /* 0x0C */ be<u32> mAngle;  /* was m0C: view of dPa_followEcallBack::mAngle (d/particle/d_particle_local.h) */
+    /* 0x10 */ be<u8> mFlag;  /* was m10: view of dPa_followEcallBack::mFlag (d/particle/d_particle_local.h) */
+    /* 0x11 */ be<u8> mRateOff;  /* was m11: view of dPa_followEcallBack::mRateOff (d/particle/d_particle_local.h) */
+    /* 0x12 */ be<u8> mFollowOff;  /* was m12: view of dPa_followEcallBack::mFollowOff (d/particle/d_particle_local.h) */
+    /* 0x13 */ be<u8> mTemporary;  /* was m13: view of dPa_followEcallBack::mTemporary (d/particle/d_particle_local.h) */
     JPABaseEmitter* getEmitter() { return mpEmitter; }
     /* remove(): virtual (vtable +0x44) */
     void remove() { gabi::call_ptr(gabi::load<u32>(__vtbl + 0x44), this); }
@@ -44,7 +44,7 @@ struct dPa_followEcallBack {
 WWHD_SIZE(dPa_followEcallBack, 0x14);
 /* dPa_smokeEcallBack (0x20, unchanged from GameCube apart from the HD vtable at +0) [v nz] */
 struct dPa_smokeEcallBack : dPa_followEcallBack {
-    /* 0x14 */ be<s8> field_0x14;
+    /* 0x14 */ be<s8> mSetupInfo;  /* was field_0x14: view of dPa_smokeEcallBack::mSetupInfo (d/particle/d_particle_local.h) */
     /* 0x15 */ be<u8> mWindOff;
     /* 0x16 */ GXColor mColor;
     /* 0x1A */ u8 _1A[2];

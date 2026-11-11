@@ -3,9 +3,9 @@
 #include "d/actor/d_a_player_main_04_item.h"
 
 struct LinkWaterCallback : LinkItemFollowCallback {
-    /* 0x1C */ be<u32> field_0x1C;
+    /* 0x1C */ be<u32> mReady;  /* was field_0x1C: view of daPy_waterDropEcallBack_c::mReady (d_a_player_main_04b.h) */
 };
-WWHD_OFFSET(LinkWaterCallback, field_0x1C, 0x1C);
+WWHD_OFFSET(LinkWaterCallback, mReady, 0x1C);
 WWHD_SIZE(LinkWaterCallback, 0x20);
 struct LinkWaterParticleCallback {
     /* 0x00 */ be<u32> __vtbl;
@@ -46,5 +46,5 @@ inline LinkWaterEmitter& LinkWaterEmitterView(JPABaseEmitter* emitter) {
     return *reinterpret_cast<LinkWaterEmitter*>(emitter);
 }
 inline LinkItemMtxCallback& LinkWaterRain(daPy_lk_c* player, u32 index) {
-    return *reinterpret_cast<LinkItemMtxCallback*>(player->m3460 + index * 0x10);
+    return *reinterpret_cast<LinkItemMtxCallback*>(player->mRainDropEcallBack + index * 0x10);
 }

@@ -214,7 +214,7 @@ static inline void wait(bmdfoot_class* i_this) {
             if (sVar2 < 0) {
                 sVar2 = -sVar2;
             }
-            if (sVar2 < l_HIO.m06) {
+            if (sVar2 < l_HIO.mAttackAngle) {
                 housi_off(i_this);
                 i_this->mAction = Bmdfoot_Attack1;
                 i_this->mMode = 0;
@@ -305,7 +305,7 @@ static inline void attack_1(bmdfoot_class* i_this) {
 
     s16 pa = fopAcM_searchPlayerAngleY(actor);
     s16 sVar3 = (s16)(pa - actor->current.angle.y);
-    s16 m06 = l_HIO.m06;
+    s16 m06 = l_HIO.mAttackAngle;
     s16 sVar5;
     if (sVar3 > m06) {
         sVar5 = m06;
@@ -711,7 +711,7 @@ static BOOL daBmdfoot_Execute(bmdfoot_class* i_this) {
     cLib_addCalcAngleS2(&i_this->mAimAngle, 0, 0x10, 0x80);
     s16 sVar1_2;
     if (i_this->mAction < 3) {
-        sVar1_2 = l_HIO.m08;
+        sVar1_2 = l_HIO.mActivePitch;
     } else {
         sVar1_2 = 0;
     }
@@ -819,8 +819,8 @@ static cPhs_State daBmdfoot_Create(fopAc_ac_c* a_this) {
     } else if (res != cPhs_COMPLEATE_e) {
         return res;
     }
-    i_this->mLAttackSmoke00CB[0].m12 = 1; /* setFollowOff */
-    i_this->mLAttackSmoke00CB[1].m12 = 1;
+    i_this->mLAttackSmoke00CB[0].mFollowOff = 1; /* setFollowOff */
+    i_this->mLAttackSmoke00CB[1].mFollowOff = 1;
     if (!fopAcM_entrySolidHeap(a_this, gabi::guest_fn(reinterpret_cast<const void*>(useHeapInit)), 0x5040)) {
         return cPhs_ERROR_e;
     }
@@ -891,8 +891,8 @@ static daBmdfoot_HIO_c* daBmdfoot_HIO_c_ct(daBmdfoot_HIO_c* h) {
     }
     h->mNo = -1;
     h->__vtbl = BmdfootVtable_Hio;
-    h->m06 = 3500;
-    h->m08 = 1000;
+    h->mAttackAngle = 3500;
+    h->mActivePitch = 1000;
     return h;
 }
 

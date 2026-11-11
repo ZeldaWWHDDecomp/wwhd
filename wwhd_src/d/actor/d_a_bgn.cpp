@@ -420,7 +420,7 @@ void part_draw(bgn_class* i_this, part_s* param_2) {
     BgnCameraView* camera = (BgnCameraView*)dComIfGp_getCamera(0);
     cXyz_mi(&param_2->mPartCenter, local_38, &camera->mEye);
     f32 dist = std_sqrtf(PSVECSquareMag(local_38));
-    if (dist > l_HIO().m008 * param_2->mPartScale) {
+    if (dist > l_HIO().mPartDrawDist * param_2->mPartScale) {
         setLightTevColorType(dKy_getEnvlight(), model, (dKy_tevstr_c*)tev);
         s8 health = actor->health;
         if (health <= 2 &&
@@ -440,7 +440,7 @@ void part_draw(bgn_class* i_this, part_s* param_2) {
             mDoExt_modelUpdateDL(model);
         }
     }
-    if (l_HIO().m00C != 0) {
+    if (l_HIO().mReflectionOn != 0) {
         param_2->mPartPacket.setModel(model);
         mDoExt_J3DModelPacketS_update(&param_2->mPartPacket);
     }
@@ -486,7 +486,7 @@ static void* ki_a_d_sub(void* param_1, void*) {
     if (fopAc_IsActor(param_1) && param_1 != nullptr && fpcM_GetName(param_1) == fpcNm_KI_e) {
         u32 model = keese->model;
         if (model != 0) {
-            mDoExt_J3DModelPacketS* pkt = &((BgnKeeseView*)keese)->m2B8;
+            mDoExt_J3DModelPacketS* pkt = &((BgnKeeseView*)keese)->mModelPacket;
             pkt->setModel(gabi::at<J3DModel>(model));
             mDoExt_J3DModelPacketS_update(pkt);
         }
@@ -740,11 +740,11 @@ void part_control_0(bgn_class* i_this, int param_2, part_s* param_3, move_s* par
     f32 dVar10;
     param_3++;
     if (param_4->mCut == 0) {
-        dVar10 = l_HIO().m16C;
+        dVar10 = l_HIO().mPartDropHung;
     } else if (i_this->mCSMode != 0) {
         dVar10 = -40.0f;
     } else {
-        dVar10 = l_HIO().m170;
+        dVar10 = l_HIO().mPartDropCut;
     }
     for (s32 i = 1; i < (s32)((u32)param_2 + 1); i++, param_3++) {
         part_s* prev = param_3 - 1;
@@ -864,10 +864,10 @@ void part_mtx_set(bgn_class* i_this, int param_2, part_s* param_3, int param_4, 
                 }
             }
         }
-        f32 hio = l_HIO().m0F4;
+        f32 hio = l_HIO().mScale;
         f32 fVar4 = gabi::fmuls_ppc(param_3->mPartScale, hio);
         if ((u32)i != (u32)(param_2 - 1) && (param_4 == 3 || param_4 == 4)) {
-            f32 diff = gabi::fsubs_ppc(i_this->mArmLength[param_4 - 3], l_HIO().m124);
+            f32 diff = gabi::fsubs_ppc(i_this->mArmLength[param_4 - 3], l_HIO().mArmPartSpacing);
             f32 fVar5 = gabi::fmadds(diff, gabi::fadds_ppc(REG0_F(0), 0.005f), 1.0f);
             MtxScale(fVar4, fVar4, gabi::fmuls_ppc(fVar4, fVar5), true);
         } else {
@@ -878,13 +878,13 @@ void part_mtx_set(bgn_class* i_this, int param_2, part_s* param_3, int param_4, 
             f32 f = gabi::fmuls_ppc((f32)uVar7, gabi::fadds_ppc(REG0_F(14), 170.0f));
             s16 sVar8 = (s16)gabi::ftoi(gabi::fmuls_ppc(cM_ssin(uVar7 * 0x2100), f));
             s16 iVar1 = (s16)gabi::ftoi(gabi::fmuls_ppc(cM_ssin(sVar8 * 0x2300), f));
-            cMtx_YrotM(calc_mtx(), (s16)(i_this->mC744 + l_HIO().m03C + iVar1));
-            cMtx_ZrotM(calc_mtx(), (s16)(l_HIO().m040 + sVar8));
+            cMtx_YrotM(calc_mtx(), (s16)(i_this->mHeadCutYaw + l_HIO().mHeadRotY + iVar1));
+            cMtx_ZrotM(calc_mtx(), (s16)(l_HIO().mHeadRotZ + sVar8));
         }
-        MtxTrans(0.0f, 0.0f, l_HIO().m168, true);
+        MtxTrans(0.0f, 0.0f, l_HIO().mPartOffsetZ, true);
         if (param_4 == 0) {
-            MtxTrans(0.0f, l_HIO().m034, l_HIO().m038, true);
-            cMtx_XrotM(calc_mtx(), l_HIO().m03E);
+            MtxTrans(0.0f, l_HIO().mHeadOffsetY, l_HIO().mHeadOffsetZ, true);
+            cMtx_XrotM(calc_mtx(), l_HIO().mHeadRotX);
         } else if (param_4 == 7 && (u32)i == (u32)(param_2 - 1)) {
             s8 health = actor->health;
             if (health == 3) {
@@ -940,7 +940,7 @@ void part_mtx_set(bgn_class* i_this, int param_2, part_s* param_3, int param_4, 
             } else {
                 local_8c->y = 0.0f;
                 local_8c->x = 0.0f;
-                local_8c->z = l_HIO().m168;
+                local_8c->z = l_HIO().mPartOffsetZ;
                 MtxPosition(local_8c, &i_this->mHimoTopPos[param_4]);
                 local_8c->z = 0.0f;
                 local_8c->x = 0.0f;
@@ -1079,7 +1079,7 @@ void damage(bgn_class* i_this) {
         actor->speed.y = 0.0f;
     }
     if (i_this->mBodyOffset.y > 100.0f) {
-        cLib_addCalc2(&i_this->mC774, REG0_F(9) + 250.0f, 1.0f, REG0_F(10) + 50.0f);
+        cLib_addCalc2(&i_this->mRedRopeSway, REG0_F(9) + 250.0f, 1.0f, REG0_F(10) + 50.0f);
         for (s32 i = 0; i < 8; i++) {
             cLib_addCalc2(&i_this->mMove[i].mSwayAmplitude, REG0_F(9) + 250.0f, 1.0f, REG0_F(10) + 50.0f);
         }
@@ -1219,7 +1219,7 @@ void hensin(bgn_class* i_this) {
         if (i_this->mKSubCount >= (s16)(REG0_S(3) + 150)) {
             cLib_addCalc2(&i_this->mFogFade, 1.0f, 1.0f, REG0_F(15) + 0.005f);
         }
-        cLib_addCalc2(&i_this->mC774, REG0_F(9) + 250.0f, 1.0f, REG0_F(10) + 50.0f);
+        cLib_addCalc2(&i_this->mRedRopeSway, REG0_F(9) + 250.0f, 1.0f, REG0_F(10) + 50.0f);
         if (i_this->mKSubCount == 280) {
             i_this->mMode = 10;
             i_this->mTimers[0] = (s16)(REG0_S(6) + 300);
@@ -1313,7 +1313,7 @@ void action_s(bgn_class* i_this, move_s* param_2, int param_3) {
         param_2->mLimbShakeTimer = t;
     }
     f32 target = 0.0f;
-    if (l_HIO().m025 == 0 && i_this->mBodyOffset.y > REG0_F(12) + -900.0f) {
+    if (l_HIO().mPoseEditMode == 0 && i_this->mBodyOffset.y > REG0_F(12) + -900.0f) {
         target = gabi::fadds_ppc(gabi::fmadds((f32)t, REG0_F(2) + 20.0f, 300.0f), REG0_F(13));
     }
     cLib_addCalc2(&param_2->mLimbShakeAmplitude, target, 0.5f, REG0_F(8) + 200.0f);
@@ -1321,44 +1321,44 @@ void action_s(bgn_class* i_this, move_s* param_2, int param_3) {
     param_2->mPhaseCos = (s16)(param_2->mPhaseCos + (param_3 * 3 + REG0_S(6) + 2300));
     if (param_2->m2FE != 0)
         param_2->m2FE = (s16)(param_2->m2FE - 1);
-    if (l_HIO().m025 != 0) {
+    if (l_HIO().mPoseEditMode != 0) {
         param_2->mCut = 0;
         daBgn_HIO_c& h = l_HIO();
         switch ((u32)param_3) {
         case 0:
-            param_2->mPoseTarget.x = h.m0AA;
-            param_2->mPoseTarget.y = h.m0AC;
-            param_2->mPoseTarget.z = h.m0AE;
+            param_2->mPoseTarget.x = h.mPoseEdit0X;
+            param_2->mPoseTarget.y = h.mPoseEdit0Y;
+            param_2->mPoseTarget.z = h.mPoseEdit0Z;
             break;
         case 2:
-            param_2->mPoseTarget.x = h.m0B0;
-            param_2->mPoseTarget.y = h.m0B2;
-            param_2->mPoseTarget.z = h.m0B4;
+            param_2->mPoseTarget.x = h.mPoseEdit2X;
+            param_2->mPoseTarget.y = h.mPoseEdit2Y;
+            param_2->mPoseTarget.z = h.mPoseEdit2Z;
             break;
         case 3:
-            param_2->mPoseTarget.x = h.m0B6;
-            param_2->mPoseTarget.y = h.m0B8;
-            param_2->mPoseTarget.z = h.m0BA;
+            param_2->mPoseTarget.x = h.mPoseEdit3X;
+            param_2->mPoseTarget.y = h.mPoseEdit3Y;
+            param_2->mPoseTarget.z = h.mPoseEdit3Z;
             break;
         case 4:
-            param_2->mPoseTarget.x = h.m0BC;
-            param_2->mPoseTarget.y = h.m0BE;
-            param_2->mPoseTarget.z = h.m0C0;
+            param_2->mPoseTarget.x = h.mPoseEdit4X;
+            param_2->mPoseTarget.y = h.mPoseEdit4Y;
+            param_2->mPoseTarget.z = h.mPoseEdit4Z;
             break;
         case 5:
-            param_2->mPoseTarget.x = h.m0C2;
-            param_2->mPoseTarget.y = h.m0C4;
-            param_2->mPoseTarget.z = h.m0C6;
+            param_2->mPoseTarget.x = h.mPoseEdit5X;
+            param_2->mPoseTarget.y = h.mPoseEdit5Y;
+            param_2->mPoseTarget.z = h.mPoseEdit5Z;
             break;
         case 6:
-            param_2->mPoseTarget.x = h.m0C8;
-            param_2->mPoseTarget.y = h.m0CA;
-            param_2->mPoseTarget.z = h.m0CC;
+            param_2->mPoseTarget.x = h.mPoseEdit6X;
+            param_2->mPoseTarget.y = h.mPoseEdit6Y;
+            param_2->mPoseTarget.z = h.mPoseEdit6Z;
             break;
         case 7:
-            param_2->mPoseTarget.x = h.m0CE;
-            param_2->mPoseTarget.y = h.m0D0;
-            param_2->mPoseTarget.z = h.m0D2;
+            param_2->mPoseTarget.x = h.mPoseEdit7X;
+            param_2->mPoseTarget.y = h.mPoseEdit7Y;
+            param_2->mPoseTarget.z = h.mPoseEdit7Z;
             break;
         }
     }
@@ -1668,129 +1668,129 @@ static daBgn_HIO_c* daBgn_HIO_c_ct(daBgn_HIO_c* p) {
     }
     p->__vtbl = bgnTu::hio_vtbl;
     p->mNo = -1;
-    p->m00C = 1;
-    p->m00D = 1;
-    p->m010 = 50.0f;
+    p->mReflectionOn = 1;
+    p->mRoomReflectionOn = 1;
+    p->mWaterAlphaPct = 50.0f;
     p->m014 = 10;
     p->m016 = 10;
     p->m018 = 80;
     p->m01C = 1000.0f;
     p->m020 = 10000.0f;
-    p->m025 = 0;
+    p->mPoseEditMode = 0;
     p->m026 = 0;
-    p->m027 = 0;
+    p->mDebugHealth = 0;
     p->m024 = 0;
-    p->m028 = 1;
-    p->m008 = 200.0f;
-    p->m004 = 0;
-    p->m029 = 0;
-    p->m02A = 0;
-    p->m02B = 0;
-    p->m02C = 0;
-    p->m02D = 0;
-    p->m02E = 0;
-    p->m02F = 0;
-    p->m030 = 0;
-    p->m034 = -20.0f;
-    p->m038 = -30.0f;
-    p->m03C = 0;
-    p->m03E = 22000;
-    p->m040 = 0;
-    p->m042 = 0;
+    p->mAttackOn = 1;
+    p->mPartDrawDist = 200.0f;
+    p->mChestRotX = 0;
+    p->mForceCutString0 = 0;
+    p->mForceCutString1 = 0;
+    p->mForceCutString2 = 0;
+    p->mForceCutString3 = 0;
+    p->mForceCutString4 = 0;
+    p->mForceCutString5 = 0;
+    p->mForceCutString6 = 0;
+    p->mForceCutString7 = 0;
+    p->mHeadOffsetY = -20.0f;
+    p->mHeadOffsetZ = -30.0f;
+    p->mHeadRotY = 0;
+    p->mHeadRotX = 22000;
+    p->mHeadRotZ = 0;
+    p->mPoseEditAngleY = 0;
     p->m044 = 0;
     p->m048 = 0.0f;
-    p->m04C = 950.0f;
+    p->mBodyHeight = 950.0f;
     p->m050 = 0.0f;
-    p->m054 = 0.0f;
-    p->m058 = 2000.0f;
-    p->m05C = 800.0f;
-    p->m060 = 0.0f;
-    p->m064 = -800.0f;
-    p->m068 = -800.0f;
-    p->m06C = 700.0f;
-    p->m070 = -900.0f;
-    p->m074 = 300.0f;
-    p->m078 = -700.0f;
-    p->m07C = -900.0f;
-    p->m080 = 300.0f;
-    p->m084 = 500.0f;
-    p->m088 = -1300.0f;
-    p->m08C = -100.0f;
-    p->m090 = -500.0f;
-    p->m094 = -1300.0f;
-    p->m098 = -100.0f;
-    p->m09C = 0.0f;
-    p->m0A0 = -700.0f;
-    p->m0A4 = -1200.0f;
-    p->m0A8 = 0;
-    p->m0AA = 0;
-    p->m0AC = 0;
-    p->m0AE = 0;
-    p->m0B0 = 0;
-    p->m0B2 = 0;
-    p->m0B4 = 0;
-    p->m0B6 = 0;
-    p->m0B8 = 0;
-    p->m0BA = 0;
-    p->m0BC = 0;
-    p->m0BE = 0;
-    p->m0C0 = 0;
-    p->m0C2 = 0;
-    p->m0C4 = 0;
-    p->m0C6 = 0;
-    p->m0C8 = 0;
-    p->m0CA = 0;
-    p->m0CC = 0;
-    p->m0CE = 0;
-    p->m0D0 = 0;
-    p->m0D2 = 0;
-    p->m0D8 = 120;
-    p->m0DA = 20;
-    p->m0DC = 1200;
-    p->m0DE = 1500;
-    p->m0E0 = 2000;
-    p->m0E2 = 300;
-    p->m0E4 = 200;
-    p->m0E6 = 150;
-    p->m0E8 = 15;
-    p->m0EA = 15;
-    p->m0EC = 15;
-    p->m0EE = 500;
-    p->m0D4 = 40.0f;
-    p->m0F0 = 5;
-    p->m0F2 = 10;
-    p->m0F4 = 1.3f;
-    p->m0FC = 3.25f;
-    p->m0F8 = 1.6f;
-    p->m100 = 1.8f;
-    p->m104 = 1.2f;
-    p->m108 = 0.3f;
-    p->m10C = 1.2f;
-    p->m110 = 0.4f;
-    p->m114 = 1.2f;
-    p->m118 = 0.1f;
-    p->m11C = 185.0f;
-    p->m124 = 185.0f;
-    p->m120 = 185.0f;
-    p->m128 = 185.0f;
-    p->m168 = 100.0f;
-    p->m12C = 0.0f;
-    p->m130 = -10.0f;
-    p->m134 = 120.0f;
-    p->m138 = 100.0f;
-    p->m13C = 25.0f;
-    p->m140 = 20.0f;
-    p->m144 = 0.0f;
-    p->m148 = -115.0f;
-    p->m14C = 0.0f;
-    p->m150 = 80.0f;
-    p->m154 = -20.0f;
-    p->m158 = 100.0f;
-    p->m15C = 0.0f;
-    p->m160 = -60.0f;
-    p->m164 = 150.0f;
-    p->m16C = -50.0f;
-    p->m170 = -100.0f;
+    p->mHeadEndPosX = 0.0f;
+    p->mHeadEndPosY = 2000.0f;
+    p->mHeadEndPosZ = 800.0f;
+    p->mPelvisEndPosX = 0.0f;
+    p->mPelvisEndPosY = -800.0f;
+    p->mPelvisEndPosZ = -800.0f;
+    p->mLeftHandPosX = 700.0f;
+    p->mLeftHandPosY = -900.0f;
+    p->mLeftHandPosZ = 300.0f;
+    p->mRightHandPosX = -700.0f;
+    p->mRightHandPosY = -900.0f;
+    p->mRightHandPosZ = 300.0f;
+    p->mLeftFootPosX = 500.0f;
+    p->mLeftFootPosY = -1300.0f;
+    p->mLeftFootPosZ = -100.0f;
+    p->mRightFootPosX = -500.0f;
+    p->mRightFootPosY = -1300.0f;
+    p->mRightFootPosZ = -100.0f;
+    p->mTailEndPosX = 0.0f;
+    p->mTailEndPosY = -700.0f;
+    p->mTailEndPosZ = -1200.0f;
+    p->mBodyDrawOffsetY = 0;
+    p->mPoseEdit0X = 0;
+    p->mPoseEdit0Y = 0;
+    p->mPoseEdit0Z = 0;
+    p->mPoseEdit2X = 0;
+    p->mPoseEdit2Y = 0;
+    p->mPoseEdit2Z = 0;
+    p->mPoseEdit3X = 0;
+    p->mPoseEdit3Y = 0;
+    p->mPoseEdit3Z = 0;
+    p->mPoseEdit4X = 0;
+    p->mPoseEdit4Y = 0;
+    p->mPoseEdit4Z = 0;
+    p->mPoseEdit5X = 0;
+    p->mPoseEdit5Y = 0;
+    p->mPoseEdit5Z = 0;
+    p->mPoseEdit6X = 0;
+    p->mPoseEdit6Y = 0;
+    p->mPoseEdit6Z = 0;
+    p->mPoseEdit7X = 0;
+    p->mPoseEdit7Y = 0;
+    p->mPoseEdit7Z = 0;
+    p->mKeeseDanceTime = 120;
+    p->mDanceAStepTime = 20;
+    p->mDanceASpin3HP = 1200;
+    p->mDanceASpin2HP = 1500;
+    p->mDanceASpin1HP = 2000;
+    p->mDanceTime3HP = 300;
+    p->mDanceTime2HP = 200;
+    p->mDanceTime1HP = 150;
+    p->mDanceBStepTime3HP = 15;
+    p->mDanceBStepTime2HP = 15;
+    p->mDanceBStepTime1HP = 15;
+    p->mDanceBTurnStep = 500;
+    p->mPoseSpeedBase = 40.0f;
+    p->mHandMax = 5;
+    p->mTailMax = 10;
+    p->mScale = 1.3f;
+    p->mChestScale = 3.25f;
+    p->mHeadScale = 1.6f;
+    p->mPelvisScale = 1.8f;
+    p->mArmRootScale = 1.2f;
+    p->mArmTipScale = 0.3f;
+    p->mLegRootScale = 1.2f;
+    p->mLegTipScale = 0.4f;
+    p->mTailRootScale = 1.2f;
+    p->mTailTipScale = 0.1f;
+    p->mBodyPartSpacing = 185.0f;
+    p->mArmPartSpacing = 185.0f;
+    p->mLegPartSpacing = 185.0f;
+    p->mTailPartSpacing = 185.0f;
+    p->mPartOffsetZ = 100.0f;
+    p->mHeadRootPosX = 0.0f;
+    p->mHeadRootPosY = -10.0f;
+    p->mHeadRootPosZ = 120.0f;
+    p->mShoulderPosX = 100.0f;
+    p->mShoulderPosY = 25.0f;
+    p->mShoulderPosZ = 20.0f;
+    p->mPelvisRootPosX = 0.0f;
+    p->mPelvisRootPosY = -115.0f;
+    p->mPelvisRootPosZ = 0.0f;
+    p->mHipPosX = 80.0f;
+    p->mHipPosY = -20.0f;
+    p->mHipPosZ = 100.0f;
+    p->mTailRootPosX = 0.0f;
+    p->mTailRootPosY = -60.0f;
+    p->mTailRootPosZ = 150.0f;
+    p->mPartDropHung = -50.0f;
+    p->mPartDropCut = -100.0f;
     p->mKeeseNum3HP = 3;
     p->mKeeseNum2HP = 4;
     p->mKeeseNum1HP = 5;

@@ -108,7 +108,7 @@ void daSwProp_c::CreateInit() {
     mCyl.Set(&l_cyl_src);
     mCyl.SetStts(&mStts);
 
-    m648 = fopAcM_GetParam(this) & 0xFF;
+    mSwitchNo = fopAcM_GetParam(this) & 0xFF;
     set_mtx();
 
     /* mpModel->getModelData()->getJointName()->getIndex("kaiten") */
@@ -178,7 +178,7 @@ bool daSwProp_c::_execute() {
 
     /* the wind stopped: toggle the switch */
     if (!windHit && mWindHit != 0) {
-        dComIfGs_revSwitch(m648, home.roomNo);
+        dComIfGs_revSwitch(mSwitchNo, home.roomNo);
     }
 
     s16 rest = cLib_addCalcAngleS(&mRotYVel, mRotYVelTarget, mSpinDown ? 10 : 30, 100, 10);

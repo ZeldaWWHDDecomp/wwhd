@@ -470,7 +470,7 @@ struct daPz_c : fopNpc_npc_c {
     /* 0x7E8 */ be<u8> mTgHitTimer;
     /* 0x7E9 */ be<u8> mHitType;
     /* 0x7EA */ be<s8> mBckIdx; /* pzDLib_bcks_setAnm: bck */
-    /* 0x7EB */ be<s8> m06D3;   /* GameCube m06D3: anm prm number */
+    /* 0x7EB */ be<s8> mAnm;  /* was m06D3: setAnm 02454654 stores the animation number (15 keeps the current one); _execute 02454B7C sets the head splash in ANM_WAKE; modeAttackInit 02456D34 tests the bow animations; GameCube mAnm: anm prm number */
     /* 0x7EC */ be<s8> mOldAnm;
     /* 0x7ED */ be<s8> mCurEye; /* GameCube 0x6D5 */
     /* 0x7EE */ u8 _7EE[2];
@@ -487,7 +487,7 @@ struct daPz_c : fopNpc_npc_c {
     /* 0x844 */ cXyz mHeadPos;            /* head joint translation */
     /* 0x850 */ u8 _850[0x856 - 0x850];
     /* 0x856 */ be<u8> mbEyesFollowGanondorf;
-    /* 0x857 */ be<u8> m073F;
+    /* 0x857 */ be<u8> mAfraidRequest;  /* was m073F: _execute 02454B7C switches to MODE_AFRAID while it is set (outside modes 5 / 6); modeAfraid 02457D68, modeSideStep 02458000 and modeBackStep 02458274 clear it; nothing here sets it */
     /* 0x858 */ be<u8> mbWakeUp;
     /* 0x859 */ u8 _859[3];
     /* 0x85C */ be<s32> mbLastHitFromPlayer; /* last hit was not Ganondorf */
@@ -506,10 +506,10 @@ struct daPz_c : fopNpc_npc_c {
     /* 0xA5C */ cXyz mFollowPos;
     /* 0xA68 */ dBgS_LinChk mLinChk;
     /* 0xAD4 */ gptr<daPz_matAnm_c> mpMatAnm[2]; /* eyes L/R, GameCube m08A8 */
-    /* 0xADC */ be<s32> m08B0;
+    /* 0xADC */ be<s32> mBattlePhase;  /* was m08B0: createInit 024528D8 clears it; _execute 02454B7C goes to MODE_DOWN in phase 1 and auto-talks only in 0 / 2; modeMoveInit 02455AB8, modeAttackInit 02456D34 and modeTalkInit 024584C0 index the l_HIO tables (move wait, circle radius, attack times, talk distance / wait) with it; getMsg 02458AEC picks the message by it */
     /* 0xAE0 */ be<s32> mLightArrowID;
     /* 0xAE4 */ cXyz mEyePos; /* head joint * (0,0,0) */
-    /* 0xAF0 */ cXyz m08C4;
+    /* 0xAF0 */ cXyz mTargetPos;  /* was m08C4: modeWait 0245588C / modeMoveInit 02455AB8: the player eye position or mGanondorfPos4; the circle path centre; modeAttack 02456ED8 aims at it; the eye animation copies it to mEyeTargetPos */
     /* 0xAFC */ cXyz mEyeTargetPos;
     /* 0xB08 */ cXyz mEyePos2; /* head joint * (24,-16,0) */
     /* 0xB14 */ be<s16> mLookTurnSpeed;
@@ -525,19 +525,19 @@ struct daPz_c : fopNpc_npc_c {
     /* 0xB44 */ be<f32> mCircleSpeed;      /*   walk speed */
     /* 0xB48 */ be<s16> mCircleAngle;      /*   angle */
     /* 0xB4A */ be<s16> mCircleAngleSpeed; /*   angle speed */
-    /* 0xB4C */ be<s32> m0920;
+    /* 0xB4C */ be<s32> mCircleDir;  /* was m0920: createInit 024528D8 sets 1; modeMoveInit 02455AB8 flips it by chance (mReverseDirectionChance); the sign of mCircleAngleSpeed and of the side-step waist turn (modeSideStep 02458000) */
     /* 0xB50 */ be<f32> mTargetSpeed;
     /* 0xB54 */ enemyice mEventIce;   /* GameCube 0x928 */
     /* 0xF0C */ enemyfire mEnemyFire; /* GameCube 0xCE0 */
     /* 0x1138 */ Mtx34 mWaistMtx;
     /* 0x1168 */ cXyz mWaistPos;
     /* 0x1174 */ be<f32> mAttackAimSpread;
-    /* 0x1178 */ be<u8> m0F48;
+    /* 0x1178 */ be<u8> mAimAtPlayer;  /* was m0F48: modeAttackInit 02456D34: 1 by l_HIO mPlayerAimChance (head lock on the player), else 0; modeAttack 02456ED8 aims at mGanondorfPos4 only while it is 0 */
     /* 0x1179 */ u8 _1179[3];
     /* 0x117C */ cXyz mGanondorfPosCurrent; /* GameCube 0xF4C */
     /* 0x1188 */ cXyz mGanondorfPos4;       /* Ganondorf eyePos, GameCube 0xF58 */
     /* 0x1194 */ be<u8> mbHasGanondorf;     /* GameCube 0xF64 */
-    /* 0x1195 */ be<u8> m0F65;
+    /* 0x1195 */ be<u8> mAdviceGiven;  /* was m0F65: getMsg 02458AEC: in phase 2 the first message is PZ_MSG_ADVICE (then sets it), later PZ_MSG_REPEAT; modeAttackInit 02456D34 uses phase 0 timings until it is set; modeMove 024563D4 tests it */
     /* 0x1196 */ be<u8> mbDemoActive;
     /* 0x1197 */ be<u8> mEyeFrame;
     /* 0x1198 */ be<f32> mHitSlideSpeed;
@@ -547,13 +547,13 @@ struct daPz_c : fopNpc_npc_c {
     /* 0x11A4 */ u8 _11A4[4];
     /* 0x11A8 */ be<s16> mWaistAngleZ;
     /* 0x11AA */ be<s16> mWaistAngleY;
-    /* 0x11AC */ be<s32> m0F7C;
-    /* 0x11B0 */ be<u8> m0F80;
+    /* 0x11AC */ be<s32> mTalkWaitTimer;  /* was m0F7C: createInit 024528D8 / modeDown 02457718 / modeTalkInit 024584C0 load l_HIO mTalkWaitTime[...]; _execute 02454B7C counts it down and starts the talk when it reaches 0 near the player */
+    /* 0x11B0 */ be<u8> mAutoTalkOff;  /* was m0F80: modeTalkInit 024584C0 sets 1 after a phase 0 talk; modeDown 02457718 and createInit 024528D8 clear it; _execute 02454B7C starts no automatic talk while it is set */
     /* 0x11B1 */ be<u8> mbInPlayerFan;
-    /* 0x11B2 */ be<u8> m0F82; /* 1: speak event, 2: other event */
+    /* 0x11B2 */ be<u8> mEventType;  /* was m0F82: _execute 02454B7C sets 1 (speak event) for the automatic talk, modeMove 024563D4 / modeFollow 02458550 set 2; eventOrder 02453A00 offers the talk (and orders the speak event for 1); checkOrder 024539BC switches to MODE_TALK and clears it; 1: speak event, 2: other event */
     /* 0x11B3 */ u8 _11B3;
     /* 0x11B4 */ be<s32> mArg; /* GameCube 0xF84 */
-    /* 0x11B8 */ be<u8> m0F88;
+    /* 0x11B8 */ be<u8> mHasBow;  /* was m0F88: createInit 024528D8 sets 1 for mArg 0; _draw 0245562C draws the bow only while it is set */
     /* 0x11B9 */ u8 _11B9[3];
     /* 0x11BC */ gptr<mDoExt_McaMorf> mpBowMcaMorf; /* GameCube 0xF8C */
     /* 0x11C0 */ mDoExt_brkAnm mBrkAnm;             /* mDoExt_brkAnm (HD 0x78), GameCube 0xF90 */

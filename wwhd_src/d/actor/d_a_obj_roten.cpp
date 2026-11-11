@@ -53,7 +53,7 @@ BOOL daObj_Roten_c::CreateHeap() {
     };
     u32 idx = mType;
     J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes(M_arcname, bdl_arc_idx[idx]);
-    JUT_ASSERT(0xB0, modelData != NULL);
+    JUT_ASSERT_MSG(0xB0, modelData != NULL, "modelData != (0)");
     mpModel = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
     RotenBgW* bg = static_cast<RotenBgW*>(new_dBgW());
     mpBgW = bg;
@@ -99,10 +99,10 @@ s32 daObj_RotenCreate(daObj_Roten_c* self) {
     }
     s32 needed = type == 0 ? 3 : type == 1 ? 6 : 9;
     if (count <= needed) {
-        self->field_0x2D1 = 1;
+        self->mCreateFailed = 1;
         return cPhs_ERROR_e;
     }
-    self->field_0x2D1 = 0;
+    self->mCreateFailed = 0;
     s32 phase = dComIfG_resLoad(&self->mPhs, M_arcname);
     if (phase != cPhs_COMPLEATE_e)
         return phase;
@@ -116,7 +116,7 @@ s32 daObj_RotenCreate(daObj_Roten_c* self) {
 
 /* 02388CC4 */
 BOOL daObj_RotenDelete(daObj_Roten_c* self) {
-    if (!self->field_0x2D1) {
+    if (!self->mCreateFailed) {
         dBgS* bgs = dComIfG_Bgsp();
         RotenBgW* w = self->mpBgW;
         bgs->Release(w);
@@ -187,7 +187,7 @@ void emptyVirtual(daObj_Roten_c* self) {}
 /* WWHD glue (tools/verify/autoglue.py)
 str 1002EE60
 str 1002EE20
-str 1002EE34 "modelData != NULL" renamed # HD: assertion spells zero instead of NULL.
+str 1002EE34 "modelData != (0)" # HD: assertion spells zero instead of NULL.
 data bdl_arc_idx 101CC94C
 data dzb_arc_idx 101CC958
 data l_HIO 1046BD84

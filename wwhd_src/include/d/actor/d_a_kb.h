@@ -327,10 +327,11 @@ static inline bool SafeString_eq(SafeString *a, SafeString *b) {
     return false;
 }
 /* strcmp(dComIfGp_getStartStageName(), lit) == 0 (HD: SafeString comparison; the start stage name
- * at play+0x5134) */
+ * at play+0x5134). lit is a host literal (its registered guest copy) or a guest string by address
+ * (gabi::at<char>), for a site whose original loads another copy of the same text. */
 static inline bool kbIsStartStage(const char *lit) {
     gabi::Local<SafeString> a;
-    a->mTextPtr = gabi::guest_str(lit);
+    a->mTextPtr = gabi::guest_addr(lit);
     a->__vtbl = SAFESTRING_VTBL;
     gabi::Local<SafeString> b;
     b->mTextPtr = gabi::ea(kbPlay()->mCurStage.mName);

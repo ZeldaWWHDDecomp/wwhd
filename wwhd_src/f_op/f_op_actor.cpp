@@ -65,11 +65,11 @@ static void checkPosition(fopAc_ac_c* actor, s32 line, s32 rangeLine) {
     // HD: the assertion uses integer NaN tests before its ordered float range checks.
     auto* words = reinterpret_cast<fopAc_vectorWordsHD*>(&actor->current.pos);
     if (positionIsNaN(words->position[0]))
-        JUTAssertion_showAssert("f_op_actor.cpp", line, "!isnan(actor->current.pos.x)");
+        JUTAssertion_showAssert("f_op_actor.cpp", line, "!__generic(actor->current.pos.x, , ,__isnand,__isnanf,__isnanl,,,)(actor->current.pos.x)");
     if (positionIsNaN(words->position[1]))
-        JUTAssertion_showAssert("f_op_actor.cpp", line + 1, "!isnan(actor->current.pos.y)");
+        JUTAssertion_showAssert("f_op_actor.cpp", line + 1, "!__generic(actor->current.pos.y, , ,__isnand,__isnanf,__isnanl,,,)(actor->current.pos.y)");
     if (positionIsNaN(words->position[2]))
-        JUTAssertion_showAssert("f_op_actor.cpp", line + 2, "!isnan(actor->current.pos.z)");
+        JUTAssertion_showAssert("f_op_actor.cpp", line + 2, "!__generic(actor->current.pos.z, , ,__isnand,__isnanf,__isnanl,,,)(actor->current.pos.z)");
     const f32 lo = -1.0e32f, hi = 1.0e32f;
     f32 x = actor->current.pos.x;
     bool ok = lo < x && x < hi;
@@ -145,7 +145,7 @@ s32 fopAc_IsDelete(fopAc_ac_c* actor) {
 /* 025D4B4C */
 s32 fopAc_Delete(fopAc_ac_c* actor) {
     // HD: constructed actors run their virtual destructor before removal from the queues.
-    JUT_ASSERT(0x376, actor->mHdConstructState == CONSTRUCTED_e);
+    JUT_ASSERT_MSG(0x376, actor->mHdConstructState == CONSTRUCTED_e, "actor->constructStatus_ == fopAc_ac_c::CONSTRUCTED_e");
     s32 ret = fpcMtd_Delete(gabi::at<process_method_class>(actor->sub_method), actor);
     if (ret == TRUE) {
         if (actor->mHdConstructState == CONSTRUCTED_e) {
@@ -277,7 +277,7 @@ u32 fopAc_ac_c__ct(fopAc_ac_c* self) {
         for (u32 i = 0; i < 8; ++i)
             light->factors[i] = g[i];
     }
-    JUT_ASSERT(0x14F, self->mHdConstructState == CLEARED_e);
+    JUT_ASSERT_MSG(0x14F, self->mHdConstructState == CLEARED_e, "constructStatus_ == CLEARED_e");
     self->mHdConstructState = CONSTRUCTED_e;
     return gabi::ea(self);
 }
@@ -288,7 +288,7 @@ void fopAc_ac_c__dt(fopAc_ac_c* self, s32 flags) {
         return;
     u8 state = self->mHdConstructState;
     self->__vtbl = gabi::ea(&l_actorVtable);
-    JUT_ASSERT(0x157, state == CONSTRUCTED_e);
+    JUT_ASSERT_MSG(0x157, state == CONSTRUCTED_e, "constructStatus_ == CONSTRUCTED_e");
     self->mHdConstructState = DESTROYED_e;
     fopAc_baseProcessDtorHD(self, 0);
     if (flags & 1)
@@ -310,15 +310,15 @@ str 10056E7C "f_op_actor.cpp" in 025D475C
 str 1005706C "f_op_actor.cpp" in 025D4B4C
 str 100570E4 "f_op_actor.cpp" in 025D4ED0
 str 10057118 "f_op_actor.cpp" in 025D50BC
-str 10056E8C "!isnan(actor->current.pos.x)" renamed
-str 10056EE8 "!isnan(actor->current.pos.y)" renamed
-str 10056F44 "!isnan(actor->current.pos.z)" renamed
+str 10056E8C "!__generic(actor->current.pos.x, , ,__isnand,__isnanf,__isnanl,,,)(actor->current.pos.x)"
+str 10056EE8 "!__generic(actor->current.pos.y, , ,__isnand,__isnanf,__isnanl,,,)(actor->current.pos.y)"
+str 10056F44 "!__generic(actor->current.pos.z, , ,__isnand,__isnanf,__isnanl,,,)(actor->current.pos.z)"
 str 10056FA0
-str 1005707C "actor->mHdConstructState == CONSTRUCTED_e" renamed
+str 1005707C "actor->constructStatus_ == fopAc_ac_c::CONSTRUCTED_e"
 str 10056E64 "d_demo.h"
 str 10056E54 "m_object != (0)"
-str 100570C4 "self->mHdConstructState == CLEARED_e" renamed
-str 100570F4 "state == CONSTRUCTED_e" renamed
+str 100570C4 "constructStatus_ == CLEARED_e"
+str 100570F4 "constructStatus_ == CONSTRUCTED_e"
 ext 025DD258 BOOL fpcBs_Is_JustOfType(int, int)
 ext 025DD268 s32 fpcBs_MakeOfType(be<s32>*)
 ext 025986BC BOOL dMenu_flag()

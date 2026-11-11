@@ -185,7 +185,7 @@ void ftree_dComIfG_resDelete(void*, const char*);
 unsigned int ftree_mDoExt_McaMorf__play(void*, int, int, int);
 unsigned int ftree_mDoExt_baseAnm__play(void*);
 void ftree_dl(void*);
-void ftree_dBgS_Acch___dBgS_Acch(void*, int);
+void ftree_dCcD_Cyl___dCcD_Cyl(void*, int); /* 02515A70 dCcD_Cyl::~dCcD_Cyl (was ftree_dBgS_Acch___dBgS_Acch (misnamed)) */
 void ftree_destroyCollisionStatus(void*, int);
 void ftree_cBgS_Chk___cBgS_Chk(void*, int);
 void ftree_fopAc_ac_c___fopAc_ac_c(daObjFtree::Act_c*, int);

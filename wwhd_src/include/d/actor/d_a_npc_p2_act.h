@@ -11,7 +11,7 @@
 
 /* dNpc_HIO_c (0x28, constructor 0259DA18), as in d_a_npc_bs1.h (SHARED-CANDIDATE) */
 struct dNpc_HIO_p2 {
-    /* 0x00 */ be<f32> m04;              /* playerEyePos offset */
+    /* 0x00 */ be<f32> mPlayerEyeOffsetY;  /* was m04: copy of dNpc_HIO_c (d/d_npc.h), see there; playerEyePos offset */
     /* 0x04 */ be<s16> mMaxHeadX;
     /* 0x06 */ be<s16> mMaxBackboneX;
     /* 0x08 */ be<s16> mMaxHeadY;
@@ -24,7 +24,7 @@ struct dNpc_HIO_p2 {
     /* 0x16 */ be<s16> mMaxHeadTurnVel;
     /* 0x18 */ be<f32> mAttnYOffset;
     /* 0x1C */ be<s16> mMaxAttnAngleY;
-    /* 0x1E */ be<u8> m22;
+    /* 0x1E */ be<u8> mDebugDraw;  /* was m22: copy of dNpc_HIO_c (d/d_npc.h), see there */
     /* 0x1F */ u8 _1F;
     /* 0x20 */ be<f32> mMaxAttnDistXZ;
     /* 0x24 */ be<u32> __vtbl;

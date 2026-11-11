@@ -17,19 +17,19 @@ BOOL Act_c::_createHeap() {
     static const s32 bdl[2] = {5, 6};
     // dRes_INDEX_OKMONO_DZB_OTBLE_e, dRes_INDEX_OKMONO_DZB_OTBLE_L_e
     static const s32 dzb[2] = {9, 10};
-    J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes("Okmono", bdl[m294]);
-    JUT_ASSERT(0xC1, modelData != NULL); // HD: assertion line differs from GameCube.
+    J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes("Okmono", bdl[mVariant]);
+    JUT_ASSERT_MSG(0xC1, modelData != NULL, "modelData != (0)"); // HD: assertion line differs from GameCube.
     mModel = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000022);
     if (mModel == NULL)
         return FALSE;
     mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
     mDoMtx_stack_c::YrotM(current.angle.y);
-    PSMTXCopy(mDoMtx_stack_c::get(), &m2A4);
+    PSMTXCopy(mDoMtx_stack_c::get(), &mBgMtx);
     mBgW = new_dBgW();
     if (mBgW == NULL)
         return FALSE;
-    cBgD_t* bgw_data = (cBgD_t*)dComIfG_getObjectRes("Okmono", dzb[m294]);
-    if (mBgW->Set(bgw_data, dBgW::MOVE_BG_e, &m2A4))
+    cBgD_t* bgw_data = (cBgD_t*)dComIfG_getObjectRes("Okmono", dzb[mVariant]);
+    if (mBgW->Set(bgw_data, dBgW::MOVE_BG_e, &mBgMtx))
         return FALSE;
     return TRUE;
 }
@@ -46,7 +46,7 @@ void Act_c::set_mtx() {
     mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
     mDoMtx_stack_c::YrotM(current.angle.y);
     J3DModel_setBaseTRMtx(mModel, mDoMtx_stack_c::get());
-    PSMTXCopy(mDoMtx_stack_c::get(), &m2A4);
+    PSMTXCopy(mDoMtx_stack_c::get(), &mBgMtx);
     mBgW->Move();
 }
 
@@ -61,7 +61,7 @@ void Act_c::CreateInit() {
     fopAcM_posMoveF(this, nullptr);
     set_mtx();
     fopAcM_SetMtx(this, J3DModel_getBaseTRMtx(mModel));
-    if (m294 == 1)
+    if (mVariant == 1)
         fopAcM_setCullSizeBox(this, -100.0f, -0.0f, -200.0f, 100.0f, 150.0f, 200.0f);
     else
         fopAcM_setCullSizeBox(this, -100.0f, -0.0f, -100.0f, 100.0f, 150.0f, 100.0f);
@@ -101,10 +101,10 @@ cPhs_State Act_c::_create() {
     u8 variant = u32(mParameters) & 0xFF;
     if (variant > 1)
         variant = 1;
-    m294 = variant;
+    mVariant = variant;
     cPhs_State ret = dComIfG_resLoad(&mPhase, "Okmono");
     if (ret == cPhs_COMPLEATE_e) {
-        if (!fopAcM_entrySolidHeap(this, createHeap_CB, heapsize.values[m294]))
+        if (!fopAcM_entrySolidHeap(this, createHeap_CB, heapsize.values[mVariant]))
             return cPhs_ERROR_e;
         CreateInit();
     }
@@ -154,7 +154,7 @@ str 1002E394 in 02380D28 # "Okmono"
 str 1002E324 in 023811A0 # "Okmono"
 str 1002E3F0 in 023812FC # "Okmono"
 str 1002E39C # "d_a_obj_otble.cpp"
-str 1002E3B0 "modelData != NULL" renamed # HD: assertion prints null as 0
+str 1002E3B0 "modelData != (0)" # HD: assertion prints null as 0
 data bdl 1002E384
 data dzb 1002E38C
 data l_heapsize_init 1002E318

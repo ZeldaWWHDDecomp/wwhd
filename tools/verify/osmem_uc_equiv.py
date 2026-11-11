@@ -66,7 +66,7 @@ HARNESS_SHIM = r"""
 #include <iterator>
 #include <stdexcept>
 #include <sys/mman.h>
-struct HCpu { uint32_t r[32]; };
+struct HCpu { uint32_t r[32]; struct { double ps0, ps1; } f[32]; };
 #define Cpu HCpu
 static struct { int depth = 0; } V;
 static std::unordered_map<uint32_t, uint8_t> g_hmem;
@@ -124,6 +124,20 @@ int main() {
 """
 
 
+def gthr_decls(hsrc):
+    """what the osm namespace names from the other `osmem` parts: the pure model headers harness.cpp includes
+    (gthr/ax/pad/dynload/portans_model.h), harness.cpp's early gthr block, and stub definitions of the gthr functions
+    (defined in gthr_sched.inc); the equivalence runs set osm::parts to their own part only, so none of them is reached"""
+    a = hsrc.index("namespace gthr {\nextern bool on;")
+    block = hsrc[a:hsrc.index("\n}\n", a) + 3]
+    model = "".join(open(os.path.join(HERE, "src", h)).read().replace("#pragma once", "") + "\n"
+                    for h in ("gthr_model.h", "ax_model.h", "pad_model.h", "dynload_model.h", "portans_model.h"))
+    stubs = ("namespace gthr { uint32_t main_obj = 0; bool models(uint32_t) { return false; } "
+             "bool call(Cpu*, uint32_t, const uint32_t*) { return false; } bool ax_call(Cpu*, uint32_t, const uint32_t*) { return false; } "
+             "uint64_t clock_now() { return 0; } }\n")
+    return model + "\n" + block + stubs
+
+
 def main():
     args = sys.argv[1:]
     port = args[args.index("--port-src") + 1] if "--port-src" in args else None
@@ -137,7 +151,7 @@ def main():
     osm = hsrc[hsrc.index("namespace osm {"):hsrc.index("}  // namespace osm") + len("}  // namespace osm")]
     d = tempfile.mkdtemp(prefix="osmem_uc_equiv-", dir=os.environ.get("TMPDIR"))
     cpp, exe = os.path.join(d, "eq.cpp"), os.path.join(d, "eq")
-    open(cpp, "w").write(HARNESS_SHIM + osm + "\n#undef Cpu\n" + PORT_SHIM % tuple(pieces) + DRIVER)
+    open(cpp, "w").write(HARNESS_SHIM + gthr_decls(hsrc) + osm + "\n#undef Cpu\n" + PORT_SHIM % tuple(pieces) + DRIVER)
     r = subprocess.run(["clang++", "-std=c++17", "-O1", "-w", "-o", exe, cpp], capture_output=True, text=True)
     if r.returncode:
         print(r.stderr[-3000:])

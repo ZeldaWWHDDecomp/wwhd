@@ -111,8 +111,8 @@ void Act_c::set_cc_rec_pos() {
 
     mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
     mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), shape_angle.x, shape_angle.y, shape_angle.z);
-    mDoMtx_stack_c::transM(0.0f, L_attr.field_0xB4, L_attr.field_0xB8);
-    mDoMtx_XrotM(mDoMtx_stack_c::get(), L_attr.field_0xBC);
+    mDoMtx_stack_c::transM(0.0f, L_attr.mTriOffsetY, L_attr.mTriOffsetZ);
+    mDoMtx_XrotM(mDoMtx_stack_c::get(), L_attr.mMirrorAngleX);
 
     cXyz* out[3] = {&a, &b, &c};
     for (int i = 0; i < 5; i++) {
@@ -137,10 +137,10 @@ void Act_c::set_cc_trans_pos() {
 
     end.y = 0.0f;
     end.x = 0.0f;
-    end.z = L_attr.field_0xD0;
+    end.z = L_attr.mBeamLength;
     mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
     mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), shape_angle.x, shape_angle.y, shape_angle.z);
-    mDoMtx_stack_c::transM(L_attr.field_0xC0[0], L_attr.field_0xC0[1], L_attr.field_0xC0[2]);
+    mDoMtx_stack_c::transM(L_attr.mBeamStart[0], L_attr.mBeamStart[1], L_attr.mBeamStart[2]);
     PSMTXMultVec(mDoMtx_stack_c::get(), cXyz_Zero, &cps.mStart);
     PSMTXMultVec(mDoMtx_stack_c::get(), &end, &cps.mEnd);
     cps.mRadius = L_attr.radius;
@@ -174,7 +174,7 @@ void Act_c::set_cc_trans_pos() {
     tmp.z = sz;
     tmp.y = sy;
     tmp.x = sx;
-    f32 d = std_sqrtf(Mmrr_squareDistance(&tmp, &cps.mEnd)) / L_attr.field_0xD0;
+    f32 d = std_sqrtf(Mmrr_squareDistance(&tmp, &cps.mEnd)) / L_attr.mBeamLength;
     /* ~dBgS_MirLightLinChk */
     chk.__vtbl_20 = 0x1002CCA8;
     chk.__vtbl_58 = 0x1002CCF8;
@@ -187,8 +187,8 @@ void Act_c::set_cc_trans_pos() {
 void Act_c::set_cull() {
     f32 y1, z1;
     if (mReflecting) {
-        u16 ang = (u16)L_attr.field_0xBC;
-        f32 d0 = L_attr.field_0xD0;
+        u16 ang = (u16)L_attr.mMirrorAngleX;
+        f32 d0 = L_attr.mBeamLength;
         f32 s = cM_ssin(ang), c = cM_scos(ang);
         y1 = gabi::fnmsubs(d0, s, 680.0f); /* -d0 * sin + 680 */
         z1 = gabi::fmadds(d0, c, 160.0f);  /* d0 * cos + 160 */

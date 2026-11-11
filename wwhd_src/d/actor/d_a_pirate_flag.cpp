@@ -8,7 +8,13 @@
  * Every marked function retains its verified WWHD behavior; the final glue records TU data.
  */
 #include "d/actor/d_a_pirate_flag.h"
+#include "sead/ElementAt.h"
 #include <cmath>
+// Guest EA arithmetic: mBuffers + (channel * 2 + frame) * sizeof(PirateVertexBuffer) wraps at 32 bits as on the console (a
+// generated current-frame index reached host addresses far above the guest window).
+static inline PirateVertexBuffer& clothBuffer(PirateVertexBuffer (*buffers)[2], u32 channel, u32 frame) {
+    return sead::elementAt<PirateVertexBuffer>(gabi::ea(buffers), channel * 2u + frame);
+}
 
 static daPirate_Flag_HIO_c l_HIO;
 using PirateShipPointer = gptr<PirateShipView>;
@@ -222,7 +228,7 @@ void daPirate_Flag_packet_c::setCorrectNrmAngle(s16 windAngle, f32 windStrength)
     f32 sine = cM_ssin(wave);
     mNrmAngle = s16(gabi::ftoi(300.0f * sine));
     f32 attenuation = gabi::fnmsubs(0.5f, windStrength, 1.0f);
-    s16 escape = s16(gabi::ftoi((f32)l_HIO.m1C * attenuation));
+    s16 escape = s16(gabi::ftoi((f32)l_HIO.mEscapeNrmAngle * attenuation));
     s16 opposite = s16(u16(windAngle) + 0x8000u);
     s16 threshold = s16(gabi::ftoi((f32(escape) * 1.25f) * 182.04444885253906f));
     s16 target = 0;
@@ -318,7 +324,7 @@ void daPirate_Flag_packet_c::draw() {
     PirateClothBuffers *buffers = &packet->mClothBuffers;
     for (u32 channel = 0; channel < 2; ++channel) {
         u32 frame = buffers->mCurrent;
-        u32 vertex = buffers->mBuffers[channel][frame].mpVertices;
+        u32 vertex = clothBuffer(buffers->mBuffers, channel, frame).mpVertices;
         for (u32 i = 0; i < 25; ++i) {
             u32 index = packet->mCurArr;
             cXyz *source = &packet->mPos[index][i];
@@ -338,7 +344,7 @@ void daPirate_Flag_packet_c::draw() {
         }
     }
     u32 frame = buffers->mCurrent;
-    u32 buffer = gabi::ea(&buffers->mBuffers[0][frame].mBuffer);
+    u32 buffer = gabi::ea(&clothBuffer(buffers->mBuffers, 0, frame).mBuffer);
     for (u32 channel = 0; channel < 2; ++channel) {
         u32 bytes = gabi::at<PirateBufferDescriptor>(buffer)->mByteCount;
         pirateBufferFlush(ptr(buffer), 0, bytes);
@@ -444,7 +450,7 @@ BOOL daPirate_Flag_Draw(void *actor) {
     play = pirateGetPlay();
     l_translucentBuffer = (u32)gabi::at<PiratePlayView>(play)->mpTranslucentEntryBuffer;
     i_this->mPacket.draw();
-    if ((u8)l_HIO.m05) {
+    if ((u8)l_HIO.mDrawDebugLines) {
         u16 facing = (u16)i_this->current.angle.y;
         pirateFirstLightVector(&local->result, &local->light);
         x = local->light.x;
@@ -481,7 +487,7 @@ void get_cloth_anim_sub_factor(cXyz *origin, cXyz *neighbor, cXyz *accumulated, 
     pirateVectorNormalize(displacement, unit);
     f32 lengthSquared = pirateVectorSquareMag(displacement);
     f32 length = pirateSqrt(lengthSquared);
-    f32 spring = (length - restLength) * (f32)l_HIO.m18;
+    f32 spring = (length - restLength) * (f32)l_HIO.mSpringRate;
     pirateVectorScale(unit, unit, spring);
     pirateVectorAdd(accumulated, unit, accumulated);
 }
@@ -504,11 +510,11 @@ void pirate_flag_move(void *actor) {
     local->probe.z = 0.0f;
     local->probe.x = 1.0f;
     pirateMtxPosition(&local->probe, &local->result);
-    s16 phase = s16(u32((s16)i_this->mWindPhase) + (u32)l_HIO.m08);
+    s16 phase = s16(u32((s16)i_this->mWindPhase) + (u32)l_HIO.mWindPhaseStep);
     i_this->mWindPhase = phase;
     f32 wave = cM_ssin(phase);
     f32 factor = gabi::fmadds(0.5f, wave, 0.5f);
-    f32 strength = gabi::fmadds((f32)l_HIO.m0C, factor, (f32)l_HIO.m10 * (1.0f - factor));
+    f32 strength = gabi::fmadds((f32)l_HIO.mWindStrengthMax, factor, (f32)l_HIO.mWindStrengthMin * (1.0f - factor));
     f32 normalStrength = std::fabs(f32(local->result.z));
     local->wind.x = 0.0f;
     local->wind.y = 0.0f;
@@ -568,7 +574,7 @@ void pirate_flag_move(void *actor) {
                 local->center.z = (f32)gabi::at<cXyz>(source)->z;
                 f32 dot = pirateVectorDot(&local->wind, ptr(normals + index * 12));
                 pirateVectorProduct(ptr(normals + index * 12), &local->scaled, dot);
-                f32 gravity = (f32)l_HIO.m14;
+                f32 gravity = (f32)l_HIO.mGravity;
                 local->spring.x = local->scaled.x;
                 local->spring.y = f32(local->scaled.y) + gravity;
                 local->spring.z = local->scaled.z;
@@ -641,7 +647,7 @@ void pirate_flag_move(void *actor) {
 /* 023D2610 */
 BOOL daPirate_Flag_Execute(void *actor) {
     auto *i_this = static_cast<pirate_flag_class *>(actor);
-    if (l_HIO.m07)
+    if (l_HIO.mStopMove)
         return TRUE;
     PirateShipView *ship = l_p_ship;
     if (ship->actor_condition & fopAcCnd_NODRAW_e)
@@ -822,17 +828,17 @@ void __sinit_d_a_pirate_flag_cpp() {
     pirateRegisterGlobal(ptr(0x101CEA84));
     pirateHeaderCircleConstruct(&l_headerCircle);
     pirateRegisterGlobal(ptr(0x101CEA90));
-    l_HIO.m1C = 0.0f;
-    l_HIO.m0C = 13.0f;
-    l_HIO.m10 = 7.0f;
-    l_HIO.m14 = -3.5f;
+    l_HIO.mEscapeNrmAngle = 0.0f;
+    l_HIO.mWindStrengthMax = 13.0f;
+    l_HIO.mWindStrengthMin = 7.0f;
+    l_HIO.mGravity = -3.5f;
     l_HIO.mNo = -1;
-    l_HIO.m18 = 0.45f;
+    l_HIO.mSpringRate = 0.45f;
     l_HIO.__vtbl = 0x10034648;
     l_HIO.m06 = 0;
-    l_HIO.m05 = 0;
-    l_HIO.m08 = 0x40;
-    l_HIO.m07 = 0;
+    l_HIO.mDrawDebugLines = 0;
+    l_HIO.mWindPhaseStep = 0x40;
+    l_HIO.mStopMove = 0;
     pirateRegisterGlobal(ptr(0x101CEA9C));
 }
 
@@ -1016,13 +1022,13 @@ void pirate_initialize_graphics(void *object) {
     packet->mPrimitiveMode = 6;
     for (u32 channel = 0; channel < 2; ++channel) {
         u32 frame = (u32)gabi::at<PirateClothBuffers>(buffers)->mCurrent,
-            vertex = u32(packet->mClothBuffers.mBuffers[channel][frame].mpVertices),
+            vertex = u32(clothBuffer(packet->mClothBuffers.mBuffers, channel, frame).mpVertices),
             end = vertex + 0x320;
         for (u32 block = vertex; block < end; block += 0x20)
             for (u32 byte = 0; byte < 0x20; ++byte)
                 gabi::at<be<u8>>(block & ~31u)[byte] = 0;
         frame = (u32)gabi::at<PirateClothBuffers>(buffers)->mCurrent;
-        vertex = u32(packet->mClothBuffers.mBuffers[channel][frame].mpVertices);
+        vertex = u32(clothBuffer(packet->mClothBuffers.mBuffers, channel, frame).mpVertices);
         for (u32 i = 0; i < 25; ++i) {
             u32 position = 0x101CE884 + i * 12, uv = 0x101CE9B0 + i * 8, dest = vertex + i * 0x20;
             f32 x = (f32)gabi::at<cXyz>(position)->x, y = (f32)gabi::at<cXyz>(position)->y,
@@ -1040,8 +1046,8 @@ void pirate_initialize_graphics(void *object) {
     u32 frame = (u32)gabi::at<PirateClothBuffers>(buffers)->mCurrent, other = frame == 0 ? 1 : 0;
     for (u32 channel = 0; channel < 2; ++channel)
         for (u32 vertex = 0; vertex < 25; ++vertex) {
-            u32 source = u32(packet->mClothBuffers.mBuffers[channel][frame].mpVertices),
-                dest = u32(packet->mClothBuffers.mBuffers[channel][other].mpVertices);
+            u32 source = u32(clothBuffer(packet->mClothBuffers.mBuffers, channel, frame).mpVertices),
+                dest = u32(clothBuffer(packet->mClothBuffers.mBuffers, channel, other).mpVertices);
             for (u32 component = 0; component < 8; ++component)
                 gabi::at<PirateFloatVertex>(dest)[vertex].component[component] =
                     (f32)gabi::at<PirateFloatVertex>(source)[vertex].component[component];

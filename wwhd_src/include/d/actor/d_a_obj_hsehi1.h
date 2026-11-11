@@ -20,7 +20,8 @@ struct daObj_hsh_c : fopAc_ac_c {
     be<u32> mFlags, mMsgNo;
     be<s32> mSwitchNo;
     be<u32> mPrmMsgNo;
-    be<s8> field_0x514, mEventSelector;
+    be<s8> mOrderEvent;  /* was field_0x514: the event to order: waitAction 0235C144 sets 5 (argument 0) or 3 while Link is in attention; eventOrder 0235ABE0 makes Link able to talk for 3 / 4 / 5 (orders the speak event for 4) or orders mEventId[it] for 0 / 1; checkOrder 0235AAA0 / checkCommandTalk 0235A628 / eventProc 0235A6F8 reset it to -1; init 0235AEF8 sets -1 */
+    be<s8> mEventSelector;
     u8 field_0x516;
     be<s8> mActionMode;
     be<u8> mAttentionLatch, mAppearDeleteTimer;
@@ -87,7 +88,9 @@ struct daObj_hsh_HIO_c {
     be<s8> mNo;
     u8 _01[3];
     struct hio_prm_c {
-        be<f32> mAttnDist, field_0x0c, field_0x10;
+        be<f32> mAttnDist;
+        be<f32> mAttnOffsetY;  /* was field_0x0c: setAttention 0235BF68 adds it to the attention_info.position height (tww the same) */
+        be<f32> mEyeOffsetY;  /* was field_0x10: setAttention 0235BF68 adds it to the eyePos height (tww the same) */
         be<s16> mAttnAngle;
         be<s8> field_0x16;
         u8 _0F;

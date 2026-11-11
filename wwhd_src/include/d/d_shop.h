@@ -16,15 +16,17 @@ struct ShopItems_c__ItemData {
     u8 _00D[3];
 };
 struct __shop_items_set_data {
-    be<u32> mpItemData, mShowMsgNo, mBuyMsgNo, m0C;
+    be<u32> mpItemData, mShowMsgNo, mBuyMsgNo;
+    be<u32> mSoldOutMsgNo;  /* was m0C: dShop_now_triggercheck 025BB698 shows it instead of mShowMsgNo when the selected item is sold out (tww the same: *pMsgNo = itemSetList[nextIdx]->m0C when isSoldOutItem) */
     be<s32> mCount;
 };
 struct ShopItems_c__select_list_data {
     be<s16> mLeftIdx, mRightIdx, mUpIdx, mDownIdx;
 };
 struct ShopItems_c__shop_cam_data {
-    cXyz m00, m0C;
-    be<f32> m18;
+    cXyz mCenter;  /* was m00: shop_cam_action_init 025BBE98 copies it into ShopCam_action_c::mCenter, shop_cam_action 025BBF4C eases mCenter towards it; the camera Set center (tww the same; one row per shop and zoom state in shop_cam_data_tbl) */
+    cXyz mEye;  /* was m0C: shop_cam_action_init 025BBE98 copies it into ShopCam_action_c::mEye, shop_cam_action 025BBF4C eases mEye towards it; the camera Set eye (tww the same) */
+    be<f32> mFovy;  /* was m18: shop_cam_action_init 025BBE98 copies it into ShopCam_action_c::mFovy, shop_cam_action 025BBF4C eases mFovy towards it; the camera Set fovy (tww the same) */
 };
 struct ShopAction {
     be<s16> mThisDelta, mVtableIndex;
@@ -42,14 +44,16 @@ struct ShopCam_action_c {
     u32 rsh_talk_cam_action_init(void* actor, void* desiredCenter, void* desiredEye, f32 fovy);
     /* 0x00 */ ShopAction mCurrActionFunc;
     /* 0x08 */ ShopAction mPreviousAction;
-    /* 0x10 */ cXyz m18;
-    /* 0x1C */ cXyz m24;
-    /* 0x28 */ be<f32> m30;
+    /* 0x10 */ cXyz mCenter;  /* was m18: shop_cam_action 025BBF4C, rsh_talk_cam_action 025BC38C, ds_normal_cam_action 025BC4DC pass it to the camera's Set as the center (shop_cam_action eases it towards shop_cam_data_tbl's center); the NPCs' inline getItemZoomPos aims from mEye towards it (tww the same) */
+    /* 0x1C */ cXyz mEye;  /* was m24: the same three actions pass it to the camera's Set as the eye; the NPCs' inline getItemZoomPos returns mEye + normalize(mCenter - mEye) * distance (tww the same) */
+    /* 0x28 */ be<f32> mFovy;  /* was m30: the same three actions pass it to the camera's Set as the fovy; shop_cam_action 025BBF4C eases it towards the table's fovy; ShopCam_action_c_ct 025BBDF0 sets 60 (tww the same) */
     /* 0x2C */ cXyz mOrigCenter;
     /* 0x38 */ cXyz mOrigEye;
     /* 0x44 */ be<f32> mOrigFovy;
-    /* 0x48 */ be<u16> m50, m52;
-    /* 0x4C */ be<s16> m54, mCamDataIdx;
+    /* 0x48 */ be<u16> m50;
+    /* 0x4A */ be<u16> m52;
+    /* 0x4C */ be<s16> mSelectIdx;  /* was m54: shop_cam_action 025BBF4C uses the table's second (zoomed) row while it is >= 0; the NPCs set it to mShopItems.mSelectedItemIdx, the init actions and ShopCam_action_c_ct to -1 (tww the same) */
+    /* 0x4E */ be<s16> mCamDataIdx;
 };
 struct ShopItems_c {
     // HD: preserve 32-bit guest-address wrapping for unconstrained signed indices.
@@ -85,8 +89,9 @@ struct ShopItems_c {
     /* 0x04 */ be<u32> mItemActorProcessIds[8];
     /* 0x24 */ be<u32> mpItemSetList;
     /* 0x28 */ be<u8> mItemIsSoldOut[8];
-    /* 0x30 */ cXyz m30;
-    /* 0x3C */ be<s16> m3C, mbIsHide, mNumItems, mItemSetListGlobalIdx;
+    /* 0x30 */ cXyz mZoomPos;  /* was m30: Item_ZoomUp 025BCC7C stores the position it is given; Item_Select 025BCA2C moves the selected item towards it (minus the item centre) while mbZoomUp is 1 (tww the same) */
+    /* 0x3C */ be<s16> mbZoomUp;  /* was m3C: Item_ZoomUp 025BCC7C sets 1, Item_Move 025BCCA4 clears it after each pass, ShopItems_c_ct 025BC760 clears it; Item_Select 025BCA2C moves the item to mZoomPos while it is 1, else back home (tww the same) */
+    be<s16> mbIsHide, mNumItems, mItemSetListGlobalIdx;
 };
 struct ShopCursor_c {
     void setPos(void* pos);
@@ -96,11 +101,15 @@ struct ShopCursor_c {
     /* 0x0C */ be<u32> mpModels[4];
     /* 0x1C */ be<u32> mpBrkData;
     /* 0x20 */ mDoExt_brkAnm mBrkAnm;
-    /* 0x98 */ be<f32> m38, m3C, m40;
-    /* 0xA4 */ be<s16> m44;
+    /* 0x98 */ be<f32> mPieceDistFar;  /* was m38: ShopCursor_c::anm_play 025BD290: mPieceDist switches between it and mPieceDistNear; the ctor ShopCursor_c_ct sets 30, the shop NPCs' setScale sets their HIO value (tww the same) */
+    /* 0x9C */ be<f32> mPieceDistNear;  /* was m3C: ShopCursor_c::anm_play 025BD290: mPieceDist switches between mPieceDistFar and it; the ctor sets 25, the shop NPCs' setScale their HIO value (tww the same) */
+    /* 0xA0 */ be<f32> mPieceDist;  /* was m40: ShopCursor_c::draw 025BD338: each of the four cursor pieces is moved it * sqrt(2) out from mPos; anm_play 025BD290 sets it to the far or near distance (tww the same) */
+    /* 0xA4 */ be<s16> mDistSwitchTimer;  /* was m44: ShopCursor_c::anm_play 025BD290: counts down; at 0 mPieceDist switches and it is reloaded with 15 + random (tww the same) */
     u8 _0A6[2];
-    /* 0xA8 */ be<f32> m48, m4C, m50;
-    /* 0xB4 */ be<u8> m54;
+    /* 0xA8 */ be<f32> mPieceScale;  /* was m48: ShopCursor_c::draw 025BD338: the pieces' scale (y times mPieceScaleYFar / mPieceScaleYNear); ShopCursor_create's scale argument, setScale's first (tww the same) */
+    /* 0xAC */ be<f32> mPieceScaleYFar;  /* was m4C: ShopCursor_c::draw 025BD338: the pieces' y scale factor while mPieceDist is the far distance (tww the same) */
+    /* 0xB0 */ be<f32> mPieceScaleYNear;  /* was m50: ShopCursor_c::draw 025BD338: the pieces' y scale factor while mPieceDist is the near distance (tww the same) */
+    /* 0xB4 */ be<u8> mbShow;  /* was m54: ShopCursor_c::draw 025BD338 draws only while it is set; the shop NPCs' show() / hide() set 1 / 0 and test it (tww the same) */
     u8 _0B5[3];
 };
 enum ShopItems_c__BuyConditions {
@@ -117,18 +126,18 @@ WWHD_SIZE(__shop_items_set_data, 0x14);
 WWHD_SIZE(ShopItems_c__select_list_data, 8);
 WWHD_SIZE(ShopItems_c__shop_cam_data, 0x1C);
 WWHD_SIZE(ShopAction, 8);
-WWHD_OFFSET(ShopCam_action_c, m18, 0x10);
+WWHD_OFFSET(ShopCam_action_c, mCenter, 0x10);
 WWHD_OFFSET(ShopCam_action_c, mOrigCenter, 0x2C);
 WWHD_OFFSET(ShopCam_action_c, mCamDataIdx, 0x4E);
 WWHD_SIZE(ShopCam_action_c, 0x50);
 WWHD_OFFSET(ShopItems_c, mItemActorProcessIds, 4);
 WWHD_OFFSET(ShopItems_c, mpItemSetList, 0x24);
-WWHD_OFFSET(ShopItems_c, m30, 0x30);
+WWHD_OFFSET(ShopItems_c, mZoomPos, 0x30);
 WWHD_OFFSET(ShopItems_c, mNumItems, 0x40);
 WWHD_SIZE(ShopItems_c, 0x44);
 WWHD_OFFSET(ShopCursor_c, mBrkAnm, 0x20);
-WWHD_OFFSET(ShopCursor_c, m38, 0x98);
-WWHD_OFFSET(ShopCursor_c, m54, 0xB4);
+WWHD_OFFSET(ShopCursor_c, mPieceDistFar, 0x98);
+WWHD_OFFSET(ShopCursor_c, mbShow, 0xB4);
 WWHD_SIZE(ShopCursor_c, 0xB8);
 
 // HD: camera vectors are passed by address. Keep the verified 32-bit bank argument.

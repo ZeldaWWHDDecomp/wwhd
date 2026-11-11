@@ -126,7 +126,7 @@ static s32 dScnPly_isPause() {
 void dScnPly_msg_HIO_c::dScnPly_msg_HIO_checkUpdate(u32 i_update) { mIsUpdate = (u8)i_update; }
 
 /* 025AF43C */
-void dScnPly_msg_HIO_c::dScnPly_msg_HIO_setUpdate(u32 param_0) { field_0x07 = (u8)param_0; }
+void dScnPly_msg_HIO_c::dScnPly_msg_HIO_setUpdate(u32 param_0) { mShowRequest = (u8)param_0; }
 
 // HD: mID has only a lower clamp; the retail JUTReport call is omitted.
 /* 025AF3DC */
@@ -181,11 +181,11 @@ void dScnPly_msg_HIO_c::dScnPly_msg_HIO_padCheck() {
         else
             dScnPly_msg_HIO_numUpdate(0, -1);
     } else if (dScnPly_pad_trigB(3)) {
-        if (field_0x06 == 0)
-            field_0x06 = 1;
-    } else if (field_0x07 != 0) {
-        if (field_0x06 == 0)
-            field_0x06 = 1;
+        if (mShowMessage == 0)
+            mShowMessage = 1;
+    } else if (mShowRequest != 0) {
+        if (mShowMessage == 0)
+            mShowMessage = 1;
         dScnPly_msg_HIO_setUpdate(0);
     }
 }
@@ -195,9 +195,9 @@ void dScnPly_msg_HIO_c::dScnPly_msg_HIO_padCheck() {
 void dScnPly_msg_HIO_c::dScnPly_msg_HIO_messageProc() {
     dScnPly_msg_HIO_padCheck();
     u32 mgr = l_messageManager.mValue;
-    if (field_0x06 == 0)
+    if (mShowMessage == 0)
         return;
-    if ((s32)field_0x10 == -1) {
+    if ((s32)mMsgId == -1) {
         s32 group = (s16)mGroup;
         u32 msg_num = ((u32)group << 16) | (u32)(s32)(s16)mID;
         gabi::Local<cXyz> pos;
@@ -207,10 +207,10 @@ void dScnPly_msg_HIO_c::dScnPly_msg_HIO_messageProc() {
         if (group != 99 && group != 98 && group != 89) {
             mGroup = 0;
             mID = 0;
-            field_0x10 = dScnPly_fopMsgM_messageSet(mgr, 0, gabi::ea(pos.get()));
+            mMsgId = dScnPly_fopMsgM_messageSet(mgr, 0, gabi::ea(pos.get()));
             return;
         }
-        field_0x10 = dScnPly_fopMsgM_messageSet(mgr, msg_num, gabi::ea(pos.get()));
+        mMsgId = dScnPly_fopMsgM_messageSet(mgr, msg_num, gabi::ea(pos.get()));
         return;
     }
     if (dScnPly_fopMsgM_getStatus(mgr) == 0xE) {
@@ -220,8 +220,8 @@ void dScnPly_msg_HIO_c::dScnPly_msg_HIO_messageProc() {
     if (dScnPly_fopMsgM_getStatus(mgr) == 0x12) {
         dScnPly_fopMsgM_setStatus(mgr, 0x13);
         s16 id = (s16)mID;
-        field_0x10 = (u32)-1;
-        field_0x06 = 0;
+        mMsgId = (u32)-1;
+        mShowMessage = 0;
         mID = (u16)(id + 1);
     }
 }

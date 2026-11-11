@@ -31,14 +31,14 @@ struct daObjRflw_c : fopAc_ac_c {
     /* 0x3B4 */ gptr<J3DModel> mpModel;
     /* 0x3B8 */ dCcD_Stts mStts;
     /* 0x3F4 */ dCcD_Cyl mCyl;
-    /* 0x524 */ be<s16> m408;
-    /* 0x526 */ be<s16> m40A;
-    /* 0x528 */ be<s16> m40C;
-    /* 0x52A */ be<s16> m40E;
-    /* 0x52C */ be<u8> m410;
+    /* 0x524 */ be<s16> mSwingAngle;  /* was m408: _execute (in daObjRflw_Execute 02388064): sin(mSwingPhase) * (0x100 - mHitTimer) * 4 (first 8 frames) or * 2, 0 at the end; nodeCallBack 02387A74 rotates each joint by it about Y (tww the same); CreateInit 02387DA8 clears it */
+    /* 0x526 */ be<s16> mSwingPhase;  /* was m40A: _execute (in daObjRflw_Execute 02388064): 0 on a hit, + 0x1000 per frame for the first 8 frames then + 0x800; the sine argument of mSwingAngle (tww the same) */
+    /* 0x528 */ be<s16> mHitTimer;  /* was m40C: _execute (in daObjRflw_Execute 02388064): 0 on a hit, + 1 per frame while mIsSwinging, ends the swing above 0x100; a new hit counts only above 0x38; damps mSwingAngle by (0x100 - it) (tww the same); the unit spec d_a_obj_rflw.txt already calls 0x528 mHitTimer */
+    /* 0x52A */ be<s16> mSwingDirAngle;  /* was m40E: _execute (in daObjRflw_Execute 02388064): the angle from the colliding actor to the flower (cM_atan2s) - 0x4000 on a hit; nodeCallBack 02387A74 rotates X by it, Y by mSwingAngle, X back by -it, so the flower swings away from the hitter (tww the same) */
+    /* 0x52C */ be<u8> mIsSwinging;  /* was m410: _execute (in daObjRflw_Execute 02388064): 1 on a cylinder co-hit (with the JA_SE_OBJ_TREE_SWING_S sound), 0 when mHitTimer passes 0x100; the swing runs while set; _create (in daObjRflw_Create 02387E5C) clears it (tww the same); the unit spec calls 0x52C "swinging" */
     /* 0x52D */ u8 m411[3];
 };
 WWHD_OFFSET(daObjRflw_c, mCyl, 0x3F4);
-WWHD_OFFSET(daObjRflw_c, m410, 0x52C);
+WWHD_OFFSET(daObjRflw_c, mIsSwinging, 0x52C);
 WWHD_SIZE(daObjRflw_c, 0x530);
 

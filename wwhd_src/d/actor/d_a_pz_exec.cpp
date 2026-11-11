@@ -284,10 +284,10 @@ BOOL daPz_c::_execute() {
         mbEyesFollowGanondorf = (u8)checkEyeArea(&mGanondorfPosCurrent);
     s32 mode = mMode;
     gravity = l_HIO.mGravity;
-    if (mode != 6 && mode != 5 && m073F != 0)
+    if (mode != 6 && mode != 5 && mAfraidRequest != 0)
         modeProc(PROC_INIT_e, MODE_AFRAID);
     setRipple();
-    if (mMode != MODE_DOWN && m08B0 == 1)
+    if (mMode != MODE_DOWN && mBattlePhase == 1)
         modeProc(PROC_INIT_e, MODE_DOWN);
     setJntStatus();
     if (demo()) {
@@ -306,18 +306,18 @@ BOOL daPz_c::_execute() {
         J3DModel_setBaseTRMtx(mpMorf->getModel(), mDoMtx_stack_c::get());
         return TRUE;
     }
-    if (m06D3 == ANM_WAKE)
+    if (mAnm == ANM_WAKE)
         setHeadSplash();
-    if (mArg == 0 && (m08B0 == 0 || m08B0 == 2) && m0F80 == 0 && mMode != MODE_ATTACK_WAIT &&
+    if (mArg == 0 && (mBattlePhase == 0 || mBattlePhase == 2) && mAutoTalkOff == 0 && mMode != MODE_ATTACK_WAIT &&
         mMode != MODE_ATTACK && mMode != MODE_DOWN && mMode != MODE_TALK &&
-        pzCLib_calcTimer(&m0F7C) == 0) {
+        pzCLib_calcTimer(&mTalkWaitTimer) == 0) {
         gabi::Local<be<u32>> gndId;
         if (pzFopAcM_SearchByName(fpcNm_GND_e, gndId) && *gndId != 0) {
             fopAc_ac_c* gnd = pzGuest<fopAc_ac_c>(*gndId);
             f64 dist = pzSearchActorDistanceXZ_d(this, dComIfGp_getPlayer(0));
-            if (dist < l_HIO.mTalkDistance[m08B0] &&
+            if (dist < l_HIO.mTalkDistance[mBattlePhase] &&
                 reinterpret_cast<PzGanondorfHD*>(gnd)->mDemoState == 0) {
-                m0F82 = 1;
+                mEventType = 1;
                 modeProc(PROC_INIT_e, MODE_TALK);
             }
         }

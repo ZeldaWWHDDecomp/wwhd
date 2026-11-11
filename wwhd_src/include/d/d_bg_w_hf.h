@@ -87,8 +87,8 @@ class dBgWHf {
     u8 padding;
     /* 0xBC */ be<u32> mSvFlag;
     /* 0xC0 */ gptr<cXyz> mBackVtx;
-    /* 0xC4 */ be<f32> mC4;
-    /* 0xC8 */ gptr<be<u16>> mC8;
+    /* 0xC4 */ be<f32> mNormalY;  /* was mC4: Set 024F5870 stores its normal argument; CalcPlane 024F4B0C uses it as the y of every grid plane normal (tww the same) */
+    /* 0xC8 */ gptr<be<u16>> mpTriMap;  /* was mC8: Set 024F5870 stores its map argument; CalcPlane 024F4B0C looks up each grid cell's triangle index in it (tww the same) */
     /* 0xCC */ be<s32> m_gridx;
     /* 0xD0 */ be<s32> m_gridz;
 };
@@ -99,7 +99,7 @@ WWHD_SIZE(cBgW_NodeTree, 28);
 WWHD_SIZE(cBgW_GrpElm, 32);
 WWHD_OFFSET(dBgWHf, pm_tri, 0x88);
 WWHD_OFFSET(dBgWHf, pm_vtx_tbl, 0x90);
-WWHD_OFFSET(dBgWHf, mC4, 0xC4);
+WWHD_OFFSET(dBgWHf, mNormalY, 0xC4);
 WWHD_SIZE(dBgWHf, 0xD4);
 void *operator_new(u32);
 void *operator_new_array(u32);

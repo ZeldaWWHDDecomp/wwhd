@@ -2,6 +2,7 @@
  * HD: layout/state UI replaces the GameCube J2D screen. All verified entry points,
  * callback ordering and GHS stack footprints are preserved. */
 #include "d/d_file_select.h"
+#include "sead/ElementAt.h"
 using namespace FileSelectHD;
 #include <bit>
 using namespace gabi;
@@ -47,7 +48,9 @@ static u32 fileSelectGetPane(u32 p, u32 i) {
     auto* owner = at<dFile_select_c>(p);
     const u32 array = owner->mpPanes;
     const u32 count = owner->mPaneCount;
-    return at<be<u32>>(array)[i < count ? i : 0].get();
+    // Guest EA arithmetic: array + i * 4 wraps at 32 bits as on the console (a host index on a NULL pane array reached host
+    // addresses past 4 GB).
+    return sead::elementAt<be<u32>>(array, i < count ? i : 0).get();
 }
 static u32 fileSelectGetAnimation(u32 p) {
     return at<Layout>(at<dFile_select_c>(p)->mpLayout.get())->mpAnimation.get();

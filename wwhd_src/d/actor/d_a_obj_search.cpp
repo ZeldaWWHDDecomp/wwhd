@@ -811,7 +811,7 @@ void daObj_Search::Act_c::modeFind() {
     u32 vt = static_cast<u32>(gabi::at<daPy_py_c>(player)->__vtbl), targetFn = search_virtual(vt, 0x4C);
     if (gabi::call<s32>(targetFn, gabi::at<void>(player)))
         return;
-    if (static_cast<f32>(gabi::at<daPy_py_c>(player)->field_0x2b0) < l_zero) {
+    if (static_cast<f32>(gabi::at<daPy_py_c>(player)->mGrabItemOffsetY) < l_zero) {
         SearchHD_fopAcM_orderOtherEvent2(a, "Search_Light_Find_With_Barrel", 1, 0xFFFF);
         return;
     }
@@ -1615,7 +1615,7 @@ s32 daObj_Search::Act_c::player_check() {
             if (distanceA < far || distanceB < far)
                 return 0;
             if (!(std::fabs(static_cast<f32>(gabi::at<daPy_py_c>(player)->speedF)) < speed) ||
-                !(static_cast<f32>(gabi::at<daPy_py_c>(player)->field_0x2b0) < zero))
+                !(static_cast<f32>(gabi::at<daPy_py_c>(player)->mGrabItemOffsetY) < zero))
                 return 1;
         }
     }
@@ -1631,7 +1631,7 @@ s32 daObj_Search::Act_c::player_check() {
         if (distanceB < far)
             return 0;
         if (!(std::fabs(static_cast<f32>(gabi::at<daPy_py_c>(player)->speedF)) < speed) ||
-            !(static_cast<f32>(gabi::at<daPy_py_c>(player)->field_0x2b0) < zero))
+            !(static_cast<f32>(gabi::at<daPy_py_c>(player)->mGrabItemOffsetY) < zero))
             return 1;
     }
     if (!static_cast<s32>(SearchHD_dCcD_GObjInf_ChkCoHit(&a->mCps[0])) &&

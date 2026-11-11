@@ -15,8 +15,10 @@ struct MozoColorAnimation {
 
 // HD: GHS places HIO vtables after the GameCube payload.
 struct daMozo_childHIO_c {
-    be<f32> m04, m08;
-    be<s16> m0C, m0E;
+    be<f32> mSearchDist;  /* was m04: daMozo_c::checkRange 021D5030 with 0 (wait_proc 021D53D8, before the attack starts): Link must be closer than it horizontally; daMozo_HIO_c__ct 021D6070 1000 for both children (tww the same) */
+    be<f32> mAttackDist;  /* was m08: daMozo_c::checkRange 021D5030 with 1 (the attack procs; a failed check returns to towait_proc_init): Link must stay closer than it horizontally; daMozo_HIO_c__ct 021D6070 1200 for both children (tww the same) */
+    be<s16> mSearchAngle;  /* was m0C: daMozo_c::checkRange 021D5030 with 0: the angle between the actor's facing and Link must be below it; daMozo_HIO_c__ct 021D6070 0x2000 (tww the same) */
+    be<s16> mAttackAngle;  /* was m0E: daMozo_c::checkRange 021D5030 with 1: the facing angle limit while it attacks; daMozo_HIO_c__ct 021D6070 0x2800 (tww the same) */
     be<u8> m10;
     u8 pad11[3];
     be<u32> __vtbl;
@@ -177,7 +179,8 @@ struct daMozo_c : fopAc_ac_c {
     be<s32> animation;             // 0x544
     be<s16> fireTimer;             // 0x548
     u8 unused54A[4];
-    be<u8> field_0x376, requestEvent;  // 0x54E
+    /* mType (0x54E) was field_0x376: CreateInit 021D4B14: parameter byte 3 clamped to 0..2 (0xFF -> 0); wait_proc 021D53D8 / towait_proc 021D5E08 start the beam (MOZO_BEAM / MOZO_BEAM_ALT) or fire (MOZO_FIRE) search by it; checkRange 021D5030 picks the l_HIO child block by it; daMozo_nodeCallBack 021D3DF0 moves the joints only up to MOZO_FIRE (tww the same switch) */
+    be<u8> mType, requestEvent;  // 0x54E
     be<u32> fireEmitter, smokeEmitter; // 0x550
     dCcD_Stts mStts;                   // 0x558
     MozoCapsule mCps;                  // 0x594
@@ -192,7 +195,7 @@ WWHD_OFFSET(daMozo_c, mBtkAnm, 0x43C);
 WWHD_OFFSET(daMozo_c, beamOrigin, 0x4B4);
 WWHD_OFFSET(daMozo_c, fireOrigin, 0x508);
 WWHD_OFFSET(daMozo_c, mQuatRotation, 0x534);
-WWHD_OFFSET(daMozo_c, field_0x376, 0x54E);
+WWHD_OFFSET(daMozo_c, mType, 0x54E);
 WWHD_OFFSET(daMozo_c, mStts, 0x558);
 WWHD_OFFSET(daMozo_c, mCps, 0x594);
 WWHD_SIZE(daMozo_c, 0x6CC);

@@ -175,13 +175,13 @@ WWHD_SIZE(daNpc_Ds1_c, 0xA68);
 struct daNpc_Ds1_childHIO_c {
     /* 0x00 */ u8 _00[4];
     /* 0x04 */ dNpc_HIO_c mNpc;
-    /* 0x2C */ be<f32> m2C;
-    /* 0x30 */ be<f32> m30;
+    /* 0x2C */ be<f32> mAttnMaxX;  /* was m2C: chkAttention 0222FDBC: Link counts as in front only while |x| of his offset from the given position is below it; HIO ctor 300 (tww d_a_npc_ds1 has stubs only) */
+    /* 0x30 */ be<f32> mAttnMaxZ;  /* was m30: chkAttention 0222FDBC: Link counts as in front only while z of his offset from the given position is below it; HIO ctor 300 (tww d_a_npc_ds1 has stubs only) */
     /* 0x34 */ be<f32> mCursorScale;
-    /* 0x38 */ be<f32> m38;
-    /* 0x3C */ be<f32> m3C;
-    /* 0x40 */ be<f32> m40;
-    /* 0x44 */ be<f32> m44;
+    /* 0x38 */ be<f32> mCursorScaleYFar;  /* was m38: lookBack 02230B24 stores it in the cursor's mPieceScaleYFar (setScale); HIO ctor 0.9 (tww d_a_npc_ds1 has stubs only; as Bs1 / Rsh1) */
+    /* 0x3C */ be<f32> mCursorScaleYNear;  /* was m3C: lookBack 02230B24 stores it in the cursor's mPieceScaleYNear (setScale); HIO ctor 0.5 (tww d_a_npc_ds1 has stubs only; as Bs1 / Rsh1) */
+    /* 0x40 */ be<f32> mCursorDistFar;  /* was m40: lookBack 02230B24 stores it in the cursor's mPieceDistFar (setScale); HIO ctor 27 (tww d_a_npc_ds1 has stubs only; as Bs1 / Rsh1) */
+    /* 0x44 */ be<f32> mCursorDistNear;  /* was m44: lookBack 02230B24 stores it in the cursor's mPieceDistNear (setScale); HIO ctor 20 (tww d_a_npc_ds1 has stubs only; as Bs1 / Rsh1) */
     /* 0x48 */ be<u32> __vtbl;
 };
 WWHD_SIZE(daNpc_Ds1_childHIO_c, 0x4C);
@@ -191,7 +191,7 @@ WWHD_SIZE(daNpc_Ds1_childHIO_c, 0x4C);
 struct daNpc_Ds1_HIO_c {
     /* 0x00 */ be<s8> mNo;
     /* 0x01 */ u8 _01[3];
-    /* 0x04 */ be<s32> mCount;
+    /* 0x04 */ be<s32> mRefCount;  /* was mCount (misnamed): _create 0222E8F0 creates the HIO child while it is < 0, then adds 1; _delete 0222EA54 subtracts 1 and deletes the child when it falls below 0; daNpc_Ds1_HIO_c_ct 02232B9C sets -1; the same code as daNpc_Bs1_HIO_c::mRefCount and the other NPC HIOs' mRefCount */
     /* 0x08 */ daNpc_Ds1_childHIO_c mChild[1];
     /* 0x54 */ be<u32> __vtbl;
 };

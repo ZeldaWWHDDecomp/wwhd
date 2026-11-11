@@ -608,7 +608,7 @@ u32 daNpc_Bm1_c::getMsg_BMB_1() {
 
 /* 022020EC */
 u32 daNpc_Bm1_c::getMsg_BMB_2() {
-    if (m87C != 0) {
+    if (mPostEventMsg != 0) {
         return 0x199C;
     }
     if (mPreItemNo == 0x47) {
@@ -656,7 +656,7 @@ u32 daNpc_Bm1_c::getMsg_BMC_0() {
 
 /* 022022B4 */
 u32 daNpc_Bm1_c::getMsg_BMC_2() {
-    if (m87C != 0) {
+    if (mPostEventMsg != 0) {
         return 0x1EF7;
     }
     if (dComIfGs_isGetItemReserve(0xF)) {
@@ -866,7 +866,7 @@ void daNpc_Bm1_c::bm_clcFlySpd() {
 void daNpc_Bm1_c::bm_clcMovSpd() {
     s16 target = cLib_targetAngleY(&current.pos, &mTargetPos);
     Bm1BehaviorHioPrm& prm = hio_prm(mType);
-    cLib_addCalcAngleS(&current.angle.y, target, prm.m34, prm.m36, 0);
+    cLib_addCalcAngleS(&current.angle.y, target, prm.mTurnScale, prm.mTurnMaxStep, 0);
     cLib_chaseF(&speedF, mTargetFlySpeed, mTargetFlyStep);
 }
 
@@ -956,7 +956,7 @@ void daNpc_Bm1_c::bm_nMove() {
     case 0x14:
     case 0xE: {
         bm_clcMovSpd();
-        f32 spd = speedF * hio_prm(mType).m38;
+        f32 spd = speedF * hio_prm(mType).mWalkAnmSpeed;
         if (spd < 0.5f) {
             spd = 0.5f;
         }
@@ -994,7 +994,7 @@ void daNpc_Bm1_c::event_proc(int i_staff_idx) {
         switch ((u32)(s32)mEventIdx) {
         case 0:
             mOrderEvent = 1;
-            m87C = 1;
+            mPostEventMsg = 1;
             break;
         case 1:
             dComIfGs_onEventBit(0x1F40);
@@ -1055,10 +1055,10 @@ void daNpc_Bm1_c::setStt(s8 i_status) {
         mTargetPos.copy(rel);
         mTargetFlyStep = 0.0f;
         Bm1BehaviorHioPrm& prm = hio_prm(mType);
-        mFlySpeedY = prm.m28;
-        mFlyAccelY = prm.m2C;
+        mFlySpeedY = prm.mFlyUpSpeed;
+        mFlyAccelY = prm.mFlyUpAccel;
         speedF = 0.0f;
-        mPassDist = prm.m30;
+        mPassDist = prm.mFlyPassDist;
         speed.y = 0.0f;
         gravity = 0.0f;
         mFlyDescend = 1;
@@ -1075,13 +1075,13 @@ void daNpc_Bm1_c::setStt(s8 i_status) {
         break;
     }
     case 0x10:
-        m872 = (s16)((l_counter & 3) + 1);
+        mWaitAnmLoops = (s16)((l_counter & 3) + 1);
         break;
     case 0x11: {
         Bm1BehaviorHioPrm& prm = hio_prm(mType);
-        mTargetFlySpeed = prm.m3C;
-        mTargetFlyStep = prm.m40;
-        mPassDist = prm.m44;
+        mTargetFlySpeed = prm.mWalkSpeed;
+        mTargetFlyStep = prm.mWalkAccel;
+        mPassDist = prm.mWalkPassDist;
         break;
     }
     case 0x12:
@@ -1178,7 +1178,7 @@ BOOL daNpc_Bm1_c::talk_1() {
                 dComIfGs_onEventBit(0x1908);
                 break;
             case 0x1EF7:
-                m87C = 0;
+                mPostEventMsg = 0;
                 break;
             }
             mPreItemNo = 0xFF;
@@ -1288,7 +1288,7 @@ BOOL daNpc_Bm1_c::wait_5() {
         xz.z = diff.z;
         f32 fVar2 = std_sqrtf(PSVECSquareMag(&xz));
         f32 fVar1 = dComIfGp_getLinkPlayer()->current.pos.y - current.pos.y;
-        if (fVar2 < hio_prm(mType).m48 && -40.0f < fVar1 && fVar1 < 300.0f) {
+        if (fVar2 < hio_prm(mType).mEventOrderDist && -40.0f < fVar1 && fVar1 < 300.0f) {
             mOrderEvent = 4;
         }
     }
@@ -1385,7 +1385,7 @@ BOOL daNpc_Bm1_c::wait_3() {
 BOOL daNpc_Bm1_c::wait_8() {
     mOrderEvent = 2;
     if (mbMorfAnimStopped) {
-        if (!Bm1Behavior_calcTimer(&m872)) {
+        if (!Bm1Behavior_calcTimer(&mWaitAnmLoops)) {
             setStt(8);
         }
         if (mTalking && chk_talk()) {
@@ -1846,7 +1846,7 @@ BOOL daNpc_Bm1_c::_draw() {
         break;
     }
     /* debug leftovers: function-local static colors initialised on first use */
-    if (hio_prm(mType).m18 != 0) {
+    if (hio_prm(mType).mDebugDraw != 0) {
         static_color_init(0x101FDA50, 0x101FEBF4,
                           0x10016F70); /* (GXColor){0xFF, 0x00, 0x00, 0x80} */
         static_color_init(0x101FDAC0, 0x101FEBF8,

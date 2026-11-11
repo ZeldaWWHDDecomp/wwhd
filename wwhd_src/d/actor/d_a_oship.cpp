@@ -209,7 +209,7 @@ void daOship_c::pathMove() {
     cLib_addCalc2(&this->speedF, target, rate, step);
     f32 speed = f32(this->speedF);
     u32 path = this->mpPath.v;
-    OshipPathMoveHD(&this->mOrigPos, &this->m2D4, OshipGuest<dPath>(path),
+    OshipPathMoveHD(&this->mOrigPos, &this->mPathPntNo, OshipGuest<dPath>(path),
                     gabi::guest_fn((const void*)pathMove_CB), this, speed);
     f32 radius = f32(l_debugRegisters.mFloat[0]);
     radius += l_pathRadiusBias;
@@ -420,7 +420,7 @@ void daOship_c::setWave() {
 /* 023C714C */
 BOOL daOship_c::checkTgHit() {
     this->mStts.Move();
-    if (u8(l_HIO.m05)) {
+    if (u8(l_HIO.mDebugKill)) {
         OshipBits<u8>(this->health) = 0;
         this->modeProc(PROC_INIT_e, MODE_DELETE);
         return TRUE;
@@ -758,7 +758,7 @@ void daOship_c::modeAttackInit() {
     u32 playerStatus = u32(OshipGuest<dComIfG_inf_c>(play)->play.mPlayerStatus[0][0]);
     if (playerStatus & 0x01100000) {
         this->mAimCounter = 0;
-        u8 debug = u8(l_HIO.m08);
+        u8 debug = u8(l_HIO.mPerfectAim);
         f32 extra = l_badAimExtra;
         error += extra;
         if (debug)
@@ -770,7 +770,7 @@ void daOship_c::modeAttackInit() {
             s32 remaining = s32(6u - u32(count));
             error = gabi::fmadds(f32(remaining), scale, error);
         }
-        if (u8(l_HIO.m08))
+        if (u8(l_HIO.mPerfectAim))
             error = zero;
     }
     play = dComIfGp_ea();
@@ -804,7 +804,7 @@ void daOship_c::modeAttack() {
         target = this->mAimRotXTarget;
         OshipDistanceAngleS(angle, target);
         this->mAttackTimer = -1;
-        if (u8(l_HIO.m06) || this->lineCheck(&this->mSmokePos, &this->mTargetPos)) {
+        if (u8(l_HIO.mNoAttack) || this->lineCheck(&this->mSmokePos, &this->mTargetPos)) {
             this->changeModeByRange();
             return;
         }
@@ -966,7 +966,7 @@ s32 daOship_c::_execute() {
             this->mBombAlloc[i] = 0;
             continue;
         }
-        if (u8(l_HIO.m07) == 0)
+        if (u8(l_HIO.mBombRegFlight) == 0)
             continue;
         f32 limit = f32(f32(l_debugRegisters.mFloat[1]) + heightBias);
         f32 height = f32(OshipGuest<fopAc_ac_c>(bomb)->speed.y);
@@ -1415,12 +1415,12 @@ daOship_HIO_c* daOship_HIO_c__ct(daOship_HIO_c* data) {
     f32 setting0 = l_defaultAttentionOffsY;
     data->m04 = 0x0;
     f32 setting1 = l_defaultWaveOffsZ;
-    data->m07 = 0x0;
+    data->mBombRegFlight = 0x0;
     data->mWaveOffsZ = setting1;
     f32 setting2 = l_defaultSplashScaleTarget;
     f32 setting3 = l_defaultRangeB;
     data->mSplashScaleTimerTarget = setting2;
-    data->m08 = 0x0;
+    data->mPerfectAim = 0x0;
     data->mDistRangeB = setting3;
     f32 setting4 = l_defaultRangeC;
     data->mAttentionOffsY = setting0;
@@ -1428,7 +1428,7 @@ daOship_HIO_c* daOship_HIO_c__ct(daOship_HIO_c* data) {
     f32 setting5 = l_zero;
     f32 setting6 = l_defaultTrackOffsY;
     data->mAttackDelayA = 0x1E;
-    data->m05 = 0x0;
+    data->mDebugKill = 0x0;
     data->mTrackOffsY = setting6;
     f32 setting7 = l_defaultMaxWaveVelocity;
     f32 setting8 = l_cullMaxX;
@@ -1437,7 +1437,7 @@ daOship_HIO_c* daOship_HIO_c__ct(daOship_HIO_c* data) {
     data->mTrackVel = setting8;
     data->mSplashMaxScaleTimer = setting8;
     f32 setting10 = l_defaultBombOffsX;
-    data->m06 = 0x0;
+    data->mNoAttack = 0x0;
     data->mWaveVelFade1 = setting9;
     data->mTrackOffsZ = setting5;
     f32 setting11 = l_defaultRangeA;

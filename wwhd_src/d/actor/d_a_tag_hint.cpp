@@ -59,16 +59,16 @@ s32 daTag_Hint_c::arrivalTerms() {
         return 0;
     switch (type) {
     case 1:
-        m2A0 = 600;
+        mHintDelay = 600;
         break;
     case 4:
     case 8:
-        m2A0 = 3600;
+        mHintDelay = 3600;
         break;
     case 9:
         if (!dComIfGs_isTmpBit(0x308))
             return 0;
-        m2A0 = 600;
+        mHintDelay = 600;
         break;
     case 11:
         if (gabi::load<u8>(0x101D5F4C) != 1)
@@ -82,13 +82,13 @@ s32 daTag_Hint_c::arrivalTerms() {
         break;
     case 12:
     case 14:
-        m2A0 = 1800;
+        mHintDelay = 1800;
         break;
     case 15:
-        m2A0 = 900;
+        mHintDelay = 900;
         break;
     default:
-        m2A0 = 0;
+        mHintDelay = 0;
         break;
     }
     return 1;
@@ -152,9 +152,9 @@ s32 daTag_Hint_c::rangeCheck_local(cXyz* pos) {
     flat->x = x;
     flat->y = 0.0f;
     f32 mag = PSVECSquareMag(flat.get());
-    if (!(mag < m2A8))
+    if (!(mag < mRangeXZSq))
         return 0;
-    if (y > m2AC)
+    if (y > mRangeY)
         return 0;
     return 1;
 }
@@ -172,9 +172,9 @@ s32 daTag_Hint_c::otherCheck() {
         gabi::at<daPy_py_c>(gabi::ea(gabi::at<dComIfG_inf_c>(play)->play.mpPlayerPtr[0].get()));
     u8 type = getType();
     if (type == 4 || type == 8 || type == 9 || type == 12) {
-        s16 timer = m2A0;
+        s16 timer = mHintDelay;
         if (timer > 0) {
-            m2A0 = timer - 1;
+            mHintDelay = timer - 1;
             return 0;
         }
     }
@@ -184,7 +184,7 @@ s32 daTag_Hint_c::otherCheck() {
         hint::PlayerVtable* vtable = gabi::at<hint::PlayerVtable>(player->__vtbl);
         if (gabi::call<s32>(vtable->checkGrabBarrel, gabi::ea(player)))
             return 0;
-        f32 v = (f32)player->field_0x2b0;
+        f32 v = (f32)player->mGrabItemOffsetY;
         if (v < 0.0f)
             return 0;
     } else if (type == 1) {
@@ -199,11 +199,11 @@ s32 daTag_Hint_c::otherCheck() {
         if (gabi::at<dComIfG_inf_c>(play)->play.mEvtCtrl.mMode)
             return 0;
     }
-    if (m2A0 <= 0)
+    if (mHintDelay <= 0)
         return 1;
     u32 control = l_messageControl;
     if (!hintMessageStatus(control))
-        m2A0 = (s16)m2A0 - 1;
+        mHintDelay = (s16)mHintDelay - 1;
     return 0;
 }
 
@@ -233,8 +233,8 @@ void daTag_Hint_c::makeEventId() {
     u8 event = getEventNo();
     play = dComIfGp_ea();
     s32 idx = hintGetEventIdx(&gabi::at<dComIfG_inf_c>(play)->play.mEvtManager, name, event);
-    m2A4 = idx;
-    m2A3 = special;
+    mHintEventIdx = idx;
+    mGrabHint = special;
 }
 
 /* 024A9D04 */
@@ -344,7 +344,7 @@ void daTag_Hint_c::setPlayerAngle() {
     s16 angle = 0;
     bool clear = false;
     for (u32 i = 0; i < 8; ++i) {
-        u8 special = m2A3;
+        u8 special = mGrabHint;
         s16 heading = (s16)player->shape_angle.y;
         s16 offset = special ? search_angle_table_grab[i] : search_angle_table[i];
         angle = (s16)(heading + offset);
@@ -398,9 +398,9 @@ void daTag_Hint_c::darkProc() {
         if (av == 0)
             return;
     }
-    dKy_set_vrboxcol_ratio((f32)m2B0);
-    dKy_set_fogcol_ratio((f32)m2B0);
-    f32 t = ((f32)m2B0 - 0.15f) * 1.1764705181121826f;
+    dKy_set_vrboxcol_ratio((f32)mDarkRatio);
+    dKy_set_fogcol_ratio((f32)mDarkRatio);
+    f32 t = ((f32)mDarkRatio - 0.15f) * 1.1764705181121826f;
     if (t > 0.5f) {
         dKy_fog_startendz_set(300.0f, 2000.0f, 2.0f - (t + t));
     } else {
@@ -424,8 +424,8 @@ void daTag_Hint_c::startProc() {
     }
     u32 play = dComIfGp_ea();
     s32 staff = hintGetMyStaffId(&gabi::at<dComIfG_inf_c>(play)->play.mEvtManager, "TAGHINT", 0, 0);
-    m29C = staff;
-    m2B0 = 1.0f;
+    mStaffId = staff;
+    mDarkRatio = 1.0f;
     if (type != 10 && !(getType2() & 1)) {
         hintSeStart(hint::JA_SE_ITM_OMAMORI_ST_TALK);
         setPlayerAngle();
@@ -442,35 +442,35 @@ u16 daTag_Hint_c::next_msgStatus(u32* msg) { return hint::fopMsgStts_MSG_ENDS_e;
 u32 daTag_Hint_c::getMsg() { return mMsgNo; }
 
 /* 024A9CF8 */
-void daTag_Hint_c::talkInit() { m294 = 0; }
+void daTag_Hint_c::talkInit() { mTalkState = 0; }
 
 /* 024A9E68 */
 u16 daTag_Hint_c::talk() {
-    s8 state = m294;
+    s8 state = mTalkState;
     u32 control = l_messageControl;
     u16 status = 255;
     if (state == 0) {
         l_msgId = fpcM_ERROR_PROCESS_ID_e;
-        m290 = getMsg();
-        m294 = 1;
+        mTalkMsgId = getMsg();
+        mTalkState = 1;
     } else if (state != -1) {
         s32 id = l_msgId;
         if (id == -1) {
-            u32 msg = m290;
+            u32 msg = mTalkMsgId;
             u32 res = hintMessageSet(control, msg, &eyePos);
             l_msgId = res;
         } else if (state == 1)
-            m294 = 2;
+            mTalkState = 2;
         else if (state == 2) {
             status = (u16)hintMessageStatus(control);
             if (status == hint::fopMsgStts_MSG_DISPLAYED_e) {
-                u16 next = next_msgStatus(reinterpret_cast<u32*>(&m290));
+                u16 next = next_msgStatus(reinterpret_cast<u32*>(&mTalkMsgId));
                 hintSetMessageStatus(control, next);
                 if (hintMessageStatus(control) == hint::fopMsgStts_MSG_CONTINUES_e)
-                    hintMessageSet(control, (u32)m290, 0);
+                    hintMessageSet(control, (u32)mTalkMsgId, 0);
             } else if (status == hint::fopMsgStts_BOX_CLOSED_e) {
                 hintSetMessageStatus(control, hint::fopMsgStts_MSG_DESTROYED_e);
-                m294 = -1;
+                mTalkState = -1;
             }
         }
     }
@@ -479,14 +479,14 @@ u16 daTag_Hint_c::talk() {
 
 /* 024A9FAC */
 s32 daTag_Hint_c::actionEvent() {
-    s32 staff = m29C;
+    s32 staff = mStaffId;
     u32 play = dComIfGp_ea();
     s32 action = hintGetMyActIdx(&gabi::at<dComIfG_inf_c>(play)->play.mEvtManager, staff,
                                  action_table, 5, 0, 0);
-    staff = m29C;
+    staff = mStaffId;
     play = dComIfGp_ea();
     if (hintGetIsAddvance(&gabi::at<dComIfG_inf_c>(play)->play.mEvtManager, staff)) {
-        m2A6 = (u16)m2A6 | 1;
+        mFlags = (u16)mFlags | 1;
         switch (action) {
         case 1:
             talkInit();
@@ -516,7 +516,7 @@ s32 daTag_Hint_c::actionEvent() {
         }
     }
     auto endCut = [&]() {
-        s32 id = m29C;
+        s32 id = mStaffId;
         u32 p = dComIfGp_ea();
         hintCutEnd(&gabi::at<dComIfG_inf_c>(p)->play.mEvtManager, id);
     };
@@ -529,23 +529,23 @@ s32 daTag_Hint_c::actionEvent() {
             deleteLight();
             resetEvent();
         }
-        f32 v = m2B0;
+        f32 v = mDarkRatio;
         if (v > 0.15f) {
             if (v > 0.2f) {
-                m2B0 = v - 0.05f;
+                mDarkRatio = v - 0.05f;
                 darkProc();
                 return 1;
             }
-            m2B0 = 0.15f;
+            mDarkRatio = 0.15f;
         }
         darkProc();
     } else if (action == 2) {
         u16 status = talk();
-        u16 flags = m2A6;
+        u16 flags = mFlags;
         if (flags & 1) {
             if (status == hint::fopMsgStts_BOX_CLOSED_e) {
                 hintSeStart(hint::JA_SE_ITM_OMAMORI_ED_TALK);
-                s32 id = m29C;
+                s32 id = mStaffId;
                 mMsgNo = 0x454;
                 u32 p = dComIfGp_ea();
                 hintCutEnd(&gabi::at<dComIfG_inf_c>(p)->play.mEvtManager, id);
@@ -576,7 +576,7 @@ s32 daTag_Hint_c::actionHunt() {
     }
     if (otherCheck()) {
         makeEventId();
-        eventInfo.setEventId(m2A4);
+        eventInfo.setEventId(mHintEventIdx);
         u8 event = getEventNo();
         eventInfo.mMapToolId = event;
         if (getType2() & 1)
@@ -599,7 +599,7 @@ s32 daTag_Hint_c::actionArrival() {
     }
     if (arrivalTerms()) {
         makeEventId();
-        eventInfo.setEventId(m2A4);
+        eventInfo.setEventId(mHintEventIdx);
         u8 event = getEventNo();
         eventInfo.mMapToolId = event;
         mCurProc = hint::ACTION_HUNT;
@@ -610,12 +610,12 @@ s32 daTag_Hint_c::actionArrival() {
 
 /* 024A8F08 */
 s32 daTag_Hint_c::actionLight() {
-    f32 v = m2B0;
+    f32 v = mDarkRatio;
     if (!(v < 0.95f)) {
         mCurProc = hint::ACTION_WAIT;
-        m2B0 = 1.0f;
+        mDarkRatio = 1.0f;
     } else
-        m2B0 = v + 0.05f;
+        mDarkRatio = v + 0.05f;
     darkProc();
     return 1;
 }
@@ -667,11 +667,11 @@ static s32 daTag_Hint_Create(daTag_Hint_c* a) {
         a->actor_condition = flags | fopAcCnd_INIT_e;
     }
     f32 x = a->scale.x, y = a->scale.y;
-    a->m2A8 = (x * x) * 10000.0f;
-    a->m2AC = y * 100.0f;
+    a->mRangeXZSq = (x * x) * 10000.0f;
+    a->mRangeY = y * 100.0f;
     u8 type = a->getType();
     if (type == 14) {
-        a->m2AC = 2410.0f;
+        a->mRangeY = 2410.0f;
         type = a->getType();
     }
     u8 sw = a->getSwbit();
@@ -684,7 +684,7 @@ static s32 daTag_Hint_Create(daTag_Hint_c* a) {
     a->shape_angle.x = 0;
     a->current.angle.z = 0;
     a->current.angle.x = 0;
-    a->m2A0 = 0;
+    a->mHintDelay = 0;
     a->shape_angle.z = 0;
     return cPhs_COMPLEATE_e;
 }

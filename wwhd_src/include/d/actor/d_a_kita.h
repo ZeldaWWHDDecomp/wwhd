@@ -115,36 +115,36 @@ struct kita_class : fopAc_ac_c {
     enum : u32 { __vt = 0x10012EC4 }; // HD: virtual destructor.
     /* 0x3AC */ request_of_phase_process_class mPhs;
     /* 0x3B4 */ be<s16> mMoveCounter;
-    /* 0x3B6 */ be<s16> field_29A;
+    /* 0x3B6 */ be<s16> mMode;  /* was field_29A: daKita_Execute 0219DF90 switches on it: 0 kita_move_wait (hanging on the vines), 1 kita_move_fall; kita_move_wait sets 1 once all four vines are cut, daKita_Create 0219F05C when mStartFloating; ride_call_back 0219DBFC tilts the platform only in mode 0 or on water */
     /* 0x3B8 */ gptr<J3DModel> mModel;
-    /* 0x3BC */ be<u8> field_2A0;
-    /* 0x3BD */ be<u8> field_2A1;
+    /* 0x3BC */ be<u8> mSizeType;  /* was field_2A0: daKita_Create 0219F05C: param bits 0-7 (0xFF -> 0); 1 / 2 scale the platform by 1.25 / 1.5 in x and z */
+    /* 0x3BD */ be<u8> mStartFloating;  /* was field_2A1: daKita_Create 0219F05C: param bits 8-15; 1 starts the platform already fallen and floating (mMode 1, mOnWater 1, mFloorY = pos.y + 70) without creating vines */
     /* 0x3BE */ u8 _3BE[2];
     /* 0x3C0 */ cXyz mPosRel;
-    /* 0x3CC */ cXyz field_2B0;
-    /* 0x3D8 */ cXyz field_2BC;
-    /* 0x3E4 */ csXyz field_2C8;
+    /* 0x3CC */ cXyz mSwayAmp;  /* was field_2B0: kita_move_wait (in daKita_Execute 0219DF90): mPosRel.x / .z = sin * it, eased to 0; ride_call_back 0219DBFC raises it from the rider's movement */
+    /* 0x3D8 */ cXyz mTiltAmp;  /* was field_2BC: kita_move_wait / kita_move_fall (in daKita_Execute 0219DF90): amplitude of the mTilt wobble, eased toward 300 / 400 or 0; ride_call_back 0219DBFC raises it from the rider's movement; a hard landing sets 2000 */
+    /* 0x3E4 */ csXyz mTilt;  /* was field_2C8: kita_move_wait / kita_move_fall (in daKita_Execute 0219DF90): x / z = sin(mMoveCounter * n) * mTiltAmp; shape_angle = current.angle + it */
     /* 0x3EA */ u8 _3EA[2];
     /* 0x3EC */ be<f32> mHeight;
-    /* 0x3F0 */ be<u32> field_2D4[4];
-    /* 0x400 */ be<u8> field_2E4[4];
-    /* 0x404 */ cXyz field_2E8[4];
-    /* 0x434 */ be<u8> field_318[4];
+    /* 0x3F0 */ be<u32> mShandIds[4];  /* was field_2D4: himo_create (in daKita_Create 0219F05C): process IDs of the four fpcNm_SHAND_e vines it creates, looked up to link them */
+    /* 0x400 */ be<u8> mShandCreateStep[4];  /* was field_2E4: himo_create (in daKita_Create 0219F05C): per vine 0 create, 1 link (pointers into mRopeRootPos / mRopeState), 2 done */
+    /* 0x404 */ cXyz mRopeRootPos[4];  /* was field_2E8: daKita_Execute 0219DF90: the four vine attachment points on the platform (xd / zd * scale, y -15) through the model matrix; himo_create hands each vine a pointer (KitaShandView::mpRootPos) */
+    /* 0x434 */ be<u8> mRopeState[4];  /* was field_318: himo_create (in daKita_Create 0219F05C) hands each vine a pointer (KitaShandView::mpParentState); kita_move_wait (in daKita_Execute 0219DF90) reads it: non-zero = that vine is cut (mask of himo_off_check), 1 -> 5 and 2 -> 0 restart mCutEase */
     /* 0x438 */ be<s16> mRotY;
     /* 0x43A */ be<s16> mRotX;
-    /* 0x43C */ be<f32> field_320;
+    /* 0x43C */ be<f32> mCutEase;  /* was field_320: kita_move_wait (in daKita_Execute 0219DF90): cleared when a vine's state changes, eased to 1; scales the mHeight step (250 * it) and the mRotX / mRotY turn speed (10000 * it) */
     /* 0x440 */ be<s32> unused_324;
     /* 0x444 */ Mtx34 mBgwMtx;
     /* 0x474 */ gptr<dBgW> pm_bgw;
-    /* 0x478 */ be<f32> field_35C;
-    /* 0x47C */ be<u8> field_360;
+    /* 0x478 */ be<f32> mFloorY;  /* was field_35C: kita_move_wait (in daKita_Execute 0219DF90): the highest ground (solid ground cross or water + 40) under the platform once it falls; kita_move_fall lands on it; daKita_Create 0219F05C sets pos.y + 70 for mStartFloating */
+    /* 0x47C */ be<u8> mOnWater;  /* was field_360: kita_move_wait (in daKita_Execute 0219DF90) sets 1 when water is below; kita_move_fall sets 2 when it lands there (splash, FFHAMON00 ripple, the push sphere and drift run while 2); ride_call_back 0219DBFC tilts while set */
     /* 0x47D */ u8 _47D;
     /* 0x47E */ be<s16> mPlayerAngle;
-    /* 0x480 */ be<f32> field_364;
+    /* 0x480 */ be<f32> mDriftSpeed;  /* was field_364: kita_move_fall (in daKita_Execute 0219DF90): eased toward mDriftSpeedTarget while mPushTimer runs, else to 0; speed.x / .z chase 2 * it along mPlayerAngle */
     /* 0x484 */ be<f32> mAngleYSpeed;
-    /* 0x488 */ be<f32> field_36C;
-    /* 0x48C */ be<f32> field_370;
-    /* 0x490 */ be<s16> field_374;
+    /* 0x488 */ be<f32> mDriftSpeedTarget;  /* was field_36C: kita_move_fall (in daKita_Execute 0219DF90): set on a sphere hit from the player's facing (|cos| * -6 or 6) */
+    /* 0x48C */ be<f32> mAngleYSpeedTarget;  /* was field_370: kita_move_fall (in daKita_Execute 0219DF90): set on a sphere hit (sin * 200 * distance factor, or random 100); mAngleYSpeed eases toward it while mPushTimer runs */
+    /* 0x490 */ be<s16> mPushTimer;  /* was field_374: kita_move_fall (in daKita_Execute 0219DF90): 20 on a sphere hit, counted down; the drift and turn chase their targets while it runs */
     /* 0x492 */ be<s16> mExecuteCount;
     /* 0x494 */ gptr<JPABaseEmitter> mBaseEmitter;
     /* 0x498 */ dCcD_Stts mStts;
@@ -153,9 +153,9 @@ struct kita_class : fopAc_ac_c {
     /* 0x640 */ dBgS_ObjAcch mAcch;
 };
 WWHD_OFFSET(kita_class, mPosRel, 0x3C0);
-WWHD_OFFSET(kita_class, field_2E8, 0x404);
+WWHD_OFFSET(kita_class, mRopeRootPos, 0x404);
 WWHD_OFFSET(kita_class, mBgwMtx, 0x444);
-WWHD_OFFSET(kita_class, field_360, 0x47C);
+WWHD_OFFSET(kita_class, mOnWater, 0x47C);
 WWHD_OFFSET(kita_class, mBaseEmitter, 0x494);
 WWHD_OFFSET(kita_class, mSph, 0x4D4);
 WWHD_OFFSET(kita_class, mAcch, 0x640);

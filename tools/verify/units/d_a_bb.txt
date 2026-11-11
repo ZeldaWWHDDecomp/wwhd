@@ -41,14 +41,14 @@ field 0205DFC0 r3+0x453 u8 3,4,7         # mBehavior
 ret 025200D4 0x54000000 0x54000000       # play object at a fixed address
 field 0205DFC0 54005B2C u32 0x55000000 0x55000000   # player
 field 0205DFC0 r3+0x4B0 f32 0 3000       # mPlayerDistXZ (distance)
-field 0205DFC0 10461614 f32 0 3000       # l_bbHIO.unk_68 (distance limit)
-field 0205DFC0 10461618 f32 0 3000       # unk_6C
+field 0205DFC0 10461614 f32 0 3000       # l_bbHIO.mSightDist (distance limit)
+field 0205DFC0 10461618 f32 0 3000       # mWaitSightDist
 field 0205DFC0 55000318 f32 -100 100     # player y
 field 0205DFC0 r3+0x380 f32 -100 100     # eyePos.y
-field 0205DFC0 10461620 f32 0 200        # unk_74 (height window)
-field 0205DFC0 10461624 f32 0 200        # unk_78
-field 0205DFC0 1046161C i16 0 0x7000     # unk_70 (angle window)
-field 0205DFC0 1046161E i16 0 0x7000     # unk_72
+field 0205DFC0 10461620 f32 0 200        # mViewHeight (height window)
+field 0205DFC0 10461624 f32 0 200        # mWaitViewHeight
+field 0205DFC0 1046161C i16 0 0x7000     # mViewAngle (angle window)
+field 0205DFC0 1046161E i16 0 0x7000     # mWaitViewAngle
 
 # daBb_Create
 ret 02520460 4,4,4,0,5                   # dComIfG_resLoad: mostly complete
@@ -70,7 +70,7 @@ field 0206432C r3+0x4B4 i16 0,0,1        # mHitCooldown
 ret 02516300 0x58000000 0x58000000       # GetTgHitObj: a fixed hit object
 field 0206432C 58000010 u32 0,0x80000,0x100000,0x200,0x40000,0x1
 field 0206432C r3+0x453 u8 3,0           # mBehavior
-field 0206432C 104615B0 u8 0,0,1         # l_bbHIO.unk_04
+field 0206432C 104615B0 u8 0,0,1         # l_bbHIO.mResetHealthOnHit
 field 0206432C r3+0x3A1 i8 -1 2          # health
 
 # pl_name_check: the name around fpcNm 0xC3, null actor sometimes

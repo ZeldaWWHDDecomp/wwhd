@@ -263,7 +263,7 @@ bool dCamera_c::ChangeModeOK(s32 mode) {
 }
 
 /* 024FA410 */
-// HD: m514 is a byte (only 0 selects a type); move-BG type 3 keeps the current type;
+// HD: mHoldType is a byte (only 0 selects a type); move-BG type 3 keeps the current type;
 // a map-tool type does not replace the type while a subject style is active
 s32 dCamera_c::nextType(s32 cur) {
     s32 next = cur;
@@ -281,7 +281,7 @@ s32 dCamera_c::nextType(s32 cur) {
             }
             return next;
         }
-        if (mpPlayerActor.get() == nullptr || *reinterpret_cast<be<u8>*>(&m514) != 0 /* m514 */)
+        if (mpPlayerActor.get() == nullptr || *reinterpret_cast<be<u8>*>(&mHoldType) != 0 /* mHoldType */)
             return next;
         if ((u32)cur == (u32)(s32)mCamTypeEvent) {
             next = mEventData.field_0x0c;
@@ -389,7 +389,7 @@ s32 dCamera_c::nextMode(s32 cur) {
     auto chooseMode = [&]() -> ModeExit {
         if (cameraModeIsPlaying())
             return NORMAL_TAIL; /* dComIfGp_evmng_cameraPlay() */
-        if ((f32)mBG.m00.m58 > player_pos.y)
+        if ((f32)mBG.mPlayerGround.mGroundY > player_pos.y)
             m1AE = 0; /* mBG.m00.m58 */
         {
             u32 c = (u32)cur;
@@ -426,7 +426,7 @@ s32 dCamera_c::nextMode(s32 cur) {
                         !(S0() & daPyStts0_SWIM_e /* SWIM */)) {
                         if (mCStickYState == 1) {
                             if (mStickCPosYLast <
-                                (f32)cameraModeSetup(this)->mCstick.m00 /* mCstick.m00 */)
+                                (f32)cameraModeSetup(this)->mCstick.mUpReleaseY /* mCstick.m00 */)
                                 mCStickYState = 0;
                         } else if (cameraModeOptionC()) {
                             s32 id = mCameraID;

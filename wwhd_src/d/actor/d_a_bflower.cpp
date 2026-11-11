@@ -169,25 +169,25 @@ void daBFlower_c::CreateInit() {
     attention_info.position.copy(eyePos);
     mGrabbable = current.angle.x != 0;
     mpBombActor = nullptr;
-    m58C = 1;
-    m5B8 = 0;
+    mHasBomb = 1;
+    mBombGrowing = 0;
     mBombScale.copy(scale);
     f32 r = cM_rndF(150.0f);
-    m55C = -1;
+    mBck1AnmIdx = -1;
     mAnimTimer = gabi::ftoi(r + 60.0f);
 }
 /* 02077530 */
 s32 daBFlower_c::init_bck_anm(s16 index) {
-    if (m55C != -1)
+    if (mBck1AnmIdx != -1)
         return 1;
-    m55C = index;
+    mBck1AnmIdx = index;
     auto model = resource(dRes_INDEX_VBAKH_BDL_VBAKH_e), anim = resource(index);
     return initBck(&mBck1, model, anim, 1, 1);
 }
 /* 02077280 */
 void daBFlower_c::animPlay() {
     if (mBck1.play())
-        m55C = -1;
+        mBck1AnmIdx = -1;
     mBrk1.play();
 }
 /* 020772C8 */
@@ -199,7 +199,7 @@ void daBFlower_c::setCollision() {
         mSph.SetC(&current.pos);
         p = bflowerPlay();
         BFlower_setCollision(&p->play.mCcS, &mSph);
-    } else if (m58C) {
+    } else if (mHasBomb) {
         gabi::Local<cXyz> center;
         center->x = 0.0f;
         center->y = 30.0f;
@@ -231,7 +231,7 @@ bool daBFlower_c::_draw() {
     model = mpModel.get();
     data = model->getModelData();
     reinterpret_cast<BFlowerModelData *>(data)->mJointTree->mpMtxCalc = 0;
-    if (m58C) {
+    if (mHasBomb) {
         e = dKy_getEnvlight();
         model = mpModel2.get();
         setLightTevColorType(e, model, &tevStr);
@@ -270,7 +270,7 @@ BOOL daBFlower_c::actLive() {
     BFlower_addCalc(&mBombScale.x, 1.0f, 0.05f, 0.1f, 0.05f);
     BFlower_addCalc(&mBombScale.y, 1.0f, 0.05f, 0.1f, 0.05f);
     f32 growing = BFlower_addCalc(&mBombScale.z, 1.0f, 0.05f, 0.1f, 0.05f);
-    if (m5B8 && growing == 0.0f)
+    if (mBombGrowing && growing == 0.0f)
         init_bck_anm(dRes_INDEX_VBAKH_BCK_VBAKH_e);
     if (distance < 50.0f) {
         f32 change = std::fabs((f32)mPrevPlayerDist - distance);
@@ -293,48 +293,48 @@ BOOL daBFlower_c::actLive() {
     s32 finished = mBck2.play();
     s32 grabbable = mGrabbable;
     if (finished)
-        m58D = 1;
+        mBombReady = 1;
     auto bomb = mpBombActor.get();
     if (grabbable == 1)
-        m58D = 0;
+        mBombReady = 0;
     u32 id = bomb ? u32(bomb->mBsPcId) : 0xFFFFFFFF;
     if (BFlower_isExecuting(id)) {
         u32 flags = u32(attention_info.flags);
-        m58D = 0;
+        mBombReady = 0;
         attention_info.flags = flags & ~u32(fopAc_Attn_ACTION_CARRY_e);
     } else {
-        if (!m58C) {
+        if (!mHasBomb) {
             mBombScale.z = 0.0f;
             mBombScale.x = 0.0f;
             mBombScale.y = 0.0f;
             sound(this, 0x6A0F);
         }
-        u8 ready = m58D;
-        m58C = 1;
+        u8 ready = mBombReady;
+        mHasBomb = 1;
         u32 flags = u32(attention_info.flags);
         attention_info.flags =
             ready ? flags | fopAc_Attn_ACTION_CARRY_e : flags & ~u32(fopAc_Attn_ACTION_CARRY_e);
     }
-    if (m58C && growing == 0.0f) {
+    if (mHasBomb && growing == 0.0f) {
         if (mSph.ChkTgHit()) {
             auto hit = reinterpret_cast<dCcD_GObjInf *>(mSph.GetTgHitObj());
             if (hit) {
                 u32 type = u32(hit->mAtType);
                 if (type & 0x20) {
                     mpBombActor = createBomb(this, 0x100);
-                    m58C = 0;
+                    mHasBomb = 0;
                 } else if (type & 0xFF1DFEFF) {
                     u32 parameter = mGrabbable == 1 ? 0x101 : 1;
                     mpBombActor = createBomb(this, parameter);
-                    m58C = 0;
+                    mHasBomb = 0;
                 }
             }
         }
         mSph.ClrTgHit();
     }
     if ((u32)actor_status & fopAcStts_CARRY_e) {
-        if (m58D) {
-            m58C = 0;
+        if (mBombReady) {
+            mHasBomb = 0;
             mpBombActor = createBomb(this, 2);
             fopAcM_cancelCarryNow(this);
             bomb = mpBombActor.get();
@@ -348,7 +348,7 @@ BOOL daBFlower_c::actLive() {
             init_bck_anm(dRes_INDEX_VBAKH_BCK_VBAKH_e);
         }
     }
-    m5B8 = m58C && growing > 0.0f;
+    mBombGrowing = mHasBomb && growing > 0.0f;
     return TRUE;
 }
 /* 02077AE8 */
@@ -389,8 +389,8 @@ BOOL daBFlower_c::actDead() {
         }
     }
     u32 flags = u32(attention_info.flags);
-    m58D = 0;
-    m58C = 1;
+    mBombReady = 0;
+    mHasBomb = 1;
     attention_info.flags = flags & ~u32(fopAc_Attn_ACTION_CARRY_e);
     return TRUE;
 }

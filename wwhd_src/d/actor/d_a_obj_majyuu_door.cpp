@@ -124,7 +124,7 @@ BOOL daObj_MjDoor_c::_createHeap() {
 
 /* 0236F3BC */
 void daObj_MjDoor_c::getArg() {
-    field_0x2CC = static_cast<u8>(fopAcM_GetParam(this));
+    mSwitchNo = static_cast<u8>(fopAcM_GetParam(this));
 }
 
 /* 0236F4CC */
@@ -161,7 +161,7 @@ cPhs_State daObj_MjDoor_c::_create() {
     cPhs_State phase = dComIfG_resLoad(&mPhs, "S_MSPDo");
     if (phase == cPhs_COMPLEATE_e) {
         getArg();
-        u8 sw = field_0x2CC;
+        u8 sw = mSwitchNo;
         if (sw != 0xFF && dComIfGs_isSwitch(sw, current.roomNo))
             return cPhs_ERROR_e;
         if (!fopAcM_entrySolidHeap(this, createHeap_CB, 0x820))
@@ -212,7 +212,7 @@ void daObj_MjDoor_c::modeWaitInit() {
 /* 0236FCD8 */
 void daObj_MjDoor_c::modeWait() {
     setCollision();
-    if (health < 0 || l_HIO.field_0x4)
+    if (health < 0 || l_HIO.mForceBreak)
         modeDeleteInit();
 }
 
@@ -231,7 +231,7 @@ void daObj_MjDoor_c::smoke_set() {
 
 /* 0236FAAC */
 void daObj_MjDoor_c::modeDeleteInit() {
-    u8 sw = field_0x2CC;
+    u8 sw = mSwitchNo;
     if (sw != 0xFF)
         dComIfGs_onSwitch(sw, current.roomNo);
     s8 room = current.roomNo;
@@ -348,7 +348,7 @@ daObj_MjDoorHIO_c* MjDoor_hioCtor(daObj_MjDoorHIO_c* obj) {
         if (!obj)
             return nullptr;
     }
-    obj->field_0x4 = 0;
+    obj->mForceBreak = 0;
     obj->__vtbl = gabi::ea(&l_hioVtable);
     return obj;
 }

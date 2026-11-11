@@ -31,7 +31,7 @@ BOOL daShutter2_c::Delete() {
 /* 02484F94 */
 BOOL daShutter2_c::CreateHeap() {
     J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes(m_arcname[0], m_bdlidx[0]);
-    JUT_ASSERT(224, modelData != NULL);
+    JUT_ASSERT_MSG(224, modelData != NULL, "modelData != (0)");
     mpModel = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000022);
     if (!mpModel) {
         return FALSE;
@@ -251,7 +251,7 @@ static void SafeString_dt(void* p, s32 flags) {
 
 /* WWHD glue (tools/verify/autoglue.py)
 str 1003CB70
-str 1003CB84 "modelData != NULL" renamed
+str 1003CB84 "modelData != (0)"
 data m_arcname 101D068C
 data m_open_ev_name 101D0690
 data m_close_ev_name 101D0694

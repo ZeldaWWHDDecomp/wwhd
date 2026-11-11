@@ -19,7 +19,7 @@ struct enemyice_l {
     /* 0x006 */ be<s8> mLightShrinkTimer;
     /* 0x007 */ u8 _007;
     /* 0x008 */ be<f32> mYOffset;
-    /* 0x00C */ be<s8> m00C;
+    /* 0x00C */ be<s8> mFreezeType;  /* was m00C: view of enemyice::mFreezeType (c/c_damagereaction.h) */
     /* 0x00D */ be<s8> mMode;
     /* 0x00E */ be<s16> mFreezeTimer;
     /* 0x010 */ be<s16> mMoveDelayTimer;
@@ -28,8 +28,8 @@ struct enemyice_l {
     /* 0x016 */ u8 _016[2];
     /* 0x018 */ cXyz mSpeed;
     /* 0x024 */ be<f32> mSpeedF;
-    /* 0x028 */ be<f32> m028;
-    /* 0x02C */ be<f32> m02C;
+    /* 0x028 */ be<f32> mBodyLiftY;  /* was m028: view of enemyice::mBodyLiftY (c/c_damagereaction.h) */
+    /* 0x02C */ be<f32> mIceOffsetY;  /* was m02C: view of enemyice::mIceOffsetY (c/c_damagereaction.h) */
     /* 0x030 */ dCcD_Stts mStts;
     /* 0x06C */ dCcD_Cyl mCyl;
     /* 0x19C */ be<f32> mCylHeight;
@@ -74,7 +74,7 @@ struct mt_class : fopEn_enemy_c {
     /* 0x44C */ be<f32> mBodyWaveAmplitude;  /* was m44C: MtExec::Actor mBodyWaveAmplitude; mtBodyActorView mBodyWaveAmplitude (d_a_mt_exec.h / d_a_mt_body.h, same offset); uses: mt_fight (in daMt_Execute 021D87A0); body_control3 021DE1E0; mt_move_maru 021DF238; body_control3: sideways wave amplitude */
     /* 0x450 */ be<s16> mJointWaveStep;  /* was m450: MtExec::Actor mJointWaveStep (d_a_mt_exec.h, same offset); uses: daMt_Execute 021D87A0; Execute: joint wave step */
     /* 0x452 */ u8 _452[2];
-    /* 0x454 */ be<f32> m454;
+    /* 0x454 */ be<f32> mSegmentPulseAmp;  /* was m454: daMt_Execute 021D87A0 sets each mSegmentScaleY[k] to 1 + sin(phase) * it and eases it to 0.1; mt_move_maru 021DF238 (the roll) eases it to 0.3 and sets 0.5 at the roll start: the amplitude of the body segments' pulse */
     /* 0x458 */ gptr<J3DAnmTexPattern> mpBtpRes;
     /* 0x45C */ gptr<mDoExt_btpAnm> mpBtp;
     /* 0x460 */ be<u8> mBtpFrame;
@@ -187,7 +187,7 @@ struct daMt_HIO_c {
     /* 0x12 */ u8 _12[2];
     /* 0x14 */ be<f32> m14;
     /* 0x18 */ be<f32> m18;
-    /* 0x1C */ be<f32> m1C;            /* Draw: rubble model scale */
+    /* 0x1C */ be<f32> mRubbleScale;  /* was m1C: br_draw 021D7E80: the rubble (br) model scale is it * 2; the constructor sets 0.8 */
     /* 0x20 */ be<f32> m20;
     /* 0x24 */ be<f32> m24;
     /* 0x28 */ be<f32> m28;
@@ -203,7 +203,7 @@ struct daMt_HIO_c {
     /* 0x44 */ be<f32> m44;
     /* 0x48 */ be<f32> m48;
     /* 0x4C */ be<f32> m4C;
-    /* 0x50 */ be<s16> m50;            /* Draw: per-segment btk/brk frame step */
+    /* 0x50 */ be<s16> mSegmentFrameStep;  /* was m50: daMt_Draw 021D7FFC: segment i plays the brk / btk at mBrkFrame / mBtkFrame + i * it; the constructor sets -5 */
     /* 0x52 */ be<s16> m52;
     /* 0x54 */ be<s16> m54;
     /* 0x56 */ u8 _56[2];

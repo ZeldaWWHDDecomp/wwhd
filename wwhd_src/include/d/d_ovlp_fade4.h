@@ -53,7 +53,7 @@ struct dOvlpFd4_c : overlap_task_class {
     be<s16> field_0x2c4;
     u8 padding362[2];
     be<f32> timerStep;
-    be<u8> field_0x2cc;
+    be<u8> mSceneStarted;  /* was field_0x2cc: dOvlpFd4_construct 025A2D24 clears it; execFadeIn 025A3224: when the timer and blur are done, the first time calls fopOvlpM_SceneIsStart and sets it, the next time ends the overlap (fopOvlpM_Done) (tww the same) */
     u8 padding369[3];
     // HD: Native blur passes use an integer counter, independent of the packet dimensions.
     be<u32> mBlurCounter;
@@ -147,7 +147,7 @@ WWHD_OFFSET(dOvlpFd4_c, fadeOutBlur1_dlst, 0x164);
 WWHD_OFFSET(dOvlpFd4_c, totalTime, 0x34A);
 WWHD_OFFSET(dOvlpFd4_c, delayPercent, 0x350);
 WWHD_OFFSET(dOvlpFd4_c, timerStep, 0x364);
-WWHD_OFFSET(dOvlpFd4_c, field_0x2cc, 0x368);
+WWHD_OFFSET(dOvlpFd4_c, mSceneStarted, 0x368);
 WWHD_OFFSET(dOvlpFd4_play_c, mWindowNum, 0x5AC9);
 WWHD_OFFSET(dOvlpFd4_play_c, m2DShow, 0x5C22);
 WWHD_OFFSET(dOvlpFd4_texture_c, mFilter, 0x150);

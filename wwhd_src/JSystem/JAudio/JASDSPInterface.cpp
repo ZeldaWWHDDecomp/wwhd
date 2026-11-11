@@ -1,5 +1,6 @@
 /** DSP channel buffers and effects routing, with GC names and verified WWHD semantics. */
 #include "JSystem/JAudio/JASDSPInterface.h"
+#include "sead/ElementAt.h"
 using namespace JASystem;
 using namespace JASystem::DSPInterface;
 
@@ -207,17 +208,23 @@ void DSPBuffer::setDistFilter(u32 value) {
     filters.distance = (u16)(value);
 }
 
+// Guest EA arithmetic: mOutputChannels + index * 8 + word * 2 wraps at 32 bits as on the console (a host index on a
+// NULL or garbage buffer reached host addresses past 4 GB).
+static inline be<u16>& outputWord(be<u16> (*channels)[4], u32 index, u32 word) {
+    return sead::elementAt<be<u16>>(gabi::ea(channels), index * 4u + word);
+}
+
 /* 028160A8 */
 // HD: delay is initialized separately, retaining the original store order.
 void DSPBuffer::setMixerInitVolume(u32 index, u32 value) {
-    mOutputChannels[index][1] = (u16)value;
-    mOutputChannels[index][3] = 0;
-    mOutputChannels[index][2] = (u16)value;
+    outputWord(mOutputChannels, index, 1) = (u16)value;
+    outputWord(mOutputChannels, index, 3) = 0;
+    outputWord(mOutputChannels, index, 2) = (u16)value;
 }
 
 /* 028160C4 */
 void DSPBuffer::setMixerInitDelay(u32 index, u32 value) {
-    mOutputChannels[index][3] = (u16)((value << 8) | (value & 255));
+    outputWord(mOutputChannels, index, 3) = (u16)((value << 8) | (value & 255));
 }
 
 /* 028160DC */
@@ -225,14 +232,14 @@ void DSPBuffer::setMixerInitDelay(u32 index, u32 value) {
 void DSPBuffer::setMixerVolumeOnly(u32 index, u32 value) {
     if (mForcedStop)
         return;
-    u8 delay = (u16)mOutputChannels[index][3] & 255;
-    mOutputChannels[index][1] = (u16)value;
-    mOutputChannels[index][3] = delay;
+    u8 delay = (u16)outputWord(mOutputChannels, index, 3) & 255;
+    outputWord(mOutputChannels, index, 1) = (u16)value;
+    outputWord(mOutputChannels, index, 3) = delay;
 }
 
 /* 02816100 */
 void DSPBuffer::setMixerDelay(u32 index, u32 value) {
-    mOutputChannels[index][3] = (u16)((value << 8) | ((u16)mOutputChannels[index][3] & 255));
+    outputWord(mOutputChannels, index, 3) = (u16)((value << 8) | ((u16)outputWord(mOutputChannels, index, 3) & 255));
 }
 
 /* 02816120 */
@@ -261,7 +268,7 @@ void DSPBuffer::setFIR8FilterParam(be<u16>* src) {
 
 /* 0281619C */
 void DSPBuffer::setBusConnect(u32 index, u32 bus) {
-    mOutputChannels[index][0] = connect_table.entry[bus];
+    outputWord(mOutputChannels, index, 0) = connect_table.entry[bus];
 }
 
 /* 028161C4 */
@@ -297,10 +304,10 @@ u32 setFXLine(u32 index, void* buffer, FxlineConfig_* config) {
     FXBuffer* fx = at<FXBuffer>(FX_BUF.v.get() + index * 32u);
     fx->mActive = 0;
     if (config) {
-        fx->field_0xa = config->field_0x4;
-        fx->field_0x8 = SEND_TABLE.entry[(u16)config->field_0x2];
-        fx->field_0xe = config->field_0x8;
-        fx->field_0xc = SEND_TABLE.entry[(u16)config->field_0x6];
+        fx->mSend1Value = config->mSend1Value;
+        fx->mSend1 = SEND_TABLE.entry[(u16)config->mSend1Idx];
+        fx->mSend2Value = config->mSend2Value;
+        fx->mSend2 = SEND_TABLE.entry[(u16)config->mSend2Idx];
         fx->mBufferBlocks = (u16)config->mBufferBlocks;
         dspSetFilterTableNative(fx->mFilterParams, config->mFilterParams, 8);
         if (buffer) {

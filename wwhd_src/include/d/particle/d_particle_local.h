@@ -101,8 +101,8 @@ struct dPa_followEcallBack {
     be<u32> mAngle;
     be<u8> mFlag;
     be<u8> mRateOff;
-    be<u8> field_0x12;
-    be<u8> field_0x13;
+    be<u8> mFollowOff;  /* was field_0x12: tww setFollowOff() sets it 1 (WWHD actors write .mFollowOff = 1 the same way); execute 025A590C moves the emitter to mPos / mAngle only while it is 0, setup 025A5A04 takes pos/angle only while 0; dPa_followCtor 025A5894 stores the ctor argument (tww the same) */
+    be<u8> mTemporary;  /* was field_0x13: setup 025A5A04 keeps the emitter (mpEmitter, Immortal flag) only while it is 0; dPa_smokeCtorFlags 025A5C04 stores its 'temporary' argument, dPa_followCtor 025A5894 clears it (tww the same) */
 };
 WWHD_SIZE(dPa_followEcallBack, 0x14);
 WWHD_OFFSET(dPa_followEcallBack, mpEmitter, 4);
@@ -110,20 +110,20 @@ WWHD_OFFSET(dPa_followEcallBack, mPos, 8);
 WWHD_OFFSET(dPa_followEcallBack, mAngle, 0xC);
 WWHD_OFFSET(dPa_followEcallBack, mFlag, 0x10);
 WWHD_OFFSET(dPa_followEcallBack, mRateOff, 0x11);
-WWHD_OFFSET(dPa_followEcallBack, field_0x12, 0x12);
-WWHD_OFFSET(dPa_followEcallBack, field_0x13, 0x13);
+WWHD_OFFSET(dPa_followEcallBack, mFollowOff, 0x12);
+WWHD_OFFSET(dPa_followEcallBack, mTemporary, 0x13);
 struct dPa_smokeEcallBack : dPa_followEcallBack {
     void execute(void* emitter);
     void end();
     void setup(void* emitter, void* pos, void* angle, u32 info);
-    be<s8> field_0x14;
+    be<s8> mSetupInfo;  /* was field_0x14: dPa_smokeEcallBack::setup 025A5DD4 stores its setup-info argument (after tww dPa_control_c::set setupInfo); execute 025A5D90 passes it to the lighting call; the ctors 025A5B18 / 025A5C04 / 025A5CEC set -1 (tww the same) */
     be<u8> mWindOff;
     u8 mColor[4];
     u8 padding[2];
     be<u32> mTevstr;
 };
 WWHD_SIZE(dPa_smokeEcallBack, 0x20);
-WWHD_OFFSET(dPa_smokeEcallBack, field_0x14, 0x14);
+WWHD_OFFSET(dPa_smokeEcallBack, mSetupInfo, 0x14);
 WWHD_OFFSET(dPa_smokeEcallBack, mWindOff, 0x15);
 WWHD_OFFSET(dPa_smokeEcallBack, mColor, 0x16);
 WWHD_OFFSET(dPa_smokeEcallBack, mTevstr, 0x1C);
@@ -325,16 +325,16 @@ struct dPa_cutTurnEcallBack_c {
     void end();
     /* 0x0 */ be<u32> __vtbl;
     /* 0x4 */ be<u8> mAlpha;
-    /* 0x5 */ be<u8> field_0x5;
-    /* 0x6 */ be<s16> field_0x6;
+    /* 0x5 */ be<u8> mEndRequest;  /* was field_0x5: end 025A9D64 sets 1 after removing the emitter; executeAfter 025A9C3C then stops the emitter (StopEmit, callback cleared) and returns; setup 025A9C20 clears it (tww the same) */
+    /* 0x6 */ be<s16> mPosNum;  /* was field_0x6: tww setPosArray(pos_array, n) stores the number of mPosArray entries; executeAfter 025A9C3C makes a particle at each of the first n-1 positions, moves the emitter to the last, then clears it; setup 025A9C20 clears it (tww the same) */
     /* 0x8 */ be<u32> mPosArray;
     /* 0xC */ be<u32> mpBaseEmitter;
 };
 WWHD_SIZE(dPa_cutTurnEcallBack_c, 0x10);
 WWHD_OFFSET(dPa_cutTurnEcallBack_c, __vtbl, 0x0);
 WWHD_OFFSET(dPa_cutTurnEcallBack_c, mAlpha, 0x4);
-WWHD_OFFSET(dPa_cutTurnEcallBack_c, field_0x5, 0x5);
-WWHD_OFFSET(dPa_cutTurnEcallBack_c, field_0x6, 0x6);
+WWHD_OFFSET(dPa_cutTurnEcallBack_c, mEndRequest, 0x5);
+WWHD_OFFSET(dPa_cutTurnEcallBack_c, mPosNum, 0x6);
 WWHD_OFFSET(dPa_cutTurnEcallBack_c, mPosArray, 0x8);
 WWHD_OFFSET(dPa_cutTurnEcallBack_c, mpBaseEmitter, 0xC);
 struct dPa_simpleEcallBack {
@@ -474,10 +474,10 @@ struct dPa_J3DmodelEmitter_c {
     be<u32> mpHeap;
     be<u32> modelData;
     be<u32> hdModelData;
-    be<u32> field_0x1c;
-    be<u32> field_0x20;
-    be<u16> field_0x24;
-    be<u8> field_0x26;
+    be<u32> mpAnmTexPattern;  /* was field_0x1c: ctor 025A3BDC stores the J3DAnmTexPattern argument (btp) and, when set, builds the btp animation from it; dPa_modelEmitterDraw 025A4204 sets its frame to mBtpFrame and enters the animation, then clears the model data's tex-no animator (tww the same) */
+    be<u32> mpBtpAnm;  /* was field_0x20: ctor 025A3BDC: an mDoExt_btpAnm made in mpHeap and initialised with mpAnmTexPattern (0 without a pattern); dPa_modelEmitterDraw 025A4204 enters it on modelData (HD; tww: a J3DTexNoAnm array) */
+    be<u16> mBtpFrame;  /* was field_0x24: ctor 025A3BDC stores the frame argument once the btp animation exists; dPa_modelEmitterDraw 025A4204 sets mpAnmTexPattern's frame to it (tww the same) */
+    be<u8> mRotAxis;  /* was field_0x26: ctor 025A3BDC stores the last argument; dPa_modelEmitterDraw 025A4204 rotates each particle model by its rotate angle about y (0), x (1), z (2) or a fixed axis (3) (tww 0-2 the same) */
     u8 padding2B;
     u8 tevStr[0x1C8];
 };
@@ -487,10 +487,10 @@ WWHD_OFFSET(dPa_J3DmodelEmitter_c, __vtbl, 16);
 WWHD_OFFSET(dPa_J3DmodelEmitter_c, mpHeap, 20);
 WWHD_OFFSET(dPa_J3DmodelEmitter_c, modelData, 24);
 WWHD_OFFSET(dPa_J3DmodelEmitter_c, hdModelData, 28);
-WWHD_OFFSET(dPa_J3DmodelEmitter_c, field_0x1c, 32);
-WWHD_OFFSET(dPa_J3DmodelEmitter_c, field_0x20, 36);
-WWHD_OFFSET(dPa_J3DmodelEmitter_c, field_0x24, 40);
-WWHD_OFFSET(dPa_J3DmodelEmitter_c, field_0x26, 42);
+WWHD_OFFSET(dPa_J3DmodelEmitter_c, mpAnmTexPattern, 32);
+WWHD_OFFSET(dPa_J3DmodelEmitter_c, mpBtpAnm, 36);
+WWHD_OFFSET(dPa_J3DmodelEmitter_c, mBtpFrame, 40);
+WWHD_OFFSET(dPa_J3DmodelEmitter_c, mRotAxis, 42);
 WWHD_OFFSET(dPa_J3DmodelEmitter_c, tevStr, 0x2C);
 } // namespace pa
 

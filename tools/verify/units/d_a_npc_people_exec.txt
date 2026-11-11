@@ -17,9 +17,9 @@ field 022C305C r3+0x90F u8 0 1            # mbIsNight
 field 022C305C r3+0x909 u8 0 3            # mAnmFlag
 field 022C305C r3+0x908 u8 0 4            # mLastRandNo
 field 022C305C r3+0x907 u8 0 3            # mAnmIdx
-field 022C305C r3+0x915 u8 0 1            # m7A1
+field 022C305C r3+0x915 u8 0 1            # mCanMove
 field 022C305C r3+0x903 u8 0 14           # mExecuteMode (moveProc index)
-field 022C305C r3+0x910 u8 0 1            # m79C
+field 022C305C r3+0x910 u8 0 1            # mModeInTalk
 field 022C305C r3+0xF8 u16 0 2            # eventInfo.mCommand
 ret 022BFF78 0 8                          # getRand
 ret 022BE784 0 1                          # getPrmArg0
@@ -30,7 +30,7 @@ ret 025200D4 0x54000000 0x54000000
 field 022C4074 r3+0x905 u8 0xB,0xB,0xB,0xB,0x10,0x11,0x12,0
 field 022C4074 r3+0x90F u8 1,1,1,0
 field 022C4074 r3+0x8FD u8 1,1,1,0          # mInAttention
-field 022C4074 r3+0x8FE u8 0 1            # m78A
+field 022C4074 r3+0x8FE u8 0 1            # mInLookDist
 field 022C4074 r3+0x8E2 i16 0 2           # mWaitTimer
 field 022C4074 r3+0x8CC u32 0,1,0x101,0x201,0x100,0x200,0x400,0x1000,0x700,0x80000001
 field 022C4074 54005CD8 u32 0,0x00200000,0x00200000
@@ -54,7 +54,7 @@ field 022C3AC4 r3+0x905 u8 0x11,0x12,1,0
 field 022C3AC4 r3+0xF8 u16 0 2
 field 022C3AC4 r3+0x8CC u32 0,0x10,0x30,0x4000,0x20000
 field 022C3AC4 r3+0x8FC u8 0 2            # mTalk
-field 022C3AC4 r3+0x910 u8 0 1            # m79C
+field 022C3AC4 r3+0x910 u8 0 1            # mModeInTalk
 field 022C3AC4 r3+0x903 u8 0,1,0xD
 # _execute: walking play speed clamp (speedF * l_npc_dat.mWalkAnmRate around 0.5)
 field 022C305C r3+0x8A0 u32 0x5A000000,0x5A000000,0

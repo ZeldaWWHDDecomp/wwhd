@@ -20,7 +20,7 @@ BOOL daObjDmgroom_c::CreateHeap() {
     // HD: the archive name is lowercase.
     J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes("dmgroom", dRes_INDEX_DMGROOM_BDL_DMGROOM_e);
     if (modelData == nullptr) /* JUT_ASSERT(82, modelData != NULL) */
-        JUTAssertion::showAssert("d_a_obj_dmgroom.cpp", 82, "modelData != NULL");
+        JUTAssertion::showAssert("d_a_obj_dmgroom.cpp", 82, "modelData != (0)");
     J3DModel* model = mDoExt_J3DModel__create(modelData, 0x00, 0x11020203);
     mpModel = model;
     if (model == nullptr) /* HD: tests the returned pointer */
@@ -28,7 +28,7 @@ BOOL daObjDmgroom_c::CreateHeap() {
 
     J3DAnmTevRegKey* brk = (J3DAnmTevRegKey*)dComIfG_getObjectRes("dmgroom", dRes_INDEX_DMGROOM_BRK_DMGROOM_e);
     if (brk == nullptr) /* JUT_ASSERT(92, brk != NULL) */
-        JUTAssertion::showAssert("d_a_obj_dmgroom.cpp", 92, "brk != NULL");
+        JUTAssertion::showAssert("d_a_obj_dmgroom.cpp", 92, "brk != 0");
     if (!mBrkAnm.init(modelData, brk, true, J3DFrameCtrl::EMode_NONE))
         return FALSE;
     return TRUE;
@@ -98,7 +98,7 @@ static BOOL daObjDmgroom_Execute(void* p) {
         // HD: the demo actor lookup is inlined, including its range check and assertion.
         if (id <= 0x20) {
             if (m_object == nullptr) /* JUT_ASSERT(0x23A, m_object != NULL) */
-                JUTAssertion::showAssert("d_demo.h", 0x23A, "m_object != NULL");
+                JUTAssertion::showAssert("d_demo.h", 0x23A, "m_object != (0)");
             demoAc = m_object->getActor(id);
         }
         if (demoAc != nullptr) {
@@ -145,12 +145,12 @@ static void empty_virtual(void* p) {
 /* WWHD glue (tools/verify/autoglue.py): this translation unit's data and local bindings
 str 10027284 in 02334608
 str 1002728C
-str 100272A0 "modelData != NULL"
-str 100272B4 "brk != NULL" renamed
+str 100272A0 "modelData != (0)"
+str 100272B4 "brk != 0"
 str 10027230 in 02334880
 str 100272D0 in 0233494C
 str 10027274
-str 10027264 "m_object != NULL"
+str 10027264 "m_object != (0)"
 data m_object 101D5FFC
 ext 025E80D0 void mDoExt_brkAnm_ct(void*)
 ext 025E8154 BOOL mDoExt_brkAnm_init_dmgroom(void*, J3DModelData*, J3DAnmTevRegKey*, s32, s32, f32, s16, s16, s32, s32)

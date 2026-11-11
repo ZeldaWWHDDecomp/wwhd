@@ -1,5 +1,6 @@
 /** HD: in-game UI scene state handlers. Private game-derived source. */
 #include "d/hd_scene_ingame_ui.h"
+#include "sead/ElementAt.h"
 #include "d/hd_input_ctrl.h"
 #include "d/d_com_inf_game.h"
 #include "d/d_mesg_core.h"
@@ -2011,6 +2012,8 @@ static void drawSubWindowOverlay(void* screen, void* viewport) {
     gabi::call_ptr(table->mDrawOverlay.get(), subWindow, viewport);
 }
 
+// Guest EA arithmetic (drawHudScreens, drawInputScreens, drawOverlayScreens, drawModeSwitchScreens): layers + index * 4 wraps at
+// 32 bits as on the console (a host index on a NULL layer table reached host addresses past 4 GB).
 /* 02715CA0 */
 void hdIngameUi_c::drawHudScreens(hdLayerRenderInfo_c* info) {
     hdIngameSetShaderModeEx(0, 0x30, 0x40, 0, 0, 0xC8, 0xC0);
@@ -2018,7 +2021,7 @@ void hdIngameUi_c::drawHudScreens(hdLayerRenderInfo_c* info) {
     u32 index = info->mTarget;
     u32 count = renderer->mLayerCount;
     gptr<hdRenderCommandLayer_l>* layers = renderer->mpLayers;
-    hdRenderCommandLayer_l* layer = layers[index < count ? index : 0];
+    hdRenderCommandLayer_l* layer = sead::elementAt<gptr<hdRenderCommandLayer_l>>(gabi::ea(layers), index < count ? index : 0);
     void* viewport = &layer->mBase.mViewport;
     if (!hdIngameMenuPauseFlag()) {
         mpMainHud->vDraw(viewport);
@@ -2073,7 +2076,7 @@ void hdIngameUi_c::drawOverlayScreens(hdLayerRenderInfo_c* info) {
     u32 index = info->mTarget;
     u32 count = renderer->mLayerCount;
     gptr<hdRenderCommandLayer_l>* layers = renderer->mpLayers;
-    hdRenderCommandLayer_l* layer = layers[index < count ? index : 0];
+    hdRenderCommandLayer_l* layer = sead::elementAt<gptr<hdRenderCommandLayer_l>>(gabi::ea(layers), index < count ? index : 0);
     void* viewport = &layer->mBase.mViewport;
     if (sUiMode == 4) screenParts(mpPictographScreen)->vDraw(viewport);
     mpBatonEffects->vDraw(viewport);
@@ -2102,7 +2105,7 @@ void hdIngameUi_c::drawPrimaryScreens(hdLayerRenderInfo_c* info) {
     u32 index = info->mTarget;
     u32 count = renderer->mLayerCount;
     gptr<hdRenderCommandLayer_l>* layers = renderer->mpLayers;
-    hdRenderCommandLayer_l* layer = layers[index < count ? index : 0];
+    hdRenderCommandLayer_l* layer = sead::elementAt<gptr<hdRenderCommandLayer_l>>(gabi::ea(layers), index < count ? index : 0);
     void* viewport = &layer->mBase.mViewport;
     screenParts(mpItemScreen)->vDraw(viewport);
     (mpMapCoordinator)->processInput(gabi::ea(info), gabi::ea(viewport));
@@ -2138,7 +2141,7 @@ void hdIngameUi_c::drawInputScreens(hdLayerRenderInfo_c* info) {
     u32 index = info->mTarget;
     u32 count = renderer->mLayerCount;
     gptr<hdRenderCommandLayer_l>* layers = renderer->mpLayers;
-    hdRenderCommandLayer_l* layer = layers[index < count ? index : 0];
+    hdRenderCommandLayer_l* layer = sead::elementAt<gptr<hdRenderCommandLayer_l>>(gabi::ea(layers), index < count ? index : 0);
     void* viewport = &layer->mBase.mViewport;
     if ((hdInputGetManager())->isAlternateGamePadMode() ||
         ((hdInputGetManager())->isTvMode() && isTaktSignListActive())) {
@@ -2191,7 +2194,7 @@ void hdIngameUi_c::drawModeSwitchScreens(hdLayerRenderInfo_c* info) {
     u32 index = info->mTarget;
     u32 count = renderer->mLayerCount;
     gptr<hdRenderCommandLayer_l>* layers = renderer->mpLayers;
-    hdRenderCommandLayer_l* layer = layers[index < count ? index : 0];
+    hdRenderCommandLayer_l* layer = sead::elementAt<gptr<hdRenderCommandLayer_l>>(gabi::ea(layers), index < count ? index : 0);
     void* viewport = &layer->mBase.mViewport;
     mpBatonSign->vDraw(viewport);
     mpModeSwitchScreen->vDraw(viewport);

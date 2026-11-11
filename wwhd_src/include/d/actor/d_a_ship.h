@@ -394,7 +394,7 @@ struct daShip_c : fopAc_ac_c {
     /* 0x0650 */ u8 m0368[4];
     /* 0x0654 */ be<s16> mControllAngle;  /* was m036C: setControllAngle 024751E0 springs it toward the given angle (m036C += m036E); execute 02477A24 shape_angle.z = m036C + m0372 */
     /* 0x0656 */ be<s16> mControllAngleSpeed;  /* was m036E: setControllAngle 024751E0 velocity of the spring (m036E += step; m036C += m036E; eased to 0); cleared in procSteerMove 0247E854 / procZevDemo 024800A8 */
-    /* 0x0658 */ be<s16> mWaveAngleX;  /* was m0370: setWaveAngle 024759CC springs it toward the wave-slope pitch (m0370 += m0374); execute 02477A24 shape_angle.x = m0370 + m0384 and pitches speed by it; setYPos 024754D8 / setCrashData 0247D880 add sway/crash */
+    /* 0x0658 */ be<s16> mWaveAngleX;  /* was m0370: setWaveAngle 024759CC springs it toward the wave-slope pitch (m0370 += m0374); execute 02477A24 shape_angle.x = m0370 + mPitchOffset and pitches speed by it; setYPos 024754D8 / setCrashData 0247D880 add sway/crash */
     /* 0x065A */ be<s16> mWaveAngleZ;  /* was m0372: setWaveAngle 024759CC springs it toward the wave-slope roll (m0372 += m0376); execute 02477A24 shape_angle.z = m036C + m0372 */
     /* 0x065C */ be<s16> mWaveAngleSpeedX;  /* was m0374: setWaveAngle 024759CC velocity of m0370 (fmadds diff*0.045, eased to 0); setCrashData 0247D880 kicks it */
     /* 0x065E */ be<s16> mWaveAngleSpeedZ;  /* was m0376: setWaveAngle 024759CC velocity of m0372 (fmadds diff*0.045, eased to 0); setCrashData 0247D880 kicks it */
@@ -404,8 +404,8 @@ struct daShip_c : fopAc_ac_c {
     /* 0x0666 */ be<s16> mOldShapeAngleZ;  /* was m037E: execute 02477A24 copies shape_angle.z after setWaveAngle and reuses it as the wave roll while flying; draw 0247255C passes it as the mDoMtx_lookAt roll */
     /* 0x0668 */ be<s16> mTargetSailAngle;  /* was m0380: setSailAngle 0247D398 picks +-0x1555 from the wind side and eases mSailAngle toward it (cLib_addCalcAngleS(&mSailAngle, m0380,...)) */
     /* 0x066A */ be<s16> m0382;
-    /* 0x066C */ be<s16> m0384;
-    /* 0x066E */ be<s16> m0386;
+    /* 0x066C */ be<s16> mPitchOffset;  /* was m0384: execute 02477A24: shape_angle.x = mWaveAngleX + it; on the water sprung back to 0 through mPitchOffsetSpeed, eased to -0x800 while daSFLG_FLY_e is set; procZevDemo 024800A8 eases / sets it to 0 (tww the same) */
+    /* 0x066E */ be<s16> mPitchOffsetSpeed;  /* was m0386: execute 02477A24: velocity of the mPitchOffset spring (it += step; mPitchOffset += it; eased to 0), as mControllAngleSpeed; cleared in procSteerMove 0247E854 / procZevDemo 024800A8 (tww the same) */
     /* 0x0670 */ be<s16> mLandTimer;  /* was m0388: setYPos 024754D8 sets 30 when the ship lands (offStateFlg(daSFLG_FLY_e)); execute 02477A24 counts down; setMoveAngle 0247D4B0 limits the turn rate while >= 15 */
     /* 0x0672 */ be<u16> mAnmTransformFileIdx;  /* was m038A: procTalk_init 024749DC / procTalk 02481630: mAnmTransform = ship_getRes(m038A) (BCK_FN_TALK_A/B); TWW comment "file idx" */
     /* 0x0674 */ be<s16> mTurnTargetAngle;  /* was m038C: checkOutRange 02474A98 stores the path direction +0x4000; procTurn 02481874 / execute 02477A24 ease shape_angle.y toward it (cLib_addCalcAngleS2) */

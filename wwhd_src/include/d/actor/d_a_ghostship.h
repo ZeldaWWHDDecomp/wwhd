@@ -59,7 +59,7 @@ struct daGhostship_c : fopAc_ac_c {
     be<u8> mbEnteredShip;
     u8 pad68D[3];
     dLib_circle_path_c mPaths[12];
-    be<f32> field_0x6C4[12];
+    be<f32> mPathRadiusTarget[12];  /* was field_0x6C4: _execute 0214A9A4: per circle path the target of cLib_addCalc2 on mPaths[i].mRadius, 1500 + 100 * i while the radius is below 900, 800 once it passed 1400 + 100 * i (tww the same) */
     cXyz mPathPos;
     be<u32> field_0x700;
     be<f32> mPathSpeed;
@@ -78,7 +78,7 @@ WWHD_OFFSET(daGhostship_c, mAcch, 0x47C);
 WWHD_OFFSET(daGhostship_c, mCir, 0x640);
 WWHD_OFFSET(daGhostship_c, mWave, 0x680);
 WWHD_OFFSET(daGhostship_c, mPaths, 0x690);
-WWHD_OFFSET(daGhostship_c, field_0x6C4, 0x840);
+WWHD_OFFSET(daGhostship_c, mPathRadiusTarget, 0x840);
 WWHD_OFFSET(daGhostship_c, mPathPos, 0x870);
 WWHD_OFFSET(daGhostship_c, mbCanEnterShip, 0x884);
 WWHD_SIZE(daGhostship_c, 0x888);
@@ -139,7 +139,7 @@ struct ModelDataTail {
 
 struct Hio {
     be<u32> vtable;
-    be<u8> field_0x04;
+    be<u8> mDebugDraw;  /* was field_0x04: _draw 0214B4A8 sets up the debug axis / fan / vector colours only while it is set; the HIO constructor clears it (tww the same) */
     be<u8> hideShip;
     u8 padding[2];
     be<f32> shipAlpha;

@@ -55,13 +55,13 @@ static daobj_stairHIO_c *daobj_stairHIO_c_ct(daobj_stairHIO_c *h) {
       return h;
   }
   h->mNo = -1;
-  h->m10 = 5.0f;
+  h->mBreakRotSpeed = 5.0f;
   h->__vtbl = 0x1002F6E4;
-  h->m14 = 2.5f;
-  h->m08 = 2.5f;
+  h->mBreakSpeed = 2.5f;
+  h->mFallAccel = 2.5f;
   // HD: the falling-speed limit is -175 instead of -70.
-  h->m0C = -175.0f;
-  h->m18 = 6;
+  h->mFallSpeedMax = -175.0f;
+  h->mBreakDelay = 6;
   return h;
 }
 
@@ -71,7 +71,7 @@ static void ride_call_back(dBgW *i_arg0, fopAc_ac_c *i_arg1,
   daObj_Stair_c *i_this = (daObj_Stair_c *)i_arg1;
   // HD: profile checks tolerate a null actor.
   if (i_arg2 != nullptr && (s16)i_arg2->mProfName == fpcNm_PLAYER_e &&
-      i_this->mBreakTimer < l_HIO.m18) {
+      i_this->mBreakTimer < l_HIO.mBreakDelay) {
     i_this->mBreaking = 1;
     cXyz d;
     d = i_arg2->current.pos - i_arg1->current.pos;
@@ -226,7 +226,7 @@ bool daObj_Stair_c::_delete() {
 /* 02390AC4 */
 bool daObj_Stair_c::_execute() {
   if (mBreaking == 1) {
-    if (mBreakTimer == l_HIO.m18) {
+    if (mBreakTimer == l_HIO.mBreakDelay) {
       cXyz temp;
       temp = mHitOffset.normZP();
       cXyz op;
@@ -239,7 +239,7 @@ bool daObj_Stair_c::_execute() {
         temp3 = temp2.normZP();
         f32 len = stairAbs(&mHitOffset);
         f32 f2EC = mBreakPower;
-        f32 temp4 = l_HIO.m10 * 0.5f * len * 0.01f * f2EC;
+        f32 temp4 = l_HIO.mBreakRotSpeed * 0.5f * len * 0.01f * f2EC;
         s16 ang = (s16)gabi::ftoi(temp4 * 182.04444885253906f); /* DEG2S */
         f32 sn = cM_ssin(ang);
         f32 cs = cM_scos(ang);
@@ -249,9 +249,9 @@ bool daObj_Stair_c::_execute() {
         mRotSpeed.x = sn * temp3.x;
         mRotSpeed.z = sn * temp3.z;
 
-        speed.x = l_HIO.m14 * cs * f2EC * mBreakDir.x;
-        speed.y = l_HIO.m14 * cs * f2EC * mBreakDir.y;
-        speed.z = l_HIO.m14 * cs * mBreakPower * mBreakDir.z;
+        speed.x = l_HIO.mBreakSpeed * cs * f2EC * mBreakDir.x;
+        speed.y = l_HIO.mBreakSpeed * cs * f2EC * mBreakDir.y;
+        speed.z = l_HIO.mBreakSpeed * cs * mBreakPower * mBreakDir.z;
       } else {
         mRotSpeed.y = 0.0f;
         mRotSpeed.z = 0.0f;
@@ -259,9 +259,9 @@ bool daObj_Stair_c::_execute() {
         mRotSpeed.w = 1.0f;
 
         f32 f2EC = mBreakPower;
-        speed.x = f2EC * l_HIO.m14 * mBreakDir.x;
-        speed.y = f2EC * l_HIO.m14 * mBreakDir.y;
-        speed.z = f2EC * l_HIO.m14 * mBreakDir.z;
+        speed.x = f2EC * l_HIO.mBreakSpeed * mBreakDir.x;
+        speed.y = f2EC * l_HIO.mBreakSpeed * mBreakDir.y;
+        speed.z = f2EC * l_HIO.mBreakSpeed * mBreakDir.z;
       }
       /* fopAcM_seStart(this, JA_SE_OBJ_BREAK_STEPS, 0) */
       s32 reverb = dComIfGp_getReverb(current.roomNo);
@@ -270,11 +270,11 @@ bool daObj_Stair_c::_execute() {
 
     mBreakTimer = mBreakTimer + 1;
 
-    if (mBreakTimer > l_HIO.m18) {
-      cLib_addCalc2(&speed.y, l_HIO.m0C, 0.5f, l_HIO.m08);
+    if (mBreakTimer > l_HIO.mBreakDelay) {
+      cLib_addCalc2(&speed.y, l_HIO.mFallSpeedMax, 0.5f, l_HIO.mFallAccel);
       current.pos.y = current.pos.y + speed.y;
     }
-    if (mBreakTimer > l_HIO.m18 + 0xF0) {
+    if (mBreakTimer > l_HIO.mBreakDelay + 0xF0) {
       fopAcM_delete(this);
     }
   } else {
@@ -325,7 +325,7 @@ bool daObj_Stair_c::_execute() {
           mBreakDir.copy(d);
           f32 a2 = PSVECSquareMag(&mHitOffset);
           s16 sub = (s16)gabi::ftoi(0.0002f * a2);
-          mBreakTimer = l_HIO.m18 - sub;
+          mBreakTimer = l_HIO.mBreakDelay - sub;
           if (stairAbs(&mHitOffset) < 80.0f) {
             mBreakPower = 0.7f;
           } else {
@@ -340,14 +340,14 @@ bool daObj_Stair_c::_execute() {
           d = mBreakDir.normZP();
           mBreakDir.copy(d);
 
-          mBreakTimer = l_HIO.m18 - 2;
+          mBreakTimer = l_HIO.mBreakDelay - 2;
           mBreakPower = 1.0f;
         }
       }
     }
   }
   s32 temp5 = mBreakTimer;
-  s32 m18 = l_HIO.m18;
+  s32 m18 = l_HIO.mBreakDelay;
   if (temp5 > m18 - 10 && temp5 < m18) {
     f32 sinResult = cM_ssin((((temp5 - m18) + 10) & 0x3) << 14);
     mShakeY = 1.5f * sinResult;

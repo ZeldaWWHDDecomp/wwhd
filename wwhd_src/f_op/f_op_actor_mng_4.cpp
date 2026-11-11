@@ -2,6 +2,7 @@
  * WWHD source, verified against the native unit.
  * HD: water checks use SplGrpChk and terrain checks retain this translation unit's vtables. */
 #include "f_op/f_op_actor_mng.h"
+#include "sead/ElementAt.h"
 
 
 
@@ -138,12 +139,14 @@ static u32 enemySearchJugge(u32 ptr, u32 unused) {
 }
 
 // HD: getGrabActorID is a virtual of the player (vtable +0xBC)
+// Guest EA arithmetic: rooms + roomNo * 0x22C wraps at 32 bits as on the console (a generated room number reached host
+// addresses far above the guest window).
 /* 025D98E8 */
 static u32 fopAcM_myRoomSearchEnemy(u32 roomNo) {
     if ((s32)roomNo < 0)
         actMngGuest_JUT_ASSERT(gabi::guest_addr("f_op_actor_mng.cpp"), 0x1065,
                                gabi::guest_addr("roomNo >= 0"));
-    u32 roomProc = actMngGuest_fopScnM_SearchByID((u32)roomStatuses.rooms[roomNo].mProcID);
+    u32 roomProc = actMngGuest_fopScnM_SearchByID((u32)sead::elementAt<ActorManagerRoomStatus>(gabi::ea(roomStatuses.rooms), u32(roomNo)).mProcID);
     if (roomProc == 0)
         actMngGuest_JUT_ASSERT(gabi::guest_addr("f_op_actor_mng.cpp"), 0x1068,
                                gabi::guest_addr("roomProc != (0)"));

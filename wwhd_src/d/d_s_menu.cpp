@@ -145,9 +145,9 @@ static s32 dScnMenu_Execute(menu_of_scene_class* i_this) {
     if (MenuPad_holdUp(0) || MenuPad_holdDown(0)) {
         bool trig = true;
         if (MenuPad_trigUp(0) || MenuPad_trigDown(0))
-            i_this->field_0x1e1 = REPEAT_DELAY;
-        else if (Menu_calcTimer(&i_this->field_0x1e1) == 0)
-            i_this->field_0x1e1 = REPEAT_INTERVAL;
+            i_this->mStageRepeatTimer = REPEAT_DELAY;
+        else if (Menu_calcTimer(&i_this->mStageRepeatTimer) == 0)
+            i_this->mStageRepeatTimer = REPEAT_INTERVAL;
         else
             trig = false;
         if (trig) {
@@ -169,9 +169,9 @@ static s32 dScnMenu_Execute(menu_of_scene_class* i_this) {
     if (MenuPad_holdB(0) || MenuPad_holdA(0)) {
         bool trig = true;
         if (MenuPad_trigB(0) || MenuPad_trigA(0))
-            i_this->field_0x1e2 = REPEAT_DELAY;
-        else if (Menu_calcTimer(&i_this->field_0x1e2) == 0)
-            i_this->field_0x1e2 = REPEAT_INTERVAL;
+            i_this->mRoomRepeatTimer = REPEAT_DELAY;
+        else if (Menu_calcTimer(&i_this->mRoomRepeatTimer) == 0)
+            i_this->mRoomRepeatTimer = REPEAT_INTERVAL;
         else
             trig = false;
         if (trig) {
@@ -204,7 +204,7 @@ static s32 dScnMenu_Execute(menu_of_scene_class* i_this) {
     // HD: start-code shoulder-button adjustment is absent; startCode remains externally supplied.
     // HD: readable spellings below map to the original Shift-JIS menu strings.
     if (MenuPad_trigStart(0)) {
-        setString(&frame->demoName, "demo");
+        setString(&frame->demoName, "デモ");
         setString(&frame->stageName, selectedStage(info));
         MenuString_assureTermination(&frame->demoName);
         terminate(&frame->demoName);
@@ -219,15 +219,15 @@ static s32 dScnMenu_Execute(menu_of_scene_class* i_this) {
             s32 room = *groupPoint(id);
             bool demo23 = true;
             if (room > 23) {
-                setString(&frame->needleFirst, "(44)");
+                setString(&frame->needleFirst, "（４４）");
                 demo23 = contains(&frame->roomName, &frame->needleFirst, &frame->candidateFirst);
                 if (!demo23) {
-                    setString(&frame->needleSecond, "(49)");
+                    setString(&frame->needleSecond, "（４９）");
                     demo23 =
                         contains(&frame->roomName, &frame->needleSecond, &frame->candidateSecond);
                 }
                 if (!demo23) {
-                    setString(&frame->needleLast, "(50)");
+                    setString(&frame->needleLast, "（５０）");
                     demo23 = contains(&frame->roomName, &frame->needleLast, &frame->candidateThird);
                 }
             }
@@ -235,7 +235,7 @@ static s32 dScnMenu_Execute(menu_of_scene_class* i_this) {
                 MenuEvent_off(l_save->mEvent, EVENT_DEMO23);
             else
                 MenuEvent_on(l_save->mEvent, EVENT_DEMO23);
-            setString(&frame->needleLast, "(19)");
+            setString(&frame->needleLast, "（１９）");
             if (contains(&frame->roomName, &frame->needleLast, &frame->candidateLast))
                 MenuEvent_on(l_save->mEvent, EVENT_DEMO40);
         }
@@ -364,11 +364,11 @@ static s32 phase_1(menu_of_scene_class* i_this) {
     DvdCommand* command = Menu_createDvd("/Common/Debug/DebugMenu/Menu1.dat", 0, 0);
     i_this->command = command;
     if (!command)
-        Menu_assert("d_s_menu.cpp", 0x308, "i_this->command != NULL");
+        Menu_assert("d_s_menu.cpp", 0x308, "i_this->command != (0)");
     command = Menu_createDvd("/Common/Debug/DebugMenu/kanfont_fix16.bfn", 0, 0);
     i_this->fontCommand = command;
     if (!command)
-        Menu_assert("d_s_menu.cpp", 0x30B, "i_this->fontCommand != NULL");
+        Menu_assert("d_s_menu.cpp", 0x30B, "i_this->fontCommand != (0)");
     return cPhs_NEXT_e;
 }
 
@@ -383,7 +383,7 @@ static s32 phase_2(menu_of_scene_class* i_this) {
     menu_inf* info = static_cast<menu_inf*>(command->mMemAddress.get());
     i_this->info = info;
     if (!info)
-        Menu_assert("d_s_menu.cpp", 0x338, "i_this->info != NULL");
+        Menu_assert("d_s_menu.cpp", 0x338, "i_this->info != (0)");
     command = i_this->command;
     if (command)
         gabi::call_ptr(command->__vtbl->deletingDestructor.get(), command, 3);
@@ -416,7 +416,7 @@ static s32 phase_2(menu_of_scene_class* i_this) {
         be<s8>* points = Menu_newArray(num);
         l_groupPoint = points;
         if (!points)
-            Menu_assert("d_s_menu.cpp", 0x353, "l_groupPoint != NULL");
+            Menu_assert("d_s_menu.cpp", 0x353, "l_groupPoint != (0)");
         for (u32 i = 0; i < static_cast<u32>(info->num); ++i)
             *groupPoint(i) = 0;
     }
@@ -483,11 +483,11 @@ data l_languageType 101EA6D2
 data l_save 101F84DC
 data l_displayFlags 104873CF
 data l_safeStringVtable 100528C4
-str 1005291C "demo" renamed
-str 10052924 "(44)" renamed
-str 10052930 "(49)" renamed
-str 1005293C "(50)" renamed
-str 10052948 "(19)" renamed
+str 1005291C "デモ"
+str 10052924 "（４４）"
+str 10052930 "（４９）"
+str 1005293C "（５０）"
+str 10052948 "（１９）"
 data l_zero 100528DC
 data l_fastTimeAdv 100528E0
 data l_integerBias 100528E8
@@ -525,10 +525,10 @@ str 10052954 "/Common/Debug/DebugMenu/Menu1.dat"
 str 10052978 "/Common/Debug/DebugMenu/kanfont_fix16.bfn"
 str 100529A4 "d_s_menu.cpp" in 025AD5E0
 str 10052A10 "d_s_menu.cpp" in 025AD680
-str 100529B4 "i_this->command != NULL"
-str 100529CC "i_this->fontCommand != NULL"
-str 100529E8 "i_this->info != NULL"
-str 100529FC "l_groupPoint != NULL"
+str 100529B4 "i_this->command != (0)"
+str 100529CC "i_this->fontCommand != (0)"
+str 100529E8 "i_this->info != (0)"
+str 100529FC "l_groupPoint != (0)"
 ext 020075E0 u32 MenuPad_holdUp(u32)
 ext 0200760C u32 MenuPad_holdDown(u32)
 ext 02007764 u32 MenuPad_trigUp(u32)

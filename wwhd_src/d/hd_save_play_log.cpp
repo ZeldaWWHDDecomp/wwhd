@@ -1,5 +1,6 @@
 /** HD save helpers; local decomp */
 #include "d/hd_save_info_holder.h"
+#include "sead/ElementAt.h"
 static u32 sSavePlayLogHeaderStatics;
 static u32 sSavePlayLogHeaderDescriptors;
 static u32 sSavePlayLogHeaderZero;
@@ -76,7 +77,9 @@ f32 hdSavePlayLog_c::getEndTime() {
 /* 027208A0 */
 void hdSavePlayLog_c::setFlag(u32 index, u32 bit) {
     u32 mask = (bit & 63) < 32 ? 1u << (bit & 31) : 0;
-    mFlags[index] = u32(mFlags[index]) | mask;
+    /* guest address arithmetic: mFlags + index * 4 wraps at 32 bits as on the console */
+    be<u32>& flags = sead::elementAt<be<u32>>(gabi::ea(mFlags), index);
+    flags = u32(flags) | mask;
 }
 
 /* 027208C0 */
@@ -87,7 +90,8 @@ void hdSavePlayLog_c::setVisited(u32 index) {
 /* 027208C8 */
 BOOL hdSavePlayLog_c::hasFlag(u32 index, u32 bit) {
     u32 mask = (bit & 63) < 32 ? 1u << (bit & 31) : 0;
-    return (u32(mFlags[index]) & mask) != 0;
+    /* guest address arithmetic: mFlags + index * 4 wraps at 32 bits as on the console */
+    return (u32(sead::elementAt<be<u32>>(gabi::ea(mFlags), index)) & mask) != 0;
 }
 
 /* 027208EC */

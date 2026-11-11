@@ -238,11 +238,21 @@ JASDSPInterface.h JASDsp::TChannel, JASWaveInfo.h, JASOscillator.h), matched by 
 | TOscillator (JASOscillator.h) | `field_0x6` | `mCurPoint` | after TP JASOscillator::mCurPoint; calc 02816480: index of the current envelope table point, stepped per point |
 | TOscillator (JASOscillator.h) | `field_0x5` | `mEnvelopeMode` | after TP JASOscillator::mEnvelopeMode; calc 02816480: curve of the current point, from the table / the direct release (>> 14 & 3) |
 
-Open (only cleared, or values whose meaning the code does not show): DSPBuffer `field_0x8`, `field_0x60`, `field_0x66`,
-`field_0x78`, `field_0x80`, `field_0xa8`, `field_0xb0`, `field_0xd0`, `field_0x10c` (TP leaves these unnamed too);
-FXBuffer `field_0x8`, `field_0xa`, `field_0xc`, `field_0xe` and FxlineConfig_ `field_0x2`, `field_0x4`, `field_0x6`, `field_0x8`
-(send levels / indices copied by setFXLine 02816254). TOscillator::Osc_ and TRegisterParam keep their offset-name union
-aliases next to named members for now (removing an alias is not a pure rename; to be asked).
+Round 2:
+
+| Struct (header) | Old | New | Evidence |
+|---|---|---|---|
+| FXBuffer (JASDSPInterface.h) | `field_0x8` | `mSend1` | setFXLine 02816254: SEND_TABLE[FxlineConfig_ mSend1Idx], the first send entry of the FX line (tww FXBuffer::setFXLine the same) |
+| FXBuffer (JASDSPInterface.h) | `field_0xa` | `mSend1Value` | setFXLine 02816254: FxlineConfig_ mSend1Value, paired with mSend1 (tww FXBuffer::setFXLine the same) |
+| FXBuffer (JASDSPInterface.h) | `field_0xc` | `mSend2` | setFXLine 02816254: SEND_TABLE[FxlineConfig_ mSend2Idx], the second send entry of the FX line (tww FXBuffer::setFXLine the same) |
+| FXBuffer (JASDSPInterface.h) | `field_0xe` | `mSend2Value` | setFXLine 02816254: FxlineConfig_ mSend2Value, paired with mSend2 (tww FXBuffer::setFXLine the same) |
+| FxlineConfig_ (JASDSPInterface.h) | `field_0x2` | `mSend1Idx` | setFXLine 02816254: FXBuffer mSend1 = SEND_TABLE[it] (tww FXBuffer::setFXLine the same) |
+| FxlineConfig_ (JASDSPInterface.h) | `field_0x4` | `mSend1Value` | setFXLine 02816254 copies it into FXBuffer mSend1Value, next to mSend1 (tww FXBuffer::setFXLine the same) |
+| FxlineConfig_ (JASDSPInterface.h) | `field_0x6` | `mSend2Idx` | setFXLine 02816254: FXBuffer mSend2 = SEND_TABLE[it] (tww FXBuffer::setFXLine the same) |
+| FxlineConfig_ (JASDSPInterface.h) | `field_0x8` | `mSend2Value` | setFXLine 02816254 copies it into FXBuffer mSend2Value, next to mSend2 (tww FXBuffer::setFXLine the same) |
+
+Open (only cleared, or values whose meaning the code does not show): DSPBuffer `field_0x8`, `field_0x60`, `field_0x66`, `field_0x78`, `field_0x80`, `field_0xa8`, `field_0xb0`, `field_0xd0`, `field_0x10c` (TP leaves these unnamed too). TOscillator::Osc_ and TRegisterParam keep their offset-name union aliases next to named members for now (removing an alias is not a pure rename; to be asked).
+
 
 ## JStudio, JAudio parameter view, m_Do old-frame blend
 
@@ -269,8 +279,9 @@ likewise. Names come from the WWHD uses or from this decomp's own names for the 
 
 Open: mDoExt_MtxCalcOldFrame `field_0x1` (only the constructor sets it, d_a_player_main_01.cpp); mDoMtxQuatStack (only its
 static initialiser touches it), MaterialWork `field_0x44`, mDoExt_bpkAnm/btpAnm `field_0x14` (only cleared), actor_place `field_0x13`
-(unused), msg_class `field_0xf0`/`field_0xf4` and fopMsg_prm_class `field_0x14`/`field_0x18` (only copied by fopMsg_Create 025DB150),
-MyPicture m124..m134 and mDoMain_StartupRecord: no use that shows a meaning.
+(unused), msg_class `field_0xf4` and fopMsg_prm_class `field_0x18` (always -1, only copied by fopMsg_Create 025DB150),
+MyPicture m124..m134: no use that shows a meaning. (msg_class `field_0xf0`, fopMsg_prm_class `field_0x14` and
+mDoMain_StartupRecord: named in round 2, see below.)
 
 ## Alias batch: offset-name union aliases removed
 
@@ -318,3 +329,16 @@ hdBgmController and hdSoundArchiveAccessor `field_0x4`/`field_0x8`, hdSoundArchi
 Open: `field_0x0[6]` (tww's getFlag() reads element 3, the array itself stays), `field_0xe` and `field_0x1a` (tww comments
 "BendSense?" / "Priority?"; WWHD only sets 12 / 0x40 in init and copies them in inherit), `field_0x1c` (unused); the
 `field_0xc` union alias stays (different type).
+
+## m_Do main startup record and f_op message lifecycle (m_Do/m_Do_main.h, f_op/f_op_msg.h)
+
+mDoMain_StartupRecord is tww's mDoRstData (include/m_Do/m_Do_Reset.h, d217e2b): tww names. The message fields are named after tww's uses (f_op_msg_mng.cpp, d_msg.cpp), which our decomp has no code for.
+
+| Struct (header) | Old | New | Evidence |
+|---|---|---|---|
+| mDoMain_StartupRecord (m_Do/m_Do_main.h) | `field_0x0` | `mReset` | tww name (mDoRstData, m_Do_Reset.h): main01 025F1660 clears it before setting sCurrentStartupRecord, as tww main01 mDoRst::offReset() |
+| mDoMain_StartupRecord (m_Do/m_Do_main.h) | `field_0x4` | `mResetPrepare` | tww name (mDoRstData): main01 025F1660 clears it, as tww main01 mDoRst::offResetPrepare() |
+| mDoMain_StartupRecord (m_Do/m_Do_main.h) | `field_0x8` | `m3ButtonReset` | tww name (mDoRstData): main01 025F1660 clears it, as tww main01 mDoRst::off3ButtonReset() |
+| mDoMain_StartupRecord (m_Do/m_Do_main.h) | `field_0xc` | `m3ButtonResetPort` | tww name (mDoRstData): main01 025F1660 sets -1, as tww main01 mDoRst::set3ButtonResetPort(-1) |
+| fopMsgLifecycle::msg_class (f_op/f_op_msg.h) | `field_0xf0` | `mStartMsgNo` | fopMsg_Create 025DB150 copies it from the request (mStartMsgNo); after tww: fopMsgM_messageSet sets it with mMsgNo, d_msg resets mMsgNo to it when B cancels |
+| fopMsgLifecycle::fopMsg_prm_class (f_op/f_op_msg.h) | `field_0x14` | `mStartMsgNo` | fopMsg_Create 025DB150 copies it into msg_class::mStartMsgNo; after tww: fopMsgM_messageTypeSelect passes the message number for it (createAppend p4) |

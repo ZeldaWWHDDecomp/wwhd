@@ -137,7 +137,7 @@ static u32 dKyr_moon_arrival_check() {
 /* 0256691C */
 static void rain_bg_chk(u32 packet, s32 index) {
   u32 camera = (u32)view<GameInfo>(gameInfo())->camera;
-  view<dKankyo_rain_Packet>(packet)->mEff[index].field_0x30 = gabi::fadds_ppc(
+  view<dKankyo_rain_Packet>(packet)->mEff[index].mGroundY = gabi::fadds_ppc(
       (f32)view<Camera>(camera)->mCenter.y, (f32)constant(RainFloorOffset));
 }
 /* 0256C8BC */
@@ -350,7 +350,7 @@ static void dKyr_poison_light_colision() {
     if ((hit & 1) && object &&
         ((u32)view<CollisionObject>(object)->attackType & 0x800000) &&
         (u8)view<POISON_EFF>(particle)->mStatus == PoisonActive) {
-      view<POISON_EFF>(particle)->field_0x2e = 60;
+      view<POISON_EFF>(particle)->mWaitTimer = 60;
       view<POISON_EFF>(particle)->mStatus = PoisonHit;
     }
     count = (s32)(u32)view<EnvironmentPackets>(environment())->mPoisonCount;
@@ -390,9 +390,9 @@ static void poison_init() {
     return;
   }
   f32 zero = (f32)constant(Zero);
-  view<dKankyo_poison_Packet>(poisonPacket())->field_0xbb9c.x = zero;
-  view<dKankyo_poison_Packet>(poisonPacket())->field_0xbb9c.y = zero;
-  view<dKankyo_poison_Packet>(poisonPacket())->field_0xbb9c.z = zero;
+  view<dKankyo_poison_Packet>(poisonPacket())->mNearestPos.x = zero;
+  view<dKankyo_poison_Packet>(poisonPacket())->mNearestPos.y = zero;
+  view<dKankyo_poison_Packet>(poisonPacket())->mNearestPos.z = zero;
   view<dKankyo_poison_Packet>(poisonPacket())->mCount = 0;
   packet = poisonPacket();
   view<dKankyo_poison_Packet>(packet)->mRot = zero;

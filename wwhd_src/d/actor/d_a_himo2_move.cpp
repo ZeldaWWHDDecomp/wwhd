@@ -190,9 +190,9 @@ static void new_himo2_move(himo2_class* i_this) {
     bool r25 = false;
     fopAc_ac_c* r24 = nullptr;
     if (r30) {
-        rope_scale = l_himo2HIO.m20;
+        rope_scale = l_himo2HIO.mRopeScale;
     } else {
-        rope_scale = l_himo2HIO.m1C;
+        rope_scale = l_himo2HIO.mRopeScaleLockOn;
         i_this->mHideTimer = 0;
     }
     if (mv_LockonTruth(att) != 0) {
@@ -284,7 +284,7 @@ static void new_himo2_move(himo2_class* i_this) {
             i_this->mRootSegment = l_himo2Regs.mChild[0].mShortRegs[6] + 0x5A;
             himo2_s* phVar18 = i_this->mSegments;
             for (int iVar8 = 0; iVar8 < 100; iVar8++, phVar18++)
-                phVar18->m10 = *sp100.get();
+                phVar18->mPos = *sp100.get();
         }
         break;
     }
@@ -590,7 +590,7 @@ static void new_himo2_move(himo2_class* i_this) {
             i_this->mCamEyeSignZ = l_himo2Regs.mChild[0].mFloatRegs[7] + 1.0f;
             i_this->mCamEyeDist = l_himo2Regs.mChild[0].mFloatRegs[16] + 3.5f;
         } else {
-            /* HD: no l_himo2HIO.m06 choice: always (-1, -1) */
+            /* HD: no l_himo2HIO.mSwingDirMode choice: always (-1, -1) */
             i_this->mWrapOffsetX = 0.0f;
             i_this->mCamEyeSignX = -1.0f;
             i_this->mCamEyeSignZ = -1.0f;

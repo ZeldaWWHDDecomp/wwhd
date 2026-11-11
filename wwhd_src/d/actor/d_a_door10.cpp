@@ -28,7 +28,7 @@ static void cutEnd(daDoor10_c* i_this) {
     dComIfGp_evmng_cutEnd(staff);
 }
 static void orderEvent(daDoor10_c* i_this) {
-    u8 idx = i_this->m2C6;
+    u8 idx = i_this->mEventKind;
     s16 evt = i_this->mEventIdx[idx];
     u8 tool = i_this->mToolId[idx];
     Door10_orderEvent(i_this, evt, tool, 65535, 0, 1);
@@ -129,18 +129,18 @@ BOOL daDoor10_c::chkStopOpen() {
     if ((front == 0 && type == 2) || (front == 1 && type == 5)) {
         dComIfG_inf_c* p = door10Play();
         bool running = p->play.mEvtCtrl.mMode != 0;
-        if (!running || m2A1 == 0) {
+        if (!running || mStopOpenTimer == 0) {
             p = door10Play();
             if (Door10_roomIsDisplay(&p->play.mRoomCtrl, room) && !Door10_searchEnemy((s8)room)) {
-                if (m2A1 != 0) {
-                    m2A1 = m2A1 - 1;
+                if (mStopOpenTimer != 0) {
+                    mStopOpenTimer = mStopOpenTimer - 1;
                     return FALSE;
                 }
                 if (sw != 255)
                     dComIfGs_onSwitch(sw, room);
                 return TRUE;
             }
-            m2A1 = getArg1() == 15 ? 0 : 65;
+            mStopOpenTimer = getArg1() == 15 ? 0 : 65;
         }
     } else if (sw != 255 && dComIfGs_isSwitch(sw, room))
         return TRUE;
@@ -148,7 +148,7 @@ BOOL daDoor10_c::chkStopOpen() {
 }
 
 /* 02126F48 */
-void daDoor10_c::setStopDemo() { m2C6 = mFrontCheck != 0; }
+void daDoor10_c::setStopDemo() { mEventKind = mFrontCheck != 0; }
 
 /* 02126F5C */
 BOOL daDoor10_c::chkStopClose() {
@@ -196,8 +196,8 @@ BOOL daDoor10_c::CreateHeap() {
     auto object = [](s32 id) { return dComIfG_getObjectRes("DoorBs", id); };
     auto stage = [](const char* name) { return dComIfG_getStageRes("Stage", name); };
     J3DModelData* data;
-    if (m364 != 0)
-        data = (J3DModelData*)object(m364);
+    if (mDoorBsBdlIdx != 0)
+        data = (J3DModelData*)object(mDoorBsBdlIdx);
     else {
         const char* name = getBdlName();
         data = (J3DModelData*)stage(name);
@@ -225,8 +225,8 @@ BOOL daDoor10_c::CreateHeap() {
     if (!mpBgW)
         return FALSE;
     cBgD_t* bg;
-    if (m364 != 0)
-        bg = (cBgD_t*)object(m364 == 4 ? 8 : 9);
+    if (mDoorBsBdlIdx != 0)
+        bg = (cBgD_t*)object(mDoorBsBdlIdx == 4 ? 8 : 9);
     else {
         const char* name = getDzbName();
         bg = (cBgD_t*)stage(name);
@@ -246,11 +246,11 @@ BOOL daDoor10_c::CreateHeap() {
 /* 02127080 */
 void daDoor10_c::setEventPrm() {
     if (mFrontCheck == 0) {
-        m2C6 = 2;
+        mEventKind = 2;
         if (mStopBars.mA == 255)
             mStopBars.mA = chkStopB();
     } else {
-        m2C6 = 3;
+        mEventKind = 3;
         if (getType() == 1 && getArg1() != 16)
             return;
         if (mStopBars.mA == 255)
@@ -259,9 +259,9 @@ void daDoor10_c::setEventPrm() {
     if (mStopBars.m8 != 0)
         return;
     if (getType() == 1 && getArg1() != 16)
-        m2C6 = 6;
+        mEventKind = 6;
     else if (mStopBars.mA == 1)
-        m2C6 = m2C6 + 2;
+        mEventKind = mEventKind + 2;
     if (mKeyLock.mbEnabled) {
         u8 type = getType();
         dSv_info_c* s = dComIfGs_info();
@@ -273,7 +273,7 @@ void daDoor10_c::setEventPrm() {
     }
     f32 size = getSize2X();
     if (checkArea(size, 12100.0f, 62500.0f)) {
-        u8 index = m2C6;
+        u8 index = mEventKind;
         u16 condition = eventInfo.mCondition;
         eventInfo.mEventId = mEventIdx[index];
         u8 tool = mToolId[index];
@@ -288,7 +288,7 @@ void daDoor10_c::openInit() {
     onFlag(DOOR10_OPEN);
     dComIfG_inf_c* p = door10Play();
     cBgS_Release(&p->play.mBgS, mpBgW);
-    m358 = 0;
+    mOpenHeight = 0;
     // HD: delay the start sound until openProc actually moves.
     speedF = 0;
 }
@@ -301,10 +301,10 @@ BOOL daDoor10_c::openProc() {
     if (std::fabs((f32)speedF) < 0.000003814697265625f)
         sound(this, JA_SE_OBJ_STN_DOOR_MOVE_U);
     cLib_chaseF(&speedF, 30, 4);
-    BOOL done = cLib_chaseF(&m358, 300, speedF) != 0;
+    BOOL done = cLib_chaseF(&mOpenHeight, 300, speedF) != 0;
     calcMtx();
     if (mHkyo.chkUse())
-        mHkyo.calcMtx(this, m358);
+        mHkyo.calcMtx(this, mOpenHeight);
     return done;
 }
 
@@ -312,7 +312,7 @@ BOOL daDoor10_c::openProc() {
 void daDoor10_c::openEnd() {
     sound(this, JA_SE_OBJ_STN_DOOR_STOP_U);
     offFlag(DOOR10_OPEN);
-    m358 = 300;
+    mOpenHeight = 300;
     speedF = 0;
 }
 
@@ -329,10 +329,10 @@ void daDoor10_c::closeInit() {
 /* 021267A8 */
 BOOL daDoor10_c::closeProc() {
     cLib_chaseF(&speedF, 60, 6);
-    BOOL done = cLib_chaseF(&m358, 0, speedF) != 0;
+    BOOL done = cLib_chaseF(&mOpenHeight, 0, speedF) != 0;
     calcMtx();
     if (mHkyo.chkUse())
-        mHkyo.calcMtx(this, m358);
+        mHkyo.calcMtx(this, mOpenHeight);
     return done;
 }
 
@@ -351,7 +351,7 @@ void daDoor10_c::closeEnd() {
 void daDoor10_c::calcMtx() {
     mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
     mDoMtx_stack_c::YrotM(home.angle.y);
-    mDoMtx_stack_c::transM(0, m358, 0);
+    mDoMtx_stack_c::transM(0, mOpenHeight, 0);
     J3DModel_setBaseTRMtx(mpModel, mDoMtx_stack_c::get());
 }
 
@@ -361,7 +361,7 @@ BOOL daDoor10_c::CreateInit() {
     if (dBgS_Regist(&p->play.mBgS, mpBgW, this))
         JUT_ASSERT_fail("d_a_door10.cpp", 623, "0");
     tevStr.mRoomNo = current.roomNo;
-    m358 = 0;
+    mOpenHeight = 0;
     setAction(DOOR10_INIT);
     u8 type = getType();
     f32 a = attention_info.position.y, b = eyePos.y, height = type == 1 ? 250 : 150;
@@ -379,7 +379,7 @@ BOOL daDoor10_c::CreateInit() {
         mHkyo.calcMtx(this, 0);
     }
     // HD: countdown before the enemy-clear stop can open.
-    m2A1 = 65;
+    mStopOpenTimer = 65;
     return TRUE;
 }
 
@@ -391,9 +391,9 @@ cPhs_State daDoor10_c::create() {
     else
         mHkyo.offUse();
     arg = getArg1();
-    m364 = arg == 13 ? 4 : arg == 14 ? 5 : 0;
+    mDoorBsBdlIdx = arg == 13 ? 4 : arg == 14 ? 5 : 0;
     cPhs_State state;
-    if (m364) {
+    if (mDoorBsBdlIdx) {
         state = dComIfG_resLoad(&mPhase, "DoorBs");
         if (state != cPhs_COMPLEATE_e)
             return state;
@@ -432,10 +432,10 @@ void daDoor10_c::demoProc() {
             setGoal();
             break;
         case 5:
-            m2D0.smokeInit(this);
+            mSmoke.smokeInit(this);
             break;
         case 6:
-            m2D0.smokeEnd();
+            mSmoke.smokeEnd();
             break;
         case 8:
             mKeyLock.keyInit(this);
@@ -471,7 +471,7 @@ void daDoor10_c::demoProc() {
         }
         break;
     case 5:
-        m2D0.smokeProc(this);
+        mSmoke.smokeProc(this);
         cutEnd(this);
         break;
     case 8:
@@ -567,7 +567,7 @@ BOOL daDoor10_actionStopClose(daDoor10_c* i_this) {
 
 /* 02127408 */
 BOOL daDoor10_actionDemo(daDoor10_c* i_this) {
-    s16 evt = i_this->mEventIdx[i_this->m2C6];
+    s16 evt = i_this->mEventIdx[i_this->mEventKind];
     dComIfG_inf_c* p = door10Play();
     if (Door10_endCheck(&p->play.mEvtManager, evt)) {
         i_this->setAction(DOOR10_WAIT);
@@ -591,7 +591,7 @@ BOOL daDoor10_actionHkyo(daDoor10_c* i_this) {
         i_this->setAction(DOOR10_DEMO);
         i_this->demoProc();
     } else if (i_this->mHkyo.chkStart()) {
-        i_this->m2C6 = 10;
+        i_this->mEventKind = 10;
         orderEvent(i_this);
     }
     return TRUE;
@@ -647,7 +647,7 @@ BOOL daDoor10_Execute(daDoor10_c* i_this) {
         i_this->setAction(DOOR10_INIT);
         break;
     case 2:
-        l_action.invoke(i_this->m354, i_this);
+        l_action.invoke(i_this->mAction, i_this);
         break;
     case 1:
         i_this->startDemoProc();
@@ -670,13 +670,13 @@ BOOL daDoor10_Delete(daDoor10_c* i_this) {
         dComIfG_inf_c* p = door10Play();
         cBgS_Release(&p->play.mBgS, i_this->mpBgW);
     }
-    if (i_this->m364 != 0)
+    if (i_this->mDoorBsBdlIdx != 0)
         dComIfG_resDelete(&i_this->mPhase, "DoorBs");
     if (i_this->chkMakeKey())
         i_this->mKeyLock.keyResDelete();
     if (i_this->mHkyo.chkUse())
         i_this->mHkyo.resDelete();
-    i_this->m2D0.smokeEnd();
+    i_this->mSmoke.smokeEnd();
     return TRUE;
 }
 
@@ -687,7 +687,7 @@ cPhs_State daDoor10_Create(daDoor10_c* i_this) {
         if (i_this) {
             Door10_infoConstruct(i_this);
             i_this->__vtbl = daDoor10_c::__vt;
-            Door10_smokeConstruct(&i_this->m2D0);
+            Door10_smokeConstruct(&i_this->mSmoke);
             Door10_keyConstruct(&i_this->mKeyLock);
             Door10_stopConstruct(&i_this->mStopBars);
             Door10_hkyoConstruct(&i_this->mHkyo);

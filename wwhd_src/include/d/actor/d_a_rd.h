@@ -24,7 +24,7 @@ struct enemyice_l {
     /* 0x006 */ be<s8> mLightShrinkTimer;
     /* 0x007 */ u8 _007;
     /* 0x008 */ be<f32> mYOffset;
-    /* 0x00C */ be<s8> m00C;
+    /* 0x00C */ be<s8> mFreezeType;  /* was m00C: view of enemyice::mFreezeType (c/c_damagereaction.h) */
     /* 0x00D */ be<s8> mMode;
     /* 0x00E */ be<s16> mFreezeTimer;
     /* 0x010 */ be<s16> mMoveDelayTimer;
@@ -33,8 +33,8 @@ struct enemyice_l {
     /* 0x016 */ u8 _016[2];
     /* 0x018 */ cXyz mSpeed;
     /* 0x024 */ be<f32> mSpeedF;
-    /* 0x028 */ be<f32> m028;
-    /* 0x02C */ be<f32> m02C;
+    /* 0x028 */ be<f32> mBodyLiftY;  /* was m028: view of enemyice::mBodyLiftY (c/c_damagereaction.h) */
+    /* 0x02C */ be<f32> mIceOffsetY;  /* was m02C: view of enemyice::mIceOffsetY (c/c_damagereaction.h) */
     /* 0x030 */ dCcD_Stts mStts;
     /* 0x06C */ dCcD_Cyl mCyl;
     /* 0x19C */ be<f32> mCylHeight;
@@ -72,7 +72,7 @@ struct enemyfire_l {
     /* 0x0A0 */ dCcD_Stts mStts;
     /* 0x0DC */ dCcD_Sph mSph;
     /* 0x208 */ u8 mLight[0x20];  /* LIGHT_INFLUENCE */
-    /* 0x228 */ be<f32> m228;     /* HD: 1.0f in the constructor */
+    /* 0x228 */ be<f32> mHD20;  /* HD: 1.0f in the constructor; was m228: mLight (0x208, a LIGHT_INFLUENCE of HD size 0x24, declared here as its first 0x20 bytes) + 0x20 = LIGHT_INFLUENCE::mHD20 (bindings.h / d/d_kankyo.h), the light's HD tail; the enemyfire constructors (pt 02446C68, ki 0219D368, ks 021AA2D8, cc 02110B28, oq 023C3C80, am 0204B6A0, rd 0245A984, nz 0230F104) set it to 1.0 as the LIGHT_INFLUENCE constructor does; no reader in WWHD, so it keeps the class name */
 };
 WWHD_SIZE(enemyfire_l, 0x22C);
 #endif
@@ -128,7 +128,7 @@ struct daRd_c : fopEn_enemy_c {
     /* 0x3D4 */ be<s32> mAreaRadius;
     /* 0x3D8 */ be<s32> mChecksSwitch;
     /* 0x3DC */ be<s32> mSwNo;
-    /* 0x3E0 */ be<u8> m2C4;
+    /* 0x3E0 */ be<u8> mTgHitWait;  /* was m2C4: checkTgHit 0245C770: a hit is taken only while it has counted down to 0; reloaded with l_HIO m48 at every hit, 3 after a strong hit (resulting attack type 1) (tww the same) */
     /* 0x3E1 */ be<u8> mHitType;
     /* 0x3E2 */ u8 m2C6[2];
     /* 0x3E4 */ request_of_phase_process_class mPhs;
@@ -149,12 +149,12 @@ struct daRd_c : fopEn_enemy_c {
     /* 0x868 */ u8 mInvisModel[8];        /* mDoExt_invisibleModel */
     /* 0x870 */ dNpc_JntCtrl_c mJntCtrl;
     /* 0x8A4 */ be<u32> mCorpseID;
-    /* 0x8A8 */ be<s32> m6D4;
+    /* 0x8A8 */ be<s32> mFireDeathTimer;  /* was m6D4: _execute 0245BF50: reloaded with l_HIO m4E while mEnemyFire is off; while burning it counts down and at 0 the ReDead dies (MODE_DEATH) unless already attacking / crying / dead */
     /* 0x8AC */ be<s8> mBckIdx;
     /* 0x8AD */ be<s8> mAnmPrmIdx;
     /* 0x8AE */ be<s8> mOldAnmPrmIdx;
-    /* 0x8AF */ be<s8> m6DB;
-    /* 0x8B0 */ be<s8> m6DC;
+    /* 0x8AF */ be<s8> mBtkAnmPrmIdx;  /* was m6DB: setBtkAnm 0245AC14: the btk_anm_prm_tbl entry to play, follows the entry's m01 at a non-looping end (as mAnmPrmIdx for the bck) */
+    /* 0x8B0 */ be<s8> mOldBtkAnmPrmIdx;  /* was m6DC: setBtkAnm 0245AC14: the entry last started; the btk is re-initialised only when mBtkAnmPrmIdx differs (as mOldAnmPrmIdx) */
     /* 0x8B1 */ u8 m6DD[3];
     /* 0x8B4 */ enemyice_l mEnemyIce;
     /* 0xC6C */ enemyfire_l mEnemyFire;
@@ -163,21 +163,21 @@ struct daRd_c : fopEn_enemy_c {
     /* 0xEA8 */ cXyz mRdEyePos;
     /* 0xEB4 */ be<s16> mMaxHeadTurnVel;
     /* 0xEB6 */ u8 mCDE[2];
-    /* 0xEB8 */ be<s32> mCE0;
-    /* 0xEBC */ be<s32> mCE4;
-    /* 0xEC0 */ Mtx34 mCE8;
+    /* 0xEB8 */ be<s32> mHitReactTimer;  /* was mCE0: checkTgHit 0245C770: 40 for a non-damaging wind / boomerang / stick / far arrow / grappling hit; _execute 0245BF50 tilts the head (mHeadRotY to 0x2000) while it counts down and starts mLookPlayerTimer when it reaches 1 */
+    /* 0xEBC */ be<s32> mLookPlayerTimer;  /* was mCE4: _execute 0245BF50: 4 * 30 when mHitReactTimer ends; lookBack 0245B9A8 turns the head to the player's head while it counts down (not while attacking / crying / dead) */
+    /* 0xEC0 */ Mtx34 mHeadMtx;  /* was mCE8: _nodeHeadControl 0245A4DC: copy of the head joint matrix; debugDraw 0245C49C draws its axes (tww the same) */
     /* 0xEF0 */ be<s16> mHeadAngle;
-    /* 0xEF2 */ be<s16> mD1A;
-    /* 0xEF4 */ be<s16> mD1C;
-    /* 0xEF6 */ be<s16> mD1E;
+    /* 0xEF2 */ be<s16> mHeadRotX;  /* was mD1A: _nodeControl 0245A21C: extra X rotation of the head joint after the m_jnt angles; never written in WWHD or tww (always 0) */
+    /* 0xEF4 */ be<s16> mHeadRotZ;  /* was mD1C: _nodeControl 0245A21C: extra Z rotation of the head joint after mHeadRotX; never written in WWHD or tww (always 0) */
+    /* 0xEF6 */ be<s16> mHeadRotY;  /* was mD1E: _nodeControl 0245A21C: extra Y rotation of the head joint; _execute 0245BF50 eases it to 0x2000 while mHitReactTimer runs, else back to 0 (tww the same) */
     /* 0xEF8 */ u8 mD20[0xF06 - 0xEF8];
     /* 0xF06 */ be<s16> mD2E;
     /* 0xF08 */ u8 mD30[4];
     /* 0xF0C */ be<u8> mbIkari;
     /* 0xF0D */ u8 mD35[3];
-    /* 0xF10 */ be<f32> mD38;
-    /* 0xF14 */ be<s32> mD3C;
-    /* 0xF18 */ be<s32> mD40;
+    /* 0xF10 */ be<f32> mHeadOffsetX;  /* was mD38: _nodeHeadControl 0245A4DC: transM(it, 0, 0) on the head joint; _execute 0245BF50 eases it to l_HIO m60 while isIkari (angry), else to 0 (tww the same) */
+    /* 0xF14 */ be<s32> mStickDirX;  /* was mD3C: createInit 0245B234 sets 1; rd_breakFree (d_a_rd.h, in modeCry 0245DD80 / modeAttack 0245E30C) flips it to -1 / 1 when the stick x changes side and counts mBreakFreeCounter down (tww the same) */
+    /* 0xF18 */ be<s32> mStickDirY;  /* was mD40: createInit 0245B234 sets 1; rd_breakFree (d_a_rd.h, in modeCry 0245DD80 / modeAttack 0245E30C) flips it to -1 / 1 when the stick y changes side and counts mBreakFreeCounter down (tww the same) */
 
     bool isAnm(s8 idx) { return mAnmPrmIdx == idx; }
     void onIkari() { mbIkari = 1; }
@@ -245,42 +245,42 @@ WWHD_OFFSET(daRd_c, mJntCtrl, 0x870);
 WWHD_OFFSET(daRd_c, mEnemyIce, 0x8B4);
 WWHD_OFFSET(daRd_c, mEnemyFire, 0xC6C);
 WWHD_OFFSET(daRd_c, mpJntHit, 0xE98);
-WWHD_OFFSET(daRd_c, mCE8, 0xEC0);
+WWHD_OFFSET(daRd_c, mHeadMtx, 0xEC0);
 WWHD_OFFSET(daRd_c, mD2E, 0xF06);
-WWHD_OFFSET(daRd_c, mD38, 0xF10);
+WWHD_OFFSET(daRd_c, mHeadOffsetX, 0xF10);
 WWHD_SIZE(daRd_c, 0xF1C);
 
 // HD: dNpc_HIO_c and JntHit_HIO_c keep their vtables at the ends of the subobjects.
 struct daRd_HIO_c {
     /* 0x00 */ be<u32> __vtbl;
     /* 0x04 */ dNpc_HIO_c mNpc;
-    /* 0x2C */ be<u8> m2C;
+    /* 0x2C */ be<u8> mDebugDraw;  /* was m2C: _draw 0245C620 calls debugDraw while it is set (debug switch; daRd_HIO_c_ct 0245EFE0 clears it) (tww the same) */
     /* 0x2D */ u8 padding_2D[3];
-    /* 0x30 */ be<f32> m30;
-    /* 0x34 */ be<f32> m34;
+    /* 0x30 */ be<f32> mAreaRadiusAdd;  /* was m30: getArg 0245AB98: mAreaRadius = it + the parameter's area radius (tww the same) */
+    /* 0x34 */ be<f32> mNoticeRadius;  /* was m34: the ReDead's notice range: rd_noticePlayer (checkInFan radius, with mNoticeSpreadAngle), _searchNearDeadRd 0245A194 (a dead ReDead nearer than it) and debugDraw 0245C49C's fan (tww the same) */
     /* 0x38 */ be<f32> mCryRadius;
     /* 0x3C */ be<f32> mAttackRadius;
-    /* 0x40 */ be<s16> m40;
+    /* 0x40 */ be<s16> mNoticeSpreadAngle;  /* was m40: rd_noticePlayer: checkInFan's spread angle (with mNoticeRadius); debugDraw 0245C49C's fan angle (tww the same) */
     /* 0x42 */ be<s16> mCrySpreadAngle;
     /* 0x44 */ be<s16> mAttackSpreadAngle;
-    /* 0x46 */ be<s16> m46;
-    /* 0x48 */ be<s16> m48;
-    /* 0x4A */ be<s16> m4A;
-    /* 0x4C */ be<s16> m4C;
-    /* 0x4E */ be<s16> m4E;
-    /* 0x50 */ be<s16> m50;
-    /* 0x52 */ be<s16> m52;
-    /* 0x54 */ be<s16> m54;
+    /* 0x46 */ be<s16> mMaxHealth;  /* was m46: createInit 0245B234: max_health (tww the same) */
+    /* 0x48 */ be<s16> mHitWaitTime;  /* was m48: checkTgHit 0245C770: mTgHitWait after a hit (tww the same) */
+    /* 0x4A */ be<s16> mFreezeTime;  /* was m4A: checkTgHit 0245C770: mEnemyIce.mFreezeDuration on an ice hit (tww the same) */
+    /* 0x4C */ be<s16> mFireTime;  /* was m4C: checkTgHit 0245C770: mEnemyFire.mFireDuration on a fire hit (tww the same) */
+    /* 0x4E */ be<s16> mFireDeathTime;  /* was m4E: _execute 0245BF50: mFireDeathTimer (tww the same) */
+    /* 0x50 */ be<s16> mAttackBreakFreeCount;  /* was m50: modeAttackInit 0245E298: mBreakFreeCounter, the stick turns needed to break free of the grab (tww the same) */
+    /* 0x52 */ be<s16> mAttackTime;  /* was m52: modeAttackInit 0245E298: mTimer1 of the grab attack (tww the same) */
+    /* 0x54 */ be<s16> mCryTime;  /* was m54: modeCryInit 0245DC9C: mTimer1 of the paralysing cry (tww the same) */
     /* 0x56 */ u8 padding_56[2];
-    /* 0x58 */ be<f32> m58;
-    /* 0x5C */ be<f32> m5C;
-    /* 0x60 */ be<f32> m60;
-    /* 0x64 */ be<f32> m64;
-    /* 0x68 */ be<f32> m68;
+    /* 0x58 */ be<f32> mAttentionOffsetY;  /* was m58: setAttention 0245B854: added to the attention position's y (tww the same) */
+    /* 0x5C */ be<f32> mEyeOffsetY;  /* was m5C: setAttention 0245B854: added to eyePos.y (tww the same) */
+    /* 0x60 */ be<f32> mIkariHeadOffsetX;  /* was m60: _execute 0245BF50: mHeadOffsetX eases to it while isIkari (tww the same) */
+    /* 0x64 */ be<f32> mHeadOffsetStep;  /* was m64: _execute 0245BF50: cLib_addCalc2's step of mHeadOffsetX (tww the same) */
+    /* 0x68 */ be<f32> mWalkSpeed;  /* was m68: rd_walkToPlayer (modeMove / modeCry, d_a_rd.h): speedF eases to it * the distance factor, doubled while burning (tww modeMove / modeCry the same) */
     /* 0x6C */ be<f32> mReturnWalkSpeed;
-    /* 0x70 */ be<f32> m70;
-    /* 0x74 */ be<f32> m74;
-    /* 0x78 */ be<s16> m78;
+    /* 0x70 */ be<f32> mWalkAnmSpeedRate;  /* was m70: _execute 0245BF50: the walk animation's play speed is speedF * it (at least mWalkAnmSpeedMin) (tww the same) */
+    /* 0x74 */ be<f32> mWalkAnmSpeedMin;  /* was m74: _execute 0245BF50: the lower bound of the walk animation's play speed (tww the same) */
+    /* 0x78 */ be<s16> mCryBreakFreeCount;  /* was m78: modeCryInit 0245DC9C: mBreakFreeCounter, the stick turns needed to break free of the cry's paralysis (tww the same) */
     /* 0x7A */ be<s16> mParalysisDuration;
     /* 0x7C */ u8 m7C[0x2C]; // JntHit_HIO_c
 };
@@ -346,7 +346,12 @@ enum RD_JNT {
 };
 
 WWHD_SIZE(daRd_c::ModeEntry, 0x14);
-struct rd_anm_prm_struct { be<s8> m00, m01; u8 _padding[2]; be<s32> loopMode; };
+struct rd_anm_prm_struct {
+    be<s8> mBtkIdx;  /* was m00: setBtkAnm 0245AC14: index into btk_anm_idx_tbl of the btk to load (-1 none); static btk_anm_prm_tbl, never written (tww setBtkAnm a_anm_prm_tbl the same) */
+    be<s8> mNextPrmIdx;  /* was m01: setBtkAnm 0245AC14: once a one-shot (EMode_NONE) btk has stopped, mBtkAnmPrmIdx moves on to this entry (-1 none; the open and close entries go on to a looping one); static btk_anm_prm_tbl, never written (tww setBtkAnm the same) */
+    u8 _padding[2];
+    be<s32> loopMode;
+};
 WWHD_SIZE(rd_anm_prm_struct, 8);
 
 // HD: guest pointers embedded in the original joint-hit table.
@@ -375,10 +380,10 @@ struct RdLinkState : daPy_py_c {
     /* 0x043C */ u8 _043C[0x699E - 0x43C];
     /* 0x699E */ be<s16> mNoDamageTimer;
     /* 0x69A0 */ u8 _69A0[0x69E8 - 0x69A0];
-    /* 0x69E8 */ be<u8> mStrongHitTimerActive;
+    /* 0x69E8 */ be<u8> mStrongJumpCut;  /* was mStrongHitTimerActive (misnamed): view of daPy_lk_c::mStrongJumpCut (d_a_player_main.h), set by the player's spun-up jump cut; the extra spin damage / hit timer here is what it does in this reader */
 };
 WWHD_OFFSET(RdLinkState, mNoDamageTimer, 0x699E);
-WWHD_OFFSET(RdLinkState, mStrongHitTimerActive, 0x69E8);
+WWHD_OFFSET(RdLinkState, mStrongJumpCut, 0x69E8);
 WWHD_SIZE(RdLinkState, 0x69E9);
 // HD: animation pointers cleared after drawing, following the common model-data prefix.
 struct RdModelAnimations {
@@ -518,7 +523,7 @@ struct CcAtInfo_l {
     /* 0x09 */ be<u8> mbDead;
     /* 0x0A */ be<u8> mResultingAttackType;
     /* 0x0B */ u8 _0B;
-    /* 0x0C */ csXyz m0C;
+    /* 0x0C */ csXyz mHitAngle;  /* was m0C: the CcAtInfo copy of this unit; see d/d_cc_uty.h */
     /* 0x12 */ be<u16> mPlCutBit;
     /* 0x14 */ gptr<cXyz> pParticlePos;
     /* 0x18 */ be<s32> mHitSoundId;
@@ -586,7 +591,7 @@ static inline bool rd_noticePlayer(daRd_c* i_this, fopAc_ac_c* player, BOOL isOt
             if ((checkInCircle(i_this->mSpawnPos, player, (f32)i_this->mAreaRadius, 100.0f) &&
                  player->speedF > REG_F(12, 4) + 10.0f) ||
                 isOto ||
-                checkInFan(i_this->current.pos, player, i_this->shape_angle.y, l_HIO().m40, l_HIO().m34, 100.0f)) {
+                checkInFan(i_this->current.pos, player, i_this->shape_angle.y, l_HIO().mNoticeSpreadAngle, l_HIO().mNoticeRadius, 100.0f)) {
                 return true;
             }
         }
@@ -602,26 +607,26 @@ static inline void rd_walkToPlayer(daRd_c* i_this, f32 dist) {
     if (temp < 0.1f) {
         temp = 0.1f;
     }
-    f32 temp2 = l_HIO().m68;
+    f32 temp2 = l_HIO().mWalkSpeed;
     if (i_this->mEnemyFire.mMode != 0) {
         temp2 = temp2 + temp2;
     }
     cLib_addCalc2(&i_this->speedF, temp2 * temp, 0.1f, REG_F(12, 0) + 0.1f);
 }
 static inline void rd_breakFree(daRd_c* i_this, f32 stickPosX, f32 stickPosY) {
-    if (i_this->mD3C > 0 && stickPosX < 0.0f) {
-        i_this->mD3C = -1;
+    if (i_this->mStickDirX > 0 && stickPosX < 0.0f) {
+        i_this->mStickDirX = -1;
         i_this->mBreakFreeCounter = i_this->mBreakFreeCounter - 1;
-    } else if (i_this->mD3C < 0 && stickPosX > 0.0f) {
-        i_this->mD3C = 1;
+    } else if (i_this->mStickDirX < 0 && stickPosX > 0.0f) {
+        i_this->mStickDirX = 1;
         i_this->mBreakFreeCounter = i_this->mBreakFreeCounter - 1;
     }
 
-    if (i_this->mD40 > 0 && stickPosY < 0.0f) {
-        i_this->mD40 = -1;
+    if (i_this->mStickDirY > 0 && stickPosY < 0.0f) {
+        i_this->mStickDirY = -1;
         i_this->mBreakFreeCounter = i_this->mBreakFreeCounter - 1;
-    } else if (i_this->mD40 < 0 && stickPosY > 0.0f) {
-        i_this->mD40 = 1;
+    } else if (i_this->mStickDirY < 0 && stickPosY > 0.0f) {
+        i_this->mStickDirY = 1;
         i_this->mBreakFreeCounter = i_this->mBreakFreeCounter - 1;
     }
 

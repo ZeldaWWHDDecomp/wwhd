@@ -61,12 +61,12 @@ static BOOL daBdk_Draw(bdk_class* i_this) {
     fopAc_ac_c* actor = i_this;
     J3DModel* model = bdkDraw_getModel(i_this->mpMorf);
 
-    if (i_this->m259E >= 1) {
-        if (i_this->m259E > 1) {
-            l_blur.mRate = static_cast<u8>(i_this->m259E);
+    if (i_this->mBlurRate >= 1) {
+        if (i_this->mBlurRate > 1) {
+            l_blur.mRate = static_cast<u8>(i_this->mBlurRate);
             BdkDraw_onBlure();
         } else {
-            i_this->m259E = 0;
+            i_this->mBlurRate = 0;
             l_blur.mEnabled = 0;
         }
     }
@@ -87,7 +87,7 @@ static BOOL daBdk_Draw(bdk_class* i_this) {
                 continue;
             }
             for (s32 i = 0; i < 9; i++) {
-                f32 scale = tial_scale.mScale[i] * l_HIO.m00C;
+                f32 scale = tial_scale.mScale[i] * l_HIO.mTailScale;
                 cXyz* pos = &tail->mPos[i];
                 MtxTrans(pos->x, pos->y, pos->z, 0);
                 MtxScale(scale, scale, scale, 1);

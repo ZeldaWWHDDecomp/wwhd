@@ -44,7 +44,7 @@ struct daDemo_Kmm_c : fopAc_ac_c {
     static const char M_arcname[];
     BOOL draw();
     BOOL execute();
-    void setAction(u8 idx) { unk_29C = idx; }
+    void setAction(u8 idx) { mAction = idx; }
 
     BOOL CreateHeap();
     void calcMtx();
@@ -54,7 +54,7 @@ struct daDemo_Kmm_c : fopAc_ac_c {
 
     /* 0x3AC */ request_of_phase_process_class mPhase;
     /* 0x3B4 */ gptr<mDoExt_McaMorf> mpMorf;
-    /* 0x3B8 */ be<u8> unk_29C;
+    /* 0x3B8 */ be<u8> mAction;  /* was unk_29C: written only by CreateInit 02124324 through setAction(0) (d_a_demo_kmm.h); read only in tww daDemo_Kmm_c::execute, which calls l_action[it] (the one entry daDemo_Kmm_actionWait) */
     /* 0x3B9 */ u8 _3B9;
     /* 0x3BA */ be<s16> unk_29E;
     /* 0x3BC */ u8 unk2A0[4];

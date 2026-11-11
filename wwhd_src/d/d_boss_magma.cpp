@@ -28,7 +28,7 @@ void dMagma_ballBoss_c::calc(f32 param_1, u8 param_2, s32 param_3) {
             cLib_addCalc2(&mPos.y, gabi::fnmsubs(diff, 0.1f, targetY), 0.5f, 20.0f);
             cLib_addCalc2(&mScale, 1.5f, 0.2f, 0.2f);
             mWave = 0x4000;
-            field_0x7C = 1000;
+            mWaveSpeed = 1000;
             return;
         }
     }
@@ -43,7 +43,7 @@ void dMagma_ballBoss_c::calc(f32 param_1, u8 param_2, s32 param_3) {
     f32 adjustment = REG0_F(5);
     s16 nextWave = mWave;
     f32 base = mBaseY;
-    s16 speed = field_0x7C;
+    s16 speed = mWaveSpeed;
     f32 sine = cM_ssin(phase);
     f32 y = gabi::fmadds(sine, gabi::fadds_ppc(adjustment, 50.0f), base);
     mWave = (s16)(nextWave + speed);
@@ -108,7 +108,7 @@ void dMagma_ballBoss_c::setup(f32 param_1, u8 param_2, s32 param_3) {
     }
     f32 speed = cM_rndF(100.0f);
     speed = gabi::fadds_ppc(speed, 400.0f);
-    field_0x7C = (s16)gabi::ftoi(speed);
+    mWaveSpeed = (s16)gabi::ftoi(speed);
     f32 wave = cM_rndF(8.0f);
     mWave = (s16)gabi::ftoi(gabi::fmuls_ppc(4096.0f, wave));
 }

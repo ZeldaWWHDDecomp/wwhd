@@ -22,7 +22,7 @@ static const u32 debugDraw_src = 0xff0080;
 BOOL daObj_Hole_c::_createHeap() {
     J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes(m_arc_name, dRes_INDEX_AANA_BDL_AANA_e);
     // HD: assertion line is 0x13F (GameCube 0x13D).
-    JUT_ASSERT(0x13F, modelData != NULL);
+    JUT_ASSERT_MSG(0x13F, modelData != NULL, "modelData != (0)");
     mpMdl = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000022);
     if (mpMdl == nullptr) {
         return FALSE;
@@ -74,19 +74,19 @@ void daObj_Hole_c::modeProc(s32 proc, s32 newMode) {
 /* 023573BC */
 void daObj_Hole_c::setMtx() {
     f32 ax = current.pos.x;
-    f32 ay = current.pos.y + l_HIO.m10;
+    f32 ay = current.pos.y + l_HIO.mModelOffsetY;
     f32 az = current.pos.z;
     if (mMode != MODE_EVENT) {
         shape_angle.y = (s16)(fopCamM_GetAngleY(dComIfGp_getCamera(0)) + 0x8000);
     }
     if (mHasModel == 0xFF) {
-        f32 scaleMag = l_HIO.m08 * scale.x;
-        if (l_HIO.m0C != 0) {
-            scaleMag += (f32)(l_HIO.m0C * 10);
+        f32 scaleMag = l_HIO.mBaseRadius * scale.x;
+        if (l_HIO.mSizeOverride != 0) {
+            scaleMag += (f32)(l_HIO.mSizeOverride * 10);
         } else {
             scaleMag += (f32)(mScaleLocal * 10);
         }
-        scaleMag /= l_HIO.m08;
+        scaleMag /= l_HIO.mBaseRadius;
         J3DModel* mdl = mpMdl;
         mdl->mBaseScale.x = scaleMag;
         mdl->mBaseScale.y = scaleMag;
@@ -125,9 +125,9 @@ void daObj_Hole_c::modeWaitInit() {
 
 /* 02357AC8 */
 void daObj_Hole_c::modeWait() {
-    f32 scaleMag = l_HIO.m08 * scale.x;
-    if (l_HIO.m0C != 0) {
-        scaleMag += (f32)(l_HIO.m0C * 10);
+    f32 scaleMag = l_HIO.mBaseRadius * scale.x;
+    if (l_HIO.mSizeOverride != 0) {
+        scaleMag += (f32)(l_HIO.mSizeOverride * 10);
     } else {
         scaleMag += (f32)(mScaleLocal * 10);
     }
@@ -178,7 +178,7 @@ void daObj_Hole_c::debugDraw() {
 
 /* 0235792C */
 bool daObj_Hole_c::_draw() {
-    if (l_HIO.m05 != 0) {
+    if (l_HIO.mDebugDraw != 0) {
         debugDraw();
     }
     if (mHasModel == 0xFF) {
@@ -254,10 +254,10 @@ static daObj_Hole_HIO_c* daObj_Hole_HIO_c_ct(daObj_Hole_HIO_c* h) {
         if (h == nullptr)
             return h;
     }
-    h->m05 = 0;
-    h->m10 = 2.0f;
-    h->m0C = 0;
-    h->m08 = 65.0f;
+    h->mDebugDraw = 0;
+    h->mModelOffsetY = 2.0f;
+    h->mSizeOverride = 0;
+    h->mBaseRadius = 65.0f;
     h->__vtbl = 0x1002A918;
     h->mNo = -1;
     return h;
@@ -299,7 +299,7 @@ str 1002A9D8 "Aana"
 str 1002A9A4 "Ypit00"
 str 1002A9AC "DEFAULT_PITFALL"
 str 1002A928 "d_a_obj_hole.cpp"
-str 1002A93C "modelData != NULL"
+str 1002A93C "modelData != (0)"
 str 1002A978 "WAIT"
 str 1002A980 "EVENT"
 data l_HIO 10469EDC

@@ -14,13 +14,13 @@ struct mDoExt_bckAnm_kk1 {
     u8 _[0x8C];
 };
 
-/* daNpc_Kk1_HIO_c (HD 0x60: vtable +0, mNo +4, field_0x8 +8, parameter table +0xC (0x54 bytes,
+/* daNpc_Kk1_HIO_c (HD 0x60: vtable +0, mNo +4, mRefCount +8, parameter table +0xC (0x54 bytes,
  * from .data 0x101BF5EC); the static l_HIO is at 0x10467698) */
 struct daNpc_Kk1_HIO_c {
     /* 0x00 */ be<u32> __vtbl;
     /* 0x04 */ be<s8> mNo;
     /* 0x05 */ u8 _05[3];
-    /* 0x08 */ be<s32> field_0x8;
+    /* 0x08 */ be<s32> mRefCount;  /* was field_0x8: daNpc_Kk1_HIO_c_ct 022711F4 -1; never read in WWHD or tww (tww has stubs only); after our decomp's daNpc_Pm1_HIO_c / daNpc_Ba1_HIO_c mRefCount: the same HIO layout (mNo, then the s32 instance counter) */
     /* 0x0C */ u8 mPrm[0x14];
     /* 0x20 */ be<f32> mAttentionYOffset;  /* setAttention */
     /* 0x24 */ u8 mPrm24[0x60 - 0x24];

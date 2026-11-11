@@ -56,7 +56,7 @@ public:
     /* 0x3BC */ gptr<dBgW> mdBgW[2];
     /* 0x3C4 */ Mtx34 mMtx[2];
     /* 0x424 */ cXyz mcXyz[2];
-    /* 0x43C */ be<s32> field_0x320;
+    /* 0x43C */ be<s32> mEventOrder;  /* was field_0x320: demo 02484B10: 1 (open) / 2 (close) when the switch changes after mFrameTimer; orders mOpenEventIdx / mCloseEventIdx while set and clears it once that event starts (tww the same) */
     /* 0x440 */ be<s32> mSwitchNo;
     /* 0x444 */ be<s32> field_0x328;
     /* 0x448 */ be<s32> mStaffId;
@@ -67,14 +67,14 @@ public:
     /* 0x452 */ be<u8> mbIsSwitch;
     /* 0x453 */ be<s8> mFrameTimer;
     /* 0x454 */ be<u8> mTimer;
-    /* 0x455 */ be<u8> field_0x339;
-    /* 0x456 */ be<u8> field_0x33A;
+    /* 0x455 */ be<u8> mActionStarted;  /* was field_0x339: shutter_move 0248478C: set on the first frame of ACT_OPEN (with the TOTG open sound) and ACT_CLOSE, cleared by ACT_WAIT02 when its timer ends (tww the same) */
+    /* 0x456 */ be<u8> mOpenFrame;  /* was field_0x33A: shutter_move 0248478C: ACT_WAIT clears it, ACT_OPEN counts it up; at 75 the TOTG shutter plays the stop sound and a shock (tww the same) */
     /* 0x457 */ be<u8> field_0x33B;
 };
 WWHD_OFFSET(daShutter_c, mpModel, 0x3B4);
 WWHD_OFFSET(daShutter_c, mMtx, 0x3C4);
 WWHD_OFFSET(daShutter_c, mcXyz, 0x424);
-WWHD_OFFSET(daShutter_c, field_0x320, 0x43C);
+WWHD_OFFSET(daShutter_c, mEventOrder, 0x43C);
 WWHD_OFFSET(daShutter_c, mType, 0x451);
 WWHD_SIZE(daShutter_c, 0x458);
 

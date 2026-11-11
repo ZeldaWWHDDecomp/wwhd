@@ -9,9 +9,9 @@
 #include "gc_api/d/d_com_inf_game.h"
 
 struct hand_s {
-    /* 0x00 */ cXyz m00;
-    /* 0x0C */ cXyz m0C;
-    /* 0x18 */ be<f32> m18;
+    /* 0x00 */ cXyz mPos;  /* was m00: the tentacle segment's position: control1 / control2 (inlined into daBmdhand_Execute 020B8D9C) and cut_control 020B88C4 chain each segment to the previous one, control2 pulls segment 0x13 to mHandPos, the blood effect is set at it (tww the same) */
+    /* 0x0C */ cXyz mSpeed;  /* was m0C: cut_control 020B88C4: first a copy of the old position, then (new - old) * factor, added in the next step's position; the segment's velocity (tww the same) */
+    /* 0x18 */ be<f32> mLineSize;  /* was m18: control3 020B882C and cut_control3 020B8C74 set it per segment (10.5, then tapering); hand_move (inlined into daBmdhand_Execute 020B8D9C) passes it to Bmdhand_setLineSize, the tentacle line's width (tww the same) */
 };
 WWHD_SIZE(hand_s, 0x1C);
 
@@ -22,10 +22,10 @@ struct bmdhand_class : fopEn_enemy_c {
     /* 0x3D6 */ be<s16> mAction;  /* was m2BA: hand_move (in daBmdhand_Execute 020B8D9C) switch on the Bmdhand_* actions (Attached, Cut, BossDown, Intro, Disappear, RegrowWait); daBmdhand_Create 020BAD4C sets Intro */
     /* 0x3D8 */ be<s16> mHandStep;  /* was m2BC: hand_calc (in daBmdhand_Execute 020B8D9C) switch: 0 reach the ceiling, 1 hold, 2 move the hand to a new place; hand_move lets the tentacle be cut only above 0 */
     /* 0x3DA */ be<s16> mIntroStep;  /* was m2BE: hand_move (in daBmdhand_Execute 020B8D9C), Intro action: 0 wait for mVineCommand 5, 1 random delay, 2 grow to the ceiling (adds to mVineCount), 3 grown */
-    /* 0x3DC */ be<s16> mTimers[4];  /* was m2C0: daBmdhand_Execute 020B8D9C counts all 4 down; hand_calc / hand_move load [0] (hand moves, regrow delay l_HIO.m0C) and [1] (boss-down delay) and wait on them */
+    /* 0x3DC */ be<s16> mTimers[4];  /* was m2C0: daBmdhand_Execute 020B8D9C counts all 4 down; hand_calc / hand_move load [0] (hand moves, regrow delay l_HIO.mRegrowTime) and [1] (boss-down delay) and wait on them */
     /* 0x3E4 */ be<s16> mCcOffTimer;  /* was m2C8: hand_move (in daBmdhand_Execute 020B8D9C) sets 20 / 10 / 70 and moves both spheres out of reach (no lock-on) while it runs; daBmdhand_Execute counts it down */
     /* 0x3E6 */ be<s16> mBloodTimer;  /* was m2CA: hand_move (in daBmdhand_Execute 020B8D9C) sets 2 when the tentacle is cut; cut_control 020B88C4 emits ID_AK_SN_O_BKMTENTACLEBLOOD00 at the cut end while it runs; daBmdhand_Execute counts it down */
-    /* 0x3E8 */ cXyz mCeilingPos;  /* was m2CC: hand_ceiling_check (in daBmdhand_Execute 020B8D9C): the ceiling hit of a line 2500 up from mHandPos, + l_HIO.m08; hand_calc holds the hand at its height; daBmdhand_Execute opens / closes the hand model when it crosses it */
+    /* 0x3E8 */ cXyz mCeilingPos;  /* was m2CC: hand_ceiling_check (in daBmdhand_Execute 020B8D9C): the ceiling hit of a line 2500 up from mHandPos, + l_HIO.mCeilingOffsetY; hand_calc holds the hand at its height; daBmdhand_Execute opens / closes the hand model when it crosses it */
     /* 0x3F4 */ cXyz mHandPos;  /* was m2D8: hand_calc (in daBmdhand_Execute 020B8D9C) moves it toward mHandTargetPos; control2 pulls the last chain point to it; the vine-set sound plays there; daBmdhand_Delete 020BABAC deletes its sound object */
     /* 0x400 */ cXyz mHandTargetPos;  /* was m2E4: hand_calc / start_hand_calc (in daBmdhand_Execute 020B8D9C) set it 250 / 350 in front of the root at the ceiling height and move mHandPos toward it */
     /* 0x40C */ cXyz mHandModelPos;  /* was m2F0: control_tail (in daBmdhand_Execute 020B8D9C) copies the last chain point; hand_mtx_set 020B8724 places the hand model there; cut_control3 020B8C74 eases it to the ceiling */
@@ -78,8 +78,8 @@ WWHD_OFFSET(BmdhandBossView, mVineCommand, 0x452);
 struct daBmdhand_HIO_c {
     /* 0x00 */ be<s8> mNo;
     /* 0x01 */ u8 _01[3];
-    /* 0x04 */ be<f32> m08;
-    /* 0x08 */ be<s16> m0C;
+    /* 0x04 */ be<f32> mCeilingOffsetY;  /* was m08: hand_ceiling_check (inlined into daBmdhand_Execute 020B8D9C through hand_calc / start_hand_calc): added to the y of the ceiling the upward line check found, giving mCeilingPos; daBmdhand_HIO_c_ct 020BAF50 -20 (tww the same) */
+    /* 0x08 */ be<s16> mRegrowTime;  /* was m0C: hand_move (inlined into daBmdhand_Execute 020B8D9C), Bmdhand_Attached: a cut tentacle sets mTimers[0] to it; Bmdhand_Cut shrinks the hand below 100 and re-attaches it at 0; daBmdhand_HIO_c_ct 020BAF50 1000 (tww the same) */
     /* 0x0A */ u8 _0A[2];
     /* 0x0C */ be<u32> __vtbl;
 };

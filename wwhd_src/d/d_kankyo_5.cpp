@@ -285,10 +285,10 @@ s32 dKy_Create(void *i_this) {
     for (u32 i = 0; i < 12; i++)
         colorFogEnv()->colorRatios()[i] = one;
     colorFogEnv()->mColChgFlag = 0;
-    colorFogEnv()->field_0xc34 = zero;
+    colorFogEnv()->mColChgRatio = zero;
     colorFogEnv()->field_0xc2c = zero;
     colorFogEnv()->field_0xc30 = zero;
-    colorFogEnv()->field_0xc98 = 0;
+    colorFogEnv()->mColChgActive = 0;
     colorFogEnv()->mbDayNightTactStop = 0;
     ColorFogStageInfo *info = static_cast<ColorFogStageInfo *>(stageResource(&ColorFogStageVtable::getStagInfo));
     void *sched;
@@ -395,8 +395,8 @@ s32 dKy_Create(void *i_this) {
     colorFogEnv()->field_0x10ac = k3;
     colorFogEnv()->field_0x10b0 = one;
     colorFogEnv()->field_0x10b4 = k3;
-    colorFogEnv()->field_0x10b8 = k3;
-    colorFogEnv()->field_0x10bc = k3;
+    colorFogEnv()->mWaveSecondaryColorScale = k3;
+    colorFogEnv()->mWavePrimaryColorScale = k3;
     for (u32 i = 0; i < 4; i++)
         colorFogEnv()->shaderLightRatios()[i] = one;
     for (u32 i = 0; i < 5; i++)
@@ -410,7 +410,7 @@ s32 dKy_Create(void *i_this) {
     f32 t = f32(colorFogSave.value->mTime);
     u8 night = (t > colorFogDayStart && t < colorFogDayEnd) ? 0 : 1;
     colorFogEnv()->field_0x10a6 = night;
-    colorFogEnv()->field_0x10e8 = zero;
+    colorFogEnv()->mMonotoneBlend = zero;
     colorFogEnv()->field_0x1040 = zero;
     colorFogEnv()->field_0xc9a = 0xFF;
     colorFogEnv()->field_0xc9b = 0xFF;
@@ -728,20 +728,20 @@ void dKy_Sound_set(cXyz *pos, s32 p2, u32 p3, u32 p4) {
     ColorFogCamera *camera = colorFogPlay()->mpCamera;
     f32 newDist = colorFogSqrt(colorFogSquareDistance(pos, &camera->mEye));
     ColorFogEnvironment *envLight = colorFogEnv();
-    f32 curDist = colorFogSqrt(colorFogSquareDistance(&envLight->mSound.field_0x0, &camera->mEye));
+    f32 curDist = colorFogSqrt(colorFogSquareDistance(&envLight->mSound.mNoisePos, &camera->mEye));
     if (!(newDist < curDist))
         return;
     if (!(curDist < colorFogSoundNearDistance)) {
-        if (!(s32(colorFogEnv()->mSound.field_0xc) < p2))
+        if (!(s32(colorFogEnv()->mSound.mNoiseLevel) < p2))
             return;
     }
     envLight = colorFogEnv();
-    colorFogWordBits(envLight->mSound.field_0x0.x) = colorFogWordBits(pos->x);
-    colorFogWordBits(envLight->mSound.field_0x0.y) = colorFogWordBits(pos->y);
-    colorFogWordBits(envLight->mSound.field_0x0.z) = colorFogWordBits(pos->z);
-    colorFogEnv()->mSound.field_0xc = p2;
-    colorFogEnv()->mSound.field_0x14 = p3;
-    colorFogEnv()->mSound.field_0x10 = p4;
+    colorFogWordBits(envLight->mSound.mNoisePos.x) = colorFogWordBits(pos->x);
+    colorFogWordBits(envLight->mSound.mNoisePos.y) = colorFogWordBits(pos->y);
+    colorFogWordBits(envLight->mSound.mNoisePos.z) = colorFogWordBits(pos->z);
+    colorFogEnv()->mSound.mNoiseLevel = p2;
+    colorFogEnv()->mSound.mNoiseActorId = p3;
+    colorFogEnv()->mSound.mNoiseTimer = p4;
 }
 
 /* 0255F530 */

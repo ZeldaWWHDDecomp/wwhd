@@ -113,7 +113,7 @@ static inline void rebound(daArrow_c *a) {
     f32 xz = absXZ(a->speed.x, a->speed.z);
     f32 sy = gabi::fadds_ppc(a->speed.y, xz);
     a->current.pos.copy(a->old.pos);
-    a->field_0x69c = 0x2C00;
+    a->mSpinSpeedX = 0x2C00;
     a->speed.y = sy;
 }
 
@@ -196,25 +196,25 @@ void daArrow_c::checkCreater() {
 /* 02052C40 */
 void daArrow_c::setLightEffect() {
     u8 type = mArrowType;
-    if (field_0x682 == type) {
+    if (mLightEffType == type) {
         if (type == TYPE_NORMAL) {
             return;
         }
         if (!mbHasLightEff) {
-            mLightEffPID = fopAcM_createChild(fpcNm_ARROW_LIGHTEFF_e, fopAcM_GetID(this), type, &field_0x6a8,
+            mLightEffPID = fopAcM_createChild(fpcNm_ARROW_LIGHTEFF_e, fopAcM_GetID(this), type, &mImpactPos,
                                               current.roomNo, &shape_angle, nullptr, -1, 0);
             if (mLightEffPID != fpcM_ERROR_PROCESS_ID_e) {
                 mbHasLightEff = true;
             }
         } else {
-            field_0x682 = type;
+            mLightEffType = type;
             return;
         }
     } else {
         fopAcM_delete(fopAcM_SearchByID(mLightEffPID));
         mbHasLightEff = false;
     }
-    field_0x682 = mArrowType;
+    mLightEffType = mArrowType;
 }
 
 /* 02053628 */
@@ -279,7 +279,7 @@ void daArrow_c::setDrawShapeMaterial() {
 
 /* 02053814 */
 void daArrow_c::arrowShooting() {
-    field_0x6a8.copy(current.pos);
+    mImpactPos.copy(current.pos);
     f32 xCos = cM_scos(current.angle.x);
     speed.x = 200.0f * cM_ssin(current.angle.y) * xCos;
     speed.y = 200.0f * cM_ssin(current.angle.x);
@@ -328,7 +328,7 @@ void daArrow_c::arrowShooting() {
 
     createBlur();
 
-    field_0x602 = l_count;
+    mShotNo = l_count;
     s16 count = l_count + 1;
     if (count == 5) {
         count = 0;
@@ -401,9 +401,9 @@ void daArrow_c::ShieldReflect() {
 
 /* 020532B8 */
 bool daArrow_c::check_water_in() {
-    u8 prev_field_0x699 = field_0x699;
+    u8 prev_field_0x699 = mWaterEffect;
     u8 now = daPy_lk_c_setItemWaterEffect(this, prev_field_0x699, 1);
-    field_0x699 = now;
+    mWaterEffect = now;
     if (prev_field_0x699 != 0 || now == 0) { /* HD: any non-zero result */
         return FALSE;
     }
@@ -440,20 +440,20 @@ bool daArrow_c::check_water_in() {
     if (type == TYPE_FIRE) {
         mInWaterTimer = 1;
         particle_setP1(0x35A /* ID_AK_JN_EVAPORATION00 */, waterHitPos);
-        if (!field_0x6e4) {
+        if (!mFlewFar) {
             dKy_arrowcol_chg_on(&current.pos, 0);
         }
     } else if (type == TYPE_ICE) {
         mInWaterTimer = 10 * 30;
         fopAcM_createChild(0x1D9 /* fpcNm_ARROW_ICEEFF_e */, fopAcM_GetID(this), mArrowType, waterHitPos,
                            current.roomNo, &current.angle, nullptr, -1, 0);
-        if (!field_0x6e4) {
+        if (!mFlewFar) {
             dKy_arrowcol_chg_on(&current.pos, 1);
         }
     } else if (type == TYPE_LIGHT) {
         particle_setP1(0x2A1 /* ID_IT_JN_ARWG_HITA00 */, waterHitPos);
         seStartCurrent(this, 0x69DC /* JA_SE_OBJ_LIGHT_ARW_EFF */, 0);
-        if (!field_0x6e4) {
+        if (!mFlewFar) {
             dKy_arrowcol_chg_on(&current.pos, 2);
         }
         mInWaterTimer = 1;
@@ -461,7 +461,7 @@ bool daArrow_c::check_water_in() {
         mInWaterTimer = 1;
     }
 
-    field_0x698 = false;
+    mDraw = false;
 
     return TRUE;
 }
@@ -616,8 +616,8 @@ void daArrow_c::setKeepMatrix() {
 /* 02053DDC */
 void daArrow_c::setStopActorMatrix() {
     s16 xRot = 0;
-    if (arrow_calcTimer(&field_0x604) != 0) {
-        s16 timer = field_0x604;
+    if (arrow_calcTimer(&mHitShakeTimer) != 0) {
+        s16 timer = mHitShakeTimer;
         f32 temp = (f32)timer / 40.0f;
         xRot = (s16)gabi::ftoi(((1024.0f * temp) * temp) * cM_ssin(timer * 0x52FB));
     }
@@ -650,8 +650,8 @@ void daArrow_c::setStopActorMatrix() {
     gabi::Local<csXyz> hitJointRot;
     mDoMtx_MtxToRot(stack, hitJointRot);
 
-    mDoMtx_stack_c::transM(field_0x618.x, field_0x618.y, field_0x618.z);
-    mDoMtx_ZXYrotM(stack, field_0x6e6.x, field_0x6e6.y, field_0x6e6.z);
+    mDoMtx_stack_c::transM(mHitJointOffset.x, mHitJointOffset.y, mHitJointOffset.z);
+    mDoMtx_ZXYrotM(stack, mHitAngle.x, mHitAngle.y, mHitAngle.z);
 
     f32 px = stack->m[0][3], py = stack->m[1][3], pz = stack->m[2][3]; /* multVecZero */
     current.pos.y = py;
@@ -660,7 +660,7 @@ void daArrow_c::setStopActorMatrix() {
 
     mDoMtx_stack_c::transS(px, py, pz);
     mDoMtx_ZXYrotM(stack, hitJointRot->x, hitJointRot->y, hitJointRot->z);
-    mDoMtx_ZXYrotM(stack, field_0x6e6.x, field_0x6e6.y, field_0x6e6.z);
+    mDoMtx_ZXYrotM(stack, mHitAngle.x, mHitAngle.y, mHitAngle.z);
     mDoMtx_XrotM(stack, xRot);
     mDoMtx_stack_c::transM(offset_arrow_pos->x, offset_arrow_pos->y, offset_arrow_pos->z);
     J3DModel_setBaseTRMtx(mpModel, stack);
@@ -670,11 +670,11 @@ void daArrow_c::setStopActorMatrix() {
 BOOL daArrow_c::procWait() {
     speedF = 0.0f;
     setKeepMatrix();
-    PSMTXCopy(mpModel ? &mpModel->mBaseTransformMtx : nullptr, &field_0x6b4);
+    PSMTXCopy(mpModel ? &mpModel->mBaseTransformMtx : nullptr, &mModelMtx);
     u16 sx = shape_angle.x, sy = shape_angle.y, sz = shape_angle.z;
-    field_0x6e6.x = sx;
-    field_0x6e6.y = sy;
-    field_0x6e6.z = sz;
+    mHitAngle.x = sx;
+    mHitAngle.y = sy;
+    mHitAngle.z = sz;
 
     if (fopAcM_GetParam(this) == 1) {
         if (!mbSetByZelda) {
@@ -701,11 +701,11 @@ BOOL daArrow_c::procMove() {
     quarterStepPos->copy(*sum);
     dBgS_LinChk_Set(&mLinChk, &old.pos, quarterStepPos, this);
     u16 sy = shape_angle.y, sx = shape_angle.x, sz = shape_angle.z;
-    field_0x6e6.z = sz;
-    field_0x6e6.x = sx;
-    field_0x6e6.y = sy;
+    mHitAngle.z = sz;
+    mHitAngle.x = sx;
+    mHitAngle.y = sy;
 
-    PSMTXCopy(mpModel ? &mpModel->mBaseTransformMtx : nullptr, &field_0x6b4);
+    PSMTXCopy(mpModel ? &mpModel->mBaseTransformMtx : nullptr, &mModelMtx);
     mBlurAngle.z = mBlurAngle.z + 0x889;
 
     void *poly = static_cast<cBgS_PolyInfo *>(&mLinChk);
@@ -745,14 +745,14 @@ BOOL daArrow_c::procMove() {
                                  ((a = ArrowAtHitActor(at)) != nullptr && fpcM_GetName(a) == 0xF5);
                     if (ganon && hitWasBlocked) {
                         // Hit Puppet Ganon (fpcNm_BGN_e / BGN2 / BGN3).
-                        field_0x6a8.copy(*hitPos);
+                        mImpactPos.copy(*hitPos);
                         gabi::Local<cXyz> back;
                         cXyz_ml(&speed, back, 0.25f);
                         gabi::Local<cXyz> pos;
                         cXyz_mi(hitPos, pos, back);
                         current.pos.copy(*pos);
 
-                        if (!field_0x6e4) {
+                        if (!mFlewFar) {
                             dKy_arrowcol_chg_on(&current.pos, 2);
                         }
 
@@ -760,7 +760,7 @@ BOOL daArrow_c::procMove() {
                         actor_status = actor_status | 0x4000; /* fopAcM_OnStatus(this, fopAcStts_UNK4000_e) */
                         setProc(A_procStop_BG);
                         mParameters = 2;
-                        field_0x604 = 0x28;
+                        mHitShakeTimer = 0x28;
                         /* HD: no GetTriPla call */
 
                         gabi::Local<csXyz> temp10;
@@ -770,16 +770,16 @@ BOOL daArrow_c::procMove() {
                         temp10->z = 0;
                         mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
                         mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), temp10->x, temp10->y, 0);
-                        PSMTXCopy(mDoMtx_stack_c::get(), &field_0x6b4);
+                        PSMTXCopy(mDoMtx_stack_c::get(), &mModelMtx);
 
-                        particle_setP1(0x2A1 /* ID_IT_JN_ARWG_HITA00 */, &field_0x6a8, temp10);
+                        particle_setP1(0x2A1 /* ID_IT_JN_ARWG_HITA00 */, &mImpactPos, temp10);
                         seStartCurrent(this, 0x69DC /* JA_SE_OBJ_LIGHT_ARW_EFF */, 0);
                         fopAcM_delete(this);
                     }
                     // otherwise: no hit (pass through)
                 } else if (hitWasBlocked) {
                     hitType = 1; // Blocked hit
-                    field_0x604 = 0x28;
+                    mHitShakeTimer = 0x28;
                     actor_status = actor_status | 0x4000;
                 } else if (jntHit) {
                     gabi::Local<cXyz> temp12;
@@ -789,17 +789,17 @@ BOOL daArrow_c::procMove() {
                     mHitJointIndex = jnt;
                     if (jnt >= 0) {
                         u16 rx = temp11->x, ry = temp11->y;
-                        field_0x6e6.x = rx;
-                        field_0x6e6.y = ry;
+                        mHitAngle.x = rx;
+                        mHitAngle.y = ry;
                         u32 a = gabi::at<ArrowWords>(self(temp12.get()))->y,
                             b = gabi::at<ArrowWords>(self(temp12.get()))->z;
-                        gabi::at<ArrowWords>(self(&field_0x618))->y = a;
-                        gabi::at<ArrowWords>(self(&field_0x618))->z = b;
-                        field_0x6e6.z = temp11->z;
+                        gabi::at<ArrowWords>(self(&mHitJointOffset))->y = a;
+                        gabi::at<ArrowWords>(self(&mHitJointOffset))->z = b;
+                        mHitAngle.z = temp11->z;
                         actor_status = actor_status | 0x4000;
-                        field_0x604 = 0x28;
+                        mHitShakeTimer = 0x28;
                         hitType = 2; // Hit a joint
-                        gabi::at<ArrowWords>(self(&field_0x618))->x =
+                        gabi::at<ArrowWords>(self(&mHitJointOffset))->x =
                             (u32)gabi::at<ArrowWords>(self(temp12.get()))->x;
                     } else if (jnt == -3 /* JntHitIdx_DELETE_e */) {
                         fopAcM_delete(this);
@@ -827,12 +827,12 @@ BOOL daArrow_c::procMove() {
             u8 type = mArrowType;
             if (type == TYPE_FIRE) {
                 seStartCurrent(this, 0x69DA /* JA_SE_OBJ_FIRE_ARW_EFF */, 0);
-                field_0x698 = false;
+                mDraw = false;
             } else if (type == TYPE_ICE) {
                 seStartCurrent(this, 0x69DB /* JA_SE_OBJ_ICE_ARW_EFF */, 0);
             } else if (type == TYPE_LIGHT) {
                 seStartCurrent(this, 0x69DC /* JA_SE_OBJ_LIGHT_ARW_EFF */, 0);
-                field_0x698 = false;
+                mDraw = false;
             }
 
             setStopActorMatrix();
@@ -841,7 +841,7 @@ BOOL daArrow_c::procMove() {
 
     if (bg_check) {
         if (cBgS_LineCross(dComIfG_Bgsp(), &mLinChk)) {
-            field_0x6a8.copy(*crossP);
+            mImpactPos.copy(*crossP);
             gabi::Local<cXyz> back;
             cXyz_ml(&speed, back, 0.25f);
             gabi::Local<cXyz> pos;
@@ -850,13 +850,13 @@ BOOL daArrow_c::procMove() {
 
             if (!check_water_in()) {
                 u8 type = mArrowType;
-                if (type >= 1 && type <= 3 && !field_0x6e4) {
+                if (type >= 1 && type <= 3 && !mFlewFar) {
                     /* switch (mArrowType): FIRE 0, ICE 1, LIGHT 2, default -1 */
                     dKy_arrowcol_chg_on(&current.pos, l_arrowColor[type]);
                 }
 
                 setProc(A_procStop_BG);
-                field_0x604 = 0x28;
+                mHitShakeTimer = 0x28;
                 mParameters = 2;
                 actor_status = actor_status | 0x4000;
                 void *triPla = dBgS_GetTriPla(dComIfG_Bgsp(), poly);
@@ -876,28 +876,28 @@ BOOL daArrow_c::procMove() {
                 }
                 mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
                 mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), temp10->x, temp10->y, 0);
-                PSMTXCopy(mDoMtx_stack_c::get(), &field_0x6b4);
+                PSMTXCopy(mDoMtx_stack_c::get(), &mModelMtx);
 
                 type = mArrowType;
                 if (type == TYPE_FIRE) {
-                    particle_setP1(0x29A /* ID_IT_JN_ARWF_HITA00 */, &field_0x6a8, temp10);
-                    particle_setP1(0x29B /* ID_IT_JN_ARWF_HITB00 */, &field_0x6a8, temp10);
+                    particle_setP1(0x29A /* ID_IT_JN_ARWF_HITA00 */, &mImpactPos, temp10);
+                    particle_setP1(0x29B /* ID_IT_JN_ARWF_HITB00 */, &mImpactPos, temp10);
                     seStartCurrent(this, 0x69DA /* JA_SE_OBJ_FIRE_ARW_EFF */, 0);
-                    field_0x698 = false;
+                    mDraw = false;
                 } else if (type == TYPE_ICE) {
                     if (dBgS_ChkGrpInf(dComIfG_Bgsp(), poly, 0x200)) {
-                        fopAcM_create(0x2A /* fpcNm_Obj_Magmarock_e */, 0, &field_0x6a8, current.roomNo,
+                        fopAcM_create(0x2A /* fpcNm_Obj_Magmarock_e */, 0, &mImpactPos, current.roomNo,
                                       nullptr, nullptr, -1, 0);
                     } else {
-                        particle_setP1(0x29E /* ID_IT_JN_ARWI_HITA00 */, &field_0x6a8, temp10);
+                        particle_setP1(0x29E /* ID_IT_JN_ARWI_HITA00 */, &mImpactPos, temp10);
                         fopAcM_createChild(0x1D9 /* fpcNm_ARROW_ICEEFF_e */, fopAcM_GetID(this), mArrowType,
-                                           &field_0x6a8, current.roomNo, &field_0x6e6, nullptr, -1, 0);
+                                           &mImpactPos, current.roomNo, &mHitAngle, nullptr, -1, 0);
                         seStartCurrent(this, 0x69DB /* JA_SE_OBJ_ICE_ARW_EFF */, 0);
                     }
                 } else if (type == TYPE_LIGHT) {
-                    particle_setP1(0x2A1 /* ID_IT_JN_ARWG_HITA00 */, &field_0x6a8, temp10);
+                    particle_setP1(0x2A1 /* ID_IT_JN_ARWG_HITA00 */, &mImpactPos, temp10);
                     seStartCurrent(this, 0x69DC /* JA_SE_OBJ_LIGHT_ARW_EFF */, 0);
-                    field_0x698 = false;
+                    mDraw = false;
                 }
 
                 u32 attribCode = dBgS_GetAttributeCode(dComIfG_Bgsp(), poly);
@@ -911,7 +911,7 @@ BOOL daArrow_c::procMove() {
                     gabi::Local<csXyz> temp9;
                     cM3d_CalcVecZAngle(triPla, temp9); /* *triPla->GetNP() */
 
-                    particle_setP1(0xC /* ID_AK_JN_NG */, &field_0x6a8, temp9);
+                    particle_setP1(0xC /* ID_AK_JN_NG */, &mImpactPos, temp9);
                     seStartCurrent(this, 0x287A /* JA_SE_LK_ARROW_REBOUND */, mtrlSndId);
                 } else {
                     seStartCurrent(this, 0x2879 /* JA_SE_LK_ARROW_HIT */, mtrlSndId);
@@ -926,14 +926,14 @@ BOOL daArrow_c::procMove() {
         set_model_mtx(this);
     } else {
         gabi::Local<cXyz> d;
-        cXyz_mi(&current.pos, d, &field_0x6a8);
+        cXyz_mi(&current.pos, d, &mImpactPos);
         if (vec_abs(d) > 25000.0f) { // ble: unordered skips
             f32 vy = speed.y - 2.0f;
             if (vy < -100.0f) { // bge
                 vy = -100.0f;
             }
             f32 posY = current.pos.y;
-            f32 startY = field_0x6a8.y;
+            f32 startY = mImpactPos.y;
             speed.y = vy;
             if (startY > posY) { // ble
                 fopAcM_delete(this);
@@ -941,9 +941,9 @@ BOOL daArrow_c::procMove() {
             }
         } else {
             gabi::Local<cXyz> d2;
-            cXyz_mi(&current.pos, d2, &field_0x6a8);
+            cXyz_mi(&current.pos, d2, &mImpactPos);
             if (vec_abs(d2) > 20000.0f) { // ble
-                field_0x6e4 = true;
+                mFlewFar = true;
             }
         }
 
@@ -968,12 +968,12 @@ BOOL daArrow_c::procReturn() {
     speedF = 0.0f;
     speed.y = sy;
     PSVECAdd(&current.pos, &speed, &current.pos);
-    shape_angle.x = shape_angle.x + field_0x69c;
+    shape_angle.x = shape_angle.x + mSpinSpeedX;
     gabi::Local<cXyz> step;
     cXyz_ml(&speed, step, 0.25f);
     gabi::Local<cXyz> quarterStepPos;
     cXyz_pl(&current.pos, quarterStepPos, step);
-    field_0x699 = daPy_lk_c_setItemWaterEffect(this, field_0x699, 1);
+    mWaterEffect = daPy_lk_c_setItemWaterEffect(this, mWaterEffect, 1);
     dBgS_LinChk_Set(&mLinChk, &old.pos, quarterStepPos, this);
     setBlur();
 
@@ -987,14 +987,14 @@ BOOL daArrow_c::procReturn() {
             speed.x = gabi::fmuls_ppc(gabi::fmuls_ppc(temp1->x, temp2), 0.5f);
             speed.z = gabi::fmuls_ppc(gabi::fmuls_ppc(temp1->z, temp2), 0.5f);
 
-            s32 temp3 = -field_0x69c;
-            field_0x69c = (s16)(temp3 / 2);
+            s32 temp3 = -mSpinSpeedX;
+            mSpinSpeedX = (s16)(temp3 / 2);
             if (!(gabi::at<cM3dGPla>(gabi::ea(triPla))->mNormal.y <
                   0.5f)) { /* cBgW_CheckBGround(triPla->GetNP()->y) */
-                field_0x69a = true;
+                mBounceGround = true;
             }
         }
-    } else if (field_0x69a && speed.y < 0.0f) { // bge: unordered skips
+    } else if (mBounceGround && speed.y < 0.0f) { // bge: unordered skips
         fopAcM_delete(this);
     }
 
@@ -1015,19 +1015,19 @@ BOOL daArrow_c::procStop_BG() {
 
     BOOL temp2 = FALSE;
 
-    s16 t = field_0x604;
+    s16 t = mHitShakeTimer;
     if (t > 0) {
         t = t - 1;
         f32 a = (f32)t * (1 / 40.0f);
-        f32 base = (f32)(s16)field_0x6e6.x;
+        f32 base = (f32)(s16)mHitAngle.x;
         f32 amp = (1024.0f * a) * a;
-        field_0x604 = t;
+        mHitShakeTimer = t;
         s16 sx = (s16)gabi::ftoi(gabi::fmadds(amp, cM_ssin(t * 0x52FB), base));
-        s16 sy = field_0x6e6.y;
+        s16 sy = mHitAngle.y;
         shape_angle.x = sx;
         shape_angle.y = sy;
         temp2 = TRUE;
-    } else if (field_0x600) {
+    } else if (mDeleteRequest) {
         fopAcM_delete(this);
         return TRUE;
     }
@@ -1035,17 +1035,17 @@ BOOL daArrow_c::procStop_BG() {
     setBlur();
 
     if (dBgS_ChkMoveBG(dComIfG_Bgsp(), poly)) {
-        dBgS_MoveBgTransPos(dComIfG_Bgsp(), poly, true, &field_0x6a8, &current.angle, &shape_angle);
+        dBgS_MoveBgTransPos(dComIfG_Bgsp(), poly, true, &mImpactPos, &current.angle, &shape_angle);
         temp2 = TRUE;
     }
 
     if (temp2) {
         f32 xCos = cM_scos(shape_angle.x);
         f32 ax = 50.0f * cM_ssin(shape_angle.y);
-        current.pos.x = gabi::fnmsubs(ax, xCos, field_0x6a8.x);
-        current.pos.y = gabi::fmadds(50.0f, cM_ssin(shape_angle.x), field_0x6a8.y);
+        current.pos.x = gabi::fnmsubs(ax, xCos, mImpactPos.x);
+        current.pos.y = gabi::fmadds(50.0f, cM_ssin(shape_angle.x), mImpactPos.y);
         f32 az = 50.0f * cM_scos(shape_angle.y);
-        current.pos.z = gabi::fnmsubs(az, xCos, field_0x6a8.z);
+        current.pos.z = gabi::fnmsubs(az, xCos, mImpactPos.z);
 
         set_model_mtx(this);
     }
@@ -1054,22 +1054,22 @@ BOOL daArrow_c::procStop_BG() {
         cM3dGSph_SetC(&mCoSph.mSph, &current.pos);
         dComIfG_Ccsp_Set(&mCoSph);
 
-        s32 n = field_0x6a0;
+        s32 n = mStopTimer;
         if (n == 0) {
-            field_0x600 = true;
-            field_0x698 = false;
+            mDeleteRequest = true;
+            mDraw = false;
         } else {
             n--;
-            field_0x6a0 = n;
+            mStopTimer = n;
 
             if (n < 60) {
                 if ((n & 1) == 0) {
-                    field_0x698 = false;
+                    mDraw = false;
                 } else {
-                    field_0x698 = true;
+                    mDraw = true;
                 }
             } else {
-                field_0x698 = true;
+                mDraw = true;
             }
         }
 
@@ -1085,7 +1085,7 @@ BOOL daArrow_c::procStop_BG() {
     }
 
     if (mbSetByZelda) {
-        field_0x600 = true;
+        mDeleteRequest = true;
     }
 
     return TRUE;
@@ -1094,7 +1094,7 @@ BOOL daArrow_c::procStop_BG() {
 /* 020553C0 */
 BOOL daArrow_c::procStop_Actor() {
     speedF = 0.0f;
-    if (field_0x600) {
+    if (mDeleteRequest) {
         fopAcM_delete(this);
         return TRUE;
     }
@@ -1104,7 +1104,7 @@ BOOL daArrow_c::procStop_Actor() {
     if (fopAcM_SearchByID(mHitActorProcID)) {
         setStopActorMatrix();
     } else {
-        field_0x600 = true;
+        mDeleteRequest = true;
     }
 
     return TRUE;
@@ -1159,7 +1159,7 @@ BOOL daArrow_c::createInit() {
     dCcD_Sph_Set(&mCoSph, gabi::ea(&l_coSphSrc));
     mCoSph.SetStts(&mStts);
 
-    field_0x602 = -1;
+    mShotNo = -1;
 
     if (mArrowType != TYPE_LIGHT) {
         u32 joints = mpModel->mModelData.v.get();
@@ -1171,16 +1171,16 @@ BOOL daArrow_c::createInit() {
     }
     setDrawShapeMaterial();
 
-    field_0x698 = true;
-    field_0x699 = 0;
-    field_0x69a = false;
-    field_0x69c = 0;
-    field_0x6a0 = 300;
+    mDraw = true;
+    mWaterEffect = 0;
+    mBounceGround = false;
+    mSpinSpeedX = 0;
+    mStopTimer = 300;
     mInWaterTimer = 0;
-    field_0x6e4 = false;
+    mFlewFar = false;
     mbHasLightEff = false;
     mbLinkReflect = false;
-    field_0x604 = 0;
+    mHitShakeTimer = 0;
 
     return TRUE;
 }
@@ -1263,8 +1263,8 @@ BOOL daArrow_c::_execute() {
         mpSparkleEmitter = 0;
     }
 
-    if ((u32)(s32)field_0x602 == (u32)(s32)l_count) {
-        field_0x600 = true;
+    if ((u32)(s32)mShotNo == (u32)(s32)l_count) {
+        mDeleteRequest = true;
     }
 
     f32 frame = mBtkFrame;
@@ -1311,7 +1311,7 @@ BOOL daArrow_c::_execute() {
 
 /* 02053188 */
 BOOL daArrow_c::_draw() {
-    if (!field_0x698) {
+    if (!mDraw) {
         return TRUE;
     }
 

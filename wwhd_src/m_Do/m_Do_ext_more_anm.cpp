@@ -82,7 +82,7 @@ u32 HdBtkAnm::init(HdAnmModel* model, HdAnmObject* animation, u32 play, s32 mode
         return 1;
     }
     if (model == NULL) {
-        hdAnmAssert("btk source", 0x40F, "btk model");
+        hdAnmAssert("m_Do_ext.cpp", 0x40F, "i_modelData != (0)");
         return 0;
     }
     mpAnm = animation;
@@ -178,9 +178,9 @@ void HdBrkAnm::calc(HdAnmModel* model, f32 frame) {
 /* 025E8508 */
 u32 HdBckAnm::init(HdAnmModel* model, HdAnmObject* animation, u32 play, s32 mode,
                   s32 start, s32 end, u32 existing, f32 rate) {
-    if (!existing && !hdAnmIsCurrentSolidHeap()) hdAnmAssert("bck source", 0x61B, "solid heap");
+    if (!existing && !hdAnmIsCurrentSolidHeap()) hdAnmAssert("m_Do_ext.cpp", 0x61B, "i_modify || isCurrentSolidHeap()");
     if (model == NULL || animation == NULL) {
-        hdAnmAssert("bck source", 0x61C, "bck model and animation");
+        hdAnmAssert("m_Do_ext.cpp", 0x61C, "i_modelData != (0) && i_bck != (0)");
         return 0;
     }
     mpAnm = animation;
@@ -225,11 +225,11 @@ static void mDoExt_setAnmDrawModeSeven() { setDrawMode(HdAnm_ModeSeven); }
 /* WWHD glue (tools/verify/autoglue.py): HD animation backend ABI.
 data l_one 100586D4
 data l_backendVtable 1016D7E0
-str 10058A60 "btk source" renamed
-str 10058A70 "btk model" renamed
-str 10058A84 "bck source" renamed
-str 10058A94 "solid heap" renamed
-str 10058AB8 "bck model and animation" renamed
+str 10058A60 "m_Do_ext.cpp" in 025E7CE0
+str 10058A70 "i_modelData != (0)"
+str 10058A84 "m_Do_ext.cpp" in 025E8508
+str 10058A94 "i_modify || isCurrentSolidHeap()"
+str 10058AB8 "i_modelData != (0) && i_bck != (0)"
 ext 0273AD10 void* hdAnmAllocate(u32)
 ext 027F2BC0 void hdAnmFrameConstruct(mDoExt_baseAnm*, u32)
 ext 027DA984 void hdAnmBackendConstruct(HdAnmBackend*)

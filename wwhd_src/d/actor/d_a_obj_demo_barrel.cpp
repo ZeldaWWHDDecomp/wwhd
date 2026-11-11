@@ -31,21 +31,21 @@ void daObj_Demo_Barrel_c::setParticleHahen() {
 void daObj_Demo_Barrel_c::setParticleSibuki() {
     cXyz sp18;
     f32 py = current.pos.y, px = current.pos.x;
-    m2D0.y = py;
-    m2D0.x = px;
+    mSplashPos.y = py;
+    mSplashPos.x = px;
     f32 pz = current.pos.z;
     sp18.x = px;
-    m2D0.z = pz;
+    mSplashPos.z = pz;
     sp18.z = pz;
     sp18.y = 100.0f;
-    m2D0.y = dBgS_ObjGndChk_Wtr_Func(&sp18);
-    dComIfGp_getParticle()->set(0, dPa_name::ID_IT_JN_WP_HAMON01, &m2D0, nullptr, nullptr, 0xFF, nullptr, -1, nullptr, nullptr, nullptr);
-    dComIfGp_getParticle()->set(0, dPa_name::ID_IT_JN_WP_HAMON02, &m2D0, nullptr, nullptr, 0xFF, nullptr, -1, nullptr, nullptr, nullptr);
-    dComIfGp_getParticle()->set(0, dPa_name::ID_IT_SN_DEMO_HAMON_S, &m2D0, nullptr, nullptr, 0xFF, nullptr, -1, nullptr, nullptr, nullptr);
-    dComIfGp_getParticle()->set(0, dPa_name::ID_IT_SN_DEMO_SUIMEN_A, &m2D0, nullptr, nullptr, 0xFF, nullptr, -1, nullptr, nullptr, nullptr);
-    dComIfGp_getParticle()->set(0, dPa_name::ID_IT_SN_MIZUBASHIRA2, &m2D0, nullptr, nullptr, 0xFF, nullptr, -1, nullptr, nullptr, nullptr);
-    dComIfGp_getParticle()->set(0, dPa_name::ID_IT_SN_DEMO_SHIBUKI_A, &m2D0, nullptr, nullptr, 0xFF, nullptr, -1, nullptr, nullptr, nullptr);
-    dComIfGp_getParticle()->set(0, dPa_name::ID_IT_SN_DEMO_SHIBUKI_B, &m2D0, nullptr, nullptr, 0xFF, nullptr, -1, nullptr, nullptr, nullptr);
+    mSplashPos.y = dBgS_ObjGndChk_Wtr_Func(&sp18);
+    dComIfGp_getParticle()->set(0, dPa_name::ID_IT_JN_WP_HAMON01, &mSplashPos, nullptr, nullptr, 0xFF, nullptr, -1, nullptr, nullptr, nullptr);
+    dComIfGp_getParticle()->set(0, dPa_name::ID_IT_JN_WP_HAMON02, &mSplashPos, nullptr, nullptr, 0xFF, nullptr, -1, nullptr, nullptr, nullptr);
+    dComIfGp_getParticle()->set(0, dPa_name::ID_IT_SN_DEMO_HAMON_S, &mSplashPos, nullptr, nullptr, 0xFF, nullptr, -1, nullptr, nullptr, nullptr);
+    dComIfGp_getParticle()->set(0, dPa_name::ID_IT_SN_DEMO_SUIMEN_A, &mSplashPos, nullptr, nullptr, 0xFF, nullptr, -1, nullptr, nullptr, nullptr);
+    dComIfGp_getParticle()->set(0, dPa_name::ID_IT_SN_MIZUBASHIRA2, &mSplashPos, nullptr, nullptr, 0xFF, nullptr, -1, nullptr, nullptr, nullptr);
+    dComIfGp_getParticle()->set(0, dPa_name::ID_IT_SN_DEMO_SHIBUKI_A, &mSplashPos, nullptr, nullptr, 0xFF, nullptr, -1, nullptr, nullptr, nullptr);
+    dComIfGp_getParticle()->set(0, dPa_name::ID_IT_SN_DEMO_SHIBUKI_B, &mSplashPos, nullptr, nullptr, 0xFF, nullptr, -1, nullptr, nullptr, nullptr);
 }
 
 /* 02333CF4 */
@@ -82,8 +82,8 @@ static cPhs_State daObj_Demo_BarrelCreate(void* v_this) {
             return cPhs_ERROR_e;
         }
         fopAcM_SetMtx(i_this, i_this->mpModel->getBaseTRMtx());
-        i_this->m2DC = 1;
-        i_this->m2DE = 0;
+        i_this->mUnbroken = 1;
+        i_this->mSplashDone = 0;
     }
     return ret;
 }
@@ -110,16 +110,16 @@ static BOOL daObj_Demo_BarrelExecute(void* v_this) {
         /* HD: null check on the demo actor */
         if (ac != nullptr && ac->checkEnable(dDemo_actor_c::ENABLE_UNK_e)) {
             dDemo_prm_c* prm = ac->getPrm();
-            if (i_this->m2DC == 1 && prm->getId() == 1) {
-                i_this->m2DC = 0;
+            if (i_this->mUnbroken == 1 && prm->getId() == 1) {
+                i_this->mUnbroken = 0;
                 dComIfGs_onCollect(3, 0);
                 dComIfGs_offCollect(0, 0);
                 dComIfGs_setSelectEquip(0, dItemNo_NONE_e);
                 i_this->setParticleHahen();
             }
-            if (i_this->m2DE == 0 && prm->getId() == 2) {
+            if (i_this->mSplashDone == 0 && prm->getId() == 2) {
                 i_this->setParticleSibuki();
-                i_this->m2DE = 1;
+                i_this->mSplashDone = 1;
             }
         }
     }
@@ -136,7 +136,7 @@ static BOOL daObj_Demo_BarrelExecute(void* v_this) {
 // HD: daObj_Demo_BarrelDraw (_draw inlined)
 static BOOL daObj_Demo_BarrelDraw(void* v_this) {
     daObj_Demo_Barrel_c* i_this = (daObj_Demo_Barrel_c*)v_this;
-    if (i_this->m2DC == 0) {
+    if (i_this->mUnbroken == 0) {
         return FALSE;
     }
     g_env_light.settingTevStruct(TEV_TYPE_ACTOR, &i_this->current.pos, &i_this->tevStr);

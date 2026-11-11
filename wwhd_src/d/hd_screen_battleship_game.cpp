@@ -90,7 +90,7 @@ void hdScreenBattleship_c::updateBestScore() {
     text->mBuffer = buffer->characters;
     text->__vtbl = gabi::ea(&sBattleshipGameTextVtable);
     text->mCapacity = 3;
-    minigameFormatCount(text, "battleship best score format", mBestScore);
+    minigameFormatCount(text, "", mBestScore);
     minigameSetText(mpTextPanes[1].get(), text, 0);
 }
 
@@ -344,7 +344,7 @@ data sBattleshipGameWait 1048EDB0 nocheck
 data sBattleshipGameLayoutName 1048EDE0 nocheck
 data sBattleshipGameStateNumberReady 101FD8E4 nocheck
 data sBattleshipGameStateNumber 101FDD50 nocheck
-str 100E4AA4 "battleship best score format" renamed
+str 100E4AA4 ""
 str 100E4D08 "T_NumCannonball_00" in 02624590
 str 100E4CAC "T_NumBestScore_00" in 02624590
 str 100E4CC0 "BattleshipGame_00" in 02624590

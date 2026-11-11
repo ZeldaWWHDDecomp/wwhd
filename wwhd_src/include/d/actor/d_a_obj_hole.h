@@ -22,12 +22,12 @@ inline void __dt(dBgS_ObjLinChk* p) {
 }
 struct daObj_Hole_HIO_c {
     /* 0x00 */ be<s8> mNo;
-    /* 0x01 */ be<u8> m05;
+    /* 0x01 */ be<u8> mDebugDraw;  /* was m05: daObj_Hole_c::_draw 0235792C calls debugDraw while it is set; daObj_Hole_HIO_c_ct 02357CE0 0 (tww the same) */
     /* 0x02 */ u8 _02[2];
-    /* 0x04 */ be<f32> m08;
-    /* 0x08 */ be<s16> m0C;
+    /* 0x04 */ be<f32> mBaseRadius;  /* was m08: daObj_Hole_c::modeWait 02357AC8: the pit's radius is it * scale.x + size * 10, and Link inside that circle (dLib_checkPlayerInCircle) starts the pitfall event; setMtx 023573BC divides the same radius by it for the model scale; daObj_Hole_HIO_c_ct 02357CE0 65 (tww the same) */
+    /* 0x08 */ be<s16> mSizeOverride;  /* was m0C: daObj_Hole_c::modeWait 02357AC8 and setMtx 023573BC: when non-zero it replaces the actor's own size step mScaleLocal in the radius (it * 10); daObj_Hole_HIO_c_ct 02357CE0 0 (tww the same) */
     /* 0x0A */ u8 _0A[2];
-    /* 0x0C */ be<f32> m10;
+    /* 0x0C */ be<f32> mModelOffsetY;  /* was m10: daObj_Hole_c::setMtx 023573BC: added to current.pos.y for the model's position; daObj_Hole_HIO_c_ct 02357CE0 2 (tww the same) */
     /* 0x10 */ be<u32> __vtbl;
 };
 

@@ -10,10 +10,10 @@ struct dDoor_info_c : fopAc_ac_c {
     u8 _3AF;
     /* 0x3B0 */ cXyz mAngleVec;
     /* 0x3BC */ be<u8> mFrontCheck;
-    /* 0x3BD */ be<u8> m2A1;
+    /* 0x3BD */ be<u8> mStopOpenTimer;  /* was m2A1: view of dDoor_info_c::mStopOpenTimer (d/d_door_info.h) */
     /* 0x3BE */ be<s16> mEventIdx[12];
     /* 0x3D6 */ be<u8> mToolId[12];
-    /* 0x3E2 */ be<u8> m2C6;
+    /* 0x3E2 */ be<u8> mEventKind;  /* was m2C6: view of dDoor_info_c::mEventKind (d/d_door_info.h) */
     /* 0x3E3 */ be<u8> m2C7;
     /* 0x3E4 */ be<s32> mStaffId;
     /* 0x3E8 */ be<s8> mRoomNo;
@@ -30,7 +30,7 @@ struct dDoor_key2_c {
     /* 0x04 */ gptr<J3DModel> mpModel;
     /* 0x08 */ mDoExt_bckAnm mBckAnim;
     /* 0x94 */ request_of_phase_process_class mPhs;
-    /* 0x9C */ be<u8> m20;
+    /* 0x9C */ be<u8> mbUnlocking;  /* was m20: keyInit 0252B4A4 sets 1 when the key door is opened (switch on, key used, lock sound), else 0; keyProc 0252B5B4 plays the unlock bck only while it is set and clears it at the end (tww the same) */
     /* 0x9D */ be<u8> mbIsBossDoor;
     u8 _9E[2];
     s32 keyResLoad();
@@ -47,7 +47,7 @@ struct dDoor_key2_c {
 };
 WWHD_OFFSET(dDoor_key2_c, mBckAnim, 8);
 WWHD_OFFSET(dDoor_key2_c, mPhs, 0x94);
-WWHD_OFFSET(dDoor_key2_c, m20, 0x9C);
+WWHD_OFFSET(dDoor_key2_c, mbUnlocking, 0x9C);
 WWHD_OFFSET(dDoor_key2_c, mbIsBossDoor, 0x9D);
 WWHD_SIZE(dDoor_key2_c, 0xA0);
 

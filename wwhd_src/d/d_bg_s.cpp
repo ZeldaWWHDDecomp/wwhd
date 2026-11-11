@@ -4,6 +4,7 @@
  * JUT_ASSERTs are still present in HD (JUTAssertion 0273AA24 with per-instance strings), also
  * those of the inlined dBgW accessors (GetPolyInfId and friends). */
 #include "bindings.h"
+#include "sead/ElementAt.h"
 
 void BgAPI_CheckConstruct(void*);
 void BgAPI_SphereConstruct(void*);
@@ -293,7 +294,7 @@ struct dBgS {
 
 // Private helpers shared by the polygon queries below.
 
-static inline dBgW* elm_bgw(dBgS* s, s32 i) { return s->m_chk_element[i].m_bgw_base_ptr.get(); }
+static inline dBgW* elm_bgw(dBgS* s, s32 i) { return sead::elementPtr(s->m_chk_element, u32(i))->m_bgw_base_ptr.get(); }
 
 /* dBgW::GetPolyInfId + GetPolyInfN (inline, with their asserts; strings per instance):
  * info word `word` (0..3) of the polygon's info entry */
@@ -306,10 +307,12 @@ struct PolyInfAsserts {
 static inline u32 dBgW_GetPolyInf(dBgW* bgw, s32 poly_index, u32 word, const PolyInfAsserts& a) {
     if (!(0 <= poly_index && poly_index < bgw->pm_bgd->m_t_num))
         JUT_ASSERT_fail(a.file, 0x2F1, a.msg_poly);
-    s32 id = gabi::at<Triangle>(bgw->pm_bgd->m_t_tbl)[poly_index].mInfoIndex.get();
+    // Guest EA arithmetic: table + index * size wraps at 32 bits as on the console (a host index on a NULL table reached host
+    // addresses past 4 GB).
+    s32 id = sead::elementAt<Triangle>(u32(bgw->pm_bgd->m_t_tbl), u32(poly_index)).mInfoIndex.get();
     if (!(id < bgw->pm_bgd->m_ti_num))
         JUT_ASSERT_fail(a.file, a.line_id, a.msg_id);
-    return gabi::at<PolygonInfo>(bgw->pm_bgd->m_ti_tbl)[id].mInfo[word].get();
+    return sead::elementAt<PolygonInfo>(u32(bgw->pm_bgd->m_ti_tbl), u32(id)).mInfo[word].get();
 }
 
 } // namespace BgSystemHD
@@ -540,7 +543,7 @@ static inline s32 GetPolyIdN(BgSystemHD::dBgS* bgs, s32 bg_index, s32 poly_index
                              const char* msg, const PolyInfAsserts& a) {
     if (!((u32)bg_index < 256))
         JUT_ASSERT_fail(file, line, msg);
-    if (!bgs->m_chk_element[bg_index].ChkUsed())
+    if (!sead::elementPtr(bgs->m_chk_element, u32(bg_index))->ChkUsed())
         return defv;
     BgSystemHD::dBgW* bgwp = elm_bgw(bgs, bg_index);
     u32 v = dBgW_GetPolyInf(bgwp, poly_index, word, a) & mask;
@@ -577,7 +580,7 @@ s32 BgSystemHD::dBgS::GetGrpRoomInfId(BgSystemHD::cBgS_PolyInfo* p) {
     u32 bg_index = p->m_bg_index;
     if (!(bg_index < 256))
         JUT_ASSERT_fail("d_bg_s.cpp", 0x48F, "0 <= bg_index && bg_index < 256");
-    if (!m_chk_element[bg_index].ChkUsed())
+    if (!sead::elementPtr(m_chk_element, u32(bg_index))->ChkUsed())
         return 0xFF;
     BgSystemHD::dBgW* bgwp = elm_bgw(this, bg_index);
     s32 inf = bgwp->m_grp_room_inf;
@@ -720,7 +723,7 @@ u32 BgSystemHD::dBgS::ChkPolyHSStick(BgSystemHD::cBgS_PolyInfo* p) {
     u32 bg_index = p->m_bg_index;
     if (!(bg_index < 256))
         JUT_ASSERT_fail("d_bg_s.cpp", 0x669, "0 <= bg_index && bg_index < 256");
-    if (!m_chk_element[bg_index].ChkUsed())
+    if (!sead::elementPtr(m_chk_element, u32(bg_index))->ChkUsed())
         return FALSE;
     BgSystemHD::dBgW* bgwp = elm_bgw(this, bg_index);
     s32 poly = p->m_poly_index;
@@ -886,7 +889,7 @@ static inline void MoveBgProc(BgSystemHD::dBgS* bgs, BgSystemHD::cBgS_PolyInfo* 
         return; /* !ChkBgIndex */
     if (!(bg_index < 256))
         JUT_ASSERT_fail(file, line, msg);
-    BgSystemHD::cBgS_ChkElm* elm = &bgs->m_chk_element[bg_index];
+    BgSystemHD::cBgS_ChkElm* elm = sead::elementPtr(bgs->m_chk_element, u32(bg_index));
     if (elm->ChkUsed()) {
         BgSystemHD::dBgW* bgwp = elm->m_bgw_base_ptr.get();
         if ((bgwp->m_move_flag & 1) && (!polySafe || BgAPI_cBgS_ChkPolySafe(bgs, polyInfo))) {
@@ -925,7 +928,7 @@ void BgSystemHD::dBgS::RideCallBack(BgSystemHD::cBgS_PolyInfo* polyInfo, fopAc_a
         JUT_ASSERT_fail("d_bg_s.cpp", 0x967, "0 <= bg_index && bg_index < 256");
     BgSystemHD::dBgW* bgwp = elm_bgw(this, bg_index);
     if (bgwp->m_id < 0x100 && bgwp->m_ride_callback != 0)
-        gabi::call_ptr(bgwp->m_ride_callback, bgwp, (u32)m_chk_element[bg_index].m_actor_ptr, ac);
+        gabi::call_ptr(bgwp->m_ride_callback, bgwp, (u32)sead::elementPtr(m_chk_element, u32(bg_index))->m_actor_ptr, ac);
 }
 
 /* 024EFC54 */
@@ -937,7 +940,7 @@ u32 BgSystemHD::dBgS::PushPullCallBack(BgSystemHD::cBgS_PolyInfo* polyInfo, fopA
     BgSystemHD::dBgW* bgwp = elm_bgw(this, bg_index);
     if (!(bgwp->m_id < 0x100))
         return 0;
-    u32 actor = m_chk_element[bg_index].m_actor_ptr;
+    u32 actor = sead::elementPtr(m_chk_element, u32(bg_index))->m_actor_ptr;
     if (actor == 0)
         return 0;
     u32 cb = bgwp->m_push_pull_callback;

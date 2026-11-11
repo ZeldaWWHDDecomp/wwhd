@@ -49,9 +49,9 @@ struct daFloor_c : dBgS_MoveBgActor {
     /* 0x3E0 */ request_of_phase_process_class mPhs;
     /* 0x3E8 */ gptr<J3DModel> mpModel;
     /* 0x3EC */ be<s32> mSwitchNo;
-    /* 0x3F0 */ be<u8> field_0x2d8;
-    /* 0x3F1 */ be<u8> field_0x2d9;
-    /* 0x3F2 */ be<u8> field_0x2da;
+    /* 0x3F0 */ be<u8> mBreakStarted;  /* was field_0x2d8: rideCallBack 0213FD18: set once (with mBreakTimer 6) when the player in iron boots lands on the floor after mPlayerStanding was set; only then (tww the same) */
+    /* 0x3F1 */ be<u8> mPlayerStanding;  /* was field_0x2d9: rideCallBack 0213FD18 sets 1 while the player rides the floor without the iron boots; Execute 0214000C clears it whenever the player moves in XZ; the break needs it (tww the same) */
+    /* 0x3F2 */ be<u8> mBreakTimer;  /* was field_0x2da: rideCallBack 0213FD18: 6 when the break starts; Execute 0214000C counts it down and at 0 sets the effect, the break sound, the switch and deletes the floor (tww the same) */
     /* 0x3F3 */ be<u8> field_0x2db;
     /* 0x3F4 */ dPa_smokeEcallBack mSmokeCallBack;
 };

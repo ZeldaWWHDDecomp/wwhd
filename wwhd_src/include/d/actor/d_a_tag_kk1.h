@@ -5,7 +5,11 @@
 struct daTag_Kk1_HIO_c {
     struct hio_prm_c {
         union {
-            struct { be<f32> mHorizontalDistance, mVerticalDistance; be<u8> field_0x10; u8 _09[3]; };
+            struct {
+                be<f32> mHorizontalDistance, mVerticalDistance;
+                be<u8> mDebugDraw;  /* was field_0x10: _draw 024ACC98 sets up the debug draw colour while it is set (HD keeps the colour set-up, the debug drawing itself is absent); daTag_Kk1_HIO_c__ct 024ACD04 copies it from a_prm_tbl (tww the same) */
+                u8 _09[3];
+            };
             be<u32> mWords[3];
         };
     };

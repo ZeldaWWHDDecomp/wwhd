@@ -103,7 +103,7 @@ static void faceHome(daNpcMt_c* a) {
     a->m_jnt.mbTrn = 1;
 }
 static void playerGaze(daNpcMt_c* a, cXyz* eye) {
-    u8 turn = static_cast<u8>(a->m750), look = static_cast<u8>(a->m751);
+    u8 turn = static_cast<u8>(a->mBodyTurn), look = static_cast<u8>(a->mLookAtPlayer);
     u32 x = Mt_floatWord(eye->x), y = Mt_floatWord(eye->y), z = Mt_floatWord(eye->z);
     a->mHeadOnlyFollow = turn == 0;
     Mt_storeFloatWord(a->mLookAtPos.z, z);
@@ -127,7 +127,7 @@ daNpcMt_c* daNpcMt_construct(daNpcMt_c* a) {
     a->mNpcNo = a->getPrmNpcNo();
     a->mHomeAngleY = static_cast<s16>(a->home.angle.y);
     a->mNextMorf = -1.0f;
-    a->m747 = 0;
+    a->mResFlag = 0;
     a->m718 = 0.0f;
     a->mAnmIdx = 0;
     a->m736 = 0;
@@ -197,7 +197,7 @@ s32 phase_1(daNpcMt_c* a) {
             a->clearPhotoSelection();
         }
     }
-    a->m747 = 1;
+    a->mResFlag = 1;
     return 2;
 }
 
@@ -272,7 +272,7 @@ s32 daNpcMt_c::createInit() {
     mDoExt_McaMorf* morph = mpMorf;
     mTalking = 0;
     m752 = 0;
-    m753 = 0;
+    mAttnEnabled = 0;
     mInAttention = 0;
     this->mTurnSpeed = 0;
     J3DModel* model = morph->getModel();
@@ -282,10 +282,10 @@ s32 daNpcMt_c::createInit() {
     this->attention_info.distances[3] = 0x6E;
     this->attention_info.flags = 0x0100000A;
     jointParameters(&m_jnt);
-    this->m750 = static_cast<u8>(l_npc_dat.field_0x4A);
-    this->m751 = static_cast<u8>(l_npc_dat.field_0x4B);
-    this->m720 = static_cast<f32>(l_npc_dat.field_0x20);
-    this->m730 = static_cast<s16>(l_npc_dat.field_0x28);
+    this->mBodyTurn = static_cast<u8>(l_npc_dat.mBodyTurn);
+    this->mLookAtPlayer = static_cast<u8>(l_npc_dat.mLookAtPlayer);
+    this->mAttnDistXZ = static_cast<f32>(l_npc_dat.mMaxAttnDistXZ);
+    this->mAttnAngle = static_cast<s16>(l_npc_dat.mMaxAttnAngleY);
     mObjAcch.CrrPos(dComIfG_Bgsp());
     setMtx();
     mpMorf->getModel()->calc();
@@ -296,7 +296,7 @@ s32 daNpcMt_c::createInit() {
     center->z = static_cast<f32>(this->current.pos.z);
     mCyl.mStts = &mStts;
     center->y = static_cast<f32>(this->current.pos.y);
-    setCollision(&mCyl, center, static_cast<f32>(l_npc_dat.field_0x30), 150.0f);
+    setCollision(&mCyl, center, static_cast<f32>(l_npc_dat.mCylRadius), 150.0f);
     return 4;
 }
 
@@ -370,14 +370,14 @@ BOOL daNpcMt_c::_execute() {
     center->x = static_cast<f32>(this->current.pos.x);
     center->y = static_cast<f32>(this->current.pos.y);
     center->z = static_cast<f32>(this->current.pos.z);
-    setCollision(&mCyl, center, static_cast<f32>(l_npc_dat.field_0x30), 150.0f);
+    setCollision(&mCyl, center, static_cast<f32>(l_npc_dat.mCylRadius), 150.0f);
     f32 x = static_cast<f32>(this->current.pos.x), y = static_cast<f32>(this->current.pos.y),
         z = static_cast<f32>(this->current.pos.z);
-    f32 offset = static_cast<f32>(l_npc_dat.field_0x18);
+    f32 offset = static_cast<f32>(l_npc_dat.mAttnYOffset);
     this->attention_info.position.z = z;
     this->attention_info.position.x = x;
     this->attention_info.position.y = y + offset;
-    offset = static_cast<f32>(l_npc_dat.field_0x1C);
+    offset = static_cast<f32>(l_npc_dat.mEyeYOffset);
     this->eyePos.z = z;
     this->eyePos.x = x;
     this->eyePos.y = y + offset;
@@ -752,7 +752,7 @@ void daNpcMt_c::chkAttention() {
     bool close = false;
     if (event) {
         f32 z = static_cast<f32>(this->mEventCut.mPos.z), y = static_cast<f32>(this->mEventCut.mPos.y);
-        u8 turn = static_cast<u8>(this->m750);
+        u8 turn = static_cast<u8>(this->mBodyTurn);
         this->mLookAtPos.z = z;
         this->mLookMode = 1;
         this->mLookAtPos.y = y;
@@ -774,8 +774,8 @@ void daNpcMt_c::chkAttention() {
         target->x = static_cast<f32>(player->current.pos.x);
         target->y = static_cast<f32>(player->current.pos.y);
         target->z = static_cast<f32>(player->current.pos.z);
-        f32 radius = static_cast<f32>(this->m720);
-        s32 cone = static_cast<s16>(this->m730);
+        f32 radius = static_cast<f32>(this->mAttnDistXZ);
+        s32 cone = static_cast<s16>(this->mAttnAngle);
         dNpc_calc_DisXZ_AngY(origin, target, distance, angle);
         u8 wasNear = static_cast<u8>(this->mInAttention);
         s16 difference = (s16)(angle.get()->get() - static_cast<s16>(this->shape_angle.y));
@@ -788,26 +788,26 @@ void daNpcMt_c::chkAttention() {
         s32 absAngle = difference < 0 ? -(s32)difference : difference;
         if (radius > separation && cone > absAngle) {
             gabi::Local<cXyz> eye;
-            dNpc_playerEyePos(eye, l_npc_dat.field_0x14);
+            dNpc_playerEyePos(eye, l_npc_dat.mPlayerEyeOffsetY);
             playerGaze(this, eye);
             close = true;
         } else {
             if (wasNear == 1) {
                 this->mInAttention = 0;
-                this->m72E = static_cast<s16>(l_npc_dat.field_0x48);
+                this->mTurnBackTimer = static_cast<s16>(l_npc_dat.mTurnBackTime);
             }
-            if (static_cast<f32>(l_npc_dat.field_0x24) > separation || static_cast<u8>(this->m753)) {
+            if (static_cast<f32>(l_npc_dat.mLookDistXZ) > separation || static_cast<u8>(this->mAttnEnabled)) {
                 gabi::Local<cXyz> eye;
-                dNpc_playerEyePos(eye, l_npc_dat.field_0x14);
+                dNpc_playerEyePos(eye, l_npc_dat.mPlayerEyeOffsetY);
                 playerGaze(this, eye);
                 this->m752 = 1;
             } else {
                 u32 message = static_cast<u32>(this->m6F0);
                 this->mLookMode = 0;
                 if (!message) {
-                    s16 timer = static_cast<s16>(this->m72E);
+                    s16 timer = static_cast<s16>(this->mTurnBackTimer);
                     if (timer)
-                        this->m72E = (u16)(timer - 1);
+                        this->mTurnBackTimer = (u16)(timer - 1);
                     else
                         faceHome(this);
                 }
@@ -816,7 +816,7 @@ void daNpcMt_c::chkAttention() {
     }
     if (close && !static_cast<u8>(this->mInAttention))
         this->mInAttention = 1;
-    this->mTurnSpeedTarget = static_cast<s16>(l_npc_dat.field_0x2A);
+    this->mTurnSpeedTarget = static_cast<s16>(l_npc_dat.mMaxHeadTurnVel);
 }
 
 /* 022A1708 */
@@ -834,7 +834,7 @@ void daNpcMt_c::lookBack() {
         targetPtr = target;
     } else if (mode == 2)
         yaw = static_cast<s16>(this->mDesiredYRot);
-    bool forced = static_cast<u8>(this->mTalking) && static_cast<u8>(this->m750);
+    bool forced = static_cast<u8>(this->mTalking) && static_cast<u8>(this->mBodyTurn);
     if (forced) {
         this->m_jnt.mbTrn = 1;
         enabled = 0;
@@ -912,7 +912,7 @@ void daNpcMt_c::playAnm() {
         if (setAnmTbl(mpAnmDat))
             this->mAnmFlag = static_cast<u8>(this->mAnmFlag) | 1;
     } else
-        setAnm(mpAnmDat->field_0x00, 0, 0.0f);
+        setAnm(mpAnmDat->mAnmIdx, 0, 0.0f);
 }
 
 /* 022A01A4 */
@@ -930,16 +930,16 @@ void daNpcMt_c::setAnm(u8 animation, s32 attr, f32 blend) {
 
 /* 022A02B0 */
 BOOL daNpcMt_c::setAnmTbl(sMtAnmDat* table) {
-    if (table->field_0x00 == 0xFF) {
+    if (table->mAnmIdx == 0xFF) {
         mpAnmDat.v = 0;
         return TRUE;
     }
     mpAnmDat = table;
-    s8 count = table->field_0x02;
+    s8 count = table->mLoopCount;
     mAnmTimer = count;
-    u8 animation = table->field_0x00;
+    u8 animation = table->mAnmIdx;
     if (count > 0 || static_cast<u8>(mAnmIdx) != animation) {
-        setAnm(animation, count > 0 ? 0 : 2, static_cast<f32>(static_cast<u8>(table->field_0x01)));
+        setAnm(animation, count > 0 ? 0 : 2, static_cast<f32>(static_cast<u8>(table->mMorf)));
     }
     return FALSE;
 }

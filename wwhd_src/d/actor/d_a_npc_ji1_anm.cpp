@@ -160,9 +160,9 @@ BOOL daNpc_Ji1_c::setAnm(int param_1, f32 param_2, int param_3) {
     J3DAnmTransform* bckAnm = (J3DAnmTransform*)ji_res(bckIdx);
     void* pSoundAnimRes = ji_res(basIdx);
     switch (param_1) {
-    case 6: speed = l_HIO().field_0x48; break;
-    case 7: speed = l_HIO().field_0x44; break;
-    case 13: speed = l_HIO().field_0x4C; break;
+    case 6: speed = l_HIO().mKrotAnmSpeed; break;
+    case 7: speed = l_HIO().mInasiAnmSpeed; break;
+    case 13: speed = l_HIO().mWaraiAnmSpeed; break;
     case 14:
     case 15: speed = 2.0f; break;
     case 22:
@@ -227,11 +227,11 @@ void daNpc_Ji1_c::setAnimFromMsgNo(u32 msgNo) {
         break;
     case 0x9AE:
         if (mAnimation == 0x16 && mpOrcaMorf->checkFrame(mpOrcaMorf->getEndFrame() - 1.0f)) {
-            setAnm(0x15, l_HIO().field_0xA8, 0);
+            setAnm(0x15, l_HIO().mOdorokuAnmMorf, 0);
             break;
         }
         if (mAnimation != 0x15) {
-            setAnm(0x16, l_HIO().field_0xA4, 0);
+            setAnm(0x16, l_HIO().mBibiriAnmMorf, 0);
         }
         break;
     case 0x9B9:

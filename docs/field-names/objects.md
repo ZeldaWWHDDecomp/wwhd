@@ -18,14 +18,119 @@ Old names are the GameCube offsets (zeldaret/tww `mXXX`). The partial copies daT
 | 0x618 | `m4FC` | `mWaterY` | crr_pos_water 024CD5E0: mAcch's water height, else -inf; chk_sink_water / eff_hit_water_splash use it |
 | 0x61C | `m500` | `mWaterYOld` | crr_pos_water 024CD5E0 keeps last frame's mWaterY here; water_tention 024CFA48 uses the difference |
 | 0x794 | `m678` | `mMode` | mode_hide_init 024CAAD0 sets 0, mode_appear_init 024CAB30 1, mode_carry_init 024CD4C8 4, ...; set_mtx 024CB280 tests == 4 |
+| 0x7A4 | `m688` | `mRotAxisRoll` | the roll of the pose rotation axis: the set_tensor_* tail (set_tensor_wait 024CFEC8) turns BaseX by YrotS(mRotAxisYaw) XrotM(mRotAxisPitch) ZrotM(it) and set_tensor 024CB088 rotates the pose about that axis by mRotAngle; init_rot_throw 024CF4E0 sets data mThrowRotAxisRollMax * cM_rnd(), init_rot_clean 024CAA54 / pos_init 0 (tww d_a_tsubo.cpp the same) |
+| 0x7A6 | `m68A` | `mRotAxisPitch` | cSAngle; the pitch of the pose rotation axis (XrotM in the set_tensor_* tail, set_tensor_wait 024CFEC8); init_rot_throw 024CF4E0 sets cM_rndFX(0x8000), set_tensor_drop 024D0074 / sink 024D0184 / afl 024D0294 add mRotAxisPitchSpeed to it each frame; init_rot_clean 024CAA54 / pos_init 0 (tww the same) |
+| 0x7A8 | `m68C` | `mRotAxisPitchSpeed` | cSAngle; the per-frame step of mRotAxisPitch: init_rot_throw 024CF4E0 sets data mThrowRotAxisPitchSpeed, set_tensor_drop 024D0074 (data mDropRotResistLinear/Quad) and sink 024D0184 / afl 024D0294 (data mWaterRotResistLinear/Quad) damp it and add it to mRotAxisPitch; init_rot_clean 024CAA54 / pos_init 0 (tww the same) |
+| 0x7AA | `m68E` | `mRotAngle` | cSAngle; the angle set_tensor 024CB088 rotates the pose matrix by about the axis (rotAxisRad, cM_s2rad); set_tensor_walk 024CFF48 / drop 024D0074 / sink 024D0184 / afl 024D0294 add mRotAngleSpeed to it each frame; init_rot_throw 024CF4E0 / init_rot_clean 024CAA54 / pos_init 0 (tww the same) |
+| 0x7AC | `m690` | `mRotAngleSpeed` | cSAngle; the per-frame step of mRotAngle: set_tensor_walk 024CFF48 eases it towards twice the distance moved over data mAcchRoofHeight (the pot rolls as it moves), set_tensor_drop 024D0074 / sink 024D0184 damp it, set_tensor_afl 024D0294 also pushes it back by mRotAngle and a sine sway; init_rot_throw 024CF4E0 sets data mThrowRotAngleSpeed, init_rot_clean 024CAA54 / pos_init 0 (tww the same) |
+| 0x7AE | `m692` | `mRotAxisYaw` | cSAngle; the yaw of the pose rotation axis (YrotS in the set_tensor_* tail, set_tensor_wait 024CFEC8); init_rot_throw 024CF4E0 / init_rot_clean 024CAA54 / pos_init set it to current.angle.y and set_tensor_walk 024CFF48 copies current.angle.y each frame (tww the same) |
 | 0x808 | `m6EC` | `mOffsetY` | set_mtx 024CB280 adds it to the model's y translation; _create 024CB5EC clears it; moment_proc_call 024CE204 sets it |
-| 0x818 | `m6FC` | `mFallStartY` | _create 024CB5EC sets current.pos.y; damage_bg_proc_directly 024CDAB4 breaks the pot when it minus current.pos.y exceeds the attribute's fall height (m38) |
+| 0x818 | `m6FC` | `mFallStartY` | _create 024CB5EC sets current.pos.y; damage_bg_proc_directly 024CDAB4 breaks the pot when it minus current.pos.y exceeds the attribute's fall height (mBreakFallHeight) |
 | 0x81C | `m700` | `mWaterDropPos` | set_mtx 024CB280: the model matrix times offsetPos; eff_drop_water 024CD95C sets dPa_ID_IT_SN_WPOT_PITYA there |
 | 0x8A0 | `m784` | `mKutaniCb` | the constructor 024CA1DC constructs it (dPa_followEcallBack); eff_kutani_set 024CE3D0 uses it; _delete 024CBC98 removes it |
 | 0x8B4 | `m798` | `mKutaniTimer` | eff_kutani_init 024CACEC sets 1 + rnd(30); eff_kutani_set 024CE3D0 acts while it is not 0 |
 | 0x910 | `m7F4` | `mWindVec` | _create 024CB5EC clears it; set_wind_vec 024CC244 sets the wind vector (PSVECSquareMag); mode_walk / mode_drop / mode_afl use it |
 
-Open: `m504`, `m505`, `m67E`..`m686`, the rotation angles `m688`..`m692`, `m694` (quaternion, set to zero by init_mtx only), `m6A4`, `m6B0`, `m6F0`, the effect callbacks `m70C`, `m748`, `m799`, `m7A0`, `m800`..`m80C`, `m810`, `m811`, `m814`.
+Open: `m504`, `m505`, `m67E`..`m686`, `m694` (quaternion, set to zero by init_mtx only), `m6A4`, `m6B0`, `m6F0`, the effect callbacks `m70C`, `m748`, `m799`, `m7A0`, `m800`..`m80C`, `m810`, `m811`, `m814`.
+
+
+## daTsubo::Act_c::Data_c (M_data, the per-type table; d_a_tsubo.h, copy in d_a_tsubo_main.h)
+
+Round 10. The table keeps its GameCube layout (0xCC per type, M_data at 0x10040FAC), so the offsets are tww's. Read through data(this) / d in d_a_tsubo*.cpp; tww reads it as data().mXX in d_a_tsubo.cpp (which keeps the offset names).
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x04 | `m04` | `mCenterHeight` | set_mtx 024CB280 lifts the model by it and turns the pose about that height (transM back by -it); crr_pos_water 024CD5E0 / crr_pos_lava 024CD70C / chk_sink_lava 024CCB4C test the water and lava surface at pos.y + it (tww d_a_tsubo.cpp the same) |
+| 0x10 | `m10` | `mWeight` | create_init_cc 024CA804 / mode_wait_init 024CAC44 / mode_drop_init 024CF5AC: mStts.Init's weight (tww the same) |
+| 0x14 | `m14` | `mDropSpeedY` | mode_drop_init 024CF5AC: speed.y when the pot is let go (tww: unless m810 is set) |
+| 0x18 | `m18` | `mDropSpeedF` | mode_drop_init 024CF5AC: speedF = it + the player's speedF * mDropSpeedFPlayerRate (tww the same) |
+| 0x1C | `m1C` | `mDropSpeedFPlayerRate` | mode_drop_init 024CF5AC: the share of the player's speedF added to mDropSpeedF (tww the same) |
+| 0x20 | `m20` | `mAirResistLinear` | calc_drop_param 024CED64 / calc_afl_param 024CFB20: posMoveF_stream's linear resistance above water (tww posMoveF_resist_acc param_4); mode_afl 024CFD3C scales the wind vector by it (tww the same) |
+| 0x24 | `m24` | `mAirResistQuad` | calc_drop_param 024CED64 / calc_afl_param 024CFB20: posMoveF_stream's quadratic resistance above water (tww posMoveF_resist_acc param_5) |
+| 0x28 | `m28` | `mThrowRotAxisRollMax` | init_rot_throw 024CF4E0: mRotAxisRoll = it * cM_rnd() (tww the same) |
+| 0x2A | `m2A` | `mThrowRotAxisPitchSpeed` | init_rot_throw 024CF4E0: the start value of mRotAxisPitchSpeed (tww the same) |
+| 0x2C | `m2C` | `mThrowRotAngleSpeed` | init_rot_throw 024CF4E0: the start value of mRotAngleSpeed (tww the same) |
+| 0x30 | `m30` | `mDropRotResistLinear` | set_tensor_drop 024D0074: tensor_damp's linear damping of mRotAxisPitchSpeed / mRotAngleSpeed in the air (tww: speed -= rad2s(v * it + v * |v| * mDropRotResistQuad)) |
+| 0x34 | `m34` | `mDropRotResistQuad` | set_tensor_drop 024D0074: tensor_damp's quadratic damping of mRotAxisPitchSpeed / mRotAngleSpeed in the air (tww the same) |
+| 0x38 | `m38` | `mBreakFallHeight` | damage_bg_proc_directly 024CDAB4: the pot breaks on landing when mFallStartY - current.pos.y is above it (tww the same) |
+| 0x3C | `m3C` | `mBuoyancy` | mode_sink_init 024CCE64: gravity = mGravity + it; damage_bg_proc 024CD1E8 tests mGravity + it < 0; calc_drop_param 024CED64 / calc_afl_param 024CFB20 add immersion * it to mGravity (tww the same) |
+| 0x40 | `m40` | `mWaterResistLinear` | mode_sink 024CFAB8: posMoveF_stream's linear resistance under water; calc_drop_param 024CED64 / calc_afl_param 024CFB20 its immersion share (tww the same) |
+| 0x44 | `m44` | `mWaterResistQuad` | mode_sink 024CFAB8: posMoveF_stream's quadratic resistance under water; calc_drop_param 024CED64 / calc_afl_param 024CFB20 its immersion share (tww the same) |
+| 0x48 | `m48` | `mWaterRotResistLinear` | set_tensor_sink 024D0184 / set_tensor_afl 024D0294: tensor_damp's linear damping of mRotAxisPitchSpeed / mRotAngleSpeed in water (tww the same) |
+| 0x4C | `m4C` | `mWaterRotResistQuad` | set_tensor_sink 024D0184 / set_tensor_afl 024D0294: tensor_damp's quadratic damping of mRotAxisPitchSpeed / mRotAngleSpeed in water (tww the same) |
+| 0x50 | `m50` | `mWaterEntrySpeedMax` | limit_speed (inlined in mode_sink_init 024CCE64 / mode_afl_init 024CCD44): the speed (|speed.y, speedF|) is scaled down to it on entering water (tww mode_sink_init / mode_afl_init the same) |
+| 0x56 | `m56` | `mNoGradeAngle` | mode_walk 024CF094: posMoveF_grade's no_grade_cos is cos(it - 0.5 degrees) (tww the same) |
+| 0x5C | `m5C` | `mGradeFriction` | mode_walk 024CF094: posMoveF_grade's friction (tww the same) |
+| 0x60 | `m60` | `mBreakNoiseLevel` | se_break 024CBE2C: set_senv's level (dKy_Sound_set's mNoiseLevel) of the break noise (tww the same) |
+| 0x61 | `m61` | `mBreakNoiseTimer` | se_break 024CBE2C: set_senv's timer (dKy_Sound_set's mNoiseTimer) of the break noise (tww the same) |
+| 0x62 | `m62` | `mHitNoiseLevel` | damage_cc_proc 024CC7EC: set_senv's level (dKy_Sound_set's mNoiseLevel) of the hit noise (tww the same) |
+| 0x63 | `m63` | `mHitNoiseTimer` | damage_cc_proc 024CC7EC: set_senv's timer (dKy_Sound_set's mNoiseTimer) of the hit noise (tww the same) |
+| 0x64 | `m64` | `mFallInNoiseLevel` | se_fall_water 024CCBA0 / se_fall_lava 024CCF84: set_senv's level (dKy_Sound_set's mNoiseLevel) of the splash noise (tww the same) |
+| 0x65 | `m65` | `mFallInNoiseTimer` | se_fall_water 024CCBA0 / se_fall_lava 024CCF84: set_senv's timer (dKy_Sound_set's mNoiseTimer) of the splash noise (tww the same) |
+| 0x6C | `m6C` | `mModelIdx` | create_heap 024CA3D0: the model's resource index in M_arcname(mType) (tww the same) |
+| 0x6E | `m6E` | `mShadowSize` | never read in WWHD (the HD _draw draws no simple shadow); tww _draw passes scale.x * it as dComIfGd_setSimpleShadow2's size |
+| 0x70 | `m70` | `mCylHeight` | create_init_cc 024CA804: mCyl.SetH (tww the same; mAcchCirRad is its radius) |
+| 0x74 | `m74` | `mBreakParticleScale` | eff_break_tsubo 024D0550: the scale of the TUBOHAHEN / TUBOKONAGONA break particles (tww get_particle_scale) |
+| 0x80 | `m80` | `mBreakTexIdx` | eff_break_tsubo 024D0550: the texture-pattern index of the shards and the tsubo select-texture callback index (tww getTsuboSelectTexEcallBack(it)) |
+| 0x88 | `m88` | `mSoundID_Land` | damage_bg_proc_directly 024CDAB4: fopAcM_seStart of a landing that does not break the pot (material sound, 0x2D for the bomb flower) (tww the same) |
+| 0xB0 | `mB0` | `mCullSizeFar` | create_init_cull 024CA690: on the sea stage cullSizeFar = it / the stage's cull point (tww fopAcM_setCullSizeFar the same) |
+| 0xBC | `mBC` | `mWpillarScaleXZ` | eff_hit_water_splash 024CCCEC: fopKyM_createWpillar's scaleXZ (tww the same) |
+| 0xC0 | `mC0` | `mWpillarScaleY` | eff_hit_water_splash 024CCCEC: fopKyM_createWpillar's scaleY (tww the same) |
+| 0xC4 | `mC4` | `mMpillarSize` | eff_hit_lava_splash 024CD0B8: fopKyM_createMpillar's size (tww the same) |
+| 0xC8 | `mC8` | `mLandEffectScale` | eff_land_smoke 024CDA98: daObj::make_land_effect's scale (tww the same) |
+
+Open (no name yet): `m54` and `m58` (read nowhere in WWHD or tww; only the table values); padding `mA0`, `mAC`, `mB4`.
+
+
+## daTsubo::Act_c::AttrSpine_c (M_attrSpine, the bomb flower's regrow and fuse constants; d_a_tsubo.h, copy in d_a_tsubo_main.h)
+
+Round 10. GHS folds this const table into immediates (the code comments name M_attrSpine.<field>), so no WWHD code reads the struct; named under the 2026-11-11 rule from tww's reads (tww d_a_tsubo.cpp mode_appear_init / mode_appear (spec 4) / _create / _draw read M_attrSpine.mXX with one role each) and the matching folded constants in WWHD.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x00 | `m00` | `mSwellDampXZ` | the bomb flower's regrow swell: tww mode_appear (spec 4) damps the x/z scale speed m808 by m808 * it each frame; WWHD mode_appear 024CEB50 folds it into the constant 0.55 (no WWHD reader of the table) |
+| 0x04 | `m04` | `mSwellDampY` | tww mode_appear (spec 4) damps the y scale speed m80C by m80C * it each frame; WWHD mode_appear 024CEB50 folds it into the constant 0.55 |
+| 0x08 | `m08` | `mSwellSpringXZ` | tww mode_appear (spec 4): m808 -= (scale.x - 1) * it, the spring back to scale 1; WWHD mode_appear 024CEB50 folds it into the constant 0.7 |
+| 0x0C | `m0C` | `mSwellSpringY` | tww mode_appear (spec 4): m80C -= (scale.y - 1) * it; WWHD mode_appear 024CEB50 folds it into the constant 0.7 |
+| 0x10 | `m10` | `mSwellSpeedXZInit` | tww mode_appear_init (spec 4) sets m808 to it; WWHD mode_appear_init 024CAB30 folds it into the constant 0.2 (commented M_attrSpine.mSwellSpeedXZInit) |
+| 0x14 | `m14` | `mSwellSpeedYInit` | tww mode_appear_init (spec 4) sets m80C to it; WWHD mode_appear_init 024CAB30 folds it into the constant 0.2 (commented M_attrSpine.mSwellSpeedYInit) |
+| 0x18 | `m18` | `mRegrowTime` | tww mode_appear_init (spec 4) sets the appear timer m802 to it; WWHD mode_appear_init 024CAB30 folds it into 0x50 (commented M_attrSpine.mRegrowTime) |
+| 0x1A | `m1A` | `mRegrowGrowEnd` | tww mode_appear (spec 4): while the timer m802 is at least it the scale eases to mRegrowScale, below it the swell spring runs; WWHD mode_appear 024CEB50 folds it into 0xE (commented) |
+| 0x1C | `m1C` | `mRecoverSeTime` | tww mode_appear (spec 4): JA_SE_OBJ_BOKKURI_RECOVER when the timer m802 reaches it; WWHD mode_appear 024CEB50 folds it into 0x46 (commented) |
+| 0x1E | `m1E` | `mSwellSeTime` | tww mode_appear (spec 4): JA_SE_OBJ_BOKKURI_SWELL when the timer m802 reaches it; WWHD mode_appear 024CEB50 folds it into 0xD (commented) |
+| 0x20 | `m20` | `mRegrowScale` | tww mode_appear (spec 4): cLib_addCalc's target of scale.x in the grow phase; WWHD mode_appear 024CEB50 folds it into 0.5 |
+| 0x24 | `m24` | `mRegrowScaleRate` | tww mode_appear (spec 4): cLib_addCalc's scale (fraction) in the grow phase; WWHD mode_appear 024CEB50 folds it into 0.1 |
+| 0x28 | `m28` | `mRegrowStepMax` | tww mode_appear (spec 4): cLib_addCalc's max step in the grow phase; WWHD mode_appear 024CEB50 folds it into 0.02 |
+| 0x2C | `m2C` | `mRegrowStepMin` | tww mode_appear (spec 4): cLib_addCalc's min step in the grow phase; WWHD mode_appear 024CEB50 folds it into 0.001 |
+| 0x30 | `m30` | `mFuseTime` | the bomb flower's fuse: tww _create / mode_carry_init set m800 to it, _draw shows the brk frame (1 - m800 / it); WWHD folds it into 0x4B0 / 1200 (commented M_attrSpine.mFuseTime in _create 024CB5EC, mode_carry_init 024CD4C8, damage_cc_proc 024CC7EC and _draw 024CE994); damage_kill_proc 024CD3CC explodes the pot when m800 runs out |
+
+
+## daTsubo::Act_c::SpecBokoData (M_data_spec_boko, the boko sticks stuck in a pot; d_a_tsubo.h, copy in d_a_tsubo_main.h)
+
+Round 10. One entry per stick (spec 1..3); WWHD reads it through M_data_spec_boko(i), tww through data_spec_boko(i).
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x00 | `m00` | `mYaw` | spec_make_boko 024CAD38: the stuck boko stick's yaw around the pot (copied into M7A0 mStickYaw) (tww the same) |
+| 0x02 | `m02` | `mTiltX` | spec_mtx 024CB118: the stick's X rotation (XrotM) (tww the same) |
+| 0x04 | `m04` | `mRestHeight` | spec_make_boko 024CAD38 / spec_mode_put_init 024CF77C: the stick's start height (M7A0 mHeight); spec_mode_carry 024CF320 bounces it back above it (tww the same) |
+| 0x08 | `m08` | `mOffsetZ` | spec_mtx 024CB118: the stick's z offset (transM(0, M7A0 mHeight, it)) (tww the same) |
+
+
+## daTsubo::Act_c::M7A0 (m7A0[3], the state of the stuck boko sticks; d_a_tsubo.h, copy in d_a_tsubo_main.h)
+
+Round 10. One entry per stick, used by the spec_* functions (WWHD and tww).
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x00 | `m00` | `mBokoId` | spec_make_boko 024CAD38: fopAcM_create's process id of the stuck boko stick; spec_init 024CAF78 sets fpcM_ERROR_PROCESS_ID_e (tww the same) |
+| 0x04 | `m04` | `mbCarried` | spec_carry_spec 024CAE78 sets 1 after tsuboSetCarryNow on the stick; spec_remove 024CBB58 / spec_mode_carry 024CF320 / spec_mode_put_init 024CF77C act only when it is set (tww the same) |
+| 0x06 | `m06` | `mStickYaw` | spec_make_boko 024CAD38 copies SpecBokoData mYaw; spec_mtx 024CB118 turns the stick by -it, spec_remove 024CBB58 throws it off at shape_angle.y - it - 0x8000 (tww the same) |
+| 0x10 | `m10` | `mHeight` | spec_make_boko 024CAD38 / spec_mode_put_init 024CF77C set SpecBokoData mRestHeight; spec_mode_carry 024CF320 moves it by mHeightSpeed; spec_mtx 024CB118: transM(0, it, mOffsetZ) (tww the same) |
+| 0x14 | `m14` | `mHeightSpeed` | spec_mode_carry 024CF320: the per-frame step of mHeight (random kick, -0.8 per frame, halved and reversed at the bottom) (tww the same) |
+| 0x18 | `m18` | `mBounceCount` | spec_mode_carry 024CF320: set to 2 at a kick, decremented at each bounce at the bottom; at 0 the stick rests (tww the same) |
+
+Open (no name yet): `m08` (written only: spec_make_boko copies m06 into it, spec_init clears it) and `m0C` (written only: spec_init / spec_mode_put_init clear it); read nowhere in WWHD or tww.
 
 ## daObjBarrel2::Act_c (d_a_obj_barrel2.h)
 
@@ -49,7 +154,63 @@ Old names are the GameCube offsets (zeldaret/tww `mXXX`).
 | 0x590 | `m474` | `mExitReq` | execute_sub 02320AD4 starts the exit in MODE_AFL when set; TWW exit_req() { m474 = 1; } |
 | 0x592 | `m476` | `mItemGive` | item_give 023208BC sets 1; TWW chk_item_give() { return m476; } |
 
-Open: `m414`, `m418`, `m42C`..`m438`, `m43C`, `m440`..`m44C` (sway / drift state), `m468`, `m46C`, `m470`, `m475`, `m478`.
+Round 2:
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x530 | `m414` | `mDriftVelX` | mode_afl 02321564: X speed = (it + (x - home.x) * -0.002) * 0.9, added to current.pos.x with the collision push (the pull back home) (tww the same) |
+| 0x534 | `m418` | `mDriftVelZ` | mode_afl 02321564: Z speed = (it + (z - home.z) * -0.002) * 0.9, added to current.pos.z with the collision push (see mDriftVelX) (tww the same) |
+| 0x548 | `m42C` | `mWobbleX` | set_water_pos 0231EA58: off the sea, a random spring value (velocity mWobbleVelX) used as mWaterNormal.x before normalizing; _create 0231F350 clears (tww the same) |
+| 0x54C | `m430` | `mWobbleZ` | set_water_pos 0231EA58: off the sea, a random spring value (velocity mWobbleVelZ) used as mWaterNormal.z before normalizing; _create 0231F350 clears (tww the same) |
+| 0x550 | `m434` | `mWobbleVelX` | set_water_pos 0231EA58: (it + mWobbleX * -0.2 + rnd) * 0.99, added to mWobbleX; _create 0231F350 clears (tww the same) |
+| 0x554 | `m438` | `mWobbleVelZ` | set_water_pos 0231EA58: (it + mWobbleZ * -0.2 + rnd) * 0.99, added to mWobbleZ; _create 0231F350 clears (tww the same) |
+| 0x558 | `m43C` | `mBobAngle` | mode_afl 02321564 / mode_explode 02321D54 advance it by attr m58 * (rnd + 1); set_pos_y 0231ED94 adds sin(it) times the sway height to the water y (tww the same) |
+| 0x55C | `m440` | `mTiltX` | set_mtx 0231EEF4: the X of the up axis (it, 1, mTiltZ) the model is tilted to; afl_sway 0232115C springs it toward the water normal; _create 0231F350 random for a coming mine, else 0 (tww the same) |
+| 0x560 | `m444` | `mTiltZ` | set_mtx 0231EEF4: the Z of the up axis (mTiltX, 1, it); afl_sway 0232115C springs it toward the water normal; _create 0231F350 random for a coming mine, else 0 (tww the same) |
+| 0x564 | `m448` | `mTiltVelX` | afl_sway 0232115C: the spring speed of mTiltX (damped by attr m64), added to it each frame; _create 0231F350 clears (tww the same) |
+| 0x568 | `m44C` | `mTiltVelZ` | afl_sway 0232115C: the spring speed of mTiltZ (damped by attr m64), added to it each frame; _create 0231F350 clears (tww the same) |
+| 0x584 | `m468` | `mMineFlash` | execute_sub 02320AD4: a mine (mType 2) sets 1 once mine_chk_range_flash finds the ship; in MODE_AFL it then plays mpBrkAnm and explodes when it ends, and blocks the mine exit; _create 0231F350 clears (tww the same) |
+| 0x588 | `m46C` | `mEventRun` | _execute 0232101C: 1 while an event runs (unless mStagePoint is 1), and then runs execute_sub off screen too; set_item_position 023213F8 sets the item by matrix while set (tww the same) |
+| 0x58C | `m470` | `mHitType` | tg_hitCB 0231E800 3 (attack type 0x20), co_hitCB 0231E84C 1 (ship rams it) / 2 (ship touches); execute_sub 02320AD4 takes and clears it: 1 break demo, 2 push under, 3 break and drop (tww the same) |
+| 0x591 | `m475` | `mDeleteReq` | execute_sub 02320AD4 deletes the item and the barrel while set; _execute 0232101C runs execute_sub off screen while set (tww the same); never set in WWHD or tww |
+| 0x594 | `m478` | `mBaseMtx` | set_mtx 0231EEF4 copies the model's base TR matrix (before the buoy flag offset) into it (tww cMtx_copy(mDoMtx_stack_c::get(), it)); never read in WWHD or tww |
+
+Open: Attr_c `m00`..`m70` (the M_attr tuning table) is not part of this pass.
+
+### daObjBarrel2::Attr_c (M_attr; d_a_obj_barrel2.h)
+
+Round 3: the per-type tuning table M_attr[mType] (Attr_c is 0x74 in WWHD as on the GameCube, so the offsets are the old names). M_attr is constant data: no field is written in WWHD or tww; the reads are in our d_a_obj_barrel2.cpp and match tww's (zeldaret/tww d217e2b, src/d/actor/d_a_obj_barrel2.cpp).
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x00 | `m00` | `mModelResIdx` | create_heap 0231E670: dComIfG_getObjectRes("Ktaru_00", it) is the model data (tww the same); M_attr is read only, never written in WWHD or tww |
+| 0x02 | `m02` | `mBrkResIdx` | create_heap 0231E670: dComIfG_getObjectRes("Ktaru_00", it) is the brk_data (tww the same) |
+| 0x04 | `m04` | `mHeapSize` | _create 0231F350: the size passed to fopAcM_entrySolidHeap (tww the same) |
+| 0x08 | `m08` | `mCylRadius` | _create 0231F350: mCyl's radius (tww mCyl.SetR) |
+| 0x0C | `m0C` | `mCylHeight` | _create 0231F350: mCyl's height (tww mCyl.SetH) |
+| 0x10 | `m10` | `mMoveCullRadius` | cull_set_move 0231FBA8: the cull sphere radius while moving (tww the same) |
+| 0x14 | `m14` | `mBarrelHeight` | set_pos_y 0231ED94 (float depth mFloatDepthRate * it), set_mtx 0231EEF4 / _create 0231F350 (the top, (it - 5) * scale), mode_afl 02321564 / mode_explode 02321D54 (mPosYOffset capped at 0.6 / 0.2 of it) (tww the same) |
+| 0x18 | `m18` | `mCenterHeight` | _create 0231F350: attention / eye position and cull sphere centre at it * scale above pos, the coming start depth -(it * scale) - 50; mode_exit_v 0232183C / mode_exit_h 023219D8 the exit depth from it (tww the same) |
+| 0x34 | `m34` | `mItemGiveDist` | execute_sub 02320AD4: item_give once mItemDistance < it squared (tww the same) |
+| 0x38 | `m38` | `mShipHitSpeed` | co_hitCB 0231E84C: a ship hit counts only above this speedF (tww the same) |
+| 0x3C | `m3C` | `mShipHitDot` | co_hitCB 0231E84C, mine_chk_range_damage 02320418: when dot(barrel - ship, ship speed) < it squared the ship gets flag 4 (tww the same) |
+| 0x40 | `m40` | `mFlashRange` | mine_chk_range_flash 023209E4: ship distance squared below it squared (tww the same) |
+| 0x44 | `m44` | `mExplodeRange` | mine_chk_range_explode 0231FD84: ship distance squared below it squared (tww the same) |
+| 0x48 | `m48` | `mDamageRange` | mine_chk_range_damage 02320418: ship distance squared below it squared (tww the same) |
+| 0x4C | `m4C` | `mDamageHeight` | mine_chk_range_damage 02320418: the ship counts only below pos.y + it (tww the same) |
+| 0x50 | `m50` | `mFloatDepthRate` | set_pos_y 0231ED94: the floating depth is it * mBarrelHeight; effect_position (in eff_break / eff_explode) puts effects at that depth (tww the same) |
+| 0x54 | `m54` | `mBobAmplitude` | set_pos_y 0231ED94: the bob it * sin(mBobAngle) (tww the same) |
+| 0x58 | `m58` | `mBobAngleStep` | mode_afl 02321564 / mode_explode 02321D54: mBobAngle += it * (cM_rnd() + 1) (tww the same) |
+| 0x5C | `m5C` | `mTiltTargetMax` | afl_sway 0232115C: the water-normal tilt target is clamped to this length (tww the same) |
+| 0x60 | `m60` | `mTiltSpring` | afl_sway 0232115C: the tilt acceleration -(tilt - target) * it (tww the same) |
+| 0x64 | `m64` | `mTiltDamping` | afl_sway 0232115C: the tilt velocity damping -velocity * it (tww the same) |
+| 0x68 | `m68` | `mWaveTiltRate` | afl_sway 0232115C: the tilt target is mWaterNormal.x / .z * it (tww the same) |
+| 0x6C | `m6C` | `mPillarScaleXZ` | eff_explode 0231FE60: fopKyM_createWpillar's scaleXZ (tww the same) |
+| 0x70 | `m70` | `mPillarScaleY` | eff_explode 0231FE60: fopKyM_createWpillar's scaleY (tww the same) |
+
+Open (no name yet): `m1C` (read nowhere in WWHD or tww); `m20` and `m24` (only ever read as their product, the model scale: set_mtx 0231EEF4, set_pos_y 0231ED94, cull_set_draw 02320EDC, effect_position; no use tells them apart); `m28` and `m2C` (only ever read as their product, the race item's scale: _create 0231F350, item_drop_init 02320294); `m30` (two roles: the exit depth below the centre in mode_exit_v 0232183C / mode_exit_h 023219D8, and the item's height above pos in set_item_position 023213F8); the padding `_5a`.
+
+
 
 ## daPirate_Flag_packet_c (d_a_pirate_flag.h): index buffer fields
 
@@ -173,6 +334,27 @@ Old names are the zeldaret/tww GameCube offset names (`mXXX`). The view in d_a_k
 | 0x3E6 | `m2CE` | `mSailSeOn` | _create 023852E0 sets (mParameters & 15) != 0; sound_proc 02384A78 starts JA_SE_OBJ_PIRATE_SAIL only when set |
 
 Open: 0x3E2 `m2CA` (executeShip sets it from the HIO every frame outside demos; nothing in this source reads it).
+
+### daObjPirateShipHIO_c (l_HIO; d_a_obj_pirateship.h)
+
+Round 3: the pirate ship's HIO values. In WWHD the vtable sits at the end, so each field is 4 below its GameCube name. Each is set only by pirateship_sinit 02385FA0 (the static constructor; default in parentheses) and never written elsewhere in WWHD or tww; the reads are in our d_a_obj_pirateship.cpp (executeShip is the body of daObjPirateship::Act_c::_execute 02385B70) and match zeldaret/tww d217e2b.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x00001 | `m05` | `mNoPathMove` | executeShip (in daObjPirateship::Act_c::_execute 02385B70): the path move and the sway run only while it is 0 (tww _execute the same) (0) |
+| 0x00004 | `m08` | `mPathSpeed` | path_move_call_back 02384078: the speed toward the next path point is (it + 5) * \|cos\| of the turn left (tww the same) (2) |
+| 0x00008 | `m0C` | `mSwayHeight` | executeShip (in daObjPirateship::Act_c::_execute 02385B70): pos.y = home.pos.y + (it + 10) * sin(mSwayAngle) (tww _execute the same) (100) |
+| 0x0000C | `m10` | `mSwaySpeedRising` | executeShip (in daObjPirateship::Act_c::_execute 02385B70): mSwaySpeed's target while mSwayAngle is within +-0x4000 (the ship rising) (tww _execute the same) (250) |
+| 0x0000E | `m12` | `mSwaySpeedFalling` | executeShip (in daObjPirateship::Act_c::_execute 02385B70): mSwaySpeed's target while mSwayAngle is outside +-0x4000 (the ship sinking) (tww _execute the same) (500) |
+| 0x00014 | `m18` | `mWakeOffset` | daObjPirateship::Act_c::SetWave 02384C2C: the wake emitter's position in ship space (mWakePos is the ship matrix times it) (tww the same) (0, 0, 0) |
+| 0x00020 | `m24` | `mWakeScale` | daObjPirateship::Act_c::SetWave 02384C2C: the wake emitter's particle and dynamics scale (tww the same) (4) |
+| 0x00024 | `m28` | `mWakeIndirectOffset` | daObjPirateship::Act_c::SetWave 02384C2C: mWakeCb.mIndirectOffset (tww setIndirectTexData's first argument) (tww the same) (-0.02) |
+| 0x00028 | `m2C` | `mWakeIndirectScale` | daObjPirateship::Act_c::SetWave 02384C2C: mWakeCb.mIndirectScale (tww setIndirectTexData's second argument) (tww the same) (5) |
+| 0x0002C | `m30` | `mWakeSpeed` | daObjPirateship::Act_c::SetWave 02384C2C: mWakeCb.mSpeed (tww setSpeed) (tww the same) (300) |
+| 0x00030 | `m34` | `mWakeLimitSpeed` | daObjPirateship::Act_c::SetWave 02384C2C: mWakeCb.mLimitSpeed (tww setLimitSpeed) (tww the same) (3) |
+| 0x00034 | `m38` | `mWakeDirectionalSpeed` | daObjPirateship::Act_c::SetWave 02384C2C: the wake emitter's mInitialVelDir (tww setDirectionalSpeed) (tww the same) (17) |
+
+Open (no name yet): `m06` (executeShip copies it into Act_c `m2CA` every frame, and m2CA is read nowhere in WWHD or tww, so no role), `m14` (set by the constructor only, read nowhere); padding `reserved11`.
 
 ## daObjTide::Act_c (d_a_obj_tide.h)
 
@@ -345,6 +527,41 @@ unchanged for object identity); the original binary's text is `M_type >= 0 && M_
 Open: none of the offset-named Act_c fields. `Attr_c` keeps its two-digit tww offset names (m04, m0E..m5C), out of the
 lint pattern; not done here.
 
+### daStone2::Attr_c (M_attr; d_a_stone2.h)
+
+Round 3: the per-type tuning table M_attr[mType] (Attr_c is 0x60 in WWHD as on the GameCube, so the offsets are the old names). Constant data: no field is written in WWHD or tww; the reads are in our d_a_stone2.cpp and match tww's (zeldaret/tww d217e2b). The comma-list declarations were split one per line first (own commit). mBreakSmokeCb.m10 / mLiftSmokeCb.m10 belong to the smoke callback class (dPa_followEcallBack, round 3's copies pass), not to Attr_c.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x04 | `m04` | `mModelResIdx` | CreateHeap 0249E5B8: dComIfG_getObjectRes(resName, it) is the model data (tww the same); M_attr is read only, never written in WWHD or tww |
+| 0x0C | `m0C` | `mCarryAttnDist` | Create 0249E8BC: attention_info.distances[fopAc_Attn_TYPE_CARRY_e] (tww the same) |
+| 0x0E | `m0E` | `mShadowSize` | never read in WWHD (HD draws no simple shadow for the rock); tww Act_c::draw_shadow passes it as dComIfGd_setSimpleShadow / setSimpleShadow2's size |
+| 0x10 | `m10` | `mRoofCrrHeight` | Create 0249E8BC: mAcch.SetRoofCrrHeight(it) (tww the same) |
+| 0x12 | `m12` | `mRadius` | Create 0249E8BC: mCyl's radius and mAcchCir's wall radius (tww mCyl.SetR / mAcchCir.SetWall) |
+| 0x14 | `m14` | `mHeight` | Create 0249E8BC: mCyl's height (tww mCyl.SetH) |
+| 0x18 | `m18` | `mDamageSE` | damaged 0249EEAC: the sound started on a hit (tww fopAcM_seStart(this, it, 0)) |
+| 0x20 | `m20` | `mMoveCullX` | cull_set_move 0249EC74: the cull sphere's x (tww fopAcM_setCullSizeSphere) |
+| 0x22 | `m22` | `mMoveCullY` | cull_set_move 0249EC74: the cull sphere's y (tww fopAcM_setCullSizeSphere) |
+| 0x24 | `m24` | `mMoveCullZ` | cull_set_move 0249EC74: the cull sphere's z (tww fopAcM_setCullSizeSphere) |
+| 0x26 | `m26` | `mMoveCullRadius` | cull_set_move 0249EC74: the cull sphere's radius; below 0 the rock is always executed (mForceExecute) (tww the same) |
+| 0x28 | `m28` | `mDrawCullX` | cull_set_draw 0249F57C: the cull sphere's x (tww fopAcM_setCullSizeSphere) |
+| 0x2A | `m2A` | `mDrawCullY` | cull_set_draw 0249F57C: the cull sphere's y (tww fopAcM_setCullSizeSphere) |
+| 0x2C | `m2C` | `mDrawCullZ` | cull_set_draw 0249F57C: the cull sphere's z (tww fopAcM_setCullSizeSphere) |
+| 0x2E | `m2E` | `mDrawCullRadius` | cull_set_draw 0249F57C: the cull sphere's radius (tww fopAcM_setCullSizeSphere) |
+| 0x30 | `m30` | `mGravity` | Create 0249E8BC / mode_drop_init 0249FD5C set gravity to it (tww the same) |
+| 0x34 | `m34` | `mPivotHeight` | set_mtx 0249E6DC: while dropping the model rotates about the point it above pos (translate up, rotate, translate back) (tww the same) |
+| 0x38 | `m38` | `mAttnHeight` | Create 0249E8BC / Execute 0249F6CC: attention_info.position.y = pos.y + it (tww the same) |
+| 0x3C | `m3C` | `mDropSpeedY` | mode_drop_init 0249FD5C: speed.y (tww the same) |
+| 0x40 | `m40` | `mDropSpeedF` | mode_drop_init 0249FD5C: speedF (tww the same) |
+| 0x44 | `m44` | `mResistLinear` | mode_drop 0249FE90: posMoveF_stream's linear resistance (tww posMoveF_resist_acc param_4) |
+| 0x48 | `m48` | `mResistQuad` | mode_drop 0249FE90: posMoveF_stream's quadratic resistance (tww posMoveF_resist_acc param_5) |
+| 0x50 | `m50` | `mShockStrength` | damaged 0249EEAC: dComIfGp_getVibration().StartShock(it, ...) when above 0 (tww the same) |
+| 0x54 | `m54` | `mMBreakEffScale` | eff_m_break 024A018C: the break particles' scale (tww the same) |
+| 0x58 | `m58` | `mBBreakEffScale` | eff_b_break 024A02F0: the break particles' scale (tww the same) |
+| 0x5C | `m5C` | `mLiftSmokeScale` | eff_lift_smoke_start 0249FA68: the smoke particles' scale (tww the same) |
+
+Open (no name yet): `m1C` and `m4C` (read nowhere in WWHD or tww); padding `pad0D`, `pad16`, `pad52`.
+
 ## daComing3::Act_c (d_a_coming3.h)
 
 Named from zeldaret/tww's code (d217e2b, src/d/actor/d_a_coming3.cpp, which keeps the `unk_4xx` names) and our decomp's use.
@@ -408,6 +625,52 @@ EffSmokeCB (the slip smoke callbacks mSmokeCbs[2]):
 |---|---|---|---|
 | 0x20 | `field_0x20` | `mPos` | eff_set_slip_smoke_pos 02379010: PSMTXMultVec of the smoke base position into it (tww multVec(&base_pos[i])); eff_smoke_slip_start 0237918C passes it as the position of particle 0x2022 (ID_AK_JT_ELEMENTSMOKE00) |
 | 0x2C | `field_0x2C` | `mAngle` | eff_set_slip_smoke_pos 02379010: (0, push angle, 0) (tww set(0, angle, 0)); eff_smoke_slip_start 0237918C passes it as the angle of particle 0x2022 |
+
+### daObjMovebox::Attr_c (M_attr; d_a_obj_movebox.h)
+
+Round 3: the per-type tuning table M_attr[mType] of the 13 box types (Attr_c is 0x9C in WWHD as on the GameCube, so the offsets are the old names). Constant data: only m0C is filled by the static initializer; no field is written anywhere else in WWHD or tww. The reads are in our d_a_obj_movebox.cpp and match tww's (zeldaret/tww d217e2b). The comma-list declarations were split one per line first (own commit).
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x02 | `m02` | `mPushMomentCnt` | check_to_walk 02378D18: a push (mPPLabel without bit 4) starts the walk once every mMomentCnt[i] reaches it (tww the same); M_attr is constant data (only m0C is filled by the static initializer), never written elsewhere in WWHD or tww |
+| 0x04 | `m04` | `mPushWalkTime` | mode_wait 02379308: a push walk sets mWalkTimer to it and mWalkAngleStep to 0x8000 / it (tww the same) |
+| 0x08 | `m08` | `mPullMomentCnt` | check_to_walk 02378D18: a pull (mPPLabel bit 2, without bit 4) starts the walk once every mMomentCnt[i] reaches it (tww the same) |
+| 0x0A | `m0A` | `mPullWalkTime` | mode_wait 02379308: a pull walk (mPPLabel bit 2) sets mWalkTimer to it and mWalkAngleStep to 0x8000 / it (tww the same) |
+| 0x0C | `m0C` | `mGridSize` | mode_wait 02379308 / mode_walk 02379834: the position is home + (mGridX, mGridZ) * it (tww the same); the static initializer (d_a_obj_movebox_static.cpp) sets it to 75 for all 13 types |
+| 0x10 | `m10` | `mShadowSize` | never read in WWHD (HD draws no simple shadow for the box); tww Act_c::Draw passes it as dComIfGd_setSimpleShadow's size |
+| 0x14 | `m14` | `mGravity` | mode_wait_init 02377B84 / Create 02377C1C set gravity to it; mode_afl 0237A0A8 adds it to the buoyancy; Execute 02378638 floats up only when mBuoyancy + it > 0 (tww the same) |
+| 0x18 | `m18` | `mAirResistLinear` | mode_wait 02379308 / mode_walk 02379834: posMoveF_stream's linear resistance (tww posMoveF_resist_acc param_4); mode_afl 0237A0A8 the above-water share of it |
+| 0x1C | `m1C` | `mAirResistQuad` | mode_wait 02379308 / mode_walk 02379834: posMoveF_stream's quadratic resistance (tww posMoveF_resist_acc param_5); mode_afl 0237A0A8 the above-water share of it |
+| 0x20 | `m20` | `mLeaveGroundSpeedY` | Bgc_c::proc_vertical 02376914: speed.y when the box loses the ground (tww the same) |
+| 0x28 | `m28` | `mBuoyancy` | mode_afl 0237A0A8: gravity = mGravity + immersion * it + mBobAmplitude * sin(mAflBobAngle); Execute 02378638 floats up only when it + mGravity > 0 (tww the same) |
+| 0x2C | `m2C` | `mPlayerRideSink` | RideCallBack 02377308: the sink acceleration of the player riding it (tww fpcNm_PLAYER_e); with mOtherRideSink the lower limit (tww the same) |
+| 0x30 | `m30` | `mOtherRideSink` | RideCallBack 02377308: the sink acceleration of a rider that is not the player; with mPlayerRideSink the lower limit (tww the same) |
+| 0x34 | `m34` | `mBobAmplitude` | mode_afl 0237A0A8: the gravity term it * sin(mAflBobAngle) (tww the same) |
+| 0x38 | `m38` | `mBobAngleStep` | mode_afl 0237A0A8: mAflBobAngle += it * (cM_rnd() + 1) (tww the same) |
+| 0x3C | `m3C` | `mWaterResistLinear` | mode_afl 0237A0A8: posMoveF_stream's linear resistance under water (immersion share; mAirResistLinear the rest) (tww the same) |
+| 0x40 | `m40` | `mWaterResistQuad` | mode_afl 0237A0A8: posMoveF_stream's quadratic resistance under water (immersion share; mAirResistQuad the rest) (tww the same) |
+| 0x44 | `m44` | `mPlayerRideTilt` | RideCallBack 02377308: the player's sway moment is mInvRideRadius * it (tww the same) |
+| 0x48 | `m48` | `mOtherRideTilt` | RideCallBack 02377308: another rider's sway moment is mInvRideRadius * it (tww the same) |
+| 0x4C | `m4C` | `mSwayTargetMax` | afl_sway 02379D00: the sway target is clamped to this length (tww the same) |
+| 0x50 | `m50` | `mSwaySpring` | afl_sway 02379D00: the sway acceleration -(sway - target) * it (tww the same) |
+| 0x54 | `m54` | `mSwayDamping` | afl_sway 02379D00: the sway speed damping -speed * it (tww the same) |
+| 0x68 | `m68` | `mBoxHeight` | set_mtx 02377764 / Create 02377C1C: the buoy sits at it - 5 above pos; mode_afl 0237A0A8: fully immersed below -it, mSinkDepth capped at it (tww the same) |
+| 0x6C | `m6C` | `mImmersionRate` | mode_afl 0237A0A8: immersion = depth * it (1 once deeper than mBoxHeight) (tww the same) |
+| 0x74 | `m74` | `mInvRideRadius` | RideCallBack 02377308: the rider's weight falls off as 1 - distance * it, and the sway moments are it * mPlayerRideTilt / mOtherRideTilt (tww the same) |
+| 0x9A | `m9A` | `mbHeavy` | PPCallBack 023775DC: a push / pull counts only with PPLABEL_HEAVY (power bracelets) when set; Bgc_c::proc_vertical 02376914 / check_to_walk 02378D18 / afl_sway 02379D00 use the 21-line M_lin20 instead of M_lin5 (tww the same) |
+
+Open (no name yet): `m00` and `m06` (check_to_walk 02378D18: the push / pull moment counts when mPPLabel bit 4 is set; that bit is tww's PPLABEL_UNK4, set by Link's setPushPullKeepData from an unnamed proc variable, so the case has no name yet); padding `_3A`, `_9B`.
+
+### daObjMovebox::BgcSrc_c (Bgc_c::M_lin5 / M_lin20; d_a_obj_movebox.h)
+
+Round 3: the ground / wall check line sources. tww's header comments mark m00 / m08 as z and m04 / m0C as x.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x00 | `m00` | `mScaledZ` | Bgc_c::gnd_pos 02376314: the check point's z is it * mScaleXZ + mOffsetZ; wall_pos 023765D0 / chk_wall_touch 02376B54: the z scaled by the box size (tww comment "z"); M_lin20 is filled by its static initializer (d_a_obj_movebox_static.cpp), never written elsewhere |
+| 0x04 | `m04` | `mScaledX` | Bgc_c::gnd_pos 02376314: the check point's x is it * mScaleXZ + mOffsetX; wall_pos 023765D0 / chk_wall_touch 02376B54: the x scaled by the box size (tww comment "x") |
+| 0x08 | `m08` | `mOffsetZ` | Bgc_c::gnd_pos 02376314: the unscaled z added to mScaledZ * mScaleXZ; wall_pos 023765D0 / chk_wall_touch 02376B54: the line's z offset (tww comment "z") |
+| 0x0C | `m0C` | `mOffsetX` | Bgc_c::gnd_pos 02376314: the unscaled x added to mScaledX * mScaleXZ; wall_pos 023765D0 / chk_wall_touch 02376B54: the line's x offset (tww comment "x") |
 
 ## daObjBarrel::Act_c (d_a_obj_barrel.h)
 
@@ -612,7 +875,7 @@ Named from zeldaret/tww's code (d217e2b, src/d/actor/d_a_obj_stair.cpp, which ke
 | WWHD offset | Old (GameCube name) | New | Evidence |
 |---|---|---|---|
 | 0x3E0 | `field_0x2C8` | `mHitOffset` | ride_call_back 023905F4 / _execute 02390AC4 (bomb hit): the rider's or bomb's position minus the step's (tww); _execute uses its direction and length for the break tilt |
-| 0x3EC | `field_0x2D4` | `mBreakDir` | ride_call_back 023905F4 (0, -1, 0) for the player; _execute 02390AC4 the bomb-to-step vector clamped to the step (tww); the break speed is l_HIO.m14 * mBreakPower * it, the tilt axis is mHitOffset x it |
+| 0x3EC | `field_0x2D4` | `mBreakDir` | ride_call_back 023905F4 (0, -1, 0) for the player; _execute 02390AC4 the bomb-to-step vector clamped to the step (tww); the break speed is l_HIO.mBreakSpeed * mBreakPower * it, the tilt axis is mHitOffset x it |
 | 0x3F8 | `field_0x2E0` | `mBreakTimer` | _execute 02390AC4: frames since the break started; the break happens at l_HIO.m18, the fall after it, fopAcM_delete at l_HIO.m18 + 0xF0 (tww); ride_call_back 023905F4 only triggers while it is below l_HIO.m18; _create 0239069C 0 |
 | 0x3FC | `field_0x2E4` | `mBreaking` | ride_call_back 023905F4 / _execute 02390AC4 (bomb hit) set 1; _execute runs the break and Execute 02391328 shakes the debris position while it is 1 (tww) |
 | 0x400 | `field_0x2E8` | `mShakeY` | _execute 02390AC4: 1.5 * sin offset; Execute 02391328 adds it to current.pos.y (tww transS(.., current.pos.y + it, ..)); _create 0239069C 0 |
@@ -759,6 +1022,28 @@ Named from zeldaret/tww's code (d217e2b, src/d/actor/d_a_obj_ikada.cpp and inclu
 | 0x14C4 | `m1168` | `mSvDirection` | tww accessor getSvDirection() { return it; } (read by daNpc_Sv_c for its look angle); modePathMoveInit 02364460: random 0 or 1 (tww); modeCraneTurn 02364274 turns to 0x4000 when it is 1, else -0x4000 (tww) |
 | 0x1640 | `m12E4` | `mHitTimer` | checkTgHit 02364854: hits count only once cLib_calcTimer(&it) is 0, then it is set (60 in ours; tww 5) |
 
+### daObj_Ikada_HIO_c (l_HIO; d_a_obj_ikada.h)
+
+Round 3: the remaining offset-named HIO values (vtable first here, so the WWHD offsets equal the GameCube names). Each is set only by hioConstructor 02364E6C (default in parentheses) and never written elsewhere in WWHD or tww; the reads are in our d_a_obj_ikada.cpp and match zeldaret/tww d217e2b.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x00005 | `m05` | `mDebugHandleLeft` | daObj_Ikada_c::modePathMove 02364578 / modeStop 02364668: HandleLeft turns the handle animation back each frame while it is set (tww the same) (0) |
+| 0x00006 | `m06` | `mDebugHandleRight` | daObj_Ikada_c::modePathMove 02364578 / modeStop 02364668: HandleRight turns the handle animation on each frame while it is set (tww the same) (0) |
+| 0x00008 | `m08` | `mDebugNoPathMove` | daObj_Ikada_c::modePathMove 02364578: the path move is skipped while it is set (as without a path) (tww the same) (0) |
+| 0x0001C | `m1C` | `mDebugRopeCnt` | daObj_Ikada_c::modeWait 02363E98 (type 4): when not 0, mRopeCnt steps toward it by incRopeCnt (tww the same) (0) |
+| 0x0001E | `m1E` | `mCraneDownRopeCnt` | daObj_Ikada_c::modeCraneDown 02364148: the rope is let out (incRopeCnt) until mRopeCnt reaches it, then crane wait (tww the same) (100) |
+| 0x00020 | `m20` | `mHandleSpeed` | daObj_Ikada_c::HandleRight 02363F30 / HandleLeft 02364098: the handle animation's frame step (tww the same) (1.5) |
+| 0x00024 | `m24` | `mCraneWaitTime` | daObj_Ikada_c::modeCraneUpWaitInit 02364034 / modeCraneDownWaitInit 02364204: mTimer for the crane waits (tww the same) (60) |
+| 0x00028 | `m28` | `mBombSmokeHeight` | daObj_Ikada_c::_execute 02362C54: mBombSmokePos.y (tww the same) (100) |
+| 0x00094 | `m94` | `mTerry1StopDistanceShip` | daObj_Ikada_c::modePathMoveTerry 023649B8 / modeStopTerry 02364C6C: type 1 stops while the player is closer than it and rides a ship (player status 0x10000, tww daPyStts0_SHIP_RIDE_e) (tww the same) (3000) |
+| 0x00098 | `m98` | `mTerry3StopDistance` | daObj_Ikada_c::modePathMoveTerry 023649B8 / modeStopTerry 02364C6C: type 3 stops while the player is closer than it (tww the same) (1000) |
+| 0x0009A | `m9A` | `mTerry1StopDistance` | daObj_Ikada_c::modePathMoveTerry 023649B8 / modeStopTerry 02364C6C: type 1 stops while the player is closer than it and not on a ship (tww the same) (1000) |
+| 0x0009C | `m9C` | `mSphRadius` | daObj_Ikada_c::setCollision 023647D0: the collision sphere's radius (times scale.x) (tww the same) (300) |
+| 0x000A8 | `mA8` | `mVelocityTargetTerry3Near` | daObj_Ikada_c::modePathMoveTerry 023649B8: type 3's mVelocityFwdTarget while the player is closer than mPlayerStopDistance (tww the same) (30) |
+
+Open (no name yet): padding `m09`, `m26`.
+
 ## daObj_Warpt_c (d_a_obj_warpt.h)
 
 Named from zeldaret/tww's code (d217e2b, src/d/actor/d_a_obj_warpt.cpp, which keeps the GameCube offset names; accessor isHuta) and our decomp's use. Open: m298 and m2C5 (stored by getArg, never read), m2BC (only compared with 0xFF to play the riddle sound) and m2C0 (only compared with 0xFF to set the warp bit at creation).
@@ -779,7 +1064,7 @@ Named from zeldaret/tww's code (d217e2b, src/d/actor/d_a_obj_warpt.cpp, which ke
 | 0x3F8 | `m2DC` | `mBodyBgW1Mtx` | createBodyHeap 023B9AE8: the matrix mpBodyBgW1 is set up with (tww mpBodyBgW1->Set(.., &it)); setMtx 023BA250 copies the pot matrix into it (tww cMtx_copy(.., it)) |
 | 0x42C | `m310` | `mBodyBgW2Mtx` | createBodyHeap 023B9AE8: the matrix mpBodyBgW2 is set up with (tww mpBodyBgW2->Set(.., &it)); setMtx 023BA250 copies the pot matrix into it (tww) |
 | 0x460 | `m344` | `mLidBgWMtx` | createHutaHeap 023B9944: the matrix mpLidBgW is set up with (tww mpLidBgW->Set(.., &it)); setMtx 023BA250 copies the lid matrix into it (tww) |
-| 0x9AC | `m830` | `mLidPos` | setMtx 023BA250: current.pos raised by l_HIO.m08 (tww it = current.pos; it.y += l_HIO.m08), where the lid models are put; setCollision 023BA1BC mCyl2 centre; breakHuta 023BAA28 particles; _draw 023BB074 tev position (tww) |
+| 0x9AC | `m830` | `mLidPos` | setMtx 023BA250: current.pos raised by l_HIO.mLidOffsetY (tww it = current.pos; it.y += l_HIO.m08), where the lid models are put; setCollision 023BA1BC mCyl2 centre; breakHuta 023BAA28 particles; _draw 023BB074 tev position (tww) |
 | 0x9B8 | `m83C` | `mBreakFireTimer` | modeBreakFireInit 023BB57C 60; modeBreakFire 023BB5CC acts when cLib_calcTimer(&it) reaches 0 (tww) |
 | 0x9BC | `m840` | `mBgW2RegistTimer` | createInit 023BA4E0 30 or 5, modeEventWarp 023BB820 30 (tww); _execute 023BAD74 counts it down (tww cLib_calcTimer(&it)); setMtx 023BA250 registers mpBodyBgW2 when it is 1 (tww if (it == 1) .. Regist(mpBodyBgW2, this)) |
 | 0x9C0 | `m844` | `mOpenSmokeCallBack` | modeOpenInit 023BB2A4: the follow callback of the open smoke particle 0x8161 (tww ID_AK_SN_WARPPOTOPEN00, &it); _execute 023BAD74 recolours its emitter; _delete 023BA8C8 removes it |
@@ -853,3 +1138,1490 @@ ylzou::EffSmokeCB (the slip-smoke callbacks mSmokeCbs[2]):
 |---|---|---|---|
 | 0x20 | `field_0x20` | `mPos` | eff_set_slip_smoke_pos 023BE21C: the smoke position from the matrix stack (tww multVecZero(&mSmokeCbs[i].it)); eff_smoke_slip_start 023BE33C passes it as the ID_AK_JT_ELEMENTSMOKE00 particle position (tww) |
 | 0x2C | `field_0x2C` | `mAngle` | eff_set_slip_smoke_pos 023BE21C: (0, current.angle.y, 0) (tww mSmokeCbs[i].it.set(0, current.angle.y, 0)); eff_smoke_slip_start 023BE33C passes it as the particle angle (tww) |
+
+## daBomb_c and daBomb_fuseSmokeEcallBack (d_a_bomb.h)
+
+Old names are the GameCube offsets (zeldaret/tww d_a_bomb.h `field_0x...`, same code in tww d_a_bomb.cpp). The declaration
+lists were split one per line first (layout-neutral). mBombCheckFlag and mNoHit take tww's accessor names.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x8D4 | `field_0x554` | `mLavaY` | bgCrrPos_lava 020C5980 stores the lava ground height (GroundCross with the lava filter); chk_lava_hit 020C7AF4 is true below it, chk_dead_zone 020C7EB0 tests it with mWaterY / ground; create_init 020C6408 sets -1e9 (tww the same) |
+| 0x8D8 | `field_0x558` | `mWaterY` | bgCrrPos_water 020C59EC stores the water surface height (the water BG or the sea wave, -1e9 without); chk_water_sink 020C7A98 (30 below it), water_tention 020C6E44 and eff_water_splash 020C7B24 use it; create_init 020C6408 sets -1e9 (tww the same) |
+| 0x8DC | `field_0x55C` | `mWaterYOld` | bgCrrPos_water 020C59EC copies mWaterY into it before the update; water_tention 020C6E44 reads it as the old surface height; create_init 020C6408 sets -1e9 (tww the same) |
+| 0x8E0 | `field_0x560` | `mWaterLand` | bgCrrPos_water 020C59EC sets it on the frame the bomb enters water (in water and mbWaterIn still 0); chk_water_land 020C7AEC returns it; create_init 020C6408 clears it (tww the same) |
+| 0x8E2 | `field_0x562` | `mWaterIsSea` | bgCrrPos_water 020C59EC sets 1 when mWaterY is the sea wave (daSea_calcWave), 0 for the water BG; eff_water_splash 020C7B24 then passes no water polygon to the splash; create_init 020C6408 clears it (tww the same) |
+| 0xA70 | `field_0x6F0` | `mInPlayerBombCnt` | create_init 020C6408 sets 1 for a bomb in STATE_3 (Link's); procExplode_init 020C5EF8 and bombDelete 020C50BC take 1 off Link's mBombCnt while it is set (explode then clears it) (tww the same) |
+| 0xA71 | `field_0x6F1` | `mBombCheckFlag` | getBombCheck_Flag 020CB678 returns it, setBombCheck_Flag 020CB6A8 sets 1 (tww accessor names; d_a_am / d_a_nz skip a bomb whose flag is set) |
+| 0xA73 | `field_0x6F3` | `mNoHit` | setBombNoHit 020CB710 sets 1 (tww accessor name); posMoveF 020C6EB4 skips water_tention and the ground-slope handling while it is 1 |
+| 0xA74 | `field_0x6F4` | `mFuseLit` | waitState_bomtyu 020C713C sets 1 when the bomb flower bomb is lit (mBombFire); execute 020C4D84 plays the fuse sound 0x6100 every frame while it is 1 (or ATTR_STATE_10); create_init 020C6408 clears it (tww the same) |
+| 0xA7E | `field_0x6FE` | `mExplodeCcTimer` | procExplode_init 020C5EF8 sets 2; procExplode 020C74A0 registers the explosion sphere (mSph at current.pos) while it counts down, then waits for mExplodeLightStep (tww the same) |
+| 0xAF8 | `field_0x774` | `mExplodeLightStep` | procExplode_init 020C5EF8 clears it; procExplode 020C74A0: 0 brightens mExplodeLight to 1, 1 fades it to 0, then the bomb deletes itself (mDeleteReq) once it is above 1 (tww the same) |
+| 0xAFC | `field_0x778` | `mExplodeLight` | procExplode 020C74A0 eases it per mExplodeLightStep and scales the explosion's actor / BG ambient and diffuse add colours (dKy_*addcol*_set) by it; procExplode_init 020C5EF8 clears it (tww the same) |
+| 0xB00 | `field_0x77C` | `mFireEffectSet` | execute 020C4D84 makes the fire effect (makeFireEffect) once in STATE_4 and sets it; create_init 020C6408 clears it (tww the same) |
+| 0xB01 | `field_0x77D` | `mWaterExplodeEffDone` | makeWaterEffect 020C7CC0 runs once (water pillar, sound, the water explosion sphere) and sets it; draw 020C4660 hides the bomb in STATE_4 once it is set; create_init 020C6408 clears it (tww the same) |
+| 0xB02 | `field_0x77E` | `mFuseEffectSet` | setFuseEffect 020C584C starts the fuse sparks / smoke once and sets it; create_init 020C6408 clears it (tww the same) |
+| 0xB03 | `field_0x77F` | `mCannonFlySeOn` | se_cannon_fly_set 020C70DC sets it; se_cannon_fly_stop 020C5078 stops the flying sound only while it is set and clears it; create_init 020C6408 clears it (tww the same) |
+| 0xB04 | `field_0x780` | `mThrown` | procCarry 020C76E0 sets it when the bomb leaves the hand with speedF > 0; bound 020C71FC clears it on a ground bounce slower than 19.5; while it is set a bomb nut explodes on a CO hit (checkExplodeCc_nut 020C789C) or a wall / ground hit (checkExplodeBg_nut 020C7DC4) (tww the same) |
+| 0xB05 | `field_0x781` | `mDeleteReq` | checkExplodeBg_norm 020C7C34 / _nut 020C7DC4 / _cannon 020C7EEC (sinking, the cannon bomb also in the dead zone) and procExplode 020C74A0 (end) set it; execute 020C4D84 deletes the actor while it is set; procWait 020C7358 returns before bound then (tww the same) |
+| 0xB06 | `field_0x782` | `mExplodeCcSet` | set when the explosion sphere is first registered (procExplode_init 020C5EF8, procExplode 020C74A0, makeWaterEffect 020C7CC0); execute 020C4D84 counts mExplodeFrame up while it is set (tww the same) |
+| 0xB08 | `field_0x784` | `mExplodeFrame` | execute 020C4D84 adds 1 per frame while mExplodeCcSet; get_explode_instant 020CB98C is true at 1; create_init 020C6408 clears it (tww the same) |
+| 0xB4C | `field_0x7C8` | `mDrawDelay` | create_init 020C6408 sets 2 for a bomb in STATE_3, else 0; draw 020C4660 draws nothing while it is above 0; set_real_shadow_flag 020C506C counts it down and keeps the real shadow at 1 (tww the same) |
+
+Fuse smoke callback (offsets within daBomb_fuseSmokeEcallBack):
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x4 | `field_0x04` | `mPrevLife` | daBomb_fuseSmokeEcallBack::executeAfter 020C6860 stores this frame's particle life in it; the next frame steps the in-between particles' life from it to the new one; setFuseEffect 020C584C sets 20 (tww set() the same) |
+| 0xC | `field_0x0C` | `mpOldPos` | setFuseEffect 020C584C points it at daBomb_c::mFusePos2 (last frame's fuse point); executeAfter 020C6860 fills the smoke trail from mpPos back to it (distance, spline end) (tww set() the same) |
+| 0x10 | `field_0x10` | `mpOldOldPos` | setFuseEffect 020C584C points it at daBomb_c::mFusePos3 (the fuse point two frames back); executeAfter 020C6860 takes the spline tangent at mpOldPos from it (tww set() the same) |
+
+Open: `field_0x6F5` / `6F6` / `6F7`, `field_0x702`, `field_0x794[0x30]` (no use in WWHD or tww); BombWindInfluence
+`field_0x20` (view of the shared WIND_INFLUENCE, unnamed there too; procExplode_init only clears it).
+
+## daTitle_proc_c, daTitle_Attr_c and daTitle_c (d_a_title.h)
+
+Old names are the GameCube names (zeldaret/tww d_a_title.h `mXXX`; tww's L_attr Attr_c is `field_0x00` .. `field_0x34`,
+its values are quoted in the evidence; HD keeps them in a 0x3C attribute object with a vtable, so the HD offset is +4).
+HD has no kirari animation: the kirari timer / frame are named from tww's calc_2d_alpha, the pane pointers from tww's
+proc_init3D.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x4 | `field_0x00` | `mShipPosX` | set_mtx 024B83F4 places the ship model at x = it + mShipOffsetX (tww L_attr 0.0) |
+| 0x08 | `field_0x04` | `mShipPosY` | set_mtx 024B83F4 places the ship model at y = it (tww L_attr 0.0) |
+| 0x0C | `field_0x08` | `mShipScale` | set_mtx 024B83F4 sets the ship model's base scale to it (tww L_attr 0.9) |
+| 0x10 | `field_0x0C` | `mShipMoveRate` | calc_2d_alpha 024B7CFC: mShipOffsetX = mShipMoveFrame^2 * it (sign by direction); daTitle_proc_ct 024B89D8 starts at 2500 * it (tww L_attr 0.1) |
+| 0x14 | `field_0x10` | `mSubtitlePosX` | set_mtx 024B83F4 places the subtitle and kirari models at x = it (tww L_attr -57) |
+| 0x18 | `field_0x14` | `mSubtitlePosY` | set_mtx 024B83F4 places the subtitle and kirari models at y = it (tww L_attr -19 JPN / -3) |
+| 0x1C | `field_0x18` | `mSubtitleScaleX` | set_mtx 024B83F4 sets the subtitle and kirari models' x scale to it (tww L_attr 1.0) |
+| 0x20 | `field_0x1C` | `mSubtitleScaleY` | set_mtx 024B83F4 sets the subtitle and kirari models' y scale to it (tww L_attr 1.0) |
+| 0x24 | `field_0x20` | `mKirariIntervalRnd` | daTitle_proc_ct 024B89D8 sets mKirariTimer to rnd(it) + mKirariIntervalBase + 130; tww calc_2d_alpha reloads mKirariTimer the same way after each kirari (HD has no kirari animation) (tww L_attr 120) |
+| 0x28 | `field_0x24` | `mKirariIntervalBase` | daTitle_proc_ct 024B89D8: base of mKirariTimer (rnd(mKirariIntervalRnd) + it + 130); tww calc_2d_alpha the same (tww L_attr 10) |
+| 0x2C | `field_0x28` | `mWindIntervalRnd` | calc_2d_alpha 024B7CFC and daTitle_proc_ct 024B89D8 set mWindTimer to rnd(it) + mWindIntervalBase (the layout's wind interval wins when set) (tww L_attr 120) |
+| 0x30 | `field_0x2C` | `mWindIntervalBase` | calc_2d_alpha 024B7CFC and daTitle_proc_ct 024B89D8: base of mWindTimer (rnd(mWindIntervalRnd) + it) (tww L_attr 10) |
+| 0x34 | `field_0x30` | `mSmokeOffsetX` | calc_2d_alpha 024B7CFC adds it to the x of the TITLESMOKE00 emitter (the layout smoke position +- mShipOffsetX) (tww L_attr 85 / 78 JPN) |
+| 0x38 | `field_0x34` | `mSmokeOffsetY` | calc_2d_alpha 024B7CFC adds it to the y of the TITLESMOKE00 emitter (tww L_attr 5 / 8 JPN) |
+| 0x048 | `m00C` | `mKiraPos` | calc_2d_alpha 024B7CFC sets it to the layout kira position at the kira start frame, starts the TITLEKIRAKIRA00 emitter mpEmitter2 there and moves it right by 320 / (end - start) per frame until the kira end (tww the same) |
+| 0x054 | `m018` | `mFrameCount` | calc_2d_alpha 024B7CFC adds 1 per frame; the intro ends at 200 (ENTER_WAIT), the layout intro starts at 30, the kira effect runs between the layout's kira start and end frames; daTitle_proc_ct 024B89D8 clears it (tww the same) |
+| 0x058 | `m01C` | `mStartDelay` | daTitle_proc_ct 024B89D8 sets 120; proc_execute 024B8670 counts it down (JA_SE_TITLE_WIND at 0) and runs calc_2d_alpha only once it is 0; a button press in the intro clears it (tww the same) |
+| 0x05C | `m020` | `mWindTimer` | calc_2d_alpha 024B7CFC counts it down and at 0 starts a TITLEWIND00 particle and reloads it (rnd(mWindIntervalRnd) + mWindIntervalBase or the layout's interval); daTitle_proc_ct 024B89D8 sets the first value (tww the same) |
+| 0x060 | `m024` | `mKirariTimer` | daTitle_proc_ct 024B89D8 sets rnd(mKirariIntervalRnd) + mKirariIntervalBase + 130; tww calc_2d_alpha counts it down and at 0 plays the 20-frame kirari animation (mKirariFrame), then reloads it (HD has no kirari animation, nothing else uses it) |
+| 0x068 | `m02C` | `mKirariFrame` | daTitle_proc_ct 024B89D8 clears it; tww calc_2d_alpha steps it 1..20 as the mBtkKirari frame while mKirariTimer is 0, then clears it (HD has no kirari animation) |
+| 0x274 | `m094` | `mShipOffsetX` | calc_2d_alpha 024B7CFC sets it to mShipMoveFrame^2 * mShipMoveRate (negated once the ship leaves); set_mtx 024B83F4 adds it to the ship x, calc_2d_alpha moves the smoke emitter with it; daTitle_proc_ct 024B89D8 starts at 2500 * mShipMoveRate (tww the same, sign flipped) |
+| 0x278 | `m098` | `mShipMoveFrame` | daTitle_proc_ct 024B89D8 sets -50; calc_2d_alpha 024B7CFC counts it up to 0 in the intro (the ship sails in), proc_execute 024B8670 sets 0 on a button press and counts it up while leaving; it drives mShipOffsetX and the ship bpk frame (100 +- 2 * it) (tww the same) |
+| 0x280 | `m0A0` | `mScreenPanes` | tww proc_init3D: the J2DPane pointers m_Screen->search('zeld' / 'zelj' / 'pres' / 'nint' / 'eft1' / 'eft2'), passed to fopMsgM_setPaneData for pane[i] (HD: the 2D logo is a separate layout; no use) |
+| 0x3B8 | `m29C` | `mSceneChangeReq` | daTitle_Execute 024B87A4 requests the scene change (to the name scene in ENTER mode 3, else back to the title scene) only while it is 0 and then sets it; daTitle_Create 024B8F44 clears it (tww the same) |
+
+Open: `m028` (calc_2d_alpha counts it 0..100, nothing reads it in WWHD or tww), `m090` (constructor only), `m034`
+(padding).
+
+## daTag_MdCb_c (Medli / Makar event tag; d_a_tag_md_cb.h)
+
+Old names are the GameCube offsets (zeldaret/tww d_a_tag_md_cb.h `mXXX`, same code). The member lists were split one
+per line first (layout-neutral).
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3AC | `m290` | `mActionFn` | setAction 024AEFA0 stores the action (member-function pointer with delta / index) and calls it; action 024AF0E0 calls it each frame unless its index is 0 (tww the same) |
+| 0x3B4 | `m29C` | `mParamMsgNo` | init 024AF468 sets it to the low 16 parameter bits; initialMsgSetEvent 024AF844 takes it as the message number when the event gives none (tww the same) |
+| 0x3B8 | `m2A0` | `mSwitchStart` | init 024AF468 sets it to parameter bits 16..23; checkCondition 024AEA28 tests the switches mSwitchStart .. + mSwitchCount - 1 (tww the same) |
+| 0x3BC | `m2A4` | `mSwitchCount` | init 024AF468 sets it to parameter bits 24..31; checkCondition 024AEA28 loops over that many switches from mSwitchStart (tww the same) |
+| 0x3C0 | `m2A8` | `mMsgNo` | initialMsgSetEvent 024AF844 sets the message number (event substance or mParamMsgNo) and picks the sound by it; talk_init 024AF974 / talk 024AFB68 set it as the message, next_msgStatus 024AF9E4 steps it (tww the same) |
+| 0x3C8 | `m2B0` | `mSwitchNo` | init 024AF468 sets it to the low byte of current.angle.x; checkCondition 024AEA28 tests (and clears) that switch per tag kind (tww the same) |
+| 0x3CA | `m2B2` | `mTimer` | checkTimer 024AE9FC counts it down (cLib_calcTimer) and is true at 0; init 024AF468 sets 0 / 60 / l_HIO m0A by kind, next_msgStatus 024AF9E4 l_HIO m08 (tww the same) |
+| 0x3CC | `m2B4` | `mOrderEventIdx` | messageAction 024AFD80 sets the index (0 .. 6) of the event to order by the partner (Medli / Makar) and its carry state; eventOrder 024AF2CC orders mEventIdxTbl[it] while it is not -1; eventProc 024AE748 / init 024AF468 set -1 (tww the same) |
+| 0x3CD | `m2B5` | `mEventIdx` | eventOrder 024AF2CC copies mOrderEventIdx into it when it orders; eventProc 024AE748 ends the event mEventIdxTbl[it], talk 024AFB68 picks the partner animation by it, eventEnd 024AE6FC sets -1 (tww the same) |
+| 0x3CE | `m2B6` | `mActionPhase` | setAction 024AEFA0 sets -1 for the old action's last call and 0 for the new one; warpAction 024AFD10 / messageAction 024AFD80 turn 0 into 1 on their first call and run only after that (tww the same) |
+| 0x3D1 | `m2B9` | `mAreaIn` | checkAreaIn 024AE968 sets 1 while the partner is inside the tag's cylinder; execute 024AF360 copies it to m2B8 and clears it each frame (tww the same) |
+| 0x3D2 | `m2BA` | `mSwitchSeen` | checkCondition 024AEA28 sets 1 once a switch of the mSwitchStart range is on; then entering the area starts mTimer (checkTimer); init 024AF468 clears it (tww the same) |
+| 0x3D4 | `m2BC` | `mEventIdxTbl` | init 024AF468 and execute 024AF360 fill [i] with getEventIdx(event_name_tbl[i]) for the 7 events; eventOrder 024AF2CC orders [mOrderEventIdx], eventProc 024AE748 checks [mEventIdx] for the end (tww the same) |
+
+Open: `m2AC` (eventProc sets bit 0, eventEnd clears it, nothing reads it), `m2B7` (init clears it only), `m2B8`
+(execute copies mAreaIn into it, never read), `m2CA` / `m2CC` / `m2CE` / `m2D0` / `m2D8` (setAction clears them only;
+tww the same), `m2BB` / `m2D2` (padding).
+
+### HioPrm (l_HIO.mPrm; d_a_tag_md_cb.h)
+
+Round 3: the tag's HIO values (tww daTag_MdCb_HIO_c::hio_prm_c). daTag_MdCb_HIO_ctor 024AFF08 fills them by a word copy from init_data (default in parentheses); no field is written elsewhere in WWHD or tww. The reads are in our d_a_tag_md_cb.cpp and match zeldaret/tww d217e2b.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x00 | `m00` | `mAreaHeight` | daTag_MdCb_c::execute 024AF360: scale.y for kinds 0 / 1, the height of the tag area (the area check counts Link below scale.y) (tww execute the same) (200) |
+| 0x04 | `m04` | `mAreaRadius` | daTag_MdCb_c::execute 024AF360: scale.x for kinds 0 / 1, the radius of the tag area (tww execute the same) (200) |
+| 0x08 | `m08` | `mNextMsgTime` | daTag_MdCb_c::next_msgStatus 024AF9E4: mTimer after messages 0x19F0 / 0x19F1 / 0x19F2 / 0x19F4 (tww the same) (900) |
+| 0x0A | `m0A` | `mInitTime` | daTag_MdCb_c::init 024AF468: mTimer at the start for every kind but 3 (tww the same) (150) |
+
+Open (no name yet): `m0C`..`m12` (filled from init_data only, read nowhere in WWHD or tww); `padding`.
+
+## daMachine_c (d_a_machine.h)
+
+Old names are the GameCube offsets (zeldaret/tww d_a_machine.h `field_0x...`, same code in tww d_a_machine.cpp).
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x520 | `field_0x404` | `mBodySph` | CreateInit 021B7600 sets the three spheres up (l_sph_src_col); set_body 021B7F84 places them along the body (l_body0 / 1 / 2 in front of current.pos, turned by current.angle) and registers them; [0] also gets At and l_cullRadius (tww the same) |
+| 0x9D0 | `field_0x84b` | `mAcch` | CreateInit 021B7600 sets it up (Set with current.pos / old.pos / mAcchCir / speed); constructed in _create 021B7844, destroyed in the destructor 021B8268 (tww the same) |
+| 0xB94 | `field_0xa78` | `mAcchCir` | CreateInit 021B7600 sets its wall radius (l_wallRadius) and passes it to mAcch (tww the same) |
+| 0xBD4 | `field_0xab8` | `mSearchCps` | set_cube 021B7D8C sets the capsule from l_searchNear to l_cullFront in front of the machine (radius l_searchRadius); attack 021B7E48 starts the attack when mPlayerSph crosses it (tww the same) |
+| 0xD0C | `field_0xbf0` | `mPlayerSph` | attack 021B7E48 sets it at the player (+ l_playerHeight, radius l_playerRadius) and tests it against mSearchCps (tww the same) |
+| 0xD20 | `field_0xc04` | `mBck` | CreateHeap 021B7364 sets up the machine's bck; attack 021B7E48 restarts and plays it (state 1 / 2); set_at 021B8080 sets the attack sphere only between two of its frames; _draw 021B7A70 enters it (tww the same) |
+| 0xDAC | `field_0xc14` | `mPathId` | CreateInit 021B7600 sets the low parameter byte (255 = no path, also when the room has no such path); path_move 021B7D14 and set_next_pnt 021B7C24 do nothing at 255 (tww the same) |
+| 0xDAD | `field_0xc15` | `mPathPntNo` | set_next_pnt 021B7C24 steps it by mPathDir and turns at the path ends; the next target mNextPos is that point; CreateInit 021B7600 sets 1 (tww the same) |
+| 0xDAE | `field_0xc16` | `mPathDir` | set_next_pnt 021B7C24: +1 / -1, reversed at the path ends; CreateInit 021B7600 sets 1 (tww the same) |
+| 0xDB0 | `field_0xc18` | `mpPath` | CreateInit 021B7600 stores the room path mPathId; set_next_pnt 021B7C24 reads the point count and points from it (tww the same) |
+| 0xDB4 | `field_0xc1c` | `mNextPos` | CreateInit 021B7600 / set_next_pnt 021B7C24 set it to path point mPathPntNo; path_move 021B7D14 moves current.pos toward it at speedF (tww the same) |
+| 0xDD4 | `field_0xc3c` | `mJoint3Mtx` | nodeCallBack 021B7494 copies the animated "joint3" matrix into it; set_at 021B8080 puts the attack sphere mSph at its translation (tww the same) |
+| 0xE04 | `field_0xc6c` | `mAtPos` | set_at 021B8080 copies the translation of mJoint3Mtx into it and centres the attack sphere mSph on it (tww the same) |
+| 0xE10 | `field_0xc78` | `mAttackState` | attack 021B7E48: 0 waits for the player in mSearchCps, 1 starts the attack animation (JAMA_MECHA_OUT), 2 plays it and returns to 0 at its end (tww the same) |
+
+Open: `field_0x788` (a sphere only set up, constructed and destroyed), `field_0xc28` (set_next_pnt copies mNextPos into
+it, nothing reads it in WWHD or tww), `field_0xc34` / `field_0xC79` (padding).
+
+## daStandItem_c (shop stand item; d_a_dai_item.h)
+
+Old names are the GameCube offsets (zeldaret/tww d_a_dai_item.h `mXXX`, same code). The lists holding offset-named fields
+were split one per line first (layout-neutral).
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x7AC | `m690` | `mpWaitEmitter` | actionFobj09 02118390 (Fountain Idol): before the animation has played (mbBckDidPlay 0) and while the player is within 500 it keeps particle 0x82B3 on the tuboko_head joint matrix (m660), else invalidates it; _delete 021177AC invalidates it (tww the same) |
+| 0x7B0 | `m694` | `mpHeadEmitter` | actionFobj09 02118390 (Fountain Idol): once the animation has played it starts particle 0x82B4 and keeps it on the tuboko_head joint matrix (m660); _delete 021177AC invalidates it (tww the same) |
+| 0x7B4 | `m698` | `mpBaseEmitter` | actionFobj09 02118390 (Fountain Idol): once the animation has played it starts particle 0x82B5 (immortal) and keeps it on the tuboko_base joint matrix (m630); _delete 021177AC invalidates it (tww the same) |
+| 0x7BE | `m6A2` | `mClothAngleY` | CreateInit 02117168 sets it to the wind angle (atan2 of mClothWind); set_mtx 02116EA8 eases it toward the angle of mClothWind and turns the cloth matrix by it - current.angle.y (tww the same) |
+| 0x7C0 | `m6A4` | `mClothWind` | CreateInit 02117168 copies the wind vector; set_mtx 02116EA8 takes a stronger wind at once and eases toward a weaker one (cLib_addCalcPos2); its angle is mClothAngleY's target (tww the same) |
+| 0x7CD | `m6B1` | `mbBckDidPlayOld` | actionFobj09 02118390 copies mbBckDidPlay into it at the end; on the frame the animation has played and it is still 0 the head / base emitters are started (tww the same) |
+| 0x7CE | `m6B2` | `mSpinSpeed` | actionFobj06 02117F20 (pinwheel) sets it to 1536 * mSpinPower and adds it to the spin angle m6B4 (tww the same) |
+| 0x7E0 | `m6C4` | `mSpinPower` | actionFobj06 02117F20 (pinwheel) adds the horizontal wind strength (at most 4), eases it to 0 by the wind power and sets mSpinSpeed from it (tww the same) |
+
+Named in round 3 with the view ComStatic::StandItem (d_com_static.h): `m630` / `m660` / `m6B4` ->
+daiItemNodeCallBack 02526580 copies the tuboko_base / tuboko_head joint matrices into `m630` / `m660` (the Fountain Idol
+emitters' matrices) and turns the pinwheel's top joint by `m6B4` (actionFobj06 adds mSpinSpeed to it); so
+`mBaseJointMtx` / `mHeadJointMtx` / `mSpinAngle` in both. Open: `m6BC` (CreateInit stores the wind power, nothing reads
+it in WWHD or tww), padding.
+
+## daObjTpost_c, daObjTpost_HIO_c and the letter data (mailbox; d_a_obj_toripost.h)
+
+Old names are the GameCube offsets (zeldaret/tww d_a_obj_toripost.h `field_0x...`, same code). The member lists were split one per line first. HIO and letter-data offsets are within their struct.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x9F4 | `field_0x8DC` | `mXYEndTimer` | modeTalkXYInit 023A4E34 loads l_HIO mXYEndWaitTime; modeTalkXY 023A4E8C ends the item-show talk (back to MODE_WAIT) only once it has counted down and the animation has stopped (tww the same) |
+| 0x9F8 | `field_0x8E0` | `mPresentTimer` | modeTalkXYInit 023A4E34 loads l_HIO mPresentWaitTime; modeTalkXY 023A4E8C cancels the present and plays animation 2 once the present has ended and it has counted down (tww the same) |
+| 0x9FC | `field_0x8E4` | `mPutOutDemoTimer` | modeTalkXY 023A4E8C sets 10 when the put-out animation starts (mPutOutStart) and at 0 puts the player into demo mode 24, then -1 (tww the same) |
+| 0xA01 | `field_0x8E9` | `mReceiveReq` | next_msgStatus 023A55BC sets 1 when the letter is to be received (no postage due, or paid); modeTalk 023A4D9C then goes to MODE_RECEIVE instead of MODE_WAIT and clears it (tww the same) |
+| 0xA02 | `field_0x8EA` | `mPutOutStart` | getMsgXY 023A52B8 and next_msgStatus 023A55BC set it with the POST_PUTOUT animation; modeTalkXY 023A4E8C clears it and starts mPutOutDemoTimer (tww the same) |
+| 0xA03 | `field_0x8EB` | `mNextLetterMsg` | modeReceiveDemo 023A50CC sets it when more readable letters wait; getMsgNormal 023A5500 then opens with message 0xCF7 for the next letter (count mLetterOrdinal) and clears it (tww the same) |
+| 0xA08 | `field_0x8F0` | `mLetterOrdinal` | the ordinal of the letter being handed out (its low half is mLetterOrdinalLow, the message count number): createInit 023A418C / modeWaitInit 023A4C68 set 1, modeReceiveDemo 023A50CC and next_msgStatus 023A55BC add 1 per letter (tww dComIfGp_setMessageCountNumber(it)) |
+| 0xA0C | `field_0x8F4` | `mTalkReq` | checkOrder 023A4548 sets it when the normal talk event starts; modeWait 023A4CD8 goes to MODE_TALK while it is set; modeTalk 023A4D9C clears it at the end (tww the same) |
+| 0xA0D | `field_0x8F5` | `mTalkXYReq` | checkOrder 023A4548 sets it when the item-show (XY) talk event starts; modeWait 023A4CD8 goes to MODE_TALK_XY; modeTalkXY 023A4E8C clears it at the end (tww the same) |
+| 0x7 | `field_0x07` | `mForcePay` | next_msgStatus 023A55BC asks for postage (message 0xCF3) for every letter while it is set, else only for a letter with mPayOnReceive; createHIO 023A5AB4 sets 0 (tww the same) |
+| 0x14 | `field_0x14` | `mXYEndWaitTime` | modeTalkXYInit 023A4E34 loads it into mXYEndTimer; createHIO 023A5AB4 sets 30 (tww the same) |
+| 0x16 | `field_0x16` | `mPresentWaitTime` | modeTalkXYInit 023A4E34 loads it into mPresentTimer; createHIO 023A5AB4 sets 30 (tww the same) |
+| 0x0 | `field_0x00` | `mPayOnReceive` | next_msgStatus 023A55BC: a letter with it set asks for postage on delivery (message 0xCF3 -> 0xCF4 / 0xCF8, 10 or 201 rupees) before it is received (tww m_letter[i].field_0x00 the same) |
+
+
+Open: HIO `field_0x06` (createHIO only; no read in WWHD or tww).
+
+## daAleaf_c (acorn leaf; d_a_acorn_leaf.h)
+
+Old names are tww's `unk_XXX` (zeldaret/tww d_a_acorn_leaf.h, same code).
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3AC | `unk_290` | `mPhs` | _create 02047948 loads the m_arcname resource into it (dComIfG_resLoad); daAleaf_Delete 02047AD4 releases it (tww the same) |
+| 0x3B4 | `unk_298` | `mpModel` | CreateHeap 020475B4 creates the leaf model; set_mtx 020476D0 sets its scale / matrix, _draw 02047B04 draws it (tww the same) |
+| 0x3B8 | `unk_29C` | `mStts` | CreateInit 02047878 inits it (255, 255) and gives it to mCyl; constructed in the constructor, destroyed in daAleaf_dtor 02047FBC (tww the same) |
+| 0x3F4 | `unk_2D8` | `mCyl` | CreateInit 02047878 sets it from l_cyl_src with mStts; constructed / destroyed with the actor (tww the same) |
+| 0x524 | `unk_408` | `mBck` | CreateHeap 020475B4 sets up the leaf's bck (EMode_RESET); _execute 02047C00 restarts and plays it while mBckPlay, _draw 02047B04 enters it (tww the same) |
+| 0x5B0 | `unk_418` | `mBckPlay` | _execute 02047C00 sets it (and the bck rate 1) when the leaf is disturbed (acorn appears / falls off, the player steps close, a dropped object lands near) and clears it when the bck play ends (tww the same) |
+| 0x5B1 | `unk_419` | `mAcornStuckOld` | _execute 02047C00 stores whether the acorn (Tsubo child mAcornId) still sticks (prm_get_stick); when it was stuck last frame and is not now, the leaf sways (tww the same) |
+| 0x5B4 | `unk_41C` | `mAcornWaitCount` | _execute 02047C00 counts it up while the acorn exists and at 69 plays the sway once (then 70); create_acorn_sub 020477B0 clears it (tww the same) |
+| 0x5B8 | `unk_420` | `mRespawnTimer` | create_acorn 02047B8C creates a new acorn only while it is 0 and the old one is gone, then sets 60 and counts it down (tww the same) |
+| 0x5BC | `unk_424` | `mAcornId` | create_acorn_sub 020477B0 stores the process id of the acorn (a Tsubo child); create_acorn 02047B8C / _execute 02047C00 search it; CreateInit 02047878 sets the error id (tww the same) |
+| 0x5C0 | `unk_428` | `mGrabIdOld` | _execute 02047C00 stores the player's grab actor id each frame; when the player has just let go (no grab now) an object dropped within 70 sways the leaf; CreateInit 02047878 sets the error id (tww the same) |
+| 0x5C4 | `unk_42C` | `mPlayerDistOld` | _execute 02047C00 stores the XZ distance to the player; a step closer by more than 3 within 50 (and at the same height) sways the leaf (tww the same) |
+
+
+Open: `unk_41B` (create_acorn_sub clears it only; no read in WWHD or tww), `unk_41A` (padding).
+
+## daSTBox_c and daSTBox_shadowEcallBack_c (salvage treasure box; d_a_salvage_tbox.h)
+
+Old names are the GameCube offsets (zeldaret/tww d_a_salvage_tbox.h, same code). The lists holding offset-named fields were split one per line first.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3B8 | `field_0x29C` | `mpDropEmitter` | CreateInit 02467F24 starts the water-drop emitters (STBOX_WATER_DROP; [2] only for box types 1 / 2), setupEmitter places them, _execute 02468550 updates them and clearEmitters invalidates and clears them (HD emitter pointers; tww the same three) |
+| 0x440 | `field_0x324` | `mShadowPos` | CreateInit 02467F24 sets it to the ship's crane top at the water height (or the crane point) and starts the STBOX_SALVAGE_SHADOW particle there, copying it to mShadowCallback.mPos (tww the same) |
+| 0x44C | `field_0x330` | `mItemNo` | CreateInit 02467F24 sets the low parameter byte (1 .. 4 become 5); actWait 0246933C creates that item from the box (stboxCreateItem) for box types 1 / 2 (tww the same) |
+| 0x44D | `field_0x331` | `mBoxType` | _create 024682CC sets parameter bits 8..11; CreateHeap 02467D9C picks the model by it, actWait 0246933C / actWait02 02469554 the crane offset (crane_offset[it]), types 1 / 2 carry an item, _delete 024683D8 tests 2 (tww the same) |
+| 0x450 | `field_0x334` | `mSplashDone` | actDrop 024695C4 plays the splash sound and water pillar once when the box falls below the water and sets it; CreateInit 02467F24 clears it (tww the same) |
+| 0x451 | `field_0x335` | `mRippleSet` | actWait 0246933C starts the STBOX_RIPPLE particle once the box rises to the water surface and sets it (tww the same) |
+| 0x452 | `field_0x336` | `mBgmStarted` | actWait 0246933C starts the salvage sub BGM once a type 1 / 2 box rises above the water and sets it; CreateInit 02467F24 clears it (tww the same) |
+| 0x14 | `field_0x14` | `mPrevRibbonPos` | daSTBox_shadowEcallBack_c::draw 02468C20 keeps the first three particle positions of the shadow ribbon in it (each step writes them as the previous vertex position and stores the new ones); _create 024682CC constructs the array (tww draw the same) |
+
+
+Open: `field_0x332` (initWait02 sets 20, nothing reads it in WWHD or tww), the shadow callback's `field_0x4` (only cleared in setup; execute stops the emitter while it is set, never set in WWHD or tww) and `field_0x50` (never written; execute turns the shadow by 0x8000 while it is negative).
+
+## daArrow_Iceeff_c (ice arrow effect; d_a_arrow_iceeff.h)
+
+Old names are the GameCube offsets (zeldaret/tww d_a_arrow_iceeff.h, same code).
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3B4 | `field_0x298` | `mpIceModel` | CreateHeap 02055B84 creates the 30 ice chunk models (only for the arrow version, mWaterType 0); set_mtx 02055D38 places them, _draw lights and draws the first min(mFrameCount, 30) (tww the same) |
+| 0x430 | `field_0x314` | `mIceMtx` | CreateInit 02055F04 builds each ice chunk's random rotation and offset matrix (in the arrow's frame); set_mtx 02055D38 concatenates it to place chunk i (tww the same) |
+| 0x9D0 | `field_0x8B4` | `mIceScale` | CreateInit 02055F04 sets chunk i's random scale (6.3 .. 10.8); set_mtx 02055D38 gives it to the chunk model (tww the same) |
+| 0xB38 | `field_0xA1C` | `mpIceBtk` | CreateInit 02055F04 points it at Link's ice particle btk (mWaterType 0) or ice-water particle btk (1); _draw sets its frame to mBtkFrame, advance_frame stops at its last frame (tww the same) |
+| 0xBC8 | `field_0xA30` | `mFrameCount` | _execute 020564D0 counts it up: the arrow version draws min(it, 30) chunks, advances the btk from 30 and breaks at 60; the water version starts the hit effect at 0, the ripples at 0x23 / 0x28 and ends at 300; CreateInit 02055F04 clears it (tww the same) |
+| 0xBCC | `field_0xA34` | `mBtkFrame` | advance_frame (in _execute 020564D0) adds 1 up to the btk's last frame; _draw sets mpIceBtk's frame to it; CreateInit 02055F04 clears it (tww the same) |
+| 0xBD0 | `field_0xA38` | `mWaterType` | _create sets 1 when the arrow's parameter is 4 (the ice arrow hit the water surface), else 0; CreateHeap / CreateInit / set_mtx / _draw / _execute 020564D0 switch between the 30 ice chunks (0) and the single water model (1) (tww the same) |
+| 0xBD4 | `field_0xA3C` | `mVisible` | CreateInit 02055F04 sets 1; _draw draws the models only while it is set; _execute 020564D0 clears it at frame 0x28 of the water version (the break) (tww the same) |
+
+
+Open: `field_0x290` / `field_0x294` (no use in WWHD or tww); the view ArrowIceParentHD takes daArrow_c's name `mImpactPos` (round 3).
+
+## daDoor10_c (d_a_door10.h)
+
+Old names are the GameCube offsets (zeldaret/tww d_a_door10.h, same members and inline accessors).
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3EC | `m2D0` | `mSmoke` | demoProc 021268C8 runs the door smoke (smokeInit / smokeProc / smokeEnd), daDoor10_Delete 02127900 ends it, daDoor10_Create 02127C80 constructs it (tww dDoor_smoke_c m2D0 the same) |
+| 0x4EC | `m354` | `mAction` | setAction() stores it (tww accessor name setAction); daDoor10_Execute 021277D0 runs l_action[it] |
+| 0x4EE | `m356` | `mFlag` | checkFlag() / onFlag() / offFlag() test, set and clear its bits (tww accessor names) |
+| 0x4F0 | `m358` | `mOpenHeight` | openInit 021262D8 / CreateInit 02127998 clear it, openProc 0212662C chases it to 300 and closeProc 021267A8 to 0 at speedF, openEnd 0212673C sets 300; calcMtx 02125FA4 raises the door by it, the hkyo bars follow it (tww the same) |
+| 0x4FC | `m364` | `mDoorBsBdlIdx` | create 02127B20 sets 4 / 5 for door arguments 13 / 14 (else 0) and then loads the DoorBs archive; CreateHeap 02126074 takes model DoorBs[it] and collision DoorBs[8 or 9] instead of the stage's own door; daDoor10_Delete 02127900 releases DoorBs while it is set (tww the same) |
+
+
+## daObjBuoyrace::Act_c (race buoy; d_a_obj_buoyrace.h)
+
+Old names are the GameCube offsets (zeldaret/tww, same code). The sway spring takes daObjMovebox::Act_c's names for the same spring.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3B0 | `m294` | `mWaterNrm` | set_water_pos 0232EF34 stores the normalised cross product of the water surface around the buoy; afl_calc_sway 0232F554 pulls the tilt toward its x / z (* 0.35, at most 0.3) (tww the same) |
+| 0x3BC | `m2A0` | `mBobPhase` | afl_calc 0232F650 adds 1000 .. 2000 at random each frame; the buoy height follows mMeanSeaHeight + 2 * (0.5 * sin(it) - 120) + mBobOffsetY; _create 0232F3D8 uses it for the start height (tww the same) |
+| 0x3C8 | `m2AC` | `mSwayX` | afl_calc_sway 0232F554 adds mSwaySpeedX each frame; set_mtx 0232F170 tilts the buoy by the up vector (mSwayX, 1, mSwayZ) (tww the same; as daObjMovebox::Act_c mSwayX) |
+| 0x3CC | `m2B0` | `mSwayZ` | afl_calc_sway 0232F554 adds mSwaySpeedZ each frame; set_mtx 0232F170 uses it as the up vector's z (tww the same) |
+| 0x3D0 | `m2B4` | `mSwaySpeedX` | afl_calc_sway 0232F554: spring speed of mSwayX (pull 0.02 toward the water normal's x, damping 0.04) (tww the same) |
+| 0x3D4 | `m2B8` | `mSwaySpeedZ` | afl_calc_sway 0232F554: spring speed of mSwayZ (pull 0.02 toward the water normal's z, damping 0.04) (tww the same) |
+| 0x3D8 | `m2BC` | `mBobOffsetY` | afl_calc 0232F650 adds mBobSpeedY (at most 30) and adds it to the buoy's target height (tww the same) |
+| 0x3DC | `m2C0` | `mBobSpeedY` | afl_calc 0232F650: spring speed of mBobOffsetY (pull -0.01 * it, * 0.94 damping) (tww the same) |
+
+
+Open: `m2A2[10]` (padding).
+
+## daTag_Mk_c (d_a_tag_mk.h)
+
+Old names are the GameCube offsets (zeldaret/tww d_a_tag_mk.h, same members).
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3AC | `m290` | `mMsgNo` | talk 024B08E8 sets it from getMsg, shows it (setMessage) and steps it with next_msgStatus (tww the same) |
+| 0x3B0 | `m294` | `mTalkState` | talkInit 024B065C sets 0; talk 024B08E8 turns it into 1 (message chosen), 2 (message shown) and -1 (talk over) (tww the same) |
+| 0x3B2 | `m296` | `mDaichiStep` | actionDaichi 024B0BD4: its step (0 / 10 wait for tmp bit 0x440, 1 the first switch, 2 / 11 the cut timer and sub BGM, 3 / 12 the second switch); daTag_Mk_Create 024B0F4C sets 0, 10 or 20 by the switches already set (tww the same) |
+| 0x3B8 | `m29C` | `mFacingDir` | daTag_Mk_Create 024B0F4C sets (sin, 0, cos) of current.angle.y for the villa tag; checkArea 024B0668 projects the player offset on it for the area depth / width test (tww the same) |
+| 0x3D0 | `m2B4` | `mItemId` | demoInitMake 024B01C4 stores the created item's process id; demoInitSetgoal 024B031C and demoInitDelete 024B02D0 search the item by it (tww the same) |
+| 0x3D4 | `m2B8` | `mStaffName` | daTag_Mk_Create 024B0F4C points it at the guest string "TagMk"; actionReady 024B0538 passes it to the event manager's getMyStaffId (tww the same) |
+
+
+## daObjMshokki_c (dish; d_a_obj_mshokki.h)
+
+Old names are the GameCube offsets (zeldaret/tww d_a_obj_mshokki.h, same members). `be<u32> m614, m618;` was split first.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x728 | `m60C` | `mType` | _create 0237D260 sets the dish type from the parameter (0 when out of range); create_heap 0237CE88 picks the bdl, _create the cylinder radius / height, break_proc 0237D6DC the particle, set_se 0237D574 the sound and _execute 0237D89C the attention height by it (tww the same) |
+| 0x72E | `m612` | `mGroundTouched` | _execute 0237D89C sets 1 once the dish rests on the ground (ground hit without a landing); a later landing (after being knocked up) then breaks it (break_proc) (tww the same) |
+| 0x730 | `m614` | `mFrameCount` | _execute 0237D89C adds 1 per frame; co_hitCallback 0237CF48 compares it with mLaunchFrame (tww the same) |
+| 0x734 | `m618` | `mLaunchFrame` | co_hitCallback 0237CF48 stores mFrameCount when the rolling player knocks the dish up, and knocks it up again only more than 2 frames later (tww the same) |
+| 0x738 | `m61C` | `mPushAngleY` | co_hitCallback 0237CF48 sets the pusher's facing + 0x2000 when it pushes the dish over; set_se 0237D574 plays the rattle only while shape_angle.y is within 4096 of it (tww the same) |
+
+
+Open: `m610` (padding).
+
+
+## MshData (l_data, the dish table; d_a_obj_mshokki.h)
+
+Round 10. One entry per dish type (l_data.values[mType]); radius / height were named earlier. tww's l_data entries (d_a_obj_mshokki.cpp) keep m00 / m0C and read them the same way.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x00 | `m00` | `mAttentionOffsetY` | _execute 0237D89C: attention_info.position.y = current.pos.y + it (tww the same) |
+| 0x0C | `m0C` | `mMaxTilt` | co_hitCallback 0237CF48: the push tilt shape_angle.x is strength * it; set_se 0237D574 scales the sound by the tilt / it (tww the same) |
+
+## daItem_c and daItemBase_c_m_data (field item; d_a_item.h)
+
+Old names are the GameCube offsets (zeldaret/tww d_a_item.h / d_a_itembase.h, same code). m_data offsets are within the struct.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x764 | `field_0x650` | `mLastSpeedY` | the last non-zero speed.y: CreateInit 021800F0 and the item actions (itemActionForRupee 02180DE4, ForKey 02181338, ForEmono 021814C0, ForArrow 021815E8, ForThrownItem 02182460) store speed.y while airborne and bounce with it * mGroundReflect on landing; set_bound_se 0218086C picks the bound sound by its size (tww the same) |
+| 0x77A | `field_0x660` | `mSwordRockAngle` | itemActionForSword 0218188C: the lying sword's rocking angle, 0x2000 at the first ground touch, * -0.8 at each further touch; current.angle.x is eased to it + 0x4000 until it is 0 (tww the same) |
+| 0x780 | `field_0x666` | `mSwordRockCount` | itemActionForSword 0218188C counts the ground touches of the rocking sword (1 starts the rock at 0x2000) and clears it when the rock ends (tww the same) |
+| 0x2C | `field_0x2C` | `mAct4SpeedY` | initAction 0217F93C: daItemAct_4_e launches the item with speed.y = it + rnd(5) (tww daItemBase_c_m_data the same) |
+| 0x30 | `field_0x30` | `mAct4SpeedF` | initAction 0217F93C: daItemAct_4_e gives the item a random speedF up to it (tww the same) |
+| 0x44 | `field_0x44` | `mAct8SpeedY` | initAction 0217F93C: daItemAct_8_e launches the item with speed.y = it + rnd(+-5) and speedF mVelocityScale (tww the same) |
+
+
+Open: daItemBase_c_m_data `field_0x34` (no use in WWHD or tww).
+
+## daRaceItem_c (d_a_race_item.h)
+
+Old names are the GameCube offsets (zeldaret/tww d_a_race_item.cpp, same code).
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x750 | `field_0x63C` | `mGetTimer` | execute 02459230 sets 13 when the get starts (the item hops above Link's head) and counts it down in RaceItem_Get; the item is deleted below 0 (tww the same) |
+| 0x754 | `field_0x640` | `mState` | the race item state (RaceItem_Wait / GetStart / Get / DropStart / Drop): execute 02459230 switches on it; CreateInit 024597B8, normalItemGet 02459EA0, raceItemForceGet 02459F6C, startOffsetPos 02459F90 and endOffsetPos 02459FA0 set it (tww the same) |
+| 0x758 | `field_0x644` | `mType` | CreateInit 024597B8 sets parameter bits 15..18; checkGet 0245910C and execute 02459230 take a touch or a boomerang hit only for RaceItem_Normal; raceItemForceGet 02459F6C reads it (tww the same) |
+| 0x759 | `field_0x645` | `mFlags` | bit RaceItem_BoomerangCarry: execute 02459230 sets it on a boomerang hit and clears it when the boomerang lets go or the get starts; checkOffsetPos 0245A000 and execute keep the item on its offset only while it is clear (tww cLib_offBit(field_0x645, 1)) |
+
+
+## Small tags and objects (round 2 batch 1)
+
+The small classes of this round, one or a few fields each:
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x01 | `field_0x05` | `mForceClear` | modeClearWait 024A878C goes to the clear event while it is set, as when a DEFAULT_TREASURE event ends (debug switch); daTag_Gship_HIO_ct 024A8A70 sets 0 (tww the same) |
+| 0x18 | `field_0x018` | `mStrokeLowY` | set_mtx 023660A4 and the spring joint callback 02365DD8 move the spring by (mStrokeHighY - it) * (mScale - 1): the low end of the spring stroke (tww L_attr 40 / 160) |
+| 0x1C | `field_0x01C` | `mStrokeHighY` | set_mtx 023660A4 and the spring joint callback 02365DD8 move the spring by (it - mStrokeLowY) * (mScale - 1): the high end of the spring stroke (tww L_attr 125 / 270) |
+| 0x20 | `field_0x020` | `mBodyTopY` | set_mtx 023660A4 scales the body height between mScalePivotY and it (span = it - mScalePivotY) so that its top follows the stroke (tww L_attr 150 / 300; tww set_mtx the same) |
+| 0x3E0 | `field_0x2C4` | `mSplash` | clear_splash 024C9F44 clears the 30 entries, renew_splash 024C9F6C fills them with the particles of mpEmitters[1] and their y; check_water_h 024C9E8C looks a particle up in it to see whether it was above the water (-230) (tww the same) |
+| 0x3E0 | `m2C8` | `mOpenX` | set_mtx 0239FD7C moves the two shutter halves by -it / +it in x; Execute 023A0060 raises it by 1 per frame while opening up to 100 (the save switch 2 goes on at 80); Create 0239FF5C sets 200 when already open, else 0 (tww the same) |
+| 0x3E4 | `m2CC` | `mMode` | Execute 023A0060 switches on it (MODE_WAIT_e -> START -> OPENING -> OPEN); Create 0239FF5C sets MODE_OPEN_e or MODE_WAIT_e (tww the same) |
+| 0xC | `field_0x0C` | `mOffset` | daShopItem_c::set_mtx 02483508 translates the item model by mData[m_itemNo]'s it after the actor position / angle (tww daShopItem_c::set_mtx the same) |
+| 0x18 | `field_0x18` | `mRotation` | daShopItem_c::set_mtx 02483508 rotates the item model by mData[m_itemNo]'s it (ZXY) after mOffset (tww set_mtx the same) |
+| 0x3BE | `unk_2A2` | `mOpenAngle` | calcMtx 02057F50 turns the jail door by home.angle.y - it; daAtdoor_actionOpen 0205828C raises it by 0x400 per frame up to 0x4000 (open), daAtdoor_actionClose 020581D0 lowers it to 0; CreateInit 0205842C sets 0x4000 when the switch is already on (tww the same) |
+| 0x0 | `field_0x00` | `mBdlResIdx` | CreateHeap 023561E4 loads the platform model Hlift[it] for the size index mSizeIdx (tww CreateHeap the same) |
+| 0x1 | `field_0x01` | `mDzbResIdx` | Mthd_Create 02356090 passes it to MoveBGCreate as the collision (dzb) resource of the size (tww Create the same) |
+| 0x2 | `field_0x02` | `mHeapSize` | Mthd_Create 02356090 passes it to MoveBGCreate as the heap size of the size (tww Create the same) |
+| 0x20 | `field_0x20` | `mLifeTimer` | BarrelSmokeCB::BarrelSmokeCB 0233A258 sets 60; execute 0233A2C4 counts it down, fades the smoke alpha below 50 (* 3.6) and ends the smoke at 0 (tww the same) |
+
+
+Rows: daTag_Gship_HIO_c (HIO offset), daObjJump::Attr_c, daTpota_c, daObjTenmado::Act_c, daShopItem_c_m_data (offsets within mData's entry), daAtdoor_c, daObjHlift::Act_c::size_data (offsets within the entry), daObjEff::BarrelSmokeCB (the same `mLifeTimer` in StoolSmokeCB, SkullSmokeCB, PineconeSmokeCB and WoodBoxSmokeCB, each set to 60 by its constructor and counted down by its execute). daTag_Kk1_HIO_c::hio_prm_c `field_0x10` -> `mDebugDraw` (_draw 024ACC98 sets up the debug colour while it is set). Open: daTag_Gship_c `field_0x294` / `field_0x298` (getArg stores them, nothing reads them), daObjHlift `field_0x2F7` / `field_0x2FA` (padding), daFallRockTag_c `field_0x298` (execute clears it only), daObj_Stair_c `field_0x4C0` (written with a random offset while breaking, nothing reads it), daObjIceisland_c `field_0x394` (padding), kytag01_wave_chan_c `field_0x2f` (cleared only), daNpc_Zk1_c `m72C` (_execute copies current.pos into it once, nothing reads it) and HIO `field_0x8` (constructor -1 only), daTpota_c `field_0x3B4` (padding).
+## daObj_Demo_Barrel_c (d_a_obj_demo_barrel.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+| 0x3EC | `m2D0` | `mSplashPos` | setParticleSibuki 02334098: current.pos with y from dBgS_ObjGndChk_Wtr_Func (the water surface), the position of the HAMON / SUIMEN / MIZUBASHIRA / SHIBUKI splash particles (tww the same) |
+| 0x3F8 | `m2DC` | `mUnbroken` | daObj_Demo_BarrelCreate 02333EB4 sets 1; daObj_Demo_BarrelExecute 02334294 clears it at demo prm id 1 (onCollect, setParticleHahen: the barrel breaks); daObj_Demo_BarrelDraw 02334494 draws only while set (tww the same) |
+| 0x3FA | `m2DE` | `mSplashDone` | daObj_Demo_BarrelCreate 02333EB4 clears it; daObj_Demo_BarrelExecute 02334294 calls setParticleSibuki once at demo prm id 2 and sets it (tww the same) |
+
+Open (offset names kept):
+
+- `m2A0[...]`: the unaccessed block up to 0x3EC (padding).
+
+
+## daObj_Warpt_c (d_a_obj_warpt.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+| 0x3AC | `m290` | `mCurMode` | modeProc 023B9CB0: stores the new mode and calls its init / run from mode_tbl (tww mode_tbl[it].init / .run); _ride 023B9D5C / _draw 023BB074 test it (MODE_EVENT_WARP, the open mode 2); after tww daObj_Canon_c / daObj_Ikada_c mCurMode |
+| 0x3B8 | `m29C` | `mWarpSclsNo` | getArg 023B9F74: parameter bits 12-19 (tww); normalWarp 023BB7AC warps to it once mWarpSwNo is on (tww warp(it), warp sets the next stage by scls number) |
+| 0x3BC | `m2A0` | `mSpSclsNo1` | getArg 023B9F74: parameter bits 8-15 for the special pots (tww); spWarp 023BB6A4 warps to it when warp bit 1 is set (tww isWarpBit(1) -> warp(it)) |
+| 0x3C0 | `m2A4` | `mSpSclsNo2` | getArg 023B9F74: parameter bits 16-23 for the special pots (tww); spWarp 023BB6A4 warps to it when warp bit 2 is set (tww isWarpBit(2) -> warp(it)) |
+| 0x3C4 | `m2A8` | `mSpSclsNo4` | getArg 023B9F74: parameter bits 24-31 for the special pots (tww); spWarp 023BB6A4 warps to it when warp bit 4 is set (tww isWarpBit(4) -> warp(it)) |
+| 0x3C8 | `m2AC` | `mLidSwNo` | getArg 023B9F74: switch number (tww uVar6 bits 0-7); openHuta 023BB400 turns it on, mLidClosed is set while it is off (tww dComIfGs_onSwitch / isSwitch(it, ..)); isOtherHuta 023B9884 / modeClose 023BB488 test it |
+| 0x3CC | `m2B0` | `mWarpSwNo` | getArg 023B9F74: switch number (tww uVar6 bits 8-15); normalWarp 023BB7AC only warps while it is on (tww dComIfGs_isSwitch(it, ..)) |
+| 0x3D0 | `m2B4` | `mPotType` | getArg 023B9F74: parameter bits 0-3 (tww); isSp 023B9864: 2 .. 4 are the special pots (tww it == 2 // 3 // 4); spWarp 023BB6A4 switches on it; createInit 023BA4E0 picks the smoke colours by it (tww m_def_smoke_prm_color[it]) |
+| 0x3D4 | `m2B8` | `mEventRegNo` | getArg 023B9F74: parameter bits 4-7 for the special pots (tww); onWarpBit 023B9E94 / isWarpBit 023B9F1C use the event register m_event_reg[it] (tww) |
+| 0x3DC | `m2C0` | `mOpenPrm` | getArg 023B9F74 (sp pots): home.angle.z bits 8-15; when not 0xFF getArg sets the pot's warp bit at once, so the lid starts open (mLidClosed = !isWarpBit) (tww the same) |
+| 0x3E0 | `m2C4` | `mWarpBit` | getArg 023B9F74: 1, 2 or 4 by mPotType (tww); openHuta 023BB400 sets it in the event register (tww onWarpBit(it)); getArg sets mLidClosed from isWarpBit(it) (tww) |
+| 0x3E2 | `m2C6` | `mLidClosed` | tww accessor isHuta() { return it; } (our isHuta 023B985C); getArg 023B9F74: set while the lid switch / warp bit is off (tww); openHuta 023BB400 clears it |
+| 0x3F8 | `m2DC` | `mBodyBgW1Mtx` | createBodyHeap 023B9AE8: the matrix mpBodyBgW1 is set up with (tww mpBodyBgW1->Set(.., &it)); setMtx 023BA250 copies the pot matrix into it (tww cMtx_copy(.., it)) |
+| 0x42C | `m310` | `mBodyBgW2Mtx` | createBodyHeap 023B9AE8: the matrix mpBodyBgW2 is set up with (tww mpBodyBgW2->Set(.., &it)); setMtx 023BA250 copies the pot matrix into it (tww) |
+| 0x460 | `m344` | `mLidBgWMtx` | createHutaHeap 023B9944: the matrix mpLidBgW is set up with (tww mpLidBgW->Set(.., &it)); setMtx 023BA250 copies the lid matrix into it (tww) |
+| 0x9AC | `m830` | `mLidPos` | setMtx 023BA250: current.pos raised by l_HIO.mLidOffsetY (tww it = current.pos; it.y += l_HIO.m08), where the lid models are put; setCollision 023BA1BC mCyl2 centre; breakHuta 023BAA28 particles; _draw 023BB074 tev position (tww) |
+| 0x9B8 | `m83C` | `mBreakFireTimer` | modeBreakFireInit 023BB57C 60; modeBreakFire 023BB5CC acts when cLib_calcTimer(&it) reaches 0 (tww) |
+| 0x9BC | `m840` | `mBgW2RegistTimer` | createInit 023BA4E0 30 or 5, modeEventWarp 023BB820 30 (tww); _execute 023BAD74 counts it down (tww cLib_calcTimer(&it)); setMtx 023BA250 registers mpBodyBgW2 when it is 1 (tww if (it == 1) .. Regist(mpBodyBgW2, this)) |
+| 0x9C0 | `m844` | `mOpenSmokeCallBack` | modeOpenInit 023BB2A4: the follow callback of the open smoke particle 0x8161 (tww ID_AK_SN_WARPPOTOPEN00, &it); _execute 023BAD74 recolours its emitter; _delete 023BA8C8 removes it |
+| 0x9D4 | `m858` | `mCloseSmokeCallBack` | modeCloseInit 023BB380: the follow callback of the close smoke particle 0x8162 (tww ID_AK_SN_WARPPOTCLOSE00, &it); modeOpenInit 023BB2A4 removes it; _delete 023BA8C8 removes it |
+| 0x9E8 | `m86C` | `mSmokePrmColor` | createInit 023BA4E0: m_def_smoke_prm_color[mPotType] (tww); modeOpenInit 023BB2A4 / modeCloseInit 023BB380 pass it as the smoke particle's prim colour (tww particle_set(.., &it, &m870)) |
+| 0x9EC | `m870` | `mSmokeEnvColor` | createInit 023BA4E0: m_def_smoke_env_color[mPotType] (tww); modeOpenInit 023BB2A4 / modeCloseInit 023BB380 pass it as the smoke particle's env colour (tww particle_set(.., &m86C, &it)) |
+
+Open (offset names kept):
+
+- `m298`: getArg 023B9F74 stores param bits 4-11 (normal pots); never read in WWHD or tww.
+- `m2BC`: getArg 023B9F74 stores home.angle.z bits 0-7 (sp pots); its only read is openHuta 023BB400 playing JA_SE_READ_RIDDLE_1 while it is 0xFF, no clear role.
+- `m2C5`: getArg 023B9F74 sets 0 / 1 / 2 for pot types 2 / 3 / 4; never read in WWHD or tww.
+
+
+## daShopItem_c (d_a_shop_item.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+| 0x758 | `field_0x644` | `mpCloth` | clothCreate 02483C10 stores the dCloth_packet_c made for the flag items (nullptr for the others); set_mtx 02483508 sets its scale and matrix; _draw 02483B28 draws it (dCloth_packet_cloth_draw) (tww the same) |
+| 0x75C | `field_0x648` | `mClothType` | clothCreate 02483C10 stores the cloth kind of the item (0-3, by item number), the index into clothRes / clothFunc; set_mtx 02483508 reads it again (tww the same) |
+| 0x760 | `field_0x64C` | `mMtx` | set_mtx 02483508 copies the model matrix (mDoMtx_stack_c::get()) into it; CreateInit 024836F4 sets cullMtx to it (fopAcM_SetMtx) (tww the same) |
+
+
+## daSpcItem01_c (d_a_spc_item01.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+| 0x750 | `field_0x63C` | `mLastSpeedY` | move 02489FA4 stores speed.y whenever it is non-zero; on ground landing the bounce speed is -it * 0.62 (stop when below gravity - 0.5) (tww the same) |
+| 0x754 | `field_0x640` | `mTargetAngleX` | rotate_item 0248A08C: the angle.x target of cLib_chaseAngleS for rupees (angle.x + 0x2000 before the first bounce, else 0) (tww the same) |
+| 0x756 | `field_0x642` | `mBounceCount` | move 02489FA4 adds 1 per ground landing; set_effect 02489E3C makes the appear effect only while it is 0; rotate_item 0248A08C spins rupees only while it is 0 (tww the same) |
+| 0x758 | `field_0x644` | `mFlag` | CreateInit 0248A2A4 stores daSpcItem01_prm::getFlag(this); set_effect 02489E3C makes the appear effect only with bit 0 set (tww the same) |
+
+Open (offset names kept):
+
+- `field_0x643`, `field_0x646`, `field_0x647`: no use in WWHD or tww.
+
+
+## daBranch_c (d_a_branch.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+| 0x3D4 | `m02B8` | `mShapeId` | the demo shape id: daBranch_Execute 020DF140 (execute inlined) stores the demo actor's getShapeId() and plays mAnims[0] for 6 / mAnims[1] for 5; daBranch_Draw 020DEFB0 draws model 1 for 5, else model 0; daBranch_Create 020DF534 sets 6 (tww the same) |
+
+Open (offset names kept):
+
+- `m02BC`, `m02BD`: only daBranch_Create 020DF534 clears them; never read in WWHD or tww.
+
+
+## Act_c (d_a_obj_ekskz.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+| 0x6D4 | `m480` | `mBroken` | Create 0233BCBC clears it; Execute 0233BEC8 sets 1 when the object breaks (dComIfGs_onSwitch(prm_get_swSave()), particle 0x82EC) and handles the pieces while set; Draw 0233C0C8 draws the whole object only while it is 0; broken |
+
+Open (offset names kept):
+
+- `m504[2]`, `m510`: only the constructor Act_c_ct 0233B4A8 clears them; no use in tww.
+
+
+## daKnob00_c (d_a_knob00.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+|  | `m2D0` | `mDoorMsg` | the dDoor_msg_c door message: demoProc 021A3FB8 init(home.angle.z) at DEMO_MESSAGE and proc() until it ends; actionPassward2 021A4808 init(0x1B1A + event reg 0xBA0F) and proc() for the password door (tww: dDoor_msg_c mDoorMsg) |
+
+
+## daObjRcloud_c (d_a_obj_rcloud.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+| 0x434 | `m2BC` | `mAction` | setup_action 02387428 stores the act_proc index next to mCurrentActProc; setTexMtx 0238767C scrolls the texture's y by mCloudAnimProgress only while it is 2 (clouds_lift_act_proc) |
+
+Open (offset names kept):
+
+- `m2C5[3]`: no use in WWHD or tww.
+
+
+## Act_c (d_a_obj_dragonhead.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+| 0x528 | `field_0x40c` | `mBgRegistered` | CreateInit 02337A28 clears it and sets 1 when dComIfG_Bgsp()->Regist(mpBgW) succeeds (switch off); Execute 02337FA0 releases mpBgW while set when the switch turns on (clears it on success, JA_SE_OBJ_ICEVERG_MELT); Delete 02337CAC releases it while set (tww: background registered flag); tww: background registered flag |
+
+
+## daTag_Hint_c (d_a_tag_hint.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+| 0x3AC | `m290` | `mTalkMsgId` | talk 024A9E68 stores getMsg() at the first step and drives the message with it (hintMessageSet / next_msgStatus) (tww the same) |
+| 0x3B0 | `m294` | `mTalkState` | talkInit 024A9CF8 clears it; talk 024A9E68 steps it 0 -> 1 (message created) -> 2 (shown) and -1 at the end (tww the same) |
+| 0x3B8 | `m29C` | `mStaffId` | startProc 024A97E4 stores getMyStaffId("TAGHINT"); actionEvent 024A9FAC reads the event actions and ends the cuts with it (tww the same) |
+| 0x3BC | `m2A0` | `mHintDelay` | arrivalTerms 024A9284 sets 600 / 3600 / 1800 / 900 / 0 by hint type; otherCheck 024A996C counts it down (types 4 / 8 / 9 / 12 before the range check, the others while no message is open) and allows the hint only at 0; daTag_Hint_Create 024AA334 clears it (tww the same) |
+| 0x3BF | `m2A3` | `mGrabHint` | makeEventId 024A94A0 sets 1 when Link holds an actor (event DEFAULT_HINT2), else 0; setPlayerAngle 024A95C4 then uses search_angle_table_grab (tww the same) |
+| 0x3C0 | `m2A4` | `mHintEventIdx` | makeEventId 024A94A0 stores the event index of HIRL_HINT / DEFAULT_HINT2 / DEFAULT_HINT; actionHunt 024A9B78 / actionArrival 024A9C74 order it (eventInfo.setEventId) (tww the same) |
+| 0x3C2 | `m2A6` | `mFlags` | actionEvent 024A9FAC sets bit 0 when the event advances (action 2 ends the cut only with it); tww chkFlag / setFlag on it |
+| 0x3C4 | `m2A8` | `mRangeXZSq` | daTag_Hint_Create 024AA334: (scale.x * 100) squared; rangeCheck_local 024A8BC0 needs the squared XZ distance below it (tww the same) |
+| 0x3C8 | `m2AC` | `mRangeY` | daTag_Hint_Create 024AA334: scale.y * 100 (2410 for type 14); rangeCheck_local 024A8BC0 needs the height difference within it (tww the same) |
+| 0x3CC | `m2B0` | `mDarkRatio` | startProc 024A97E4 sets 1; actionEvent 024A9FAC lowers it by 0.05 to 0.15 during the hint talk, actionLight 024A8F08 raises it back to 1; darkProc 024A8D2C passes it to dKy_set_vrboxcol_ratio / dKy_set_fogcol_ratio (tww the same) |
+
+
+## daBeam_c (d_a_beam.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+| 0x658 | `m53C` | `mAtHit` | daBeam_AtHitCallback 02074C98 / daBeam_checkHitCallback 02075078 set 1 and store the hit position in mAtHitPos; _execute 02075988 then ends the beam there (no hot floor) and clears it (tww the same) |
+| 0x65C | `m540` | `mAtHitPos` | daBeam_AtHitCallback 02074C98 / daBeam_checkHitCallback 02075078 copy the AT hit position (mGObjAt.mHitPos); _execute 02075988 shortens the beam to it and copies it into mBeamEndPos (tww the same) |
+| 0x668 | `m54C` | `mSidePush` | CreateInit 02075384: param bits 24-27 (0 for the searching type); while non-zero the hit on Link (hitDirection, in the AT hit callbacks) sets the AT / TG vectors to the beam's side direction (tww the same) |
+| 0x66C | `m550` | `mSearchProc` | _execute 02075988 calls it every frame; CreateInit 02075384 sets it; tww setSearchProc(func) stores into it |
+| 0x674 | `m55C` | `mDefaultProc` | _execute 02075988 restores mSearchProc from it when the switch is off; CreateInit 02075384 sets it; tww setDefaultProc(func) stores into it |
+| 0x718 | `m588` | `mBeamFrame` | the beam's grow frame 0..5: move_search 02076260 counts it up while on target, fade (in move_search / wait_proc 02076598) and _execute 02075988 use it; set_mtx 02075124 width (it * (5 - mFadeFrame)) / 50 + 0.5; the BG line length is it * 20 * scale.z (tww the same) |
+| 0x798 | `m5A8` | `mFadeFrame` | fade (in move_search 02076260 / wait_proc 02076598) counts it up to 4 while mBeamOn and then ends the beam; set_mtx 02075124 narrows the beam by it (tww the same) |
+| 0x814 | `m5C4` | `mHotFloorMtx` | set_mtx 02075124 builds the hot floor matrix (at mBeamEndPos, mHotFloorQuat, Y rotation, z scale mHotFloorScaleZ) into it and gives it to mpHotFloor (mtx_p) (tww the same) |
+| 0x844 | `m5F4` | `mBeamOn` | move_search 02076260 sets 1 once mBeamFrame reached 5 on target; fade (in move_search / wait_proc 02076598) fades the beam out and clears it; _execute 02075988 sets the AT capsule only while it is 1 (tww the same) |
+| 0x846 | `m5F6` | `mCycleTimer` | no use in WWHD (CreateInit 02075384 runs move_search for kind 2); tww CreateInit stores a parameter in it for kind 2 and timer_change counts it down: beam on while it is above 0, off below, reloaded with 60 at -30 |
+| 0x848 | `m5F8` | `mHFloorParticle` | CreateInit 02075384: 1 - param bit 28; _execute 02075988 passes !it as bit 0 of the Hot_Floor parameters; tww checkHFloorParticle / onHFloorParticle / offHFloorParticle use it |
+| 0x849 | `m5F9` | `mSmokeParticle` | CreateInit 02075384: 1 - param bit 29; _execute 02075988 passes !it as bit 1 of the Hot_Floor parameters; tww checkSmokeParticle / onSmokeParticle / offSmokeParticle use it |
+| 0x8B8 | `m668` | `mBeamEndPos` | _execute 02075988: the beam's end (mAtHitPos, the BG line cross or the line end), where the Hot_Floor is created and JA_SE_OBJ_STATUE_BEAM plays; set_mtx 02075124 places the hot floor there; daBeamDelete 02075924 deletes its sound (tww the same) |
+| 0x8C4 | `m674` | `mHotFloorQuat` | _execute 02075988: Quaternion_setRotate from the hit polygon's normal; set_mtx 02075124 rotates the hot floor by it; CreateInit 02075384 sets ZeroQuat (tww the same) |
+| 0x8D4 | `m684` | `mHotFloorId` | _execute 02075988 stores the fopAcM_create id of the Hot_Floor (-1 without one) and looks the actor up by it (tww the same) |
+| 0x8D8 | `m688` | `mHotFloorScaleZ` | _execute 02075988 sets 1; set_mtx 02075124 scales the hot floor matrix's z by it (tww the same) |
+| 0x8DC | `m68C` | `mpHotFloor` | _execute 02075988 finds the daHot_Floor_c by mHotFloorId (nullptr while none); set_mtx 02075124 gives it mHotFloorMtx and mbSpawnParticle (tww the same) |
+| 0x8E0 | `m690` | `mpBeamEmitter` | the ID_AK_SN_LASERROOT00 emitter: move_search 02076260 creates it, move_search / wait_proc 02076598 end it; set_mtx 02075124 places and scales it; tww beamCheck() tests it |
+| 0x8E4 | `m694` | `mEmitterOffsetZ` | CreateInit 02075384: 0.001 times a global float for the searching type, else 0; set_mtx 02075124 moves the emitter matrix along z by it |
+| 0x8E8 | `m698` | `mSwitchNo` | CreateInit 02075384: param bits 16-23 (searching type); CreateInit / _execute 02075988 switch to wait_proc while that switch is set (0xFF: none) (tww the same) |
+
+
+## daArrow_c (d_a_arrow.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+| 0x71C | `field_0x600` | `mDeleteRequest` | procStop_BG 02054FE0 / procStop_Actor 020553C0 delete the stuck arrow once it is set; set when the stuck time (mStopTimer) ends, when the hit actor is gone, by mbSetByZelda, and by _execute 02052DB8 when l_count comes round to mShotNo again (tww the same) |
+| 0x71E | `field_0x602` | `mShotNo` | arrowShooting 02053814 stores l_count (0-4) for the arrow; _execute 02052DB8 sets mDeleteRequest when l_count is back at it; createInit 02052738 sets -1 (tww the same) |
+| 0x720 | `field_0x604` | `mHitShakeTimer` | procMove 02054040 sets 0x28 when the arrow sticks; setStopActorMatrix 02053DDC / procStop_BG 02054FE0 count it down and shake the arrow's x angle by (1024 * (t / 40)^2) * sin(t * 0x52FB) (tww the same) |
+| 0x734 | `field_0x618` | `mHitJointOffset` | procMove 02054040 stores the hit position local to the hit joint (ArrowSearchJointHit); setStopActorMatrix 02053DDC translates the joint matrix by it (tww the same) |
+| 0x79E | `field_0x682` | `mLightEffType` | setLightEffect 02052C40: the arrow type the light effect child was made for; a different mArrowType deletes the child (tww the same) |
+| 0x7B0 | `field_0x698` | `mDraw` | _draw 02053188 draws only while set; createInit 02052738 sets it; procStop_BG 02054FE0 blinks it during the last 60 frames of mStopTimer; cleared when the arrow ends in water or hits (tww the same) |
+| 0x7B1 | `field_0x699` | `mWaterEffect` | check_water_in 020532B8 / procReturn 02055450: the state byte passed to and returned by Link's setItemWaterEffect; createInit 02052738 clears it (tww the same) |
+| 0x7B2 | `field_0x69a` | `mBounceGround` | procReturn 02055450 sets it when the falling arrow bounces off a polygon with normal.y >= 0.5 and deletes the arrow once it falls again; createInit 02052738 clears it (tww the same) |
+| 0x7B4 | `field_0x69c` | `mSpinSpeedX` | rebound (in procMove 02054040) sets 0x2C00; procReturn 02055450 adds it to shape_angle.x each frame and halves and reverses it on a bounce; createInit 02052738 clears it (tww the same) |
+| 0x7B8 | `field_0x6a0` | `mStopTimer` | createInit 02052738 sets 300; procStop_BG 02054FE0 counts it down for normal arrows (blink below 60, mDeleteRequest at 0) (tww the same) |
+| 0x7C0 | `field_0x6a8` | `mImpactPos` | arrowShooting 02053814 sets the shot position; procMove 02054040 stores the hit position (BG cross or AT hit) and plays the hit particles there; setLightEffect 02052C40 creates the light effect at it; procStop_BG 02054FE0 keeps the arrow tip there (moving BG); procMove sets mFlewFar beyond 20000 of it (tww the same) |
+| 0x7CC | `field_0x6b4` | `mModelMtx` | procWait 02053D24 / procMove 02054040 copy the model (or hit stack) matrix into it each frame; the light effect child daArrow_Lighteff_c reads it (setTopPos 020570BC / set_mtx 02056EB8) (tww the same) |
+| 0x7FC | `field_0x6e4` | `mFlewFar` | procMove 02054040 sets it once the arrow is farther than 20000 from mImpactPos (the shot position); check_water_in 020532B8 / procMove then skip dKy_arrowcol_chg_on; createInit 02052738 clears it (tww the same) |
+| 0x7FE | `field_0x6e6` | `mHitAngle` | procWait 02053D24 / procMove 02054040 store shape_angle each frame, and the angle local to the hit joint on an actor hit; setStopActorMatrix 02053DDC rotates the stuck arrow by it, procStop_BG 02054FE0 uses it as the base of the shake (tww the same) |
+
+Open (offset names kept):
+
+- `field_0x624[...]`: unaccessed block.
+
+
+## ArrowLightArrow (d_a_arrow_lighteff.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+|  | `field_0x6b4` | `mModelMtx` | as daArrow_c::mModelMtx; setTopPos 020570BC / set_mtx 02056EB8 copy it |
+|  | `field_0x6e4` | `mFlewFar` | as daArrow_c::mFlewFar; _execute 02057930 deletes the effect while it is set |
+|  | `field_0x6e6` | `mHitAngle` | as daArrow_c::mHitAngle; _execute 02057930 copies it into current.angle |
+
+
+## daArrow_Lighteff_c (d_a_arrow_lighteff.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+| 0x3B4 | `field_0x298` | `mpModel` | CreateHeap 02056B54 creates the effect model (mDoExt_J3DModel__create); CreateInit 0205715C sets cullMtx to its matrix; set_mtx 02056EB8 sets its base scale and matrix (tww the same) |
+| 0x3B8 | `field_0x29C` | `mTopPos` | setTopPos 020570BC: 62 along the parent arrow's mModelMtx; CreateInit 0205715C makes the type particles there; setPointLight 0205777C puts the point light there (tww the same); top position |
+| 0x3C4 | `field_0x2A8` | `mScale` | CreateInit 0205715C sets 1 (or the particle manager's global scale); _execute 02057930 stretches z up to 20 and shrinks x / y to 0.5 while the arrow flies; set_mtx 02056EB8 sets it as the model's base scale (tww the same); model scale |
+| 0x4BC | `field_0x2E0` | `mBrkFrame` | brk_play (in _execute 02057930) counts it toward mBrk's end frame (toward 5 while the camera attention status 0x20 is set) and sets mBrk's frame to it; CreateHeap 02056B54 clears it (tww the same); brk frame |
+| 0x4C0 | `field_0x2E4` | `mEndTimer` | CreateInit 0205715C clears it; _execute 02057930 counts it up while the arrow is stuck (param 2 / 4) and deletes the effect at 0x3C (tww the same) |
+| 0x4C4 | `field_0x2E8` | `mArrowType` | the arrow type: CreateHeap 02056B54 stores the parameter; CreateInit 0205715C picks the particles, setPointLight 0205777C the light colour, delete_particle 02057510 the alpha fade by it (tww the same); type |
+| 0x4C5 | `field_0x2E9` | `mDraw` | CreateInit 0205715C sets 1; _execute 02057930 clears it once the arrow is stuck; _draw 0205763C draws only while set (tww the same); draw |
+| 0x4C6 | `field_0x2EA` | `mUseArrowEffect` | _execute 02057930 sets 1 when it calls Link's onUseArrowEffect (the arrow is shot); _delete 020575A4 calls offUseArrowEffect while set; _create 02057478 clears it (tww the same) |
+| 0x4C8 | `field_0x2EC` | `mArrowParam` | _execute 02057930 stores the parent arrow's parameter (its state: 1 flying, 3 returned, other stuck) each frame; setPointLight 0205777C lights only while it is 0 or 1; CreateInit 0205715C clears it (tww the same) |
+| 0x4CC | `field_0x2F0` | `mPrevArrowParam` | _execute 02057930 copies mArrowParam into it before reading the new one; the first frame of param 1 (it != 1) starts the arrow effect; CreateInit 0205715C clears it (tww the same) |
+| 0x4D0 | `field_0x2F4` | `mParticleCb0` | the follow callback of the first type particle (HINOKO00 / KIRAKIRA00 / TSUBU00) made by CreateInit 0205715C; delete_particle 02057510 fades and removes it (tww the same) |
+| 0x4E4 | `field_0x308` | `mParticleCb1` | the follow callback of the second type particle (REIKI00 / FLASH00) made by CreateInit 0205715C; delete_particle 02057510 fades and removes it (tww the same) |
+| 0x4F8 | `field_0x31C` | `mLight` | setPointLight 0205777C fills this LIGHT_INFLUENCE (position mTopPos, the type colour, power mLightPower * 150, fluctuation 250) (tww the same) |
+| 0x51C | `field_0x33C` | `mLightPower` | setPointLight 0205777C eases it toward 1 + rnd(0.2) while the arrow flies with a non-normal type, else 0; the light power is it * 150 (tww the same) |
+
+Open (offset names kept):
+
+- `field_0x290`, `field_0x294`: no use in WWHD or tww.
+
+
+## daTag_Etc_c (d_a_tag_etc.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+| 0x3B6 | `field_0x29A` | `mCutEndDelay` | demoInitProc 024A5FA4 sets 15 (type2 0); demoProc 024A5E0C counts it down while Medli is not flying and ends the TAG_ETC_D cut at 0 (tww the same) |
+
+Open (offset names kept):
+
+- `field_0x291`, `field_0x292`, `field_0x293`: no use in WWHD or tww.
+
+
+## TagEtcMedli (d_a_tag_etc.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+|  | `m30F0` | `mStatus` | as daNpc_Md_c::mStatus (d_a_npc_md.h, same offset 0x420C); checkStatusFly / onBitCamTagIn / offBitCamTagIn test and set its bits |
+
+
+## daGhostship_c (d_a_ghostship.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+|  | `field_0x6C4` | `mPathRadiusTarget` | _execute 0214A9A4: per circle path the target of cLib_addCalc2 on mPaths[i].mRadius, 1500 + 100 * i while the radius is below 900, 800 once it passed 1400 + 100 * i (tww the same) |
+
+Open (offset names kept):
+
+- `field_0x2B0`, `field_0x2C0`, `field_0x2C4`, `field_0x2C8`, `field_0x700`: no read in WWHD or tww. Hio `field_0x0C`: only the HIO constructor sets 5.0. Cloth `field_0xF0` (no use), `field_0xF2` (only cleared).
+
+
+## Hio (d_a_ghostship.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+|  | `field_0x04` | `mDebugDraw` | _draw 0214B4A8 sets up the debug axis / fan / vector colours only while it is set; the HIO constructor clears it (tww the same) |
+
+
+## daObj_hsh_c (d_a_obj_hsehi1.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+|  | `field_0x514` | `mOrderEvent` | the event to order: waitAction 0235C144 sets 5 (argument 0) or 3 while Link is in attention; eventOrder 0235ABE0 makes Link able to talk for 3 / 4 / 5 (orders the speak event for 4) or orders mEventId[it] for 0 / 1; checkOrder 0235AAA0 / checkCommandTalk 0235A628 / eventProc 0235A6F8 reset it to -1; init 0235AEF8 sets -1 |
+
+Open (offset names kept):
+
+- `field_0x4d8[12]`, `field_0x516`, `field_0x51a[2]`, `field_0x524[4]`, `field_0x52c[4]`: no use. `field_0x51c`, `field_0x51e`, `field_0x520`, `field_0x522`, `field_0x528`: only init 0235AEF8 clears them. HIO prm `field_0x16`: no use.
+
+
+## hio_prm_c (d_a_obj_hsehi1.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+|  | `field_0x0c` | `mAttnOffsetY` | setAttention 0235BF68 adds it to the attention_info.position height (tww the same) |
+|  | `field_0x10` | `mEyeOffsetY` | setAttention 0235BF68 adds it to the eyePos height (tww the same) |
+
+
+## daObjGnnbtaki_c (d_a_obj_gnnbtltaki.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+|  | `field_0x2B0` | `mAnmStarted` | _create 0234AFF8 sets 0 for type 1 (btk stopped) and 1 otherwise; _execute 0234B184 starts the btk animation (rate 1) once for type 1 when the g2before event passes demo frame 0x126F in the tower stage and sets it |
+|  | `field_0x2B1` | `mType` | _create 0234AFF8: param bits 0-3 (0xF -> 0); type 1 waits for the g2before event (_execute 0234B184) |
+
+
+## MmrrAttributes (d_a_obj_mmrr.h)
+
+| WWHD offset | Old | New | Evidence |
+|---|---|---|---|
+|  | `field_0x00` | `mTriVertices` | set_cc_rec_pos 02374E98 transforms vertex(i, j) of these 5 x 3 points into the five mTri collision triangles (L_attr, filled by the static initialiser; tww set_cc_rec_pos the same) |
+|  | `field_0xB4` | `mTriOffsetY` | set_cc_rec_pos 02374E98 translates the triangle frame by (0, it, mTriOffsetZ) before rotating it by mMirrorAngleX (tww the same) |
+|  | `field_0xB8` | `mTriOffsetZ` | set_cc_rec_pos 02374E98: the z of that translation (tww the same) |
+|  | `field_0xBC` | `mMirrorAngleX` | set_cc_rec_pos 02374E98 rotates the triangle frame about x by it; set_cull 02375264 turns the reflected beam's cull box by it (tww the same) |
+|  | `field_0xC0` | `mBeamStart` | set_cc_trans_pos 02374FC0 translates to it for the start of the reflected beam capsule (tww the same) |
+|  | `field_0xD0` | `mBeamLength` | set_cc_trans_pos 02374FC0: the beam end lies at z = it; mBeamLenRate is the line-check distance over it; set_cull 02375264 sizes the cull box by it (tww the same) |
+
+## daBemos_c (Beamos: blue, red and yellow types; d_a_obj_bemos.h)
+
+Old names are the GameCube offsets (zeldaret/tww `mXXX`, unnamed there). Named from the uses in d_a_obj_bemos.cpp.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3AC | `m290` | `mEyeProc` | tww's type EyeProc (pointer to member function); blue / red / yellow eye *_init (blue_eye_wait_init 02324428, blue_eye_charge_init 0232666C, red_eye_wait_init 02324830, yellow_eye_wait_init 02324C5C, ...) store the eye state function, _execute 02326020 calls it |
+| 0x3B4 | `m29C` | `mHeadAngle` | set_mtx 023252C8: rotation of the head model (y added to current.angle.y); blue_eye_charge 023268D0 / red_eye_wait 0232728C turn it toward the target or by mRotSpeed; CreateInit3 02324DC8 aims it at the next path point |
+| 0x3BC | `m2A4` | `mHeadPos` | CreateInit1 02324628 / CreateInit2 02324A2C: current.pos raised by 260 (+REG); set_mtx 023252C8 places the head model there; the beam child (fpcNm_Beam_e) and the BMOSBALL00 particle are created at it; mSph centres on it |
+| 0x3D0 | `m2B8` | `mpBodyModel` | CreateHeap1 0232409C / CreateHeap2 0232419C / CreateHeap3 0232435C: model BDL_HMOS1 / HMOS2 / HMOS3 (by mType); set_mtx 023252C8 scales and places it at current.pos; _draw 023261A0 draws it; CreateInit 02325558 takes its matrix as cullMtx |
+| 0x3D4 | `m2BC` | `mpHeadModel` | CreateHeap1 0232409C / CreateHeap2 0232419C: model BDL_HMOSUP1 / HMOSUP2 (blue and red types); set_mtx 023252C8 scales it by mHeadScale and places it at mHeadPos turned by mHeadAngle; _draw 023261A0 draws it |
+| 0x3D8 | `m2C0` | `mpHmos2tModel` | CreateHeap2 0232419C: model BDL_HMOS2T with the brk mBrkAnm2 (red type only); set_mtx 023252C8 turns it with the head yaw at current.pos; _draw 023261A0 draws it with mBrkAnm2 |
+| 0x4D4 | `m2FC` | `mpWaitEmitter` | blue_eye_wait_init 02324428 / red_eye_wait_init 02324830 / yellow_eye_wait_init 02324C5C: particle ID_AK_SN_BMOSWAIT00 (wait glow); blue_eye_charge_init 0232666C and event_move 02325B44 (switch on) stop it |
+| 0x4D8 | `m300` | `mpEyeEmitter` | blue_eye_wait_init 02324428 / red_eye_wait_init 02324830: particle ID_AK_SN_BMOSEYE00; blue_eye_wait 023267CC / red_eye_wait 0232728C move it to mBeamRootPos and set its alpha to mEyeAlpha |
+| 0x4DC | `m304` | `mpChargeEmitter` | blue_eye_charge_init 0232666C / red_eye_charge_init 0232712C / eye_break_init 0232599C: particle ID_AK_SN_BMOSBALL00 at mHeadPos; blue_eye_wait_init 02324428 / yellow_eye_wait_init 02324C5C stop it |
+| 0x4E4 | `m30C` | `mpLaserRootEmitter` | blue_eye_charge 023268D0: particle ID_AK_SN_LASERROOT00 at mBeamRootPos once mChargeCount passes mChargeTime, scaled by mLaserRootScale; stopped when the laser starts or the charge ends |
+| 0x4E8 | `m310` | `mEyeAlpha` | CreateInit1 02324628 / CreateInit2 02324A2C set 255; blue_eye_charge 023268D0 fades it to 0, blue_eye_wait 023267CC / red_eye_wait 0232728C back to 255 (then attention off); the alpha of mpEyeEmitter |
+| 0x4EC | `m314` | `mLaserRootScale` | blue_eye_charge 023268D0: (6.25 - (mLaserRootTimer - 2.5)^2) * 1.6 in x, y, z, the scale of mpLaserRootEmitter; CreateInit1 / CreateInit2 clear it |
+| 0x4F8 | `m320` | `mSearchRange` | CreateInit1 02324628 / CreateInit2 02324A2C: param bits 0-7 * 100 + 500; CreateInit3 02324DC8: 1000 or the distance to the target point; blue_range_check 02326274 / red_range_check 02326460: the player is found closer than it |
+| 0x52C | `m354` | `mBeamRootPos` | set_mtx 023252C8: the point 60 in front of the head (mHeadPos, mHeadAngle); mpEyeEmitter / mpLaserRootEmitter follow it; blue_eye_search 02326E4C / red_eye_search 02327968 put the beam actor there |
+| 0x538 | `m360` | `mHeadScale` | set_mtx 023252C8: base scale of mpHeadModel; CreateInit1 / blue_eye_wait_init 02324428 set (0, 0.75, 1); blue_eye_charge 023268D0 grows x to 1 (HIO m14) and shrinks it back (HIO m18), the laser starts once x is 1 |
+| 0x544 | `m36C` | `mLastPlayerPos` | red_eye_search 02327968 stores the player position when the fire time (mFireTimer) ends; red_range_check 02326460 re-arms (mArmed) only once the player is more than 5 away from it or out of the angle |
+| 0x878 | `m6A0` | `mGroundY` | CreateInit1 02324628 / CreateInit2 02324A2C: cBgS_GroundCross of mGndChk (the ground under the Beamos); not read in WWHD; tww's daBemos_c::_draw passes it to dComIfGd_setSimpleShadow2 as the shadow ground height |
+| 0x87C | `m6A4` | `mInRange` | blue_range_check 02326274 / red_range_check 02326460 / yellow_range_check 0232665C store the last result (1 = player in range); the eye states pass it back as the active flag, which widens the range (HIO m30 / m34 / m2C) |
+| 0x880 | `m6A8` | `mSwitchNo` | CreateInit3 02324DC8: param bits 0-7 (passed to the child); yellow_eye_wait 02327D98 turns the beam off and event_move 02325B44 stops mpWaitEmitter while dSv_info_c::isSwitch(it) (255: none) |
+| 0x884 | `m6AC` | `mLaserRootTimer` | blue_eye_charge 023268D0 counts it up to 5 once fully charged (then blue_eye_search_init) and down again when the player leaves; drives mLaserRootScale; blue_eye_charge_init 0232666C / blue_eye_search_init 023268A8 clear it |
+| 0x886 | `m6AE` | `mChargeCount` | blue_eye_charge_init 0232666C clears it or sets HIO m1E; blue_eye_charge 023268D0 counts it up to mChargeTime while the player is in range and down otherwise; red_eye_charge 023273F0 up to HIO m28 |
+| 0x888 | `m6B0` | `mChargeTime` | blue_eye_charge_init 0232666C: HIO m1C (from the wait state) or m1E; blue_eye_charge 023268D0: the laser root starts once mChargeCount passes it |
+| 0x88A | `m6B2` | `mRotSpeed` | CreateInit2 02324A2C: param bits 8-15 (signed) * 250 + 750 / -500; red_eye_wait 0232728C adds it to mHeadAngle.y every frame (the red head turns) |
+| 0x88E | `m6B6` | `mFireTimer` | red_eye_search_init 023273C0 sets HIO m42; red_eye_search 02327968 counts it down while firing and at 0 stores mLastPlayerPos and clears mArmed |
+| 0x890 | `m6B8` | `mType` | _create 02325698: param bits 28-31; 0 = blue (CreateHeap1 / CreateInit1), 1 = red (2), 2 = yellow (3); set_mtx 023252C8, eye_break_init 0232599C, event_move 02325B44 and guard_proc 02325DB8 branch on it |
+| 0x891 | `m6B9` | `mSubType` | CreateInit3 02324DC8: param bits 8-15 (255 -> 0), passed to the child; 2: other beam flags and no guard cylinder; yellow_eye_wait 02327D98: 1 turns the beam off while the player is in another room; _execute 02326020 tests 2 |
+| 0x892 | `m6BA` | `mSwitchOn` | CreateInit3 02324DC8 / event_move 02325B44: the last dSv_info_c::isSwitch(mSwitchNo); event_move starts the hmos3cam event when it turns on |
+| 0x893 | `m6BB` | `mEventStep` | event_move 02325B44: 1 orders the hmos3cam event, 2 while it runs (cutEnd until it ends, then 0); CreateInit3 02324DC8 clears it |
+| 0x894 | `m6BC` | `mArmed` | CreateInit 02325558 sets 1; red_eye_search 02327968 clears it when mFireTimer ends; red_range_check 02326460 does not look for the player while it is 0 and sets it again once the player moved more than 5 from mLastPlayerPos or out of the angle |
+| 0x895 | `m6BD` | `mHasPath` | CreateInit3 02324DC8: 1 when the yellow Beamos takes its position from a path (and creates the second one at the next point); event_move 02325B44 (the switch event) and guard_proc 02325DB8 (guard cylinder) run only for it |
+| 0x897 | `m6BF` | `mDropItemNo` | CreateInit1 02324628 / CreateInit2 02324A2C: shape_angle.z bits 0-5; eye_break 02328120 passes it to fopAcM_createItemFromTable as the item number |
+| 0x898 | `m6C0` | `mDropItemBitNo` | CreateInit1 02324628 / CreateInit2 02324A2C: shape_angle.z bits 6-12; eye_break 02328120 passes it to fopAcM_createItemFromTable as the item bit |
+
+Open: `m308` (an emitter slot that only CreateInit 02325558 / eye_break_init 0232599C clear and _delete 023258A8 stops; nothing sets it in WWHD or tww), `m6BE` (no use; tww has none either).
+
+### daBemos_HIO_c (l_HIO; d_a_obj_bemos.h)
+
+Round 3: the Beamos HIO values. In WWHD the vtable sits at the end, so each field is 4 below its GameCube name. Each is set only by daBemos_HIO_c__ct 02328718 (default in parentheses) and never written elsewhere in WWHD or tww; the reads are in our d_a_obj_bemos.cpp (through bemos_hio()) and match zeldaret/tww d217e2b.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x00004 | `m08` | `mBlueSearchWidth` | daBemos_c::blue_range_check 02326274: the half width of the search box in front (the player's side distance must be below it) (tww the same) (400) |
+| 0x00010 | `m14` | `mBlueHeadOpenStep` | daBemos_c::blue_eye_charge 023268D0: the cLib_chaseF step of mHeadScale.x toward 1 (y a quarter of it) while the player is in range (tww the same) (0.3) |
+| 0x00014 | `m18` | `mBlueHeadCloseStep` | daBemos_c::blue_eye_charge 023268D0: the cLib_chaseF step of mHeadScale.x toward 0 (y a quarter of it) once the player is out of range (tww the same) (0.3) |
+| 0x00018 | `m1C` | `mBlueChargeTime` | daBemos_c::blue_eye_charge_init 0232666C: mChargeTime (mChargeCount 0) when the charge starts from blue_eye_wait; blue_eye_charge fires once mChargeCount passes it (tww the same) (3) |
+| 0x0001A | `m1E` | `mBlueChargeResume` | daBemos_c::blue_eye_charge_init 0232666C: mChargeCount and mChargeTime when the charge starts from any other state (tww the same) (7) |
+| 0x0001C | `m20` | `mRedHeadOpenStep` | daBemos_c::red_eye_charge 023273F0: the cLib_chaseF step of mHeadScale.x toward 1 (y a quarter of it) while the player is in range (tww the same) (0.1) |
+| 0x00020 | `m24` | `mRedHeadCloseStep` | daBemos_c::red_eye_charge 023273F0: the cLib_chaseF step of mHeadScale.x toward 0 (y a quarter of it) once the player is out of range (tww the same) (0.07) |
+| 0x00024 | `m28` | `mRedChargeTime` | daBemos_c::red_eye_charge_init 0232712C: mChargeTime (mChargeCount 0) when the charge starts from red_eye_wait; red_eye_charge fires once mChargeCount passes it (tww the same) (0) |
+| 0x00026 | `m2A` | `mRedChargeResume` | daBemos_c::red_eye_charge_init 0232712C: mChargeCount and mChargeTime when the charge starts from any other state (tww the same) (0) |
+| 0x00028 | `m2C` | `mRedRangeInRangeAdd` | daBemos_c::red_range_check 02326460: added to the search range while the player is already in range (mInRange) (tww the same) (0) |
+| 0x0002C | `m30` | `mBlueWidthInRangeAdd` | daBemos_c::blue_range_check 02326274: added to mBlueSearchWidth while the player is already in range (mInRange) (tww the same) (0) |
+| 0x00030 | `m34` | `mBlueRangeInRangeAdd` | daBemos_c::blue_range_check 02326274: added to mSearchRange while the player is already in range (mInRange) (tww the same) (0) |
+| 0x0003C | `m40` | `mRedTurnStep` | daBemos_c::red_eye_search 02327968: the largest step of the head's yaw toward the player (cLib_addCalcAngleS2) (tww the same) (400) |
+| 0x0003E | `m42` | `mRedFireTime` | daBemos_c::red_eye_search_init 023273C0: mFireTimer at the start of the search (tww the same) (30) |
+| 0x00040 | `m44` | `mGuardRadius` | daBemos_c::guard_proc 02325DB8: the guard cylinder's radius; the cylinder sits it - 20 to the player's side (tww the same) (200) |
+| 0x00044 | `m48` | `mGuardHeight` | daBemos_c::guard_proc 02325DB8: the guard cylinder's height (100 while the player crouches) and half of it is taken off its y (tww the same) (100) |
+
+Open (no name yet): `m0C` (900), `m10`, `m38`, `m3C`, `m4C` (each set by the constructor only and read nowhere in WWHD or tww); padding `_pad1`, `_pad49`.
+
+## daFire_c (fire / torch flame object; d_a_fire.h)
+
+Old names are the GameCube offsets (zeldaret/tww `field_0x...`, unnamed there).
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3E8 | `field_0x2CC` | `mTgCyls` | CreateInit 0213E930: Set(l_cyl_src) (all three for shape 1 with radius 50, else [0]); ctrlEffect 0213F078 reads [0]'s Tg hit (wind / water / ice); checkCol 0213FA58 places and sets [0] (shape != 1); execStopFire / execPlayFire toggle [0]'s At (tww Set(l_cyl_src)) |
+| 0x778 | `field_0x65C` | `mCoCyl` | CreateInit 0213E930: Set(l_co_cyl_src); checkCol 0213FA58 places it at current.pos and sets it; execStopFire 0213E8C0 / execPlayFire 0213EF18 toggle its Co (tww Set(l_co_cyl_src)) |
+| 0x8A8 | `field_0x78C` | `mAtCyl` | CreateInit 0213E930: Set(at_cyl_src); checkCol 0213FA58 places it at current.pos and sets it; execStopFire 0213E8C0 / execPlayFire 0213EF18 toggle its At (tww Set(at_cyl_src)) |
+| 0x9D8 | `field_0x8BC` | `mpEmitter0` | _create 0213F3D0: particle 0x461 at current.pos; emitter(0): execStopFire / execPlayFire / setDirParticle 0213EF88 / CreateInit (shape 2 scale) drive it; demo_proc 0213F654 checks its live particles |
+| 0x9DC | `field_0x8C0` | `mpEmitter1` | _create 0213F3D0: particle 0x462 at current.pos; emitter(1), driven like mpEmitter0 |
+| 0x9E0 | `field_0x8C4` | `mpEmitter2` | _create 0213F3D0: particle 0x445B (group 4) at current.pos; emitter(2), driven like mpEmitter0 |
+| 0x9EE | `field_0x8D2` | `mStopTimer` | ctrlEffect 0213F078 sets 80 on a water / ice hit (At type 0x80100) and keeps the fire stopped while it counts down (tww the same) |
+| 0x9F0 | `field_0x8D4` | `mParticleDir` | CreateInit 0213E930 sets (0, 1, 0); setDirParticle 0213EF88 chases it toward the given direction and copies it to each emitter's mDirection |
+| 0x9FC | `field_0x8E0` | `mWindDir` | CreateInit 0213E930 sets (0, 1, 0); ctrlEffect 0213F078 sets it from a wind hit's vector (normalised, y from the XZ length) and eases it back to (0, 1, 0), then passes it to setDirParticle |
+| 0xA08 | `field_0x8EC` | `mWasStopped` | CreateInit 0213E930: the initial stopped state (switch or treasure bit); ctrlEffect 0213F078 plays the on / off sound when the new stopped state differs, then stores it |
+| 0xA09 | `field_0x8ED` | `mOffState` | eventOrder 0213F8C4: the last off state (treasure bit, switch, or no enemies left); a change starts the on (1) / off (2) event in mEventState |
+| 0xA0C | `field_0x8F0` | `mWindId` | search_wind 0213EE34: process ID of actor 0x187 (or -1); ctrlEffect 0213F078 looks it up to ignore / stop on that actor's wind hit (tww the same) |
+| 0xA10 | `field_0x8F4` | `mEventState` | eventOrder 0213F8C4: 1 / 2 order mOnEventIdx / mOffEventIdx; checkOrder 0213F7A4 clears it once the event started |
+| 0xA14 | `field_0x8F8` | `mStaffId` | checkOrder 0213F7A4: dComIfGp_evmng_getMyStaffId by type; demo_proc 0213F654 uses it for getMyActIdx / cutEnd |
+| 0xA18 | `field_0x8FC` | `mOnEventIdx` | CreateInit 0213E930: event index of "fire_on_cam" (type 0, else -1); eventOrder 0213F8C4 orders it for mEventState 1; checkOrder 0213F7A4 checks its start / end |
+| 0xA1A | `field_0x8FE` | `mOffEventIdx` | CreateInit 0213E930: event index of "fire_off_cam(_ws)" (type 0) / "zenfire_cam(_ws)" (type 1), else -1; eventOrder 0213F8C4 orders it for mEventState 2; checkOrder 0213F7A4 checks its start / end |
+| 0xA1D | `field_0x901` | `mEventDelay` | CreateInit 0213E930 sets 30; _execute 0213FAF4 counts it down to -1; eventOrder 0213F8C4 starts on / off events only once it is negative |
+| 0xA1E | `field_0x902` | `mFireOn` | CreateInit 0213E930: 1 unless the switch is on (then execStopFire); ctrlEffect 0213F078 runs only while set; demo_proc 0213F654 sets 1 / 0 for the on / off cuts (tww the same) |
+| 0xA1F | `field_0x903` | `mNoEnemyTimer` | eventOrder 0213F8C4, type 1: reset to 5 while an enemy is in the room; when it runs out the fire turns off |
+
+Open: `field_0x8D1` (ctrlEffect clears it and tests it with mStopTimer; nothing sets it non-zero in WWHD or tww), the padding `field_0x8EE`.
+
+## daMbdoor_c (barred double door; d_a_mbdoor.h)
+
+Old names are tww's (`field_0x...`, the GameCube offsets, unnamed there; the header carried short role comments, now in the evidence). Named from the uses in d_a_mbdoor.cpp.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3C8 | `field_0x2ac` | `mBgRegistered` | CreateInit 021C0AFC sets 1 once mpBgW is registered; daMbdoor_actionCloseWait 021C07FC sets 0 when it releases mpBgW for the door event (tww the same); not read in WWHD; tww's demo-version daMbdoor_Delete releases mpBgW only while it is set (the retail one, like WWHD 021C0AA0, tests the heap) |
+| 0x3C9 | `field_0x2ad` | `mOpenSide` | checkArea 021C06D8: 1 when the player stands on the +lateral side, else 0; calcMtx 021BF854 swings the door to that side (mDoorAngle or its negative) and places mPlayerGoalPos there; demoProc 021C00C4 uses it for the goal; execute 021C0984 sets 0 for a demo actor |
+| 0x3CC | `field_0x2b0` | `mBarAngle` | calcMtx 021BF854: Z rotation of the bar (lock) model; CreateInit 021C0AFC: 0 when locked, -0x3F65 when open; demoProc 021C00C4 ACT_STOP_OPEN raises it to -0x3F65 by mAngleSpeed; execute 021C0984 takes a demo actor's mRotate.z |
+| 0x3CE | `field_0x2b2` | `mDoorAngle` | calcMtx 021BF854: Y rotation of the door wings; demoProc 021C00C4 ACT_OPEN opens it to -0x1C71 by mAngleSpeed; CreateInit 021C0AFC sets 0; execute 021C0984 takes a demo actor's mRotate.y |
+| 0x3D0 | `field_0x2b4` | `mAngleSpeed` | demoProc 021C00C4: cleared by ACT_OPEN / ACT_STOP_OPEN, then grows each frame as the step of mDoorAngle (ACT_OPEN) or mBarAngle (ACT_STOP_OPEN) |
+| 0x3D2 | `field_0x2b6` | `mBarOpening` | demoProc 021C00C4: ACT_STOP_OPEN sets 1 and moves mBarAngle only while it is set; cleared when the bar reaches -0x3F65 |
+| 0x3D8 | `field_0x2bc` | `mUnlockDelay` | CreateInit 021C0AFC sets 30; checkUnlock 021BFF14 (type 1): counts it down after the room's enemies are gone and turns the switch on only at 0 |
+| 0x3E0 | `field_0x2c4` | `mPlayerGoalPos` | calcMtx 021BF854: the point beside the opening door wing (on mOpenSide); demoProc 021C00C4 makes it the player's goal (setPlayerGoal / ACT_SET_GOAL) and checks the player's distance to it |
+
+Open: none besides the padding.
+
+## daSalvage_c (salvage point manager; d_a_salvage.h)
+
+Old names are the GameCube offsets (zeldaret/tww `mXXX`, unnamed there). Named from the uses in d_a_salvage.cpp.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x404 | `m2E8` | `mPrevRoomNo` | CreateInit 02465914 stores the start room; _create 02465A8C, on a room change, stores the old mNowRoomNo (tww getSRoomNo()); never read in WWHD or tww |
+| 0x405 | `m2E9` | `mOrderType` | proc_wait 02467364: 1 / 2 get item (crane left / right), 3 / 4 nothing found (left / right); eventOrder 024662F0 orders the event it selects; checkOrder 02465EC4 starts the salvage for the matching event and clears it |
+| 0x406 | `m2EA` | `mInitDone` | CreateInit 02465914 sets 1 (tww true); _delete 02465C68 stops mEmitter and cleans up only while it is set (tww the same) |
+| 0x408 | `m2EC` | `mTboxId` | checkOrder 02465EC4: process ID of the fpcNm_SALVAGE_TBOX_e chest it creates at the crane top; checks it exists after mSearchWait and deletes it at the end; proc_wait_init 02465E9C sets -1 |
+| 0x418 | `m2FC` | `mShowDelay` | onSalvageForOship 024679F4 sets 90 when it moves a point under the ship; calcAlpha 02466578 counts it down outside events and keeps kind 2 points hidden while it is not 0 (tww the same) |
+| 0x41D | `m301` | `mHasSbox` | checkOrder 02465EC4: 1 when the fpcNm_SBOX_e box was created with the chest (get item events), 0 for the nothing-found events and after the cleanup; the existence check and cleanup include mSboxId only while set |
+| 0x41E | `m302` | `mSearchWait` | checkOrder 02465EC4 sets 99 when the salvage starts and counts it down; at 0 it checks that mTboxId / mSboxId still exist and resets the event otherwise |
+| 0x420 | `m304` | `mSboxId` | checkOrder 02465EC4: process ID of the fpcNm_SBOX_e box created at the crane top (or -1); checked and deleted with mTboxId |
+
+Open: none besides the padding.
+
+## daObjLeaves_c (leaf pile; d_a_obj_leaves.h)
+
+Old names are the GameCube offsets (zeldaret/tww `mXXX`, unnamed there). Named from the uses in d_a_obj_leaves.cpp (the delays and steps are copied from the l_effect entry, whose member names this decomp already had).
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x524 | `m408` | `mAlpha` | _create 0236A554 sets 255; item_set_wait_proc 0236ACF8 / retire_wait_proc 0236ADFC add mAlphaSpeed each frame (item at <= 200, delete at 0); _draw 0236A884 uses it as the model opacity (translucent below 255) |
+| 0x528 | `m40C` | `mAlphaSpeed` | birthEffect 02369D08: the l_effect entry's mAlphaStep; item_set_wait_proc 0236ACF8 / retire_wait_proc 0236ADFC add it to mAlpha |
+| 0x54C | `m430` | `mFadeWait` | birthEffect 02369D08: the l_effect entry's mFadeDelay; _execute 0236A7E8 counts it down; alpha_calc_start_wait_proc 0236ACCC starts the fade (LeavesItemWait) at 0 |
+| 0x550 | `m434` | `mRetireWait` | birthEffect 02369D08: the l_effect entry's mRetireDelay; _execute 0236A7E8 counts it down; retire_wait_proc 0236ADFC deletes the actor only once it is 0 |
+| 0x554 | `m438` | `mEffectKind` | birthEffect 02369D08: the l_effect entry's mKind (0 particle, 1 smoke callback); not read in WWHD; tww's demo-version _delete removes the smoke callback only for kind 1 |
+| 0x558 | `m43C` | `mAppear` | _create 0236A554: chk_appear's result (kept after the first phase); resources are loaded only while set; _delete 0236A74C deletes the resources, smoke callback and background only while set (tww the same) |
+| 0x564 | `m44C` | `mBlown` | tg_hitCallback 0236A18C sets 1 on a wind, bomb or fire hit (with the blow / burn effects); wait_proc 0236ABD0 sets the switch, releases the background and starts the fade (LeavesAlphaWait) once it is set |
+
+Open: none besides the padding.
+
+## daMdoor_c (cage / stop door; d_a_mdoor.h)
+
+Old names are the GameCube offsets (zeldaret/tww `mXXX`, unnamed there). Named from the uses in d_a_mdoor.cpp.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3AC | `m290` | `mSmokeCallback` | smokeInit 021C10C4: the dPa_smokeEcallBack of the ID_AK_JT_ELEMENTSMOKE00 landing smoke; create 021C1E8C constructs it, smokeEnd 021C19FC ends it (tww dPa_smokeEcallBack) |
+| 0x3DC | `m2C0` | `mStaffId` | daMdoor_actionDemoWait 021C1418 ("Mori1") / daMdoor_actionReady 021C17A4 ("SHUTTER_DOOR"): dComIfGp_evmng_getMyStaffId; demoProc 021C1174 reads the action and advance of that staff |
+| 0x3E0 | `m2C4` | `mDelayTimer` | CreateInit 021C1AFC sets 1 (type 1); daMdoor_actionGenocide 021C1514 counts it down after the room's enemies are gone before ordering the event; daMdoor_actionReadyOpen 021C188C sets 20 and daMdoor_actionOpen 021C15B0 counts it down before the door rises |
+| 0x3E2 | `m2C6` | `mEventIdx` | CreateInit 021C1AFC: event index of "MORI1_EVENT" (type 0) or "DEFAULT_STOP_OPEN" (types 1 / 2); order and the demo / open actions start and end-check it |
+| 0x3E4 | `m2C8` | `mToolId` | CreateInit 021C1AFC: 0xFF, or getToolId() for type 2; order passes it to fopAcM_orderOtherEventId; it selects ACT_SWITCH8_e / ACT_SWITCH12_e |
+| 0x3E6 | `m2CA` | `mDemoFlags` | demoProc 021C1174: bit 0 set when the close action starts, cleared when the door lands (then the debris and smokeInit) |
+| 0x3E8 | `m2CC` | `mHeight` | calcMtx 021C0EAC: the model's height above current.pos; CreateInit 021C1AFC: 0 (closed) or 280 (open); demoProc 021C1174 / daMdoor_actionOpen 021C15B0 chase it to 0 / 280 by speedF |
+
+Open: none besides the padding.
+
+## daShutter_c (sliding shutter; d_a_shutter.h)
+
+Old names are tww's (`field_0x...`, the GameCube offsets, unnamed there). Named from the uses in d_a_shutter.cpp.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x43C | `field_0x320` | `mEventOrder` | demo 02484B10: 1 (open) / 2 (close) when the switch changes after mFrameTimer; orders mOpenEventIdx / mCloseEventIdx while set and clears it once that event starts (tww the same) |
+| 0x455 | `field_0x339` | `mActionStarted` | shutter_move 0248478C: set on the first frame of ACT_OPEN (with the TOTG open sound) and ACT_CLOSE, cleared by ACT_WAIT02 when its timer ends (tww the same) |
+| 0x456 | `field_0x33A` | `mOpenFrame` | shutter_move 0248478C: ACT_WAIT clears it, ACT_OPEN counts it up; at 75 the TOTG shutter plays the stop sound and a shock (tww the same) |
+
+Open: `field_0x328` (CreateInit sets 3 / 2 by the switch; never read in WWHD or tww), `field_0x334`, `field_0x33B` (no use; tww has none either).
+
+## daObjDrift::Act_c (drifting raft; d_a_obj_drift.h)
+
+Old names are tww's (`field_0x...`, the GameCube offsets, unnamed there).
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x5E0 | `field_0x4C8` | `mLastPrevY` | set_mtx 023384F0 stores mPrevPos.y before mPrevPos takes the new matrix position (the previous mLastPrevY moves to mOlderPrevY); Create 023388B0 sets current.pos.y; never read in WWHD or tww (tww the same writes) |
+| 0x5E4 | `field_0x4CC` | `mOlderPrevY` | set_mtx 023384F0 takes mLastPrevY before it is updated (the y one step further back); Create 023388B0 sets current.pos.y; never read in WWHD or tww (tww the same writes) |
+
+Open: `field_0x49F` (no use), `field_0x4B0` (Create sets (5, 5, 5); never read), `field_0x4D0` (set to 1 when mRotTimer passes 10; never read), `field_0x4D4` (Create clears it; never read) (tww the same).
+
+## daDai_c (figurine / item pedestal; d_a_dai.h)
+
+Old names are the GameCube offsets (zeldaret/tww `mXXX`, unnamed there). The header declares several fields per line, so each renamed field has its own comment line above the declaration.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x95C | `m844` | `mCanTalk` | proc 02116648: 1 while the player is within 100 (XZ, |dy| < 10) and faces the stand; eventOrder 02116750 offers the talk / item talk only then (tww the same) |
+| 0x962 | `m84A` | `mSelectItem` | XyCheckCB 02115E7C stores the X / Y item when it can go on the stand; checkOrder 02116470 refuses (talk) unless it is a daiza item; next_msgStatus 02116848 clears it when the item is taken back |
+| 0x963 | `m84B` | `mPlacedItemNo` | checkOrder 02116470: the mItemNo of the daStandItem_c the player puts down (mStandItemId), saved into the stand's event register when the DAI_ITEM event ends |
+| 0x964 | `m84C` | `mTalkPending` | checkOrder 02116470 sets 1 for a plain talk (or an item it cannot take); proc 02116648 runs talk(1) while it is set and clears it (and resets the event) when the box closes |
+| 0x968 | `m850` | `mStandItemId` | CreateInit 02116054: process ID of the fpcNm_STANDITEM_e created for the saved item (or -1); checkOrder 02116470 takes the item the player holds when DAI_ITEM starts and moves it onto the stand at the end; next_msgStatus 02116848 deletes it when taken back |
+
+Open: the padding `m84E`.
+
+## daWbird_c (Wind Waker wind-direction bird; d_a_wbird.h)
+
+Old names are tww's (`field_0x...`, the GameCube offsets, unnamed there). Named from the uses in d_a_wbird.cpp.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3B9 | `field_0x29D` | `mStartWindSe` | actionSelect 024DE55C sets it when the wind direction is decided; actionMove 024DE768 then plays JA_SE_TAKT_WIND_DEMO once and clears it (tww the same) |
+| 0x3BA | `field_0x29E` | `mTimer` | CreateInit 024DE9F0 clears it; actionSelect 024DE55C counts it up (the wind window opens at 10); setStartPos 024DE334 sets 90 and actionMove 024DE768 counts it down: the bird moves while it is above 30, the tact wind starts at 20, the move ends at 0 |
+| 0x3BC | `field_0x2A0` | `mAccelY` | setStartPos 024DE334 sets 1.0; actionMove 024DE768 adds it to speed.y every moving frame (tww the same) |
+
+Open: the padding `field_0x290`.
+
+## daObjTry::Act_c: offset-name union aliases removed (d_a_obj_try.h)
+
+As in the alias batch (2026-11-10, docs/field-names/libraries.md): each of these unions paired tww's GameCube offset name with a member of exactly the same type that the port had already named; the alias goes, its uses (d_a_obj_try.cpp) move to the named member, and the union becomes that member.
+
+| WWHD offset | Removed alias | Named member | Uses moved |
+|---|---|---|---|
+| 0x7B8 | `field_0x63C` | `correctPosition` | 6 |
+| 0x7C4 | `field_0x648` | `correctYaw` | 1 |
+| 0x7C8 | `field_0x64C` | `correctEnabled` | 3 |
+| 0x7C9 | `field_0x64D` | `correctImmediate` | 5 |
+
+## daYkgr_c (d_a_ykgr.h)
+
+Old names are the GameCube offsets (zeldaret/tww `mXXX`, unnamed there).
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3E8 | `m2CC` | `mAimRate` | daYkgrExecute 024EAAE8 eases it toward the global m_aim_rate and blends it half and half with mPosRate into the particle callback parameter (between l_HIO m14 and m18); _create 024EA6A0 sets 0.5 (tww the same) |
+| 0x3EC | `m2D0` | `mPosRate` | daYkgrExecute 024EAAE8 eases it toward getPosRate() and blends it with mAimRate into the particle callback parameter; _create 024EA6A0 sets 0 (tww the same) |
+
+Open: the padding `m2C8`.
+
+## daObj_Otble::Act_c (table; d_a_obj_otble.h)
+
+Old names are the GameCube offsets (zeldaret/tww `mXXX`, unnamed there). The header has no offset prefixes, so each renamed field has its own comment line above the declaration.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3B0 | `m294` | `mVariant` | _create 023811A0: param bits 0-7 clamped to 0 / 1; _createHeap 02380D28 picks the bdl (OTABLE / OTABLEL) and dzb by it, _create the heap size, CreateInit 02380F8C the cull box (tww the same) |
+| 0x3C0 | `m2A4` | `mBgMtx` | _createHeap 02380D28: the model matrix that mBgW is Set with (dBgW::MOVE_BG_e); set_mtx 02380E74 copies the new matrix into it each frame before mBgW->Move() (tww the same) |
+
+## daMmusic::Act_c (music note particles; d_a_mmusic.h)
+
+Old names are tww's (`field_0x...`, the GameCube offsets, unnamed there).
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3B4 | `field_0x298` | `mMusicPlaying` | _create 021C5EE4 and _execute 021C612C store Macore_is_playing(); _execute creates the ID_AK_SN_MACOREMUSIC00 note emitter only once it is 1, then clears it (tww the same) |
+| 0x3B8 | `field_0x29c` | `mEmitting` | _execute 021C612C / manage_se 021C6008: 1 while the note emitter creates particles; stopCreateParticle sets 0 (culled, or no practice song), playCreateParticle sets 1 (tww the same) |
+
+## daTagWaterlevel::Act_c (water-level schedule tag; d_a_tag_waterlevel.h)
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3AC | `field_0x290` | `mLevelStep` | _execute 024B3AC0: the step of the water level ease (cLib_addCalc of M_now): grows by attr 0x00 each frame, clamped to attr 0x0C .. 0x08, reset to 0 once the level is reached; _create 024B398C sets 0 (tww the same) |
+
+Open: the cpp-local attr fields (`field_0x00` .. `field_0x0c`, not in this header).
+
+## daMozo_c (Mozo statue; d_a_mozo.h)
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x54E | `field_0x376` | `mType` | CreateInit 021D4B14: parameter byte 3 clamped to 0..2 (0xFF -> 0); wait_proc 021D53D8 / towait_proc 021D5E08 start the beam (MOZO_BEAM / MOZO_BEAM_ALT) or fire (MOZO_FIRE) search by it; checkRange 021D5030 picks the l_HIO child block by it; daMozo_nodeCallBack 021D3DF0 moves the joints only up to MOZO_FIRE (tww the same switch) |
+
+## daObjHbrf1::Act_c (rising lift; d_a_obj_hbrf1.h)
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3FC | `m2E4` | `mEventOrdered` | daObjHbrf1_down_stop 02351278 / daObjHbrf1_up_stop 02351580 set 1 when they order the lift demo event (first time or by the event parameter); daObjHbrf1_up_demo 0235146C / daObjHbrf1_down_demo 02351798 reset the event at the end of the move only while it is set, then clear it; Create 0235106C clears it (tww the same) |
+
+## daObjBuoyflag::Act_c: offset-name union aliases removed (d_a_obj_buoyflag.h)
+
+As in the alias batch (2026-11-10): the unions paired tww's GameCube offset names with already named members of the same type; the aliases go and their uses (d_a_obj_buoyflag.cpp) move to the named members.
+
+| WWHD offset | Removed alias | Named member | Uses moved |
+|---|---|---|---|
+| 0x3218 | `m1124` | `mMode` | 2 |
+| 0x321C | `m1128` | `mbInit` | 3 |
+
+## daOship_c (pirate / enemy ship; d_a_oship.h)
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3F0 | `m2D4` | `mPathPntNo` | pathMove 023C7084 passes it to dLib_pathMove (OshipPathMoveHD) as the path point index the ship moves toward, which the call advances (tww dLib_pathMove(&mOrigPos, &it, mpPath, ...) the same) |
+
+Open: daOship_HIO_c `field_0x8E`, `field_0x90` (only the HIO constructor sets them; no read in WWHD or tww).
+## daPds_c (tower pedestal; d_a_pedestal.h)
+
+Named from zeldaret/tww's code (d217e2b, src/d/actor/d_a_pedestal.cpp, which keeps the GameCube offset names) and our decomp's use; the brk fields follow daNpc_Os_c (npcs.md), whose initBrkAnm / playBrkAnm have the same shape.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x480 | `unk308` | `mBrkFrame` | initBrkAnm 023C85F8 stores mBrk's frame after the init (end frame for a reversed table entry); playBrkAnm 023C8D18 stores the frame after each play; nothing reads it (tww the same) |
+| 0x486 | `unk30E` | `mBrkAnmIdx` | initBrkAnm 023C85F8 stores the brkAnmTbl index it initialised; nothing reads it (tww the same); after daNpc_Os_c::mBrkAnmIdx (same initBrkAnm code) |
+| 0x487 | `unk30F` | `mBrkAnmEnd` | playBrkAnm 023C8D18 stores mBrk's play() result (animation end); nothing reads it (tww the same); after daNpc_Os_c::mBrkAnmEnd (same playBrkAnm code) |
+
+Open: `unk310`, `unk312`, `unk314`, `unk316` and `unk31C` (0x488..0x48E, 0x494: only cleared by setAction 023C8FBC, tww the same, no other use).
+
+## daIball_c and IbRipple (d_a_ib.h)
+
+Open only: `m670`, `m678`, `m682` (0x928, 0x930, 0x93A) are unused byte gaps (no use in WWHD or tww). IbRipple (the HD-only 0x90 object at 0x894, mRippleCb) `field_0x48`, `field_0x6c`, `field_0x70`, `field_0x74`, `field_0x78` are only zeroed by ibConstructor 0217B1F8; tww's mRippleCb is a plain dPa_rippleEcallBack, so there is no counterpart.
+
+## daLlift_c (Forbidden Woods leaf lift; d_a_leaflift.h)
+
+Named from zeldaret/tww's code (d217e2b, src/d/actor/d_a_leaflift.cpp, which keeps the GameCube offset names) and our decomp's use.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x558 | `m43C` | `mbPlayerRiding` | rideCallBack 021B3028 sets 1 when the rider is the player (fopAcM_GetName 0xA8); _execute 021B3D04 resets the tilt and lets the lift sink only while it is 0, then clears it every frame (tww the same) |
+| 0x559 | `m43D` | `mbRiseWobble` | MoveUpLift 021B4090 sets 1 while the lift is still below home.y + 560; rideCallBack 021B3028 then uses a random sine wobble (mActorLifetimeFrameCount << 11) as the tilt factor instead of 2, and clears it after each call (tww the same) |
+| 0x55A | `m43E` | `mbDescendReady` | set to 1 by _execute 021B3D04 when mStartDelay runs out and by rideCallBack 021B3028 when the player rides; while set and not mbPlayerRiding, _execute resets the tilt and starts the descent (mbIsDescending) once the player is 270 away (tww the same) |
+| 0x55B | `m43F` | `mStartDelay` | CreateInit 021B35F4 sets 30; _execute 021B3D04 counts it down and sets mbDescendReady when it reaches 0 (tww the same) |
+
+Open: `m442`, `m446` and `m46A` (unused byte gaps, no use in WWHD or tww).
+
+## daObjRflw_c (Rito flower; d_a_obj_rflw.h)
+
+Named from zeldaret/tww's code (d217e2b, src/d/actor/d_a_obj_rflw.cpp, which keeps the GameCube offset names) and our decomp's use; mHitTimer is the name the unit spec (tools/verify/units/d_a_obj_rflw.txt) already used.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x524 | `m408` | `mSwingAngle` | _execute (in daObjRflw_Execute 02388064): sin(mSwingPhase) * (0x100 - mHitTimer) * 4 (first 8 frames) or * 2, 0 at the end; nodeCallBack 02387A74 rotates each joint by it about Y (tww the same); CreateInit 02387DA8 clears it |
+| 0x526 | `m40A` | `mSwingPhase` | _execute (in daObjRflw_Execute 02388064): 0 on a hit, + 0x1000 per frame for the first 8 frames then + 0x800; the sine argument of mSwingAngle (tww the same) |
+| 0x528 | `m40C` | `mHitTimer` | _execute (in daObjRflw_Execute 02388064): 0 on a hit, + 1 per frame while mIsSwinging, ends the swing above 0x100; a new hit counts only above 0x38; damps mSwingAngle by (0x100 - it) (tww the same); the unit spec d_a_obj_rflw.txt already calls 0x528 mHitTimer |
+| 0x52A | `m40E` | `mSwingDirAngle` | _execute (in daObjRflw_Execute 02388064): the angle from the colliding actor to the flower (cM_atan2s) - 0x4000 on a hit; nodeCallBack 02387A74 rotates X by it, Y by mSwingAngle, X back by -it, so the flower swings away from the hitter (tww the same) |
+| 0x52C | `m410` | `mIsSwinging` | _execute (in daObjRflw_Execute 02388064): 1 on a cylinder co-hit (with the JA_SE_OBJ_TREE_SWING_S sound), 0 when mHitTimer passes 0x100; the swing runs while set; _create (in daObjRflw_Create 02387E5C) clears it (tww the same); the unit spec calls 0x52C "swinging" |
+
+Open: `m411` (unused byte gap).
+
+## daBFlower_c (bomb flower; d_a_bflower.h)
+
+Named from zeldaret/tww's code (d217e2b, src/d/actor/d_a_bflower.cpp, which keeps the GameCube offset names) and our decomp's use (d_a_bflower.cpp). TP has no such actor.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x754 | `m55C` | `mBck1AnmIdx` | init_bck_anm 02077530 plays the mBck1 resource index only while it is -1 and stores it; animPlay 02077280 sets -1 when mBck1 ends; CreateInit 02076D94 -1 (tww the same, tww comment "Current bck1 anim?") |
+| 0x860 | `m58C` | `mHasBomb` | set while the bomb fruit sits on the flower: _draw 0207717C draws mpModel2 (the bomb) only then; actLive 020775F8 clears it when it creates the bomb (hit or carry), sets 1 when it regrows; CreateInit 02076D94 1 (tww the same) |
+| 0x861 | `m58D` | `mBombReady` | actLive 020775F8: 1 when the bomb grow animation mBck2 ends, 0 while mGrabbable is 1 or the last bomb still exists; sets/clears the carry attention flag and lets a carry create the bomb (tww the same) |
+| 0x88C | `m5B8` | `mBombGrowing` | actLive 020775F8: set to mHasBomb && mBombScale still growing at the end; at the start, when set and the growth has just ended, init_bck_anm(VBAKH) sways the flower (tww the same); CreateInit 02076D94 0 |
+
+Open: `m58E` (no use in WWHD or tww), `m594` (actDead 02077AE8 only writes 70 when the flower revives; never read).
+
+## daAmiProp_c (rotating mesh propeller; d_a_amiprop.h)
+
+Named from zeldaret/tww's code (d217e2b, src/d/actor/d_a_amiprop.cpp, which keeps the `unk_...` names) and our decomp's use (d_a_amiprop.cpp).
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x528 | `unk_40C` | `mBgMtx` | CreateHeap 02050800 registers mpBgW (MOVE_BG) with this matrix; set_mtx 02050918 / setMoveBGMtx 02050788 copy the model (with scale) matrix into it (tww the same) |
+| 0x558 | `unk_43C` | `mSwitchNo` | CreateInit 02050A04: daAmiProp_prm::getSwitchNo; _execute 02050D14 tests fopAcM_isSwitch(this, it) (tww the same) |
+| 0x55C | `unk_440` | `mPrevSwitch` | _execute 02050D14: last frame's switch state; a change from it starts the turn, stored at the end (tww the same) |
+| 0x560 | `unk_444` | `mTurning` | _execute 02050D14: set when the switch state changes; while set, angle x or y (by type) eases to mTargetAngle; cleared when the turn is done (tww the same) |
+| 0x562 | `unk_446` | `mTargetAngle` | CreateInit 02050A04: angle.x + 0x4000; _execute 02050D14 eases angle x / y to it (cLib_addCalcAngleS) and adds 0x4000 when reached (tww the same) |
+
+## dDoor_info_c (door base; d_door_info.h; copies in d_door_key.h, d_door_checks.h)
+
+Named from zeldaret/tww's code (d217e2b, src/d/actor/d_a_door10.cpp / d_a_door12.cpp / d_a_kddoor.cpp / d_a_knob00.cpp, which keep the GameCube offset names) and our decomp's use. The copies in d_door_key.h and d_door_checks.h keep the old names for now.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3BD | `m2A1` | `mStopOpenTimer` | door10 / door12 / kddoor chkStopOpen (door10 02126D8C): 65 while enemies remain, counted down once the room is clear, the stop bars open only at 0; chkStopClose sets 65; dDoor_info_c__ct 0252A244 0 (tww the same) |
+| 0x3E2 | `m2C6` | `mEventKind` | index into mEventIdx / mToolId (event table DEFAULT_STOP_OPEN .. SHUTTER_DROP_CARRY): door10 setEventPrm 02127080 2/3 (+2, 6), knob00 setEventPrm 021A4318 7/8/9; initOpenDemo 0252A2DC tests != 9 (tww the same) |
+
+Open: `m2C7` (no use in WWHD or tww). The copies in d_door_checks.h / d_door_key.h take the class names in round 3.
+
+Still open in objects (unchanged): daObj_Canon_c `field_0x2A0`, `field_0x2B4`, `field_0x448`; daObj_Canon_HIO_c `field_0x3A`, `field_0x48`; daComing2::Act_c `unk_2AA`, `unk_476`; daObjAjav::Act_c `m884`, `mC25`, `mC29` (padding); daObjWood::Act_c / daObjMsdan2::Act_c `field_0x290`; daIkari_c `m29E`; daTag_So_c `m299` (padding); Ji1EventTsuboHD `m688`..`m692` (view of daTsubo::Act_c, open there).
+
+## daObj_Roten_c and daObj_Roten_HIO_c (Zunari's shop stalls; d_a_obj_roten.h)
+
+Named from zeldaret/tww's code (d217e2b, src/d/actor/d_a_obj_roten.cpp) and our decomp's use.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3ED | `field_0x2D1` | `mCreateFailed` | daObj_RotenCreate 02388B50 sets 1 and fails when the bag holds too few items for the stall type, else 0; daObj_RotenDelete 02388CC4 releases mpBgW and the resource only while 0 (tww the same) |
+
+Open: daObj_Roten_c `field_0x29C` (gap, no use); daObj_Roten_HIO_c `field_0x08`, `field_0x0C` (set only by the HIO constructor 02388DB0, never read in WWHD or tww).
+
+## daObj_Tousekiki_c (catapult on the pirate ship; d_a_obj_tousekiki.h; view daObjPirateship_ActView)
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3E4 | `m2CC` | `mAppeared` | view of daObjPirateship::Act_c; same name as daObjPirateship::Act_c::mAppeared (d_a_obj_pirateship.h, HD 0x3E4); _draw (in daObj_TousekikiDraw 023A6304) draws only once it is set (tww the same) |
+
+Open: daObj_Tousekiki_c `m2A0` (written only: the model matrix copy, never read in WWHD or tww), `m2D0` (only set 0xFFFF by CreateHeap 023A5CCC).
+
+## daObjGnntakis_c (Tower of the Gods waterfall demo; d_a_obj_gnndemotakis.h)
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x42C | `m2B0` | `mAnmStarted` | _create 0234BA3C FALSE; _execute 0234BB78 (g2before running): TRUE when the demo frame reaches 0x11D9 and the btk starts (rate 1); once set, deletes the actor at 0x126F (tww the same) |
+
+## daLbridge_c (Tower of the Gods light bridge; d_a_lbridge.h)
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x558 | `unk31C` | `mDemoState` | holds DemoState: appear_bridge 021B2880 APPEAR_DEMO, disappear_bridge 021B2A38 DISAPPEAR_DEMO; demo 021B2C8C orders that event and back to NO_DEMO when it starts (tww the same) |
+
+## daDekuItem_c (Deku Leaf item; d_a_deku_item.h)
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x844 | `unk630` | `mGetEventOrder` | mode_getdemo_init 0211F0CC sets 1; eventOrder 0211EE80 orders the get-item event while 1; checkOrder 0211ED7C clears it when the event starts; mode_getdemo_wait 0211F134 creates the item once 0 (tww the same) |
+
+## daWindMill_c (windmill; d_a_windmill.h)
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x1360 | `m1244` | `mCpsShape` | set_at 024E179C: per blade the capsule start / end (model matrix) and radius 170 (large) / 70 (small), handed to mCps[i] (tww cM3dGCpsS m1244, mCps[i].Set(m1244[i])) |
+
+WindTagView `field_0x49c` takes daWindTag_c's name `mHeightScale` (round 3, view follows its class).
+
+## daObjMkiek::Act_c (light-sensitive wall; d_a_obj_mkiek.h)
+
+Named from zeldaret/tww's code (d217e2b, src/d/actor/d_a_obj_mkiek.cpp, which keeps the GameCube offset names) and our decomp's use.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x5D0 | `m458` | `mVanish` | demo_wait 02371CBC sets 1 when the wall breaks (vanish particles, switch on); Draw 0237205C then draws mpModelV with the brk animation instead of mpModel; Create 02371B3C 0 (tww the same) |
+| 0x5D8 | `m460` | `mFrameCount` | check 02371C14 counts frames of light / hit, the die event at 20, else 0; demo_wait 02371CBC counts on to 20 before breaking; Create 02371B3C 0 (tww the same) |
+
+## daObjComing::Act_c (floating barrel spawner; d_a_obj_coming.h)
+
+Named from zeldaret/tww's code (d217e2b, src/d/actor/d_a_obj_coming.cpp, which keeps the GameCube offset names) and our decomp's use. `mType` would clash with PrmBarrel2_c::mType in the same files, so m290 is `mPrmType`.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3AC | `m290` | `mPrmType` | _create 02331B98: parameter bits 0-3 (PRM_TYPE, tww prm_get_type()); _execute 02331C94 picks mode_proc[it][mode] (tww the same) |
+| 0x3B0 | `m294` | `mCtrl` | the five Ctrl_c barrel controllers: _create 02331B98 inits them, _execute 02331C94 counts their timers and runs their mode (tww the same) |
+
+## daTagKbItem_c (pig-dig item tag; d_com_static.h; second declaration in d_a_tag_kb_item.h)
+
+Named from zeldaret/tww's code (d217e2b, src/d/d_com_static.cpp, field_0x298 / field_0x299) and our decomp's use (d_com_static.cpp). The copy in d_a_tag_kb_item.h takes the same names in round 3; it kept the old names before (same names suggested there).
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3B4 | `field_0x298` | `mDigDone` | daTagKbItem_c::dig_main 02526330: returns at once while set; set 1 once the item was dropped or the enemy kind handed to the pig (tww the same) |
+| 0x3B5 | `field_0x299` | `mDigRequest` | kb_dig 02526560 sets 1 (with the pig mpActor) and calls dig_main; dig_main 02526330 does nothing unless it is set and clears it at the end (tww the same) |
+
+ComStatic::StandItem `m630`, `m660`, `m6B4`: named with daStandItem_c in round 3 (mBaseJointMtx / mHeadJointMtx / mSpinAngle).
+
+## daWarpf_c (boss warp flower; d_a_warpf.h)
+
+Old names are the GameCube offsets (zeldaret/tww d217e2b, include/d/actor/d_a_warpf.h `mXXX`); WWHD runs the same code as tww src/d/actor/d_a_warpf.cpp.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3AC | `m290` | `mpBstWarpEmitter` | set_effect 024D6940: on the TOTG stage the emitter of ID_AK_SN_BSTWARP00 + 3, created once; _delete 024D717C invalidates it (tww the same) |
+| 0x3B0 | `m294` | `mpKirakiraEmitter` | set_effect 024D6940: on the boss stages the emitter of ID_AK_SN_BOSSWARPKIRAKIRA00, created once; initWait 024D7BCC / _delete 024D717C invalidate it (tww the same) |
+| 0x3B4 | `m298` | `mpLightEmitter` | set_effect 024D6940: on ET / WT before the end demo the emitter of ID_IT_SN_SHINDENTF_LIGHT00; initWait 024D7BCC / _delete 024D717C invalidate it (tww the same) |
+| 0x3B8 | `m29C` | `mpStarEmitter` | set_effect 024D6940: on ET / WT the emitter of ID_IT_SN_SHINDENTF_STAR00 (or ID_IT_SN_DEMO29_STAR00 after the end demo); initWait 024D7BCC / _delete 024D717C invalidate it (tww the same) |
+| 0x3C4 | `m2A8` | `mpModel` | CreateHeap 024D6114 creates the main model (YSBWP00 / GTFGLOW00 / GDEMO29_A00); set_mtx 024D7258 places it, _draw 024D73B4 draws it with the brk / bck / btk (tww the same) |
+| 0x3C8 | `m2AC` | `mpBrkAnm` | CreateHeap 024D6114: the main model's brk (YSBWP00 / GTFGLOW00 / GDEMO29_A01); anim_play 024D7A54 plays it, setEndAnim 024D6D94 sets its end frame, _draw 024D73B4 enters it (tww the same) |
+| 0x3CC | `m2B0` | `mpBckAnm` | CreateHeap 024D6114: the TOTG model's bck (YSBWP00); anim_play 024D7A54 plays it, setEndAnim 024D6D94 sets its end frame, _draw 024D73B4 enters it (tww the same) |
+| 0x3D0 | `m2B4` | `mpBtkAnm` | CreateHeap 024D6114: the TOTG model's btk (YSBWP00); anim_play 024D7A54 plays it, setEndAnim 024D6D94 sets its end frame, _draw 024D73B4 enters it (tww the same) |
+| 0x3D4 | `m2B8` | `mpBrkAnm1` | CreateHeap 024D6114: the second brk (GTFGLOW01, loop, rate 0); set_effect 024D6940 / anim_play 024D7A54 (from frame 120 of mFrameCount) start it, _draw 024D73B4 enters it while its rate > 0 (tww the same) |
+| 0x3D8 | `m2BC` | `mpBrkAnm2` | CreateHeap 024D6114: the third brk (GTFGLOW02, rate 0), NULL after the end demo; never played or entered in WWHD or tww |
+| 0x3DC | `m2C0` | `mpEndModel` | CreateHeap 024D6114: on ET / WT after the end demo the second model GDEMO29_B00, else NULL; set_mtx 024D7258 places it, _draw 024D73B4 draws it (tww the same) |
+| 0x3EC | `m2D0` | `mOrderRequest` | checkOrder 024D7628 sets 1 when check_warp_event finds the player in warp range and clears it once the event starts; eventOrder 024D79F4 orders the event mEventIdx while it is 1 (tww the same) |
+| 0x3F2 | `m2D6` | `mEventIdx` | CreateInit 024D6EEC: event index of WARP_WIND (WARP_WIND_AFTER after the end demo); eventOrder 024D79F4 orders it, checkOrder 024D7628 startCheck / endCheck it (tww the same) |
+| 0x3F4 | `m2D8` | `mSeState` | set_se 024D78D0: 0 plays the appear SE (JA_SE_CM_BST_WARP_BEAM / JA_SE_OBJ_BOSS_WARP_APPEAR) once and sets 1 (tww the same) |
+| 0x3FC | `m2E0` | `mSeTimer` | set_se 024D78D0 counts it up to 20000; on TOTG the level SE mpLevelSe starts only from 45 (tww the same) |
+| 0x400 | `m2E4` | `mFrameCount` | _execute 024D7B0C adds 1 each frame; actWait 024D7C98 / set_effect 024D6940 spawn wind every N frames of it, anim_play 024D7A54 starts mpBrkAnm1 from 120 (tww the same) |
+| 0x404 | `m2E8` | `mpLevelSe` | _create 024D6FB8: the dLevelSe_c made by fopKyM_fastCreate(fpcNm_LEVEL_SE_e, ..), reverb set on it; set_se 024D78D0 dLevelSe_seStart it (tww the same) |
+| 0x408 | `m2EC` | `mPlayerPos` | initWarpStart 024D7CE4 copies the player's current.pos; actWarpMode_1 024D7D38 / _2 024D7E64 / _3 024D7F68 put the wind effect at its y + 100 / 120 / 140 (tww the same) |
+
+Open: `m2CC`, `m2D4` (padding arrays, no use in WWHD or tww).
+
+## daHmlif_c (Tower of the Gods glowing lift; d_a_hmlif.h)
+
+Old names are the GameCube offsets (zeldaret/tww d217e2b, include/d/actor/d_a_hmlif.h `mXXX`); names after the tww daHmlif_prm accessors where tww reads the field from one (getPathId, getSwitchNo, getSwitchNo2, getSmooth, getType). The header declares several fields per line (`m444, m445`; `m446, m447, m448`; `m488, m489`); each gets its own name.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x55C | `m444` | `mPathId` | Create 021762C8: params >> 8 (tww daHmlif_prm::getPathId()); set_next_pnt 02175908 / setNextPath 021757CC fetch the home path with it |
+| 0x55D | `m445` | `mCurPathId` | Create 021762C8: mPathId, 255 when the room has no such path; move 02175DE4 / set_next_pnt 02175908 stop while 255; setNextPath 021757CC sets mPathId again on return (tww the same) |
+| 0x55E | `m446` | `mPathDir` | Create 021762C8: +1 / -1 from the direction parameter (random for 2); set_next_pnt 02175908 adds it to mPointNo and reverses it at the ends of an open path; setNextPath 021757CC sets it (tww the same) |
+| 0x55F | `m447` | `mSavedPathDir` | Create 021762C8 copies mPathDir; setNextPath 021757CC keeps mPathDir in it when switching to the next path, sets -1 / 1 at the path ends and restores mPathDir from it on return (tww the same) |
+| 0x560 | `m448` | `mPointNo` | Create 021762C8: the start point (params >> 22 & 31); set_next_pnt 02175908 steps it by mPathDir (wraps / bounces) and loads mTargetPos from that point; setNextPath 021757CC sets 1 / mArg0 + dir (tww the same) |
+| 0x568 | `m450` | `mTargetPos` | Create 021762C8: the start point; set_next_pnt 02175908: the position of point mPointNo; lift_normal_move 02175C34 / lift_smooth_move 02175AD0 move the lift toward it (tww the same) |
+| 0x574 | `m45C` | `mPrevTargetPos` | Create 021762C8: the start position; set_next_pnt 02175908 keeps the old mTargetPos in it; lift_smooth_move 02175AD0 turns toward the angle from it to mTargetPos (tww the same) |
+| 0x580 | `m468` | `mJunctionPos` | Create 021762C8: while mSwitchNo != 255, the position of path point mArg0 (the point where setNextPath 021757CC switches paths) (tww the same); never read in WWHD or tww |
+| 0x58C | `m474` | `mSwitchNo` | Create 021762C8: params & 0xFF (tww daHmlif_prm::getSwitchNo()); chkSwitchPathType 021757B8: != 255; setNextPath 021757CC takes the next room path while the switch is on |
+| 0x590 | `m478` | `mSwitchNo2` | CreateHeap 02175520: home.angle.z & 0xFF (tww daHmlif_prm::getSwitchNo2()); check_col 02175F48 turns this switch on when hit; anim_play 02175E60 / CreateHeap set mBtpFrame by it |
+| 0x596 | `m47E` | `mSmoothMove` | Create 021762C8: params >> 31 (tww daHmlif_prm::getSmooth()); move 02175DE4 runs lift_smooth_move while set, else lift_normal_move |
+| 0x598 | `m480` | `mMaxSpeed` | Create 021762C8: the speed table entry of params >> 16 & 15 (capped at 8), also speedF; lift_smooth_move 02175AD0 / lift_normal_move 02175C34 ease speedF to it (tww the same) |
+| 0x59C | `m484` | `mMoveCount` | lift_normal_move 02175C34: 0 in MOVE_INIT / MOVE_CRUISE, +1 per frame while accelerating or decelerating (tww the same); never otherwise read in WWHD or tww |
+| 0x5A0 | `m488` | `mMoveState` | lift_normal_move 02175C34: the MoveState (MOVE_INIT, MOVE_ACCELERATE, MOVE_CRUISE, MOVE_DECELERATE) it switches on and advances (tww the same) |
+| 0x5A1 | `m489` | `mType` | daHmlifCreate 021753A8: params >> 27 & 15, 0 when >= 3 (tww daHmlif_prm::getType()); CreateHeap 02175520 / Create 021762C8 / check_col 02175F48 pick the arc, model, cull box and sphere by it |
+| 0x5A2 | `m48A` | `mBtpFrame` | CreateHeap 02175520: 0, or 3 when mSwitchNo2 is on; anim_play 02175E60 steps it toward 3 (switch on) or 0 (off); Draw 021761F8 enters the btp at it (tww the same) |
+
+Open: `m449`, `m47C`, `m47F` (padding, no use in WWHD or tww).
+## daBoko_c (enemy weapons: Bokoblin stick, machete, mace, sword, spear; d_a_boko.h; view TnBoko in d_a_tn.h)
+
+zeldaret/tww (d217e2b, include/d/actor/d_a_boko.h) keeps the GameCube offset names for these fields; mRotAngleSpeed and mThrowAngle follow its setRotAngleSpeed(s16) / setThrow(s16), the rest come from the WWHD use (d_a_boko.cpp); the tww code is the same for every use cited. The multi-name declarations were split into one declaration per member first (separate commit). The view TnBoko (d_a_tn.h) takes mRotAngleSpeed for 0x43A: updateHeldWeapon (in daTn_Execute 024BD170) gives the dropped weapon a random spin.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x431 | `m2B9` | `mNoDraw` | checkNoDraw 020C0BFC: the stick is not drawn while it is set (as in Mode_4_e); never written in WWHD or tww |
+| 0x433 | `m2BB` | `mGroundSnapCount` | procMove_init 020C2624: bokoCarryHideTimer + 5; procMove 020C2C90: while it is not 0 each ground contact pulls current.pos.y down by the smaller root / top gap and counts it down (by 2 when the pitch has settled) |
+| 0x438 | `m2C0` | `mPitchSpeed` | procMove 020C2C90: the per-bounce pitch step toward the ground slope, added to shape_angle.x (with mRotAngleSpeed, the larger one); procWait_init 020C25A8 / setThrowReverse 020C26AC clear it (tww the same) |
+| 0x43A | `m2C2` | `mRotAngleSpeed` | tww setRotAngleSpeed(s16) stores it; setThrowReverse 020C26AC: +-0x7FF, then the 1500 / 2000 spin; procMove 020C2C90 adds it to shape_angle.x and damps it at each bounce; procWait_init 020C25A8 clears it |
+| 0x440 | `m2C8` | `mThrowGravityDelay` | procCarry 020C3480: 2 when the throw starts (gravity 0); procThrow 020C2978 counts it down and sets gravity -3 at 0 (tww the same) |
+| 0x442 | `m2CA` | `mThrowAngle` | tww setThrow(s16) stores it; procCarry 020C3480: the throw's shape_angle.x, speedF = 70 cos / speed.y = -70 sin of it |
+| 0x44C | `m2D0` | `mTopPos` | setTopRootPos 020C0E08: m_top_offset[type] through the stick matrix; procMove 020C2C90 ground-checks it; setFlameEffect 020C0EF8 puts the flame there (tww the same) |
+| 0x458 | `m2DC` | `mRootPos` | setTopRootPos 020C0E08: m_root_offset[type] through the stick matrix; procMove 020C2C90 ground-checks it against mTopPos (tww the same) |
+| 0x4A0 | `m320` | `mOldTopPos` | setFlameEffect 020C0EF8: copy of mTopPos after the flame emitter update; the emitter direction is (mTopPos - it) * rate (tww the same) |
+| 0x964 | `m7E4` | `mFlameScale` | setFlameEffect 020C0EF8: eased to 1 + random 0.2, scales the four flame models; execute 020C183C sets 0 when the flame goes out and scales mLight.mPower by it |
+
+### ke_c_s (one line-drawn hair strand) and LineKe (its 16 strands)
+
+| Offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x000 | `m000` | `mNodePos` | keCalc1 020C1250: the 10 node positions of one strand, each pulled from the previous node (tww the same) |
+| 0x078 | `m078` | `mNodeSpeed` | keCalc1 020C1250: the 10 node velocities added to the strand step (tww the same) |
+| 0x148 | `m001C` | `mKe` | keCalc 020C1684 / keCalc1 020C1250 / keDraw: the 16 hair strands (ke_c_s) drawn with the line material (tww the same) |
+
+Open (no name yet): `m2F4` (create 020C2188 copies current.pos there; never read) and the padding.
+
+## daWarpdm20_c (warp to Hyrule, the ring in the sea; d_a_warpdm20.h)
+
+zeldaret/tww (d217e2b, include/d/actor/d_a_warpdm20.h) keeps the GameCube offset names for these fields; the names come from the WWHD use (d_a_warpdm20.cpp) and the tww code is the same for every use cited. `m2E0, m2EC` were split into one declaration each first (separate commit).
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3E4 | `m2C8` | `mWarpOrder` | CreateInit 024D4D10 clears it; normal_execute 024D5354 sets 1 when check_warp sees the ship within 500; eventOrder 024D5708 orders TO_HYRULE_WARP while it is 1; checkOrder 024D5468 clears it when the event starts and runs normal_execute only while it is 0 (tww the same) |
+| 0x3E8 | `m2CC` | `mVisible` | CreateInit (event bit 0x2D08) / normal_execute 024D5354 / demo_execute 024D57E4 set 1; actDead 024D5B84 clears it when the bck ends; _draw 024D507C draws nothing while it is 0; _execute 024D58FC plays the warp sound while it is set (tww the same) |
+| 0x3F4 | `m2D8` | `mDemoShapeId` | demo_execute 024D57E4: the demo actor's mShapeId; 0 hides the model, 1 starts the 0x82BD effect (tww switches on it) |
+| 0x3FC | `m2E0` | `mEffectPos` | CreateInit 024D4D10 / _execute: current.pos at the sea height; set_effect 024D513C places the ripple particle there (tww the same) |
+| 0x408 | `m2EC` | `mEffectScale` | CreateInit 024D4D10 sets (1, 1, 1); set_effect 024D513C passes it as the particle scale; actDead 024D5B84 chases it to 0 and copies it into the emitter's particle and dynamics scales (tww the same) |
+| 0x414 | `m2F8` | `mSenkoSet` | set_wpsenko 024D5768: the 0x82BC particle is set only once; set to 1 after it (tww the same) |
+
+Open (no name yet): `m2D6` (CreateInit stores the parameter type; never read in WWHD or tww) and the padding.
+
+## daWarphr_c (warp out of Hyrule; d_a_warphr.h)
+
+zeldaret/tww (d217e2b, include/d/actor/d_a_warphr.h) keeps the GameCube offset names for these fields; the names come from the WWHD use (d_a_warphr.cpp) and the tww code is the same for every use cited; mWarpOrder / mEventIdx / mStaffIdx / mDemoShapeId as in daWarpdm20_c. `m2AC, m2B0` were split into one declaration each first (separate commit).
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3C8 | `m2AC` | `mpWarpEmitter` | initWarp 024DB718 / initWarpArrive 024DB808 store the ID_IT_SN_HRWARPB00 emitter; initWarpArriveEnd 024DB930 / _delete 024DA99C end it and clear it |
+| 0x3CC | `m2B0` | `mpDemoEmitter` | _execute 024DB310 stores the ID_IT_SP_DEMO20_INDWP00 emitter in the demo; _draw 024DAA1C sets its rotation / translation from mDemoEmitterMtx; _delete 024DA99C ends it |
+| 0x3D0 | `m2B4` | `mDemoEmitterMtx` | _draw 024DAA1C: translation to the demo camera eye and its yaw; decomposed into mpDemoEmitter's global rotation / translation (tww the same) |
+| 0x400 | `m2E4` | `mDemoEffectSet` | _execute 024DB310: set once the demo frame reaches 0x225 (the monotone effect starts only while it is 0) (tww the same) |
+| 0x40C | `m2F0` | `mWarpOrder` | normal_execute 024DAEE4 sets 2 when check_warp sees the player; eventOrder 024DB1EC orders the warp event while it is 2; checkOrder 024DAF54 clears it when the event starts; _execute 024DB310 clears it in the demo (tww the same) |
+| 0x414 | `m2F8` | `mEventIdx` | CreateInit 024DA6DC: the event index of TO_SEA_WARP_2 / TO_SEA_WARP_1; eventOrder 024DB1EC / checkOrder 024DAF54 order and check it (tww the same); as daWarpdm20_c::mEventIdx |
+| 0x41C | `m300` | `mDemoShapeId` | demo_execute 024DB24C: the demo actor's mShapeId; 0 plays animation 0 (tww switches on it); as daWarpdm20_c |
+| 0x420 | `m304` | `mStaffIdx` | demo_proc 024DB028: dComIfGp_evmng_getMyStaffId("Ghrwp"); the warp cuts read it (tww the same); as daWarpdm20_c::mStaffIdx |
+
+Open (no name yet): `m2FA` (CreateInit stores the parameter type; never read in WWHD or tww) and the padding.
+
+## daWarpgn_c (warp to Ganon's Tower; d_a_warpgn.h)
+
+zeldaret/tww (d217e2b, include/d/actor/d_a_warpgn.h) keeps the GameCube offset names for these fields; the names come from the WWHD use (d_a_warpgn.cpp) and the tww code is the same for every use cited.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3E0 | `m2C4` | `mWarpOrder` | normal_execute 024D9880 sets WarpgnOrder_APPEAR / WarpgnOrder_WARP; eventOrder 024D9CA4 orders the appear / to-majyuu warp event by it; checkOrder 024D999C and _execute 024D9E00 (in a demo) reset it to WarpgnOrder_NONE (tww the same); as daWarpdm20_c / daWarphr_c::mWarpOrder |
+| 0x5BC | `m388` | `mAppeared` | actAppear 024DA23C sets 1; _execute 024D9E00 runs the warp effects and the 100-frame timer while it is set or event bit 0x3D02 is on (tww the same) |
+
+## daWindTag::daWindTag_c (wind column tag; d_a_wind_tag.h)
+
+zeldaret/tww (d217e2b, src/d/actor/d_a_wind_tag.cpp) keeps the GameCube offset names; the names come from the WWHD use (d_a_wind_tag.cpp), the same code as tww.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x6F4 | `field_0x49c` | `mHeightScale` | CreateInit 024DF548: copy of scale.y; _execute 024E065C / CreateInit scale the type's height (mData[type * 2 + 1]) by it for mOffsY (tww the same) |
+| 0x8E7 | `field_0x577` | `mSwitchLatch` | _execute 024E065C: set when the switch changes (and the switch type allows it), cleared when the schedule bits turn off again (mPrevSchActive); while it is set the wind blows regardless of the switch / schedule (tww the same) |
+| 0x8EC | `field_0x57c` | `mPrevSwitch` | CreateInit 024DF548 / _execute 024E065C: fopAcM_isSwitch(mSwNo) of the last frame; _execute 024E065C compares it with the current state to latch mSwitchLatch (tww the same) |
+| 0x8ED | `field_0x57d` | `mPrevSchActive` | _execute 024E065C: the last frame's getSch & dKy_get_schbit (schedule active); clears mSwitchLatch when it falls to 0 (tww the same) |
+| 0x8EF | `field_0x57f` | `mSplash` | CreateInit 024DF548: daWindTag_prm::getSplashFlag == 1; CreateInit sets up the splash effect colour and emitter only while it is set (tww the same) |
+
+## daFallRock_c (falling rock; d_a_fallrock.h)
+
+zeldaret/tww (d217e2b, include/d/actor/d_a_fallrock.h) keeps the GameCube offset names; the names come from the WWHD use (d_a_fallrock.cpp), the same code as tww.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3B8 | `field_0x29C` | `mAcch` | create 0213185C sets it up with mAcchCir and speed; daFallRock_Execute 02131520 runs CrrPos and checks ChkGroundLanding / ChkWaterIn; daFallRock_c_dt 02131B58 destroys it (dBgS_ObjAcch; tww the same) |
+| 0x57C | `field_0x460` | `mAcchCir` | create 0213185C: SetWall(30, 30), passed to mAcch.Set; daFallRock_c_dt 02131B58 destroys it (dBgS_AcchCir; tww the same) |
+| 0x728 | `field_0x60C` | `mParticleColor` | setParticle 02131208: tevStr.mColorC0 copied in, the prim colour of the ID_IT_JN_M_STS_HAHEN fragments (tww the same) |
+| 0x72C | `field_0x610` | `mFallDist` | create 0213185C clears it; daFallRock_Execute 02131520 adds /speed.y/ each frame and deletes the rock once it exceeds m_falllen (tww the same) |
+
+Open (no name yet): `field_0x614` (daFallRock_Execute counts it up; never read).
+
+## daObjPlant_c (swaying plant; d_a_obj_plant.h)
+
+zeldaret/tww (d217e2b) keeps the GameCube offset names; the names come from the WWHD use, the same code as tww.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x524 | `field_0x408` | `mSwayAngle` | _execute (in daObjPlant_Execute 023867F4): sin(mSwayPhase) * (0x100 - mHitTimer) * 32 / 16 while mSwaying, 0 at the end; nodeCallBack 023861E0 rotates the joint by it about the axis set by mSwayDir (tww the same) |
+| 0x526 | `field_0x40A` | `mSwayPhase` | _execute (in daObjPlant_Execute 023867F4): 0 at a hit, + 0x1000 (first 8 frames) / + 0x800 per frame; the sine phase of mSwayAngle (tww the same) |
+| 0x52A | `field_0x40E` | `mSwayDir` | _execute (in daObjPlant_Execute 023867F4): the angle from the hitting actor - 0x4000; nodeCallBack 023861E0 rotates X by it before and by -it after the sway rotation (tww the same) |
+| 0x52C | `field_0x410` | `mSwaying` | CreateInit 02386514 clears it; _execute (in daObjPlant_Execute 023867F4) sets 1 at a hit, sways while it is set and clears it after 0x100 frames; a new hit counts only while it is 0 or after frame 0x38 (tww the same) |
+
+## daFloor_c (floor that breaks under the Iron Boots; d_a_floor.h)
+
+zeldaret/tww (d217e2b) keeps the GameCube offset names; the names come from the WWHD use, the same code as tww.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3F0 | `field_0x2d8` | `mBreakStarted` | rideCallBack 0213FD18: set once (with mBreakTimer 6) when the player in iron boots lands on the floor after mPlayerStanding was set; only then (tww the same) |
+| 0x3F1 | `field_0x2d9` | `mPlayerStanding` | rideCallBack 0213FD18 sets 1 while the player rides the floor without the iron boots; Execute 0214000C clears it whenever the player moves in XZ; the break needs it (tww the same) |
+| 0x3F2 | `field_0x2da` | `mBreakTimer` | rideCallBack 0213FD18: 6 when the break starts; Execute 0214000C counts it down and at 0 sets the effect, the break sound, the switch and deletes the floor (tww the same) |
+
+Open (no name yet): `field_0x2db` (no use).
+
+## daToge_c (Wind Temple floor spikes; d_a_toge.h)
+
+zeldaret/tww (d217e2b) names these unk470 / unk474 / unk485 / unk486; the names come from the WWHD use (d_a_toge.cpp), the same code as tww. The header comment that said the unk names follow the retail decompilation is updated.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x58C | `unk470` | `mSpikeY` | nodeCallBack 024C6E78: transM(0, it, 0) on the spike model; Create 024C6FB0 -150 (m_y_min); toge_move 024C7520 eases it to -150 (RETRACT) or to mSpikeTargetY (EXTEND); set_collision 024C7774 puts the collision at it - 10 (tww the same) |
+| 0x590 | `unk474` | `mSpikeTargetY` | toge_move 024C7520: the EXTEND target of mSpikeY: 0 once the spikes are up, then -60 / 0 for the bob (tww the same) |
+| 0x5A1 | `unk485` | `mRetractRequest` | _execute 024C77F0 sets 1 when the switch is on or the wind tag's wind stops (unless already waiting to retract); toge_move 024C7520 starts RETRACT_WAIT with mRetractWait at the extended position and clears it (tww the same) |
+| 0x5A2 | `unk486` | `mRetractWait` | toge_move 024C7520: 10 when RETRACT_WAIT starts; counted down there, the spikes retract at 0 (tww the same) |
+
+## daHys_c (arrow switch; d_a_hys.h)
+
+zeldaret/tww (d217e2b) keeps the GameCube offset names; the names come from the WWHD use, the same code as tww.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x5C8 | `field_0x450` | `mMode` | mode_proc_call 0217A8B4 runs mode_proc[it] (0 mode_wait, 1 mode_sw_on); Create 0217AB18 sets it from the switch; mode_sw_on_init 0217AD8C / mode_wait_init 0217AD04 set 1 / 0 (tww the same) |
+| 0x5D0 | `field_0x458` | `mBtpFrame` | Draw 0217AA6C enters mBtpAnm at it; mode_sw_on 0217AD10 counts it up to 3, mode_wait 0217ADF8 down to 0; Create 0217AB18 3 / 0 by the switch (tww the same) |
+
+## daObj_MjDoor_c and daObj_MjDoorHIO_c (Forsaken Fortress breakable door; d_a_obj_majyuu_door.h)
+
+zeldaret/tww (d217e2b) keeps the GameCube offset names; the names come from the WWHD use (d_a_obj_majyuu_door.cpp), the same code as tww. The HIO flag is set only by the HIO constructor.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3E8 | `field_0x2CC` | `mSwitchNo` | getArg 0236F3BC: param & 0xFF; _create 0236F580 creates nothing when that switch is on; modeDeleteInit 0236FAAC sets it (tww the same) |
+| HIO 0x04 | `field_0x4` | `mForceBreak` | modeWait 0236FCD8 breaks the door (modeDeleteInit) when it is set as when health < 0; MjDoor_hioCtor 0236FDB8 sets 0, never written elsewhere in WWHD or tww |
+
+## daSwProp_c (wind propeller switch; d_a_swpropeller.h)
+
+zeldaret/tww (d217e2b) keeps the GameCube offset name; the name comes from the WWHD use (d_a_swpropeller.cpp), the same code as tww.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x764 | `m648` | `mSwitchNo` | CreateInit 024A2E10: param & 0xFF; _execute 024A31E4 toggles that switch (dComIfGs_revSwitch) (tww the same) |
+
+## daObjOspbox::Act_c (Ospbox; d_a_obj_ospbox.h)
+
+zeldaret/tww (d217e2b) keeps the GameCube offset names; the names come from the WWHD use (d_a_obj_ospbox.cpp), the same code as tww.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x5AC | `m494` | `mGroundY` | set_ground 02380610: the GroundCross result 100 above the box (tww tests it against -G_CM3D_F_INF) |
+| 0x5B0 | `m498` | `mGroundTries` | init_ground 023806CC sets 5; set_ground 02380610 checks the ground only while it is > 0, sets 0 once found, else counts down (tww the same) |
+
+Open (no name yet): `m49A` (Create sets 2, Execute counts it down and then sets bit 0x80 of the dBgW flags; that flag has no name, so the role is not settled).
+
+## daDemo_Kmm_c (demo actor Kmm; d_a_demo_kmm.h)
+
+Named under the 2026-11-11 rule (written by WWHD only at init, read only by zeldaret/tww d217e2b).
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x3B8 | `unk_29C` | `mAction` | written only by CreateInit 02124324 through setAction(0) (d_a_demo_kmm.h); read only in tww daDemo_Kmm_c::execute, which calls l_action[it] (the one entry daDemo_Kmm_actionWait) |
+
+Open (no name yet): `unk_29E` (CreateInit clears it; no read in WWHD or tww).
+
+## daObj_Warpt_HIO_c (l_HIO; d_a_obj_warpt.h)
+
+Round 5 (two-digit offset names). The warp pot's HIO: a one-shot lid-break request, the ride switch, the lid height, the warp circle radius and the smoke colours. Same meanings in zeldaret/tww d217e2b.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x04 | `m04` | `mBreakHutaReq` | _execute 023BAD74: while set it is cleared, breakHuta(0) runs and the mode goes to 2 (MODE_BREAK_FIRE), a one-shot request; warptHioConstruct 023BBA6C 0 (tww the same) |
+| 0x06 | `m06` | `mNoRide` | _ride 023B9D5C returns before the warp check while it is set (tww the warp check runs only while it is 0); warptHioConstruct 023BBA6C 0 (tww the same) |
+| 0x08 | `m08` | `mLidOffsetY` | setMtx 023BA250: mLidPos.y = current.pos.y + it, the height where the lid models are put; warptHioConstruct 023BBA6C 150 (tww m830.y += it) |
+| 0x0C | `m0C` | `mWarpRadius` | _ride 023B9D5C: Link inside a circle of this radius (height 20) around mLidPos starts mode 3, MODE_EVENT_WARP; warptHioConstruct 023BBA6C 30 (tww dLib_checkPlayerInCircle(m830, it, 20)) |
+| 0x14 | `m14` | `mSmokePrmColorOverride` | _execute 023BAD74: when its r/g/b is not all 0 it becomes the open / close smoke emitters' prim colour (tww setGlobalPrmColor); warptHioConstruct 023BBA6C the default colour (tww {0, 0, 0, 128}) |
+| 0x18 | `m18` | `mSmokeEnvColorOverride` | _execute 023BAD74: when its r/g/b is not all 0 it becomes the open / close smoke emitters' env colour (tww setGlobalEnvColor); warptHioConstruct 023BBA6C the default colour (tww {0, 0, 0, 128}) |
+
+Open (no name yet): `m05` and `m10` (set by warptHioConstruct 023BBA6C to 0 / -2.5, read nowhere in WWHD or tww), padding `mPadding7`.
+
+
+## daYkgr_HIO_c and dPa_YkgrPcallBack (l_HIO, YkgrCB; d_a_ykgr.h)
+
+Round 5 (two-digit offset names). The Dragon Roost heat haze: the HIO's alpha fade step, the strength range blended by the aim / position rates, the aim target and the path distance range; the particle callback's 2x3 indirect texture matrix and its scale exponent, which YkgrPcallBack_draw 024EAD4C hands to JPASetIndTexMtx. Same meanings in zeldaret/tww d217e2b.
+
+daYkgr_HIO_c (l_HIO):
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x0C | `m0C` | `mAlphaStep` | daYkgrExecute 024EAAE8 (_execute inlined): m_alpha moves by it per frame toward 0 (stopped) or 0xFF (started); __sinit_d_a_ykgr_cpp 024EAD68 3 (tww the same) |
+| 0x14 | `m14` | `mStrengthLow` | daYkgrExecute 024EAAE8: setParam(rate * mStrengthHigh + (1 - rate) * it), the haze strength (the ind-matrix scale exponent and mantissa) at rate 0; __sinit_d_a_ykgr_cpp 024EAD68 -5 (tww the same) |
+| 0x18 | `m18` | `mStrengthHigh` | daYkgrExecute 024EAAE8: the haze strength passed to setParam at rate 1 (rate = half mAimRate + half mPosRate); __sinit_d_a_ykgr_cpp 024EAD68 -3 (tww the same) |
+| 0x1C | `m1C` | `mAimRateTarget` | daYkgrExecute 024EAAE8: m_aim_rate eases toward it, and mAimRate toward m_aim_rate; __sinit_d_a_ykgr_cpp 024EAD68 0 (tww the same) |
+| 0x20 | `m20` | `mPathDistMax` | getPosRate 024EA984: the player's xz distance to the nearest path point is clamped to [mPathDistMin, it]; the rate is 1 - (dist - min) / (it - min); __sinit_d_a_ykgr_cpp 024EAD68 1500 (tww the same) |
+| 0x24 | `m24` | `mPathDistMin` | getPosRate 024EA984: the lower clamp of the path distance, where the position rate is 1; __sinit_d_a_ykgr_cpp 024EAD68 500 (tww the same) |
+
+dPa_YkgrPcallBack (YkgrCB):
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x04 | `m04` | `mIndMtx00` | YkgrPcallBack_draw 024EAD4C passes &it to JPASetIndTexMtx as the 2x3 indirect texture matrix (tww GXSetIndTexMtx(GX_ITM_0, &m04, m1C)); row 0 column 0, the mantissa setParam 024EA58C computes |
+| 0x08 | `m08` | `mIndMtx01` | YkgrPcallBack_draw 024EAD4C: row 0 column 1 of the indirect texture matrix starting at mIndMtx00; setParam 024EA58C and __sinit_d_a_ykgr_cpp 024EAD68 0 (tww the same) |
+| 0x0C | `m0C` | `mIndMtx02` | YkgrPcallBack_draw 024EAD4C: row 0 column 2 of the indirect texture matrix; setParam 024EA58C and __sinit_d_a_ykgr_cpp 024EAD68 0 (tww the same) |
+| 0x10 | `m10` | `mIndMtx10` | YkgrPcallBack_draw 024EAD4C: row 1 column 0 of the indirect texture matrix; setParam 024EA58C and __sinit_d_a_ykgr_cpp 024EAD68 0 (tww the same) |
+| 0x14 | `m14` | `mIndMtx11` | YkgrPcallBack_draw 024EAD4C: row 1 column 1 of the indirect texture matrix; setParam 024EA58C stores the same mantissa as mIndMtx00 (tww m04 = m14 = ..) |
+| 0x18 | `m18` | `mIndMtx12` | YkgrPcallBack_draw 024EAD4C: row 1 column 2 of the indirect texture matrix; setParam 024EA58C and __sinit_d_a_ykgr_cpp 024EAD68 0 (tww the same) |
+| 0x1C | `m1C` | `mIndScaleExp` | YkgrPcallBack_draw 024EAD4C passes it to JPASetIndTexMtx as the matrix's scale exponent (tww GXSetIndTexMtx scale_exp); setParam 024EA58C stores its parameter rounded down; __sinit_d_a_ykgr_cpp 024EAD68 1 (tww the same) |
+
+Open (no name yet): daYkgr_HIO_c `m08` and `m10` (set by __sinit_d_a_ykgr_cpp 024EAD68 to 0xFF / -16, read nowhere in WWHD or tww), padding `_05`.
+
+
+## daObjTide::Attr_c (attr(); d_a_obj_tide.h)
+
+Round 6 (two-digit offset names). The tide object's attributes: the height it moves with the water level, the speed curve of its chase to the aim height, and the delay and rate of its wet (nure) brk. Same meanings in zeldaret/tww d217e2b.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x20 | `m20` | `mLevelHeight` | Mthd_Create 023A0484 (with sch_flag) and mode_norm 023A14A8: current.pos.y = home.pos.y + (1 - the water level) * it, the height the object moves with the tide (tww the same) |
+| 0x24 | `m24` | `mMoveAccel` | move_to_aim 023A1258: mMoveSpeed grows by it every frame (tww m2F0 += it) |
+| 0x28 | `m28` | `mMoveSpeedMax` | move_to_aim 023A1258: the upper clamp of mMoveSpeed (tww the same) |
+| 0x2C | `m2C` | `mMoveSpeedMin` | move_to_aim 023A1258: mMoveSpeed is kept above it (it + 0.001) and it is cLib_addCalc's minimum step (tww the same) |
+| 0x30 | `m30` | `mMoveScale` | move_to_aim 023A1258: cLib_addCalc's scale for the height chase toward the aim (tww the same) |
+| 0x42 | `m42` | `mNureBrkDelay` | mode_norm 023A14A8: mTimer = it when the water state flags it (STATE_2 without STATE_1); when mTimer runs out the nure (wet) brk restarts from frame 0 (tww m2F4 = it) |
+| 0x44 | `m44` | `mNureBrkRate` | CreateHeap 023A06C0 inits the nure (wet) brk mBrk2 with it as play speed; mode_norm 023A14A8 sets that rate again on restart (tww setPlaySpeed(it)) |
+
+Open (no name yet): padding `padding0E`, `padding22`, `padding41`.
+
+
+## daobj_stairHIO_c (l_HIO; d_a_obj_stair.h)
+
+Round 6 (two-digit offset names). The crumbling stairs (崩れる階段): the delay before a hit stair breaks loose, its break speed and spin, and its fall. Same meanings in zeldaret/tww d217e2b; in WWHD the vtable is last, so the offsets are 4 lower than the old names.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x04 | `m08` | `mFallAccel` | _execute 02390AC4: after mBreakDelay, speed.y eases toward mFallSpeedMax with cLib_addCalc2 step it; daobj_stairHIO_c_ct 02391570 2.5 (tww the same) |
+| 0x08 | `m0C` | `mFallSpeedMax` | _execute 02390AC4: the target of speed.y while the broken stair falls; daobj_stairHIO_c_ct 02391570 -175 (tww the same) |
+| 0x0C | `m10` | `mBreakRotSpeed` | _execute 02390AC4: when mBreakTimer reaches mBreakDelay the spin per frame is it * 0.5 * the hit offset length * 0.01 * mBreakPower degrees (mRotSpeed); daobj_stairHIO_c_ct 02391570 5 (tww the same) |
+| 0x10 | `m14` | `mBreakSpeed` | _execute 02390AC4: when mBreakTimer reaches mBreakDelay the speed is it * mBreakPower along mBreakDir (times the spin cosine); daobj_stairHIO_c_ct 02391570 2.5 (tww the same) |
+| 0x14 | `m18` | `mBreakDelay` | ride_call_back 023905F4 and the hit code in _execute 02390AC4 start mBreakTimer below it (it - 2, or less for a far hit); at it the stair breaks loose (speed, spin, JA_SE_OBJ_BREAK_STEPS), it shakes in the 10 frames before, falls after and is deleted 240 frames later; daobj_stairHIO_c_ct 02391570 6 (tww the same) |
+
+Open (no name yet): padding `_01`, `_16`. The local `m18` in _execute (a copy of the HIO value) keeps its name.
+
+
+## daMozo_childHIO_c (l_HIO.mBeamChild / mFireChild; d_a_mozo.h)
+
+Round 8 (two-digit offset names). The per-type search and attack ranges of the Mozo statue (beam and fire child HIOs, picked by mType in checkRange). Same meanings in zeldaret/tww; in WWHD the vtable is last, so the offsets are 4 lower than the names.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x00 | `m04` | `mSearchDist` | daMozo_c::checkRange 021D5030 with 0 (wait_proc 021D53D8, before the attack starts): Link must be closer than it horizontally; daMozo_HIO_c__ct 021D6070 1000 for both children (tww the same) |
+| 0x04 | `m08` | `mAttackDist` | daMozo_c::checkRange 021D5030 with 1 (the attack procs; a failed check returns to towait_proc_init): Link must stay closer than it horizontally; daMozo_HIO_c__ct 021D6070 1200 for both children (tww the same) |
+| 0x08 | `m0C` | `mSearchAngle` | daMozo_c::checkRange 021D5030 with 0: the angle between the actor's facing and Link must be below it; daMozo_HIO_c__ct 021D6070 0x2000 (tww the same) |
+| 0x0A | `m0E` | `mAttackAngle` | daMozo_c::checkRange 021D5030 with 1: the facing angle limit while it attacks; daMozo_HIO_c__ct 021D6070 0x2800 (tww the same) |
+
+Open (no name yet): daMozo_childHIO_c `m10` (set to 0 by the constructor, read nowhere in WWHD or tww); daMozo_HIO_c `m08` (set to -1, read nowhere), `m3C`, `m40`, `m44` (constructor only, read nowhere in WWHD or tww).
+
+## daOship_HIO_c (l_HIO; d_a_oship.h)
+
+Round 8 (two-digit offset names). The enemy ship's debug switches: instant kill, no shot, debug-register bomb flight and perfect aim. Same fields (bool, unnamed) in zeldaret/tww; the vtable is first, so the offsets equal the old names.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x05 | `m05` | `mDebugKill` | daOship_c::checkTgHit 023C714C: while it is set the ship's health becomes 0 and it enters MODE_DELETE at once, before any hit check; daOship_HIO_c__ct 023C8090 0 (tww the same, bool) |
+| 0x06 | `m06` | `mNoAttack` | daOship_c::modeAttack 023C760C: when the aim timer runs out, a set flag skips the shot the way a blocked lineCheck does (changeModeByRange, no bomb); daOship_HIO_c__ct 023C8090 0 (tww the same, bool) |
+| 0x07 | `m07` | `mBombRegFlight` | daOship_c::_execute 023C68B8: only while it is set do the fired bombs get the debug-register flight (speedF eased to l_debugRegisters mFloat[3]/[4], speed.y set from mFloat[2] once below mFloat[1]); daOship_HIO_c__ct 023C8090 0 (tww the same with REG12_F) |
+| 0x08 | `m08` | `mPerfectAim` | daOship_c::modeAttackInit 023C6DB4: a set flag forces the random aim error to 0 on both branches (Link in the special status and normal); daOship_HIO_c__ct 023C8090 0 (tww the same, bool) |
+
+Open (no name yet): daOship_HIO_c `m04` (set to 0 by the constructor, read nowhere in WWHD or tww), padding `padding09`.
+
+## daObj_Hole_HIO_c (l_HIO; d_a_obj_hole.h)
+
+Round 8 (two-digit offset names). The pitfall hole's HIO: debug draw, the base radius, a size override and the model's height offset. Same meanings in zeldaret/tww; in WWHD the vtable is last, so the offsets are 4 lower than the names.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x01 | `m05` | `mDebugDraw` | daObj_Hole_c::_draw 0235792C calls debugDraw while it is set; daObj_Hole_HIO_c_ct 02357CE0 0 (tww the same) |
+| 0x04 | `m08` | `mBaseRadius` | daObj_Hole_c::modeWait 02357AC8: the pit's radius is it * scale.x + size * 10, and Link inside that circle (dLib_checkPlayerInCircle) starts the pitfall event; setMtx 023573BC divides the same radius by it for the model scale; daObj_Hole_HIO_c_ct 02357CE0 65 (tww the same) |
+| 0x08 | `m0C` | `mSizeOverride` | daObj_Hole_c::modeWait 02357AC8 and setMtx 023573BC: when non-zero it replaces the actor's own size step mScaleLocal in the radius (it * 10); daObj_Hole_HIO_c_ct 02357CE0 0 (tww the same) |
+| 0x0C | `m10` | `mModelOffsetY` | daObj_Hole_c::setMtx 023573BC: added to current.pos.y for the model's position; daObj_Hole_HIO_c_ct 02357CE0 2 (tww the same) |
+
+Open (no name yet): padding `_02`, `_0A`.
+
+## daTbox_HIO_c (l_HIO; d_a_tbox.h)
+
+Round 8 (two-digit offset names). The treasure chest's HIO: the timing of the appear demo after the Wind Waker song (show frame, length, dimming and brightening of the scene colours). Same meanings in zeldaret/tww; in WWHD the vtable is last, so the offsets are 4 lower than the names.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x02 | `m06` | `mAppearShowFrame` | daTbox_c::demoProcAppear_Tact 024B68B0: when mAppearTimer reaches mAppearTime - it (that many frames into the demo) the chest model is made visible and the appear brk is played to its end; daTbox_HIO_ct 024B7888 130 (tww the same) |
+| 0x04 | `m08` | `mAppearTime` | the length of the chest's Wind Waker appear demo: daTbox_c::CreateInit 024B5CFC starts mAppearTimer at it, demoProcAppear_Tact 024B68B0 counts it down and measures the show frame and the dimming from it; daTbox_HIO_ct 024B7888 180 (tww the same) |
+| 0x06 | `m0A` | `mAppearDimTime` | daTbox_c::demoProcAppear_Tact 024B68B0: over the first it frames the scene colour ratio falls from 1 to 0.4 (tboxSetAllColorRatio); daTbox_HIO_ct 024B7888 48 (tww dKy_set_allcol_ratio, the same) |
+| 0x08 | `m0C` | `mAppearBrightenTime` | daTbox_c::demoProcAppear_Tact 024B68B0: over the last it frames the colour ratio rises from 0.4 back to 1; daTbox_HIO_ct 024B7888 30 (tww the same) |
+
+Nothing else is open; `mPadding` and `mPaddingA` are padding.
+
+## daObjComing::Ctrl_c, Act_c::MakeTmp_c and PrmBarrel2_c (d_a_obj_coming.h)
+
+Round 8 (two-digit offset names). The floating barrel spawner: each of its five Ctrl_c controllers (mode, timer, barrel id), the position check record MakeTmp_c and the barrel parameter record's buoy flag. Same meanings in zeldaret/tww; no vtable, so the offsets equal the old names.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x00 | `m00` | `mMode` | the controller's Ctrl_c::Mode: Ctrl_c::init 02331A08 MODE_WAIT; mode_barrel2_wait 02332728 sets MODE_APPEAR after creating a barrel, mode_barrel2_appear 02332868 MODE_WAIT again; _execute 02331C94 dispatches on it (tww the same) |
+| 0x04 | `m04` | `mTimer` | Ctrl_c::init_timer 0233194C / set_wait_timer 02331A44 / set_retry_timer 02331B00 / set_appear_timer 02331B4C set it; _execute 02331C94 counts it down; mode_barrel2_wait / appear act only once it is 0 (tww the same) |
+| 0x08 | `m08` | `mBarrelId` | process id of the controller's barrel: mode_barrel2_wait 02332728 stores Coming_createBarrel's result, mode_barrel2_appear 02332868 / leave 02332960 look it up and clear it to fpcM_ERROR_PROCESS_ID_e; Ctrl_c::init 02331A08 clears it (tww the same) |
+
+Act_c::MakeTmp_c:
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x00 | `m00` | `mShipPos` | Act_c::barrel2_get_param 023325C4: the ship's position; chk_make_pos_wall 023322EC: start of the line check to mMakePos (tww the same) |
+| 0x0C | `m0C` | `mMakePos` | Act_c::barrel2_get_param 023325C4: the candidate barrel position from get_make_pos; chk_make_pos_gnd 0233211C, chk_make_pos_wall 023322EC and chk_make_pos_act 0233233C test it (tww the same) |
+| 0x18 | `m18` | `mCheckRadius` | barrel2_get_param 023325C4 200; chk_make_pos_gnd 0233211C and chk_make_pos_act 0233233C use it + 100 as the radius around mMakePos (tww the same) |
+| 0x1C | `m1C` | `mCheckHeight` | barrel2_get_param 023325C4 400; chk_make_pos_act 0233233C: an actor counts as in the way within it + 100 of mMakePos.y (tww the same) |
+
+PrmBarrel2_c:
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x14 | `m14` | `mHasBuoy` | Act_c::barrel2_get_param 023325C4 sets it from barrel2_get_buoy (tww daObjComing::Act_c::barrel2_get_buoy, a per-pattern bool table); mode_barrel2_wait 02332728 puts its inverse in bit 8 of the barrel's parameters |
+
+Open (no name yet): `Attr_c::m00` in d_a_obj_coming.cpp (the s16 table L_Attr: entries 0-3 are the barrel counts per PRM_MAKENUM, entries 4-11 the base and random range of the wait timer per PRM_WAIT_TIME; no single role for one name), padding `PrmBarrel2_c::padding`, `Act_c::padding`.
+
+## daObjSwpush::Attr_c (M_attr; d_a_obj_swpush.h)
+
+Round 9 (two-digit offset names). The floor switch's per-type attributes: the speed when a rider lands, the delay of the downward move, and the ride-area scales before and while riding. Same fields, unnamed, in zeldaret/tww (tww reads them the same way: attr().m34 / m38 / m40 / m44); no vtable, so the offsets equal the old names.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x34 | `m34` | `mLandSpeed` | daObjSwpush::Act_c::mode_upper 02398608: when a rider newly lands on a switch that does not need a heavy rider, mSpeed is set to it (with a 30-frame debounce and a pause); per-type attribute (tww the same field, unnamed) |
+| 0x38 | `m38` | `mLowerDelay` | daObjSwpush::Act_c::mode_u_l_init 02398348: the timer passed to top_bg_aim_req with target 0 when the switch starts going down (upper to lower); next to mMiniPushDelay1 / mPushDelay / mMiniPushDelay2 (tww the same field, unnamed) |
+| 0x40 | `m40` | `mRideAreaScale` | rideCB 0239705C: scale of the no-push offset vectors that widen the top's ride-check triangles while the rider was not on it the previous frame (tww the same field, unnamed) |
+| 0x44 | `m44` | `mRideAreaScaleHeld` | rideCB 0239705C: the same scale while the rider was already on it (mPrevRiding), so the area differs once riding (tww the same field, unnamed) |
+
+Nothing else open apart from the padding `padding4A`.

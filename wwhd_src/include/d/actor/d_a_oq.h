@@ -18,7 +18,7 @@ struct enemyice {
     /* 0x006 */ be<s8> mLightShrinkTimer;
     /* 0x007 */ u8 _007;
     /* 0x008 */ be<f32> mYOffset;
-    /* 0x00C */ be<s8> m00C;
+    /* 0x00C */ be<s8> mFreezeType;  /* was m00C: view of enemyice::mFreezeType (c/c_damagereaction.h) */
     /* 0x00D */ be<s8> mMode;
     /* 0x00E */ be<s16> mFreezeTimer;
     /* 0x010 */ be<s16> mMoveDelayTimer;
@@ -27,8 +27,8 @@ struct enemyice {
     /* 0x016 */ u8 _016[2];
     /* 0x018 */ cXyz mSpeed;
     /* 0x024 */ be<f32> mSpeedF;
-    /* 0x028 */ be<f32> m028;
-    /* 0x02C */ be<f32> m02C;
+    /* 0x028 */ be<f32> mBodyLiftY;  /* was m028: view of enemyice::mBodyLiftY (c/c_damagereaction.h) */
+    /* 0x02C */ be<f32> mIceOffsetY;  /* was m02C: view of enemyice::mIceOffsetY (c/c_damagereaction.h) */
     /* 0x030 */ dCcD_Stts mStts;
     /* 0x06C */ dCcD_Cyl mCyl;
     /* 0x19C */ be<f32> mCylHeight;
@@ -68,7 +68,7 @@ struct enemyfire {
     /* 0x0A0 */ dCcD_Stts mStts;
     /* 0x0DC */ dCcD_Sph mSph;
     /* 0x208 */ u8 mLight[0x20]; /* LIGHT_INFLUENCE */
-    /* 0x228 */ be<f32> m228;    /* HD */
+    /* 0x228 */ be<f32> mHD20;  /* HD; was m228: mLight (0x208, a LIGHT_INFLUENCE of HD size 0x24, declared here as its first 0x20 bytes) + 0x20 = LIGHT_INFLUENCE::mHD20 (bindings.h / d/d_kankyo.h), the light's HD tail; the enemyfire constructors (pt 02446C68, ki 0219D368, ks 021AA2D8, cc 02110B28, oq 023C3C80, am 0204B6A0, rd 0245A984, nz 0230F104) set it to 1.0 as the LIGHT_INFLUENCE constructor does; no reader in WWHD, so it keeps the class name */
 };
 WWHD_OFFSET(enemyfire, mSph, 0xDC);
 WWHD_SIZE(enemyfire, 0x22C);
@@ -178,7 +178,7 @@ struct CcAtInfo_oq {
     /* 0x09 */ be<u8> mbDead;
     /* 0x0A */ be<u8> mResultingAttackType;
     /* 0x0B */ u8 _0B;
-    /* 0x0C */ csXyz m0C;
+    /* 0x0C */ csXyz mHitAngle;  /* was m0C: the CcAtInfo copy of this unit; see d/d_cc_uty.h */
     /* 0x12 */ be<u16> mPlCutBit;
     /* 0x14 */ be<u32> pParticlePos;
     /* 0x18 */ be<s32> mHitSoundId;
@@ -403,7 +403,7 @@ WWHD_OFFSET(enemyice, mpActor, 0x000);
 WWHD_OFFSET(enemyice, mFreezeDuration, 0x004);
 WWHD_OFFSET(enemyice, mLightShrinkTimer, 0x006);
 WWHD_OFFSET(enemyice, mYOffset, 0x008);
-WWHD_OFFSET(enemyice, m00C, 0x00C);
+WWHD_OFFSET(enemyice, mFreezeType, 0x00C);
 WWHD_OFFSET(enemyice, mMode, 0x00D);
 WWHD_OFFSET(enemyice, mFreezeTimer, 0x00E);
 WWHD_OFFSET(enemyice, mMoveDelayTimer, 0x010);
@@ -411,8 +411,8 @@ WWHD_OFFSET(enemyice, mAngleY, 0x012);
 WWHD_OFFSET(enemyice, mAngularVelY, 0x014);
 WWHD_OFFSET(enemyice, mSpeed, 0x018);
 WWHD_OFFSET(enemyice, mSpeedF, 0x024);
-WWHD_OFFSET(enemyice, m028, 0x028);
-WWHD_OFFSET(enemyice, m02C, 0x02C);
+WWHD_OFFSET(enemyice, mBodyLiftY, 0x028);
+WWHD_OFFSET(enemyice, mIceOffsetY, 0x02C);
 WWHD_OFFSET(enemyice, mStts, 0x030);
 WWHD_OFFSET(enemyice, mCyl, 0x06C);
 WWHD_OFFSET(enemyice, mWallRadius, 0x1A0);
@@ -439,7 +439,7 @@ WWHD_OFFSET(enemyfire, mHitboxFlameIdx, 0x09D);
 WWHD_OFFSET(enemyfire, mStts, 0x0A0);
 WWHD_OFFSET(enemyfire, mSph, 0x0DC);
 WWHD_OFFSET(enemyfire, mLight, 0x208);
-WWHD_OFFSET(enemyfire, m228, 0x228);
+WWHD_OFFSET(enemyfire, mHD20, 0x228);
 WWHD_OFFSET(mDoExt_baseAnm_oq, mFrameCtrl, 0x00);
 WWHD_OFFSET(dPa_rippleEcallBack_oq, mpEmitter, 0x04);
 WWHD_OFFSET(dPa_rippleEcallBack_oq, mRate, 0x10);
@@ -448,7 +448,7 @@ WWHD_OFFSET(CcAtInfo_oq, mpActor, 0x04);
 WWHD_OFFSET(CcAtInfo_oq, mDamage, 0x08);
 WWHD_OFFSET(CcAtInfo_oq, mbDead, 0x09);
 WWHD_OFFSET(CcAtInfo_oq, mResultingAttackType, 0x0A);
-WWHD_OFFSET(CcAtInfo_oq, m0C, 0x0C);
+WWHD_OFFSET(CcAtInfo_oq, mHitAngle, 0x0C);
 WWHD_OFFSET(CcAtInfo_oq, mPlCutBit, 0x12);
 WWHD_OFFSET(CcAtInfo_oq, pParticlePos, 0x14);
 WWHD_OFFSET(CcAtInfo_oq, mHitSoundId, 0x18);

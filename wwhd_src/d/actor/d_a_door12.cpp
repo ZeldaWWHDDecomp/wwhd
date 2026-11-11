@@ -146,26 +146,26 @@ BOOL daDoor12_c::chkStopOpen() {
     if (mFrontCheck == 0 && type == 2) {
         auto* play = door12GameInfo();
         // HD: an event blocks the enemy countdown only while its timer is nonzero.
-        if (play->mEvent.mMode != 0 && m2A1 != 0)
+        if (play->mEvent.mMode != 0 && mStopOpenTimer != 0)
             return FALSE;
         play = door12GameInfo();
         if (door12RoomDisplayed(play->mRoomControl, room) && door12RoomEnemy((s8)room) == 0) {
-            u8 timer = m2A1;
+            u8 timer = mStopOpenTimer;
             if (timer) {
-                m2A1 = timer - 1;
+                mStopOpenTimer = timer - 1;
                 return FALSE;
             }
             if (sw != 255)
                 dComIfGs_onSwitch(sw, room);
             return TRUE;
         }
-        m2A1 = 65;
+        mStopOpenTimer = 65;
         return FALSE;
     }
     return sw != 255 && dComIfGs_isSwitch(sw, room);
 }
 /* 021290B4 */
-void daDoor12_c::setStopDemo() { m2C6 = mFrontCheck != 0; }
+void daDoor12_c::setStopDemo() { mEventKind = mFrontCheck != 0; }
 /* 021290C8 */
 BOOL daDoor12_c::chkStopClose() {
     u8 type = door12Type(this);
@@ -257,11 +257,11 @@ f32 daDoor12_c::openWide() {
 /* 0212919C */
 void daDoor12_c::setEventPrm() {
     if (mFrontCheck == 0) {
-        m2C6 = 2;
+        mEventKind = 2;
         if (mStopBars.mA == 255)
             mStopBars.mA = chkStopB();
     } else {
-        m2C6 = 3;
+        mEventKind = 3;
         if (door12Type(this) == 3)
             return;
         if (mStopBars.mA == 255)
@@ -270,9 +270,9 @@ void daDoor12_c::setEventPrm() {
     if (mStopBars.mbEnabled != 0)
         return;
     if (door12Type(this) == 3) {
-        m2C6 = 6;
+        mEventKind = 6;
     } else if (mStopBars.mA == 1)
-        m2C6 = m2C6 + 2;
+        mEventKind = mEventKind + 2;
     if (getShapeType() == 1 || getShapeType() == 2 || getShapeType() == 4 || getShapeType() == 5) {
         Door12Player* player = door12GameInfo()->mpPlayer;
         Door12PlayerVtable* vt = player->__vtbl;
@@ -281,7 +281,7 @@ void daDoor12_c::setEventPrm() {
             gabi::Local<be<s32>> key;
             *key = id;
             if (door12SearchActor(&sSearchById, key.get()))
-                m2C6 = 11;
+                mEventKind = 11;
         }
     }
     if (mKeyLock.mbEnabled) {
@@ -295,7 +295,7 @@ void daDoor12_c::setEventPrm() {
     }
     if (!door12CheckArea(this, 12100.0f, 12100.0f, 62500.0f))
         return;
-    u8 action = m2C6;
+    u8 action = mEventKind;
     u16 flags = eventInfo.mCondition;
     eventInfo.mEventId = mEventIdx[action];
     u8 tool = mToolId[action];
@@ -313,7 +313,7 @@ void daDoor12_c::openInit() {
 }
 /* 021287A0 */
 BOOL daDoor12_c::openProc() {
-    u8 action = m2C6;
+    u8 action = mEventKind;
     if (action == 2 || action == 3 || action == 11)
         door12OpenProcCom(this);
     // HD: opening waits until the destination room is active.
@@ -403,7 +403,7 @@ BOOL daDoor12_c::CreateInit() {
     u8 room = door12FRoomNo(this);
     reinterpret_cast<Door12BackgroundRoom*>(w)->mRoomId = room;
     door12InitProc(this, 2);
-    m2A1 = 65;
+    mStopOpenTimer = 65;
     return TRUE;
 }
 /* 02129AAC */
@@ -544,7 +544,7 @@ s32 daDoor12_c::actionWait() {
         }
         if (chkStopOpen()) {
             setStopDemo();
-            u8 action = m2C6, tool = mToolId[action];
+            u8 action = mEventKind, tool = mToolId[action];
             s16 event = mEventIdx[action];
             fopAcM_orderOtherEventId(this, event, tool, 0xFFFF, 0, 1);
         }
@@ -561,7 +561,7 @@ s32 daDoor12_c::actionWait() {
 }
 /* 021294F0 */
 s32 daDoor12_c::actionDemo() {
-    s16 event = mEventIdx[m2C6];
+    s16 event = mEventIdx[mEventKind];
     if (dComIfGp_evmng_endCheck(event)) {
         mAction = ACTION_WAIT;
         auto* play = door12GameInfo();

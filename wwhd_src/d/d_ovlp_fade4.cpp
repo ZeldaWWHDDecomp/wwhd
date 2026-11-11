@@ -128,7 +128,7 @@ u32 dOvlpFd4_construct(u32 self) {
         task->field_0x2bc = zero;
         task->field_0x2c4 = 0;
         task->totalTime = 0;
-        task->field_0x2cc = 0;
+        task->mSceneStarted = 0;
         task->fadeOutStatus = 0;
         task->field_0x2c2 = 0;
         task->startTime = 0;
@@ -274,9 +274,9 @@ static void execNextSnap(u32 self) {
 static void execFadeIn(u32 self) {
     auto* task = gabi::at<dOvlpFd4_c>(self);
     if (!dOvlpFd4_calcTimer(&task->timer) && !task->mBlurCounter) {
-        if (!task->field_0x2cc) {
+        if (!task->mSceneStarted) {
             fopOvlpM_SceneIsStart();
-            task->field_0x2cc = true;
+            task->mSceneStarted = true;
             return;
         }
         fopOvlpM_Done(task);

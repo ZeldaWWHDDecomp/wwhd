@@ -15,7 +15,7 @@ void hdScreenRupySwordCounter_c::updateDisplay() {
     text->mBuffer = buffer->characters;
     text->__vtbl = gabi::ea(&swordTextVtable);
     text->mCapacity = 5;
-    minigameFormatCurrency(text, "sword currency format", Minigame_SwordCurrencyGlyph, u32(mShownCount));
+    minigameFormatCurrency(text, "", Minigame_SwordCurrencyGlyph, u32(mShownCount));
     minigameSetText(mpNumText.get(), text, 0);
 }
 
@@ -41,6 +41,6 @@ void hdScreenRupySwordCounter_c::roll() {
 data swordTextVtable 10101D6C
 data swordCounterActive 1047B09A
 data swordIdleState 1049A3A8
-str 10101E28 "sword currency format" renamed
+str 10101E28 ""
 ext 02759D3C void minigameFormatCurrency(MinigameText*, const char*, u32, u32)
 */

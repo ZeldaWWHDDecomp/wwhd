@@ -90,7 +90,7 @@ BOOL dEnvSe_c::execute() {
     dEnvSe_addEye(&camera->mEye, eye.get(), &camera->mEyeOffset);
     f64 maximum = l_maxDistance;
     for (; count != 0; --count, ++sound_data) {
-        u32 type = sound_data->field_0x17;
+        u32 type = sound_data->mType;
         path_layout::dPath* path;
         if (type == dEnvSe_SEA_e || type == dEnvSe_RIVER_e || type == dEnvSe_WINDOW_e) {
             switch (type) {
@@ -104,7 +104,7 @@ BOOL dEnvSe_c::execute() {
                 mDoAud_initWindowPos();
                 break;
             }
-            path = dEnvSe_getRoomPath((u32)sound_data->field_0x18, roomNo);
+            path = dEnvSe_getRoomPath((u32)sound_data->mPathNo, roomNo);
             while (path) {
                 dEnvSe_getNearPathPos(&mPos, eye.get(), path);
                 switch (type) {
@@ -121,16 +121,16 @@ BOOL dEnvSe_c::execute() {
                 path = dPath_GetNextRoomPath(path, roomNo);
             }
             if (type == dEnvSe_SEA_e) {
-                mDoAud_seaEnvSePlay((u32)sound_data->field_0x14);
+                mDoAud_seaEnvSePlay((u32)sound_data->mSeParam);
             } else if (type == dEnvSe_RIVER_e) {
                 u32 reverb = dEnvSe_getReverb(roomNo);
-                mDoAud_riverSePlay((u32)sound_data->field_0x14, reverb);
+                mDoAud_riverSePlay((u32)sound_data->mSeParam, reverb);
             }
         } else if (type == dEnvSe_SHORE_e || type == dEnvSe_WATERFALL_e) {
             copyPosition(&mPos, eye.get());
             f64 nearest = maximum;
             u32 arg = 0;
-            path = dEnvSe_getRoomPath((u32)sound_data->field_0x18, roomNo);
+            path = dEnvSe_getRoomPath((u32)sound_data->mPathNo, roomNo);
             cXyz* tmp = type == dEnvSe_SHORE_e ? temp1.get() : temp2.get();
             while (path) {
                 dEnvSe_getNearPathPos(tmp, eye.get(), path);
@@ -145,21 +145,21 @@ BOOL dEnvSe_c::execute() {
             }
             if (type == dEnvSe_SHORE_e) {
                 // HD: do not start a shore sound when no finite nearest path was selected.
-                if (field_0xf8 == 0 && nearest != maximum) {
+                if (mWaveCounter == 0 && nearest != maximum) {
                     mDoAud_startSeaShoreSE(&mPos, arg);
-                    field_0xfc = arg;
+                    mShoreSeArg = arg;
                 } else {
-                    mDoAud_continueSeaShoreSE(&mPos, field_0xfc);
+                    mDoAud_continueSeaShoreSE(&mPos, mShoreSeArg);
                 }
                 // HD: the wave-frame store uses the low halfword, before reloading the counter.
                 u16 frame = mWaveWords.mLow;
                 play = (dEnvSe_gameInfo*)dComIfGp_get();
                 play->mWaveFrame = frame;
-                u32 ticks = field_0xf8;
-                field_0xf8 = ticks == 99 ? 0 : ticks + 1;
+                u32 ticks = mWaveCounter;
+                mWaveCounter = ticks == 99 ? 0 : ticks + 1;
             } else {
                 u32 reverb = dEnvSe_getReverb(roomNo);
-                mDoAud_waterfallSePlay((u32)sound_data->field_0x14, &mPos, reverb);
+                mDoAud_waterfallSePlay((u32)sound_data->mSeParam, &mPos, reverb);
             }
         }
     }

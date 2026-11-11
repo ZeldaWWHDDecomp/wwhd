@@ -349,8 +349,8 @@ void daPy_swimTailEcallBack_c::draw(JPABaseEmitter*) {
 /* 02415138 */
 void daPy_swimTailEcallBack_c::setup(JPABaseEmitter* emitter, const cXyz* pos, const csXyz* angle, s8) {
     mpEmitter = gabi::ea(emitter);
-    field_0x20 = gabi::ea(angle);
-    field_0x05 = 0;
+    mpAngle = gabi::ea(angle);
+    mRightFlg = 0;
     mbEnd = 0;
     // HD: the emitter's material parameter "jparticle_type_b"
     gabi::Local<player04b::EmitterMaterialParam> prm;
@@ -402,12 +402,12 @@ void daPy_lk_c::setSpeedAndAngleAtnBack() {
             mNormalSpeed = -mNormalSpeed;
         }
         s16 origAngleY = current.angle.y;
-        cLib_addCalcAngleS(&current.angle.y, m34E8, 6, 0xBB8, 0x7D0); /* HD: HIO folded */
+        cLib_addCalcAngleS(&current.angle.y, mMoveTargetAngleY, 6, 0xBB8, 0x7D0); /* HD: HIO folded */
         f1 = (2.5f * mStickDistance) * cM_scos((s16)(current.angle.y - origAngleY));
     } else {
         f1 = 0.0f;
     }
-    shape_angle.y = m34E6;
+    shape_angle.y = mAtnShapeAngleY;
     setNormalSpeedF(f1, 0.5f, 8.0f, 2.0f);
 }
 
@@ -426,7 +426,7 @@ void daPy_lk_c::setAngleAtnHD() {
     }
     if (mStickDistance > 0.05f) {
         int d = getDirectionFromCurrentAngle();
-        s16 target = m34E8;
+        s16 target = mMoveTargetAngleY;
         if (d == 1) {
             current.angle.y = (s16)(current.angle.y - 0x8000);
             mNormalSpeed = -mNormalSpeed;
@@ -445,7 +445,7 @@ void daPy_lk_c::setSpeedAndAngleAtnNoShapeHD() {
             mNormalSpeed = -mNormalSpeed;
         }
         s16 origAngleY = current.angle.y;
-        cLib_addCalcAngleS(&current.angle.y, m34E8, 6, 0xBB8, 0x7D0);
+        cLib_addCalcAngleS(&current.angle.y, mMoveTargetAngleY, 6, 0xBB8, 0x7D0);
         f32 f1 = (5.0f * mStickDistance) * cM_scos((s16)(current.angle.y - origAngleY));
         setNormalSpeedF(f1, 0.5f, 7.5f, 4.0f);
     } else {
@@ -462,7 +462,7 @@ void daPy_lk_c::setBlendSubjectMoveAnimeHD() {
     } else {
         mModeFlg = flg & ~(u32)player04b::ModeFlg_00000001;
     }
-    s32 a = m34DC;
+    s32 a = mStickAngle;
     if (a < 0) {
         a = -a;
     }
@@ -503,12 +503,12 @@ void daPy_lk_c::setSpeedAndAngleAtn() {
             mNormalSpeed = -mNormalSpeed;
         }
         s16 origAngleY = current.angle.y;
-        cLib_addCalcAngleS(&current.angle.y, m34E8, 6, 0xBB8, 0x7D0);
+        cLib_addCalcAngleS(&current.angle.y, mMoveTargetAngleY, 6, 0xBB8, 0x7D0);
         f1 = (5.0f * mStickDistance) * cM_scos((s16)(current.angle.y - origAngleY));
     } else {
         f1 = 0.0f;
     }
-    shape_angle.y = m34E6;
+    shape_angle.y = mAtnShapeAngleY;
     setNormalSpeedF(f1, 0.5f, 7.5f, 4.0f);
 }
 
@@ -541,7 +541,7 @@ void daPy_lk_c::setSpeedAndAngleAtnActor() {
             mNormalSpeed = -mNormalSpeed;
         }
         s16 origAngleY = current.angle.y;
-        cLib_addCalcAngleS(&current.angle.y, m34E8, 6, 0xBB8, 0x7D0);
+        cLib_addCalcAngleS(&current.angle.y, mMoveTargetAngleY, 6, 0xBB8, 0x7D0);
         f1 = (5.0f * mStickDistance) * cM_scos((s16)(current.angle.y - origAngleY));
     } else {
         f1 = 0.0f;
@@ -628,7 +628,7 @@ void daPy_lk_c::setSwimTail() {
         /* dComIfGp_particle_setShipTail(dPa_name::ID_IT_JN_LK_SWIMK_L, &cb.getPos(), &current.angle, &scale, 0xFF, &cb) */
         dPa_control_set(dComIfGp_getParticle(), 5, 0x3A, &cb0->mPos, &current.angle, &scale, 0xFF,
                         gabi::at<dPa_levelEcallBack>(gabi::ea(cb0)), -1, nullptr, nullptr, nullptr);
-        cb0->field_0x05 = 1; /* onRightFlg() */
+        cb0->mRightFlg = 1; /* onRightFlg() */
     }
     auto* cb1 = gabi::at<daPy_swimTailEcallBack_c>(gabi::ea(this) + 0x66D0); /* mSwimTailEcallBack[1] */
     if (cb1->mpEmitter == 0) {
@@ -727,8 +727,8 @@ BOOL daPy_lk_c::checkSubjectEnd(BOOL i_playSound) {
 /* 02416160 */
 BOOL daPy_lk_c::procCrawlStart_init() {
     commonProcInit(player04b::daPyProc_CRAWL_START_e);
-    m3700.copy(*cXyz_Zero);
-    m34C2 = 1;
+    mPrevRootTrans.copy(*cXyz_Zero);
+    mRootMoveMode = 1;
     setSingleMoveAnime(player04b::ANM_LIE, 1.0f, 0.0f, 9, 3.0f); /* HD: HIO folded */
     mNormalSpeed = 0.0f;
     current.angle.y = shape_angle.y;
@@ -775,7 +775,7 @@ void daPy_lk_c::setNormalSpeedF(f32 acceleration, f32 decelerationRate, f32 maxD
     f32 maxSpeed;
     if (dComIfGp_event_runCheck() ||
         checkHeavyStateOn() ||
-        field_0x2b0 < 0.0f /* checkGrabWear() */) {
+        mGrabItemOffsetY < 0.0f /* checkGrabWear() */) {
         maxSpeed = mMaxNormalSpeed * mStickDistance;
     } else {
         f32 st = mStickDistance;
@@ -934,7 +934,7 @@ BOOL daPy_lk_c::procSubjectivity() {
         gabi::Local<cXyz> crawlMove;
         f32 y = current.pos.y;
         mDoMtx_stack_c::transS(current.pos.x, y, current.pos.z);
-        mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), m34E2, shape_angle.y, 0);
+        mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), mGroundAngle, shape_angle.y, 0);
         PSMTXMultVec(mDoMtx_stack_c::get(), &player04b::l_crawl_start_front_offset(), crawlFront);
         PSMTXMultVec(mDoMtx_stack_c::get(), &player04b::l_crawl_top_offset(), crawlTop);
         if (getCrawlMoveVec(crawlTop, crawlFront, crawlMove)) {
@@ -954,7 +954,7 @@ BOOL daPy_lk_c::procSubjectivity() {
             groundDeltaXZ->z = groundDelta->z;
             f32 xz = std_sqrtf(PSVECSquareMag(groundDeltaXZ));
             s16 a = cM_atan2s(-groundDelta->y, xz);
-            if (cLib_distanceAngleS(a, m34E2) > 0x100) {
+            if (cLib_distanceAngleS(a, mGroundAngle) > 0x100) {
                 return TRUE;
             }
         }
@@ -987,7 +987,7 @@ BOOL daPy_lk_c::procCall() {
 /* 024173F4 */
 BOOL daPy_lk_c::procIceSlipAlmostFall_init() {
     commonProcInit(player04b::daPyProc_ICE_SLIP_ALMOST_FALL_e);
-    current.angle.y = cM_atan2s(m36AC.x, m36AC.z);
+    current.angle.y = cM_atan2s(mOldSlipSpeed.x, mOldSlipSpeed.z);
     int direction = getDirectionFromAngle((s32)(s16)(current.angle.y - shape_angle.y));
     int anm;
     if (direction == player04b::DIR_BACKWARD) {
@@ -1050,15 +1050,15 @@ BOOL daPy_lk_c::procFreeWait() {
 
 /* 024177A8 */
 BOOL daPy_lk_c::procWait() {
-    gabi::Local<cXyz> xz0; /* m36A0.abs2XZ() */
+    gabi::Local<cXyz> xz0; /* mSlipSpeed.abs2XZ() */
     xz0->y = 0.0f;
-    xz0->x = m36A0.x;
-    xz0->z = m36A0.z;
+    xz0->x = mSlipSpeed.x;
+    xz0->z = mSlipSpeed.z;
     if (!(PSVECSquareMag(xz0) > 1.0000001e-06f)) {
-        gabi::Local<cXyz> xz1; /* m36AC.abs2XZ() */
-        xz1->x = m36AC.x;
+        gabi::Local<cXyz> xz1; /* mOldSlipSpeed.abs2XZ() */
+        xz1->x = mOldSlipSpeed.x;
         xz1->y = 0.0f;
-        xz1->z = m36AC.z;
+        xz1->z = mOldSlipSpeed.z;
         if (!(PSVECSquareMag(xz1) < 25.0f)) {
             return procIceSlipAlmostFall_init();
         }
@@ -1074,7 +1074,7 @@ BOOL daPy_lk_c::procWait() {
                 if (cLib_distanceAngleS(shape_angle.y, wallFacingAngle) <= 0x2000) {
                     shape_angle.y = wallFacingAngle;
                     current.angle.y = wallFacingAngle;
-                    m34E6 = wallFacingAngle;
+                    mAtnShapeAngleY = wallFacingAngle;
                 }
                 break;
             }
@@ -1097,7 +1097,7 @@ BOOL daPy_lk_c::procWait() {
         }
     } else if (checkRestHPAnime() && (u16)gabi::at<player04b::AnmHeap>(gabi::ea(m_anm_heap_under))[0].mIdx != player04b::dRes_INDEX_LKANM_BCK_WAITB_e) {
         BOOL hasRestFace = (u16)gabi::at<player04b::AnmHeap>(gabi::ea(m_tex_anm_heap))->mIdx == 0x234; /* m_tex_anm_heap.mIdx == mTexAnmIndexTable[daPyFace_TMABAF].mBtpIdx */
-        u16 textureVariant = m3530;
+        u16 textureVariant = mTexAnmFrame;
         setSingleMoveAnime(player04b::ANM_WAITATOB, 0.6f, 0.0f, 0xC, 6.0f);
         if (hasRestFace == 0) {
             mModeFlg = (mModeFlg | player04b::ModeFlg_00000400) & ~(u32)player04b::ModeFlg_00000100;
@@ -1120,7 +1120,7 @@ BOOL daPy_lk_c::procWait() {
         (u16)gabi::at<player04b::AnmHeap>(gabi::ea(m_anm_heap_under))[0].mIdx == player04b::dRes_INDEX_LKANM_BCK_WAITS_e &&
         (u16)gabi::at<player04b::AnmHeap>(gabi::ea(m_anm_heap_upper))[2].mIdx == 0xFFFF /* checkNoUpperAnime() */ &&
         (u8)player04b::eyeMoveFlag() == 0 /* daPy_matAnm_c::getEyeMoveFlg() */ &&
-        m3564.y == 0 && m3564.z == 0 && m3564.x == 0) {
+        mNeckAngle.y == 0 && mNeckAngle.z == 0 && mNeckAngle.x == 0) {
         mProcVar1 = mProcVar1 - 1;
         if (mProcVar1 == 0) {
             procFreeWait_init();
@@ -1138,7 +1138,7 @@ BOOL daPy_lk_c::procLadderUpEnd_init(int leftFoot) {
     setSingleMoveAnime(anm, 0.9f, 0.0f, -1, 3.0f); /* HD: HIO folded */
     speedF = 0.0f;
     gravity = 0.0f;
-    m34C2 = 7;
+    mRootMoveMode = 7;
     speed.y = 0.0f;
     mNormalSpeed = 0.0f;
     dComIfGp_setPlayerStatus0(0, player04b::daPyStts0_UNK2000000_e);
@@ -1149,7 +1149,7 @@ BOOL daPy_lk_c::procLadderUpEnd_init(int leftFoot) {
 void daPy_lk_c::procClimbUpStart_init_sub() {
     setSingleMoveAnime(player04b::ANM_LADDERUPST, 1.0f, 0.0f, -1, 1.0f); /* HD: HIO folded */
     mProcVar6 = 1;
-    m34C2 = 4;
+    mRootMoveMode = 4;
     dComIfGp_setPlayerStatus1(0, player04b::daPyStts1_UNK10000_e);
 }
 
@@ -1157,7 +1157,7 @@ void daPy_lk_c::procClimbUpStart_init_sub() {
 void daPy_lk_c::procLadderUpStart_init_sub() {
     setSingleMoveAnime(player04b::ANM_LADDERUPST, 1.0f, 0.0f, -1, 1.0f); /* HD: HIO folded */
     mProcVar6 = 1;
-    m34C2 = 4;
+    mRootMoveMode = 4;
     dComIfGp_setPlayerStatus0(0, player04b::daPyStts0_UNK2000000_e);
 }
 
@@ -1165,7 +1165,7 @@ void daPy_lk_c::procLadderUpStart_init_sub() {
 void daPy_lk_c::procLadderDownStart_init_sub() {
     setSingleMoveAnime(player04b::ANM_LADDERDWST, 1.3f, 0.0f, -1, 3.0f); /* HD: HIO folded */
     mProcVar6 = 1;
-    m34C2 = 4;
+    mRootMoveMode = 4;
     dComIfGp_setPlayerStatus0(0, player04b::daPyStts0_UNK2000000_e);
     setOldRootQuaternion(0, -0x8000, 0);
     shape_angle.y = (s16)(shape_angle.y - 0x8000);
@@ -1211,7 +1211,7 @@ BOOL daPy_lk_c::procClimbMoveUpDown_init(int fromBelow) {
     mProcVar0 = 1;
     speedF = 0.0f;
     mNormalSpeed = 0.0f;
-    m34C2 = 7;
+    mRootMoveMode = 7;
     dComIfGp_setPlayerStatus1(0, player04b::daPyStts1_UNK10000_e);
     return TRUE;
 }
@@ -1295,7 +1295,7 @@ BOOL daPy_lk_c::procLadderMove_init(int fromMidair, int direction, cXyz* ladderP
     mProcVar0 = 1;
     speedF = 0.0f;
     mNormalSpeed = 0.0f;
-    m34C2 = 7;
+    mRootMoveMode = 7;
     dComIfGp_setPlayerStatus0(0, player04b::daPyStts0_UNK2000000_e);
     return TRUE;
 }
@@ -1471,7 +1471,7 @@ BOOL daPy_lk_c::procHangStart_init() {
 /* 02419514 */
 BOOL daPy_lk_c::procIceSlipFall_init() {
     commonProcInit(player04b::daPyProc_ICE_SLIP_FALL_e);
-    s16 a = cM_atan2s(-m36A0.x, -m36A0.z);
+    s16 a = cM_atan2s(-mSlipSpeed.x, -mSlipSpeed.z);
     int direction = getDirectionFromAngle((s32)(s16)(a - shape_angle.y));
     if (direction == player04b::DIR_FORWARD) {
         mProcVar6 = player04b::ANM_DAMFB;
@@ -1502,7 +1502,7 @@ BOOL daPy_lk_c::procIceSlipFall_init() {
 
 /* 024197A0 */
 BOOL daPy_lk_c::checkIceSlipFall() {
-    s16 slipAngle = cM_atan2s(m36A0.x, m36A0.z);
+    s16 slipAngle = cM_atan2s(mSlipSpeed.x, mSlipSpeed.z);
     f32 minSpeed;
     f32 minSlipSpeedSquared;
     if (m34C3 == 1) {
@@ -1513,10 +1513,10 @@ BOOL daPy_lk_c::checkIceSlipFall() {
         minSlipSpeedSquared = 49.0f; /* SQUARE(7.0f) */
     }
     if (cLib_distanceAngleS(slipAngle, current.angle.y) > 0x7000 && !(mNormalSpeed < minSpeed)) {
-        gabi::Local<cXyz> xz; /* m36A0.abs2XZ() */
-        xz->x = m36A0.x;
+        gabi::Local<cXyz> xz; /* mSlipSpeed.abs2XZ() */
+        xz->x = mSlipSpeed.x;
         xz->y = 0.0f;
-        xz->z = m36A0.z;
+        xz->z = mSlipSpeed.z;
         if (!(PSVECSquareMag(xz) < minSlipSpeedSquared)) {
             mProcVar0 = mProcVar0 - 1;
             if (mProcVar0 == 0) {
@@ -1562,7 +1562,7 @@ void daPy_lk_c::setSpeedAndAngleNormal(s16 maxAngleStep) {
         f32 st = mStickDistance;
         f32 stickRateSquared = st * st;
         BOOL heavy = checkHeavyStateOn();
-        f32 wear = field_0x2b0;
+        f32 wear = mGrabItemOffsetY;
         if (heavy) {
             stickRateSquared *= 4.0f; /* 1.0f / SQUARE(m_HIO->mMove.m.field_0x80) */
         }
@@ -1570,7 +1570,7 @@ void daPy_lk_c::setSpeedAndAngleNormal(s16 maxAngleStep) {
             stickRateSquared *= 1.5624999f; /* 1.0f / SQUARE(m_HIO->mMove.m.field_0x74) */
         }
         bool turn = false;
-        if (!lk_checkAttentionLock(this) && cLib_distanceAngleS(m34E8, current.angle.y) > 0x7800 &&
+        if (!lk_checkAttentionLock(this) && cLib_distanceAngleS(mMoveTargetAngleY, current.angle.y) > 0x7800 &&
             mCurProc != player04b::daPyProc_MOVE_TURN_e) {
             turn = true;
         }
@@ -1581,16 +1581,16 @@ void daPy_lk_c::setSpeedAndAngleNormal(s16 maxAngleStep) {
             }
             if (mCurProc == player04b::daPyProc_MOVE_e) {
                 if (speedF / mMaxNormalSpeed > 0.6f) { /* m_HIO->mSlip.m.field_0x4 */
-                    if (getDirectionFromAngle((s32)(s16)(m34EA - m34DC)) == player04b::DIR_BACKWARD) {
+                    if (getDirectionFromAngle((s32)(s16)(mOldStickAngle - mStickAngle)) == player04b::DIR_BACKWARD) {
                         return;
                     }
                     cosPart = false; // Keep zero acceleration while reversing at high speed.
                 } else {
-                    cLib_addCalcAngleS(&current.angle.y, m34E8, 5, maxAngleStep, 100); /* HD: HIO folded */
+                    cLib_addCalcAngleS(&current.angle.y, mMoveTargetAngleY, 5, maxAngleStep, 100); /* HD: HIO folded */
                     return;
                 }
             } else {
-                cLib_addCalcAngleS(&current.angle.y, m34E8, 5, maxAngleStep, 100);
+                cLib_addCalcAngleS(&current.angle.y, mMoveTargetAngleY, 5, maxAngleStep, 100);
             }
         } else {
             s16 angleStep;
@@ -1608,10 +1608,10 @@ void daPy_lk_c::setSpeedAndAngleNormal(s16 maxAngleStep) {
                     minAngleStep = 1;
                 }
             }
-            cLib_addCalcAngleS(&current.angle.y, m34E8, 5, angleStep, minAngleStep);
+            cLib_addCalcAngleS(&current.angle.y, mMoveTargetAngleY, 5, angleStep, minAngleStep);
         }
         if (cosPart) {
-            f32 c = cM_scos((u16)(m34E8 - current.angle.y));
+            f32 c = cM_scos((u16)(mMoveTargetAngleY - current.angle.y));
             f32 half = mMaxNormalSpeed * 0.5f;
             if (mNormalSpeed > half) {
                 if (c < 0.7f) {
@@ -1626,7 +1626,7 @@ void daPy_lk_c::setSpeedAndAngleNormal(s16 maxAngleStep) {
                 f32 r = mNormalSpeed / mMaxNormalSpeed;
                 f32 accelerationThreshold = gabi::fnmsubs(std::fabs(r), 0.5f, 0.5f); /* 0.5f - 0.5f * abs(..) */
                 BOOL heavy2 = checkHeavyStateOn();
-                f32 wear2 = field_0x2b0;
+                f32 wear2 = mGrabItemOffsetY;
                 f32 st2 = mStickDistance;
                 if (heavy2) {
                     accelerationThreshold *= 0.5f;
@@ -1642,7 +1642,7 @@ void daPy_lk_c::setSpeedAndAngleNormal(s16 maxAngleStep) {
     }
     if (!lk_checkAttentionLock(this) && mCurProc != player04b::daPyProc_MOVE_TURN_e && mStickDistance > 0.05f) {
         s16 angleStep = shape_angle.y;
-        cLib_addCalcAngleS(&shape_angle.y, m34E8, 5, (s16)(maxAngleStep << 1), 200);
+        cLib_addCalcAngleS(&shape_angle.y, mMoveTargetAngleY, 5, (s16)(maxAngleStep << 1), 200);
         s16 cur = current.angle.y;
         s32 temp = (s16)(angleStep - cur);
         s32 temp2 = (s16)(shape_angle.y - cur);
@@ -1658,8 +1658,8 @@ BOOL daPy_lk_c::changeFrontWallTypeProc() {
     setFrontWallType();
     f32 st = mStickDistance;
     u32 modeFlg = mModeFlg;
-    s16 previousWallDelay = m3544;
-    m3544 = 0;
+    s16 previousWallDelay = mFrontWallTimer;
+    mFrontWallTimer = 0;
     u32 midair = modeFlg & player04b::ModeFlg_MIDAIR;
     if (!(st > 0.05f) && midair == 0) {
         return FALSE;
@@ -1677,7 +1677,7 @@ BOOL daPy_lk_c::changeFrontWallTypeProc() {
             deleteEquipItem(1);
             shape_angle.y = (s16)(m352C + 0x8000);
             procClimbMoveUpDown_init(1);
-            m35E0 = 43.67353f;
+            mRootTransY = 43.67353f;
             lk_initOldFrameMorf(this, 5.0f, 0, 0x2A);
             mFrameCtrlUnder[0].setRate(0.0f);
             return TRUE;
@@ -1701,8 +1701,8 @@ BOOL daPy_lk_c::changeFrontWallTypeProc() {
             current.pos.y = ny;
             current.pos.z = z;
             deleteEquipItem(1);
-            f32 lim = m35F8 - 150.0f;
-            m35E0 = 43.67353f;
+            f32 lim = mLadderTopY - 150.0f;
+            mRootTransY = 43.67353f;
             if (current.pos.y > lim) {
                 current.pos.y = lim;
                 m370C.x = current.pos.x; /* m370C = current.pos */
@@ -1729,7 +1729,7 @@ BOOL daPy_lk_c::changeFrontWallTypeProc() {
             shape_angle.y = (s16)(m352C + 0x8000);
             current.pos.y = y;
             procClimbMoveUpDown_init(1);
-            m35E0 = 43.67353f;
+            mRootTransY = 43.67353f;
             lk_initOldFrameMorf(this, 5.0f, 0, 0x2A);
             mFrameCtrlUnder[0].setRate(0.0f);
             return TRUE;
@@ -1761,7 +1761,7 @@ BOOL daPy_lk_c::changeFrontWallTypeProc() {
                 current.pos.y = y;
             }
             procLadderMove_init(1, 0, &current.pos);
-            m35E0 = 43.67353f;
+            mRootTransY = 43.67353f;
             lk_initOldFrameMorf(this, 5.0f, 0, 0x2A);
             return TRUE;
         }
@@ -1775,7 +1775,7 @@ BOOL daPy_lk_c::changeFrontWallTypeProc() {
     }
     type = mFrontWallType;
     s16 cnt = (s16)(previousWallDelay + 1);
-    m3544 = cnt;
+    mFrontWallTimer = cnt;
     if (type == 6) {
         if (cnt > 4) { /* m_HIO->mSmallJump.m.field_0x2 */
             return procSmallJump_init(0);
@@ -1796,7 +1796,7 @@ BOOL daPy_lk_c::changeFrontWallTypeProc() {
     if (type == 8 || type == 9) {
         return procVerticalJump_init();
     }
-    m3544 = 0;
+    mFrontWallTimer = 0;
     return FALSE;
 }
 
@@ -1813,7 +1813,7 @@ BOOL daPy_lk_c::procTactPlayEnd_init(int r30) {
         u32 body = player04bGetCameraBody();
         player04bEndEventCamera(body, fopAcM_GetID(this));
         fopAc_ac_c* partner = fopAcM_SearchByID(mTactZevPartnerId);
-        player04bOrderChangeEvent(this, gabi::ea(partner), (u32)m3494, 0, 0xFFFF);
+        player04bOrderChangeEvent(this, gabi::ea(partner), (u32)mTactZevEventName, 0, 0xFFFF);
         mDemo.mDemoType = 2; /* mDemo.setSystemDemoType() */
     } else if (r30 == 0) {
         u32 body = player04bGetCameraBody();
@@ -1933,7 +1933,7 @@ void daPy_swimTailEcallBack_c::execute(JPABaseEmitter* emitter) {
             return;
         }
     }
-    if (field_0x20 != 0) {
+    if (mpAngle != 0) {
         f32 x = mPos.x;
         f32 z = mPos.z;
         f32 y = mPos.y;
@@ -1943,8 +1943,8 @@ void daPy_swimTailEcallBack_c::execute(JPABaseEmitter* emitter) {
         effect->mGlobalTranslation.z = z; /* setGlobalTranslation */
         effect->mGlobalTranslation.x = x;
         effect->mGlobalTranslation.y = y;
-        /* setGlobalRotation(TVec3<s16>(0, field_0x20->y, 0)) */
-        JPAGetXYZRotateMtx(0, gabi::at<csXyz>(field_0x20)->y, 0, &effect->mGlobalRotation);
+        /* setGlobalRotation(TVec3<s16>(0, mpAngle->y, 0)) */
+        JPAGetXYZRotateMtx(0, gabi::at<csXyz>(mpAngle)->y, 0, &effect->mGlobalRotation);
     } else {
         gabi::Local<cXyz> sp20;
         copyFloatBits(sp20->z, effect->mGlobalTranslation.z); /* getGlobalTranslation */
@@ -1960,7 +1960,7 @@ void daPy_swimTailEcallBack_c::execute(JPABaseEmitter* emitter) {
         cLib_chaseF(&mSpeedRate, 0.0f, 0.08f);
     }
     effect->mInitialVelDir = gabi::fmadds(12.0f, mSpeedRate, 1.0f); /* setDirectionalSpeed(1.0f + 12.0f * mSpeedRate) */
-    if (field_0x05) {
+    if (mRightFlg) {
         effect->mEmitterDir.x = (f32)l_right_dir.x; /* setDirection(right_dir) */
         effect->mEmitterDir.y = (f32)l_right_dir.y;
         effect->mEmitterDir.z = (f32)l_right_dir.z;
@@ -2237,12 +2237,12 @@ BOOL daPy_lk_c::procSelfieHD() {
             mFace = face;
             f32 frame = entry->mFrame;
             setTextureAnime(face & 0xFFFF, gabi::ftoi(frame));
-            gabi::store<f32>(mpAnmTexPatternData, (f32)(u32)m3530);
-            gabi::store<f32>(mpTexScrollResData, (f32)(u32)m3532);
+            gabi::store<f32>(mpAnmTexPatternData, (f32)(u32)mTexAnmFrame);
+            gabi::store<f32>(mpTexScrollResData, (f32)(u32)mTexScrollFrame);
             // HD: the three animation objects at 0x644/0x69C/0x6F4 (value = fn(ctx, frame, a, b))
-            auto* channels = gabi::at<player04b::AnimationChannel>(gabi::ea(m644));
+            auto* channels = gabi::at<player04b::AnimationChannel>(gabi::ea(mTexAnmCtrl));
             for (int i = 0; i < 3; i++) {
-                f32 f = (f32)(u32)(i < 2 ? m3530 : m3532);
+                f32 f = (f32)(u32)(i < 2 ? mTexAnmFrame : mTexScrollFrame);
                 u32 o = channels[i].mpAnimation;
                 auto* value = gabi::at<player04b::AnimationValue>(o);
                 f32 r = gabi::call_ptr<f32>(value->mpInterpolate, (u32)value->mpContext, f,
@@ -2254,7 +2254,7 @@ BOOL daPy_lk_c::procSelfieHD() {
             if (keep != 0) {
                 mModeFlg = mf | 0x100 | 0x08000080;
             } else {
-                m3530 = (u16)gabi::ftoi(frame);
+                mTexAnmFrame = (u16)gabi::ftoi(frame);
                 mModeFlg = (mf & ~0x100u) | 0x08000080;
             }
             if (face == 0x92) {
@@ -2634,12 +2634,12 @@ static void* daPy_lk_ct(void* i_self) {
     auto* packets = player04b::modelPackets(player);
     auto* items = player04b::itemModels(player);
     auto* background = player04b::backgroundChecks(player);
-    auto* renderAnimations = gabi::at<player04b::AnimationChannel>(gabi::ea(player->m644));
+    auto* renderAnimations = gabi::at<player04b::AnimationChannel>(gabi::ea(player->mTexAnmCtrl));
     player04bConstructPlayerBase(self);
     player->__vtbl = 0x10037CF0; /* vtable */
-    lk_ct_listInit(gabi::ea(&player->m458), 0xA, 0x34);
+    lk_ct_listInit(gabi::ea(&player->mLinktexList), 0xA, 0x34);
     {
-        u32 p = gabi::ea(&player->m48C);
+        u32 p = gabi::ea(&player->mOtherLinktex);
         if (p == 0) {
             p = gabi::ea(operator_new(0x168));
         }
@@ -2865,27 +2865,27 @@ static void* daPy_lk_ct(void* i_self) {
     player->m_sanm_buffer = 0x0;
     gabi::at<player04b::AnimeSoundPrefix>(gabi::ea(player->mJAIZelAnime))->mVtable = 0x100037A0;
     player04bConstructArray(gabi::ea(&player->mFootEffect), 0x2, 0x4C, 0x24443E4u);
-    player04bConstructRippleCallback(gabi::ea(&player->m3280));
+    player04bConstructRippleCallback(gabi::ea(&player->mRippleEcallBack));
     player04bConstructArray(gabi::ea(&player->mSwimTailEcallBack), 0x2, 0x28, 0x2444440u);
-    player->m32F0.mVtable = 0x100347F0;
-    player->m32E4.mVtable = 0x100347F0;
+    player->mProcEffectEcallBack1.mVtable = 0x100347F0;
+    player->mProcEffectEcallBack0.mVtable = 0x100347F0;
     player04bConstructSmokeCallback(gabi::ea(&player->mSmokeEcallBack), 0x1);
-    gabi::at<player04b::CutTurnCallback>(gabi::ea(player->m332C))->__vtbl = 0x10052228;
-    gabi::at<player04b::CutTurnCallback>(gabi::ea(player->m331C))->__vtbl = 0x10052228;
-    gabi::at<daPy_waterDropEcallBack_c>(gabi::ea(player->m334C))->__vtbl = 0x10037B68;
-    gabi::at<daPy_waterDropEcallBack_c>(gabi::ea(player->m336C))->__vtbl = 0x10037B68;
-    gabi::at<daPy_mtxPosFollowEcallBack_c>(gabi::ea(player->m33A8))->__vtbl = 0x10037CB0;
-    gabi::at<player04b::CutTurnCallback>(gabi::ea(player->m333C))->__vtbl = 0x10052228;
-    gabi::at<daPy_followEcallBack_c>(gabi::ea(player->m338C))->__vtbl = 0x10037B28;
+    gabi::at<player04b::CutTurnCallback>(gabi::ea(player->mCutTurnEcallBack1))->__vtbl = 0x10052228;
+    gabi::at<player04b::CutTurnCallback>(gabi::ea(player->mCutTurnEcallBack0))->__vtbl = 0x10052228;
+    gabi::at<daPy_waterDropEcallBack_c>(gabi::ea(player->mNeckWaterDropEcallBack))->__vtbl = 0x10037B68;
+    gabi::at<daPy_waterDropEcallBack_c>(gabi::ea(player->mBodyWaterDropEcallBack))->__vtbl = 0x10037B68;
+    gabi::at<daPy_mtxPosFollowEcallBack_c>(gabi::ea(player->mProcEffectEcallBack2))->__vtbl = 0x10037CB0;
+    gabi::at<player04b::CutTurnCallback>(gabi::ea(player->mCutTurnEcallBack2))->__vtbl = 0x10052228;
+    gabi::at<daPy_followEcallBack_c>(gabi::ea(player->mTalismanFlashEcallBack))->__vtbl = 0x10037B28;
     player04bConstructArray(gabi::ea(&player->mDmEcallBack), 0x4, 0xC, 0x2444480u);
-    player->m33E8.mVtable = 0x100347F0;
-    gabi::at<daPy_followEcallBack_c>(gabi::ea(player->m3438))->__vtbl = 0x10037B28;
-    gabi::at<daPy_followEcallBack_c>(gabi::ea(player->m3410))->__vtbl = 0x10037B28;
-    player->m342C.mVtable = 0x100347F0;
+    player->mFanWindEcallBack.mVtable = 0x100347F0;
+    gabi::at<daPy_followEcallBack_c>(gabi::ea(player->mShieldLightHitEcallBack))->__vtbl = 0x10037B28;
+    gabi::at<daPy_followEcallBack_c>(gabi::ea(player->mWadeSplashEcallBack))->__vtbl = 0x10037B28;
+    player->mMirrorShieldEcallBack.mVtable = 0x100347F0;
     gabi::at<daPy_fanSwingEcallBack_c>(gabi::ea(player->mFanSwingCb))->__vtbl = 0x10037BA8;
-    gabi::at<daPy_mtxPosFollowEcallBack_c>(gabi::ea(player->m3400))->__vtbl = 0x10037CB0;
-    player->m3454.mVtable = 0x100347F0;
-    player04bConstructArray(gabi::ea(&player->m3460), 0x2, 0x10, 0x24444C0u);
+    gabi::at<daPy_mtxPosFollowEcallBack_c>(gabi::ea(player->mWaterfallSplashEcallBack))->__vtbl = 0x10037CB0;
+    player->mLightSaverEcallBack.mVtable = 0x100347F0;
+    player04bConstructArray(gabi::ea(&player->mRainDropEcallBack), 0x2, 0x10, 0x24444C0u);
     player->m68D0 = 1.0f;
     {
         u32 p = gabi::ea(&player->mpSeAnm); /* SafeString member */
@@ -2969,11 +2969,11 @@ static inline void lk_setBaseTRMtx_b(u32 model, u32 src) {
         gmem_stf32(model + 0xC8 + i * 4, t[i]);
     }
 }
-/* if (changeSwimProc()) { procSwimWait_init(0); m34C2 = 0; } else procWait_init(); */
+/* if (changeSwimProc()) { procSwimWait_init(0); mRootMoveMode = 0; } else procWait_init(); */
 static inline void lk_swimWaitOrWait(daPy_lk_c* p) {
     if (p->changeSwimProc()) {
         p->procSwimWait_init(0);
-        p->m34C2 = 0;
+        p->mRootMoveMode = 0;
     } else {
         p->procWait_init();
     }
@@ -2985,14 +2985,14 @@ static inline void lk_swimWaitOrWait(daPy_lk_c* p) {
 /* 024131D0 */
 BOOL daPy_lk_c::makeBgWait() {
     u32 self = gabi::ea(this);
-    if (m352E != 0) { /* m352E */
-        m352E = (s16)(m352E - 1);
+    if (mBgWaitTimer != 0) { /* mBgWaitTimer */
+        mBgWaitTimer = (s16)(mBgWaitTimer - 1);
     }
     mAcch.CrrPos(dComIfG_Bgsp());
     if (mAcch.m_ground_h == -1000000000.0f) { /* mAcch.GetGroundH() == -G_CM3D_F_INF */
         return 0;
     }
-    if (m352E != 0 && player04bCheckMovingBackground(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mAcch.m_gnd))) {
+    if (mBgWaitTimer != 0 && player04bCheckMovingBackground(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mAcch.m_gnd))) {
         u32 ap = player04bGetBackgroundActor(dComIfG_Bgsp(), (u32)mAcch.m_gnd.mBgIndex);
         if (ap != 0 && gabi::load<s16>(ap + 8) == 0x124) {
             gabi::Local<dBgS_GndChk> chk;
@@ -3026,7 +3026,7 @@ BOOL daPy_lk_c::makeBgWait() {
             }
         }
     }
-    if ((mParameters & 0x80) && m352E != 0) {
+    if ((mParameters & 0x80) && mBgWaitTimer != 0) {
         if (!player04bCheckMovingBackground(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mAcch.m_gnd))) {
             return 0;
         }
@@ -3035,7 +3035,7 @@ BOOL daPy_lk_c::makeBgWait() {
             return 0;
         }
         u32 gh = gmem_ld32(gabi::ea(&mAcch.m_ground_h));
-        m352E = 0;
+        mBgWaitTimer = 0;
         gmem_stf32(gabi::ea(&current.pos.y), gh);
     }
     setWaterY();
@@ -3112,7 +3112,7 @@ BOOL daPy_lk_c::makeBgWait() {
     } else if (sceneMode == 4 || sceneMode == 5) {
         if (changeSwimProc()) {
             procSwimWait_init(0);
-            m34C2 = 0;
+            mRootMoveMode = 0;
         } else {
             gmem_stf32(gabi::ea(&current.pos.y), gmem_ld32(gabi::ea(&mAcch.m_ground_h)));
             mDemo.mDemoType = 4;
@@ -3142,14 +3142,14 @@ BOOL daPy_lk_c::makeBgWait() {
                 speedF = 8.5f;
                 procMove_init();
             } else if (sceneMode == 2) {
-                m34E8 = shape_angle.y; /* m34E8 */
+                mMoveTargetAngleY = shape_angle.y; /* mMoveTargetAngleY */
                 procCrawlMove_init(0, 0);
             } else if (sceneMode == 3) {
                 s16 a = (s16)(shape_angle.y - 0x8000);
                 m34DE = a;
                 current.angle.y = a;
                 shape_angle.y = a;
-                m34E8 = (s16)(a + 0x8000);
+                mMoveTargetAngleY = (s16)(a + 0x8000);
                 procCrawlMove_init(0, 0);
             } else {
                 u32 v = gmem_ld32(gabi::ea(&mNormalSpeed));
@@ -3198,7 +3198,7 @@ BOOL daPy_lk_c::makeBgWait() {
         }
     } else if (changeSwimProc()) {
         procSwimWait_init(0);
-        m34C2 = 0;
+        mRootMoveMode = 0;
     } else if (current.pos.y - mAcch.m_ground_h > 30.1f) {
         procFall_init(1, 0.0f);
     } else {
@@ -3224,8 +3224,8 @@ BOOL daPy_lk_c::makeBgWait() {
     player04bSetCylinderCenter(&mCyl.mCyl, &current.pos);
     setAttentionPos();
     u32 code = player04bGetGroundCode(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mAcch.m_gnd));
-    m3580 = code;
-    m357C = code;
+    mGroundCode = code;
+    mOldGroundCode = code;
     if (sceneMode == 4) {
         u32 m = gabi::ea(lk_getAnmMtx(mpCLModel.get(), 0 /* CL_JNT_LINK_ROOT_e */));
         gabi::Local<cXyz> pos;
@@ -3641,7 +3641,7 @@ static void daPy_lk_dt(void* i_self, s32 flags) {
     player04bDestroyCollisionCylinder(gabi::ea(&player->mCyl), 2);
     player04bDestroyCollisionStatus(gabi::ea(&player->mStts), 2);
     player04bDestroyArray(gabi::ea(&player->mFootData), 2, 0x118, 0x02444868u, 0, 0);
-    player04bDestroyArray(gabi::ea(&player->m3460), 2, 0x10, 0x02444D38u, 0, 0);
+    player04bDestroyArray(gabi::ea(&player->mRainDropEcallBack), 2, 0x10, 0x02444D38u, 0, 0);
     player04bDestroyArray(gabi::ea(&player->mDmEcallBack), 4, 0xC, 0x02444D4Cu, 0, 0);
     player04bDestroyArray(gabi::ea(&player->mSwimTailEcallBack), 2, 0x28, 0x02444D24u, 0, 0);
     player04bDestroyArray(gabi::ea(&player->mFootEffect), 2, 0x4C, 0x024448E0u, 0, 0);
@@ -3808,7 +3808,7 @@ static inline void lk_playerInitTail(u32 self, u32 demo, u32 extraFlg) {
     }
     light->mPower = 0.0f;
     player04bRegisterPointLight(gabi::ea(light));
-    player->m352E = 900;
+    player->mBgWaitTimer = 900;
     player->m34DE = player->shape_angle.y;
     player->mFace = 0xAD;
 }
@@ -3965,28 +3965,28 @@ void daPy_lk_c::playerInit() {
         auto* heap = &gabi::at<player04b::AnmHeap>(gabi::ea(m_anm_heap_under))[i];
         createAnimeHeap(gabi::at<JKRSolidHeap*>(gabi::ea(&heap->mpAnimeHeap)), player04b::HEAP_TYPE_UNDER_UPPER_e);
         heap->mIdx = -1;
-        heap->field_0x2 = -1;
-        heap->field_0x4 = -1;
+        heap->mPriIdx = -1;
+        heap->mDemoIdx = -1;
     }
     for (u32 i = 0; i < 3; i++) { /* m_anm_heap_upper */
         auto* heap = &gabi::at<player04b::AnmHeap>(gabi::ea(m_anm_heap_upper))[i];
         createAnimeHeap(gabi::at<JKRSolidHeap*>(gabi::ea(&heap->mpAnimeHeap)), player04b::HEAP_TYPE_UNDER_UPPER_e);
         heap->mIdx = -1;
-        heap->field_0x2 = -1;
-        heap->field_0x4 = -1;
+        heap->mPriIdx = -1;
+        heap->mDemoIdx = -1;
     }
     createAnimeHeap(gabi::at<JKRSolidHeap*>(gabi::ea(&gabi::at<player04b::AnmHeap>(gabi::ea(m_tex_anm_heap))->mpAnimeHeap)), player04b::HEAP_TYPE_TEXTURE_ANIME_e); /* m_tex_anm_heap */
-    gabi::at<player04b::AnmHeap>(gabi::ea(m_tex_anm_heap))->field_0x6 = -1;
-    gabi::at<player04b::AnmHeap>(gabi::ea(m_tex_anm_heap))->field_0x4 = -1;
+    gabi::at<player04b::AnmHeap>(gabi::ea(m_tex_anm_heap))->mDemoAnmNo = -1;
+    gabi::at<player04b::AnmHeap>(gabi::ea(m_tex_anm_heap))->mDemoIdx = -1;
     gabi::at<player04b::AnmHeap>(gabi::ea(m_tex_anm_heap))->mIdx = -1;
-    gabi::at<player04b::AnmHeap>(gabi::ea(m_tex_anm_heap))->field_0x2 = -1;
+    gabi::at<player04b::AnmHeap>(gabi::ea(m_tex_anm_heap))->mPriIdx = -1;
     createAnimeHeap(gabi::at<JKRSolidHeap*>(gabi::ea(&gabi::at<player04b::AnmHeap>(gabi::ea(m_tex_scroll_heap))->mpAnimeHeap)), player04b::HEAP_TYPE_TEXTURE_SCROLL_e); /* m_tex_scroll_heap */
-    gabi::at<player04b::AnmHeap>(gabi::ea(m_tex_scroll_heap))->field_0x2 = -1;
+    gabi::at<player04b::AnmHeap>(gabi::ea(m_tex_scroll_heap))->mPriIdx = -1;
     gabi::at<player04b::AnmHeap>(gabi::ea(m_tex_scroll_heap))->mIdx = -1;
-    m34F0 = -1; /* mSeAnmIdx */
+    mSeAnmDemoAnmNo = -1; /* mSeAnmIdx */
     mpSeAnm = gabi::guest_addr(""); /* (HD SafeString member: "") */
-    gabi::at<player04b::AnmHeap>(gabi::ea(m_tex_scroll_heap))->field_0x4 = -1;
-    gabi::at<player04b::AnmHeap>(gabi::ea(m_tex_scroll_heap))->field_0x6 = -1;
+    gabi::at<player04b::AnmHeap>(gabi::ea(m_tex_scroll_heap))->mDemoIdx = -1;
+    gabi::at<player04b::AnmHeap>(gabi::ea(m_tex_scroll_heap))->mDemoAnmNo = -1;
     for (u32 i = 0; i < 2; i++) { /* mpItemHeaps (HD: named, no dummy allocation) */
         u32 h = gabi::ea(mDoExt_createSolidHeapFromGameToCurrent(0x1E600, 0x20));
         items->mpItemHeaps[i] = h;
@@ -4006,10 +4006,10 @@ void daPy_lk_c::playerInit() {
     current.angle.z = 0;   /* current.angle.z */
     shape_angle.z = 0;   /* shape_angle.z */
     m3630 = -1;
-    m3526 = 8;  /* m3526 */
+    mSlideStartTimer = 8;  /* mSlideStartTimer */
     mGameOverId = -1;
     mTactZevPartnerId = -1;
-    gabi::at<Quaternion>(gabi::ea(m3648))->w = 1.0f; /* m3648.w */
+    gabi::at<Quaternion>(gabi::ea(mRootJointQuat))->w = 1.0f; /* mRootJointQuat.w */
     resetSeAnime();
     {
         gabi::Local<player04b::SafeString> arc;
@@ -4065,7 +4065,7 @@ void daPy_lk_c::playerInit() {
         arc->mpString = gabi::guest_addr("Link");
         casual = player04bGetResource(gabi::load<u32>(0x101F4F28), arc.get(), 0x71);
     }
-    mpCurrLinktex = gabi::ea(m458);
+    mpCurrLinktex = gabi::ea(mLinktexList);
     u32 texture = (u32)gabi::at<player04b::ModelData>(mpCLModelData.v)->mTexture; /* getTexture() */
     if (texture == 0) {
         JUT_ASSERT_fail("d_a_player_main.cpp", 0x60DA, "texture != (0)");
@@ -4095,16 +4095,16 @@ void daPy_lk_c::playerInit() {
         }
         u32 res = (u32)gabi::at<player04b::TextureTable>(texture)->mpRes + (u32)i * 0x24;
         {
-            s32 cnt = (s32)gabi::at<player04b::TextureOriginals>(gabi::ea(m458))->mCount;
-            if (cnt < (s32)gabi::at<player04b::TextureOriginals>(gabi::ea(m458))->mCapacity) { /* the originals list: push_back */
-                gabi::store<u32>((u32)gabi::at<player04b::TextureOriginals>(gabi::ea(m458))->mpHeaders + (u32)cnt * 4, res);
-                cnt = (s32)gabi::at<player04b::TextureOriginals>(gabi::ea(m458))->mCount + 1;
-                gabi::at<player04b::TextureOriginals>(gabi::ea(m458))->mCount = cnt;
+            s32 cnt = (s32)gabi::at<player04b::TextureOriginals>(gabi::ea(mLinktexList))->mCount;
+            if (cnt < (s32)gabi::at<player04b::TextureOriginals>(gabi::ea(mLinktexList))->mCapacity) { /* the originals list: push_back */
+                gabi::store<u32>((u32)gabi::at<player04b::TextureOriginals>(gabi::ea(mLinktexList))->mpHeaders + (u32)cnt * 4, res);
+                cnt = (s32)gabi::at<player04b::TextureOriginals>(gabi::ea(mLinktexList))->mCount + 1;
+                gabi::at<player04b::TextureOriginals>(gabi::ea(mLinktexList))->mCount = cnt;
             }
             u32 last = (u32)cnt - 1;
             u32 v = mpCurrLinktex;
             u32 n = gabi::load<u32>(v);
-            u32 dst = gabi::ea(m48C) + (last < 10 ? last * 0x24 : 0);
+            u32 dst = gabi::ea(mOtherLinktex) + (last < 10 ? last * 0x24 : 0);
             u32 src = last < n ? gabi::load<u32>(gabi::load<u32>(v + 8) + last * 4) : 0;
             lk_copy24(dst, src); /* keep a copy of the original header */
         }
@@ -4155,9 +4155,9 @@ void daPy_lk_c::playerInit() {
             u32 src = k < gabi::load<u32>(v) ? gabi::load<u32>(gabi::load<u32>(v + 8) + k * 4) : 0;
             lk_copy24(t + k * 0x24, src);
         }
-        player04bCopyTextureList((u32)mpCurrLinktex, gabi::ea(m48C));
+        player04bCopyTextureList((u32)mpCurrLinktex, gabi::ea(mOtherLinktex));
         for (u32 k = 0; k < 10; k++) {
-            lk_copy24(gabi::ea(m48C) + k * 0x24, t + k * 0x24);
+            lk_copy24(gabi::ea(mOtherLinktex) + k * 0x24, t + k * 0x24);
         }
     }
     player04b::actorState(this).field_0x8282 = 0;

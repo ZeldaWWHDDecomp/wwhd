@@ -67,7 +67,7 @@ u8 Act_c::create_heap() {
     mpBgW = (AkabeBgW*)new_dBgW();
     if (mpBgW != NULL) {
         cBgD_t* bgw_data = (cBgD_t*)dComIfG_getObjectRes(M_arcname[mType], dzb[mType]);
-        JUT_ASSERT(0x82, bgw_data != NULL);
+        JUT_ASSERT_MSG(0x82, bgw_data != NULL, "bgw_data != 0");
         if (!mpBgW->Set(bgw_data, dBgW::MOVE_BG_e, &mMtx))
             ret = true;
     }
@@ -174,7 +174,7 @@ static BOOL Mthd_IsDelete(void*) { return TRUE; }
 
 /* WWHD glue (tools/verify/autoglue.py): translation-unit data
 str 10024A94 # "d_a_obj_akabe.cpp"
-str 10024AA8 "bgw_data != NULL" renamed # HD: assertion prints null as 0
+str 10024AA8 "bgw_data != 0" # HD: assertion prints null as 0
 data M_arcname 10024AE0
 data l_cull_attr 10024AB8
 data l_cull_depth 10024A38

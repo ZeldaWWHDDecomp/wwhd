@@ -8,6 +8,7 @@
  * against it.
  */
 #include "d/actor/d_a_npc_sarace.h"
+#include "sead/ElementAt.h"
 
 // HD: GHS emits a SafeString vtable in each translation unit.
 const gc_tu_data gc_tu = {.safeString = 0x10021948, .objAcchDt = {0x10021960, 0x10021970}};
@@ -64,7 +65,7 @@ static Mtx34* jointMtx(J3DModel* model, u32 index) {
     J3DMtxBuffer_hd* block = model->mpMtxBuffer;
     Mtx34* matrices = gabi::at<Mtx34>(block->mpAnmMtx);
     block->mFlags |= 0x10;
-    return matrices + index;
+    return sead::elementPtr(matrices, index); /* matrices + index * 0x30, wrapped at 32 bits as on the console */
 }
 /* inline setAction(int (daNpc_Sarace_c::*)(void*), void*): GHS pointer-to-member compare, then
  * the old action is called with mActionStatus -1 and the new one with 0 */
@@ -407,7 +408,7 @@ void daNpc_Sarace_c::lookBack() {
             m_jnt.mbTrn = 1;
             track = mbAttention != 0;
             if (!track) {
-                dNpc_playerEyePos(playerEye.get(), l_HIO.mNpc.m04);
+                dNpc_playerEyePos(playerEye.get(), l_HIO.mNpc.mPlayerEyeOffsetY);
                 copyWords(tgt.get(), playerEye.get());
                 s16 angle = cLib_targetAngleY(&current.pos, tgt.get());
                 cLib_addCalcAngleS2(&current.angle.y, angle, 4, 0x1800);
@@ -417,7 +418,7 @@ void daNpc_Sarace_c::lookBack() {
             track = mbAttention != 0;
         }
         if (track) {
-            dNpc_playerEyePos(playerEye2.get(), l_HIO.mNpc.m04);
+            dNpc_playerEyePos(playerEye2.get(), l_HIO.mNpc.mPlayerEyeOffsetY);
             eyeY = (f32)eyePos.y;
             copyWords(tgt.get(), playerEye2.get());
             eyeX = (f32)current.pos.x;
@@ -755,10 +756,10 @@ void* daNpc_Sarace_HIO_ct(void* self) {
     hio->__vtbl = 0x10021980;
     saraceNpcHioInit(&hio->mNpc);
     hio->mNpc.mMaxBackboneX = 0;
-    hio->mNpc.m04 = -20.0f;
+    hio->mNpc.mPlayerEyeOffsetY = -20.0f;
     hio->mNpc.mMaxAttnDistXZ = 400.0f;
     hio->mNpc.mMinHeadY = -6000;
-    hio->mNpc.m22 = 0;
+    hio->mNpc.mDebugDraw = 0;
     hio->mNpc.mMinBackboneX = -2000;
     hio->mNpc.mMaxHeadTurnVel = 0x640;
     hio->mNpc.mMaxHeadX = 4000;

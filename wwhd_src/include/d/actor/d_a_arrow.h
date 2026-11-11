@@ -65,42 +65,42 @@ struct daArrow_c : fopAc_ac_c {
     /* 0x47C */ dCcD_Stts mStts;
     /* 0x4B8 */ dCcD_Cps mAtCps;
     /* 0x5F0 */ dCcD_Sph mCoSph;
-    /* 0x71C */ be<u8> field_0x600;
+    /* 0x71C */ be<u8> mDeleteRequest;  /* was field_0x600: procStop_BG 02054FE0 / procStop_Actor 020553C0 delete the stuck arrow once it is set; set when the stuck time (mStopTimer) ends, when the hit actor is gone, by mbSetByZelda, and by _execute 02052DB8 when l_count comes round to mShotNo again (tww the same) */
     /* 0x71D */ be<u8> mArrowType;
-    /* 0x71E */ be<s16> field_0x602;
-    /* 0x720 */ be<s16> field_0x604;
+    /* 0x71E */ be<s16> mShotNo;  /* was field_0x602: arrowShooting 02053814 stores l_count (0-4) for the arrow; _execute 02052DB8 sets mDeleteRequest when l_count is back at it; createInit 02052738 sets -1 (tww the same) */
+    /* 0x720 */ be<s16> mHitShakeTimer;  /* was field_0x604: procMove 02054040 sets 0x28 when the arrow sticks; setStopActorMatrix 02053DDC / procStop_BG 02054FE0 count it down and shake the arrow's x angle by (1024 * (t / 40)^2) * sin(t * 0x52FB) (tww the same) */
     /* 0x722 */ u8 _722[2];
     /* 0x724 */ be<s16> mSparkleTimer;
     /* 0x726 */ u8 _726[2];
     /* 0x728 */ be<u32> mpSparkleEmitter;
     /* 0x72C */ be<u32> mHitActorProcID;
     /* 0x730 */ be<s32> mHitJointIndex;
-    /* 0x734 */ cXyz field_0x618;
+    /* 0x734 */ cXyz mHitJointOffset;  /* was field_0x618: procMove 02054040 stores the hit position local to the hit joint (ArrowSearchJointHit); setStopActorMatrix 02053DDC translates the joint matrix by it (tww the same) */
     /* 0x740 */ u8 field_0x624[0x77C - 0x740];
     /* 0x77C */ be<f32> mBtkFrame;
     /* 0x780 */ be<u8> mbLinkReflect;
     /* 0x781 */ u8 _781[3];
     /* 0x784 */ dPa_followEcallBack mBlurFollowCb; /* dPa_followEcallBack: vtable +0, emitter +4 */
     /* 0x798 */ csXyz mBlurAngle;
-    /* 0x79E */ be<u8> field_0x682;
+    /* 0x79E */ be<u8> mLightEffType;  /* was field_0x682: setLightEffect 02052C40: the arrow type the light effect child was made for; a different mArrowType deletes the child (tww the same) */
     /* 0x79F */ u8 _79F;
     /* 0x7A0 */ be<u32> mLightEffPID;
     /* 0x7A4 */ be<u8> mbHasLightEff;
     /* 0x7A5 */ u8 _7A5[3];
     /* 0x7A8 */ gabi::ptmf<BOOL (daArrow_c::*)()> mCurrProcFunc; // HD: GHS8-byte member pointer
-    /* 0x7B0 */ be<u8> field_0x698;
-    /* 0x7B1 */ be<u8> field_0x699;
-    /* 0x7B2 */ be<u8> field_0x69a;
+    /* 0x7B0 */ be<u8> mDraw;  /* was field_0x698: _draw 02053188 draws only while set; createInit 02052738 sets it; procStop_BG 02054FE0 blinks it during the last 60 frames of mStopTimer; cleared when the arrow ends in water or hits (tww the same) */
+    /* 0x7B1 */ be<u8> mWaterEffect;  /* was field_0x699: check_water_in 020532B8 / procReturn 02055450: the state byte passed to and returned by Link's setItemWaterEffect; createInit 02052738 clears it (tww the same) */
+    /* 0x7B2 */ be<u8> mBounceGround;  /* was field_0x69a: procReturn 02055450 sets it when the falling arrow bounces off a polygon with normal.y >= 0.5 and deletes the arrow once it falls again; createInit 02052738 clears it (tww the same) */
     /* 0x7B3 */ u8 _7B3;
-    /* 0x7B4 */ be<s16> field_0x69c;
+    /* 0x7B4 */ be<s16> mSpinSpeedX;  /* was field_0x69c: rebound (in procMove 02054040) sets 0x2C00; procReturn 02055450 adds it to shape_angle.x each frame and halves and reverses it on a bounce; createInit 02052738 clears it (tww the same) */
     /* 0x7B6 */ u8 _7B6[2];
-    /* 0x7B8 */ be<s32> field_0x6a0;
+    /* 0x7B8 */ be<s32> mStopTimer;  /* was field_0x6a0: createInit 02052738 sets 300; procStop_BG 02054FE0 counts it down for normal arrows (blink below 60, mDeleteRequest at 0) (tww the same) */
     /* 0x7BC */ be<s32> mInWaterTimer;
-    /* 0x7C0 */ cXyz field_0x6a8;
-    /* 0x7CC */ Mtx34 field_0x6b4;
-    /* 0x7FC */ be<u8> field_0x6e4;
+    /* 0x7C0 */ cXyz mImpactPos;  /* was field_0x6a8: arrowShooting 02053814 sets the shot position; procMove 02054040 stores the hit position (BG cross or AT hit) and plays the hit particles there; setLightEffect 02052C40 creates the light effect at it; procStop_BG 02054FE0 keeps the arrow tip there (moving BG); procMove sets mFlewFar beyond 20000 of it (tww the same) */
+    /* 0x7CC */ Mtx34 mModelMtx;  /* was field_0x6b4: procWait 02053D24 / procMove 02054040 copy the model (or hit stack) matrix into it each frame; the light effect child daArrow_Lighteff_c reads it (setTopPos 020570BC / set_mtx 02056EB8) (tww the same) */
+    /* 0x7FC */ be<u8> mFlewFar;  /* was field_0x6e4: procMove 02054040 sets it once the arrow is farther than 20000 from mImpactPos (the shot position); check_water_in 020532B8 / procMove then skip dKy_arrowcol_chg_on; createInit 02052738 clears it (tww the same) */
     /* 0x7FD */ u8 _7FD;
-    /* 0x7FE */ csXyz field_0x6e6;
+    /* 0x7FE */ csXyz mHitAngle;  /* was field_0x6e6: procWait 02053D24 / procMove 02054040 store shape_angle each frame, and the angle local to the hit joint on an actor hit; setStopActorMatrix 02053DDC rotates the stuck arrow by it, procStop_BG 02054FE0 uses it as the base of the shake (tww the same) */
     /* 0x804 */ be<u32> mpAtHitActor;
     /* 0x808 */ cXyz mAtHitPos;
     /* 0x814 */ be<f32> mNearestHitDist;
@@ -113,7 +113,7 @@ WWHD_OFFSET(daArrow_c, mCoSph, 0x5F0);
 WWHD_OFFSET(daArrow_c, mArrowType, 0x71D);
 WWHD_OFFSET(daArrow_c, mBtkFrame, 0x77C);
 WWHD_OFFSET(daArrow_c, mCurrProcFunc, 0x7A8);
-WWHD_OFFSET(daArrow_c, field_0x6b4, 0x7CC);
+WWHD_OFFSET(daArrow_c, mModelMtx, 0x7CC);
 WWHD_OFFSET(daArrow_c, mbHitActor, 0x818);
 WWHD_SIZE(daArrow_c, 0x81C);
 

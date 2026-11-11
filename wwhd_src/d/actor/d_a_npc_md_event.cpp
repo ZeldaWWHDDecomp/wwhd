@@ -259,13 +259,13 @@ void daNpc_Md_c::NpcCall(be<s32>* r31) {
     }
     f32 dist_sq = fopAcM_searchActorDistance2(this, dComIfGp_getPlayer(0));
     if (!(mNoResetFlg1 & 2)) { /* !checkNpcCallCommand() */
-        if (dist_sq < l_HIO().m0C8 * l_HIO().m0C8) {
+        if (dist_sq < l_HIO().mCallDist * l_HIO().mCallDist) {
             Link* player = link(daPy_getPlayerLinkActorClass());
             player->mNoResetFlg1 = player->mNoResetFlg1 | 2;
             *r31 = 1;
         }
     } else {
-        f32 temp = l_HIO().m0C4 + l_HIO().m0C4;
+        f32 temp = l_HIO().mFollowStopDist + l_HIO().mFollowStopDist;
         if (!(dist_sq < temp * temp)) {
             gabi::Local<ProcFunc_l> fn;
             copyAction(fn, action_searchNpcAction);
@@ -319,10 +319,10 @@ void daNpc_Md_c::waitGroundCheck() {
         if (mType != 2) { /* !isTypeM_Dra09() */
             /* GetSpecialCode(mAcch.m_gnd): its cBgS_PolyInfo at mAcch+0xE8 */
             if (dBgS_GetSpecialCode(dComIfG_Bgsp(), gabi::ea(static_cast<cBgS_PolyInfo*>(&mAcch.m_gnd))) == 1) {
-                cLib_addCalcAngleS(&shape_angle.y, cM_atan2s(m32A4.x, m32A4.z), 8, 0x2000, 0x400);
+                cLib_addCalcAngleS(&shape_angle.y, cM_atan2s(mGroundNormal.x, mGroundNormal.z), 8, 0x2000, 0x400);
                 f32 s = speedF + 0.5f;
                 speedF = s;
-                f32 lim = l_HIO().m008.m08;
+                f32 lim = l_HIO().mWalk.mWalkMaxSpeed;
                 speedF = (s - lim >= 0.0f) ? lim : s; /* cLib_maxLimit (fsel) */
             } else {
                 speedF = 0.0f;
@@ -344,7 +344,7 @@ BOOL daNpc_Md_c::chkAdanmaeDemoOrder() {
         /* cLib_checkMinMaxLimit(groundH, 600, 700), as the branches test it */
         if (checkStatus(daMdStts_CAM_TAG_IN) && !(groundH < 600.0f) && !(groundH > 700.0f)) {
             mCurEventMode = 6;
-            gravity = l_HIO().m0F4;
+            gravity = l_HIO().mGravity;
             maxFallSpeed = -100.0f;
             if (mAcch.ChkGroundHit()) {
                 speedF = 0.0f;
@@ -371,13 +371,13 @@ void daNpc_Md_c::setNormalSpeedF(f32 f1, f32 f2, f32 i_scale, f32 i_maxStep, f32
     if (r3 >= 0) {
         s16 angle = (s16)(current.angle.y + 0x8000 - mAcchCir[r3].GetWallAngleY());
         if (abs((int)angle) < 0x4000) {
-            f31 *= gabi::fnmsubs(l_HIO().m008.m1C, cM_scos(angle), 1.0f); /* 1 - m1C * cos */
+            f31 *= gabi::fnmsubs(l_HIO().mWalk.mWallSlowRate, cM_scos(angle), 1.0f); /* 1 - mWallSlowRate * cos */
         }
     }
     f32 targetSpeed;
     f32 maxStep;
-    if (f31 < m3108) {
-        f32 temp2 = m3108 - f31;
+    if (f31 < mNormalSpeed) {
+        f32 temp2 = mNormalSpeed - f31;
         if (temp2 > i_maxStep) {
             maxStep = i_maxStep;
         } else {
@@ -393,14 +393,14 @@ void daNpc_Md_c::setNormalSpeedF(f32 f1, f32 f2, f32 i_scale, f32 i_maxStep, f32
         targetSpeed = 0.0f;
     }
     if (!(std::fabs(f2) < 3.814697265625e-06f)) { /* !cM3d_IsZero(f2) */
-        f32 v = m3108 + f2;
+        f32 v = mNormalSpeed + f2;
         if (v > f31) {
-            m3108 = f31;
+            mNormalSpeed = f31;
         } else {
-            m3108 = v;
+            mNormalSpeed = v;
         }
     } else {
-        cLib_addCalc(&m3108, targetSpeed, i_scale, maxStep, i_minStep);
+        cLib_addCalc(&mNormalSpeed, targetSpeed, i_scale, maxStep, i_minStep);
     }
 }
 
@@ -408,22 +408,22 @@ void daNpc_Md_c::setNormalSpeedF(f32 f1, f32 f2, f32 i_scale, f32 i_maxStep, f32
 void daNpc_Md_c::setSpeedAndAngleNormal(f32 f1, s16 r4) {
     f32 f2;
     if (f1 > 0.05f) {
-        cLib_addCalcAngleS(&current.angle.y, r4, l_HIO().m008.m24, l_HIO().m008.m20, l_HIO().m008.m22);
+        cLib_addCalcAngleS(&current.angle.y, r4, l_HIO().mWalk.mTurnScale, l_HIO().mWalk.mTurnMaxStep, l_HIO().mWalk.mTurnMinStep);
         f32 temp = cM_scos((s16)(r4 - current.angle.y));
         temp = (temp >= 0.0f) ? temp : 0.0f; /* if (temp < 0) temp = 0 (fsel) */
-        f2 = l_HIO().m008.m04 * f1 * temp;
+        f2 = l_HIO().mWalk.mWalkAccel * f1 * temp;
     } else {
         f2 = 0.0f;
     }
-    setNormalSpeedF(f1, f2, l_HIO().m008.m14, l_HIO().m008.m0C, l_HIO().m008.m10);
+    setNormalSpeedF(f1, f2, l_HIO().mWalk.mWalkScale, l_HIO().mWalk.mWalkMaxStep, l_HIO().mWalk.mWalkMinStep);
 }
 
 /* 0228E5CC */
 void daNpc_Md_c::walkProc(f32 f1, s16 r3) {
-    mMaxNormalSpeed = l_HIO().m008.m08;
+    mMaxNormalSpeed = l_HIO().mWalk.mWalkMaxSpeed;
     setSpeedAndAngleNormal(f1, r3);
-    f32 temp = std::fabs(m3108 / mMaxNormalSpeed);
-    f32 temp2 = temp * l_HIO().m008.m18;
+    f32 temp = std::fabs(mNormalSpeed / mMaxNormalSpeed);
+    f32 temp2 = temp * l_HIO().mWalk.mWalkAnmSpeed;
     MdEvent::morf(mpMorf.get())->mPlaySpeed = temp2;    /* mpMorf->setPlaySpeed */
     MdEvent::morf(mpArmMorf.get())->mPlaySpeed = temp2; /* mpArmMorf->setPlaySpeed */
     /* setRunRate(temp) */
@@ -431,7 +431,7 @@ void daNpc_Md_c::walkProc(f32 f1, s16 r3) {
     mRunRate = temp;
     MdEvent::morf(mpMorf.get())->mAnmRate = temp; /* setAnmRate */
     MdEvent::morf(mpArmMorf.get())->mAnmRate = mRunRate;
-    speedF = m3108;
+    speedF = mNormalSpeed;
 }
 
 /* 0228B610 */
@@ -563,11 +563,11 @@ void daNpc_Md_c::initialMovePosEvent(int staffIdx) {
             if (md_SafeString_eq(arrival, evName)) {
                 mdEvent_checkInitialRoom(this); /* daPy_npc_c::check_initialRoom */
                 setAnm(0);
-                m3131 = 1;
+                mGroundHit = 1;
             }
         }
     }
-    gravity = l_HIO().m0F4;
+    gravity = l_HIO().mGravity;
     maxFallSpeed = -100.0f;
     speedF = 0.0f;
     speed.y = 0.0f;
@@ -595,7 +595,7 @@ void daNpc_Md_c::initialFlyEvent(int) {
     setBitStatus(daMdStts_UNK1);
     setWingEmitter();
     speed.y = 20.0f;
-    gravity = l_HIO().m188;
+    gravity = l_HIO().mFlyGravity;
     maxFallSpeed = 10.0f;
     mEventTimer = 60 * 30;
 }
@@ -611,8 +611,8 @@ BOOL daNpc_Md_c::actionFlyEvent(int staffIdx) {
         emitterDelete(&mEmitters[0]);
         return TRUE;
     }
-    if (m3104 == 0x19) {
-        if (m312A != 0) {
+    if (mAnmPrmIdx == 0x19) {
+        if (mAnmEnd != 0) {
             setAnm(9);
         }
     }
@@ -625,7 +625,7 @@ BOOL daNpc_Md_c::actionFlyEvent(int staffIdx) {
 
 /* 0228C338 */
 void daNpc_Md_c::initialGlidingEvent(int) {
-    gravity = l_HIO().m0F4;
+    gravity = l_HIO().mGravity;
     maxFallSpeed = -100.0f;
 }
 
@@ -652,12 +652,12 @@ void daNpc_Md_c::initialLandingEvent(int) {
     shape_angle.z = 0;
     clearStatus(daMdStts_UNK1);
     setAnm(0x10);
-    m312A = 0;
+    mAnmEnd = 0;
 }
 
 /* 0228C454 */
 BOOL daNpc_Md_c::actionLandingEvent(int) {
-    if (m312A != 0) {
+    if (mAnmEnd != 0) {
         setAnm(0);
         return TRUE;
     }
@@ -840,12 +840,12 @@ BOOL daNpc_Md_c::actionTactEvent(int staffIdx) {
 /* 0228CCC0 */
 void daNpc_Md_c::initialTakeOffEvent(int) {
     setAnm(0x18);
-    m312A = 0;
+    mAnmEnd = 0;
 }
 
 /* 0228CCF8 */
 BOOL daNpc_Md_c::actionTakeOffEvent(int) {
-    if (m312A != 0) {
+    if (mAnmEnd != 0) {
         return TRUE;
     }
     setAttention(true);
@@ -874,13 +874,13 @@ void daNpc_Md_c::initialOnetimeEvent(int staffIdx) {
         }
     }
     setAnm(anm);
-    m312A = 0;
+    mAnmEnd = 0;
 }
 
 /* 0228CDFC */
 BOOL daNpc_Md_c::actionOnetimeEvent(int) {
-    if (m312A != 0) {
-        if (m3104 == 0x1A) {
+    if (mAnmEnd != 0) {
+        if (mAnmPrmIdx == 0x1A) {
             setAnm(0);
         } else {
             return TRUE;
@@ -924,7 +924,7 @@ void daNpc_Md_c::initialHarpPlayEvent(int) {
 
 /* 0228D0AC */
 BOOL daNpc_Md_c::actionHarpPlayEvent(int) {
-    if (m312A != 0) {
+    if (mAnmEnd != 0) {
         setHarpPlayNum(0);
     }
     return daPy_lk_checkEndTactMusic(daPy_getPlayerLinkActorClass()) ? TRUE : FALSE;
@@ -1058,14 +1058,14 @@ BOOL daNpc_Md_c::actionLookDown(int) {
     f32 y = eyePos.y;
     f32 z = current.pos.z;
     s16 desiredYRot = shape_angle.y;
-    m30AC.y = -50.0f;
+    mLookDownOffset.y = -50.0f;
     /* local_38.set(...); &local_14 = &local_38 */
     local_14.x = x;
     local_14.y = y;
     local_14.z = z;
     Mtx34* stack = &mtxStack; /* mDoMtx_stack_c::now */
     mDoMtx_YrotS(stack, desiredYRot);
-    PSMTXMultVec(stack, &m30AC, &cStack_20);
+    PSMTXMultVec(stack, &mLookDownOffset, &cStack_20);
     PSVECAdd(&local_14, &cStack_20, &local_14);
     local_38.x = x;
     local_38.y = y;
@@ -1112,7 +1112,7 @@ BOOL daNpc_Md_c::talk(int r4) {
         return TRUE;
     }
     if (!fopAcM_checkCarryNow(this) && !checkStatus(daMdStts_SHIP_RIDE) && mMsgNo != 0x05AC) {
-        if (m313A == 1 && msgAnmAtr == 0x14 && m312A != 0) {
+        if (m313A == 1 && msgAnmAtr == 0x14 && mAnmEnd != 0) {
             setAnm(0x1B);
             m313A = 1;
         }
@@ -1124,20 +1124,20 @@ BOOL daNpc_Md_c::talk(int r4) {
 bool daNpc_Md_c::chkAttention(cXyz* pos, s16 angle, int param_3) {
     fopAc_ac_c* link = daPy_getPlayerLinkActorClass();
     f32 maxAttnDistXZ = l_HIO().mNpc.mMaxAttnDistXZ;
-    f32 dVar8 = l_HIO().m0C0;
+    f32 dVar8 = l_HIO().mMinAttnY;
     int maxAttnAngleY = l_HIO().mNpc.mMaxAttnAngleY;
-    f32 dVar9 = l_HIO().m0BC;
+    f32 dVar9 = l_HIO().mMaxAttnY;
     if (checkStatus(daMdStts_SHIP_RIDE)) {
-        maxAttnDistXZ = l_HIO().m074.m04;
+        maxAttnDistXZ = l_HIO().mShipRide.mShipMaxAttnDistXZ;
     } else if (mType == 2 && dComIfGs_isEventBit(UNK_1101)) { /* isTypeM_Dra09() */
-        maxAttnDistXZ = l_HIO().m0B8;
+        maxAttnDistXZ = l_HIO().mDra09MaxAttnDistXZ;
     }
     f32 dz = link->current.pos.z - pos->z;
     f32 dx = link->current.pos.x - pos->x;
     f32 distXZ = std_sqrtf(gabi::fmadds(dx, dx, dz * dz));
     s16 targetAngleY = cM_atan2s(dx, dz);
     f32 dy = link->current.pos.y - pos->y;
-    if (m312C != 0) {
+    if (mHasAttention != 0) {
         maxAttnDistXZ += 40.0f;
         maxAttnAngleY += 0x71C;
     }
@@ -1525,8 +1525,8 @@ s32 daNpc_Md_c::lookBackWaist(s16 param_1, f32 param_2) {
     s16 iVar2 = (s16)(param_1 - shape_angle.y);
     f32 sn = cM_ssin(iVar2);
     f32 cs = cM_scos(iVar2);
-    f32 fVar1 = cs * param_2 * l_HIO().m034.m04;
-    f32 dVar6 = sn * param_2 * l_HIO().m034.m08;
+    f32 fVar1 = cs * param_2 * l_HIO().mMirror.mWaistRateX;
+    f32 dVar6 = sn * param_2 * l_HIO().mMirror.mWaistRateY;
     // HD: an option of the save data (027200D0(save + 0x12C0) + 2) == 0 mirrors the waist turn
     u32 opt = mdEvent_option(gabi::ea(&saveInfo.mpInfo->mOption));
     if ((u8)bytes(opt)[2] == 0) {
@@ -1534,12 +1534,12 @@ s32 daNpc_Md_c::lookBackWaist(s16 param_1, f32 param_2) {
     }
     s16 sVar3;
     if (fVar1 < 0.0f) {
-        sVar3 = (s16)gabi::ftoi((f32)l_HIO().m034.m20 * fVar1);
+        sVar3 = (s16)gabi::ftoi((f32)l_HIO().mMirror.mWaistMaxRotXNeg * fVar1);
     } else {
-        sVar3 = (s16)gabi::ftoi((f32)l_HIO().m034.m1E * fVar1);
+        sVar3 = (s16)gabi::ftoi((f32)l_HIO().mMirror.mWaistMaxRotXPos * fVar1);
     }
     sVar3 = cLib_addCalcAngleS(&mWaistRotX, sVar3, 4, 0xC00, 0x180);
-    s16 sVar4 = cLib_addCalcAngleS(&mWaistRotY, (s16)gabi::ftoi((f32)l_HIO().m034.m22 * dVar6), 4, 0xC00, 0x180);
+    s16 sVar4 = cLib_addCalcAngleS(&mWaistRotY, (s16)gabi::ftoi((f32)l_HIO().mMirror.mWaistMaxRotY * dVar6), 4, 0xC00, 0x180);
     // HD: while mStickValue > 0.9, a body turn towards a target far to the side
     f32 rate = mStickValue;
     if (rate > 0.9f) {

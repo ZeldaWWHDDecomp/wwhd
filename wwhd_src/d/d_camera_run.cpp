@@ -58,7 +58,7 @@ using namespace camera_run;
 // HD: the field of view is scaled by an environment-light zoom factor (0.7 / 1.0 /
 // eased to 0.8 or 1.0 by the light's state byte); the floor clamp keeps the subject camera's
 // centre except in the "Tornado" type; switching to a subject style calls 026185BC; the pad is
-// also updated in minigame 8; m514 is a byte
+// also updated in minigame 8; mHoldType is a byte
 u32 dCamera_c::Run() {
     u32 res = 0;                     /* the engine's r3, returned unmasked */
     cameraRunFocusOff(&mForcusLine); /* mForcusLine.Off() */
@@ -140,7 +140,7 @@ u32 dCamera_c::Run() {
             cameraRunParamChange(mCamParam, mCurStyle); /* mCamParam.Change(mCurStyle) */
             if (camStyleAlg(mCurStyle) == dCamAlg_SUBJECT_CAMERA_e /* SUBJECT */) {
                 cameraRunSubjectStart(padObject);
-                m154 = 0.0f;
+                mSmoothedCStickX = 0.0f;
             }
         }
     }
@@ -180,10 +180,10 @@ u32 dCamera_c::Run() {
         s32 pad = mPadId;
         if (cameraRunStickValue(pad) > 0.001f || cameraRunSubstickValue(pad) > 0.001f ||
             cameraRunTrigger(pad) != 0 || mMonitor.field_0x0C.x > 10.0f || mPlayerOnFloor == 0 || mOnMoveBg != 0) {
-            *reinterpret_cast<GuestByte*>(&m514) = 0; /* m514 */
+            *reinterpret_cast<GuestByte*>(&mHoldType) = 0; /* mHoldType */
             mEventFlags = mEventFlags & ~0x200000u;
         } else {
-            *reinterpret_cast<GuestByte*>(&m514) = 0;
+            *reinterpret_cast<GuestByte*>(&mHoldType) = 0;
         }
     } else {
         DemoToken* demo = demoObject;
@@ -204,7 +204,7 @@ u32 dCamera_c::Run() {
             mCurModeTimer = mCurModeTimer + 1;
         }
         if (!res)
-            *reinterpret_cast<GuestByte*>(&m514) = 0;
+            *reinterpret_cast<GuestByte*>(&mHoldType) = 0;
     }
 
     if (!chkFlag(0x400)) {

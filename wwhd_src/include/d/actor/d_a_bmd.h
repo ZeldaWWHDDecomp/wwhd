@@ -145,10 +145,10 @@ struct daBmd_HIO_c {
     /* 0x00 */ be<s8> mNo;
     /* 0x01 */ be<u8> m05;
     /* 0x02 */ u8 _02[2];
-    /* 0x04 */ be<f32> m08;
-    /* 0x08 */ be<f32> m0C;
+    /* 0x04 */ be<f32> mMoveChance;  /* was m08: wait (d_a_bmd_move.cpp, inlined into daBmd_Execute 020AEBCC): every 30-80 frames Kalle Demos switches to mode 1 (Link within 1300) or 2 (farther) when cM_rndF(1) is below it; daBmd_HIO_c_ct 020B1CB4 0.8 (tww the same) */
+    /* 0x08 */ be<f32> mCustomTime;  /* was m0C: bmd_kankyo (inlined into daBmd_Execute 020AEBCC): passed to dKy_custom_timeset every frame; daBmd_HIO_c_ct 020B1CB4 1.0 (tww the same) */
     /* 0x0C */ be<f32> m10;
-    /* 0x10 */ be<s16> m14;
+    /* 0x10 */ be<s16> mOpenTime;  /* was m14: damage (d_a_bmd_move.cpp, inlined into daBmd_Execute 020AEBCC): when the flower's open animation (HIRAKU) stops, mTimers[0] is set to it; sub mode 3 closes the flower (HANA_TOJIRU) when it runs out; daBmd_HIO_c_ct 020B1CB4 100 (tww m308[0] the same) */
     /* 0x12 */ u8 _12[2];
     /* 0x14 */ be<u32> __vtbl;
 };

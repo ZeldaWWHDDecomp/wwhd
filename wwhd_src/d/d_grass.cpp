@@ -666,7 +666,7 @@ u32 dGrass_packet_c__ct(u32 self) {
     GrassHD::SDK::IndexBuffer_set(
         indices, alternate ? Data::forestIndices : Data::grassIndices, 4,
         (u32)*at<be<u32>>(alternate ? Data::grassPositions : Data::grassIndexCount));
-    at<IndexBuffer>(indices)->mpIndices = 4;
+    at<IndexBuffer>(indices)->mPrimitiveMode = 4;
     for (u32 kind = 0; kind < 2; ++kind) {
         u32 selected = resources + (u32)(at<Resources>(resources)->mSelected) * 0x254;
         u32 buffer = (u32)(at<Resource>(selected + kind * sizeof(Resource) * 2)->mpBuffer);
@@ -716,7 +716,7 @@ u32 dGrass_packet_c__ct(u32 self) {
     at<dGrass_packet_c>(self)->mAtParticle = alternate ? 0x8221 : 0x3DA;
     GrassHD::SDK::IndexBuffer_set(gabi::ea(&at<dGrass_packet_c>(self)->mIndices[1]), Data::cutIndices, 4,
                                   (u32)(*at<be<u32>>(Data::cutIndexCount)));
-    at<dGrass_packet_c>(self)->mIndices[1].mpIndices = 4;
+    at<dGrass_packet_c>(self)->mIndices[1].mPrimitiveMode = 4;
     u32 target = gabi::ea(&at<dGrass_packet_c>(self)->mTexture);
     bool equal = true;
     const u32 fields[] = {4, 8, 12, 16, 20, 24, 56, 52, 28};
@@ -882,9 +882,9 @@ void GrassHD::dGrass_packet_c::draw(u32 state) {
                 u32 indices = gabi::ea(&mIndices[0]) + (animated ? 0 : 24);
                 u32 count = (u32)(at<IndexBuffer>(indices)->mCount);
                 if (count)
-                    GrassHD::SDK::GX2DrawIndexedEx((u32)(at<IndexBuffer>(indices)->mpIndices), count,
-                                                   (u32)(at<IndexBuffer>(indices)->mPrimitive),
-                                                   (u32)(at<IndexBuffer>(indices)->mIndexType), 0, 1);
+                    GrassHD::SDK::GX2DrawIndexedEx((u32)(at<IndexBuffer>(indices)->mPrimitiveMode), count,
+                                                   (u32)(at<IndexBuffer>(indices)->mFormat),
+                                                   (u32)(at<IndexBuffer>(indices)->mStorage), 0, 1);
             }
             data = (u32)at<dGrass_data_c>(data)->mpNextData;
         }

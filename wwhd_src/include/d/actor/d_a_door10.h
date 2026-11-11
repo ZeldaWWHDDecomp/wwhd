@@ -46,7 +46,8 @@ struct Door10KeyHD {
     gptr<J3DModel> mpModel;
     Door10BckAnimationHD mBckAnim;
     request_of_phase_process_class mPhase;
-    be<u8> m20, mbIsBossDoor;
+    be<u8> mbUnlocking;  /* was m20: view of dDoor_key2_c (d_door_key.h), see there; no uses in d_a_door10 */
+    be<u8> mbIsBossDoor;
     u8 _9e[2];
     BOOL keyCreate(s32 x);
     cPhs_State keyResLoad();
@@ -91,22 +92,22 @@ struct Door10HkyoHD {
 };
 struct daDoor10_c : Door10InfoHD {
     static constexpr u32 __vt = 0x1000DE80;
-    Door10SmokeHD m2D0;
+    Door10SmokeHD mSmoke;  /* was m2D0: demoProc 021268C8 runs the door smoke (smokeInit / smokeProc / smokeEnd), daDoor10_Delete 02127900 ends it, daDoor10_Create 02127C80 constructs it (tww dDoor_smoke_c mSmoke the same) */
     Door10KeyHD mKeyLock;
     Door10StopHD mStopBars;
     Door10HkyoHD mHkyo;
     gptr<J3DModel> mpModel;
     gptr<dBgW> mpBgW;
-    be<u8> m354;
+    be<u8> mAction;  /* was m354: setAction() stores it (tww accessor name setAction); daDoor10_Execute 021277D0 runs l_action[it] */
     u8 _4ed;
-    be<u16> m356;
-    be<f32> m358;
+    be<u16> mFlag;  /* was m356: checkFlag() / onFlag() / offFlag() test, set and clear its bits (tww accessor names) */
+    be<f32> mOpenHeight;  /* was m358: openInit 021262D8 / CreateInit 02127998 clear it, openProc 0212662C chases it to 300 and closeProc 021267A8 to 0 at speedF, openEnd 0212673C sets 300; calcMtx 02125FA4 raises the door by it, the hkyo bars follow it (tww the same) */
     request_of_phase_process_class mPhase;
-    be<s32> m364;
-    bool checkFlag(u16 f) { return (m356 & f) != 0; }
-    void onFlag(u16 f) { m356 = m356 | f; }
-    void offFlag(u16 f) { m356 = m356 & ~f; }
-    void setAction(u8 x) { m354 = x; }
+    be<s32> mDoorBsBdlIdx;  /* was m364: create 02127B20 sets 4 / 5 for door arguments 13 / 14 (else 0) and then loads the DoorBs archive; CreateHeap 02126074 takes model DoorBs[it] and collision DoorBs[8 or 9] instead of the stage's own door; daDoor10_Delete 02127900 releases DoorBs while it is set (tww the same) */
+    bool checkFlag(u16 f) { return (mFlag & f) != 0; }
+    void onFlag(u16 f) { mFlag = mFlag | f; }
+    void offFlag(u16 f) { mFlag = mFlag & ~f; }
+    void setAction(u8 x) { mAction = x; }
     s32 chkMakeKey();
     void setKey();
     BOOL chkMakeStop();
@@ -133,7 +134,7 @@ struct daDoor10_c : Door10InfoHD {
     void demoProc();
     BOOL draw();
 };
-WWHD_OFFSET(daDoor10_c, m2D0, 0x3EC);
+WWHD_OFFSET(daDoor10_c, mSmoke, 0x3EC);
 WWHD_OFFSET(daDoor10_c, mKeyLock, 0x424);
 WWHD_OFFSET(daDoor10_c, mStopBars, 0x4C4);
 WWHD_OFFSET(daDoor10_c, mpModel, 0x4E4);
@@ -144,7 +145,7 @@ WWHD_SIZE(Door10SmokeHD, 0x38);
 WWHD_OFFSET(Door10KeyHD, mpModel, 4);
 WWHD_OFFSET(Door10KeyHD, mBckAnim, 8);
 WWHD_OFFSET(Door10KeyHD, mPhase, 0x94);
-WWHD_OFFSET(Door10KeyHD, m20, 0x9C);
+WWHD_OFFSET(Door10KeyHD, mbUnlocking, 0x9C);
 WWHD_SIZE(Door10KeyHD, 0xA0);
 WWHD_OFFSET(Door10StopHD, mOffsY, 4);
 WWHD_OFFSET(Door10StopHD, m8, 8);
@@ -154,11 +155,11 @@ WWHD_OFFSET(Door10HkyoHD, mUse, 0x11);
 WWHD_SIZE(Door10HkyoHD, 0x14);
 WWHD_OFFSET(daDoor10_c, mHkyo, 0x4D0);
 WWHD_OFFSET(daDoor10_c, mpBgW, 0x4E8);
-WWHD_OFFSET(daDoor10_c, m354, 0x4EC);
-WWHD_OFFSET(daDoor10_c, m356, 0x4EE);
-WWHD_OFFSET(daDoor10_c, m358, 0x4F0);
+WWHD_OFFSET(daDoor10_c, mAction, 0x4EC);
+WWHD_OFFSET(daDoor10_c, mFlag, 0x4EE);
+WWHD_OFFSET(daDoor10_c, mOpenHeight, 0x4F0);
 WWHD_OFFSET(daDoor10_c, mPhase, 0x4F4);
-WWHD_OFFSET(daDoor10_c, m364, 0x4FC);
+WWHD_OFFSET(daDoor10_c, mDoorBsBdlIdx, 0x4FC);
 
 // HD: the room status stride grows to 0x22C; this accessor consumes an unsigned byte room.
 struct Door10RoomStatusHD {

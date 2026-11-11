@@ -1,7 +1,7 @@
 /* Laser beam actor, with the original verified HD call and copy order. */
 #include "d/actor/d_a_beam.h"
 // HD: guest_fn cannot register instance methods. These names encode the original
-// GHS PTMF targets while m550/m55C retain their exact eight-byte descriptors.
+// GHS PTMF targets while mSearchProc/mDefaultProc retain their exact eight-byte descriptors.
 enum BeamProcHD : u32 {
     Beam_FIX_SEARCH_HD = 0x02076794,
     Beam_MOVE_SEARCH_HD = 0x02076260,
@@ -65,9 +65,9 @@ void invalidateEmitter(u32 address) {
     emitter->mFlags = flags | 1;
 }
 void searchProc(daBeam_c* b, u32 target) {
-    b->m550.d = 0;
-    b->m550.i = -1;
-    b->m550.f = target;
+    b->mSearchProc.d = 0;
+    b->mSearchProc.i = -1;
+    b->mSearchProc.f = target;
 }
 bool isSwitch(daBeam_c* b, s32 sw) {
     auto* save = dComIfGs_info();
@@ -84,21 +84,21 @@ void endpoint(daBeam_c* b, cXyz* out, f32 distance) {
     out->set(x, gabi::fnmsubs(distance, sinAngle(pitch), py), z);
 }
 void fade(daBeam_c* b) {
-    if (b->m5F4 == 1) {
-        f32 frame = b->m588;
+    if (b->mBeamOn == 1) {
+        f32 frame = b->mBeamFrame;
         if (frame < 5.0f)
-            b->m588 = frame + 1.0f;
-        f32 fade = b->m5A8;
+            b->mBeamFrame = frame + 1.0f;
+        f32 fade = b->mFadeFrame;
         if (fade < 4.0f)
-            b->m5A8 = fade + 1.0f;
+            b->mFadeFrame = fade + 1.0f;
         else {
-            b->m588 = 0.0f;
-            b->m5A8 = 0.0f;
-            b->m5F4 = 0;
+            b->mBeamFrame = 0.0f;
+            b->mFadeFrame = 0.0f;
+            b->mBeamOn = 0;
         }
     } else {
-        b->m5A8 = 0.0f;
-        b->m588 = 0.0f;
+        b->mFadeFrame = 0.0f;
+        b->mBeamFrame = 0.0f;
     }
 }
 } // namespace
@@ -113,7 +113,7 @@ void hitDirection(daBeam_c* b, void* at, void* other, void* tg) {
             s32 reverb = beamCall(dComIfGp_getReverbHD, room);
             beamCall(mDoAud_seStartHD, JA_SE_LK_BEAM_HIT, &i_actor->current.pos, 0, reverb);
         }
-        if (b->m54C) {
+        if (b->mSidePush) {
             u16 yaw = b->current.angle.y;
             gabi::Local<cXyz> direction, delta;
             direction->set(-cosAngle(yaw), 0.0f, sinAngle(yaw));
@@ -139,10 +139,10 @@ void hitDirection(daBeam_c* b, void* at, void* other, void* tg) {
 void daBeam_c::set_mtx() {
     f32 distance = 100.0f * (f32)scale.z;
     gabi::Local<cXyz> delta;
-    beamCall(cXyz_subHD, &m668, delta.get(), &current.pos);
+    beamCall(cXyz_subHD, &mBeamEndPos, delta.get(), &current.pos);
     f32 square = beamCall(VECSquareMagHD, delta.get());
     f32 length = beamCall(sqrtfHD, square) / distance;
-    f32 width = ((f32)m588 * (5.0f - (f32)m5A8)) / 50.0f + 0.5f;
+    f32 width = ((f32)mBeamFrame * (5.0f - (f32)mFadeFrame)) / 50.0f + 0.5f;
     auto* model = M_mdl.get();
     auto scaleVec = scale.get();
     model->mBaseScale.y = scaleVec.y;
@@ -162,17 +162,17 @@ void daBeam_c::set_mtx() {
     auto* destination = reinterpret_cast<be<f32>*>(&model->mBaseTransformMtx);
     for (int i = 0; i < 12; ++i)
         destination[i] = m[i];
-    if (gabi::ea(m690.get())) {
+    if (gabi::ea(mpBeamEmitter.get())) {
         pos = current.pos.get();
         beamCall(MTXTransHD, ptr(matrix), pos.x, pos.y, pos.z);
         x = current.angle.x;
         y = current.angle.y;
         z = current.angle.z;
         beamCall(mDoMtx_ZXYrotMHD, ptr(matrix), x, y, z);
-        beamCall(mDoMtx_stack_transMHD, 0.0f, 0.0f, (f32)m694);
-        auto* emitter = m690.get();
+        beamCall(mDoMtx_stack_transMHD, 0.0f, 0.0f, (f32)mEmitterOffsetZ);
+        auto* emitter = mpBeamEmitter.get();
         beamCall(JPASetRMtxTVecfromMtxHD, ptr(matrix), &emitter->mGlobalRot, &emitter->mGlobalTrs);
-        emitter = m690.get();
+        emitter = mpBeamEmitter.get();
         f32 s = scale.x;
         emitter->mGlobalPrmScl.y = s;
         emitter->mGlobalScl.x = s;
@@ -181,16 +181,16 @@ void daBeam_c::set_mtx() {
         emitter->mGlobalPrmScl.z = s;
         emitter->mGlobalPrmScl.x = s;
     }
-    if (gabi::ea(m68C.get())) {
-        pos = m668.get();
+    if (gabi::ea(mpHotFloor.get())) {
+        pos = mBeamEndPos.get();
         beamCall(MTXTransHD, ptr(matrix), pos.x, pos.y, pos.z);
-        beamCall(mDoMtx_stack_quatMHD, &m674);
+        beamCall(mDoMtx_stack_quatMHD, &mHotFloorQuat);
         y = current.angle.y;
         beamCall(mDoMtx_YrotMHD, ptr(matrix), y);
-        beamCall(mDoMtx_stack_scaleMHD, 1.0f, 1.0f, (f32)m688);
-        beamCall(MTXCopyHD, ptr(matrix), &m5C4);
-        auto* floor = m68C.get();
-        floor->mtx_p = &m5C4;
+        beamCall(mDoMtx_stack_scaleMHD, 1.0f, 1.0f, (f32)mHotFloorScaleZ);
+        beamCall(MTXCopyHD, ptr(matrix), &mHotFloorMtx);
+        auto* floor = mpHotFloor.get();
+        floor->mtx_p = &mHotFloorMtx;
         floor->mbSpawnParticle = 1;
     }
 }
@@ -256,8 +256,8 @@ void daBeam_AtHitCallback(daBeam_c* b, void* at, void* other, void* tg) {
     u32 parent = b->parentActorID;
     u32 id = other ? static_cast<fopAc_ac_c*>(other)->mBsPcId : 0xFFFFFFFF;
     if (id != parent) {
-        b->m540.copy(b->mCps1.mGObjAt.mHitPos);
-        b->m53C = 1;
+        b->mAtHitPos.copy(b->mCps1.mGObjAt.mHitPos);
+        b->mAtHit = 1;
     }
 }
 
@@ -278,8 +278,8 @@ void daBeam_checkHitCallback(daBeam_c* b, void* at, void* other, void* tg) {
     if (other && static_cast<fopAc_ac_c*>(other)->mProcName == fpcNm_PLAYER_e &&
         !(static_cast<dCcD_GObjInf*>(at)->mGObjAt.mRPrm & 1))
         return;
-    b->m540.copy(b->mCps2.mGObjAt.mHitPos);
-    b->m53C = 1;
+    b->mAtHitPos.copy(b->mCps2.mGObjAt.mHitPos);
+    b->mAtHit = 1;
 }
 
 /* 02075384 */
@@ -305,9 +305,9 @@ s32 daBeam_c::CreateInit() {
     mCps2.mObjAt.mSPrm = flags | 16;
     if (!mode)
         mCps2.mGObjAt.mHitCallback = gabi::guest_fn((void*)daBeam_checkHitCallback);
-    copyWords(gabi::ea(&m674), 0x101E9C38, 16);
-    m684 = -1;
-    m68C = nullptr;
+    copyWords(gabi::ea(&mHotFloorQuat), 0x101E9C38, 16);
+    mHotFloorId = -1;
+    mpHotFloor = nullptr;
     beamCall(Beam_set_mtxHD, this);
     u32 model = gabi::ea(M_mdl.get());
     cullMtx = model ? gabi::ea(&M_mdl->mBaseTransformMtx) : 0;
@@ -315,51 +315,51 @@ s32 daBeam_c::CreateInit() {
     if (parentActorID == 0xFFFFFFFF) {
         u8 kind = (u32)mParameters;
         kind = kind > 2 ? 2 : kind;
-        m550.d = 0;
-        m550.i = -1;
+        mSearchProc.d = 0;
+        mSearchProc.i = -1;
         // HD: kind 2 uses move_search; there is no separate timer_change entry.
         u32 target = kind == 0 ? Beam_FIX_SEARCH_HD : Beam_MOVE_SEARCH_HD;
         if (kind < 2) {
-            m55C.d = 0;
-            m55C.i = -1;
-            m55C.f = target;
+            mDefaultProc.d = 0;
+            mDefaultProc.i = -1;
+            mDefaultProc.f = target;
         }
-        m550.f = target;
+        mSearchProc.f = target;
         u32 parameters = mParameters;
         scale.set(2.5f, 2.5f, 20.0f);
         f32 offset = *gabi::at<be<f32>>(0x1047BBD8);
-        m690 = nullptr;
-        m698 = (parameters >> 16) & 255;
-        m694 = 0.001f * offset;
-        s32 sw = m698;
+        mpBeamEmitter = nullptr;
+        mSwitchNo = (parameters >> 16) & 255;
+        mEmitterOffsetZ = 0.001f * offset;
+        s32 sw = mSwitchNo;
         if (sw != 255 && isSwitch(this, sw))
             searchProc(this, Beam_WAIT_PROC_HD);
-        m54C = 0;
+        mSidePush = 0;
     } else {
         u32 parameters = mParameters;
-        m694 = 0.0f;
-        m690 = nullptr;
-        m5F8 = 1 - ((parameters >> 28) & 1);
-        m54C = (parameters >> 24) & 15;
-        m5F9 = 1 - ((parameters >> 29) & 1);
+        mEmitterOffsetZ = 0.0f;
+        mpBeamEmitter = nullptr;
+        mHFloorParticle = 1 - ((parameters >> 28) & 1);
+        mSidePush = (parameters >> 24) & 15;
+        mSmokeParticle = 1 - ((parameters >> 29) & 1);
     }
     return cPhs_COMPLEATE_e;
 }
 
 /* 02075988 */
 BOOL daBeam_c::_execute() {
-    s16 slot = m550.i;
+    s16 slot = mSearchProc.i;
     if (slot) {
-        beamCall(this->*m550);
-        s32 sw = m698;
+        beamCall(this->*mSearchProc);
+        s32 sw = mSwitchNo;
         if (sw != 255) {
             if (isSwitch(this, sw))
                 searchProc(this, Beam_WAIT_PROC_HD);
             else {
-                u32 descriptor = *reinterpret_cast<be<u32>*>(&m55C);
-                u32 target = m55C.f;
-                *reinterpret_cast<be<u32>*>(&m550) = descriptor;
-                m550.f = target;
+                u32 descriptor = *reinterpret_cast<be<u32>*>(&mDefaultProc);
+                u32 target = mDefaultProc.f;
+                *reinterpret_cast<be<u32>*>(&mSearchProc) = descriptor;
+                mSearchProc.f = target;
             }
         }
     }
@@ -370,10 +370,10 @@ BOOL daBeam_c::_execute() {
     mCps2.mCps.mRadius = 25.0f;
     auto* gameInfo = beamCall(dComIfGp_getHD);
     beamCall(cCcS_SetHD, &gameInfo->play.mCcS, &mCps2);
-    if (m5F4 == 1) {
+    if (mBeamOn == 1) {
         f32 length = 100.0f * (f32)scale.z;
-        if (m53C == 1) {
-            beamCall(cXyz_subHD, &m540, delta.get(), &current.pos);
+        if (mAtHit == 1) {
+            beamCall(cXyz_subHD, &mAtHitPos, delta.get(), &current.pos);
             f32 square = beamCall(VECSquareMagHD, delta.get());
             length = beamCall(sqrtfHD, square);
         }
@@ -387,55 +387,55 @@ BOOL daBeam_c::_execute() {
         gameInfo = beamCall(dComIfGp_getHD);
         beamCall(cCcS_SetHD, &gameInfo->play.mCcS, &mCps1);
     }
-    f32 frame = m588;
+    f32 frame = mBeamFrame;
     if (!(frame > 0.0f)) {
-        m68C = nullptr;
-        m53C = 0;
-        m684 = -1;
+        mpHotFloor = nullptr;
+        mAtHit = 0;
+        mHotFloorId = -1;
         return 0;
     }
     endpoint(this, lineEnd.get(), (frame * 20.0f) * (f32)scale.z);
     mLinChk.mBackFlag = 0;
     beamCall(dBgS_LinChk_SetHD, &mLinChk, &current.pos, lineEnd.get(), this);
-    if (m53C == 1) {
-        m668.copy(m540);
-        m684 = -1;
-        m688 = 1.0f;
-        m68C = nullptr;
+    if (mAtHit == 1) {
+        mBeamEndPos.copy(mAtHitPos);
+        mHotFloorId = -1;
+        mHotFloorScaleZ = 1.0f;
+        mpHotFloor = nullptr;
     } else {
         gameInfo = beamCall(dComIfGp_getHD);
         if (beamCall(cBgS_LineCrossHD, &gameInfo->play.mBgS, &mLinChk)) {
             gameInfo = beamCall(dComIfGp_getHD);
             u16 group = mLinChk.mBgIndex, triangle = mLinChk.mPolyIndex;
             u32 plane = beamCall(cBgS_GetTriPlaHD, &gameInfo->play.mBgS, group, triangle);
-            m668.copy(mLinChk.mLin.mEnd);
+            mBeamEndPos.copy(mLinChk.mLin.mEnd);
             if (plane) {
                 auto* planeNormal = gabi::at<cXyz>(plane);
                 normal->set(planeNormal->x, planeNormal->y, planeNormal->z);
-                beamCall(Quaternion_setRotateHD, &m674, normal.get());
+                beamCall(Quaternion_setRotateHD, &mHotFloorQuat, normal.get());
             }
-            if (m684 == 0xFFFFFFFF) {
-                u32 parameters = (!m5F8 ? 1 : 0) | (!m5F9 ? 2 : 0);
-                m684 = beamCall(fopAcM_createHD, fpcNm_Hot_Floor_e, parameters, &m668, -1, ptr(0),
+            if (mHotFloorId == 0xFFFFFFFF) {
+                u32 parameters = (!mHFloorParticle ? 1 : 0) | (!mSmokeParticle ? 2 : 0);
+                mHotFloorId = beamCall(fopAcM_createHD, fpcNm_Hot_Floor_e, parameters, &mBeamEndPos, -1, ptr(0),
                                 ptr(0), -1, ptr(0));
             }
-            m688 = 1.0f;
+            mHotFloorScaleZ = 1.0f;
         } else {
-            m668.copy(*lineEnd.get());
-            m688 = 1.0f;
-            m684 = -1;
-            m68C = nullptr;
+            mBeamEndPos.copy(*lineEnd.get());
+            mHotFloorScaleZ = 1.0f;
+            mHotFloorId = -1;
+            mpHotFloor = nullptr;
         }
     }
-    if (m684 != 0xFFFFFFFF && !gabi::ea(m68C.get())) {
+    if (mHotFloorId != 0xFFFFFFFF && !gabi::ea(mpHotFloor.get())) {
         gabi::Local<be<u32>> id;
-        *id.get() = m684;
-        m68C = gabi::at<daHot_Floor_c>(beamCall(fopAcM_SearchHD, ptr(0x025E1234), id.get()));
+        *id.get() = mHotFloorId;
+        mpHotFloor = gabi::at<daHot_Floor_c>(beamCall(fopAcM_SearchHD, ptr(0x025E1234), id.get()));
     }
     s8 room = current.roomNo;
     s32 reverb = beamCall(dComIfGp_getReverbHD, room);
-    beamCall(mDoAud_seStartHD, JA_SE_OBJ_STATUE_BEAM, &m668, 0, reverb);
-    m53C = 0;
+    beamCall(mDoAud_seStartHD, JA_SE_OBJ_STATUE_BEAM, &mBeamEndPos, 0, reverb);
+    mAtHit = 0;
     return 0;
 }
 
@@ -480,42 +480,42 @@ void daBeam_c::move_search() {
         s16 yaw = angle->y;
         beamCall(cLib_addCalcAngleS2HD, &current.angle.y, yaw, 4, 0x400);
         u32 magnitude = delta < 0 ? 0u - (u32)delta : (u32)delta;
-        if ((s32)magnitude < 0x400 && m5F4 == 0) {
-            if (!gabi::ea(m690.get())) {
+        if ((s32)magnitude < 0x400 && mBeamOn == 0) {
+            if (!gabi::ea(mpBeamEmitter.get())) {
                 auto* gameInfo = beamCall(dComIfGp_getHD);
                 u32 particles = gabi::ea(gameInfo->play.mParticle);
                 u32 emitter =
                     beamCall(dPa_control_setHD, ptr(particles), 0, ID_AK_SN_LASERROOT00,
                              &current.pos, ptr(0), ptr(0), 255, ptr(0), -1, ptr(0), ptr(0), ptr(0));
-                s16 active = m5F4;
-                m690 = gabi::at<BeamEmitterHD>(emitter);
+                s16 active = mBeamOn;
+                mpBeamEmitter = gabi::at<BeamEmitterHD>(emitter);
                 if (active != 0) {
-                    m588 = 5.0f;
-                    m5A8 = 0.0f;
+                    mBeamFrame = 5.0f;
+                    mFadeFrame = 0.0f;
                     return;
                 }
             }
-            f32 frame = m588;
-            m5A8 = 0.0f;
+            f32 frame = mBeamFrame;
+            mFadeFrame = 0.0f;
             if (frame < 5.0f)
-                m588 = frame + 1.0f;
+                mBeamFrame = frame + 1.0f;
             else {
-                m5A8 = 0.0f;
-                m588 = 5.0f;
-                m5F4 = 1;
+                mFadeFrame = 0.0f;
+                mBeamFrame = 5.0f;
+                mBeamOn = 1;
             }
         }
     } else {
-        if (m5F4 == 0 || !((f32)m588 > 0.4f)) {
+        if (mBeamOn == 0 || !((f32)mBeamFrame > 0.4f)) {
             s16 yaw = home.angle.y;
             beamCall(cLib_addCalcAngleS2HD, &current.angle.y, yaw, 4, 0x400);
             s16 pitch = home.angle.x;
             beamCall(cLib_addCalcAngleS2HD, &current.angle.x, pitch, 4, 0x400);
         }
-        u32 emitter = gabi::ea(m690.get());
+        u32 emitter = gabi::ea(mpBeamEmitter.get());
         if (emitter) {
             invalidateEmitter(emitter);
-            m690 = nullptr;
+            mpBeamEmitter = nullptr;
         }
         fade(this);
     }
@@ -526,13 +526,13 @@ void daBeam_c::fix_search() {}
 
 /* 02076598 */
 void daBeam_c::wait_proc() {
-    u32 emitter = gabi::ea(m690.get());
+    u32 emitter = gabi::ea(mpBeamEmitter.get());
     if (emitter) {
         invalidateEmitter(emitter);
-        m690 = nullptr;
+        mpBeamEmitter = nullptr;
     }
     fade(this);
-    if (!m5F4) {
+    if (!mBeamOn) {
         current.angle.z = home.angle.z;
         current.angle.y = home.angle.y;
         current.angle.x = home.angle.x;
@@ -607,9 +607,9 @@ s32 daBeamCreate(daBeam_c* b) {
 /* 02075924 */
 // HD: GameCube inline _delete and the actor wrapper form one verified entry.
 BOOL daBeamDelete(daBeam_c* b) {
-    beamCall(mDoAud_seDeleteObjectHD, &b->m668);
+    beamCall(mDoAud_seDeleteObjectHD, &b->mBeamEndPos);
     beamCall(dComIfG_resDeleteHD, &b->mPhase, ptr(0x10008758));
-    u32 emitter = gabi::ea(b->m690.get());
+    u32 emitter = gabi::ea(b->mpBeamEmitter.get());
     if (emitter)
         invalidateEmitter(emitter);
     return 1;
@@ -621,16 +621,16 @@ BOOL daBeamExecute(daBeam_c* b) { return beamCall(Beam_executeHD, b); }
 /* 02075F90 */
 // HD: GameCube inline _draw and the actor wrapper form one verified entry.
 BOOL daBeamDraw(daBeam_c* b) {
-    if (!b->m5F4)
+    if (!b->mBeamOn)
         return 1;
     beamCall(Beam_set_mtxHD, b);
     u32 data = gabi::ea(b->M_mdl.get()->mModelData);
     f32 frame = b->mBtkAnm.mFrameCtrl.mFrame;
     beamCall(mDoExt_btkAnm_entryHD, &b->mBtkAnm, ptr(data), frame);
-    frame = (s16)gabi::ftoi(b->m5A8);
+    frame = (s16)gabi::ftoi(b->mFadeFrame);
     data = gabi::ea(b->M_mdl.get()->mModelData);
     beamCall(mDoExt_brkAnm_entryHD, &b->mBrkAnm, ptr(data), frame);
-    frame = (s16)gabi::ftoi(b->m588);
+    frame = (s16)gabi::ftoi(b->mBeamFrame);
     data = gabi::ea(b->M_mdl.get()->mModelData);
     beamCall(mDoExt_bckAnm_entryHD, &b->mBckAnm, ptr(data), frame);
     beamCall(mDoExt_modelUpdateHD, ptr(gabi::ea(b->M_mdl.get())), 0);

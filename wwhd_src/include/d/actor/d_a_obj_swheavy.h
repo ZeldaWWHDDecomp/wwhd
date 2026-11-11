@@ -17,7 +17,8 @@ struct Attr_c {
     u8 m00[4];
     be<u32> mFlags;
     be<f32> mVSpring, mVSpeedDecay, mPushVSpeed0;
-    be<s16> m14, mMiniPushDelay, mPushDelay;
+    be<s16> mTopLowerDelay;  /* was m14: mode_u_l_init 02394AE8 passes it to top_bg_aim_req as the timer: calc_top_pos 02394730 moves the top collision aim to height 0 that many frames after the switch starts going down (0: the request never takes effect); static attribute table (0, 0, 4, 4), never written (tww mode_u_l_init the same) */
+    be<s16> mMiniPushDelay, mPushDelay;
     u8 mPadding[2];
 };
 struct Act_c : fopAc_ac_c {

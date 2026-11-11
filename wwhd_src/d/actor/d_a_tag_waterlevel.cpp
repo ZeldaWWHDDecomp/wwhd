@@ -39,7 +39,7 @@ cPhs_State Act_c::_create() {
     } else {
         M_now = 0.0f;
     }
-    field_0x290 = 0.0f;
+    mLevelStep = 0.0f;
     mAction = 0;
     return cPhs_COMPLEATE_e;
 }
@@ -60,7 +60,7 @@ void Act_c::bgm_proc() {
 }
 
 /* 024B3AC0 */
-// HD: the step clamp is computed before the single store of field_0x290
+// HD: the step clamp is computed before the single store of mLevelStep
 bool Act_c::_execute() {
     f32 target;
     u8 prm_sch = prm_get_sch();
@@ -88,14 +88,14 @@ bool Act_c::_execute() {
     } else {
         if (std::fabs(target - M_now) < attr().field_0x0c) {
             M_now = target;
-            field_0x290 = 0.0f;
+            mLevelStep = 0.0f;
         } else {
-            f32 step = field_0x290 + attr().field_0x00;
+            f32 step = mLevelStep + attr().field_0x00;
             if (step > attr().field_0x08)
                 step = attr().field_0x08;
             else if (step < attr().field_0x0c)
                 step = attr().field_0x0c;
-            field_0x290 = step;
+            mLevelStep = step;
             cLib_addCalc(&M_now, target, attr().field_0x04, step, attr().field_0x0c);
         }
     }

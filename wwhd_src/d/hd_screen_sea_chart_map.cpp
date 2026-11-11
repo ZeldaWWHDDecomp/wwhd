@@ -1,5 +1,6 @@
 /** HD sea-chart map animation and coordinate controls; gates pending. */
 #include "d/hd_screen_sea_chart_map.h"
+#include "sead/ElementAt.h"
 #include "d/hd_parts_text_pane.h"
 #include "ppc.h"
 using namespace gabi;
@@ -13,11 +14,13 @@ void hdSeaChartMap_c::playOpenAnimation() {
 void hdSeaChartMap_c::playCloseAnimation() {
     hdAnimSet_play(reinterpret_cast<hdParts_c*>(this)->animSet(), mCloseAnimation, mAnimationGroup, l_hdMapOne);
 }
+// Guest EA arithmetic (selectedCell, findCellPanes): table + index * size wraps at 32 bits as on the console (a host index on a
+// NULL table reached host addresses past 4 GB).
 /* 0267BA9C */
 void* hdSeaChartMap_c::selectedCell() {
     u32 index = mSelectedCell;
     if (index >= u32(mCellCount)) return nullptr;
-    return mpCells[index].get();
+    return sead::elementAt(mpCells, index).get();
 }
 /* 0267BAC4 */
 u32 hdSeaChartMap_c::hasMaskedFlag(u32 flags, u32 mask) {
@@ -315,7 +318,7 @@ void* hdSeaChartMap_c::findResourceCell(u32 resource) {
         if (u32(mappings[i].mResource) != resource) continue;
         u32 index = mappings[i].mCell;
         if (index >= u32(mCellCount)) return nullptr;
-        return mpCells[index].get();
+        return sead::elementAt(mpCells, index).get();
     }
     return nullptr;
 }
@@ -983,11 +986,11 @@ void hdSeaChartMap_c::findCellPanes() {
     for (u32 i = 0; s32(i) < s32(mPaneNameCount); ++i) {
         auto* parts = reinterpret_cast<hdParts_c*>(this);
         auto* accessor = parts->mpLayout->mAccessor.get();
-        auto* name = &mpPaneNames[i];
+        auto* name = &sead::elementAt(mpPaneNames, i);
         name->assureTermination();
         auto* pane = accessor->mObject->findPane(reinterpret_cast<const char*>(name->mText.get()));
         if (pane && s32(mCellCount) < s32(mCellCapacity)) {
-            mpCells[u32(mCellCount)] = pane;
+            sead::elementAt(mpCells, u32(mCellCount)) = pane;
             mCellCount = u32(mCellCount) + 1;
         }
     }

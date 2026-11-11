@@ -3,6 +3,7 @@
  * Verified against the HD implementation; all 81 entry points and call boundaries retained.
  */
 #include "d/d_resorce.h"
+#include "sead/ElementAt.h"
 using StringBuffer128 = resorce_hd::ResourceStringBuffer128HD;
 using ResourceSafeStringRaw = resorce_hd::ResourceSafeStringHD;
 static resorce_hd::HeaderStatics l_resourceHeaderStatics;
@@ -29,13 +30,15 @@ void resorce_hd::ResourceControlHD::destroy(u32 flags) {
         resourceFree(self);
     }
 }
+// Guest EA arithmetic (getRes, getIDRes, setRes, setIDRes): resources + index * 4 wraps at 32 bits as on the console (a host
+// index on a NULL resource table reached host addresses past 4 GB).
 /* 026066A0 */
 u32 resorce_hd::ResourceArchiveInfoHD::getRes(u32 index) {
     if (s32(index) >= mResCount) {
         return 0;
     }
     gptr<void> *resources = mRes;
-    return resources[index].v;
+    return sead::elementAt<gptr<void>>(gabi::ea(resources), index).v;
 }
 /* 026067D0 */
 u32 resorce_hd::ResourceArchiveInfoHD::getIDRes(u32 id) {
@@ -43,7 +46,7 @@ u32 resorce_hd::ResourceArchiveInfoHD::getIDRes(u32 id) {
         return 0;
     }
     gptr<void> *resources = mIdRes;
-    return resources[id].v;
+    return sead::elementAt<gptr<void>>(gabi::ea(resources), id).v;
 }
 
 /* 026082D0 */
@@ -51,7 +54,7 @@ void resorce_hd::ResourceArchiveInfoHD::setRes(s32 index, u32 value) {
     s32 count = mResCount;
     if (index < count) {
         gptr<void> *resources = mRes;
-        resources[u32(index)].v = value;
+        sead::elementAt<gptr<void>>(gabi::ea(resources), u32(index)).v = value;
     }
 }
 /* 026082EC */
@@ -59,7 +62,7 @@ void resorce_hd::ResourceArchiveInfoHD::setIDRes(s32 index, u32 value) {
     s32 count = mIdResCount;
     if (index < count) {
         gptr<void> *resources = mIdRes;
-        resources[u32(index)].v = value;
+        sead::elementAt<gptr<void>>(gabi::ea(resources), u32(index)).v = value;
     }
 }
 /* 02603680 */

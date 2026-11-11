@@ -237,7 +237,7 @@ struct daNpc_Ji1_c : fopEn_enemy_c {
     /* 0xEB0 */ be<s16> mLookMaxVel;  /* was field_0xC88: lookBack 0224ABA4 eases it to HIO 0x18 while m_jnt turns, else clears it; passed as lookAtTarget's maxVel (TWW d_npc.h parameter name) */
     /* 0xEB2 */ u8 _EB2[2];
     /* 0xEB4 */ be<s32> mTeachCutType;  /* was field_0xC8C: teachAction 02255908 / teachSPRollCutAction 02256F1C copy mHitCutType here and test it (CUT_TYPE_CUT_ROLL) */
-    /* 0xEB8 */ be<s32> field_0xC90;
+    /* 0xEB8 */ be<s32> mTeachResult;  /* was field_0xC90: the result of a lesson cut: teachAction 02255908 sets 1 for a right cut with hits left (orders event 1, then speakAction), 2 for a wrong cut (event 3, speakBadAction), 3 for the last needed cut (event 1 / 2 / 15, then speakAction or endspeakAction), and copies mRollTeachResult into it after a spin attack; speakAction 02252FD0 picks the reply message by it (1 / 3 per lesson step); CreateInit 0224C650 / teachSPRollCutAction 02256F1C clear it (tww the same) */
     /* 0xEBC */ be<s32> field_0xC94;
     /* 0xEC0 */ be<s32> mTeachHitsLeft;  /* was field_0xC98: CreateInit 0224C650 sets HIO 0x54[mTeachStep]; teachAction 02255908 counts it down per good cut, the lesson ends at 0 */
     /* 0xEC4 */ be<f32> mBackSlideDist;  /* was field_0xC9C: BackSlideInit 0224DE14 and every battle subaction init clear it; BackSlide 022525B4 eases it to the slide distance behind mBackSlideStartPos */
@@ -252,7 +252,7 @@ struct daNpc_Ji1_c : fopEn_enemy_c {
     /* 0xF40 */ be<f32> mRollAtRadius;  /* was field_0xD18: evn_RollAtControl_init 02258A14 sets 400; evn_RollAtControl 02258E6C chases it to 0 */
     /* 0xF44 */ cXyz mRollAtPos;  /* was field_0xD1C: evn_RollAtControl 02258E6C: position on the circle of mRollAtAngle / mRollAtRadius */
     /* 0xF50 */ cXyz mInitPos;  /* was field_0xD28: CreateInit 0224C650 / kaitenAction 02251ED0 copy home.pos; initPos 02254390 puts current.pos and old.pos there */
-    /* 0xF5C */ be<s32> field_0xD34;
+    /* 0xF5C */ be<s32> mRollTeachResult;  /* was field_0xD34: teachAction 02255908: the same result values (1 / 2 / 3) for a spin attack (CUT_TYPE_CUT_ROLL), held until Link's cut ends, then copied into mTeachResult (speakAction / speakBadAction); teachSPRollCutAction 02256F1C clears it (tww the same) */
     /* 0xF60 */ cXyz mBackSlideStartPos;  /* was field_0xD38: BackSlideInit 0224DE14 and the subaction inits copy current.pos; BackSlide 022525B4 slides back from it */
     /* 0xF6C */ u8 pad_0xD44[0xC];
     /* 0xF78 */ cXyz mHeldItemOffset;  /* was field_0xD50: CreateInit 0224C650 sets (-13, -4, 10); _execute 0224B268 eases it to the item/normal aim offset; set_mtx 0224AEF0 translates by it */
@@ -306,13 +306,13 @@ struct daNpc_Ji1_HIO_c {
     /* 0x000 */ be<s8> mNo;
     /* 0x001 */ u8 _001[3];
     /* 0x004 */ be<f32> field_0x08;
-    /* 0x008 */ be<s16> field_0x0C;
-    /* 0x00A */ be<s16> field_0x0E;
-    /* 0x00C */ be<s16> field_0x10;
-    /* 0x00E */ be<s16> field_0x12;
-    /* 0x010 */ be<s16> field_0x14;
-    /* 0x012 */ be<s16> field_0x16;
-    /* 0x014 */ be<s16> field_0x18;
+    /* 0x008 */ be<s16> mMaxHeadX;  /* was field_0x0C: lookBack 0224ABA4 passes it to m_jnt.setParam as the head's max X angle (and its negative as the min); daNpc_Ji1_HIO_ct 0225CC44 7000; same role as dNpc_HIO_c::mMaxHeadX */
+    /* 0x00A */ be<s16> mMaxBackboneX;  /* was field_0x0E: lookBack 0224ABA4 passes it to m_jnt.setParam as the backbone's max X angle (and its negative as the min); daNpc_Ji1_HIO_ct 0225CC44 4000; same role as dNpc_HIO_c::mMaxBackboneX */
+    /* 0x00C */ be<s16> mMaxHeadY;  /* was field_0x10: lookBack 0224ABA4 passes it to m_jnt.setParam as the head's max Y angle (its negative as the head and backbone min; 0x3E80 instead during BTKAMASI / BTKAMAE); chkAttention 0224AA24 adds it to mMaxBackboneY as the attention angle; daNpc_Ji1_HIO_ct 0225CC44 9000; same role as dNpc_HIO_c::mMaxHeadY */
+    /* 0x00E */ be<s16> mMaxBackboneY;  /* was field_0x12: lookBack 0224ABA4 passes it to m_jnt.setParam as the backbone's max Y angle (0x1F40 instead during BTKAMASI / BTKAMAE); chkAttention 0224AA24 adds it to mMaxHeadY as the attention angle; daNpc_Ji1_HIO_ct 0225CC44 7000; same role as dNpc_HIO_c::mMaxBackboneY */
+    /* 0x010 */ be<s16> mMaxTurnStep;  /* was field_0x14: lookBack 0224ABA4 passes it to m_jnt.setParam as the turn step; daNpc_Ji1_HIO_ct 0225CC44 5000; same role as dNpc_HIO_c::mMaxTurnStep */
+    /* 0x012 */ be<s16> mHeadTurnVelScale;  /* was field_0x16: lookBack 0224ABA4: the scale of cLib_addCalcAngleS2 that eases mLookMaxVel toward mMaxHeadTurnVel while turning; daNpc_Ji1_HIO_ct 0225CC44 1 */
+    /* 0x014 */ be<s16> mMaxHeadTurnVel;  /* was field_0x18: lookBack 0224ABA4: cLib_addCalcAngleS2 eases mLookMaxVel toward it while turning (else 0); daNpc_Ji1_HIO_ct 0225CC44 2000; same role as dNpc_HIO_c::mMaxHeadTurnVel */
     /* 0x016 */ be<u8> field_0x1A;
     /* 0x017 */ u8 _017;
     /* 0x018 */ be<f32> field_0x1C;
@@ -320,69 +320,69 @@ struct daNpc_Ji1_HIO_c {
     /* 0x020 */ be<f32> field_0x24;
     /* 0x024 */ be<u8> field_0x28;
     /* 0x025 */ u8 _025[3];
-    /* 0x028 */ be<f32> field_0x2C;
-    /* 0x02C */ be<u8> field_0x30;
+    /* 0x028 */ be<f32> mTalkDistXZ;  /* was field_0x2C: normalAction 02250A1C / kaitenwaitAction 02250D54: Orca can be talked to (dEvtCnd_CANTALK_e) only while Link is within this XZ distance; daNpc_Ji1_HIO_ct 0225CC44 200.0 */
+    /* 0x02C */ be<u8> mbRepeatKaiten;  /* was field_0x30: CreateInit 0224C650 starts kaitenExpAction when it is set even with event bit 0x0640; kaitenwaitAction 02250D54 reacts to Link's front-roll crash when it is set even with event bit 0x0501; daNpc_Ji1_HIO_ct 0225CC44 0 */
     /* 0x02D */ u8 _02D[3];
-    /* 0x030 */ be<f32> field_0x34;
-    /* 0x034 */ be<f32> field_0x38;
-    /* 0x038 */ be<f32> field_0x3C;
-    /* 0x03C */ be<f32> field_0x40;
-    /* 0x040 */ be<f32> field_0x44;
-    /* 0x044 */ be<f32> field_0x48;
-    /* 0x048 */ be<f32> field_0x4C;
+    /* 0x030 */ be<f32> mJpGuardSlideDist;  /* was field_0x34: battleSubActionJpGuard 0225C660 / teachAction 02255908 (animation 0xA, twice it on the last hit) / teachSPRollCutAction 02256F1C (twice it): cLib_addCalc2 target of mBackSlideDist, the jump-guard slide back; daNpc_Ji1_HIO_ct 0225CC44 150.0 */
+    /* 0x034 */ be<f32> mJpGuardSlideStep;  /* was field_0x38: battleSubActionJpGuard 0225C660 / teachAction 02255908 / teachSPRollCutAction 02256F1C: cLib_addCalc2 max step of mBackSlideDist toward mJpGuardSlideDist; daNpc_Ji1_HIO_ct 0225CC44 20.0 */
+    /* 0x038 */ be<f32> mGuardSlideDist;  /* was field_0x3C: teachAction 02255908: cLib_addCalc2 target of mBackSlideDist for the other guard animations; daNpc_Ji1_HIO_ct 0225CC44 90.0 */
+    /* 0x03C */ be<f32> mGuardSlideStep;  /* was field_0x40: teachAction 02255908 / battleSubActionGuard 0225C7EC: cLib_addCalc2 max step of mBackSlideDist on a guard; daNpc_Ji1_HIO_ct 0225CC44 10.0 */
+    /* 0x040 */ be<f32> mInasiAnmSpeed;  /* was field_0x44: setAnm 0224DFF0: the play speed of animation 7 (ji_inasi.bck); daNpc_Ji1_HIO_ct 0225CC44 2.0 */
+    /* 0x044 */ be<f32> mKrotAnmSpeed;  /* was field_0x48: setAnm 0224DFF0: the play speed of animation 6 (ji_krot.bck); battleMove 02259EC4 / teachMove 0224EF14 / teachSpRollCutMove 0224F368 (scaled) and MoveToPlayer 0224F628 set the body's play speed from it; daNpc_Ji1_HIO_ct 0225CC44 2.0 */
+    /* 0x048 */ be<f32> mWaraiAnmSpeed;  /* was field_0x4C: setAnm 0224DFF0: the play speed of animation 13 (ji_warai.bck); daNpc_Ji1_HIO_ct 0225CC44 1.25 */
     /* 0x04C */ be<f32> field_0x50;
-    /* 0x050 */ be<s16> field_0x54[6];
-    /* 0x05C */ be<s16> field_0x60[4];
+    /* 0x050 */ be<s16> mTeachHitCount[6];  /* was field_0x54: CreateInit 0224C650 / speakAction 02252FD0 / startspeakAction 02253880 load mTeachHitsLeft with [mTeachStep] (or [0]); teachAction 02255908 counts the hits against it; daNpc_Ji1_HIO_ct 0225CC44 {9, 9, 9, 2, 2, 2} */
+    /* 0x05C */ be<s16> mLevelHits[4];  /* was field_0x60: the battle-game hit thresholds: isClearRecord 0224D5BC / setClearRecord 0224D654 compare the hits with [level]; battleGameSetTimer 02259A6C picks the timer segment by them; createItem 02258574 / battleGuardCheck 0225A534 end the game at [3]; daNpc_Ji1_HIO_ct 0225CC44 {100, 300, 500, 1000} */
     /* 0x064 */ be<u8> field_0x68;
     /* 0x065 */ u8 _065[3];
-    /* 0x068 */ be<f32> field_0x6C;
-    /* 0x06C */ be<f32> field_0x70;
-    /* 0x070 */ be<f32> field_0x74;
-    /* 0x074 */ be<f32> field_0x78;
+    /* 0x068 */ be<f32> mAttackAnmSpeed;  /* was field_0x6C: battleSubActionAttackInit 0225B2B8 / battleSubActionAttack 0225BF44: the attack animation's play speed up to frame 10; daNpc_Ji1_HIO_ct 0225CC44 0.7 (tww the same) */
+    /* 0x06C */ be<f32> mAttackSwingAnmSpeed;  /* was field_0x70: battleSubActionAttack 0225BF44: the attack animation's play speed after frame 10; daNpc_Ji1_HIO_ct 0225CC44 1.5 (tww the same) */
+    /* 0x070 */ be<f32> mTateYokoSwingAnmSpeed;  /* was field_0x74: battleSubActionTateAttack 0225B85C (after frame 26) / battleSubActionYokoAttack 0225BBA4 (after frame 25): the swing's play speed; daNpc_Ji1_HIO_ct 0225CC44 1.4 (tww the same) */
+    /* 0x074 */ be<f32> mTateAnmSpeed;  /* was field_0x78: battleSubActionTateAttackInit 0225B22C sets it; battleSubActionTateAttack 0225B85C / battleSubActionYokoAttack 0225BBA4: the play speed before the swing; daNpc_Ji1_HIO_ct 0225CC44 1.4 (tww the same) */
     /* 0x078 */ be<f32> field_0x7C;
-    /* 0x07C */ be<f32> field_0x80;
-    /* 0x080 */ be<f32> field_0x84;
-    /* 0x084 */ be<s16> field_0x88;
-    /* 0x086 */ be<s16> field_0x8A;
-    /* 0x088 */ be<s16> field_0x8C;
-    /* 0x08A */ be<s16> field_0x8E;
-    /* 0x08C */ be<s16> field_0x90;
-    /* 0x08E */ be<s16> field_0x92;
-    /* 0x090 */ be<s16> field_0x94;
-    /* 0x092 */ be<s16> field_0x96;
-    /* 0x094 */ be<s16> field_0x98;
-    /* 0x096 */ be<s16> field_0x9A;
-    /* 0x098 */ be<s16> field_0x9C;
-    /* 0x09A */ be<s16> field_0x9E;
-    /* 0x09C */ be<s16> field_0xA0;
+    /* 0x07C */ be<f32> mYokoAnmSpeed;  /* was field_0x80: battleSubActionYokoAttackInit 0225B1A0: the side attack's starting play speed; daNpc_Ji1_HIO_ct 0225CC44 1.4 (tww the same) */
+    /* 0x080 */ be<f32> mNockBackAnmSpeed;  /* was field_0x84: battleSubActionAttack 0225BF44 / TateAttack 0225B85C / YokoAttack 0225BBA4 / NockBack 0225C208: the body's play speed while mNockBackTimer runs; daNpc_Ji1_HIO_ct 0225CC44 0.1 */
+    /* 0x084 */ be<s16> mNockBackTime;  /* was field_0x88: the attack sub-actions load mNockBackTimer with it when Link's shield blocks the attack (ChkTgShieldHit); daNpc_Ji1_HIO_ct 0225CC44 11 */
+    /* 0x086 */ be<s16> mBattleTimerBase0;  /* was field_0x8A: battleGameSetTimer 02259A6C: mBattleTimer base at 0 hits (segment 0's start); daNpc_Ji1_HIO_ct 0225CC44 50 (tww the same) */
+    /* 0x088 */ be<s16> mBattleTimerBase1;  /* was field_0x8C: battleGameSetTimer 02259A6C: mBattleTimer base at mLevelHits[0] (segment 1's start, also segment 3's); daNpc_Ji1_HIO_ct 0225CC44 40 (tww the same) */
+    /* 0x08A */ be<s16> mBattleTimerBase2;  /* was field_0x8E: battleGameSetTimer 02259A6C: mBattleTimer base, segment 0's end and segment 2's start; daNpc_Ji1_HIO_ct 0225CC44 30 (tww the same) */
+    /* 0x08C */ be<s16> mBattleTimerBase3;  /* was field_0x90: battleGameSetTimer 02259A6C: mBattleTimer base, segment 1's end; daNpc_Ji1_HIO_ct 0225CC44 20 (tww the same) */
+    /* 0x08E */ be<s16> mBattleTimerBase4;  /* was field_0x92: battleGameSetTimer 02259A6C: mBattleTimer base, segment 2's end; daNpc_Ji1_HIO_ct 0225CC44 15 (tww the same) */
+    /* 0x090 */ be<s16> mBattleTimerBase5;  /* was field_0x94: battleGameSetTimer 02259A6C: mBattleTimer base, segment 3's end and past mLevelHits[3]; daNpc_Ji1_HIO_ct 0225CC44 10 (tww the same) */
+    /* 0x092 */ be<s16> mBattleTimerRange0;  /* was field_0x96: battleGameSetTimer 02259A6C: the random part (cM_rndF) of mBattleTimer at 0 hits (segment 0's start); daNpc_Ji1_HIO_ct 0225CC44 180 (tww the same) */
+    /* 0x094 */ be<s16> mBattleTimerRange1;  /* was field_0x98: battleGameSetTimer 02259A6C: the random part of mBattleTimer, segment 1's start (also segment 3's); daNpc_Ji1_HIO_ct 0225CC44 140 (tww the same) */
+    /* 0x096 */ be<s16> mBattleTimerRange2;  /* was field_0x9A: battleGameSetTimer 02259A6C: the random part of mBattleTimer, segment 0's end and segment 2's start; daNpc_Ji1_HIO_ct 0225CC44 100 (tww the same) */
+    /* 0x098 */ be<s16> mBattleTimerRange3;  /* was field_0x9C: battleGameSetTimer 02259A6C: the random part of mBattleTimer, segment 1's end; daNpc_Ji1_HIO_ct 0225CC44 80 (tww the same) */
+    /* 0x09A */ be<s16> mBattleTimerRange4;  /* was field_0x9E: battleGameSetTimer 02259A6C: the random part of mBattleTimer, segment 2's end; daNpc_Ji1_HIO_ct 0225CC44 60 (tww the same) */
+    /* 0x09C */ be<s16> mBattleTimerRange5;  /* was field_0xA0: battleGameSetTimer 02259A6C: the random part of mBattleTimer, segment 3's end and past mLevelHits[3]; daNpc_Ji1_HIO_ct 0225CC44 50 (tww the same) */
     /* 0x09E */ be<u8> field_0xA2;
     /* 0x09F */ u8 _09F;
-    /* 0x0A0 */ be<f32> field_0xA4;
-    /* 0x0A4 */ be<f32> field_0xA8;
-    /* 0x0A8 */ be<f32> field_0xAC;
-    /* 0x0AC */ be<f32> field_0xB0;
-    /* 0x0B0 */ be<f32> field_0xB4;
+    /* 0x0A0 */ be<f32> mBibiriAnmMorf;  /* was field_0xA4: setAnimFromMsgNo 02251A8C: the morf of animation 0x16 (ji_bibiri.bck); daNpc_Ji1_HIO_ct 0225CC44 6.0 */
+    /* 0x0A4 */ be<f32> mOdorokuAnmMorf;  /* was field_0xA8: setAnimFromMsgNo 02251A8C: the morf of animation 0x15 (ji_odoroku.bck); daNpc_Ji1_HIO_ct 0225CC44 16.0 */
+    /* 0x0A8 */ be<f32> mBibiriSlideDist;  /* was field_0xAC: talkAction 0225268C: BackSlide's target distance once the bibiri animation passes mBibiriSlideFrame; daNpc_Ji1_HIO_ct 0225CC44 70.0 */
+    /* 0x0AC */ be<f32> mBibiriSlideStep;  /* was field_0xB0: talkAction 0225268C: BackSlide's max step during the bibiri animation; daNpc_Ji1_HIO_ct 0225CC44 10.0 */
+    /* 0x0B0 */ be<f32> mBibiriSlideFrame;  /* was field_0xB4: talkAction 0225268C: the bibiri animation slides Orca back from this frame on; daNpc_Ji1_HIO_ct 0225CC44 1.0 */
     /* 0x0B4 */ be<u8> field_0xB8;
     /* 0x0B5 */ u8 _0B5[3];
-    /* 0x0B8 */ be<f32> field_0xBC;
-    /* 0x0BC */ be<f32> field_0xC0;
-    /* 0x0C0 */ cXyz field_0xC4[3];
-    /* 0x0E4 */ be<s16> field_0xE8;
-    /* 0x0E6 */ be<s16> field_0xEA;
-    /* 0x0E8 */ be<s16> field_0xEC;
-    /* 0x0EA */ be<s16> field_0xEE;
-    /* 0x0EC */ be<s16> field_0xF0;
-    /* 0x0EE */ be<s16> field_0xF2;
-    /* 0x0F0 */ be<s16> field_0xF4;
-    /* 0x0F2 */ be<s16> field_0xF6;
-    /* 0x0F4 */ be<s16> field_0xF8;
-    /* 0x0F6 */ be<s16> field_0xFA;
-    /* 0x0F8 */ be<s16> field_0xFC;
-    /* 0x0FA */ be<s16> field_0xFE;
+    /* 0x0B8 */ be<f32> mHarpoonBounce;  /* was field_0xBC: harpoonMove 0224A2B8: the dropped harpoon's speed.y is multiplied by it when it hits the ground; daNpc_Ji1_HIO_ct 0225CC44 0.25 */
+    /* 0x0BC */ be<f32> mHarpoonGravity;  /* was field_0xC0: harpoonMove 0224A2B8: added to the dropped harpoon's speed.y each frame; daNpc_Ji1_HIO_ct 0225CC44 -5.0 */
+    /* 0x0C0 */ cXyz mBackboneOffsets[3];  /* was field_0xC4: nodeCallBack1 02249084: the backbone joint matrix times these three points gives mBackbonePos[0..2]; daNpc_Ji1_HIO_ct 0225CC44 (90, 5, 30), (90, 5, -30), (-20, -20, 0) */
+    /* 0x0E4 */ be<s16> mHair1MinY;  /* was field_0xE8: _execute 0224B268 (daNpc_Ji1_setHairAngle): the lower limit of mHair1AngleY; daNpc_Ji1_HIO_ct 0225CC44 -0x3800 */
+    /* 0x0E6 */ be<s16> mHair1MaxY;  /* was field_0xEA: _execute 0224B268 (daNpc_Ji1_setHairAngle): the upper limit of mHair1AngleY; daNpc_Ji1_HIO_ct 0225CC44 0x3800 */
+    /* 0x0E8 */ be<s16> mHair2MinY;  /* was field_0xEC: _execute 0224B268 (daNpc_Ji1_setHairAngle): the lower limit of mHair1AngleY + mHair2AngleY; daNpc_Ji1_HIO_ct 0225CC44 -0x3A00 */
+    /* 0x0EA */ be<s16> mHair2MaxY;  /* was field_0xEE: _execute 0224B268 (daNpc_Ji1_setHairAngle): the upper limit of mHair1AngleY + mHair2AngleY; daNpc_Ji1_HIO_ct 0225CC44 0x3A00 */
+    /* 0x0EC */ be<s16> mHair3MinY;  /* was field_0xF0: _execute 0224B268 (daNpc_Ji1_setHairAngle): the lower limit of the three hair joints' Y angles together; daNpc_Ji1_HIO_ct 0225CC44 -0x3A00 */
+    /* 0x0EE */ be<s16> mHair3MaxY;  /* was field_0xF2: _execute 0224B268 (daNpc_Ji1_setHairAngle): the upper limit of the three hair joints' Y angles together; daNpc_Ji1_HIO_ct 0225CC44 0x3A00 */
+    /* 0x0F0 */ be<s16> mHair1MinZ;  /* was field_0xF4: _execute 0224B268 (daNpc_Ji1_setHairAngle): the lower limit of mHair1AngleZ; daNpc_Ji1_HIO_ct 0225CC44 -0x500 */
+    /* 0x0F2 */ be<s16> mHair1MaxZ;  /* was field_0xF6: _execute 0224B268 (daNpc_Ji1_setHairAngle): the upper limit of mHair1AngleZ; daNpc_Ji1_HIO_ct 0225CC44 0x3800 */
+    /* 0x0F4 */ be<s16> mHair2MinZ;  /* was field_0xF8: _execute 0224B268 (daNpc_Ji1_setHairAngle): the lower limit of mHair1AngleZ + mHair2AngleZ; daNpc_Ji1_HIO_ct 0225CC44 -0xA00 */
+    /* 0x0F6 */ be<s16> mHair2MaxZ;  /* was field_0xFA: _execute 0224B268 (daNpc_Ji1_setHairAngle): the upper limit of mHair1AngleZ + mHair2AngleZ; daNpc_Ji1_HIO_ct 0225CC44 0x3A00 */
+    /* 0x0F8 */ be<s16> mHair3MinZ;  /* was field_0xFC: _execute 0224B268 (daNpc_Ji1_setHairAngle): the lower limit of the three hair joints' Z angles together; daNpc_Ji1_HIO_ct 0225CC44 -0xF00 */
+    /* 0x0FA */ be<s16> mHair3MaxZ;  /* was field_0xFE: _execute 0224B268 (daNpc_Ji1_setHairAngle): the upper limit of the three hair joints' Z angles together; daNpc_Ji1_HIO_ct 0225CC44 0x3A00 */
     /* 0x0FC */ be<u32> __vtbl;
 };
-WWHD_OFFSET(daNpc_Ji1_HIO_c, field_0x60, 0x5C);
-WWHD_OFFSET(daNpc_Ji1_HIO_c, field_0xC4, 0xC0);
+WWHD_OFFSET(daNpc_Ji1_HIO_c, mLevelHits, 0x5C);
+WWHD_OFFSET(daNpc_Ji1_HIO_c, mBackboneOffsets, 0xC0);
 WWHD_SIZE(daNpc_Ji1_HIO_c, 0x100);
 
 /* ---- free functions of the translation unit ---- */

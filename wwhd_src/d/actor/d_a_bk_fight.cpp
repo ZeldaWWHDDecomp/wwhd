@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_bk_fight.h"
+#include "sead/ElementAt.h"
 
 /* weak guest-call stubs for TU functions defined in d_a_bk.cpp (lets this part build alone;
  * the decompiled definitions replace them) */
@@ -75,7 +76,7 @@ void attack_set(bk_class* i_this, u8 r28) {
         i_this->mAtStartFrame = REG6_F(4) + 23.0f;
         i_this->mAtEndFrame = REG6_F(5) + 26.0f;
         i_this->mLookStartFrame = 45.0f;
-        i_this->mTurnEndFrame = l_bkHIO().m09C;
+        i_this->mTurnEndFrame = l_bkHIO().mAttackTurnEndFrame;
     } else if (r28 == 1) {
         i_this->mAttackKind = 1;
         i_this->mAtStartFrame = REG6_F(8) + 3.0f;
@@ -113,7 +114,7 @@ void* shot_s_sub(void* param_1, void* unused) {
 
 /* inlined into fight_run */
 static inline void fight_run_set(bk_class* i_this) {
-    anm_init(i_this, dRes_INDEX_BK_BCK_BK_RUN_e, 10.0f, 2, l_bkHIO().m070,
+    anm_init(i_this, dRes_INDEX_BK_BCK_BK_RUN_e, 10.0f, 2, l_bkHIO().mRunAnmSpeed,
              dRes_INDEX_BK_BAS_BK_RUN_e);
 }
 
@@ -152,19 +153,19 @@ void fight_run(bk_class* i_this) {
     case 1: {
         f32 scaleMag;
         if (i_this->mHoldWeapon != 0 || i_this->mBareHanded != 0) {
-            scaleMag = l_bkHIO().m054;
+            scaleMag = l_bkHIO().mRunSpeed;
         } else {
-            scaleMag = l_bkHIO().m058;
+            scaleMag = l_bkHIO().mRunSpeedNoWeapon;
         }
         cLib_addCalc2(&i_this->speedF, scaleMag, 1.0f, 5.0f);
         i_this->m1212 = i_this->m1212 + 1;
         if (daBk_player_way_check(i_this) && (i_this->m1212 & 0x30) && !r29) {
             if (i_this->mJumpMove != 0) {
-                anm_init(i_this, dRes_INDEX_BK_BCK_BK_RUN_e, 10.0f, 2, l_bkHIO().m070,
+                anm_init(i_this, dRes_INDEX_BK_BCK_BK_RUN_e, 10.0f, 2, l_bkHIO().mRunAnmSpeed,
                          dRes_INDEX_BK_BAS_BK_RUN_e);
                 i_this->mJumpMove = 0;
             }
-            if (i_this->mPlayerDistance < l_bkHIO().m02C) {
+            if (i_this->mPlayerDistance < l_bkHIO().mAttackDist) {
                 i_this->dr.mMode = 2;
                 i_this->mTimers[4] = 50;
             }
@@ -177,7 +178,7 @@ void fight_run(bk_class* i_this) {
         }
 
         if (i_this->mHoldWeapon != 0) {
-            i_this->speedF = l_bkHIO().m068;
+            i_this->speedF = l_bkHIO().mJumpRunSpeed;
 
             switch (i_this->mJumpStep) {
             case 0:
@@ -191,7 +192,7 @@ void fight_run(bk_class* i_this) {
                     anm_init(i_this, dRes_INDEX_BK_BCK_BK_JUMP2_e, 0.0f, 0, 1.0f,
                              dRes_INDEX_BK_BAS_BK_JUMP2_e);
                     i_this->mJumpStep = 2;
-                    i_this->mSmokeTimer = l_bkHIO().m00C + 2;
+                    i_this->mSmokeTimer = l_bkHIO().mSmokeTimerBase + 2;
                     i_this->mSmokeType = 4;
                 }
                 break;
@@ -213,7 +214,7 @@ void fight_run(bk_class* i_this) {
             }
         }
 
-        if (i_this->mPlayerDistance < l_bkHIO().m030) {
+        if (i_this->mPlayerDistance < l_bkHIO().mFightDist) {
             i_this->dr.mAction = 5;
             i_this->dr.mMode = 0;
             return;
@@ -238,7 +239,7 @@ void fight_run(bk_class* i_this) {
             } else {
                 i_this->dr.mMode = 6;
             }
-        } else if (i_this->mPlayerDistance < l_bkHIO().m030) {
+        } else if (i_this->mPlayerDistance < l_bkHIO().mFightDist) {
             anm_init(i_this, dRes_INDEX_BK_BCK_BK_WALK2_e, 10.0f, 2, 1.0f,
                      dRes_INDEX_BK_BAS_BK_WALK2_e);
             i_this->dr.mMode = 4;
@@ -250,7 +251,7 @@ void fight_run(bk_class* i_this) {
         i_this->mTimers[1] = (s16)gabi::ftoi(cM_rndF(20.0f) + 20.0f);
         break;
     case 3:
-        cLib_addCalc2(&i_this->speedF, l_bkHIO().m060, 1.0f, 20.0f);
+        cLib_addCalc2(&i_this->speedF, l_bkHIO().mFightWalkSpeed, 1.0f, 20.0f);
         if (r29) {
             i_this->speed.y = REG0_F_(16) + 100.0f;
             anm_init(i_this, dRes_INDEX_BK_BCK_BK_JUMP1_e, 2.0f, 0, 1.0f,
@@ -278,7 +279,7 @@ void fight_run(bk_class* i_this) {
         break;
     case 4:
         if ((i_this->mGroundCheck & 0x2) == 0) {
-            cLib_addCalc2(&i_this->speedF, -l_bkHIO().m060, 1.0f, 20.0f);
+            cLib_addCalc2(&i_this->speedF, -l_bkHIO().mFightWalkSpeed, 1.0f, 20.0f);
             if (i_this->mTimers[1] == 0) {
                 i_this->dr.mMode = 2;
             }
@@ -303,7 +304,7 @@ void fight_run(bk_class* i_this) {
                 i_this->mTimers[1] = 0;
             }
         }
-        cLib_addCalc2(&i_this->speedF, l_bkHIO().m064, 1.0f, 30.0f);
+        cLib_addCalc2(&i_this->speedF, l_bkHIO().mSideStepSpeed, 1.0f, 30.0f);
         if (i_this->mTimers[1] == 0) {
             i_this->dr.mMode = 2;
         }
@@ -317,17 +318,17 @@ void fight_run(bk_class* i_this) {
     }
 
     if (i_this->dr.mMode >= 3 && i_this->mSideStepTimer <= 2) {
-        if (i_this->mPlayerDistance > l_bkHIO().m02C + 75.0f) {
+        if (i_this->mPlayerDistance > l_bkHIO().mAttackDist + 75.0f) {
             i_this->dr.mAction = 0;
             i_this->dr.mMode = 0;
             path_check(i_this, 0);
         }
         f32 dist = i_this->mPlayerDistance;
-        f32 m030 = l_bkHIO().m030;
+        f32 m030 = l_bkHIO().mFightDist;
         if (dist < m030 + 62.5f && dist > m030 - 62.5f) {
             if (i_this->mTimers[4] == 0) {
-                i_this->mTimers[4] = l_bkHIO().m078;
-                if (cM_rndF(100.0f) < l_bkHIO().m07C) {
+                i_this->mTimers[4] = l_bkHIO().mAttackChanceWait;
+                if (cM_rndF(100.0f) < l_bkHIO().mAttackChance) {
                     i_this->dr.mAction = 5;
                     i_this->dr.mMode = 0;
                 }
@@ -354,7 +355,7 @@ void fight_run(bk_class* i_this) {
                          dAttention_Lockon(attention) &&
                          (fopAc_ac_c*)i_this == dAttention_LockonTarget(attention, 0)))) {
                 /* GHS: `<= 0.5f` branches on `> 0.5f` */
-                if (i_this->mHasShield != 0 && (!(cM_rndF(1.0f) > 0.5f) || l_bkHIO().m008 != 0)) {
+                if (i_this->mHasShield != 0 && (!(cM_rndF(1.0f) > 0.5f) || l_bkHIO().mAlwaysGuard != 0)) {
                     i_this->dr.mAction = 10;
                     i_this->dr.mMode = 0;
                     if (daPy_getCutType(player) == daPy_CUT_TYPE_JUMPCUT_SWORD) {
@@ -379,9 +380,9 @@ void fight_run(bk_class* i_this) {
         }
     }
 
-    if (i_this->mHoldWeapon != 0 && i_this->mPlayerDistance < l_bkHIO().m030 - 62.5f &&
+    if (i_this->mHoldWeapon != 0 && i_this->mPlayerDistance < l_bkHIO().mFightDist - 62.5f &&
         daBk_player_view_check(i_this, &i_this->dr.mpLookTarget->current.pos, i_this->mTargetAngleY,
-                               l_bkHIO().m034)) {
+                               l_bkHIO().mViewAngle)) {
         i_this->mOshiCount = i_this->mOshiCount + 1;
         if (i_this->mOshiCount >= (s16)(0x19 + REG0_S(0))) {
             if (cM_rndF(1.0f) < REG0_F_(0) + 0.5f &&
@@ -491,45 +492,47 @@ static inline fopAc_ac_c* yari_hit_check(bk_class* i_this) {
 }
 
 /* inlined into fight */
+// Guest EA arithmetic: the attack info table + mAttackStep * sizeof(attack_info_s) wraps at 32 bits as on the console (a host
+// index on a NULL table reached host addresses past 4 GB).
 static inline void fight_attack(bk_class* i_this, fopAc_ac_c* player) {
     i_this->mWeaponSph.SetAtAtp(bk_attack_AP[i_this->mAttackKind]);
-    f32 f1 = bkFight_attackInfo(i_this->mAttackKind)[i_this->mAttackStep].speed;
+    f32 f1 = sead::elementAt<attack_info_s>(gabi::ea(bkFight_attackInfo(i_this->mAttackKind)), u32(i_this->mAttackStep)).speed;
     if (i_this->dr.mAcch.ChkGroundHit() || (i_this->mAttackKind != 1 && i_this->mAttackKind != 2)) {
         i_this->mAttackFrame = i_this->mAttackFrame + f1;
         cLib_addCalc2(&i_this->speedF, 0.0f, 1.0f, 20.0f);
     }
     if (i_this->mAttackFrame > i_this->mLookStartFrame &&
         daBk_player_view_check(i_this, &i_this->dr.mpLookTarget->current.pos, i_this->mTargetAngleY,
-                               l_bkHIO().m034)) {
+                               l_bkHIO().mViewAngle)) {
         i_this->dr.mLookMode = 1;
     }
 
     if (i_this->mAttackDir > 0) {
         bkHIO_c& hio = l_bkHIO();
         if (i_this->mAttackKind == 0) {
-            int r3 = hio.m0A0 + hio.m0A2 + hio.m0A4 + hio.m0A6;
-            if (gabi::ftoi(i_this->mAttackFrame) >= hio.m0A0 && gabi::ftoi(i_this->mAttackFrame) <= r3) {
+            int r3 = hio.mBlur0Start + hio.mBlur0ALen + hio.mBlur0BLen + hio.mBlur0TailLen;
+            if (gabi::ftoi(i_this->mAttackFrame) >= hio.mBlur0Start && gabi::ftoi(i_this->mAttackFrame) <= r3) {
                 i_this->mBlurOn = 1;
-                if (gabi::ftoi(i_this->mAttackFrame) >= (hio.m0A0 + hio.m0A2) &&
-                    gabi::ftoi(i_this->mAttackFrame) < (hio.m0A0 + hio.m0A2 + hio.m0A4)) {
+                if (gabi::ftoi(i_this->mAttackFrame) >= (hio.mBlur0Start + hio.mBlur0ALen) &&
+                    gabi::ftoi(i_this->mAttackFrame) < (hio.mBlur0Start + hio.mBlur0ALen + hio.mBlur0BLen)) {
                     i_this->mBlurUseB = 1;
                 }
-                int r0 = gabi::ftoi(i_this->mAttackFrame) - hio.m0A0;
+                int r0 = gabi::ftoi(i_this->mAttackFrame) - hio.mBlur0Start;
                 if (r0 < 10) {
-                    i_this->mBlurScaleX = hio.m0A8[r0];
+                    i_this->mBlurScaleX = hio.mBlur0ScaleX[r0];
                 }
             }
         } else if (i_this->mAttackKind == 1) {
-            int r3 = hio.m0D0 + hio.m0D2 + hio.m0D4 + hio.m0D6;
-            if (gabi::ftoi(i_this->mAttackFrame) >= hio.m0D0 && gabi::ftoi(i_this->mAttackFrame) <= r3) {
+            int r3 = hio.mBlur1Start + hio.mBlur1ALen + hio.mBlur1BLen + hio.mBlur1TailLen;
+            if (gabi::ftoi(i_this->mAttackFrame) >= hio.mBlur1Start && gabi::ftoi(i_this->mAttackFrame) <= r3) {
                 i_this->mBlurOn = 1;
-                if (gabi::ftoi(i_this->mAttackFrame) >= (hio.m0D0 + hio.m0D2) &&
-                    gabi::ftoi(i_this->mAttackFrame) < (hio.m0D0 + hio.m0D2 + hio.m0D4)) {
+                if (gabi::ftoi(i_this->mAttackFrame) >= (hio.mBlur1Start + hio.mBlur1ALen) &&
+                    gabi::ftoi(i_this->mAttackFrame) < (hio.mBlur1Start + hio.mBlur1ALen + hio.mBlur1BLen)) {
                     i_this->mBlurUseB = 1;
                 }
-                int r0 = gabi::ftoi(i_this->mAttackFrame) - hio.m0D0;
+                int r0 = gabi::ftoi(i_this->mAttackFrame) - hio.mBlur1Start;
                 if (r0 < 10) {
-                    i_this->mBlurScaleX = hio.m0D8[r0];
+                    i_this->mBlurScaleX = hio.mBlur1ScaleX[r0];
                 }
             }
         }
@@ -558,7 +561,7 @@ static inline void fight_attack(bk_class* i_this, fopAc_ac_c* player) {
     i_this->mBtAttackType = attackType;
     i_this->mBtEndFrame = endFrame;
     i_this->mBtMaxDis = 10000.0f;
-    i_this->mBtMaxDis = l_bkHIO().m014;
+    i_this->mBtMaxDis = l_bkHIO().mAttackBtMaxDis;
     i_this->mBtNowFrame = i_this->mAttackFrame;
 
     dComIfGp_get(); /* HD: leftover call */
@@ -568,7 +571,7 @@ static inline void fight_attack(bk_class* i_this, fopAc_ac_c* player) {
             if (daPy_checkPlayerGuard(player) && (i_this->mAttackKind == 0 || i_this->mAttackKind == 1)) {
                 i_this->mpMorf->setPlaySpeed(-1.0f);
                 if (i_this->mSmokeTimer != 0) {
-                    i_this->mSmokeTimer = l_bkHIO().m00C + 6;
+                    i_this->mSmokeTimer = l_bkHIO().mSmokeTimerBase + 6;
                 }
                 i_this->mAttackDir = -1;
                 i_this->mpMorf->play(&i_this->eyePos, 0, 0);
@@ -590,7 +593,7 @@ static inline void fight_attack(bk_class* i_this, fopAc_ac_c* player) {
                 i_this->mpMorf->setPlaySpeed(-1.0f);
                 i_this->mBlurOn = 0;
                 if (i_this->mSmokeTimer != 0) {
-                    i_this->mSmokeTimer = l_bkHIO().m00C + 6;
+                    i_this->mSmokeTimer = l_bkHIO().mSmokeTimerBase + 6;
                 }
                 i_this->mAttackDir = -1;
                 i_this->mpMorf->play(&i_this->eyePos, 0, 0);
@@ -619,9 +622,9 @@ static inline void fight_attack(bk_class* i_this, fopAc_ac_c* player) {
         if (i_this->mHitActorId != fpcM_ERROR_PROCESS_ID_e) {
             i_this->dr.mAction = 14;
             i_this->dr.mMode = 0;
-        } else if (i_this->mPlayerDistance < l_bkHIO().m02C) {
+        } else if (i_this->mPlayerDistance < l_bkHIO().mAttackDist) {
             if (daBk_player_view_check(i_this, &i_this->dr.mpLookTarget->current.pos, i_this->mTargetAngleY,
-                                       l_bkHIO().m034)) {
+                                       l_bkHIO().mViewAngle)) {
                 if (cM_rndF(1.0f) < 0.8f || i_this->mAttackDir < 0) {
                     i_this->mTimers[1] = 0;
                     i_this->dr.mAction = 4;
@@ -650,13 +653,13 @@ static inline void fight_attack(bk_class* i_this, fopAc_ac_c* player) {
         f32 speed;
         if (i_this->mAttackDir > 0) {
             i_this->mAttackStep = i_this->mAttackStep + 1;
-            speed = r6[i_this->mAttackStep].speed;
+            speed = sead::elementAt<attack_info_s>(gabi::ea(r6), u32(i_this->mAttackStep)).speed;
         } else {
             i_this->mAttackStep = i_this->mAttackStep - 1;
-            speed = -r6[i_this->mAttackStep].speed;
+            speed = -sead::elementAt<attack_info_s>(gabi::ea(r6), u32(i_this->mAttackStep)).speed;
         }
-        anm_init(i_this, r6[i_this->mAttackStep].bckFileIdx, 0.0f, 0, speed,
-                 r6[i_this->mAttackStep].soundFileIdx);
+        anm_init(i_this, sead::elementAt<attack_info_s>(gabi::ea(r6), u32(i_this->mAttackStep)).bckFileIdx, 0.0f, 0, speed,
+                 sead::elementAt<attack_info_s>(gabi::ea(r6), u32(i_this->mAttackStep)).soundFileIdx);
     }
     return;
 }
@@ -740,7 +743,7 @@ void p_lost(bk_class* i_this) {
     }
 
     if (i_this->mTimers[1] < 10 && daBk_player_view_check(i_this, &i_this->dr.mpLookTarget->current.pos,
-                                                        i_this->mTargetAngleY, l_bkHIO().m034)) {
+                                                        i_this->mTargetAngleY, l_bkHIO().mViewAngle)) {
         i_this->mTimers[1] = 0;
         i_this->dr.mAction = 4;
         i_this->dr.mMode = 2;
@@ -784,8 +787,8 @@ void b_nige(bk_class* i_this) {
         }
         break;
     case 2:
-        i_this->speedF = l_bkHIO().m05C;
-        i_this->mSmokeTimer = l_bkHIO().m00C + 3;
+        i_this->speedF = l_bkHIO().mDashSpeed;
+        i_this->mSmokeTimer = l_bkHIO().mSmokeTimerBase + 3;
         i_this->mSmokeType = 4;
         cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->dr.mTurnTargetY, 4, 0x1000);
         if (std_sqrtf(gabi::fmadds(x, x, z * z)) > 800.0f) {

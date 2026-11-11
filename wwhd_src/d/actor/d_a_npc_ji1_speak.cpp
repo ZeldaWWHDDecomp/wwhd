@@ -107,7 +107,7 @@ BOOL daNpc_Ji1_c::startspeakAction(void* arg) {
                 mTeachStep = 0;
                 if (no == 0x969) {
                     field_0xC94 = 0;
-                    mTeachHitsLeft = (s16)l_HIO().field_0x54[0];
+                    mTeachHitsLeft = (s16)l_HIO().mTeachHitCount[0];
                     ji1_setAction(this, ACT_teachAction, nullptr);
                 } else if (no == 0x98C || no == 0x98E || no == 0x990 || no == 0x992 || no == 0x994) {
                     ji1_setAction(this, ACT_battleAction, nullptr);

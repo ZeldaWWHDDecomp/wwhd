@@ -252,7 +252,7 @@ static inline void md_setGroundInfo(daNpc_Md_c* t) {
     auto* gnd = static_cast<cBgS_PolyInfo*>(&t->mAcch.m_gnd); /* mAcch.m_gnd's cBgS_PolyInfo */
     u32 pla = gabi::ea(cBgS_GetTriPla(dComIfG_Bgsp(), gnd->mBgIndex, gnd->mPolyIndex));
     if (pla != 0) {
-        md_xyz_copy(&t->m32A4, normalAt(pla)); /* *triPla->GetNP() */
+        md_xyz_copy(&t->mGroundNormal, normalAt(pla)); /* *triPla->GetNP() */
     }
     s8 roomNo = md_GetRoomId(dComIfG_Bgsp(), gabi::ea(gnd));
     t->current.roomNo = roomNo;
@@ -271,7 +271,7 @@ static inline void md_setGroundInfo(daNpc_Md_c* t) {
 void daNpc_Md_c::npcAction(void* arg) {
     if (mCurrNpcActionFunc.i == 0) { /* mCurrNpcActionFunc == NULL */
         speedF = 0.0f;
-        if (m3104 == 0x20) {
+        if (mAnmPrmIdx == 0x20) {
             gabi::Local<ProcFunc_l> fn;
             copyAction(fn, action_mwaitNpcAction);
             setNpcAction(fn, nullptr);
@@ -408,15 +408,15 @@ BOOL daNpc_Md_c::lightHitCheck() {
         if (mCps.ChkAtHit()) {
             fopAc_ac_c* hitActor = mCps.GetAtHitAc();
             if ((actor_status & fopAcStts_CARRY_e) /* fopAcM_checkCarryNow */ && !checkStatus(daMdStts_CARRY_ACTION)) {
-                if (hitActor != dComIfGp_getLinkPlayer() && m3058.mpEmitter.get() == nullptr) {
+                if (hitActor != dComIfGp_getLinkPlayer() && mHitShieldLightCb.mpEmitter.get() == nullptr) {
                     dComIfGp_particle_set(0x8232 /* ID_AK_SN_HITSHIELDLIGHT00 */, &current.pos, nullptr, nullptr, 0xFF,
-                                          (dPa_levelEcallBack*)(void*)&m3058);
+                                          (dPa_levelEcallBack*)(void*)&mHitShieldLightCb);
                 }
-            } else if (m3058.mpEmitter.get() == nullptr) {
-                dComIfGp_particle_set(0x8232, &current.pos, nullptr, nullptr, 0xFF, (dPa_levelEcallBack*)(void*)&m3058);
+            } else if (mHitShieldLightCb.mpEmitter.get() == nullptr) {
+                dComIfGp_particle_set(0x8232, &current.pos, nullptr, nullptr, 0xFF, (dPa_levelEcallBack*)(void*)&mHitShieldLightCb);
             }
             auto* cps = reinterpret_cast<Capsule*>(&mCps);
-            cM3d_lineVsPosSuisenCross(gabi::ea(&cps->mGeometry.mStart), gabi::ea(&cps->mGeometry.mEnd), gabi::ea(&mCps.mGObjAt.mHitPos), &m3058.mPos);
+            cM3d_lineVsPosSuisenCross(gabi::ea(&cps->mGeometry.mStart), gabi::ea(&cps->mGeometry.mEnd), gabi::ea(&mCps.mGObjAt.mHitPos), &mHitShieldLightCb.mPos);
             /* lightVec.absXZ(): sqrt(PSVECSquareMag({x, 0, z})) */
             cXyz xz;
 
@@ -426,11 +426,11 @@ BOOL daNpc_Md_c::lightHitCheck() {
             f32 absXZ = std_sqrtf(PSVECSquareMag(&xz));
             s16 angleX = cM_atan2s(-lightVec.y, absXZ);
             s16 angleY = cM_atan2s(lightVec.x, lightVec.z);
-            m3058.mAngle.y = angleY;
-            m3058.mAngle.x = angleX;
-            m3058.mAngle.z = 0;
+            mHitShieldLightCb.mAngle.y = angleY;
+            mHitShieldLightCb.mAngle.x = angleX;
+            mHitShieldLightCb.mAngle.z = 0;
         } else {
-            m3058.end();
+            mHitShieldLightCb.end();
         }
         /* fopAcM_seStartCurrent */
         u32 se;
@@ -454,7 +454,7 @@ BOOL daNpc_Md_c::lightHitCheck() {
         }
     } else {
         clearStatus(daMdStts_LIGHT_HIT);
-        m3058.end();
+        mHitShieldLightCb.end();
         if (mMirrorShieldCb.mpEmitter.get() != nullptr) {
             MdExec::emitter(mMirrorShieldCb.mpEmitter.get())->mGlobalAlpha = 0; /* setGlobalAlpha(0) */
             mtxFollow_end(&mMirrorShieldCb);
@@ -511,12 +511,12 @@ BOOL daNpc_Md_c::eventProc() {
                 md_event_setTalkPartner(dComIfGp_getLinkPlayer());
                 mdExec_startControlSound(0x886); /* mDoAud_seStart(JA_SE_CTRL_NPC_TO_LINK) */
             } else {
-                m4E4 = m4E4 & ~1u; /* offReturnLink() */
+                mNpcFlags = mNpcFlags & ~1u; /* offReturnLink() */
                 mCurEventMode = 0;
             }
         }
         if (mCurEventMode != 0) {
-            m4E4 = m4E4 | 2; /* onEventAccept() */
+            mNpcFlags = mNpcFlags | 2; /* onEventAccept() */
             mCurEventMode = 0;
         }
     }
@@ -535,13 +535,13 @@ BOOL daNpc_Md_c::eventProc() {
                 }
             }
         }
-        if (m4E4 & 2) { /* isEventAccept() */
+        if (mNpcFlags & 2) { /* isEventAccept() */
             if (dComIfGp_evmng_endCheck(mEventIdxTable[mCurEvent])) {
                 dComIfGp_event_reset();
-                m4E4 = m4E4 & ~2u; /* offEventAccept() */
+                mNpcFlags = mNpcFlags & ~2u; /* offEventAccept() */
                 if (mCurEvent == 8) {
                     returnLinkPlayer();
-                    m4E4 = m4E4 & ~1u; /* offReturnLink() */
+                    mNpcFlags = mNpcFlags & ~1u; /* offReturnLink() */
                 }
                 mCurEvent = -1;
             }
@@ -598,7 +598,7 @@ void daNpc_Md_c::initialLetterEvent(int staffIdx) {
     clearStatus(daMdStts_UNK1 | daMdStts_UNK2 | daMdStts_FLY);
     setBitStatus(daMdStts_UNK4);
     speedF = 0.0f;
-    m30F8 = 75.0f;
+    mCylH = 75.0f;
     if (mCurEvent == 0) {
         itemNo = 0x98;
     } else if (mCurEvent == 1) {
@@ -671,7 +671,7 @@ int daNpc_Md_c::getAnmType(u8 r4) {
 
 /* 0228729C */
 void daNpc_Md_c::playTexPatternAnm() {
-    if (m3136 == 1) {
+    if (mBtpSyncBody == 1) {
         /* mBtpAnm.setFrame(mBtpFrame): an lfs/stfs copy (bit exact) */
         word(reinterpret_cast<TexturePatternAnm*>(mBtpAnm)->mFrame) = word(mBtpFrame);
         return;
@@ -695,7 +695,7 @@ BOOL daNpc_Md_c::setAnm(int anmIdx) {
      * l_anmTbl , armAnmTbl , wingAnmTbl  ({char[0x20], char[0x20]}) */
     AnmPrm* prm = &l_anmPrm.values[anmIdx];
     BOOL ret = FALSE;
-    m3104 = anmIdx;
+    mAnmPrmIdx = anmIdx;
     f32 speed = prm->speed;
     f32 morf = prm->morf;
     // HD: no morphing into the wait animation during the "ARRIVAL_GND" event
@@ -712,44 +712,44 @@ BOOL daNpc_Md_c::setAnm(int anmIdx) {
         }
     }
     if (anmIdx == 6) {
-        speed = l_HIO().m118;
+        speed = l_HIO().mFiringAnmSpeed;
     } else if (anmIdx == 9 || anmIdx == 0xA) {
-        speed = l_HIO().m11C;
+        speed = l_HIO().mFly02AnmSpeed;
     } else if (anmIdx == 0x2E) {
-        speed = l_HIO().m124;
+        speed = l_HIO().mTiredFlyAnmSpeed;
     } else if (anmIdx == 0x28) {
-        morf = l_HIO().m068.m4;
-        speed = l_HIO().m068.m8;
+        morf = l_HIO().mKyoroAnm.m4;
+        speed = l_HIO().mKyoroAnm.m8;
     } else if (anmIdx == 7 || anmIdx == 8) {
-        morf = l_HIO().m1A8;
+        morf = l_HIO().mFly01AnmMorf;
     }
 
     s8 anmTblIdx = prm->anmTblIdx;
     if (anmTblIdx != mAnmTblIdx || MdExec::morf(mpMorf)->mPlaySpeed != prm->speed) {
         /* mpMorf->getPlaySpeed() != prm->speed */
-        m312A = 0;
+        mAnmEnd = 0;
         mAnmTblIdx = anmTblIdx;
         AnmTbl* bodyAnm = &l_anmTbl.values[anmTblIdx];
-        dNpc_Md_setAnm(mpMorf, mRunRate, prm->loopMode, morf, speed, bodyAnm->m00, bodyAnm->m20, mModelArcName);
+        dNpc_Md_setAnm(mpMorf, mRunRate, prm->loopMode, morf, speed, bodyAnm->mBckName, bodyAnm->mBlendBckName, mModelArcName);
         /* mBtpFrame = mpMorf->getFrame() (lfs/stfs copy) */
         word(mBtpFrame) = word(MdExec::morf(mpMorf)->mFrame);
         u8 armIdx = prm->armAnmTblIdx;
         if (armIdx < 0x80) {
             AnmTbl* armAnm = &armAnmTbl.values[armIdx];
-            dNpc_Md_setAnm(mpArmMorf, mRunRate, prm->loopMode, morf, speed, armAnm->m00, armAnm->m20, mModelArcName);
+            dNpc_Md_setAnm(mpArmMorf, mRunRate, prm->loopMode, morf, speed, armAnm->mBckName, armAnm->mBlendBckName, mModelArcName);
             ret = FALSE;
         } else {
             if (!isTypeShipRide()) {
                 AnmTbl* wingAnm = &wingAnmTbl.values[armIdx - 0x80];
-                dNpc_Md_setAnm((mDoExt_McaMorf*)mpWingMorf.get(), prm->loopMode, morf, speed, wingAnm->m00, mModelArcName);
+                dNpc_Md_setAnm((mDoExt_McaMorf*)mpWingMorf.get(), prm->loopMode, morf, speed, wingAnm->mBckName, mModelArcName);
             }
             ret = TRUE;
         }
         /* fopAcM_seStartCurrent */
-        if (m3104 == 0x12 || m3104 == 0x1F) {
+        if (mAnmPrmIdx == 0x12 || mAnmPrmIdx == 0x1F) {
             s32 reverb = dComIfGp_getReverb(current.roomNo);
             mDoAud_seStart(0x59A1 /* JA_SE_CM_MD_HARP_SET_UP */, &current.pos, 0, reverb);
-        } else if (m3104 == 0x13 || m3104 == 0x21) {
+        } else if (mAnmPrmIdx == 0x13 || mAnmPrmIdx == 0x21) {
             s32 reverb = dComIfGp_getReverb(current.roomNo);
             mDoAud_seStart(0x59A2 /* JA_SE_CM_MD_HARP_TAKE_OFF */, &current.pos, 0, reverb);
         }
@@ -901,7 +901,7 @@ void daNpc_Md_c::setCollision() {
     if (!checkStatus(daMdStts_SHIP_RIDE) && !(actor_status & fopAcStts_CARRY_e) /* fopAcM_checkCarryNow */) {
         mCyl1.SetC(&local_2c);
         mCyl1.SetR(radius);
-        mCyl1.SetH(m30F8);
+        mCyl1.SetH(mCylH);
         dComIfG_Ccsp_Set(&mCyl1);
     } else {
         mdExec_clearCoHit(&mCyl1); /* ClrCoHit */
@@ -909,16 +909,16 @@ void daNpc_Md_c::setCollision() {
     }
     mCyl2.SetC(&local_2c);
     mCyl2.SetR(radius);
-    mCyl2.SetH(m30F8);
+    mCyl2.SetH(mCylH);
     dComIfG_Ccsp_Set(&mCyl2);
     mCyl3.SetC(&local_2c);
     mCyl3.SetR(radius);
-    mCyl3.SetH(m30F8);
+    mCyl3.SetH(mCylH);
     dComIfG_Ccsp_Set(&mCyl3);
     if (checkStatus(daMdStts_LIGHT_HIT)) {
         PSMTXCopy(J3DModel_getBaseTRMtx(mpHarpModel), mDoMtx_stack_c::get());
-        mDoMtx_stack_c::transM(l_HIO().m034.m0C, l_HIO().m034.m10, l_HIO().m034.m14);
-        md_mDoMtx_XYZrotM(mDoMtx_stack_c::get(), l_HIO().m034.m18, l_HIO().m034.m1A, l_HIO().m034.m1C);
+        mDoMtx_stack_c::transM(l_HIO().mMirror.mLightOffsetX, l_HIO().mMirror.mLightOffsetY, l_HIO().mMirror.mLightOffsetZ);
+        md_mDoMtx_XYZrotM(mDoMtx_stack_c::get(), l_HIO().mMirror.mLightRotX, l_HIO().mMirror.mLightRotY, l_HIO().mMirror.mLightRotZ);
         PSMTXMultVec(mDoMtx_stack_c::get(), &l_ms_light_local_start, &local_44);
         PSMTXMultVecSR(mDoMtx_stack_c::get(), &l_ms_light_local_vec, &local_38);
         cXyz_pl(&local_44, &tmp, &local_38);
@@ -954,7 +954,7 @@ void MdLookBackActor::lookBack(int param_1, int param_2, int param_3) {
     if (mJntCtrl.mbTrn != 0) { /* trnChk() */
         s16 target;
         if (param_2 != 0) {
-            target = l_HIO().m1BC;
+            target = l_HIO().mTurnLookMaxVel;
         } else {
             target = l_HIO().mNpc.mMaxHeadTurnVel;
         }
@@ -963,7 +963,7 @@ void MdLookBackActor::lookBack(int param_1, int param_2, int param_3) {
         mLookMaxVel = 0;
     }
     if (param_1 != 0) {
-        dNpc_playerEyePos(&eye, l_HIO().mNpc.m04);
+        dNpc_playerEyePos(&eye, l_HIO().mNpc.mPlayerEyeOffsetY);
 
         word(local_30.x) = word(eye.x);
         word(local_30.z) = word(eye.z);
@@ -1042,7 +1042,7 @@ BOOL daNpc_Md_c::draw() {
 
         Mtx34 mtx;
         PSMTXCopy(J3DModel_getBaseTRMtx(mpHarpModel), mDoMtx_stack_c::get());
-        mDoMtx_stack_c::transM(l_HIO().m034.m0C, l_HIO().m034.m10, l_HIO().m034.m14);
+        mDoMtx_stack_c::transM(l_HIO().mMirror.mLightOffsetX, l_HIO().mMirror.mLightOffsetY, l_HIO().mMirror.mLightOffsetZ);
         PSMTXCopy(mDoMtx_stack_c::get(), &mtx);
         cXyz* start = &l_ms_light_local_start;
         PSMTXTrans(mDoMtx_stack_c::get(), start->x, start->y, start->z); /* transS */
@@ -1068,14 +1068,14 @@ void daNpc_Md_c::animationPlay() {
         mtrlSndId = dBgS_GetMtrlSndId(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mAcch.m_gnd));
     }
     s32 reverb = dComIfGp_getReverb(current.roomNo);
-    m312A = McaMorf2_play(mpMorf, &eyePos, mtrlSndId, reverb);
+    mAnmEnd = McaMorf2_play(mpMorf, &eyePos, mtrlSndId, reverb);
     bool bVar3 = true;
     if (md_event_runCheck() && (dComIfGp_evmng_startCheckOld(event_name_tbl.values[5]) ||
                                 dComIfGp_evmng_endCheckOld(event_name_tbl.values[5]))) {
         bVar3 = false;
     }
-    if (mType == 3 && bVar3 && (m3104 == 0x16 || m3104 == 0x17)) { /* isTypeSea() */
-        s32 anm = m3104;
+    if (mType == 3 && bVar3 && (mAnmPrmIdx == 0x16 || mAnmPrmIdx == 0x17)) { /* isTypeSea() */
+        s32 anm = mAnmPrmIdx;
         bool bVar2 = false;
         if (McaMorf2_checkFrame(mpMorf, 11.0f)) {
             bVar2 = true;
@@ -1086,20 +1086,20 @@ void daNpc_Md_c::animationPlay() {
         }
         if (bVar2) {
             u32 se;
-            if (m313E == 0) {
+            if (mHarpSeCount == 0) {
                 s32 i = md_getRndValue(0, 10);
                 se = l_harp_play_se.values[i];
-                m313E = 2;
-                m30F4 = se;
+                mHarpSeCount = 2;
+                mHarpSe = se;
             } else {
-                m313E = m313E - 1;
-                se = m30F4;
+                mHarpSeCount = mHarpSeCount - 1;
+                se = mHarpSe;
             }
             s32 rv = dComIfGp_getReverb(current.roomNo);
             md_monsSeStart(se, &current.pos, mBsPcId /* fopAcM_GetID */, rv);
         }
     } else {
-        m313E = 0;
+        mHarpSeCount = 0;
     }
     if (!isTypeShipRide() && checkStatus(daMdStts_UNK1)) {
         mpWingMorf->play(nullptr, 0, 0);
@@ -1110,10 +1110,10 @@ void daNpc_Md_c::animationPlay() {
     f32 playSpeed = morfState(morf)->mPlaySpeed;
     if (playSpeed < 0.0f) {
         if (mBtpFrame < morfState(morf)->mFrame) {
-            m312A = 1;
+            mAnmEnd = 1;
         }
     } else if (mBtpFrame > morfState(morf)->mFrame) {
-        m312A = 1;
+        mAnmEnd = 1;
     }
     /* mBtpFrame = mpMorf->getFrame() (lfs/stfs copy) */
     word(mBtpFrame) = word(morfState(morf)->mFrame);
@@ -1146,7 +1146,7 @@ BOOL daNpc_Md_c::execute() {
     cLib_calcTimer_u8(&mDamageFogTimer); /* executeDamageFog() */
     if (checkStatus(daMdStts_SHIP_RIDE)) {
         daNpc_Md_HIO_l& h = l_HIO();
-        mJntCtrl.setParam(h.m074.m10, h.m074.m12, h.m074.m14, h.m074.m16, h.m074.m08, h.m074.m0A, h.m074.m0C, h.m074.m0E,
+        mJntCtrl.setParam(h.mShipRide.mMaxBackboneX, h.mShipRide.mMaxBackboneY, h.mShipRide.mMinBackboneX, h.mShipRide.mMinBackboneY, h.mShipRide.mMaxHeadX, h.mShipRide.mMaxHeadY, h.mShipRide.mMinHeadX, h.mShipRide.mMinHeadY,
                           h.mNpc.mMaxTurnStep);
     } else if (mType != 6) { /* !isTypeM_DaiB() */
         if (!daPy_npc_check_initialRoom(this)) {
@@ -1174,7 +1174,7 @@ BOOL daNpc_Md_c::execute() {
             return TRUE;
         }
         u32 poly = gabi::ea(&mPolyInfo);
-        if (m3131 != 0 && cBgS_ChkPolySafe(dComIfG_Bgsp(), poly) && dBgS_ChkMoveBG(dComIfG_Bgsp(), poly)) {
+        if (mGroundHit != 0 && cBgS_ChkPolySafe(dComIfG_Bgsp(), poly) && dBgS_ChkMoveBG(dComIfG_Bgsp(), poly)) {
             dBgS_MoveBgCrrPos(dComIfG_Bgsp(), poly, true, &old.pos, nullptr, nullptr);
         }
         daNpc_Md_HIO_l& h = l_HIO();
@@ -1187,7 +1187,7 @@ BOOL daNpc_Md_c::execute() {
         if (mAcch.GetGroundH() != -1000000000.0f /* -G_CM3D_F_INF */) {
             md_setGroundInfo(this);
         }
-    } else if (!checkStatus(daMdStts_SHIP_RIDE) && !(m4E4 & 1) /* isReturnLink() */ && !(actor_status & fopAcStts_CARRY_e)) {
+    } else if (!checkStatus(daMdStts_SHIP_RIDE) && !(mNpcFlags & 1) /* isReturnLink() */ && !(actor_status & fopAcStts_CARRY_e)) {
         if (daPy_npc_checkNowPosMove(this, gabi::ea(l_staff_name.mpName.get()))) {
             f32 fVar1 = maxFallSpeed;
             f32 fVar2 = speed.y;
@@ -1241,16 +1241,16 @@ BOOL daNpc_Md_c::execute() {
         if (mAcch.GetGroundH() != -1000000000.0f) {
             md_setGroundInfo(this);
         }
-        if (mAcch.ChkGroundHit() && m3131 == 0) {
+        if (mAcch.ChkGroundHit() && mGroundHit == 0) {
             gabi::Local<be<s32>> iStack_88;
             md_setSimpleLand(gabi::ea(static_cast<cBgS_PolyInfo*>(&mAcch.m_gnd)), &current.pos, &shape_angle, 1.25f, 1.5f, 1.0f, &tevStr, (s32*)(void*)iStack_88.get(), 7);
         }
-        m3131 = mAcch.ChkGroundHit();
+        mGroundHit = mAcch.ChkGroundHit();
         if (mAcch.GetGroundH() == -1000000000.0f || md_GetGroundCode(dComIfG_Bgsp(), gabi::ea(static_cast<cBgS_PolyInfo*>(&mAcch.m_gnd))) == 4) {
             // HD: the unnamed action  falls too
             if (isFallAction() || md_pmf_is(&mCurrNpcActionFunc, RETURN_TO_PLAYER_NPC_ACTION)) {
-                if (m4E8 < 30) {
-                    m4E8 = m4E8 + 1;
+                if (mFallTimer < 30) {
+                    mFallTimer = mFallTimer + 1;
                 } else if (md_pmf_is(&mCurrNpcActionFunc, RETURN_TO_PLAYER_NPC_ACTION) || !md_roomStatus10(home.roomNo)) {
                     /* current = home (struct copy), shape_angle = home.angle */
                     word(current.pos.x) = word(home.pos.x);
@@ -1261,7 +1261,7 @@ BOOL daNpc_Md_c::execute() {
                     shape_angle.x = home.angle.x;
                     placeWords(&current)->mAngleXY = placeWords(&home)->mAngleXY;
                     shape_angle.z = home.angle.z;
-                    m4E8 = 0;
+                    mFallTimer = 0;
                     speedF = 0.0f;
                     // HD: back to the wait action
                     gabi::Local<ProcFunc_l> fn;
@@ -1272,10 +1272,10 @@ BOOL daNpc_Md_c::execute() {
                     daPy_lk_startRestartRoom(dComIfGp_getLinkPlayer(), 5, 0xC9, -1.0f, 0);
                 }
             } else {
-                m4E8 = 0;
+                mFallTimer = 0;
             }
         } else {
-            m4E8 = 0;
+            mFallTimer = 0;
         }
     }
     lightHitCheck();
@@ -1283,7 +1283,7 @@ BOOL daNpc_Md_c::execute() {
     // HD: also animated on the Dragon Roost spring stage (M_Dra09)
     if (daPy_npc_checkNowPosMove(this, gabi::ea(l_staff_name.mpName.get())) || md_stageNameIs(DRAGON_ROOST_SPRING_NAME /* "M_Dra09" */)) {
         // HD: back to the wait animation after the tact animation there (event bit 0x1140)
-        if (m3104 == 0x22 && dSv_event_isEventBit(md_event(), 0x1140) && md_stageNameIs(DRAGON_ROOST_SPRING_NAME)) {
+        if (mAnmPrmIdx == 0x22 && dSv_event_isEventBit(md_event(), 0x1140) && md_stageNameIs(DRAGON_ROOST_SPRING_NAME)) {
             setAnm(0);
         }
         animationPlay();
@@ -1291,25 +1291,25 @@ BOOL daNpc_Md_c::execute() {
     if (!eventProc()) {
         if (dComIfGp_getPlayer(0) == this) {
             md_setStatusMap(this, 0x31); /* GameCube 0x11 */
-            if (m4E4 & 1) { /* isReturnLink() */
+            if (mNpcFlags & 1) { /* isReturnLink() */
                 mCurEventMode = 0xC;
             } else {
                 if (checkStatus(daMdStts_CARRY_ACTION)) { /* isNoCarryAction() */
                     gabi::Local<ProcFunc_l> fn;
                     copyAction(fn, action_carryPlayerAction);
                     setPlayerAction(fn, nullptr);
-                    m4E4 = m4E4 | 1; /* returnLink() */
+                    mNpcFlags = mNpcFlags | 1; /* returnLink() */
                 }
                 playerAction(nullptr);
                 if (returnLinkCheck()) {
-                    m4E4 = m4E4 | 1;
+                    mNpcFlags = mNpcFlags | 1;
                 } else {
                     checkCollision(1);
                 }
             }
         } else {
-            m313F = daPy_npc_chkMoveBlock(this, &m30C4);
-            if (m313F != 0) {
+            mMoveBlockSide = daPy_npc_chkMoveBlock(this, &mMoveBlockSpeed);
+            if (mMoveBlockSide != 0) {
                 gabi::Local<ProcFunc_l> fn;
                 copyAction(fn, action_escapeNpcAction);
                 setNpcAction(fn, nullptr);
@@ -1474,7 +1474,7 @@ static void daNpc_Md_dt(daNpc_Md_c* i_this, s32 flags) {
     i_this->emitterDelete(&i_this->mEmitters[0]);
     i_this->deleteHane02Emitter();
     i_this->deleteHane03Emitter();
-    i_this->m3058.end();
+    i_this->mHitShieldLightCb.end();
     mtxFollow_end(&i_this->mMirrorShieldCb);
     mdExec_endRipple(&i_this->mRippleCb); /* dPa_rippleEcallBack::end (GameCube remove()) */
     // HD: no l_HIO child to delete; a static instance pointer is cleared instead

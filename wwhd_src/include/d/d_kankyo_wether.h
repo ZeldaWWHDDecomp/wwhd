@@ -551,24 +551,24 @@ struct RAIN_EFF {
     u8 padmPos[0x3];
     /* 0x0004 */ WeatherVector mPos;
     /* 0x0010 */ WeatherVector mBasePos;
-    /* 0x001C */ be<f32> mSpeed;
-    /* 0x0020 */ be<f32> mWindScale;
-    /* 0x0024 */ be<f32> mGravity;
+    /* 0x001C */ be<f32> field_0x1c;  /* was mSpeed (misnamed): a name without evidence; open, as in the other RAIN_EFF copies (d_kankyo_rain.h, d_kankyo_rain_kazanbai_move.h): dKyr_rain_move 02566B88 sets it to a random angle at spawn (through the kazanbai_move copy); nothing reads it */
+    /* 0x0020 */ be<f32> field_0x20;  /* was mWindScale (misnamed): a name without evidence; open, as in the other RAIN_EFF copies (d_kankyo_rain.h, d_kankyo_rain_kazanbai_move.h): dKyr_rain_move 02566B88 sets it to a random angle at spawn; nothing reads it */
+    /* 0x0024 */ be<f32> field_0x24;  /* was mGravity (misnamed): a name without evidence; open, as in the other RAIN_EFF copies (d_kankyo_rain.h, d_kankyo_rain_kazanbai_move.h): dKyr_rain_move 02566B88 sets it at spawn and eases it; nothing else reads it */
     /* 0x0028 */ be<f32> mAlpha;
-    /* 0x002C */ be<f32> mSplashRadius;
-    /* 0x0030 */ be<f32> mSplashHeight;
+    /* 0x002C */ be<f32> field_0x2c;  /* was mSplashRadius (misnamed): a name without evidence; open, as in the other RAIN_EFF copies (d_kankyo_rain.h, d_kankyo_rain_kazanbai_move.h): no use in WWHD */
+    /* 0x0030 */ be<f32> mGroundY;  /* was mSplashHeight (misnamed): the same field as RAIN_EFF::mGroundY of d_kankyo_rain.h (the drop's floor: rain_bg_chk 0256691C stores it, dKyr_rain_move 02566B88 respawns the drop below it); no source reads it through this header */
     /* 0x0034 */ be<s16> mTimer;
     u8 padEnd[0x2];
 };
 WWHD_OFFSET(RAIN_EFF, mStatus, 0x0);
 WWHD_OFFSET(RAIN_EFF, mPos, 0x4);
 WWHD_OFFSET(RAIN_EFF, mBasePos, 0x10);
-WWHD_OFFSET(RAIN_EFF, mSpeed, 0x1C);
-WWHD_OFFSET(RAIN_EFF, mWindScale, 0x20);
-WWHD_OFFSET(RAIN_EFF, mGravity, 0x24);
+WWHD_OFFSET(RAIN_EFF, field_0x1c, 0x1C);
+WWHD_OFFSET(RAIN_EFF, field_0x20, 0x20);
+WWHD_OFFSET(RAIN_EFF, field_0x24, 0x24);
 WWHD_OFFSET(RAIN_EFF, mAlpha, 0x28);
-WWHD_OFFSET(RAIN_EFF, mSplashRadius, 0x2C);
-WWHD_OFFSET(RAIN_EFF, mSplashHeight, 0x30);
+WWHD_OFFSET(RAIN_EFF, field_0x2c, 0x2C);
+WWHD_OFFSET(RAIN_EFF, mGroundY, 0x30);
 WWHD_OFFSET(RAIN_EFF, mTimer, 0x34);
 WWHD_SIZE(RAIN_EFF, 0x38);
 struct dKankyo_rain_Packet {

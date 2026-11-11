@@ -26,7 +26,7 @@ struct fopMsg_prm_class {
         /* 0x04 */ fopMsg_positionWordsHD mPosWords;
     };
     /* 0x10 */ be<u32> mMsgNo;
-    /* 0x14 */ be<u32> field_0x14;
+    /* 0x14 */ be<u32> mStartMsgNo;  /* was field_0x14: view of fopMsgLifecycle::fopMsg_prm_class::mStartMsgNo (f_op/f_op_msg.h); fopMsgM_create 025DB374 stores its fifth argument there, fopMsgM_Timer_create 025DB468 0 */
     /* 0x18 */ be<u32> field_0x18;
 };
 WWHD_SIZE(fopMsg_prm_class, 0x1C);

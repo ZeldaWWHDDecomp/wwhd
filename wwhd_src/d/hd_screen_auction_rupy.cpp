@@ -472,60 +472,60 @@ void rupy_staticInit() {
     l_rupyScales.mValues[2] = small;
     l_rupyGroupNames.mNames[0].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
     l_rupyGroupNames.mNames[0].mpBuffer =
-        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E2FE0"));
+        gabi::at<be<u8>>(gabi::guest_addr("G_AuctionRupy_00"));
     l_rupyGroupNames.mNames[1].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
     l_rupyGroupNames.mNames[1].mpBuffer =
-        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E2FF4"));
+        gabi::at<be<u8>>(gabi::guest_addr("G_Meter_00"));
     l_rupyAnimationNames.mNames[0].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
     l_rupyAnimationNames.mNames[0].mpBuffer =
-        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E2FC0"));
+        gabi::at<be<u8>>(gabi::guest_addr("InAuctionRupy"));
     l_rupyAnimationNames.mNames[1].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
     l_rupyAnimationNames.mNames[1].mpBuffer =
-        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E2F88"));
+        gabi::at<be<u8>>(gabi::guest_addr("PositionAuctionRupy"));
     l_rupyAnimationNames.mNames[2].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
     l_rupyScales.mValues[1] = big;
     l_rupyAnimationNames.mNames[2].mpBuffer =
-        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E3000"));
+        gabi::at<be<u8>>(gabi::guest_addr("OutAuctionRupy"));
     l_rupyAnimationNames.mNames[3].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
     l_rupyAnimationNames.mNames[3].mpBuffer =
-        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E2F68"));
+        gabi::at<be<u8>>(gabi::guest_addr("InMeter"));
     l_rupyAnimationNames.mNames[4].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
     l_rupyAnimationNames.mNames[4].mpBuffer =
-        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E2F70"));
+        gabi::at<be<u8>>(gabi::guest_addr("Meter"));
     l_rupyAnimationNames.mNames[5].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
     l_rupyAnimationNames.mNames[5].mpBuffer =
-        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E3010"));
+        gabi::at<be<u8>>(gabi::guest_addr("OutMeter"));
     l_rupyUnusedNames.mNames[2].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
     l_rupyDigitNames.mNames[0].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
     l_rupyDigitNames.mNames[0].mpBuffer =
-        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E2F9C"));
+        gabi::at<be<u8>>(gabi::guest_addr("L_Number_00"));
     l_rupyDigitNames.mNames[1].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
     l_rupyDigitNames.mNames[1].mpBuffer =
-        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E2FA8"));
+        gabi::at<be<u8>>(gabi::guest_addr("L_Number_01"));
     l_rupyDigitNames.mNames[2].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
     l_rupyDigitNames.mNames[2].mpBuffer =
-        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E2FB4"));
+        gabi::at<be<u8>>(gabi::guest_addr("L_Number_02"));
     l_rupyScales.mValues[3] = small;
     l_rupyGroupNames.mNames[2].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
     l_rupyUnusedNames.mNames[1].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
     l_rupyGroupNames.mNames[2].mpBuffer =
-        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E2F78"));
+        gabi::at<be<u8>>(gabi::guest_addr("G_InOutMeter_00"));
     l_rupyLayoutNames.mNames[0].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
     l_rupyPartName.mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
     const u32 guard = l_rupyStateGuard;
     l_rupyUnusedNames.mNames[0].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
     l_rupyUnusedNames.mNames[0].mpBuffer =
-        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E301C"));
+        gabi::at<be<u8>>(gabi::guest_addr("AuctionNumber_00"));
     l_rupyUnusedNames.mNames[2].mpBuffer =
-        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E301C"));
+        gabi::at<be<u8>>(gabi::guest_addr("AuctionNumber_00"));
     l_rupyUnusedNames.mNames[1].mpBuffer =
-        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E301C"));
+        gabi::at<be<u8>>(gabi::guest_addr("AuctionNumber_00"));
     l_rupyLayoutNames.mNames[0].mpBuffer =
-        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E3030"));
+        gabi::at<be<u8>>(gabi::guest_addr("Auction_00"));
     l_rupyLayoutNames.mNames[1].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
-    l_rupyPartName.mpBuffer = gabi::at<be<u8>>(gabi::guest_addr("auction text 100E3030"));
+    l_rupyPartName.mpBuffer = gabi::at<be<u8>>(gabi::guest_addr("Auction_00"));
     l_rupyLayoutNames.mNames[1].mpBuffer =
-        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E301C"));
+        gabi::at<be<u8>>(gabi::guest_addr("AuctionNumber_00"));
     u32 id;
     if (guard)
         id = l_rupyNextStateId;
@@ -542,11 +542,11 @@ void rupy_staticInit() {
     l_rupyStateWait.mId = id + 1;
     l_rupyStateWait.mInitKind = 4;
     l_rupyStateWait.mThisExit = 0;
-    l_rupyStateWait.mpName = gabi::at<be<u8>>(gabi::guest_addr("auction text 100E303C"));
+    l_rupyStateWait.mpName = gabi::at<be<u8>>(gabi::guest_addr("::StateID_Move"));
     l_rupyStateExit.mThisInit = 0;
     l_rupyStateWait.mpOwner = &l_rupyStateOwner;
     l_rupyStateExit.mInitIndex = 0x1C;
-    l_rupyStateExit.mpName = gabi::at<be<u8>>(gabi::guest_addr("auction text 100E2FD0"));
+    l_rupyStateExit.mpName = gabi::at<be<u8>>(gabi::guest_addr("::StateID_End"));
     l_rupyStateWait.mMoveIndex = 0x1A;
     l_rupyStateWait.mFinalIndex = 0;
     l_rupyStateExit.mpOwner = &l_rupyStateOwner;
@@ -634,22 +634,22 @@ data l_rupyStateExit 1048E0DC
 data l_rupyStateGuard 101FD8E4
 data l_rupyNextStateId 101FDD50
 data l_rupyAnimationGroups 100E2E84
-str 100E2FE0 "auction text 100E2FE0" renamed
-str 100E2FC0 "auction text 100E2FC0" renamed
-str 100E3000 "auction text 100E3000" renamed
-str 100E2F68 "auction text 100E2F68" renamed
-str 100E2F70 "auction text 100E2F70" renamed
-str 100E3010 "auction text 100E3010" renamed
-str 100E2F9C "auction text 100E2F9C" renamed
-str 100E2FB4 "auction text 100E2FB4" renamed
-str 100E2F78 "auction text 100E2F78" renamed
-str 100E301C "auction text 100E301C" renamed
-str 100E3030 "auction text 100E3030" renamed
-str 100E2FF4 "auction text 100E2FF4" renamed
-str 100E2F88 "auction text 100E2F88" renamed
-str 100E2FA8 "auction text 100E2FA8" renamed
-str 100E303C "auction text 100E303C" renamed
-str 100E2FD0 "auction text 100E2FD0" renamed
+str 100E2FE0 "G_AuctionRupy_00"
+str 100E2FC0 "InAuctionRupy"
+str 100E3000 "OutAuctionRupy"
+str 100E2F68 "InMeter"
+str 100E2F70 "Meter"
+str 100E3010 "OutMeter"
+str 100E2F9C "L_Number_00"
+str 100E2FB4 "L_Number_02"
+str 100E2F78 "G_InOutMeter_00"
+str 100E301C "AuctionNumber_00"
+str 100E3030 "Auction_00"
+str 100E2FF4 "G_Meter_00"
+str 100E2F88 "PositionAuctionRupy"
+str 100E2FA8 "L_Number_01"
+str 100E303C "::StateID_Move"
+str 100E2FD0 "::StateID_End"
 ext 026F88F0 void rupyBaseDestroy(RupyScreen*,u32)
 ext 0273AF40 void rupyDelete(void*)
 ext 0273AD10 void* rupyAllocate(u32)

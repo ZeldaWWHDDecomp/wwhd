@@ -132,11 +132,11 @@ struct LinkItemLayout {
     u8 _55E4[0x1018];
     LinkItemFootEffect mFootEffect[2];
     u8 _6694[0xEC];
-    LinkItemFollowCallback m336C;
+    LinkItemFollowCallback mBodyWaterDropEcallBack;  /* was m336C: view of daPy_lk_c::mBodyWaterDropEcallBack */
     u8 _679C[0x88];
-    LinkItemFollowCallback m3410;
-    LinkItemMtxCallback m342C;
-    LinkItemFollowCallback m3438;
+    LinkItemFollowCallback mWadeSplashEcallBack;  /* was m3410: view of daPy_lk_c::mWadeSplashEcallBack */
+    LinkItemMtxCallback mMirrorShieldEcallBack;  /* was m342C: view of daPy_lk_c::mMirrorShieldEcallBack */
+    LinkItemFollowCallback mShieldLightHitEcallBack;  /* was m3438: view of daPy_lk_c::mShieldLightHitEcallBack */
     u8 _6868[0x69EA - 0x6868];
     // HD: decaying hammer recoil.
     be<s16> mHammerSwingAngle, mHammerSwingTimer;
@@ -165,10 +165,10 @@ WWHD_OFFSET(LinkItemLayout, mpBottleCapModel, 0x4974);
 WWHD_OFFSET(LinkItemLayout, mpSwordModel1, 0x4978);
 WWHD_OFFSET(LinkItemLayout, mpYbafo00Btk, 0x5570);
 WWHD_OFFSET(LinkItemLayout, mFootEffect, 0x65FC);
-WWHD_OFFSET(LinkItemLayout, m336C, 0x6780);
-WWHD_OFFSET(LinkItemLayout, m3410, 0x6824);
-WWHD_OFFSET(LinkItemLayout, m342C, 0x6840);
-WWHD_OFFSET(LinkItemLayout, m3438, 0x684C);
+WWHD_OFFSET(LinkItemLayout, mBodyWaterDropEcallBack, 0x6780);
+WWHD_OFFSET(LinkItemLayout, mWadeSplashEcallBack, 0x6824);
+WWHD_OFFSET(LinkItemLayout, mMirrorShieldEcallBack, 0x6840);
+WWHD_OFFSET(LinkItemLayout, mShieldLightHitEcallBack, 0x684C);
 WWHD_OFFSET(LinkItemLayout, mHammerSwingAngle, 0x69EA);
 WWHD_OFFSET(LinkItemLayout, mHammerSwingTimer, 0x69EC);
 WWHD_SIZE(LinkItemLayout, 0x69EE);
@@ -299,22 +299,22 @@ WWHD_OFFSET(LinkItemAnimationResource, __vtbl, 4);
 // HD: J3DPacket grows; the GameCube blur members move by +0x88.
 struct daPy_swBlur_c {
     /* 0x000 */ u8 _000[0x9C];
-    /* 0x09C */ be<s32> field_0x014;
-    /* 0x0A0 */ be<s32> field_0x018;
+    /* 0x09C */ be<s32> mSegmentNum;  /* was field_0x014: the number of trail segments: initSwBlur 02407070 clears it, copySwBlur 02407310 adds the new samples (at most 58); setCollision 024076CC clears it after the spin attack and fades it by 10 per frame; procHammerFrontSwing 0243CA98 walks the first it mTopPos (tww the same, draw loops over it) */
+    /* 0x0A0 */ be<s32> mBufferIdx;  /* was field_0x018: the frame index into mpPosBuffer (two positions per frame): initSwBlur 02407070 stores idx, copySwBlur 02407310 samples from the old to the new one and stores it; setCollision 024076CC uses its change as the cut-turn position count (tww the same) */
     /* 0x0A4 */ be<s32> mBlurColorType;
     /* 0x0A8 */ be<f32> mBlurTopRate;
     /* 0x0AC */ gptr<cXyz> mpPosBuffer;
-    /* 0x0B0 */ cXyz field_0x028;
-    /* 0x0BC */ cXyz field_0x034[60];
-    /* 0x38C */ cXyz field_0x304[60];
+    /* 0x0B0 */ cXyz mPrevBasePos;  /* was field_0x028: initSwBlur 02407070 / copySwBlur 02407310: the translation of the model matrix of the last sample; copySwBlur spreads the move since then over the new samples (tww the same) */
+    /* 0x0BC */ cXyz mTopPos[60];  /* was field_0x034: initSwBlur 02407070 / copySwBlur 02407310: the outer trail edge, mpPosBuffer[2i] moved out from mRootPos by mBlurTopRate, newest first; procHammerFrontSwing 0243CA98 tests its heights (tww the same, draw's first vertex row) */
+    /* 0x38C */ cXyz mRootPos[60];  /* was field_0x304: initSwBlur 02407070 / copySwBlur 02407310: the inner trail edge, mpPosBuffer[2i + 1], newest first; setCollision 024076CC hands it to the three mCutTurnEcallBack (setPosArray) (tww the same) */
     void initSwBlur(Mtx34*, int, f32, int);
     void copySwBlur(Mtx34*, int);
 };
-WWHD_OFFSET(daPy_swBlur_c, field_0x304, 0x38C);
+WWHD_OFFSET(daPy_swBlur_c, mRootPos, 0x38C);
 
-WWHD_OFFSET(daPy_swBlur_c, field_0x014, 0x9C);
+WWHD_OFFSET(daPy_swBlur_c, mSegmentNum, 0x9C);
 WWHD_OFFSET(daPy_swBlur_c, mpPosBuffer, 0xAC);
-WWHD_OFFSET(daPy_swBlur_c, field_0x034, 0xBC);
+WWHD_OFFSET(daPy_swBlur_c, mTopPos, 0xBC);
 WWHD_SIZE(daPy_swBlur_c, 0x65C);
 
 struct LinkItemCapsuleGeometry {

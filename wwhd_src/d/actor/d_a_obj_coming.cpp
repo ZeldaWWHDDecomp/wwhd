@@ -190,8 +190,8 @@ inline ComingBarrel2* Coming_barrel(u32 id) { return gabi::at<ComingBarrel2>(id)
 /* 02331A08 */
 void Ctrl_c::init(const Act_c* actor) {
     Coming_initTimer(this, actor);
-    m00 = MODE_WAIT;
-    m08 = fpcM_ERROR_PROCESS_ID_e;
+    mMode = MODE_WAIT;
+    mBarrelId = fpcM_ERROR_PROCESS_ID_e;
 }
 
 /* 0233194C */
@@ -200,7 +200,7 @@ void Ctrl_c::init_timer(const Act_c* actor) {
     if (waitTime >= 4)
         Coming_assert("d_a_obj_coming.cpp", 0x104, "(n >= 0) && (n < L_wait_max)");
     s32 total = (s32)L_Attr.m00[4 + waitTime * 2] + (s32)L_Attr.m00[5 + waitTime * 2];
-    m04 = gabi::ftoi(Coming_rndF((f32)total));
+    mTimer = gabi::ftoi(Coming_rndF((f32)total));
 }
 
 /* 02331A44 */
@@ -211,19 +211,19 @@ void Ctrl_c::set_wait_timer(const Act_c* actor) {
     f32 range = (f32)L_Attr.m00[5 + waitTime * 2];
     s32 base = L_Attr.m00[4 + waitTime * 2];
     s32 random = gabi::ftoi(Coming_rndF(range));
-    m04 = (u32)base + (u32)random;
+    mTimer = (u32)base + (u32)random;
 }
 
 /* 02331B00 */
 void Ctrl_c::set_retry_timer(const Act_c*) {
     s32 random = gabi::ftoi(Coming_rndF(30.0f));
-    m04 = (u32)random + 30;
+    mTimer = (u32)random + 30;
 }
 
 /* 02331B4C */
 void Ctrl_c::set_appear_timer(const Act_c*) {
     s32 random = gabi::ftoi(Coming_rndF(30.0f));
-    m04 = (u32)random + 300;
+    mTimer = (u32)random + 300;
 }
 
 /* 02331B98 */
@@ -238,10 +238,10 @@ s32 Act_c::_create() {
         }
         actor_condition = condition | fopAcCnd_INIT_e;
     }
-    m290 = Coming_PrmAbstract(this, PRM_TYPE_W, PRM_TYPE_S);
+    mPrmType = Coming_PrmAbstract(this, PRM_TYPE_W, PRM_TYPE_S);
     Coming_disableDraw(&draw_tag);
     for (int i = 0; i < 5; ++i)
-        Coming_init(&m294[i], this);
+        Coming_init(&mCtrl[i], this);
     f32 y = current.pos.y, x = current.pos.x, z = current.pos.z;
     y += 500.0f;
     M_gnd_work.m_pos.x = x;
@@ -339,12 +339,12 @@ void Act_c::get_make_pos(const fopAc_ac_c* ship, cXyz* out) {
 
 /* 0233211C */
 u32 Act_c::chk_make_pos_gnd(const MakeTmp_c* tmp) {
-    f32 end = tmp->m18 + 100.0f, distance = 0;
+    f32 end = tmp->mCheckRadius + 100.0f, distance = 0;
     s16 angle = 0;
     if (!(distance < end))
         return 1;
     do {
-        f32 x = tmp->m0C.x, y = tmp->m0C.y, z = tmp->m0C.z;
+        f32 x = tmp->mMakePos.x, y = tmp->mMakePos.y, z = tmp->mMakePos.z;
         Coming_mtxTrans(Coming_matrix(), x, y, z);
         Coming_mtxYrot(Coming_matrix(), angle);
         Coming_transM(0, 0, distance);
@@ -372,7 +372,7 @@ u32 Act_c::chk_make_pos_gnd(const MakeTmp_c* tmp) {
 
 /* 023322EC */
 u32 Act_c::chk_make_pos_wall(const MakeTmp_c* tmp) {
-    Coming_setLine(&M_wall_work, &tmp->m00, &tmp->m0C, 0);
+    Coming_setLine(&M_wall_work, &tmp->mShipPos, &tmp->mMakePos, 0);
     // HD: the full callee register is XORed before truncation, rather than boolean negation.
     return (u8)(Coming_lineCross(dComIfG_Bgsp(), &M_wall_work) ^ 1);
 }
@@ -387,7 +387,7 @@ static void* chk_make_pos_act(void* i_actor, void* i_tmp) {
         return nullptr;
     if (actor && actor->mProcName == fpcNm_PLAYER_e)
         return nullptr;
-    f32 y = actor->current.pos.y, ty = tmp->m0C.y, height = tmp->m1C;
+    f32 y = actor->current.pos.y, ty = tmp->mMakePos.y, height = tmp->mCheckHeight;
     f32 difference = __builtin_fabsf(y - ty);
     height += 100.0f;
     if (!(difference < height))
@@ -397,12 +397,12 @@ static void* chk_make_pos_act(void* i_actor, void* i_tmp) {
     actorPos.x = actor->current.pos.x;
     actorPos.z = actor->current.pos.z;
     actorPos.y = 0;
-    tmpPos.z = tmp->m0C.z;
-    tmpPos.x = tmp->m0C.x;
+    tmpPos.z = tmp->mMakePos.z;
+    tmpPos.x = tmp->mMakePos.x;
     tmpPos.y = 0;
     f32 distance = Coming_squareDistance(&actorPos, &tmpPos);
     distance = Coming_sqrt(distance);
-    f32 radius = tmp->m18 + 100.0f;
+    f32 radius = tmp->mCheckRadius + 100.0f;
     if (!(distance < radius))
         return nullptr;
     return actor;
@@ -465,14 +465,14 @@ u32 Act_c::barrel2_get_param(PrmBarrel2_c* out) {
     Coming_makePosition(this, ship, &pos);
     MakeTmp_c tmp;
     // HD: these are float copies, with separate origin/position guest stack slots.
-    tmp.m00.x = origin.x;
-    tmp.m00.y = origin.y;
-    tmp.m00.z = origin.z;
-    tmp.m0C.x = pos.x;
-    tmp.m0C.y = pos.y;
-    tmp.m0C.z = pos.z;
-    tmp.m18 = 200.0f;
-    tmp.m1C = 400.0f;
+    tmp.mShipPos.x = origin.x;
+    tmp.mShipPos.y = origin.y;
+    tmp.mShipPos.z = origin.z;
+    tmp.mMakePos.x = pos.x;
+    tmp.mMakePos.y = pos.y;
+    tmp.mMakePos.z = pos.z;
+    tmp.mCheckRadius = 200.0f;
+    tmp.mCheckHeight = 400.0f;
     if (!Coming_checkPosition(this, &tmp))
         return 0;
     f32 x = pos.x, y = pos.y, z = pos.z;
@@ -482,7 +482,7 @@ u32 Act_c::barrel2_get_param(PrmBarrel2_c* out) {
     u32 pattern = Coming_pattern(this);
     out->mType = Coming_type(pattern);
     out->mItem = Coming_item(pattern);
-    out->m14 = Coming_buoy(pattern);
+    out->mHasBuoy = Coming_buoy(pattern);
     // HD: targetAngleY's entire r3 participates in the addition.
     s32 angle = Coming_targetAngle(&ship->current.pos, &pos);
     s32 random = gabi::ftoi(Coming_rndFX(8192.0f));
@@ -497,7 +497,7 @@ void Act_c::mode_barrel2_wait(Ctrl_c* ctrl) {
         return;
     if (home.roomNo != room && mRoomId != room && !Coming_PrmAbstract(this, PRM_ALWAYS_W, PRM_ALWAYS_S))
         return;
-    if (ctrl->m04 > 0)
+    if (ctrl->mTimer > 0)
         return;
     PrmBarrel2_c param;
     if (Coming_parameters(this, &param)) {
@@ -505,14 +505,14 @@ void Act_c::mode_barrel2_wait(Ctrl_c* ctrl) {
         u32 item = param.mItem;
         s16 angle = param.mAngleY;
         u32 type = param.mType;
-        u8 buoy = param.m14;
+        u8 buoy = param.mHasBuoy;
         csXyz rot;
         Coming_angleCtor(&rot, 0, angle, 0);
         u32 parameters = (item & 63) | 0x007F0000 | (type << 24) |
                          ((u32)(buoy ^ 1) << 8) | 0x10000000;
-        ctrl->m08 = Coming_createBarrel(fpcNm_Obj_Barrel2_e, parameters, &param.mPos, createRoom, &rot, 0, -1, 0);
+        ctrl->mBarrelId = Coming_createBarrel(fpcNm_Obj_Barrel2_e, parameters, &param.mPos, createRoom, &rot, 0, -1, 0);
         Coming_appearTimer(ctrl, this);
-        ctrl->m00 = Ctrl_c::MODE_APPEAR;
+        ctrl->mMode = Ctrl_c::MODE_APPEAR;
     } else {
         Coming_retryTimer(ctrl, this);
     }
@@ -520,32 +520,32 @@ void Act_c::mode_barrel2_wait(Ctrl_c* ctrl) {
 
 /* 02332868 */
 void Act_c::mode_barrel2_appear(Ctrl_c* ctrl) {
-    if (ctrl->m04 > 0)
+    if (ctrl->mTimer > 0)
         return;
-    u32 id = ctrl->m08;
+    u32 id = ctrl->mBarrelId;
     if (id == fpcM_ERROR_PROCESS_ID_e)
         return;
     gabi::Local<be<u32>> found;
     if (!Coming_searchById(id, found.get())) {
-        ctrl->m08 = fpcM_ERROR_PROCESS_ID_e;
+        ctrl->mBarrelId = fpcM_ERROR_PROCESS_ID_e;
         return;
     }
     ComingBarrel2* barrel = Coming_barrel(*found);
     if (barrel) {
         if (barrel->mProcName != fpcNm_Obj_Barrel2_e)
             // HD: assertion spells the profile tk_Obj_Barrel2_e and the pointer barrel2_act.
-            Coming_assert("d_a_obj_coming.cpp", 0x465, "fopAcM_GetName(barrel) == fpcNm_Obj_Barrel2_e");
+            Coming_assert("d_a_obj_coming.cpp", 0x465, "fopAcM_GetName(barrel2_act) == tk_Obj_Barrel2_e");
         barrel->mExit = 1;
     }
-    if (ctrl->m08 != fpcM_ERROR_PROCESS_ID_e) {
+    if (ctrl->mBarrelId != fpcM_ERROR_PROCESS_ID_e) {
         Coming_waitTimer(ctrl, this);
-        ctrl->m00 = Ctrl_c::MODE_WAIT;
+        ctrl->mMode = Ctrl_c::MODE_WAIT;
     }
 }
 
 /* 02332960 */
 void Act_c::mode_barrel2_leave(Ctrl_c* ctrl) {
-    u32 id = ctrl->m08;
+    u32 id = ctrl->mBarrelId;
     if (id == fpcM_ERROR_PROCESS_ID_e)
         return;
     gabi::Local<be<u32>> found;
@@ -554,11 +554,11 @@ void Act_c::mode_barrel2_leave(Ctrl_c* ctrl) {
         if (barrel) {
             if (barrel->mProcName != fpcNm_Obj_Barrel2_e)
                 // HD: assertion spells the profile tk_Obj_Barrel2_e and the pointer barrel2_act.
-                Coming_assert("d_a_obj_coming.cpp", 0x480, "fopAcM_GetName(barrel) == fpcNm_Obj_Barrel2_e");
+                Coming_assert("d_a_obj_coming.cpp", 0x480, "fopAcM_GetName(barrel2_act) == tk_Obj_Barrel2_e");
             barrel->mExit = 1;
         }
     } else {
-        ctrl->m08 = fpcM_ERROR_PROCESS_ID_e;
+        ctrl->mBarrelId = fpcM_ERROR_PROCESS_ID_e;
     }
 }
 
@@ -573,14 +573,14 @@ s32 Act_c::_execute() {
     s32 count = L_Attr.m00[makeNum];
     bool done = true;
     for (s32 i = 0; i < count; ++i) {
-        Ctrl_c* ctrl = &m294[i];
-        s32 timer = ctrl->m04;
+        Ctrl_c* ctrl = &mCtrl[i];
+        s32 timer = ctrl->mTimer;
         if (timer > 0)
-            ctrl->m04 = (u32)timer - 1;
-        u32 type = m290, mode = ctrl->m00;
+            ctrl->mTimer = (u32)timer - 1;
+        u32 type = mPrmType, mode = ctrl->mMode;
         // HD: read the guest PTMF table, including the virtual form, on every dispatch.
         (this->*mode_proc[type][mode].fn)(ctrl);
-        if (ctrl->m00 != Ctrl_c::MODE_LEAVE || ctrl->m08 != fpcM_ERROR_PROCESS_ID_e)
+        if (ctrl->mMode != Ctrl_c::MODE_LEAVE || ctrl->mBarrelId != fpcM_ERROR_PROCESS_ID_e)
             done = false;
     }
     if (done)
@@ -726,9 +726,9 @@ str 10026E48 "(n >= 0) && (n < L_wait_max)" in 02331A44
 str 10026E88 in 02331C94
 str 10026E9C "(prm >= 0) && (prm < L_ctrl_max)"
 str 10026F88 in 02332868
-str 10026F58 "fopAcM_GetName(barrel) == fpcNm_Obj_Barrel2_e" renamed in 02332868
+str 10026F58 "fopAcM_GetName(barrel2_act) == tk_Obj_Barrel2_e" in 02332868
 str 10026FCC in 02332960
-str 10026F9C "fopAcM_GetName(barrel) == fpcNm_Obj_Barrel2_e" renamed in 02332960
+str 10026F9C "fopAcM_GetName(barrel2_act) == tk_Obj_Barrel2_e" in 02332960
 ext 02332D84 u32 Coming_PrmAbstract(const daObjComing::Act_c*, u32, u32)
 ext 0273AA24 void Coming_assert(const char*, s32, const char*)
 ext 020198D8 f32 Coming_rndF(f32)

@@ -79,15 +79,15 @@ WWHD_SIZE(dScnPly_ply_c, 0xB68);
 struct dScnPly_msg_HIO_c {
     be<u32> mVtable;
     be<u8> mIsUpdate;
-    be<u8> field_0x06;
-    be<u8> field_0x07;
-    be<u8> field_0x08;
+    be<u8> mShowMessage;  /* was field_0x06: dScnPly_msg_HIO_messageProc 025AF738 runs the HIO test message only while it is set and clears it when the message ends (status 0x12); dScnPly_msg_HIO_padCheck 025AF444 sets it on a B trigger or a request (mShowRequest); dScnPly_Delete 025B0630 clears it; dScnPly_msg_HIO_c_ct 025B3438 clears it */
+    be<u8> mShowRequest;  /* was field_0x07: dScnPly_msg_HIO_setUpdate 025AF43C stores it; dScnPly_msg_HIO_padCheck 025AF444 turns it into mShowMessage and clears it; dScnPly_msg_HIO_c_ct 025B3438 clears it */
+    be<u8> mLanguage;  /* was field_0x08: WWHD: dScnPly_msg_HIO_c_ct 025B3438 sets 0, nothing reads it here; tww: the font / text language switch, 0 Japanese, otherwise English (mDoExt font init picks rock_24_20_4i1.bfn / rock_e_24_20_4i.bfn by it; d_message / d_mesg / f_op_msg_mng pick the Japanese or English sizes and glyphs) (2026-11-11 rule) */
     be<u8> field_0x09;
     u8 padding[1];
     be<s16> mGroup;
     be<s16> mID;
     u8 paddingID[2];
-    be<u32> field_0x10;
+    be<u32> mMsgId;  /* was field_0x10: dScnPly_msg_HIO_messageProc 025AF738: the fopMsgM_messageSet result (-1 while no message), reset to -1 when the message ends; dScnPly_msg_HIO_c_ct 025B3438 and dScnPly_Delete 025B0630 set -1 */
     // HD: argument widths remain full registers instead of retail u8/s16.
     void dScnPly_msg_HIO_checkUpdate(u32);
     void dScnPly_msg_HIO_numUpdate(s32, s32);
@@ -96,11 +96,11 @@ struct dScnPly_msg_HIO_c {
     void dScnPly_msg_HIO_messageProc();
 };
 WWHD_OFFSET(dScnPly_msg_HIO_c, mIsUpdate, 4);
-WWHD_OFFSET(dScnPly_msg_HIO_c, field_0x06, 5);
-WWHD_OFFSET(dScnPly_msg_HIO_c, field_0x07, 6);
+WWHD_OFFSET(dScnPly_msg_HIO_c, mShowMessage, 5);
+WWHD_OFFSET(dScnPly_msg_HIO_c, mShowRequest, 6);
 WWHD_OFFSET(dScnPly_msg_HIO_c, mGroup, 0xA);
 WWHD_OFFSET(dScnPly_msg_HIO_c, mID, 0xC);
-WWHD_OFFSET(dScnPly_msg_HIO_c, field_0x10, 0x10);
+WWHD_OFFSET(dScnPly_msg_HIO_c, mMsgId, 0x10);
 WWHD_SIZE(dScnPly_msg_HIO_c, 0x14);
 struct dScnPly_reg_childHIO_c {
     be<u32> mVtable;
@@ -130,14 +130,15 @@ struct dScnPly_env_otherHIO_c {
     be<u8> field_0x15, field_0x16;
     u8 paddingArray[2];
     be<u16> field_0x18[20];
-    be<s16> field_0x40;
+    /* mFocusDepthOffset (0x40) was field_0x40: WWHD: dScnPly_env_otherHIO_c_ct 025B32FC sets 0, nothing reads it here; tww: m_Do_graphic subtracts it from the focus depth for the depth-of-field TEV alpha (l_tevColor0.a = depth - it; -it as the auto-focus limit) (2026-11-11 rule) */
+    be<s16> mFocusDepthOffset;
     u8 paddingFloat[2];
     be<f32> field_0x44;
 };
 WWHD_OFFSET(dScnPly_env_otherHIO_c, field_0x05, 4);
 WWHD_OFFSET(dScnPly_env_otherHIO_c, field_0x15, 0x14);
 WWHD_OFFSET(dScnPly_env_otherHIO_c, field_0x18, 0x18);
-WWHD_OFFSET(dScnPly_env_otherHIO_c, field_0x40, 0x40);
+WWHD_OFFSET(dScnPly_env_otherHIO_c, mFocusDepthOffset, 0x40);
 WWHD_OFFSET(dScnPly_env_otherHIO_c, field_0x44, 0x44);
 WWHD_SIZE(dScnPly_env_otherHIO_c, 0x48);
 struct dScnPly_env_debugHIO_c {

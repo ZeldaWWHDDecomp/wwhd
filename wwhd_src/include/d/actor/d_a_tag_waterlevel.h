@@ -13,10 +13,10 @@ public:
     void bgm_proc();
     bool _execute();
 
-    /* 0x3AC */ be<f32> field_0x290;
+    /* 0x3AC */ be<f32> mLevelStep;  /* was field_0x290: _execute 024B3AC0: the step of the water level ease (cLib_addCalc of M_now): grows by attr 0x00 each frame, clamped to attr 0x0C .. 0x08, reset to 0 once the level is reached; _create 024B398C sets 0 (tww the same) */
     /* 0x3B0 */ be<s32> mAction;
 };
-WWHD_OFFSET(Act_c, field_0x290, 0x3AC);
+WWHD_OFFSET(Act_c, mLevelStep, 0x3AC);
 WWHD_SIZE(Act_c, 0x3B4);
 
 }

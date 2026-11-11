@@ -149,12 +149,12 @@ BOOL daMachine_c::CreateHeap() {
     auto* pbck = static_cast<J3DAnmTransform*>(dComIfG_getObjectRes("Hkikai1", dRes_INDEX_HKIKAI1_BCK_HKIKAI1_e));
     if (!pbck)
         JUT_ASSERT_fail("d_a_machine.cpp", 0x169, "pbck != (0)");
-    if (!field_0xc04.init(modelData, pbck, true, J3DFrameCtrl::EMode_NONE, l_rate.mValue, 0, -1, false))
+    if (!mBck.init(modelData, pbck, true, J3DFrameCtrl::EMode_NONE, l_rate.mValue, 0, -1, false))
         return false;
     model = mpModel;
-    f32 frame = field_0xc04.getFrame();
+    f32 frame = mBck.getFrame();
     J3DModelData* data = model->getModelData();
-    field_0xc04.entry(data, frame);
+    mBck.entry(data, frame);
     return true;
 }
 /* 021B7494 */
@@ -171,7 +171,7 @@ s32 nodeCallBack(J3DNode* node, s32 timing) {
             // HD: the source matrix pointer is not bounds checked.
             gptr<Mtx34>& first = reinterpret_cast<gptr<Mtx34>&>(buffer->mpAnmMtx);
             PSMTXCopy(first.get() + index, mDoMtx_stack_c::get());
-            PSMTXCopy(mDoMtx_stack_c::get(), &actor->field_0xc3c);
+            PSMTXCopy(mDoMtx_stack_c::get(), &actor->mJoint3Mtx);
         }
     }
     return true;
@@ -190,13 +190,13 @@ void daMachine_c::CreateInit() {
     mSph.Set(&l_sph_src_at);
     mSph.SetStts(&mStts);
     for (u32 i = 0; i < 3; ++i) {
-        field_0x404[i].Set(&l_sph_src_col);
-        field_0x404[i].SetStts(&mStts);
+        mBodySph[i].Set(&l_sph_src_col);
+        mBodySph[i].SetStts(&mStts);
     }
     field_0x788.Set(&l_sph_src_col);
     field_0x788.SetStts(&mStts);
-    Machine_wallRadius(&field_0xa78, l_wallRadius.mValue);
-    Machine_acchSet(&field_0x84b, &current.pos, &old.pos, this, 1, &field_0xa78, &speed, nullptr, nullptr);
+    Machine_wallRadius(&mAcchCir, l_wallRadius.mValue);
+    Machine_acchSet(&mAcch, &current.pos, &old.pos, this, 1, &mAcchCir, &speed, nullptr, nullptr);
     set_mtx();
     model = mpModel;
     model->setUserArea(reinterpret_cast<uintptr_t>(this));
@@ -219,21 +219,21 @@ void daMachine_c::CreateInit() {
     mpModel->calc();
     // HD: the path byte is the low byte of the actor parameter word.
     u8 id = u32(mParameters) & 255;
-    field_0xc14 = id;
+    mPathId = id;
     if (id == 255)
         return;
     auto* path = Machine_roomPath(id, current.roomNo);
-    field_0xc18 = path;
+    mpPath = path;
     if (!path) {
-        field_0xc14 = 255;
+        mPathId = 255;
         return;
     }
-    path = field_0xc18;
-    field_0xc16 = 1;
-    field_0xc15 = 1;
+    path = mpPath;
+    mPathDir = 1;
+    mPathPntNo = 1;
     auto* points = path->m_points.get();
     auto* source = reinterpret_cast<MachineVecWords*>(&points[1].m_position);
-    auto* next = reinterpret_cast<MachineVecWords*>(&field_0xc1c);
+    auto* next = reinterpret_cast<MachineVecWords*>(&mNextPos);
     u32 xb = source->mX;
     next->mX = xb;
     u32 yb = source->mY;
@@ -256,11 +256,11 @@ void daMachine_c::CreateInit() {
 }
 /* 021B7D14 */
 void daMachine_c::path_move() {
-    if (field_0xc14 == 255)
+    if (mPathId == 255)
         return;
-    Machine_chasePos(&current.pos, &field_0xc1c, speedF);
+    Machine_chasePos(&current.pos, &mNextPos, speedF);
     gabi::Local<cXyz> difference;
-    cXyz_mi(&field_0xc1c, difference.get(), &current.pos);
+    cXyz_mi(&mNextPos, difference.get(), &current.pos);
     f32 square = PSVECSquareMag(difference.get());
     f32 distance = Machine_sqrt(square);
     if (distance < l_nextDistance.mValue)
@@ -268,43 +268,43 @@ void daMachine_c::path_move() {
 }
 /* 021B7C24 */
 void daMachine_c::set_next_pnt() {
-    if (field_0xc14 == 255)
+    if (mPathId == 255)
         return;
-    s32 index = s8(u8(field_0xc15) + u8(field_0xc16));
-    auto* path = field_0xc18.get();
-    field_0xc15 = index;
+    s32 index = s8(u8(mPathPntNo) + u8(mPathDir));
+    auto* path = mpPath.get();
+    mPathPntNo = index;
     if (path->m_closed & 1) {
         u16 count = path->m_num;
         if (index > s32(s8(count)) - 1)
-            field_0xc15 = 0;
+            mPathPntNo = 0;
         else if (index < 0)
-            field_0xc15 = count - 1;
+            mPathPntNo = count - 1;
     } else {
         u16 count = path->m_num;
         if (index > s32(count) - 1) {
-            path = field_0xc18;
-            field_0xc16 = -1;
+            path = mpPath;
+            mPathDir = -1;
             count = path->m_num;
-            field_0xc15 = count - 2;
+            mPathPntNo = count - 2;
         } else if (index < 0) {
-            field_0xc16 = 1;
-            field_0xc15 = 1;
+            mPathDir = 1;
+            mPathPntNo = 1;
         }
     }
     // HD: integer copies and pointer reloads preserve the original aliasing behavior.
-    auto* next = reinterpret_cast<MachineVecWords*>(&field_0xc1c);
+    auto* next = reinterpret_cast<MachineVecWords*>(&mNextPos);
     auto* previous = reinterpret_cast<MachineVecWords*>(&field_0xc28);
     u32 y = next->mY, x = next->mX;
     previous->mY = y;
     previous->mX = x;
     u32 z = next->mZ;
-    s8 idx = field_0xc15;
-    path = field_0xc18;
+    s8 idx = mPathPntNo;
+    path = mpPath;
     previous->mZ = z;
     auto* point = &path->m_points[idx];
-    field_0xc1c.x = point->m_position.x;
-    field_0xc1c.y = point->m_position.y;
-    field_0xc1c.z = point->m_position.z;
+    mNextPos.x = point->m_position.x;
+    mNextPos.y = point->m_position.y;
+    mNextPos.z = point->m_position.z;
 }
 /* 021B7AE4 */
 machine_layout::WindMill* daMachine_c::search_wind_mill() {
@@ -336,20 +336,20 @@ cPhs_State daMachine_c::_create() {
             __vtbl = gabi::ea(&l_actorVtable);
             dCcD_Stts_ct(&mStts);
             Machine_sphCtor(&mSph);
-            Machine_constructArray(field_0x404, 3, 0x12C, Machine_sphCtor);
+            Machine_constructArray(mBodySph, 3, 0x12C, Machine_sphCtor);
             Machine_sphCtor(&field_0x788);
-            __ct(&field_0x84b);
-            __ct(&field_0xa78);
-            auto* cps = reinterpret_cast<MachineCps*>(&field_0xab8);
-            Machine_gObjCtor(&field_0xab8);
+            __ct(&mAcch);
+            __ct(&mAcchCir);
+            auto* cps = reinterpret_cast<MachineCps*>(&mSearchCps);
+            Machine_gObjCtor(&mSearchCps);
             cps->mShapeVtable = gabi::ea(&l_shapeVtable);
             cps->mAabVtable = gabi::ea(&l_aabVtable);
             Machine_capsuleCtor(&cps->mCapsule);
             cps->__vtbl_hitinf = gabi::ea(&l_hitVtable);
             cps->mCapsule.__vtbl = gabi::ea(&l_capsuleVtable);
             cps->mShapeVtable = gabi::ea(&l_cpsShapeVtable);
-            Machine_sphereCtor(&field_0xbf0);
-            auto* animation = reinterpret_cast<MachineBck*>(&field_0xc04);
+            Machine_sphereCtor(&mPlayerSph);
+            auto* animation = reinterpret_cast<MachineBck*>(&mBck);
             animation->mFrameCtrl.init(0);
             animation->__vtbl = gabi::ea(&l_bckBaseVtable);
             Machine_materialCtor(&animation->mMaterial);
@@ -423,26 +423,26 @@ void daMachine_c::attack() {
     pos->y = y;
     pos->z = player->current.pos.z;
     pos->y = y + f32(l_playerHeight.mValue);
-    field_0xbf0.SetC(pos.get());
-    field_0xbf0.SetR(l_playerRadius.mValue);
-    u8 state = field_0xc78;
+    mPlayerSph.SetC(pos.get());
+    mPlayerSph.SetR(l_playerRadius.mValue);
+    u8 state = mAttackState;
     if (state == 0) {
         gabi::Local<cXyz> cross;
-        if (Machine_capsuleCross(&reinterpret_cast<MachineCps*>(&field_0xab8)->mCapsule, &field_0xbf0, cross.get()))
-            field_0xc78 = 1;
+        if (Machine_capsuleCross(&reinterpret_cast<MachineCps*>(&mSearchCps)->mCapsule, &mPlayerSph, cross.get()))
+            mAttackState = 1;
         return;
     }
     if (state == 1) {
         s32 reverb = dComIfGp_getReverb(current.roomNo);
         mDoAud_seStart(JA_SE_OBJ_JAMA_MECHA_OUT, &eyePos, 0, reverb);
-        u8 next = u8(field_0xc78) + 1;
-        field_0xc04.setFrame(l_zero.mValue);
-        field_0xc78 = next;
-        field_0xc04.setPlaySpeed(l_rate.mValue);
+        u8 next = u8(mAttackState) + 1;
+        mBck.setFrame(l_zero.mValue);
+        mAttackState = next;
+        mBck.setPlaySpeed(l_rate.mValue);
     } else if (state != 2)
         return;
-    if (field_0xc04.play())
-        field_0xc78 = 0;
+    if (mBck.play())
+        mAttackState = 0;
 }
 /* 021B7D8C */
 void daMachine_c::set_cube() {
@@ -457,7 +457,7 @@ void daMachine_c::set_cube() {
     mDoMtx_stack_c::YrotM(current.angle.y);
     mDoMtx_stack_c::multVec(far.get(), far.get());
     mDoMtx_stack_c::multVec(near.get(), near.get());
-    Machine_capsuleSet(&reinterpret_cast<MachineCps*>(&field_0xab8)->mCapsule, near.get(), far.get(),
+    Machine_capsuleSet(&reinterpret_cast<MachineCps*>(&mSearchCps)->mCapsule, near.get(), far.get(),
                        l_searchRadius.mValue);
 }
 /* 021B7F84 */
@@ -476,23 +476,23 @@ void daMachine_c::set_body() {
     mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
     mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), current.angle.x, current.angle.y, current.angle.z);
     for (u32 i = 0; i < 3; ++i) {
-        auto* sphere = &field_0x404[i];
+        auto* sphere = &mBodySph[i];
         mDoMtx_stack_c::multVec(positions[i].get(), positions[i].get());
         sphere->SetC(positions[i].get());
         cCcS_Set(dComIfG_Ccsp(), sphere);
     }
-    field_0x404[0].OnAtSPrmBit(cCcD_AtSPrm_Set_e);
-    field_0x404[0].SetR(l_cullRadius.mValue);
+    mBodySph[0].OnAtSPrmBit(cCcD_AtSPrm_Set_e);
+    mBodySph[0].SetR(l_cullRadius.mValue);
 }
 /* 021B8080 */
 void daMachine_c::set_at() {
-    f32 frame = field_0xc04.getFrame();
+    f32 frame = mBck.getFrame();
     if (l_speed.mValue < frame && l_attackEnd.mValue > frame) {
-        f32 y = field_0xc3c.m[1][3], z = field_0xc3c.m[2][3], x = field_0xc3c.m[0][3];
-        field_0xc6c.y = y;
-        field_0xc6c.z = z;
-        field_0xc6c.x = x;
-        mSph.SetC(&field_0xc6c);
+        f32 y = mJoint3Mtx.m[1][3], z = mJoint3Mtx.m[2][3], x = mJoint3Mtx.m[0][3];
+        mAtPos.y = y;
+        mAtPos.z = z;
+        mAtPos.x = x;
+        mSph.SetC(&mAtPos);
         cCcS_Set(dComIfG_Ccsp(), &mSph);
     }
 }
@@ -503,9 +503,9 @@ bool daMachine_c::_draw() {
     env = dKy_getEnvlight();
     setLightTevColorType(env, mpModel, &tevStr);
     J3DModel* model = mpModel;
-    f32 frame = field_0xc04.getFrame();
+    f32 frame = mBck.getFrame();
     J3DModelData* data = model->getModelData();
-    field_0xc04.entry(data, frame);
+    mBck.entry(data, frame);
     mDoExt_modelUpdateDL(mpModel);
     return true;
 }
@@ -544,13 +544,13 @@ void machine_nameDestructor(void* object, u32 flags) {
 void machine_destructor(daMachine_c* actor, u32 flags) {
     if (!actor)
         return;
-    auto* animation = reinterpret_cast<MachineBck*>(&actor->field_0xc04);
+    auto* animation = reinterpret_cast<MachineBck*>(&actor->mBck);
     Machine_bckTailDtor(&animation->__vtbl, 0);
-    Machine_gObjDtor(&actor->field_0xab8, 2);
-    __dt(&actor->field_0xa78);
-    __dt(&actor->field_0x84b);
+    Machine_gObjDtor(&actor->mSearchCps, 2);
+    __dt(&actor->mAcchCir);
+    __dt(&actor->mAcch);
     Machine_sphDtor(&actor->field_0x788, 2);
-    Machine_destroyArray(actor->field_0x404, 3, 0x12C, Machine_sphDtor, 0, 0);
+    Machine_destroyArray(actor->mBodySph, 3, 0x12C, Machine_sphDtor, 0, 0);
     Machine_sphDtor(&actor->mSph, 2);
     __dt(&actor->mStts);
     __dt(static_cast<fopAc_ac_c*>(actor));

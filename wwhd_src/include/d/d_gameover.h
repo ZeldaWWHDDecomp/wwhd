@@ -4,8 +4,10 @@
 struct dGameover_c {
     u8 _00[0x10C];
     /* HD: fields move eight bytes earlier than the GameCube object. */
-    be<s16> field_0x114;
-    be<s16> field_0x116;
+    /* mAnimeTimer (0x10C) was field_0x114: _create 02549B28 sets 90; _execute 025499A0 starts the game-over graphics at 90 and steps it down (tww dGameover_c::_execute counts it down to 0 after animeOpen, then valueInit / animeClose) */
+    be<s16> mAnimeTimer;
+    /* mCloseDelay (0x10E) was field_0x116: WWHD: _create 02549B28 sets l_gameoverDelay, not read here; tww: _create sets g_menuHIO field_0xb6 and _execute counts it down after animeClose before mState 3 (the select window) (2026-11-11 rule: name from tww's read) */
+    be<s16> mCloseDelay;
     be<u8> mState;
     be<u8> mAnimeStart;
     u32 _execute();

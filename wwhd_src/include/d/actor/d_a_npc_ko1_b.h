@@ -127,8 +127,10 @@ struct Ko1MovementParameters {
     be<s16> mJointScale, mTurnMaxVelocity;
     u8 _18[4]; be<u8> mDebugColors; u8 _1D[3];
     be<s16> mAngleStep; u8 _22[2];
-    be<f32> mWalkAnimationRate, mWalkMaxSpeed; u8 _2C[8];
-    be<f32> mRunAnimationRate, mRunMaxSpeed; u8 _3C[0x24];
+    /* mWalkSpeed (0x28) was mWalkMaxSpeed (misnamed): the walk speed, not a cap: setStt 02278134 copies it into daNpc_Ko1_c::mMoveSpeed, which ko_clcMovSpd 02276028 chases speedF to; ko_nMove 022763A8 only caps the walk play rate at it * mWalkAnimationRate; same name as daNpc_Ko1_childHIO_c::mWalkSpeed (d_a_npc_ko1_d1.h, the same table at 0x104677E8) */
+    be<f32> mWalkAnimationRate, mWalkSpeed; u8 _2C[8];
+    /* mRunSpeed (0x38) was mRunMaxSpeed (misnamed): the run speed, not a cap: setStt 02278134 copies it into daNpc_Ko1_c::mMoveSpeed, which ko_clcMovSpd 02276028 chases speedF to; ko_nMove 022763A8 only caps the run play rate at it * mRunAnimationRate; same name as daNpc_Ko1_childHIO_c::mRunSpeed (d_a_npc_ko1_d1.h, the same table at 0x104677E8) */
+    be<f32> mRunAnimationRate, mRunSpeed; u8 _3C[0x24];
 };
 WWHD_SIZE(Ko1MovementParameters, 0x60);
 WWHD_OFFSET(Ko1MovementParameters, mHeadMinX, 0x4);
@@ -144,9 +146,9 @@ WWHD_OFFSET(Ko1MovementParameters, mTurnMaxVelocity, 0x16);
 WWHD_OFFSET(Ko1MovementParameters, mDebugColors, 0x1C);
 WWHD_OFFSET(Ko1MovementParameters, mAngleStep, 0x20);
 WWHD_OFFSET(Ko1MovementParameters, mWalkAnimationRate, 0x24);
-WWHD_OFFSET(Ko1MovementParameters, mWalkMaxSpeed, 0x28);
+WWHD_OFFSET(Ko1MovementParameters, mWalkSpeed, 0x28);
 WWHD_OFFSET(Ko1MovementParameters, mRunAnimationRate, 0x34);
-WWHD_OFFSET(Ko1MovementParameters, mRunMaxSpeed, 0x38);
+WWHD_OFFSET(Ko1MovementParameters, mRunSpeed, 0x38);
 struct Ko1PathFlags { u8 _00[5]; be<u8> mClosed; };
 WWHD_OFFSET(Ko1PathFlags, mClosed, 5);
 struct Ko1ModelAnimations { u8 _00[0x38]; be<u32> mpBtpAnimation; };

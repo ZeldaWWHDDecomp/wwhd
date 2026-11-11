@@ -450,7 +450,7 @@ static void dAttCatch_c_init(u32 i_this) {
     auto* self = AttentionHD::view<AttentionHD::Catch>(i_this);
     self->mCatchItemNo = 0x56;
     self->mRequestActorID = 0xFFFFFFFF;
-    self->field_0x4 = 3;
+    self->mRequestPriority = 3;
     self->mCatghTargetID = 0xFFFFFFFF;
 }
 
@@ -460,7 +460,7 @@ static void dAttCatch_c_proc(u32 i_this) {
     u32 id = (u32)self->mRequestActorID;
     u8 item = (u8)self->mCatchItemNo;
     self->mCatghTargetID = id;
-    self->field_0x4 = 3;
+    self->mRequestPriority = 3;
     self->mCatchItemNo = 0x56;
     self->mChangeItem = item;
     self->mRequestActorID = 0xFFFFFFFF;
@@ -492,7 +492,7 @@ static bool dAttCatch_c_request(u32 i_this, u32 reqActor, u8 itemNo, f32 horizon
                                 f32 downDist, s32 angle, s32 param_7) {
     auto* self = AttentionHD::view<AttentionHD::Catch>(i_this);
     u32 player = player0();
-    if (param_7 > (s32)(u32)self->field_0x4)
+    if (param_7 > (s32)(u32)self->mRequestPriority)
         return false;
     gabi::Local<cXyz> v;
     att1_cXyz_mi(reqActor + AC_ATTN_POS, gabi::ea(v.get()), player + AC_ATTN_POS);
@@ -508,8 +508,8 @@ static bool dAttCatch_c_request(u32 i_this, u32 reqActor, u8 itemNo, f32 horizon
         if (globe_angle(gabi::ea(v.get()), player) > angle)
             return false;
     }
-    if (param_7 < (s32)(u32)self->field_0x4 || dist < (f32)self->mDistance) {
-        self->field_0x4 = (u32)param_7;
+    if (param_7 < (s32)(u32)self->mRequestPriority || dist < (f32)self->mDistance) {
+        self->mRequestPriority = (u32)param_7;
         self->mCatchItemNo = itemNo;
         u32 id = getID(reqActor);
         self->mDistance = dist;
@@ -526,7 +526,7 @@ static u32 dAttLook_c_convPId(u32 i_this, u32 id) { return searchByID(id); }
 static void dAttLook_c_init(u32 i_this) {
     auto* self = AttentionHD::view<AttentionHD::Look>(i_this);
     self->mRequestActorID = 0xFFFFFFFF;
-    self->field_0x4 = 3;
+    self->mRequestPriority = 3;
     self->mLookTargetID = 0xFFFFFFFF;
 }
 
@@ -535,7 +535,7 @@ static void dAttLook_c_proc(u32 i_this) {
     auto* self = AttentionHD::view<AttentionHD::Look>(i_this);
     u32 id = (u32)self->mRequestActorID;
     self->mRequestActorID = 0xFFFFFFFF;
-    self->field_0x4 = 3;
+    self->mRequestPriority = 3;
     self->mLookTargetID = id;
 }
 
@@ -557,7 +557,7 @@ static bool dAttLook_c_request(u32 i_this, u32 reqActor, f32 horizontalDist, f32
                                f32 downDist, s32 angle, s32 param_6) {
     auto* self = AttentionHD::view<AttentionHD::Look>(i_this);
     u32 player = player0();
-    if (param_6 > (s32)(u32)self->field_0x4)
+    if (param_6 > (s32)(u32)self->mRequestPriority)
         return false;
     gabi::Local<cXyz> v;
     att1_cXyz_mi(reqActor + AC_EYE, gabi::ea(v.get()), player + AC_EYE);
@@ -573,9 +573,9 @@ static bool dAttLook_c_request(u32 i_this, u32 reqActor, f32 horizontalDist, f32
         if (look_angle_fails(gabi::ea(v.get()), reqActor, player, angle))
             return false;
     }
-    if (param_6 < (s32)(u32)self->field_0x4 || dist < (f32)self->mDistance) {
+    if (param_6 < (s32)(u32)self->mRequestPriority || dist < (f32)self->mDistance) {
         u32 id = getID(reqActor);
-        self->field_0x4 = (u32)param_6;
+        self->mRequestPriority = (u32)param_6;
         self->mDistance = dist;
         self->mRequestActorID = id;
         return true;
@@ -587,7 +587,7 @@ static bool dAttLook_c_request(u32 i_this, u32 reqActor, f32 horizontalDist, f32
 static bool dAttLook_c_requestF(u32 i_this, u32 reqActor, s32 angle, s32 param_3) {
     auto* self = AttentionHD::view<AttentionHD::Look>(i_this);
     u32 player = player0();
-    if (param_3 > (s32)(u32)self->field_0x4)
+    if (param_3 > (s32)(u32)self->mRequestPriority)
         return false;
     gabi::Local<cXyz> v;
     att1_cXyz_mi(reqActor + AC_EYE, gabi::ea(v.get()), player + AC_EYE);
@@ -596,9 +596,9 @@ static bool dAttLook_c_requestF(u32 i_this, u32 reqActor, s32 angle, s32 param_3
         if (look_angle_fails(gabi::ea(v.get()), reqActor, player, angle))
             return false;
     }
-    if (param_3 < (s32)(u32)self->field_0x4 || dist < (f32)self->mDistance) {
+    if (param_3 < (s32)(u32)self->mRequestPriority || dist < (f32)self->mDistance) {
         u32 id = getID(reqActor);
-        self->field_0x4 = (u32)param_3;
+        self->mRequestPriority = (u32)param_3;
         self->mDistance = dist;
         self->mRequestActorID = id;
         return true;

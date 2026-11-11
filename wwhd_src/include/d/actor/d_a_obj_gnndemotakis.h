@@ -13,12 +13,12 @@ struct daObjGnntakis_c : fopAc_ac_c {
     gptr<J3DModel> mpModel;
     request_of_phase_process_class mPhs;
     mDoExt_btkAnm mpBtkAnm;
-    be<s32> m2B0;
+    be<s32> mAnmStarted;  /* was m2B0: _create 0234BA3C FALSE; _execute 0234BB78 (g2before running): TRUE when the demo frame reaches 0x11D9 and the btk starts (rate 1); once set, deletes the actor at 0x126F (tww the same) */
 };
 WWHD_OFFSET(daObjGnntakis_c, mpModel, 0x3AC);
 WWHD_OFFSET(daObjGnntakis_c, mPhs, 0x3B0);
 WWHD_OFFSET(daObjGnntakis_c, mpBtkAnm, 0x3B8);
-WWHD_OFFSET(daObjGnntakis_c, m2B0, 0x42C);
+WWHD_OFFSET(daObjGnntakis_c, mAnmStarted, 0x42C);
 WWHD_SIZE(daObjGnntakis_c, 0x430);
 
 void gnntakis_actor_dt(void*, s32);

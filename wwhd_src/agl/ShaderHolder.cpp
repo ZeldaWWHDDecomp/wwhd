@@ -1,6 +1,7 @@
 // agl::detail::ShaderHolder: creates the six shader-program archives from the library's resource archive
 // and names the uniforms, samplers, attributes and uniform blocks of every built-in shader program.
 #include "agl/ShaderHolder.h"
+#include "sead/ElementAt.h"
 #include "agl/ShaderArchiveRelocations.h"
 #include "sead/ArchiveRes.h"
 using namespace agl;
@@ -297,9 +298,12 @@ void ShaderHolder::initialize(sead::ArchiveRes* resource, sead::RegistryHeap* he
         u32 index = (u32)archive->findProgram(programName.get());
         ShaderProgram* program = NULL;
         if (index < archive->mProgramCount)
-            program = reinterpret_cast<ShaderProgram*>(&archive->mPrograms.get()[index]);
+            /* guest EA arithmetic: wraps at 32 bits as on the console */
+            program = reinterpret_cast<ShaderProgram*>(&sead::elementAt<std::remove_reference_t<decltype(*archive->mPrograms.get())>>(
+                gabi::ea(archive->mPrograms.get()), index));
         if (mPrograms.mCount < mPrograms.mCapacity) {
-            programSlots()[(s32)mPrograms.mCount] = program;
+            sead::elementAt<std::remove_reference_t<decltype(programSlots()[0])>>(gabi::ea(programSlots()),
+                                                                                    (u32)(s32)mPrograms.mCount) = program;
             mPrograms.mCount = mPrograms.mCount + 1;
         }
 

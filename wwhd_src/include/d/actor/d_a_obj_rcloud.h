@@ -57,7 +57,7 @@ public:
     /* 0x3B4 */ gptr<J3DModel> mpModel;
     /* 0x3B8 */ RcloudBtkAnm mBtkAnm;
     /* 0x42C */ gabi::ptmf<ProcFunc> mCurrentActProc;
-    /* 0x434 */ be<s32> m2BC;
+    /* 0x434 */ be<s32> mAction;  /* was m2BC: setup_action 02387428 stores the act_proc index next to mCurrentActProc; setTexMtx 0238767C scrolls the texture's y by mCloudAnimProgress only while it is 2 (clouds_lift_act_proc) */
     /* 0x438 */ be<s32> mDemoNameIndex;
     /* 0x43C */ be<u8> mResourceLoadedFlag;
     /* 0x43D */ u8 m2C5[3];

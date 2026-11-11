@@ -12,7 +12,7 @@ ret 025E7CE0 0 1              # btkAnm::init
 ret 025E8154 0 1              # brkAnm::init
 arg 0233C3B8 r4 0,1,8,31,32,33,63
 arg 0233C3B8 r5 0,1,8,24,31,32,33,63
-field 0233BEC8 r3+0x6D4 u8 0 1          # m480 (broken)
+field 0233BEC8 r3+0x6D4 u8 0 1          # mBroken (broken)
 field 0233C0C8 r3+0x6D4 u8 0 1
 field 0233BEC8 r3+0x5F7 u8 0 1          # brk frame ctrl state (stop bit)
 field 0233BEC8 r3+0x5E8 f32 0,1         # brk rate

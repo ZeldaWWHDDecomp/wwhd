@@ -49,8 +49,8 @@ struct Act_c : fopAc_ac_c {
     /* 0x3FC */ gptr<mDoExt_brkAnm> mBrk2;
     /* 0x400 */ be<s32> M_type;
     /* 0x404 */ be<s32> mMode;  /* was m2EC: mode_norm_init 023A0DC0 / mode_gmtw_pre_init 023A0D58 / mode_gmtw_demo_init 023A1644 / mode_gmtw_init 023A16AC set MODE_*; Execute 023A0F08 calls tideModeProc[it] */
-    /* 0x408 */ be<f32> mMoveSpeed;  /* was m2F0: move_to_aim 023A1258: the step of the height chase (cLib_addCalc), grows by attr m24 per frame between attr m2C and m28, 0 once at the aim; Create 023A0DCC clears it */
-    /* 0x40C */ be<s16> mTimer;  /* was m2F4: mode_norm 023A14A8: counts down from attr m42 and restarts the second brk when it reaches 0; mode_gmtw_demo 023A1D68: set 90 when the rise starts, counted down to step 2 (water particle and dBgW at 59) */
+    /* 0x408 */ be<f32> mMoveSpeed;  /* was m2F0: move_to_aim 023A1258: the step of the height chase (cLib_addCalc), grows by attr mMoveAccel per frame between attr mMoveSpeedMin and mMoveSpeedMax, 0 once at the aim; Create 023A0DCC clears it */
+    /* 0x40C */ be<s16> mTimer;  /* was m2F4: mode_norm 023A14A8: counts down from attr mNureBrkDelay and restarts the second brk when it reaches 0; mode_gmtw_demo 023A1D68: set 90 when the rise starts, counted down to step 2 (water particle and dBgW at 59) */
     /* 0x40E */ be<u8> mDemoStep;  /* was m2F6: mode_gmtw_demo 023A1D68: 0 waits for gmtw_demo_up_start, 1 counts mTimer, 2 rises; mode_gmtw_init 023A16AC sets 2; se_set_gmtw 023A19AC plays the out/up sounds in step 2 (step 1 once mBgRegistered) */
     /* 0x40F */ be<u8> mBgRegistered;  /* was m2F7: Mthd_Create 023A0484 sets 1 after the move dBgW is created; mode_gmtw_pre 023A1798 releases the dBgW and clears it; mode_gmtw_demo 023A1D68 registers it again and sets 1 */
     /* 0x410 */ be<u8> mSeGopoOn;  /* was m2F8: se_set_gmtw 023A19AC: on while the water is not finished; starts/stops the gurgle sound (se_start_gopo / se_stop_gopo, M_id_gopo) on a change; se_init_gmtw 023A0418 clears it */
@@ -101,12 +101,12 @@ struct Attr_c {
     /* 0x16 */ be<s16> nure_brk_res_index;
     /* 0x18 */ be<u32> nure_bdl_dlist_flags;
     /* 0x1C */ be<u32> res_size;
-    /* 0x20 */ be<s16> m20;
+    /* 0x20 */ be<s16> mLevelHeight;  /* was m20: Mthd_Create 023A0484 (with sch_flag) and mode_norm 023A14A8: current.pos.y = home.pos.y + (1 - the water level) * it, the height the object moves with the tide (tww the same) */
     /* 0x22 */ u8 padding22[2];
-    /* 0x24 */ be<f32> m24;
-    /* 0x28 */ be<f32> m28;
-    /* 0x2C */ be<f32> m2C;
-    /* 0x30 */ be<f32> m30;
+    /* 0x24 */ be<f32> mMoveAccel;  /* was m24: move_to_aim 023A1258: mMoveSpeed grows by it every frame (tww m2F0 += it) */
+    /* 0x28 */ be<f32> mMoveSpeedMax;  /* was m28: move_to_aim 023A1258: the upper clamp of mMoveSpeed (tww the same) */
+    /* 0x2C */ be<f32> mMoveSpeedMin;  /* was m2C: move_to_aim 023A1258: mMoveSpeed is kept above it (it + 0.001) and it is cLib_addCalc's minimum step (tww the same) */
+    /* 0x30 */ be<f32> mMoveScale;  /* was m30: move_to_aim 023A1258: cLib_addCalc's scale for the height chase toward the aim (tww the same) */
     /* 0x34 */ be<s16> min_x;
     /* 0x36 */ be<s16> min_y;
     /* 0x38 */ be<s16> min_z;
@@ -115,12 +115,12 @@ struct Attr_c {
     /* 0x3E */ be<s16> max_z;
     /* 0x40 */ be<u8> sch_flag;
     /* 0x41 */ u8 padding41;
-    /* 0x42 */ be<s16> m42;
-    /* 0x44 */ be<f32> m44;
+    /* 0x42 */ be<s16> mNureBrkDelay;  /* was m42: mode_norm 023A14A8: mTimer = it when the water state flags it (STATE_2 without STATE_1); when mTimer runs out the nure (wet) brk restarts from frame 0 (tww m2F4 = it) */
+    /* 0x44 */ be<f32> mNureBrkRate;  /* was m44: CreateHeap 023A06C0 inits the nure (wet) brk mBrk2 with it as play speed; mode_norm 023A14A8 sets that rate again on restart (tww setPlaySpeed(it)) */
 };
 WWHD_SIZE(Attr_c, 0x48);
 WWHD_OFFSET(Attr_c, bdl_dlist_flags, 0x10);
-WWHD_OFFSET(Attr_c, m24, 0x24);
+WWHD_OFFSET(Attr_c, mMoveAccel, 0x24);
 WWHD_OFFSET(Attr_c, sch_flag, 0x40);
 } // namespace daObjTide
 namespace tideHD {

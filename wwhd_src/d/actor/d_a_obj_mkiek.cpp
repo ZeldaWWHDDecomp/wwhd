@@ -29,15 +29,15 @@ s32 Act_c::prm_get_swSave() { return PrmAbstract(this, PRM_SWSAVE_W, PRM_SWSAVE_
 /* 0237184C */
 BOOL Act_c::CreateHeap() {
     J3DModelData* model_data = (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_MKIEK_BDL_MKIEK_e);
-    JUT_ASSERT(0x96, model_data != NULL);
+    JUT_ASSERT_MSG(0x96, model_data != NULL, "model_data != 0");
     mpModel = mDoExt_J3DModel__create(model_data, 0, 0x11020203);
 
     J3DModelData* model_data_v = (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_MKIEK_BDL_YLSMK00_e);
-    JUT_ASSERT(0x9C, model_data_v != NULL);
+    JUT_ASSERT_MSG(0x9C, model_data_v != NULL, "model_data_v != 0");
     mpModelV = mDoExt_J3DModel__create(model_data_v, 0, 0x11020203);
 
     void* brk = dComIfG_getObjectRes(M_arcname, dRes_INDEX_MKIEK_BRK_YLSMK00_e);
-    JUT_ASSERT(0xA2, brk != NULL);
+    JUT_ASSERT_MSG(0xA2, brk != NULL, "brk != 0");
 
     BOOL result = mBrkAnm.init( model_data_v, brk, true, J3DFrameCtrl::EMode_NONE, 1.0f, 0, -1, false, 0);
     if (result == 0)
@@ -53,10 +53,10 @@ BOOL Act_c::Create() {
     fopAcM_SetMtx(this, mpModel->getBaseTRMtx());
     init_mtx();
     fopAcM_setCullSizeBox(this, -200.0f, -100.0f, -200.0f, 200.0f, 305.0f, 200.0f);
-    m458 = false;
+    mVanish = false;
     mDieEventIdx = dComIfGp_evmng_getEventIdx("MkieK_die", 0xFF);
     mState = STATE_0;
-    m460 = 0;
+    mFrameCount = 0;
     return TRUE;
 }
 
@@ -104,13 +104,13 @@ void Act_c::init_mtx() {
 /* 02371C14 */
 void Act_c::check() {
     if (dComIfGp_getDetect().chk_light(&current.pos) || mSph.ChkTgHit()) {
-        m460 = m460 + 1;
-        if (m460 >= 0x14) {
+        mFrameCount = mFrameCount + 1;
+        if (mFrameCount >= 0x14) {
             fopAcM_orderOtherEventId(this, mDieEventIdx, 0xFF, 0xFFFF, 0, 1);
             mState = STATE_1;
         }
     } else {
-        m460 = 0;
+        mFrameCount = 0;
     }
 }
 
@@ -120,8 +120,8 @@ void Act_c::demo_wait() {
         if (prm_get_sound() == 0) {
             mDoAud_seStart(JA_SE_READ_RIDDLE_1);
         }
-        if (m460 < 0x14) {
-            m460 = m460 + 1;
+        if (mFrameCount < 0x14) {
+            mFrameCount = mFrameCount + 1;
         } else {
             if (mpBgW->ChkUsed()) {
                 dBgS* bgs = dComIfG_Bgsp();
@@ -138,7 +138,7 @@ void Act_c::demo_wait() {
                             nullptr, roomNo, &tevStr.mColorK0, &color, nullptr);
             fopAcM_onSwitch(this, prm_get_swSave());
             fopAcM_seStartCurrent(this, JA_SE_OBJ_L_OBJ_BRK_TAME, 0);
-            m458 = true;
+            mVanish = true;
             mState = STATE_2;
         }
     } else {
@@ -192,7 +192,7 @@ BOOL Act_c::Execute(Mtx34** o_mtx) {
 // HD: no simple shadow
 BOOL Act_c::Draw() {
     g_env_light.settingTevStruct(TEV_TYPE_BG0, &current.pos, &tevStr);
-    if (m458) {
+    if (mVanish) {
         g_env_light.setLightTevColorType(mpModelV, &tevStr);
         J3DModel* mdl = mpModelV;
         f32 frame = mBrkAnm.getFrame();
@@ -280,9 +280,9 @@ str 1002C880 "MkieK"
 str 1002C864 "MkieK_die"
 str 1002C820 "d_a_obj_mkiek.cpp" in 0237184C
 str 1002C7B8 "d_a_obj_mkiek.cpp" in 02371698
-str 1002C810 "model_data != NULL" renamed
-str 1002C834 "model_data_v != NULL" renamed
-str 1002C848 "brk != NULL" renamed
+str 1002C810 "model_data != 0"
+str 1002C834 "model_data_v != 0"
+str 1002C848 "brk != 0"
 str 1002C7CC "(phase_state == cPhs_COMPLEATE_e) || (phase_state == cPhs_ERROR_e)"
 data M_tmp_mtx 1046A5A4
 data sph_check_src 101CAE40

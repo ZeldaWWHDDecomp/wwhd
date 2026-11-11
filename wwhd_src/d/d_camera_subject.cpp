@@ -120,7 +120,7 @@ bool dCamera_c::CalcSubjectAngle(s16* outV, s16* outU) {
     work->m3BA = (s16)*r;
     f32 yaw = x, pitch = y;
     f32 eyeY = mEye.y;
-    bool keep = eyeY > mGroundHeight + 5.0f && eyeY > mBG.m5C.m58 + 5.0f;
+    bool keep = eyeY > mGroundHeight + 5.0f && eyeY > mBG.mCameraGround.mGroundY + 5.0f;
     if (!keep) {
         if (work->m388 < 0.0f) {
             if (!(pitch > 0.0f))

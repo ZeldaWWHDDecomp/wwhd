@@ -409,7 +409,7 @@ static inline void kamome_path_move(kamome_class* i_this) {
     case 0x17: {
         moveType = 1;
         s32 frame = McaMorf_getFrame(i_this->mpMorf);
-        if (frame >= l_kamomeHIO.m06 && frame <= l_kamomeHIO.m08) {
+        if (frame >= l_kamomeHIO.mMoveStartFrame && frame <= l_kamomeHIO.mMoveEndFrame) {
             f32 v = 5.0f * i_this->mScale;
             a_this->speedF = v;
             i_this->mVelocityFwdTarget = v;
@@ -546,7 +546,7 @@ static inline void kamome_imouto_move(kamome_class* i_this) {
                     fopAc_ac_c* imouto = (fopAc_ac_c*)fpcM_Search(KAMOME_ARYLL_SEARCH, a_this); /* search_imouto */
                     i_this->mpTargetActor = imouto;
                     if (imouto != nullptr) {
-                        if (diff_abs(&player->current.pos, &imouto->current.pos) < l_kamomeHIO.m10) {
+                        if (diff_abs(&player->current.pos, &imouto->current.pos) < l_kamomeHIO.mImoutoPlayerDist) {
                             timer(i_this, 3) = 0x32;
                             i_this->mpTargetActor = nullptr;
                         } else {
@@ -577,7 +577,7 @@ static inline void kamome_imouto_move(kamome_class* i_this) {
         break;
 
     case 10:
-        if (diff_abs(&player->current.pos, &i_this->mTargetPos) < l_kamomeHIO.m10) {
+        if (diff_abs(&player->current.pos, &i_this->mTargetPos) < l_kamomeHIO.mImoutoPlayerDist) {
             i_this->mMoveState = 0;
             timer(i_this, 3) = 0x32;
         } else {
@@ -635,7 +635,7 @@ static inline void kamome_imouto_move(kamome_class* i_this) {
     case 0x17: {
         cVar8 = 1;
         s32 frame = McaMorf_getFrame(i_this->mpMorf);
-        if ((frame >= l_kamomeHIO.m06) && (frame <= l_kamomeHIO.m08)) {
+        if ((frame >= l_kamomeHIO.mMoveStartFrame) && (frame <= l_kamomeHIO.mMoveEndFrame)) {
             f32 v = 5.0f * i_this->mScale;
             i_this->mVelocityFwdTarget = v;
             i_this->mRotVel = 4000.0f;
@@ -707,7 +707,7 @@ static inline void kamome_imouto_move(kamome_class* i_this) {
         kamome_ground_pos_move(i_this);
         if (i_this->mMoveState != 0x19 &&
             (a_this->current.pos.y - i_this->mAcch.GetGroundH() /* GetGroundH */ > 200.0f ||
-             fopAcM_searchActorDistance(a_this, dComIfGp_getPlayer(0)) < l_kamomeHIO.m10)) {
+             fopAcM_searchActorDistance(a_this, dComIfGp_getPlayer(0)) < l_kamomeHIO.mImoutoPlayerDist)) {
             take_off(i_this);
         }
         break;
@@ -768,7 +768,7 @@ static BOOL daKamome_Execute(kamome_class* i_this) {
         }
     }
 
-    if (l_kamomeHIO.m05 == 0) {
+    if (l_kamomeHIO.mStopMove == 0) {
         for (s32 i = 0; i < 6; i++) {
             if (timer(i_this, i) != 0) {
                 timer(i_this, i)--;

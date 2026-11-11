@@ -10,19 +10,20 @@
 struct dMagma_floor_c;
 struct btd_hahen_s {
     /* 0x00 */ gptr<J3DModel> model;
-    /* 0x04 */ be<u8> m04;
+    /* 0x04 */ be<u8> mActive;  /* was m04: btdActionBurst (in btdActionDamage, move 020F6004; tww damage) sets 1 on a free piece; btdExecDebrisMove (in daBtd_Execute 020F1494; tww hahen_move) moves only active pieces and clears it below y -100; daBtd_Draw 020F0A74 draws only active pieces (tww the same) */
     /* 0x05 */ u8 m05[3];
-    /* 0x08 */ cXyz m08;
-    /* 0x14 */ cXyz m14;
-    /* 0x20 */ be<s16> m20, m22;
+    /* 0x08 */ cXyz mPos;  /* was m08: btdActionBurst: a joint position plus a random offset; btdExecDebrisMove adds mSpeed every frame and puts the piece's model there (tww the same) */
+    /* 0x14 */ cXyz mSpeed;  /* was m14: btdActionBurst: 20..25 up and out, turned toward the piece's direction; btdExecDebrisMove adds it to mPos and lowers its y by 3 per frame (tww the same) */
+    /* 0x20 */ be<s16> mAngleX;  /* was m20: btdActionBurst random; btdExecDebrisMove adds 0x900 per frame and turns the piece's model by it about x (tww the same) */
+    /* 0x22 */ be<s16> mAngleY;  /* was m22: btdActionBurst random; btdExecDebrisMove adds 0x600 per frame and turns the piece's model by it about y (tww the same) */
     /* 0x24 */ u8 m24[4];
 };
 WWHD_SIZE(btd_hahen_s, 0x28);
 struct btd_sibuki_s {
-    /* 0x00 */ be<s8> m00;
+    /* 0x00 */ be<s8> mState;  /* was m00: sibuki_set 020F10B4 sets 1 on a free splash (0); btdExecSplashMove (in daBtd_Execute 020F1494; tww sibuki_move) flies states 1 / 2 (1 -> 2 on the first collision update), counts states above 2 up to 30 and back to 0, and clears it when the splash lands or hits (tww the same) */
     /* 0x01 */ u8 m01[3];
-    /* 0x04 */ cXyz m04;
-    /* 0x10 */ cXyz m10;
+    /* 0x04 */ cXyz mPos;  /* was m04: sibuki_set 020F10B4: a random point 300..500 around the boss; btdExecSplashMove adds mSpeed, follows Link for splash 0 with HIO mSplashFollow, and puts the attack sphere and the 0x8063 / 0x8064 effects there; daBtd_Delete 020F34A8 deletes the sound object at it (tww the same) */
+    /* 0x10 */ cXyz mSpeed;  /* was m10: sibuki_set 020F10B4: HIO mSplashSpeedF / mSplashSpeedY plus random, turned to a random direction; btdExecSplashMove lowers its y by HIO mSplashGravity and adds it to mPos (tww the same) */
     /* 0x1C */ u8 m1C[8];
 };
 WWHD_SIZE(btd_sibuki_s, 0x24);
@@ -388,37 +389,37 @@ void btdGuest_wave_set(u32 a0);
 // HD: HIO stores its vtable after the data, rather than before it.
 struct daBtd_HIO_c {
     /* 0x00 */ be<s8> mNo;
-    /* 0x01 */ be<u8> m05;
-    /* 0x02 */ be<u8> m06;
-    /* 0x03 */ be<u8> m07;
-    /* 0x04 */ be<f32> m08;
-    /* 0x08 */ be<s16> m0C;
-    /* 0x0A */ be<s16> m0E;
-    /* 0x0C */ be<u8> m10;
+    /* 0x01 */ be<u8> mNoAnmPlay;  /* was m05: daBtd_Execute 020F1494: the body morf plays only while it is 0 (tww the same); daBtd_HIO_ct 020F4744 sets the default, never written elsewhere in WWHD or tww (0) */
+    /* 0x02 */ be<u8> mDebugBreak;  /* was m06: btdActionBreakShell (inlined into daBtd_Execute 020F1494): when set the crack stage goes straight to 3; damage_check 020F4D80 (d_a_btd_damage.cpp): when set any hit counts as the last one (tww the same); daBtd_HIO_ct 020F4744 sets the default, never written elsewhere in WWHD or tww (0) */
+    /* 0x03 */ be<u8> mDebugNoBreak;  /* was m07: btdActionBreakShell (inlined into daBtd_Execute 020F1494): when set a crack stage of 3 or more is held at 2 (tww damage the same); daBtd_HIO_ct 020F4744 sets the default, never written elsewhere in WWHD or tww (0) */
+    /* 0x04 */ be<f32> mScale;  /* was m08: daBtd_Execute 020F1494: scale (x, y, z) and the model base scale (tww the same); daBtd_HIO_ct 020F4744 sets the default, never written elsewhere in WWHD or tww (1.0) */
+    /* 0x08 */ be<s16> mStunTime;  /* was m0C: btdActionDamage (inlined into daBtd_Execute 020F1494): the stun timer of the damage action (tww damage mStunTimer); daBtd_HIO_ct 020F4744 sets the default, never written elsewhere in WWHD or tww (150) */
+    /* 0x0A */ be<s16> mDamageLimit;  /* was m0E: damage_check 020F4D80 (d_a_btd_damage.cpp): in action 2, once mTotalDamage reaches it, it is cleared and mGohmaState becomes 10 (tww the same); daBtd_HIO_ct 020F4744 sets the default, never written elsewhere in WWHD or tww (5) */
+    /* 0x0C */ be<u8> mDebugAttackType;  /* was m10: btdActionWait / btdActionTurningPunch (inlined into daBtd_Execute 020F1494): 0 picks the attack at random, 1..3 force attack type it - 1, 4 the turning punch (tww the same); daBtd_HIO_ct 020F4744 sets the default, never written elsewhere in WWHD or tww (0) */
     /* 0x0D */ be<s8> m11;
     /* 0x0E */ be<s8> m12;
     /* 0x0F */ be<s8> m13;
-    /* 0x10 */ be<f32> m14;
-    /* 0x14 */ be<f32> m18;
-    /* 0x18 */ be<f32> m1C;
-    /* 0x1C */ be<f32> m20;
-    /* 0x20 */ be<f32> m24;
-    /* 0x24 */ be<f32> m28;
-    /* 0x28 */ be<s16> m2C;
+    /* 0x10 */ be<f32> mWaitTime;  /* was m14: btdActionReset / btdActionPunch (inlined into daBtd_Execute 020F1494): ACT_WAIT's mTimers[0] is cM_rndF(50) + it (tww the same); daBtd_HIO_ct 020F4744 sets the default, never written elsewhere in WWHD or tww (100) */
+    /* 0x14 */ be<f32> mAttack0Rate;  /* was m18: btdActionWait (inlined into daBtd_Execute 020F1494): in battle phase 0 attack type 0 is chosen when cM_rndF(1) < it (tww wait the same); daBtd_HIO_ct 020F4744 sets the default, never written elsewhere in WWHD or tww (0.5) */
+    /* 0x18 */ be<f32> mAttack1Rate;  /* was m1C: btdActionWait (inlined into daBtd_Execute 020F1494): in battle phase 0 otherwise attack type 1 when cM_rndF(1) < it, else 2 (tww wait the same); daBtd_HIO_ct 020F4744 sets the default, never written elsewhere in WWHD or tww (0.5) */
+    /* 0x1C */ be<f32> mAttack0RatePhase1;  /* was m20: btdActionWait (inlined into daBtd_Execute 020F1494): mAttack0Rate in battle phase 1 (tww wait the same); daBtd_HIO_ct 020F4744 sets the default, never written elsewhere in WWHD or tww (0.2) */
+    /* 0x20 */ be<f32> mAttack1RatePhase1;  /* was m24: btdActionWait (inlined into daBtd_Execute 020F1494): mAttack1Rate in battle phase 1 (tww wait the same); daBtd_HIO_ct 020F4744 sets the default, never written elsewhere in WWHD or tww (0.2) */
+    /* 0x24 */ be<f32> mPunchWaitTime;  /* was m28: btdActionPunch (inlined into daBtd_Execute 020F1494): mTimers[0] after the punch is cM_rndF(100) + it (tww punch_attack the same); daBtd_HIO_ct 020F4744 sets the default, never written elsewhere in WWHD or tww (150) */
+    /* 0x28 */ be<s16> mFireTime;  /* was m2C: btdActionFire / btdActionHighFire (inlined into daBtd_Execute 020F1494): the fire timers (it * 9, it * 4, it) (tww fire_attack the same); daBtd_HIO_ct 020F4744 sets the default, never written elsewhere in WWHD or tww (10) */
     /* 0x2A */ be<s16> m2E;
-    /* 0x2C */ be<f32> m30;
-    /* 0x30 */ be<f32> m34;
-    /* 0x34 */ be<f32> m38;
-    /* 0x38 */ be<s16> m3C;
-    /* 0x3A */ be<s16> m3E;
-    /* 0x3C */ be<s16> m40;
-    /* 0x3E */ be<s16> m42;
-    /* 0x40 */ be<s16> m44;
-    /* 0x42 */ be<s16> m46;
-    /* 0x44 */ be<f32> m48;
-    /* 0x48 */ be<f32> m4C;
-    /* 0x4C */ be<f32> m50;
-    /* 0x50 */ be<u8> m54;
+    /* 0x2C */ be<f32> mCustomTime;  /* was m30: btd_kankyo 020F94DC / daBtd_Create 020F4308: dKy_custom_timeset(it) every frame (tww the same); daBtd_HIO_ct 020F4744 sets the default, never written elsewhere in WWHD or tww (4.0) */
+    /* 0x30 */ be<f32> mCustomTimeState2;  /* was m34: btd_kankyo 020F94DC: dKy_custom_timeset(it) in kankyo state 2 (tww the same); daBtd_HIO_ct 020F4744 sets the default, never written elsewhere in WWHD or tww (20.0) */
+    /* 0x34 */ be<f32> mCustomTimeState7;  /* was m38: btd_kankyo 020F94DC: dKy_custom_timeset(it) in kankyo state 7 (tww the same); daBtd_HIO_ct 020F4744 sets the default, never written elsewhere in WWHD or tww (6.0) */
+    /* 0x38 */ be<s16> mLightRState1;  /* was m3C: btd_kankyo 020F94DC: mLightColorR in kankyo state 1 (tww the same); daBtd_HIO_ct 020F4744 sets the default, never written elsewhere in WWHD or tww (182) */
+    /* 0x3A */ be<s16> mLightGState1;  /* was m3E: btd_kankyo 020F94DC: mLightColorG in kankyo state 1 (tww the same); daBtd_HIO_ct 020F4744 sets the default, never written elsewhere in WWHD or tww (156) */
+    /* 0x3C */ be<s16> mLightBState1;  /* was m40: btd_kankyo 020F94DC: mLightColorB in kankyo state 1 (tww the same); daBtd_HIO_ct 020F4744 sets the default, never written elsewhere in WWHD or tww (86) */
+    /* 0x3E */ be<s16> mLightRState2;  /* was m42: btd_kankyo 020F94DC: mLightColorR in kankyo state 2 (tww the same); daBtd_HIO_ct 020F4744 sets the default, never written elsewhere in WWHD or tww (255) */
+    /* 0x40 */ be<s16> mLightGState2;  /* was m44: btd_kankyo 020F94DC: mLightColorG in kankyo state 2 (tww the same); daBtd_HIO_ct 020F4744 sets the default, never written elsewhere in WWHD or tww (142) */
+    /* 0x42 */ be<s16> mLightBState2;  /* was m46: btd_kankyo 020F94DC: mLightColorB in kankyo state 2 (tww the same); daBtd_HIO_ct 020F4744 sets the default, never written elsewhere in WWHD or tww (36) */
+    /* 0x44 */ be<f32> mSplashSpeedF;  /* was m48: sibuki_set 020F10B4: the splash's forward speed it + cM_rndF(it / 2) (tww the same); daBtd_HIO_ct 020F4744 sets the default, never written elsewhere in WWHD or tww (12.0) */
+    /* 0x48 */ be<f32> mSplashSpeedY;  /* was m4C: sibuki_set 020F10B4: the splash's upward speed it + cM_rndF(it / 2) (tww the same); daBtd_HIO_ct 020F4744 sets the default, never written elsewhere in WWHD or tww (35.0) */
+    /* 0x4C */ be<f32> mSplashGravity;  /* was m50: btdExecSplashMove (inlined into daBtd_Execute 020F1494): subtracted from the splash's speed.y each frame (tww sibuki_move the same); daBtd_HIO_ct 020F4744 sets the default, never written elsewhere in WWHD or tww (1.0) */
+    /* 0x50 */ be<u8> mSplashFollow;  /* was m54: btdExecSplashMove (inlined into daBtd_Execute 020F1494): when set the first splash follows the player (tww sibuki_move the same); daBtd_HIO_ct 020F4744 sets the default, never written elsewhere in WWHD or tww (0) */
     u8 _pad51[3];
     be<u32> vtable;
 };
@@ -569,17 +570,17 @@ struct BtdJointDataHD {
 };
 struct BtdDragonHD : fopAc_ac_c {
     u8 prefix[0x558 - 0x3AC];
-    be<u8> m43C;
+    be<u8> mFloorBroken;  /* was m43C: view of dr2_class 0x558 (d_a_dr2.h mFloorBroken): end 020F52B8 sets 1 when Gohma's demo timer reaches 2 */
     u8 padding[0x5C4 - 0x559];
-    cXyz m4A8;
+    cXyz mRockPos;  /* was m4A8: view of dr2_class 0x5C4 (d_a_dr2.h mRockPos): daBtd_Delete 020F34A8 deletes the sound object at it */
     u8 padding2[6];
-    be<s16> m4BA;
+    be<s16> mRockState;  /* was m4BA: view of dr2_class 0x5D6 (d_a_dr2.h mRockState): btdActionBurst (in move 020F6004) sets 10; btdActionTrack (in move 020F6004) turns Gohma only while it is 0 or >= 10 */
     u8 padding3[0xE];
-    be<s16> m4CA;
+    be<s16> mRockFallTimer;  /* was m4CA: view of dr2_class 0x5E6 (d_a_dr2.h mRockFallTimer): btdActionTrack (in move 020F6004) turns Gohma only while it is 0 or >= 98 */
 };
-WWHD_OFFSET(BtdDragonHD, m43C, 0x558);
-WWHD_OFFSET(BtdDragonHD, m4BA, 0x5D6);
-WWHD_OFFSET(BtdDragonHD, m4CA, 0x5E6);
+WWHD_OFFSET(BtdDragonHD, mFloorBroken, 0x558);
+WWHD_OFFSET(BtdDragonHD, mRockState, 0x5D6);
+WWHD_OFFSET(BtdDragonHD, mRockFallTimer, 0x5E6);
 struct BtdMagmaFloorHD {
     u8 prefix[0xB38];
     cXyz position;

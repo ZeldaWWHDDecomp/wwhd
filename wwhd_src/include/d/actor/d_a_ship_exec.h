@@ -113,7 +113,7 @@ WWHD_OFFSET(ShipExecEffectModels, mpFallPointAnm, 0x5B4);
 struct ShipExecGrid {
     fopAc_ac_c mActor;
     u8 mPadding[0x2B78 - sizeof(fopAc_ac_c)];
-    be<f32> field_0x2200;
+    be<f32> furl;  /* was field_0x2200: view of daGrid_c 0x2B78 (d_a_grid.h furl): execute 02477A24 sets it to 1 - |sail offset| / 265 */
     u8 mPadding2[0x2B9A - 0x2B7C];
     be<s16> mForceWindRelAngle;
     be<u8> mIsForceWindRelAngle;
@@ -124,7 +124,7 @@ struct ShipExecGrid {
     }
 };
 WWHD_SIZE(ShipExecGrid, 0x2BA0);
-WWHD_OFFSET(ShipExecGrid, field_0x2200, 0x2B78);
+WWHD_OFFSET(ShipExecGrid, furl, 0x2B78);
 WWHD_OFFSET(ShipExecGrid, mForceWindRelAngle, 0x2B9A);
 WWHD_OFFSET(ShipExecGrid, mIsForceWindRelAngle, 0x2B9C);
 struct ShipExecTrack {

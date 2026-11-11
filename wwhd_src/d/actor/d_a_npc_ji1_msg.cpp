@@ -248,8 +248,8 @@ u16 daNpc_Ji1_c::next_msgStatus(be<u32> *pMsgNo) {
 /* tail of talkAction: the retreat while explaining */
 static inline void talk_backslide(daNpc_Ji1_c *t) {
   if (t->mAnimation == Ji1Msg_BIBIRI &&
-      !(t->mpOrcaMorf->getFrame() < l_hio.field_0xB4)) {
-    t->BackSlide(l_hio.field_0xAC, l_hio.field_0xB0);
+      !(t->mpOrcaMorf->getFrame() < l_hio.mBibiriSlideFrame)) {
+    t->BackSlide(l_hio.mBibiriSlideDist, l_hio.mBibiriSlideStep);
   }
 }
 
@@ -350,10 +350,10 @@ BOOL daNpc_Ji1_c::speakAction(void *arg) {
     } else {
       switch ((u32)mTeachStep) {
       case 0:
-        if (field_0xC90 == 1) {
+        if (mTeachResult == 1) {
           mMsgNo = 0x97C;
           field_0xC94 = 1;
-        } else if (field_0xC90 == 3) {
+        } else if (mTeachResult == 3) {
           mMsgNo = 0x96A;
           l_replyFlag = 0;
         } else {
@@ -361,10 +361,10 @@ BOOL daNpc_Ji1_c::speakAction(void *arg) {
         }
         break;
       case 1:
-        if (field_0xC90 == 1) {
+        if (mTeachResult == 1) {
           mMsgNo = 0x97D;
           field_0xC94 = 1;
-        } else if (field_0xC90 == 3) {
+        } else if (mTeachResult == 3) {
           mMsgNo = 0x96B;
           l_replyFlag = 0;
         } else {
@@ -372,10 +372,10 @@ BOOL daNpc_Ji1_c::speakAction(void *arg) {
         }
         break;
       case 2:
-        if (field_0xC90 == 1) {
+        if (mTeachResult == 1) {
           mMsgNo = 0x97E;
           field_0xC94 = 1;
-        } else if (field_0xC90 == 3) {
+        } else if (mTeachResult == 3) {
           mMsgNo = 0x97F;
           l_replyFlag = 0;
         } else {
@@ -383,10 +383,10 @@ BOOL daNpc_Ji1_c::speakAction(void *arg) {
         }
         break;
       case 3:
-        if (field_0xC90 == 1) {
+        if (mTeachResult == 1) {
           mMsgNo = 0x981;
           field_0xC94 = 1;
-        } else if (field_0xC90 == 3) {
+        } else if (mTeachResult == 3) {
           mMsgNo = 0x983;
           attention_info.flags |= fopAc_Attn_LOCKON_BATTLE_e;
           attention_info.distances[fopAc_Attn_TYPE_BATTLE_e] = 3;
@@ -396,10 +396,10 @@ BOOL daNpc_Ji1_c::speakAction(void *arg) {
         }
         break;
       case 4:
-        if (field_0xC90 == 1) {
+        if (mTeachResult == 1) {
           mMsgNo = 0x984;
           field_0xC94 = 1;
-        } else if (field_0xC90 == 3) {
+        } else if (mTeachResult == 3) {
           mMsgNo = 0x96C;
           attention_info.flags &= ~fopAc_Attn_LOCKON_BATTLE_e;
           attention_info.distances[fopAc_Attn_TYPE_BATTLE_e] = 0xB5;
@@ -409,10 +409,10 @@ BOOL daNpc_Ji1_c::speakAction(void *arg) {
         }
         break;
       default:
-        if (field_0xC90 == 1) {
+        if (mTeachResult == 1) {
           mMsgNo = 0x982;
           field_0xC94 = 1;
-        } else if (field_0xC90 == 3) {
+        } else if (mTeachResult == 3) {
           mMsgNo = 0x96D;
           l_replyFlag = 0;
         } else {
@@ -420,7 +420,7 @@ BOOL daNpc_Ji1_c::speakAction(void *arg) {
         }
         break;
       }
-      if (field_0xC90 == 3) {
+      if (mTeachResult == 3) {
         mTeachStep = mTeachStep + 1;
         field_0xC94 = 0;
         reinterpret_cast<Ji1MsgHeadAnmHD *>(mHeadAnm)->swing_vertical_init(
@@ -459,11 +459,11 @@ BOOL daNpc_Ji1_c::speakAction(void *arg) {
           if (mMsgNo == 0x969) {
             mTeachStep = 0;
             field_0xC94 = 0;
-            mTeachHitsLeft = l_hio.field_0x54[0];
+            mTeachHitsLeft = l_hio.mTeachHitCount[0];
             ji1_setAction(this, ACT_teachAction, nullptr);
           } else {
-            if (field_0xC90 != 1) {
-              mTeachHitsLeft = l_hio.field_0x54[(s32)mTeachStep];
+            if (mTeachResult != 1) {
+              mTeachHitsLeft = l_hio.mTeachHitCount[(s32)mTeachStep];
             }
             ji1_setActionP(this, mPrevAction, nullptr);
           }

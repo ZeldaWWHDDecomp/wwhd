@@ -345,7 +345,7 @@ BOOL daShip_c::execute() {
                 current.angle.y = shape_angle.y;
             }
         }
-        s16 sVar16 = -m0384;
+        s16 sVar16 = -mPitchOffset;
         s16 sVar5 = (s16)gabi::ftoi((f32)sVar16 * 0.05f);
         if (sVar5 == 0) {
             if (sVar16 < 0) {
@@ -354,11 +354,11 @@ BOOL daShip_c::execute() {
                 sVar5 = 1;
             }
         }
-        m0386 += sVar5;
-        m0384 += m0386;
-        cLib_addCalcAngleS(&m0386, 0, 30, 0x1000, 1);
+        mPitchOffsetSpeed += sVar5;
+        mPitchOffset += mPitchOffsetSpeed;
+        cLib_addCalcAngleS(&mPitchOffsetSpeed, 0, 30, 0x1000, 1);
     } else {
-        cLib_addCalcAngleS(&m0384, -0x800, 3, 0x500, 0x300);
+        cLib_addCalcAngleS(&mPitchOffset, -0x800, 3, 0x500, 0x300);
     }
 
     mPrevPos.copy(current.pos);
@@ -569,7 +569,7 @@ BOOL daShip_c::execute() {
         shape_angle.x = 0;
         shape_angle.z = 0;
     } else {
-        shape_angle.x = mWaveAngleX + m0384;
+        shape_angle.x = mWaveAngleX + mPitchOffset;
         shape_angle.z = (s16)(mControllAngle + mWaveAngleZ);
     }
     mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
@@ -683,8 +683,8 @@ BOOL daShip_c::execute() {
         PSMTXMultVecSR(mtx, top_offset, spD8.get());
         gabi::at<fopAc_ac_c>(mpGrid)->scale.y = cXyz_abs(spD8.get()) / 365.0f;
         PSMTXMultVecSR(model_getAnmMtx(model1, 8 /* J_FN_SAIL2 */), XZ_top_offset, spD8.get());
-        gabi::at<ShipExecGrid>(grid)->field_0x2200 =
-            1.0f - cXyz_abs(spD8.get()) / 265.0f; /* field_0x2200 */
+        gabi::at<ShipExecGrid>(grid)->furl =
+            1.0f - cXyz_abs(spD8.get()) / 265.0f; /* furl */
         if (mTornadoActor) {
             /* mpGrid->force_calc_wind_rel_angle(0x3000) */
             gabi::at<ShipExecGrid>(mpGrid)->force_calc_wind_rel_angle(0x3000);

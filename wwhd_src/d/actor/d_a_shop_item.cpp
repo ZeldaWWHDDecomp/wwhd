@@ -37,7 +37,7 @@ s16 daShopItem_c::getShopBmdIdx() {
 
 /* 024836F4 */
 void daShopItem_c::CreateInit() {
-    cullMtx = gabi::ea(&field_0x64C); /* fopAcM_SetMtx */
+    cullMtx = gabi::ea(&mMtx); /* fopAcM_SetMtx */
     fopAcM_setCullSizeBox(this, -100.0f, 0.0f, -100.0f, 100.0f, 200.0f, 100.0f);
     if (mDoLib_clipper_getFar() > 1.0f) {
         cullSizeFar = 5000.0f / mDoLib_clipper_getFar();
@@ -89,7 +89,7 @@ BOOL daShopItem_c::clothCreate() {
         default:
             idx = 3;
         }
-        field_0x648 = idx;
+        mClothType = idx;
 
         const char *arcName = getShopArcname();
         u32 res = clothRes[idx];
@@ -97,15 +97,15 @@ BOOL daShopItem_c::clothCreate() {
         void *clothArc =
             dComIfG_getObjectRes(clothArcname.bytes, shopAbi::CLOTHTOON, SAFESTRING_VTBL);
 
-        u32 fn = clothFunc[field_0x648];
+        u32 fn = clothFunc[mClothType];
         dCloth_packet_c *cloth =
             gabi::call_ptr<dCloth_packet_c *>(fn, shopArc, clothArc, &tevStr, 0);
-        field_0x644 = cloth;
+        mpCloth = cloth;
         if (cloth == nullptr) {
             return FALSE;
         }
     } else {
-        field_0x644 = nullptr;
+        mpCloth = nullptr;
     }
 
     return TRUE;
@@ -118,20 +118,20 @@ void daShopItem_c::set_mtx() {
     J3DModel_setBaseScale(mpModel, &scale);
     mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
     mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), current.angle.x, current.angle.y, current.angle.z);
-    PSMTXCopy(mDoMtx_stack_c::get(), &field_0x64C);
+    PSMTXCopy(mDoMtx_stack_c::get(), &mMtx);
 
     auto *data = gabi::at<daShopItem_c_m_data>(
-        daShopItem_data::mData(m_itemNo)); /* getData()[m_itemNo].field_0x0C */
-    mDoMtx_stack_c::transM(data->field_0x0C.x, data->field_0x0C.y, data->field_0x0C.z);
-    data = gabi::at<daShopItem_c_m_data>(daShopItem_data::mData(m_itemNo)); /* .field_0x18 */
-    mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), data->field_0x18.x, data->field_0x18.y,
-                   data->field_0x18.z);
+        daShopItem_data::mData(m_itemNo)); /* getData()[m_itemNo].mOffset */
+    mDoMtx_stack_c::transM(data->mOffset.x, data->mOffset.y, data->mOffset.z);
+    data = gabi::at<daShopItem_c_m_data>(daShopItem_data::mData(m_itemNo)); /* .mRotation */
+    mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), data->mRotation.x, data->mRotation.y,
+                   data->mRotation.z);
     J3DModel_setBaseTRMtx(mpModel, mDoMtx_stack_c::get());
 
-    if (field_0x644 != nullptr) {
+    if (mpCloth != nullptr) {
         /* cXyz local[4] at sp+8 (GameCube: two arrays; HD keeps only the one it reads) */
         cXyz *local = gabi::at<cXyz>(frame.sp + 8);
-        u8 idx = field_0x648;
+        u8 idx = mClothType;
         f32 y94 = REG_F(10, 15) + 94.0f;
         f32 y97 = REG_F(10, 15) + 97.5f;
         const f32 ys[4] = {y94, y94, y97, y94};
@@ -143,8 +143,8 @@ void daShopItem_c::set_mtx() {
         const cXyz &clothOffset = local[idx];
         mDoMtx_stack_c::transM(clothOffset.x, clothOffset.y, clothOffset.z);
         mDoMtx_stack_c::YrotM(0x4000);
-        dCloth_packet_setScale(field_0x644, &scale);
-        dCloth_packet_setMtx(field_0x644, mDoMtx_stack_c::get());
+        dCloth_packet_setScale(mpCloth, &scale);
+        dCloth_packet_setMtx(mpCloth, mDoMtx_stack_c::get());
     }
 }
 
@@ -169,8 +169,8 @@ bool daShopItem_c::_draw() {
     }
     gabi::call_ptr(vfn(daItemBase_VT_DRAWBASE), this); /* DrawBase() (virtual) */
 
-    if (field_0x644 != nullptr)
-        dCloth_packet_cloth_draw(field_0x644);
+    if (mpCloth != nullptr)
+        dCloth_packet_cloth_draw(mpCloth);
 
     return true;
 }

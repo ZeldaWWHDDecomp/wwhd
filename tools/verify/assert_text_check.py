@@ -14,6 +14,7 @@ text the original does not have. This tool checks, per source:
      ADDR runs, and the literal's bytes against the image string there, byte for byte:
        TEXT      bytes differ (`renamed` lines);
        NULLSPELL the source writes NULL where the image has (0) (autoglue tolerates it);
+       WIDE      the image holds the literal's text as UTF-16BE (a wide guest string; information);
        ENC       same text, other encoding (UTF-8 Japanese / \\u00XX for Shift-JIS; autoglue tolerates it);
        AMBIG     several unpinned registrations with these bytes at different addresses (guest_str stops);
        DUPPIN    several `in FUNC` lines with these bytes at different addresses: every site gets the last one
@@ -270,6 +271,16 @@ def disabled_ranges(code):
     return _dis_cache["out"]
 
 
+def wide_match(host, addr):
+    """the image holds the literal's text as a UTF-16BE string at addr (a narrow source literal standing for a
+    wide guest string, e.g. a char16 format): same text, so no mismatch"""
+    try:
+        w = host.encode("latin1").decode("utf-8").encode("utf-16-be") + b"\0\0"
+    except UnicodeDecodeError:
+        return False
+    return len(w) > 2 and ag.img_read(addr, len(w)) == w
+
+
 def classify(host, content):
     if host == content:
         return None
@@ -282,6 +293,29 @@ def classify(host, content):
 
 def show(s):
     return '"%s"' % s.encode("latin1").decode("utf-8", "backslashreplace").replace("\n", "\\n")
+
+
+# what JUT_ASSERT's expand-then-stringize makes of the object-like macros used in conditions (gabi.h FALSE/TRUE;
+# NULL is the host's __null). Checked against clang -E over every JUT_ASSERT source (2026-11-11): these are the only
+# macros whose expansion changes a condition's text.
+EXPANSIONS = (("FALSE", "0"), ("TRUE", "1"), ("NULL", "__null"))
+
+
+def stringize(text, code, a, b, expand=True):
+    """the C preprocessor's #ARG of text[a:b]: comments are spaces, white space runs become one space, ends stripped
+    (string/char literals inside are kept as written)"""
+    out, i = [], a
+    while i < b:
+        c = text[i]
+        if code[i] == " " and c not in " \t\n":  # inside a comment (mask() blanked it)
+            c = " "
+        out.append(c)
+        i += 1
+    r = re.sub(r"[ \t\n]+", " ", "".join(out)).strip()
+    if expand:  # JUTAssert.h stringizes after macro expansion: the object-like macros conditions use
+        for name, val in EXPANSIONS:
+            r = re.sub(r"\b%s\b" % name, val, r)
+    return r.encode("utf-8").decode("latin1")
 
 
 def split_args(code, open_paren):
@@ -341,14 +375,13 @@ def check_file(path, findings, stats):
         lits = literals(text, code, lo, hi)
         stats["literals"] += len(lits)
         resolved = {}
-        for s, e, host in lits:
-            if STATIC_TABLE.search(code, lo, s) and STATIC_TABLE.search(code[lo:s]):
-                continue  # a function-local static table: a data view, its initialiser is autoglue's check
+        def resolve(s, host):
+            """the address guest_str gives the literal `host` at source offset s while fa runs (None: unregistered)"""
             pinned = [x for x in strs if x[2] == fa and x[1] == host]
             cands = pinned or [x for x in strs if x[2] == 0 and x[1] == host]
             if not cands:
                 emit("UNREG", s, fa, show(host), "", None)
-                continue
+                return None
             # the registry list runs from the last registration to the first: guest_str takes the last pinned line
             addr = cands[-1][0] if pinned else cands[0][0]
             if len({x[0] for x in cands}) > 1:
@@ -356,13 +389,45 @@ def check_file(path, findings, stats):
                 # function gets the last line's address, while the original may load another copy at some site
                 emit("DUPPIN" if pinned else "AMBIG", s, fa, show(host), " ".join("@%08X" % x[0] for x in cands), addr)
             used.update((x[0], x[1], x[2]) for x in cands)
-            resolved[s] = addr
             content = ag.img_cstr(addr)
             cls = classify(host, content)
+            if cls and wide_match(host, addr):
+                cls = "WIDE"
             if cls:
                 emit(cls, s, fa, show(host), show(content), addr)
             if addr not in formed and addr - 1 not in formed:  # addr-1: an inlined strcmp's lbzu loop
                 emit("ADDR", s, fa, show(host), show(content), addr)
+            return addr
+
+        for s, e, host in lits:
+            if STATIC_TABLE.search(code, lo, s) and STATIC_TABLE.search(code[lo:s]):
+                continue  # a function-local static table: a data view, its initialiser is autoglue's check
+            addr = resolve(s, host)
+            if addr is not None:
+                resolved[s] = addr
+        def check_call(pos, faddr, line, maddr):
+            oc = [c for c in calls if c[1] == ASSERT_TARGET]
+            # candidates: the original's calls with this msg address, plus calls whose r5 the propagation could
+            # not pin (paths that merge into one shared call with different values)
+            match = [c for c in oc if c[2].get(5) in (maddr, None)]
+            fit = [c for c in match if c[2].get(4) in (line, None) or line is None]
+            fit = [c for c in fit if faddr is None or c[2].get(3) in (faddr, None)]
+            if fit:
+                if not any(c[2].get(5) == maddr and c[2].get(4) == line and (faddr is None or c[2].get(3) == faddr)
+                           for c in fit):
+                    emit("UNSURE", pos, fa, "msg @%08X line %s" % (maddr, "0x%X" % line if line is not None else "?"),
+                         "only calls with unresolved arguments fit", maddr)
+                return
+            if not match:
+                emit("NOCALL", pos, fa, "msg @%08X" % maddr, "no showAssert call with r5=%08X" % maddr, maddr)
+                return
+            if line is not None and not any(c[2].get(4) in (line, None) for c in match):
+                emit("LINE", pos, fa, "line 0x%X" % line,
+                     "line " + ",".join("0x%X" % c[2][4] if c[2].get(4) is not None else "?" for c in match), maddr)
+            elif faddr is not None:
+                emit("FILE", pos, fa, "file @%08X" % faddr,
+                     "file " + ",".join("@%08X" % c[2][3] if c[2].get(3) is not None else "?" for c in match), maddr)
+
         # JUT_ASSERT_fail(file, line, msg) against the original's showAssert calls
         oc = [c for c in calls if c[1] == ASSERT_TARGET]
         for m in re.finditer(r"\bJUT_ASSERT_fail\s*\(", code[lo:hi]):
@@ -376,27 +441,32 @@ def check_file(path, findings, stats):
             line = int_lit(code[args[1][0]:args[1][1]])
             if not ml:
                 continue
-            maddr = resolved[ml[0]]
-            # candidates: the original's calls with this msg address, plus calls whose r5 the propagation could
-            # not pin (paths that merge into one shared call with different values)
-            match = [c for c in oc if c[2].get(5) in (maddr, None)]
-            fit = [c for c in match if c[2].get(4) in (line, None) or line is None]
-            fit = [c for c in fit if not fl or c[2].get(3) in (resolved[fl[0]], None)]
-            if fit:
-                if not any(c[2].get(5) == maddr and c[2].get(4) == line and (not fl or c[2].get(3) == resolved[fl[0]])
-                           for c in fit):
-                    emit("UNSURE", lo + m.start(), fa, "msg @%08X line %s" % (maddr, "0x%X" % line if line is not None else "?"),
-                         "only calls with unresolved arguments fit", maddr)
+            check_call(lo + m.start(), resolved[fl[0]] if fl else None, line, resolved[ml[0]])
+        # JUT_ASSERT(LINE, COND) (gc_api/JSystem/JUTAssert.h): showAssert(__FILE_NAME__, LINE, #COND), so the guest gets
+        # the registrations of the file's base name and of the stringized condition
+        for m in re.finditer(r"\bJUT_ASSERT\s*\(", code[lo:hi]):
+            p = lo + m.end() - 1
+            args = split_args(code, p)
+            if len(args) != 2:
                 continue
-            if not match:
-                emit("NOCALL", lo + m.start(), fa, "msg @%08X" % maddr, "no showAssert call with r5=%08X" % maddr, maddr)
+            stats["asserts"] += 1
+            pos = lo + m.start()
+            faddr = resolve(pos, os.path.basename(path))
+            maddr = resolve(pos + 1, stringize(text, code, *args[1]))
+            if maddr is not None:
+                check_call(pos, faddr, int_lit(code[args[0][0]:args[0][1]]), maddr)
+        # JUT_ASSERT_MSG(LINE, COND, MSG): showAssert(__FILE_NAME__, LINE, MSG), MSG a literal (resolved above)
+        for m in re.finditer(r"\bJUT_ASSERT_MSG\s*\(", code[lo:hi]):
+            p = lo + m.end() - 1
+            args = split_args(code, p)
+            if len(args) != 3:
                 continue
-            if line is not None and not any(c[2].get(4) in (line, None) for c in match):
-                emit("LINE", lo + m.start(), fa, "line 0x%X" % line,
-                     "line " + ",".join("0x%X" % c[2][4] if c[2].get(4) is not None else "?" for c in match), maddr)
-            elif fl:
-                emit("FILE", lo + m.start(), fa, "file @%08X" % resolved[fl[0]],
-                     "file " + ",".join("@%08X" % c[2][3] if c[2].get(3) is not None else "?" for c in match), maddr)
+            stats["asserts"] += 1
+            pos = lo + m.start()
+            faddr = resolve(pos, os.path.basename(path))
+            ml = [r for r in resolved if args[2][0] <= r < args[2][1]]
+            if ml:
+                check_call(pos, faddr, int_lit(code[args[0][0]:args[0][1]]), resolved[ml[0]])
     # literals outside marked functions
     for s, e, host in literals(text, code, 0, glue_pos):
         if any(b <= s < en for b, en in spans):
@@ -405,11 +475,29 @@ def check_file(path, findings, stats):
         if not cands:
             continue  # file-scope text (tables are checked by autoglue's initialiser check), not a guest_str key
         used.update((x[0], x[1], x[2]) for x in cands)
-        if not any(ag.img_cstr(x[0]) == host for x in cands):
+        if not any(ag.img_cstr(x[0]) == host or wide_match(host, x[0]) for x in cands):
             content = ag.img_cstr(cands[0][0])
             cls = classify(host, content)
             if cls:
                 emit(cls, s, 0, show(host), show(content), cands[0][0])
+    # JUT_ASSERT(LINE, COND) outside marked functions (unmarked helpers run under their caller): the stringized
+    # condition and the file name against every registration with those bytes
+    for m in re.finditer(r"\bJUT_ASSERT\s*\(", code):
+        if any(b <= m.start() < en for b, en in spans):
+            continue
+        args = split_args(code, m.end() - 1)
+        if len(args) != 2:
+            continue
+        for host in (os.path.basename(path), stringize(text, code, *args[1])):
+            cands = [x for x in strs if x[1] == host]
+            used.update((x[0], x[1], x[2]) for x in cands)
+            if not cands:
+                emit("UNREG", m.start(), 0, show(host), "(JUT_ASSERT outside marked functions)", None)
+            elif not any(ag.img_cstr(x[0]) == host for x in cands):
+                content = ag.img_cstr(cands[0][0])
+                cls = classify(host, content)
+                if cls:
+                    emit(cls, m.start(), 0, show(host), show(content), cands[0][0])
     # registrations
     gm = re.search(r"/\* WWHD glue", text)
     for addr, host, fn in strs:
@@ -454,7 +542,7 @@ def main():
                 print("%s %s" % (fn, " ".join("%s=%d" % kv for kv in sorted(c.items()))))
     else:
         for cls, rel, line, fn, ours, orig, addr in findings:
-            if a.quiet_info and cls in ("ENC", "UNUSED", "UNSURE", "DUPPIN"):
+            if a.quiet_info and cls in ("ENC", "WIDE", "UNUSED", "UNSURE", "DUPPIN"):
                 continue
             print("%-9s %s:%d %s %s | %s%s" % (cls, rel, line, fn, ours, orig, " @%08X" % addr if addr else ""))
     if a.tsv:

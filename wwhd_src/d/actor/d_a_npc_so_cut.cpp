@@ -120,7 +120,7 @@ void daNpc_So_c::cutJumpStart() {
     current.pos.y = so_getWaterY(&current.pos, &mAcch);
     be<f32>* pSpeedY = (be<f32>*)so_getMyP(mStaffId, "Speed_y", 0);
     be<f32>* pSpeedF = (be<f32>*)so_getMyP(mStaffId, "SpeedF", 0);
-    shape_angle.x = (s16)soCutHIO().m68;
+    shape_angle.x = (s16)soCutHIO().mRisePitchFast;
     if (pSpeedY != nullptr) {
         speed.y = *pSpeedY;
     } else {
@@ -376,13 +376,13 @@ void daNpc_So_c::cutJumpMapopenProc() {
     }
     if (mMapopenStep == 0) {
         mOffsetY = mOffsetYCalc.x;
-        gravity = soCutHIO().m80;
+        gravity = soCutHIO().mMapopenGravity;
         speedF = 0.0f;
-        f32 vy = soCutHIO().m84;
+        f32 vy = soCutHIO().mMapopenJumpSpeedY;
         mJumpSpeedY = vy;
         mTargetSpeedF = 0.0f;
         speed.y = vy;
-        shape_angle.x = (s16)soCutHIO().m68;
+        shape_angle.x = (s16)soCutHIO().mRisePitchFast;
         so_seStart(this, SoCutConstants::JA_SE_CM_SO_JUMP_DRAW);
         mMapopenStep = mMapopenStep + 1;
     } else if (mMapopenStep == 1) {
@@ -390,14 +390,14 @@ void daNpc_So_c::cutJumpMapopenProc() {
         mMapopenGoalPos.y = ship->current.pos.y;
         mMapopenGoalPos.z = ship->current.pos.z;
         u16 idx = (u16)(ship->shape_angle.y + 0x4000);
-        so_offsetXZ(&mMapopenGoalPos, &mMapopenGoalPos, idx, -soCutHIO().m88);
+        so_offsetXZ(&mMapopenGoalPos, &mMapopenGoalPos, idx, -soCutHIO().mMapopenNearDist);
         f32 y = current.pos.y;
         if (speed.y < 1.0) {
             speed.y = 1.0f;
         }
-        if (soCut_chasePosXZ(&current.pos, &mMapopenGoalPos, soCutHIO().m90) != 0) { /* cLib_chasePosXZ */
+        if (soCut_chasePosXZ(&current.pos, &mMapopenGoalPos, soCutHIO().mMapopenMoveStep) != 0) { /* cLib_chasePosXZ */
             current.pos.y = y;
-            if ((u8)soCutHIO().m94 == 0) {
+            if ((u8)soCutHIO().mNoFmapFish == 0) {
                 soCutPlay(dComIfGp_ea()).mFmapFishFlag = 2; /* dComIfGp_fmapOpenFishOn() */
             }
             shape_angle.y = shape_angle.y + 0x8000;
@@ -408,9 +408,9 @@ void daNpc_So_c::cutJumpMapopenProc() {
         mMapopenGoalPos.y = ship->current.pos.y;
         mMapopenGoalPos.z = ship->current.pos.z;
         u16 idx = (u16)(ship->shape_angle.y + 0x4000);
-        so_offsetXZ(&mMapopenGoalPos, &mMapopenGoalPos, idx, -soCutHIO().m8C);
+        so_offsetXZ(&mMapopenGoalPos, &mMapopenGoalPos, idx, -soCutHIO().mMapopenFarDist);
         f32 y = current.pos.y;
-        if (soCut_chasePosXZ(&current.pos, &mMapopenGoalPos, soCutHIO().m90) != 0) {
+        if (soCut_chasePosXZ(&current.pos, &mMapopenGoalPos, soCutHIO().mMapopenMoveStep) != 0) {
             current.pos.y = y;
             so_seStart(this, SoCutConstants::JA_SE_CM_SO_DIVE);
             fopKyM_createWpillar(&current.pos, gabi::fmuls_ppc(scale.x, 1.4f), 1.4f, 0);
@@ -559,7 +559,7 @@ static inline void so_miniGameJump(daNpc_So_c* t, fopAc_ac_c* player, bool done)
         if (t->mTgHitTimer == 0) {
             cM3dGSph* sph = &t->mSph.mSph; /* mSph's cM3dGSph */
             if (!(t->current.pos.y < gabi::fadds_ppc(water, 50.0f))) {
-                soCut_sphereRadius(sph, soCutHIO().m3C);  /* SetR(l_HIO.m3C) */
+                soCut_sphereRadius(sph, soCutHIO().mMiniGameSphRadius);  /* SetR(l_HIO.m3C) */
                 soCut_sphereCenter(sph, &t->current.pos); /* SetC */
                 dComIfG_Ccsp_Set(&t->mSph);
             } else {
@@ -688,13 +688,13 @@ void daNpc_So_c::cutMiniGameProc() {
         speedF = spd;
         f32 vy = gabi::fmadds(18.0f, mTargetScale, gabi::fmuls_ppc(spd, 4.0f));
         speed.y = vy;
-        f32 mx = soCutHIO().m50;
+        f32 mx = soCutHIO().mJumpSpeedYMax;
         if (vy > mx) { /* ble: a NaN keeps vy */
             speed.y = mx;
         }
         gravity = -0.8f;
         so_setAnm(this, 4, false);
-        shape_angle.x = (s16)soCutHIO().m68;
+        shape_angle.x = (s16)soCutHIO().mRisePitchFast;
         so_offsetZero(this);
         mMiniGameStep = mMiniGameStep + 1;
         so_seStart(this, SoCutConstants::JA_SE_CM_SO_JUMP_L);

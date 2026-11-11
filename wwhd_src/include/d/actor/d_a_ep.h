@@ -194,11 +194,11 @@ struct EpSafeStringVTable {
 };
 WWHD_OFFSET(EpSafeStringVTable, assureTerminationImpl, 0x14);
 static inline void daPy_getBokoFlamePos(fopAc_ac_c* player, cXyz* pos) {
-    auto* methods = reinterpret_cast<EpPlayerVTable*>(static_cast<u32>(player->__vtbl));
+    auto* methods = gabi::at<EpPlayerVTable>(static_cast<u32>(player->__vtbl)); // in the guest window: member offsets wrap at 32 bits
     gabi::call_ptr(methods->getBokoFlamePos, player, pos);
 }
 static inline void SafeString_assure(SafeString* string) {
-    auto* methods = reinterpret_cast<EpSafeStringVTable*>(static_cast<u32>(string->__vtbl));
+    auto* methods = gabi::at<EpSafeStringVTable>(static_cast<u32>(string->__vtbl)); // in the guest window: member offsets wrap at 32 bits
     gabi::call_ptr(methods->assureTerminationImpl, string);
 }
 

@@ -17,15 +17,15 @@ struct daObjPlant_c : fopAc_ac_c {
     /* 0x3B4 */ gptr<J3DModel> mpModel;
     /* 0x3B8 */ dCcD_Stts mStts;
     /* 0x3F4 */ dCcD_Cyl mCyl;
-    /* 0x524 */ be<s16> field_0x408;
-    /* 0x526 */ be<s16> field_0x40A;
+    /* 0x524 */ be<s16> mSwayAngle;  /* was field_0x408: _execute (in daObjPlant_Execute 023867F4): sin(mSwayPhase) * (0x100 - mHitTimer) * 32 / 16 while mSwaying, 0 at the end; nodeCallBack 023861E0 rotates the joint by it about the axis set by mSwayDir (tww the same) */
+    /* 0x526 */ be<s16> mSwayPhase;  /* was field_0x40A: _execute (in daObjPlant_Execute 023867F4): 0 at a hit, + 0x1000 (first 8 frames) / + 0x800 per frame; the sine phase of mSwayAngle (tww the same) */
     /* 0x528 */ be<s16> mHitTimer;
-    /* 0x52A */ be<s16> field_0x40E;
-    /* 0x52C */ be<u8> field_0x410;
+    /* 0x52A */ be<s16> mSwayDir;  /* was field_0x40E: _execute (in daObjPlant_Execute 023867F4): the angle from the hitting actor - 0x4000; nodeCallBack 023861E0 rotates X by it before and by -it after the sway rotation (tww the same) */
+    /* 0x52C */ be<u8> mSwaying;  /* was field_0x410: CreateInit 02386514 clears it; _execute (in daObjPlant_Execute 023867F4) sets 1 at a hit, sways while it is set and clears it after 0x100 frames; a new hit counts only while it is 0 or after frame 0x38 (tww the same) */
     /* 0x52D */ u8 _52D[3];
 };
 WWHD_OFFSET(daObjPlant_c, mCyl, 0x3F4);
-WWHD_OFFSET(daObjPlant_c, field_0x410, 0x52C);
+WWHD_OFFSET(daObjPlant_c, mSwaying, 0x52C);
 WWHD_SIZE(daObjPlant_c, 0x530);
 
 

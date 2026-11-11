@@ -29,7 +29,7 @@ struct daSwProp_c : fopAc_ac_c {
     /* 0x75E */ be<s16> mRotYVel;
     /* 0x760 */ be<s16> mRotYVelTarget;
     /* 0x762 */ u8 _762[2];
-    /* 0x764 */ be<u32> m648;    /* GameCube m648 */
+    /* 0x764 */ be<u32> mSwitchNo;  /* was m648: CreateInit 024A2E10: param & 0xFF; _execute 024A31E4 toggles that switch (dComIfGs_revSwitch) (tww the same); GameCube m648 */
     /* 0x768 */ be<u8> mWindHit; /* wind hit in the previous frame */
     /* 0x769 */ be<u8> mType;
     /* 0x76A */ be<u8> mSpinDown; /* turning after a weapon hit */

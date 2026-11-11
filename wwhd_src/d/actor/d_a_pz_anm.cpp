@@ -35,7 +35,7 @@ static inline f32 REG12_F(int i) {
 /* 02453BA8 */
 void daPz_c::ctrlEye() {
 
-    mEyeTargetPos.copy(m08C4);
+    mEyeTargetPos.copy(mTargetPos);
     s16 angleX = pzCLib_targetAngleX(&mEyePos2, &mEyeTargetPos);
     s16 angleY = cLib_targetAngleY(&mEyePos2, &mEyeTargetPos);
     s16 dx = (s16)(angleX - (m_jnt.mAngles[0][0] + m_jnt.mAngles[1][0]));
@@ -116,9 +116,9 @@ void daPz_c::setAnm(s8 i_anm, s32 i_morf, s32 i_eye) {
 
     s32 anm;
     if (i_anm == 15) {
-        anm = m06D3;
+        anm = mAnm;
     } else {
-        m06D3 = i_anm;
+        mAnm = i_anm;
         anm = i_anm;
     }
 
@@ -135,11 +135,11 @@ void daPz_c::setAnm(s8 i_anm, s32 i_morf, s32 i_eye) {
             setBowAnm(2, 0);
             mLightArrowID = pzFopAcM_createChild(fpcNm_ARROW_e, fopAcM_GetID(this), 0, &current.pos,
                                                  current.roomNo, nullptr, nullptr, -1, 0);
-            anm = m06D3;
+            anm = mAnm;
         }
         if (anm == ANM_BOW_HOLD) {
             setBowAnm(3, 1);
-            anm = m06D3;
+            anm = mAnm;
         }
         if (anm == ANM_BOW_SHOOT) {
             fopAcM_monsSeStart(this, JA_SE_CV_ZL_SHOOT_BOW, 0);
@@ -152,22 +152,22 @@ void daPz_c::setAnm(s8 i_anm, s32 i_morf, s32 i_eye) {
                     pzGuest<fopAc_ac_c>(*arrow)->mParameters =
                         1; /* the arrow's parameters: shoot */
             }
-            anm = m06D3;
+            anm = mAnm;
         }
         bool bow;
         if (anm == ANM_BOW_READY || anm == ANM_BOW_HOLD) {
             dPa_followEcallBack_end(&mFollowCB1);
-            bow = (u32)(m06D3 - 4) <= 2;
+            bow = (u32)(mAnm - 4) <= 2;
         } else {
             gabi::Local<be<u32>> arrow2;
             if (pzFopAcM_SearchByID(mLightArrowID, arrow2) && *arrow2 != 0)
                 pzGuest<fopAc_ac_c>(*arrow2)->mParameters = 1;
-            if (m06D3 == ANM_WAKE) {
+            if (mAnm == ANM_WAKE) {
                 setHeadSplash();
-                bow = (u32)(m06D3 - 4) <= 2;
+                bow = (u32)(mAnm - 4) <= 2;
             } else {
                 dPa_followEcallBack_end(&mFollowCB1);
-                bow = (u32)(m06D3 - 4) <= 2;
+                bow = (u32)(mAnm - 4) <= 2;
             }
         }
         if (bow) {
@@ -179,16 +179,16 @@ void daPz_c::setAnm(s8 i_anm, s32 i_morf, s32 i_eye) {
         if (i_eye != 15)
             setEyeAnm(eye_tbl[i_eye]);
         else
-            setEyeAnm(eye_tbl[m06D3]);
+            setEyeAnm(eye_tbl[mAnm]);
     }
-    pzDLib_bcks_setAnm(l_arcName, mpMorf, &mBckIdx, &m06D3, &mOldAnm, gabi::ea(bcks),
+    pzDLib_bcks_setAnm(l_arcName, mpMorf, &mBckIdx, &mAnm, &mOldAnm, gabi::ea(bcks),
                        gabi::ea(&prm), i_morf, 0);
 }
 
 /* 02454978 */
 void daPz_c::setAnmRunSpeed() {
 
-    if (m06D3 != ANM_RUN)
+    if (mAnm != ANM_RUN)
         return;
     cXyz d;
     cXyz_mi(&current.pos, &d, &old.pos);
@@ -263,7 +263,7 @@ BOOL daPz_c::_draw() {
         pzIceEntryDL(mpMorf.get(), -1, mInvisibleModel); /* dMat_control_c::iceEntryDL */
     else
         bodyDraw();
-    if (m0F88)
+    if (mHasBow)
         bowDraw();
     dSnap_RegistFig(0x87, this, 1.0f, 1.0f, 1.0f);
     return TRUE;

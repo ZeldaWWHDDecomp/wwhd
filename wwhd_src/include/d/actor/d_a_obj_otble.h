@@ -18,16 +18,18 @@ public:
     BOOL _execute();
     BOOL _draw();
     gptr<J3DModel> mModel;
-    be<s32> m294;
+    /* mVariant (0x3B0) was m294: _create 023811A0: param bits 0-7 clamped to 0 / 1; _createHeap 02380D28 picks the bdl (OTABLE / OTABLEL) and dzb by it, _create the heap size, CreateInit 02380F8C the cull box (tww the same) */
+    be<s32> mVariant;
     request_of_phase_process_class mPhase;
     gptr<dBgW> mBgW;
-    Mtx34 m2A4;
+    /* mBgMtx (0x3C0) was m2A4: _createHeap 02380D28: the model matrix that mBgW is Set with (dBgW::MOVE_BG_e); set_mtx 02380E74 copies the new matrix into it each frame before mBgW->Move() (tww the same) */
+    Mtx34 mBgMtx;
     dBgS_ObjAcch mObjAcch;
     dBgS_AcchCir mObjAcchCir;
 };
 }
 WWHD_SIZE(daObj_Otble::Act_c, 0x5F4);
-WWHD_OFFSET(daObj_Otble::Act_c, m2A4, 0x3C0);
+WWHD_OFFSET(daObj_Otble::Act_c, mBgMtx, 0x3C0);
 WWHD_OFFSET(daObj_Otble::Act_c, mObjAcch, 0x3F0);
 WWHD_OFFSET(daObj_Otble::Act_c, mObjAcchCir, 0x5B4);
 // HD: typed view of the compiler's guarded local heap-size array.

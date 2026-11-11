@@ -78,7 +78,7 @@ static void* ko_s_sub(void* param_1, void*) {
     gabi::AutoFrame frame{gabi::current_function()};
     if (fopAc_IsActor(param_1) && param_1 != nullptr &&
         fpcM_GetName(param_1) == bwd_detail::fpcNm_BWDS_e) {
-        if (ko_count < l_HIO.m26) {
+        if (ko_count < l_HIO.mLarvaMax) {
             ko_ac()[ko_count] = gabi::ea(param_1);
             ko_count = ko_count + 1;
         }
@@ -147,8 +147,8 @@ static BOOL daBwd_Draw(bwd_class* i_this) {
         sita_s* psVar3 = i_this->mTongueSegments;
         for (int i = 0; i < 0x1E; i++, psVar3++) {
             dScnKy_env_light_c* env = dKy_getEnvlight();
-            setLightTevColorType(env, psVar3->m00, &actor->tevStr);
-            mDoExt_modelUpdateDL(psVar3->m00);
+            setLightTevColorType(env, psVar3->mpModel, &actor->tevStr);
+            mDoExt_modelUpdateDL(psVar3->mpModel);
         }
     }
     if (i_this->mDrawBody != 0) {
@@ -419,7 +419,7 @@ static BOOL useHeapInit(fopAc_ac_c* a_this) {
                                                             SAFESTRING_VTBL);
         }
         J3DModel* m = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
-        i_this->mTongueSegments[i].m00 = m;
+        i_this->mTongueSegments[i].mpModel = m;
         if (m == nullptr) {
             return FALSE;
         }
@@ -726,9 +726,9 @@ static cPhs_State daBwd_Create(fopAc_ac_c* a_this) {
     }
     for (int i = 0; i < 30; i++) {
         f32 y = a_this->current.pos.y;
-        i_this->mTongueSegments[i].m04.x = 0.0f;
-        i_this->mTongueSegments[i].m04.y = y;
-        i_this->mTongueSegments[i].m04.z = 0.0f;
+        i_this->mTongueSegments[i].mPos.x = 0.0f;
+        i_this->mTongueSegments[i].mPos.y = y;
+        i_this->mTongueSegments[i].mPos.z = 0.0f;
     }
     reinterpret_cast<GXColor*>(eff_col)->r = 0xA0;
     reinterpret_cast<GXColor*>(eff_col)->g = 0xA0;
@@ -749,22 +749,22 @@ static daBwd_HIO_c* daBwd_HIO_c_ct(daBwd_HIO_c* hio) {
             return hio;
     }
     hio->mNo = -1;
-    hio->m05 = 0;
-    hio->m06 = 0;
-    hio->m07 = 0;
+    hio->mNoMove = 0;
+    hio->mDebugLastHit = 0;
+    hio->mDebugFlyAfterHit = 0;
     hio->m08 = 0;
-    hio->m0C = -400.0f;
-    hio->m10 = 6.0f;
-    hio->m14 = 0x78;
-    hio->m18 = 700.0f;
-    hio->m1C = 3000.0f;
-    hio->m20 = 1.3f;
-    hio->m24 = 3;
-    hio->m26 = 5;
-    hio->m28 = 800.0f;
-    hio->m2C = -500.0f;
-    hio->m30 = 3.5f;
-    hio->m34 = 2.0f;
+    hio->mWaitHeight = -400.0f;
+    hio->mPushPower = 6.0f;
+    hio->mTonguePulledTime = 0x78;
+    hio->mEatAttackDistance = 700.0f;
+    hio->mResetDistance = 3000.0f;
+    hio->mBodyScale = 1.3f;
+    hio->mHitLarvaCount = 3;
+    hio->mLarvaMax = 5;
+    hio->mBaseHeight = 800.0f;
+    hio->mPlatformHeight = -500.0f;
+    hio->mSplashScaleXZ = 3.5f;
+    hio->mSplashScaleY = 2.0f;
     hio->m38 = 0x8C;
     hio->m3A = 0x78;
     hio->m3C = 0x50;

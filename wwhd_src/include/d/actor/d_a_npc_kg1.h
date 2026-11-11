@@ -7,16 +7,16 @@ struct daNpc_Kg1_c : fopNpc_npc_l {
     /* 0x854 */ request_of_phase_process_class mPhs;
     /* 0x85C */ ProcFunc_l mAction;
     /* 0x864 */ u8 _864[4];
-    /* 0x868 */ gptr<J3DAnmTexPattern> mpTexPattern;
-    /* 0x86C */ u8 mBtpAnm[0x74];
+    /* 0x868 */ gptr<J3DAnmTexPattern> m_eye_tex_pattern;  /* was mpTexPattern (misnamed): the eye pattern; the core class initTexPatternAnm 0226586C asserts it as "m_eye_tex_pattern != (0)" (kg1_core::daNpc_Kg1_c::m_eye_tex_pattern) */
+    /* 0x86C */ u8 mEyeBtpAnm[0x74];  /* was mBtpAnm (misnamed): the eye pattern animation (kg1_core::daNpc_Kg1_c::mEyeBtpAnm, set up with m_eye_tex_pattern); mBtpAnm is the prop model's pattern at 0x7E0 (tww mBtpAnm at GameCube 0x6C8) */
     /* 0x8E0 */ u8 _8E0[0x954-0x8E0];
     /* 0x954 */ be<u8> mBtpFrame;
     /* 0x955 */ u8 _955;
     /* 0x956 */ be<s16> mBlinkTimer;
     /* 0x958 */ u8 _958[2];
-    /* 0x95A */ be<u8> mTalkActive;
+    /* 0x95A */ be<u8> mTalking;  /* was mTalkActive (misnamed): kg1_core::daNpc_Kg1_c::mTalking (checkOrder 022663A4 sets it on the talk command; same code as daNpc_Ba1_c::mTalking); one name per field */
     /* 0x95B */ u8 _95B;
-    /* 0x95C */ be<u8> mEventOrder;
+    /* 0x95C */ be<u8> mOrderEvent;  /* was mEventOrder (misnamed): kg1_core::daNpc_Kg1_c::mOrderEvent (eventOrder 022664A4 orders by it; same code as daNpc_Ba1_c::mOrderEvent); one name per field */
     /* 0x95D */ u8 _95D[0x960-0x95D];
     /* 0x960 */ cXyz mEyePos;
     /* 0x96C */ cXyz mHeadPos;

@@ -271,9 +271,9 @@ static daNpc_Bms1_HIO_c* daNpc_Bms1_HIO_c_ct(daNpc_Bms1_HIO_c* i_this) {
     i_this->mMinBackboneY = 0;
     i_this->mMaxTurnStep = 0x1000;
     i_this->mMaxHeadTurnVel = 0x800;
-    i_this->m04 = -50.0f;
+    i_this->mPlayerEyeOffsetY = -50.0f;
     i_this->mAttnYOffset = 40.0f;
-    i_this->m22 = 0;
+    i_this->mDebugDraw = 0;
     i_this->mMaxAttnDistXZ = 300.0f;
     i_this->mCursorScale[0] = 0.65f;
     i_this->mCursorScale[1] = 0.9f;

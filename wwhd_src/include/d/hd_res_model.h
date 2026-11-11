@@ -2,6 +2,7 @@
  * Relative pointers use unsigned 32-bit address addition, including wrap to zero. */
 #pragma once
 #include "bindings.h"
+#include "sead/ElementAt.h"
 
 struct hdResModel_relativePtr_c {
     be<u32> mOffset;
@@ -64,7 +65,9 @@ struct hdResModel_c {
     hdResModel_entry_c* getEntry(u32 idx) {
         u32 count = mEntries.mCount;
         hdResModel_entry_c* entries = mEntries.mpEntries;
-        return idx < count ? entries + idx : entries;
+        // Guest EA arithmetic: entries + idx * size wraps at 32 bits as on the console (a host index on a NULL entry table
+        // reached host addresses past 4 GB).
+        return sead::elementPtr(entries, idx < count ? idx : 0u);
     }
 };
 WWHD_OFFSET(hdResModel_c, mDisposerVtable, 0xC);

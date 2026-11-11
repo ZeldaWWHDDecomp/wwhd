@@ -236,7 +236,7 @@ struct daPy_py_c : fopAc_ac_c {
     /* 0x3C0 */ be<u32> mResetFlg0;
     /* 0x3C4 */ be<f32> mMaxNormalSpeed;
     /* 0x3C8 */ be<f32> mHeight;
-    /* 0x3CC */ be<f32> field_0x2b0;
+    /* 0x3CC */ be<f32> mGrabItemOffsetY;  /* was field_0x2b0: the held actor's height offset from the hand midpoint: daPy_lk_c::setGrabItemPos 0240A41C eases it (with the bounce) to 0 / -115 / -85 for a worn barrel and puts the held actor at the hands + it; freeGrabItem 023DCF8C clears it; TWW checkGrabWear() is it < 0, read by the Link procs (setStickData 023F32E4, changeDamageProc 023FA578, setCollision 024076CC ...) and by d_a_obj_search / d_a_tag_hint / d_a_tn (tww the same) */
     /* 0x3D0 */ csXyz mBodyAngle;
     /* 0x3D6 */ u8 field_0x2BA[2];
     /* 0x3D8 */ cXyz mHeadTopPos;

@@ -333,21 +333,21 @@ struct stage_tgsc_data_class {
 };
 WWHD_SIZE(stage_tgsc_data_class, 0x24);
 struct stage_map_info_class {
-    /* 0x00 */ be<f32> field_0x00;
-/* 0x04 */ be<f32> field_0x04;
-/* 0x08 */ be<f32> field_0x08;
-/* 0x0C */ be<f32> field_0x0c;
+    /* 0x00 */ be<f32> mSubMapX0;  /* was field_0x00: stage map data (map info, read from the stage file); tww dMap_RoomInfo_c::getRoomImage uses the floor's s%d.bti image only while mSubMapX1 differs from it and mSubMapZ1 from mSubMapZ0 (the same test it makes for the m%d.bti image on mMap1X0 .. mMap1Z1); no use in WWHD */
+/* 0x04 */ be<f32> mSubMapZ0;  /* was field_0x04: stage map data; tww getRoomImage compares it with mSubMapZ1 for the s%d.bti image (see mSubMapX0); no use in WWHD */
+/* 0x08 */ be<f32> mSubMapX1;  /* was field_0x08: stage map data; tww getRoomImage compares it with mSubMapX0 for the s%d.bti image (see mSubMapX0); no use in WWHD */
+/* 0x0C */ be<f32> mSubMapZ1;  /* was field_0x0c: stage map data; tww getRoomImage compares it with mSubMapZ0 for the s%d.bti image (see mSubMapX0); no use in WWHD */
 /* 0x10 */ be<f32> field_0x10;
 /* 0x14 */ be<f32> field_0x14;
-/* 0x18 */ be<f32> field_0x18;
-/* 0x1C */ be<f32> field_0x1c;
-/* 0x20 */ be<f32> field_0x20;
-/* 0x24 */ be<f32> field_0x24;
-/* 0x28 */ be<f32> field_0x28;
-/* 0x2C */ be<f32> field_0x2c;
+/* 0x18 */ be<f32> mMap1X0;  /* was field_0x18: stage map data; tww d_map.cpp getMapInfo_map1_X0 returns it (getRoomImage tests it against mMap1X1 for the m%d.bti image; d_a_agb clamps home.pos.x to mMap1X0 .. mMap1X1); no use in WWHD */
+/* 0x1C */ be<f32> mMap1Z0;  /* was field_0x1c: stage map data; tww d_map.cpp getMapInfo_map1_Z0 returns it (d_a_agb clamps home.pos.z to mMap1Z0 .. mMap1Z1); no use in WWHD */
+/* 0x20 */ be<f32> mMap1X1;  /* was field_0x20: stage map data; tww d_map.cpp getMapInfo_map1_X1 returns it; no use in WWHD */
+/* 0x24 */ be<f32> mMap1Z1;  /* was field_0x24: stage map data; tww d_map.cpp getMapInfo_map1_Z1 returns it; no use in WWHD */
+/* 0x28 */ be<f32> mMap1XC;  /* was field_0x28: stage map data; tww d_map.cpp getMapInfo_map1_XC returns it; no use in WWHD */
+/* 0x2C */ be<f32> mMap1ZC;  /* was field_0x2c: stage map data; tww d_map.cpp getMapInfo_map1_ZC returns it; no use in WWHD */
 /* 0x30 */ be<f32> field_0x30;
     /* 0x34 */ be<u8> field_0x34;
-    /* 0x35 */ be<u8> field_0x35;
+    /* 0x35 */ be<u8> mFloorNo;  /* was field_0x35: dStage_roomDt_c::getMapInfo2 025C40E0 returns the map info entry whose it equals the asked number; tww getRoomImage asks with the floor number (s%d / m%d.bti) */
     /* 0x36 */ be<u8> mOceanXZ;
     /* 0x37 */ u8 pad37;
 };
@@ -368,7 +368,9 @@ struct stage_scls_info_class {
 };
 WWHD_SIZE(stage_scls_info_class, 0xC);
 struct roomRead_data_class {
-    /* 0x0 */ be<u8> num, field_0x1, field_0x2;
+    /* 0x0 */ be<u8> num;
+    /* 0x1 */ be<u8> mReverb;  /* was field_0x1: dStage_roomRead_dt_c_GetReverbStage 025C2150 returns it & 0x7F as the room's reverb (tww inline dStage_roomRead_dt_c_GetReverb) */
+    /* 0x2 */ be<u8> mTimePass;  /* was field_0x2: dStage_RoomCheck 025C35E8 reads it & 3 as the room's time-pass mode (tww inline dStage_roomRead_dt_c_GetTimePass) */
     u8 pad3;
     /* 0x4 */ gptr<u8> m_rooms;
 };
@@ -376,7 +378,12 @@ WWHD_SIZE(roomRead_data_class, 8);
 struct dStage_dPnt_c { be<s32> num; be<u32> m_pnt_offset; };
 struct dStage_dPath_c { be<s32> num; gptr<path_layout::dPath> m_path; };
 struct dStage_FileList_dt_c { be<u32> mParam; be<f32> mSeaLevel; };
-struct dStage_Ship_dt_c { cXyz m_pos; be<s16> m_angle; be<u8> field_0xe, field_0xf; };
+struct dStage_Ship_dt_c {
+    /* 0x0 */ cXyz m_pos;
+    /* 0xC */ be<s16> m_angle;
+    /* 0xE */ be<u8> mShipId;  /* was field_0xe: hdGameInfo_dComIfGp_getShip 02520584 returns the room's ship entry whose it equals the asked id (tww dComIfGp_getShip the same) */
+    /* 0xF */ be<u8> field_0xf;
+};
 WWHD_SIZE(dStage_Ship_dt_c, 0x10);
 struct stage_actor_class { be<s32> num; gptr<stage_actor_data_class> m_entries; };
 WWHD_SIZE(stage_actor_class, 8);

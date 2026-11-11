@@ -46,7 +46,7 @@ void daNpcPeople_c::playAnm() {
                         mAnmFlag = mAnmFlag | 1;
                     }
                 } else {
-                    setAnm(mpAnmTbl->field_0x00, 0, 0.0f, mAnmSpeed);
+                    setAnm(mpAnmTbl->mAnmIdx, 0, 0.0f, mAnmSpeed);
                 }
             }
         }
@@ -102,7 +102,7 @@ u16 daNpcPeople_c::talk2(int param_1, fopAc_ac_c* param_2) {
         }
         mCurrMsgBsPcId = peopleMsgMessageSet(mgr, mCurrMsgNo, &param_2->eyePos);
         if (mCurrMsgBsPcId != fpcM_ERROR_PROCESS_ID_e) { /* HD: only when the message was set */
-            m7A8 = 0;
+            mMsgChecked = 0;
             mbHasMsg = 0;
             mMsgStatus = 0xFFFF;
         }
@@ -110,10 +110,10 @@ u16 daNpcPeople_c::talk2(int param_1, fopAc_ac_c* param_2) {
         status = (u16)peopleMsgGetStatus(mgr);
         switch (status) {
         case fopMsgStts_MSG_DISPLAYED_e:
-            if (m7A8 == 0) {
+            if (mMsgChecked == 0) {
                 chkMsg();
             }
-            m7A8 = 0;
+            mMsgChecked = 0;
             peopleMsgSetStatus(mgr, peopleNextStatus(this, &mCurrMsgNo));
             if (peopleMsgGetStatus(mgr) == fopMsgStts_MSG_CONTINUES_e) {
                 peopleMsgMessageSet(mgr, mCurrMsgNo, nullptr);
@@ -122,13 +122,13 @@ u16 daNpcPeople_c::talk2(int param_1, fopAc_ac_c* param_2) {
         case fopMsgStts_MSG_TYPING_e:
             if (mMsgStatus == fopMsgStts_MSG_CONTINUES_e || mMsgStatus == fopMsgStts_BOX_OPENING_e) {
                 chkMsg();
-                m7A8 = 1;
+                mMsgChecked = 1;
             }
             break;
         case fopMsgStts_CLOSE_WAIT_e:
-            if (m7A8 == 0) {
+            if (mMsgChecked == 0) {
                 chkMsg();
-                m7A8 = 1;
+                mMsgChecked = 1;
             }
             break;
         case fopMsgStts_BOX_CLOSED_e:
@@ -248,7 +248,7 @@ void daNpcPeople_c::lookBack() {
 /* 022C0084 */
 void daNpcPeople_c::chkAttention() {
     u8 npc_no = mNpcNo;
-    m78A = 0;
+    mInLookDist = 0;
     // HD: assert the NPC table bound; the debug string calls npc_no a_npc_no.
     if (npc_no > NPC_UG2) {
         JUT_ASSERT_fail("d_a_npc_people.cpp", 0x234B, "a_npc_no >= 0 && (a_npc_no < daNpcPeople_c::Npc_No_Max)");
@@ -341,7 +341,7 @@ void daNpcPeople_c::chkAttention() {
                     mLookMode = 2;
                     m_jnt.mbTrn = 1;
                 }
-                m78A = 1;
+                mInLookDist = 1;
             } else {
                 mLookMode = 0;
                 if (mPathRun.mPath.get() == nullptr) {
@@ -373,7 +373,7 @@ u16 daNpcPeople_c::next_msgStatus(be<u32>* pMsgNo) {
         daNpcPeople_c* pActor = (daNpcPeople_c*)peopleSearchFromName(peopleUg1StaffId(), 0, 0);
         if (pActor == nullptr) { /* HD: JUT_ASSERT(pActor != NULL) */
             // HD: the assertion calls pActor act.
-            JUT_ASSERT_fail("d_a_npc_people.cpp", 0x1D43, "pActor != (0)");
+            JUT_ASSERT_fail("d_a_npc_people.cpp", 0x1D43, "act != (0)");
             return fopMsgStts_MSG_ENDS_e;
         }
         dComIfG_inf_c* play;
@@ -397,7 +397,7 @@ u16 daNpcPeople_c::next_msgStatus(be<u32>* pMsgNo) {
     default:
         if (mpUbMsg.get() != nullptr) {
             mpUbMsg = mpUbMsg.get() + 1;
-            if (mpUbMsg->field_0x00 != 0) {
+            if (mpUbMsg->mMsgNo != 0) {
                 setMessageUb(mpUbMsg);
             } else {
                 status = fopMsgStts_MSG_ENDS_e;
@@ -409,38 +409,38 @@ u16 daNpcPeople_c::next_msgStatus(be<u32>* pMsgNo) {
             switch (v) {
             case 1:
                 mpMsgList = nullptr;
-                m77E = m77E | 0x1;
+                mEventFlags = mEventFlags | 0x1;
                 status = fopMsgStts_MSG_ENDS_e;
                 break;
             case 2:
                 mpMsgList = nullptr;
-                m77E = m77E | 0x2;
+                mEventFlags = mEventFlags | 0x2;
                 status = fopMsgStts_MSG_ENDS_e;
                 break;
             case 3:
                 mpMsgList = nullptr;
-                m77E = m77E | 0x4;
+                mEventFlags = mEventFlags | 0x4;
                 status = fopMsgStts_MSG_ENDS_e;
                 break;
             case 4:
                 mpMsgList = nullptr;
-                m77E = m77E | 0x8;
+                mEventFlags = mEventFlags | 0x8;
                 status = fopMsgStts_MSG_ENDS_e;
                 break;
             case 5:
-                m77E = m77E | 0x10;
+                mEventFlags = mEventFlags | 0x10;
                 status = fopMsgStts_MSG_ENDS_e;
                 break;
             case 6: {
                 p += 1;
                 mpMsgList = p;
                 u8 no = peopleMessageLowByte(p);
-                m792 = no;
+                mSa3ItemIdx = no;
                 if (!dComIfGs_isEventBit(peopleTalkData().l_item_chk_sa3[no])) {
                     p = mpMsgList.get() + 1;
                     mpMsgList = p;
                     *pMsgNo = *p;
-                    u8 no2 = m792;
+                    u8 no2 = mSa3ItemIdx;
                     mGetItemNo = peopleTalkData().l_item_id_sa3[no2]; /* l_item_id_sa3 */
                     dComIfGs_onEventBit(peopleTalkData().l_item_chk_sa3[no2]);
                 } else {
@@ -450,7 +450,7 @@ u16 daNpcPeople_c::next_msgStatus(be<u32>* pMsgNo) {
                 break;
             }
             case 7:
-                m77E = m77E | 0x20;
+                mEventFlags = mEventFlags | 0x20;
                 status = fopMsgStts_MSG_ENDS_e;
                 break;
             case 8: {
@@ -469,13 +469,13 @@ u16 daNpcPeople_c::next_msgStatus(be<u32>* pMsgNo) {
             }
             case 9:
                 mGetItemNo = 4;
-                m77E = m77E | 0x40;
+                mEventFlags = mEventFlags | 0x40;
                 status = fopMsgStts_MSG_ENDS_e;
                 break;
             case 0xA:
                 // HD: the reward is a bag upgrade only when not yet owned (item 0xFD).
                 mGetItemNo = 5;
-                m77E = m77E | 0x40;
+                mEventFlags = mEventFlags | 0x40;
                 if (!dComIfGs_checkGetItem(0xFD)) {
                     mGetItemNo = 0xFD;
                 }
@@ -564,7 +564,7 @@ u16 daNpcPeople_c::next_msgStatus(be<u32>* pMsgNo) {
                 u8 reg = dComIfGs_getTmpReg(0xFF03);
                 if (reg >= 3) { /* HD: bounds assertion, the list is kept */
                     // HD: the assertion calls reg a_tempReg.
-                    JUT_ASSERT_fail("d_a_npc_people.cpp", 0x1E1B, "(reg >= 0) && (reg < (sizeof(l_msg_sa5_explain) / sizeof(l_msg_sa5_explain[0])))");
+                    JUT_ASSERT_fail("d_a_npc_people.cpp", 0x1E1B, "(a_tempReg >= 0) && (a_tempReg < (sizeof(l_msg_sa5_explain) / sizeof(l_msg_sa5_explain[0])))");
                 } else {
                     mpMsgList = peopleTalkData().l_msg_sa5_explain[reg]; /* l_msg_sa5_explain[reg] */
                 }
@@ -636,6 +636,6 @@ str 100205BC "a_npc_no >= 0 && (a_npc_no < daNpcPeople_c::Npc_No_Max)"
 str 100205F4 "d_a_npc_people.cpp" in 022C0084
 str 100206A0 "Ub2"
 str 100207EC "d_a_npc_people.cpp" in 022C6108
-str 10020800 "pActor != (0)" renamed
-str 1002080C "(reg >= 0) && (reg < (sizeof(l_msg_sa5_explain) / sizeof(l_msg_sa5_explain[0])))" renamed
+str 10020800 "act != (0)"
+str 1002080C "(a_tempReg >= 0) && (a_tempReg < (sizeof(l_msg_sa5_explain) / sizeof(l_msg_sa5_explain[0])))"
 */

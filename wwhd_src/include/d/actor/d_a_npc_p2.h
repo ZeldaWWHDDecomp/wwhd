@@ -11,7 +11,7 @@
 
 /* dNpc_HIO_c (0x28, constructor 0259DA18), as in d_a_npc_bs1.h (SHARED-CANDIDATE) */
 struct dNpc_HIO_p2 {
-    /* 0x00 */ be<f32> m04;              /* playerEyePos offset */
+    /* 0x00 */ be<f32> mPlayerEyeOffsetY;  /* was m04: copy of dNpc_HIO_c (d/d_npc.h), see there; playerEyePos offset */
     /* 0x04 */ be<s16> mMaxHeadX;
     /* 0x06 */ be<s16> mMaxBackboneX;
     /* 0x08 */ be<s16> mMaxHeadY;
@@ -24,7 +24,7 @@ struct dNpc_HIO_p2 {
     /* 0x16 */ be<s16> mMaxHeadTurnVel;
     /* 0x18 */ be<f32> mAttnYOffset;
     /* 0x1C */ be<s16> mMaxAttnAngleY;
-    /* 0x1E */ be<u8> m22;
+    /* 0x1E */ be<u8> mDebugDraw;  /* was m22: copy of dNpc_HIO_c (d/d_npc.h), see there */
     /* 0x1F */ u8 _1F;
     /* 0x20 */ be<f32> mMaxAttnDistXZ;
     /* 0x24 */ be<u32> __vtbl;
@@ -195,11 +195,11 @@ struct daNpc_P2_c : fopAc_ac_c {
     /* 0x8A8 */ cXyz mLookPos;
     /* 0x8B4 */ cXyz mGoalLookPos;
     /* 0x8C0 */ be<s16> mShipAngleOffs;
-    /* 0x8C2 */ be<u8> m8C2;
+    /* 0x8C2 */ be<u8> mbGoalTalkStarted;  /* was m8C2: the name the copy in d_a_npc_p2_act.h uses: goal_talkpos_wait 022BC868 sets it and orders the talk (mOrder 1) the first time, then waits for mbTalk */
     /* 0x8C3 */ u8 _8C3;
     /* 0x8C4 */ be<s32> mMoccoTimer;
     /* 0x8C8 */ be<u8> mbNoAttention;
-    /* 0x8C9 */ be<u8> m8C9;
+    /* 0x8C9 */ be<u8> mbMessageGestureStarted;  /* was m8C9: the name the copy in d_a_npc_p2_act.h uses: anmAtr 022B8B24 (P2B, message animation 7) switches to animation 7 only while it is 0 and sets it; talk 022B8E24 clears it when the message box closes */
     /* 0x8CA */ u8 _8CA[2];
     /* 0x8CC */ u8 mSmokeCB[0x20];       /* dPa_smokeEcallBack (constructor 025A5B18(this, 1)); emitter at +4 */
     /* 0x8EC */ cXyz mSmokePos;

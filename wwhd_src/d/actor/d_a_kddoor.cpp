@@ -257,23 +257,23 @@ BOOL daKddoor_c::chkStopOpen() {
         play = kddoorGameInfo();
         BOOL visible = kddoorRoomDisplayed(&play->mRoomControl, room);
         if (visible && !kddoorRoomEnemy((s8)room)) {
-            u8 timer = this->m2A1;
+            u8 timer = this->mStopOpenTimer;
             if (timer) {
-                this->m2A1 = timer - 1;
+                this->mStopOpenTimer = timer - 1;
                 return FALSE;
             }
             if (sw != 0xFF)
                 setSwitch(sw, room);
             return TRUE;
         }
-        this->m2A1 = 0x41;
+        this->mStopOpenTimer = 0x41;
         return FALSE;
     }
     return sw != 0xFF && switchOn(sw, room);
 }
 
 /* 02197F14 */
-void daKddoor_c::setStopDemo() { this->m2C6 = (u8)this->mFrontCheck != 0; }
+void daKddoor_c::setStopDemo() { this->mEventKind = (u8)this->mFrontCheck != 0; }
 
 /* 02197F8C */
 BOOL daKddoor_c::chkStopClose() {
@@ -679,13 +679,13 @@ BOOL daKddoor_c::CreateHeap() {
 void daKddoor_c::setEventPrm() {
     u8 other = this->mStop.mOtherEnabled;
     if (!this->mFrontCheck) {
-        this->m2C6 = 2;
+        this->mEventKind = 2;
         if (other == 255) {
             other = (u8)this->chkStopB();
             this->mStop.mOtherEnabled = other;
         }
     } else {
-        this->m2C6 = 3;
+        this->mEventKind = 3;
         if (other == 255) {
             other = (u8)this->chkStopF();
             this->mStop.mOtherEnabled = other;
@@ -695,7 +695,7 @@ void daKddoor_c::setEventPrm() {
         return;
     u8 keyEnabled = this->mKey.mbEnabled;
     if (other == 1)
-        this->m2C6 = (u8)this->m2C6 + 2;
+        this->mEventKind = (u8)this->mEventKind + 2;
     if (keyEnabled) {
         KddoorSave* save = sSave;
         if (!save->mKeyNum)
@@ -708,11 +708,11 @@ void daKddoor_c::setEventPrm() {
             return;
     }
     if (kddoorCheckArea(this, 12100.0f, 12100.0f, 62500.0f)) {
-        u8 m2C6 = this->m2C6;
+        u8 mEventKind = this->mEventKind;
         u16 flags = eventInfo.mCondition;
-        s16 event = this->mEventIdx[m2C6];
+        s16 event = this->mEventIdx[mEventKind];
         eventInfo.mEventId = event;
-        u8 tool = this->mToolId[m2C6];
+        u8 tool = this->mToolId[mEventKind];
         eventInfo.mCondition = flags | 4;
         eventInfo.mMapToolId = tool;
     }
@@ -959,9 +959,9 @@ static BOOL daKddoor_actionWait(daKddoor_c* i_this) {
         }
         if (i_this->chkStopOpen()) {
             i_this->setStopDemo();
-            u8 m2C6 = i_this->m2C6;
-            u8 tool = i_this->mToolId[m2C6];
-            s16 event = i_this->mEventIdx[m2C6];
+            u8 mEventKind = i_this->mEventKind;
+            u8 tool = i_this->mToolId[mEventKind];
+            s16 event = i_this->mEventIdx[mEventKind];
             kddoorOrderEvent(i_this, event, tool, 0xFFFF, 0, 1);
         }
         return TRUE;
@@ -986,7 +986,7 @@ static BOOL daKddoor_actionStopClose(daKddoor_c* i_this) {
 
 /* 0219838C */
 static BOOL daKddoor_actionDemo(daKddoor_c* i_this) {
-    s16 event = i_this->mEventIdx[i_this->m2C6];
+    s16 event = i_this->mEventIdx[i_this->mEventKind];
     auto play = kddoorGameInfo();
     if (kddoorEndCheck(&play->mEventManager, event)) {
         i_this->mAction = daKddoor_c::ACTION_WAIT;

@@ -8,7 +8,7 @@ callee 025D54C4 r4=4          # fopAcM_SearchByID(id, &actor)
 
 ret 021EE714 0 1              # XyCheck_cB -> bool
 ret 021EE9B0 0 1              # setBtp -> bool
-# anmAtr: message status 6 / 0xE, m819, tag info
+# anmAtr: message status 6 / 0xE, mAnmAtrSetCnt, tag info
 arg 021F15B8 r4 5 15
 field 021F15B8 r3+0x989 i8 0 1
 ret 025200D4 0x54000000 0x54000000
@@ -31,7 +31,7 @@ field 021F0D58 r3+0x94E i16 0 3          # mEventIdx
 field 021F17EC 101F4B5C u32 0x56000000 0x56000000   # message manager
 field 021F17EC 56000948 u32 0 2          # mSelectNum
 arg 021F1714 f1 0 180                    # chk_drct degrees
-field 021F1B70 r3+0x962 u8 2 3           # m7F2
+field 021F1B70 r3+0x962 u8 2 3           # mHealedDays
 # action functions
 field 021F2818 r3+0x988 i8 -1 4
 field 021F2980 r3+0x988 i8 -1 4

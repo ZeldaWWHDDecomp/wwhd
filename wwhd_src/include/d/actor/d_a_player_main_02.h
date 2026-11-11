@@ -304,16 +304,16 @@ struct TexAnmTableEntry { be<u16> mBtpIdx, mBtkIdx; };
 WWHD_SIZE(TexAnmTableEntry, 4);
 struct anmHeap_c {
     be<u16> mIdx;
-    be<u16> field_0x2;
-    be<u16> field_0x4;
-    be<u16> field_0x6;
+    be<u16> mPriIdx;  /* was field_0x2: view of daPy_anmHeap_c::mPriIdx (evidence in d_a_player_main_01.h) */
+    be<u16> mDemoIdx;  /* was field_0x4: view of daPy_anmHeap_c::mDemoIdx (evidence in d_a_player_main_01.h) */
+    be<u16> mDemoAnmNo;  /* was field_0x6: view of daPy_anmHeap_c::mDemoAnmNo (evidence in d_a_player_main_01.h) */
     be<u32> m_buffer;
     be<u32> mpAnimeHeap;
 };
 WWHD_OFFSET(anmHeap_c, mIdx, 0);
-WWHD_OFFSET(anmHeap_c, field_0x2, 2);
-WWHD_OFFSET(anmHeap_c, field_0x4, 4);
-WWHD_OFFSET(anmHeap_c, field_0x6, 6);
+WWHD_OFFSET(anmHeap_c, mPriIdx, 2);
+WWHD_OFFSET(anmHeap_c, mDemoIdx, 4);
+WWHD_OFFSET(anmHeap_c, mDemoAnmNo, 6);
 WWHD_OFFSET(anmHeap_c, m_buffer, 8);
 WWHD_OFFSET(anmHeap_c, mpAnimeHeap, 0xC);
 WWHD_SIZE(anmHeap_c, 0x10);

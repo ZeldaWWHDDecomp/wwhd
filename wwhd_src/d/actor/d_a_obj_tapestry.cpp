@@ -1285,7 +1285,7 @@ void daObjTapestryPacket_c::eff_delete() {
 
 /* 02399F90 */
 void daObjTapestryPacket_c::smokeCallback_init() {
-  mSmokeCallback.m11 = 0;
+  mSmokeCallback.mRateOff = 0;
 }
 
 /* 0239C158 */

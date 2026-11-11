@@ -127,10 +127,10 @@ static u32 dScnName_Draw(dScnName_c* i_this) {
 void dScnName_c::changeGameScene() {
     if (fopOvlpM_IsPeek()) return;
     dComIfGs_gameStart();
-    if (!fopScnM_ChangeReq(this, field_0x55f ? NameScene::OPEN_SCENE : NameScene::PLAY_SCENE,
+    if (!fopScnM_ChangeReq(this, mToOpenScene ? NameScene::OPEN_SCENE : NameScene::PLAY_SCENE,
                                    NameScene::OVERLAP0, 5, 1)) return;
     // HD: keep both save singleton reads and each play accessor call.
-    l_saveInfo->field_0x7BC = 255;
+    l_saveInfo->mDanStageNo = -1;
     l_saveInfo->mRestartRoomParam = 0;
     NameScene::PlayView* play = reinterpret_cast<NameScene::PlayView*>(dComIfGp_get());
     NameScene::Stage* stage = &play->mNextStage;
@@ -160,7 +160,7 @@ void dScnName_c::NameInMain() {
         return;
     }
     if (isControllerState(controller, &l_nameAccepted)) {
-        field_0x55f = controller->field_0x145;
+        mToOpenScene = controller->field_0x145;
         changeGameScene();
     }
 }

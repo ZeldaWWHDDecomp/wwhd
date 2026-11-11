@@ -131,7 +131,7 @@ static void hdRoot_setupGraphicsHeaps() {
         resource->mVtable = &l_resourceVtable;
         resource->mDisposerVtable = &l_resourceDisposerVtable;
     }
-    setString(name, "graphics resource");
+    setString(name, "sarc");
     hdRootRegisterGfxResource(l_resourceManager.mpValue, resource, name);
     hdRootGfxConfigConstruct(config);
     config->mCommandFlags = 0;
@@ -143,7 +143,7 @@ static void hdRoot_setupGraphicsHeaps() {
     config->mGpuMemorySize = 0x02000000;
     config->mGpuMode = 0;
     config->mCommandMode = 0;
-    setString(name, "graphics memory heap");
+    setString(name, "agl::DynamicTextureAllocator(MEM)");
     config->mpHeap = hdRootCreateExpHeap(0, name, root, 1, 0);
     u32 baseHeap = MEMGetBaseHeapHandle(0);
     config->mpCommandMemory = MEMAllocFromFrmHeapEx(baseHeap, config->mCommandMemorySize, 4);
@@ -162,7 +162,7 @@ static void hdRoot_setupGraphicsHeaps() {
     config->mpHeap = parent;
     descriptor->mFlags = 0;
     descriptor->mAlignment = 0x20;
-    descriptor->mName.mpString = gabi::at<void>(gabi::guest_addr("graphics resource data"));
+    descriptor->mName.mpString = gabi::at<void>(gabi::guest_addr("agl_resource_cafe_dev.sarc"));
     descriptor->mThird = 0;
     descriptor->mFifth = 0;
     descriptor->mMode = 0;
@@ -172,14 +172,14 @@ static void hdRoot_setupGraphicsHeaps() {
         l_resourceType.mVtable = &l_resourceTypeVtable;
     }
     if (graphicsResource != NULL && !gabi::call_ptr<u32>(graphicsResource->mVtable[HdRoot_ResourceCast].get(), graphicsResource, &l_resourceType)) graphicsResource = NULL;
-    setString(name, "graphics initialization heap");
+    setString(name, "agl::Framework");
     config->mpHeap = hdRootCreateExpHeap(0, name, config->mpHeap, 1, 0);
     hdRootGfxInitialize(config);
     adjustHeap(config->mpHeap);
     config->mpHeap = config->mpHeap->mpParent;
     hdRootGfxSetMode(0);
     hdRootGfxSetResource(graphicsResource);
-    setString(name, "graphics command heap");
+    setString(name, "agl::smdl");
     HdRootHeap* commandHeap = hdRootCreateExpHeap(0, name, root, 1, 0);
     hdRootHeapHolderConstruct(holder);
     holder->mpHeap = commandHeap;
@@ -238,17 +238,17 @@ void HdRootTask::prepare() {
     void* device = l_fileManager.mpManager->mpDefaultDevice;
     HdRootSafeString* nameA = gabi::at<HdRootSafeString>(native + 8);
     HdRootSafeString* nameB = gabi::at<HdRootSafeString>(native + 0x10);
-    setString(nameA, "archive C path");
-    setString(nameB, "archive C name");
+    setString(nameA, "Cafe/JP/");
+    setString(nameB, "local");
     mpArchiveC = hdRootLoadArchive(0, nameB, device, nameA);
-    setString(nameA, "archive D path");
-    setString(nameB, "archive D name");
+    setString(nameA, "platform");
+    setString(nameB, "Cafe/Common/");
     mpArchiveD = hdRootLoadArchive(0, nameA, device, nameB);
-    setString(nameA, "archive B path");
-    setString(nameB, "archive B name");
+    setString(nameA, "common");
+    setString(nameB, "Common/");
     mpArchiveB = hdRootLoadArchive(0, nameA, device, nameB);
-    setString(nameA, "archive A path");
-    setString(nameB, "archive A name");
+    setString(nameA, "tmp");
+    setString(nameB, "");
     mpArchiveA = hdRootLoadArchive(0, nameA, device, nameB);
     void* multi = hdRootCreateMultiArchive(0, 4, 0, 4);
     mpMultiArchive = multi;
@@ -260,12 +260,12 @@ void HdRootTask::prepare() {
     HdRootSafeString* mountA = gabi::at<HdRootSafeString>(native + 0x38);
     HdRootSafeString* mountB = gabi::at<HdRootSafeString>(native + 0x40);
     void* firstMount = hdRootCreateMount(0, 0xFF);
-    setString(mountA, "first mount");
+    setString(mountA, "save_common");
     hdRootMountDevice(l_fileManager.mpManager, firstMount, mountA);
     nn_act_Initialize();
     u32 slot = nn_act_GetSlotNo();
     void* secondMount = hdRootCreateMount(0, slot);
-    setString(mountB, "second mount");
+    setString(mountB, "save_act");
     hdRootMountDevice(l_fileManager.mpManager, secondMount, mountB);
     hdRootHeapInitialize(0);
     nameA->mVtable = &l_stringVtable;
@@ -273,28 +273,28 @@ void HdRootTask::prepare() {
     // HD: the unchecked heap index uses wrapping guest address arithmetic.
     gptr<HdRootHeap>* selected = gabi::at<gptr<HdRootHeap>>(gabi::ea(mHeaps) + (u32)mHeapIndex * 4);
     HdRootHeap* selectedHeap = *selected;
-    nameA->mpString = gabi::at<void>(gabi::guest_addr("default heap"));
+    nameA->mpString = gabi::at<void>(gabi::guest_addr("primitive_renderer/primitive_renderer_cafe.gsh"));
     hdRootSelectDefaultHeap(heapManager, selectedHeap, nameA);
     HdRootTaskInfo* info = hdRootGetTaskInfo(this);
     info->mpHeapControl->mFlags = 0;
     hdRoot_setupGraphicsHeaps();
     hdRootInputConfigure(l_input.mpValue, &l_inputConfig, 0);
     HdRootSafeString* heapName = gabi::at<HdRootSafeString>(native + 0x18);
-    setString(heapName, "resource heap");
+    setString(heapName, "ResMgr");
     HdRootHeap* root = hdRootGetMainHeap();
     HdRootHeap* resourceHeap = hdRootCreateExpHeap(0xB00000, heapName, root, 1, 0);
     hdRootResourceInitialize(resourceHeap);
     hdRootResourceSetHeap(l_resourceLoader.mpValue, resourceHeap);
     u32 commandSize = hdRootHeapOverhead(4) + 0xE00000;
-    setString(heapName, "command heap");
+    setString(heapName, "ModelResSetup");
     root = hdRootGetMainHeap();
     HdRootHeap* commandHeap = hdRootCreateExpHeap(commandSize, heapName, root, 1, 0);
     u32 systemSize = 0x16C00000 - commandSize;
-    setString(heapName, "system heap");
+    setString(heapName, "ModelRes");
     root = hdRootGetMainHeap();
     HdRootHeap* systemHeap = hdRootCreateExpHeap(systemSize, heapName, root, 1, 1);
     u32 dataSize = hdRootHeapOverhead(0x2000) + 0x0D400000;
-    setString(heapName, "data heap");
+    setString(heapName, "PermanentResource");
     HdRootHeap* dataHeap = hdRootCreateExpHeap(dataSize, heapName, systemHeap, ~0u, 0);
     hdRootModelInitialize(systemHeap);
     HdRootSaveManager* save = l_save.mpManager;
@@ -304,19 +304,19 @@ void HdRootTask::prepare() {
     save->mpDataHeap = dataHeap;
     HdRootSafeString* archiveName = gabi::at<HdRootSafeString>(native + 0x20);
     HdRootSafeString* archivePath = gabi::at<HdRootSafeString>(native + 0x48);
-    setString(archiveName, "common archive");
+    setString(archiveName, "Misc");
     root = hdRootGetArchiveHeap();
     HdRootHeap* archiveHeap = hdRootCreateExpHeap(0x100000, archiveName, root, 1, 0);
     archivePath->mVtable = &l_stringVtable;
-    setString(archiveName, "common archive");
-    archivePath->mpString = gabi::at<void>(gabi::guest_addr("common archive path"));
+    setString(archiveName, "Misc");
+    archivePath->mpString = gabi::at<void>(gabi::guest_addr("Misc/Misc.szs"));
     hdRootLoadArchiveResource(l_resourceLoader.mpValue, archiveName, archivePath, archiveHeap, 1, 0x40000, 0x2000);
-    setString(nameA, "common archive");
-    setString(nameB, "shader archive");
+    setString(nameA, "Misc");
+    setString(nameB, "Misc.bfres");
     void* archiveResource = hdRootGetArchiveResource(l_resourceLoader.mpValue, nameA, nameB, 0);
     HdRootArchive* archive = hdRootCastArchive(archiveResource);
     HdRootSafeString* graphicsName = gabi::at<HdRootSafeString>(native + 0x50);
-    setString(graphicsName, "UI graphics heap");
+    setString(graphicsName, "LayoutMgr");
     root = hdRootGetGraphicsHeap();
     HdRootHeap* graphicsHeap = hdRootCreateExpHeap(0x2000000, graphicsName, root, 1, 0);
     hdRootUiGraphicsInitialize(graphicsHeap);
@@ -325,7 +325,7 @@ void HdRootTask::prepare() {
     firstRange->mpEnd = NULL;
     firstRange->mpBegin = NULL;
     void* files = resolveOffset(&archive->mFilesOffset);
-    HdRootFileEntry* file = hdRootFindArchiveFile(files, "first shader binary");
+    HdRootFileEntry* file = hdRootFindArchiveFile(files, "font_BuildinShader.gsh");
     u32 offset = file->mDataOffset;
     u32 size = file->mSize;
     void* first = offset ? gabi::at<void>(gabi::ea(file) + offset) : NULL;
@@ -334,7 +334,7 @@ void HdRootTask::prepare() {
     secondRange->mpBegin = NULL;
     firstRange->mpBegin = first;
     files = resolveOffset(&archive->mFilesOffset);
-    file = hdRootFindArchiveFile(files, "second shader binary");
+    file = hdRootFindArchiveFile(files, "lyt_BuildinShader.gsh");
     offset = file->mDataOffset;
     size = file->mSize;
     void* second = offset ? gabi::at<void>(gabi::ea(file) + offset) : NULL;
@@ -342,7 +342,7 @@ void HdRootTask::prepare() {
     secondRange->mpEnd = rangeEnd(second, size);
     hdRootSetShaderRanges(l_uiGraphics.mpValue, graphicsHeap, firstRange, secondRange);
     HdRootSafeString* uiName = gabi::at<HdRootSafeString>(native + 0x58);
-    setString(uiName, "UI resource heap");
+    setString(uiName, "LayoutResMgr");
     root = hdRootGetGraphicsHeap();
     HdRootHeap* uiHeap = hdRootCreateExpHeap(0x5C00000, uiName, root, 1, 0);
     hdRootUiResourceInitialize(uiHeap);
@@ -350,7 +350,7 @@ void HdRootTask::prepare() {
     HdRootHeap* fontHeap = hdRootGetFontHeap();
     hdRootFontInitialize(fontHeap);
     hdRootFontSetHeap(l_fontManager.mpValue, fontHeap);
-    setString(nameA, "font resource heap");
+    setString(nameA, "SaveData");
     HdRootHeap* fontResourceHeap = hdRootCreateFrameHeap(0, nameA, fontHeap, 1, 0);
     void* fontResource = hdRootCreateFontResource(fontResourceHeap);
     adjustHeap(fontResourceHeap);
@@ -490,34 +490,34 @@ data l_signedRegistration 1018F56C
 data l_unsignedRegistration 1018F578
 data l_inputConfig 104A0CD8
 str 10006520 "RootTask" renamed
-str 1000652C "graphics resource" renamed
-str 10006534 "graphics memory heap" renamed
-str 10006564 "graphics resource data" renamed
-str 10006580 "graphics initialization heap" renamed
-str 10006558 "graphics command heap" renamed
-str 10006624 "archive C path" renamed
-str 1000659C "archive C name" renamed
-str 10006630 "archive D path" renamed
-str 1000663C "archive D name" renamed
-str 100065A8 "archive B path" renamed
-str 10006590 "archive B name" renamed
-str 10006598 "archive A path" renamed
-str 100065A4 "archive A name" renamed
-str 100065C0 "first mount" renamed
-str 1000664C "second mount" renamed
-str 10006658 "default heap" renamed
-str 100065B0 "resource heap" renamed
-str 100065CC "command heap" renamed
-str 10006688 "system heap" renamed
-str 100065DC "data heap" renamed
-str 100065B8 "common archive" renamed
-str 100065F0 "common archive path" renamed
-str 10006694 "shader archive" renamed
-str 10006600 "UI graphics heap" renamed
-str 100066A0 "first shader binary" renamed
-str 1000660C "second shader binary" renamed
-str 100066B8 "UI resource heap" renamed
-str 100066C8 "font resource heap" renamed
+str 1000652C "sarc"
+str 10006534 "agl::DynamicTextureAllocator(MEM)"
+str 10006564 "agl_resource_cafe_dev.sarc"
+str 10006580 "agl::Framework"
+str 10006558 "agl::smdl"
+str 10006624 "Cafe/JP/"
+str 1000659C "local"
+str 10006630 "platform"
+str 1000663C "Cafe/Common/"
+str 100065A8 "common"
+str 10006590 "Common/"
+str 10006598 "tmp"
+str 100065A4 ""
+str 100065C0 "save_common"
+str 1000664C "save_act"
+str 10006658 "primitive_renderer/primitive_renderer_cafe.gsh"
+str 100065B0 "ResMgr"
+str 100065CC "ModelResSetup"
+str 10006688 "ModelRes"
+str 100065DC "PermanentResource"
+str 100065B8 "Misc"
+str 100065F0 "Misc/Misc.szs"
+str 10006694 "Misc.bfres"
+str 10006600 "LayoutMgr"
+str 100066A0 "font_BuildinShader.gsh"
+str 1000660C "lyt_BuildinShader.gsh"
+str 100066B8 "LayoutResMgr"
+str 100066C8 "SaveData"
 ext 0273AD10 void* hdRootAllocate(u32)
 ext 0273AF40 void hdRootDelete(void*)
 ext 02748100 void hdRootTaskConstruct(HdRootTask*, void*, const char*)

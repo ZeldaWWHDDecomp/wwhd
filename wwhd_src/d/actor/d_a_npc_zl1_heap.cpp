@@ -104,7 +104,7 @@ static daNpc_Zl1_HIO_c* daNpc_Zl1_HIO_c_ct(daNpc_Zl1_HIO_c* i_this) {
     i_this->__vtbl = zl1Heap::hioVtable;
     memcpy_g(&i_this->mPrmTbl, &a_prm_tbl, sizeof(a_prm_tbl));
     i_this->mNo = -1;
-    i_this->field_0x8 = -1;
+    i_this->mRefCount = -1;
     return i_this;
 }
 
@@ -116,7 +116,7 @@ static daNpc_Zl1_matAnm_c* daNpc_Zl1_matAnm_c_ct(daNpc_Zl1_matAnm_c* i_this) {
         if (i_this == nullptr)
             return i_this;
     }
-    i_this->field_0x7C = 0;
+    i_this->mMoveFlag = 0;
     i_this->mOffset.x = 0.0f;
     i_this->__vtbl = zl1Heap::materialAnmVtable;
     i_this->mOffset.y = 0.0f;
@@ -145,7 +145,7 @@ static void daNpc_Zl1_matAnm_c_calc(daNpc_Zl1_matAnm_c* i_this, void* i_material
         *bits = *bits | (1u << (relatedIndex & 31));
     }
     auto* srt = reinterpret_cast<zl1Heap::TextureSRT*>(material->mpTextureSRT.get() + (u16)entry->mSRTOffset);
-    if (i_this->field_0x7C != 0) {
+    if (i_this->mMoveFlag != 0) {
         srt->mTranslationX = i_this->mOffset.x;
         srt->mTranslationY = i_this->mOffset.y;
     }
@@ -360,16 +360,16 @@ BOOL daNpc_Zl1_c::bodyCreateHeap() {
     for (int no = 0; no < 6; no++) {
         SafeString* name = &l_eyeNames[no];
         zl1Heap::Material* material = materialByName(a_mdl_dat, name);
-        field_0x860[no] = gabi::ea(material);
-        field_0x890[no] = material->mShape;
+        mpEyeMat[no] = gabi::ea(material);
+        mpEyeShape[no] = material->mShape;
     }
     static const char* const mayu_names[] = {"mayuLdamB", "mayuLdamA", "mayuL", "mayuRdamB", "mayuRdamA", "mayuR"};
     initMaterialNames(&l_eyebrowGuard, l_eyebrowNames, mayu_names, 6, &l_eyebrowDestructor);
     for (int no = 0; no < 6; no++) {
         SafeString* name = &l_eyebrowNames[no];
         zl1Heap::Material* material = materialByName(a_mdl_dat, name);
-        field_0x878[no] = gabi::ea(material);
-        field_0x8A8[no] = material->mShape;
+        mpMayuMat[no] = gabi::ea(material);
+        mpMayuShape[no] = material->mShape;
     }
     m_hed_jnt_num = zl1Heap_jointNameIndex(zl1Heap::jointNames(a_mdl_dat), "head" /* "head" */);
     if (m_hed_jnt_num < 0)

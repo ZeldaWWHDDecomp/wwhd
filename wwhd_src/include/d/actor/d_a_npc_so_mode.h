@@ -7,26 +7,26 @@ struct SoModeHIO {
     u8 prefix[0x22];
     /* 0x22 */ be<u8> debugDraw;
     u8 reserved[9];
-    /* 0x2C */ be<u8> m2C;
+    /* 0x2C */ be<u8> mForceHudeDraw;  /* was m2C: see d/actor/d_a_npc_so.h (daNpc_So_HIO_c) */
     be<u8> m2D;
-    be<u8> m2E;
-    be<u8> m2F;
-    be<u8> m30;
-    be<u8> m31;
+    be<u8> mForceMiniGameClear;  /* was m2E: see d/actor/d_a_npc_so.h (daNpc_So_HIO_c) */
+    be<u8> mForceGridArrived;  /* was m2F: see d/actor/d_a_npc_so.h (daNpc_So_HIO_c) */
+    be<u8> mForceMiniGameTag;  /* was m30: see d/actor/d_a_npc_so.h (daNpc_So_HIO_c) */
+    be<u8> mNoDraw;  /* was m31: see d/actor/d_a_npc_so.h (daNpc_So_HIO_c) */
     u8 tuning[0x1E];
-    /* 0x50 */ be<f32> m50;
-    /* 0x54 */ be<f32> m54;
+    /* 0x50 */ be<f32> mJumpSpeedYMax;  /* was m50: see d/actor/d_a_npc_so.h (daNpc_So_HIO_c) */
+    /* 0x54 */ be<f32> mFirstWaitShipDist;  /* was m54: see d/actor/d_a_npc_so.h (daNpc_So_HIO_c) */
     u8 jumpTuning[0x10];
-    /* 0x68 */ be<s16> m68;
+    /* 0x68 */ be<s16> mRisePitchFast;  /* was m68: see d/actor/d_a_npc_so.h (daNpc_So_HIO_c) */
     u8 hitTuning[0x12];
-    /* 0x7C */ be<s16> m7C;
+    /* 0x7C */ be<s16> mTgHitTime;  /* was m7C: see d/actor/d_a_npc_so.h (daNpc_So_HIO_c) */
 };
 WWHD_OFFSET(SoModeHIO, debugDraw, 0x22);
-WWHD_OFFSET(SoModeHIO, m2C, 0x2C);
-WWHD_OFFSET(SoModeHIO, m50, 0x50);
-WWHD_OFFSET(SoModeHIO, m54, 0x54);
-WWHD_OFFSET(SoModeHIO, m68, 0x68);
-WWHD_OFFSET(SoModeHIO, m7C, 0x7C);
+WWHD_OFFSET(SoModeHIO, mForceHudeDraw, 0x2C);
+WWHD_OFFSET(SoModeHIO, mJumpSpeedYMax, 0x50);
+WWHD_OFFSET(SoModeHIO, mFirstWaitShipDist, 0x54);
+WWHD_OFFSET(SoModeHIO, mRisePitchFast, 0x68);
+WWHD_OFFSET(SoModeHIO, mTgHitTime, 0x7C);
 WWHD_SIZE(SoModeHIO, 0x7E);
 
 struct SoModeCirclePath {

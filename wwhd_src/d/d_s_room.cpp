@@ -1,7 +1,10 @@
 /** Room scenes and phased resource loading. */
 #include "d/d_s_room.h"
+#include "sead/ElementAt.h"
 
 static RoomStatusTable l_roomStatus;
+/* guest address arithmetic (every l_roomStatus.entries[roomNo] below): entries + roomNo * 0x22C wraps at 32 bits as on the
+ * console */
 static RoomDemoArcName l_demoArcName;
 static RoomPhaseTable l_method;
 static RoomSafeStringMethods l_safeStringMethods;
@@ -53,7 +56,7 @@ static bool roomStageEqual(const char* name) {
 void objectSetCheck(room_of_scene_class* i_this) {
     u32 roomNo = i_this->mParameters;
     dComIfGp_get();
-    RoomStatus* status = &l_roomStatus.entries[roomNo];
+    RoomStatus* status = &sead::elementAt<RoomStatus>(gabi::ea(l_roomStatus.entries), roomNo);
     bool reloaded = i_this->mbReLoaded != 0;
     u32 hiddenFlag = status->mFlags & RoomFlag_HIDDEN;
     if (!reloaded) {
@@ -98,7 +101,7 @@ void objectSetCheck(room_of_scene_class* i_this) {
 BOOL dScnRoom_Execute(room_of_scene_class* i_this) {
     u32 roomNo = i_this->mParameters;
     dComIfGp_get();
-    RoomStatus* status = &l_roomStatus.entries[roomNo];
+    RoomStatus* status = &sead::elementAt<RoomStatus>(gabi::ea(l_roomStatus.entries), roomNo);
     u8 flags = status->mFlags;
     if (flags & RoomFlag_DELETE) {
         fopScnM_DeleteReq(i_this);
@@ -139,7 +142,7 @@ BOOL dScnRoom_Delete(room_of_scene_class* i_this) {
     }
     dComIfG_deleteStageRes(i_this->mArcName);
     dComIfGp_get();
-    l_roomStatus.entries[roomNo].mFlags = 0;
+    sead::elementAt<RoomStatus>(gabi::ea(l_roomStatus.entries), roomNo).mFlags = 0;
     RoomPlayView* play = roomPlay();
     RoomDt* roomDt = dStage_roomControl_getStatusRoomDt(&play->mRoomControl, roomNo);
     roomDt->init();
@@ -166,7 +169,7 @@ BOOL dScnRoom_Delete(room_of_scene_class* i_this) {
 cPhs_State phase_0(room_of_scene_class* i_this) {
     u32 roomNo = i_this->mParameters;
     u32 id = i_this ? static_cast<u32>(i_this->mBsPcId) : 0xFFFFFFFF;
-    l_roomStatus.entries[roomNo].mProcID = id;
+    sead::elementAt<RoomStatus>(gabi::ea(l_roomStatus.entries), roomNo).mProcID = id;
     // HD: cache an eight-byte archive name using unsigned room formatting.
     Room_formatArchiveName(i_this->mArcName, 8, "Room%u", roomNo);
     return cPhs_NEXT_e;
@@ -193,7 +196,7 @@ cPhs_State phase_2(room_of_scene_class* i_this) {
     }
     u32 roomNo = i_this->mParameters;
     dComIfGp_get();
-    RoomStatus* status = &l_roomStatus.entries[roomNo];
+    RoomStatus* status = &sead::elementAt<RoomStatus>(gabi::ea(l_roomStatus.entries), roomNo);
     if (status->mZoneNo < 0) {
         u32 zoneNo = dSv_info_createZone(dComIfGs_info(), roomNo);
         dComIfGp_get();
@@ -215,7 +218,8 @@ cPhs_State phase_2(room_of_scene_class* i_this) {
                 be<u8>* banks = lbnk->mEntries;
                 if (banks) {
                     u32 layerNo = dComIfG_play_getLayerNo(roomNo);
-                    u32 bank = banks[layerNo];
+                    /* guest address arithmetic: banks + layerNo wraps at 32 bits as on the console */
+                    u32 bank = sead::elementAt<be<u8>>(gabi::ea(banks), layerNo);
                     if (bank != Room_NO_DEMO_BANK) {
                         if (bank >= 100) {
                             JUTAssertion::showAssert("d_s_room.cpp", 0x238, "0 <= bank && bank < 100");

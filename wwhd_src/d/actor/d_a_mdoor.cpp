@@ -18,7 +18,7 @@ u8 daMdoor_c::getShapeType() {
 }
 /* 021C0EAC */
 void daMdoor_c::calcMtx() {
-    f32 height = m2CC, y = current.pos.y, x = current.pos.x, z = current.pos.z;
+    f32 height = mHeight, y = current.pos.y, x = current.pos.x, z = current.pos.z;
     PSMTXTrans(mDoMtx_stack_c::get(), x, y + height, z);
     mDoMtx_YrotM(mDoMtx_stack_c::get(), home.angle.y);
     mpModel->setBaseTRMtx(mDoMtx_stack_c::get());
@@ -73,7 +73,7 @@ void daMdoor_c::smokeInit() {
     dPa_control_c* control = ((dComIfG_inf_c*)play)->play.mParticle;
     MdoorEmitter* emitter = (MdoorEmitter*)control->set(
         0, dPa_name::ID_AK_JT_ELEMENTSMOKE00, &current.pos, &shape_angle, nullptr, 0xAA,
-        (dPa_levelEcallBack*)&m290, room, nullptr, nullptr, nullptr);
+        (dPa_levelEcallBack*)&mSmokeCallback, room, nullptr, nullptr, nullptr);
     if (emitter) {
         emitter->mRate = 16.0f;
         emitter->mSpread = 0.35f;
@@ -95,7 +95,7 @@ static void sound(daMdoor_c* i_this, u32 id, bool checkNull = false) {
     mDoAud_seStart(id, &i_this->eyePos, 0, reverb);
 }
 static void cutEnd(daMdoor_c* i_this) {
-    s32 staff = i_this->m2C0;
+    s32 staff = i_this->mStaffId;
     dComIfGp_evmng_cutEnd(staff);
 }
 static void move(daMdoor_c* i_this) {
@@ -104,16 +104,16 @@ static void move(daMdoor_c* i_this) {
 }
 /* 021C1174 */
 void daMdoor_c::demoProc() {
-    s32 staff = m2C0;
+    s32 staff = mStaffId;
 
     u32 action = dComIfGp_evmng_getMyActIdx(staff, action_table.entries, 3, 0, 0);
-    staff = m2C0;
+    staff = mStaffId;
 
     if (dComIfGp_evmng_getIsAddvance(staff)) {
         if (action == 1) {
-            u16 flags = m2CA;
+            u16 flags = mDemoFlags;
             speedF = 0.0f;
-            m2CA = flags | 1;
+            mDemoFlags = flags | 1;
             sound(this, JA_SE_OBJ_CAGE_CLOSE);
         } else if (action == 2) {
             speedF = 0.0f;
@@ -124,11 +124,11 @@ void daMdoor_c::demoProc() {
     }
     if (action == 1) {
         cLib_chaseF(&speedF, 60.0f, 6.0f);
-        if (cLib_chaseF(&m2CC, 0.0f, speedF)) {
+        if (cLib_chaseF(&mHeight, 0.0f, speedF)) {
             cutEnd(this);
-            u16 flags = m2CA;
+            u16 flags = mDemoFlags;
             if (flags & 1) {
-                m2CA = flags & 0xFFFE;
+                mDemoFlags = flags & 0xFFFE;
                 if (getShapeType() != 1)
                     debris(this);
                 smokeInit();
@@ -137,7 +137,7 @@ void daMdoor_c::demoProc() {
         move(this);
     } else if (action == 2) {
         cLib_chaseF(&speedF, 30.0f, 3.0f);
-        if (cLib_chaseF(&m2CC, 280.0f, speedF))
+        if (cLib_chaseF(&mHeight, 280.0f, speedF))
             cutEnd(this);
         move(this);
     } else
@@ -145,19 +145,19 @@ void daMdoor_c::demoProc() {
 }
 /* 021C1418 */
 static BOOL daMdoor_actionDemoWait(daMdoor_c* i_this) {
-    s16 event = i_this->m2C6;
+    s16 event = i_this->mEventIdx;
 
     if (dComIfGp_evmng_startCheck(event)) {
         i_this->mAction = (u8)((u8)i_this->mAction + 1);
 
-        i_this->m2C0 = dComIfGp_evmng_getMyStaffId("Mori1", 0, 0);
+        i_this->mStaffId = dComIfGp_evmng_getMyStaffId("Mori1", 0, 0);
         i_this->demoProc();
     }
     return TRUE;
 }
 /* 021C149C */
 static BOOL daMdoor_actionDemo(daMdoor_c* i_this) {
-    s16 event = i_this->m2C6;
+    s16 event = i_this->mEventIdx;
 
     if (dComIfGp_evmng_endCheck(event))
         i_this->mAction = (u8)((u8)i_this->mAction + 1);
@@ -170,16 +170,16 @@ u8 daMdoor_c::getType() {
     return (mParameters >> 8) & 0xFF;
 }
 static void order(daMdoor_c* i_this) {
-    s16 event = i_this->m2C6;
-    u8 tool = i_this->m2C8;
+    s16 event = i_this->mEventIdx;
+    u8 tool = i_this->mToolId;
     fopAcM_orderOtherEventId(i_this, event, tool, 0xFFFF, 0, 1);
 }
 /* 021C1514 */
 static BOOL daMdoor_actionGenocide(daMdoor_c* i_this) {
     if (!mdoorSearchEnemy((s8)i_this->current.roomNo)) {
-        s16 timer = i_this->m2C4;
+        s16 timer = i_this->mDelayTimer;
         if (timer > 0)
-            i_this->m2C4 = (s16)(timer - 1);
+            i_this->mDelayTimer = (s16)(timer - 1);
         else {
             if (i_this->getType() == 1)
                 mDoAud_subBgmStop();
@@ -194,30 +194,30 @@ static void resetEvent() {
 }
 /* 021C15B0 */
 static BOOL daMdoor_actionOpen(daMdoor_c* i_this) {
-    s16 event = i_this->m2C6;
+    s16 event = i_this->mEventIdx;
 
     if (dComIfGp_evmng_endCheck(event)) {
         i_this->mAction = (u8)((u8)i_this->mAction + 1);
         resetEvent();
         return TRUE;
     }
-    s16 timer = i_this->m2C4;
+    s16 timer = i_this->mDelayTimer;
     if (timer < 0)
         return TRUE;
     if (timer > 0) {
         timer = (s16)(timer - 1);
-        i_this->m2C4 = timer;
+        i_this->mDelayTimer = timer;
         if (timer)
             return TRUE;
         i_this->speedF = 0.0f;
         if (i_this->getShapeType() != 1)
             debris(i_this);
         sound(i_this, JA_SE_OBJ_CAGE_OPEN, true);
-        if ((s16)i_this->m2C4 != 0)
+        if ((s16)i_this->mDelayTimer != 0)
             return TRUE;
     }
     cLib_chaseF(&i_this->speedF, 30.0f, 3.0f);
-    cLib_chaseF(&i_this->m2CC, 280.0f, i_this->speedF);
+    cLib_chaseF(&i_this->mHeight, 280.0f, i_this->speedF);
     move(i_this);
     return TRUE;
 }
@@ -240,7 +240,7 @@ static BOOL daMdoor_actionSwitch(daMdoor_c* i_this) {
 static BOOL daMdoor_actionReady(daMdoor_c* i_this) {
     if ((u16)i_this->eventInfo.mCommand == dEvtCmd_INDEMO_e) {
 
-        i_this->m2C0 = dComIfGp_evmng_getMyStaffId("SHUTTER_DOOR", 0, 0);
+        i_this->mStaffId = dComIfGp_evmng_getMyStaffId("SHUTTER_DOOR", 0, 0);
         i_this->demoProc();
         i_this->mAction = (u8)((u8)i_this->mAction + 1);
         u8 sw = i_this->getSwbit();
@@ -265,14 +265,14 @@ static BOOL daMdoor_actionReadyOpen(daMdoor_c* i_this) {
             dSv_info_c* save = dComIfGs_info();
             save->isSwitch(sw, (s8)i_this->current.roomNo);
         }
-        i_this->m2C4 = 20;
+        i_this->mDelayTimer = 20;
     } else
         order(i_this);
     return TRUE;
 }
 /* 021C1924 */
 static BOOL daMdoor_actionEvent(daMdoor_c* i_this) {
-    s16 event = i_this->m2C6;
+    s16 event = i_this->mEventIdx;
 
     if (dComIfGp_evmng_endCheck(event)) {
         i_this->mAction = (u8)((u8)i_this->mAction + 1);
@@ -292,7 +292,7 @@ static BOOL daMdoor_Draw(daMdoor_c* i_this) {
 }
 /* 021C19FC */
 void daMdoor_c::smokeEnd() {
-    m290.end();
+    mSmokeCallback.end();
 }
 /* 021C1A04 */
 static BOOL daMdoor_Execute(daMdoor_c* i_this) {
@@ -335,34 +335,34 @@ BOOL daMdoor_c::CreateInit() {
     if (space->Regist(mpBgW, this))
         JUT_ASSERT_fail("d_a_mdoor.cpp", 0xEC, "0");
     s8 room = current.roomNo;
-    m2CC = 0.0f;
+    mHeight = 0.0f;
     tevStr.mRoomNo = room;
-    m2C8 = 0xFF;
+    mToolId = 0xFF;
     if (type == 0) {
         dSv_info_c* save = dComIfGs_info();
         bool done = save->mSavedata.mEvent.isEventBit(0x1101);
         if (done)
             mAction = ACT_WAIT3_e;
         else {
-            m2CC = 280.0f;
+            mHeight = 280.0f;
             mAction = ACT_DEMO_WAIT_e;
         }
 
         s16 event = dComIfGp_evmng_getEventIdx("MORI1_EVENT", 0xFF);
-        m2C6 = event;
+        mEventIdx = event;
     } else if (type == 1) {
         dSv_info_c* save = dComIfGs_info();
         if (save->mSavedata.mEvent.isEventBit(0x1101)) {
             mAction = ACT_WAIT7_e;
-            m2CC = 280.0f;
+            mHeight = 280.0f;
         } else {
             save = dComIfGs_info();
             mdoorOffEventBit(&save->mSavedata.mEvent, 0x1140);
             mAction = ACT_GENOCIDE_e;
 
             s16 event = dComIfGp_evmng_getEventIdx("DEFAULT_STOP_OPEN", 0xFF);
-            m2C4 = 1;
-            m2C6 = event;
+            mDelayTimer = 1;
+            mEventIdx = event;
         }
     } else if (type == 2) {
         bool done = sw == 0xFF;
@@ -372,14 +372,14 @@ BOOL daMdoor_c::CreateInit() {
         }
         if (done) {
             mAction = ACT_WAIT11_e;
-            m2CC = 280.0f;
+            mHeight = 280.0f;
         } else {
-            m2C8 = getToolId();
+            mToolId = getToolId();
             u8 tool = getToolId();
 
             s16 event = dComIfGp_evmng_getEventIdx("DEFAULT_STOP_OPEN", tool);
-            u8 savedTool = m2C8;
-            m2C6 = event;
+            u8 savedTool = mToolId;
+            mEventIdx = event;
             mAction = savedTool == 0xFF ? ACT_SWITCH8_e : ACT_SWITCH12_e;
         }
     } else
@@ -396,7 +396,7 @@ s32 daMdoor_c::create() {
         if (this) {
             mdoorActorConstruct(this);
             __vtbl = __vt;
-            __ct(&m290, 1);
+            __ct(&mSmokeCallback, 1);
             condition = actor_condition;
         }
         actor_condition = condition | fopAcCnd_INIT_e;

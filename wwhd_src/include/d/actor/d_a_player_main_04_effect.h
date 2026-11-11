@@ -23,10 +23,10 @@ struct LinkEffectLayout {
     u8 _0000[0x5848];
     be<u16> mUnderAnimationIndex;
     u8 _584A[0x6868 - 0x584A];
-    LinkItemMtxCallback m3454;
+    LinkItemMtxCallback mLightSaverEcallBack;  /* was m3454: view of daPy_lk_c::mLightSaverEcallBack */
 };
 WWHD_OFFSET(LinkEffectLayout, mUnderAnimationIndex, 0x5848);
-WWHD_OFFSET(LinkEffectLayout, m3454, 0x6868);
+WWHD_OFFSET(LinkEffectLayout, mLightSaverEcallBack, 0x6868);
 WWHD_SIZE(LinkEffectLayout, 0x6874);
 struct LinkEffectBarrel {
     u8 _000[0x738];

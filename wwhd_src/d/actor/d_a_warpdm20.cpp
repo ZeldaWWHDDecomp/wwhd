@@ -35,7 +35,7 @@ BOOL daWarpdm20_c::CreateHeap() {
     J3DModelData* modelData = static_cast<J3DModelData*>(
         warpObjectResource(dComIfG_resControl(), modelKey.get(), dRes_INDEX_GDEMO20_BDL_GDEMO20_1_e));
     if (!modelData)
-        JUT_ASSERT_fail("d_a_warpdm20.cpp", 0xDB, "modelData != NULL");
+        JUT_ASSERT_fail("d_a_warpdm20.cpp", 0xDB, "modelData != (0)");
     mpModel = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000222);
     if (!mpModel)
         return FALSE;
@@ -46,7 +46,7 @@ BOOL daWarpdm20_c::CreateHeap() {
     void* bckResource =
         warpObjectResource(dComIfG_resControl(), bckKey.get(), dRes_INDEX_GDEMO20_BCK_GDEMO20_1_e);
     if (!bckResource)
-        JUT_ASSERT_fail("d_a_warpdm20.cpp", 0xED, "pbck != NULL");
+        JUT_ASSERT_fail("d_a_warpdm20.cpp", 0xED, "pbck != (0)");
     warpdm20::BckConstructView* bck = static_cast<warpdm20::BckConstructView*>(operator_new(0x8C));
     if (bck) {
         warpFrameConstruct(bck, 0);
@@ -73,7 +73,7 @@ BOOL daWarpdm20_c::CreateHeap() {
     void* btkResource =
         warpObjectResource(dComIfG_resControl(), btkKey.get(), dRes_INDEX_GDEMO20_BTK_GDEMO20_1_e);
     if (!btkResource)
-        JUT_ASSERT_fail("d_a_warpdm20.cpp", 0x117, "pbtk != NULL");
+        JUT_ASSERT_fail("d_a_warpdm20.cpp", 0x117, "pbtk != (0)");
     mpBtkAnm = warpCreateBtk(0);
     if (!mpBtkAnm)
         return FALSE;
@@ -87,7 +87,7 @@ BOOL daWarpdm20_c::CreateHeap() {
     void* brkResource =
         warpObjectResource(dComIfG_resControl(), brkKey.get(), dRes_INDEX_GDEMO20_BRK_GDEMO20_1_e);
     if (!brkResource)
-        JUT_ASSERT_fail("d_a_warpdm20.cpp", 0x12B, "pbrk != NULL");
+        JUT_ASSERT_fail("d_a_warpdm20.cpp", 0x12B, "pbrk != (0)");
     mpBrkAnm = warpCreateBrk(0);
     if (!mpBrkAnm)
         return FALSE;
@@ -114,21 +114,21 @@ void daWarpdm20_c::CreateInit() {
     if (water == -1000000000.0f)
         water = 0.0f;
     current.pos.y = water;
-    m2E0.y = water;
+    mEffectPos.y = water;
     warpdm20::modelScale(currentModel)->z = z;
     warpdm20::modelScale(currentModel)->x = x;
     warpdm20::modelScale(currentModel)->y = y;
     Warpdm20CopyTranslation(this);
-    m2EC.z = 1.0f;
-    warpdm20::words(&m2E0)->z = warpdm20::words(&current.pos)->z;
-    warpdm20::words(&m2E0)->y = warpdm20::words(&current.pos)->y;
-    m2EC.x = 1.0f;
-    m2C8 = 0;
-    warpdm20::words(&m2E0)->x = warpdm20::words(&current.pos)->x;
-    m2EC.y = 1.0f;
+    mEffectScale.z = 1.0f;
+    warpdm20::words(&mEffectPos)->z = warpdm20::words(&current.pos)->z;
+    warpdm20::words(&mEffectPos)->y = warpdm20::words(&current.pos)->y;
+    mEffectScale.x = 1.0f;
+    mWarpOrder = 0;
+    warpdm20::words(&mEffectPos)->x = warpdm20::words(&current.pos)->x;
+    mEffectScale.y = 1.0f;
     dSv_event_c* save = dComIfGs_getEvent();
     if (warpIsEventBit(save, UNK_2D08)) {
-        m2CC = 1;
+        mVisible = 1;
         this->setEndAnm();
     }
     dComIfG_inf_c* game = warpdm20::game();
@@ -174,7 +174,7 @@ BOOL daWarpdm20_c::_execute() {
         this->eventOrder();
     } else
         this->demo_execute();
-    if (u8(m2CC)) {
+    if (u8(mVisible)) {
         const s32 reverb = warpReverb(s32(current.roomNo));
         warpLevelSound(JA_SE_OBJ_HL_WAPR_EFF, &eyePos, 0, reverb);
     }
@@ -186,7 +186,7 @@ BOOL daWarpdm20_c::_execute() {
     const f32 scaleY = scale.y;
     if (water == -1000000000.0f)
         water = 0.0f;
-    m2E0.y = water;
+    mEffectPos.y = water;
     const f32 scaleX = scale.x, scaleZ = scale.z;
     J3DModel* model = mpModel;
     current.pos.y = water;
@@ -212,7 +212,7 @@ void daWarpdm20_c::normal_execute() {
     dSv_event_c* save = dComIfGs_getEvent();
     if (!warpIsEventBit(save, UNK_2D08))
         return;
-    m2CC = 1;
+    mVisible = 1;
     this->animPlay();
     if (emitter) {
         auto* flags = &emitter->mStatus;
@@ -222,26 +222,26 @@ void daWarpdm20_c::normal_execute() {
             *flags = u32(*flags) | 1;
     }
     if (this->check_warp())
-        m2C8 = 1;
+        mWarpOrder = 1;
 }
 
 /* 024D57E4 */
 void daWarpdm20_c::demo_execute() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     const u32 demoId = demoActorID;
-    m2CC = 1;
+    mVisible = 1;
     if (!demoId || demoId > 32)
         return;
     warpdm20::DemoObjects* objects = warpdm20::demoObjects();
     if (!objects) {
-        JUT_ASSERT_fail("d_demo.h", 0x23A, "m_object != NULL");
+        JUT_ASSERT_fail("d_demo.h", 0x23A, "m_object != (0)");
         objects = warpdm20::demoObjects();
     }
     dDemo_actor_c* demo = warpDemoActor(objects, demoId);
     if (!demo)
         return;
     const u32 action = demo->mShapeId;
-    m2D8 = action;
+    mDemoShapeId = action;
     if (action == 0) {
         warpOffDraw(warpdm20::drawTag(this));
     } else if (action == 1) {
@@ -361,7 +361,7 @@ void daWarpdm20_c::initWaitDead(s32 action) {
     goal->z = f32(current.pos.z) + 1000.0f;
     dComIfG_inf_c* game = warpdm20::game();
     warpSetGoal(&game->play.mEvtManager, goal.get());
-    m2CC = 1;
+    mVisible = 1;
     init_bck_anm(dRes_INDEX_GDEMO20_BCK_GDEMO20_1A_e);
     if (mpBrkAnm) {
         auto* animation = mpBrkAnm.get();
@@ -408,14 +408,14 @@ BOOL daWarpdm20_c::actDead(s32 action) {
     if (mpBckAnm) {
         mpBckAnm->mFrameCtrl.mRate = 1.0f;
         if (mpBckAnm.get()->play()) {
-            m2CC = 0;
+            mVisible = 0;
             done = TRUE;
         }
     }
     warpdm20::Emitter* emitter = mRippleCallback.mpEmitter;
     if (emitter) {
-        warpChasePosition(&m2EC, &l_zeroVector, 0.2f);
-        const f32 x = m2EC.x, y = m2EC.y, z = m2EC.z;
+        warpChasePosition(&mEffectScale, &l_zeroVector, 0.2f);
+        const f32 x = mEffectScale.x, y = mEffectScale.y, z = mEffectScale.z;
         emitter->mGlobalParticleScale.z = z;
         emitter->mGlobalParticleScale.x = x;
         emitter->mGlobalDynamicsScale.y = y;
@@ -446,7 +446,7 @@ BOOL daWarpdm20_c::actReturnWait(s32 action) {
 /* 024D5708 */
 void daWarpdm20_c::eventOrder() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (s32(m2C8) != 1)
+    if (s32(mWarpOrder) != 1)
         return;
     warpOrderEvent(this, s32(mEventIdx), 255, 65535, 0, 1);
     auto* condition = &eventInfo.mCondition;
@@ -461,8 +461,8 @@ void daWarpdm20_c::checkOrder() {
         dComIfG_inf_c* game = warpdm20::game();
         const s32 started = warpEventStart(&game->play.mEvtManager, event);
         event = mEventIdx;
-        if (started && s32(m2C8))
-            m2C8 = 0;
+        if (started && s32(mWarpOrder))
+            mWarpOrder = 0;
         game = warpdm20::game();
         if (warpEventEnd(&game->play.mEvtManager, event)) {
             game = warpdm20::game();
@@ -470,7 +470,7 @@ void daWarpdm20_c::checkOrder() {
             *flags = u16(*flags) | 8;
             warpDeleteActor(this);
         }
-    } else if (s32(m2C8) == 0) {
+    } else if (s32(mWarpOrder) == 0) {
         dComIfG_inf_c* game = warpdm20::game();
         if ((u8)game->play.mEvtCtrl.mMode == 0)
             normal_execute();
@@ -524,7 +524,7 @@ BOOL daWarpdm20_c::set_effect(u32 effect) {
         return FALSE;
     dComIfG_inf_c* game = warpdm20::game();
     dPa_control_c* particles = game->play.mParticle;
-    warpParticle(particles, 5, effect, &m2E0, 0, &m2EC, 255, &mRippleCallback, -1, 0, 0, 0);
+    warpParticle(particles, 5, effect, &mEffectPos, 0, &mEffectScale, 255, &mRippleCallback, -1, 0, 0, 0);
     warpdm20::Emitter* emitter = mRippleCallback.mpEmitter;
     auto* flags = &mRippleCallback.mStatus;
     mRippleCallback.mRate = 7.0f;
@@ -539,12 +539,12 @@ BOOL daWarpdm20_c::set_effect(u32 effect) {
 /* 024D5768 */
 void daWarpdm20_c::set_wpsenko() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (u8(m2F8))
+    if (u8(mSenkoSet))
         return;
     dComIfG_inf_c* game = warpdm20::game();
     dPa_control_c* particles = game->play.mParticle;
     warpParticle(particles, 0, 0x82BC, &current.pos, 0, 0, 255, 0, -1, 0, 0, 0);
-    m2F8 = 1;
+    mSenkoSet = 1;
 }
 
 /* 024D5C88 */
@@ -584,7 +584,7 @@ BOOL daWarpdm20_c::check_warp() {
 /* 024D507C */
 BOOL daWarpdm20_c::_draw() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (!u8(m2CC))
+    if (!u8(mVisible))
         return TRUE;
     dScnKy_env_light_c* environment = dKy_getEnvlight();
     settingTevStruct(environment, 0, &current.pos, &tevStr);
@@ -686,12 +686,12 @@ str 10042220 "Gdemo20"
 str 100421BC "TO_HYRULE_WARP"
 str 100421D0 "Gdemo20" in 024D5544
 str 1004213C "d_demo.h"
-str 1004212C "m_object != NULL"
+str 1004212C "m_object != (0)"
 str 10042174 "d_a_warpdm20.cpp"
-str 10042188 "modelData != NULL"
-str 10042150 "pbck != NULL"
-str 1004215C "pbtk != NULL"
-str 10042168 "pbrk != NULL"
+str 10042188 "modelData != (0)"
+str 10042150 "pbck != (0)"
+str 1004215C "pbtk != (0)"
+str 10042168 "pbrk != (0)"
 ext 0246B6A4 s32 warpSeaArea(f32, f32)
 ext 0246BA0C f32 warpSeaWave(f32, f32)
 ext 024F1478 f32 warpWaterHeight(const cXyz*)

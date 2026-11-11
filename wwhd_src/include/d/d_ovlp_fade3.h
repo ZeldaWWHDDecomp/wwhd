@@ -19,16 +19,16 @@ struct dOvlpFd3_c : overlap_task_class {
     }
     /* 0xD0 */ gabi::ptmf<executeFn> mExecuteFn;
     /* 0xD8 */ dDlst_snapShot_c mSnapshot_c;
-    /* 0xDC */ dDlst_2DT2_c field_0xdc;
-    /* 0x14C */ dDlst_2DT2_c field_0x120;
-    /* 0x1BC */ be<u8> field_0x164;
+    /* 0xDC */ dDlst_2DT2_c mWipePacket;  /* was field_0xdc: tww dOvlpFd3_c: the 2D packet of the wipe_00.bti texture (init in the constructor), shrunk to 0 by execFadeOut and drawn last; HD dOvlpFd3_construct 025A25F0 constructs it and dOvlpFd3_Delete 025A2558 destroys it only, the native fade renderer replaces the draw */
+    /* 0x14C */ dDlst_2DT2_c mFrameBufferPacket;  /* was field_0x120: tww dOvlpFd3_c: the 2D packet of the frame-buffer image (mDoGph_gInf_c::getFrameBufferTimg) drawn under mWipePacket; HD dOvlpFd3_construct 025A25F0 / dOvlpFd3_Delete 025A2558 construct and destroy it only */
+    /* 0x1BC */ be<u8> mSnapTaken;  /* was field_0x164: dOvlpFd3_nativeDraw 025A28B0 captures the snapshot while it is 0 and sets it; dOvlpFd3_execFirstSnap 025A26D8 starts the fade-out only once it is set; dOvlpFd3_execNextSnap 025A27E4 clears it for the next snapshot (tww draw / execFirstSnap the same) */
     u8 padding[3];
 };
 WWHD_OFFSET(dOvlpFd3_c, mExecuteFn, 0xD0);
 WWHD_OFFSET(dOvlpFd3_c, mSnapshot_c, 0xD8);
-WWHD_OFFSET(dOvlpFd3_c, field_0xdc, 0xDC);
-WWHD_OFFSET(dOvlpFd3_c, field_0x120, 0x14C);
-WWHD_OFFSET(dOvlpFd3_c, field_0x164, 0x1BC);
+WWHD_OFFSET(dOvlpFd3_c, mWipePacket, 0xDC);
+WWHD_OFFSET(dOvlpFd3_c, mFrameBufferPacket, 0x14C);
+WWHD_OFFSET(dOvlpFd3_c, mSnapTaken, 0x1BC);
 WWHD_SIZE(dOvlpFd3_c, 0x1C0);
 
 // HD: Native rendering replaces the GameCube snapshot/2D draw-list submissions.

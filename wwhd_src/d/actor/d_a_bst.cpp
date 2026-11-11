@@ -984,7 +984,7 @@ static s32 daBst_Create(bst_class *i_this) {
     s32 phase = BstBase_dComIfG_resLoad(&bstBaseActor(address)->mPhs, "Bst");
     if (phase == cPhs_COMPLEATE_e) {
         u32 parameters = (u32)(bstBaseActor(address)->mParameters);
-        bstBaseActor(address)->mPa_smokeEcallBack.m12 = 1;
+        bstBaseActor(address)->mPa_smokeEcallBack.mFollowOff = 1;
         bstBaseActor(address)->mBstPartType = (u8)parameters;
         if (!BstBase_entryHeap(i_this, gabi::guest_fn(reinterpret_cast<const void *>(useHeapInit)),
                                0x96000))

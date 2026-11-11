@@ -75,9 +75,9 @@ struct bgn2_class : fopEn_enemy_c {
     /* 0x3300 */ be<f32> mRopeSway;  /* was m2EC4: plesattack / damage (in daBgn2_Execute 0208B6A4) ease it to 250; move eases it to 0 and swings the 60 points of mRedRopeMat by sin * it; rope sway */
     /* 0x3304 */ u8 mHdPacket[0xB0];  /* was m3304: useHeapInit 0208EEA4 sets the fourth mDoExt_J3DModelPacketS up (HD); daBgn_Draw 0207B2CC (inlined daBgn2_Draw) points it at mRedRopeMat and updates it; the bgn_draw::bgn2_class view already calls it mHdPacket; HD: a fourth mDoExt_J3DModelPacketS */
     /* 0x33B4 */ gptr<JPABaseEmitter> mpPotaEmitter[2];  /* was m2EC8: jumpattack (in daBgn2_Execute 0208B6A4) sets [0] = ID_AK_SN_KGTT2CHESTPOTA00 and [1] = ID_AK_SN_KGTT2STOMACHPOTA00 on the KARADA1 / KARADA2 joints and retires them */
-    /* 0x33BC */ be<s8> mKiSetCount;  /* was m2ED0: ki_set (in daBgn2_Execute 0208B6A4) sets l_HIO.m2E; daBgn2_Execute counts it down and spawns one fpcNm_KI_e (while ki_check < l_HIO.m30) per count; daBgn_Execute 0207E7B4 clears it; Keese spawns left */
+    /* 0x33BC */ be<s8> mKiSetCount;  /* was m2ED0: ki_set (in daBgn2_Execute 0208B6A4) sets l_HIO.mKiPerLanding; daBgn2_Execute counts it down and spawns one fpcNm_KI_e (while ki_check < l_HIO.mKiMax) per count; daBgn_Execute 0207E7B4 clears it; Keese spawns left */
     /* 0x33BD */ u8 _33BD;
-    /* 0x33BE */ be<s16> mKiSetTimer;  /* was m2ED2: ki_set (in daBgn2_Execute 0208B6A4) returns while it runs and reloads it from l_HIO.m2C; daBgn2_Execute counts it down; Keese spawn cooldown */
+    /* 0x33BE */ be<s16> mKiSetTimer;  /* was m2ED2: ki_set (in daBgn2_Execute 0208B6A4) returns while it runs and reloads it from l_HIO.mKiSetInterval; daBgn2_Execute counts it down; Keese spawn cooldown */
     /* 0x33C0 */ dBgS_AcchCir mAcchCir;
     /* 0x3400 */ dBgS_ObjAcch mAcch;
     /* 0x35C4 */ be<u8> mHioOwner;  /* was m30D8: daBgn2_Create 0208F218 sets 1 when it created the l_HIO child; daBgn2_Delete 0208EE40 deletes the HIO child only then (same as bgn_class mHioOwner); owns the HIO child */
@@ -108,26 +108,26 @@ WWHD_SIZE(bgn2_class, 0x35C8);
 /* daBgn2_HIO_c, HD: the vtable pointer is the last word (0x30); size 0x34 */
 struct daBgn2_HIO_c {
     /* 0x00 */ be<s8> mNo;
-    /* 0x01 */ be<u8> m05;
-    /* 0x02 */ be<u8> m06;
+    /* 0x01 */ be<u8> mNoMove;  /* was m05: daBgn2_Execute 0208B6A4: move and the animations run only while it is 0 (tww the same); daBgn2_HIO_c_ct 0208F7C8 sets the default, never written elsewhere in WWHD or tww (0) */
+    /* 0x02 */ be<u8> mDebugHealth;  /* was m06: daBgn2_Execute 0208B6A4: when not 0, health is set to it (tww the same); daBgn2_HIO_c_ct 0208F7C8 sets the default, never written elsewhere in WWHD or tww (0) */
     /* 0x03 */ u8 _03;
-    /* 0x04 */ be<f32> m08;
-    /* 0x08 */ be<f32> m0C;
-    /* 0x0C */ be<f32> m10;
-    /* 0x10 */ be<f32> m14;
-    /* 0x14 */ be<s16> m18;
-    /* 0x16 */ be<s16> m1A;
-    /* 0x18 */ be<s16> m1C;
-    /* 0x1A */ be<s16> m1E;
-    /* 0x1C */ be<s16> m20;
-    /* 0x1E */ be<s16> m22;
-    /* 0x20 */ be<s16> m24;
-    /* 0x22 */ be<s16> m26;
-    /* 0x24 */ be<s16> m28;
-    /* 0x26 */ be<s16> m2A;
-    /* 0x28 */ be<s16> m2C;
-    /* 0x2A */ be<s16> m2E;
-    /* 0x2C */ be<s16> m30;
+    /* 0x04 */ be<f32> mGroundHeight;  /* was m08: checkGround 0208B340: the floor height; current.pos.y is clamped to it and speed.y cleared there (tww the same); daBgn2_HIO_c_ct 0208F7C8 sets the default, never written elsewhere in WWHD or tww (280) */
+    /* 0x08 */ be<f32> mPressHeight;  /* was m0C: plesattack (in daBgn2_Execute 0208B6A4): the height it rises to before the drop (cLib_addCalc2 target) (tww the same); daBgn2_HIO_c_ct 0208F7C8 sets the default, never written elsewhere in WWHD or tww (3000) */
+    /* 0x0C */ be<f32> mPressRiseStep;  /* was m10: plesattack (in daBgn2_Execute 0208B6A4): the largest cLib_addCalc2 step of the rise to mPressHeight (tww the same); daBgn2_HIO_c_ct 0208F7C8 sets the default, never written elsewhere in WWHD or tww (15) */
+    /* 0x10 */ be<f32> mGravity;  /* was m14: plesattack (in daBgn2_Execute 0208B6A4) / hensin (in daBgn2_Execute 0208B6A4): added to speed.y each frame (taken off again while mTimers[0] runs before the drop) (tww the same); daBgn2_HIO_c_ct 0208F7C8 sets the default, never written elsewhere in WWHD or tww (-2) */
+    /* 0x14 */ be<s16> mSpinSpeedHealth3;  /* was m18: jumpattack (in daBgn2_Execute 0208B6A4): mSpinSpeedTarget at health 3 (random sign) (tww the same); daBgn2_HIO_c_ct 0208F7C8 sets the default, never written elsewhere in WWHD or tww (0x5DC) */
+    /* 0x16 */ be<s16> mSpinSpeedHealth2;  /* was m1A: jumpattack (in daBgn2_Execute 0208B6A4): mSpinSpeedTarget at health 2 (tww the same); daBgn2_HIO_c_ct 0208F7C8 sets the default, never written elsewhere in WWHD or tww (0xA28) */
+    /* 0x18 */ be<s16> mSpinSpeedHealth1;  /* was m1C: jumpattack (in daBgn2_Execute 0208B6A4): mSpinSpeedTarget at health 1 (tww the same); daBgn2_HIO_c_ct 0208F7C8 sets the default, never written elsewhere in WWHD or tww (0xED8) */
+    /* 0x1A */ be<s16> mPressHangTimeHealth3;  /* was m1E: plesattack (in daBgn2_Execute 0208B6A4): mTimers[0] at the top before the drop at health 3 (tww the same); daBgn2_HIO_c_ct 0208F7C8 sets the default, never written elsewhere in WWHD or tww (60) */
+    /* 0x1C */ be<s16> mPressHangTimeHealth2;  /* was m20: plesattack (in daBgn2_Execute 0208B6A4): mTimers[0] at the top before the drop at health 2 (tww the same); daBgn2_HIO_c_ct 0208F7C8 sets the default, never written elsewhere in WWHD or tww (50) */
+    /* 0x1E */ be<s16> mPressHangTimeHealth1;  /* was m22: plesattack (in daBgn2_Execute 0208B6A4): mTimers[0] at the top before the drop at health 1 (tww the same); daBgn2_HIO_c_ct 0208F7C8 sets the default, never written elsewhere in WWHD or tww (40) */
+    /* 0x20 */ be<s16> mPressLandTimeHealth3;  /* was m24: plesattack (in daBgn2_Execute 0208B6A4): mTimers[0] after landing at health 3; at 0 the action becomes jumpattack (2) (tww the same); daBgn2_HIO_c_ct 0208F7C8 sets the default, never written elsewhere in WWHD or tww (100) */
+    /* 0x22 */ be<s16> mPressLandTimeHealth2;  /* was m26: plesattack (in daBgn2_Execute 0208B6A4): mTimers[0] after landing at health 2 (tww the same); daBgn2_HIO_c_ct 0208F7C8 sets the default, never written elsewhere in WWHD or tww (100) */
+    /* 0x24 */ be<s16> mPressLandTimeHealth1;  /* was m28: plesattack (in daBgn2_Execute 0208B6A4): mTimers[0] after landing at health 1 (tww the same); daBgn2_HIO_c_ct 0208F7C8 sets the default, never written elsewhere in WWHD or tww (100) */
+    /* 0x26 */ be<s16> mMahiTime;  /* was m2A: mahi (in daBgn2_Execute 0208B6A4): mTimers[0] for the stunned (mahi) state; at 0 the action becomes jumpattack (2) (tww the same); daBgn2_HIO_c_ct 0208F7C8 sets the default, never written elsewhere in WWHD or tww (600) */
+    /* 0x28 */ be<s16> mKiSetInterval;  /* was m2C: ki_set (in daBgn2_Execute 0208B6A4) / daBgn2_Execute: mKiSetTimer, the wait before the next Ki wave (tww the same); daBgn2_HIO_c_ct 0208F7C8 sets the default, never written elsewhere in WWHD or tww (100) */
+    /* 0x2A */ be<s16> mKiPerLanding;  /* was m2E: ki_set (in daBgn2_Execute 0208B6A4): mKiSetCount, the Ki created per landing (tww the same); daBgn2_HIO_c_ct 0208F7C8 sets the default, never written elsewhere in WWHD or tww (3) */
+    /* 0x2C */ be<s16> mKiMax;  /* was m30: daBgn2_Execute 0208B6A4: a Ki is created only while ki_check counts fewer than it (tww the same); daBgn2_HIO_c_ct 0208F7C8 sets the default, never written elsewhere in WWHD or tww (10) */
     /* 0x2E */ u8 _2E[2];
     /* 0x30 */ be<u32> __vtbl;
 };
@@ -357,7 +357,7 @@ struct CcAtInfo_l {
     /* 0x09 */ be<u8> mbDead;
     /* 0x0A */ be<u8> mResultingAttackType;
     /* 0x0B */ u8 _0B;
-    /* 0x0C */ csXyz m0C;
+    /* 0x0C */ csXyz mHitAngle;  /* was m0C: the CcAtInfo copy of this unit; see d/d_cc_uty.h */
     /* 0x12 */ be<u16> mPlCutBit;
     /* 0x14 */ gptr<cXyz> pParticlePos;
     /* 0x18 */ be<s32> mHitSoundId;

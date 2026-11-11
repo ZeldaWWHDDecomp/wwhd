@@ -121,7 +121,7 @@ static BOOL daObj_TousekikiExecute(void* i_this) {
 }
 
 inline bool daObj_Tousekiki_c::_draw() {
-    if (l_p_ship->m2CC == 0) {
+    if (l_p_ship->mAppeared == 0) {
         return true;
     }
     g_env_light.settingTevStruct(TEV_TYPE_ACTOR, &current.pos, &tevStr);

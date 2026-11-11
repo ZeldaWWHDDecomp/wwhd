@@ -36,9 +36,9 @@ void daObjDrift::Act_c::set_mtx() {
     for (u32 i = 0; i < 12; ++i)
         model->mBaseTransformMtx.m[i / 4][i % 4] = values[i];
     driftCopyMatrix(matrix, &mMtx);
-    f32 height = field_0x4C8, prev = mPrevPos.y;
-    field_0x4CC = height;
-    field_0x4C8 = prev;
+    f32 height = mLastPrevY, prev = mPrevPos.y;
+    mOlderPrevY = height;
+    mLastPrevY = prev;
     mPrevPos.x = matrix->m[0][3];
     mPrevPos.y = matrix->m[1][3];
     mPrevPos.z = matrix->m[2][3];
@@ -403,8 +403,8 @@ BOOL daObjDrift::Act_c::Create() {
     mRideFlag = 0;
     field_0x4B0.y = 5;
     field_0x4B0.z = 5;
-    field_0x4C8 = y;
-    field_0x4CC = y;
+    mLastPrevY = y;
+    mOlderPrevY = y;
     field_0x4D0 = 0;
     mWavePhaseZ = (s16)phase;
     mTargetAngleY = 0;

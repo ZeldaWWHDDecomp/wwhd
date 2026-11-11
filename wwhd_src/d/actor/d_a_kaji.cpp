@@ -37,7 +37,7 @@ daKaji_c::daKaji_c() {
 /* 02184F4C */
 BOOL daKaji_c::CreateHeap() {
     J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_KAJI_BDL_ASODA_e);
-    JUT_ASSERT(0x55, modelData != NULL);
+    JUT_ASSERT_MSG(0x55, modelData != NULL, "modelData != (0)");
 
     J3DAnmTransform* bck = (J3DAnmTransform*)dComIfG_getObjectRes("Kaji", dRes_INDEX_KAJI_BCK_KJ_WAIT_e);
     void* bas = dComIfG_getObjectRes("Kaji", dRes_INDEX_KAJI_BAS_KJ_WAIT_e);
@@ -178,7 +178,7 @@ static void SafeString_assureTerminationImpl(void* p) {
 /* WWHD glue (tools/verify/autoglue.py): this translation unit's data
 str 10012298 "Kaji"
 str 100122A0
-str 100122B0 "modelData != NULL"
+str 100122B0 "modelData != (0)"
 data arcname 100122F8
 data l_p_ship 10464884
 ext 025E5434 void mDoExt_McaMorf_update(mDoExt_McaMorf*)

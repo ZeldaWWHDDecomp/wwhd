@@ -81,23 +81,23 @@ WWHD_OFFSET(daPy_followEcallBack_c, mPos, 0x08);
 WWHD_OFFSET(daPy_followEcallBack_c, mAngle, 0x14);
 WWHD_OFFSET(daPy_followEcallBack_c, _1A, 0x1A);
 struct daPy_waterDropEcallBack_c : daPy_followEcallBack_c {
-    /* 0x1C */ be<u32> field_0x1C;
+    /* 0x1C */ be<u32> mReady;  /* was field_0x1C: TWW checkReady() / onReady() / offReady(): setSwimWaterDrop 0240CAAC (d_a_player_main_04) sets 1 when the drop point goes under water (not in daPyProc_VOMIT_WAIT) and, once out of the water with no emitter, starts the drip emitter while it is set and clears it */
     void execute(JPABaseEmitter*);
     void setup(JPABaseEmitter*, const cXyz*, const csXyz*, s8);
     void end() { gabi::call(0x0240CA4C, this); }
 };
 WWHD_SIZE(daPy_waterDropEcallBack_c, 0x20);
-WWHD_OFFSET(daPy_waterDropEcallBack_c, field_0x1C, 0x1C);
+WWHD_OFFSET(daPy_waterDropEcallBack_c, mReady, 0x1C);
 struct daPy_swimTailEcallBack_c {
     /* 0x00 */ be<u32> __vtbl;
     /* 0x04 */ be<u8> mbEnd;
-    /* 0x05 */ be<u8> field_0x05;
+    /* 0x05 */ be<u8> mRightFlg;  /* was field_0x05: TWW onRightFlg(): setup 02415138 clears it; setSwimTail 02412D54 sets 1 on mSwimTailEcallBack[0] (onRightFlg); execute 02414E8C then points the emitter along l_right_dir (tww the same) */
     /* 0x06 */ u8 _06[2];
     /* 0x08 */ be<f32> mSpeedRate;
     /* 0x0C */ be<f32> mWaterY;
     /* 0x10 */ be<f32> mWaterFlatY;
     /* 0x14 */ cXyz mPos;
-    /* 0x20 */ be<u32> field_0x20; /* const csXyz* */
+    /* 0x20 */ be<u32> mpAngle;  /* was field_0x20: the csXyz pointer passed to setup 02415138 (TWW onEnd() clears it); execute 02414E8C rotates the emitter by its y (setGlobalRotation(0, it->y, 0)) while it is set; const csXyz* */
     /* 0x24 */ be<u32> mpEmitter;
     void remove();
     void getMaxWaterY(cXyz*);
@@ -108,13 +108,13 @@ struct daPy_swimTailEcallBack_c {
 WWHD_SIZE(daPy_swimTailEcallBack_c, 0x28);
 WWHD_OFFSET(daPy_swimTailEcallBack_c, __vtbl, 0x00);
 WWHD_OFFSET(daPy_swimTailEcallBack_c, mbEnd, 0x04);
-WWHD_OFFSET(daPy_swimTailEcallBack_c, field_0x05, 0x05);
+WWHD_OFFSET(daPy_swimTailEcallBack_c, mRightFlg, 0x05);
 WWHD_OFFSET(daPy_swimTailEcallBack_c, _06, 0x06);
 WWHD_OFFSET(daPy_swimTailEcallBack_c, mSpeedRate, 0x08);
 WWHD_OFFSET(daPy_swimTailEcallBack_c, mWaterY, 0x0C);
 WWHD_OFFSET(daPy_swimTailEcallBack_c, mWaterFlatY, 0x10);
 WWHD_OFFSET(daPy_swimTailEcallBack_c, mPos, 0x14);
-WWHD_OFFSET(daPy_swimTailEcallBack_c, field_0x20, 0x20);
+WWHD_OFFSET(daPy_swimTailEcallBack_c, mpAngle, 0x20);
 WWHD_OFFSET(daPy_swimTailEcallBack_c, mpEmitter, 0x24);
 struct daPy_fanSwingEcallBack_c {
     /* 0x0 */ be<u32> __vtbl;
@@ -473,7 +473,10 @@ struct TextureOriginals {
 WWHD_OFFSET(TextureOriginals, mpHeaders, 8);
 WWHD_SIZE(TextureOriginals, 0x34);
 struct AnmHeap {
-    be<s16> mIdx, field_0x2, field_0x4, field_0x6;
+    /* 0x0 */ be<s16> mIdx;
+    /* 0x2 */ be<s16> mPriIdx;  /* was field_0x2: view of daPy_anmHeap_c::mPriIdx (evidence in d_a_player_main_01.h) */
+    /* 0x4 */ be<s16> mDemoIdx;  /* was field_0x4: view of daPy_anmHeap_c::mDemoIdx (evidence in d_a_player_main_01.h) */
+    /* 0x6 */ be<s16> mDemoAnmNo;  /* was field_0x6: view of daPy_anmHeap_c::mDemoAnmNo (evidence in d_a_player_main_01.h) */
     be<u32> m_buffer, mpAnimeHeap;
 };
 WWHD_OFFSET(AnmHeap, m_buffer, 8);
@@ -989,7 +992,10 @@ WWHD_SIZE(TextureTable, 0x20);
 struct ActorState {
     be<u8> mTingleDemoOrdered, mBottleThrowPending; u8 _02[2];
     be<u32> mThrowActor; u8 _0C[0x827C-0x826C];
-    be<u8> field_0x827C; u8 _827D[3]; be<u16> field_0x8280; be<u8> field_0x8282;
+    /* 0x18 */ be<u8> field_0x827C;
+    /* 0x19 */ u8 _827D[3];
+    /* 0x1C */ be<u16> field_0x8280;
+    /* 0x1E */ be<u8> field_0x8282;
 };
 WWHD_OFFSET(ActorState, mThrowActor, 4);
 WWHD_OFFSET(ActorState, field_0x827C, 0x18);
@@ -1006,9 +1012,9 @@ inline const u8* l_fan_wind_cps_src() { return gabi::at<const u8>(0x101CEDF4); }
 }
 
 WWHD_OFFSET(player04b::AnmHeap, mIdx, 0);
-WWHD_OFFSET(player04b::AnmHeap, field_0x2, 2);
-WWHD_OFFSET(player04b::AnmHeap, field_0x4, 4);
-WWHD_OFFSET(player04b::AnmHeap, field_0x6, 6);
+WWHD_OFFSET(player04b::AnmHeap, mPriIdx, 2);
+WWHD_OFFSET(player04b::AnmHeap, mDemoIdx, 4);
+WWHD_OFFSET(player04b::AnmHeap, mDemoAnmNo, 6);
 
 
 namespace player04b {
@@ -1042,8 +1048,14 @@ namespace player04b {
 // HD: bck animation embeds an expanded backend, followed by unresolved renderer state.
 struct BckAnmHD {
     J3DFrameCtrl mFrameCtrl; be<u32> __vtbl; AnimationChannel mBackend;
-    be<u32> field_0x6C, field_0x70, field_0x74, field_0x78;
-    be<u32> field_0x7C, field_0x80, field_0x84, field_0x88;
+    /* 0x6C */ be<u32> field_0x6C;
+    /* 0x70 */ be<u32> field_0x70;
+    /* 0x74 */ be<u32> field_0x74;
+    /* 0x78 */ be<u32> field_0x78;
+    /* 0x7C */ be<u32> field_0x7C;
+    /* 0x80 */ be<u32> field_0x80;
+    /* 0x84 */ be<u32> field_0x84;
+    /* 0x88 */ be<u32> field_0x88;
 };
 WWHD_OFFSET(BckAnmHD, __vtbl, 0x10);
 WWHD_OFFSET(BckAnmHD, mBackend, 0x14);

@@ -1,21 +1,26 @@
 // WWHD rendering matrix operations, reconstructed from the local game.
 #include "sead/RenderMath.h"
 
+// guest EA arithmetic for row/column-indexed matrix words: rows of 4 words,
+// base + row * 16 + column * 4 wraps at 32 bits as on the console (a host index reached host addresses past 4 GB)
+static inline be<u32>& matrixWord(const void* rows, u32 row, u32 column) {
+    return *gabi::at<be<u32>>(gabi::ea(rows) + row * 16u + column * 4u);
+}
 /* 0274F300 */
 static void copyMatrixRow(sead::RenderQuaternion* result, const sead::RenderMatrix44* matrix, u32 row) {
     // Pure lfs/stfs copies preserve signaling-NaN representations.
-    reinterpret_cast<be<u32>&>(result->x) = (u32)reinterpret_cast<const be<u32>&>(matrix->mRows[row][0]);
-    reinterpret_cast<be<u32>&>(result->y) = (u32)reinterpret_cast<const be<u32>&>(matrix->mRows[row][1]);
-    reinterpret_cast<be<u32>&>(result->z) = (u32)reinterpret_cast<const be<u32>&>(matrix->mRows[row][2]);
-    reinterpret_cast<be<u32>&>(result->w) = (u32)reinterpret_cast<const be<u32>&>(matrix->mRows[row][3]);
+    reinterpret_cast<be<u32>&>(result->x) = (u32)matrixWord(matrix->mRows, row, 0);
+    reinterpret_cast<be<u32>&>(result->y) = (u32)matrixWord(matrix->mRows, row, 1);
+    reinterpret_cast<be<u32>&>(result->z) = (u32)matrixWord(matrix->mRows, row, 2);
+    reinterpret_cast<be<u32>&>(result->w) = (u32)matrixWord(matrix->mRows, row, 3);
 }
 
 /* 0274F32C */
 static void setMatrixRow(sead::RenderMatrix44* matrix, const sead::RenderQuaternion* source, u32 row) {
-    reinterpret_cast<be<u32>&>(matrix->mRows[row][0]) = (u32)reinterpret_cast<const be<u32>&>(source->x);
-    reinterpret_cast<be<u32>&>(matrix->mRows[row][1]) = (u32)reinterpret_cast<const be<u32>&>(source->y);
-    reinterpret_cast<be<u32>&>(matrix->mRows[row][2]) = (u32)reinterpret_cast<const be<u32>&>(source->z);
-    reinterpret_cast<be<u32>&>(matrix->mRows[row][3]) = (u32)reinterpret_cast<const be<u32>&>(source->w);
+    matrixWord(matrix->mRows, row, 0) = (u32)reinterpret_cast<const be<u32>&>(source->x);
+    matrixWord(matrix->mRows, row, 1) = (u32)reinterpret_cast<const be<u32>&>(source->y);
+    matrixWord(matrix->mRows, row, 2) = (u32)reinterpret_cast<const be<u32>&>(source->z);
+    matrixWord(matrix->mRows, row, 3) = (u32)reinterpret_cast<const be<u32>&>(source->w);
 }
 
 /* 02750C2C */
@@ -62,9 +67,9 @@ void sead::RenderMatrix34::setQuaternion(const RenderQuaternion* rotation) {
 
 /* 02750CDC */
 void sead::RenderMatrix34::setColumn(u32 column, const RenderVector3* vector) {
-    reinterpret_cast<be<u32>&>(mRows[0][column]) = (u32)reinterpret_cast<const be<u32>&>(vector->x);
-    reinterpret_cast<be<u32>&>(mRows[1][column]) = (u32)reinterpret_cast<const be<u32>&>(vector->y);
-    reinterpret_cast<be<u32>&>(mRows[2][column]) = (u32)reinterpret_cast<const be<u32>&>(vector->z);
+    matrixWord(mRows, 0, column) = (u32)reinterpret_cast<const be<u32>&>(vector->x);
+    matrixWord(mRows, 1, column) = (u32)reinterpret_cast<const be<u32>&>(vector->y);
+    matrixWord(mRows, 2, column) = (u32)reinterpret_cast<const be<u32>&>(vector->z);
 }
 
 /* 02750D00 */

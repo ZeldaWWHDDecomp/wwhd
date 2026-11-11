@@ -420,9 +420,9 @@ static cPhs_State daAM_Create(fopAc_ac_c* i_this) {
 
         a_this->stealItemLeft = 3;
 
-        a_this->mSmokeCbs[0].m11 = 0;
-        a_this->mSmokeCbs[1].m11 = 0;
-        a_this->mSmokeCbs[3].m11 = 0;
+        a_this->mSmokeCbs[0].mRateOff = 0;
+        a_this->mSmokeCbs[1].mRateOff = 0;
+        a_this->mSmokeCbs[3].mRateOff = 0;
 
         u32 prm = fopAcM_GetParam(a_this);
         a_this->mType = (prm >> 0x00) & 0xFF;
@@ -517,7 +517,7 @@ static enemyfire* enemyfire_ct(enemyfire* self) {
         operator_new(0xC);
     dCcD_Stts_ct(&self->mStts);
     am_constructSphere(&self->mSph);
-    self->m228 = 1.0f;
+    self->mHD20 = 1.0f;
     return self;
 }
 

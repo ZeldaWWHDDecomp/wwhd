@@ -1513,9 +1513,9 @@ void ftree_terminateBuffer(void* object) {
 void ftree_destroy(Act_c* actor, u32 flags) {
     if (!actor)
         return;
-    ftree_dBgS_Acch___dBgS_Acch(static_cast<void*>(&actor->mCyl), 2);
+    ftree_dCcD_Cyl___dCcD_Cyl(static_cast<void*>(&actor->mCyl), 2);
     ftree_destroyCollisionStatus(static_cast<void*>(&actor->mStts), 2);
-    ftree_dBgS_Acch___dBgS_Acch(static_cast<void*>(&actor->mWaterCyl), 2);
+    ftree_dCcD_Cyl___dCcD_Cyl(static_cast<void*>(&actor->mWaterCyl), 2);
     ftree_destroyCollisionStatus(static_cast<void*>(&actor->mWaterStts), 2);
     actor->mGndChk.cBgS_PolyInfo::__vtbl = ftree_tu::destroyPolyInfo;
     actor->mGndChk.dBgS_PolyPassChk::__vtbl = ftree_tu::destroyPolyPassCheck;
@@ -1668,7 +1668,7 @@ ext 025204C8 void ftree_dComIfG_resDelete(void *, const char *)
 ext 025E535C unsigned int ftree_mDoExt_McaMorf__play(void *, int, int, int)
 ext 025E742C unsigned int ftree_mDoExt_baseAnm__play(void *)
 ext 0273AF40 void ftree_dl(void *)
-ext 02515A70 void ftree_dBgS_Acch___dBgS_Acch(void *, int)
+ext 02515A70 void ftree_dCcD_Cyl___dCcD_Cyl(void *, int)
 ext 02515860 void ftree_destroyCollisionStatus(void *, int)
 ext 02008DAC void ftree_cBgS_Chk___cBgS_Chk(void *, int)
 ext 025D50BC void ftree_fopAc_ac_c___fopAc_ac_c(daObjFtree::Act_c *, int)

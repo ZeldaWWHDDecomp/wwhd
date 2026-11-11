@@ -6,11 +6,11 @@ namespace event_camera_style {
 using EventInt = be<s32>;
 struct StageEvent {
     u8 _00[0x10];
-    be<u8> field_0x10;
-    be<u8> field_0x11;
+    be<u8> mMapToolCamId;  /* was field_0x10: maptoolIdEvCamera 02535830 passes it (with mRoomNo) to getCameraTypeFromMapToolID to pick the event camera type; same byte as dStage_Event_dt_c::mMapToolCamId */
+    be<u8> mDuration;  /* was field_0x11: maptoolIdEvCamera 02535830: the event camera keeps its style until mCurStyleTimer exceeds it * 10 (0xFF: until the event changes), then moves to the next event entry; same byte as dStage_Event_dt_c::mDuration */
     be<u8> field_0x12;
     be<u8> mSpawnSwitchNo;
-    be<s8> field_0x14;
+    be<s8> mRoomNo;  /* was field_0x14: maptoolIdEvCamera 02535830 passes it as the room to getCameraTypeFromMapToolID */
     u8 _15[3];
 };
 WWHD_SIZE(StageEvent, 0x18);

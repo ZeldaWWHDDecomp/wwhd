@@ -1,5 +1,5 @@
 /* Wind Temple floor spikes. HD expands the actor prefix by 0x11C.
- * Field names, including unk470/unk474/unk485/unk486, follow the retail decompilation. */
+ * Field names follow the retail decompilation where it has them; the spike fields are named from their uses. */
 #pragma once
 #include "gc_api/gc_api.h"
 struct daToge_c : fopAc_ac_c {
@@ -31,14 +31,14 @@ struct daToge_c : fopAc_ac_c {
     /* 0x528 */ Mtx34 mtx1;
     /* 0x558 */ gptr<dBgW> mpBgW2;
     /* 0x55C */ Mtx34 mtx2;
-    /* 0x58C */ be<f32> unk470;
-    /* 0x590 */ be<f32> unk474;
+    /* 0x58C */ be<f32> mSpikeY;  /* was unk470: nodeCallBack 024C6E78: transM(0, it, 0) on the spike model; Create 024C6FB0 -150 (m_y_min); toge_move 024C7520 eases it to -150 (RETRACT) or to mSpikeTargetY (EXTEND); set_collision 024C7774 puts the collision at it - 10 (tww the same) */
+    /* 0x590 */ be<f32> mSpikeTargetY;  /* was unk474: toge_move 024C7520: the EXTEND target of mSpikeY: 0 once the spikes are up, then -60 / 0 for the bob (tww the same) */
     /* 0x594 */ be<s32> mSwitchNo;
     /* 0x598 */ u8 pad47C[4];
     /* 0x59C */ be<u32> mWindTagId;
     /* 0x5A0 */ be<u8> mEventState;
-    /* 0x5A1 */ be<u8> unk485;
-    /* 0x5A2 */ be<u8> unk486;
+    /* 0x5A1 */ be<u8> mRetractRequest;  /* was unk485: _execute 024C77F0 sets 1 when the switch is on or the wind tag's wind stops (unless already waiting to retract); toge_move 024C7520 starts RETRACT_WAIT with mRetractWait at the extended position and clears it (tww the same) */
+    /* 0x5A2 */ be<u8> mRetractWait;  /* was unk486: toge_move 024C7520: 10 when RETRACT_WAIT starts; counted down there, the spikes retract at 0 (tww the same) */
     /* 0x5A3 */ u8 _5A3;
 };
 WWHD_OFFSET(daToge_c, m_Phs, 0x3AC);
@@ -49,14 +49,14 @@ WWHD_OFFSET(daToge_c, mpBgW1, 0x524);
 WWHD_OFFSET(daToge_c, mtx1, 0x528);
 WWHD_OFFSET(daToge_c, mpBgW2, 0x558);
 WWHD_OFFSET(daToge_c, mtx2, 0x55C);
-WWHD_OFFSET(daToge_c, unk470, 0x58C);
-WWHD_OFFSET(daToge_c, unk474, 0x590);
+WWHD_OFFSET(daToge_c, mSpikeY, 0x58C);
+WWHD_OFFSET(daToge_c, mSpikeTargetY, 0x590);
 WWHD_OFFSET(daToge_c, mSwitchNo, 0x594);
 WWHD_OFFSET(daToge_c, pad47C, 0x598);
 WWHD_OFFSET(daToge_c, mWindTagId, 0x59C);
 WWHD_OFFSET(daToge_c, mEventState, 0x5A0);
-WWHD_OFFSET(daToge_c, unk485, 0x5A1);
-WWHD_OFFSET(daToge_c, unk486, 0x5A2);
+WWHD_OFFSET(daToge_c, mRetractRequest, 0x5A1);
+WWHD_OFFSET(daToge_c, mRetractWait, 0x5A2);
 WWHD_SIZE(daToge_c, 0x5A4);
 struct TogeJointData {
     u8 _00[4];

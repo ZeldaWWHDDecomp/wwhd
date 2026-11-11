@@ -1562,6 +1562,21 @@ static std::set<uint32_t> g_surface_size;
 struct LookupSpec { unsigned idx; uint32_t base, count; };
 static std::unordered_map<uint32_t, LookupSpec> g_lookup_specs;
 extern "C" int verify_calc_surface(uint8_t* bytes); /* surface_calc.cpp: 0 = done, else outside the modelled domain */
+/* mockcopysurface TARGET: GX2CopySurface (C0006120; r3 src surface, r4 srcMip, r5 srcSlice, r6 dst surface,
+ * r7 dstMip, r8 dstSlice). The mock re-tiles the source level into the destination level in guest memory with the
+ * shipping port's CPU path (runtime/src/gfx/metal_surfaces.mm copy_surface_impl, via src/surface_calc.cpp
+ * verify_copy_surface): per element (y outer, x inner) bytesPerBlock bytes from the source offset to the destination
+ * offset, each computed by the Cemu address library for the surface's own tiling and swizzle. Opt-in, top level and
+ * nested, like mocksurfacesize: the descriptors and the source bytes are read before the call's epoch, the destination
+ * bytes written after it (copies overlapping their own output read the bytes written by earlier elements, as the
+ * port's in-place memcpy loop does). Outside the modelled domain the input aborts: a null descriptor, a descriptor
+ * outside the mocksurfacesize domain, a level above 13 or a level base address of 0; a copy larger than the guest
+ * operation budget aborts as an over-budget memmove does. */
+static std::set<uint32_t> g_copy_surface;
+extern "C" int verify_copy_surface(const uint8_t* src74, uint32_t srcMip, uint32_t srcSlice, const uint8_t* dst74, uint32_t dstMip,
+                                   uint32_t dstSlice, uint32_t* sbase, uint32_t* dbase, uint32_t* bytesPerBlock,
+                                   void (*emit)(void*, uint32_t, uint32_t), void* ctx);
+struct CopySurfacePlan { std::vector<std::pair<uint32_t, uint8_t>> writes; std::vector<uint32_t> from; };
 static uint64_t g_set_calls, g_set_bytes, g_surface_calls;
 /* mockretain TARGET rN SIZE: the callee keeps the pointer rN of a call and, on its next generated call, writes
  * SIZE deterministic bytes through the pointer kept from the previous one (a callback/descriptor retained
@@ -1693,6 +1708,50 @@ static void surface_write(uint32_t target, uint32_t at, const uint8_t* bytes) {
                         (unsigned)bytes[0x20] << 24 | bytes[0x21] << 16 | bytes[0x22] << 8 | bytes[0x23],
                         (unsigned)bytes[0x38] << 24 | bytes[0x39] << 16 | bytes[0x3A] << 8 | bytes[0x3B],
                         (unsigned)bytes[0x3C] << 24 | bytes[0x3D] << 16 | bytes[0x3E] << 8 | bytes[0x3F]);
+}
+
+/* mockcopysurface: the plan (destination bytes in write order) from the state before the epoch */
+static bool copy_surface_read(uint32_t target, const uint32_t* argr, uint32_t lr, CopySurfacePlan& plan) {
+    if (!g_copy_surface.count(target)) return false;
+    uint32_t sa = argr[3], da = argr[6];
+    if (sa == 0 || da == 0) model_reject(target, "mockcopysurface: null surface");
+    uint8_t sb[0x74], db[0x74];
+    V.depth++;
+    for (uint32_t j = 0; j < 0x74; j++) { sb[j] = peek8(sa + j); db[j] = peek8(da + j); }
+    V.depth--;
+    std::vector<std::pair<uint32_t, uint32_t>> el;
+    uint32_t sbase = 0, dbase = 0, bpb = 0;
+    if (verify_copy_surface(sb, argr[4], argr[5], db, argr[7], argr[8], &sbase, &dbase, &bpb,
+                            [](void* ctx, uint32_t so, uint32_t dofs) { ((std::vector<std::pair<uint32_t, uint32_t>>*)ctx)->emplace_back(so, dofs); },
+                            &el) != 0)
+        model_reject(target, "mockcopysurface: surface copy outside the modelled domain");
+    op_budget("memmove", target, dbase, (uint32_t)std::min<uint64_t>((uint64_t)el.size() * bpb, 0xFFFFFFFFull), lr);
+    std::unordered_map<uint32_t, uint8_t> written;
+    plan.writes.reserve(el.size() * bpb);
+    V.depth++;
+    for (auto& [so, dofs] : el)
+        for (uint32_t j = 0; j < bpb; j++) {
+            tick();
+            uint32_t from = sbase + so + j, to = dbase + dofs + j;
+            auto w = written.find(from);
+            uint8_t v = w != written.end() ? w->second : peek8(from);
+            written[to] = v;
+            plan.writes.emplace_back(to, v);
+            if (g_trace) plan.from.push_back(from);
+        }
+    V.depth--;
+    return true;
+}
+static void copy_surface_write(uint32_t target, const CopySurfacePlan& plan) {
+    V.depth++;
+    for (auto& [a, v] : plan.writes) { tick(); patch8(a, v); }
+    V.depth--;
+    if (g_trace) { /* every byte (source -> destination = value) up to 0x4000 bytes (copysurface_test.py reads them) */
+        printf("        mockcopysurface %08X %zu bytes\n", target, plan.writes.size());
+        if (plan.writes.size() <= 0x4000)
+            for (size_t i = 0; i < plan.writes.size(); i++)
+                printf("        mockcopysurface byte %08X -> %08X = %02X\n", plan.from[i], plan.writes[i].first, plan.writes[i].second);
+    }
 }
 
 /* alloc / allocfixed: distinct deterministic blocks from BASE in call order (identical on both sides) */
@@ -2958,7 +3017,7 @@ static bool code_target(uint32_t target) {
     for (uint32_t a : {target, t})
         if (g_ret_specs.count(a) || g_ret_picks.count(a) || g_fret_specs.count(a) || g_fret64_picks.count(a) || g_retarg.count(a) ||
             g_nestedret.count(a) || g_set_specs.count(a) || g_zero_specs.count(a) || g_lookup_specs.count(a) || g_tls_role.count(a) ||
-            g_surface_size.count(a) || g_move_specs.count(a) || g_fetch_size.count(a) || g_fetch_init.count(a) ||
+            g_surface_size.count(a) || g_copy_surface.count(a) || g_move_specs.count(a) || g_fetch_size.count(a) || g_fetch_init.count(a) ||
             g_utf16_specs.count(a) || g_retain_specs.count(a) || g_mockfield.count(a) || g_alloc_specs.count(a) ||
             g_callcr_specs.count(a) || g_observe_specs.count(a) || g_observeptr_specs.count(a) || g_nested_specs.count(a) || g_retfield.count(a) ||
             g_stop_specs.count(a))
@@ -3114,6 +3173,12 @@ static void do_call(Cpu* c, uint32_t target, int kind, int nint, int nflt) {
             uint8_t sb[0x74];
             surface_read(target, nargr[3], sb);
             surface_write(target, nargr[3], sb);
+            return;
+        }
+        if (g_copy_surface.count(target)) { /* declared mockcopysurface also when nested */
+            CopySurfacePlan plan;
+            copy_surface_read(target, nargr, c->lr, plan);
+            copy_surface_write(target, plan);
             return;
         }
         if (auto nr = g_nestedret.find(target); nr != g_nestedret.end()) { c->r[3] = nr->second; return; }
@@ -3412,6 +3477,13 @@ static void do_call(Cpu* c, uint32_t target, int kind, int nint, int nflt) {
     uint8_t surface_bytes[0x74];
     uint32_t surface_at = c->r[3];
     bool surface = surface_read(target, surface_at, surface_bytes); /* inputs as before the call's epoch, like mockmove */
+    CopySurfacePlan copy_plan;
+    bool copy_surface;
+    {
+        uint32_t cargr[11];
+        for (int i = 3; i <= 10; i++) cargr[i] = c->r[i];
+        copy_surface = copy_surface_read(target, cargr, c->lr, copy_plan); /* source bytes as before the epoch */
+    }
     /* a listed constructor (ctor_sizes.tsv) whose storage mkunit marked output-only without a random fill
      *: the storage of a mocked constructor is not an input; its output is modelled as
      * zeros, written BEFORE the mocked call on both sides (nothing is written after it). Zeros, not a non-zero
@@ -3475,6 +3547,7 @@ static void do_call(Cpu* c, uint32_t target, int kind, int nint, int nflt) {
     apply_lookup(c, target, argr);
     apply_tls(c, target, argr); /* after the epoch; GET/CUR replace the generated r3 */
     if (surface) surface_write(target, surface_at, surface_bytes);
+    if (copy_surface) copy_surface_write(target, copy_plan);
     if (auto rt = g_retain_specs.find(target); rt != g_retain_specs.end()) {
         if (auto kept = g_retained.find(target); kept != g_retained.end()) {
             V.depth++;
@@ -4253,6 +4326,12 @@ static void load_specs(const char* path) {
             unsigned target; char extra[8];
             if (sscanf(line, "%*s %x %7s", &target, extra) != 1) { fprintf(stderr, "invalid mocksurfacesize directive: %s", line); exit(2); }
             g_surface_size.insert(target);
+            continue;
+        }
+        if (!strcmp(kw, "mockcopysurface")) { // mockcopysurface TARGET
+            unsigned target; char extra[8];
+            if (sscanf(line, "%*s %x %7s", &target, extra) != 1) { fprintf(stderr, "invalid mockcopysurface directive: %s", line); exit(2); }
+            g_copy_surface.insert(target);
             continue;
         }
         if (!strcmp(kw, "mockmove")) { // mockmove TARGET rDST rSRC rSIZE

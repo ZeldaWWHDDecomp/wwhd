@@ -538,7 +538,7 @@ KankyoEnvLight *KankyoEnvLight::construct() {
     self->mVrboxKumoColRatio = zero;
     self->field_0x1040 = zero;
     self->field_0xc30 = zero;
-    self->field_0xc34 = zero;
+    self->mColChgRatio = zero;
     self->mTimeAdv = zero;
     self->mFogRatio = zero;
     self->field_0x1034 = zero;
@@ -572,7 +572,7 @@ KankyoEnvLight *KankyoEnvLight::construct() {
     self->field_0x10a5 = 0;
     self->field_0xc9a = 0;
     self->mbVrboxInvisible = 0;
-    self->field_0x10b8 = zero;
+    self->mWaveSecondaryColorScale = zero;
     self->field_0x10a8 = zero;
     self->mDiceWeatherCurrPattern = 0;
     self->mDiceWeatherState = 0;
@@ -583,7 +583,7 @@ KankyoEnvLight *KankyoEnvLight::construct() {
     self->mFogAdjCenter = 0;
     self->mDayOfWeek = 0;
     self->field_0x10ac = zero;
-    self->field_0x10bc = zero;
+    self->mWavePrimaryColorScale = zero;
     self->mbContrastFlag = 0;
     self->field_0xc9b = 0;
     self->mbDayNightTactStop = 0;
@@ -600,7 +600,7 @@ KankyoEnvLight *KankyoEnvLight::construct() {
     self->mDiceWeatherCounter = 0;
     self->field_0x10b0 = zero;
     self->field_0x10c4 = zero;
-    self->field_0xc98 = 0;
+    self->mColChgActive = 0;
     self->field_0x10a4 = 0;
     self->field_0x10c8 = zero;
     self->field_0x10cc = zero;
@@ -610,7 +610,7 @@ KankyoEnvLight *KankyoEnvLight::construct() {
     self->field_0x10dc = zero;
     self->field_0x10e0 = zero;
     self->field_0x10e4 = zero;
-    self->field_0x10e8 = zero;
+    self->mMonotoneBlend = zero;
     kankyoClear(&self->mHdTailState, 0x1C);
     kankyoClear(&self->mHdTailTable0, 0x80);
     kankyoClear(&self->mHdTailTable1, 0x80);

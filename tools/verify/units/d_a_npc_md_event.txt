@@ -7,7 +7,7 @@ ret 0254487C 0,0x58000000,0x58000000,0x58000010,0x58000020,0x58000030
 # initialOnetimeEvent: "WATASU" or another name
 field 0228CD40 58000000 u32 0x57415441,0x57415400,0x41414141
 field 0228CD40 58000004 u32 0x53550000,0x53560000
-# actions: current anm (m3104), anm end flag (m312A)
+# actions: current anm (mAnmPrmIdx), anm end flag (mAnmEnd)
 field * r3+0x4220 i32 0x19,0x1A,0,9
 field * r3+0x4246 i8 0 1
 # isTagCheckOK: npc action {d, i, f}

@@ -15,7 +15,7 @@ field * 5B00004C i32 0,1,2,3          # demo prm id
 field * 10469614 u32 0 1              # em_scl guard
 field * r3+0x2E4 u32 0,8,0xFFFFFFF7   # condition (INIT bit)
 field * r3+0x2DC u8 0,1,0x20,0x21,0xFF # demoActorID
-field * r3+0x3F8 i16 0,1,2            # m2DC
-field * r3+0x3FA i16 0,1              # m2DE
+field * r3+0x3F8 i16 0,1,2            # mUnbroken
+field * r3+0x3FA i16 0,1              # mSplashDone
 arg 02334594 r4 0,1,2,3
 arg 023345B0 r4 0,1,2,3

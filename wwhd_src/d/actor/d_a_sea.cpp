@@ -7,6 +7,7 @@
  * "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_sea.h"
+#include "sead/ElementAt.h"
 #include "gc_api/d/d_com_inf_game.h"
 #include "gc_api/f_op/f_op_actor.h"
 
@@ -311,12 +312,15 @@ f32 daSea_WaveInfo::GetScale(f32 v) {
 
 /* 0246B784 */
 f32 daSea_WaveInfo::GetKm(int idx) {
-    return gabi::fmuls_ppc(6.28f, mWaveInfoTable.get()[idx].mKm);
+    /* guest address arithmetic: the table + idx * size wraps at 32 bits as on the console */
+    return gabi::fmuls_ppc(6.28f, sead::elementAt<daSea_WaveInfoDat>(mWaveInfoTable, (u32)idx).mKm);
 }
 
 /* 0246B7A4 */
 f32 daSea_WaveInfo::GetRatio(int idx) {
-    return (f32)mCounters[idx] / (f32)mWaveInfoTable.get()[idx].mCounterMax;
+    /* guest address arithmetic: mCounters + idx * 4 and the table + idx * size wrap at 32 bits as on the console */
+    return (f32)sead::elementAt<be<s32>>(gabi::ea(mCounters), (u32)idx) /
+           (f32)sead::elementAt<daSea_WaveInfoDat>(mWaveInfoTable, (u32)idx).mCounterMax;
 }
 
 /* 0246B808 */

@@ -201,7 +201,7 @@ BOOL daObjSwflat::Act_c::Create() {
     }
     // HD: HIO uses the Shift-JIS label フラットスイッチ; glue maps the readable spelling.
     if (l_HIO.mNo < 0) {
-        s32 child = swflatHioCreate("Flat switch", &l_HIO);
+        s32 child = swflatHioCreate("フラットスイッチ", &l_HIO);
         l_HIO.mNo = child;
     }
     s32 count = l_HIO.mCount;
@@ -557,7 +557,7 @@ data l_cyl_src 101CCD6C
 str 1002F928
 str 1002F894
 str 1002F8A8
-str 1002F904 "Flat switch" renamed
+str 1002F904 "フラットスイッチ"
 ext 025E80D0 SwflatBrk *swflatBrkConstruct(SwflatBrk *)
 ext 025E8154 BOOL swflatBrkInit(SwflatBrk *, void *, void *, s32, s32, f32, s32, s32, s32, s32)
 ext 0200BD2C void swflatStatusBaseConstruct(dCcD_Stts *)

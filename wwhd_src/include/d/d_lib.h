@@ -19,23 +19,23 @@ struct STControl {
     HORIZONTAL = LEFT | RIGHT,
     VERTICAL = UP | DOWN
   };
-  /* 0x00 */ be<f32> field_0x04;
-  /* 0x04 */ be<f32> field_0x08;
-  /* 0x08 */ be<u8> field_0x0c;
-  /* 0x09 */ be<u8> field_0x0d;
-  /* 0x0A */ be<s16> field_0x0e;
-  /* 0x0C */ be<s16> field_0x10;
-  /* 0x0E */ be<s16> field_0x12;
-  /* 0x10 */ be<s16> field_0x14;
-  /* 0x12 */ be<s16> field_0x16;
-  /* 0x14 */ be<s16> field_0x18;
-  /* 0x16 */ be<s16> field_0x1a;
-  /* 0x18 */ be<s16> field_0x1c;
-  /* 0x1A */ be<s16> field_0x1e;
-  /* 0x1C */ be<s16> field_0x20;
-  /* 0x1E */ be<s16> field_0x22;
-  /* 0x20 */ be<s16> field_0x24;
-  /* 0x22 */ be<s16> field_0x26;
+  /* 0x00 */ be<f32> mThreshold;  /* was field_0x04: TP name (zeldaret/tp include/d/d_lib.h STControl::mThreshold); setWaitParm 025885C4 'high'; checkTrigger 0258873C takes the new direction bits while the stick value is >= it (tww the same) */
+  /* 0x04 */ be<f32> mReleaseThreshold;  /* was field_0x08: setWaitParm 025885C4 'low'; checkTrigger 0258873C clears the direction bits while the stick value is below it, between it and mThreshold only drops bits (tww the same; TP leaves it unnamed) */
+  /* 0x08 */ be<u8> mDirectionTrig;  /* was field_0x0c: TP name (zeldaret/tp include/d/d_lib.h STControl::mDirectionTrig); checkTrigger 0258873C sets the LEFT / RIGHT / UP / DOWN bits and returns them; the check*Trigger 02588A0C.. test them; Xinit / Yinit clear their half (tww the same) */
+  /* 0x09 */ be<u8> mPrevDirectionTrig;  /* was field_0x0d: checkTrigger 0258873C copies mDirectionTrig into it first, then compares (a change resets mAngleShift) and counts the repeat timers only for bits held in both (tww the same); init 025885E8 clears */
+  /* 0x0A */ be<s16> mXrepeatTimer;  /* was field_0x0e: checkLeftTrigger 02588A0C / checkRightTrigger 02588A7C fire only while it is 0 and reload it with mXwaitTimer; checkTrigger 0258873C counts it down while left / right is held; Xinit 025886EC clears (tww the same) */
+  /* 0x0C */ be<s16> mYrepeatTimer;  /* was field_0x10: checkUpTrigger 02588AEC / checkDownTrigger 02588B5C fire only while it is 0 and reload it with mYwaitTimer; checkTrigger 0258873C counts it down while up / down is held; Yinit 02588714 clears (tww the same) */
+  /* 0x0E */ be<s16> mRepeatDelayY;  /* was field_0x12: TP name (zeldaret/tp include/d/d_lib.h STControl::mRepeatDelayY); setWaitParm 025885C4 'first'; init 025885E8 / Xinit 025886EC / Yinit 02588714 reset mXwaitTimer and mYwaitTimer to it (tww the same) */
+  /* 0x10 */ be<s16> mRepeatDelayX;  /* was field_0x14: TP name (zeldaret/tp include/d/d_lib.h STControl::mRepeatDelayX); setWaitParm 025885C4 'minimum'; the check*Trigger 02588A0C.. never let mXwaitTimer / mYwaitTimer drop below it (tww the same) */
+  /* 0x12 */ be<s16> mRepeatDelayStep;  /* was field_0x16: setWaitParm 025885C4 'step'; the check*Trigger 02588A0C.. subtract it from mXwaitTimer / mYwaitTimer per repeat once the step delay count is 0 (tww the same; TP leaves it unnamed) */
+  /* 0x14 */ be<s16> mXwaitTimer;  /* was field_0x18: TP name (zeldaret/tp include/d/d_lib.h STControl::mXwaitTimer); checkLeftTrigger 02588A0C / checkRightTrigger 02588A7C load mXrepeatTimer with it and shrink it by mRepeatDelayStep; init / Xinit 025886EC reset it to mRepeatDelayY (tww the same) */
+  /* 0x16 */ be<s16> mYwaitTimer;  /* was field_0x1a: TP name (zeldaret/tp include/d/d_lib.h STControl::mYwaitTimer); checkUpTrigger 02588AEC / checkDownTrigger 02588B5C load mYrepeatTimer with it and shrink it by mRepeatDelayStep; init / Yinit 02588714 reset it to mRepeatDelayY (tww the same) */
+  /* 0x18 */ be<s16> mStepDelayCount;  /* was field_0x1c: setWaitParm 025885C4 'delay'; init 025885E8 / Xinit 025886EC / Yinit 02588714 copy it into mXstepDelayCount / mYstepDelayCount (tww the same; TP leaves it unnamed) */
+  /* 0x1A */ be<s16> mXstepDelayCount;  /* was field_0x1e: checkLeftTrigger 02588A0C / checkRightTrigger 02588A7C count it down per repeat and only shrink mXwaitTimer once it is 0; init / Xinit 025886EC load mStepDelayCount (tww the same) */
+  /* 0x1C */ be<s16> mYstepDelayCount;  /* was field_0x20: checkUpTrigger 02588AEC / checkDownTrigger 02588B5C count it down per repeat and only shrink mYwaitTimer once it is 0; init / Yinit 02588714 load mStepDelayCount (tww the same) */
+  /* 0x1E */ be<s16> mAngleShift;  /* was field_0x22: checkTrigger 0258873C adds it to every direction sector bound; when the direction bits change it becomes +mAngleMargin or -mAngleMargin (by the half of the sector the stick is in), 0 when released; init 025885E8 clears (tww the same) */
+  /* 0x20 */ be<s16> mAngleMargin;  /* was field_0x24: setWaitParm 025885C4 'margin'; checkTrigger 0258873C sets mAngleShift to +/- it when the direction changes (tww the same; TP leaves it unnamed) */
+  /* 0x22 */ be<s16> mDiagonalWidth;  /* was field_0x26: setWaitParm 025885C4 'sector'; checkTrigger 0258873C: the bounds move by (0x2000 - it) >> 1, so each diagonal sector is it wide (0x2000 default) (tww the same; TP leaves it unnamed) */
   /* 0x24 */ gptr<STControlVtable> mpVtable;
 };
 struct dLib_circle_path_c {

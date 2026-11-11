@@ -4,7 +4,7 @@ src wwhd_src/d/actor/d_a_tag_etc.cpp
 field 024A6304 r3+0x3AC u8 0 4          # mAction (5-entry table)
 field * r3+0xB0 u32 0,0x100,0x200,0xF00,0x1000000,0xFFFFFFFF   # params: type2 0 / non-0
 field * r3+0x3B0 u32 0,1,0xFFFFFFFF    # mMedliPID (-1: no search)
-field * r3+0x3B6 i16 -1 2              # field_0x29A
+field * r3+0x3B6 i16 -1 2              # mCutEndDelay
 field * r3+0xF8 u16 0,1,2,3            # eventInfo.mCommand
 ret 02542D88 -1 1                      # getMyStaffId
 ret 02543F10 -1 1                      # getEventIdx

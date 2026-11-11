@@ -19,13 +19,13 @@ struct daObjLeaves_c : fopAc_ac_c {
     /* 0x3B8 */ gptr<dBgW> mpBgW;
     /* 0x3BC */ dCcD_Stts mStts;
     /* 0x3F8 */ dCcD_Sph mSph;
-    /* 0x524 */ be<f32> m408, m40C;
+    /* 0x524 */ be<f32> mAlpha, mAlphaSpeed;  /* mAlpha was m408: _create 0236A554 sets 255; item_set_wait_proc 0236ACF8 / retire_wait_proc 0236ADFC add mAlphaSpeed each frame (item at <= 200, delete at 0); _draw 0236A884 uses it as the model opacity (translucent below 255); mAlphaSpeed was m40C: birthEffect 02369D08: the l_effect entry's mAlphaStep; item_set_wait_proc 0236ACF8 / retire_wait_proc 0236ADFC add it to mAlpha */
     /* 0x52C */ dPa_smokeEcallBack mSmokeCallback;
-    /* 0x54C */ be<s32> m430, m434, m438;
-    /* 0x558 */ be<u8> m43C;
+    /* 0x54C */ be<s32> mFadeWait, mRetireWait, mEffectKind;  /* mFadeWait was m430: birthEffect 02369D08: the l_effect entry's mFadeDelay; _execute 0236A7E8 counts it down; alpha_calc_start_wait_proc 0236ACCC starts the fade (LeavesItemWait) at 0; mRetireWait was m434: birthEffect 02369D08: the l_effect entry's mRetireDelay; _execute 0236A7E8 counts it down; retire_wait_proc 0236ADFC deletes the actor only once it is 0; mEffectKind was m438: birthEffect 02369D08: the l_effect entry's mKind (0 particle, 1 smoke callback); not read in WWHD; tww's demo-version _delete removes the smoke callback only for kind 1 */
+    /* 0x558 */ be<u8> mAppear;  /* was m43C: _create 0236A554: chk_appear's result (kept after the first phase); resources are loaded only while set; _delete 0236A74C deletes the resources, smoke callback and background only while set (tww the same) */
     u8 _559[3];
     /* 0x55C */ gabi::ptmf<MemberFunc> mMemberFunc;
-    /* 0x564 */ be<u8> m44C;
+    /* 0x564 */ be<u8> mBlown;  /* was m44C: tg_hitCallback 0236A18C sets 1 on a wind, bomb or fire hit (with the blow / burn effects); wait_proc 0236ABD0 sets the switch, releases the background and starts the fade (LeavesAlphaWait) once it is set */
     u8 _565[3];
     void birthEffect(s32, cXyz*, csXyz*, GXColor*);
     u32 chk_appear();
@@ -44,7 +44,7 @@ struct daObjLeaves_c : fopAc_ac_c {
 WWHD_OFFSET(daObjLeaves_c, mSph, 0x3F8);
 WWHD_OFFSET(daObjLeaves_c, mSmokeCallback, 0x52C);
 WWHD_OFFSET(daObjLeaves_c, mMemberFunc, 0x55C);
-WWHD_OFFSET(daObjLeaves_c, m44C, 0x564);
+WWHD_OFFSET(daObjLeaves_c, mBlown, 0x564);
 WWHD_SIZE(daObjLeaves_c, 0x568);
 enum {
     fpcNm_PLAYER_e = 168,
@@ -169,12 +169,12 @@ WWHD_OFFSET(daObjLeaves_c, mPhase, 0x3AC);
 WWHD_OFFSET(daObjLeaves_c, mModel, 0x3B4);
 WWHD_OFFSET(daObjLeaves_c, mpBgW, 0x3B8);
 WWHD_OFFSET(daObjLeaves_c, mStts, 0x3BC);
-WWHD_OFFSET(daObjLeaves_c, m408, 0x524);
-WWHD_OFFSET(daObjLeaves_c, m40C, 0x528);
-WWHD_OFFSET(daObjLeaves_c, m430, 0x54C);
-WWHD_OFFSET(daObjLeaves_c, m434, 0x550);
-WWHD_OFFSET(daObjLeaves_c, m438, 0x554);
-WWHD_OFFSET(daObjLeaves_c, m43C, 0x558);
+WWHD_OFFSET(daObjLeaves_c, mAlpha, 0x524);
+WWHD_OFFSET(daObjLeaves_c, mAlphaSpeed, 0x528);
+WWHD_OFFSET(daObjLeaves_c, mFadeWait, 0x54C);
+WWHD_OFFSET(daObjLeaves_c, mRetireWait, 0x550);
+WWHD_OFFSET(daObjLeaves_c, mEffectKind, 0x554);
+WWHD_OFFSET(daObjLeaves_c, mAppear, 0x558);
 WWHD_OFFSET(LeavesEffect, mKind, 4);
 WWHD_OFFSET(LeavesEffect, mFadeDelay, 8);
 WWHD_OFFSET(LeavesEffect, mRetireDelay, 0xC);

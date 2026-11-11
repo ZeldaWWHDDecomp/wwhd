@@ -56,21 +56,21 @@ void demo_camera(bdk_class *i_this) {
         local_104->y = fadds_ppc(REG0_F(1), -30.0f);
         local_104->z = fadds_ppc(REG0_F(2), 50.0f);
         MtxPosition(local_104, &i_this->mDemoCamCenter);
-        PSVECAdd(&i_this->mDemoCamCenter, &i_this->m1150, &i_this->mDemoCamCenter);
+        PSVECAdd(&i_this->mDemoCamCenter, &i_this->mHeadPos, &i_this->mDemoCamCenter);
 
         local_104->x = fadds_ppc(REG0_F(5), 400.0f);
         local_104->y = fadds_ppc(REG0_F(6), -100.0f);
         local_104->z = fadds_ppc(REG0_F(7), 400.0f);
         MtxPosition(local_104, &i_this->mDemoCamEye);
-        PSVECAdd(&i_this->mDemoCamEye, &i_this->m1150, &i_this->mDemoCamEye);
+        PSVECAdd(&i_this->mDemoCamEye, &i_this->mHeadPos, &i_this->mDemoCamEye);
 
         local_104->x = fadds_ppc(REG0_F(0), -230.0f);
         local_104->y = 0.0f;
         local_104->z = fadds_ppc(REG0_F(2), 110.0f);
         MtxPosition(local_104, local_108);
-        local_108->x = fadds_ppc(local_108->x, i_this->m1150.x);
+        local_108->x = fadds_ppc(local_108->x, i_this->mHeadPos.x);
         BdkDemo_copyFloat(local_108->y, player->current.pos.y);
-        local_108->z = fadds_ppc(local_108->z, i_this->m1150.z);
+        local_108->z = fadds_ppc(local_108->z, i_this->mHeadPos.z);
         bdk_setPlayerPosAndAngle(player, local_108, (s16)(actor->shape_angle.y + REG0_S(6) + 20000));
 
         s16 r4 = i_this->mDemoTimer;
@@ -190,7 +190,7 @@ void demo_camera(bdk_class *i_this) {
             mDoAud_seStart_simple_bdk(JA_SE_ATM_MJT_JINARI);
         }
         if (i_this->mDemoTimer == (s16)(REG0_S(6) + 0x96)) {
-            i_this->m25D8 = 1;
+            i_this->mDemoStepReq = 1;
         }
         if (i_this->mDemoTimer == 0xA3) { /* HD: a fixed frame (GameCube REG0_S(7) + 0xA0) */
             i_this->mDemoTimer = 0;
@@ -216,12 +216,12 @@ void demo_camera(bdk_class *i_this) {
             cLib_addCalc2(&i_this->mDemoCamFovy, 55.0f, 0.2f, 3.0f);
         }
         if (i_this->mDemoTimer == (s16)(REG0_S(8) + 0x37)) {
-            i_this->m25D8 = 1;
+            i_this->mDemoStepReq = 1;
         }
-        cLib_addCalc2(&i_this->mDemoCamCenter.x, i_this->m1150.x, 0.1f, 50.0f);
-        cLib_addCalc2(&i_this->mDemoCamCenter.y, fadds_ppc(fsubs_ppc(i_this->m1150.y, 200.0f), REG0_F(11)), 0.1f,
+        cLib_addCalc2(&i_this->mDemoCamCenter.x, i_this->mHeadPos.x, 0.1f, 50.0f);
+        cLib_addCalc2(&i_this->mDemoCamCenter.y, fadds_ppc(fsubs_ppc(i_this->mHeadPos.y, 200.0f), REG0_F(11)), 0.1f,
                       50.0f);
-        cLib_addCalc2(&i_this->mDemoCamCenter.z, i_this->m1150.z, 0.1f, 50.0f);
+        cLib_addCalc2(&i_this->mDemoCamCenter.z, i_this->mHeadPos.z, 0.1f, 50.0f);
         if (i_this->mpMorf->isStop()) {
             anm_init(i_this, dRes_INDEX_BDK_BCK_FLY3_e, 1.0f, 2, 1.0f, dRes_INDEX_BDK_BAS_FLY3_e, 0);
             bdk_changeDemoMode(player, daPy_demo_c::DEMO_A_WAIT_e);
@@ -287,7 +287,7 @@ void demo_camera(bdk_class *i_this) {
             i_this->mFlyAnm = -1;
             i_this->mState = 0;
             actor->gravity = fadds_ppc(REG0_F(4), -5.0f);
-            i_this->m2B4 = 0;
+            i_this->mTowerBattle = 0;
             for (s32 i = 0; i < 10; i++) {
                 i_this->mWindAtSph[i].SetAtType(AT_TYPE_WIND);
             }
@@ -361,8 +361,8 @@ void demo_camera(bdk_class *i_this) {
             cXyz *eye = &pCamera->mEye;
             BdkDemo_copyVector(&i_this->mDemoCamEye, eye);
             local_104->y = 0.0f;
-            local_104->x = fsubs_ppc(eye->x, i_this->m1150.x);
-            local_104->z = fsubs_ppc(eye->z, i_this->m1150.z);
+            local_104->x = fsubs_ppc(eye->x, i_this->mHeadPos.x);
+            local_104->z = fsubs_ppc(eye->z, i_this->mHeadPos.z);
             i_this->mDemoCamAngle.y = cM_atan2s(local_104->x, local_104->z);
             f32 z = local_104->z;
             f32 x = local_104->x;
@@ -375,10 +375,10 @@ void demo_camera(bdk_class *i_this) {
             bdk_changeOriginalDemo(player);
             mDoAud_bgmStreamPrepare_bdk(JA_STRM_DK_CLEAR);
             /* HD: the camera target starts at the body (it is eased towards it in case 0x65) */
-            f32 y = i_this->m1150.y;
-            BdkDemo_copyFloat(i_this->mDemoCamCenter.x, i_this->m1150.x);
-            BdkDemo_copyFloat(i_this->mDemoCamCenter.y, i_this->m1150.y);
-            BdkDemo_copyFloat(i_this->mDemoCamCenter.z, i_this->m1150.z);
+            f32 y = i_this->mHeadPos.y;
+            BdkDemo_copyFloat(i_this->mDemoCamCenter.x, i_this->mHeadPos.x);
+            BdkDemo_copyFloat(i_this->mDemoCamCenter.y, i_this->mHeadPos.y);
+            BdkDemo_copyFloat(i_this->mDemoCamCenter.z, i_this->mHeadPos.z);
             i_this->mDemoCamCenter.y = fadds_ppc(y, fadds_ppc(REG0_F(16), -100.0f));
         }
         /* fall through */
@@ -394,9 +394,9 @@ void demo_camera(bdk_class *i_this) {
                 mDoAud_bgmStreamPlay_bdk();
             }
         }
-        cLib_addCalc2(&i_this->mDemoCamCenter.x, i_this->m1150.x, 0.1f, 50.0f);
-        cLib_addCalc2(&i_this->mDemoCamCenter.y, fsubs_ppc(i_this->m1150.y, 100.0f), 0.1f, 50.0f);
-        cLib_addCalc2(&i_this->mDemoCamCenter.z, i_this->m1150.z, 0.1f, 50.0f);
+        cLib_addCalc2(&i_this->mDemoCamCenter.x, i_this->mHeadPos.x, 0.1f, 50.0f);
+        cLib_addCalc2(&i_this->mDemoCamCenter.y, fsubs_ppc(i_this->mHeadPos.y, 100.0f), 0.1f, 50.0f);
+        cLib_addCalc2(&i_this->mDemoCamCenter.z, i_this->mHeadPos.z, 0.1f, 50.0f);
         local_104->y = 0.0f;
         local_104->z = fadds_ppc(i_this->mDemoCamDist, REG0_F(17));
         local_104->x = 0.0f;
@@ -405,7 +405,7 @@ void demo_camera(bdk_class *i_this) {
         MtxPosition(local_104, local_108);
         PSVECAdd(local_108, &actor->current.pos, local_108); /* HD: around the boss (GameCube mDemoCamCenter) */
         cLib_addCalc2(&i_this->mDemoCamEye.x, local_108->x, 0.1f, 100.0f);
-        if (i_this->m25A2 == 0) {
+        if (i_this->mFinalHitHigh == 0) {
             i_this->mDemoCamEye.y = fadds_ppc(REG0_F(18), 9950.0f);
         } else {
             cLib_addCalc2(&i_this->mDemoCamEye.y, fadds_ppc(local_108->y, REG0_F(13)), 0.1f, 100.0f);
@@ -499,7 +499,7 @@ void demo_camera(bdk_class *i_this) {
         dCamera_SetTrimSize_bdk(cam, 0);
         dComIfGp_event_reset();
         actor->actor_status &= ~fopAcStts_UNK4000_e;
-        i_this->m259E = 0;        /* HD */
+        i_this->mBlurRate = 0;        /* HD */
         BdkDemo_globalFlag() = 0; /* HD: a global flag */
         break;
     }

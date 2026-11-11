@@ -1272,9 +1272,9 @@ BOOL daMt_Execute(mt_class* actor) {
         cLib_addCalcAngleS2(&i_this->mJointWaveStep, 0x2000, 1, 0x100);
         for (int k = 0; k < MT_PART_NUM; k++) {
             f32 s = cM_ssin(i_this->mFrameCounter * (REG0_S(5) + 0x9C4) + k * (REG0_S(6) + 0x1D4C));
-            i_this->mSegmentScaleY[k] = gabi::fmadds(s, i_this->m454, 1.0f);
+            i_this->mSegmentScaleY[k] = gabi::fmadds(s, i_this->mSegmentPulseAmp, 1.0f);
         }
-        cLib_addCalc2(&i_this->m454, 0.1f, 1.0f, 0.002f);
+        cLib_addCalc2(&i_this->mSegmentPulseAmp, 0.1f, 1.0f, 0.002f);
     }
 
     if (!(i_this->mType & 1)) {

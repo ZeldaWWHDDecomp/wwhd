@@ -53,7 +53,7 @@ static daNpc_Ac1_HIO_c* daNpc_Ac1_HIO_c_ct(daNpc_Ac1_HIO_c* i_this) {
     // HD: the parameter block is copied byte-for-byte.
     memcpy_g(&i_this->mPrmTbl, &a_prm_tbl, 0x30); /* 028FEAC0 */
     i_this->mNo = -1;
-    i_this->field_0x8 = -1;
+    i_this->mRefCount = -1;
     return i_this;
 }
 
@@ -192,7 +192,7 @@ bool daNpc_Ac1_c::createInit() {
     }
     mEventCut.setActorInfo2("Ac1" /* "Ac1" */, (fopNpc_npc_c*)this);
     mAnmNum = 4;
-    if (m879 != 0) {
+    if (mType != 0) {
         return false;
     }
     if (!init_AC1_0()) {
@@ -534,7 +534,7 @@ u16 daNpc_Ac1_c::next_msgStatus(be<u32>* i_msg_no) {
 u32 daNpc_Ac1_c::getBitMask() {
 
     u32 ret = 0;
-    if (m879 == 0) {
+    if (mType == 0) {
         ret = 0x10;
     }
     return ret;
@@ -563,7 +563,7 @@ u32 daNpc_Ac1_c::getMsg_AC1_0() {
 u32 daNpc_Ac1_c::getMsg() {
 
     u32 ret = 0;
-    if (m879 == 0) {
+    if (mType == 0) {
         ret = getMsg_AC1_0();
     }
     return ret;
@@ -597,8 +597,8 @@ void daNpc_Ac1_c::setAttention(u32 i_setEyePos) {
 /* 021E3060 */
 bool daNpc_Ac1_c::charDecide(int) {
 
-    m879 = 0;
     mType = 0;
+    m878 = 0;
     return true;
 }
 

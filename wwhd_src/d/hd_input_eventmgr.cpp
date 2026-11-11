@@ -25,12 +25,12 @@ u32 hdUiEventMgr_construct(u32 p) {
         if (!p)
             return 0;
     }
-    auto* manager = reinterpret_cast<EventMgr*>((uintptr_t)p);
+    auto* manager = gabi::at<EventMgr>(p);
     hdUiEventMgrBaseConstruct(manager);
     manager->mpFocus = nullptr;
     manager->mpHover = nullptr;
     manager->mMode = 0;
-    manager->mpVtable = reinterpret_cast<EventMgrVtable*>((uintptr_t)ManagerVtable);
+    manager->mpVtable = gabi::at<EventMgrVtable>(ManagerVtable);
     manager->mSecondaryVtable = SecondaryVtable;
     manager->mNextMode = 0;
     const f32 z = zero();
@@ -42,9 +42,9 @@ u32 hdUiEventMgr_construct(u32 p) {
     for (u32 i = 0; i < 7; ++i) {
         if (i == 4)
             manager->mInertiaFrames = INERTIA_IDLE;
-        Vec2* vector = reinterpret_cast<Vec2*>((uintptr_t)gabi::ea(vectors[i]));
+        Vec2* vector = gabi::at<Vec2>(gabi::ea(vectors[i]));
         if (!vector)
-            vector = reinterpret_cast<Vec2*>((uintptr_t)hdUiAllocate(sizeof(Vec2)));
+            vector = gabi::at<Vec2>(hdUiAllocate(sizeof(Vec2)));
         if (vector) {
             vector->value.y = z;
             vector->value.x = z;
@@ -67,10 +67,10 @@ void hdUiEventMgr_createInstance(u32 heap) {
     if (l_instance)
         return;
     const u32 p = hdUiAllocateAligned(sizeof(EventMgr), heap, 4u);
-    const u32 d = gabi::ea(&reinterpret_cast<EventMgr*>((uintptr_t)p)->mDisposer);
+    const u32 d = gabi::ea(&gabi::at<EventMgr>(p)->mDisposer);
     if (d) {
         hdUiDisposerConstruct(d, heap, 3u);
-        reinterpret_cast<Disposer*>((uintptr_t)d)->mVtable = DisposerVtable;
+        gabi::at<Disposer>(d)->mVtable = DisposerVtable;
     }
     l_disposer = d;
     l_instance = p ? hdUiEventMgr_construct(p) : 0u;
@@ -81,7 +81,7 @@ void hdUiEventMgr_createInstance(u32 heap) {
 void hdUiEventMgr_dtor(u32 p, u32 flags) {
     if (!p)
         return;
-    reinterpret_cast<EventMgr*>((uintptr_t)p)->mSecondaryVtable = SecondaryVtable;
+    gabi::at<EventMgr>(p)->mSecondaryVtable = SecondaryVtable;
     hdUiEventMgrBaseDestroy(p, 0u);
     if (flags & 1)
         hdUiFree(p);
@@ -97,7 +97,7 @@ void cking::ui::input::EventMgr::prepare() {
     const u32 parent = hdUiGetParentHeap();
     const u32 heap = hdUiCreateHeap(size, name.a, parent, 1u, 0u);
     hdUiEventQueuePrepare(gabi::ea(this), heap, 0xAu);
-    call_ptr<void>(reinterpret_cast<cking::ui::input::Heap*>((uintptr_t)heap)->mpVtable->mReset.get(), heap);
+    call_ptr<void>(gabi::at<cking::ui::input::Heap>(heap)->mpVtable->mReset.get(), heap);
 }
 
 /* current id becomes the last id */
@@ -135,15 +135,15 @@ void cking::ui::input::EventMgr::forward() { hdUiEventQueueForward(gabi::ea(this
 
 /* 02614FC0 */
 void cking::ui::input::EventMgr::setFocus(u32 v) {
-    mpFocus = reinterpret_cast<cking::ui::input::Receiver*>((uintptr_t)(v));
+    mpFocus = gabi::at<cking::ui::input::Receiver>((v));
 }
 /* 02614FC8 */
 void cking::ui::input::EventMgr::setGrab(u32 v) {
-    mpGrab = reinterpret_cast<cking::ui::input::Receiver*>((uintptr_t)(v));
+    mpGrab = gabi::at<cking::ui::input::Receiver>((v));
 }
 /* 02614FD0 */
 void cking::ui::input::EventMgr::setHover(u32 v) {
-    mpHover = reinterpret_cast<cking::ui::input::Receiver*>((uintptr_t)(v));
+    mpHover = gabi::at<cking::ui::input::Receiver>((v));
 }
 
 /* reset: clears the state and unlinks every receiver */
@@ -175,14 +175,13 @@ void cking::ui::input::EventMgr::reset() {
     while (node != gabi::ea(this)) {
         const u32 n = node;
         const u32 owner = gabi::ea(
-            (cking::ui::input::ReceiverList*)reinterpret_cast<cking::ui::input::ReceiverNode*>((uintptr_t)n)
+            (cking::ui::input::ReceiverList*)gabi::at<cking::ui::input::ReceiverNode>(n)
                 ->mpOwner);
-        node = gabi::ea((cking::ui::input::ReceiverNode*)reinterpret_cast<cking::ui::input::ReceiverNode*>(
-                            (uintptr_t)node)
+        node = gabi::ea((cking::ui::input::ReceiverNode*)gabi::at<cking::ui::input::ReceiverNode>(node)
                             ->mNext);
         if (owner) {
-            reinterpret_cast<cking::ui::input::ReceiverNode*>((uintptr_t)n)->mpOwner =
-                reinterpret_cast<cking::ui::input::ReceiverList*>((uintptr_t)(0));
+            gabi::at<cking::ui::input::ReceiverNode>(n)->mpOwner =
+                gabi::at<cking::ui::input::ReceiverList>((0));
             hdUiListErase(n);
             mCount = (u32)mCount - 1;
         }
@@ -193,8 +192,8 @@ void cking::ui::input::EventMgr::reset() {
 /* TList::pushBack (moves the node from its previous list) */
 /* 026150C0 */
 void hdUiReceiverList_pushBack(u32 list, u32 node) {
-    auto* target = reinterpret_cast<ReceiverList*>((uintptr_t)list);
-    auto* entry = reinterpret_cast<ReceiverNode*>((uintptr_t)node);
+    auto* target = gabi::at<ReceiverList>(list);
+    auto* entry = gabi::at<ReceiverNode>(node);
     ReceiverList* owner = entry->mpOwner;
     if (owner) {
         entry->mpOwner = nullptr;
@@ -232,8 +231,8 @@ u32 cking::ui::input::EventMgr::getHover() { return gabi::ea((cking::ui::input::
 /* touch position delta to (bx, by) as two float words; the default vector 104A0908 when invalid */
 /* inlined into EventMgr input methods */
 static Pair32 touchDelta(u32 src, const Vec2* base) {
-    const u32 wx = (u32) reinterpret_cast<Vec2*>((uintptr_t)src)->words[0],
-              wy = (u32) reinterpret_cast<Vec2*>((uintptr_t)src)->words[1];
+    const u32 wx = (u32) gabi::at<Vec2>(src)->words[0],
+              wy = (u32) gabi::at<Vec2>(src)->words[1];
     const f32 lim = (f32)l_constants.mTouchLimit;
     Local<Vec2> v;
     v->words[0] = wx;
@@ -253,8 +252,8 @@ static Pair32 touchDelta(u32 src, const Vec2* base) {
 Pair32 cking::ui::input::EventMgr::touchFromStart() {
     const u32 c = l_inputManager;
     const u32 src =
-        ((u32) reinterpret_cast<InputManager*>((uintptr_t)c)->mPointer.mPointerFlags & POINTER_VALID)
-            ? gabi::ea(&reinterpret_cast<InputManager*>((uintptr_t)c)->mPointer.mTouch)
+        ((u32) gabi::at<InputManager>(c)->mPointer.mPointerFlags & POINTER_VALID)
+            ? gabi::ea(&gabi::at<InputManager>(c)->mPointer.mTouch)
             : gabi::ea(&l_invalidTouch);
     return touchDelta(src, &mTouchStart);
 }
@@ -262,14 +261,14 @@ Pair32 cking::ui::input::EventMgr::touchFromStart() {
 /* touch delta from the touch start (GamePad touch position) */
 /* 02615260 */
 Pair32 cking::ui::input::EventMgr::padTouchFromStart() {
-    return touchDelta(gabi::ea(&reinterpret_cast<InputManager*>((uintptr_t)l_inputManager)->mPointer.mTouch),
+    return touchDelta(gabi::ea(&gabi::at<InputManager>(l_inputManager)->mPointer.mTouch),
                       &mTouchStart);
 }
 
 /* touch delta from the previous position */
 /* 026152FC */
 Pair32 cking::ui::input::EventMgr::padTouchFromPrev() {
-    return touchDelta(gabi::ea(&reinterpret_cast<InputManager*>((uintptr_t)l_inputManager)->mPointer.mTouch),
+    return touchDelta(gabi::ea(&gabi::at<InputManager>(l_inputManager)->mPointer.mTouch),
                       &mTouchPrevious);
 }
 
@@ -282,14 +281,14 @@ u32 cking::ui::input::EventMgr::getId() {
 
 static u32 checkInput(u32 self, u32 off, u32 ev) {
     return call_ptr<u32>(
-        reinterpret_cast<EventMgr*>((uintptr_t)self)->mpVtable->mSlots[off / sizeof(gfn)].get(), self, ev);
+        gabi::at<EventMgr>(self)->mpVtable->mSlots[off / sizeof(gfn)].get(), self, ev);
 }
 static void dispatchCommand(u32 self, u32 off) {
-    call_ptr<void>(reinterpret_cast<EventMgr*>((uintptr_t)self)->mpVtable->mSlots[off / sizeof(gfn)].get(),
+    call_ptr<void>(gabi::at<EventMgr>(self)->mpVtable->mSlots[off / sizeof(gfn)].get(),
                    self);
 }
 static void dispatchPointer(u32 self, u32 off, u32 ev) {
-    call_ptr<void>(reinterpret_cast<EventMgr*>((uintptr_t)self)->mpVtable->mSlots[off / sizeof(gfn)].get(),
+    call_ptr<void>(gabi::at<EventMgr>(self)->mpVtable->mSlots[off / sizeof(gfn)].get(),
                    self, ev);
 }
 
@@ -297,30 +296,30 @@ static void dispatchPointer(u32 self, u32 off, u32 ev) {
 /* inlined into EventMgr input methods */
 static void shiftTouch(u32 self, u32 pos) {
     const f32 a =
-        (f32) reinterpret_cast<cking::ui::input::EventMgr*>((uintptr_t)self)->mSampleCurrent.value.x;
-    const f32 x = (f32) reinterpret_cast<Vec2*>((uintptr_t)pos)->value.x;
-    reinterpret_cast<cking::ui::input::EventMgr*>((uintptr_t)self)->mSamplePrevious.value.x = a;
+        (f32) gabi::at<cking::ui::input::EventMgr>(self)->mSampleCurrent.value.x;
+    const f32 x = (f32) gabi::at<Vec2>(pos)->value.x;
+    gabi::at<cking::ui::input::EventMgr>(self)->mSamplePrevious.value.x = a;
     const f32 b =
-        (f32) reinterpret_cast<cking::ui::input::EventMgr*>((uintptr_t)self)->mSampleCurrent.value.y;
-    reinterpret_cast<cking::ui::input::EventMgr*>((uintptr_t)self)->mSampleCurrent.value.x = x;
-    const f32 y = (f32) reinterpret_cast<Vec2*>((uintptr_t)pos)->value.y;
-    reinterpret_cast<cking::ui::input::EventMgr*>((uintptr_t)self)->mSamplePrevious.value.y = b;
-    reinterpret_cast<cking::ui::input::EventMgr*>((uintptr_t)self)->mSampleCurrent.value.y = y;
+        (f32) gabi::at<cking::ui::input::EventMgr>(self)->mSampleCurrent.value.y;
+    gabi::at<cking::ui::input::EventMgr>(self)->mSampleCurrent.value.x = x;
+    const f32 y = (f32) gabi::at<Vec2>(pos)->value.y;
+    gabi::at<cking::ui::input::EventMgr>(self)->mSamplePrevious.value.y = b;
+    gabi::at<cking::ui::input::EventMgr>(self)->mSampleCurrent.value.y = y;
 }
 
 /* event dispatch: touch handling, then the button checks in priority order */
 /* 026153B4 */
 u32 cking::ui::input::EventMgr::dispatch(u32 ev) {
-    auto* event = reinterpret_cast<Event*>((uintptr_t)ev);
+    auto* event = gabi::at<Event>(ev);
     if (!ev)
         return 1;
     const u32 src =
         ((u32)event->mPointerFlags & POINTER_VALID) ? ev + SLOT_OnHoldBit12 : gabi::ea(&l_invalidTouch);
     Local<Vec2> pos;
-    pos->words[0] = (u32) reinterpret_cast<Vec2*>((uintptr_t)src)->words[0];
+    pos->words[0] = (u32) gabi::at<Vec2>(src)->words[0];
     const f32 lim = (f32)l_constants.mTouchLimit;
     const f32 x = (f32)pos->value.x;
-    pos->words[1] = (u32) reinterpret_cast<Vec2*>((uintptr_t)src)->words[1];
+    pos->words[1] = (u32) gabi::at<Vec2>(src)->words[1];
     if (x > lim && (f32)pos->value.y > lim) {
         if ((u32)event->mHold & BUTTON_TOUCH) {
             dispatchPointer(gabi::ea(this), SLOT_PointerDown, ev);
@@ -354,7 +353,7 @@ u32 cking::ui::input::EventMgr::dispatch(u32 ev) {
         dispatchCommand(gabi::ea(this), SLOT_OnHoldBit12);
         return 1;
     }
-    if ((u8) reinterpret_cast<Options*>((uintptr_t)l_options)->mDirectionalInputEnabled) {
+    if ((u8) gabi::at<Options>(l_options)->mDirectionalInputEnabled) {
         if (checkInput(gabi::ea(this), SLOT_CheckLeft, ev)) {
             if (checkInput(gabi::ea(this), SLOT_CheckUp, ev))
                 dispatchCommand(gabi::ea(this), SLOT_OnLeftUp);
@@ -404,7 +403,7 @@ u32 cking::ui::input::EventMgr::dispatch(u32 ev) {
 /* touch down: focuses the first receiver hit by the touch */
 /* 02615C80 */
 u32 cking::ui::input::EventMgr::touchDown(u32 ev) {
-    auto* event = reinterpret_cast<Event*>((uintptr_t)ev);
+    auto* event = gabi::at<Event>(ev);
     setGrab(0);
     setHover(0);
     const f32 z = zero();
@@ -429,23 +428,23 @@ u32 cking::ui::input::EventMgr::touchDown(u32 ev) {
     const u32 src =
         ((u32)event->mPointerFlags & POINTER_VALID) ? gabi::ea(&event->mTouch) : gabi::ea(&l_invalidTouch);
     Local<Vec2> pos;
-    pos->words[0] = (u32) reinterpret_cast<Vec2*>((uintptr_t)src)->words[0];
+    pos->words[0] = (u32) gabi::at<Vec2>(src)->words[0];
     u32 node = gabi::ea((cking::ui::input::ReceiverNode*)mFirst);
-    pos->words[1] = (u32) reinterpret_cast<Vec2*>((uintptr_t)src)->words[1];
+    pos->words[1] = (u32) gabi::at<Vec2>(src)->words[1];
     if (node == gabi::ea(this))
         return 0;
     const f32 x = (f32)pos->value.x, y = (f32)pos->value.y;
     do {
         const u32 item = gabi::ea(
-            (cking::ui::input::Receiver*)reinterpret_cast<cking::ui::input::ReceiverNode*>((uintptr_t)node)
+            (cking::ui::input::Receiver*)gabi::at<cking::ui::input::ReceiverNode>(node)
                 ->mpReceiver);
-        if (call_ptr<u32>(reinterpret_cast<Receiver*>((uintptr_t)item)->mpVtable->mContains.get(), item, x,
+        if (call_ptr<u32>(gabi::at<Receiver>(item)->mpVtable->mContains.get(), item, x,
                           y)) {
             hdUiQueueEvent(gabi::ea(this), EVENT_TOUCH_DOWN,
-                           (u32) reinterpret_cast<cking::ui::input::Receiver*>((uintptr_t)item)->mId, 0u);
+                           (u32) gabi::at<cking::ui::input::Receiver>(item)->mId, 0u);
             setFocus(item);
-            mReceiverId = (u32) reinterpret_cast<cking::ui::input::Receiver*>((uintptr_t)item)->mId;
-            if (call_ptr<u32>(reinterpret_cast<Receiver*>((uintptr_t)item)->mpVtable->mCanDrag.get(), item)) {
+            mReceiverId = (u32) gabi::at<cking::ui::input::Receiver>(item)->mId;
+            if (call_ptr<u32>(gabi::at<Receiver>(item)->mpVtable->mCanDrag.get(), item)) {
                 const f32 px = (f32)pos->value.x;
                 mVelocity.value.x = z;
                 mTouchCurrent.value.x = px;
@@ -460,8 +459,7 @@ u32 cking::ui::input::EventMgr::touchDown(u32 ev) {
             }
             return 1;
         }
-        node = gabi::ea((cking::ui::input::ReceiverNode*)reinterpret_cast<cking::ui::input::ReceiverNode*>(
-                            (uintptr_t)node)
+        node = gabi::ea((cking::ui::input::ReceiverNode*)gabi::at<cking::ui::input::ReceiverNode>(node)
                             ->mNext);
     } while (node != gabi::ea(this));
     return 0;
@@ -481,11 +479,11 @@ u32 cking::ui::input::EventMgr::findTarget() {
         return 0;
     for (;;) {
         const u32 item = gabi::ea(
-            (cking::ui::input::Receiver*)reinterpret_cast<cking::ui::input::ReceiverNode*>((uintptr_t)node)
+            (cking::ui::input::Receiver*)gabi::at<cking::ui::input::ReceiverNode>(node)
                 ->mpReceiver);
         if (item != focus &&
-            call_ptr<u32>(reinterpret_cast<Receiver*>((uintptr_t)item)->mpVtable->mCanDrop.get(), item) &&
-            call_ptr<u32>(reinterpret_cast<Receiver*>((uintptr_t)item)->mpVtable->mAccepts.get(), item,
+            call_ptr<u32>(gabi::at<Receiver>(item)->mpVtable->mCanDrop.get(), item) &&
+            call_ptr<u32>(gabi::at<Receiver>(item)->mpVtable->mAccepts.get(), item,
                           gabi::ea((cking::ui::input::Receiver*)mpFocus))) {
             const f32 d = hdUiReceiverDistance(gabi::ea((cking::ui::input::Receiver*)mpFocus), item);
             if (bestD == z || bestD > d) {
@@ -493,8 +491,7 @@ u32 cking::ui::input::EventMgr::findTarget() {
                 best = item;
             }
         }
-        node = gabi::ea((cking::ui::input::ReceiverNode*)reinterpret_cast<cking::ui::input::ReceiverNode*>(
-                            (uintptr_t)node)
+        node = gabi::ea((cking::ui::input::ReceiverNode*)gabi::at<cking::ui::input::ReceiverNode>(node)
                             ->mNext);
         if (node == gabi::ea(this))
             return best;
@@ -512,7 +509,7 @@ static void zeroTouch(be<f32>* const* fields, u32 n) {
 /* touch move: drag over targets (events 0x43..0x48, 3) */
 /* 02616020 */
 u32 cking::ui::input::EventMgr::touchMove(u32 ev) {
-    auto* event = reinterpret_cast<Event*>((uintptr_t)ev);
+    auto* event = gabi::at<Event>(ev);
     if (!ev) {
         mReceiverId = 0;
         setFocus(0);
@@ -528,10 +525,10 @@ u32 cking::ui::input::EventMgr::touchMove(u32 ev) {
     const u32 src =
         ((u32)event->mPointerFlags & POINTER_VALID) ? gabi::ea(&event->mTouch) : gabi::ea(&l_invalidTouch);
     Local<Vec2> pos;
-    const u32 wx = (u32) reinterpret_cast<Vec2*>((uintptr_t)src)->words[0];
+    const u32 wx = (u32) gabi::at<Vec2>(src)->words[0];
     const u32 px = (u32)mTouchCurrent.words[0];
     pos->words[0] = wx;
-    const u32 wy = (u32) reinterpret_cast<Vec2*>((uintptr_t)src)->words[1];
+    const u32 wy = (u32) gabi::at<Vec2>(src)->words[1];
     mTouchPrevious.words[0] = px;
     const u32 grab = gabi::ea((cking::ui::input::Receiver*)mpGrab);
     const u32 py = (u32)mTouchCurrent.words[1];
@@ -547,7 +544,7 @@ u32 cking::ui::input::EventMgr::touchMove(u32 ev) {
                 hdUiQueueEvent(gabi::ea(this), EVENT_DRAG_OVER, (u32)mReceiverId, 0u);
                 return 1;
             }
-            if (!call_ptr<u32>(reinterpret_cast<Receiver*>((uintptr_t)best)->mpVtable->mCanDrop.get(), best))
+            if (!call_ptr<u32>(gabi::at<Receiver>(best)->mpVtable->mCanDrop.get(), best))
                 return 0;
             setHover(best);
             hdUiQueueEvent(gabi::ea(this), EVENT_DRAG_ENTER, (u32)mReceiverId, 0u);
@@ -564,7 +561,7 @@ u32 cking::ui::input::EventMgr::touchMove(u32 ev) {
     u32 item = gabi::ea((cking::ui::input::Receiver*)mpFocus);
     if (!item)
         return 0;
-    if (call_ptr<u32>(reinterpret_cast<Receiver*>((uintptr_t)item)->mpVtable->mCanDrag.get(), item)) {
+    if (call_ptr<u32>(gabi::at<Receiver>(item)->mpVtable->mCanDrag.get(), item)) {
         const f32 dy = fsubs_ppc((f32)mTouchStart.value.y, (f32)pos->value.y);
         const f32 dy2 = fmuls_ppc(dy, dy);
         const f32 dx = fsubs_ppc((f32)mTouchStart.value.x, (f32)pos->value.x);
@@ -578,10 +575,10 @@ u32 cking::ui::input::EventMgr::touchMove(u32 ev) {
         }
     }
     item = gabi::ea((cking::ui::input::Receiver*)mpFocus);
-    bool keep = call_ptr<u32>(reinterpret_cast<Receiver*>((uintptr_t)item)->mpVtable->mCanDrag.get(), item);
+    bool keep = call_ptr<u32>(gabi::at<Receiver>(item)->mpVtable->mCanDrag.get(), item);
     if (!keep) {
         item = gabi::ea((cking::ui::input::Receiver*)mpFocus);
-        keep = call_ptr<u32>(reinterpret_cast<Receiver*>((uintptr_t)item)->mpVtable->mContains.get(), item,
+        keep = call_ptr<u32>(gabi::at<Receiver>(item)->mpVtable->mContains.get(), item,
                              (f32)pos->value.x, (f32)pos->value.y);
     }
     if (!keep) {
@@ -602,12 +599,12 @@ void cking::ui::input::EventMgr::bounce() {
     if (!grab)
         return;
     const f32 m = (f32)mMargin;
-    const u32 mtx = gabi::ea(&reinterpret_cast<Receiver*>((uintptr_t)grab)->mpLayout->mTransform);
+    const u32 mtx = gabi::ea(&gabi::at<Receiver>(grab)->mpLayout->mTransform);
     const f32 h = fsubs_ppc((f32)l_constants.mHalfHeight, m);
     const f32 w = fsubs_ppc((f32)l_constants.mHalfWidth, m);
     Local<WordMatrix> copy;
     for (u32 i = 0; i < 12; i++)
-        copy->mWords[i] = reinterpret_cast<be<u32>*>((uintptr_t)mtx)[i];
+        copy->mWords[i] = gabi::at<be<u32>>(mtx)[i];
     const f32 nw = -w;
     const f32 tx = (f32) reinterpret_cast<Mtx34*>(copy.get())->m[0][3];
     const f32 z = zero();
@@ -628,7 +625,7 @@ void cking::ui::input::EventMgr::bounce() {
 /* touch release: swipe events, inertia scrolling of the grabbed receiver, drop */
 /* 02616444 */
 u32 cking::ui::input::EventMgr::touchUp(u32 ev) {
-    auto* event = reinterpret_cast<Event*>((uintptr_t)ev);
+    auto* event = gabi::at<Event>(ev);
     const f32 z = zero();
     if (!ev) {
         mReceiverId = 0;
@@ -677,7 +674,7 @@ u32 cking::ui::input::EventMgr::touchUp(u32 ev) {
         }
         const u32 item = gabi::ea((cking::ui::input::Receiver*)mpFocus);
         if (item &&
-            call_ptr<u32>(reinterpret_cast<Receiver*>((uintptr_t)item)->mpVtable->mCanSwipe.get(), item)) {
+            call_ptr<u32>(gabi::at<Receiver>(item)->mpVtable->mCanSwipe.get(), item)) {
             const f32 ddx = (f32)F->mDelta.value.x;
             if ((f32)l_constants.mSwipeXThreshold < fabsf(ddx)) { /* bge: branch when not less */
                 hdUiQueueEvent(gabi::ea(this), EVENT_SWIPE_X, (u32)mReceiverId, 0u);
@@ -758,7 +755,7 @@ u32 cking::ui::input::EventMgr::touchUp(u32 ev) {
         return 0;
     }
     const u32 item = gabi::ea((cking::ui::input::Receiver*)mpFocus);
-    if (item && call_ptr<u32>(reinterpret_cast<Receiver*>((uintptr_t)item)->mpVtable->mContains.get(), item,
+    if (item && call_ptr<u32>(gabi::at<Receiver>(item)->mpVtable->mContains.get(), item,
                               (f32)F->mPosition.value.x, (f32)F->mPosition.value.y)) {
         hdUiQueueEvent(gabi::ea(this), EVENT_TOUCH_UP, (u32)mReceiverId, 0u);
         mReceiverId = 0;
@@ -814,7 +811,7 @@ u32 cking::ui::input::EventMgr::sendEvent63() {
 /* stick-direction button: the stick bit when the stick is tilted, else the D-pad bit */
 /* inlined into EventMgr input methods */
 static u8 stickOrPad(u32 ev, u32 stickBit, u32 padBit) {
-    auto* event = reinterpret_cast<Event*>((uintptr_t)ev);
+    auto* event = gabi::at<Event>(ev);
     const f32 z = zero();
     const bool tilted = !((f32)event->mStick.value.x == z) || !((f32)event->mStick.value.y == z);
     const u32 b = tilted ? stickBit : padBit;
@@ -832,52 +829,52 @@ u8 cking::ui::input::EventMgr::isDown(u32 ev) { return stickOrPad(ev, 23, 19); }
 /* hold bits of the event */
 /* 02616CD4 */
 u32 cking::ui::input::EventMgr::holdBit0(u32 ev) {
-    auto* event = reinterpret_cast<Event*>((uintptr_t)ev);
+    auto* event = gabi::at<Event>(ev);
     return ((u32)event->mHold >> 0) & 1;
 }
 /* 02616CE0 */
 u32 cking::ui::input::EventMgr::holdBit1(u32 ev) {
-    auto* event = reinterpret_cast<Event*>((uintptr_t)ev);
+    auto* event = gabi::at<Event>(ev);
     return ((u32)event->mHold >> 1) & 1;
 }
 /* 02616CEC */
 u32 cking::ui::input::EventMgr::holdBit3(u32 ev) {
-    auto* event = reinterpret_cast<Event*>((uintptr_t)ev);
+    auto* event = gabi::at<Event>(ev);
     return ((u32)event->mHold >> 3) & 1;
 }
 /* 02616CF8 */
 u32 cking::ui::input::EventMgr::holdBit4(u32 ev) {
-    auto* event = reinterpret_cast<Event*>((uintptr_t)ev);
+    auto* event = gabi::at<Event>(ev);
     return ((u32)event->mHold >> 4) & 1;
 }
 /* 02616D04 */
 u32 cking::ui::input::EventMgr::holdBit13(u32 ev) {
-    auto* event = reinterpret_cast<Event*>((uintptr_t)ev);
+    auto* event = gabi::at<Event>(ev);
     return ((u32)event->mHold >> 13) & 1;
 }
 /* 02616D10 */
 u32 cking::ui::input::EventMgr::holdBit14(u32 ev) {
-    auto* event = reinterpret_cast<Event*>((uintptr_t)ev);
+    auto* event = gabi::at<Event>(ev);
     return ((u32)event->mHold >> 14) & 1;
 }
 /* 02616D1C */
 u32 cking::ui::input::EventMgr::holdBit2(u32 ev) {
-    auto* event = reinterpret_cast<Event*>((uintptr_t)ev);
+    auto* event = gabi::at<Event>(ev);
     return ((u32)event->mHold >> 2) & 1;
 }
 /* 02616D28 */
 u32 cking::ui::input::EventMgr::holdBit5(u32 ev) {
-    auto* event = reinterpret_cast<Event*>((uintptr_t)ev);
+    auto* event = gabi::at<Event>(ev);
     return ((u32)event->mHold >> 5) & 1;
 }
 /* 02616D34 */
 u32 cking::ui::input::EventMgr::holdBit11(u32 ev) {
-    auto* event = reinterpret_cast<Event*>((uintptr_t)ev);
+    auto* event = gabi::at<Event>(ev);
     return ((u32)event->mHold >> 11) & 1;
 }
 /* 02616D40 */
 u32 cking::ui::input::EventMgr::holdBit12(u32 ev) {
-    auto* event = reinterpret_cast<Event*>((uintptr_t)ev);
+    auto* event = gabi::at<Event>(ev);
     return ((u32)event->mHold >> 12) & 1;
 }
 
@@ -886,11 +883,11 @@ u32 cking::ui::input::EventMgr::holdBit12(u32 ev) {
 void hdUiEventMgr_disposerDtor(u32 p, u32 flags) {
     if (!p)
         return;
-    reinterpret_cast<Disposer*>((uintptr_t)p)->mVtable = DisposerVtable;
+    gabi::at<Disposer>(p)->mVtable = DisposerVtable;
     if (p == l_disposer) {
         const u32 inst = l_instance;
         l_disposer = 0;
-        call_ptr<void>(reinterpret_cast<EventMgr*>((uintptr_t)inst)->mpVtable->mSlots[3].get(), inst, 2u);
+        call_ptr<void>(gabi::at<EventMgr>(inst)->mpVtable->mSlots[3].get(), inst, 2u);
         l_instance = 0;
     }
     hdUiDisposerDestroy(p, 0u);

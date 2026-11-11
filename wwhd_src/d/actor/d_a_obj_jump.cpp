@@ -165,8 +165,8 @@ void Act_c::set_mtx() {
   mtx_copy(&mModel->mBaseTransformMtx, matrix);
   const Attr_c &table = attr();
   f32 scale = mScale, offset = f32(table.mScalePivotY);
-  f32 low = f32(table.field_0x018), high = f32(table.field_0x01C),
-      span = f32(table.field_0x020) - offset;
+  f32 low = f32(table.mStrokeLowY), high = f32(table.mStrokeHighY),
+      span = f32(table.mBodyTopY) - offset;
   f32 ratio = gabi::fmadds(high - low, scale - 1.0f, span) / span;
   jumpTransMHD(0.0f, offset, 0.0f);
   jumpScaleMHD(1.0f, ratio, 1.0f);
@@ -291,8 +291,8 @@ static s32 jnodeCB_lower(J3DNode *node, s32 timing) {
     matrix = model->getAnmMtx(index);
     mtx_copy(matrix, &l_matrixStack);
     const Attr_c &table = i_this->attr();
-    f32 scale = i_this->mScale, low = table.field_0x018,
-        high = table.field_0x01C;
+    f32 scale = i_this->mScale, low = table.mStrokeLowY,
+        high = table.mStrokeHighY;
     J3DSys::mCurrentMtx->m[1][3] =
         gabi::fmadds(high - low, scale - 1.0f, J3DSys::mCurrentMtx->m[1][3]);
   }

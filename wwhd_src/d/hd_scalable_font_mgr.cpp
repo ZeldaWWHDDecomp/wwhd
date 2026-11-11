@@ -284,10 +284,10 @@ static void hdSFont_staticInit() {
     u32 id = 0;
     if (l_stateIdInitialized) id = l_lastStateId;
     else l_stateIdInitialized = 1;
-    setStateId(&l_waitState,id+1,gabi::at<const char>(gabi::guest_addr("Wait")),2,3,4);
-    setStateId(&l_workState,id+2,gabi::at<const char>(gabi::guest_addr("InProgress")),5,6,7);
+    setStateId(&l_waitState,id+1,gabi::at<const char>(gabi::guest_addr("::StateID_Wait")),2,3,4);
+    setStateId(&l_workState,id+2,gabi::at<const char>(gabi::guest_addr("::StateID_InProgress")),5,6,7);
     l_lastStateId = id+3;
-    setStateId(&l_finishState,id+3,gabi::at<const char>(gabi::guest_addr("Finish")),8,9,10);
+    setStateId(&l_finishState,id+3,gabi::at<const char>(gabi::guest_addr("::StateID_Finish")),8,9,10);
 }
 
 /* WWHD glue (tools/verify/autoglue.py)
@@ -314,9 +314,9 @@ data l_registration2 101F4BC0
 data l_registration3 101F4BCC
 data l_stateIdInitialized 101FD8E4
 data l_lastStateId 101FDD50
-str 100E0EB8 "Wait" renamed
-str 100E0EC8 "InProgress" renamed
-str 100E0EE0 "Finish" renamed
+str 100E0EB8 "::StateID_Wait"
+str 100E0EC8 "::StateID_InProgress"
+str 100E0EE0 "::StateID_Finish"
 ext 0273AD10 void* operator_new(u32)
 ext 0273B0D4 hdScalableFontMgr_c* hdSFont_allocInstance(u32,void*,u32)
 ext 0273B050 HdStateVTableObject* hdSFont_allocAllocator(u32,void*,u32)

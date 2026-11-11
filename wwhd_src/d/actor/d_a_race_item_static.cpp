@@ -7,8 +7,8 @@ static RaceItemSounds l_itemSounds;
 
 /* 02459F6C */
 void daRaceItem_c::raceItemForceGet() {
-    u32 type = field_0x644;
-    field_0x640 = RaceItem_GetStart;
+    u32 type = mType;
+    mState = RaceItem_GetStart;
     if (type == RaceItem_Race)
         raceItemGet();
     else if (type == RaceItem_Normal)
@@ -54,7 +54,7 @@ void daRaceItem_c::raceItemGet() {
 /* 02459EA0 */
 void daRaceItem_c::normalItemGet() {
     u32 item = m_itemNo;
-    field_0x640 = RaceItem_GetStart;
+    mState = RaceItem_GetStart;
     execItemGet(item);
     s32 bit = mItemBitNo;
     if (bit != 127) {
@@ -72,7 +72,7 @@ void daRaceItem_c::normalItemGet() {
 
 /* 02459F90 */
 BOOL daRaceItem_c::startOffsetPos() {
-    field_0x640 = RaceItem_Wait;
+    mState = RaceItem_Wait;
     return true;
 }
 
@@ -90,14 +90,14 @@ BOOL daRaceItem_c::endOffsetPos(f32 grav, cXyz* scl, f32 vy, f32 forward, csXyz*
     }
     speedF = forward;
     gravity = grav;
-    field_0x640 = RaceItem_DropStart;
+    mState = RaceItem_DropStart;
     speed.y = vy;
     return true;
 }
 
 /* 0245A000 */
 BOOL daRaceItem_c::checkOffsetPos() {
-    return !(field_0x645 & RaceItem_BoomerangCarry) && !(actor_status & fopAcStts_HOOK_CARRY_e);
+    return !(mFlags & RaceItem_BoomerangCarry) && !(actor_status & fopAcStts_HOOK_CARRY_e);
 }
 
 /* 0245A028 */

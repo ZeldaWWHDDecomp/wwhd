@@ -136,7 +136,7 @@ static void markersAndShips(daMgBoard_c *board) {
     mDoMtx_stack_c::transS(px, py, pz);
     mDoMtx_stack_c::YrotM(board->current.angle.y);
     // HD: retain the full signed rotation argument at this call site.
-    s32 rotation = (s8)ship->mVertical ? -0x8000 : 0x4000;
+    s32 rotation = (s8)ship->mLengthY ? -0x8000 : 0x4000;
     mgBoard_ZrotM(mDoMtx_stack_c::get(), rotation);
     model->setBaseTRMtx(mDoMtx_stack_c::get());
   }

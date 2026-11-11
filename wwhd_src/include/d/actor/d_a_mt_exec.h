@@ -112,7 +112,7 @@ struct Actor : fopEn_enemy_c {
     /* 0x44C */ be<f32> mBodyWaveAmplitude;
     /* 0x450 */ be<s16> mJointWaveStep;
     /* 0x452 */ u8 _452[2];
-    /* 0x454 */ be<f32> m454;
+    /* 0x454 */ be<f32> mSegmentPulseAmp;  /* was m454: daMt_Execute 021D87A0 sets each mSegmentScaleY[k] to 1 + sin(phase) * it and eases it to 0.1; mt_move_maru 021DF238 (the roll) eases it to 0.3 and sets 0.5 at the roll start: the amplitude of the body segments' pulse */
     /* 0x458 */ gptr<J3DAnmTexPattern> mpBtpRes;
     /* 0x45C */ gptr<mDoExt_btpAnm> mpBtp;
     /* 0x460 */ be<u8> mBtpFrame;
@@ -220,7 +220,7 @@ WWHD_OFFSET(Actor,mpBrk,0x42C);
 WWHD_OFFSET(Actor,mBodyWaveAmplitude,0x44C);
 WWHD_OFFSET(Actor,mJointWaveStep,0x450);
 WWHD_OFFSET(Actor,_452,0x452);
-WWHD_OFFSET(Actor,m454,0x454);
+WWHD_OFFSET(Actor,mSegmentPulseAmp,0x454);
 WWHD_OFFSET(Actor,mpBtpRes,0x458);
 WWHD_OFFSET(Actor,mpBtp,0x45C);
 WWHD_OFFSET(Actor,mBtpFrame,0x460);

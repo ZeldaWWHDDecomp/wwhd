@@ -130,15 +130,15 @@ namespace {} // namespace
 /* 024DA99C */
 bool daWarphr_c::_delete() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    u32 e = gabi::ea(m2AC.get());
+    u32 e = gabi::ea(mpWarpEmitter.get());
     if (e) {
         invalidate(e);
-        m2AC = 0;
+        mpWarpEmitter = 0;
     }
-    e = gabi::ea(m2B0.get());
+    e = gabi::ea(mpDemoEmitter.get());
     if (e) {
         invalidate(e);
-        m2B0 = 0;
+        mpDemoEmitter = 0;
     }
     warphrResDelete(&mPhase, "Ghrwp");
     return true;
@@ -162,7 +162,7 @@ s32 daWarphr_c::CreateHeap() {
     auto* data = static_cast<J3DModelData*>(
         warphrResource(ptr(resource), modelA.get(), dRes_INDEX_GHRWP_BDL_GHRWPA00_e));
     if (!data)
-        JUT_ASSERT_fail("d_a_warphr.cpp", 0xDD, "modelData != NULL");
+        JUT_ASSERT_fail("d_a_warphr.cpp", 0xDD, "modelData != (0)");
     mpModel1 = mDoExt_J3DModel__create(data, 0x80000, 0x11000222);
     if (!(J3DModel*)mpModel1)
         return 0;
@@ -173,7 +173,7 @@ s32 daWarphr_c::CreateHeap() {
     auto* tex =
         static_cast<u8*>(warphrResource(ptr(resource), textureA.get(), dRes_INDEX_GHRWP_BTK_GHRWPA00_e));
     if (!tex)
-        JUT_ASSERT_fail("d_a_warphr.cpp", 0xEF, "pbtk != NULL");
+        JUT_ASSERT_fail("d_a_warphr.cpp", 0xEF, "pbtk != (0)");
     u32 obj = warphrBtkConstruct(0);
     mpBtkAnm1 = warphr::btkAt(obj);
     if (!obj)
@@ -188,7 +188,7 @@ s32 daWarphr_c::CreateHeap() {
     data = static_cast<J3DModelData*>(
         warphrResource(ptr(resource), modelB.get(), dRes_INDEX_GHRWP_BDL_GHRWPB00_e));
     if (!data)
-        JUT_ASSERT_fail("d_a_warphr.cpp", 0x100, "modelData != NULL");
+        JUT_ASSERT_fail("d_a_warphr.cpp", 0x100, "modelData != (0)");
     mpModel2 = mDoExt_J3DModel__create(data, 0x80000, 0x11000222);
     if (!(J3DModel*)mpModel2)
         return 0;
@@ -198,7 +198,7 @@ s32 daWarphr_c::CreateHeap() {
     textureB->text = gabi::guest_addr("Ghrwp");
     tex = static_cast<u8*>(warphrResource(ptr(resource), textureB.get(), dRes_INDEX_GHRWP_BTK_GHRWPB00_e));
     if (!tex)
-        JUT_ASSERT_fail("d_a_warphr.cpp", 0x112, "pbtk != NULL");
+        JUT_ASSERT_fail("d_a_warphr.cpp", 0x112, "pbtk != (0)");
     obj = warphrBtkConstruct(0);
     mpBtkAnm2 = warphr::btkAt(obj);
     if (!obj)
@@ -213,7 +213,7 @@ s32 daWarphr_c::CreateHeap() {
     colors->text = gabi::guest_addr("Ghrwp");
     tex = static_cast<u8*>(warphrResource(ptr(resource), colors.get(), dRes_INDEX_GHRWP_BRK_GHRWPB00_e));
     if (!tex)
-        JUT_ASSERT_fail("d_a_warphr.cpp", 0x127, "pbrk != NULL");
+        JUT_ASSERT_fail("d_a_warphr.cpp", 0x127, "pbrk != (0)");
     obj = warphrBrkConstruct(0);
     mpBrkAnm = warphr::brkAt(obj);
     if (!obj)
@@ -235,7 +235,7 @@ void daWarphr_c::CreateInit() {
     set_mtx(this);
     u32 event = warphrEventBit(ptr(saveevent()), 0x2D08);
     u32 manager = eventmanager();
-    m2F8 = warphrEventIndex(ptr(manager), event ? "TO_SEA_WARP_2" : "TO_SEA_WARP_1", 255);
+    mEventIdx = warphrEventIndex(ptr(manager), event ? "TO_SEA_WARP_2" : "TO_SEA_WARP_1", 255);
 }
 
 /* 024DA8C8 */
@@ -270,9 +270,9 @@ bool daWarphr_c::_execute() {
             u32 manager = eventmanager();
             u32 started = warphrStartCheckName(ptr(manager), "warp_out");
             if (started) {
-                u32 emitter = gabi::ea(m2B0.get());
+                u32 emitter = gabi::ea(mpDemoEmitter.get());
                 if (emitter) {
-                    if (l_demoFrame >= 0x225 && !m2E4) {
+                    if (l_demoFrame >= 0x225 && !mDemoEffectSet) {
                         u32 flags = u32(warphr::emitter(emitter)->mFlags);
                         warphr::emitter(emitter)->mFlags = flags | 1;
                         warphrMonotoneOn();
@@ -297,15 +297,15 @@ bool daWarphr_c::_execute() {
                         }
                         l_graphics.mMonotoneRate = rate;
                         l_graphics.mMonotoneRateSpeed = 0;
-                        m2E4 = 1;
+                        mDemoEffectSet = 1;
                     }
                 } else {
-                    m2B0 = warphr::emitterAt(particle(this, warphr::ID_IT_SP_DEMO20_INDWP00, 4));
+                    mpDemoEmitter = warphr::emitterAt(particle(this, warphr::ID_IT_SP_DEMO20_INDWP00, 4));
                     warphrMonotoneOff();
                 }
             }
         }
-        m2F0 = 0;
+        mWarpOrder = 0;
         demo_execute();
     }
     s32 room = current.roomNo;
@@ -321,7 +321,7 @@ bool daWarphr_c::normal_execute() {
     if (check_warp()) {
         if (!get_return_count())
             warphrOnEventBit(ptr(saveevent()), 0x3810);
-        m2F0 = 2;
+        mWarpOrder = 2;
     }
     anim_play(2);
     return true;
@@ -335,13 +335,13 @@ bool daWarphr_c::demo_execute() {
         return true;
     u32 obj = l_demoObjects;
     if (!obj) {
-        JUT_ASSERT_fail("d_demo.h", 0x23A, "m_object != NULL");
+        JUT_ASSERT_fail("d_demo.h", 0x23A, "m_object != (0)");
         obj = l_demoObjects;
     }
     u32 actor = warphrDemoActor(ptr(obj), id);
     if (actor) {
         u32 shape = warphr::demoShape(actor);
-        m300 = shape;
+        mDemoShapeId = shape;
         if (shape == 0) {
             anim_play(0);
             return true;
@@ -356,17 +356,17 @@ bool daWarphr_c::demo_execute() {
 void daWarphr_c::demo_proc() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     u32 manager = eventmanager();
-    m304 = warphrStaffId(ptr(manager), "Ghrwp", 0, 0);
+    mStaffIdx = warphrStaffId(ptr(manager), "Ghrwp", 0, 0);
     if (!warphr::eventRunning(play()))
         return;
     if (eventInfo.mCommand == dEvtCmd_INTALK_e)
         return;
-    s32 staff = m304;
+    s32 staff = mStaffIdx;
     if (staff == -1)
         return;
     manager = eventmanager();
     s32 action = warphrActionIndex(ptr(manager), staff, action_table, 5, 0, 0);
-    staff = m304;
+    staff = mStaffIdx;
     if (action == -1) {
         manager = eventmanager();
         warphrCutEnd(ptr(manager), staff);
@@ -377,7 +377,7 @@ void daWarphr_c::demo_proc() {
     if (advance)
         warphr::invokeAction(this, warphr::eventAt(event_init_tbl.entries, u32(action)));
     if (warphr::invokeAction(this, warphr::eventAt(event_action_tbl.entries, u32(action)))) {
-        staff = m304;
+        staff = mStaffIdx;
         manager = eventmanager();
         warphrCutEnd(ptr(manager), staff);
     }
@@ -413,7 +413,7 @@ bool daWarphr_c::actStartWarp(s32 staff) {
 void daWarphr_c::initWarp(s32 staff) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     particle(this, warphr::ID_IT_SN_HRWARPA00);
-    m2AC = warphr::emitterAt(particle(this, warphr::ID_IT_SN_HRWARPB00));
+    mpWarpEmitter = warphr::emitterAt(particle(this, warphr::ID_IT_SN_HRWARPB00));
     warphrSystemSound(warphr::JA_SE_LK_HL_WAPR_U_IN);
 }
 
@@ -428,7 +428,7 @@ bool daWarphr_c::actWarp(s32 staff) {
 void daWarphr_c::initWarpArrive(s32 staff) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     particle(this, warphr::ID_IT_SN_HRWARPA00);
-    m2AC = warphr::emitterAt(particle(this, warphr::ID_IT_SN_HRWARPB00));
+    mpWarpEmitter = warphr::emitterAt(particle(this, warphr::ID_IT_SN_HRWARPB00));
     set_end_anim();
     if (!l_arriveTargetGuard) {
         l_arriveTargetGuard = 1;
@@ -450,10 +450,10 @@ bool daWarphr_c::actWarpArrive(s32 staff) {
 /* 024DB930 */
 void daWarphr_c::initWarpArriveEnd(s32 staff) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    u32 e = gabi::ea(m2AC.get());
+    u32 e = gabi::ea(mpWarpEmitter.get());
     if (e) {
         invalidate(e);
-        m2AC = 0;
+        mpWarpEmitter = 0;
     }
 }
 
@@ -468,8 +468,8 @@ bool daWarphr_c::actWarpArriveEnd(s32 staff) {
 /* 024DB1EC */
 void daWarphr_c::eventOrder() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (m2F0 == 2) {
-        s32 idx = m2F8;
+    if (mWarpOrder == 2) {
+        s32 idx = mEventIdx;
         warphrOrderEvent(this, idx, 255, 65535, 0, 1);
         eventInfo.mCondition = u16(eventInfo.mCondition) | dEvtCnd_UNK2_e;
     }
@@ -479,19 +479,19 @@ void daWarphr_c::eventOrder() {
 void daWarphr_c::checkOrder() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     if (eventInfo.mCommand == dEvtCmd_INDEMO_e) {
-        s32 idx = m2F8;
+        s32 idx = mEventIdx;
         u32 manager = eventmanager();
         u32 started = warphrStartCheck(ptr(manager), idx);
-        idx = m2F8;
-        if (started && m2F0 != 0)
-            m2F0 = 0;
+        idx = mEventIdx;
+        if (started && mWarpOrder != 0)
+            mWarpOrder = 0;
         manager = eventmanager();
         if (warphrEndCheck(ptr(manager), idx)) {
             u32 p = play();
             u16 flags = u16(warphr::game(p)->play.mEvtCtrl.mEventFlag);
             warphr::game(p)->play.mEvtCtrl.mEventFlag = flags | 8;
         }
-    } else if (m2F0 == 0) {
+    } else if (mWarpOrder == 0) {
         if (!warphr::eventRunning(play()))
             normal_execute();
     }
@@ -582,7 +582,7 @@ bool daWarphr_c::_draw() {
     play();
     u32 object = l_demoObjects;
     if (!object) {
-        JUT_ASSERT_fail("d_demo.h", 0x23E, "m_object != NULL");
+        JUT_ASSERT_fail("d_demo.h", 0x23E, "m_object != (0)");
         object = l_demoObjects;
     }
     u32 camera = warphrDemoCamera(ptr(object));
@@ -597,15 +597,15 @@ bool daWarphr_c::_draw() {
      * (eye at SP+8..0x10, angle.y at SP+0x22 are never written; undefined behaviour, already in the
      * GameCube source: sp1C/sp08 stay uninitialised when dComIfGp_demo_getCamera() is NULL). The
      * candidate's gabi::Locals start zeroed, so it yields zeros (identity translation, yaw 0) where the
-     * game builds m2B4 (+0x3D0) from stale stack bytes. Visual only (projection emitter). */
+     * game builds mDemoEmitterMtx (+0x3D0) from stale stack bytes. Visual only (projection emitter). */
     f32 x = eye->x, y = eye->y, z = eye->z;
     auto* stack = &l_matrix;
     warphrMatrixTranslate(stack, x, y, z);
     warphrMatrixRotateY(stack, yaw);
-    warphrMatrixCopy(stack, &m2B4);
-    u32 emitter = gabi::ea(m2B0.get());
+    warphrMatrixCopy(stack, &mDemoEmitterMtx);
+    u32 emitter = gabi::ea(mpDemoEmitter.get());
     if (emitter)
-        warphrMatrixDecompose(&m2B4, warphr::emitter(emitter)->mGlobalRotation,
+        warphrMatrixDecompose(&mDemoEmitterMtx, warphr::emitter(emitter)->mGlobalRotation,
                               reinterpret_cast<u8*>(&warphr::emitter(emitter)->mGlobalTranslation));
     u32 env = warphrEnvironment();
     warphrTev(ptr(env), 0, &current.pos, &tevStr);
@@ -716,17 +716,17 @@ static void WarphrSafeStringDtor(u8* object, s32 flags) {
 // clang-format off
 /* WWHD glue (tools/verify/autoglue.py)
 str 100426AC "d_a_warphr.cpp"
-str 100426BC "modelData != NULL" renamed
-str 10042694 "pbtk != NULL" renamed
-str 100426A0 "pbrk != NULL" renamed
+str 100426BC "modelData != (0)"
+str 10042694 "pbtk != (0)"
+str 100426A0 "pbrk != (0)"
 str 100426DC "TO_SEA_WARP_2"
 str 100426EC "TO_SEA_WARP_1"
 str 1004279C "Ghrwp"
 str 10042680 "d_demo.h"
-str 10042670 "m_object != NULL" renamed
+str 10042670 "m_object != (0)"
 str 10042720 "Ghrwp" in 024DB028
 str 1004270C "d_demo.h" in 024DAA1C
-str 100426FC "m_object != NULL" renamed in 024DAA1C
+str 100426FC "m_object != (0)" in 024DAA1C
 str 10042768 "warp_out"
 str 10042760 "Hyrule"
 data event_init_tbl 101D3108

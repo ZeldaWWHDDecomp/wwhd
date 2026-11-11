@@ -60,7 +60,7 @@ static inline void wait_move_body(bb_class* i_this) {
             break;
         }
         i_this->mMode = 3;
-        anm_init(i_this, dRes_INDEX_BB_BCK_FLY01_e, 5.0f, 2, l_bbHIO.unk_24 * 1.5f, dRes_INDEX_BB_BAS_FLY01_e);
+        anm_init(i_this, dRes_INDEX_BB_BCK_FLY01_e, 5.0f, 2, l_bbHIO.mFlyAnmSpeed * 1.5f, dRes_INDEX_BB_BAS_FLY01_e);
         i_this->mTimers[0] = REG0_S(0) + 70;
         /* fallthrough */
     case 3:
@@ -115,13 +115,13 @@ static inline void wait_move_body(bb_class* i_this) {
                 i_this->mMode = 11;
             }
         } else if (i_this->mMode == 11) {
-            if (sqrt < (f32)l_bbHIO.unk_50) {
+            if (sqrt < (f32)l_bbHIO.mSwoopDist) {
                 i_this->mMode = 12;
                 anm_init(i_this, dRes_INDEX_BB_BCK_FLY03_e, 10.0f, 0, 1.0f, dRes_INDEX_BB_BAS_FLY03_e);
             }
         } else if (i_this->mMode == 12 && sqrt < gabi::fmadds(REG0_F(9), 10.0f, 300.0f)) {
             i_this->mMode = 20;
-            anm_init(i_this, dRes_INDEX_BB_BCK_LAND01_e, 5.0f, 2, l_bbHIO.unk_44, dRes_INDEX_BB_BAS_LAND01_e);
+            anm_init(i_this, dRes_INDEX_BB_BCK_LAND01_e, 5.0f, 2, l_bbHIO.mLand1AnmSpeed, dRes_INDEX_BB_BAS_LAND01_e);
             i_this->speed.y = 0.0f;
             i_this->mMoveCounter = 0;
             i_this->mFlyAnmState = 10;
@@ -137,7 +137,7 @@ static inline void wait_move_body(bb_class* i_this) {
         cLib_addCalc2(&i_this->current.pos.x, i_this->home.pos.x, 0.1f, speedX);
         cLib_addCalc2(&i_this->current.pos.z, i_this->home.pos.z, 0.1f, speedZ);
         i_this->current.pos.y = i_this->current.pos.y + i_this->speed.y;
-        if (old_354 > l_bbHIO.unk_40) {
+        if (old_354 > l_bbHIO.mLandDelay) {
             i_this->speed.y = i_this->speed.y - (REG0_F(7) + 0.8f);
         }
         cLib_addCalcAngleS2(&i_this->current.angle.x, 0, 5, 0x800);
@@ -148,8 +148,8 @@ static inline void wait_move_body(bb_class* i_this) {
         if (!(i_this->current.pos.y > homeY)) { /* GHS: bgt over the block */
             i_this->current.pos.y = homeY;
             i_this->speed.y = -0.5f;
-            if (old_354 > l_bbHIO.unk_40) {
-                anm_init(i_this, dRes_INDEX_BB_BCK_LAND02_e, 5.0f, 0, l_bbHIO.unk_48, dRes_INDEX_BB_BAS_LAND02_e);
+            if (old_354 > l_bbHIO.mLandDelay) {
+                anm_init(i_this, dRes_INDEX_BB_BCK_LAND02_e, 5.0f, 0, l_bbHIO.mLand2AnmSpeed, dRes_INDEX_BB_BAS_LAND02_e);
                 i_this->mMode = -1;
             }
         }
@@ -194,7 +194,7 @@ void bb_auto_move(bb_class* i_this) {
         if (i_this->mTimers[0] == 0 && i_this->current.pos.y < i_this->mTargetPos.y) {
             i_this->mFlyAnmState = 0;
             i_this->mTimers[0] = (s16)gabi::ftoi(cM_rndF(60.0f) + 20.0f);
-            anm_init(i_this, dRes_INDEX_BB_BCK_FLY01_e, 5.0f, 2, l_bbHIO.unk_24, dRes_INDEX_BB_BAS_FLY01_e);
+            anm_init(i_this, dRes_INDEX_BB_BCK_FLY01_e, 5.0f, 2, l_bbHIO.mFlyAnmSpeed, dRes_INDEX_BB_BAS_FLY01_e);
         }
         break;
     case 10:
@@ -204,7 +204,7 @@ void bb_auto_move(bb_class* i_this) {
         if (frame == 0x22) {
             i_this->mFlyAnmState = 0;
             i_this->mTimers[0] = (s16)gabi::ftoi(cM_rndF(60.0f) + 20.0f);
-            anm_init(i_this, dRes_INDEX_BB_BCK_FLY01_e, 0.0f, 2, l_bbHIO.unk_24, dRes_INDEX_BB_BAS_FLY01_e);
+            anm_init(i_this, dRes_INDEX_BB_BCK_FLY01_e, 0.0f, 2, l_bbHIO.mFlyAnmSpeed, dRes_INDEX_BB_BAS_FLY01_e);
         }
         break;
     }
@@ -212,9 +212,9 @@ void bb_auto_move(bb_class* i_this) {
     switch (i_this->mMode) {
     case 0:
         if (i_this->mTimers[1] == 0) {
-            f32 rx = cM_rndFX(l_bbHIO.unk_0C);
+            f32 rx = cM_rndFX(l_bbHIO.mWanderRange);
             f32 x = (i_this->home.pos.x + rx) - i_this->current.pos.x;
-            f32 rz = cM_rndFX(l_bbHIO.unk_0C);
+            f32 rz = cM_rndFX(l_bbHIO.mWanderRange);
             f32 z = (i_this->home.pos.z + rz) - i_this->current.pos.z;
 
             if (std_sqrtf(gabi::fmadds(x, x, z * z)) > 200.0f) {
@@ -269,13 +269,13 @@ void bb_auto_move(bb_class* i_this) {
             f32 sqrt = std_sqrtf(gabi::fmadds(z, z, gabi::fmadds(x, x, y * y)));
 
             if (i_this->mMode == 10) {
-                if (sqrt < (f32)l_bbHIO.unk_50) {
+                if (sqrt < (f32)l_bbHIO.mSwoopDist) {
                     i_this->mMode = 11;
                     anm_init(i_this, dRes_INDEX_BB_BCK_FLY03_e, 10.0f, 0, 1.0f, dRes_INDEX_BB_BAS_FLY03_e);
                 }
             } else if (sqrt < gabi::fmadds(REG0_F(9), 10.0f, 300.0f)) {
                 i_this->mMode = 20;
-                anm_init(i_this, dRes_INDEX_BB_BCK_LAND01_e, 5.0f, 2, l_bbHIO.unk_44, dRes_INDEX_BB_BAS_LAND01_e);
+                anm_init(i_this, dRes_INDEX_BB_BCK_LAND01_e, 5.0f, 2, l_bbHIO.mLand1AnmSpeed, dRes_INDEX_BB_BAS_LAND01_e);
                 i_this->speed.y = 0.0f;
                 i_this->mMoveCounter = 0;
                 i_this->mFlyAnmState = 10;
@@ -295,7 +295,7 @@ void bb_auto_move(bb_class* i_this) {
         cLib_addCalc2(&i_this->current.pos.x, i_this->mTargetPos.x, 0.1f, sx);
         cLib_addCalc2(&i_this->current.pos.z, i_this->mTargetPos.z, 0.1f, std::fabs((f32)i_this->speed.z));
         i_this->current.pos.y = i_this->current.pos.y + i_this->speed.y;
-        if (old_354 > l_bbHIO.unk_40) {
+        if (old_354 > l_bbHIO.mLandDelay) {
             i_this->speed.y = i_this->speed.y - (REG0_F(7) + 0.8f);
         }
         cLib_addCalcAngleS2(&i_this->current.angle.x, 0, 5, 0x800);
@@ -305,7 +305,7 @@ void bb_auto_move(bb_class* i_this) {
             i_this->mMode = 25;
         } else if (dBgS_Acch_ChkGroundHit(&i_this->mAcch)) {
             i_this->speed.y = -0.5f;
-            anm_init(i_this, dRes_INDEX_BB_BCK_LAND02_e, 5.0f, 0, l_bbHIO.unk_48, dRes_INDEX_BB_BAS_LAND02_e);
+            anm_init(i_this, dRes_INDEX_BB_BCK_LAND02_e, 5.0f, 0, l_bbHIO.mLand2AnmSpeed, dRes_INDEX_BB_BAS_LAND02_e);
             i_this->mMode = 22;
             i_this->mTimers[2] = 50;
         }
@@ -344,7 +344,7 @@ void bb_auto_move(bb_class* i_this) {
     case 23: {
         r29 = 1;
         i_this->mHeadLookMode = 0;
-        i_this->mTargetSpeed = l_bbHIO.unk_54;
+        i_this->mTargetSpeed = l_bbHIO.mEsaWalkSpeed;
         f32 z = i_this->mTargetPos.z - i_this->current.pos.z;
         f32 x = i_this->mTargetPos.x - i_this->current.pos.x;
         i_this->speedF = 1.0f;
@@ -379,7 +379,7 @@ void bb_auto_move(bb_class* i_this) {
     case 25:
         r29 = 1;
         i_this->mMode = 0;
-        anm_init(i_this, dRes_INDEX_BB_BCK_FLY01_e, 5.0f, 2, l_bbHIO.unk_24, dRes_INDEX_BB_BAS_FLY01_e);
+        anm_init(i_this, dRes_INDEX_BB_BCK_FLY01_e, 5.0f, 2, l_bbHIO.mFlyAnmSpeed, dRes_INDEX_BB_BAS_FLY01_e);
         i_this->mTurnSpeed = gabi::fmadds(REG0_F(4), 10.0f, 2000.0f);
         i_this->mTargetSpeed = 25.0f;
         i_this->mSpeedStep = 1.0f;
@@ -420,7 +420,7 @@ void bb_auto_move(bb_class* i_this) {
                 }
                 i_this->mFlyAnmState = 0;
                 i_this->mTimers[0] = (s16)gabi::ftoi(cM_rndF(60.0f) + 20.0f);
-                anm_init(i_this, dRes_INDEX_BB_BCK_FLY01_e, 3.0f, 2, l_bbHIO.unk_24, dRes_INDEX_BB_BAS_FLY01_e);
+                anm_init(i_this, dRes_INDEX_BB_BCK_FLY01_e, 3.0f, 2, l_bbHIO.mFlyAnmSpeed, dRes_INDEX_BB_BAS_FLY01_e);
                 if (i_this->mPathNo != 0xFF) {
                     i_this->mPathOn = (s8)(i_this->mPathNo + 1);
                     path_check(i_this);

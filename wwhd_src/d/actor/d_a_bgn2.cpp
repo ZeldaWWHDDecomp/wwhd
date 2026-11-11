@@ -120,7 +120,7 @@ void asi_hamon_set(bgn2_class* i_this) {
 /* 0208B340 */
 int checkGround(bgn2_class* i_this) {
     fopAc_ac_c* actor = i_this;
-    f32 h = l_HIO.m08;
+    f32 h = l_HIO.mGroundHeight;
     if (actor->current.pos.y > h) {
         return FALSE;
     }
@@ -363,25 +363,25 @@ static daBgn2_HIO_c* daBgn2_HIO_c_ct(daBgn2_HIO_c* p) {
             return p;
     }
     p->mNo = -1;
-    p->m05 = 0;
-    p->m06 = 0;
-    p->m08 = 280.0f;
-    p->m0C = 3000.0f;
-    p->m10 = 15.0f;
-    p->m14 = -2.0f;
-    p->m18 = 0x5dc;
-    p->m1A = 0xa28;
-    p->m1C = 0xed8;
-    p->m1E = 0x3c;
-    p->m20 = 0x32;
-    p->m22 = 0x28;
-    p->m24 = 100;
-    p->m26 = 100;
-    p->m28 = 100;
-    p->m2A = 600;
-    p->m2C = 100;
-    p->m2E = 3;
-    p->m30 = 10;
+    p->mNoMove = 0;
+    p->mDebugHealth = 0;
+    p->mGroundHeight = 280.0f;
+    p->mPressHeight = 3000.0f;
+    p->mPressRiseStep = 15.0f;
+    p->mGravity = -2.0f;
+    p->mSpinSpeedHealth3 = 0x5dc;
+    p->mSpinSpeedHealth2 = 0xa28;
+    p->mSpinSpeedHealth1 = 0xed8;
+    p->mPressHangTimeHealth3 = 0x3c;
+    p->mPressHangTimeHealth2 = 0x32;
+    p->mPressHangTimeHealth1 = 0x28;
+    p->mPressLandTimeHealth3 = 100;
+    p->mPressLandTimeHealth2 = 100;
+    p->mPressLandTimeHealth1 = 100;
+    p->mMahiTime = 600;
+    p->mKiSetInterval = 100;
+    p->mKiPerLanding = 3;
+    p->mKiMax = 10;
     p->__vtbl = BGN2_HIO_VTBL;
     return p;
 }

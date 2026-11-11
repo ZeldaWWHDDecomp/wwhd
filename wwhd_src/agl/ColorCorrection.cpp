@@ -3,6 +3,7 @@
 // Reconstructed from WWHD's own instructions and strings.
 #include "bindings.h"
 #include "agl/ColorCorrection.h"
+#include "sead/ElementAt.h"
 using namespace agl;
 using namespace agl::color_correction;
 
@@ -533,7 +534,9 @@ u32 ColorCorrection::drawMap(u32 shaderMode) {
     // Skipped while the dynamic texture owner's slot of this core is busy.
     DynamicTextureCache* cache = sCorrectionTextureCache;
     u32 slot = sCoreSlots.mSlots[currentCoreId()];
-    if (cache->mPools[slot].mCoreFlags & 1) return shaderMode;
+    /* guest EA arithmetic: pools + slot * 0xBD0 wraps at 32 bits as on the
+     * console; a host index on a NULL cache reached host addresses past 4 GB */
+    if (sead::elementAt<TextureCachePool>(gabi::ea(cache->mPools), slot).mCoreFlags & 1) return shaderMode;
     if (mFlags & kFlagVariationDirty) updateMapVariation();
 
     ShaderProgram* program = holderProgram(kProgramColorCorrectionMap);
@@ -706,7 +709,8 @@ void ParameterNodeHooks::alternateTrailingEmptyHook() {}
 void ParameterNodeHooks::finalEmptyHook() {}
 /* 02785288 */
 f32 ToneCurveParameter::evaluate(u32 index, f32 position) const {
-    const CurveDescriptor& descriptor = mDescriptors[index];
+    /* guest EA arithmetic: a host index on a NULL `this` reached host addresses past 4 GB */
+    const CurveDescriptor& descriptor = sead::elementAt<CurveDescriptor>(gabi::ea(mDescriptors), index);
     u32 evaluator = sToneCurveEvaluators.mFunctions[descriptor.mKind];
     auto samples = reinterpret_cast<const agl_gx2_support::CurveSamples*>(&descriptor.mKind);
     auto values = descriptor.mValues.get();

@@ -204,7 +204,7 @@ static u32 dNpc_HIO_c__ct(dNpc_HIO_c* self) {
     self->mMaxHeadY = 0;
     self->mAttnYOffset = zero;
     self->__vtbl = gabi::ea(&npc_hio_vtable);
-    self->m04 = zero;
+    self->mPlayerEyeOffsetY = zero;
     self->mMinHeadY = 0;
     self->mMaxAttnAngleY = 0;
     self->mMaxBackboneY = 0;
@@ -215,7 +215,7 @@ static u32 dNpc_HIO_c__ct(dNpc_HIO_c* self) {
     self->mMinBackboneX = 0;
     self->mMinBackboneY = 0;
     self->mMaxHeadX = 0;
-    self->m22 = 0;
+    self->mDebugDraw = 0;
     self->mMaxAttnDistXZ = zero;
     return gabi::ea(self);
 }
@@ -387,7 +387,7 @@ void npc_readable::dNpc_JntCtrl_c::turn_fromBackbone2Head(s32 requested, be<s16>
         s32 value = npc_jointLimit(this, requested, 1, 1);
         *back = value;
         // HD: both previous-turn directions participate in the reset test.
-        if (field_0x32 && ((direction && value < 0) || (!direction && value > 0)))
+        if (mBackboneTargetY && ((direction && value < 0) || (!direction && value > 0)))
             *back = 0;
     }
     *head = 0;
@@ -403,7 +403,7 @@ void npc_readable::dNpc_JntCtrl_c::turn_fromHead2Backbone(s32 requested, be<s16>
     gabi::AutoFrame frame{0x0259E1DC};
     *head = 0;
     if (!mbHeadLock) {
-        s16 value = (s16)((u32)requested - (u32)(s32)field_0x32);
+        s16 value = (s16)((u32)requested - (u32)(s32)mBackboneTargetY);
         *head = value;
         *head = npc_jointLimit(this, value, 0, 1);
     }
@@ -1371,7 +1371,7 @@ void npc_readable::dNpc_JntCtrl_c::lookAtTarget_2(be<s16>* angle, cXyz* target, 
         pitch = npc_targetAngleX(origin, target);
     }
     s16 relative = (s16)((u32)yaw - (u32)(s32)*angle);
-    s32 previous = field_0x32;
+    s32 previous = mBackboneTargetY;
     bool split = previous < 0 ? relative > previous : (relative < previous && previous != 0);
     gabi::Local<be<s16>> head, back;
     if (split)
@@ -1379,12 +1379,12 @@ void npc_readable::dNpc_JntCtrl_c::lookAtTarget_2(be<s16>* angle, cXyz* target, 
     else
         turn_fromHead2Backbone(relative, head.get(), back.get());
     s32 backTarget = (s16)*back;
-    field_0x32 = backTarget;
+    mBackboneTargetY = backTarget;
     gabi::Local<be<s32>> headValue, backValue;
     *headValue = mAngles[0][1];
     *backValue = mAngles[1][1];
     s32 headTarget = (s16)*head;
-    field_0x2E = headTarget;
+    mHeadTargetY = headTarget;
     npc_addCalcAngleL(headValue.get(), headTarget, 4, mMaxTurnStep[0][0], 4);
     npc_addCalcAngleL(backValue.get(), backTarget, 4, mMaxTurnStep[0][0], 4);
     mAngles[0][1] = (s32)*headValue;
@@ -1403,7 +1403,7 @@ void npc_readable::dNpc_JntCtrl_c::lookAtTarget_2(be<s16>* angle, cXyz* target, 
         if (!mbHeadLock)
             npc_jointConsume(this, &mAngles[0][1], amount);
     } else {
-        s32 total = (s32)field_0x2E + (s32)field_0x32;
+        s32 total = (s32)mHeadTargetY + (s32)mBackboneTargetY;
         mbTrn = relative < 0 ? relative < total : relative > total;
     }
     s32 top = npc_jointLimit(this, pitch, 0, 0);

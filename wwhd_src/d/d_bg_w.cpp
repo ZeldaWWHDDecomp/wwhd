@@ -66,7 +66,7 @@ static inline void wall_hit(dBgS_Acch *acch, s32 cir_index, u32 off, u32 poly, u
         assertion(acchHeaderFile, 0x274, circleIndexCheck);
     u32 c1 = acch->pm_acch_cir.v + off;
     s32 bg = acch->m_bg_index;
-    u32 f78 = acch->field_0x78;
+    u32 f78 = acch->mpNowBgW;
     u32 ap = acch->m_ap_id;
     if (bg < 0)
         assertion(polyInfoHeaderFile, 0x59, backgroundIndexCheck);

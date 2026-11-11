@@ -188,7 +188,7 @@ static daNpc_Ba1_HIO_c* daNpc_Ba1_HIO_c_ct(daNpc_Ba1_HIO_c* i_this) {
 
     memcpy_g(&i_this->mPrmTbl, &a_prm_tbl, 0x24);
     i_this->mNo = -1;
-    i_this->field_0x8 = -1;
+    i_this->mRefCount = -1;
     return i_this;
 }
 
@@ -349,7 +349,7 @@ bool daNpc_Ba1_c::createInit() {
         mEventIdTable[i] = dComIfGp_evmng_getEventIdx(name, 0xFF);
     }
     gravity = -4.5f;
-    m79C.copy(current.pos);
+    mLookPos.copy(current.pos);
     attention_info.flags = fopAc_Attn_LOCKON_TALK_e | fopAc_Attn_ACTION_SPEAK_e; /* attention_info.flags = LOCKON_TALK | ACTION_SPEAK */
     attention_info.distances[fopAc_Attn_TYPE_SPEAK_e] = 171;  /* attention_info.distances[SPEAK] */
     attention_info.distances[fopAc_Attn_TYPE_TALK_e] = 171;  /* attention_info.distances[TALK] */
@@ -377,16 +377,16 @@ bool daNpc_Ba1_c::createInit() {
         break;
     }
     if (init_success) {
-        m78A.x = current.angle.x;
-        m78A.y = current.angle.y;
-        m78A.z = current.angle.z;
-        shape_angle.x = m78A.x;
-        shape_angle.y = m78A.y;
-        shape_angle.z = m78A.z;
+        mAngle.x = current.angle.x;
+        mAngle.y = current.angle.y;
+        mAngle.z = current.angle.z;
+        shape_angle.x = mAngle.x;
+        shape_angle.y = mAngle.y;
+        shape_angle.z = mAngle.z;
     } else {
         return false;
     }
-    m7F2 = dComIfGs_getEventReg( 0xA60F /* dSv_event_flag_c::UNK_A60F */);
+    mHealedDays = dComIfGs_getEventReg( 0xA60F /* dSv_event_flag_c::UNK_A60F */);
     mStts.Init(0xFF, 0xFF, this);
     mCyl.SetStts(&mStts);
     mCyl.Set(gabi::at<dCcD_SrcCyl>(0x101EA190) /* dNpc_cyl_src */);
@@ -414,7 +414,7 @@ void daNpc_Ba1_c::setMtx(u32 param_1) {
     tevStr.mEnvrIdxOverride = dBgS_GetPolyColor(dComIfG_Bgsp(), gndPoly); /* tevStr.mEnvrIdxOverride */
 
     mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
-    mDoMtx_stack_c::YrotM(m78A.y);
+    mDoMtx_stack_c::YrotM(mAngle.y);
     J3DModel_setBaseTRMtx(mpMorf->getModel(), mDoMtx_stack_c::get());
     mpMorf->calc();
 
@@ -527,16 +527,16 @@ bool daNpc_Ba1_c::setAnm() {
 
 /* 021F1560 */
 void daNpc_Ba1_c::chg_anmAtr(u8 i_param_1) {
-    if ((i_param_1 >= 0x15) || (i_param_1 == m80E)) {
+    if ((i_param_1 >= 0x15) || (i_param_1 == mAnmAtrNo)) {
         return;
     }
-    m80E = i_param_1;
+    mAnmAtrNo = i_param_1;
     setAnm_ATR(1);
 }
 
 /* 021F1584 */
 void daNpc_Ba1_c::control_anmAtr() {
-    switch (m80E) {
+    switch (mAnmAtrNo) {
     case 5:
     case 6:
         switch (mLookBackState) {
@@ -557,19 +557,19 @@ void daNpc_Ba1_c::control_anmAtr() {
 void daNpc_Ba1_c::setAnm_ATR(int i_param_1) {
     anm_prm_c* a_anm_prm_tbl = a_anm_atr_prm_tbl;
     if (i_param_1 != 0) {
-        setAnm_tex(a_anm_prm_tbl[m80E].mBtpNum);
+        setAnm_tex(a_anm_prm_tbl[mAnmAtrNo].mBtpNum);
     }
-    setAnm_anm(&a_anm_prm_tbl[m80E]);
+    setAnm_anm(&a_anm_prm_tbl[mAnmAtrNo]);
 }
 
 /* 021F15B8 */
 void daNpc_Ba1_c::anmAtr(u16 i_param_1) {
     switch (i_param_1) {
     case 6: {
-        if (m819 == 0) {
-            m80E = 0xFF;
+        if (mAnmAtrSetCnt == 0) {
+            mAnmAtrNo = 0xFF;
             chg_anmAtr(dComIfGp_getMesgAnimeAttrInfo());
-            m819 = m819 + 1;
+            mAnmAtrSetCnt = mAnmAtrSetCnt + 1;
         }
         u8 mesgAnimeTagInfo = dComIfGp_getMesgAnimeTagInfo(); /* dComIfGp_getMesgAnimeTagInfo() */
         dComIfGp_clearMesgAnimeTagInfo();                /* dComIfGp_clearMesgAnimeTagInfo() */
@@ -580,7 +580,7 @@ void daNpc_Ba1_c::anmAtr(u16 i_param_1) {
         break;
     }
     case 0xE:
-        m819 = 0;
+        mAnmAtrSetCnt = 0;
         break;
     default:
         break;
@@ -591,13 +591,13 @@ void daNpc_Ba1_c::anmAtr(u16 i_param_1) {
 
 /* 021F0F78 */
 void daNpc_Ba1_c::eventOrder() {
-    s8 condition = m812;
+    s8 condition = mOrderEvent;
     if (condition == 1 || condition == 2) {
         eventInfo.onCondition(dEvtCnd_CANTALK_e); /* onCondition(dEvtCnd_CANTALK_e) */
         if (mSpecificType == 3 && !dComIfGs_isEventBit(dSv_event_flag_GRANDMA_HEALED)) {
             eventInfo.onCondition(dEvtCnd_CANTALKITEM_e); /* onCondition(dEvtCnd_CANTALKITEM_e) */
         }
-        if (m812 == 1) {
+        if (mOrderEvent == 1) {
             fopAcM_orderSpeakEvent(this);
         }
     } else if (condition >= 3) {
@@ -610,11 +610,11 @@ void daNpc_Ba1_c::eventOrder() {
 void daNpc_Ba1_c::checkOrder() {
     if (eventInfo.mCommand == dEvtCmd_INDEMO_e /* eventInfo.checkCommandDemoAccrpt() */) {
         if (dComIfGp_evmng_startCheck(mEventIdTable[mEventIdx])) {
-            m812 = 0;
+            mOrderEvent = 0;
         }
-    } else if (checkCommandTalk() && (m812 == 1 || m812 == 2)) {
-        m812 = 0;
-        m809 = true;
+    } else if (checkCommandTalk() && (mOrderEvent == 1 || mOrderEvent == 2)) {
+        mOrderEvent = 0;
+        mTalking = true;
     }
 }
 
@@ -673,7 +673,7 @@ void daNpc_Ba1_c::lookBack() {
         break;
     }
     case LOOK_POSITION:
-        dstPos->copy(m79C);
+        dstPos->copy(mLookPos);
         dstPos_p = dstPos;
         srcZ = current.pos.z;
         srcX = current.pos.x;
@@ -752,13 +752,13 @@ u16 daNpc_Ba1_c::next_msgStatus(be<u32>* i_msg_no) {
 
 /* 021F19AC */
 u32 daNpc_Ba1_c::getMsg_BA1_0() {
-    if (m7FA) {
+    if (mbTalkedBefore) {
         return 0x7d8;
     }
     if (mbHoldEvent) {
         return dComIfGs_isEventBit(dSv_event_flag_UNK_0608) ? 0x7e7 : 0x7e6;
     }
-    return m7FB ? 0x7e5 : 0x7e4;
+    return mbMsg7E4Done ? 0x7e5 : 0x7e4;
 }
 
 /* 021F1A50 */
@@ -780,7 +780,7 @@ u32 daNpc_Ba1_c::getMsg_BA1_1() {
 
 /* 021F1B70 */
 u32 daNpc_Ba1_c::getMsg_BA1_3() {
-    if (m7F0) {
+    if (mbSoupGiven) {
         if (dComIfGs_isEventBit(dSv_event_flag_GRANDMA_HEALED)) {
             return 0x801;
         }
@@ -788,17 +788,17 @@ u32 daNpc_Ba1_c::getMsg_BA1_3() {
     }
     if (dComIfGs_isEventBit(dSv_event_flag_GRANDMA_HEALED)) {
         dComIfGs_setEventReg(0xA60F /* dSv_event_flag_c::UNK_A60F */, 0);
-        if (m7F2 >= 3) {
-            if (m7FA) {
+        if (mHealedDays >= 3) {
+            if (mbTalkedBefore) {
                 return 0x7fd;
             }
-            m7FA = true;
+            mbTalkedBefore = true;
             return 0x7fc;
         }
-        if (m7FA) {
+        if (mbTalkedBefore) {
             return 0x7fa;
         }
-        m7FA = true;
+        mbTalkedBefore = true;
         return 0x7fb;
     }
     return 0x7f1;
@@ -880,8 +880,8 @@ bool daNpc_Ba1_c::partner_srch_sub(u32 i_searchFunc) {
 
 /* 021EF848 */
 void daNpc_Ba1_c::partner_srch() {
-    if (m818 == PROC_SEARCH) {
-        m818 = m818 + 1;
+    if (mActionStatus == PROC_SEARCH) {
+        mActionStatus = mActionStatus + 1;
     }
 }
 
@@ -897,7 +897,7 @@ bool daNpc_Ba1_c::check_useFairyArea() {
     f32 mag = std_sqrtf(PSVECSquareMag(xz));
     bool ret = false;
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
-    if (std::fabs(player->current.pos.y - current.pos.y) < 100.0f && mag < l_HIO.mPrmTbl.m1C) {
+    if (std::fabs(player->current.pos.y - current.pos.y) < 100.0f && mag < l_HIO.mPrmTbl.mUseFairyRadius) {
         ret = true;
     }
     return ret;
@@ -969,10 +969,10 @@ void daNpc_Ba1_c::eInit_USE_FAIRY_END_() {
 
 /* 021EFF78 */
 void daNpc_Ba1_c::eInit_MOV_POS_() {
-    m7FE = true;
+    mbNoCollision = true;
     mpClothModel = nullptr;
-    m7F5 = true;
-    m7F7 = true;
+    mbNoShapeAngle = true;
+    mNoDraw = true;
 }
 
 /* 021EFF94 */
@@ -1000,14 +1000,14 @@ void daNpc_Ba1_c::eInit_ACTOR_DRW_CONTROL_(be<s32>* i_param_1, be<s32>* i_param_
     if (i_param_2 != nullptr) {
         switch ((u32)(s32)*i_param_2) {
         case 0:
-            m7F7 = 1;
+            mNoDraw = 1;
             break;
         case 1:
-            m7F7 = 0;
+            mNoDraw = 0;
             break;
         case 2:
             setAnm_NUM(10, 1);
-            m7F7 = 1;
+            mNoDraw = 1;
             return;
         case 3: {
             current.angle.y = cLib_targetAngleY(&current.pos, &dComIfGp_getPlayer(0)->current.pos);
@@ -1021,7 +1021,7 @@ void daNpc_Ba1_c::eInit_ACTOR_DRW_CONTROL_(be<s32>* i_param_1, be<s32>* i_param_
             PSMTXTrans(mDoMtx_stack_c::get(), x, y, current.pos.z);
             mDoMtx_stack_c::YrotM(current.angle.y);
             PSMTXMultVec(mDoMtx_stack_c::get(), tmp, &current.pos);
-            m7F7 = 0;
+            mNoDraw = 0;
             break;
         }
         }
@@ -1136,12 +1136,12 @@ u32 daNpc_Ba1_c::eMove_MOV_POS_() {
     xz->z = dz;
     f32 mag = std_sqrtf(PSVECSquareMag(xz));
     ret = mag < 4.0f;
-    m78A.y = cLib_targetAngleY(&current.pos, &dComIfGp_getPlayer(0)->current.pos);
-    m7F5 = true;
+    mAngle.y = cLib_targetAngleY(&current.pos, &dComIfGp_getPlayer(0)->current.pos);
+    mbNoShapeAngle = true;
     if (ret) {
         mEyeOffset = 0.0f;
-        m7F5 = false;
-        current.angle.y = m78A.y;
+        mbNoShapeAngle = false;
+        current.angle.y = mAngle.y;
         speedF = 0.0f;
     } else {
         cLib_addCalcAngleS(&current.angle.y, cLib_targetAngleY(&current.pos, temp), 4, 0x400, 0);
@@ -1276,7 +1276,7 @@ void daNpc_Ba1_c::privateCut(int i_staff_idx) {
 /* 021EFC9C */
 void daNpc_Ba1_c::endEvent() {
     dComIfGp_event_reset();
-    m80E = 0xFF;
+    mAnmAtrNo = 0xFF;
 }
 
 /* 021EFC5C */
@@ -1298,10 +1298,10 @@ void daNpc_Ba1_c::event_proc(int i_staff_idx) {
                 dComIfGs_setEmptyBottleItemIn(dItemNo_SOUP_BOTTLE_e);
             }
             if (dComIfGs_isEventBit(dSv_event_flag_GRANDMA_HEALED)) {
-                m812 = 1;
-                m7F0 = 1;
+                mOrderEvent = 1;
+                mbSoupGiven = 1;
             } else {
-                m812 = 5;
+                mOrderEvent = 5;
             }
             break;
         case 2: {
@@ -1314,7 +1314,7 @@ void daNpc_Ba1_c::event_proc(int i_staff_idx) {
             mInitialAngle.x = current.angle.x;
             mInitialAngle.y = current.angle.y;
             mInitialAngle.z = current.angle.z;
-            m7FE = 0;
+            mbNoCollision = 0;
             break;
         }
         case 3:
@@ -1350,13 +1350,13 @@ BOOL daNpc_Ba1_c::set_action(Ba1ProcFunc* i_newProcFunc, void* i_argsP) {
         newD = i_newProcFunc->d;
     }
     if (cur->i != 0) {
-        m818 = PROC_END;
+        mActionStatus = PROC_END;
         pmf_call(this, cur, i_argsP);
     }
     cur->f = newF;
     cur->d = newD;
     cur->i = newI;
-    m818 = PROC_START;
+    mActionStatus = PROC_START;
     pmf_call(this, cur, i_argsP);
     return TRUE;
 }
@@ -1368,7 +1368,7 @@ void daNpc_Ba1_c::setStt(s8 i_status) {
     mEvTimer2 = 0;
     switch ((u32)(s32)i_status) {
     case 2:
-        m80E = 0xFF;
+        mAnmAtrNo = 0xFF;
         if (mAnmNum != 4) {
             m_jnt.mbTrn = 1; /* m_jnt.setTrn() */
             mLookBackState = LOOK_PLAYER;
@@ -1379,7 +1379,7 @@ void daNpc_Ba1_c::setStt(s8 i_status) {
         break;
     case 5:
         mPrevStatus = temp;
-        m80E = 0xFF;
+        mAnmAtrNo = 0xFF;
         return;
     case 1:
     case 3:
@@ -1395,10 +1395,10 @@ void daNpc_Ba1_c::setStt(s8 i_status) {
 /* 021F1F0C */
 BOOL daNpc_Ba1_c::wait_0() {
     cLib_addCalcAngleS(&current.angle.y, mInitialAngle.y, 4, 0x800, 0);
-    if (m812 == 1 || m812 >= 3) {
+    if (mOrderEvent == 1 || mOrderEvent >= 3) {
         return TRUE;
     }
-    m812 = 0;
+    mOrderEvent = 0;
     if (!dComIfGs_isTmpBit(0x0310 /* dSv_event_tmp_flag_c::UNK_0310 */)) {
         gabi::Local<cXyz> diff;
         cXyz_mi(&dComIfGp_getPlayer(0)->current.pos, diff, &current.pos);
@@ -1408,9 +1408,9 @@ BOOL daNpc_Ba1_c::wait_0() {
         xz->x = dx;
         xz->z = dz;
         f32 dist = std_sqrtf(PSVECSquareMag(xz));
-        if (std::fabs(dComIfGp_getPlayer(0)->current.pos.y - current.pos.y) < 100.0f && dist < l_HIO.mPrmTbl.m20) {
+        if (std::fabs(dComIfGp_getPlayer(0)->current.pos.y - current.pos.y) < 100.0f && dist < l_HIO.mPrmTbl.mFairyEventRadius) {
             dComIfGs_onTmpBit(0x0310);
-            m812 = 6;
+            mOrderEvent = 6;
         }
     }
     return TRUE;
@@ -1419,10 +1419,10 @@ BOOL daNpc_Ba1_c::wait_0() {
 /* 021F2040 */
 BOOL daNpc_Ba1_c::wait_1() {
     cLib_addCalcAngleS(&current.angle.y, mInitialAngle.y, 4, 0x800, 0);
-    if (m812 == 1 || m812 >= 3) {
+    if (mOrderEvent == 1 || mOrderEvent >= 3) {
         return TRUE;
     }
-    if (m809) {
+    if (mTalking) {
         if (chk_talk()) {
             setStt(STATUS_TALK);
             mHeadOnlyFollow = false;
@@ -1430,11 +1430,11 @@ BOOL daNpc_Ba1_c::wait_1() {
         return TRUE;
     } else if (mbHoldEvent) {
         setAnm_NUM(4, 1);
-        m812 = 1;
+        mOrderEvent = 1;
         mLookBackState = LOOK_NONE;
         mTargetYRot = current.angle.y + -0x638e;
     } else {
-        m812 = 2;
+        mOrderEvent = 2;
         if (mbAttention != 0) {
             mEvTimer2 = 60;
         }
@@ -1464,7 +1464,7 @@ BOOL daNpc_Ba1_c::talk_1() {
         if (fopMsgM_getStatus() == 0x13 /* fopMsgStts_MSG_DESTROYED_e */) {
             switch (mCurrMsgNo) {
             case 0x7e4:
-                m7FB = true;
+                mbMsg7E4Done = true;
                 break;
             case 0x7e6:
                 dComIfGs_onEventBit(dSv_event_flag_UNK_0608);
@@ -1480,15 +1480,15 @@ BOOL daNpc_Ba1_c::talk_1() {
                 break;
             case 0x800:
                 /* GameCube: if (mCurrMsgNo != 0x7f9), always true here */
-                m812 = 4;
+                mOrderEvent = 4;
                 mFairyUsed = false;
                 break;
             case 0x801:
-                m7F0 = 0;
+                mbSoupGiven = 0;
                 break;
             }
             mItemNo = 0xff;
-            m809 = false;
+            mTalking = false;
             setStt(mPrevStatus);
             mEvTimer2 = 60;
             endEvent();
@@ -1506,11 +1506,11 @@ BOOL daNpc_Ba1_c::talk_2() {
 /* 021F24B8 */
 BOOL daNpc_Ba1_c::wait_2() {
     cLib_addCalcAngleS(&current.angle.y, mInitialAngle.y, 4, 0x800, 0);
-    if (m812 == 1 || m812 >= 3) {
+    if (mOrderEvent == 1 || mOrderEvent >= 3) {
         return TRUE;
     }
-    if (m809) {
-        if (m7FF) {
+    if (mTalking) {
+        if (mbGoLinkRM) {
             dComIfGp_setNextStage("LinkRM" /* "LinkRM" */, 201, 0, 9, 0.0f, 0, 1, 0);
             return TRUE;
         }
@@ -1529,9 +1529,9 @@ BOOL daNpc_Ba1_c::wait_2() {
         mInitialAngle.y = -0x8000;
         current.angle.y = -0x8000; /* current.angle.y = -0x8000; mInitialAngle = current.angle */
         if ((dComIfGp_getPlayer(0)->current.pos.y - current.pos.y) < 1.0f) {
-            m7FF = 1;
+            mbGoLinkRM = 1;
             mTargetYRot = mInitialAngle.y;
-            m812 = 1;
+            mOrderEvent = 1;
             mLookBackState = LOOK_ANGLE;
             m_jnt.mbTrn = 1;
             return TRUE;
@@ -1541,7 +1541,7 @@ BOOL daNpc_Ba1_c::wait_2() {
         m_jnt.mbTrn = 1; /* m_jnt.setTrn() */
         return TRUE;
     }
-    m812 = 2;
+    mOrderEvent = 2;
     if (mbAttention) {
         mEvTimer2 = 60;
     }
@@ -1562,22 +1562,22 @@ BOOL daNpc_Ba1_c::wait_3() {
 
 /* 021F26D4 */
 BOOL daNpc_Ba1_c::ZZZwai() {
-    if (m812 == 1 || m812 >= 3) {
+    if (mOrderEvent == 1 || mOrderEvent >= 3) {
         return TRUE;
     }
     if (mFairyUsed) {
         mFairyUsed = false;
-        m812 = 4;
+        mOrderEvent = 4;
         return TRUE;
     }
-    if (m809) {
+    if (mTalking) {
         if (chk_talk()) {
             setStt(STATUS_TALK_SLEEP);
         }
         return TRUE;
     }
     if (dComIfGs_isEventBit(dSv_event_flag_GRANDMA_HEALED)) {
-        m812 = 2;
+        mOrderEvent = 2;
         if (mbAttention) {
             mEvTimer2 = 60;
         }
@@ -1589,9 +1589,9 @@ BOOL daNpc_Ba1_c::ZZZwai() {
             m_jnt.mbTrn = 1; /* m_jnt.setTrn() */
         }
     } else {
-        m812 = 0;
+        mOrderEvent = 0;
         if (check_useFairyArea()) {
-            m812 = 2;
+            mOrderEvent = 2;
         }
     }
     return TRUE;
@@ -1599,22 +1599,22 @@ BOOL daNpc_Ba1_c::ZZZwai() {
 
 /* 021F2818 */
 BOOL daNpc_Ba1_c::wait_action1(void*) {
-    switch ((u32)(s32)m818) {
+    switch ((u32)(s32)mActionStatus) {
     case PROC_START:
         if (dComIfGs_isEventBit(dSv_event_flag_UNK_2A80)) {
-            m7FA = dComIfGs_isTmpBit(0x0310) != 0;
-            if (m7FA) {
+            mbTalkedBefore = dComIfGs_isTmpBit(0x0310) != 0;
+            if (mbTalkedBefore) {
                 dComIfGs_offTmpBit(0x0310);
             }
             setStt(STATUS_WAIT_HOME);
-            m818 = m818 + 1;
+            mActionStatus = mActionStatus + 1;
         } else {
             if (dComIfGs_isTmpBit(0x0310)) {
                 setStt(STATUS_WAIT_HOME);
-                m818 = m818 + 1;
+                mActionStatus = mActionStatus + 1;
             } else {
                 setStt(STATUS_WAIT_PLAYER);
-                m818 = m818 + 1;
+                mActionStatus = mActionStatus + 1;
             }
         }
         break;
@@ -1642,10 +1642,10 @@ BOOL daNpc_Ba1_c::wait_action1(void*) {
 
 /* 021F2980 */
 BOOL daNpc_Ba1_c::wait_action2(void*) {
-    switch ((u32)(s32)m818) {
+    switch ((u32)(s32)mActionStatus) {
     case PROC_START:
         setStt(STATUS_WAIT_OUTSIDE);
-        m818 = m818 + 1;
+        mActionStatus = mActionStatus + 1;
         break;
     case PROC_SEARCH:
     case PROC_PARTNER_FOUND:
@@ -1669,11 +1669,11 @@ BOOL daNpc_Ba1_c::wait_action2(void*) {
 
 /* 021F2A30 */
 BOOL daNpc_Ba1_c::demo_action1(void*) {
-    switch (m818) {
+    switch (mActionStatus) {
     case PROC_END:
         break;
     case PROC_START:
-        m818 = m818 + 1;
+        mActionStatus = mActionStatus + 1;
     case PROC_SEARCH:
     case PROC_PARTNER_FOUND:
     case PROC_ACTIVE:
@@ -1684,10 +1684,10 @@ BOOL daNpc_Ba1_c::demo_action1(void*) {
 
 /* 021F2A4C */
 BOOL daNpc_Ba1_c::wait_action3(void*) {
-    switch ((u32)(s32)m818) {
+    switch ((u32)(s32)mActionStatus) {
     case PROC_START:
         setStt(STATUS_SLEEP);
-        m818 = m818 + 1;
+        mActionStatus = mActionStatus + 1;
         break;
     case PROC_SEARCH:
     case PROC_PARTNER_FOUND:
@@ -1711,10 +1711,10 @@ BOOL daNpc_Ba1_c::wait_action3(void*) {
 
 /* 021F2B08 */
 BOOL daNpc_Ba1_c::wait_action4(void*) {
-    switch ((u32)(s32)m818) {
+    switch ((u32)(s32)mActionStatus) {
     case PROC_START:
         setStt(STATUS_WAIT_HEALED);
-        m818 = m818 + 1;
+        mActionStatus = mActionStatus + 1;
         break;
     case PROC_SEARCH:
     case PROC_PARTNER_FOUND:
@@ -1809,12 +1809,12 @@ u8 daNpc_Ba1_c::demo() {
         }
     }
     dDemo_setDemoData(this, flags, mpMorf, "Ba" /* "Ba" */, 0, nullptr, 0, 0);
-    m78A.x = current.angle.x;
-    m78A.y = current.angle.y;
-    m78A.z = current.angle.z;
-    shape_angle.x = m78A.x;
-    shape_angle.y = m78A.y;
-    shape_angle.z = m78A.z;
+    mAngle.x = current.angle.x;
+    mAngle.y = current.angle.y;
+    mAngle.z = current.angle.z;
+    shape_angle.x = mAngle.x;
+    shape_angle.y = mAngle.y;
+    shape_angle.z = mAngle.z;
     return mbInDemo;
 }
 
@@ -1822,7 +1822,7 @@ u8 daNpc_Ba1_c::demo() {
 BOOL daNpc_Ba1_c::_draw() {
     J3DModel* morf_model = mpMorf->getModel();
     J3DModelData* model_data = morf_model->getModelData();
-    if (mbInitGrandma0 || m7F7) {
+    if (mbInitGrandma0 || mNoDraw) {
         return TRUE;
     }
     settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &current.pos, &tevStr);
@@ -1839,7 +1839,7 @@ BOOL daNpc_Ba1_c::_draw() {
     dSnap_RegistFig(0x4A /* DSNAP_TYPE_NPC_BA1 */, this, 1.0f, 1.0f, 1.0f);
 
     /* debug leftovers: function-local static colors initialised on first use */
-    if (l_HIO.mPrmTbl.m18 /* l_HIO.mPrmTbl.m18 */ != 0) {
+    if (l_HIO.mPrmTbl.mDebugDraw /* l_HIO.mPrmTbl.m18 */ != 0) {
         if (debugRedInitialized == 0) {
             debugRedInitialized = 1;
             memcpy_g(&debugRed, &a_debugRed, 4);
@@ -1879,7 +1879,7 @@ BOOL daNpc_Ba1_c::_execute() {
     if (mbInitGrandma0 && demoActorID == 0) {
         return TRUE;
     }
-    m7F6 = false;
+    mSkipPosMove = false;
     mbInitGrandma0 = false;
     partner_srch();
     checkOrder();
@@ -1894,24 +1894,24 @@ BOOL daNpc_Ba1_c::_execute() {
         } else {
             pmf_call(this, &mCurrProcFunc, nullptr); /* (this->*mCurrProcFunc)(NULL) */
         }
-        if (!m7F6) {
+        if (!mSkipPosMove) {
             fopAcM_posMoveF(this, &mStts.m_cc_move); /* mStts.GetCCMoveP() */
         }
-        if (!m7F5) {
-            m78A.x = current.angle.x;
-            m78A.y = current.angle.y;
-            m78A.z = current.angle.z;
-            shape_angle.x = m78A.x;
-            shape_angle.y = m78A.y;
-            shape_angle.z = m78A.z;
+        if (!mbNoShapeAngle) {
+            mAngle.x = current.angle.x;
+            mAngle.y = current.angle.y;
+            mAngle.z = current.angle.z;
+            shape_angle.x = mAngle.x;
+            shape_angle.y = mAngle.y;
+            shape_angle.z = mAngle.z;
         }
     }
     eventOrder();
     setMtx(false);
-    if (!mbInDemo && !m7FE) {
+    if (!mbInDemo && !mbNoCollision) {
         f32 radius = 50.0f;
         f32 height = 110.0f;
-        if (m7FD) {
+        if (mbSmallCyl) {
             radius = 30.0f;
         }
         setCollision(radius, height);

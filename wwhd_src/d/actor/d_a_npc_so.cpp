@@ -353,7 +353,7 @@ void daNpc_So_c::setAnm(s8 anmPrmIdx, u32 force) {
     f32 frame = morf->getFrame();                                    /* getFrame() */
     if (!(frame < end)) {
         f64 rnd = so_rndF_d(100.0f);
-        if (rnd < (f64)l_HIO.m5C) { /* bge skips on NaN */
+        if (rnd < (f64)l_HIO.mWaitAnmSwapRate) { /* bge skips on NaN */
             if (mAnmPrmIdx == 5) {
                 mAnmPrmIdx = 3;
             } else if (mAnmPrmIdx == 3) {
@@ -552,20 +552,20 @@ void daNpc_So_c::setScale() {
     /* fopAcM_searchActorDistanceXZ(this, dComIfGp_getPlayer(0)): the f1 result is used unrounded */
     f64 dist = soActorDistance(this, dComIfGp_getPlayer(0));
     f32 v;
-    if (dist > (f64)l_HIO.m48) {
-        f32 m48 = l_HIO.m48;
+    if (dist > (f64)l_HIO.mScaleDist) {
+        f32 m48 = l_HIO.mScaleDist;
         f32 tmp2 = gabi::fsubs_ppc(100000.0f, m48);
         f32 tmp = (f32)(dist - (f64)m48);
-        tmp2 = tmp2 / l_HIO.m4C;
+        tmp2 = tmp2 / l_HIO.mMaxScale;
         v = gabi::fadds_ppc(tmp / tmp2, 1.0f);
         mTargetScale = v;
-        f32 m4C = l_HIO.m4C;
+        f32 m4C = l_HIO.mMaxScale;
         if (v > m4C) {
             v = m4C;
             mTargetScale = v;
         }
     } else {
-        v = l_HIO.m44;
+        v = l_HIO.mNearScale;
         mTargetScale = v;
     }
     if (mMode == MODE_EVENT_TRIFORCE_e) {
@@ -653,12 +653,12 @@ void daNpc_So_c::lookBack() {
             return;
         }
         gabi::Local<cXyz> eye;
-        so_playerEyePos(eye.get(), l_HIO.mNpc.m04 /* mNpc.m04 */);
+        so_playerEyePos(eye.get(), l_HIO.mNpc.mPlayerEyeOffsetY /* mNpc.m04 */);
         so_copyWords3_yxz(&mLookPos, eye.get());
     } else {
         m_jnt.mbTrn = 0; /* clrTrn() */
         gabi::Local<cXyz> eye;
-        so_playerEyePos(eye.get(), l_HIO.mNpc.m04);
+        so_playerEyePos(eye.get(), l_HIO.mNpc.mPlayerEyeOffsetY);
         so_copyWords3_yxz(&mLookPos, eye.get());
     }
     if (m_jnt.mbTrn != 0) { /* trnChk() */
@@ -742,14 +742,14 @@ void daNpc_So_c::setAnmSwimSpeed() {
         f32 abs = (f32)(len / 10.0);                 /* HD: no debug register in the divisor */
         f32 v;
         if (!(abs > 0.0f)) { /* bgt skips on NaN */
-            v = gabi::fmuls_ppc(0.0f, l_HIO.m34);
+            v = gabi::fmuls_ppc(0.0f, l_HIO.mSwimAnmSpeed);
         } else {
             f32 c = abs;
             if (!(abs < 1.0f))
                 c = 1.0f; /* blt skips on NaN */
-            v = gabi::fmuls_ppc(c, l_HIO.m34);
+            v = gabi::fmuls_ppc(c, l_HIO.mSwimAnmSpeed);
         }
-        v = so_minLimit(v, l_HIO.m38);
+        v = so_minLimit(v, l_HIO.mSwimAnmSpeedMin);
         mpMorf->setPlaySpeed(v); /* setPlaySpeed */
         mA74->setPlaySpeed(v);   /* HD: the second morf too */
     }
@@ -841,15 +841,15 @@ bool daNpc_So_c::_execute() {
         f32 h = 0.5f;
         if (speed.y < -q) {
             if (speed.y < -gabi::fmuls_ppc(b, h)) {
-                target = l_HIO.m64;
+                target = l_HIO.mFallPitchFast;
             } else {
-                target = l_HIO.m66;
+                target = l_HIO.mFallPitchSlow;
             }
         } else if (speed.y > q) {
             if (speed.y > gabi::fmuls_ppc(b, h)) {
-                target = l_HIO.m68;
+                target = l_HIO.mRisePitchFast;
             } else {
-                target = l_HIO.m6A;
+                target = l_HIO.mRisePitchSlow;
             }
         } else {
             target = 0;
@@ -886,29 +886,29 @@ static u32 daNpc_So_HIO_ct(daNpc_So_HIO_c *h) {
     h->__vtbl = SO_HIO_VTBL;     /* vtable */
     soNpcHIOCtor(&h->mNpc);      /* dNpc_HIO_c::dNpc_HIO_c */
     soJntHitHIOCtor(&h->jntHit); /* JntHit_HIO_c::JntHit_HIO_c */
-    h->m5C = 30.0f;
-    h->m38 = 0.9f;
-    h->m64 = (s16)0x1f40;
-    h->m48 = 2000.0f;
-    h->m34 = 3.0f;
-    h->m50 = 150.0f;
-    h->m4C = 2.0f;
+    h->mWaitAnmSwapRate = 30.0f;
+    h->mSwimAnmSpeedMin = 0.9f;
+    h->mFallPitchFast = (s16)0x1f40;
+    h->mScaleDist = 2000.0f;
+    h->mSwimAnmSpeed = 3.0f;
+    h->mJumpSpeedYMax = 150.0f;
+    h->mMaxScale = 2.0f;
     h->m40 = 2000.0f;
-    h->m54 = 20000.0f;
-    h->m2E = 0;
-    h->m31 = 0;
+    h->mFirstWaitShipDist = 20000.0f;
+    h->mForceMiniGameClear = 0;
+    h->mNoDraw = 0;
     h->m6C = 10.0f;
-    h->m3C = 100.0f;
-    h->m30 = 0;
-    h->m2F = 0;
-    h->m68 = (s16)-0x1f40;
-    h->m44 = 0.7f;
+    h->mMiniGameSphRadius = 100.0f;
+    h->mForceMiniGameTag = 0;
+    h->mForceGridArrived = 0;
+    h->mRisePitchFast = (s16)-0x1f40;
+    h->mNearScale = 0.7f;
     h->mNpc.mMaxHeadX = (s16)0x1ffe;
-    h->mNpc.m04 = -33.0f;
-    h->m66 = (s16)0xfa0;
-    h->m2C = 0;
+    h->mNpc.mPlayerEyeOffsetY = -33.0f;
+    h->mFallPitchSlow = (s16)0xfa0;
+    h->mForceHudeDraw = 0;
     h->mNpc.mMaxHeadY = (s16)0x1000;
-    h->m6A = (s16)-0xfa0;
+    h->mRisePitchSlow = (s16)-0xfa0;
     h->m60 = 700.0f;
     h->m74 = 300.0f;
     h->mNpc.mMaxBackboneY = (s16)0x2000;
@@ -918,21 +918,21 @@ static u32 daNpc_So_HIO_ct(daNpc_So_HIO_c *h) {
     h->mNpc.mAttnYOffset = 50.0f;
     h->mNpc.mMinHeadX = (s16)-0xbb8;
     h->m70 = 600.0f;
-    h->mNpc.m22 = 0;
+    h->mNpc.mDebugDraw = 0;
     h->mNpc.mMaxHeadTurnVel = (s16)0x150;
-    h->m7C = (s16)0x5;
-    h->m88 = 120.0f;
-    h->m80 = -1.4f;
+    h->mTgHitTime = (s16)0x5;
+    h->mMapopenNearDist = 120.0f;
+    h->mMapopenGravity = -1.4f;
     h->m78 = 100.0f;
-    h->m90 = 15.0f;
+    h->mMapopenMoveStep = 15.0f;
     h->mNpc.mMinHeadY = (s16)-0x1000;
-    h->m94 = 0;
-    h->m84 = 18.0f;
+    h->mNoFmapFish = 0;
+    h->mMapopenJumpSpeedY = 18.0f;
     h->mNpc.mMaxAttnAngleY = (s16)0x7fff;
     h->mNpc.mMaxTurnStep = (s16)0x250;
     h->mNpc.mMinBackboneY = (s16)-0x2000;
     h->m2D = 0;
-    h->m8C = 300.0f;
+    h->mMapopenFarDist = 300.0f;
     h->mNpc.mMinBackboneX = (s16)-0x1000;
 
     return gabi::ea(h);

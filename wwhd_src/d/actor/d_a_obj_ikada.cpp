@@ -181,7 +181,7 @@ void daObj_Ikada_c::setCollision() {
     auto* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
     if ((u32)play->play.mPlayerStatus[0][0] & 0x4000)
         return;
-    ikadaApi_cM3dGSph_SetR(gabi::ea(this) + 0x15F0, (f32)l_HIO.m9C * (f32)scale.x);
+    ikadaApi_cM3dGSph_SetR(gabi::ea(this) + 0x15F0, (f32)l_HIO.mSphRadius * (f32)scale.x);
     ikadaApi_cM3dGSph_SetC(gabi::ea(this) + 0x15F0, &current.pos);
     play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
     ikadaApi_cCcS_Set(gabi::ea(&play->play.mCcS), &mSph);
@@ -231,7 +231,7 @@ void daObj_Ikada_c::pathMove() {
 }
 /* 02363F30 */
 void daObj_Ikada_c::HandleRight() {
-    f32 speed = (f32)l_HIO.m20;
+    f32 speed = (f32)l_HIO.mHandleSpeed;
     s16 end = mBckAnm.mFrameCtrl.mEnd;
     s32 frame = (s32)((u32)(s32)mFrame + (u32)gabi::ftoi(speed));
     mFrame = frame;
@@ -240,7 +240,7 @@ void daObj_Ikada_c::HandleRight() {
 }
 /* 02364098 */
 void daObj_Ikada_c::HandleLeft() {
-    f32 speed = (f32)l_HIO.m20;
+    f32 speed = (f32)l_HIO.mHandleSpeed;
     s16 start = mBckAnm.mFrameCtrl.mStart;
     s32 frame = (s32)((u32)(s32)mFrame - (u32)gabi::ftoi(speed));
     mFrame = frame;
@@ -730,7 +730,7 @@ void daObj_Ikada_c::modeWaitInit() {
 void daObj_Ikada_c::modeWait() {
     if (mType != 4)
         return;
-    s16 target = (s16)l_HIO.m1C;
+    s16 target = (s16)l_HIO.mDebugRopeCnt;
     if (target) {
         if (mRopeCnt > target)
             incRopeCnt(-1, 0);
@@ -753,7 +753,7 @@ void daObj_Ikada_c::modeCraneUp() {
 }
 /* 02364034 */
 void daObj_Ikada_c::modeCraneUpWaitInit() {
-    mTimer = (s16)l_HIO.m24;
+    mTimer = (s16)l_HIO.mCraneWaitTime;
 }
 /* 02364044 */
 void daObj_Ikada_c::modeCraneUpWait() {
@@ -769,7 +769,7 @@ void daObj_Ikada_c::modeCraneDown() {
     cLib_addCalcAngleS2(&mCraneShakeAmpl, 0, 10, 10);
     if (mCraneShakeAmpl < 20) {
         HandleLeft();
-        if (mRopeCnt < (s16)l_HIO.m1E)
+        if (mRopeCnt < (s16)l_HIO.mCraneDownRopeCnt)
             incRopeCnt(1, 0);
         else
             modeProc(PROC_INIT_e, MODE_CRANE_WAIT_e);
@@ -778,7 +778,7 @@ void daObj_Ikada_c::modeCraneDown() {
 }
 /* 02364204 */
 void daObj_Ikada_c::modeCraneDownWaitInit() {
-    mTimer = (s16)l_HIO.m24;
+    mTimer = (s16)l_HIO.mCraneWaitTime;
 }
 /* 02364214 */
 void daObj_Ikada_c::modeCraneDownWait() {
@@ -835,11 +835,11 @@ void daObj_Ikada_c::modePathMoveInit() {
 }
 /* 02364578 */
 void daObj_Ikada_c::modePathMove() {
-    if ((u8)l_HIO.m06)
+    if ((u8)l_HIO.mDebugHandleRight)
         HandleRight();
-    if ((u8)l_HIO.m05)
+    if ((u8)l_HIO.mDebugHandleLeft)
         HandleLeft();
-    if ((u8)l_HIO.m08 || mPathId == 255)
+    if ((u8)l_HIO.mDebugNoPathMove || mPathId == 255)
         return;
     if (mbCraneMode) {
         gabi::Local<cXyz> delta, horizontal;
@@ -860,9 +860,9 @@ void daObj_Ikada_c::modeStopInit() {
 }
 /* 02364668 */
 void daObj_Ikada_c::modeStop() {
-    if ((u8)l_HIO.m06)
+    if ((u8)l_HIO.mDebugHandleRight)
         HandleRight();
-    if ((u8)l_HIO.m05)
+    if ((u8)l_HIO.mDebugHandleLeft)
         HandleLeft();
     if (mPrevMode == 8) {
         mVelocityFwdTarget = 0.0f;
@@ -909,14 +909,14 @@ void daObj_Ikada_c::modePathMoveTerry() {
         mVelocityFwdTarget = (f32)l_HIO.mVelocityTargetTerry1;
         auto* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
         u32 flag = (u32)play->play.mPlayerStatus[0][0];
-        s16 range = (flag & 0x10000 ? (s16)l_HIO.m94 : (s16)l_HIO.m9A);
+        s16 range = (flag & 0x10000 ? (s16)l_HIO.mTerry1StopDistanceShip : (s16)l_HIO.mTerry1StopDistance);
         if (distance < (f32)range)
             stop = true;
     } else if (type == 3) {
         mVelocityFwdTarget = (f32)l_HIO.mVelocityTargetTerry3;
         if (distance < (f32)(s16)l_HIO.mPlayerStopDistance)
-            mVelocityFwdTarget = (f32)l_HIO.mA8;
-        if (distance < (f32)(s16)l_HIO.m98)
+            mVelocityFwdTarget = (f32)l_HIO.mVelocityTargetTerry3Near;
+        if (distance < (f32)(s16)l_HIO.mTerry3StopDistance)
             stop = true;
     }
     if (mbIsLinkRiding) {
@@ -947,9 +947,9 @@ void daObj_Ikada_c::modeStopTerry() {
     if (type == 1) {
         auto* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
         u32 flag = (u32)play->play.mPlayerStatus[0][0];
-        close = distance < (f32)(flag & 0x10000 ? (s16)l_HIO.m94 : (s16)l_HIO.m9A);
+        close = distance < (f32)(flag & 0x10000 ? (s16)l_HIO.mTerry1StopDistanceShip : (s16)l_HIO.mTerry1StopDistance);
     } else if (type == 3)
-        close = distance < (f32)(s16)l_HIO.m98;
+        close = distance < (f32)(s16)l_HIO.mTerry3StopDistance;
     if (!close) {
         modeProc(PROC_INIT_e, MODE_PATH_MOVE_TERRY_e);
         return;
@@ -1037,7 +1037,7 @@ s32 daObj_Ikada_c::_execute() {
         emitter->mGlobalParticleScale[1] = 3.0f;
         emitter->mGlobalParticleScale[2] = 3.0f;
         mBombSmokePos.copy(current.pos);
-        mBombSmokePos.y = (f32)l_HIO.m28;
+        mBombSmokePos.y = (f32)l_HIO.mBombSmokeHeight;
         if (!ikadaApi_calcTimer(&mBombSmokeTimer))
             ikadaApi_dPa_followEcallBack_end(&mBombSmokeEasterEgg);
     }
@@ -1639,23 +1639,23 @@ void *hioConstructor(void *self) {
     auto* hio = static_cast<daObj_Ikada_HIO_c*>(self);
     hio->__vtbl = 0x1002B364;
     hio->mbDebugDraw = 0;
-    hio->m05 = 0;
-    hio->m06 = 0;
+    hio->mDebugHandleLeft = 0;
+    hio->mDebugHandleRight = 0;
     hio->mbNoRotAnim = 0;
-    hio->m08 = 0;
-    hio->m1C = 0;
-    hio->m1E = 100;
-    hio->m24 = 60;
-    hio->m94 = 3000;
+    hio->mDebugNoPathMove = 0;
+    hio->mDebugRopeCnt = 0;
+    hio->mCraneDownRopeCnt = 100;
+    hio->mCraneWaitTime = 60;
+    hio->mTerry1StopDistanceShip = 3000;
     hio->mPlayerStopDistance = 6000;
-    hio->m98 = 1000;
-    hio->m9A = 1000;
+    hio->mTerry3StopDistance = 1000;
+    hio->mTerry1StopDistance = 1000;
     hio->mFlagOffset.x = 0;
     hio->mFlagOffset.y = 0;
     hio->mFlagOffset.z = 0;
     hio->mFlagScale = 0;
-    hio->m20 = 1.5f;
-    hio->m28 = 100;
+    hio->mHandleSpeed = 1.5f;
+    hio->mBombSmokeHeight = 100;
     hio->mShipOffsY_Attention = 900;
     hio->mShipOffsY_Eye = 300;
     hio->mTerryWaveOffsZ = 660;
@@ -1682,10 +1682,10 @@ void *hioConstructor(void *self) {
     hio->mWaveCollapsePos1.x = -40;
     hio->mWaveCollapsePos1.y = -100;
     hio->mWaveCollapsePos1.z = -350;
-    hio->m9C = 300;
+    hio->mSphRadius = 300;
     hio->mVelocityTargetTerry1 = 12;
     hio->mVelocityTargetTerry3 = 15;
-    hio->mA8 = 30;
+    hio->mVelocityTargetTerry3Near = 30;
     return self;
 }
 /* 0236505C */

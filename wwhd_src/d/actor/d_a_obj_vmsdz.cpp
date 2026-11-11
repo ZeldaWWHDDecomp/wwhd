@@ -10,7 +10,7 @@ enum { dRes_INDEX_VMSDZ_BDL_VMSDZ_e = 3 };
 BOOL daObjVmsdz_c::create_heap() {
     J3DModelData* mdl_data =
         (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_VMSDZ_BDL_VMSDZ_e);
-    JUT_ASSERT(0x59, mdl_data != NULL);
+    JUT_ASSERT_MSG(0x59, mdl_data != NULL, "mdl_data != 0");
     if (mdl_data == NULL)
         return FALSE;
     mModel = mDoExt_J3DModel__create(mdl_data, 0, 0x11020203);
@@ -105,5 +105,5 @@ daObjVmsdz_c::daObjVmsdz_c() {
 /* WWHD glue (tools/verify/autoglue.py): private bindings
 str 10032EC8 "VmsDZ"
 str 10032E94 "d_a_obj_vmsdz.cpp"
-str 10032EA8 "mdl_data != NULL" renamed # HD spells NULL as 0
+str 10032EA8 "mdl_data != 0" # HD spells NULL as 0
 */

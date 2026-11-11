@@ -113,35 +113,35 @@ enum { dPa_name_ID_AK_JN_TORCH = 0x1EA, dPa_name_ID_AK_JP_O_KAGEROU00 = 0x4004 }
 struct himo3HIO_c {
     /* 0x00 */ be<s8> mNo;
     /* 0x01 */ u8 _01;
-    /* 0x02 */ be<s16> m06;
-    /* 0x04 */ be<f32> m08;
-    /* 0x08 */ be<f32> m0C;
-    /* 0x0C */ be<s16> m10;
-    /* 0x0E */ be<s16> m12;
-    /* 0x10 */ be<s16> m14;
+    /* 0x02 */ be<s16> mAlphaModelType;  /* was m06: read only by tww: daHimo3_Draw picks the glow's alpha model, 0 one sphere, 1 two spheres (both in the mAlphaColorR / G / B colour), 2 the spot model; WWHD writes it only in __sinit_d_a_himo3_cpp 02174F64 (0) and has no alpha model (2026-11-11 rule: tww's one role) */
+    /* 0x04 */ be<f32> mEndScaleType1;  /* was m08: himo3_control (inlined in daHimo3_Execute 02172A00): the end model's scale for type 1; __sinit_d_a_himo3_cpp 02174F64 0.75 (tww the same) */
+    /* 0x08 */ be<f32> mEndScale;  /* was m0C: himo3_control (inlined in daHimo3_Execute 02172A00): the end model's scale for the other types, which also turn it by -0x4000 about x; __sinit_d_a_himo3_cpp 02174F64 0.5 (tww the same) */
+    /* 0x0C */ be<s16> mAlphaColorR;  /* was m10: read only by tww: daHimo3_Draw's alpha model colour r (dComIfGd_setAlphaModelColor); WWHD writes it only in __sinit_d_a_himo3_cpp 02174F64 (0xEB) (2026-11-11 rule: tww's one role) */
+    /* 0x0E */ be<s16> mAlphaColorG;  /* was m12: read only by tww: daHimo3_Draw's alpha model colour g; WWHD writes it only in __sinit_d_a_himo3_cpp 02174F64 (0x7D) (2026-11-11 rule: tww's one role) */
+    /* 0x10 */ be<s16> mAlphaColorB;  /* was m14: read only by tww: daHimo3_Draw's alpha model colour b; WWHD writes it only in __sinit_d_a_himo3_cpp 02174F64 (0) (2026-11-11 rule: tww's one role) */
     /* 0x12 */ u8 _12[2];
-    /* 0x14 */ be<f32> m18;
+    /* 0x14 */ be<f32> mGlowMtxScale;  /* was m18: daHimo3_Execute 02172A00 copies it into the actor's mGlowScale every frame (the glow matrix scale); __sinit_d_a_himo3_cpp 02174F64 5.0 (tww m1870 = it) */
     /* 0x18 */ be<u32> __vtbl;
 };
 WWHD_SIZE(himo3HIO_c, 0x1C);
 
 struct himo3_s {
-    /* 0x00 */ cXyz m00;
-    /* 0x0C */ cXyz m0C;
+    /* 0x00 */ cXyz mPos;  /* was m00: himo3_control (inlined in daHimo3_Execute 02172A00) moves each rope segment from the previous one by the gravity / pull offset and feeds the collision spheres and line from it; [0] = current.pos (tww the same; as himo2_s::mPos) */
+    /* 0x0C */ cXyz mSpeed;  /* was m0C: himo3_control (in daHimo3_Execute 02172A00) adds it to the next step and stores (new - old) * a factor (0 in WWHD, a REG value in tww) (tww the same) */
 };
 WWHD_SIZE(himo3_s, 0x18);
 
 struct h3_ga_s {
     /* 0x00 */ gptr<J3DModel> mpModel;
     /* 0x04 */ cXyz mPos;
-    /* 0x10 */ cXyz m10;
-    /* 0x1C */ csXyz m1C;
+    /* 0x10 */ cXyz mTargetPos;  /* was m10: ga_move (inlined in daHimo3_Execute 02172A00): a new random point within 150 / 100 / 150 of the rope end (mEndPos) whenever mRetargetTimer runs out; the moth turns toward it (tww the same) */
+    /* 0x1C */ csXyz mAngle;  /* was m1C: ga_move: yaw / pitch eased toward mTargetPos by 0x1000 steps, the direction the moth flies; daHimo3_Draw 021727D4 (ga_draw inlined) turns its model by it (tww the same) */
     /* 0x22 */ u8 _22[2];
-    /* 0x24 */ be<f32> m24;
-    /* 0x28 */ be<f32> m28;
-    /* 0x2C */ be<s16> m2C;
-    /* 0x2E */ be<u8> m2E;
-    /* 0x2F */ be<u8> m2F;
+    /* 0x24 */ be<f32> mScale;  /* was m24: daHimo3_Create 02174730 (useHeapInit inlined): random 0.3..0.6; daHimo3_Draw (ga_draw) scales the moth model by it (tww the same) */
+    /* 0x28 */ be<f32> mFlapScale;  /* was m28: ga_move: sin(mFlapPhase); daHimo3_Draw (ga_draw) multiplies the model's y scale by it, the wing flap (tww the same) */
+    /* 0x2C */ be<s16> mFlapPhase;  /* was m2C: ga_move adds 0x3E00 per frame and takes mFlapScale = sin(it); daHimo3_Create (useHeapInit) random start (tww the same) */
+    /* 0x2E */ be<u8> mActive;  /* was m2E: daHimo3_Create (useHeapInit) sets it for type 0; ga_move moves and daHimo3_Draw (ga_draw) draws the moth only while it is set (tww the same) */
+    /* 0x2F */ be<u8> mRetargetTimer;  /* was m2F: ga_move counts it down and, at 0, sets a random 0..10 and picks a new mTargetPos (tww the same) */
 };
 WWHD_SIZE(h3_ga_s, 0x30);
 
@@ -190,7 +190,7 @@ struct himo3_class : fopAc_ac_c {
     /* 0x1958 */ dBgS_AcchCir mAcchCir;
     /* 0x1998 */ dBgS_ObjAcch mAcch;
     /* 0x1B5C */ Mtx34 mGlowMtx;  /* was m1840: daHimo3_Execute 02172A00: end model matrix moved to the flame (10, -140, -15 for type 0) and scaled by mGlowScale; HD has no reader (the GameCube daHimo3_Draw passes it to dComIfGd_setAlphaModel / setSpotModel, tww d_a_himo3.cpp) */
-    /* 0x1B8C */ be<f32> mGlowScale;  /* was m1870: daHimo3_Execute 02172A00: himo3HIO.m18 every frame; scales mGlowMtx */
+    /* 0x1B8C */ be<f32> mGlowScale;  /* was m1870: daHimo3_Execute 02172A00: himo3HIO.mGlowMtxScale every frame; scales mGlowMtx */
     /* 0x1B90 */ u8 _1B90[4];
     /* 0x1B94 */ be<f32> mGlowSize;  /* was m1878: daHimo3_Execute 02172A00: eased to mGlowSizeTarget; HD has no reader (the GameCube daHimo3_Draw passes it to dComIfGd_setAlphaModel as the size, tww d_a_himo3.cpp) */
     /* 0x1B98 */ be<f32> mGlowSizeTarget;  /* was m187C: daHimo3_Execute 02172A00: random 4..20 each time mTimers[0] runs out; mGlowSize eases to it */

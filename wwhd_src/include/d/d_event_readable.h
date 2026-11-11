@@ -53,16 +53,16 @@ WWHD_OFFSET(EventOrder, mEventInfoIdx, 0x15);
 WWHD_SIZE(EventOrder, 0x18);
 
 struct EventStageEntry {
-    be<u8> field_0x0;
+    be<u8> mNextEventNo;  /* was field_0x0: view of dStage_Event_dt_c::mNextEventNo (d/d_event_manager.h) */
     be<char> mName[15];
-    be<u8> field_0x10, field_0x11, field_0x12, mSpawnSwitchNo;
+    be<u8> mMapToolCamId, mDuration, field_0x12, mSpawnSwitchNo;  /* was field_0x10: view of dStage_Event_dt_c::mMapToolCamId (d/d_event_manager.h); d_event.cpp copies it into the event control's map tool id; was field_0x11: view of dStage_Event_dt_c::mDuration (d/d_event_manager.h) */
     u8 _014[4];
 };
 struct EventStageInfo {
     be<s32> num;
     be<u32> events;
 };
-WWHD_OFFSET(EventStageEntry, field_0x10, 0x10);
+WWHD_OFFSET(EventStageEntry, mMapToolCamId, 0x10);
 WWHD_SIZE(EventStageEntry, 0x18);
 WWHD_SIZE(EventStageInfo, 8);
 

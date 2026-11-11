@@ -655,7 +655,7 @@ u32 daNpc_Bs1_c::getMsg() {
 
 /* the callers pass next_msgStatus's whole r3 on (the status is a u16 in the source) */
 
-/* ShopCam_action_c::getItemZoomPos(100.0f) (inline): m24 + normalize(m18 - m24) * 100, copied
+/* ShopCam_action_c::getItemZoomPos(100.0f) (inline): mEye + normalize(mCenter - mEye) * 100, copied
  * through the FPRs into *out */
 
 /* 02215DA0 */
@@ -676,7 +676,7 @@ u16 daNpc_Bs1_c::normal_talk() {
     gabi::Local<cXyz> pos;
     bs1m_getItemZoomPos(&mShopCamAction, pos.get());
     mShopItems.Item_ZoomUp(pos.get());
-    mpShopCursor->m54 = 0; /* hide() */
+    mpShopCursor->mbShow = 0; /* hide() */
     return status;
 }
 
@@ -684,7 +684,7 @@ u16 daNpc_Bs1_c::normal_talk() {
 u16 daNpc_Bs1_c::shop_talk() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     u32 mgr = bs1m_mgr();
-    mpShopCursor->m54 = 1; /* show() */
+    mpShopCursor->mbShow = 1; /* show() */
     if (bs1m_nowTriggercheck(&mStickControl, &mShopItems, &mCurrMsgNo, BS1M_getDefaultMsgCB, this)) {
         mbItemMsgSet = 1;
         mShopMsgNo = 0;
@@ -760,7 +760,7 @@ u16 daNpc_Bs1_c::talk() {
             }
         }
     }
-    mShopCamAction.m54 = mShopItems.mSelectedItemIdx;
+    mShopCamAction.mSelectIdx = mShopItems.mSelectedItemIdx;
     return status;
 }
 

@@ -59,7 +59,7 @@ struct RAIN_EFF {
   be<u8> mStatus;
   u8 padding[3];
   cXyz mPos, mBasePos;
-  be<f32> field_0x1c, field_0x20, field_0x24, mAlpha, field_0x2c, field_0x30;
+  be<f32> field_0x1c, field_0x20, field_0x24, mAlpha, field_0x2c, mGroundY;  /* was field_0x30: view of RAIN_EFF::mGroundY (d/d_kankyo_rain.h) */
   be<s16> mTimer;
   u8 tail[2];
 };

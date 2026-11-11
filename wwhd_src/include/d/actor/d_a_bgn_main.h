@@ -89,9 +89,9 @@ WWHD_SIZE(BgnPlayView, 0x5AFC);
 
 struct BgnKeeseView : fopAc_ac_c {
     u8 _3BC[0x3D4 - sizeof(fopAc_ac_c)];
-    mDoExt_J3DModelPacketS_l m2B8;
+    mDoExt_J3DModelPacketS_l mModelPacket;  /* was m2B8: view of ki_class (d_a_ki.h) 0x3D4 mModelPacket; ki_a_d_sub 0207B0D8 (from daBgn_Draw's obj_disp) gives it the keese's model and updates it */
 };
-WWHD_OFFSET(BgnKeeseView, m2B8, 0x3D4);
+WWHD_OFFSET(BgnKeeseView, mModelPacket, 0x3D4);
 WWHD_SIZE(BgnKeeseView, 0x484);
 struct BgnMorthView : fopAc_ac_c {
     u8 _3BC[0x3D0 - sizeof(fopAc_ac_c)];

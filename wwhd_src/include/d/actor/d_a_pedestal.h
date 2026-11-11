@@ -27,10 +27,10 @@ struct daPds_c : fopAc_ac_c {
     gptr<dBgW> mpBgW;
     daPds_infiniteEcallBack_c mOctagonGlowCb;
     Action mAction;
-    be<f32> mTargetYPos, unk308;
+    be<f32> mTargetYPos, mBrkFrame;  /* was unk308: initBrkAnm 023C85F8 stores mBrk's frame after the init (end frame for a reversed table entry); playBrkAnm 023C8D18 stores the frame after each play; nothing reads it (tww the same) */
     be<s8> mActionStatus;
-    be<u8> mType, unk30E;
-    be<s8> unk30F;
+    be<u8> mType, mBrkAnmIdx;  /* was unk30E: initBrkAnm 023C85F8 stores the brkAnmTbl index it initialised; nothing reads it (tww the same); after daNpc_Os_c::mBrkAnmIdx (same initBrkAnm code) */
+    be<s8> mBrkAnmEnd;  /* was unk30F: playBrkAnm 023C8D18 stores mBrk's play() result (animation end); nothing reads it (tww the same); after daNpc_Os_c::mBrkAnmEnd (same playBrkAnm code) */
     be<s16> unk310, unk312, unk314, unk316;
     u8 _490[4];
     be<f32> unk31C;

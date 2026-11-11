@@ -132,7 +132,7 @@ BOOL daNpc_Ji1_c::isClearRecord(s16 param_1) {
     return false;
   }
   u8 level = dComIfGs_getEventReg(UNK_D003);
-  if (param_1 >= l_HIO().field_0x60[level & 3]) {
+  if (param_1 >= l_HIO().mLevelHits[level & 3]) {
     return TRUE;
   }
   return FALSE;
@@ -142,12 +142,12 @@ BOOL daNpc_Ji1_c::isClearRecord(s16 param_1) {
 void daNpc_Ji1_c::setClearRecord(s16 hits) {
   u8 oldLevel = dComIfGs_getEventReg(UNK_D003);
   u8 newLevel = 0;
-  while (hits >= l_HIO().field_0x60[newLevel & 3] && newLevel <= 3) {
+  while (hits >= l_HIO().mLevelHits[newLevel & 3] && newLevel <= 3) {
     newLevel++;
   }
   if (oldLevel < newLevel) {
     dComIfGs_setEventReg(UNK_D003, newLevel);
-    if (hits >= l_HIO().field_0x60[3]) {
+    if (hits >= l_HIO().mLevelHits[3]) {
       dComIfGs_onEventBit(UNK_0F20);
     }
   }
@@ -271,7 +271,7 @@ void daNpc_Ji1_c::battleSubActionNockBackInit(int param_1) {
 /* 0225B2B8 */
 void daNpc_Ji1_c::battleSubActionAttackInit() {
   setAnm(Ji1_ANM_INASI, 0.0f, 0);
-  mpOrcaMorf->setPlaySpeed(l_HIO().field_0x6C);
+  mpOrcaMorf->setPlaySpeed(l_HIO().mAttackAnmSpeed);
   ji1_seStart(this, JA_SE_CV_JI_ATTACK, 0);
   mNockBackTimer = 0;
   ji1_setSubAction(this, SUB_battleSubActionAttack);
@@ -280,7 +280,7 @@ void daNpc_Ji1_c::battleSubActionAttackInit() {
 /* 0225B22C */
 void daNpc_Ji1_c::battleSubActionTateAttackInit() {
   setAnm(Ji1_ANM_TATEATTACK, 0.0f, 0);
-  mpOrcaMorf->setPlaySpeed(l_HIO().field_0x78);
+  mpOrcaMorf->setPlaySpeed(l_HIO().mTateAnmSpeed);
   ji1_seStart(this, JA_SE_CV_JI_ATTACK, 0);
   mNockBackTimer = 0;
   ji1_setSubAction(this, SUB_battleSubActionTateAttack);
@@ -289,7 +289,7 @@ void daNpc_Ji1_c::battleSubActionTateAttackInit() {
 /* 0225B1A0 */
 void daNpc_Ji1_c::battleSubActionYokoAttackInit() {
   setAnm(Ji1_ANM_YOKOATTACK, 0.0f, 0);
-  mpOrcaMorf->setPlaySpeed(l_HIO().field_0x80);
+  mpOrcaMorf->setPlaySpeed(l_HIO().mYokoAnmSpeed);
   ji1_seStart(this, JA_SE_CV_JI_ATTACK, 0);
   mNockBackTimer = 0;
   ji1_setSubAction(this, SUB_battleSubActionYokoAttack);

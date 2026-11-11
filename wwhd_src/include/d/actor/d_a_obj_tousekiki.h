@@ -33,7 +33,7 @@ WWHD_SIZE(daObj_Tousekiki_c, 0x55C);
 /* daObjPirateship::Act_c, the fields read here (HD offsets) */
 struct daObjPirateship_ActView : fopAc_ac_c {
     /* 0x3AC */ u8 _3AC[0x3E4 - 0x3AC];
-    /* 0x3E4 */ be<u8> m2CC;              /* GameCube 0x2C8 */
+    /* 0x3E4 */ be<u8> mAppeared;  /* was m2CC: view of daObjPirateship::Act_c; same name as daObjPirateship::Act_c::mAppeared (d_a_obj_pirateship.h, HD 0x3E4); _draw (in daObj_TousekikiDraw 023A6304) draws only once it is set (tww the same); GameCube 0x2C8 */
     /* 0x3E5 */ u8 _3E5[3];
     /* 0x3E8 */ gptr<J3DModel> mModel;    /* GameCube 0x2CC */
 };

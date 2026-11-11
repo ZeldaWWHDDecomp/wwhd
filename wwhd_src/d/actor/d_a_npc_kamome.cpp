@@ -502,9 +502,9 @@ BOOL daNpc_kam_c::setAction(KamomeAction* cur, KamomeAction* newFunc, void* arg)
     cur->d = newD;
     mUnusedC14 = 0.0f;
     mUnusedC0E = 0;
-    mC0A = 0;
-    mC0C = 0;
-    mC08 = 0;
+    mTurnTargetAngleY = 0;
+    mIdleAnmTimer = 0;
+    mActionTimer = 0;
     mActionStatus = ACTION_STARTING;
     kam_callAction<BOOL>(this, cur, arg);
     return TRUE;
@@ -769,9 +769,9 @@ BOOL daNpc_kam_c::waitPlayerAction(void*) {
         mAngVelX = hio.mGlidingAngVelX;
         mTargetAngVelY = hio.mGlidingAngVelY;
         mTargetAngVelX = hio.mGlidingAngVelX;
-        mC08 = (s16)kam_getRndValue(60, 90);
+        mActionTimer = (s16)kam_getRndValue(60, 90);
         mFlapTimer = 0;
-        mC0A = 0;
+        mTurnTargetAngleY = 0;
         mFlapExhaustedTimer = 0;
         mFlapEnergyTimer = hio.mFlapEnergyDuration;
         return TRUE;
@@ -820,8 +820,8 @@ BOOL daNpc_kam_c::waitPlayerAction(void*) {
     if (mAnmIdx != ANM_WAIT2) {
         if (mFlapTimer != 0) {
             setAnm(ANM_WAIT2);
-        } else if (kam_calcTimer(&mC08) == 0) {
-            mC08 = (s16)kam_getRndValue(90, 90);
+        } else if (kam_calcTimer(&mActionTimer) == 0) {
+            mActionTimer = (s16)kam_getRndValue(90, 90);
             setAnm(ANM_SING);
         }
         if (mAnmIdx == ANM_SING) {
@@ -860,7 +860,7 @@ BOOL daNpc_kam_c::damagePlayerAction(void*) {
         setAnm(ANM_WAIT1);
         speedF = 0.0f;
         mDoAud_seStart(JA_SE_CV_KAMOME, &eyePos, 0, dComIfGp_getReverb(current.roomNo));
-        mC08 = 30;
+        mActionTimer = 30;
     } else if (mActionStatus == ACTION_ENDING) {
         offHyoiKamome();
     } else {
@@ -868,7 +868,7 @@ BOOL daNpc_kam_c::damagePlayerAction(void*) {
         current.angle.y = y;
         shape_angle.y = y;
         setAttention(true);
-        if (kam_calcTimer(&mC08) == 0) {
+        if (kam_calcTimer(&mActionTimer) == 0) {
             returnLink();
         }
     }
@@ -1155,7 +1155,7 @@ void daNpc_kam_c::setAnm(int anmIdx) {
     f32 morf = REG0_S(0) == 0 ? prm->mMorf : 8.0f;
     kam_setAnimation(mpMorf.get(), prm->mLoopMode, morf, playSpeed,
                (s32)tbl->mBckFileIdx, (s32)tbl->mSoundFileIdx, "Kamome" );
-    if (prm->m10 < 0) {
+    if (prm->mStartAtEnd < 0) {
         mDoExt_McaMorf* m = mpMorf;
         m->setFrame(m->getEndFrame());
     }

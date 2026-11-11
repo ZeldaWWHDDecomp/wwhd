@@ -78,7 +78,7 @@ bool Act_c::create_heap() {
   s32 index = attributes.mModelId;
   J3DModelData *mdl_data =
       static_cast<J3DModelData *>(Paper_getObjectRes(control, &name, index));
-  JUT_ASSERT(0x141, mdl_data != NULL);
+  JUT_ASSERT_MSG(0x141, mdl_data != NULL, "mdl_data != 0");
   mpModel = mDoExt_J3DModel__create(mdl_data, 0x80000, 0x11000022);
   return mpModel != nullptr;
 }
@@ -324,7 +324,7 @@ str 1002E408 "Opaper"
 str 1002E410 "Ppos"
 str 1002E418 "Piwa"
 str 1002E4AC "d_a_obj_paper.cpp"
-str 1002E4C0 "mdl_data != NULL" renamed # HD: mdl_data != 0
+str 1002E4C0 "mdl_data != 0" # HD: mdl_data != 0
  data L_attr 1002E458
  data L_cyl_src 1002E508
  data mode_proc 1002E4DC

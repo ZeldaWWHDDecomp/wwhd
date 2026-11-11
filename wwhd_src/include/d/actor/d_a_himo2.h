@@ -157,9 +157,9 @@ enum himo2_state_e {
 struct himo2_s {
     /* 0x00 */ u8 m00[0x0C];
     /* 0x0C */ be<f32> m0C;
-    /* 0x10 */ cXyz m10;
-    /* 0x1C */ be<s16> m1C;
-    /* 0x1E */ be<s16> m1E;
+    /* 0x10 */ cXyz mPos;  /* was m10: himo2_control / himo2_control2 (inlined in daHimo2_Execute 0216E194) move each rope segment from its neighbour's position; daHimo2_Execute 0216E194 takes the ground height below it; himo2_draw (in daHimo2_Draw 0216CA5C) puts the segment model there (tww the same) */
+    /* 0x1C */ be<s16> mAngleX;  /* was m1C: himo2_control2 (in daHimo2_Execute 0216E194) stores the segment's pitch toward the next one; himo2_draw (in daHimo2_Draw 0216CA5C) turns the segment model by it about x (tww the same) */
+    /* 0x1E */ be<s16> mAngleY;  /* was m1E: himo2_control2 (in daHimo2_Execute 0216E194) stores the segment's yaw toward the next one; himo2_draw (in daHimo2_Draw 0216CA5C) turns the segment model by it about y (tww the same) */
     /* 0x20 */ u8 m20[4];
 };
 WWHD_SIZE(himo2_s, 0x24);
@@ -286,16 +286,16 @@ WWHD_SIZE(himo2_class, 0x2D68);
 struct himo2HIO_c {
     /* 0x00 */ be<s8> mNo;
     /* 0x01 */ u8 _01;
-    /* 0x02 */ be<s16> m06;
-    /* 0x04 */ be<s16> m08;
+    /* 0x02 */ be<s16> mSwingDirMode;  /* was m06: read only by tww: daHimo2_Execute's switch picks the swing directions (0 random, 1..4 the four fixed sign pairs); WWHD writes it only in __sinit_d_a_himo2_cpp 0216F6D8 (0) and new_himo2_move always takes (-1, -1) (2026-11-11 rule: tww's one role) */
+    /* 0x04 */ be<s16> mTargetAngleRange;  /* was m08: setTargetPos 0216EEB8 (inline search_target): a target counts only while its angle to Link lies within 0x4000 +- it (plus a debug register); HIO 15000 (tww the same) */
     /* 0x06 */ be<s16> m0A;
-    /* 0x08 */ be<s16> m0C;
-    /* 0x0A */ be<s16> m0E;
-    /* 0x0C */ be<f32> m10;
-    /* 0x10 */ be<f32> m14;
-    /* 0x14 */ be<f32> m18;
-    /* 0x18 */ be<f32> m1C;
-    /* 0x1C */ be<f32> m20;
+    /* 0x08 */ be<s16> mPitchTolBelow;  /* was m0C: setTargetPos 0216EEB8: a normal target is taken only while its pitch from the camera eye exceeds the aim point's by less than it (2000 for flagged targets); HIO 600 (tww the same) */
+    /* 0x0A */ be<s16> mPitchTolAbove;  /* was m0E: setTargetPos 0216EEB8: a target is taken only while the aim point's pitch exceeds the target's by less than it; HIO 400 (tww the same) */
+    /* 0x0C */ be<f32> mTargetRadius;  /* was m10: setTargetPos 0216EEB8: the yaw tolerance is cM_atan2s(target scale.z * it, distance from the camera eye), the target's radius per unit of scale; HIO 60 (tww the same) */
+    /* 0x10 */ be<f32> mTargetMaxDY;  /* was m14: setTargetPos 0216EEB8: a normal target is taken only while its height offset in Link's frame is below it (plus a stage tolerance on ADMumi); HIO 1500 (tww the same) */
+    /* 0x14 */ be<f32> mSearchDistMax;  /* was m18: setTargetPos 0216EEB8: the search distance grows by 100 per pass and stops above it (2000 for flagged targets); HIO 1000 (tww the same) */
+    /* 0x18 */ be<f32> mRopeScaleLockOn;  /* was m1C: daHimo2_Execute 0216E194 and new_himo2_move 0216F7FC (while Lockon) store it in rope_scale, the rope lines' width for lineMat_update; HIO 2.3 (tww the same) */
+    /* 0x1C */ be<f32> mRopeScale;  /* was m20: new_himo2_move 0216F7FC stores it in rope_scale while nothing is locked on; HIO 1.9 (tww the same) */
     /* 0x20 */ be<u32> __vtbl;
 };
 WWHD_SIZE(himo2HIO_c, 0x24);

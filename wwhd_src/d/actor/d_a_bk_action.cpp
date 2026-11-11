@@ -79,14 +79,14 @@ void hukki(bk_class* i_this) {
         // Fall-through
     case 13:
         if (i_this->mTimers[2] == 1) {
-            i_this->mSmokeTimer = l_bkHIO().m00C + 6;
+            i_this->mSmokeTimer = l_bkHIO().mSmokeTimerBase + 6;
             i_this->mSmokeType = 3;
         }
         if (i_this->mTimers[2] > 3) {
             i_this->dr.mSkipMoveOnce = 1;
         }
         if (i_this->mpMorf->isStop()) {
-            if (i_this->mPlayerDistance < l_bkHIO().m02C) {
+            if (i_this->mPlayerDistance < l_bkHIO().mAttackDist) {
                 i_this->dr.mMode = 14;
                 i_this->mTimers[1] = 10;
             } else {
@@ -173,7 +173,7 @@ void fail(bk_class* i_this) {
     case 1: {
         gabi::Local<cXyz> sp08;
         auto p = i_this->current.pos.get();
-        p.y += 100.0f + l_bkHIO().m020;
+        p.y += 100.0f + l_bkHIO().mDropItemOffsetY;
         *sp08 = p;
         u8 drop_type = daDisItem_IBALL_e;
         if (i_this->mTimers[2] >= 1000) {
@@ -325,16 +325,16 @@ void wepon_search(bk_class* i_this) {
             cLib_addCalcAngleS2(&actor->current.angle.y, i_this->dr.mTurnTargetY, 2, 0x3000);
             if (i_this->mpMorf->isStop() || i_this->mTimers[1] == 0) {
                 i_this->dr.mMode = 1;
-                i_this->mWeaponRunTimer = l_bkHIO().m08E;
+                i_this->mWeaponRunTimer = l_bkHIO().mWeaponRunTime;
                 anm_init(i_this, dRes_INDEX_BK_BCK_BK_RUN_e, 3.0f, J3DFrameCtrl::EMode_LOOP,
-                         l_bkHIO().m074, dRes_INDEX_BK_BAS_BK_RUN_e);
+                         l_bkHIO().mDashAnmSpeed, dRes_INDEX_BK_BAS_BK_RUN_e);
                 i_this->mWeaponJumpCount = 0;
             }
         }
         break;
     case 1:
-        actor->speedF = l_bkHIO().m05C;
-        i_this->mSmokeTimer = l_bkHIO().m00C + 3;
+        actor->speedF = l_bkHIO().mDashSpeed;
+        i_this->mSmokeTimer = l_bkHIO().mSmokeTimerBase + 3;
         i_this->mSmokeType = 4;
         cLib_addCalcAngleS2(&actor->current.angle.y, i_this->dr.mTurnTargetY, 4, 0x1000);
         if (f31 < REG8_F(2) + 150.0f) {
@@ -394,15 +394,15 @@ void wepon_search(bk_class* i_this) {
             cLib_addCalcAngleS2(&actor->current.angle.y, ang, 3, 0x800);
         }
         if (i_this->mpMorf->isStop()) {
-            if (l_bkHIO().m00A == 0 && !(daPy_getGrabWearTimer(player) < 0.0f) &&
-                i_this->mPlayerDistance < l_bkHIO().m02C) {
+            if (l_bkHIO().mNoPickupAttack == 0 && !(daPy_getGrabWearTimer(player) < 0.0f) &&
+                i_this->mPlayerDistance < l_bkHIO().mAttackDist) {
                 i_this->dr.mAction = 5;
                 i_this->mAttackKind = 0;
                 i_this->mAttackFrame = 18.0f;
                 i_this->mAtStartFrame = REG6_F(6) + 23.0f;
                 i_this->mAtEndFrame = REG6_F(7) + 26.0f;
                 i_this->mLookStartFrame = 63.0f;
-                i_this->mTurnEndFrame = l_bkHIO().m09C;
+                i_this->mTurnEndFrame = l_bkHIO().mAttackTurnEndFrame;
                 i_this->mAttackDir = 1;
                 i_this->mAttackStep = 1;
                 attack_info_s* info = attack_info(i_this->mAttackKind);
@@ -425,7 +425,7 @@ void wepon_search(bk_class* i_this) {
         }
         break;
     case 5:
-        actor->speedF = l_bkHIO().m05C * 0.5f;
+        actor->speedF = l_bkHIO().mDashSpeed * 0.5f;
         if (i_this->dr.mAcch.ChkGroundHit()) {
             anm_init(i_this, dRes_INDEX_BK_BCK_BK_JUMP2_e, 0.0f, J3DFrameCtrl::EMode_NONE, 1.0f,
                      dRes_INDEX_BK_BAS_BK_JUMP2_e);
@@ -437,7 +437,7 @@ void wepon_search(bk_class* i_this) {
         if (i_this->mpMorf->isStop()) {
             i_this->dr.mMode = 1;
             anm_init(i_this, dRes_INDEX_BK_BCK_BK_RUN_e, 3.0f, J3DFrameCtrl::EMode_LOOP,
-                     l_bkHIO().m074, dRes_INDEX_BK_BAS_BK_RUN_e);
+                     l_bkHIO().mDashAnmSpeed, dRes_INDEX_BK_BAS_BK_RUN_e);
         }
         break;
     }
@@ -504,7 +504,7 @@ void carry_drop(bk_class* i_this) {
             anm_init(i_this, dRes_INDEX_BK_BCK_BK_TYAKU_e, 0.0f, J3DFrameCtrl::EMode_NONE, 1.0f,
                      -1);
             i_this->dr.mMode = 2;
-            i_this->mSmokeTimer = l_bkHIO().m00C + 15;
+            i_this->mSmokeTimer = l_bkHIO().mSmokeTimerBase + 15;
             i_this->mSmokeType = 3;
             i_this->dr.mMaxFallDistance = 1000.0f;
             fopAcM_seStart(i_this, JA_SE_CM_BK_BB_LANDING, 0);
@@ -639,7 +639,7 @@ void tubo_wait(bk_class* i_this) {
             anm_init(i_this, dRes_INDEX_BK_BCK_BK_JUMP2_e, 0.0f, J3DFrameCtrl::EMode_NONE, 1.0f,
                      dRes_INDEX_BK_BAS_BK_JUMP2_e);
             i_this->dr.mMode = 11;
-            i_this->mSmokeTimer = l_bkHIO().m00C + 6;
+            i_this->mSmokeTimer = l_bkHIO().mSmokeTimerBase + 6;
             i_this->mSmokeType = 3;
         }
         break;

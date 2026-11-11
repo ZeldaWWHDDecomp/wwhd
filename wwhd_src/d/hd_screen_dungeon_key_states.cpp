@@ -65,7 +65,7 @@ void hdDungeonKeyStates_c::updateCountText() {
     text->mCapacity = 3;
     text->mpVTable.v = gabi::ea(&sDungeonKeyTextTable);
     buffer->mCharacters[2] = 0;
-    dungeonKeyFormatCount(text, "DungeonKey count format", mKeyCount);
+    dungeonKeyFormatCount(text, "", mKeyCount);
     mpTextPane->setStringPrepared(text, nullptr);
 }
 /* 02653B7C */
@@ -207,7 +207,7 @@ str 100EFF18 "G_All_00" in 026542D0
 str 100EFF24 "::StateID_Wait" in 026542D0
 str 100EFF34 "::StateID_In" in 026542D0
 str 100EFF44 "::StateID_Disp" in 026542D0
-str 100EFE70 "DungeonKey count format" renamed
+str 100EFE70 ""
 ext 02700ADC void dungeonKeyConstructBase(NoControlPart_l*)
 ext 02700A70 void dungeonKeyDestroyBase(NoControlPart_l*, u32)
 ext 02700B48 u32 dungeonKeySetupBase(NoControlPart_l*, hdUiSafeString*, u32, u32, u32)

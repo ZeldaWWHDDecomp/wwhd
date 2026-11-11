@@ -113,7 +113,7 @@ static daNpc_Tc_HIO_c* daNpc_Tc_HIO_c_ct(daNpc_Tc_HIO_c* i_this) {
     i_this->mRedTowerPos.set(100.0f, 1700.0f, 50.0f);
     i_this->mWhiteTowerAngleY = 0;
     i_this->mRedTowerAngleY = -0x8000;
-    i_this->mNpc.m04 = -20.0f;
+    i_this->mNpc.mPlayerEyeOffsetY = -20.0f;
     i_this->mNpc.mMaxHeadX = 0x1FFE;
     i_this->mNpc.mMaxHeadY = 10000;
     i_this->mNpc.mMaxBackboneX = 0;
@@ -126,7 +126,7 @@ static daNpc_Tc_HIO_c* daNpc_Tc_HIO_c_ct(daNpc_Tc_HIO_c* i_this) {
     i_this->mNpc.mMaxHeadTurnVel = 0x800;
     i_this->mNpc.mAttnYOffset = 65.0f;
     i_this->mNpc.mMaxAttnAngleY = 0x4000;
-    i_this->mNpc.m22 = 0;
+    i_this->mNpc.mDebugDraw = 0;
     i_this->mNpc.mMaxAttnDistXZ = 400.0f;
     i_this->mSitJumpDist = 900.0f;
     i_this->mWalkToJailDist = 400.0f;
@@ -770,7 +770,7 @@ void daNpc_Tc_c::lookBack() {
         ty = eyePos.y;
     } else if (mHasAttention) {
         cXyz eye;
-        Tc_playerEyePos(&eye, l_HIO.mNpc.m04);
+        Tc_playerEyePos(&eye, l_HIO.mNpc.mPlayerEyeOffsetY);
         temp6.copy(eye);
         dstPos = &temp6;
         ty = eyePos.y;
@@ -1294,7 +1294,7 @@ BOOL daNpc_Tc_c::_draw() {
     Tc_snapshot(a_snap_tbl[mType] /* a_snap_tbl[mType] */, this, &current.pos, current.angle.y,
                 1.0f, 1.0f, 1.0f);
     /* HD debug display (l_HIO.mNpc.m22, l_HIO.field_0x34): only function-local statics initialised on first use */
-    if (l_HIO.mNpc.m22 != 0) {
+    if (l_HIO.mNpc.mDebugDraw != 0) {
         if ((u32)l_debugGuard0 == 0) {
             l_debugGuard0 = 1;
             memcpy_g(&l_debugColour0, &l_debugSource0, 4); /* 028FEAC0 memcpy */

@@ -33,12 +33,12 @@ BOOL Act_c::create_heap() {
     J3DAnmTextureSRTKey* btk_data;
 
     mdl_data = (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_FRLT_BDL_YFRLT00_e);
-    JUT_ASSERT(0x66, mdl_data != NULL);
+    JUT_ASSERT_MSG(0x66, mdl_data != NULL, "mdl_data != 0");
     if (mdl_data != NULL)
         mpModel = mDoExt_J3DModel__create(mdl_data, 0, 0x11020203);
 
     btk_data = (J3DAnmTextureSRTKey*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_FRLT_BTK_YFRLT00_e);
-    JUT_ASSERT(0x6D, btk_data != NULL);
+    JUT_ASSERT_MSG(0x6D, btk_data != NULL, "btk_data != 0");
 
     s32 btkRet = mBtkAnm.init(mdl_data, btk_data, true, J3DFrameCtrl::EMode_LOOP, 1.0f, 0, -1, false, 0);
     bool ret = false;
@@ -151,8 +151,8 @@ static void Act_c_dt(Act_c* i_this, s32 flags) {
 /* WWHD glue (tools/verify/autoglue.py): this translation unit's data
 str 10013658 # "frLt"
 str 10013630 # "d_a_komore.cpp"
-str 10013610 "mdl_data != NULL" renamed # HD: "mdl_data != 0"
-str 10013620 "btk_data != NULL" renamed # HD: "btk_data != 0"
+str 10013610 "mdl_data != 0" # HD: "mdl_data != 0"
+str 10013620 "btk_data != 0" # HD: "btk_data != 0"
 ext 021A6A6C u32 Komore_create_heap_result(Act_c*)
 ext 021A6D84 u32 Komore_delete_result(Act_c*)
 ext 021A6DB4 u32 Komore_execute_result(Act_c*)

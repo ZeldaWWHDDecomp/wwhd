@@ -10,9 +10,9 @@
 
 struct LinkActionAnmHeap {
     /* 0x00 */ be<u16> mIdx;
-    /* 0x02 */ be<u16> field_0x2;
-    /* 0x04 */ be<s16> field_0x4;
-    /* 0x06 */ be<s16> field_0x6;
+    /* 0x02 */ be<u16> mPriIdx;  /* was field_0x2: view of daPy_anmHeap_c::mPriIdx (evidence in d_a_player_main_01.h) */
+    /* 0x04 */ be<s16> mDemoIdx;  /* was field_0x4: view of daPy_anmHeap_c::mDemoIdx (evidence in d_a_player_main_01.h) */
+    /* 0x06 */ be<s16> mDemoAnmNo;  /* was field_0x6: view of daPy_anmHeap_c::mDemoAnmNo (evidence in d_a_player_main_01.h) */
     /* 0x08 */ gptr<void> m_buffer;
     /* 0x0C */ gptr<JKRSolidHeap> mpAnimeHeap;
 };
@@ -528,26 +528,26 @@ struct LinkMotionApi {
 
 // HD: the two foot records retain the GameCube layout inside the larger player object.
 struct LinkMotionFootData {
-    /* 0x000 */ be<u8> field_0x000;
-    /* 0x001 */ be<u8> field_0x001;
-    /* 0x002 */ be<s16> field_0x002;
+    /* 0x000 */ be<u8> mGroundHit;  /* was field_0x000: view of daPy_footData_c::mGroundHit (evidence in d_a_player_main_01.h) */
+    /* 0x001 */ be<u8> mStopTimer;  /* was field_0x001: view of daPy_footData_c::mStopTimer (evidence in d_a_player_main_01.h) */
+    /* 0x002 */ be<s16> mFootAngle;  /* was field_0x002: view of daPy_footData_c::mFootAngle (evidence in d_a_player_main_01.h) */
     /* 0x004 */ be<s16> field_0x004;
-    /* 0x006 */ be<s16> field_0x006;
-    /* 0x008 */ be<s16> field_0x008;
-    /* 0x00A */ be<s16> field_0x00A;
-    /* 0x00C */ cXyz field_0x00C;
-    /* 0x018 */ cXyz field_0x018;
-    /* 0x024 */ cXyz field_0x024;
-    /* 0x030 */ be<f32> field_0x030;
-    /* 0x034 */ dBgS_GndChk field_0x034;
-    /* 0x088 */ Mtx34 field_0x088[3];
+    /* 0x006 */ be<s16> mLegBAngle;  /* was field_0x006: view of daPy_footData_c::mLegBAngle (evidence in d_a_player_main_01.h) */
+    /* 0x008 */ be<s16> mLegAAngle;  /* was field_0x008: view of daPy_footData_c::mLegAAngle (evidence in d_a_player_main_01.h) */
+    /* 0x00A */ be<s16> mLegBJointAngle;  /* was field_0x00A: view of daPy_footData_c::mLegBJointAngle (evidence in d_a_player_main_01.h) */
+    /* 0x00C */ cXyz mHeelPos;  /* was field_0x00C: view of daPy_footData_c::mHeelPos (evidence in d_a_player_main_01.h) */
+    /* 0x018 */ cXyz mToePos;  /* was field_0x018: view of daPy_footData_c::mToePos (evidence in d_a_player_main_01.h) */
+    /* 0x024 */ cXyz mFootPos;  /* was field_0x024: view of daPy_footData_c::mFootPos (evidence in d_a_player_main_01.h) */
+    /* 0x030 */ be<f32> mClotchShiftX;  /* was field_0x030: view of daPy_footData_c::mClotchShiftX (evidence in d_a_player_main_01.h) */
+    /* 0x034 */ dBgS_GndChk mGndChk;  /* was field_0x034: view of daPy_footData_c::mGndChk (evidence in d_a_player_main_01.h) */
+    /* 0x088 */ Mtx34 mLegMtx[3];  /* was field_0x088: view of daPy_footData_c::mLegMtx (evidence in d_a_player_main_01.h) */
 };
-WWHD_OFFSET(LinkMotionFootData, field_0x00C, 0xC);
-WWHD_OFFSET(LinkMotionFootData, field_0x018, 0x18);
-WWHD_OFFSET(LinkMotionFootData, field_0x024, 0x24);
-WWHD_OFFSET(LinkMotionFootData, field_0x030, 0x30);
-WWHD_OFFSET(LinkMotionFootData, field_0x034, 0x34);
-WWHD_OFFSET(LinkMotionFootData, field_0x088, 0x88);
+WWHD_OFFSET(LinkMotionFootData, mHeelPos, 0xC);
+WWHD_OFFSET(LinkMotionFootData, mToePos, 0x18);
+WWHD_OFFSET(LinkMotionFootData, mFootPos, 0x24);
+WWHD_OFFSET(LinkMotionFootData, mClotchShiftX, 0x30);
+WWHD_OFFSET(LinkMotionFootData, mGndChk, 0x34);
+WWHD_OFFSET(LinkMotionFootData, mLegMtx, 0x88);
 WWHD_SIZE(LinkMotionFootData, 0x118);
 struct LinkMotionWater {
     u8 _00[0x48];

@@ -16,7 +16,7 @@ dDoor_smoke_c* dDoor_smoke_ct(dDoor_smoke_c* smoke) {
         if (!smoke) return nullptr;
     }
     dDoor_smokeCallback_ct(&smoke->mSmokeCb, 1);
-    smoke->m35 = 0; smoke->m34 = 0;
+    smoke->mbStarted = 0; smoke->mWaveStep = 0;
     return smoke;
 }
 /* 0252B1E8 */
@@ -28,7 +28,7 @@ void dDoor_smoke_c::smokeInit(dDoor_info_c* door) {
     DoorSmokeEmitter* emtr = reinterpret_cast<DoorSmokeEmitter*>(dComIfGp_particle_set(
         ID_AK_JT_ELEMENTSMOKE00, &mPos, &mRot, nullptr, 0xAA,
         reinterpret_cast<dPa_levelEcallBack*>(&mSmokeCb), room, nullptr, nullptr, nullptr));
-    m34 = 0; m35 = 0;
+    mWaveStep = 0; mbStarted = 0;
     if (emtr) {
         f32 spread = l_smokeSpread, rate = l_smokeRate;
         emtr->mSpread = spread;
@@ -41,15 +41,15 @@ void dDoor_smoke_c::smokeInit(dDoor_info_c* door) {
 }
 /* 0252B2D8 */
 void dDoor_smoke_c::smokeProc(dDoor_info_c* door) {
-    if (!m35) { m35 = 1; return; }
-    u32 count = m34;
+    if (!mbStarted) { mbStarted = 1; return; }
+    u32 count = mWaveStep;
     f32 sign = count & 1 ? l_positiveWave : l_negativeWave;
     // HD: retain the signed integer conversion via its double bias and fused updates.
     f64 bias = l_integerBias;
     u64 bits = 0x4330000000000000ull | u32((count * 20) ^ 0x80000000u);
     f64 encoded; memcpy(&encoded, &bits, 8);
     f32 wave = f32(encoded - bias), x = mPos.x;
-    m34 = u8(count + 1);
+    mWaveStep = u8(count + 1);
     wave = gabi::fmuls_ppc(wave, sign);
     f32 sz = door->mAngleVec.z;
     x = gabi::fmadds(wave, sz, x);
@@ -79,7 +79,7 @@ dDoor_key2_c* dDoor_key2_ct(dDoor_key2_c* key) {
     key->mBckAnim.mAnm.mBinding.__vtbl = 0x1016D820;
     key->mBckAnim.mAnm.mBinding.mpResource = 0;
     dDoor_phase_init(&key->mPhs, 8);
-    key->mbIsBossDoor = 0; key->m20 = 0;
+    key->mbIsBossDoor = 0; key->mbUnlocking = 0;
     return key;
 }
 

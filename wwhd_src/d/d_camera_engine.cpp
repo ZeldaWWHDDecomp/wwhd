@@ -720,9 +720,9 @@ bool dCamera_c::hookshotCamera(s32 style) {
     mul.z = v3;
     relationalPos(&c, mpPlayerActor.get(), &ofs);
     if (mFollowMoveBg != 0) {
-        cameraEngineMoveBgPosition(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mBG.m5C.m04), 1,
+        cameraEngineMoveBgPosition(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mBG.mCameraGround.mGndChk), 1,
                                    &work->m380, 0, 0); /* MoveBgMatrixCrrPos */
-        cameraEngineMoveBgPosition(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mBG.m5C.m04), 1,
+        cameraEngineMoveBgPosition(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mBG.mCameraGround.mGndChk), 1,
                                    &work->m38C, 0, 0);
     }
     cXyz_mi(&c, &d, &mViewCache.mCenter);

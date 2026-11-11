@@ -1,5 +1,6 @@
 /* HD Title_00 scene controller. Derived from the game binary; */
 #include "d/hd_scene_title.h"
+#include "sead/ElementAt.h"
 extern void* titleAllocate(u32);
 extern hdTitleScene_c* titleAllocateInstance(u32, void*, u32);
 extern void titleDelete(void*);
@@ -165,7 +166,8 @@ void hdTitleScene_c::render(void* context) {
  u32 index = static_cast<hdTitleRenderContext_l*>(context)->mLayerIndex;
  hdPartsVtbl_c* vtable = screen->mVtable;
  gptr<hdLayerBase_c>* items = layers->mpLayers;
- if(index<count) items = items+index;
+ /* guest address arithmetic: items + index * 4 wraps at 32 bits as on the console */
+ if(index<count) items = sead::elementPtr(items, index);
  void* layer = items->get();
  gabi::call_ptr<void>(vtable->mDraw.get(), screen, &static_cast<hdLayerBase_c*>(layer)->mViewport);
 }

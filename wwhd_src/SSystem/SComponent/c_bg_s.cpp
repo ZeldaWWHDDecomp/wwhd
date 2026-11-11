@@ -1,5 +1,6 @@
 /* Background-world registration and collision-query dispatch. Verified HD behavior. */
 #include "SSystem/SComponent/c_bg_s.h"
+#include "sead/ElementAt.h"
 static s32 l_SetCounter = 0;
 static const f32 groundHeightMin = -1000000000.0f;
 static const f32 piMin = -3.1415927410125732f;
@@ -200,7 +201,7 @@ static cBgD_Reloc *ConvDzb(cBgD_Reloc *pbgd) {
 void *cBgS::GetActorPointer(u32 actor_index) {
     if (actor_index >= MAX_BG)
         assertion("c_bg_s.cpp", 0x2B4, "0 <= actor_index && actor_index < 256");
-    return m_chk_element[actor_index].m_actor_ptr.get();
+    return sead::elementPtr(m_chk_element, actor_index)->m_actor_ptr.get();
 }
 /* 02008498 */
 cBgWMesh *cBgS::GetBgWPointer(cBgS_PolyInfo *poly) {
@@ -233,7 +234,7 @@ bool cBgS::ChkPolySafe(cBgS_PolyInfo *poly) {
 s32 cBgS::GetTriGrp(u32 bg_index, s32 poly_index) {
     if (bg_index >= MAX_BG)
         assertion("c_bg_s.cpp", 0x2F5, "0 <= bg_index && bg_index < 256");
-    cBgS_ChkElm *elm = &m_chk_element[bg_index];
+    cBgS_ChkElm *elm = sead::elementPtr(m_chk_element, bg_index);
     if (!(elm->m_flags & cBgS_ChkElm::USED))
         return -1;
     cBgWMesh *world = elm->m_bgw_base_ptr.get();
@@ -244,13 +245,13 @@ s32 cBgS::GetTriGrp(u32 bg_index, s32 poly_index) {
         assertion("c_bg_w.h", 0x2A2, "0 <= poly_index && poly_index < pm_bgd->m_t_num");
         data = world->pm_bgd.get();
     }
-    return data->m_t_tbl.get()[poly_index].grp;
+    return sead::elementAt(data->m_t_tbl, u32(poly_index)).grp;
 }
 /* 0200839C */
 s32 cBgS::GetGrpToRoomId(u32 bg_index, u32 grp_id) {
     if (bg_index >= MAX_BG)
         assertion("c_bg_s.cpp", 0x306, "0 <= bg_index && bg_index < 256");
-    cBgS_ChkElm *elm = &m_chk_element[bg_index];
+    cBgS_ChkElm *elm = sead::elementPtr(m_chk_element, bg_index);
     if (!(elm->m_flags & cBgS_ChkElm::USED) || grp_id == INVALID_POLY)
         return INVALID_POLY;
     cBgWMesh *world = elm->m_bgw_base_ptr.get();
@@ -267,25 +268,27 @@ cBgW_Plane *cBgS::GetTriPla(u32 bg_index, s32 poly_index) {
     cBgWMesh *world = elm->m_bgw_base_ptr.get();
     if (poly_index < 0 || poly_index >= (s32)world->pm_bgd->m_t_num)
         assertion("c_bg_w.h", 0x2AF, "0 <= poly_index && poly_index < pm_bgd->m_t_num");
-    return &world->pm_tri.get()[poly_index].m_plane;
+    return &sead::elementAt(world->pm_tri, u32(poly_index)).m_plane;
 }
 /* 02008570 */
 void cBgS::GetTriPnt(cBgS_PolyInfo *poly, cXyz *p0, cXyz *p1, cXyz *p2) {
     u32 id = poly->mBgIndex;
     if (id >= MAX_BG)
         assertion("c_bg_s.cpp", 0x373, "0 <= id && id < 256");
-    cBgS_ChkElm *elm = &m_chk_element[id];
+    cBgS_ChkElm *elm = sead::elementPtr(m_chk_element, id);
     if (elm->m_flags & cBgS_ChkElm::USED)
         cBgW_GetTriPnt(elm->m_bgw_base_ptr.get(), poly->mPolyIndex, p0, p1, p2);
 }
 /* 02008B48 */
 void cBgS::Move() {}
+// Guest EA arithmetic: m_g_tbl + grp_id * size wraps at 32 bits as on the console (a host index on a NULL group table reached
+// host addresses past 4 GB).
 /* 020085F8 */
 s32 cBgS::GetGrpInf(cBgS_PolyInfo *poly, s32 grp_id) {
     u32 id = poly->mBgIndex;
     if (id >= MAX_BG)
         assertion("c_bg_s.cpp", 0x3FA, "0 <= bg_index && bg_index < 256");
-    cBgS_ChkElm *elm = &m_chk_element[id];
+    cBgS_ChkElm *elm = sead::elementPtr(m_chk_element, id);
     if (!(elm->m_flags & cBgS_ChkElm::USED))
         return -1;
     cBgWMesh *world = elm->m_bgw_base_ptr.get();
@@ -294,10 +297,10 @@ s32 cBgS::GetGrpInf(cBgS_PolyInfo *poly, s32 grp_id) {
         data = world->pm_bgd.get();
     if (grp_id < 0 || grp_id >= (s32)data->m_g_num) {
         // HD: the assertion text calls this index grp_id.
-        assertion("c_bg_w.h", 0x2E1, "0 <= grp_index && grp_index < pm_bgd->m_g_num");
+        assertion("c_bg_w.h", 0x2E1, "0 <= grp_id && grp_id < pm_bgd->m_g_num");
         data = world->pm_bgd.get();
     }
-    return data->m_g_tbl.get()[grp_id].m_info;
+    return sead::elementAt(data->m_g_tbl, u32(grp_id)).m_info;
 }
 
 // HD: compiler-generated array construction and header statics.
@@ -370,7 +373,7 @@ str 10000D6C "0 <= id && id < 256" in 02008570
 str 10000DD4 "c_bg_s.cpp" in 020085F8
 str 10000D8C "0 <= bg_index && bg_index < 256" in 020085F8
 str 10000DE0 "c_bg_w.h" in 020085F8
-str 10000DAC "0 <= grp_index && grp_index < pm_bgd->m_g_num" renamed in 020085F8
+str 10000DAC "0 <= grp_id && grp_id < pm_bgd->m_g_num" in 020085F8
 str 10000E00 "c_bg_s.cpp" in 020086D4
 str 10000DEC "0 <= i && i < 256" in 020086D4
 ext 0273AD10 void* operator_new(u32)

@@ -30,8 +30,8 @@ static daDr_HIO_c *daDr_HIO_c_ct(daDr_HIO_c *i_this) {
     i_this->__vtbl = 0x1000E07C;
     i_this->mNo = -1;
     i_this->mScale = 1.0f;
-    i_this->m0C = false;
-    i_this->m0E = 10 * 30;
+    i_this->mDebugBiku = false;
+    i_this->mBikuTime = 10 * 30;
     i_this->mWait1Morf = 10.0f;
     i_this->mAkubi1Morf = 10.0f;
     i_this->mBiku1Morf = 2.0f;
@@ -103,7 +103,7 @@ static inline void move(dr_class *i_this) {
         anm_init(i_this, dRes_INDEX_DR_BCK_DR_BIKU1_e, l_HIO.mBiku1Morf, J3DFrameCtrl::EMode_NONE, 1.0f,
                  dRes_INDEX_DR_BAS_BIKU1_e);
         i_this->mMode = i_this->mMode + 1;
-        i_this->mCountDownTimers[0] = l_HIO.m0E;
+        i_this->mCountDownTimers[0] = l_HIO.mBikuTime;
         i_this->mpBreathEmitter = dComIfGp_particle_set(dPa_name_ID_AK_SN_DRPAINBIKU00, &i_this->current.pos);
         i_this->mBikuDone = 0;
         // Fall-through
@@ -171,8 +171,8 @@ static inline void move(dr_class *i_this) {
     }
 
     if (!dComIfGs_isStageBossEnemy(STAGE_DRC)) {
-        if ((isIdle && (l_HIO.m0C || dComIfGp_getVibration_CheckQuake())) || i_this->mBikuRequest != 0) {
-            l_HIO.m0C = false;
+        if ((isIdle && (l_HIO.mDebugBiku || dComIfGp_getVibration_CheckQuake())) || i_this->mBikuRequest != 0) {
+            l_HIO.mDebugBiku = false;
             i_this->mBikuRequest = 0;
             i_this->mMode = 10;
         }

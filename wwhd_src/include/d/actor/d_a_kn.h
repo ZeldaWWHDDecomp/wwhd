@@ -26,11 +26,11 @@ enum Mode {
 
 struct kn_class : fopEn_enemy_c {
     /* 0x3C8 */ request_of_phase_process_class mPhase;
-    /* 0x3D0 */ be<u8> m2B4;
-    /* 0x3D1 */ be<u8> m2B5;
+    /* 0x3D0 */ be<u8> mType;  /* was m2B4: daKN_Create 021A30C0 stores param bits 0-7; nothing in WWHD reads it; tww daKN_Create / daKN_Execute (demo build only): 1 = crab spawner (oya_kn_move, no model, returns before the move code), 2 = spawned crab (starts buried at -25, tilted) */
+    /* 0x3D1 */ be<u8> mSpawnCountPrm;  /* was m2B5: daKN_Create 021A30C0 stores param bits 8-15; nothing in WWHD reads it; tww daKN_Create (demo build only): the spawner's crab count, copied to mSpawnLeft (0 / 0xFF -> 100) */
     /* 0x3D2 */ u8 m2B6[2];
     /* 0x3D4 */ gptr<mDoExt_McaMorf> mpMorf;
-    /* 0x3D8 */ be<u8> m2BC;
+    /* 0x3D8 */ be<u8> mIsSpawner;  /* was m2BC: no use in WWHD (retail); tww demo build: daKN_Create sets 1 for type 1, else 0; daKN_Execute switches on it: 0 kn_move, 1 oya_kn_move */
     /* 0x3D9 */ be<u8> mMode;  /* was m2BD: kn_move (in daKN_Execute 021A23B8): switch over Mode_10_e .. Mode_19_e (wait, walk, turn home, burrow, emerge, flee); daKN_Create 021A30C0 starts in Mode_10_e; daKN_Execute 021A23B8 checks it for the water ground */
     /* 0x3DA */ be<u8> mOnWater;  /* was m2BE: daKN_Execute 021A23B8: 1 when the ground under the walking crab (Mode_13_e / Mode_19_e) is a water polygon; kn_move (in daKN_Execute 021A23B8) then splashes (shibuki_set) and burrows; 0 when a walk or flight starts */
     /* 0x3DB */ be<u8> mSandBurrow;  /* was m2BF: kn_move (in daKN_Execute 021A23B8): 1 when the fleeing crab burrows with smoke (wall hit or too far from mHomePos), 0 when it burrows in water; picks smoke_set or shibuki_set on emerging and ends mSmokeEcallBack */
@@ -41,7 +41,7 @@ struct kn_class : fopEn_enemy_c {
     /* 0x3E8 */ be<f32> mBurrowY;  /* was m2CC: kn_move (in daKN_Execute 021A23B8): eased to -7 (-11 for scale above 1.5) while burrowing, back to 0 on emerging; daKN_Execute 021A23B8 lowers the model by it, BG_check (in daKN_Execute 021A23B8) checks the ground without it; daKN_Draw 021A1FA0 draws nothing while it is below 0 */
     /* 0x3EC */ be<s16> mTargetAngleY;  /* was m2D0: kn_move (in daKN_Execute 021A23B8): random near current.angle.y, the angle home (mHomePos) or away from the player; current.angle.y turns to it with step mTurnStep */
     /* 0x3EE */ be<s16> mTurnStep;  /* was m2D2: kn_move (in daKN_Execute 021A23B8): 0x800 for wait / walk, 0x100 for the flight; step of the turn to mTargetAngleY */
-    /* 0x3F0 */ be<s16> m2D4;
+    /* 0x3F0 */ be<s16> mSpawnLeft;  /* was m2D4: no use in WWHD (retail); tww demo build: daKN_Create sets it from mSpawnCountPrm (0 / 0xFF -> 100); oya_kn_move subtracts 1 per crab created (fopAcM_Create fpcNm_KN_e, param 2, every 10 frames) and deletes the spawner at 0 */
     /* 0x3F2 */ u8 m2D6[6];
     /* 0x3F8 */ be<f32> mAnmSpeed;  /* was m2DC: kn_move (in daKN_Execute 021A23B8): eased to mAnmSpeedTarget; the morf's play speed */
     /* 0x3FC */ be<f32> mAnmSpeedTarget;  /* was m2E0: kn_move (in daKN_Execute 021A23B8): 1, or 2 while the turn to mTargetAngleY is above 0x100 (walk modes) */

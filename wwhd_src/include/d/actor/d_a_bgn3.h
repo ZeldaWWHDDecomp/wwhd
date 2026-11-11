@@ -2,15 +2,17 @@
 // HD: model packets are 0xB0 bytes, line materials are enlarged, and each body part is 0x19D8.
 #pragma once
 #include "bindings.h"
+#include "sead/ElementAt.h"
+#include "d/actor/d_a_bgn_packet.h"
 
 struct bgn3_ke_s {
-    /* 0x00000 */ cXyz m00[5];
+    /* 0x00000 */ cXyz mPos[5];  /* was m00: ke_move 02090420: the five hair points, each the previous plus a segment toward mPull; copied into the line material's positions; setModels sets the root (tww the same) */
     /* 0x0003C */ cXyz m3C[5];
-    /* 0x00078 */ cXyz m78;
+    /* 0x00078 */ cXyz mPull;  /* was m78: setModels (in move 02091730): (0, mHairPullY, 0) in the hair's frame minus the root; ke_move 02090420 bends each segment toward it (tww the same) */
 };
-WWHD_OFFSET(bgn3_ke_s, m00, 0x0);
+WWHD_OFFSET(bgn3_ke_s, mPos, 0x0);
 WWHD_OFFSET(bgn3_ke_s, m3C, 0x3C);
-WWHD_OFFSET(bgn3_ke_s, m78, 0x78);
+WWHD_OFFSET(bgn3_ke_s, mPull, 0x78);
 WWHD_SIZE(bgn3_ke_s, 0x84);
 
 struct Bgn3LineMat0 {
@@ -35,7 +37,7 @@ WWHD_SIZE(Bgn3LineMat1, 0x188);
 
 struct part_s3 {
     /* 0x00000 */ gptr<J3DModel> mpPart3Model;
-    /* 0x00004 */ u8 mPart3Packet[0xB0];  /* was m0004: partCtor 02090D4C / partDtor 0209445C construct and destroy the mDoExt_J3DModelPacketS at +4; daBgn_Draw 0207B2CC (inlined daBgn3_Draw, view bgn_draw::part_s3) gives it the part model and updates it while l_HIO.m00C is set (as bgn part_s mPartPacket) */
+    /* 0x00004 */ mDoExt_J3DModelPacketS_l mPart3Packet;  /* was m0004: partCtor 02090D4C / partDtor 0209445C construct and destroy the mDoExt_J3DModelPacketS at +4; daBgn_Draw 0207B2CC (inlined daBgn3_Draw, view bgn_draw::part_s3) gives it the part model and updates it while l_HIO.m00C is set (as bgn part_s mPartPacket); type was u8[0xB0], now the packet type of the view bgn_draw::part_s3 and of bgn part_s mPartPacket */
     /* 0x000B4 */ dKy_tevstr_c mPart3TevStr;
     /* 0x0027C */ be<s16> mPart3FogColorAdd;  /* was m00C8: daBgn_Draw 0207B2CC (inlined daBgn3_Draw, view bgn_draw::part_s3) passes it to bgn_fog_flash while mPart3ArrowHitFlashTimer runs: eased and added to the fog colour of mPart3TevStr (same use as bgn part_s mPartFogColorAdd) */
     /* 0x0027E */ u8 _0027E[0x2];
@@ -181,75 +183,75 @@ WWHD_SIZE(bgn3_class, 0x1238C);
 
 struct daBgn3_HIO_c {
     /* 0x00000 */ be<s8> mNo;
-    /* 0x00001 */ be<u8> m05;
-    /* 0x00002 */ be<u8> m06;
+    /* 0x00001 */ be<u8> mNoMove;  /* was m05: move 02091730: the actions run only while it is 0 (tww the same); hioCtor 020914F4 sets the default, never written elsewhere in WWHD or tww (0) */
+    /* 0x00002 */ be<u8> mDebugHealth;  /* was m06: daBgn3_Execute 02090680: when not 0, health is set to it (tww the same); hioCtor 020914F4 sets the default, never written elsewhere in WWHD or tww (0) */
     /* 0x00003 */ u8 _00003[0x1];
-    /* 0x00004 */ be<f32> m08;
-    /* 0x00008 */ be<s16> m0C;
-    /* 0x0000A */ be<s16> m0E;
-    /* 0x0000C */ be<f32> m10;
-    /* 0x00010 */ be<s16> m14;
-    /* 0x00012 */ be<s16> m16;
-    /* 0x00014 */ be<f32> m18;
-    /* 0x00018 */ be<s16> m1C;
-    /* 0x0001A */ be<s16> m1E;
-    /* 0x0001C */ be<s16> m20;
-    /* 0x0001E */ be<s16> m22;
-    /* 0x00020 */ be<s16> m24;
-    /* 0x00022 */ be<s16> m26;
-    /* 0x00024 */ be<s16> m28;
-    /* 0x00026 */ be<s16> m2A;
-    /* 0x00028 */ be<s16> m2C;
-    /* 0x0002A */ be<s16> m2E;
-    /* 0x0002C */ be<s16> m30;
+    /* 0x00004 */ be<f32> mSpeedHealth3;  /* was m08: move0 (in move 02091730): the speedF target at health 3 (tww the same); hioCtor 020914F4 sets the default, never written elsewhere in WWHD or tww (50) */
+    /* 0x00008 */ be<s16> mTurnSpeedHealth3;  /* was m0C: move0 (in move 02091730): mTurnSpeed at health 3 (tww the same); hioCtor 020914F4 sets the default, never written elsewhere in WWHD or tww (800) */
+    /* 0x0000A */ be<s16> mWallHitsHealth3;  /* was m0E: move0 (in move 02091730): at health 3 the chase (mChaseTimer) starts after this many wall hits (tww the same); hioCtor 020914F4 sets the default, never written elsewhere in WWHD or tww (3) */
+    /* 0x0000C */ be<f32> mSpeedHealth2;  /* was m10: move0 (in move 02091730): the speedF target at health 2 (tww the same); hioCtor 020914F4 sets the default, never written elsewhere in WWHD or tww (60) */
+    /* 0x00010 */ be<s16> mTurnSpeedHealth2;  /* was m14: move0 (in move 02091730): mTurnSpeed at health 2 (tww the same); hioCtor 020914F4 sets the default, never written elsewhere in WWHD or tww (1000) */
+    /* 0x00012 */ be<s16> mWallHitsHealth2;  /* was m16: move0 (in move 02091730): the wall hits before the chase at health 2 (tww the same); hioCtor 020914F4 sets the default, never written elsewhere in WWHD or tww (3) */
+    /* 0x00014 */ be<f32> mSpeedHealth1;  /* was m18: move0 (in move 02091730): the speedF target at health 1 (tww the same); hioCtor 020914F4 sets the default, never written elsewhere in WWHD or tww (80) */
+    /* 0x00018 */ be<s16> mTurnSpeedHealth1;  /* was m1C: move0 (in move 02091730): mTurnSpeed at health 1 (tww the same); hioCtor 020914F4 sets the default, never written elsewhere in WWHD or tww (1200) */
+    /* 0x0001A */ be<s16> mWallHitsHealth1;  /* was m1E: move0 (in move 02091730): the wall hits before the chase at health 1 (tww the same); hioCtor 020914F4 sets the default, never written elsewhere in WWHD or tww (3) */
+    /* 0x0001C */ be<s16> mChaseTimeHealth3;  /* was m20: move0 (in move 02091730): mChaseTimer after the wall hits at health 3 (tww the same); hioCtor 020914F4 sets the default, never written elsewhere in WWHD or tww (60) */
+    /* 0x0001E */ be<s16> mChaseTimeHealth2;  /* was m22: move0 (in move 02091730): mChaseTimer after the wall hits at health 2 (tww the same); hioCtor 020914F4 sets the default, never written elsewhere in WWHD or tww (40) */
+    /* 0x00020 */ be<s16> mChaseTimeHealth1;  /* was m24: move0 (in move 02091730): mChaseTimer after the wall hits at health 1 (tww the same); hioCtor 020914F4 sets the default, never written elsewhere in WWHD or tww (30) */
+    /* 0x00022 */ be<s16> mOtherHitTime;  /* was m26: damage_check (in move 02091730): mTimers[0] after a hit that is none of the cases below (tww the same); hioCtor 020914F4 sets the default, never written elsewhere in WWHD or tww (10) */
+    /* 0x00024 */ be<s16> mArrowHitTime;  /* was m28: damage_check (in move 02091730): mTimers[0] after an arrow hit (tww the same); hioCtor 020914F4 sets the default, never written elsewhere in WWHD or tww (20) */
+    /* 0x00026 */ be<s16> mSwordHitTime;  /* was m2A: damage_check (in move 02091730): mTimers[0] after a sword hit (attack type 1) whose AtSpl is not 1 (tww the same); hioCtor 020914F4 sets the default, never written elsewhere in WWHD or tww (45) */
+    /* 0x00028 */ be<s16> mSpl1HitTime;  /* was m2C: hioCtor 020914F4 sets 120; damage_check 02090384: the shake duration of a hit with mSpl 1 (next to mSwordHitTime / mArrowHitTime / mOtherHitTime) (tww the same) */
+    /* 0x0002A */ be<s16> mBombHitTime;  /* was m2E: damage_check (in move 02091730): mTimers[0] after a bomb hit (attack type 2) (tww the same); hioCtor 020914F4 sets the default, never written elsewhere in WWHD or tww (200) */
+    /* 0x0002C */ be<s16> mHammerHitTime;  /* was m30: damage_check (in move 02091730): mTimers[0] after a Skull Hammer hit (attack type 9) (tww the same); hioCtor 020914F4 sets the default, never written elsewhere in WWHD or tww (250) */
     /* 0x0002E */ u8 _0002E[0x2];
-    /* 0x00030 */ be<f32> m34;
-    /* 0x00034 */ be<f32> m38;
-    /* 0x00038 */ be<s16> m3C;
-    /* 0x0003A */ be<u8> m3E;
+    /* 0x00030 */ be<f32> mPartDistanceTarget;  /* was m34: part_control (in move 02091730): mPartDistance eases to it (tww the same); hioCtor 020914F4 sets the default, never written elsewhere in WWHD or tww (5.0) */
+    /* 0x00034 */ be<f32> mPartStiffnessTarget;  /* was m38: part_control (in move 02091730): mPartStiffness eases to it (tww the same); hioCtor 020914F4 sets the default, never written elsewhere in WWHD or tww (0.5) */
+    /* 0x00038 */ be<s16> mWallKiCount;  /* was m3C: move0 (in move 02091730): a wall hit sets mKiSetCount to it; daBgn3_Execute 02090680 then creates one Ki (0xCD) per frame (tww the same); hioCtor 020914F4 sets the default, never written elsewhere in WWHD or tww (3) */
+    /* 0x0003A */ be<u8> mHairOn;  /* was m3E: daBgn3_Draw 0208FC64 / ke_move 02090420 / setModels (in move 02091730): the hair lines are moved and drawn only while it is set (tww the same); hioCtor 020914F4 sets the default, never written elsewhere in WWHD or tww (1) */
     /* 0x0003B */ u8 _0003B[0x1];
-    /* 0x0003C */ be<f32> m40;
-    /* 0x00040 */ be<f32> m44;
-    /* 0x00044 */ be<f32> m48;
-    /* 0x00048 */ be<f32> m4C;
-    /* 0x0004C */ be<s16> m50;
-    /* 0x0004E */ be<s16> m52;
-    /* 0x00050 */ be<s16> m54;
+    /* 0x0003C */ be<f32> mHairPullY;  /* was m40: setModels (in move 02091730): each hair's mPull is (0, it, 0) in the hair's frame (tww move the same); hioCtor 020914F4 sets the default, never written elsewhere in WWHD or tww (150) */
+    /* 0x00040 */ be<f32> mHairLength;  /* was m44: setModels (in move 02091730): ke_move's segment length is 2 * it (the parts: their scale * it) (tww the same); hioCtor 020914F4 sets the default, never written elsewhere in WWHD or tww (45) */
+    /* 0x00044 */ be<f32> mHairWidth;  /* was m48: daBgn3_Draw 0208FC64: mDoExt_3DlineMat0_c::update's width for the hair lines (tww the same); hioCtor 020914F4 sets the default, never written elsewhere in WWHD or tww (8) */
+    /* 0x00048 */ be<f32> mHairGravity;  /* was m4C: ke_move 02090420: added to each hair point's y (tww ke_control the same); hioCtor 020914F4 sets the default, never written elsewhere in WWHD or tww (-8) */
+    /* 0x0004C */ be<s16> mHairColorR;  /* was m50: written in WWHD only by hioCtor 020914F4 (188); HD daBgn3_Draw uses the constant 188; tww daBgn3_Create reads it as ke_color.r */
+    /* 0x0004E */ be<s16> mHairColorG;  /* was m52: written in WWHD only by hioCtor 020914F4 (152); HD daBgn3_Draw uses the constant 152; tww daBgn3_Create reads it as ke_color.g */
+    /* 0x00050 */ be<s16> mHairColorB;  /* was m54: written in WWHD only by hioCtor 020914F4 (66); HD daBgn3_Draw uses the constant 66; tww daBgn3_Create reads it as ke_color.b */
     /* 0x00052 */ u8 _00052[0x2];
     /* 0x00054 */ be<u32> __vtbl;
 };
 WWHD_OFFSET(daBgn3_HIO_c, mNo, 0x0);
-WWHD_OFFSET(daBgn3_HIO_c, m05, 0x1);
-WWHD_OFFSET(daBgn3_HIO_c, m06, 0x2);
-WWHD_OFFSET(daBgn3_HIO_c, m08, 0x4);
-WWHD_OFFSET(daBgn3_HIO_c, m0C, 0x8);
-WWHD_OFFSET(daBgn3_HIO_c, m0E, 0xA);
-WWHD_OFFSET(daBgn3_HIO_c, m10, 0xC);
-WWHD_OFFSET(daBgn3_HIO_c, m14, 0x10);
-WWHD_OFFSET(daBgn3_HIO_c, m16, 0x12);
-WWHD_OFFSET(daBgn3_HIO_c, m18, 0x14);
-WWHD_OFFSET(daBgn3_HIO_c, m1C, 0x18);
-WWHD_OFFSET(daBgn3_HIO_c, m1E, 0x1A);
-WWHD_OFFSET(daBgn3_HIO_c, m20, 0x1C);
-WWHD_OFFSET(daBgn3_HIO_c, m22, 0x1E);
-WWHD_OFFSET(daBgn3_HIO_c, m24, 0x20);
-WWHD_OFFSET(daBgn3_HIO_c, m26, 0x22);
-WWHD_OFFSET(daBgn3_HIO_c, m28, 0x24);
-WWHD_OFFSET(daBgn3_HIO_c, m2A, 0x26);
-WWHD_OFFSET(daBgn3_HIO_c, m2C, 0x28);
-WWHD_OFFSET(daBgn3_HIO_c, m2E, 0x2A);
-WWHD_OFFSET(daBgn3_HIO_c, m30, 0x2C);
-WWHD_OFFSET(daBgn3_HIO_c, m34, 0x30);
-WWHD_OFFSET(daBgn3_HIO_c, m38, 0x34);
-WWHD_OFFSET(daBgn3_HIO_c, m3C, 0x38);
-WWHD_OFFSET(daBgn3_HIO_c, m3E, 0x3A);
-WWHD_OFFSET(daBgn3_HIO_c, m40, 0x3C);
-WWHD_OFFSET(daBgn3_HIO_c, m44, 0x40);
-WWHD_OFFSET(daBgn3_HIO_c, m48, 0x44);
-WWHD_OFFSET(daBgn3_HIO_c, m4C, 0x48);
-WWHD_OFFSET(daBgn3_HIO_c, m50, 0x4C);
-WWHD_OFFSET(daBgn3_HIO_c, m52, 0x4E);
-WWHD_OFFSET(daBgn3_HIO_c, m54, 0x50);
+WWHD_OFFSET(daBgn3_HIO_c, mNoMove, 0x1);
+WWHD_OFFSET(daBgn3_HIO_c, mDebugHealth, 0x2);
+WWHD_OFFSET(daBgn3_HIO_c, mSpeedHealth3, 0x4);
+WWHD_OFFSET(daBgn3_HIO_c, mTurnSpeedHealth3, 0x8);
+WWHD_OFFSET(daBgn3_HIO_c, mWallHitsHealth3, 0xA);
+WWHD_OFFSET(daBgn3_HIO_c, mSpeedHealth2, 0xC);
+WWHD_OFFSET(daBgn3_HIO_c, mTurnSpeedHealth2, 0x10);
+WWHD_OFFSET(daBgn3_HIO_c, mWallHitsHealth2, 0x12);
+WWHD_OFFSET(daBgn3_HIO_c, mSpeedHealth1, 0x14);
+WWHD_OFFSET(daBgn3_HIO_c, mTurnSpeedHealth1, 0x18);
+WWHD_OFFSET(daBgn3_HIO_c, mWallHitsHealth1, 0x1A);
+WWHD_OFFSET(daBgn3_HIO_c, mChaseTimeHealth3, 0x1C);
+WWHD_OFFSET(daBgn3_HIO_c, mChaseTimeHealth2, 0x1E);
+WWHD_OFFSET(daBgn3_HIO_c, mChaseTimeHealth1, 0x20);
+WWHD_OFFSET(daBgn3_HIO_c, mOtherHitTime, 0x22);
+WWHD_OFFSET(daBgn3_HIO_c, mArrowHitTime, 0x24);
+WWHD_OFFSET(daBgn3_HIO_c, mSwordHitTime, 0x26);
+WWHD_OFFSET(daBgn3_HIO_c, mSpl1HitTime, 0x28);
+WWHD_OFFSET(daBgn3_HIO_c, mBombHitTime, 0x2A);
+WWHD_OFFSET(daBgn3_HIO_c, mHammerHitTime, 0x2C);
+WWHD_OFFSET(daBgn3_HIO_c, mPartDistanceTarget, 0x30);
+WWHD_OFFSET(daBgn3_HIO_c, mPartStiffnessTarget, 0x34);
+WWHD_OFFSET(daBgn3_HIO_c, mWallKiCount, 0x38);
+WWHD_OFFSET(daBgn3_HIO_c, mHairOn, 0x3A);
+WWHD_OFFSET(daBgn3_HIO_c, mHairPullY, 0x3C);
+WWHD_OFFSET(daBgn3_HIO_c, mHairLength, 0x40);
+WWHD_OFFSET(daBgn3_HIO_c, mHairWidth, 0x44);
+WWHD_OFFSET(daBgn3_HIO_c, mHairGravity, 0x48);
+WWHD_OFFSET(daBgn3_HIO_c, mHairColorR, 0x4C);
+WWHD_OFFSET(daBgn3_HIO_c, mHairColorG, 0x4E);
+WWHD_OFFSET(daBgn3_HIO_c, mHairColorB, 0x50);
 WWHD_OFFSET(daBgn3_HIO_c, __vtbl, 0x54);
 WWHD_SIZE(daBgn3_HIO_c, 0x58);
 
@@ -305,7 +307,8 @@ struct Bgn3LineRecord {
 };
 WWHD_SIZE(Bgn3LineRecord, 0x10);
 inline cXyz* bgn3LinePositions(Bgn3LineMat0* line, int index) {
-    return gabi::at<Bgn3LineRecord>(line->mpLines)[index].mpPositions;
+    /* guest address arithmetic: lines + index * 0x10 wraps at 32 bits as on the console */
+    return sead::elementAt<Bgn3LineRecord>(u32(line->mpLines), u32(index)).mpPositions;
 }
 enum Bgn3ResourceIndex {
     dRes_INDEX_BGN_BDL_BGN_HEAD1_e = 21,

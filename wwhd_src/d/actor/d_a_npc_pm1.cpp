@@ -426,7 +426,7 @@ void daNpc_Pm1_c::event_actionInit(int param_1) {
     be<s32> *actionNo = (be<s32> *)dComIfGp_evmng_getMyIntegerP(param_1, "ActNo");
     dComIfGp_evmng_getMyIntegerP(param_1, "Timer");
     if (actionNo != nullptr) {
-        field_0x7CA = (s8)(s32)*actionNo;
+        mEventActionNo = (s8)(s32)*actionNo;
     }
 }
 
@@ -612,7 +612,7 @@ BOOL daNpc_Pm1_c::_draw() {
     pm1_removePattern(model_data); /* mBtpAnm.remove() */
     // HD: no shadow model, no real/simple shadow
     /* debug leftovers: function-local static colours initialised on first use */
-    if (l_HIO.mPrmTbl.field_18) {
+    if (l_HIO.mPrmTbl.mDebugDraw) {
         local_static_init(&a_red_guard, &a_red, &a_red_source);
         local_static_init(&a_blue_guard, &a_blue, &a_blue_source);
     }
@@ -693,7 +693,7 @@ cPhs_State daNpc_Pm1_c::_create() {
         return resLoadResult;
     }
     if (l_HIO.mRefCount < 0) {
-        l_HIO.mNo = mDoHIO_createChild("Poor Maggie" /* (HIO name) */, &l_HIO);
+        l_HIO.mNo = mDoHIO_createChild("貧乏マギ－" /* (HIO name) */, &l_HIO);
     }
     l_HIO.mRefCount = l_HIO.mRefCount + 1;
 
@@ -826,7 +826,7 @@ str 10021084 in 022D1A9C
 str 100211B7 in 022D1A9C
 str 100211B4 in 022D19E0
 str 100211A4 in 022D1858
-str 100211A8 "Poor Maggie" renamed in 022D1858
+str 100211A8 "貧乏マギ－" in 022D1858
 str 10021124 in 022D10A4
 str 10021130 in 022D10A4
 str 1002116C in 022D10A4

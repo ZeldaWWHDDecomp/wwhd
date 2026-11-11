@@ -275,12 +275,12 @@ void hdExcManagerDestroy(HdExcManager *self, s32 flags) {
 /* 020346DC */
 void hdExcManagerDump(HdExcManager *self) {
     if (!hdExcTryLock(&self->mMutex)) {
-        exceptionPrintf("Dump lock unavailable");
+        exceptionPrintf("Can't call callbacks because failed tryLock.\n");
         return;
     }
     // HD: the successful tryLock intentionally remains held while invoking all entries.
     for (HdExcEntry *entry = self->mHead; entry; entry = entry->mNext) {
-        exceptionPrintf("Dump entry", entry);
+        exceptionPrintf("%08x IExceptionCallback::onException().\n", entry);
         gabi::call_ptr<void>(entry->mVTable[5].get(), entry);
     }
 }
@@ -294,10 +294,10 @@ void hdExcRestoreCallbacks(HdExcCallbacks *self) {
 
 /* 020347D0 */
 u32 hdExcHandler() {
-    exceptionPrintf("Exception dump begin");
+    exceptionPrintf("I am ExceptionManager::onExceptionOccured().\n");
     hdExcManagerDump(hdExcManagerInstance());
     hdExcRestoreCallbacks(reinterpret_cast<HdExcCallbacks *>(hdExcManagerInstance()));
-    exceptionPrintf("Exception dump end");
+    exceptionPrintf("return TRUE\n");
     return 1;
 }
 
@@ -327,13 +327,13 @@ void hdExcInitialize(HdExcCallbacks *self) {
 
 /* 020348F4 */
 void hdExcDumpFirst(HdExcManager *self) {
-    exceptionPrintf("Exception dump first");
+    exceptionPrintf("I am ExceptionManager::onAssertionFailed(%s,%d,%s,...).\n");
     hdExcManagerDump(self);
 }
 
 /* 02034934 */
 void hdExcDumpSecond(HdExcManager *self) {
-    exceptionPrintf("Exception dump second");
+    exceptionPrintf("I am ExceptionManager::onSeadAssertEvent.\n");
     hdExcManagerDump(self);
 }
 
@@ -358,9 +358,9 @@ void hdExcPanic(const char *file, u32 line, const char *format, u32 a6, u32 a7, 
     frame->mCopy.mIndices = indices;
     frame->mCopy.mOverflow = gabi::at<void>(entry + 8);
     frame->mCopy.mRegisterSave = &frame->mArgs.mGprs;
-    exceptionPrintf("Panic file and line", file, line);
+    exceptionPrintf("%s:%d Panic:", file, line);
     hdExcVPrintf(format, &frame->mArgs.mList);
-    exceptionPrintf("Panic newline");
+    exceptionPrintf("\n");
     HdExcManager *manager = hdExcManagerInstance();
     hdExcDumpFirstArgs(manager, file, line, format, &frame->mCopy);
     hdExcPanicFinish();
@@ -411,14 +411,14 @@ data l_upper 10004DF0
 data l_registration1 1018F2CC
 data l_registration2 1018F2D8
 data l_registration3 1018F2E4
-str 10004CD0 "Dump lock unavailable" renamed
-str 10004D00 "Dump entry" renamed
-str 10004D2C "Exception dump begin" renamed
-str 10004D5C "Exception dump end" renamed
-str 10004D6C "Exception dump first" renamed
-str 10004DA8 "Exception dump second" renamed
-str 10004DDC "Panic file and line" renamed
-str 10004DD8 "Panic newline" renamed
+str 10004CD0 "Can't call callbacks because failed tryLock.\n"
+str 10004D00 "%08x IExceptionCallback::onException().\n"
+str 10004D2C "I am ExceptionManager::onExceptionOccured().\n"
+str 10004D5C "return TRUE\n"
+str 10004D6C "I am ExceptionManager::onAssertionFailed(%s,%d,%s,...).\n"
+str 10004DA8 "I am ExceptionManager::onSeadAssertEvent.\n"
+str 10004DDC "%s:%d Panic:"
+str 10004DD8 "\n"
 ext 0273AD10 void* hdExcAllocate(u32)
 ext 0273AF40 void hdExcDelete(void*)
 ext 02752A84 void hdExcHeapConstruct(HdExcHeap*)

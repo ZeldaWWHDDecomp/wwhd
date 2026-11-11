@@ -104,7 +104,8 @@ struct daOship_c : fopAc_ac_c {
     cXyz mOrigPos;
     u8 reserved3E0[4];
     cXyz mPathP0;
-    be<s8> m2D4;
+    /* mPathPntNo (0x3F0) was m2D4: pathMove 023C7084 passes it to dLib_pathMove (OshipPathMoveHD) as the path point index the ship moves toward, which the call advances (tww dLib_pathMove(&mOrigPos, &it, mpPath, ...) the same) */
+    be<s8> mPathPntNo;
     u8 reserved3F1[3];
     gptr<dPath> mpPath;
     u8 reserved3F8[4];
@@ -146,7 +147,7 @@ WWHD_OFFSET(daOship_c, mSubMode, 0x3CC);
 WWHD_OFFSET(daOship_c, mModelType, 0x3D2);
 WWHD_OFFSET(daOship_c, mOrigPos, 0x3D4);
 WWHD_OFFSET(daOship_c, mPathP0, 0x3E4);
-WWHD_OFFSET(daOship_c, m2D4, 0x3F0);
+WWHD_OFFSET(daOship_c, mPathPntNo, 0x3F0);
 WWHD_OFFSET(daOship_c, mpPath, 0x3F4);
 WWHD_OFFSET(daOship_c, mPathP1, 0x3FC);
 WWHD_OFFSET(daOship_c, mWaveCallback1, 0x414);
@@ -192,7 +193,11 @@ WWHD_SIZE(daOship_c, 0xF1C);
 
 struct daOship_HIO_c {
     be<u32> __vtbl;
-    be<u8> m04, m05, m06, m07, m08;
+    be<u8> m04;
+    be<u8> mDebugKill;  /* was m05: daOship_c::checkTgHit 023C714C: while it is set the ship's health becomes 0 and it enters MODE_DELETE at once, before any hit check; daOship_HIO_c__ct 023C8090 0 (tww the same, bool) */
+    be<u8> mNoAttack;  /* was m06: daOship_c::modeAttack 023C760C: when the aim timer runs out, a set flag skips the shot the way a blocked lineCheck does (changeModeByRange, no bomb); daOship_HIO_c__ct 023C8090 0 (tww the same, bool) */
+    be<u8> mBombRegFlight;  /* was m07: daOship_c::_execute 023C68B8: only while it is set do the fired bombs get the debug-register flight (speedF eased to l_debugRegisters mFloat[3]/[4], speed.y set from mFloat[2] once below mFloat[1]); daOship_HIO_c__ct 023C8090 0 (tww the same with REG12_F) */
+    be<u8> mPerfectAim;  /* was m08: daOship_c::modeAttackInit 023C6DB4: a set flag forces the random aim error to 0 on both branches (Link in the special status and normal); daOship_HIO_c__ct 023C8090 0 (tww the same, bool) */
     u8 padding09[3];
     be<f32> mAttentionOffsY, mEyeOffsY, mWaveOffsZ, mTrackOffsZ;
     cXyz mBombOffset;

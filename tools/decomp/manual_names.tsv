@@ -12,3 +12,8 @@
 025200D4	!seStart__11JAIZelBasicFUlP3VecUlScffffUc	tiny static-instance accessor
 0200E6EC	cCt_Counter__Fi	g_Counter.mCounter0++ / mCounter1 reset-or-increment at 101FF558; identical logic
 028E9948	C_MTXPerspective	called from camera_draw with (fovy 0xD4, aspect 0xD8, near 0xCC, far 0xD0) of view_class
+02041F94	damage_reaction__FP14damagereaction	inlines dr_damage_anime and dr_matrix_set (the matcher named it dr_damage_anime); source marker c_damagereaction.cpp
+02043F34	dr_damage_set__FP14damagereaction	inlines dr_body_bg_check, dr_joint_bg_check and hang_ang_get (the matcher named it dr_body_bg_check); source marker c_damagereaction.cpp
+021D0A14	Mo2_move__FP9mo2_class	inlines fight (the matcher named it fight); source marker d_a_mo2_move.cpp
+02515A70	__dt__8dCcD_CylFv	called on dCcD_Cyl members (pirateship mCyl, ftree mCyl / mWaterCyl, d_cc_d.h dCcD_Cyl_dt); the matcher named it dBgS_Acch::~dBgS_Acch, which is 024EFD9C
+024EFD9C	__dt__9dBgS_AcchFv	dBgS_Acch destructor (source marker d_bg_s_acch.cpp; pirateship mAcch, kantera/bs1/am2 acch destructors); anchors the dBgS_Acch name once 02515A70 is dCcD_Cyl::~dCcD_Cyl

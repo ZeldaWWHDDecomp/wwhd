@@ -14,13 +14,13 @@ s16 BombStatic::daBomb_c::getBombRestTime() {
 /* 020CB678 */
 u8 BombStatic::daBomb_c::getBombCheck_Flag() {
     _prm_chk_version();
-    return field_0x6F1;
+    return mBombCheckFlag;
 }
 
 /* 020CB6A8 */
 void BombStatic::daBomb_c::setBombCheck_Flag() {
     _prm_chk_version();
-    field_0x6F1 = 1;
+    mBombCheckFlag = 1;
 }
 
 /* 020CB6DC */
@@ -38,7 +38,7 @@ void BombStatic::daBomb_c::setBombNoHit() {
     u32 co = mSph.mObjCo.mSPrm;
     mSph.mObjAt.mSPrm = at & ~1u;
     mSph.mObjTg.mSPrm = tg & ~1u;
-    field_0x6F3 = 1;
+    mNoHit = 1;
     mSph.mObjCo.mSPrm = co & ~1u;
 }
 
@@ -114,7 +114,7 @@ u32 BombStatic::daBomb_c::prm_get_state() {
 
 /* 020CB98C */
 bool BombStatic::daBomb_c::get_explode_instant() {
-    return field_0x784 == 1;
+    return mExplodeFrame == 1;
 }
 
 /* 020CB9A0 */

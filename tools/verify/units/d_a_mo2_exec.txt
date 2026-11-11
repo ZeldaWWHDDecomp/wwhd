@@ -30,7 +30,7 @@ field 021C9B1C r3+0x2E4F u8 0,0,0,1                 # mSendToPrison
 field 021C9B1C r3+0x2E50 i16 0,0,1,0x1F,2           # mCatchTimer
 field 021C9B1C r3+0x2E4C i16 0,1,2                  # mCatchDemoDelay
 field 021C9B1C r3+0x2E4E u8 0,1                     # mCatchEventPending
-field 021C9B1C 104654E2 u8 0,0,1                    # l_mo2HIO.m006
+field 021C9B1C 104654E2 u8 0,0,1                    # l_mo2HIO.mFrameStep
 field 021C9B1C r3+0x3DD u8 0,0,0,2                  # mAppearWait
 field 021C9B1C r3+0x858 i16 0,0,0,1                 # mNoHitTimer
 field 021C9B1C r3+0x3D8 u8 0,1,1,5                  # mMode
@@ -40,7 +40,7 @@ field 021C9B1C r3+0x2E22 i16 0x95 0x97              # mDemoCamTimer
 field 021C9B1C r3+0x2E20 i8 0 1                     # mDefeated
 field 021C9B1C r3+0xF8 u16 0,2
 field 021C9B1C r3+0x898 i16 0,1,2,10,30             # mSmokeTimer
-field 021C9B1C 10465500 i16 1 3                     # l_mo2HIO.m024
+field 021C9B1C 10465500 i16 1 3                     # l_mo2HIO.mSmokeTimerBase
 field 021C9B1C r3+0x89A u8 0,1,2,3,4,5              # mSmokeType
 field 021C9B1C r3+0x1002 u8 0 1                     # m712
 field 021C9B1C r3+0x8C2 i16 0,4,8,10,11,0x12,0x17,0x1E,0x1F,0x28   # mAction

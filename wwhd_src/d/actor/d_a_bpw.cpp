@@ -4687,7 +4687,7 @@ s32 daBPW_Create(bpw_class *i_this) {
         at<bpw_class>(a)->mEyeHeight = 300.f;
         at<bpw_class>(a)->mCoSphOffsetY = 0.f;
         for (u32 i = 0; i < 4; i++)
-            at<bpw_class>(a)->mSmokeCb[i].m11 = 0; // mSmokeCb[i].setRateOff(0)
+            at<bpw_class>(a)->mSmokeCb[i].mRateOff = 0; // mSmokeCb[i].setRateOff(0)
         at<bpw_class>(a)->mAttWaitTimer = 1;
         at<bpw_class>(a)->mModelOffset.y = 340.f;
         at<bpw_class>(a)->mBodyAtSphR = add(f32(BpwHio(8).mFloat[16]), 220.f);

@@ -1,5 +1,5 @@
 /* Glowing Tower of the Gods light bridge. HD enlarges actor and animation prefixes.
- * Offsets are HD; retail member names, including unk31C, are retained. */
+ * Offsets are HD; retail member names, including mDemoState, are retained. */
 #pragma once
 #include "gc_api/gc_api.h"
 #include "gc_api/JSystem/JPAEmitter.h"
@@ -52,7 +52,7 @@ struct daLbridge_c : fopAc_ac_c {
     /* 0x550 */ be<s32> mSwitchNo;
     /* 0x554 */ be<s16> mAppearEventIdx;
     /* 0x556 */ be<s16> mDisappearEventIdx;
-    /* 0x558 */ be<s16> unk31C;
+    /* 0x558 */ be<s16> mDemoState;  /* was unk31C: holds DemoState: appear_bridge 021B2880 APPEAR_DEMO, disappear_bridge 021B2A38 DISAPPEAR_DEMO; demo 021B2C8C orders that event and back to NO_DEMO when it starts (tww the same) */
     /* 0x55A */ be<u8> mTimer;
     /* 0x55B */ be<u8> mIsSw;
 };
@@ -74,7 +74,7 @@ WWHD_OFFSET(daLbridge_c, mpBgW, 0x3B8);
 WWHD_OFFSET(daLbridge_c, mSwitchNo, 0x550);
 WWHD_OFFSET(daLbridge_c, mAppearEventIdx, 0x554);
 WWHD_OFFSET(daLbridge_c, mDisappearEventIdx, 0x556);
-WWHD_OFFSET(daLbridge_c, unk31C, 0x558);
+WWHD_OFFSET(daLbridge_c, mDemoState, 0x558);
 WWHD_OFFSET(daLbridge_c, mTimer, 0x55A);
 enum {
     dRes_INDEX_GBRG00_BDL_GBRG00_e = 7,

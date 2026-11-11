@@ -183,10 +183,10 @@ cPhs_State daNpcAh_c::createInit() {
     NpcDatStruct* dat = &l_npc_dat;
     m_jnt.setParam(dat->mMax_backbone_x, dat->mMax_backbone_y, dat->mMin_backbone_x, dat->mMin_backbone_y, dat->mMax_head_x,
                    dat->mMax_head_y, dat->mMin_head_x, dat->mMin_head_y, dat->mMax_turn_step);
-    field_0x74F = (u8)dat->field_0x52;
-    field_0x750 = (u8)dat->field_0x53;
-    wcopy(&mAttnDistXZ, &dat->field_0x28);
-    mAttnAngle = dat->field_0x30;
+    mBodyTurn = (u8)dat->mBodyTurn;
+    mLookAtPlayer = (u8)dat->mLookAtPlayer;
+    wcopy(&mAttnDistXZ, &dat->mMaxAttnDistXZ);
+    mAttnAngle = dat->mMaxAttnAngleY;
     mObjAcch.CrrPos(dComIfG_Bgsp());
     // HD: matrix and collision setup follow the post-demo GameCube version.
     setMtx();
@@ -196,7 +196,7 @@ cPhs_State daNpcAh_c::createInit() {
     mCyl.SetStts(&mStts);
     gabi::Local<cXyz> center;
     wcopy3(center, &current.pos);
-    setCollision(&mCyl, center, dat->field_0x38, 150.0f);
+    setCollision(&mCyl, center, dat->mCylRadius, 150.0f);
     return cPhs_COMPLEATE_e;
 }
 
@@ -253,18 +253,18 @@ BOOL daNpcAh_c::_execute() {
     NpcDatStruct* dat = &l_npc_dat;
     gabi::Local<cXyz> center;
     wcopy3(center, &current.pos);
-    setCollision(&mCyl, center, dat->field_0x38, 150.0f);
+    setCollision(&mCyl, center, dat->mCylRadius, 150.0f);
 
     gabi::Local<cXyz> attnInfoPos;
-    wcopy(&attnInfoPos->z, &dat->field_0x20);
-    wcopy(&attnInfoPos->x, &dat->field_0x18);
-    wcopy(&attnInfoPos->y, &dat->field_0x1C);
+    wcopy(&attnInfoPos->z, &dat->mAttnOffsetZ);
+    wcopy(&attnInfoPos->x, &dat->mAttnOffsetX);
+    wcopy(&attnInfoPos->y, &dat->mAttnOffsetY);
     cMtx_YrotS(mDoMtx_stack_c::get(), current.angle.y);
     PSMTXMultVec(mDoMtx_stack_c::get(), attnInfoPos, attnInfoPos);
     PSVECAdd(attnInfoPos, &current.pos, attnInfoPos); /* attnInfoPos += current.pos */
     cXyz* attnPos = &attention_info.position; /* attention_info.position */
     wcopy3(attnPos, attnInfoPos);
-    f32 eyeOffs = dat->field_0x24;
+    f32 eyeOffs = dat->mEyeYOffset;
     f32 y = current.pos.y;
     wcopy(&eyePos.z, &current.pos.z);
     wcopy(&eyePos.x, &current.pos.x);
@@ -422,13 +422,13 @@ void daNpcAh_c::eventMesSetInit(int staffIdx) {
 BOOL daNpcAh_c::eventMesSet() {
     u16 talkVal = talk2(0);
     if (talkVal == fopMsgStts_BOX_CLOSED_e) {
-        u8 f = field_0x748;
+        u8 f = mItemFlags;
         if ((f & 1) != 0) {
-            field_0x748 = f & ~1;
+            mItemFlags = f & ~1;
             mItemNo = 7;
             mOrderState = 3;
         } else if ((f & 2) != 0) {
-            field_0x748 = f & ~2;
+            mItemFlags = f & ~2;
             mItemNo = 5;
             mOrderState = 3;
         }
@@ -560,7 +560,7 @@ void daNpcAh_c::chkAttention() {
     if (mEventCut.mbAttention != 0) { /* mEventCut.getAttnFlag() */
         wcopy3(&mEyePos, &mEventCut.mPos);
         mLookMode = 1;
-        if (field_0x74F != 0) {
+        if (mBodyTurn != 0) {
             mHeadOnlyFollow = 0;
             m_jnt.mbTrn = 1;
         } else {
@@ -591,11 +591,11 @@ void daNpcAh_c::chkAttention() {
         s32 absAng = ang < 0 ? -ang : ang;
         if (temp720 > dist && temp730 > absAng) {
             gabi::Local<cXyz> eye;
-            dNpc_playerEyePos(eye, dat->field_0x14);
+            dNpc_playerEyePos(eye, dat->mPlayerEyeOffsetY);
             wcopy3(&mEyePos, eye);
-            mHeadOnlyFollow = field_0x74F == 0;
+            mHeadOnlyFollow = mBodyTurn == 0;
             mLookMode = 1;
-            if (field_0x750 == 0) {
+            if (mLookAtPlayer == 0) {
                 mTargetYRot = mHomeAngleY;
                 mHeadOnlyFollow = 0;
                 mLookMode = 2;
@@ -607,15 +607,15 @@ void daNpcAh_c::chkAttention() {
         } else {
             if (attn == 1) {
                 mInAttention = 0;
-                mTurnBackTimer = dat->field_0x50;
+                mTurnBackTimer = dat->mTurnBackTime;
             }
-            if (dat->field_0x2C > dist) {
+            if (dat->mLookDistXZ > dist) {
                 gabi::Local<cXyz> eye;
-                dNpc_playerEyePos(eye, dat->field_0x14);
+                dNpc_playerEyePos(eye, dat->mPlayerEyeOffsetY);
                 wcopy3(&mEyePos, eye);
-                mHeadOnlyFollow = field_0x74F == 0;
+                mHeadOnlyFollow = mBodyTurn == 0;
                 mLookMode = 1;
-                if (field_0x750 == 0) {
+                if (mLookAtPlayer == 0) {
                     mTargetYRot = mHomeAngleY;
                     mHeadOnlyFollow = 0;
                     mLookMode = 2;
@@ -638,7 +638,7 @@ void daNpcAh_c::chkAttention() {
             }
         }
     }
-    mTargetAngle = dat->field_0x32;
+    mTargetAngle = dat->mMaxHeadTurnVel;
 }
 
 /* 021E6680 */
@@ -662,7 +662,7 @@ void daNpcAh_c::lookBack() {
         break;
     }
     bool turn;
-    if (mTalking != 0 && field_0x74F != 0) {
+    if (mTalking != 0 && mBodyTurn != 0) {
         headOnlyFollow = 0;
         m_jnt.mbTrn = 1;
         turn = true;
@@ -722,7 +722,7 @@ void daNpcAh_c::playTexPatternAnm() {
 /* 021E65B0 */
 void daNpcAh_c::playAnm() {
     mDoExt_McaMorf* morf = mpMorf;
-    field_0x74A = field_0x74A & ~1;
+    mAnmFlags = mAnmFlags & ~1;
     if (morf->play(nullptr, 0, 0)) {
         if (mpAnmDat != nullptr) {
             s8 n = mAnmTimer;
@@ -733,7 +733,7 @@ void daNpcAh_c::playAnm() {
                     sAhAnmDat* next = mpAnmDat.get() + 1;
                     mpAnmDat = next;
                     if (setAnmTbl(next)) {
-                        field_0x74A = field_0x74A | 1;
+                        mAnmFlags = mAnmFlags | 1;
                     }
                 } else {
                     setAnm(mpAnmDat->mBckIdx, J3DFrameCtrl::EMode_NONE, 0.0f);
@@ -762,7 +762,7 @@ BOOL daNpcAh_c::setAnmTbl(sAhAnmDat* i_anmDat) {
         return TRUE;
     }
     mpAnmDat = i_anmDat;
-    s8 n = i_anmDat->field_0x02;
+    s8 n = i_anmDat->mLoopCount;
     mAnmTimer = n;
     u8 bck = i_anmDat->mBckIdx;
     if (n > 0) {

@@ -18,9 +18,9 @@ public:
     /* 0x3B8 */ gptr<dBgW> mpBgW;
     /* 0x3BC */ be<u8> mAction;
     /* 0x3BD */ u8 _3BD;
-    /* 0x3BE */ be<s16> unk_2A2;
+    /* 0x3BE */ be<s16> mOpenAngle;  /* was unk_2A2: calcMtx 02057F50 turns the jail door by home.angle.y - it; daAtdoor_actionOpen 0205828C raises it by 0x400 per frame up to 0x4000 (open), daAtdoor_actionClose 020581D0 lowers it to 0; CreateInit 0205842C sets 0x4000 when the switch is already on (tww the same) */
 };
 WWHD_OFFSET(daAtdoor_c, mpModel, 0x3B4);
-WWHD_OFFSET(daAtdoor_c, unk_2A2, 0x3BE);
+WWHD_OFFSET(daAtdoor_c, mOpenAngle, 0x3BE);
 WWHD_SIZE(daAtdoor_c, 0x3C0);
 

@@ -38,7 +38,7 @@ static BOOL CheckCreateHeap(fopAc_ac_c* actor) { return static_cast<daDai_c*>(ac
 /* 02115E7C */
 s16 daDai_c::XyCheckCB(s32 button) {
     u8 item = dComIfGp_getSelectItem(button);
-    if (dai_isDaizaItem(item) && !dai_saved(mSaveID)) { m84A = item; return 1; }
+    if (dai_isDaizaItem(item) && !dai_saved(mSaveID)) { mSelectItem = item; return 1; }
     return 0;
 }
 /* 02115F1C */
@@ -87,12 +87,12 @@ void daDai_c::CreateInit() {
     mEvtDaiItemIdx = dComIfGp_evmng_getEventIdx("DAI_ITEM");
     mEvtDefaultTalkIdx = dComIfGp_evmng_getEventIdx("DEFAULT_TALK");
     u32 parameters = fopAcM_GetParam(this);
-    m850 = fpcM_ERROR_PROCESS_ID_e;
+    mStandItemId = fpcM_ERROR_PROCESS_ID_e;
     mSaveID = u8(parameters);
     if (dai_saved(u8(parameters))) {
         u32 item = dai_saved(mSaveID);
         fopAc_ac_c* created = dai_fastCreate(fpcNm_STANDITEM_e, item, &current.pos, fopAcM_GetRoomNo(this), &current.angle, nullptr, -1, nullptr, 0);
-        m850 = fopAcM_GetID(created);
+        mStandItemId = fopAcM_GetID(created);
         mNowItemNum = u8(mNowItemNum + 1);
     }
     mNowDaizaNum = u8(mNowDaizaNum + 1);
@@ -132,20 +132,20 @@ static BOOL daDai_Draw(daDai_c* actor) { return actor->_draw(); }
 void daDai_c::checkOrder() {
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
     if (!eventInfo.checkCommandTalk()) return;
-    if (!dComIfGp_event_chkTalkXY()) { m84C = 1; return; }
-    if (!dai_isDaizaItem(u8(m84A)) || dai_saved(mSaveID)) m84C = 1;
+    if (!dComIfGp_event_chkTalkXY()) { mTalkPending = 1; return; }
+    if (!dai_isDaizaItem(u8(mSelectItem)) || dai_saved(mSaveID)) mTalkPending = 1;
     s16 event = mEvtDaiItemIdx;
     if (dComIfGp_evmng_startCheck(event)) {
         u32 id = dai_grabActorID(player);
         if (id != fpcM_ERROR_PROCESS_ID_e) {
-            m850 = dai_grabActorID(player);
-            fopAc_ac_c* item = dai_findActor(m850);
-            if (item) m84B = static_cast<daStandItem_c*>(item)->mItemNo;
+            mStandItemId = dai_grabActorID(player);
+            fopAc_ac_c* item = dai_findActor(mStandItemId);
+            if (item) mPlacedItemNo = static_cast<daStandItem_c*>(item)->mItemNo;
         }
     }
     event = mEvtDaiItemIdx;
     if (dComIfGp_evmng_endCheck(event)) {
-        fopAc_ac_c* item = dai_findActor(m850);
+        fopAc_ac_c* item = dai_findActor(mStandItemId);
         if (item) {
             // HD: preserve the original interleaved word copy, including float NaN payloads.
             dai_positionWords_c* dst = reinterpret_cast<dai_positionWords_c*>(&item->current.pos);
@@ -153,7 +153,7 @@ void daDai_c::checkOrder() {
             for (u32 i = 0; i < 3; ++i) dst->mWords[i] = u32(src->mWords[i]);
         }
         u16 label = m_savelabel[u8(mSaveID)];
-        u8 placed = m84B;
+        u8 placed = mPlacedItemNo;
         dComIfGs_setEventReg(label, placed);
         dComIfGs_setReserveItemEmpty();
         mNowItemNum = u8(mNowItemNum + 1);
@@ -173,19 +173,19 @@ void daDai_c::proc() {
     // HD: keep the double result for the 100.0 comparison; GC absXZ rounds to f32.
     f64 distance = dai_sqrt(f64(square));
     f32 dy = player->current.pos.y - current.pos.y;
-    m844 = 0;
+    mCanTalk = 0;
     if (distance < 100.0 && __builtin_fabsf(dy) < 10.0f) {
         s16 angle = cLib_targetAngleY(&player->current.pos, &current.pos);
-        if (cLib_distanceAngleS(angle, player->shape_angle.y) < 12000) m844 = 1;
+        if (cLib_distanceAngleS(angle, player->shape_angle.y) < 12000) mCanTalk = 1;
     }
-    if (m84C && talk(1) == fopMsgStts_BOX_CLOSED_e) {
+    if (mTalkPending && talk(1) == fopMsgStts_BOX_CLOSED_e) {
         dComIfGp_event_reset();
-        m84C = 0;
+        mTalkPending = 0;
     }
 }
 /* 02116750 */
 void daDai_c::eventOrder() {
-    if (m844 == 1) eventInfo.onCondition(dEvtCnd_CANTALK_e | dEvtCnd_CANTALKITEM_e);
+    if (mCanTalk == 1) eventInfo.onCondition(dEvtCnd_CANTALK_e | dEvtCnd_CANTALKITEM_e);
 }
 /* 0211676C */
 BOOL daDai_c::_execute() {
@@ -212,14 +212,14 @@ u16 daDai_c::next_msgStatus(be<u32>* message) {
         s32 reverb = dComIfGp_getReverb(fopAcM_GetRoomNo(this));
         mDoAud_seStart(0x2871, &eyePos, 0, reverb);
         *message = MSG_REMOVED;
-        fopAc_ac_c* item = dai_findActor(m850);
+        fopAc_ac_c* item = dai_findActor(mStandItemId);
         if (item) fopAcM_delete(item);
         u8 oldItem = u8(dai_saved(mSaveID));
         u16 label = m_savelabel[u8(mSaveID)];
         dComIfGs_setEventReg(label, 0);
         dai_setReserve(dai_bag(), oldItem);
         mNowItemNum = u8(mNowItemNum - 1);
-        m84A = 0;
+        mSelectItem = 0;
     } else *message = MSG_CANNOT_REMOVE;
     return fopMsgStts_MSG_CONTINUES_e;
 }

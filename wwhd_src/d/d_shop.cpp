@@ -77,13 +77,13 @@ u32 ShopCam_action_c::shop_cam_action_init() {
     mCurrActionFunc.mThisDelta = 0;
     mCurrActionFunc.mFunction = 0x025BBF4C;
     u32 data = load<u32>(slot);
-    m18.set(at<ShopItems_c__shop_cam_data>(data)->m00);
+    mCenter.set(at<ShopItems_c__shop_cam_data>(data)->mCenter);
     data = load<u32>(slot);
-    m24.set(at<ShopItems_c__shop_cam_data>(data)->m0C);
+    mEye.set(at<ShopItems_c__shop_cam_data>(data)->mEye);
     data = load<u32>(slot);
-    f32 fovy = static_cast<f32>(at<ShopItems_c__shop_cam_data>(data)->m18);
-    m54 = 0xFFFF;
-    m30 = fovy;
+    f32 fovy = static_cast<f32>(at<ShopItems_c__shop_cam_data>(data)->mFovy);
+    mSelectIdx = 0xFFFF;
+    mFovy = fovy;
     return 1;
 }
 
@@ -92,21 +92,21 @@ u32 ShopCam_action_c::shop_cam_action() {
     u32 p = ea(this), camera = activeCamera() + 0x248;
     shop_camera::Stay(at<void>(camera));
     shop_camera::SetTrimSize(at<void>(camera), 1);
-    s16 index = static_cast<s16>(mCamDataIdx), selected = static_cast<s16>(m54);
+    s16 index = static_cast<s16>(mCamDataIdx), selected = static_cast<s16>(mSelectIdx);
     u32 data = shopTableValue(shop_cam_data_tbl, static_cast<u32>(static_cast<s32>(index)));
     if (selected >= 0)
         data += 0x1C;
     Local<cXyz> desiredCenter, desiredEye, center, eye;
-    desiredCenter->set(at<ShopItems_c__shop_cam_data>(data)->m00);
-    desiredEye->set(at<ShopItems_c__shop_cam_data>(data)->m0C);
+    desiredCenter->set(at<ShopItems_c__shop_cam_data>(data)->mCenter);
+    desiredEye->set(at<ShopItems_c__shop_cam_data>(data)->mEye);
     f32 fraction = cameraFraction, limit = cameraMaxStep,
-        fovy = static_cast<f32>(at<ShopItems_c__shop_cam_data>(data)->m18);
-    cLib_addCalcPos2(&m18, *desiredCenter.get(), fraction, limit);
-    cLib_addCalcPos2(&m24, *desiredEye.get(), fraction, limit);
-    cLib_addCalc2(&m30, fovy, fraction, cursorDelayRange);
-    copyVector(ea(center.get()), ea(&m18));
-    copyVector(ea(eye.get()), ea(&m24));
-    shop_camera::Set(at<void>(camera), center.get(), eye.get(), 0, static_cast<f32>(m30));
+        fovy = static_cast<f32>(at<ShopItems_c__shop_cam_data>(data)->mFovy);
+    cLib_addCalcPos2(&mCenter, *desiredCenter.get(), fraction, limit);
+    cLib_addCalcPos2(&mEye, *desiredEye.get(), fraction, limit);
+    cLib_addCalc2(&mFovy, fovy, fraction, cursorDelayRange);
+    copyVector(ea(center.get()), ea(&mCenter));
+    copyVector(ea(eye.get()), ea(&mEye));
+    shop_camera::Set(at<void>(camera), center.get(), eye.get(), 0, static_cast<f32>(mFovy));
     return 1;
 }
 
@@ -131,10 +131,10 @@ u32 ShopCam_action_c::rsh_talk_cam_action_init(void* actor, void* desiredCenter,
     Local<cXyz> center, eye;
     mDoMtx_stack_c::multVec(static_cast<cXyz*>(desiredCenter), center.get());
     mDoMtx_stack_c::multVec(static_cast<cXyz*>(desiredEye), eye.get());
-    copyVector(ea(&m18), ea(center.get()));
-    copyVector(ea(&m24), ea(eye.get()));
-    m30 = fovy;
-    m54 = 0xFFFF;
+    copyVector(ea(&mCenter), ea(center.get()));
+    copyVector(ea(&mEye), ea(eye.get()));
+    mFovy = fovy;
+    mSelectIdx = 0xFFFF;
     return 1;
 }
 
@@ -144,9 +144,9 @@ u32 ShopCam_action_c::rsh_talk_cam_action() {
     shop_camera::Stay(at<void>(camera));
     shop_camera::SetTrimSize(at<void>(camera), 1);
     Local<cXyz> center, eye;
-    copyVector(ea(center.get()), ea(&m18));
-    copyVector(ea(eye.get()), ea(&m24));
-    shop_camera::Set(at<void>(camera), center.get(), eye.get(), 0, static_cast<f32>(m30));
+    copyVector(ea(center.get()), ea(&mCenter));
+    copyVector(ea(eye.get()), ea(&mEye));
+    shop_camera::Set(at<void>(camera), center.get(), eye.get(), 0, static_cast<f32>(mFovy));
     return 1;
 }
 
@@ -158,15 +158,15 @@ u32 ShopCam_action_c::ds_normal_cam_action_init() {
     f32 x = normalCameraX, y = normalCameraY, z = normalCenterZ, ez = normalEyeZ, fovy = cameraFovy;
     mCurrActionFunc.mThisDelta = 0;
     mCurrActionFunc.mFunction = 0x025BC4DC;
-    m18.y = y;
-    m18.z = z;
-    m18.x = x;
-    m24.z = ez;
-    m54 = 0xFFFF;
+    mCenter.y = y;
+    mCenter.z = z;
+    mCenter.x = x;
+    mEye.z = ez;
+    mSelectIdx = 0xFFFF;
     mCurrActionFunc.mVtableIndex = 0xFFFF;
-    m30 = fovy;
-    m24.x = x;
-    m24.y = y;
+    mFovy = fovy;
+    mEye.x = x;
+    mEye.y = y;
     return 1;
 }
 
@@ -176,13 +176,13 @@ u32 ShopCam_action_c::ds_normal_cam_action() {
     shop_camera::Stay(at<void>(camera));
     shop_camera::SetTrimSize(at<void>(camera), 1);
     f32 x = normalCameraX, y = normalCameraY, z = normalCenterZ, ez = normalEyeZ, fovy = cameraFovy;
-    m24.y = y;
-    m18.y = y;
-    m30 = fovy;
-    m18.z = z;
-    m18.x = x;
-    m24.x = x;
-    m24.z = ez;
+    mEye.y = y;
+    mCenter.y = y;
+    mFovy = fovy;
+    mCenter.z = z;
+    mCenter.x = x;
+    mEye.x = x;
+    mEye.z = ez;
     Local<cXyz> center, eye;
     center->x = x;
     center->y = y;
@@ -294,10 +294,10 @@ u32 ShopItems_c::Item_Select(s32 index) {
     u32 pos = ea(at<daShopItem_c>(item)->getPosP());
     Local<cXyz> home, target, center, difference;
     copyVector(ea(home.get()), ea(&at<fopAc_ac_c>(item)->home.pos));
-    copyVector(ea(target.get()), ea(&m30));
+    copyVector(ea(target.get()), ea(&mZoomPos));
     shopItem_getCenter(at<daShopItem_c>(item), center.get());
     shop_PSVECSubtract(target.get(), center.get(), target.get());
-    bool zoom = static_cast<s16>(m3C) == 1;
+    bool zoom = static_cast<s16>(mbZoomUp) == 1;
     cXyz_mi(target.get(), difference.get(), home.get());
     f64 length = shop_squareMagnitude(difference.get());
     f64 distance = shop_sqrt(length);
@@ -324,8 +324,8 @@ u32 ShopItems_c::Item_Wait(s32 index) {
 
 /* 025BCC7C */
 u32 ShopItems_c::Item_ZoomUp(void* pos) {
-    m3C = 1;
-    copyVector(ea(&m30), ea(pos));
+    mbZoomUp = 1;
+    copyVector(ea(&mZoomPos), ea(pos));
     return 1;
 }
 
@@ -345,7 +345,7 @@ u32 ShopItems_c::Item_Move() {
                 at<daItemBase_c>(item)->hide();
         }
     }
-    m3C = 0;
+    mbZoomUp = 0;
     return 1;
 }
 
@@ -537,7 +537,7 @@ u32 dShop_now_triggercheck(void* stick, void* shop, void* message, u32 callback,
             return 0;
         u32 entry = load<u32>(list + (u32)next * 4);
         text = static_cast<u8>(at<ShopItems_c>(p)->itemSoldOutFlag(next)) == 1
-                   ? static_cast<u32>(at<__shop_items_set_data>(entry)->m0C)
+                   ? static_cast<u32>(at<__shop_items_set_data>(entry)->mSoldOutMsgNo)
                    : static_cast<u32>(at<__shop_items_set_data>(entry)->mShowMsgNo);
         *static_cast<be<u32>*>(message) = text;
     }
@@ -641,15 +641,15 @@ void* ShopCursor_c_ct(void* self, void* modelData, void* animation, f32 scale) {
     if (!shop_brkInitHD(&at<ShopCursor_c>(p)->mBrkAnm, modelData, animation, 1, 2, 0, -1, 0, 0,
                         one))
         at<ShopCursor_c>(p)->mpBrkData = 0;
-    at<ShopCursor_c>(p)->m48 = scale;
-    at<ShopCursor_c>(p)->m54 = 0;
+    at<ShopCursor_c>(p)->mPieceScale = scale;
+    at<ShopCursor_c>(p)->mbShow = 0;
     f32 upper = cursorUpper, lower = cursorLower;
-    at<ShopCursor_c>(p)->m38 = upper;
-    at<ShopCursor_c>(p)->m3C = lower;
-    at<ShopCursor_c>(p)->m40 = upper;
-    at<ShopCursor_c>(p)->m4C = one;
-    at<ShopCursor_c>(p)->m44 = 15;
-    at<ShopCursor_c>(p)->m50 = one;
+    at<ShopCursor_c>(p)->mPieceDistFar = upper;
+    at<ShopCursor_c>(p)->mPieceDistNear = lower;
+    at<ShopCursor_c>(p)->mPieceDist = upper;
+    at<ShopCursor_c>(p)->mPieceScaleYFar = one;
+    at<ShopCursor_c>(p)->mDistSwitchTimer = 15;
+    at<ShopCursor_c>(p)->mPieceScaleYNear = one;
     return at<void>(p);
 }
 
@@ -657,16 +657,16 @@ void* ShopCursor_c_ct(void* self, void* modelData, void* animation, f32 scale) {
 void ShopCursor_c::anm_play() {
     u32 p = ea(this);
     mBrkAnm.play();
-    s16 countdown = static_cast<s16>(m44);
-    m44 = (u16)(countdown - 1);
+    s16 countdown = static_cast<s16>(mDistSwitchTimer);
+    mDistSwitchTimer = (u16)(countdown - 1);
     if (countdown > 0)
         return;
     s32 delay = ftoi(cM_rndF(cursorDelayRange));
-    f32 upper = static_cast<f32>(m38), lower = static_cast<f32>(m3C),
-        current = static_cast<f32>(m40);
+    f32 upper = static_cast<f32>(mPieceDistFar), lower = static_cast<f32>(mPieceDistNear),
+        current = static_cast<f32>(mPieceDist);
     f32 compare = fmsubs(fadds_ppc(upper, lower), shopHalf, current);
-    m44 = (u32)delay + 15;
-    m40 = compare >= 0 ? upper : lower;
+    mDistSwitchTimer = (u32)delay + 15;
+    mPieceDist = compare >= 0 ? upper : lower;
 }
 
 /* 025BD338 */
@@ -677,11 +677,11 @@ void ShopCursor_c::draw() {
                                 &at<ShopCameraViewHD>(camera)->mEye);
     s16 pitch = (s16)(0u - (u32)shop_targetAngleX(&at<ShopCameraViewHD>(camera)->mCenter,
                                                   &at<ShopCameraViewHD>(camera)->mEye));
-    if (!static_cast<u8>(m54))
+    if (!static_cast<u8>(mbShow))
         return;
-    f32 mid = fmsubs(fadds_ppc(static_cast<f32>(m38), static_cast<f32>(m3C)), shopHalf,
-                     static_cast<f32>(m40));
-    f32 scaleY = mid >= 0 ? static_cast<f32>(m50) : static_cast<f32>(m4C);
+    f32 mid = fmsubs(fadds_ppc(static_cast<f32>(mPieceDistFar), static_cast<f32>(mPieceDistNear)), shopHalf,
+                     static_cast<f32>(mPieceDist));
+    f32 scaleY = mid >= 0 ? static_cast<f32>(mPieceScaleYNear) : static_cast<f32>(mPieceScaleYFar);
     store<u32>(0x104B4634, load<u32>(dComIfGp_ea() + 0x5D84));
     u32 second = load<u32>(dComIfGp_ea() + 0x5D88);
     f32 zero = shopZero, sqrtTwo = cursorSqrtTwo;
@@ -691,8 +691,8 @@ void ShopCursor_c::draw() {
                    static_cast<f32>(mPos.z));
         shop_XYZrotM(mDoMtx_stack_c::get(), (s32)pitch, yaw, 0);
         mDoMtx_stack_c::ZrotM(angle_z[i]);
-        mDoMtx_stack_c::transM(zero, fmuls_ppc(static_cast<f32>(m40), sqrtTwo), zero);
-        f32 scale = static_cast<f32>(m48);
+        mDoMtx_stack_c::transM(zero, fmuls_ppc(static_cast<f32>(mPieceDist), sqrtTwo), zero);
+        f32 scale = static_cast<f32>(mPieceScale);
         mDoMtx_stack_c::scaleM(scale, fmuls_ppc(scale, scaleY), scale);
         f32 matrix[12];
         for (u32 j = 0; j < 12; ++j)
@@ -737,18 +737,18 @@ void* ShopCam_action_c_ct(void* self) {
     bzero(&at<ShopCam_action_c>(p)->mCurrActionFunc, u32(8));
     bzero(&at<ShopCam_action_c>(p)->mPreviousAction, u32(8));
     f32 zero = shopZero, back = cameraBack, fovy = cameraFovy;
-    at<ShopCam_action_c>(p)->m18.y = zero;
-    at<ShopCam_action_c>(p)->m54 = 0xFFFF;
-    at<ShopCam_action_c>(p)->m24.y = zero;
+    at<ShopCam_action_c>(p)->mCenter.y = zero;
+    at<ShopCam_action_c>(p)->mSelectIdx = 0xFFFF;
+    at<ShopCam_action_c>(p)->mEye.y = zero;
     at<ShopCam_action_c>(p)->mCamDataIdx = 0;
     at<ShopCam_action_c>(p)->m52 = 0;
     at<ShopCam_action_c>(p)->m50 = 0;
-    at<ShopCam_action_c>(p)->m24.z = back;
-    at<ShopCam_action_c>(p)->m18.x = zero;
-    at<ShopCam_action_c>(p)->m30 = fovy;
-    at<ShopCam_action_c>(p)->m18.z = zero;
+    at<ShopCam_action_c>(p)->mEye.z = back;
+    at<ShopCam_action_c>(p)->mCenter.x = zero;
+    at<ShopCam_action_c>(p)->mFovy = fovy;
+    at<ShopCam_action_c>(p)->mCenter.z = zero;
     at<ShopCam_action_c>(p)->mOrigFovy = zero;
-    at<ShopCam_action_c>(p)->m24.x = zero;
+    at<ShopCam_action_c>(p)->mEye.x = zero;
     return at<void>(p);
 }
 
@@ -763,7 +763,7 @@ void* ShopItems_c_ct(void* self) {
     bzero(&at<ShopItems_c>(p)->mItemActorProcessIds[0], u32(0x20));
     at<ShopItems_c>(p)->mpItemSetList = 0;
     bzero(&at<ShopItems_c>(p)->mItemIsSoldOut[0], u32(8));
-    at<ShopItems_c>(p)->m3C = 0;
+    at<ShopItems_c>(p)->mbZoomUp = 0;
     at<ShopItems_c>(p)->mbIsHide = 0;
     at<ShopItems_c>(p)->mSelectedItemIdx = 0xFFFF;
     at<ShopItems_c>(p)->mItemSetListGlobalIdx = 0;

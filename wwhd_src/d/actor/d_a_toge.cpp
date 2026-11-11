@@ -73,7 +73,7 @@ static BOOL nodeCallBack(J3DNode *node, int calcTiming) {
         u32 jntNo = (u16) reinterpret_cast<TogeJointData *>(joint)->mJointNo;
         if (i_this != nullptr) {
             PSMTXCopy(model->getAnmMtx(jntNo), mDoMtx_stack_c::get());
-            mDoMtx_stack_c::transM(0.0f, i_this->unk470, 0.0f);
+            mDoMtx_stack_c::transM(0.0f, i_this->mSpikeY, 0.0f);
             mtx_copy(model->getAnmMtx(jntNo), mDoMtx_stack_c::get());
 
             PSMTXCopy(mDoMtx_stack_c::get(), &currentMatrix);
@@ -98,7 +98,7 @@ BOOL daToge_c::Create() {
     mSwitchNo = sw;
 
     if (fopAcM_isSwitch(this, sw)) {
-        unk470 = -150.0f; /* m_y_min */
+        mSpikeY = -150.0f; /* m_y_min */
         mEventState = RETRACT;
     }
 
@@ -155,7 +155,7 @@ BOOL daToge_c::_execute() {
     if (mSwitchNo != 0xFF) {
         if (fopAcM_isSwitch(this, mSwitchNo) != 0) {
             if (mEventState != RETRACT_WAIT) {
-                unk485 = 1;
+                mRetractRequest = 1;
             }
         } else if (!fopAcM_isSwitch(this, mSwitchNo) && mEventState != EXTEND) {
             mEventState = EXTEND_START;
@@ -171,7 +171,7 @@ BOOL daToge_c::_execute() {
                     mEventState = EXTEND_START;
                 }
             } else if (mEventState != RETRACT_WAIT) {
-                unk485 = 1;
+                mRetractRequest = 1;
             }
         }
     }
@@ -193,7 +193,7 @@ void daToge_c::set_collision() {
         // HD: component float stores retain the original load/store order.
         gabi::Local<cXyz> center;
         f32 x = current.pos.x;
-        f32 d = unk470 - 10.0f;
+        f32 d = mSpikeY - 10.0f;
         center->x = x;
         center->y = current.pos.y + d;
         center->z = current.pos.z;
@@ -224,13 +224,13 @@ void daToge_c::toge_move() {
     case WAIT:
         break;
     case RETRACT_WAIT:
-        if (toge_cLib_calcTimer_u8(&unk486) != 0)
+        if (toge_cLib_calcTimer_u8(&mRetractWait) != 0)
             break;
         toge_seStart(JA_SE_OBJ_TOGETOGE_IN);
         mEventState = RETRACT;
         [[fallthrough]];
     case RETRACT:
-        toge_cLib_addCalc(&unk470, -150.0f, 0.1f, f31, f30);
+        toge_cLib_addCalc(&mSpikeY, -150.0f, 0.1f, f31, f30);
         break;
     case EXTEND_START:
         toge_seStart(JA_SE_OBJ_TOGETOGE_OUT);
@@ -238,18 +238,18 @@ void daToge_c::toge_move() {
         r30 = false;
         [[fallthrough]];
     case EXTEND:
-        if (toge_cLib_addCalc(&unk470, unk474, 0.1f, f31, f30) == 0.0f) {
-            if (unk470 < 0.0f) {
-                unk474 = 0.0f;
-            } else if (unk485 != 0) {
-                unk486 = timer;
+        if (toge_cLib_addCalc(&mSpikeY, mSpikeTargetY, 0.1f, f31, f30) == 0.0f) {
+            if (mSpikeY < 0.0f) {
+                mSpikeTargetY = 0.0f;
+            } else if (mRetractRequest != 0) {
+                mRetractWait = timer;
                 mEventState = RETRACT_WAIT;
-                unk485 = 0;
+                mRetractRequest = 0;
             } else {
                 if (r30) {
                     toge_seStart(JA_SE_OBJ_TOGETOGE_MOVE);
                 }
-                unk474 = -60.0f;
+                mSpikeTargetY = -60.0f;
             }
         }
         break;

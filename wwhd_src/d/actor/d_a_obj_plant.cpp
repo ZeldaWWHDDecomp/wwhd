@@ -54,9 +54,9 @@ static BOOL nodeCallBack(J3DNode* node, s32 calcTiming) {
         daObjPlant_c* plant = model->userArea;
         if (plant != nullptr) {
             PSMTXCopy(getAnmMtx(model, jntNo), calc_mtx());
-            cMtx_XrotM(calc_mtx(), plant->field_0x40E);
-            cMtx_YrotM(calc_mtx(), plant->field_0x408);
-            cMtx_XrotM(calc_mtx(), (s16)-plant->field_0x40E);
+            cMtx_XrotM(calc_mtx(), plant->mSwayDir);
+            cMtx_YrotM(calc_mtx(), plant->mSwayAngle);
+            cMtx_XrotM(calc_mtx(), (s16)-plant->mSwayDir);
             setAnmMtx(model, jntNo, calc_mtx());
             PSMTXCopy(calc_mtx(), &currentMtx);
         }
@@ -68,7 +68,7 @@ static BOOL nodeCallBack(J3DNode* node, s32 calcTiming) {
 BOOL daObjPlant_c::CreateHeap() {
     J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes("Plant", dRes_INDEX_PLANT_BDL_YRMWD_e, gc_tu.safeString);
     if (modelData == nullptr) /* JUT_ASSERT(0xAA, modelData != NULL) */
-        JUT_ASSERT_fail("d_a_obj_plant.cpp", 0xAA, "modelData != NULL");
+        JUT_ASSERT_fail("d_a_obj_plant.cpp", 0xAA, "modelData != (0)");
 
     mpModel = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
     if (mpModel != nullptr) {
@@ -105,7 +105,7 @@ void daObjPlant_c::CreateInit() {
     mStts.Init(0xFF, 0xFF, this);
     mCyl.Set(&l_cyl_src);
     mCyl.SetStts(&mStts);
-    field_0x408 = 0;
+    mSwayAngle = 0;
     f32 x = current.pos.x, y = current.pos.y, z = current.pos.z;
     eyePos.x = x;
     eyePos.y = y + 150.0f;
@@ -132,7 +132,7 @@ cPhs_State daObjPlant_c::_create() {
             return cPhs_ERROR_e;
         CreateInit();
     }
-    field_0x410 = 0;
+    mSwaying = 0;
     return phase_state;
 }
 
@@ -158,30 +158,30 @@ BOOL daObjPlant_c::_execute() {
     mCyl.SetC(&current.pos);
     dComIfG_Ccsp_Set(&mCyl);
 
-    if ((mHitTimer > 0x38 || field_0x410 == 0) && mCyl.ChkCoHit()) {
+    if ((mHitTimer > 0x38 || mSwaying == 0) && mCyl.ChkCoHit()) {
         fopAc_ac_c* hitAc = mCyl.GetCoHitAc();
         cXyz diff = current.pos - hitAc->current.pos;
         s16 angle = cM_atan2s(diff.x, diff.z);
-        field_0x40E = (s16)(angle - 0x4000);
-        field_0x410 = 1;
+        mSwayDir = (s16)(angle - 0x4000);
+        mSwaying = 1;
         mHitTimer = 0;
-        field_0x40A = 0;
+        mSwayPhase = 0;
         fopAcM_seStart(this, JA_SE_OBJ_TREE_SWING_S, 0);
     }
 
-    if (field_0x410 != 0) {
+    if (mSwaying != 0) {
         mHitTimer = mHitTimer + 1;
         if (mHitTimer < 8) {
-            field_0x408 = (s16)gabi::ftoi(cM_ssin(field_0x40A) * (f32)(0x100 - mHitTimer) * 32.0f);
-            field_0x40A = field_0x40A + 0x1000;
+            mSwayAngle = (s16)gabi::ftoi(cM_ssin(mSwayPhase) * (f32)(0x100 - mHitTimer) * 32.0f);
+            mSwayPhase = mSwayPhase + 0x1000;
         } else {
-            field_0x408 = (s16)gabi::ftoi(cM_ssin(field_0x40A) * (f32)(0x100 - mHitTimer) * 16.0f);
-            field_0x40A = field_0x40A + 0x0800;
+            mSwayAngle = (s16)gabi::ftoi(cM_ssin(mSwayPhase) * (f32)(0x100 - mHitTimer) * 16.0f);
+            mSwayPhase = mSwayPhase + 0x0800;
         }
         if (mHitTimer > 0x100) {
-            field_0x410 = 0;
+            mSwaying = 0;
             mHitTimer = 0;
-            field_0x408 = 0;
+            mSwayAngle = 0;
         }
     }
 
@@ -247,7 +247,7 @@ str 1002EB14 in 023865EC
 str 1002EB54 in 02386324
 str 1002EBA4 in 0238672C
 str 1002EB64
-str 1002EB78 "modelData != NULL"
+str 1002EB78 "modelData != (0)"
 str 1002EB5C
 ext 027F68FC plant_layout::ResourceHeader* getJointResource(J3DModelData*)
 ext 027DF9B0 s32 JUTNameTab_getIndex(void*, const char*)

@@ -11,28 +11,7 @@
  * Size 0x15768 (GameCube 0xCC94). */
 #pragma once
 #include "bindings.h"
-
-/* mDoExt_J3DModelPacketS (HD 0xB0; constructor 02080404, destructor 02082DDC, vtable 0x10008DA8
- * at +0xC). HD: the model is at +0x98; +0x9C/+0xA0/+0xA4 optional colour/material sources read by
- * the HD update (0207AB2C); +0xA8 a lazily created 0xC-byte helper (0207FD38). */
-struct mDoExt_J3DModelPacketS_l {
-    /* 0x00 */ u8 _00[0xC];
-    /* 0x0C */ be<u32> __vtbl;
-    /* 0x10 */ u8 _10[0x90 - 0x10];
-    /* 0x90 */ be<u32> m90;
-    /* 0x94 */ u8 _94[4];
-    /* 0x98 */ gptr<J3DModel> mpModel;
-    /* 0x9C */ be<u32> m9C;
-    /* 0xA0 */ be<u32> mA0;
-    /* 0xA4 */ be<u32> mA4;
-    /* 0xA8 */ be<u32> mpHelper;
-    /* 0xAC */ be<u8> mAC;
-    /* 0xAD */ be<u8> mAD;
-    /* 0xAE */ be<u8> mAE;
-    /* 0xAF */ be<u8> mAF;
-    void setModel(J3DModel* m) { mpModel = m; }
-};
-WWHD_SIZE(mDoExt_J3DModelPacketS_l, 0xB0);
+#include "d/actor/d_a_bgn_packet.h"
 
 /* dKy_tevstr_c HD fields used here: the fog colour is GXColorS10-like (s16 r, g, b) */
 struct dKy_tevstr_l {
@@ -48,7 +27,7 @@ WWHD_SIZE(dKy_tevstr_l, 0x1C8);
 
 struct part_s {
     /* 0x000 */ gptr<J3DModel> mpPartModel;
-    /* 0x004 */ mDoExt_J3DModelPacketS_l mPartPacket;  /* was m004: part_init 0207FDA4 / useHeapInit 0207FE14 set it up (the part's HD reflection packet); part_draw 0207ACD0 gives it the part model and updates it while l_HIO.m00C is set; part_s_ct 02080498 / part_s_dt 0208AC78 construct and destroy it (as bgn_class mChestPacket) */
+    /* 0x004 */ mDoExt_J3DModelPacketS_l mPartPacket;  /* was m004: part_init 0207FDA4 / useHeapInit 0207FE14 set it up (the part's HD reflection packet); part_draw 0207ACD0 gives it the part model and updates it while l_HIO.mReflectionOn is set; part_s_ct 02080498 / part_s_dt 0208AC78 construct and destroy it (as bgn_class mChestPacket) */
     /* 0x0B4 */ dKy_tevstr_l mPartTevStr;
     /* 0x27C */ be<s16> mPartFogColorAdd;  /* was m0C8: part_draw 0207ACD0 eases it to 0x118 / 0 while mPartArrowHitFlashTimer runs (above / below 40) and adds it to the fog colour of mPartTevStr (same use as bgn_class mFogColorAdd) */
     /* 0x27E */ u8 _27E[2];
@@ -59,9 +38,9 @@ struct part_s {
     /* 0x288 */ cXyz mPartPos;  /* was m0D4: move 0208857C (MtxPosition) and part_control_0 0207D858 / part_control_2 0207DC84 chain the parts by it; part_mtx_set 0207DE64 translates the part matrix to it (not below mGroundY) and puts the arrow-hit emitters there; part_draw 0207ACD0 lights the part at it; punch_LR (in action_main 02086130) / hensin 02084D6C read the hand / head position from it */
     /* 0x294 */ csXyz mPartAngle;  /* was m0E0: part_control_0 0207D858 and move 0208857C (part_control_0Z) set .x / .y from the chain direction; part_mtx_set 0207DE64 eases .z toward mBodyAngle.y and rotates the part matrix by it; move rotates the leg roots by the pelvis part's */
     /* 0x29A */ u8 _29A[0x2A8 - 0x29A];
-    /* 0x2A8 */ be<f32> mPartScale;  /* was m0F4: move 0208857C (size_set) sets it per limb from l_HIO.m0F8 .. m114; part_mtx_set 0207DE64 scales the part matrix and mPartSph by it * l_HIO.m0F4; part_control_0 0207D858 / part_control_2 0207DC84 space the chain by it; part_draw 0207ACD0 compares the camera distance with l_HIO.m008 * it */
+    /* 0x2A8 */ be<f32> mPartScale;  /* was m0F4: move 0208857C (size_set) sets it per limb from l_HIO.mHeadScale .. mTailRootScale; part_mtx_set 0207DE64 scales the part matrix and mPartSph by it * l_HIO.mScale; part_control_0 0207D858 / part_control_2 0207DC84 space the chain by it; part_draw 0207ACD0 compares the camera distance with l_HIO.mPartDrawDist * it */
     /* 0x2AC */ dCcD_Sph mPartSph;
-    /* 0x3D8 */ cXyz mPartCenter;  /* was m224: part_mtx_set 0207DE64 stores the transformed part origin (also the mPartSph centre) in it; part_draw 0207ACD0 measures its distance to the camera eye and draws the part only beyond l_HIO.m008 * mPartScale */
+    /* 0x3D8 */ cXyz mPartCenter;  /* was m224: part_mtx_set 0207DE64 stores the transformed part origin (also the mPartSph centre) in it; part_draw 0207ACD0 measures its distance to the camera eye and draws the part only beyond l_HIO.mPartDrawDist * mPartScale */
     /* 0x3E4 */ gptr<JPABaseEmitter> mpPartArrowHitEmitter1;
     /* 0x3E8 */ gptr<JPABaseEmitter> mpPartArrowHitEmitter2;
     /* 0x3EC */ be<s16> mPartArrowHitEffectTimer;
@@ -140,14 +119,14 @@ struct bgn_class : fopEn_enemy_c {
     /* 0xC9B0 */ part_s mRightLegParts[4];
     /* 0xD970 */ part_s mTailParts[21];
     /* 0x12C20 */ move_s mMove[8];  /* was mAAA8: the 8 move_s (strings and their limb pose: mCut cut, mPoseTarget pose target); part_control_0 0207D858 / part_mtx_set 0207DE64 / start 020844F4 / action_main 02086130 per string */
-    /* 0x14480 */ cXyz mBodyPos;  /* was mC308: move 0208857C places the chest model there (+ l_HIO.m0A8, at least mGroundY + 100); hensin 02084D6C hands it to the bgn2 form as current.pos; body_attack (in action_main 02086130) reads it */
+    /* 0x14480 */ cXyz mBodyPos;  /* was mC308: move 0208857C places the chest model there (+ l_HIO.mBodyDrawOffsetY, at least mGroundY + 100); hensin 02084D6C hands it to the bgn2 form as current.pos; body_attack (in action_main 02086130) reads it */
     /* 0x1448C */ csXyz mBodyAngle;  /* was mC314: move 0208857C rotates the chest model by it (y = mBaseAngleY + mDanceAngleY); hensin 02084D6C hands it to the bgn2 form as current.angle / shape_angle */
     /* 0x14492 */ be<s16> mBaseAngleY;  /* was mC31A: move 0208857C eases it (cLib_addCalcAngleS2) and sets mBodyAngle.y = it + mDanceAngleY */
     /* 0x14494 */ u8 _14494[8];
-    /* 0x1449C */ be<f32> mArmLength[2];  /* was mC324: move 0208857C eases [i] toward l_HIO.m124 + stretch and passes it (* l_HIO.m0F4) to part_control_0 for the arms; part_mtx_set 0207DE64 scales the arm parts by it */
+    /* 0x1449C */ be<f32> mArmLength[2];  /* was mC324: move 0208857C eases [i] toward l_HIO.mArmPartSpacing + stretch and passes it (* l_HIO.mScale) to part_control_0 for the arms; part_mtx_set 0207DE64 scales the arm parts by it */
     /* 0x144A4 */ be<f32> mArmStretch[2];  /* was mC32C: punch_LR (in action_main 02086130) eases [i] to 1, move 0208857C back to 0; size_set (in move) pulls the arm part lengths toward the middle by it */
     /* 0x144AC */ be<f32> mPoseSpeed;  /* was mC334: action_s 02085630: step of cLib_addCalc2 of each move_s pose (m2D4 toward m2E0); action_main 02086130 eases it to mPoseSpeedTarget */
-    /* 0x144B0 */ be<f32> mPoseSpeedTarget;  /* was mC338: punch_LR (in action_main 02086130) sets 50 / 130 / 200, action_main l_HIO.m0D4; mPoseSpeed is eased to it */
+    /* 0x144B0 */ be<f32> mPoseSpeedTarget;  /* was mC338: punch_LR (in action_main 02086130) sets 50 / 130 / 200, action_main l_HIO.mPoseSpeedBase; mPoseSpeed is eased to it */
     /* 0x144B4 */ cXyz mHimoTopPos[8];  /* was mC33C: part_mtx_set 0207DE64: MtxPosition of each string's attach point; action_s_himo 020859AC starts string [i] from it */
     /* 0x14514 */ mDoExt_3DlineMat1_bgn mBlueRopeMat;
     /* 0x1469C */ mDoExt_3DlineMat1_bgn mRedRopeMat;
@@ -160,7 +139,7 @@ struct bgn_class : fopEn_enemy_c {
     /* 0x14E94 */ cXyz mBodyOffset;  /* was mC728: tail_attack 0208459C / damage 02084804 / head_recover 02084B90 / dance_0: height offset of the body (y eased, + speed.y, clamped); move_se_set 0207D04C sounds by its change */
     /* 0x14EA0 */ cXyz mBodyOffsetOld;  /* was mC734: move 0208857C copies mBodyOffset; move_se_set 0207D04C: mBodyOffset - it (last frame's offset) */
     /* 0x14EAC */ u8 _14EAC[4];
-    /* 0x14EB0 */ be<s16> mC744;
+    /* 0x14EB0 */ be<s16> mHeadCutYaw;  /* was mC744: move 0208857C eases it (step 0x400) to +8000 while head string mMove[0] is cut, -8000 while mMove[1] is cut (0 for both or neither); part_mtx_set 0207DE64 adds it to the head part's y rotation (with l_HIO.mHeadRotY); the head hangs to the side of the cut string (tww the same) */
     /* 0x14EB2 */ be<s16> mFrameCounter;  /* was mC746: daBgn_Execute 0207E7B4 adds 1 per frame; sin / cos phase of the dance, the body shake, the ripples and the camera bank */
     /* 0x14EB4 */ be<s16> mAction;  /* was mC748: action_main 02086130: switch (it) of the action (0 .. 7, 10); move 0208857C sets 5 on a core hit, daBgn_Create 02080BA4 7, dance_0 1 .. 4 */
     /* 0x14EB6 */ be<s16> mMode;  /* was mC74A: tail_attack 0208459C / hensin 02084D6C / dance_0: switch (it) inside each action, +1 per step; damage 02084804 sets 2 */
@@ -176,7 +155,7 @@ struct bgn_class : fopEn_enemy_c {
     /* 0x14ED8 */ be<f32> mMoveSpeed;  /* was mC76C: tail_attack 0208459C / dance_0 (in action_main 02086130): step of cLib_addCalc2 of current.pos toward mTargetPos, eased up from 0 */
     /* 0x14EDC */ be<s16> mShakeTimer;  /* was mC770: damage 02084804 sets 0x32, hensin 02084D6C 0x14 (+REG); move 0208857C counts it down and shakes the chest (X / Z rotation) by it * 300 */
     /* 0x14EDE */ u8 _14EDE[2];
-    /* 0x14EE0 */ be<f32> mC774;
+    /* 0x14EE0 */ be<f32> mRedRopeSway;  /* was mC774: action_main 02086130 swings the 60 points of mRedRopeMat by sin * it * (59 - i) / 59 and eases it to 0; damage 02084804, hensin 02084D6C and body_attack (in action_main) ease it to 250 (tww the same) */
     /* 0x14EE4 */ be<s8> mLeftPunchOn;  /* was mC778: punch_LR (in action_main 02086130) sets 1 while the left punch flies, 0 after; move 0208857C moves the left arm (i == 0) to mLeftPunchPos while it is set */
     /* 0x14EE5 */ be<s8> mRightPunchOn;  /* was mC779: punch_LR (in action_main 02086130) sets 1 while the right punch flies, 0 after; move 0208857C moves the right arm (i == 1) to mRightPunchPos while it is set */
     /* 0x14EE6 */ u8 _14EE6[2];
@@ -184,7 +163,7 @@ struct bgn_class : fopEn_enemy_c {
     /* 0x14EF4 */ cXyz mRightPunchPos;  /* was mC788: punch_LR (in action_main 02086130): copied from the right hand part (mPartPos), + mRightPunchSpeed per frame; daBgn_Delete 0207FC64 deletes its sound object */
     /* 0x14F00 */ cXyz mLeftPunchSpeed;  /* was mC794: punch_LR (in action_main 02086130): bgn_punch_aim velocity, added to mLeftPunchPos */
     /* 0x14F0C */ cXyz mRightPunchSpeed;  /* was mC7A0: punch_LR (in action_main 02086130): bgn_punch_aim velocity, added to mRightPunchPos */
-    /* 0x14F18 */ be<s16> mTimers[5];  /* was mC7AC: daBgn_Execute 0207E7B4 counts all 5 down each frame; the actions load them (tail_attack 0208459C [0] = 100, dance_A [3] = l_HIO.m0DA) */
+    /* 0x14F18 */ be<s16> mTimers[5];  /* was mC7AC: daBgn_Execute 0207E7B4 counts all 5 down each frame; the actions load them (tail_attack 0208459C [0] = 100, dance_A [3] = l_HIO.mDanceAStepTime) */
     /* 0x14F22 */ be<s16> mDamageTimer;  /* was mC7B6: move 0208857C (damage_check) sets 100 on a core hit and takes no core hit while it is set; daBgn_Execute 0207E7B4 counts it down */
     /* 0x14F24 */ be<s16> mPartHitSeTimer;  /* was mC7B8: move 0208857C (damage_check) sets 10 when a part sphere is hit (def_se_set), no new part hit sound while it is set; daBgn_Execute 0207E7B4 counts it down */
     /* 0x14F26 */ u8 _14F26[2];
@@ -255,39 +234,143 @@ WWHD_SIZE(bgn_class, 0x15768);
 
 /* daBgn_HIO_c (HD: GameCube offsets - 4, the vtable pointer is the last word 0x178); size 0x17C */
 struct daBgn_HIO_c {
-    /* 0x000 */ be<s16> m004;
+    /* 0x000 */ be<s16> mChestRotX;  /* was m004: move 0208857C (shape_calc) rotates the chest model about x by it after the body rotation and scale; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
     /* 0x002 */ be<s8> mNo;
     /* 0x003 */ u8 _003;
-    /* 0x004 */ be<f32> m008;
-    /* 0x008 */ be<u8> m00C;
-    /* 0x009 */ be<u8> m00D;
+    /* 0x004 */ be<f32> mPartDrawDist;  /* was m008: part_draw 0207ACD0 draws a part's model only while its camera distance is above it * mPartScale; daBgn_HIO_c_ct 02083558 sets 200 (tww the same) */
+    /* 0x008 */ be<u8> mReflectionOn;  /* was m00C: part_draw 0207ACD0 / daBgn_Draw 0207B2CC update the model packets (mPartPacket, mChestPacket) and run obj_disp only while set; daBgn_HIO_c_ct 02083558 sets 1 (tww the same, also for bgn2 / bgn3) */
+    /* 0x009 */ be<u8> mRoomReflectionOn;  /* was m00D: daBgn_Draw 0207B2CC runs room_disp (mpRoomReflectionModel into mRoomReflectionPacket) only while set; water0_disp (in daBgn_Draw) keeps mWaterAlphaPct then instead of the bgn2-height value; daBgn_HIO_c_ct 02083558 sets 1 (tww the same) */
     /* 0x00A */ u8 _00A[2];
-    /* 0x00C */ be<f32> m010;
+    /* 0x00C */ be<f32> mWaterAlphaPct;  /* was m010: water0_disp (in daBgn_Draw 0207B2CC): the water konst alpha is it * 2.559 (percent; 50..90 from the bgn2 height in form 1 while mRoomReflectionOn is 0); daBgn_HIO_c_ct 02083558 sets 50 (tww the same) */
     /* 0x010 */ be<s16> m014;
     /* 0x012 */ be<s16> m016;
     /* 0x014 */ be<s16> m018;
     /* 0x016 */ u8 _016[2];
     /* 0x018 */ be<f32> m01C;
     /* 0x01C */ be<f32> m020;
-    /* 0x020 */ be<u8> m024, m025, m026, m027, m028, m029, m02A, m02B, m02C, m02D, m02E, m02F, m030;
+    /* 0x020 */ be<u8> m024;
+    /* 0x021 */ be<u8> mPoseEditMode;  /* was m025: while set action_main 02086130 runs no action, action_s 02085630 clears mCut and loads every string's mPoseTarget from mPoseEdit*, and move 0208857C takes mPoseEditAngleY as the body yaw; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x022 */ be<u8> m026;
+    /* 0x023 */ be<u8> mDebugHealth;  /* was m027: daBgn_Execute 0207E7B4 sets health to it while it is not 0; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x024 */ be<u8> mAttackOn;  /* was m028: dance_0 (in action_main 02086130) leaves the dance for an attack (mTimers[0] 0, no keese left) only while set; daBgn_HIO_c_ct 02083558 sets 1 (tww the same) */
+    /* 0x025 */ be<u8> mForceCutString0;  /* was m029: move 0208857C sets mMove[0].mCut while set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x026 */ be<u8> mForceCutString1;  /* was m02A: move 0208857C sets mMove[1].mCut while set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x027 */ be<u8> mForceCutString2;  /* was m02B: move 0208857C sets mMove[2].mCut while set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x028 */ be<u8> mForceCutString3;  /* was m02C: move 0208857C sets mMove[3].mCut while set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x029 */ be<u8> mForceCutString4;  /* was m02D: move 0208857C sets mMove[4].mCut while set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x02A */ be<u8> mForceCutString5;  /* was m02E: move 0208857C sets mMove[5].mCut while set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x02B */ be<u8> mForceCutString6;  /* was m02F: move 0208857C sets mMove[6].mCut while set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x02C */ be<u8> mForceCutString7;  /* was m030: move 0208857C sets mMove[7].mCut while set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
     /* 0x02D */ u8 _02D[3];
-    /* 0x030 */ be<f32> m034;
-    /* 0x034 */ be<f32> m038;
-    /* 0x038 */ be<s16> m03C, m03E, m040, m042, m044;
+    /* 0x030 */ be<f32> mHeadOffsetY;  /* was m034: part_mtx_set 0207DE64 (head part) translates by (0, it, mHeadOffsetZ) before the mHeadRotX rotation; daBgn_HIO_c_ct 02083558 sets -20 (tww the same) */
+    /* 0x034 */ be<f32> mHeadOffsetZ;  /* was m038: part_mtx_set 0207DE64 (head part) translates by (0, mHeadOffsetY, it) before the mHeadRotX rotation; daBgn_HIO_c_ct 02083558 sets -30 (tww the same) */
+    /* 0x038 */ be<s16> mHeadRotY;  /* was m03C: part_mtx_set 0207DE64 (head part) rotates about y by mHeadCutYaw + it + the pluck shake; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x03A */ be<s16> mHeadRotX;  /* was m03E: part_mtx_set 0207DE64 (head part) rotates about x by it after the mHeadOffsetY / Z translation; daBgn_HIO_c_ct 02083558 sets 22000 (tww the same) */
+    /* 0x03C */ be<s16> mHeadRotZ;  /* was m040: part_mtx_set 0207DE64 (head part) rotates about z by it + the pluck shake; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x03E */ be<s16> mPoseEditAngleY;  /* was m042: move 0208857C takes it as the body yaw target (instead of shape_angle.y) while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x040 */ be<s16> m044;
     /* 0x042 */ u8 _042[2];
-    /* 0x044 */ be<f32> m048, m04C, m050, m054, m058, m05C, m060, m064, m068, m06C, m070, m074, m078, m07C, m080,
-        m084, m088, m08C, m090, m094, m098, m09C, m0A0, m0A4;
-    /* 0x0A4 */ be<s16> m0A8, m0AA, m0AC, m0AE, m0B0, m0B2, m0B4, m0B6, m0B8, m0BA, m0BC, m0BE, m0C0, m0C2, m0C4,
-        m0C6, m0C8, m0CA, m0CC, m0CE, m0D0, m0D2;
-    /* 0x0D0 */ be<f32> m0D4;
-    /* 0x0D4 */ be<s16> m0D8, m0DA, m0DC, m0DE, m0E0, m0E2, m0E4, m0E6, m0E8, m0EA, m0EC, m0EE, m0F0, m0F2;
-    /* 0x0F0 */ be<f32> m0F4, m0F8, m0FC, m100, m104, m108, m10C, m110, m114, m118, m11C, m120, m124, m128, m12C,
-        m130, m134, m138, m13C, m140, m144, m148, m14C, m150, m154, m158, m15C, m160, m164, m168, m16C, m170;
-    /* 0x170 */ be<s16> mKeeseNum3HP, mKeeseNum2HP, mKeeseNum1HP, mKeeseNumMax;
+    /* 0x044 */ be<f32> m048;
+    /* 0x048 */ be<f32> mBodyHeight;  /* was m04C: move 0208857C adds it to mBodyPos.y (current.pos + mBodyOffset; at least mGroundY + 100); daBgn_HIO_c_ct 02083558 sets 950 (tww the same) */
+    /* 0x04C */ be<f32> m050;
+    /* 0x050 */ be<f32> mHeadEndPosX;  /* was m054: x of the cXyz move 0208857C passes to bgn_limb_end for the head string: rotated by the body yaw, + mMove[0].mPose, + mBodyPos gives mHeadParts[1].mPartPos; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x054 */ be<f32> mHeadEndPosY;  /* was m058: y of the head-string end cXyz at mHeadEndPosX (bgn_limb_end in move 0208857C); daBgn_HIO_c_ct 02083558 sets 2000 (tww the same) */
+    /* 0x058 */ be<f32> mHeadEndPosZ;  /* was m05C: z of the head-string end cXyz at mHeadEndPosX (bgn_limb_end in move 0208857C); daBgn_HIO_c_ct 02083558 sets 800 (tww the same) */
+    /* 0x05C */ be<f32> mPelvisEndPosX;  /* was m060: x of the cXyz move 0208857C passes to bgn_limb_end for the pelvis string (mMove[2]): gives mPelvisParts[1].mPartPos; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x060 */ be<f32> mPelvisEndPosY;  /* was m064: y of the pelvis-string end cXyz at mPelvisEndPosX (bgn_limb_end in move 0208857C); daBgn_HIO_c_ct 02083558 sets -800 (tww the same) */
+    /* 0x064 */ be<f32> mPelvisEndPosZ;  /* was m068: z of the pelvis-string end cXyz at mPelvisEndPosX (bgn_limb_end in move 0208857C); daBgn_HIO_c_ct 02083558 sets -800 (tww the same) */
+    /* 0x068 */ be<f32> mLeftHandPosX;  /* was m06C: move 0208857C: x of the left hand rest position (rotated by the body yaw, + mMove[3].mPose, + mBodyPos) for mLeftArmParts[BGN_HAND_MAX] while not punching; daBgn_HIO_c_ct 02083558 sets 700 (tww the same) */
+    /* 0x06C */ be<f32> mLeftHandPosY;  /* was m070: move 0208857C: y of the left hand rest position (see mLeftHandPosX); daBgn_HIO_c_ct 02083558 sets -900 (tww the same) */
+    /* 0x070 */ be<f32> mLeftHandPosZ;  /* was m074: move 0208857C: z of the left hand rest position (see mLeftHandPosX); daBgn_HIO_c_ct 02083558 sets 300 (tww the same) */
+    /* 0x074 */ be<f32> mRightHandPosX;  /* was m078: move 0208857C: x of the right hand rest position (rotated by the body yaw, + mMove[4].mPose, + mBodyPos) for mRightArmParts[BGN_HAND_MAX] while not punching; daBgn_HIO_c_ct 02083558 sets -700 (tww the same) */
+    /* 0x078 */ be<f32> mRightHandPosY;  /* was m07C: move 0208857C: y of the right hand rest position (see mRightHandPosX); daBgn_HIO_c_ct 02083558 sets -900 (tww the same) */
+    /* 0x07C */ be<f32> mRightHandPosZ;  /* was m080: move 0208857C: z of the right hand rest position (see mRightHandPosX); daBgn_HIO_c_ct 02083558 sets 300 (tww the same) */
+    /* 0x080 */ be<f32> mLeftFootPosX;  /* was m084: x of the cXyz move 0208857C passes to bgn_limb_end for the left leg string (mMove[5]): gives mLeftLegParts[3].mPartPos; daBgn_HIO_c_ct 02083558 sets 500 (tww the same) */
+    /* 0x084 */ be<f32> mLeftFootPosY;  /* was m088: y of the left-foot cXyz at mLeftFootPosX (bgn_limb_end in move 0208857C); daBgn_HIO_c_ct 02083558 sets -1300 (tww the same) */
+    /* 0x088 */ be<f32> mLeftFootPosZ;  /* was m08C: z of the left-foot cXyz at mLeftFootPosX (bgn_limb_end in move 0208857C); daBgn_HIO_c_ct 02083558 sets -100 (tww the same) */
+    /* 0x08C */ be<f32> mRightFootPosX;  /* was m090: x of the cXyz move 0208857C passes to bgn_limb_end for the right leg string (mMove[6]): gives mRightLegParts[3].mPartPos; daBgn_HIO_c_ct 02083558 sets -500 (tww the same) */
+    /* 0x090 */ be<f32> mRightFootPosY;  /* was m094: y of the right-foot cXyz at mRightFootPosX (bgn_limb_end in move 0208857C); daBgn_HIO_c_ct 02083558 sets -1300 (tww the same) */
+    /* 0x094 */ be<f32> mRightFootPosZ;  /* was m098: z of the right-foot cXyz at mRightFootPosX (bgn_limb_end in move 0208857C); daBgn_HIO_c_ct 02083558 sets -100 (tww the same) */
+    /* 0x098 */ be<f32> mTailEndPosX;  /* was m09C: move 0208857C: x of the tail end position (rotated by the body yaw, + mMove[7].mPose, + mBodyPos, not below mGroundY) for mTailParts[BGN_TAIL_MAX]; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x09C */ be<f32> mTailEndPosY;  /* was m0A0: move 0208857C: y of the tail end position (see mTailEndPosX); daBgn_HIO_c_ct 02083558 sets -700 (tww the same) */
+    /* 0x0A0 */ be<f32> mTailEndPosZ;  /* was m0A4: move 0208857C: z of the tail end position (see mTailEndPosX); daBgn_HIO_c_ct 02083558 sets -1200 (tww the same) */
+    /* 0x0A4 */ be<s16> mBodyDrawOffsetY;  /* was m0A8: move 0208857C (shape_calc) starts the body matrix (chest and all part roots) at mBodyPos.y + it (at least mGroundY + 100); daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x0A6 */ be<s16> mPoseEdit0X;  /* was m0AA: action_s 02085630 copies it to mMove[0].mPoseTarget.x while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x0A8 */ be<s16> mPoseEdit0Y;  /* was m0AC: action_s 02085630 copies it to mMove[0].mPoseTarget.y while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x0AA */ be<s16> mPoseEdit0Z;  /* was m0AE: action_s 02085630 copies it to mMove[0].mPoseTarget.z while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x0AC */ be<s16> mPoseEdit2X;  /* was m0B0: action_s 02085630 copies it to mMove[2].mPoseTarget.x while mPoseEditMode is set (string 1 has no entry); daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x0AE */ be<s16> mPoseEdit2Y;  /* was m0B2: action_s 02085630 copies it to mMove[2].mPoseTarget.y while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x0B0 */ be<s16> mPoseEdit2Z;  /* was m0B4: action_s 02085630 copies it to mMove[2].mPoseTarget.z while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x0B2 */ be<s16> mPoseEdit3X;  /* was m0B6: action_s 02085630 copies it to mMove[3].mPoseTarget.x while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x0B4 */ be<s16> mPoseEdit3Y;  /* was m0B8: action_s 02085630 copies it to mMove[3].mPoseTarget.y while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x0B6 */ be<s16> mPoseEdit3Z;  /* was m0BA: action_s 02085630 copies it to mMove[3].mPoseTarget.z while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x0B8 */ be<s16> mPoseEdit4X;  /* was m0BC: action_s 02085630 copies it to mMove[4].mPoseTarget.x while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x0BA */ be<s16> mPoseEdit4Y;  /* was m0BE: action_s 02085630 copies it to mMove[4].mPoseTarget.y while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x0BC */ be<s16> mPoseEdit4Z;  /* was m0C0: action_s 02085630 copies it to mMove[4].mPoseTarget.z while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x0BE */ be<s16> mPoseEdit5X;  /* was m0C2: action_s 02085630 copies it to mMove[5].mPoseTarget.x while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x0C0 */ be<s16> mPoseEdit5Y;  /* was m0C4: action_s 02085630 copies it to mMove[5].mPoseTarget.y while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x0C2 */ be<s16> mPoseEdit5Z;  /* was m0C6: action_s 02085630 copies it to mMove[5].mPoseTarget.z while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x0C4 */ be<s16> mPoseEdit6X;  /* was m0C8: action_s 02085630 copies it to mMove[6].mPoseTarget.x while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x0C6 */ be<s16> mPoseEdit6Y;  /* was m0CA: action_s 02085630 copies it to mMove[6].mPoseTarget.y while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x0C8 */ be<s16> mPoseEdit6Z;  /* was m0CC: action_s 02085630 copies it to mMove[6].mPoseTarget.z while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x0CA */ be<s16> mPoseEdit7X;  /* was m0CE: action_s 02085630 copies it to mMove[7].mPoseTarget.x while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x0CC */ be<s16> mPoseEdit7Y;  /* was m0D0: action_s 02085630 copies it to mMove[7].mPoseTarget.y while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x0CE */ be<s16> mPoseEdit7Z;  /* was m0D2: action_s 02085630 copies it to mMove[7].mPoseTarget.z while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x0D0 */ be<f32> mPoseSpeedBase;  /* was m0D4: action_main 02086130 resets mPoseSpeedTarget to it every frame (punch_LR raises it for its frame); daBgn_HIO_c_ct 02083558 sets 40 (tww the same) */
+    /* 0x0D4 */ be<s16> mKeeseDanceTime;  /* was m0D8: dance_0 (in action_main 02086130) sets mTimers[0] to it for the first dance (mDanceCount 0, the one that calls the keese); daBgn_HIO_c_ct 02083558 sets 120 (tww the same) */
+    /* 0x0D6 */ be<s16> mDanceAStepTime;  /* was m0DA: dance_A (in action_main 02086130) sets mTimers[3] to it at each switch between dance_pause_1 and dance_pause_2; daBgn_HIO_c_ct 02083558 sets 20 (tww the same) */
+    /* 0x0D8 */ be<s16> mDanceASpin3HP;  /* was m0DC: dance_A (in action_main 02086130) eases mDanceAngleSpeed to it at 3 health; daBgn_HIO_c_ct 02083558 sets 1200 (tww the same) */
+    /* 0x0DA */ be<s16> mDanceASpin2HP;  /* was m0DE: dance_A (in action_main 02086130) eases mDanceAngleSpeed to it at 2 health; daBgn_HIO_c_ct 02083558 sets 1500 (tww the same) */
+    /* 0x0DC */ be<s16> mDanceASpin1HP;  /* was m0E0: dance_A (in action_main 02086130) eases mDanceAngleSpeed to it at 1 health; daBgn_HIO_c_ct 02083558 sets 2000 (tww the same) */
+    /* 0x0DE */ be<s16> mDanceTime3HP;  /* was m0E2: dance_0 (in action_main 02086130) sets mTimers[0] to it for the later dances (mDanceCount not 0) at 3 health; daBgn_HIO_c_ct 02083558 sets 300 (tww DEMO_SELECT(150, 300)) */
+    /* 0x0E0 */ be<s16> mDanceTime2HP;  /* was m0E4: dance_0 (in action_main 02086130) sets mTimers[0] to it for the later dances at 2 health; daBgn_HIO_c_ct 02083558 sets 200 (tww DEMO_SELECT(100, 200)) */
+    /* 0x0E2 */ be<s16> mDanceTime1HP;  /* was m0E6: dance_0 (in action_main 02086130) sets mTimers[0] to it for the later dances at 1 health; daBgn_HIO_c_ct 02083558 sets 150 (tww DEMO_SELECT(80, 150)) */
+    /* 0x0E4 */ be<s16> mDanceBStepTime3HP;  /* was m0E8: dance_B (in action_main 02086130) sets mTimers[3] to it at each switch between dance_pause_3 and dance_pause_4 at 3 health; daBgn_HIO_c_ct 02083558 sets 15 (tww DEMO_SELECT(20, 15)) */
+    /* 0x0E6 */ be<s16> mDanceBStepTime2HP;  /* was m0EA: dance_B (in action_main 02086130) sets mTimers[3] to it at each pose switch at 2 health; daBgn_HIO_c_ct 02083558 sets 15 (tww the same) */
+    /* 0x0E8 */ be<s16> mDanceBStepTime1HP;  /* was m0EC: dance_B (in action_main 02086130) sets mTimers[3] to it at each pose switch at 1 health; daBgn_HIO_c_ct 02083558 sets 15 (tww DEMO_SELECT(10, 15)) */
+    /* 0x0EA */ be<s16> mDanceBTurnStep;  /* was m0EE: dance_B (in action_main 02086130): the max step of mDanceAngleY toward +-0x1555; daBgn_HIO_c_ct 02083558 sets 500 (tww the same) */
+    /* 0x0EC */ be<s16> mHandMax;  /* was m0F0: daBgn_Create 02080BA4 and move 0208857C copy it to BGN_HAND_MAX (the arm part count); daBgn_HIO_c_ct 02083558 sets 5 (tww the same) */
+    /* 0x0EE */ be<s16> mTailMax;  /* was m0F2: daBgn_Create 02080BA4 and move 0208857C copy it to BGN_TAIL_MAX (the tail part count); daBgn_HIO_c_ct 02083558 sets 10 (tww the same) */
+    /* 0x0F0 */ be<f32> mScale;  /* was m0F4: part_mtx_set 0207DE64 scales every part by mPartScale * it; move 0208857C scales the chest (mChestScale), pelvis (mPelvisScale) and the part spacings by it; daBgn_HIO_c_ct 02083558 sets 1.3 (tww the same) */
+    /* 0x0F4 */ be<f32> mHeadScale;  /* was m0F8: move 0208857C (size_set) sets mHeadParts[0].mPartScale to it; daBgn_HIO_c_ct 02083558 sets 1.6 (tww the same) */
+    /* 0x0F8 */ be<f32> mChestScale;  /* was m0FC: move 0208857C (shape_calc) scales the chest matrix and mBodyAtSph by it * mScale; daBgn_HIO_c_ct 02083558 sets 3.25 (tww the same) */
+    /* 0x0FC */ be<f32> mPelvisScale;  /* was m100: move 0208857C (size_set) sets mPelvisParts[0] / [1].mPartScale to it and scales the leg / tail root matrix by it * mScale; daBgn_HIO_c_ct 02083558 sets 1.8 (tww the same) */
+    /* 0x100 */ be<f32> mArmRootScale;  /* was m104: move 0208857C (size_set): the arm parts' mPartScale runs from it at the shoulder down to mArmTipScale; daBgn_HIO_c_ct 02083558 sets 1.2 (tww the same) */
+    /* 0x104 */ be<f32> mArmTipScale;  /* was m108: move 0208857C (size_set): mPartScale of the hand part (mLeft / mRightArmParts[BGN_HAND_MAX]), the end of the mArmRootScale run; daBgn_HIO_c_ct 02083558 sets 0.3 (tww the same) */
+    /* 0x108 */ be<f32> mLegRootScale;  /* was m10C: move 0208857C (size_set): the leg parts' mPartScale runs from it at the hip down to mLegTipScale; daBgn_HIO_c_ct 02083558 sets 1.2 (tww the same) */
+    /* 0x10C */ be<f32> mLegTipScale;  /* was m110: move 0208857C (size_set): mPartScale of the foot part (mLeft / mRightLegParts[3]); daBgn_HIO_c_ct 02083558 sets 0.4 (tww the same) */
+    /* 0x110 */ be<f32> mTailRootScale;  /* was m114: move 0208857C (size_set): the tail parts' mPartScale runs from it down to mTailTipScale (the last part 0.7 * it); daBgn_HIO_c_ct 02083558 sets 1.2 (tww the same) */
+    /* 0x114 */ be<f32> mTailTipScale;  /* was m118: move 0208857C (size_set): the end of the mTailRootScale run; daBgn_HIO_c_ct 02083558 sets 0.1 (tww the same) */
+    /* 0x118 */ be<f32> mBodyPartSpacing;  /* was m11C: move 0208857C passes it * mScale to part_control_0 0207D858 / part_control_2 0207DC84 as the part spacing of the head and pelvis chains; daBgn_HIO_c_ct 02083558 sets 185 (tww the same) */
+    /* 0x11C */ be<f32> mLegPartSpacing;  /* was m120: move 0208857C passes it * mScale to part_control_0 / part_control_2 as the part spacing of both leg chains; daBgn_HIO_c_ct 02083558 sets 185 (tww the same) */
+    /* 0x120 */ be<f32> mArmPartSpacing;  /* was m124: move 0208857C eases mArmLength (the arm chains' spacing) to it + the punch stretch; part_mtx_set 0207DE64 stretches the arm parts by mArmLength - it; daBgn_HIO_c_ct 02083558 sets 185 (tww the same) */
+    /* 0x124 */ be<f32> mTailPartSpacing;  /* was m128: move 0208857C passes it * mScale to part_control_0 / part_control_2 as the part spacing of the tail chain; daBgn_HIO_c_ct 02083558 sets 185 (tww the same) */
+    /* 0x128 */ be<f32> mHeadRootPosX;  /* was m12C: move 0208857C: x of the head root in the body matrix (MtxPosition into mHeadParts[0].mPartPos); daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x12C */ be<f32> mHeadRootPosY;  /* was m130: move 0208857C: y of the head root in the body matrix; daBgn_HIO_c_ct 02083558 sets -10 (tww the same) */
+    /* 0x130 */ be<f32> mHeadRootPosZ;  /* was m134: move 0208857C: z of the head root in the body matrix; daBgn_HIO_c_ct 02083558 sets 120 (tww the same) */
+    /* 0x134 */ be<f32> mShoulderPosX;  /* was m138: move 0208857C: x of the left shoulder in the body matrix (* mPartLengthScale; the right one takes -it) for mLeft / mRightArmParts[0]; daBgn_HIO_c_ct 02083558 sets 100 (tww the same) */
+    /* 0x138 */ be<f32> mShoulderPosY;  /* was m13C: move 0208857C: y of both shoulders in the body matrix (* mPartLengthScale); daBgn_HIO_c_ct 02083558 sets 25 (tww the same) */
+    /* 0x13C */ be<f32> mShoulderPosZ;  /* was m140: move 0208857C: z of both shoulders in the body matrix (* mPartLengthScale); daBgn_HIO_c_ct 02083558 sets 20 (tww the same) */
+    /* 0x140 */ be<f32> mPelvisRootPosX;  /* was m144: move 0208857C: x of the pelvis root in the body matrix (* mPartLengthScale) for mPelvisParts[0]; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x144 */ be<f32> mPelvisRootPosY;  /* was m148: move 0208857C: y of the pelvis root in the body matrix ((it + 20) * mPartLengthScale); daBgn_HIO_c_ct 02083558 sets -115 (tww the same) */
+    /* 0x148 */ be<f32> mPelvisRootPosZ;  /* was m14C: move 0208857C: z of the pelvis root in the body matrix (* mPartLengthScale); daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x14C */ be<f32> mHipPosX;  /* was m150: move 0208857C: x of the left hip in the pelvis matrix (* mPartLengthScale; the right one takes -it), + the pelvis position, for mLeft / mRightLegParts[0]; daBgn_HIO_c_ct 02083558 sets 80 (tww the same) */
+    /* 0x150 */ be<f32> mHipPosY;  /* was m154: move 0208857C: y of both hips in the pelvis matrix (* mPartLengthScale); daBgn_HIO_c_ct 02083558 sets -20 (tww the same) */
+    /* 0x154 */ be<f32> mHipPosZ;  /* was m158: move 0208857C: z of both hips in the pelvis matrix (* mPartLengthScale); daBgn_HIO_c_ct 02083558 sets 100 (tww the same) */
+    /* 0x158 */ be<f32> mTailRootPosX;  /* was m15C: move 0208857C: x of the tail root in the pelvis matrix (* mPartLengthScale), + the pelvis position, for mTailParts[0]; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) */
+    /* 0x15C */ be<f32> mTailRootPosY;  /* was m160: move 0208857C: y of the tail root in the pelvis matrix (* mPartLengthScale); daBgn_HIO_c_ct 02083558 sets -60 (tww the same) */
+    /* 0x160 */ be<f32> mTailRootPosZ;  /* was m164: move 0208857C: z of the tail root in the pelvis matrix (* mPartLengthScale); daBgn_HIO_c_ct 02083558 sets 150 (tww the same) */
+    /* 0x164 */ be<f32> mPartOffsetZ;  /* was m168: part_mtx_set 0207DE64 translates every part matrix by (0, 0, it) after the scale and places the string tops of the non-head parts there; daBgn_HIO_c_ct 02083558 sets 100 (tww the same) */
+    /* 0x168 */ be<f32> mPartDropHung;  /* was m16C: part_control_0 0207D858 adds it to each part's y (not below the ground) while the part's string is intact; daBgn_HIO_c_ct 02083558 sets -50 (tww the same) */
+    /* 0x16C */ be<f32> mPartDropCut;  /* was m170: part_control_0 0207D858 and part_control_0Z (in move 0208857C) add it to each part's y while the string is cut (-40 in a cut scene); daBgn_HIO_c_ct 02083558 sets -100 (tww the same) */
+    /* 0x170 */ be<s16> mKeeseNum3HP;
+    /* 0x172 */ be<s16> mKeeseNum2HP;
+    /* 0x174 */ be<s16> mKeeseNum1HP;
+    /* 0x176 */ be<s16> mKeeseNumMax;
     /* 0x178 */ be<u32> __vtbl;
 };
-WWHD_OFFSET(daBgn_HIO_c, m0D4, 0xD0);
-WWHD_OFFSET(daBgn_HIO_c, m0F4, 0xF0);
+WWHD_OFFSET(daBgn_HIO_c, mPoseSpeedBase, 0xD0);
+WWHD_OFFSET(daBgn_HIO_c, mScale, 0xF0);
 WWHD_OFFSET(daBgn_HIO_c, mKeeseNum3HP, 0x170);
 WWHD_SIZE(daBgn_HIO_c, 0x17C);
 

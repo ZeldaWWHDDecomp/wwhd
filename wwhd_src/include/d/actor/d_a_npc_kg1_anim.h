@@ -5,22 +5,25 @@
 // HD: partial views of the verified Salvatore/minigame layout.
 struct Kg1Actor : fopNpc_npc_l {
     gptr<J3DModel> mpPropModel;
-    u8 mPadding7E0[4];
-    be<f32> mTalkAnimationWeight;
-    u8 mPadding7E8[0x95A - 0x7E8];
-    be<u8> mTalkActive, mbAttention, mEventOrder;
+    /* mBtpAnm (0x7E0): the prop texture pattern animation, kg1_core::daNpc_Kg1_c::mBtpAnm (tww mBtpAnm at GameCube 0x6C8); its mFrameCtrl.mFrame (0x7E4) was mTalkAnimationWeight (misnamed): daNpc_Kg1_setAnm 02265E24 sets the frame to 1.0 when animation 9's morf reaches frame 31, daNpc_Kg1_wait_action 02266D60 sets 0.0 when the talk starts; daNpc_Kg1Draw 02266B24 enters the prop pattern at this frame */
+    mDoExt_btpAnm mBtpAnm;
+    u8 mPadding854[0x95A - 0x854];
+    /* mTalking (0x95A) was mTalkActive (misnamed): kg1_core::daNpc_Kg1_c::mTalking; one name per field */
+    /* mOrderEvent (0x95C) was mEventOrder (misnamed): kg1_core::daNpc_Kg1_c::mOrderEvent; one name per field */
+    be<u8> mTalking, mbAttention, mOrderEvent;
     u8 mPadding95D[0x978 - 0x95D];
     be<s8> mAnimation, mRequestedAnimation, mPreviousAnimation;
     be<u8> mSpecialAnimation, mResponseComplete, mTalkEnabled;
     u8 mPadding97E[0x99E - 0x97E];
     be<u8> mSequenceFlags[6];
-    be<u8> m778, m779, mGameBoardScore, mEndGameTimer;
+    /* mbForceNextStatus (0x9A5) was m779: kg1_core::daNpc_Kg1_c::mbForceNextStatus */
+    be<u8> m778, mbForceNextStatus, mGameBoardScore, mEndGameTimer;
     be<u32> mPresentActor;
     be<s32> mWaitMode;
     be<s16> mEventIds[3];
     u8 mTail[2];
 };
-WWHD_OFFSET(Kg1Actor, mTalkAnimationWeight, 0x7E4);
+WWHD_OFFSET(Kg1Actor, mBtpAnm, 0x7E0);
 WWHD_OFFSET(Kg1Actor, mbAttention, 0x95B);
 WWHD_OFFSET(Kg1Actor, mAnimation, 0x978);
 WWHD_OFFSET(Kg1Actor, mSequenceFlags, 0x99E);

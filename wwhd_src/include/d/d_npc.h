@@ -30,9 +30,9 @@ struct dNpc_JntCtrl_c {
     /* 0x1E */ be<s16> mMaxTurnStep[2][2];
     /* 0x26 */ u8 pad_0x26[0x2C - 0x26];
     /* 0x2C */ be<s16> field_0x2C;
-    /* 0x2E */ be<s16> field_0x2E;
+    /* 0x2E */ be<s16> mHeadTargetY;  /* was field_0x2E: lookAtTarget_2 0259E2D4 stores the head part of the Y turn (from turn_fromHead2Backbone / turn_fromBackbone2Head) before easing mAngles[0][1] toward it, and compares the turn with it + mBackboneTargetY when not turning the body; the constructor clears it (tww the same) */
     /* 0x30 */ be<s16> field_0x30;
-    /* 0x32 */ be<s16> field_0x32;
+    /* 0x32 */ be<s16> mBackboneTargetY;  /* was field_0x32: lookAtTarget_2 0259E2D4 stores the backbone part of the Y turn and eases mAngles[1][1] toward it; next frame it picks the split order by its sign; turn_fromHead2Backbone 0259E1DC gives the head the rest after it, turn_fromBackbone2Head 0259E104 drops a backbone turn against its direction (tww the same) */
     /* 0259E08C setParam(maxBackboneX, maxBackboneY, minBackboneX, minBackboneY, maxHeadX, maxHeadY,
      * minHeadX, minHeadY, maxTurnStep): the last two on the stack [v sarace, kg1, kg2] */
     void setParam(s16 a, s16 b, s16 c, s16 d, s16 e, s16 f, s16 g, s16 h, s16 i) {
@@ -86,7 +86,7 @@ WWHD_SIZE(dNpc_JntCtrl_c, 0x34);
 
 /* dNpc_HIO_c (HD 0x28: GameCube members -4, vtable at the end; constructor 0259DA18) */
 struct dNpc_HIO_c {
-    /* 0x00 */ be<f32> m04;              /* GameCube 0x04 */
+    /* 0x00 */ be<f32> mPlayerEyeOffsetY;  /* was m04: the player's eye height offset the NPCs pass to dNpc_playerEyePos for their look target (WWHD: so, btsw, btsw2, bmsw, bs1, ds1, rsh1, sarace, kg1, tc, cb1, md, os, p2, bms1 talk code; tww: so, btsw, btsw2, bmsw); the dNpc_HIO_c constructor 0259DA18 sets 0, each NPC's HIO constructor then its own value (-20 to -80) (tww the same); GameCube 0x04 */
     /* 0x04 */ be<s16> mMaxHeadX;
     /* 0x06 */ be<s16> mMaxBackboneX;
     /* 0x08 */ be<s16> mMaxHeadY;
@@ -99,7 +99,7 @@ struct dNpc_HIO_c {
     /* 0x16 */ be<s16> mMaxHeadTurnVel;
     /* 0x18 */ be<f32> mAttnYOffset;
     /* 0x1C */ be<s16> mMaxAttnAngleY;
-    /* 0x1E */ be<u8> m22;
+    /* 0x1E */ be<u8> mDebugDraw;  /* was m22: the debug draw switch: _draw of btsw 02219840, bmsw 0220F06C, tc 022EA464 and so (022DFEDC, through d_a_npc_so_mode.h's view) draw the debug shapes while it is set (tww so / btsw / bmsw the same); the dNpc_HIO_c constructor 0259DA18 and each NPC's HIO constructor clear it; same name as daRd_HIO_c / daTag_So_HIO_c's own debug switches */
     /* 0x1F */ u8 _1F;
     /* 0x20 */ be<f32> mMaxAttnDistXZ;
     /* 0x24 */ be<u32> __vtbl;

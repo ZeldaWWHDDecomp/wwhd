@@ -260,7 +260,7 @@ u32 daNpcPeople_c::getMsg3() {
     mpMsgList = nullptr;
     switch (mNpcNo) {
     case NPC_UM3:
-        switch (m7A7) {
+        switch (mSkyLookNo) {
         case 0:
         default:
             if (dKy_moon_type_chk() == 0) {
@@ -416,8 +416,8 @@ u32 daNpcPeople_c::getMsg() {
             }
             break;
         case NPC_UO2:
-            if (m79A & 0x1) {
-                m79A = m79A & ~0x1;
+            if (mSurpriseFlags & 0x1) {
+                mSurpriseFlags = mSurpriseFlags & ~0x1;
                 mpMsgList = l_msg_uo2_surprise;
             } else if (dComIfGs_isEventBit(0x2D01)) {
                 mpMsgList = l_msg_uo2_help;
@@ -690,7 +690,7 @@ u32 daNpcPeople_c::getMsg() {
                                 mpMsgList = l_msg_sa5_false_1st[reg];
                             } else {
                                 // HD: the debug expression calls reg a_tempReg.
-                                JUT_ASSERT_fail("d_a_npc_people.cpp", 0x2113, "(reg >= 0) && (reg < (sizeof(l_msg_sa5_false_1st) / sizeof(l_msg_sa5_false_1st[0])))");
+                                JUT_ASSERT_fail("d_a_npc_people.cpp", 0x2113, "(a_tempReg >= 0) && (a_tempReg < (sizeof(l_msg_sa5_false_1st) / sizeof(l_msg_sa5_false_1st[0])))");
                             }
                             dComIfGs_onTmpBit(0x0240);
                         } else {
@@ -727,7 +727,7 @@ u32 daNpcPeople_c::getMsg() {
                             mpMsgList = l_msg_sa5_play[reg];
                         } else {
                             // HD: the debug expression calls reg a_tempReg.
-                            JUT_ASSERT_fail("d_a_npc_people.cpp", 0x2151, "(reg >= 0) && (reg < (sizeof(l_msg_sa5_play) / sizeof(l_msg_sa5_play[0])))");
+                            JUT_ASSERT_fail("d_a_npc_people.cpp", 0x2151, "(a_tempReg >= 0) && (a_tempReg < (sizeof(l_msg_sa5_play) / sizeof(l_msg_sa5_play[0])))");
                         }
                     }
                 } else if (dComIfGs_isEventBit(0x2680)) {
@@ -930,6 +930,6 @@ ext 02526100 u32 daDai_getMaxDaiza()
 ext 0252610C u32 daDai_getDaizaSetItemNum()
 ext 0259D624 void peopleCalcDisXZAngY(cXyz*, cXyz*, f32*, s16*)
 str 10020874 "d_a_npc_people.cpp"
-str 10020888 "(reg >= 0) && (reg < (sizeof(l_msg_sa5_false_1st) / sizeof(l_msg_sa5_false_1st[0])))" renamed
-str 100208EC "(reg >= 0) && (reg < (sizeof(l_msg_sa5_play) / sizeof(l_msg_sa5_play[0])))" renamed
+str 10020888 "(a_tempReg >= 0) && (a_tempReg < (sizeof(l_msg_sa5_false_1st) / sizeof(l_msg_sa5_false_1st[0])))"
+str 100208EC "(a_tempReg >= 0) && (a_tempReg < (sizeof(l_msg_sa5_play) / sizeof(l_msg_sa5_play[0])))"
 */

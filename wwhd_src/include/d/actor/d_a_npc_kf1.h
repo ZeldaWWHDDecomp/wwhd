@@ -13,10 +13,10 @@ struct daNpc_Kf1_HIO_c {
         /* 0x02 */ be<s16> mMaxHeadY;
         /* 0x04 */ be<s16> mMinHeadX;
         /* 0x06 */ be<s16> mMinHeadY;
-        /* 0x08 */ be<s16> mMaxBackBoneX;
-        /* 0x0A */ be<s16> mMaxBackBoneY;
-        /* 0x0C */ be<s16> mMinBackBoneX;
-        /* 0x0E */ be<s16> mMinBackBoneY;
+        /* 0x08 */ be<s16> mMaxBackboneX;  /* was mMaxBackBoneX (misnamed): our own spelling; the joint control's limit passed to m_jnt.setParam as argument 1 (tww dNpc_JntCtrl_c::setParam max_backbone_x), spelled as tww dNpc_HIO_c::mMaxBackboneX and the other NPC parameter blocks */
+        /* 0x0A */ be<s16> mMaxBackboneY;  /* was mMaxBackBoneY (misnamed): our own spelling; the joint control's limit passed to m_jnt.setParam as argument 2 (tww dNpc_JntCtrl_c::setParam max_backbone_y), spelled as tww dNpc_HIO_c::mMaxBackboneY and the other NPC parameter blocks */
+        /* 0x0C */ be<s16> mMinBackboneX;  /* was mMinBackBoneX (misnamed): our own spelling; the joint control's limit passed to m_jnt.setParam as argument 3 (tww dNpc_JntCtrl_c::setParam min_backbone_x), spelled as tww dNpc_HIO_c::mMinBackboneX and the other NPC parameter blocks */
+        /* 0x0E */ be<s16> mMinBackboneY;  /* was mMinBackBoneY (misnamed): our own spelling; the joint control's limit passed to m_jnt.setParam as argument 4 (tww dNpc_JntCtrl_c::setParam min_backbone_y), spelled as tww dNpc_HIO_c::mMinBackboneY and the other NPC parameter blocks */
         /* 0x10 */ be<s16> mMaxTurnStep;
         /* 0x12 */ be<s16> mLookVelMax;
         /* 0x14 */ be<f32> mAttPosOffsetY;

@@ -4,9 +4,9 @@
 namespace daObjHlift {
 struct Act_c : dBgS_MoveBgActor {
     struct size_data {
-        be<s16> field_0x00;
-        be<s16> field_0x01;
-        be<u32> field_0x02;
+        be<s16> mBdlResIdx;  /* was field_0x00: CreateHeap 023561E4 loads the platform model Hlift[it] for the size index mSizeIdx (tww CreateHeap the same) */
+        be<s16> mDzbResIdx;  /* was field_0x01: Mthd_Create 02356090 passes it to MoveBGCreate as the collision (dzb) resource of the size (tww Create the same) */
+        be<u32> mHeapSize;  /* was field_0x02: Mthd_Create 02356090 passes it to MoveBGCreate as the heap size of the size (tww Create the same) */
     };
     enum Mode_e { Mode_LOWER, Mode_L_U, Mode_UPPER, Mode_U_L, Mode_DEMOREQ, Mode_UNK };
     enum Prm_e {

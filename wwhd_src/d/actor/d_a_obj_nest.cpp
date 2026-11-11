@@ -25,7 +25,7 @@ static inline f32 maxLimitF(f32 v, f32 max) { return (v - max) >= 0.0f ? max : v
 /* 0237E9D0 */
 BOOL Act_c::CreateHeap() {
     J3DModelData* model_data = (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_MTORISU_BDL_MTORISU_e);
-    JUT_ASSERT(281, model_data != NULL);
+    JUT_ASSERT_MSG(281, model_data != NULL, "model_data != 0");
     J3DModel* model = mDoExt_J3DModel__create(model_data, 0x80000, 0x11000022);
     mpModel = model;
     return model != nullptr; /* HD: tests the returned pointer */
@@ -209,7 +209,7 @@ static void nest_SafeString_assureTermination(void* p) {
 /* WWHD glue (tools/verify/autoglue.py): this translation unit's data and existing local binding
 str 1002DEB8
 str 1002DE78 in 0237E9D0
-str 1002DE68 "model_data != NULL" renamed
+str 1002DE68 "model_data != 0"
 str 1002DE10 in 0237E8B4
 str 1002DE24
 data M_tmp_mtx 1046BA90

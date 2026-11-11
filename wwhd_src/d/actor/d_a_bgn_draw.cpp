@@ -154,8 +154,8 @@ static inline void water0_disp(bgn_class *i_this) {
     gabi::at<GXColor>(tev_kcol)->b = 0xFF;
     gabi::at<GXColor>(tev_kcol)->g = 0xFF;
     gabi::at<GXColor>(tev_kcol)->r = 0xFF;
-    f32 fVar1 = l_HIO().m010;
-    if (i_this->mForm == 1 && l_HIO().m00D == 0) {
+    f32 fVar1 = l_HIO().mWaterAlphaPct;
+    if (i_this->mForm == 1 && l_HIO().mRoomReflectionOn == 0) {
         f32 y = gabi::at<fopAc_ac_c>(bgn2_g())->current.pos.y;
         fVar1 = gabi::fmuls_ppc(gabi::fadds_ppc(gabi::fadds_ppc(REG0_F(4), 4000.0f), y),
                                 gabi::fadds_ppc(REG0_F(5), 0.01f));
@@ -247,7 +247,7 @@ BOOL daBgn_Draw(bgn_class *i_this) {
         }
     }
     water0_disp(i_this);
-    if (l_HIO().m00D != 0) {
+    if (l_HIO().mRoomReflectionOn != 0) {
         /* room_disp (inline) */
         settingTevStruct(dKy_getEnvlight(), 2, gabi::at<cXyz>(0x10461CB8),
                          (dKy_tevstr_c *)&i_this->mRoomTevStr);
@@ -260,7 +260,7 @@ BOOL daBgn_Draw(bgn_class *i_this) {
         i_this->mRoomReflectionPacket.mpModel = i_this->mpRoomReflectionModel;
         mDoExt_J3DModelPacketS_update(&i_this->mRoomReflectionPacket);
     }
-    if (l_HIO().m00C != 0) {
+    if (l_HIO().mReflectionOn != 0) {
         /* obj_disp (inline) */
         if (REG0_S(8) == 0)
             fpcM_Search(BGN_DRAW_ten_a_d_sub, i_this);
@@ -325,7 +325,7 @@ BOOL daBgn_Draw(bgn_class *i_this) {
             setLightTevColorType(dKy_getEnvlight(), i_this->mpChestModel, bgn_tev(tev));
             mDoExt_modelUpdateDL(i_this->mpChestModel, 0);
             dSnap_RegistFig(0xCD /* DSNAP_TYPE_BGN */, actor, 1.0f, 1.0f, 1.0f);
-            if (l_HIO().m00C != 0) {
+            if (l_HIO().mReflectionOn != 0) {
                 i_this->mChestPacket.mpModel = i_this->mpChestModel;
                 mDoExt_J3DModelPacketS_update(&i_this->mChestPacket);
             }
@@ -376,12 +376,12 @@ BOOL daBgn_Draw(bgn_class *i_this) {
                     gabi::at<J3DModel>((gabi::at<mDoExt_McaMorf>(bodyMorf)->mpModel.v)),
                     bgn_tev(tev));
                 bgn_morf_entryDL((body->mpHeadMorf.v));
-                if (l_HIO().m00C != 0) {
+                if (l_HIO().mReflectionOn != 0) {
                     body->mHeadPacket.mpModel.v = gabi::at<mDoExt_McaMorf>(body->mpHeadMorf.v)->mpModel.v;
                     bgn_update(b2 + 0x3D4); /* mHeadPacket */
                 }
                 bgn_morf_entryDL((body->mpBodyMorf.v));
-                if (l_HIO().m00C != 0) {
+                if (l_HIO().mReflectionOn != 0) {
                     body->mBodyPacket.mpModel.v = gabi::at<mDoExt_McaMorf>(body->mpBodyMorf.v)->mpModel.v;
                     bgn_update(b2 + 0x488); /* mBodyPacket */
                 }
@@ -408,7 +408,7 @@ BOOL daBgn_Draw(bgn_class *i_this) {
                     setLightTevColorType(dKy_getEnvlight(), gabi::at<J3DModel>(model),
                                          bgn_tev(tev));
                     mDoExt_modelUpdateDL(gabi::at<J3DModel>(model), 0);
-                    if (l_HIO().m00C != 0) {
+                    if (l_HIO().mReflectionOn != 0) {
                         body->mJyakutenPacket.mpModel.v = model;
                         bgn_update(b2 + 0x538); /* mJyakutenPacket */
                     }
@@ -433,7 +433,7 @@ BOOL daBgn_Draw(bgn_class *i_this) {
                 u32 model = (body->mpDekuModel.v); /* mpDekuModel */
                 setLightTevColorType(dKy_getEnvlight(), gabi::at<J3DModel>(model), bgn_tev(tev));
                 mDoExt_modelUpdateDL(gabi::at<J3DModel>(model), 0);
-                if (l_HIO().m00C != 0) {
+                if (l_HIO().mReflectionOn != 0) {
                     body->mDekuPacket.mpModel.v = model;
                     bgn_update(b3 + 0x488);
                 }
@@ -442,7 +442,7 @@ BOOL daBgn_Draw(bgn_class *i_this) {
                     dKy_getEnvlight(),
                     gabi::at<J3DModel>((gabi::at<mDoExt_McaMorf>(morf)->mpModel.v)), bgn_tev(tev));
                 bgn_morf_entryDL((body->mpMorf.v));
-                if (l_HIO().m00C != 0) {
+                if (l_HIO().mReflectionOn != 0) {
                     body->mHeadPacket.mpModel.v = gabi::at<mDoExt_McaMorf>(body->mpMorf.v)->mpModel.v;
                     bgn_update(b3 + 0x3D4);
                 }
@@ -480,7 +480,7 @@ BOOL daBgn_Draw(bgn_class *i_this) {
                             }
                         }
                         mDoExt_modelUpdateDL(gabi::at<J3DModel>((hairPart->mpPart3Model.v)), 0);
-                        if (l_HIO().m00C != 0) {
+                        if (l_HIO().mReflectionOn != 0) {
                             hairPart->mPart3Packet.mpModel.v = (hairPart->mpPart3Model.v);
                             bgn_update(part + 4);
                         }

@@ -73,7 +73,7 @@ class dCcMassS_MngNative {
     /* 0x0bc */ be<s32> mMassAreaCount;
     /* 0x0c0 */ dCcMassS_Obj mMassAreas[2];
     /* 0x0f0 */ MassCylAttr mCylAttr;
-    /* 0x128 */ be<u8> field_0x128;
+    /* 0x128 */ be<u8> mChkFlags;  /* was field_0x128: the checks Chk 025170D8 runs, massFlag bits: ATTACK (1) the AT check against mCylAttr, COLLISION (2), AREA (8) the area objects, MOVE (16); Clear 025169A8 / Ct 02516A78 clear it; tww SetAttr(radius, height, it, camBit) sets it */
     /* 0x129 */ be<u8> mResultCamBit;
     u8 mPadding12a[2];
     /* 0x12C */ be<u32> mFlag;
@@ -149,7 +149,7 @@ WWHD_OFFSET(dCcMassS_MngNative, mMassObjs, 0x44);
 WWHD_OFFSET(dCcMassS_MngNative, mMassAreaCount, 0xbc);
 WWHD_OFFSET(dCcMassS_MngNative, mMassAreas, 0xc0);
 WWHD_OFFSET(dCcMassS_MngNative, mCylAttr, 0xf0);
-WWHD_OFFSET(dCcMassS_MngNative, field_0x128, 0x128);
+WWHD_OFFSET(dCcMassS_MngNative, mChkFlags, 0x128);
 WWHD_OFFSET(dCcMassS_MngNative, mResultCamBit, 0x129);
 WWHD_OFFSET(dCcMassS_MngNative, mFlag, 0x12c);
 WWHD_OFFSET(dCcMassS_MngNative, mResultCam, 0x130);

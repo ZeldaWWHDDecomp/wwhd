@@ -152,6 +152,8 @@ WWHD_OFFSET(damagereaction_l, mPlayerInView, 0x747);
 WWHD_OFFSET(damagereaction_l, mStts, 0x758);
 WWHD_OFFSET(damagereaction_l, mParticleCallBack, 0x7A8);
 WWHD_SIZE(damagereaction_l, 0x7F0);
+WWHD_OFFSET(damagereaction_l, mJntGroundState, 0x400);
+WWHD_OFFSET(damagereaction_l, mJnt10LineBlocked, 0x438);
 
 /* enemyice (unchanged size 0x3B8) */
 struct enemyice_l {
@@ -160,7 +162,7 @@ struct enemyice_l {
     /* 0x006 */ be<s8> mLightShrinkTimer;
     /* 0x007 */ u8 m007;
     /* 0x008 */ be<f32> mYOffset;
-    /* 0x00C */ be<s8> m00C;
+    /* 0x00C */ be<s8> mFreezeType;  /* was m00C: view of enemyice::mFreezeType (c/c_damagereaction.h) */
     /* 0x00D */ be<s8> mMode;
     /* 0x00E */ be<s16> mFreezeTimer;
     /* 0x010 */ be<s16> mMoveDelayTimer;
@@ -169,8 +171,8 @@ struct enemyice_l {
     /* 0x016 */ u8 m016[2];
     /* 0x018 */ cXyz mSpeed;
     /* 0x024 */ be<f32> mSpeedF;
-    /* 0x028 */ be<f32> m028;
-    /* 0x02C */ be<f32> m02C;
+    /* 0x028 */ be<f32> mBodyLiftY;  /* was m028: view of enemyice::mBodyLiftY (c/c_damagereaction.h) */
+    /* 0x02C */ be<f32> mIceOffsetY;  /* was m02C: view of enemyice::mIceOffsetY (c/c_damagereaction.h) */
     /* 0x030 */ dCcD_Stts mStts;
     /* 0x06C */ dCcD_Cyl mCyl;
     /* 0x19C */ be<f32> mCylHeight;
@@ -245,13 +247,13 @@ struct bk_class : fopEn_enemy_c {
     /* 0x3FB */ be<u8> mSpawnTimer;  /* was m02DF: HD: daBk_Create 0209F918 sets 5 with status bit 0x4000 (0 for type 10); daBk_Execute 0209BD1C counts down and clears bit 0x4000 at 0; HD */
     /* 0x3FC */ u8 m02E0[4];             /* GameCube mShadowId + 4: HD 4 bytes, unused */
     /* 0x400 */ gptr<J3DModel> mpBlurModel;  /* was m02E8: useHeapInit 0209F220: swing blur model KB_KEN / KB_BOKO; br_draw (in daBk_Draw 0209971C) shows its BLURA or BLURB shape */
-    /* 0x404 */ be<f32> mBlurScaleX;  /* was m02EC: fight_attack (in fight 020A1AAC): l_bkHIO m0A8[] / m0D8[] by attack frame; br_draw (in daBk_Draw 0209971C) scales the blur model x by it */
+    /* 0x404 */ be<f32> mBlurScaleX;  /* was m02EC: fight_attack (in fight 020A1AAC): l_bkHIO mBlur0ScaleX[] / mBlur1ScaleX[] by attack frame; br_draw (in daBk_Draw 0209971C) scales the blur model x by it */
     /* 0x408 */ be<s32> mBlurOn;  /* was m02F0: daBk_Execute 0209BD1C clears it each frame; fight_attack (in fight 020A1AAC) sets 1 inside the swing frames; br_draw (in daBk_Draw 0209971C) draws the blur only when set */
     /* 0x40C */ be<s32> mBlurUseB;  /* was m02F4: daBk_Execute 0209BD1C clears it; fight_attack (in fight 020A1AAC) sets 1 for the middle swing frames; br_draw shows BLURB instead of BLURA when set */
     /* 0x410 */ be<s32> mFrameCounter;  /* was m02F8: daBk_Execute 0209BD1C adds 1 per frame; ground_smoke_set 020A070C / yogan_fail 020A38D4 / fight_run 020A0A98 test its low bits */
     /* 0x414 */ be<s32> mOshiCount;  /* was m02FC: fight_run 020A0A98 counts it up while the Bokoblin holds its weapon close to the player and sees it; at 25 (+REG) it may start BK_ACTION_OSHI and clears it, else it is cleared; damage_check (in daBk_Execute 0209BD1C) clears it on a hit */
     /* 0x418 */ be<s16> mTimers[5];  /* was m0300: daBk_Execute 0209BD1C counts all 5 down each frame; actions load [0]..[4] (e.g. hukki 020A3048, water_fail 020A3B18) */
-    /* 0x422 */ be<s16> mWeaponRunTimer;  /* was m030A: wepon_search 020A3CC8 sets l_bkHIO m08E when it starts running to a dropped weapon and gives up (bare-handed fight run) when it is 0; daBk_Execute 0209BD1C counts it down; jyunkai (in Bk_move 020A5EF4) starts no new weapon search while it runs (as tn_class mWeponRunTimer) */
+    /* 0x422 */ be<s16> mWeaponRunTimer;  /* was m030A: wepon_search 020A3CC8 sets l_bkHIO mWeaponRunTime when it starts running to a dropped weapon and gives up (bare-handed fight run) when it is 0; daBk_Execute 0209BD1C counts it down; jyunkai (in Bk_move 020A5EF4) starts no new weapon search while it runs (as tn_class mWeponRunTimer) */
     /* 0x424 */ be<s16> mAnmStopTimer;  /* was m030C: wepon_search 020A3CC8 sets 5, daBk_Execute 0209BD1C counts down and plays mpMorf only when it is 0 */
     /* 0x426 */ be<s16> mNoHitTimer;  /* was m030E: daBk_Execute 0209BD1C counts down and moves the Tg spheres 20000 down while it is not 0; damage_check (in daBk_Execute) takes a hit only when it is 0 and reloads it */
     /* 0x428 */ be<s16> mRecentHitTimer;  /* was m0310: damage_check (in daBk_Execute 0209BD1C) sets 25 on a hit (weak hits are ignored while it runs in BK_ACTION_TUBO_WAIT), daBk_Execute 0209BD1C 20 when the hiding Bokoblin comes out, then counts it down; fight_run 020A0A98 dodges shots only when it is 0 */
@@ -270,7 +272,7 @@ struct bk_class : fopEn_enemy_c {
     /* 0x450 */ cXyz mSmokePos;  /* was m0338: ground_smoke_set 020A070C computes it; smoke_set_s 02098EEC line-checks below it and sets the smoke / grass particles there */
     /* 0x45C */ csXyz mEffectAngle;  /* was m0344: ground_smoke_set 020A070C / smoke_set_s 02098EEC: smoke particle angle; daBk_Execute 0209BD1C / yogan_fail 020A38D4: TUBA00 particle angle */
     /* 0x462 */ be<s16> mSmokeAngleY;  /* was m034A: ground_smoke_set 020A070C: rotates the smoke offset by it and adds 2000 / 0x1FA0 / 0x2000 per call */
-    /* 0x464 */ be<s16> mSmokeTimer;  /* was m034C: ground_smoke_set 020A070C: counts down, sets smoke while >= l_bkHIO m00C; hukki 020A3048 / wepon_search 020A3CC8 / daBk_Execute load l_bkHIO m00C + n */
+    /* 0x464 */ be<s16> mSmokeTimer;  /* was m034C: ground_smoke_set 020A070C: counts down, sets smoke while >= l_bkHIO mSmokeTimerBase; hukki 020A3048 / wepon_search 020A3CC8 / daBk_Execute load l_bkHIO mSmokeTimerBase + n */
     /* 0x466 */ be<u8> mSmokeType;  /* was m034E: ground_smoke_set 020A070C: switch 0..4 selects where the smoke comes from; hukki 020A3048 sets 3, wepon_search 020A3CC8 4, daBk_Execute 0209BD1C 1 */
     /* 0x467 */ be<u8> mSmokeCount;  /* was m034F: ground_smoke_set 020A070C clears it; smoke_set_s 02098EEC adds 1 per smoke set and tests it with the ground attribute */
     /* 0x468 */ dPa_smokeEcallBack_l mSmokeCallBack;  /* was m0350: bk_class_ct 0209F74C: dPa_smokeEcallBack_ct; smoke_set_s 02098EEC passes it to the smoke emitter; daBk_Delete 0209F164 removes it */
@@ -374,69 +376,69 @@ WWHD_SIZE(bk_class, 0x19A4);
  * l_bkHIO is at 0x10462368. */
 struct bkHIO_c {
     /* 0x000 */ be<s8> mNo;
-    /* 0x001 */ be<u8> m005;
-    /* 0x002 */ be<u8> m006;
-    /* 0x003 */ be<u8> m007;
-    /* 0x004 */ be<u8> m008;
-    /* 0x005 */ be<u8> m009;
-    /* 0x006 */ be<u8> m00A;
+    /* 0x001 */ be<u8> mDrawSearchRange;  /* was m005: search_check_draw (in daBk_Draw 0209971C) draws the sight circles and cone only while it is set; __sinit_d_a_bk_cpp 020A0364 sets the default 0 */
+    /* 0x002 */ be<u8> mDebugFrameStep;  /* was m006: daBk_Execute 0209BD1C runs the per-frame update (mFrameCounter, mTimers, actions) only while it is 0 or on a B trigger / Y hold, so a set value steps frame by frame; __sinit_d_a_bk_cpp 020A0364 sets the default 0 */
+    /* 0x003 */ be<u8> mResetHealthOnHit;  /* was m007: damage_check (in daBk_Execute 0209BD1C) sets health back to 10 on every hit while it is set; __sinit_d_a_bk_cpp 020A0364 sets the default 0 */
+    /* 0x004 */ be<u8> mAlwaysGuard;  /* was m008: fight_run 020A0A98: a shield Bokoblin (mHasShield) guards a cut every time while it is set, else with a 50 % chance; __sinit_d_a_bk_cpp 020A0364 sets the default 1 */
+    /* 0x005 */ be<u8> mHeadAngleIsBody;  /* was m009: nodeCallBack 020991CC: while set mHeadAngleY takes angle.y instead of the head joint direction; __sinit_d_a_bk_cpp 020A0364 sets the default 0 */
+    /* 0x006 */ be<u8> mNoPickupAttack;  /* was m00A: wepon_search 020A3CC8: once the weapon is picked up, attacks (action 5) a player inside mAttackDist only while it is 0; __sinit_d_a_bk_cpp 020A0364 sets the default 0 */
     /* 0x007 */ u8 m00B;
-    /* 0x008 */ be<s16> m00C;
+    /* 0x008 */ be<s16> mSmokeTimerBase;  /* was m00C: ground_smoke_set 020A070C sets smoke while mSmokeTimer >= it; hukki 020A3048, wepon_search 020A3CC8, carry_drop 020A47B4, daBk_Execute 0209BD1C and fight_run 020A0A98 load mSmokeTimer with it + 2..16; __sinit_d_a_bk_cpp 020A0364 sets the default 4 */
     /* 0x00A */ u8 m00E[2];
-    /* 0x00C */ be<f32> m010;
-    /* 0x010 */ be<f32> m014;
-    /* 0x014 */ be<f32> m018;
+    /* 0x00C */ be<f32> mWeakHitPushback;  /* was m010: damage_check (in daBk_Execute 0209BD1C): dr.mPushback = -it for a hit with knockback power below 25; __sinit_d_a_bk_cpp 020A0364 sets the default 0.0 */
+    /* 0x010 */ be<f32> mAttackBtMaxDis;  /* was m014: fight_attack (in fight 020A1AAC) copies it to the fopEn_enemy_c mBtMaxDis of the swing; __sinit_d_a_bk_cpp 020A0364 sets the default 400 */
+    /* 0x014 */ be<f32> mBlurScale;  /* was m018: br_draw (in daBk_Draw 0209971C): MtxScale(it * mBlurScaleX, it, it) of the swing blur model; __sinit_d_a_bk_cpp 020A0364 sets the default 0.7 */
     /* 0x018 */ be<f32> m01C;
-    /* 0x01C */ be<f32> m020;
-    /* 0x020 */ be<f32> m024;
-    /* 0x024 */ be<f32> m028;
-    /* 0x028 */ be<f32> m02C;
-    /* 0x02C */ be<f32> m030;
-    /* 0x030 */ be<s16> m034;
+    /* 0x01C */ be<f32> mDropItemOffsetY;  /* was m020: fail 020A3704: the drop item (fopAcM_createDisappear) appears at current.pos.y + 100 + it; __sinit_d_a_bk_cpp 020A0364 sets the default 25 */
+    /* 0x020 */ be<f32> mAttnOffsetY;  /* was m024: nodeCallBack 020991CC: attention_info.position = eyePos + it in y; __sinit_d_a_bk_cpp 020A0364 sets the default 25 */
+    /* 0x024 */ be<f32> mNoticeDist;  /* was m028: jyunkai / path_run (in Bk_move 020A5EF4) notice the player closer than it (with the sight check); search_check_draw (in daBk_Draw 0209971C) draws a circle of this radius; __sinit_d_a_bk_cpp 020A0364 sets the default 1000 */
+    /* 0x028 */ be<f32> mAttackDist;  /* was m02C: fight_attack (in fight 020A1AAC), hukki 020A3048 and wepon_search 020A3CC8 attack a player closer than it; fight_run 020A0A98 gives up the fight beyond it + 75; search_check_draw draws a circle of this radius; __sinit_d_a_bk_cpp 020A0364 sets the default 400 */
+    /* 0x02C */ be<f32> mFightDist;  /* was m030: fight_run 020A0A98: walks in (mode 3) farther than it, backs off (mode 4) closer, attack chances inside it +- 62.5, the push (oshi) check below it - 62.5; __sinit_d_a_bk_cpp 020A0364 sets the default 240 */
+    /* 0x030 */ be<s16> mViewAngle;  /* was m034: daBk_player_view_check 0209B05C (called by fight_run 020A0A98, p_lost 020A27F8, jyunkai in Bk_move 020A5EF4, fight_attack) and search_bomb 0209A728: half angle of the sight cone around mHeadAngleY; search_check_draw draws the cone with it; __sinit_d_a_bk_cpp 020A0364 sets the default 0x6590 */
     /* 0x032 */ u8 m036[2];
-    /* 0x034 */ be<f32> m038;
-    /* 0x038 */ be<f32> m03C;
-    /* 0x03C */ be<f32> m040;
-    /* 0x040 */ be<f32> m044;
-    /* 0x044 */ be<f32> m048;
-    /* 0x048 */ be<f32> m04C;
-    /* 0x04C */ be<f32> m050;
-    /* 0x050 */ be<f32> m054;
-    /* 0x054 */ be<f32> m058;
-    /* 0x058 */ be<f32> m05C;
-    /* 0x05C */ be<f32> m060;
-    /* 0x060 */ be<f32> m064;
-    /* 0x064 */ be<f32> m068;
+    /* 0x034 */ be<f32> mViewHeight;  /* was m038: daBk_player_view_check 0209B05C, search_bomb 0209A728 and search_wepon_inline (in daBk_wepon_view_check 0209AB64): no sight when the height difference to eyePos is above it; search_check_draw draws the cone at +- it; __sinit_d_a_bk_cpp 020A0364 sets the default 300 */
+    /* 0x038 */ be<f32> mViewBoxHalfX;  /* was m03C: daBk_player_view_check 0209B05C, search_bomb 0209A728, search_wepon_inline (in daBk_wepon_view_check 0209AB64): the near sight box is |x| < it in the actor's frame; __sinit_d_a_bk_cpp 020A0364 sets the default 500 */
+    /* 0x03C */ be<f32> mViewBoxHalfY;  /* was m040: daBk_player_view_check 0209B05C, search_bomb 0209A728, search_wepon_inline (in daBk_wepon_view_check 0209AB64): the near sight box is |y| < it; __sinit_d_a_bk_cpp 020A0364 sets the default 300 */
+    /* 0x040 */ be<f32> mViewBoxFront;  /* was m044: daBk_player_view_check 0209B05C, search_bomb 0209A728, search_wepon_inline (in daBk_wepon_view_check 0209AB64): the near sight box ends at z < it (in front); __sinit_d_a_bk_cpp 020A0364 sets the default 500 */
+    /* 0x044 */ be<f32> mViewBoxBack;  /* was m048: daBk_player_view_check 0209B05C, search_bomb 0209A728, search_wepon_inline (in daBk_wepon_view_check 0209AB64): the near sight box starts at z > it (behind); __sinit_d_a_bk_cpp 020A0364 sets the default -125 */
+    /* 0x048 */ be<f32> mPatrolSpeed;  /* was m04C: jyunkai (in Bk_move 020A5EF4): patrol speedF target with a weapon (or bare-handed), arrival radius half of it; __sinit_d_a_bk_cpp 020A0364 sets the default 12 */
+    /* 0x04C */ be<f32> mPatrolSpeedNoWeapon;  /* was m050: jyunkai (in Bk_move 020A5EF4): patrol speedF target without a weapon, arrival radius half of it; __sinit_d_a_bk_cpp 020A0364 sets the default 60 */
+    /* 0x050 */ be<f32> mRunSpeed;  /* was m054: stand / path_run (in Bk_move 020A5EF4) speedF (x 0.5 / x 1.2 in some modes, home arrival radius it x 1.25); fight_run 020A0A98 run speed with a weapon; __sinit_d_a_bk_cpp 020A0364 sets the default 45 */
+    /* 0x054 */ be<f32> mRunSpeedNoWeapon;  /* was m058: fight_run 020A0A98: run speed (mode 1) while it holds no weapon and is not bare-handed; __sinit_d_a_bk_cpp 020A0364 sets the default 70 */
+    /* 0x058 */ be<f32> mDashSpeed;  /* was m05C: wepon_search 020A3CC8 (run to the weapon, x 0.5 while turning) and b_nige 020A2A54 (flee from a bomb): speedF; __sinit_d_a_bk_cpp 020A0364 sets the default 90 */
+    /* 0x05C */ be<f32> mFightWalkSpeed;  /* was m060: fight_run 020A0A98: speedF target walking in (mode 3), minus it backing off (mode 4); __sinit_d_a_bk_cpp 020A0364 sets the default 20 */
+    /* 0x060 */ be<f32> mSideStepSpeed;  /* was m064: fight_run 020A0A98: speedF target of the side step (mMoveAngleOffset +-0x4000); __sinit_d_a_bk_cpp 020A0364 sets the default 20 */
+    /* 0x064 */ be<f32> mJumpRunSpeed;  /* was m068: fight_run 020A0A98: speedF during the JUMP2 jumps while holding a weapon (mJumpStep); __sinit_d_a_bk_cpp 020A0364 sets the default 90 */
     /* 0x068 */ be<f32> m06C;
-    /* 0x06C */ be<f32> m070;
-    /* 0x070 */ be<f32> m074;
-    /* 0x074 */ be<s16> m078;
+    /* 0x06C */ be<f32> mRunAnmSpeed;  /* was m070: fight_run 020A0A98 (fight_run_set) and path_run (in Bk_move 020A5EF4): speed of the BK_RUN animation; __sinit_d_a_bk_cpp 020A0364 sets the default 1.0 */
+    /* 0x070 */ be<f32> mDashAnmSpeed;  /* was m074: wepon_search 020A3CC8: speed of the BK_RUN animation while running to the weapon; __sinit_d_a_bk_cpp 020A0364 sets the default 1.5 */
+    /* 0x074 */ be<s16> mAttackChanceWait;  /* was m078: fight_run 020A0A98: reloads mTimers[4] with it; the attack chance (mAttackChance) is rolled only when that timer is 0; __sinit_d_a_bk_cpp 020A0364 sets the default 0x23 */
     /* 0x076 */ u8 m07A[2];
-    /* 0x078 */ be<f32> m07C;
+    /* 0x078 */ be<f32> mAttackChance;  /* was m07C: fight_run 020A0A98: attacks (action 5) when cM_rndF(100) < it inside mFightDist +- 62.5; __sinit_d_a_bk_cpp 020A0364 sets the default 50 */
     /* 0x07C */ be<f32> m080;
     /* 0x080 */ be<f32> m084;
     /* 0x084 */ be<f32> m088;
-    /* 0x088 */ be<s16> m08C;
-    /* 0x08A */ be<s16> m08E;
+    /* 0x088 */ be<s16> mDownTime;  /* was m08C: daBk_Execute 0209BD1C: damage reaction modes 20 / 21 load dr.mDownTimers[2] with it; __sinit_d_a_bk_cpp 020A0364 sets the default 0x1E */
+    /* 0x08A */ be<s16> mWeaponRunTime;  /* was m08E: wepon_search 020A3CC8 loads mWeaponRunTimer with it when the run to the weapon starts; __sinit_d_a_bk_cpp 020A0364 sets the default 0x12C */
     /* 0x08C */ be<f32> m090;
     /* 0x090 */ be<f32> m094;
     /* 0x094 */ be<f32> m098;
-    /* 0x098 */ be<f32> m09C;
-    /* 0x09C */ be<s16> m0A0;
-    /* 0x09E */ be<s16> m0A2;
-    /* 0x0A0 */ be<s16> m0A4;
-    /* 0x0A2 */ be<s16> m0A6;
-    /* 0x0A4 */ be<f32> m0A8[10];
-    /* 0x0CC */ be<s16> m0D0;
-    /* 0x0CE */ be<s16> m0D2;
-    /* 0x0D0 */ be<s16> m0D4;
-    /* 0x0D2 */ be<s16> m0D6;
-    /* 0x0D4 */ be<f32> m0D8[10];
-    /* 0x0FC */ be<f32> m100;
-    /* 0x100 */ be<s16> m104;
-    /* 0x102 */ be<s16> m106;
-    /* 0x104 */ be<s16> m108;
-    /* 0x106 */ be<s16> m10A;
+    /* 0x098 */ be<f32> mAttackTurnEndFrame;  /* was m09C: attack_set 0209B760 (kind 0) and wepon_search 020A3CC8 copy it to mTurnEndFrame; __sinit_d_a_bk_cpp 020A0364 sets the default 10 */
+    /* 0x09C */ be<s16> mBlur0Start;  /* was m0A0: fight_attack (in fight 020A1AAC), attack kind 0: the swing blur is on from this mAttackFrame; mBlur0ScaleX is indexed from it; __sinit_d_a_bk_cpp 020A0364 sets the default 0x17 */
+    /* 0x09E */ be<s16> mBlur0ALen;  /* was m0A2: fight_attack (in fight 020A1AAC), attack kind 0: frames of the BLURA shape after mBlur0Start before mBlurUseB; __sinit_d_a_bk_cpp 020A0364 sets the default 1 */
+    /* 0x0A0 */ be<s16> mBlur0BLen;  /* was m0A4: fight_attack (in fight 020A1AAC), attack kind 0: frames with mBlurUseB (BLURB shape); __sinit_d_a_bk_cpp 020A0364 sets the default 1 */
+    /* 0x0A2 */ be<s16> mBlur0TailLen;  /* was m0A6: fight_attack (in fight 020A1AAC), attack kind 0: the last part of the blur window (start + A + B + it); __sinit_d_a_bk_cpp 020A0364 sets the default 0 */
+    /* 0x0A4 */ be<f32> mBlur0ScaleX[10];  /* was m0A8: fight_attack (in fight 020A1AAC), attack kind 0: mBlurScaleX = it[mAttackFrame - mBlur0Start] (10 entries); __sinit_d_a_bk_cpp 020A0364 sets the default table bkHioDefaultsA8 */
+    /* 0x0CC */ be<s16> mBlur1Start;  /* was m0D0: fight_attack (in fight 020A1AAC), attack kind 1: the swing blur is on from this mAttackFrame; mBlur1ScaleX is indexed from it; __sinit_d_a_bk_cpp 020A0364 sets the default 5 */
+    /* 0x0CE */ be<s16> mBlur1ALen;  /* was m0D2: fight_attack (in fight 020A1AAC), attack kind 1: frames of the BLURA shape after mBlur1Start before mBlurUseB; __sinit_d_a_bk_cpp 020A0364 sets the default 1 */
+    /* 0x0D0 */ be<s16> mBlur1BLen;  /* was m0D4: fight_attack (in fight 020A1AAC), attack kind 1: frames with mBlurUseB (BLURB shape); __sinit_d_a_bk_cpp 020A0364 sets the default 1 */
+    /* 0x0D2 */ be<s16> mBlur1TailLen;  /* was m0D6: fight_attack (in fight 020A1AAC), attack kind 1: the last part of the blur window (start + A + B + it); __sinit_d_a_bk_cpp 020A0364 sets the default 1 */
+    /* 0x0D4 */ be<f32> mBlur1ScaleX[10];  /* was m0D8: fight_attack (in fight 020A1AAC), attack kind 1: mBlurScaleX = it[mAttackFrame - mBlur1Start] (10 entries); __sinit_d_a_bk_cpp 020A0364 sets the default table bkHioDefaultsD8 */
+    /* 0x0FC */ be<f32> mBlurOffsetX;  /* was m100: br_draw (in daBk_Draw 0209971C): the blur model sits 150 + it along the BUKI joint's x; __sinit_d_a_bk_cpp 020A0364 sets the default -60 */
+    /* 0x100 */ be<s16> mWaitTimeMin;  /* was m104: stand (in Bk_move 020A5EF4): mTimers[1] = random in [it, mWaitTimeMax) for the wait; __sinit_d_a_bk_cpp 020A0364 sets the default 0xC8 */
+    /* 0x102 */ be<s16> mWaitTimeMax;  /* was m106: stand (in Bk_move 020A5EF4): upper end of the random wait time (mWaitTimeMin); __sinit_d_a_bk_cpp 020A0364 sets the default 0x1F4 */
+    /* 0x104 */ be<s16> mSleepTimeMin;  /* was m108: stand (in Bk_move 020A5EF4): mTimers[1] = random in [it, mSleepTimeMax) once the BK_SLEEP animation starts; __sinit_d_a_bk_cpp 020A0364 sets the default 0x12C */
+    /* 0x106 */ be<s16> mSleepTimeMax;  /* was m10A: stand (in Bk_move 020A5EF4): upper end of the random sleep time (mSleepTimeMin); __sinit_d_a_bk_cpp 020A0364 sets the default 0x258 */
     /* 0x108 */ be<u32> __vtbl;
 };
 WWHD_SIZE(bkHIO_c, 0x10C);

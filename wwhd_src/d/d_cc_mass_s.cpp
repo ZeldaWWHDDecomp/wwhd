@@ -68,7 +68,7 @@ void dCcMassS_MngNative::Clear() {
     f32 z = l_zero;
     massSetRadius(&mCylAttr.mCyl, z);
     massSetHeight(&mCylAttr.mCyl, z);
-    field_0x128 = 0;
+    mChkFlags = 0;
     mResultCamBit = 4;
 }
 /* 02516A78 */
@@ -102,7 +102,7 @@ void* dCcMassS_MngNative_constructor(void* p) {
         a->mResultCamBit = 0;
         a->mResultCam = 0;
         a->mCylAttr.mCyl.__vtbl = 0x100017D8;
-        a->field_0x128 = 0;
+        a->mChkFlags = 0;
         a->mCylAttr.mShape.__vtbl = 0x10001738;
         a->mFlag = 0;
         massZeroMemory(&a->mCamTopPos, 12);
@@ -280,7 +280,7 @@ u32 dCcMassS_MngNative::Chk(cXyz* pos, gptr<fopAc_ac_c>* actor, dCcMassS_HitInf*
         h->mpArea = 0;
         h->mCoHitLen = z;
     }
-    if (field_0x128 & massFlag::AREA) {
+    if (mChkFlags & massFlag::AREA) {
         dCcMassS_Obj* base = mMassAreas;
         // GHS compares wrapping 32-bit guest addresses, including after callbacks alter counts.
         for (u32 cursor = gabi::ea(base);
@@ -326,19 +326,19 @@ u32 dCcMassS_MngNative::Chk(cXyz* pos, gptr<fopAc_ac_c>* actor, dCcMassS_HitInf*
                 gabi::at<void>(objectVtable(obj->__vtbl)->GetShapeAttr));
             if (g && (obj->mAtSPrm & massFlag::COLLIDER_SET) &&
                 !(g->mAtSPrm & massFlag::AT_NO_MASS) && massCrossAtTg(&mCylAttr, s, atHit.get()) &&
-                (field_0x128 & massFlag::ATTACK)) {
+                (mChkFlags & massFlag::ATTACK)) {
                 *actor = obj->mStts->mp_actor;
                 result |= massFlag::RESULT_ATTACK;
                 if (h)
                     h->mpAtObj = obj;
             }
             if (!(obj->mCoSPrm & massFlag::COLLIDER_SET) || !massCrossCo(&mCylAttr, s, len.get()) ||
-                !(field_0x128 & massFlag::COLLISION))
+                !(mChkFlags & massFlag::COLLISION))
                 continue;
             fopAc_ac_c* act = obj->mStts->mp_actor;
             *actor = act;
             result |= massFlag::RESULT_COLLISION;
-            if (field_0x128 & massFlag::MOVE) {
+            if (mChkFlags & massFlag::MOVE) {
                 massVecSubtract(&act->current.pos, pos, move.get());
                 move->y = z;
                 f32 mag = massVecMag(move.get());

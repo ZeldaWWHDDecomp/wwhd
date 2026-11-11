@@ -238,7 +238,7 @@ u8 daNpc_Ym1_c::demo() {
     if (id != 0 && id <= 0x20) {
         Ym1DemoObject* obj = l_demoObject;
         if (obj == nullptr) { /* JUT_ASSERT(570, m_object != NULL) (d_demo.h) */
-            JUT_ASSERT_fail("d_demo.h", 0x23A, "m_object != NULL");
+            JUT_ASSERT_fail("d_demo.h", 0x23A, "m_object != (0)");
             obj = l_demoObject;
         }
         demo_actor_p = obj->getActor(id);
@@ -441,7 +441,7 @@ str 10023614 "Ym1"
 str 10023618 "Ym2"
 str 10023630 "DUMMY"
 str 100234C0 "d_demo.h"
-str 100234B0 "m_object != NULL"
+str 100234B0 "m_object != (0)"
 data l_staff_name 101C6A38
 data a_attn_dist 101C6A30
 data a_heap_size 101C6A58

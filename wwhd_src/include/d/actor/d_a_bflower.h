@@ -11,19 +11,19 @@ struct daBFlower_c : fopAc_ac_c {
     dCcD_Sph mSph;
     mDoExt_bckAnm mBck1;
     mDoExt_brkAnm mBrk1;
-    be<s16> m55C;
+    be<s16> mBck1AnmIdx;  /* was m55C: init_bck_anm 02077530 plays the mBck1 resource index only while it is -1 and stores it; animPlay 02077280 sets -1 when mBck1 ends; CreateInit 02076D94 -1 (tww the same, tww comment "Current bck1 anim?") */
     u8 pad756[2];
     gptr<J3DModel> mpModel2;
     mDoExt_bckAnm mBck2;
     mDoExt_brkAnm mBrk2;
-    be<u8> m58C, m58D, m58E, mState;
+    be<u8> mHasBomb, mBombReady, m58E, mState;  /* was m58C: set while the bomb fruit sits on the flower: _draw 0207717C draws mpModel2 (the bomb) only then; actLive 020775F8 clears it when it creates the bomb (hit or carry), sets 1 when it regrows; CreateInit 02076D94 1 (tww the same); was m58D: actLive 020775F8: 1 when the bomb grow animation mBck2 ends, 0 while mGrabbable is 1 or the last bomb still exists; sets/clears the carry attention flag and lets a carry create the bomb (tww the same) */
     be<s32> mSwitchNo, m594, mGrabbable;
     gptr<fopAc_ac_c> mpBombActor;
     be<s32> mAnimTimer;
     be<f32> mPrevPlayerDist;
     be<u32> mPrevGrabActorID;
     cXyz mBombScale;
-    be<u8> m5B8;
+    be<u8> mBombGrowing;  /* was m5B8: actLive 020775F8: set to mHasBomb && mBombScale still growing at the end; at the start, when set and the growth has just ended, init_bck_anm(VBAKH) sways the flower (tww the same); CreateInit 02076D94 0 */
     BOOL CreateHeap();
     void CreateInit();
     s32 init_bck_anm(s16);
@@ -37,7 +37,7 @@ struct daBFlower_c : fopAc_ac_c {
     bool _draw();
 };
 WWHD_OFFSET(daBFlower_c, mpModel, 0x3B4);
-WWHD_OFFSET(daBFlower_c, m55C, 0x754);
+WWHD_OFFSET(daBFlower_c, mBck1AnmIdx, 0x754);
 WWHD_OFFSET(daBFlower_c, mState, 0x863);
 WWHD_OFFSET(daBFlower_c, mBombScale, 0x880);
 

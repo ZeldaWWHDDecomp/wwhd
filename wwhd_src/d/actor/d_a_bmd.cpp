@@ -337,7 +337,7 @@ static cPhs_State daBmd_Create(fopAc_ac_c* a_this) {
     if (res != cPhs_COMPLEATE_e)
         return res;
     for (s32 i = 0; i < 7; i++) {
-        i_this->mSmokeCb[i].m12 = 1; // setFollowOff
+        i_this->mSmokeCb[i].mFollowOff = 1; // setFollowOff
     }
     if (dComIfGs_isStageBossEnemy() /* isStageBossEnemy */ && bmd_startStageName0() != 'X') {
         /* HD: no REG0_S(6) test */
@@ -440,9 +440,9 @@ static daBmd_HIO_c* daBmd_HIO_c_ct(daBmd_HIO_c* h) {
     }
     h->mNo = -1;
     h->m05 = 0;
-    h->m08 = 0.8f;
-    h->m14 = 100;
-    h->m0C = 1.0f;
+    h->mMoveChance = 0.8f;
+    h->mOpenTime = 100;
+    h->mCustomTime = 1.0f;
     h->m10 = 0.5f;
     h->__vtbl = 0x10009B00;
     return h;

@@ -6,6 +6,7 @@
  * (zeldaret/tww src/d/actor/d_a_boomerang.cpp) to the WWHD layout and verified against cking.rpx.
  */
 #include "d/actor/d_a_boomerang.h"
+#include "sead/ElementAt.h"
 using namespace gabi;
 
 // HD: immediate member-function identities for the verified partial GHS PTMF stores.
@@ -443,7 +444,7 @@ static void boomerangDrawBlurRing(u32 a, u32 ring, u32 top, u32 root, s32 count,
             u32 indexFormat = static_cast<u32>(at<daBoomerang_blur_c>(a)->mIndexBuffer.mIndexFormat),
                 indices = static_cast<u32>(at<daBoomerang_blur_c>(a)->mIndexBuffer.mpIndices.v),
                 mode = static_cast<u32>(at<daBoomerang_blur_c>(a)->mIndexBuffer.mPrimitiveMode);
-            boomerang_drawIndexed(mode, indexCount, at<void>(indexFormat), indices, 0, 1);
+            boomerang_drawIndexed(mode, indexCount, indexFormat, at<void>(indices), 0, 1);
         }
         if (i != 0)
             selector = static_cast<u32>(at<boomerangBlurRing_c>(ring)->mWriteBuffer);
@@ -490,10 +491,10 @@ static void boomerangInitializeBlurRing(u32 ring, f32 zero, f32 one) {
                          0x4C, 0x30, 0x1C, 0,    0xC,  0x10, 0x3C, 0x2C, 8,    0x20};
     for (u32 i = 0; i < 60; ++i) {
         u32 index = static_cast<u32>(at<boomerangBlurRing_c>(ring)->mWriteBuffer) + 2 * i;
-        u32 buffer = static_cast<u32>(at<boomerangRenderPoint_c>(ring)[index].mVertices.v);
+        u32 buffer = static_cast<u32>(sead::elementAt<boomerangRenderPoint_c>(ring, index).mVertices.v);
         boomerangZeroCacheRange(buffer, 0x40);
         index = static_cast<u32>(at<boomerangBlurRing_c>(ring)->mWriteBuffer) + 2 * i;
-        buffer = static_cast<u32>(at<boomerangRenderPoint_c>(ring)[index].mVertices.v);
+        buffer = static_cast<u32>(sead::elementAt<boomerangRenderPoint_c>(ring, index).mVertices.v);
         for (u16 offset : order)
             at<boomerangQuad_c>(buffer)->mValues[offset / 4] =
                 offset == 0x38 || offset == 0x48 || offset == 0x4C || offset == 0x20 ? one : zero;
@@ -813,7 +814,7 @@ void daBoomerang_sightPacket_c::draw() {
             u32 indexFormat = static_cast<u32>(this->mIndexBuffer.mIndexFormat),
                 indices = static_cast<u32>(this->mIndexBuffer.mpIndices.v),
                 mode = static_cast<u32>(this->mIndexBuffer.mPrimitiveMode);
-            boomerang_drawIndexed(mode, indexCount, at<void>(indexFormat), indices, 0, 1);
+            boomerang_drawIndexed(mode, indexCount, indexFormat, at<void>(indices), 0, 1);
         }
     }
 }
@@ -1784,6 +1785,8 @@ void *boomerangRenderObjectCtor(void *object) {
     return object;
 }
 
+// Guest EA arithmetic: points + index * sizeof(boomerangRenderPoint_c) wraps at 32 bits as on the console (a generated write
+// buffer index reached host addresses far above the guest window).
 /* 020CC5EC */
 void daBoomerang_sightPacket_c::setup() {
     u32 a = ea(this), resource = boomerangFindRenderResource(guest_addr("default_sight"));
@@ -1827,10 +1830,10 @@ void daBoomerang_sightPacket_c::setup() {
                                4);
     this->mIndexBuffer.mPrimitiveMode = 6;
     u32 index = static_cast<u32>(at<boomerangSightBuffers_c>(points)->mWriteBuffer);
-    u32 buffer = static_cast<u32>(at<boomerangRenderPoint_c>(points)[index].mVertices.v);
+    u32 buffer = static_cast<u32>(sead::elementAt<boomerangRenderPoint_c>(points, index).mVertices.v);
     boomerangZeroCacheRange(buffer, 0x40);
     index = static_cast<u32>(this->mWriteBuffer);
-    buffer = static_cast<u32>(at<boomerangRenderPoint_c>(points)[index].mVertices.v);
+    buffer = static_cast<u32>(sead::elementAt<boomerangRenderPoint_c>(points, index).mVertices.v);
     f32 zero = static_cast<f32>(l_zero), one = static_cast<f32>(l_one),
         minus = static_cast<f32>(l_minusOne);
     const u16 order[] = {0x4C, 0x40, 0,    0x2C, 0x28, 0x1C, 0x20, 0xC,  0x38, 0x30,
@@ -2120,7 +2123,7 @@ ext C00068A8 void boomerang_setGeometryUniform(s16 a0, void* a1, u32 a2)
 ext 027BE53C void boomerang_bindSampler(void* a0, void* a1, s32 a2, s32 a3)
 ext 027FB678 void boomerang_updateUniformTransform(void* a0)
 ext 027BFE5C void boomerang_bindVertexDeclaration(void* a0)
-ext C0006178 void boomerang_drawIndexed(u32 a0, u32 a1, void* a2, u32 a3, s32 a4, s32 a5)
+ext C0006178 void boomerang_drawIndexed(u32 a0, u32 a1, u32 a2, const void* a3, s32 a4, s32 a5)
 ext 027BF7E8 void boomerang_releaseVertexDeclaration(void* a0)
 ext 02755FEC u32 boomerang_findAllocationHeap(void* a0, void* a1)
 ext 027BEBEC void boomerang_releaseUniform(void* a0)

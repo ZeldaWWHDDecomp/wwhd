@@ -40,10 +40,10 @@ struct LinkAuraLayout {
     LinkItemBrk mYmgcs00Brk;
     LinkItemBtk mpYmgcs00Btk;
     u8 _57F0[0x6694 - 0x57F0];
-    LinkAuraRippleCallback m3280;
+    LinkAuraRippleCallback mRippleEcallBack;  /* was m3280: view of daPy_lk_c::mRippleEcallBack */
     LinkAuraSwimTailCallback mSwimTailEcallBack[2];
     u8 _66F8[0x6814 - 0x66F8];
-    LinkItemMtxCallback m3400;
+    LinkItemMtxCallback mWaterfallSplashEcallBack;  /* was m3400: view of daPy_lk_c::mWaterfallSplashEcallBack */
 };
 WWHD_OFFSET(LinkAuraLayout, mpSuimenMunyaBtk, 0x537C);
 WWHD_OFFSET(LinkAuraLayout, mMagicArmorAuraEntries, 0x55E4);
@@ -52,9 +52,9 @@ WWHD_OFFSET(LinkAuraLayout, mpYaura00Btk, 0x568C);
 WWHD_OFFSET(LinkAuraLayout, mpYmgcs00Model, 0x5700);
 WWHD_OFFSET(LinkAuraLayout, mYmgcs00Brk, 0x5704);
 WWHD_OFFSET(LinkAuraLayout, mpYmgcs00Btk, 0x577C);
-WWHD_OFFSET(LinkAuraLayout, m3280, 0x6694);
+WWHD_OFFSET(LinkAuraLayout, mRippleEcallBack, 0x6694);
 WWHD_OFFSET(LinkAuraLayout, mSwimTailEcallBack, 0x66A8);
-WWHD_OFFSET(LinkAuraLayout, m3400, 0x6814);
+WWHD_OFFSET(LinkAuraLayout, mWaterfallSplashEcallBack, 0x6814);
 WWHD_SIZE(LinkAuraLayout, 0x6820);
 inline LinkAuraLayout& LinkAura(daPy_lk_c* player) { return *reinterpret_cast<LinkAuraLayout*>(player); }
 struct LinkAuraEmitter {

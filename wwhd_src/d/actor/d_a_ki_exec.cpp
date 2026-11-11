@@ -37,16 +37,16 @@ static void ki_atack_move(ki_class* i_this) {
 
     switch (i_this->mBehaviorType) {
     case 0: {
-        anm_init(i_this, dRes_INDEX_KI_BCK_FLY1_e, 10.0f, 2, hio.m08, dRes_INDEX_KI_BAS_FLY1_e);
+        anm_init(i_this, dRes_INDEX_KI_BCK_FLY1_e, 10.0f, 2, hio.mFly1AnmSpeed, dRes_INDEX_KI_BAS_FLY1_e);
         i_this->mBehaviorType = 1;
         tex_anm_set(i_this, 0);
-        f32 r = cM_rndF(std::fabs((f32)(s32)(hio.m4E - hio.m50)));
-        i_this->mTimers[0] = (s16)gabi::ftoi(r + (f32)hio.m50);
+        f32 r = cM_rndF(std::fabs((f32)(s32)(hio.mAttackModeTimeMax - hio.mAttackModeTimeMin)));
+        i_this->mTimers[0] = (s16)gabi::ftoi(r + (f32)hio.mAttackModeTimeMin);
         i_this->mTimers[2] = 20;
     }
         [[fallthrough]];
     case 1: {
-        i_this->mPosMoveTarget = hio.m28;
+        i_this->mPosMoveTarget = hio.mFlySpeed;
         i_this->mPosMoveMaxSpeed = 2.0f;
         i_this->mPosMove.x = player->current.pos.x;
         i_this->mPosMove.y = player->current.pos.y;
@@ -59,7 +59,7 @@ static void ki_atack_move(ki_class* i_this) {
         cLib_addCalcAngleS2(&a_this->shape_angle.y, a_this->current.angle.y, 2, 0x1000);
         if (std_sqrtf(PSVECSquareMag(&sp24)) < 300.0f) {
             i_this->mBehaviorType = 10;
-            anm_init(i_this, dRes_INDEX_KI_BCK_FLY2_e, 5.0f, 2, hio.m14, dRes_INDEX_KI_BAS_FLY2_e);
+            anm_init(i_this, dRes_INDEX_KI_BCK_FLY2_e, 5.0f, 2, hio.mFly2AnmSpeed, dRes_INDEX_KI_BAS_FLY2_e);
             i_this->mPosMoveDist = 0.0f;
         }
         break;
@@ -68,23 +68,23 @@ static void ki_atack_move(ki_class* i_this) {
     case 2:
         if (i_this->mTimers[2] == 0) {
             ki_check(i_this);
-            i_this->mTimers[2] = hio.m4C;
-            f32 attackChance = hio.m48;
-            if (ki_fight_count >= hio.m54) {
+            i_this->mTimers[2] = hio.mAttackCheckTime;
+            f32 attackChance = hio.mAttackChance;
+            if (ki_fight_count >= hio.mCrowdFightCount) {
                 attackChance *= 0.5f;
                 i_this->mTimers[2] <<= 1;
             }
 
             if (cM_rndF(1.0f) < attackChance) {
                 i_this->mBehaviorType = 3;
-                anm_init(i_this, dRes_INDEX_KI_BCK_ATTACK1_e, 5.0f, 2, hio.m18, dRes_INDEX_KI_BAS_ATTACK1_e);
+                anm_init(i_this, dRes_INDEX_KI_BCK_ATTACK1_e, 5.0f, 2, hio.mAttack1AnmSpeed, dRes_INDEX_KI_BAS_ATTACK1_e);
                 i_this->mPosMove.x = player->current.pos.x;
                 i_this->mPosMove.y = player->current.pos.y;
                 i_this->mPosMove.z = player->current.pos.z;
                 i_this->mPosMove.y += 80.0f;
                 a_this->current.angle.y = fopAcM_searchPlayerAngleY(a_this);
                 a_this->speedF = 0.0f;
-                i_this->mPosMoveTarget = hio.m44;
+                i_this->mPosMoveTarget = hio.mAttackSpeed;
                 i_this->mPosMoveMaxSpeed = 3.0f;
                 i_this->mTimers[1] = 30;
                 break;
@@ -94,12 +94,12 @@ static void ki_atack_move(ki_class* i_this) {
         cLib_addCalcAngleS2(&a_this->shape_angle.y, fopAcM_searchPlayerAngleY(a_this), 2, 0x1000);
         if (i_this->mTimers[1] == 0) {
             i_this->mTimers[1] = (s16)gabi::ftoi(cM_rndF(50.0f) + 20.0f);
-            s32 rndFX = gabi::ftoi(cM_rndFX(hio.m24 * 182.0444f));
+            s32 rndFX = gabi::ftoi(cM_rndFX(hio.mCircleAngleRange * 182.0444f));
             cMtx_YrotS(calc_mtx(), (s16)(player->current.angle.y + rndFX));
             sp24.x = 0.0f;
-            f32 y = cM_rndF(50.0f) + hio.m1C;
+            f32 y = cM_rndF(50.0f) + hio.mCircleHeight;
             sp24.y = y;
-            sp24.z = hio.m20;
+            sp24.z = hio.mCircleDist;
             MtxPosition(&sp24, &i_this->mPosMove);
             cXyz_add_to(&i_this->mPosMove, &player->current.pos);
             i_this->mPosMoveDist = 0.0f;
@@ -110,9 +110,9 @@ static void ki_atack_move(ki_class* i_this) {
             f32 y = cM_ssin(i_this->mFrameCounter * 0x9C4) * 60.0f;
             f32 z = cM_scos(i_this->mFrameCounter * 0x5DC) * 50.0f;
 
-            cLib_addCalc2(&a_this->current.pos.x, i_this->mPosMove.x + x, 0.1f, hio.m2C * i_this->mPosMoveDist);
-            cLib_addCalc2(&a_this->current.pos.y, i_this->mPosMove.y + y, 0.1f, hio.m2C * i_this->mPosMoveDist);
-            cLib_addCalc2(&a_this->current.pos.z, i_this->mPosMove.z + z, 0.1f, hio.m2C * i_this->mPosMoveDist);
+            cLib_addCalc2(&a_this->current.pos.x, i_this->mPosMove.x + x, 0.1f, hio.mCircleMoveRate * i_this->mPosMoveDist);
+            cLib_addCalc2(&a_this->current.pos.y, i_this->mPosMove.y + y, 0.1f, hio.mCircleMoveRate * i_this->mPosMoveDist);
+            cLib_addCalc2(&a_this->current.pos.z, i_this->mPosMove.z + z, 0.1f, hio.mCircleMoveRate * i_this->mPosMoveDist);
             cLib_addCalc2(&i_this->mPosMoveDist, 1.0f, 1.0f, 0.05f);
         }
         cVar6 = -1;
@@ -136,14 +136,14 @@ static void ki_atack_move(ki_class* i_this) {
         }
 
         if (i_this->mTimers[1] == 0) {
-            anm_init(i_this, dRes_INDEX_KI_BCK_FLY1_e, 5.0f, 2, hio.m08, dRes_INDEX_KI_BAS_FLY1_e);
+            anm_init(i_this, dRes_INDEX_KI_BCK_FLY1_e, 5.0f, 2, hio.mFly1AnmSpeed, dRes_INDEX_KI_BAS_FLY1_e);
             i_this->mBehaviorType = 1;
         }
 
         cLib_addCalcAngleS2(&a_this->shape_angle.y, a_this->current.angle.y, 2, 0x2000);
 
         if (i_this->mAtSph.ChkAtHit() || i_this->mDamageSphere.ChkCoHit()) {
-            anm_init(i_this, dRes_INDEX_KI_BCK_FLY2_e, 2.0f, 2, hio.m14, dRes_INDEX_KI_BAS_FLY2_e);
+            anm_init(i_this, dRes_INDEX_KI_BCK_FLY2_e, 2.0f, 2, hio.mFly2AnmSpeed, dRes_INDEX_KI_BAS_FLY2_e);
             i_this->mBehaviorType = 4;
             i_this->mTimers[1] = 30;
             a_this->speedF = -15.0f;
@@ -154,16 +154,16 @@ static void ki_atack_move(ki_class* i_this) {
 
     case 4:
         if (i_this->mTimers[1] == 0) {
-            anm_init(i_this, dRes_INDEX_KI_BCK_FLY1_e, 3.0f, 2, hio.m08, dRes_INDEX_KI_BAS_FLY1_e);
+            anm_init(i_this, dRes_INDEX_KI_BCK_FLY1_e, 3.0f, 2, hio.mFly1AnmSpeed, dRes_INDEX_KI_BAS_FLY1_e);
             i_this->mBehaviorType = 1;
         }
         break;
 
     case 10:
-        i_this->mPosMoveTarget = hio.m30;
+        i_this->mPosMoveTarget = hio.mReserveMoveSpeed;
         ki_check(i_this);
 
-        if (ki_fight_count < hio.m52) {
+        if (ki_fight_count < hio.mJoinFightCount) {
             i_this->mBehaviorType = 2;
             i_this->mTimers[2] = 50;
         }
@@ -176,7 +176,7 @@ static void ki_atack_move(ki_class* i_this) {
             sp24.x = 0.0f;
             f32 y = (cM_rndFX(50.0f) + 200.0f) + REG0_F(12);
             sp24.y = y;
-            sp24.z = hio.m20 + REG0_F(13);
+            sp24.z = hio.mCircleDist + REG0_F(13);
             MtxPosition(&sp24, &i_this->mPosMove);
             cXyz_add_to(&i_this->mPosMove, &player->current.pos);
             i_this->mPosMoveDist = 0.0f;
@@ -187,9 +187,9 @@ static void ki_atack_move(ki_class* i_this) {
             f32 y = cM_ssin(i_this->mFrameCounter * 0x9C4) * 60.0f;
             f32 z = cM_scos(i_this->mFrameCounter * 0x5DC) * 100.0f;
 
-            cLib_addCalc2(&a_this->current.pos.x, i_this->mPosMove.x + x, 0.1f, hio.m30 * i_this->mPosMoveDist);
-            cLib_addCalc2(&a_this->current.pos.y, i_this->mPosMove.y + y, 0.1f, hio.m30 * i_this->mPosMoveDist);
-            cLib_addCalc2(&a_this->current.pos.z, i_this->mPosMove.z + z, 0.1f, hio.m30 * i_this->mPosMoveDist);
+            cLib_addCalc2(&a_this->current.pos.x, i_this->mPosMove.x + x, 0.1f, hio.mReserveMoveSpeed * i_this->mPosMoveDist);
+            cLib_addCalc2(&a_this->current.pos.y, i_this->mPosMove.y + y, 0.1f, hio.mReserveMoveSpeed * i_this->mPosMoveDist);
+            cLib_addCalc2(&a_this->current.pos.z, i_this->mPosMove.z + z, 0.1f, hio.mReserveMoveSpeed * i_this->mPosMoveDist);
             cLib_addCalc2(&i_this->mPosMoveDist, 1.0f, 1.0f, 0.025f);
         }
         cVar6 = -1;
@@ -233,7 +233,7 @@ static void ki_atack_move(ki_class* i_this) {
                     a_this->home.pos.z = cross->z;
                     a_this->home.pos.y -= 30.0f;
                     i_this->mBehaviorType = 10;
-                    anm_init(i_this, dRes_INDEX_KI_BCK_FLY1_e, 5.0f, 2, hio.m08, dRes_INDEX_KI_BAS_FLY1_e);
+                    anm_init(i_this, dRes_INDEX_KI_BCK_FLY1_e, 5.0f, 2, hio.mFly1AnmSpeed, dRes_INDEX_KI_BAS_FLY1_e);
                 } else {
                     i_this->mTimers[0] = 50;
                     i_this->mBehaviorType = 1;

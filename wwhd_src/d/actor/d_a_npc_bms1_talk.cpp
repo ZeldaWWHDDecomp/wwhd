@@ -7,11 +7,11 @@
  */
 #include "d/actor/d_a_npc_bms1.h"
 
-/* ShopCam_action_c::getItemZoomPos(100.0f) (inline): m24 + normalize(m18 - m24) * 100, copied
+/* ShopCam_action_c::getItemZoomPos(100.0f) (inline): mEye + normalize(mCenter - mEye) * 100, copied
  * through the FPRs into *out */
 static inline void bms1_getItemZoomPos(Bms1ShopCam* cam, cXyz* out) {
     gabi::Local<cXyz> dir;
-    cXyz_mi(&cam->m18, dir.get(), &cam->m24);
+    cXyz_mi(&cam->mCenter, dir.get(), &cam->mEye);
     if (!cXyz_normalizeRS_l(dir.get())) {
         dir->x = 0.0f;
         dir->z = 1.0f;
@@ -20,7 +20,7 @@ static inline void bms1_getItemZoomPos(Bms1ShopCam* cam, cXyz* out) {
     gabi::Local<cXyz> scaled;
     cXyz_ml(dir.get(), scaled.get(), 100.0f);
     gabi::Local<cXyz> zoom;
-    cXyz_pl(&cam->m24, zoom.get(), scaled.get());
+    cXyz_pl(&cam->mEye, zoom.get(), scaled.get());
     f32 x = zoom->x, y = zoom->y, z = zoom->z;
     out->x = x;
     out->y = y;
@@ -324,7 +324,7 @@ u16 daNpc_Bms1_c::talk() {
         bms1MessageId() = 0xFFFFFFFF;
         mMsgNo = getMsg();
         mTalkStep = 1;
-        mShopCam.m54 = mShopItems.mSelectedItemIdx;
+        mShopCam.mSelectIdx = mShopItems.mSelectedItemIdx;
         mMsgNo2 = 0;
         mBoughtItemNo = 0xFF;
         return status;
@@ -366,7 +366,7 @@ u16 daNpc_Bms1_c::talk() {
             }
         }
     }
-    mShopCam.m54 = mShopItems.mSelectedItemIdx;
+    mShopCam.mSelectIdx = mShopItems.mSelectedItemIdx;
     return status;
 }
 
@@ -412,7 +412,7 @@ void daNpc_Bms1_c::lookBack() {
     if (mode == 1) {
         if (mPlayerInRange != 0) {
             gabi::Local<cXyz> eye;
-            dNpc_playerEyePos_l(eye.get(), bms1HIO().m04);
+            dNpc_playerEyePos_l(eye.get(), bms1HIO().mPlayerEyeOffsetY);
             ex = current.pos.x;
             ez = current.pos.z;
             dstPos = target.get();
@@ -483,7 +483,7 @@ BOOL daNpc_Bms1_c::talk01() {
     } else if (bms1ShopMessageCheck(mMsgNo) && status == 8) {
         mShopItems.getSelectItemBuyMsg();
     }
-    if (mpShopCursor->m54 != 0) {
+    if (mpShopCursor->mbShow != 0) {
         dComIfGp_setDoStatusForce(0x17 /* dActStts_CHOOSE_e */);
         dComIfGp_setAStatusForce(0x27 /* dActStts_CANCEL_e */);
     }

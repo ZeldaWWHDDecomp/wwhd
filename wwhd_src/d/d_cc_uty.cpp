@@ -203,7 +203,7 @@ fopAc_ac_c* cc_at_check(fopAc_ac_c* target, CcAtInfo* at) {
         z = gabi::fsubs_ppc(tz, az);
     }
     u16 angle = cc_atan2s((f64)-x, (f64)-z);
-    at->m0C.y = angle;
+    at->mHitAngle.y = angle;
     dCcD_GObjInf* obj = at->mpObj;
     u32 flags = obj->mAtType;
     actor = at->mpActor;
@@ -229,7 +229,7 @@ fopAc_ac_c* cc_at_check(fopAc_ac_c* target, CcAtInfo* at) {
             // HD: spin attacks can apply the damage a second time.
             u8 cut = player->mCutType;
             if ((cut == cc_uty::CUT_TYPE_CUT_TURN || cut == cc_uty::CUT_TYPE_CUT_ROLL) &&
-                player->mJumpCutExtraDamage != 0) {
+                player->mStrongJumpCut != 0) {
                 health = (s8)(health - at->mDamage);
                 target->health = (u8)health;
             }
@@ -279,7 +279,7 @@ fopAc_ac_c* cc_at_check(fopAc_ac_c* target, CcAtInfo* at) {
         } else {
             u32 id;
             if (target && target->mProcName == cc_uty::fpcNm_MT_e &&
-                ((cc_mtView*)target)->m454 == 2) {
+                ((cc_mtView*)target)->mAction == 2) {
                 id = cc_uty::JA_SE_OBJ_MG_BALL_DMG;
                 arg = 0;
             } else

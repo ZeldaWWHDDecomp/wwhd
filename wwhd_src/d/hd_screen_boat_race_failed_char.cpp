@@ -11,8 +11,8 @@ void hdScreenBoatRaceFailedChar_c::wait() {
         if (n - 1 != 0) return;
         // HD: the animation-name pair occupies the original frame slot.
         gabi::FrameLocal<MinigameAnimationNames> names(8);
-        names->animation = gabi::guest_addr("boat race failure animation");
-        names->group = gabi::guest_addr("boat race failure group");
+        names->animation = gabi::guest_addr("In");
+        names->group = gabi::guest_addr("");
         minigamePlayAnimation(mScene, names.get());
     } else if (!mScene->mActive) {
         minigameChangeState(&mStateMachine, &failedIdleState);
@@ -21,8 +21,8 @@ void hdScreenBoatRaceFailedChar_c::wait() {
 
 /* WWHD glue
 data failedIdleState 1048F0F0
-str 100E570C "boat race failure animation" renamed
-str 100E565C "boat race failure group" renamed
+str 100E570C "In"
+str 100E565C ""
 ext 026F5258 void minigamePlayAnimation(MinigameAnimationScene*, MinigameAnimationNames*)
 ext 020063C0 void minigameChangeState(MinigameStateMachine*, MinigameState*)
 */

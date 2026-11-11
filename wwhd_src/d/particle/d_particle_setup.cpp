@@ -50,7 +50,7 @@ void pa::dPa_smokeEcallBack::setup(void* emitter, void* pos, void* angle, u32 in
         pa_registerGlobalObject(p(0x101EA438));
     }
     pa_followSetup(this, emitter, pos, angle, info);
-    this->field_0x14 = info;
+    this->mSetupInfo = info;
     gabi::at<pa::JPABaseEmitter>(e)->mpParticleCallBack = 0x1047B2E0;
     gabi::at<pa::JPABaseEmitter>(e)->mUserData = (u8)this->mWindOff;
     gabi::Local<ParticleShaderConfig> config;

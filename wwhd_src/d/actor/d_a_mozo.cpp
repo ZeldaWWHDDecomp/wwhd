@@ -80,16 +80,16 @@ static void *daMozo_HIO_c__ct(void *self) {
     hio->m08 = (s32)(-1);
     hio->mpBeamChild = (u32)(base + 0x10);
     hio->mpFireChild = (u32)(base + 0x24);
-    hio->mBeamChild.m04 = (f32)(1000.0f);
-    hio->mBeamChild.m08 = (f32)(1200.0f);
-    hio->mBeamChild.m0C = (s16)(0x2000);
-    hio->mBeamChild.m0E = (s16)(0x2800);
+    hio->mBeamChild.mSearchDist = (f32)(1000.0f);
+    hio->mBeamChild.mAttackDist = (f32)(1200.0f);
+    hio->mBeamChild.mSearchAngle = (s16)(0x2000);
+    hio->mBeamChild.mAttackAngle = (s16)(0x2800);
     hio->mBeamChild.m10 = (u8)(0);
     hio->mBeamChild.__vtbl = (u32)(mozo_tu::beamHio);
-    hio->mFireChild.m04 = (f32)(1000.0f);
-    hio->mFireChild.m08 = (f32)(1200.0f);
-    hio->mFireChild.m0C = (s16)(0x2000);
-    hio->mFireChild.m0E = (s16)(0x2800);
+    hio->mFireChild.mSearchDist = (f32)(1000.0f);
+    hio->mFireChild.mAttackDist = (f32)(1200.0f);
+    hio->mFireChild.mSearchAngle = (s16)(0x2000);
+    hio->mFireChild.mAttackAngle = (s16)(0x2800);
     hio->mFireChild.m10 = (u8)(0);
     hio->mFireChild.__vtbl = (u32)(mozo_tu::fireHio);
     hio->m3C = (f32)(0.0f);
@@ -105,7 +105,7 @@ static BOOL daMozo_nodeCallBack(void *node, s32 timing) {
     gabi::Local<u8[16]> linkage;
     u32 model = (u32)(l_currentModel);
     u32 actor = (u32)(gabi::at<MozoModel>(model)->mUserArea);
-    u8 type = (u8)(gabi::at<daMozo_c>(actor)->field_0x376);
+    u8 type = (u8)(gabi::at<daMozo_c>(actor)->mType);
     if (type > MOZO_FIRE)
         return 1;
     u32 joint = mozoGetJoint(node);
@@ -298,7 +298,7 @@ void daMozo_c::wait_proc() {
     u32 target = (u32)(gabi::at<MozoPlayerVtable>(table)->mpCheckStatus);
     if (gabi::call_ptr<BOOL>(target, mozoPtr(player)))
         return;
-    u8 type = this->field_0x376;
+    u8 type = this->mType;
     if (type == MOZO_BEAM || type == MOZO_BEAM_ALT)
         search_beam_proc_init();
     else if (type == MOZO_FIRE)
@@ -573,7 +573,7 @@ void daMozo_c::towait_proc() {
     u32 right = getBeamActor(this->rightChild);
     mozoQuatSlerp(&this->mQuatRotation, &l_identityQuat, &this->mQuatRotation, 0.05f);
     anime_proc();
-    u8 type = this->field_0x376;
+    u8 type = this->mType;
     bool finished = false;
     if (type == MOZO_BEAM) {
         if (!left || !right)
@@ -656,12 +656,12 @@ BOOL daMozo_c::checkRange(s32 expanded) {
     f32 distance = mozoSqrt(square);
     if ((f32)difference->y > -280.0f)
         return 0;
-    u32 hio = (u32) reinterpret_cast<be<u32> *>(&l_HIO.mpBeamChild)[(u8)this->field_0x376];
+    u32 hio = (u32) reinterpret_cast<be<u32> *>(&l_HIO.mpBeamChild)[(u8)this->mType];
     u32 angle = (u16)((*reinterpret_cast<be<u16> *>(&this->current.angle.y)));
-    f32 maximum = (expanded ? (f32)gabi::at<daMozo_childHIO_c>(hio)->m08
-                            : (f32)gabi::at<daMozo_childHIO_c>(hio)->m04);
-    s32 angleMaximum = (expanded ? (s16)gabi::at<daMozo_childHIO_c>(hio)->m0E
-                                 : (s16)gabi::at<daMozo_childHIO_c>(hio)->m0C);
+    f32 maximum = (expanded ? (f32)gabi::at<daMozo_childHIO_c>(hio)->mAttackDist
+                            : (f32)gabi::at<daMozo_childHIO_c>(hio)->mSearchDist);
+    s32 angleMaximum = (expanded ? (s16)gabi::at<daMozo_childHIO_c>(hio)->mAttackAngle
+                                 : (s16)gabi::at<daMozo_childHIO_c>(hio)->mSearchAngle);
     u32 trig = gabi::ea(&l_sincos.mEntries[angle >> 3]);
     facing->y = 0.0f;
     facing->x = (f32)(gabi::at<MozoSincos>(trig)->mSin);
@@ -718,7 +718,7 @@ s32 daMozo_c::CreateInit() {
     if (parameter > 2)
         parameter = 2;
     u32 morf = gabi::ea(this->mAnimMorf.get());
-    this->field_0x376 = parameter;
+    this->mType = parameter;
     model = (u32)((*reinterpret_cast<be<u32> *>(&gabi::at<mDoExt_McaMorf>(morf)->mpModel)));
     gabi::at<MozoModel>(model)->mUserArea = (u32)(base);
     u16 index = 0;
@@ -751,7 +751,7 @@ s32 daMozo_c::CreateInit() {
     (*reinterpret_cast<be<u32> *>(&this->rightOrigin.x)) = (u32)(x);
     this->cullMtx = (u32)(model ? model + 0xC8 : 0);
     u32 z = (u32)((*reinterpret_cast<be<u32> *>(&this->current.pos.z)));
-    u8 type = this->field_0x376;
+    u8 type = this->mType;
     (*reinterpret_cast<be<u32> *>(&this->rightOrigin.z)) = (u32)(z);
     (*reinterpret_cast<be<u32> *>(&this->leftOrigin.z)) = (u32)(z);
     (*reinterpret_cast<be<u32> *>(&this->rightOrigin.y)) = (u32)(y);

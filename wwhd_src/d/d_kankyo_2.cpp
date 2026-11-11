@@ -2,6 +2,7 @@
  * Effect lights, point light registration, fog distances, the vrbox addcol setters, time of
  * day, the HD colour conversion helpers and the dice weather. See d_kankyo.cpp for the TU. */
 #include "d/d_kankyo_2.h"
+#include "sead/ElementAt.h"
 using namespace d_kankyo_part2;
 
 namespace d_kankyo_cpp {
@@ -55,7 +56,8 @@ s32 dKy_eflight_influence_id(u32 pos, s32 nth) {
 void dKy_eflight_influence_pos(u32 ret, s32 idx) {
   if (idx < 0)
     idx = 0;
-  u32 l = environment()->mpEfLights[idx];
+  /* guest EA arithmetic: mpEfLights + idx * 4 wraps at 32 bits as on the console */
+  u32 l = sead::elementAt<be<u32>>(gabi::ea(environment()->mpEfLights), (u32)idx);
   if (ret == 0) {
     ret = allocateVector();
     if (ret == 0)
@@ -70,21 +72,25 @@ void dKy_eflight_influence_pos(u32 ret, s32 idx) {
 f32 dKy_eflight_influence_power(s32 idx) {
   if (idx < 0)
     idx = 0;
-  return view<LightInfluence>(environment()->mpEfLights[idx])->mPower;
+  /* guest EA arithmetic: mpEfLights + idx * 4 wraps at 32 bits as on the console */
+  return view<LightInfluence>(sead::elementAt<be<u32>>(gabi::ea(environment()->mpEfLights), (u32)idx))->mPower;
 }
 
 /* 0255634C */
 f32 dKy_eflight_influence_yuragi(s32 idx) {
   if (idx < 0)
     idx = 0;
-  return view<LightInfluence>(environment()->mpEfLights[idx])->mFluctuation;
+  /* guest EA arithmetic: mpEfLights + idx * 4 wraps at 32 bits as on the console */
+  return view<LightInfluence>(sead::elementAt<be<u32>>(gabi::ea(environment()->mpEfLights), (u32)idx))->mFluctuation;
 }
 
 /* 02556394 */
 f32 dKy_eflight_influence_distance(u32 pos, s32 idx) {
   if (idx < 0)
     idx = 0;
-  return squareRoot(squareDistance(pos, environment()->mpEfLights[idx]));
+  /* guest EA arithmetic: mpEfLights + idx * 4 wraps at 32 bits as on the console */
+  return squareRoot(squareDistance(
+      pos, sead::elementAt<be<u32>>(gabi::ea(environment()->mpEfLights), (u32)idx)));
 }
 
 /* 025563F0: plight_init: mLightInfluence[0].mPower (+0x4C), mpPLights[200] (+0x470), mpEfLights[10]

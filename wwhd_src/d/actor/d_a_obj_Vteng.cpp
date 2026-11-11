@@ -183,7 +183,7 @@ static void empty_virtual(void* p) {
 str 10033104
 str 10033150 in 023B5C28
 str 1003313C
-str 10033138 "FALSE" renamed # HD: "0"
+str 10033138 "0"
 ext 025F19F8 void mDoMtx_XYZrotM(Mtx34*, s16, s16, s16)
 ext 02527028 BOOL dDemo_setDemoData(fopAc_ac_c*, u8, mDoExt_McaMorf*, const char*, s32, u16*, u32, s8)
 */

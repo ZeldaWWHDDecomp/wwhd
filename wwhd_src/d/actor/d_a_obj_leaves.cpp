@@ -37,7 +37,7 @@ void daObjLeaves_c::birthEffect(s32 index, cXyz* pos, csXyz* angle, GXColor* col
         return;
     }
     LeavesEffect* entry = &l_effect[index];
-    m438 = entry->mKind;
+    mEffectKind = entry->mKind;
     s32 kind = entry->mKind;
     if (kind == 0) {
         u16 id = entry->mId;
@@ -52,9 +52,9 @@ void daObjLeaves_c::birthEffect(s32 index, cXyz* pos, csXyz* angle, GXColor* col
     } else {
         JUT_ASSERT_fail("d_a_obj_leaves.cpp", 0x1D6, "0");
     }
-    m430 = entry->mFadeDelay;
-    m434 = entry->mRetireDelay;
-    m40C = entry->mAlphaStep;
+    mFadeWait = entry->mFadeDelay;
+    mRetireWait = entry->mRetireDelay;
+    mAlphaSpeed = entry->mAlphaStep;
 }
 // HD: callbacks retain the free entry ABI; static class callbacks await autoglue support.
 /* 02369E64 */
@@ -139,13 +139,13 @@ static void tg_hitCallback(daObjLeaves_c* p, dCcD_GObjInf* mSph, fopAc_ac_c* att
         p->birthEffect(0, pos, &angle, tint(p));
         p->birthEffect(1, pos, &angle, nullptr);
         soundCurrent(p, pos, JA_SE_OBJ_OCHIBA_BLOW);
-        p->m44C = 1;
+        p->mBlown = 1;
         return;
     }
     if (type == AT_TYPE_BOMB) {
         p->birthEffect(5, pos, nullptr, tint(p));
         soundCurrent(p, pos, JA_SE_OBJ_OCHIBA_BLOW);
-        p->m44C = 1;
+        p->mBlown = 1;
         return;
     }
     cXyz difference;
@@ -187,7 +187,7 @@ static void tg_hitCallback(daObjLeaves_c* p, dCcD_GObjInf* mSph, fopAc_ac_c* att
         p->birthEffect(3, pos, nullptr, nullptr);
         p->birthEffect(4, pos, nullptr, nullptr);
         soundCurrent(p, pos, JA_SE_OBJ_OCHIBA_BURN);
-        p->m44C = 1;
+        p->mBlown = 1;
         break;
     }
 }
@@ -207,9 +207,9 @@ s32 daObjLeaves_c::_create() {
     u32 isVisible;
     if (mInitState == 0) {
         isVisible = chk_appear();
-        m43C = (u8)isVisible;
+        mAppear = (u8)isVisible;
     } else
-        isVisible = m43C;
+        isVisible = mAppear;
     if (isVisible)
         result = dComIfG_resLoad(&mPhase, arc());
     if (result == cPhs_COMPLEATE_e) {
@@ -226,10 +226,10 @@ s32 daObjLeaves_c::_create() {
         mSph.SetStts(&mStts);
         leavesSetSphereCenter(&mSph.mSph, x, y, z);
         mSph.SetR(150.0f);
-        mSmokeCallback.m11 = 0;
-        m408 = 255.0f;
+        mSmokeCallback.mRateOff = 0;
+        mAlpha = 255.0f;
         mMemberFunc.f = LeavesWait;
-        mSmokeCallback.m12 = 1;
+        mSmokeCallback.mFollowOff = 1;
         mMemberFunc.i = -1;
         mSph.mGObjTg.mHitCallback = gabi::guest_fn((void*)tg_hitCallback);
         mSmokeCallback.mTevstr = gabi::ea(&tevStr);
@@ -239,7 +239,7 @@ s32 daObjLeaves_c::_create() {
 }
 /* 0236A74C */
 bool daObjLeaves_c::_delete() {
-    if (m43C) {
+    if (mAppear) {
         dComIfG_resDelete(&mPhase, arc());
         mSmokeCallback.remove();
         if (heap != nullptr && mpBgW != nullptr) {
@@ -255,10 +255,10 @@ bool daObjLeaves_c::_delete() {
 }
 /* 0236A7E8 */
 bool daObjLeaves_c::_execute() {
-    s32 fade = (s32)((u32)m430 - 1);
-    s32 retire = (s32)((u32)m434 - 1);
-    m430 = fade > 0 ? fade : 0;
-    m434 = retire > 0 ? retire : 0;
+    s32 fade = (s32)((u32)mFadeWait - 1);
+    s32 retire = (s32)((u32)mRetireWait - 1);
+    mFadeWait = fade > 0 ? fade : 0;
+    mRetireWait = retire > 0 ? retire : 0;
     (this->*mMemberFunc)();
     return true;
 }
@@ -269,7 +269,7 @@ void daObjLeaves_c::wait_proc() {
         dBgW_Move(w);
     mStts.Move();
     mSph.ClrTgHit();
-    if (!m44C) {
+    if (!mBlown) {
         leavesSetCollision(dComIfG_Ccsp(), &mSph);
         return;
     }
@@ -286,13 +286,13 @@ void daObjLeaves_c::wait_proc() {
 }
 /* 0236ACCC */
 void daObjLeaves_c::alpha_calc_start_wait_proc() {
-    if (m430 <= 0)
+    if (mFadeWait <= 0)
         changeAction(this, LeavesItemWait);
 }
 /* 0236ACF8 */
 void daObjLeaves_c::item_set_wait_proc() {
-    f32 value = m408 + m40C;
-    m408 = value;
+    f32 value = mAlpha + mAlphaSpeed;
+    mAlpha = value;
     if (!(value > 200.0f)) {
         u32 item = PrmAbstract(this, PRM_ITEM_NO_W, PRM_ITEM_NO_S);
         u32 saveBit = PrmAbstract(this, PRM_ITEM_SAVE_BIT_NO_W, PRM_ITEM_SAVE_BIT_NO_S);
@@ -309,14 +309,14 @@ void daObjLeaves_c::item_set_wait_proc() {
 }
 /* 0236ADFC */
 u32 daObjLeaves_c::retire_wait_proc() {
-    f32 value = m408 + m40C;
+    f32 value = mAlpha + mAlphaSpeed;
     if (!(value > 0.0f)) {
-        s32 delay = m434;
-        m408 = 0.0f;
+        s32 delay = mRetireWait;
+        mAlpha = 0.0f;
         if (delay <= 0)
             return fopAcM_delete(this);
     } else
-        m408 = value;
+        mAlpha = value;
     return (u32)gabi::ea(this); // HD: preserve the original r3 result.
 }
 /* 0236A748 */
@@ -343,7 +343,7 @@ bool daObjLeaves_c::_draw() {
     settingTevStruct(dKy_getEnvlight(), 1, &current.pos, &tevStr);
     auto* light = dKy_getEnvlight();
     setLightTevColorType(light, mModel, &tevStr);
-    u8 opacity = (u8)gabi::ftoi(m408);
+    u8 opacity = (u8)gabi::ftoi(mAlpha);
     J3DModel* model = mModel;
     J3DModelData* data = model->mModelData;
     leavesSetTranslucent(model, opacity != 255);

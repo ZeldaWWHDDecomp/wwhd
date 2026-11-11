@@ -131,3 +131,6 @@ observearg 0274FEB0 r3+0x6C 3
 
 # Documented GX2CalcSurfaceSizeAndAlignment input descriptor span (README); observe before semantic-model writes.
 observearg C00060D0 r3+0 32
+# GX2CopySurface (C0006120, called by 02776524): the port's CPU re-tiling copy (the destination image is
+# read after the call on the inputs where an earlier run found 17 02776524 kills, which now rest on modelled bytes)
+mockcopysurface C0006120

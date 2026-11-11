@@ -165,8 +165,8 @@ s32 daObj_hsh_c::checkCommandTalk() {
         u32 mode = dComIfGp_event_getTalkXYBtn();
         if (mode - 1 > 3)
             return TRUE;
-        if (field_0x514 == 5)
-            field_0x514 = -1;
+        if (mOrderEvent == 5)
+            mOrderEvent = -1;
     }
     return FALSE;
 }
@@ -179,8 +179,8 @@ void daObj_hsh_c::eventEnd() {
 }
 /* 0235AAA0 */
 void daObj_hsh_c::checkOrder() {
-    if (eventInfo.checkCommandTalk() && (u32)((s32)field_0x514 - 3) <= 2) {
-        field_0x514 = -1;
+    if (eventInfo.checkCommandTalk() && (u32)((s32)mOrderEvent - 3) <= 2) {
+        mOrderEvent = -1;
         u32 mode = dComIfGp_event_getTalkXYBtn();
         if (mode - 1 > 3)
             action_from(this, talk_action);
@@ -295,7 +295,7 @@ void daObj_hsh_c::particle_setEmitter(gptr<HshEmitter> *emitter, u16 id) {
 void daObj_hsh_c::setAttention(bool set) {
     if (!set)
         return;
-    f32 y = current.pos.y, extra_eye = (f32)l_HIO.prm.field_0x10, extra_attn = (f32)l_HIO.prm.field_0x0c;
+    f32 y = current.pos.y, extra_eye = (f32)l_HIO.prm.mEyeOffsetY, extra_attn = (f32)l_HIO.prm.mAttnOffsetY;
     f32 eye = y + (argument == 0 ? 90.0f : 80.0f), attn = y + (argument == 0 ? 180.0f : 120.0f);
     f32 z = current.pos.z, x = current.pos.x;
     eyePos.x = x;
@@ -366,9 +366,9 @@ void daObj_hsh_c::action(void *arg) {
 void daObj_hsh_c::eventOrder() {
     if ((u32)mFlags & 1)
         return;
-    s32 order = field_0x514;
+    s32 order = mOrderEvent;
     if (order == 4 || order == 3) {
-        s32 now = field_0x514;
+        s32 now = mOrderEvent;
         eventInfo.onCondition(dEvtCnd_CANTALK_e);
         if (now == 4)
             fopAcM_orderSpeakEvent(this);
@@ -384,8 +384,8 @@ void daObj_hsh_c::eventOrder() {
 }
 /* 0235A6F8 */
 s32 daObj_hsh_c::eventProc() {
-    if (eventInfo.checkCommandDemoAccrpt() && field_0x514 != -1) {
-        field_0x514 = -1;
+    if (eventInfo.checkCommandDemoAccrpt() && mOrderEvent != -1) {
+        mOrderEvent = -1;
         mFlags = (u32)mFlags | 1;
     }
     s32 staff = dComIfGp_evmng_getMyStaffId("Hsh", nullptr, 0);
@@ -529,11 +529,11 @@ s32 daObj_hsh_c::waitAction(void *arg) {
         u32 flags = attention_info.flags;
         mAttentionLatch = attentive;
         if (attentive) {
-            s8 order = field_0x514;
+            s8 order = mOrderEvent;
             u32 type = argument;
             attention_info.flags = flags | 0x20000008;
             if (order == -1)
-                field_0x514 = type == 0 ? 5 : 3;
+                mOrderEvent = type == 0 ? 5 : 3;
         } else
             attention_info.flags = flags & ~0x20000008u;
         setAttention(true);
@@ -641,7 +641,7 @@ static s32 checkCreateHeap(fopAc_ac_c *a) { return static_cast<daObj_hsh_c *>(a)
 s32 daObj_hsh_c::init() {
     mEventSelector = -1;
     mAttentionLatch = 0;
-    field_0x514 = -1;
+    mOrderEvent = -1;
     u32 prm = mParameters;
     mSwitchNo = prm & 255;
     mPrmMsgNo = (prm >> 8) & 65535;

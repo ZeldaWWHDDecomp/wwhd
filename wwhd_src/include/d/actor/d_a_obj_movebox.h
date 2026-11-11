@@ -72,16 +72,54 @@ inline MoveboxBackgroundHD* backgroundHD(dBgW* bg) { return reinterpret_cast<Mov
 struct Act_c;
 struct MoveboxPathHD;
 struct Attr_c {
-    be<s16> m00, m02, m04, m06, m08, m0A;
-    be<f32> m0C, m10, m14, m18, m1C, m20, mLandSmokeScale, m28, m2C, m30, m34;
-    be<s16> m38;
+    be<s16> m00;
+    be<s16> mPushMomentCnt;  /* was m02: check_to_walk 02378D18: a push (mPPLabel without bit 4) starts the walk once every mMomentCnt[i] reaches it (tww the same); M_attr is constant data (only m0C is filled by the static initializer), never written elsewhere in WWHD or tww */
+    be<s16> mPushWalkTime;  /* was m04: mode_wait 02379308: a push walk sets mWalkTimer to it and mWalkAngleStep to 0x8000 / it (tww the same) */
+    be<s16> m06;
+    be<s16> mPullMomentCnt;  /* was m08: check_to_walk 02378D18: a pull (mPPLabel bit 2, without bit 4) starts the walk once every mMomentCnt[i] reaches it (tww the same) */
+    be<s16> mPullWalkTime;  /* was m0A: mode_wait 02379308: a pull walk (mPPLabel bit 2) sets mWalkTimer to it and mWalkAngleStep to 0x8000 / it (tww the same) */
+    be<f32> mGridSize;  /* was m0C: mode_wait 02379308 / mode_walk 02379834: the position is home + (mGridX, mGridZ) * it (tww the same); the static initializer (d_a_obj_movebox_static.cpp) sets it to 75 for all 13 types */
+    be<f32> mShadowSize;  /* was m10: never read in WWHD (HD draws no simple shadow for the box); tww Act_c::Draw passes it as dComIfGd_setSimpleShadow's size */
+    be<f32> mGravity;  /* was m14: mode_wait_init 02377B84 / Create 02377C1C set gravity to it; mode_afl 0237A0A8 adds it to the buoyancy; Execute 02378638 floats up only when mBuoyancy + it > 0 (tww the same) */
+    be<f32> mAirResistLinear;  /* was m18: mode_wait 02379308 / mode_walk 02379834: posMoveF_stream's linear resistance (tww posMoveF_resist_acc param_4); mode_afl 0237A0A8 the above-water share of it */
+    be<f32> mAirResistQuad;  /* was m1C: mode_wait 02379308 / mode_walk 02379834: posMoveF_stream's quadratic resistance (tww posMoveF_resist_acc param_5); mode_afl 0237A0A8 the above-water share of it */
+    be<f32> mLeaveGroundSpeedY;  /* was m20: Bgc_c::proc_vertical 02376914: speed.y when the box loses the ground (tww the same) */
+    be<f32> mLandSmokeScale;
+    be<f32> mBuoyancy;  /* was m28: mode_afl 0237A0A8: gravity = mGravity + immersion * it + mBobAmplitude * sin(mAflBobAngle); Execute 02378638 floats up only when it + mGravity > 0 (tww the same) */
+    be<f32> mPlayerRideSink;  /* was m2C: RideCallBack 02377308: the sink acceleration of the player riding it (tww fpcNm_PLAYER_e); with mOtherRideSink the lower limit (tww the same) */
+    be<f32> mOtherRideSink;  /* was m30: RideCallBack 02377308: the sink acceleration of a rider that is not the player; with mPlayerRideSink the lower limit (tww the same) */
+    be<f32> mBobAmplitude;  /* was m34: mode_afl 0237A0A8: the gravity term it * sin(mAflBobAngle) (tww the same) */
+    be<s16> mBobAngleStep;  /* was m38: mode_afl 0237A0A8: mAflBobAngle += it * (cM_rnd() + 1) (tww the same) */
     u8 _3A[2];
-    be<f32> m3C, m40, m44, m48, m4C, m50, m54;
-    be<s32> mModelFileIndex, mDZBFileIndex, mDZBHeapSize;
-    be<f32> mScaleY, m68, m6C, mScaleXZ, m74;
-    be<u32> mMoveSE, mCantMoveSE, mNormalFallSE, mWaterFallSE, mMagmaFallSE;
-    be<s16> mCullMinX, mCullMinY, mCullMinZ, mCullMaxX, mCullMaxY, mCullMaxZ;
-    be<u8> mbUseBGTevType, mbCastsShadow, m9A;
+    be<f32> mWaterResistLinear;  /* was m3C: mode_afl 0237A0A8: posMoveF_stream's linear resistance under water (immersion share; mAirResistLinear the rest) (tww the same) */
+    be<f32> mWaterResistQuad;  /* was m40: mode_afl 0237A0A8: posMoveF_stream's quadratic resistance under water (immersion share; mAirResistQuad the rest) (tww the same) */
+    be<f32> mPlayerRideTilt;  /* was m44: RideCallBack 02377308: the player's sway moment is mInvRideRadius * it (tww the same) */
+    be<f32> mOtherRideTilt;  /* was m48: RideCallBack 02377308: another rider's sway moment is mInvRideRadius * it (tww the same) */
+    be<f32> mSwayTargetMax;  /* was m4C: afl_sway 02379D00: the sway target is clamped to this length (tww the same) */
+    be<f32> mSwaySpring;  /* was m50: afl_sway 02379D00: the sway acceleration -(sway - target) * it (tww the same) */
+    be<f32> mSwayDamping;  /* was m54: afl_sway 02379D00: the sway speed damping -speed * it (tww the same) */
+    be<s32> mModelFileIndex;
+    be<s32> mDZBFileIndex;
+    be<s32> mDZBHeapSize;
+    be<f32> mScaleY;
+    be<f32> mBoxHeight;  /* was m68: set_mtx 02377764 / Create 02377C1C: the buoy sits at it - 5 above pos; mode_afl 0237A0A8: fully immersed below -it, mSinkDepth capped at it (tww the same) */
+    be<f32> mImmersionRate;  /* was m6C: mode_afl 0237A0A8: immersion = depth * it (1 once deeper than mBoxHeight) (tww the same) */
+    be<f32> mScaleXZ;
+    be<f32> mInvRideRadius;  /* was m74: RideCallBack 02377308: the rider's weight falls off as 1 - distance * it, and the sway moments are it * mPlayerRideTilt / mOtherRideTilt (tww the same) */
+    be<u32> mMoveSE;
+    be<u32> mCantMoveSE;
+    be<u32> mNormalFallSE;
+    be<u32> mWaterFallSE;
+    be<u32> mMagmaFallSE;
+    be<s16> mCullMinX;
+    be<s16> mCullMinY;
+    be<s16> mCullMinZ;
+    be<s16> mCullMaxX;
+    be<s16> mCullMaxY;
+    be<s16> mCullMaxZ;
+    be<u8> mbUseBGTevType;
+    be<u8> mbCastsShadow;
+    be<u8> mbHeavy;  /* was m9A: PPCallBack 023775DC: a push / pull counts only with PPLABEL_HEAVY (power bracelets) when set; Bgc_c::proc_vertical 02376914 / check_to_walk 02378D18 / afl_sway 02379D00 use the 21-line M_lin20 instead of M_lin5 (tww the same) */
     u8 _9B;
 };
 WWHD_SIZE(Attr_c, 0x9C);
@@ -96,7 +134,10 @@ struct MoveboxArchiveNamesHD {
 WWHD_SIZE(MoveboxArchiveNamesHD,0x34);
 extern MoveboxArchiveNamesHD& l_archiveNames;
 struct BgcSrc_c {
-    be<f32> m00, m04, m08, m0C;
+    be<f32> mScaledZ;  /* was m00: Bgc_c::gnd_pos 02376314: the check point's z is it * mScaleXZ + mOffsetZ; wall_pos 023765D0 / chk_wall_touch 02376B54: the z scaled by the box size (tww comment "z"); M_lin20 is filled by its static initializer (d_a_obj_movebox_static.cpp), never written elsewhere */
+    be<f32> mScaledX;  /* was m04: Bgc_c::gnd_pos 02376314: the check point's x is it * mScaleXZ + mOffsetX; wall_pos 023765D0 / chk_wall_touch 02376B54: the x scaled by the box size (tww comment "x") */
+    be<f32> mOffsetZ;  /* was m08: Bgc_c::gnd_pos 02376314: the unscaled z added to mScaledZ * mScaleXZ; wall_pos 023765D0 / chk_wall_touch 02376B54: the line's z offset (tww comment "z") */
+    be<f32> mOffsetX;  /* was m0C: Bgc_c::gnd_pos 02376314: the unscaled x added to mScaledX * mScaleXZ; wall_pos 023765D0 / chk_wall_touch 02376B54: the line's x offset (tww comment "x") */
 };
 WWHD_SIZE(BgcSrc_c,0x10);
 struct MoveboxLineSourcesHD {

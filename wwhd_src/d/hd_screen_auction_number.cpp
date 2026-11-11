@@ -156,8 +156,8 @@ static void __sinit_hd_screen_auction_number_cpp() {
     u32 guard = l_stateGuard;
     l_animationNames.mNames[1].mVtable = &l_stringVtable;
     l_animationNames.mNames[0].mVtable = &l_stringVtable;
-    l_animationNames.mNames[0].mpString = gabi::at<void>(gabi::guest_addr("digit animation"));
-    l_animationNames.mNames[1].mpString = gabi::at<void>(gabi::guest_addr("digit layout part"));
+    l_animationNames.mNames[0].mpString = gabi::at<void>(gabi::guest_addr("G_Number_00"));
+    l_animationNames.mNames[1].mpString = gabi::at<void>(gabi::guest_addr("Number"));
     l_layoutName.mVtable = &l_stringVtable;
     l_layoutName.mpString = gabi::at<void>(gabi::guest_addr("AuctionNumber_00"));
     u32 id;
@@ -169,7 +169,7 @@ static void __sinit_hd_screen_auction_number_cpp() {
     l_roll.mMove.mSlot = 0x1A;
     l_roll.mExit.mAdjust = 0;
     l_roll.mID = id;
-    l_roll.mName = gabi::at<void>(gabi::guest_addr("Roll"));
+    l_roll.mName = gabi::at<void>(gabi::guest_addr("::StateID_Count"));
     l_roll.mInit.mKind = 4;
     l_roll.mMove.mKind = 4;
     l_roll.mExit.mKind = 4;
@@ -221,10 +221,10 @@ data l_upper 100E3234
 data l_registration 101F5170
 data l_signedRegistration 101F517C
 data l_unsignedRegistration 101F5188
-str 100E3250 "digit animation" renamed
-str 100E3238 "digit layout part" renamed
+str 100E3250 "G_Number_00"
+str 100E3238 "Number"
 str 100E325C "AuctionNumber_00" renamed
-str 100E3240 "Roll" renamed
+str 100E3240 "::StateID_Count"
 ext 0273AD10 void* hdAuctionAllocate(u32)
 ext 0273B050 void* hdAuctionAllocateOnHeap(u32, void*, u32)
 ext 0273AF40 void hdAuctionDelete(void*)

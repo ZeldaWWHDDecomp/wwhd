@@ -66,7 +66,7 @@ static HdGameTask* HdGameTask__ct(HdGameTask* self, void* param) {
 static HdGameTaskManager* createManager(HdGameTaskSafeString* name, bool system) {
     HdGameTaskHeapManager* manager = hdGameTaskGetHeapManager(HdGameTask_MainHeap);
     name->mVtable = &l_stringVtable;
-    name->mpString = gabi::at<const char>(gabi::guest_addr(system ? "system manager" : "event manager"));
+    name->mpString = gabi::at<const char>(gabi::guest_addr(system ? "cking::system::OliveCommentMgr" : "cking::ui::input::EventMgr"));
     void* factory = system ? hdGameTaskSystemFactory() : hdGameTaskEventFactory();
     void* heap = system ? static_cast<void*>(&manager->mSystemHeap) : static_cast<void*>(&manager->mEventHeap);
     return hdGameTaskCreateManager(heap, name, factory, 1, 0);
@@ -233,8 +233,8 @@ data l_registration 1018F34C
 data l_signedRegistration 1018F358
 data l_unsignedRegistration 1018F364
 str 10004FCC "GameTask"
-str 10004FD8 "event manager" renamed
-str 10004FF4 "system manager" renamed
+str 10004FD8 "cking::ui::input::EventMgr"
+str 10004FF4 "cking::system::OliveCommentMgr"
 ext 0273AD10 void* hdGameTaskAllocate(u32)
 ext 0273AF40 void hdGameTaskDelete(void*)
 ext 02035B88 void hdGameTaskDestroy(HdGameTask*, s32)

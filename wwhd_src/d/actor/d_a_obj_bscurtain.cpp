@@ -15,7 +15,7 @@ BOOL daObj_Bscurtain_c::CreateHeap() {
     if ((u32(mParameters) & 0xFF) == 1 && !dComIfGs_isEventBit(EVENT_UNK_1F08))
         index = dRes_INDEX_PTC_BDL_PTCU_e;
     J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes(M_arcname, index);
-    JUT_ASSERT(0xA9, modelData != NULL);
+    JUT_ASSERT_MSG(0xA9, modelData != NULL, "modelData != (0)");
     mpModel = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
     return mpModel != NULL;
 }
@@ -133,7 +133,7 @@ static void colorToFloat(BscurtainFloatColor* out, GXColor* color) {
 /* WWHD glue (tools/verify/autoglue.py): translation-unit data
 str 10026500 # "Ptc"
 str 100264BC # "d_a_obj_bscurtain.cpp"
-str 100264D4 "modelData != NULL" renamed # HD: assertion prints null as 0
+str 100264D4 "modelData != (0)" # HD: assertion prints null as 0
 data l_HIO 1046931C
 data trans 1046933C guard 10469348
 */

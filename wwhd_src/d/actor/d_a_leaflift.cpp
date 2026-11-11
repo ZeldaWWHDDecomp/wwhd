@@ -209,7 +209,7 @@ void daLlift_c::CreateInit() {
             emitter->playCreateParticle();
     }
     model = mpModel;
-    m43F = 30;
+    mStartDelay = 30;
     model->calc();
     setMoveBGMtx();
     dComIfG_Bgsp()->Regist(mpBgW, this);
@@ -311,15 +311,15 @@ void daLlift_c::emitterCtrl() {
 s32 daLlift_c::_execute() {
     f32 distance = fopAcM_searchActorDistanceXZ(this, dComIfGp_getPlayer(0));
     s16 life = s16(s16(mActorLifetimeFrameCount) + 1);
-    u8 timer = m43F, ridden = m43C;
+    u8 timer = mStartDelay, ridden = mbPlayerRiding;
     mActorLifetimeFrameCount = life;
     if (timer) {
         timer--;
-        m43F = timer;
+        mStartDelay = timer;
         if (!timer)
-            m43E = 1;
+            mbDescendReady = 1;
     }
-    if (!ridden && m43E) {
+    if (!ridden && mbDescendReady) {
         resetRotation(this);
         if (distance > 270.f)
             mbIsDescending = 1;
@@ -333,7 +333,7 @@ s32 daLlift_c::_execute() {
     set_mtx();
     setMoveBGMtx();
     J3DModel* model = mpModel;
-    m43C = 0;
+    mbPlayerRiding = 0;
     model->calc();
     ProtectedLocal<Quaternion> interpolatedRotation;
     mDoMtx_quatSlerp(&mCurrentRotation, &mTargetRotation, interpolatedRotation.get(), 0.25f);
@@ -354,7 +354,7 @@ s32 daLlift_c::MoveUpLift() {
     mEmitterTimer = s32(u32(mEmitterTimer) + 1);
     if (y != target) {
         target = f32(home.pos.y) + 560.f;
-        m43D = 1;
+        mbRiseWobble = 1;
     }
     f32 delta = addCalc(&current.pos.y, target, 0.1f, 10.f, 5.f);
     s32 result = 0;
@@ -395,13 +395,13 @@ static void rideCallBack(dBgW* bg, daLlift_c* a, fopAc_ac_c* other) {
     *offset = other->current.pos - a->current.pos;
     f32 factor = 2.f;
     if (other && fopAcM_GetName(other) == 0xA8) {
-        a->m43C = 1;
-        a->m43E = 1;
+        a->mbPlayerRiding = 1;
+        a->mbDescendReady = 1;
         *cross = offset->outprod(up_vec);
         offset->copy(*cross);
         mDoMtx_stack_c::YrotS(s16(-s16(a->current.angle.y)));
         mDoMtx_stack_c::multVec(offset.get(), offset.get());
-        if (a->m43D) {
+        if (a->mbRiseWobble) {
             offset->x = f32(other->current.pos.x) + 200.f;
             offset->y = other->current.pos.y;
             offset->z = other->current.pos.z;
@@ -427,7 +427,7 @@ static void rideCallBack(dBgW* bg, daLlift_c* a, fopAc_ac_c* other) {
         a->mTargetRotation.z = f32(offset->z) * tilt;
         a->mTargetRotation.w = cM_scos(a->mTiltAngle);
     }
-    a->m43D = 0;
+    a->mbRiseWobble = 0;
 }
 /* 021B3380 */
 static s32 nodeCallBack(J3DNode* node, s32 timing) {

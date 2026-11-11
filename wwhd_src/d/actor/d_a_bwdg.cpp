@@ -152,8 +152,8 @@ void daBwdg_packet_c::draw(void* ctx) {
     if (render->mIndices.mCount != 0) {
         BwdgIndexBuffer* indices = &render->mIndices;
         bwdgDrawIndexed((u32)indices->mPrimitive, (u32)indices->mCount,
-                        gabi::at<void>((u32)indices->mIndexType),
-                        (u32)indices->mpIndices.v, 0, 1);
+                        (u32)indices->mIndexType,
+                        gabi::at<void>((u32)indices->mpIndices.v), 0, 1);
     }
     bwdgApplyDrawState(&bwdgSystem.mDrawState);
 }
@@ -863,7 +863,7 @@ ext 02750250 void bwdgDrawStateCtor(bwdg_draw_state*)
 ext 0280037C void bwdgSetDrawMode(u32,bwdg_draw_state*)
 ext 02750370 void bwdgApplyDrawState(bwdg_draw_state*)
 ext 027BFE5C void bwdgBindFetchShader(BwdgFetchShader*)
-ext C0006178 void bwdgDrawIndexed(u32,u32,void*,u32,u32,u32)
+ext C0006178 void bwdgDrawIndexed(u32,u32,u32,const void*,u32,u32)
 ext 02756140 BwdgHeap* bwdgGetCurrentHeap(BwdgHeapManager*)
 ext 027F1278 void bwdgBasePacketCtor(void*)
 ext 028EFFD0 void bwdgConstructArray(void*,u32,u32,BwdgConstructor)

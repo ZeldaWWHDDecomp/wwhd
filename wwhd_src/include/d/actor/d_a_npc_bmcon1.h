@@ -24,12 +24,12 @@ WWHD_SIZE(sBmconAnmDat, 3);
 struct daNpcBmcon_c__l_npc_dat {
     /* 0x00 */ be<s16> mMaxHeadX;
     /* 0x02 */ be<s16> mMaxHeadY;
-    /* 0x04 */ be<s16> mMaxBackBoneX;
-    /* 0x06 */ be<s16> mMaxBackBoneY;
+    /* 0x04 */ be<s16> mMaxBackboneX;  /* was mMaxBackBoneX (misnamed): our own spelling; the joint control's limit passed to m_jnt.setParam as argument 1 (tww dNpc_JntCtrl_c::setParam max_backbone_x), spelled as tww dNpc_HIO_c::mMaxBackboneX and the other NPC parameter blocks */
+    /* 0x06 */ be<s16> mMaxBackboneY;  /* was mMaxBackBoneY (misnamed): our own spelling; the joint control's limit passed to m_jnt.setParam as argument 2 (tww dNpc_JntCtrl_c::setParam max_backbone_y), spelled as tww dNpc_HIO_c::mMaxBackboneY and the other NPC parameter blocks */
     /* 0x08 */ be<s16> mMinHeadX;
     /* 0x0A */ be<s16> mMinHeadY;
-    /* 0x0C */ be<s16> mMinBackBoneX;
-    /* 0x0E */ be<s16> mMinBackBoneY;
+    /* 0x0C */ be<s16> mMinBackboneX;  /* was mMinBackBoneX (misnamed): our own spelling; the joint control's limit passed to m_jnt.setParam as argument 3 (tww dNpc_JntCtrl_c::setParam min_backbone_x), spelled as tww dNpc_HIO_c::mMinBackboneX and the other NPC parameter blocks */
+    /* 0x0E */ be<s16> mMinBackboneY;  /* was mMinBackBoneY (misnamed): our own spelling; the joint control's limit passed to m_jnt.setParam as argument 4 (tww dNpc_JntCtrl_c::setParam min_backbone_y), spelled as tww dNpc_HIO_c::mMinBackboneY and the other NPC parameter blocks */
     /* 0x10 */ be<s16> mMaxTurnStep;
     /* 0x12 */ u8 _12[2];
     /* 0x14 */ be<f32> mPlayerEyeOffset; /* eye offset (dNpc_playerEyePos) */
@@ -298,12 +298,12 @@ WWHD_SIZE(BmconModelMatrix, 0xF8);
 
 WWHD_OFFSET(daNpcBmcon_c__l_npc_dat, mMaxHeadX, 0x00);
 WWHD_OFFSET(daNpcBmcon_c__l_npc_dat, mMaxHeadY, 0x02);
-WWHD_OFFSET(daNpcBmcon_c__l_npc_dat, mMaxBackBoneX, 0x04);
-WWHD_OFFSET(daNpcBmcon_c__l_npc_dat, mMaxBackBoneY, 0x06);
+WWHD_OFFSET(daNpcBmcon_c__l_npc_dat, mMaxBackboneX, 0x04);
+WWHD_OFFSET(daNpcBmcon_c__l_npc_dat, mMaxBackboneY, 0x06);
 WWHD_OFFSET(daNpcBmcon_c__l_npc_dat, mMinHeadX, 0x08);
 WWHD_OFFSET(daNpcBmcon_c__l_npc_dat, mMinHeadY, 0x0A);
-WWHD_OFFSET(daNpcBmcon_c__l_npc_dat, mMinBackBoneX, 0x0C);
-WWHD_OFFSET(daNpcBmcon_c__l_npc_dat, mMinBackBoneY, 0x0E);
+WWHD_OFFSET(daNpcBmcon_c__l_npc_dat, mMinBackboneX, 0x0C);
+WWHD_OFFSET(daNpcBmcon_c__l_npc_dat, mMinBackboneY, 0x0E);
 WWHD_OFFSET(daNpcBmcon_c__l_npc_dat, mMaxTurnStep, 0x10);
 WWHD_OFFSET(daNpcBmcon_c__l_npc_dat, mPlayerEyeOffset, 0x14);
 WWHD_OFFSET(daNpcBmcon_c__l_npc_dat, mAttOffsetY, 0x18);

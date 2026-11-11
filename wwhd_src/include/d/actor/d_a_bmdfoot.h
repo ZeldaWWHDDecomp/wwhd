@@ -12,9 +12,9 @@ struct bmdfoot_class : fopEn_enemy_c {
     /* 0x3C8 */ request_of_phase_process_class mPhase;
     /* 0x3D0 */ gptr<mDoExt_McaMorf> mpBodyVineMorf;
     /* 0x3D4 */ be<s16> mFrameCounter;  /* was m2B8: daBmdfoot_Execute 020B5DC4 adds 1 per frame (daBmdfoot_Create 020B7FC8 starts it random); ug_move 020B5904 starts it random and wobbles the crawl direction by sin(it); attack_1 (in daBmdfoot_Execute) picks the attack sphere joints by it & 7 */
-    /* 0x3D6 */ be<s16> mAction;  /* was m2BA: move (in daBmdfoot_Execute 020B5DC4) switch on the Bmdfoot_* actions (Wait, Attack1, Attack2, Damage, Start, End); daBmdfoot_Create 020B7FC8 sets Start; daBmdfoot_Execute tilts the vine by l_HIO.m08 below 3 */
+    /* 0x3D6 */ be<s16> mAction;  /* was m2BA: move (in daBmdfoot_Execute 020B5DC4) switch on the Bmdfoot_* actions (Wait, Attack1, Attack2, Damage, Start, End); daBmdfoot_Create 020B7FC8 sets Start; daBmdfoot_Execute tilts the vine by l_HIO.mActivePitch below 3 */
     /* 0x3D8 */ be<s16> mMode;  /* was m2BC: the step inside mAction: wait / attack_1 / attack_2 / damage / start (in daBmdfoot_Execute 020B5DC4) switch on it */
-    /* 0x3DA */ be<s16> mAimAngle;  /* was m2BE: attack_1 (in daBmdfoot_Execute 020B5DC4) turns it toward the player (within l_HIO.m06) at mAimSpeed + 128; daBmdfoot_Execute 020B5DC4 adds it to the model's y and twice to its z rotation and eases it to 0 */
+    /* 0x3DA */ be<s16> mAimAngle;  /* was m2BE: attack_1 (in daBmdfoot_Execute 020B5DC4) turns it toward the player (within l_HIO.mAttackAngle) at mAimSpeed + 128; daBmdfoot_Execute 020B5DC4 adds it to the model's y and twice to its z rotation and eases it to 0 */
     /* 0x3DC */ be<s16> mTimers[4];  /* was m2C0: daBmdfoot_Execute 020B5DC4 counts all 4 down; wait / attack_1 / attack_2 / damage / start load [0] and [2] and wait on them */
     /* 0x3E4 */ be<s16> m2C8[2];
     /* 0x3E8 */ cXyz mJointRot[18];  /* was m2CC: nodeCallBack 020B5580 rotates joint i about x by [i].x and about z by [i].z; daBmdfoot_Execute 020B5DC4 eases [i].z to the sway and [i].x to 0; wait / damage bend [i].x */
@@ -61,8 +61,8 @@ WWHD_SIZE(bmdfoot_class, 0xE08);
 struct daBmdfoot_HIO_c {
     /* 0x00 */ be<s8> mNo;
     /* 0x01 */ be<s8> m05;
-    /* 0x02 */ be<s16> m06;
-    /* 0x04 */ be<s16> m08;
+    /* 0x02 */ be<s16> mAttackAngle;  /* was m06: wait (inlined into daBmdfoot_Execute 020B5DC4): the tentacle attacks (Bmdfoot_Attack1) only when the angle to Link is below it; attack_1 (the same): the aim angle toward Link is clamped to +-it; daBmdfoot_HIO_c_ct 020B8458 3500 (tww the same) */
+    /* 0x04 */ be<s16> mActivePitch;  /* was m08: daBmdfoot_Execute 020B5DC4: current.angle.x is eased to it while mAction is Wait / Attack1 / Attack2, to 0 otherwise; daBmdfoot_HIO_c_ct 020B8458 1000 (tww the same) */
     /* 0x06 */ u8 _06[2];
     /* 0x08 */ be<u32> __vtbl;
 };

@@ -436,7 +436,7 @@ void daTbox_c::CreateInit() {
         case FUNC_TYPE_TACT:
             setAction(ACTION_SWITCH_WAIT);
             mFlags = (u16)mFlags | (daTboxFlg_UNK_01 | daTboxFlg_UNK_02);
-            mAppearTimer = l_HIO.m08;
+            mAppearTimer = l_HIO.mAppearTime;
             break;
         case FUNC_TYPE_SWITCH_TRANSPARENT:
             mFlags = (u16)mFlags | (daTboxFlg_UNK_02);
@@ -596,7 +596,7 @@ void daTbox_c::demoInitAppear() {
 
 /* 024B68B0 */
 void daTbox_c::demoProcAppear_Tact() {
-    s32 total = l_HIO.m08, reveal = l_HIO.m06;
+    s32 total = l_HIO.mAppearTime, reveal = l_HIO.mAppearShowFrame;
     u16 timer = mAppearTimer;
     if ((u32)timer == (u32)(total - reveal)) {
         u16 flags = mFlags;
@@ -614,13 +614,13 @@ void daTbox_c::demoProcAppear_Tact() {
     if (timer) {
         timer--;
         mAppearTimer = timer;
-        s32 down = l_HIO.m0A;
-        total = l_HIO.m08;
+        s32 down = l_HIO.mAppearDimTime;
+        total = l_HIO.mAppearTime;
         f32 ratio = 0.4f;
         if ((s32)timer > total - down)
             ratio = gabi::fmadds((f32)((s32)timer + down - total), 0.6f / (f32)down, ratio);
         else {
-            s32 up = l_HIO.m0C;
+            s32 up = l_HIO.mAppearBrightenTime;
             if ((s32)timer < up)
                 ratio = gabi::fmadds((f32)(up - timer), 0.6f / (f32)up, ratio);
         }
@@ -1087,12 +1087,12 @@ static u32 daTbox_HIO_ct(u32 self) {
         if (!self)
             return 0;
     }
-    tboxView<daTbox_HIO_c>(self)->m08 = 180;
+    tboxView<daTbox_HIO_c>(self)->mAppearTime = 180;
     tboxView<daTbox_HIO_c>(self)->mNo = -1;
     tboxView<daTbox_HIO_c>(self)->__vtbl = 0x1003FE54;
-    tboxView<daTbox_HIO_c>(self)->m0C = 30;
-    tboxView<daTbox_HIO_c>(self)->m06 = 130;
-    tboxView<daTbox_HIO_c>(self)->m0A = 48;
+    tboxView<daTbox_HIO_c>(self)->mAppearBrightenTime = 30;
+    tboxView<daTbox_HIO_c>(self)->mAppearShowFrame = 130;
+    tboxView<daTbox_HIO_c>(self)->mAppearDimTime = 48;
     return self;
 }
 

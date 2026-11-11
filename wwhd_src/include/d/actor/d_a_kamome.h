@@ -69,12 +69,12 @@ WWHD_OFFSET(kamome_class, mHioSet, 0x79C);
 // HD: actor-private layouts and exact virtual metadata.
 struct kamomeHIO_c {
     /* 0x00 */ be<s8> mNo;
-    /* 0x01 */ be<u8> m05;
-    /* 0x02 */ be<s16> m06;
-    /* 0x04 */ be<s16> m08;
+    /* 0x01 */ be<u8> mStopMove;  /* was m05: daKamome_Execute 021861D4 runs the timers, the move functions and the animation only while it is 0; __sinit_d_a_kamome_cpp 02189180 0 (tww the same) */
+    /* 0x02 */ be<s16> mMoveStartFrame;  /* was m06: kamome_path_move (inlined), kamome_imouto_move (inlined) and kamome_auto_move 02189270: from this animation frame to mMoveEndFrame the seagull moves forward (speedF scale * 5), outside it stands; __sinit_d_a_kamome_cpp 02189180 1 (tww the same) */
+    /* 0x04 */ be<s16> mMoveEndFrame;  /* was m08: the same three move functions: the last animation frame of the forward step window; __sinit_d_a_kamome_cpp 02189180 8 (tww the same) */
     /* 0x06 */ u8 _06[2];
-    /* 0x08 */ be<f32> m0C;
-    /* 0x0C */ be<f32> m10;
+    /* 0x08 */ be<f32> mTakeOffDist;  /* was m0C: kamome_auto_move 02189270: a seagull on the ground takes off (state 0, the bait released) when Link comes within it; __sinit_d_a_kamome_cpp 02189180 400 (tww the same) */
+    /* 0x0C */ be<f32> mImoutoPlayerDist;  /* was m10: kamome_imouto_move (inlined in daKamome_Execute 021861D4), the seagulls with Aryll: Link within it of Aryll or of the target makes the seagull drop it, and a landed one takes off; __sinit_d_a_kamome_cpp 02189180 300 (tww the same) */
     /* 0x10 */ be<u32> __vtbl; /* GHS: vtable pointer after the members */
 };
 

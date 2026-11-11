@@ -99,7 +99,7 @@ static inline void os_lookAtStick(daNpc_Os_c* t, be<s16>* temp2, cXyz* temp) {
 BOOL daNpc_Os_c::waitNpcAction(void* param_1) {
     if (mActionPhase == 0) {
         maxFallSpeed = -100.0f;
-        gravity = Os_actionHioHD()->field_0x8C;
+        gravity = Os_actionHioHD()->mGravity;
         speedF = 0.0f;
         mCylH = 120.0f;
         mActionPhase = mActionPhase + 1;
@@ -138,13 +138,13 @@ BOOL daNpc_Os_c::waitNpcAction(void* param_1) {
     attention_info.flags &= ~u32(fopAc_Attn_LOCKON_TALK_e | fopAc_Attn_ACTION_SPEAK_e);
     f32 dist_sq = fopAcM_searchActorDistance2(this, dComIfGp_getPlayer(0));
     if (!(mNoResetFlg1 & 2) /* !checkNpcCallCommand() */) {
-        f32 r = Os_actionHioHD()->field_0x64;
+        f32 r = Os_actionHioHD()->mCallDist;
         if (dist_sq < r * r) {
             fopAc_ac_c* link = dComIfGp_getLinkPlayer();
             reinterpret_cast<daPy_py_l*>(link)->mNoResetFlg1 |= 2; /* onNpcCall */
         }
     } else if (os_wakeupCheck(this)) {
-        f32 r = Os_actionHioHD()->field_0x60;
+        f32 r = Os_actionHioHD()->mFollowStopDist;
         if (!(dist_sq < r * r)) {
             os_pmf_npc(this, &os_actions()->mSearchNpc, nullptr);
         }
@@ -166,7 +166,7 @@ BOOL daNpc_Os_c::finish01NpcAction(void* param_1) {
         os_initBrkAnm(this, 0, 1);
         mBrkAnmEnd = 0;
         maxFallSpeed = -100.0f;
-        gravity = Os_actionHioHD()->field_0x8C;
+        gravity = Os_actionHioHD()->mGravity;
         speedF = 0.0f;
         mCylH = 120.0f;
         mActionPhase = mActionPhase + 1;
@@ -194,7 +194,7 @@ BOOL daNpc_Os_c::finish02NpcAction(void* param_1) {
         }
         mStatus |= 1; /* onFinish */
         maxFallSpeed = -100.0f;
-        gravity = Os_actionHioHD()->field_0x8C;
+        gravity = Os_actionHioHD()->mGravity;
         mCylH = 120.0f;
         speedF = 0.0f;
         mActionPhase = mActionPhase + 1;
@@ -257,9 +257,9 @@ BOOL daNpc_Os_c::carryNpcAction(void* param_1) {
     }
     os_setRestart(this, os_getRestartNumber(this));
     dComIfGp_get(); /* HD: a dead dComIfGp_get() before the HIO reads */
-    cLib_chaseF(&mCarryOffset.x, Os_actionHioHD()->field_0x90, 1.0f);
-    cLib_chaseF(&mCarryOffset.y, Os_actionHioHD()->field_0x94, 1.0f);
-    cLib_chaseF(&mCarryOffset.z, Os_actionHioHD()->field_0x98, 1.0f);
+    cLib_chaseF(&mCarryOffset.x, Os_actionHioHD()->mCarryOffsetX, 1.0f);
+    cLib_chaseF(&mCarryOffset.y, Os_actionHioHD()->mCarryOffsetY, 1.0f);
+    cLib_chaseF(&mCarryOffset.z, Os_actionHioHD()->mCarryOffsetZ, 1.0f);
 
     s32 wallHit = os_wallHitCheck(this);
     if (wallHit >= 0 || ((u32)mAcch.m_flags & 0x200) /* mAcch.ChkRoofHit() */) {
@@ -295,12 +295,12 @@ BOOL daNpc_Os_c::throwNpcAction(void* param_1) {
             speed.y = 0.0f;
             current.angle.y = *(be<s16>*)param_1;
         } else {
-            speedF = Os_actionHioHD()->field_0x80;
-            speed.y = Os_actionHioHD()->field_0x84;
+            speedF = Os_actionHioHD()->mThrowSpeedF;
+            speed.y = Os_actionHioHD()->mThrowSpeedY;
             current.angle.y = shape_angle.y;
         }
         maxFallSpeed = -100.0f;
-        gravity = Os_actionHioHD()->field_0x8C;
+        gravity = Os_actionHioHD()->mGravity;
         mActionPhase = mActionPhase + 1;
         return TRUE;
     }
@@ -324,7 +324,7 @@ BOOL daNpc_Os_c::jumpNpcAction(void* param_1) {
         }
         speedF = 50.0f;
         maxFallSpeed = -100.0f;
-        gravity = Os_actionHioHD()->field_0x8C;
+        gravity = Os_actionHioHD()->mGravity;
         mActionPhase = mActionPhase + 1;
         return TRUE;
     }
@@ -500,11 +500,11 @@ BOOL daNpc_Os_c::searchNpcAction(void* param_1) {
     BOOL door = player->eventInfo.mCommand == dEvtCmd_INDOOR_e;        /* eventInfo.checkCommandDoor() */
     f64 dist_sq = Os_distanceXZSquaredHD(this, dComIfGp_getPlayer(0)); /* fopAcM_searchPlayerDistanceXZ2 */
     f32 temp;
-    f32 r = Os_actionHioHD()->field_0x60;
+    f32 r = Os_actionHioHD()->mFollowStopDist;
     if (dist_sq < (f64)(f32)(r * r)) {
         temp = 0.0f;
     } else {
-        temp = Os_actionHioHD()->field_0xA8;
+        temp = Os_actionHioHD()->mFollowWalkRate;
     }
     s16 angle = fopAcM_searchActorAngleY(this, dComIfGp_getPlayer(0));
     gabi::Local<be<s16>> adjusted;
@@ -529,9 +529,9 @@ BOOL daNpc_Os_c::searchNpcAction(void* param_1) {
     }
 
     os_walkProc(this, temp, *adjusted);
-    cLib_addCalcAngleS(&shape_angle.y, current.angle.y, Os_actionHioHD()->mOs2.field_0x28,
-                       (s16)(Os_actionHioHD()->mOs2.field_0x24 * 2),
-                       (s16)(Os_actionHioHD()->mOs2.field_0x26 * 2));
+    cLib_addCalcAngleS(&shape_angle.y, current.angle.y, Os_actionHioHD()->mOs2.mTurnScale,
+                       (s16)(Os_actionHioHD()->mOs2.mTurnMaxStep * 2),
+                       (s16)(Os_actionHioHD()->mOs2.mTurnMinStep * 2));
     s16 temp4 = shape_angle.y;
     os_lookBack(this, 1, 0, 0);
     if (temp < 0.001f) {
@@ -556,14 +556,14 @@ BOOL daNpc_Os_c::waitPlayerAction(void* param_1) {
         return TRUE;
     }
     auto* att = reinterpret_cast<OsAttentionFlagsHD*>(dComIfGp_getAttention());
-    if (!(os_stickValue() < Os_actionHioHD()->field_0x9C) || os_LockonTruth(gabi::ea(att)) ||
+    if (!(os_stickValue() < Os_actionHioHD()->mStickTurnMin) || os_LockonTruth(gabi::ea(att)) ||
         ((u32)att->mFlags & 0x20000000)) {
         s16 target = os_getStickAngY(this);
         cLib_addCalcAngleS(&current.angle.y, target, 0x19, 0x7FFF, 1);
         gabi::Local<cXyz> temp;
         s32 stickPos = os_calcStickPos(this, target, temp);
         gabi::Local<be<s16>> temp2;
-        if (stickPos != 0 && os_stickValue() < Os_actionHioHD()->field_0xA0) {
+        if (stickPos != 0 && os_stickValue() < Os_actionHioHD()->mStickWalkMin) {
             os_lookAtStick(this, temp2, temp);
         } else {
             shape_angle.y = current.angle.y;
@@ -576,7 +576,7 @@ BOOL daNpc_Os_c::waitPlayerAction(void* param_1) {
         } else {
             current.angle.y = shape_angle.y;
         }
-        if (!(os_stickValue() < Os_actionHioHD()->field_0xA0) && stickPos == 0) {
+        if (!(os_stickValue() < Os_actionHioHD()->mStickWalkMin) && stickPos == 0) {
             current.angle.y = target;
             os_pmf_player(this, &os_actions()->mWalkPlayer, nullptr);
         }
@@ -606,20 +606,20 @@ BOOL daNpc_Os_c::walkPlayerAction(void* param_1) {
         gabi::Local<cXyz> temp;
         s32 stickPos;
         f32 frame = mPrevMorfFrame;
-        if (frame > Os_actionHioHD()->field_0xB0 && frame < Os_actionHioHD()->field_0xAC) {
-            f32 s = (f32)((f64)Os_actionHioHD()->mOs2.field_0x08 * stickValue);
-            speedF = s * Os_actionHioHD()->mOs2.field_0x20;
+        if (frame > Os_actionHioHD()->mWalkFrameStart && frame < Os_actionHioHD()->mWalkFrameEnd) {
+            f32 s = (f32)((f64)Os_actionHioHD()->mOs2.mWalkSpeed * stickValue);
+            speedF = s * Os_actionHioHD()->mOs2.mPlayerWalkRate;
             stickPos = os_calcStickPos(this, target, temp);
         } else {
             speedF = 0.0f;
-            cLib_addCalcAngleS(&current.angle.y, target, Os_actionHioHD()->mOs2.field_0x28,
-                               Os_actionHioHD()->mOs2.field_0x24, Os_actionHioHD()->mOs2.field_0x26);
+            cLib_addCalcAngleS(&current.angle.y, target, Os_actionHioHD()->mOs2.mTurnScale,
+                               Os_actionHioHD()->mOs2.mTurnMaxStep, Os_actionHioHD()->mOs2.mTurnMinStep);
             stickPos = os_calcStickPos(this, target, temp);
         }
         if (stickPos == 0) {
-            cLib_addCalcAngleS(&shape_angle.y, current.angle.y, Os_actionHioHD()->mOs2.field_0x28,
-                               (s16)(Os_actionHioHD()->mOs2.field_0x24 * 2),
-                               (s16)(Os_actionHioHD()->mOs2.field_0x26 * 2));
+            cLib_addCalcAngleS(&shape_angle.y, current.angle.y, Os_actionHioHD()->mOs2.mTurnScale,
+                               (s16)(Os_actionHioHD()->mOs2.mTurnMaxStep * 2),
+                               (s16)(Os_actionHioHD()->mOs2.mTurnMinStep * 2));
         }
         gabi::Local<be<s16>> temp2;
         os_lookAtStick(this, temp2, temp);

@@ -45,8 +45,8 @@ public:
     bool _execute();
     bool _draw() { return true; }
     /* 0x3AC */ request_of_phase_process_class mPhs;
-    /* 0x3B4 */ be<s32> field_0x298;
-    /* 0x3B8 */ be<s32> field_0x29c;
+    /* 0x3B4 */ be<s32> mMusicPlaying;  /* was field_0x298: _create 021C5EE4 and _execute 021C612C store Macore_is_playing(); _execute creates the ID_AK_SN_MACOREMUSIC00 note emitter only once it is 1, then clears it (tww the same) */
+    /* 0x3B8 */ be<s32> mEmitting;  /* was field_0x29c: _execute 021C612C / manage_se 021C6008: 1 while the note emitter creates particles; stopCreateParticle sets 0 (culled, or no practice song), playCreateParticle sets 1 (tww the same) */
     /* 0x3BC */ gptr<MmusicEmitter> mpEmitter;
     /* 0x3C0 */ Mtx34 mMtx;
     /* 0x3F0 */ be<s16> mTimer;

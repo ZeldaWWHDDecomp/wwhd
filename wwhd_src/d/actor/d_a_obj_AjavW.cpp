@@ -152,5 +152,5 @@ static void empty_virtual(void* p) {
 /* WWHD glue (tools/verify/autoglue.py): this translation unit's data
 str 100249E4 # "AjavW"
 str 10024A1C # "d_a_obj_AjavW.cpp"
-str 10024A18 "FALSE" renamed # HD: "0" (FALSE expanded by the original assert macro)
+str 10024A18 "0"
 */

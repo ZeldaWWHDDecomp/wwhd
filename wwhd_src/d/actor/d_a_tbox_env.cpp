@@ -26,7 +26,7 @@ static s32 envShapeSet(daTbox_c* self) {
         const char* texName = Tbox_getTextureName(texNameTable, i);
         if (texName == nullptr) {
             // HD: release code retains this assertion; HD text is "name != (0)".
-            JUTAssertion::showAssert("d_a_tbox.cpp", 0x183, "texName != NULL");
+            JUTAssertion::showAssert("d_a_tbox.cpp", 0x183, "name != (0)");
         } else {
             // Compare guest bytes without a library call; preserve short-circuit read order.
             const char* expected = gabi::at<char>(gabi::guest_addr("__dummy"));
@@ -92,7 +92,7 @@ static s32 envShapeSet(daTbox_c* self) {
 /* WWHD glue (tools/verify/autoglue.py)
 str 1003FEC4
 str 1003FECC
-str 1003FED4 "texName != NULL" renamed
+str 1003FED4 "name != (0)"
 str 1003FEE0
  data resourceControl 101F4F28
  data graphics 101F9968

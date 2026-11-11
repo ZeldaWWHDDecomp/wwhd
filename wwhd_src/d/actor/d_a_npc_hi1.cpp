@@ -59,7 +59,7 @@ static inline void hi1_setAngle(daNpc_Hi1_c* i_this) {
     i_this->mAngle.x = x;
     i_this->mAngle.y = y;
     i_this->mAngle.z = z;
-    if (i_this->field_0x7B3 == 0) {
+    if (i_this->mKeepShapeAngle == 0) {
         i_this->shape_angle.z = i_this->current.angle.z;
         i_this->shape_angle.y = i_this->current.angle.y;
         i_this->shape_angle.x = i_this->current.angle.x;
@@ -460,7 +460,7 @@ void daNpc_Hi1_c::lookBack() {
         temp2 = &temp5;
         break;
     case 3:
-        targetY = field_0x7AA;
+        targetY = mLookAngleY;
         break;
     case 4: {
         typedef be<s32> SearchResult;
@@ -491,7 +491,7 @@ void daNpc_Hi1_c::lookBack() {
     temp.x = srcX;
     temp.z = srcZ;
     temp.y = srcY;
-    Hi1_lookAtTarget(&m_jnt, &current.angle.y, temp2, &temp, targetY, l_HIO.mPrmTbl.field_12,
+    Hi1_lookAtTarget(&m_jnt, &current.angle.y, temp2, &temp, targetY, l_HIO.mPrmTbl.mMaxHeadTurnVel,
                      temp4);
 }
 
@@ -723,7 +723,7 @@ u8 daNpc_Hi1_c::demo() {
         m_jnt.mAngles[0][1] = 0;
         m_jnt.mAngles[1][0] = 0;
         mInDemo = 1;
-        field_0x7B3 = 0;
+        mKeepShapeAngle = 0;
         m_jnt.mAngles[0][0] = 0;
         id = demoActorID;
         m_jnt.mAngles[1][1] = 0;
@@ -783,7 +783,7 @@ u8 daNpc_Hi1_c::demo() {
 BOOL daNpc_Hi1_c::_draw() {
     J3DModel* pModel = mpMorf->getModel();
     J3DModelData* modelData = pModel->getModelData();
-    if (field_0x7B2 != 0 || field_0x7B4 != 0) {
+    if (mHideUntilDemo != 0 || mNoDraw != 0) {
         return TRUE;
     }
     settingTevStruct(dKy_getEnvlight(), 0 /* TEV_TYPE_ACTOR */, &current.pos, &tevStr);
@@ -816,7 +816,7 @@ BOOL daNpc_Hi1_c::_execute() {
     daNpc_Hi1_HIO_c::hio_prm_c& prm = l_HIO.mPrmTbl;
     m_jnt.setParam(prm.mMaxBackboneX, prm.mMaxBackboneY, prm.mMinBackboneX, prm.mMinBackboneY,
                    prm.mMaxHeadX, prm.mMaxHeadY, prm.mMinHeadX, prm.mMinHeadY, prm.mMaxTurnStep);
-    if (field_0x7B2 != 0 && demoActorID == 0) {
+    if (mHideUntilDemo != 0 && demoActorID == 0) {
         return TRUE;
     }
     checkOrder();
@@ -828,7 +828,7 @@ BOOL daNpc_Hi1_c::_execute() {
             if (temp >= 0)
                 evt = true;
         }
-        if (evt || field_0x7B0 != 0) {
+        if (evt || mForceEventProc != 0) {
             event_proc(temp);
         } else {
             Hi1_callAction(this, &mCurrActionFunc, nullptr); /* (this->*mCurrActionFunc)(NULL) */
@@ -840,7 +840,7 @@ BOOL daNpc_Hi1_c::_execute() {
         eventOrder();
         hi1_setAngle(this);
     } else {
-        field_0x7B2 = 0;
+        mHideUntilDemo = 0;
         eventOrder();
         hi1_setAngle(this);
     }
@@ -975,7 +975,7 @@ static daNpc_Hi1_HIO_c* daNpc_Hi1_HIO_c_ct(daNpc_Hi1_HIO_c* i_this) {
     i_this->__vtbl = 0x1001A404;
     memcpy_g(&i_this->mPrmTbl, &a_prm_tbl, 0x1C); /* a_prm_tbl; 028FEAC0 memcpy */
     i_this->mNo = -1;
-    i_this->field_0x8 = -1;
+    i_this->mRefCount = -1;
     return i_this;
 }
 

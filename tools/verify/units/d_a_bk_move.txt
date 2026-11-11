@@ -56,10 +56,10 @@ field 020A5EF4 r3+0x136C i32 0 1        # mJumpMove
 field 020A5EF4 r3+0x1370 u8 0 2         # mJumpStep
 field 020A5EF4 r3+0x1380 u32 0,0x56000000   # mpSearchLight
 field 020A5EF4 1046232D i8 0 1          # search_sp
-field 020A5EF4 1046238C f32 500 500     # HIO m028
-field 020A5EF4 104623B8 f32 50 50       # HIO m054
-field 020A5EF4 104623B0 f32 12 12       # HIO m04C
-field 020A5EF4 104623B4 f32 60 60       # HIO m050
+field 020A5EF4 1046238C f32 500 500     # HIO mNoticeDist
+field 020A5EF4 104623B8 f32 50 50       # HIO mRunSpeed
+field 020A5EF4 104623B0 f32 12 12       # HIO mPatrolSpeed
+field 020A5EF4 104623B4 f32 60 60       # HIO mPatrolSpeedNoWeapon
 fret 028F4384 0 800                     # std_sqrtf
 fret 020198D8 0 1                       # cM_rndF
 ret 025D9DA0 0 1                        # fopAcM_otoCheck

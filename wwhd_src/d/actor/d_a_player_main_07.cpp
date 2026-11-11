@@ -10,6 +10,7 @@
  * Private HD views preserve the layout used by this address range.
  */
 #include "d/actor/d_a_player_main_07.h"
+#include "sead/ElementAt.h"
 #include "gc_api/tu.h"
 #include "gc_api/d/d_com_inf_game.h"
 #include "port_hooks.h"
@@ -57,7 +58,10 @@ static inline u32 dBgS_GetTriPla_l(u32 poly) {
 /* camera attention: dAttention_c::LockonTruth() || (flags (+0x20) & 0x20000000) (Lockon()) */
 static inline BOOL dAttention_LockonTruth_l(u32 attn) { return gabi::call<BOOL>(0x024EDFCC, attn); }
 /* the camera of the camera info index (play + 0x5AF8 + idx * 0x34); dCamera_c at +0x248 */
-static inline u32 dComIfGp_getCamera_l(s32 idx) { return Link07::gameInfo()->play.mCameraInfo[idx].mpCamera; }
+/* guest address arithmetic (both camera-info helpers): mCameraInfo + idx * 0x34 wraps at 32 bits as on the console */
+static inline u32 dComIfGp_getCamera_l(s32 idx) {
+    return sead::elementAt<std::remove_reference_t<decltype(Link07::gameInfo()->play.mCameraInfo[0])>>(gabi::ea(Link07::gameInfo()->play.mCameraInfo), (u32)idx).mpCamera;
+}
 /* play + 0x5CDC: dComIfGp_setPlayerStatus1(0, flag) */
 static inline void dComIfGp_onPlayerStatus1_l(u32 flag) {
     be<u32>& status = Link07::gameInfo()->play.mPlayerStatus[0][1];
@@ -273,7 +277,7 @@ BOOL daPy_lk_c::procGrabPut() {
         return checkNextMode(0);
     }
     if (mProcVar6 == 1) {
-        if (field_0x2b0 < 0.0f) { /* checkGrabWear() */
+        if (mGrabItemOffsetY < 0.0f) { /* checkGrabWear() */
             return TRUE;
         }
         mProcVar6 = 0;
@@ -392,7 +396,7 @@ BOOL daPy_lk_c::procGrabHeavyWait() {
         return checkNextMode(0);
     }
     if (!LK_checkAttentionLock() && mStickDistance > 0.05f) {
-        cLib_addCalcAngleS(&shape_angle.y, m34E8, 0x28, 0x12C, 0x28);
+        cLib_addCalcAngleS(&shape_angle.y, mMoveTargetAngleY, 0x28, 0x12C, 0x28);
         // HD: HIO folded
 
         s16 sy = shape_angle.y;
@@ -454,10 +458,10 @@ void daPy_lk_c::setSpeedAndAngleSwim() {
                 if (getDirectionFromShapeAngle() == Link07::DIR_BACKWARD) {
                     Link07::swimTail(this, 0).onEnd();
                     Link07::swimTail(this, 1).onEnd();
-                    shape_angle.y = m34E8;
+                    shape_angle.y = mMoveTargetAngleY;
                     current.angle.y = shape_angle.y;
                 } else {
-                    cLib_addCalcAngleS(&shape_angle.y, m34E8, 0x11, 0x1388, 0x4B0);
+                    cLib_addCalcAngleS(&shape_angle.y, mMoveTargetAngleY, 0x11, 0x1388, 0x4B0);
                     // HD: HIO folded
                 }
                 speedTarget = gabi::fmuls_ppc(gabi::fmuls_ppc(3.0f, mStickDistance),
@@ -477,7 +481,7 @@ void daPy_lk_c::setSpeedAndAngleSwim() {
                     speedTarget = 0.0f;
                     backward = TRUE;
                 } else {
-                    cLib_addCalcAngleS(&current.angle.y, m34E8, 0x11, 0x1388, 0x4B0);
+                    cLib_addCalcAngleS(&current.angle.y, mMoveTargetAngleY, 0x11, 0x1388, 0x4B0);
                     speedTarget = gabi::fmuls_ppc(gabi::fmuls_ppc(3.0f, mStickDistance),
                                                   cM_scos((s16)(current.angle.y - old)));
                 }
@@ -493,7 +497,7 @@ void daPy_lk_c::setSpeedAndAngleSwim() {
     }
     setNormalSpeedF(speedTarget, 0.02f, 2.0f, 0.5f);
     if (backward && mNormalSpeed < 5.0f) {
-        current.angle.y = m34E8;
+        current.angle.y = mMoveTargetAngleY;
         mNormalSpeed = 0.0f;
     }
     if (dComIfGp_checkPlayerStatus0_l(Link07::daPyStts0_UNK10_e)) {
@@ -1004,7 +1008,7 @@ BOOL daPy_lk_c::procBtVerticalJump() {
 
 /* 02430858 */
 BOOL daPy_lk_c::procBtVerticalJumpLand_init() {
-    f32 h = m35F0 - current.pos.y;
+    f32 h = mFallStartY - current.pos.y;
     if (Link07::gameInfo()->play.mEvtCtrl.mMode == 0 /* !dComIfGp_event_runCheck() */) {
         if (!(h < 6000.0f)) {
             // HD: HIO folded
@@ -1103,7 +1107,7 @@ void daPy_lk_c::setShipAttnetionBodyAngle() {
     } else {
         f32 stick = mStickDistance; /* kept across the call (GHS) */
         if (stick > 0.05f) {
-            s32 dir = getDirectionFromAngle(m34DC);
+            s32 dir = getDirectionFromAngle(mStickAngle);
             if (dir == Link07::DIR_LEFT) {
                 s16 lim = (s16)gabi::ftoi(512.0f * stick);
                 if (lim > mProcVar5) {
@@ -1464,7 +1468,8 @@ static inline BOOL CPad_holdBit2_l(s32 pad) { return Link07_holdSpecialPadButton
 static inline void dComIfGp_setRStatus_l(u8 s) { Link07::gameInfo()->play.mRStatus = s; }
 /* camera attention status of a camera info index: play + 0x5B00 + idx * 0x34 */
 static inline u32 dComIfGp_getCameraAttentionStatus_l(s32 idx) {
-    return Link07::gameInfo()->play.mCameraInfo[idx].mCameraAttentionStatus;
+    return sead::elementAt<std::remove_reference_t<decltype(Link07::gameInfo()->play.mCameraInfo[0])>>(gabi::ea(Link07::gameInfo()->play.mCameraInfo), (u32)idx)
+        .mCameraAttentionStatus;
 }
 /* dComIfGp_event_runCheck(): play + 0x5292 */
 static inline u8 dComIfGp_event_runCheck_l() { return Link07::gameInfo()->play.mEvtCtrl.mMode; }
@@ -1489,7 +1494,7 @@ BOOL daPy_lk_c::procShipReady() {
             setSingleMoveAnime(Link07::ANM_WALK, 0.8f, 0.0f, -1, 5.0f);
             // HD: HIO folded
 
-            m34C2 = 10;
+            mRootMoveMode = 10;
             mModeFlg = mModeFlg & ~0x420u;        /* ModeFlg_HANG | ModeFlg_00000400 */
             Link07::ship(ship)->setReadySecond(); /* ship->setReadySecond() */
             m35A0 = Link07::ship(ship)->current.pos.y;
@@ -1648,16 +1653,16 @@ BOOL daPy_lk_c::procShipScope() {
             mFace = face;
             f32 frame = entry->mFrame;
             setTextureAnime(face & 0xFFFF, gabi::ftoi(frame));
-            *gabi::at<be<f32>>(mpAnmTexPatternData) = (f32)(u16)m3530;
-            *gabi::at<be<f32>>(mpTexScrollResData) = (f32)(u16)m3532;
-            lk_functor_eval(Link07::frameBlend(this, 0).mpFunctor.get(), (f32)(u16)m3530);
-            lk_functor_eval(Link07::frameBlend(this, 1).mpFunctor.get(), (f32)(u16)m3530);
-            lk_functor_eval(Link07::frameBlend(this, 2).mpFunctor.get(), (f32)(u16)m3532);
+            *gabi::at<be<f32>>(mpAnmTexPatternData) = (f32)(u16)mTexAnmFrame;
+            *gabi::at<be<f32>>(mpTexScrollResData) = (f32)(u16)mTexScrollFrame;
+            lk_functor_eval(Link07::frameBlend(this, 0).mpFunctor.get(), (f32)(u16)mTexAnmFrame);
+            lk_functor_eval(Link07::frameBlend(this, 1).mpFunctor.get(), (f32)(u16)mTexAnmFrame);
+            lk_functor_eval(Link07::frameBlend(this, 2).mpFunctor.get(), (f32)(u16)mTexScrollFrame);
             if (entry->mHoldFrame != 0) {
                 mModeFlg = mModeFlg | 0x08000180;
             } else {
                 u32 f = mModeFlg & ~0x100u;
-                m3530 = (u16)gabi::ftoi(frame);
+                mTexAnmFrame = (u16)gabi::ftoi(frame);
                 mModeFlg = f | 0x08000080;
             }
             if (face == 0x92) {
@@ -2079,13 +2084,13 @@ BOOL daPy_lk_c::procShipGetOff() {
             gravity = -2.5f;
             mProcVar6 = 1;
             mNormalSpeed = 8.0f;
-            m34C2 = 1;
+            mRootMoveMode = 1;
             Link07::ship(ship)->setGetOffSecond(); /* ship->setGetOffSecond() */
             mModeFlg = mModeFlg | 2;               /* ModeFlg_MIDAIR */
         }
     } else {
         s32 staff = mStaffIdx;
-        m34C2 = 1;
+        mRootMoveMode = 1;
         dComIfGp_evmng_cutEnd(staff);
         if (LK_mAcchChkGroundHit()) {
             changeLandProc(1.3f);
@@ -2576,7 +2581,7 @@ BOOL daPy_lk_c::procRopeHangWait() {
     current.pos.z = mRopePos.z;
     s16 target = 0;
     if (stick > 0.05f) {
-        s32 dir = getDirectionFromAngle(m34DC);
+        s32 dir = getDirectionFromAngle(mStickAngle);
         if ((mItemButton & 0x40) /* spActionButton() */ && dir == Link07::DIR_FORWARD) {
             if (std::abs((s32)mProcVar2) <= 0x80) {
                 procRopeUp_init();
@@ -2655,7 +2660,7 @@ BOOL daPy_lk_c::procRopeUp() {
     current.pos.x = mRopePos.x;
     current.pos.z = mRopePos.z;
     if (mFrameCtrlUnder[0].getRate() < 0.01f) {
-        s32 dir = getDirectionFromAngle(m34DC);
+        s32 dir = getDirectionFromAngle(mStickAngle);
         if (!(mStickDistance > 0.05f)) {
             procRopeHangWait_init(0);
         } else if (!(mItemButton & 0x40) /* !spActionButton() */) {
@@ -2693,7 +2698,7 @@ BOOL daPy_lk_c::procRopeDown() {
     lk_xyz_copy(&mRopePos, &mActorKeepRope.mActor->current.pos);
     current.pos.x = mRopePos.x;
     current.pos.z = mRopePos.z;
-    s32 dir = getDirectionFromAngle(m34DC);
+    s32 dir = getDirectionFromAngle(mStickAngle);
     if (!(mStickDistance > 0.05f)) {
         procRopeHangWait_init(1);
     } else if (!(mItemButton & 0x40) /* !spActionButton() */) {
@@ -3047,11 +3052,11 @@ BOOL daPy_lk_c::procHookshotFly() {
         current.pos.x = x;
         f32 y = current.pos.y;
         f32 z = gabi::fnmsubs(35.0f, cM_scos(a), gabi::at<Link07::Hookshot>(hookshot)->current.pos.z);
-        m35F0 = y;
+        mFallStartY = y;
         m35F4 = y;
-        m3688.x = x;
-        m3688.z = z;
-        m3688.y = y;
+        mProcStartPos.x = x;
+        mProcStartPos.z = z;
+        mProcStartPos.y = y;
         current.pos.z = z;
         if (mAcch.ChkGroundHit()) {
             checkNextMode(0);
@@ -3098,14 +3103,14 @@ BOOL daPy_lk_c::procCutReverse_init(int anm) {
     }
     setSingleMoveAnime(anm, 0.5f, 2.0f, 0x12, 0.0f); /* HD: HIO folded */
     s16 a = (s16)(shape_angle.y + 0x8000);
-    m3522 = 0;
+    mCutComboTimer = 0;
     mNormalSpeed = 12.0f;
     current.angle.y = a;
     Link07::voiceStart(this, 37);
     if (mCurrAttributeCode == 0xF /* dBgS_Attr_ICE_e */ && !checkHeavyStateOn()) {
         s16 c = current.angle.y;
-        m36A0.x = gabi::fmadds(10.0f, cM_ssin(c), m36A0.x);
-        m36A0.z = gabi::fmadds(10.0f, cM_scos(c), m36A0.z);
+        mSlipSpeed.x = gabi::fmadds(10.0f, cM_ssin(c), mSlipSpeed.x);
+        mSlipSpeed.z = gabi::fmadds(10.0f, cM_scos(c), mSlipSpeed.z);
     }
     return TRUE;
 }
@@ -3275,13 +3280,13 @@ BOOL daPy_lk_c::procFanSwing() {
                 s16 a = (s16)(shape_angle.y + 0x8000);
                 current.angle.y = a;
                 if (mCurrAttributeCode == 0xF /* dBgS_Attr_ICE_e */) {
-                    m36A0.x = gabi::fmadds(10.0f, cM_ssin(a), m36A0.x);
-                    m36A0.z = gabi::fmadds(10.0f, cM_scos(current.angle.y), m36A0.z);
+                    mSlipSpeed.x = gabi::fmadds(10.0f, cM_ssin(a), mSlipSpeed.x);
+                    mSlipSpeed.z = gabi::fmadds(10.0f, cM_scos(current.angle.y), mSlipSpeed.z);
                 }
             }
-            m3536 = shape_angle.y;
-            m353A = 3;
-            m3534 = 10;
+            mFanWindAngleY = shape_angle.y;
+            mFanWindSphTimer = 3;
+            mFanWindTimer = 10;
             gabi::Local<cXyz> windEnd; /* sp+0x24 (GameCube local_60) */
             windEnd->y = current.pos.y + 70.0f;
             windEnd->x = current.pos.x;
@@ -3298,13 +3303,13 @@ BOOL daPy_lk_c::procFanSwing() {
                 f64 lxz = Link07_sqrtUnrounded(PSVECSquareMag(xz));
                 ax = Link07_atan2sSecondUnrounded(-d->y, lxz);
             }
-            m3538 = ax;
+            mFanWindAngleX = ax;
             anm_setFrame_hd(gabi::ea(this) + 0x54F4, 0.0f, 0x10, 0x20); /* mpYuchw00Brk->setFrame(0.0f) */
-            Link07_endMtxFollow(&m33E8);
+            Link07_endMtxFollow(&mFanWindEcallBack);
             u32 mtx = lk_getAnmMtx(gabi::ea(Link07::models(this).mpYuchw00Model.get()) /* mpYuchw00Model */,
                                    2 /* YUCHW00_JNT_LWIND_e */);
-            Link07_makeMtxFollowEmitter(&m33E8, Link07::ID_AK_JN_UCHIWAWIND00, mtx, windEnd.get(), nullptr);
-            u32 em = gabi::ea(m33E8.mpEmitter.get());
+            Link07_makeMtxFollowEmitter(&mFanWindEcallBack, Link07::ID_AK_JN_UCHIWAWIND00, mtx, windEnd.get(), nullptr);
+            u32 em = gabi::ea(mFanWindEcallBack.mpEmitter.get());
             if (em != 0) { /* setGlobalPrmColor(tevStr.mColorC0) */
                 gabi::at<Link07::Emitter>(em)->mGlobalPrmColor.r = (u8)tevStr.mColorC0.r;
                 gabi::at<Link07::Emitter>(em)->mGlobalPrmColor.b = (u8)tevStr.mColorC0.b;
@@ -3466,7 +3471,7 @@ BOOL daPy_lk_c::procTactPlay_init(s32 song, int warp, int noMsg) {
     if (use != 0 && mProcVar6 == 1) {
         u32 stage = dComIfGp_ea() + 0x5150; /* dComIfGp_getStageStagInfo(): virtual getStagInfo (slot 0x15C) */
         u32 info = gabi::call_ptr<u32>(gabi::at<Link07::StageInterface>(stage)->mpVtable->mGetStageInfo, stage);
-        if (((gabi::at<Link07::StageInfo>(info)->mStageType >> 16) & 7) == 7 /* dStageType_SEA_e */ && m34CC != 1 &&
+        if (((gabi::at<Link07::StageInfo>(info)->mStageType >> 16) & 7) == 7 /* dStageType_SEA_e */ && mTactZevMelodyNum != 1 &&
             warp != 0) {
             u32 ship = dComIfGp_getShipActor_l();
             u32 id = fopAcM_create(Link07::fpcNm_TORNADO_e, 1, &current.pos, current.roomNo, nullptr, nullptr, -1, 0);
@@ -3474,7 +3479,7 @@ BOOL daPy_lk_c::procTactPlay_init(s32 song, int warp, int noMsg) {
         }
     }
     u32 model = gabi::ea(Link07::models(this).mpEquipItemModel.get()); /* mpEquipItemModel */
-    Link07_makeMtxFollowEmitter(&m32E4, Link07::ID_AK_JN_TAKT01, model ? model + 0xC8 : 0, &current.pos, nullptr);
+    Link07_makeMtxFollowEmitter(&mProcEffectEcallBack0, Link07::ID_AK_JN_TAKT01, model ? model + 0xC8 : 0, &current.pos, nullptr);
     mProcVar4 = (s16)noMsg;
     m3624 = 0;
     mProcVar7 = warp;
@@ -3554,7 +3559,7 @@ BOOL daPy_lk_c::procTactPlay() {
     /* HD: a song Link already knows (save bit) skips the play and takes effect right away */
     if (mProcVar4 == 0 && mProcVar7 != 0) {
         s32 song = mProcVar6;
-        if (mTactZevPartnerId == 0xFFFFFFFF || (u32)m34CC != (u32)song) {
+        if (mTactZevPartnerId == 0xFFFFFFFF || (u32)mTactZevMelodyNum != (u32)song) {
             u32 sh = (u32)song & 0x3F;
             u8 bit = (u8)((sh & 0x20) ? 0 : (1u << sh));
             if (l_hdSystem.mpSystem->mLearnedSongs & bit) {
@@ -3604,7 +3609,7 @@ BOOL daPy_lk_c::procTactPlay() {
             }
             mGameOverId = 0xFFFFFFFF;
             u32 id = mTactZevPartnerId;
-            if (id != 0xFFFFFFFF && (u32)m34CC == (u32)mProcVar6) {
+            if (id != 0xFFFFFFFF && (u32)mTactZevMelodyNum == (u32)mProcVar6) {
                 gabi::Local<be<u32>> key; /* fopAcM_SearchByID */
                 *key = id;
                 partner = fopAcIt_Judge(0x025E1234 /* fpcSch_JudgeByID */, key.get());
@@ -3614,7 +3619,7 @@ BOOL daPy_lk_c::procTactPlay() {
                 return TRUE;
             }
             if (partner != nullptr) {
-                if (m3494 == 0) {
+                if (mTactZevEventName == 0) {
                     resetActAnimeUpper(Link07::UPPER_MOVE2_e, -1.0f);
                     dComIfGp_event_reset();
                     lk_endEventCamera(this);
@@ -3762,12 +3767,12 @@ BOOL daPy_lk_c::procTactPlayOriginal_init() {
     setTextureAnime(0, 0);
     s32 m6 = mProcVar6;
     s32 m7 = mProcVar7;
-    m3530 = 3;
+    mTexAnmFrame = 3;
     Link07_tactSetStickPos(m6, m7);
     Link07_tactPlayArmSwing((s32)mProcVar6, (s32)mProcVar7);
     setTactModel();
     u32 model = gabi::ea(Link07::models(this).mpEquipItemModel.get()); /* mpEquipItemModel */
-    Link07_makeMtxFollowEmitter(&m32E4, Link07::ID_AK_JN_TAKT01, model ? model + 0xC8 : 0, &current.pos, nullptr);
+    Link07_makeMtxFollowEmitter(&mProcEffectEcallBack0, Link07::ID_AK_JN_TAKT01, model ? model + 0xC8 : 0, &current.pos, nullptr);
     mProcVar5 = 0;
     mProcVar3 = 0xF;
     Link07_taktModeMute();
@@ -3856,7 +3861,7 @@ BOOL daPy_lk_c::procVomitWait() {
     s16 target = 0;
     f32 stick = mStickDistance; /* kept across the call (GHS) */
     if (stick > 0.05f) {
-        s32 dir = getDirectionFromAngle(m34DC);
+        s32 dir = getDirectionFromAngle(mStickAngle);
         if (dir == Link07::DIR_LEFT) {
             s16 lim = (s16)gabi::ftoi(512.0f * stick);
             if (lim > mProcVar2) {
@@ -4237,8 +4242,8 @@ BOOL daPy_lk_c::procHammerFrontSwing() {
         if (g > (f64)(f32)mSwordTopPos.y) {
             s32 i = 0;
             s32 mtrl = -1;
-            for (; i < gabi::at<Link07::SwordBlur>(mpSwBlur)->field_0x014; i++) {        /* mSwBlur.field_0x014 */
-                const cXyz* pt = &gabi::at<Link07::SwordBlur>(mpSwBlur)->field_0x034[i]; /* mSwBlur.field_0x034[i] */
+            for (; i < gabi::at<Link07::SwordBlur>(mpSwBlur)->mSegmentNum; i++) {        /* mSwBlur.mSegmentNum */
+                const cXyz* pt = &gabi::at<Link07::SwordBlur>(mpSwBlur)->mTopPos[i]; /* mSwBlur.mTopPos[i] */
                 f32 px = (f32)pt->x;
                 f32 py = (f32)pt->y + 300.0f;
                 f32 pz = (f32)pt->z;
@@ -4250,17 +4255,17 @@ BOOL daPy_lk_c::procHammerFrontSwing() {
                 gp->x = px;
                 f64 h = Link07_groundCrossUnrounded(dComIfG_Bgsp(), mGndChk);
                 gp->y = (f32)h;
-                if (h != -1000000000.0 && (f64)gabi::at<Link07::SwordBlur>(mpSwBlur)->field_0x034[i].y > h) {
+                if (h != -1000000000.0 && (f64)gabi::at<Link07::SwordBlur>(mpSwBlur)->mTopPos[i].y > h) {
                     mtrl = Link07_materialSoundSignedWord(dComIfG_Bgsp(), gabi::ea(this) + 0xB28);
                     break;
                 }
             }
             f32 r = frameCtrl.getRate();
             f32 f5 = gabi::fnmsubs((f32)i * r, 0.1f, frameCtrl.getFrame() - r);
-            if (i != 0 && i < gabi::at<Link07::SwordBlur>(mpSwBlur)->field_0x014) {
+            if (i != 0 && i < gabi::at<Link07::SwordBlur>(mpSwBlur)->mSegmentNum) {
                 u32 b = mpSwBlur;
-                f32 a = gabi::at<Link07::SwordBlur>(b)->field_0x034[i - 1].y;
-                f32 d = gabi::at<Link07::SwordBlur>(b)->field_0x034[i].y - a;
+                f32 a = gabi::at<Link07::SwordBlur>(b)->mTopPos[i - 1].y;
+                f32 d = gabi::at<Link07::SwordBlur>(b)->mTopPos[i].y - a;
                 if (std::fabs(d) > 1.0f) {
                     f32 t = (gp->y - a) / d;
                     f5 = gabi::fmadds((1.0f - t) * r, 0.1f, f5);
@@ -4566,7 +4571,7 @@ BOOL daPy_lk_c::procBottleDrink() {
                 } else {
                     color = 0x10036184; /* blue */
                 }
-                Link07_makeMtxPosFollowEmitterColor(&m33A8, Link07::ID_IT_JN_LK_GEPPU00, mtx, &current.pos,
+                Link07_makeMtxPosFollowEmitterColor(&mProcEffectEcallBack2, Link07::ID_IT_JN_LK_GEPPU00, mtx, &current.pos,
                                                     &shape_angle, color, 0);
             }
         } else if (frameCtrl.checkPass(10.0f)) {
@@ -4596,7 +4601,7 @@ BOOL daPy_lk_c::procBottleGet_init() {
     Link07_startBottleEventCamera(cam, 0x12, fopAcM_GetID(this), gabi::guest_str("Type"), &mProcVar6, 0);
     if (mEquipItem == Link07::dItemNo_FOREST_WATER_e) {
         u32 model = gabi::ea(Link07::models(this).mpEquipItemModel.get()); /* mpEquipItemModel */
-        Link07_makeMtxFollowEmitter(&m32F0, Link07::ID_AK_JN_FORESTWATER00, model ? model + 0xC8 : 0, &current.pos,
+        Link07_makeMtxFollowEmitter(&mProcEffectEcallBack1, Link07::ID_AK_JN_FORESTWATER00, model ? model + 0xC8 : 0, &current.pos,
                                     nullptr);
     }
     initShipRideUseItem(use, 2);
@@ -4723,7 +4728,7 @@ BOOL daPy_lk_c::procWeaponNormalSwing() {
     if (changeCutReverseProc(Link07::ANM_CUTRER)) {
         return TRUE;
     }
-    m34C2 = 1;
+    mRootMoveMode = 1;
     if (mpAttnActorLockOn != nullptr) {
         setShapeAngleToAtnActor();
         s16 a = shape_angle.y;
@@ -4852,7 +4857,7 @@ BOOL daPy_lk_c::procBottleOpen() {
             mRightHandIdx = 8; /* HANDS_JNT_CL_RHANDC_e */
         }
     } else {
-        u32 em = gabi::ea(m32E4.mpEmitter.get());
+        u32 em = gabi::ea(mProcEffectEcallBack0.mpEmitter.get());
         if (em != 0 && mProcVar2 == 0 && em + 0x1AC != 0 /* getParticleList() */ &&
             gabi::ea(gabi::at<Link07::Emitter>(em)->mpLastParticle.get()) != 0 /* getLast() */) {
             u32 ptcl =
@@ -4957,11 +4962,11 @@ BOOL daPy_lk_c::procBottleOpen() {
             if (water && frameCtrl.checkPass(9.0f)) {
                 seStartOnlyReverb(Link07::JA_SE_LK_SPRINKLE_WATER);
                 u32 mtx = lk_getAnmMtx(gabi::ea(mpCLModel.get()), Link07::CL_JNT_CL_LHANDA_e);
-                Link07_makeMtxFollowEmitterColor(&m32E4, Link07::ID_AK_JN_SPILLWATER00, mtx, &current.pos, self + 0x1A8,
+                Link07_makeMtxFollowEmitterColor(&mProcEffectEcallBack0, Link07::ID_AK_JN_SPILLWATER00, mtx, &current.pos, self + 0x1A8,
                                                  self + 0x1A8);
-                if (Link07_checkDaylightPresetHD() && gabi::ea(m32E4.mpEmitter.get()) != 0) {
+                if (Link07_checkDaylightPresetHD() && gabi::ea(mProcEffectEcallBack0.mpEmitter.get()) != 0) {
                     u32 pa = gabi::ea(dComIfGp_getParticle());
-                    u32 e = gabi::ea(m32E4.mpEmitter.get());
+                    u32 e = gabi::ea(mProcEffectEcallBack0.mpEmitter.get());
                     u8 g = gabi::at<Link07::ParticleManager>(pa)->mGlobalColor.g,
                        r = gabi::at<Link07::ParticleManager>(pa)->mGlobalColor.r,
                        b = gabi::at<Link07::ParticleManager>(pa)->mGlobalColor.b;
@@ -4970,7 +4975,7 @@ BOOL daPy_lk_c::procBottleOpen() {
                     gabi::at<Link07::Emitter>(e)->mGlobalPrmColor.b = b;
                     u8 g2 = gabi::at<Link07::ParticleManager>(pa)->mGlobalColor.g,
                        r2 = gabi::at<Link07::ParticleManager>(pa)->mGlobalColor.r;
-                    u32 e2 = gabi::ea(m32E4.mpEmitter.get());
+                    u32 e2 = gabi::ea(mProcEffectEcallBack0.mpEmitter.get());
                     u8 b2 = gabi::at<Link07::ParticleManager>(pa)->mGlobalColor.b;
                     gabi::at<Link07::Emitter>(e2)->mGlobalEnvColor.g = g2;
                     gabi::at<Link07::Emitter>(e2)->mGlobalEnvColor.r = r2;
@@ -4978,7 +4983,7 @@ BOOL daPy_lk_c::procBottleOpen() {
                 }
                 s32 spl = 0; /* dCcG_At_Spl_UNK0 */
                 if (mEquipItem != 0x56) {
-                    m3554 = 3;
+                    mForestWaterUseTimer = 3;
                     setNoResetFlg1(noResetFlg1() | daPyFlg1_FOREST_WATER_USE);
                     spl = 4; /* dCcG_At_Spl_UNK4 */
                 }
@@ -5018,7 +5023,7 @@ BOOL daPy_lk_c::procBottleOpen() {
                 }
             }
         } else if (frameCtrl.getFrame() > 40.0f) {
-            Link07_endMtxFollow(&m32E4);
+            Link07_endMtxFollow(&mProcEffectEcallBack0);
         }
     }
     if (mProcVar0 > 0) {
@@ -5140,7 +5145,7 @@ BOOL daPy_lk_c::procTactWait() {
             left = Link07_cursorStateWord(gabi::ea(l_pad.mpPad.get()));
         }
         count = m3624 != 0;
-        Link07_tactSetVolume(mStickDistance * cM_scos(m34DC));
+        Link07_tactSetVolume(mStickDistance * cM_scos(mStickAngle));
     } else {
         right = mProcVar2;
         left = mProcVar3;
@@ -5329,9 +5334,9 @@ BOOL daPy_lk_c::procFanGlide() {
         }
     }
     if (frameCtrl.getRate() < 0.01f && mProcVar6 == 0 &&
-        gabi::ea(m32E4.mpEmitter.get()) == 0 /* m32E4.getEmitter() */) {
+        gabi::ea(mProcEffectEcallBack0.mpEmitter.get()) == 0 /* mProcEffectEcallBack0.getEmitter() */) {
         u32 mtx = lk_getAnmMtx(gabi::ea(mpCLModel.get()), 0xF);
-        Link07_makeMtxFollowEmitter(&m32E4, Link07::ID_AK_JN_LEAFPARACHUTE01, mtx, &current.pos, nullptr);
+        Link07_makeMtxFollowEmitter(&mProcEffectEcallBack0, Link07::ID_AK_JN_LEAFPARACHUTE01, mtx, &current.pos, nullptr);
     }
     if (!(frameCtrl.getFrame() > 2.0f) && mProcVar6 == 0) {
         return TRUE;
@@ -5345,7 +5350,7 @@ BOOL daPy_lk_c::procFanGlide() {
     if (checkJumpFlower() || checkJumpRideShip()) {
         return TRUE;
     }
-    if (gabi::ea(gabi::at<daPy_mtxFollowEcallBack_c>(gabi::ea(m3280))->mpEmitter.get()) != 0 /* m3280.getEmitter() */) {
+    if (gabi::ea(gabi::at<daPy_mtxFollowEcallBack_c>(gabi::ea(mRippleEcallBack))->mpEmitter.get()) != 0 /* mRippleEcallBack.getEmitter() */) {
         if (mProcVar5 == 0) {
             seStartOnlyReverb(Link07::JA_SE_LK_FAN_CHUTE_WATER);
             mProcVar5 = 6;
@@ -5388,11 +5393,11 @@ BOOL daPy_lk_c::procFanGlide() {
     }
     if (close) {
         f32 x = current.pos.x, y = current.pos.y;
-        m3688.x = x;
+        mProcStartPos.x = x;
         f32 z = current.pos.z;
-        m3688.y = y;
-        m3688.z = z;
-        m35F0 = y;
+        mProcStartPos.y = y;
+        mProcStartPos.z = z;
+        mFallStartY = y;
         seStartOnlyReverb(Link07::JA_SE_LK_FAN_CHUTE_CLOSE);
         if (mItemTrigger & 2 /* swordTrigger() */) {
             setAnimeEquipSword(0);
@@ -5411,7 +5416,7 @@ BOOL daPy_lk_c::procFanGlide() {
         gravity = -2.5f;
         Link07::voiceStart(this, 5);
         seStartOnlyReverb(Link07::JA_SE_LK_FAN_CHUTE_RISE);
-        m353A = 5;
+        mFanWindSphTimer = 5;
     }
     if (mAcch.ChkWallHit()) {
         for (s32 i = 0; i < 3; i++) {
@@ -5429,7 +5434,7 @@ BOOL daPy_lk_c::procFanGlide() {
     gabi::Local<cXyz> v;          /* sp+0x28 (GameCube local_54) */
     gabi::Local<cXyz> windDir;    /* sp+0x34 (GameCube local_60) */
     Link07_getAllWindVector(gabi::ea(&mHeadTopPos), windDir.get(), windPow.get());
-    s32 diff = (s16)(m34E8 - shape_angle.y);
+    s32 diff = (s16)(mMoveTargetAngleY - shape_angle.y);
     {
         f32 stick = mStickDistance;
         cLib_addCalc_l(&mNormalSpeed, (12.0f * stick) * cM_scos(diff), 0.5f, gabi::fmadds(0.4f, stick, 0.1f),
@@ -5473,15 +5478,15 @@ BOOL daPy_lk_c::procFanGlide() {
                                          12.999f, 13.0f, 0);
         }
     }
-    cLib_addCalc_l(&m3730.x, v->x, 0.5f, step, 1.0f);
-    cLib_addCalc_l(&m3730.y, v->y, 0.5f, step, 1.0f);
-    cLib_addCalc_l(&m3730.z, v->z, 0.5f, step, 1.0f);
-    PSVECAdd(&current.pos, &m3730, &current.pos);
+    cLib_addCalc_l(&mWindSpeed.x, v->x, 0.5f, step, 1.0f);
+    cLib_addCalc_l(&mWindSpeed.y, v->y, 0.5f, step, 1.0f);
+    cLib_addCalc_l(&mWindSpeed.z, v->z, 0.5f, step, 1.0f);
+    PSVECAdd(&current.pos, &mWindSpeed, &current.pos);
     s16 a = (s16)(shape_angle.y + mProcVar2);
     shape_angle.y = a;
     current.angle.y = a;
     f32 s = cM_ssin(a), c = cM_scos(a);
-    f32 mz = m3730.z, mx = m3730.x;
+    f32 mz = mWindSpeed.z, mx = mWindSpeed.x;
     f32 lx = gabi::fmsubs(mx, c, mz * s);
     f32 lz = gabi::fmadds(mx, s, mz * c);
     f32 f4 = -(lx * 0.02f);
@@ -5502,27 +5507,27 @@ BOOL daPy_lk_c::procFanGlide() {
     cLib_addCalcAngleS(&m34F2, targetX, 5, 0x800, 0x100);
     s32 d = (s16)(m34F2 - prev);
     s32 m3 = mProcVar3;
-    m34E0 = (s16)((m34E0 + m3) - d);
+    mWaistAngleZ = (s16)((mWaistAngleZ + m3) - d);
     mProcVar3 = lk_clampS((s16)(m3 + (d >> 1)), 0x380);
-    cLib_addCalcAngleS(&m34E0, 0, 5, 0x80, 0x30);
+    cLib_addCalcAngleS(&mWaistAngleZ, 0, 5, 0x80, 0x30);
     cLib_addCalcAngleS(&mProcVar3, 0, 5, 0x50, 0x30);
-    if (m34E0 > 0x2000) {
-        m34E0 = 0x2000;
-    } else if (m34E0 < -0x2000) {
-        m34E0 = -0x2000;
+    if (mWaistAngleZ > 0x2000) {
+        mWaistAngleZ = 0x2000;
+    } else if (mWaistAngleZ < -0x2000) {
+        mWaistAngleZ = -0x2000;
     }
     s16 prev2 = m34F4;
     cLib_addCalcAngleS(&m34F4, targetZ, 5, 0x800, 0x100);
     s32 d2 = (s16)(prev2 - m34F4);
     s32 m4 = mProcVar4;
-    m34E4 = (s16)((m34E4 + m4) - d2);
+    mWaistAngleY = (s16)((mWaistAngleY + m4) - d2);
     mProcVar4 = lk_clampS((s16)(m4 + d2), 0x380);
-    cLib_addCalcAngleS(&m34E4, 0, 5, 0x80, 0x30);
+    cLib_addCalcAngleS(&mWaistAngleY, 0, 5, 0x80, 0x30);
     cLib_addCalcAngleS(&mProcVar4, 0, 5, 0x50, 0x30);
-    if (m34E4 > 0x2000) {
-        m34E4 = 0x2000;
-    } else if (m34E4 < -0x2000) {
-        m34E4 = -0x2000;
+    if (mWaistAngleY > 0x2000) {
+        mWaistAngleY = 0x2000;
+    } else if (mWaistAngleY < -0x2000) {
+        mWaistAngleY = -0x2000;
     }
     f32 pow = *windPow * 0.75f;
     f32 base = pow + 1.5f;
@@ -5815,7 +5820,7 @@ BOOL daPy_lk_c::procRopeSwing() {
             cLib_chaseS_l(&mProcVar3, 0, chaseStep);
             f32 absX = std::fabs((f32)*sp10);
             if (mStickDistance > 0.05f) {
-                s32 dir = getDirectionFromAngle(m34DC);
+                s32 dir = getDirectionFromAngle(mStickAngle);
                 if (dir == 0 || dir == 1) {
                     f32 c = std::fabs(cM_fcos_l(absX));
                     mProcVar2 = (s16)gabi::ftoi(gabi::fmadds((f32)(s32)addStep, c, (f32)(s32)mProcVar2));

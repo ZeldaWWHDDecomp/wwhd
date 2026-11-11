@@ -21,9 +21,9 @@ WWHD_OFFSET(BgnCreateTev, mLight1, 0xC0);
 WWHD_OFFSET(BgnCreateTev, mLight2, 0x144);
 struct BgnCreateSmoke {
     u8 mPrefix[0x12];
-    be<u8> field_0x12;
+    be<u8> mFollowOff;  /* was field_0x12: view of dPa_followEcallBack::mFollowOff (d/particle/d_particle_local.h) */
     u8 mTail[0xD];
-    void setFollowOff() { field_0x12 = 1; }
+    void setFollowOff() { mFollowOff = 1; }
 };
 WWHD_SIZE(BgnCreateSmoke, 0x20);
 struct BgnCreateActors {

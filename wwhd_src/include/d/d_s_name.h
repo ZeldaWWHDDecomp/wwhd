@@ -66,7 +66,7 @@ struct PlayView {
 };
 struct SaveView {
     u8 prefix[0x7BC];
-    be<u8> field_0x7BC;
+    be<s8> mDanStageNo;  /* was field_0x7BC: view of dSv_info_c::mDan.mStageNo (d/d_save.h 0x79C; the view starts 0x20 before dSv_info_c: its mRestart 0x1148 / mNewFile 0x12B1 are dSv_info_c 0x1128 / 0x1291); changeGameScene 025ADC60 stores 0xFF (-1), tww's dComIfGs_resetDan() there (dSv_danBit_c::reset: mStageNo = -1); type was be<u8>, now be<s8> as dSv_danBit_c::mStageNo */
     u8 padding[0x1148 - 0x7BD];
     u8 mRestart[0x24];
     be<u32> mRestartRoomParam;
@@ -162,7 +162,7 @@ public:
     /* 0x468 */ NameScene::Projection mProjection;
     /* 0x52C */ gptr<NameScene::Heap> oldHeap;
     /* 0x530 */ u8 padding_530[4];
-    /* 0x534 */ be<u8> field_0x55f; // HD: the opening-scene selector moves from GC +0x55F to +0x534.
+    /* 0x534 */ be<u8> mToOpenScene;  /* was field_0x55f: NameInMain 025ADD1C copies the name controller's choice when the name is accepted; changeGameScene 025ADC60 requests OPEN_SCENE while it is set, else PLAY_SCENE (tww dScnName_c sets 1 after the name input, 0 on its other path); HD: the opening-scene selector moves from GC +0x55F to +0x534 */
     /* 0x535 */ u8 padding_535[3];
     /* 0x538 */ NameScene::Environment mEnvironment;
     /* 0x938 */ be<u8> mConstructed;
@@ -182,7 +182,7 @@ WWHD_OFFSET(dScnName_c, mCamera.view.mViewMtx, 0x318);
 WWHD_OFFSET(dScnName_c, mLookAtCamera, 0x410);
 WWHD_OFFSET(dScnName_c, mProjection, 0x468);
 WWHD_OFFSET(dScnName_c, oldHeap, 0x52C);
-WWHD_OFFSET(dScnName_c, field_0x55f, 0x534);
+WWHD_OFFSET(dScnName_c, mToOpenScene, 0x534);
 WWHD_OFFSET(dScnName_c, mEnvironment, 0x538);
 WWHD_OFFSET(dScnName_c, mConstructed, 0x938);
 

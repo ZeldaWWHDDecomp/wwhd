@@ -536,7 +536,7 @@ u8 daNpc_Jb1_c::demo() {
     if (id && id <= 32) {
         void* demo = jb1::demoObjects(l_demoObjects);
         if (!demo) {
-            jbAssert("d_demo.h", 0x23A, "m_object != NULL");
+            jbAssert("d_demo.h", 0x23A, "m_object != (0)");
             demo = jb1::demoObjects(l_demoObjects);
         }
         jbDemoActor(demo, id);
@@ -676,7 +676,7 @@ s32 daNpc_Jb1_c::_create() {
         return cPhs_ERROR_e;
     s32 users = s32(l_HIO.mRefCount);
     if (users < 0) {
-        s32 child = jbHioAdd("Jabun", &l_HIO);
+        s32 child = jbHioAdd("ジャブ－", &l_HIO);
         users = s32(l_HIO.mRefCount);
         l_HIO.mNo = u8(child);
     }
@@ -698,7 +698,7 @@ void* daNpc_Jb1_c::create_Anm() {
     archive1->text = gabi::guest_addr("Jb");
     void* data = resource(archive1.get(), dRes_ID_JB_BDL_JB_e);
     if (!data)
-        assertion("d_a_npc_jb1.cpp", 0x469, "a_mdl_dat != NULL");
+        assertion("d_a_npc_jb1.cpp", 0x469, "a_mdl_dat != (0)");
     archive2->vtable = gc_tu.safeString;
     archive2->text = gabi::guest_addr("Jb");
     void* animation = resource(archive2.get(), dRes_ID_JB_BCK_JB_WAIT01_e);
@@ -719,7 +719,7 @@ void* daNpc_Jb1_c::create_Anm() {
     animation = resource(archive3.get(), dRes_ID_JB_BRK_JB_LAMP_e);
     m_lmp_brk = static_cast<J3DAnmTevRegKey*>(animation);
     if (!animation) {
-        assertion("d_a_npc_jb1.cpp", 0x47E, "m_lmp_brk != NULL");
+        assertion("d_a_npc_jb1.cpp", 0x47E, "m_lmp_brk != (0)");
         animation = m_lmp_brk.get();
     }
     morph = mpMorf.get();
@@ -754,13 +754,13 @@ BOOL daNpc_Jb1_c::create_lgt() {
     void* model = jbModelCreate(data, 0, 0x11020203);
     m_lgt_mdl = static_cast<J3DModel*>(model);
     if (!model)
-        assertion("d_a_npc_jb1.cpp", 0x4D8, "m_lgt_mdl != NULL");
+        assertion("d_a_npc_jb1.cpp", 0x4D8, "m_lgt_mdl != (0)");
     archive2->vtable = gc_tu.safeString;
     archive2->text = gabi::guest_addr("Jb");
     void* animation = resource(archive2.get(), dRes_ID_JB_BRK_LF_e);
     m_lgt_brk = static_cast<J3DAnmTevRegKey*>(animation);
     if (!animation) {
-        assertion("d_a_npc_jb1.cpp", 0x4DD, "m_lgt_brk != NULL");
+        assertion("d_a_npc_jb1.cpp", 0x4DD, "m_lgt_brk != (0)");
         animation = m_lgt_brk.get();
     }
     model = m_lgt_mdl.get();
@@ -1003,19 +1003,19 @@ str 1001AD9F "Jb" in 02248168
 str 1001AD9C "Jb" in 02248098
 str 1001AD88 "Jb1"
 str 1001AD8C "Jb" in 02247F64
-str 1001AD90 "Jabun" renamed
+str 1001AD90 "ジャブ－"
 str 1001ACE8 "Jb" in 02247260
 str 1001AD38 "Jb" in 022474D8
 str 1001ACE0 "jb_case"
 str 1001ACEC "d_a_npc_jb1.cpp"
 str 1001AD3C "d_a_npc_jb1.cpp" in 022474D8
-str 1001ACFC "a_mdl_dat != NULL" renamed
-str 1001AD10 "m_lmp_brk != NULL" renamed
+str 1001ACFC "a_mdl_dat != (0)"
+str 1001AD10 "m_lmp_brk != (0)"
 str 1001AD24 "m_cse_jnt_num >= 0" renamed
-str 1001AD4C "m_lgt_mdl != NULL" renamed
-str 1001AD60 "m_lgt_brk != NULL" renamed
+str 1001AD4C "m_lgt_mdl != (0)"
+str 1001AD60 "m_lgt_brk != (0)"
 str 1001ACD0 "d_demo.h"
-str 1001ACC0 "m_object != NULL" renamed
+str 1001ACC0 "m_object != (0)"
 data l_defaultLight 1016E414
 data a_bck_resID_tbl 1001ADC0
 data l_anmPrm 101BE9D4

@@ -21,11 +21,11 @@ inline u32 getSwitchNo(daFloor_c* ac) { return fopAcM_GetParam(ac) & 0xFF; }
 static void rideCallBack(dBgW* bgw, fopAc_ac_c* ac, fopAc_ac_c* other) {
     daFloor_c* i_this = (daFloor_c*)ac;
     if (other != nullptr && fopAcM_GetName(other) == fpcNm_PLAYER_e && !((daPy_floor_view*)other)->checkEquipHeavyBoots()) {
-        i_this->field_0x2d9 = 1;
-    } else if (other != nullptr && fopAcM_GetName(other) == fpcNm_PLAYER_e && i_this->field_0x2d9 && ((daPy_floor_view*)other)->checkEquipHeavyBoots() &&
-               !i_this->field_0x2d8) {
-        i_this->field_0x2d8 = 1;
-        i_this->field_0x2da = 6;
+        i_this->mPlayerStanding = 1;
+    } else if (other != nullptr && fopAcM_GetName(other) == fpcNm_PLAYER_e && i_this->mPlayerStanding && ((daPy_floor_view*)other)->checkEquipHeavyBoots() &&
+               !i_this->mBreakStarted) {
+        i_this->mBreakStarted = 1;
+        i_this->mBreakTimer = 6;
     }
 }
 
@@ -39,7 +39,7 @@ BOOL daFloor_c::Delete() {
 /* 021401A0 */
 BOOL daFloor_c::CreateHeap() {
     J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes(m_arcname, dRes_INDEX_HHYU1_BDL_HHYU1_e);
-    JUT_ASSERT(0xc1, modelData != NULL);
+    JUT_ASSERT_MSG(0xc1, modelData != NULL, "modelData != (0)");
     J3DModel* m = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000022);
     mpModel = m;
     if (m == nullptr)
@@ -83,9 +83,9 @@ void daFloor_c::set_mtx() {
 
 /* 0214000C */
 BOOL daFloor_c::Execute(Mtx34** mtx) {
-    if (field_0x2da != 0) {
-        u8 t = field_0x2da - 1;
-        field_0x2da = t;
+    if (mBreakTimer != 0) {
+        u8 t = mBreakTimer - 1;
+        mBreakTimer = t;
         if (t == 0) {
             set_effect();
             fopAcM_seStart(this, JA_SE_OBJ_HEAVY_FLOOR_BRK, 0);
@@ -98,7 +98,7 @@ BOOL daFloor_c::Execute(Mtx34** mtx) {
     cXyz difference;
     difference = pl->current.pos - pl->old.pos;
     if (difference.absXZ() != 0.0f)
-        field_0x2d9 = 0;
+        mPlayerStanding = 0;
     return TRUE;
 }
 
@@ -189,5 +189,5 @@ static void empty_virtual(void* p) {
 /* WWHD glue (tools/verify/autoglue.py)
 str 1000F1E0
 str 1000F1A0
-str 1000F1B0 "modelData != NULL" renamed
+str 1000F1B0 "modelData != (0)"
 */

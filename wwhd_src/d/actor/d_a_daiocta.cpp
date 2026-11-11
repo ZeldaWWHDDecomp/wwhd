@@ -192,7 +192,7 @@ static void oct_staticColor(u32 guard, u32 dst, u32 src) {
 
 /* modeWait / modeDamage / modeDamageBomb: the shared transition checks */
 static void oct_checkTransitions(daDaiocta_c* i_this, bool hioDelete) {
-    if (i_this->isDead() || (hioDelete && l_HIO.m006 != 0)) {
+    if (i_this->isDead() || (hioDelete && l_HIO.mForceDelete != 0)) {
         i_this->modeProc(daDaiocta_c::PROC_INIT_e, daDaiocta_c::MODE_DELETE);
     } else if (i_this->isDamageEye()) {
         i_this->modeProc(daDaiocta_c::PROC_INIT_e, daDaiocta_c::MODE_DAMAGE);
@@ -240,10 +240,10 @@ static u32 daDaiocta_HIO_ct(u32 self) {
     }
     auto* hio = gabi::at<daDaiocta_HIO_c>(self);
     hio->__vtbl = 0x1000D044; /* mDoHIO_entry_c vtable */
-    hio->m004 = 0;
-    hio->m008 = 0;
-    hio->m006 = 0;
-    hio->m005 = 0;
+    hio->mDrawDebug = 0;
+    hio->mAwaRepeatAlways = 0;
+    hio->mForceDelete = 0;
+    hio->mHideBody = 0;
     hio->mSphRadii[0] = 600.0f;
     hio->mSphRadii[1] = 500.0f;
     hio->mSphRadii[2] = 450.0f;
@@ -260,53 +260,53 @@ static u32 daDaiocta_HIO_ct(u32 self) {
     hio->mCpsRadii[7] = 60.0f;
     hio->mCpsRadii[8] = 60.0f;
     hio->mCpsRadii[9] = 60.0f;
-    hio->m05C = 100.0f;
-    hio->m060 = 100.0f;
-    hio->m064 = 250.0f;
-    hio->m068 = 100.0f;
-    hio->m06C = 150.0f;
-    hio->m070 = 100.0f;
-    hio->m074 = 150.0f;
+    hio->mTentacleRTipRadius = 100.0f;
+    hio->mTentacleLTipRadius = 100.0f;
+    hio->mBodyTipRadius = 250.0f;
+    hio->mFinR1Radius = 100.0f;
+    hio->mFinR2Radius = 150.0f;
+    hio->mFinL1Radius = 100.0f;
+    hio->mFinL2Radius = 150.0f;
     hio->mDefaultAppearRadius = 5000.0f;
     hio->mMinAppearRadius = 4500.0f;
-    hio->m080 = 30.0f;
-    hio->m084 = 1800.0f;
-    hio->m088 = 40.0f;
-    hio->m08C = 1.0f;
-    hio->m090 = 0.02f;
-    hio->m094 = 150.0f;
-    hio->m0FC.x = 0.0f;
-    hio->m0FC.y = 5.0f;
-    hio->m0FC.z = 700.0f;
-    hio->m0BC[1] = 8.0f;
-    hio->m0BC[2] = 8.0f;
-    hio->m0BC[3] = 3.0f;
-    hio->m0BC[4] = 3.0f;
-    hio->m0BC[5] = 3.0f;
-    hio->m0BC[6] = 7.0f;
-    hio->m0BC[7] = 9.0f;
-    hio->m098[1] = 1.0f;
-    hio->m098[2] = 0.5f;
-    hio->m098[3] = 0.75f;
-    hio->m098[4] = 0.625f;
-    hio->m098[5] = 0.625f;
-    hio->m098[6] = 0.5f;
-    hio->m098[7] = 1.0f;
-    hio->m098[8] = 1.0f;
-    hio->m0E0 = 20.0f;
-    hio->m0E4 = 300.0f;
-    hio->m0E8 = 1200.0f;
-    hio->m0EC = 1.0f;
-    hio->m0F0 = 2.0f;
-    hio->m0F4 = 10.0f;
-    hio->m0F8 = 30.0f;
+    hio->mAppearRiseStep = 30.0f;
+    hio->mSuckRange = 1800.0f;
+    hio->mShipPullSpeedTarget = 40.0f;
+    hio->mShipPullSpeedStep = 1.0f;
+    hio->mShipPullSpeedScale = 0.02f;
+    hio->mMouthOffsetX = 150.0f;
+    hio->mSuikomiOffset.x = 0.0f;
+    hio->mSuikomiOffset.y = 5.0f;
+    hio->mSuikomiOffset.z = 700.0f;
+    hio->mAnmMorf[1] = 8.0f;
+    hio->mAnmMorf[2] = 8.0f;
+    hio->mAnmMorf[3] = 3.0f;
+    hio->mAnmMorf[4] = 3.0f;
+    hio->mAnmMorf[5] = 3.0f;
+    hio->mAnmMorf[6] = 7.0f;
+    hio->mAnmMorf[7] = 9.0f;
+    hio->mAnmPlaySpeed[1] = 1.0f;
+    hio->mAnmPlaySpeed[2] = 0.5f;
+    hio->mAnmPlaySpeed[3] = 0.75f;
+    hio->mAnmPlaySpeed[4] = 0.625f;
+    hio->mAnmPlaySpeed[5] = 0.625f;
+    hio->mAnmPlaySpeed[6] = 0.5f;
+    hio->mAnmPlaySpeed[7] = 1.0f;
+    hio->mAnmPlaySpeed[8] = 1.0f;
+    hio->mSinkStep = 20.0f;
+    hio->mAwaDistMin = 300.0f;
+    hio->mAwaDistMax = 1200.0f;
+    hio->mAwaScaleMin = 1.0f;
+    hio->mAwaScaleMax = 2.0f;
+    hio->mAwaTimerMin = 10.0f;
+    hio->mAwaTimerMax = 30.0f;
     hio->mRotEyeTimerMin = 0x1E;    /* mRotEyeTimerMin */
     hio->mRotEyeTimerAddMax = 0x3C; /* mRotEyeTimerAddMax */
-    hio->m010 = 0x100;
-    hio->m012 = 0x1500;
-    hio->m014 = -0x800;
-    hio->m016 = 0x1E;
-    hio->m018 = 0x2D;
+    hio->mAppearTurnStep = 0x100;
+    hio->mSuckAngle = 0x1500;
+    hio->mSuckAngleOffset = -0x800;
+    hio->mAwaNum = 0x1E;
+    hio->mEffectColorAdd = 0x2D;
     return self;
 }
 
@@ -361,50 +361,50 @@ void daDaiocta_c::_nodeControl(J3DNode* i_nodeP, J3DModel* i_modelP) {
         base->x = 450.0f;
         base->y = 0.0f;
         base->z = 0.0f;
-        dst = A(&i_this->m21A0);
-        break; /* m21A0 */
+        dst = A(&i_this->mTentacleLTipPos);
+        break; /* mTentacleLTipPos */
     case 36:
         base->x = 450.0f;
         base->y = 0.0f;
         base->z = 0.0f;
-        dst = A(&i_this->m21AC);
-        break; /* m21AC */
+        dst = A(&i_this->mTentacleRTipPos);
+        break; /* mTentacleRTipPos */
     case 20:
-        fcpy(A(&base->x), A(&l_HIO.m094));
+        fcpy(A(&base->x), A(&l_HIO.mMouthOffsetX));
         base->y = 0.0f;
         base->z = 0.0f;
-        dst = A(&i_this->m2434);
-        break; /* m2434 */
+        dst = A(&i_this->mMouthPos);
+        break; /* mMouthPos */
     case 6:
         base->x = 450.0f;
         base->y = 0.0f;
         base->z = 0.0f;
-        dst = A(&i_this->m21B8);
-        break; /* m21B8 */
+        dst = A(&i_this->mBodyTipPos);
+        break; /* mBodyTipPos */
     case 9:
         base->x = 300.0f;
         base->y = -200.0f;
         base->z = 0.0f;
-        dst = A(&i_this->m21C4);
-        break; /* m21C4 */
+        dst = A(&i_this->mFinL1TipPos);
+        break; /* mFinL1TipPos */
     case 7:
         base->x = 300.0f;
         base->y = 0.0f;
         base->z = 0.0f;
-        dst = A(&i_this->m21D0);
-        break; /* m21D0 */
+        dst = A(&i_this->mFinL2TipPos);
+        break; /* mFinL2TipPos */
     case 10:
         base->x = 300.0f;
         base->y = 200.0f;
         base->z = 0.0f;
-        dst = A(&i_this->m21DC);
-        break; /* m21DC */
+        dst = A(&i_this->mFinR1TipPos);
+        break; /* mFinR1TipPos */
     case 8:
         base->x = 300.0f;
         base->y = 0.0f;
         base->z = 0.0f;
-        dst = A(&i_this->m21E8);
-        break; /* m21E8 */
+        dst = A(&i_this->mFinR2TipPos);
+        break; /* mFinR2TipPos */
     }
     if (dst != 0)
         PSMTXMultVec(&l_matrixStack, base.get(), gabi::at<cXyz>(dst));
@@ -557,14 +557,14 @@ void daDaiocta_c::setSuikomiMtx() {
                (f32)i_this->current.pos.z);
     mDoMtx_ZXYrotM(&l_matrixStack, (s16)i_this->shape_angle.x, (s16)i_this->shape_angle.y,
                    (s16)i_this->shape_angle.z);
-    mDoMtx_stack_transM(l_HIO.m0FC.x, l_HIO.m0FC.y, l_HIO.m0FC.z);
+    mDoMtx_stack_transM(l_HIO.mSuikomiOffset.x, l_HIO.mSuikomiOffset.y, l_HIO.mSuikomiOffset.z);
     oct_setBaseTRMtx((u32)i_this->mpSuikomiModel.v);
 }
 
 /* 0211970C */
 void daDaiocta_c::setAwaMtx() {
     auto* i_this = this;
-    for (int i = 0; i < l_HIO.m016; i++) {
+    for (int i = 0; i < l_HIO.mAwaNum; i++) {
         u32 model = (u32)(DaioctaArray(i_this->mpAwaModels, i)->v);
         /* here the recompiled copy goes through the FPRs (a signalling NaN is quieted) */
         J3DModel_setBaseScale(gabi::at<J3DModel>(model), DaioctaArray(i_this->mAwaScale, i));
@@ -596,7 +596,7 @@ void daDaiocta_c::setEffect(u32 effect_name) {
     gabi::Local<cXyz> pos;
     gabi::Local<csXyz> ang;
     DaioctaHD_dKy_get_seacolor(amb.get(), dif.get()); /* dKy_get_seacolor */
-    s32 add = l_HIO.m018;
+    s32 add = l_HIO.mEffectColorAdd;
     u32 ca = A(amb.get());
     s32 r = (u8)(amb->r) + add;
     s32 g = (u8)(amb->g) + add;
@@ -639,10 +639,10 @@ void daDaiocta_c::setEffect(u32 effect_name) {
 /* 021193F8 */
 void daDaiocta_c::setAwaRandom(s32 i_awaIndex) {
     auto* i_this = this;
-    f32 f12 = l_HIO.m0F0;
-    f32 f31 = l_HIO.m0EC;
-    f32 f30 = l_HIO.m0E4;
-    f32 f0 = l_HIO.m0E8;
+    f32 f12 = l_HIO.mAwaScaleMax;
+    f32 f31 = l_HIO.mAwaScaleMin;
+    f32 f30 = l_HIO.mAwaDistMin;
+    f32 f0 = l_HIO.mAwaDistMax;
     f32 f1 = gabi::fsubs_ppc(f12, f31);
     f32 f29 = gabi::fsubs_ppc(f0, f30);
     u32 sc = A(DaioctaArray(i_this->mAwaScale, i_awaIndex));
@@ -661,10 +661,10 @@ void daDaiocta_c::setAwaRandom(s32 i_awaIndex) {
 /* 02119514 */
 void daDaiocta_c::initAwa() {
     auto* i_this = this;
-    for (int i = 0; i < l_HIO.m016; i++) {
+    for (int i = 0; i < l_HIO.mAwaNum; i++) {
         i_this->setAwaRandom(i);
-        f32 f0 = l_HIO.m0F8;
-        f32 f31 = l_HIO.m0F4;
+        f32 f0 = l_HIO.mAwaTimerMax;
+        f32 f31 = l_HIO.mAwaTimerMin;
         f32 r = cM_rndF(gabi::fsubs_ppc(f0, f31));
         *DaioctaArray(i_this->mAwaTimers, i) = gabi::ftoi(gabi::fadds_ppc(r, f31));
         /* setFrame(getEndFrame()) on the bck, btk and brk animations */
@@ -683,7 +683,7 @@ void daDaiocta_c::initAwa() {
 /* 02119F84 */
 void daDaiocta_c::execAwa() {
     auto* i_this = this;
-    for (int i = 0; i < l_HIO.m016; i++) {
+    for (int i = 0; i < l_HIO.mAwaNum; i++) {
         if (cLib_calcTimer_i(DaioctaArray(i_this->mAwaTimers, i)) == 0) {
             u32 bck = A(DaioctaArray(i_this->mAwaBckAnms, i));
             mDoExt_baseAnm_play(gabi::at<void>(bck));
@@ -691,7 +691,7 @@ void daDaiocta_c::execAwa() {
             mDoExt_baseAnm_play(gabi::at<void>(btk));
             u32 brk = A(DaioctaArray(i_this->mAwaBrkAnms, i));
             mDoExt_baseAnm_play(gabi::at<void>(brk));
-            if (i_this->m31C4 != 0 || l_HIO.m008 != 0) {
+            if (i_this->mAwaRepeat != 0 || l_HIO.mAwaRepeatAlways != 0) {
                 /* mAwaBckAnms[i].isStop() */
                 if (((u8)gabi::at<mDoExt_bckAnm>(bck)->mFrameCtrl.mState & 1) ||
                     (f32)gabi::at<mDoExt_bckAnm>(bck)->mFrameCtrl.mRate == 0.0f) {
@@ -701,8 +701,8 @@ void daDaiocta_c::execAwa() {
                     gabi::at<mDoExt_btkAnm>(btk)->mFrameCtrl.mRate = 1.0f;
                     gabi::at<mDoExt_brkAnm>(brk)->mFrameCtrl.mFrame = 0.0f;
                     gabi::at<mDoExt_brkAnm>(brk)->mFrameCtrl.mRate = 1.0f;
-                    f32 f29 = l_HIO.m0F4;
-                    f32 f13 = l_HIO.m0F8;
+                    f32 f29 = l_HIO.mAwaTimerMin;
+                    f32 f13 = l_HIO.mAwaTimerMax;
                     f32 r = cM_rndF(gabi::fsubs_ppc(f13, f29));
                     *DaioctaArray(i_this->mAwaTimers, i) = gabi::ftoi(gabi::fadds_ppc(r, f29));
                     i_this->setAwaRandom(i);
@@ -786,11 +786,11 @@ void daDaiocta_c::setRotEye() {
                 if (eye != 0 && gabi::at<daDaiocta_Eye_c>(eye)->mbIsDead == 0) {
                     auto* actor = DaioctaGuest<daDaiocta_Eye_c>(eye);
                     oct_rndRotEyeAxis(actor, actor->mEyeRotTargetX, actor->mCurEyeRot.x,
-                                      actor->m2EC, actor->mEyeRndRotMaxX, true, i);
+                                      actor->mEyeRndRotMinX, actor->mEyeRndRotMaxX, true, i);
                     oct_rndRotEyeAxis(actor, actor->mEyeRotTargetY, actor->mCurEyeRot.y,
-                                      actor->m2EE, actor->mEyeRndRotMaxY, false, 0);
+                                      actor->mEyeRndRotMinY, actor->mEyeRndRotMaxY, false, 0);
                     oct_rndRotEyeAxis(actor, actor->mEyeRotTargetZ, actor->mCurEyeRot.z,
-                                      actor->m2F0, actor->mEyeRndRotMaxZ, false, 0);
+                                      actor->mEyeRndRotMinZ, actor->mEyeRndRotMaxZ, false, 0);
                 }
             }
         }
@@ -825,10 +825,10 @@ void daDaiocta_c::setCollision() {
         cXyz* end;
         be<f32>* radius;
     } tail[7] = {
-        {10, 36, &i_this->m21AC, &l_HIO.m05C}, {11, 30, &i_this->m21A0, &l_HIO.m060},
-        {12, 6, &i_this->m21B8, &l_HIO.m064},  {13, 10, &i_this->m21DC, &l_HIO.m068},
-        {14, 8, &i_this->m21E8, &l_HIO.m06C},  {15, 9, &i_this->m21C4, &l_HIO.m070},
-        {16, 7, &i_this->m21D0, &l_HIO.m074},
+        {10, 36, &i_this->mTentacleRTipPos, &l_HIO.mTentacleRTipRadius}, {11, 30, &i_this->mTentacleLTipPos, &l_HIO.mTentacleLTipRadius},
+        {12, 6, &i_this->mBodyTipPos, &l_HIO.mBodyTipRadius},  {13, 10, &i_this->mFinR1TipPos, &l_HIO.mFinR1Radius},
+        {14, 8, &i_this->mFinR2TipPos, &l_HIO.mFinR2Radius},  {15, 9, &i_this->mFinL1TipPos, &l_HIO.mFinL1Radius},
+        {16, 7, &i_this->mFinL2TipPos, &l_HIO.mFinL2Radius},
     };
     for (int k = 0; k < 7; k++) {
         u32 cps = A(DaioctaArray(i_this->mCps, tail[k].index));
@@ -910,7 +910,7 @@ void daDaiocta_c::modeAppear() {
         gabi::Local<GXColor> dif;
         DaioctaHD_dKy_get_seacolor(amb.get(), dif.get()); /* dKy_get_seacolor */
         u32 ca = A(amb.get());
-        s32 add = l_HIO.m018;
+        s32 add = l_HIO.mEffectColorAdd;
         s32 r = (u8)(amb->r) + add;
         s32 g = (u8)(amb->g) + add;
         s32 b = (u8)(amb->b) + add;
@@ -940,12 +940,12 @@ void daDaiocta_c::modeAppear() {
             fcpy(A(sp2C.get()) + 8, t + 0x31C);
             DaioctaBits<u32>(sp2C->y) = (u32)DaioctaBits<u32>(i_this->mWaterY);
             DaioctaHD_cLib_addCalcPos2(A(&i_this->current.pos), sp2C.get(), 0.1f,
-                                       f32(l_HIO.m080)); /* cLib_addCalcPos2 */
+                                       f32(l_HIO.mAppearRiseStep)); /* cLib_addCalcPos2 */
             gabi::Local<cXyz> d;
             f32 dist = oct_abs(A(&i_this->current.pos), A(sp2C.get()), d);
-            if (dist < 1900.0f && i_this->m26C0 == 0) {
+            if (dist < 1900.0f && i_this->mEnterSePlayed == 0) {
                 oct_seStart(t, 0x58C2 /* JA_SE_CM_DO_ENTER */, A(&i_this->eyePos));
-                i_this->m26C0 = 1;
+                i_this->mEnterSePlayed = 1;
                 DaioctaHD_mDoAud_subBgmStart(
                     0x8000002Bu); /* mDoAud_subBgmStart(JA_BGM_DIOCTA_BATTLE) */
             }
@@ -953,7 +953,7 @@ void daDaiocta_c::modeAppear() {
                 i_this->modeProc(daDaiocta_c::PROC_INIT_e, daDaiocta_c::MODE_WAIT);
             } else {
                 s16 target = fopAcM_searchActorAngleY(i_this, dComIfGp_getPlayer(0));
-                cLib_addCalcAngleS2(gabi::at<be<s16>>(t + 0x32A), target, 4, l_HIO.m010);
+                cLib_addCalcAngleS2(gabi::at<be<s16>>(t + 0x32A), target, 4, l_HIO.mAppearTurnStep);
             }
         }
     }
@@ -1051,18 +1051,18 @@ void daDaiocta_c::modeDemo() {
         oct_assert(gabi::guest_addr("d_a_daiocta.cpp"), 0x559, gabi::guest_addr("ship != (0)"));
         return;
     }
-    /* m21F4 = ship->current.pos; m2200 = ship->current.angle */
-    DaioctaBits<u32>(i_this->m21F4.x) =
+    /* mShipPos = ship->current.pos; mShipAngle = ship->current.angle */
+    DaioctaBits<u32>(i_this->mShipPos.x) =
         (u32)DaioctaBits<u32>(DaioctaGuest<fopAc_ac_c>(ship_p_1)->current.pos.x);
-    DaioctaBits<u32>(i_this->m21F4.y) =
+    DaioctaBits<u32>(i_this->mShipPos.y) =
         (u32)DaioctaBits<u32>(DaioctaGuest<fopAc_ac_c>(ship_p_1)->current.pos.y);
-    DaioctaBits<u32>(i_this->m21F4.z) =
+    DaioctaBits<u32>(i_this->mShipPos.z) =
         (u32)DaioctaBits<u32>(DaioctaGuest<fopAc_ac_c>(ship_p_1)->current.pos.z);
-    DaioctaBits<u16>(i_this->m2200.x) =
+    DaioctaBits<u16>(i_this->mShipAngle.x) =
         (u16)DaioctaBits<u16>(DaioctaGuest<fopAc_ac_c>(ship_p_1)->current.angle.x);
-    DaioctaBits<u16>(i_this->m2200.y) =
+    DaioctaBits<u16>(i_this->mShipAngle.y) =
         (u16)DaioctaBits<u16>(DaioctaGuest<fopAc_ac_c>(ship_p_1)->current.angle.y);
-    DaioctaBits<u16>(i_this->m2200.z) =
+    DaioctaBits<u16>(i_this->mShipAngle.z) =
         (u16)DaioctaBits<u16>(DaioctaGuest<fopAc_ac_c>(ship_p_1)->current.angle.z);
     if ((u16)i_this->eventInfo.mCommand != 2) { /* !eventInfo.checkCommandDemoAccrpt() */
         oct_orderOtherEvent(t, gabi::guest_addr("DAIOCTA_SUIKOMI")); /* "DAIOCTA_SUIKOMI" */
@@ -1085,9 +1085,9 @@ void daDaiocta_c::modeDemo() {
     } else {
         if (oct_strcmp(cut_name, gabi::guest_addr("SUIKOMI1")) == 0) { /* "SUIKOMI1" */
             i_this->mPrmIdx = 6;
-            oct_seStart(t, 0x50C3 /* JA_SE_CM_DO_SUCK_IN */, A(&i_this->m2434));
+            oct_seStart(t, 0x50C3 /* JA_SE_CM_DO_SUCK_IN */, A(&i_this->mMouthPos));
             gabi::Local<cXyz> d1, xz1;
-            if (oct_absXZ(A(&i_this->m2434), A(&i_this->m21F4), d1, xz1) < 80.0f) {
+            if (oct_absXZ(A(&i_this->mMouthPos), A(&i_this->mShipPos), d1, xz1) < 80.0f) {
                 oct_cutEnd(staff_id);
             } else {
                 u32 morf = (u32)i_this->mpMorf.v;
@@ -1099,33 +1099,33 @@ void daDaiocta_c::modeDemo() {
             s16 target_angle_y =
                 cLib_targetAngleY(&i_this->current.pos, gabi::at<cXyz>(ship_p_1 + 0x314));
             s32 distance_angle_s =
-                cLib_distanceAngleS((s16)((s16)i_this->shape_angle.y + l_HIO.m014), target_angle_y);
-            cLib_addCalc2(&i_this->m2208, l_HIO.m088, l_HIO.m090, l_HIO.m08C);
+                cLib_distanceAngleS((s16)((s16)i_this->shape_angle.y + l_HIO.mSuckAngleOffset), target_angle_y);
+            cLib_addCalc2(&i_this->mShipPullSpeed, l_HIO.mShipPullSpeedTarget, l_HIO.mShipPullSpeedScale, l_HIO.mShipPullSpeedStep);
             {
-                f32 m2208 = i_this->m2208;
-                f32 tx = (f32)i_this->m2434.x;
-                cLib_chaseF(&i_this->m21F4.x, tx, gabi::fmuls_ppc(m2208, 0.5f));
+                f32 pullSpeed = i_this->mShipPullSpeed;
+                f32 tx = (f32)i_this->mMouthPos.x;
+                cLib_chaseF(&i_this->mShipPos.x, tx, gabi::fmuls_ppc(pullSpeed, 0.5f));
             }
             {
-                f32 tz = (f32)i_this->m2434.z;
-                cLib_chaseF(gabi::at<be<f32>>(t + 0x237C), tz, i_this->m2208);
+                f32 tz = (f32)i_this->mMouthPos.z;
+                cLib_chaseF(gabi::at<be<f32>>(t + 0x237C), tz, i_this->mShipPullSpeed);
             }
             cLib_addCalcAngleS2(gabi::at<be<s16>>(t + 0x2382), (s16)(target_angle_y + 0x8000), 8,
                                 0x400);
-            if (distance_angle_s < l_HIO.m012) {
+            if (distance_angle_s < l_HIO.mSuckAngle) {
                 u16 a = (u16)(target_angle_y + 0x4000);
                 gabi::Local<cXyz> d2, xz2;
                 f32 dist = oct_absXZ(A(&i_this->current.pos), ship_p_1 + 0x314, d2, xz2);
                 f32 k1 = dist / gabi::fadds_ppc(REG12_F(1), 60.0f);
-                i_this->m21F4.z = gabi::fmadds(k1, cM_scos(a), (f32)i_this->m21F4.z);
+                i_this->mShipPos.z = gabi::fmadds(k1, cM_scos(a), (f32)i_this->mShipPos.z);
                 f32 k2 = dist / gabi::fadds_ppc(REG12_F(1), 60.0f);
-                i_this->m21F4.x = gabi::fmadds(k2, cM_ssin(a), (f32)i_this->m21F4.x);
+                i_this->mShipPos.x = gabi::fmadds(k2, cM_ssin(a), (f32)i_this->mShipPos.x);
             }
             gabi::Local<be<s16>> nameKey2;
             u32 ship_p_2 = oct_searchShip(nameKey2);
             if (ship_p_2 != 0)
-                oct_initStartPos(ship_p_2, A(&i_this->m21F4),
-                                 (s16)i_this->m2200.y); /* HD: null check */
+                oct_initStartPos(ship_p_2, A(&i_this->mShipPos),
+                                 (s16)i_this->mShipAngle.y); /* HD: null check */
         }
         if (oct_strcmp(cut_name, gabi::guest_addr("SUIKOMI2")) == 0) { /* "SUIKOMI2" */
             if (f32(DaioctaGuest<mDoExt_McaMorf>(i_this->mpMorf.v)->mFrameCtrl.mFrame) == 65.0f) {
@@ -1134,26 +1134,26 @@ void daDaiocta_c::modeDemo() {
             s16 target_angle_y =
                 cLib_targetAngleY(&i_this->current.pos, gabi::at<cXyz>(ship_p_1 + 0x314));
             cLib_distanceAngleS((s16)i_this->shape_angle.y, target_angle_y);
-            DaioctaHD_cLib_chasePosXZ(A(&i_this->m21F4), A(&i_this->current.pos),
-                                      (f32)i_this->m2208); /* cLib_chasePosXZ */
+            DaioctaHD_cLib_chasePosXZ(A(&i_this->mShipPos), A(&i_this->current.pos),
+                                      (f32)i_this->mShipPullSpeed); /* cLib_chasePosXZ */
             cLib_addCalcAngleS2(gabi::at<be<s16>>(t + 0x2382), (s16)(target_angle_y + 0x8000), 4,
                                 0x800);
             gabi::Local<be<s16>> nameKey3;
             u32 ship_p_2 = oct_searchShip(nameKey3);
             if (ship_p_2 != 0) { /* HD: null check */
-                oct_initStartPos(ship_p_2, A(&i_this->m21F4), (s16)i_this->m2200.y);
+                oct_initStartPos(ship_p_2, A(&i_this->mShipPos), (s16)i_this->mShipAngle.y);
                 gabi::Local<cXyz> d3, xz3;
-                if (oct_absXZ(A(&i_this->current.pos), A(&i_this->m21F4), d3, xz3) < 10.0f) {
+                if (oct_absXZ(A(&i_this->current.pos), A(&i_this->mShipPos), d3, xz3) < 10.0f) {
                     u32 morf = (u32)i_this->mpMorf.v;
                     if (oct_morfIsStop(morf) || i_this->mPrmIdx == 2) {
                         u32 m = (u32)i_this->mpMorf.v;
                         i_this->shape_angle.y = rot_y;
                         DaioctaHD_mDoExt_McaMorf_calc(m); /* mpMorf->calc() */
-                        /* current.pos = m220C (integer copy) */
-                        u32 x = (u32)DaioctaBits<u32>(i_this->m220C.x),
-                            y = (u32)DaioctaBits<u32>(i_this->m220C.y);
+                        /* current.pos = mCreatePos (integer copy) */
+                        u32 x = (u32)DaioctaBits<u32>(i_this->mCreatePos.x),
+                            y = (u32)DaioctaBits<u32>(i_this->mCreatePos.y);
                         DaioctaBits<u32>(i_this->current.pos.x) = x;
-                        u32 z = (u32)DaioctaBits<u32>(i_this->m220C.z);
+                        u32 z = (u32)DaioctaBits<u32>(i_this->mCreatePos.z);
                         DaioctaBits<u32>(i_this->current.pos.y) = y;
                         DaioctaBits<u32>(i_this->current.pos.z) = z;
                         oct_initStartPos(ship_p_2, A(&i_this->current.pos), rot_y);
@@ -1173,14 +1173,14 @@ void daDaiocta_c::modeDemo() {
             }
             u32 morf = (u32)i_this->mpMorf.v;
             if (gabi::ftoi((f32)gabi::at<mDoExt_McaMorf>(morf)->mFrameCtrl.mFrame) == 26) {
-                oct_seStart(t, 0x4937 /* JA_SE_CV_DO_SPIT_SHIP */, A(&i_this->m2434));
+                oct_seStart(t, 0x4937 /* JA_SE_CV_DO_SPIT_SHIP */, A(&i_this->mMouthPos));
                 morf = (u32)i_this->mpMorf.v;
             }
             if (i_this->mPrmIdx == 8 && oct_morfIsStop(morf)) {
                 oct_cutEnd(staff_id);
                 DaioctaHD_mDoAud_subBgmStop(); /* mDoAud_subBgmStop */
             } else if ((f32)gabi::at<mDoExt_McaMorf>(morf)->mFrameCtrl.mFrame < 10.0f) {
-                oct_initStartPos(ship_p_1, A(&i_this->m2434), rot_y);
+                oct_initStartPos(ship_p_1, A(&i_this->mMouthPos), rot_y);
                 i_this->mDemoEndTimer = 60; /* HD */
             }
             i_this->mPrmIdx = 8;
@@ -1194,7 +1194,7 @@ void daDaiocta_c::modeDemo() {
         i_this->mDemoEndTimer = tm - 1;
     if (oct_endCheck(gabi::guest_addr("DAIOCTA_SUIKOMI")) ||
         i_this->mDemoEndTimer == 1) { /* "DAIOCTA_SUIKOMI" */
-        u8 scls = i_this->m575;
+        u8 scls = i_this->mExitNo;
         u32 play = oct_play();
         if (scls == 0xFF) {
             /* daPy_getPlayerLinkActorClass()->setDaiokutaEnd(): startRestartRoom(6, 0xC9, -1.0f, 1)
@@ -1202,9 +1202,9 @@ void daDaiocta_c::modeDemo() {
             DaioctaHD_daPy_lk_c_startRestartRoom(
                 u32(DaioctaGuest<dComIfG_inf_c>(play)->play.mpPlayerPtr[0].v), 6, 0xC9, -1.0f, 1);
         } else {
-            /* dComIfGp_setNextStage(dComIfGp_getStartStageName(), m575, roomNo, -1, 0.0f, 6) (HD:
+            /* dComIfGp_setNextStage(dComIfGp_getStartStageName(), mExitNo, roomNo, -1, 0.0f, 6) (HD:
              * two more arguments) */
-            DaioctaHD_dComIfGp_setNextStage(play + 0x5134, (u32)i_this->m575,
+            DaioctaHD_dComIfGp_setNextStage(play + 0x5134, (u32)i_this->mExitNo,
                                             (s32)(s8)i_this->current.roomNo, -1, 0.0f, 6, 1, 0);
         }
     }
@@ -1267,30 +1267,30 @@ void daDaiocta_c::modeDelete() {
                 f32 y = gabi::fsubs_ppc(w, 3000.0f);
                 DaioctaBits<u32>(target_pos->z) = z;
                 i_this->mPrmIdx = 7;
-                f32 step = l_HIO.m0E0;
+                f32 step = l_HIO.mSinkStep;
                 target_pos->y = y;
                 DaioctaHD_cLib_chasePos(A(&i_this->current.pos), target_pos.get(),
                                         step); /* cLib_chasePos */
                 if (std::fabs(gabi::fsubs_ppc((f32)i_this->current.pos.y, i_this->mWaterY)) >
                         600.0f &&
-                    i_this->m26C1 == 0) {
+                    i_this->mSinkStarted == 0) {
                     i_this->initAwa();
                     oct_seStart(t, 0x58C6 /* JA_SE_CM_DO_SINK_IN_SEA */, A(&i_this->eyePos));
-                    i_this->m26C1 = 1;
-                    i_this->m31C4 = 1;
+                    i_this->mSinkStarted = 1;
+                    i_this->mAwaRepeat = 1;
                     DaioctaHD_mDoAud_subBgmStop(); /* mDoAud_subBgmStop */
                 }
                 gabi::Local<cXyz> d;
                 f32 dist = oct_abs(A(&i_this->current.pos), A(target_pos.get()), d);
-                if (dist < gabi::fmuls_ppc(l_HIO.m0E0, 3.0f)) {
+                if (dist < gabi::fmuls_ppc(l_HIO.mSinkStep, 3.0f)) {
                     if (i_this->mSwitchNo != 0xFF) {
-                        i_this->m31C4 = 0;
+                        i_this->mAwaRepeat = 0;
                         DaioctaHD_dVibration_c_StopQuake(oct_play() + 0x599C,
                                                          -1); /* StopQuake(-1) */
                         /* HD: the riddle jingle only when the switch was not on yet */
                         if (!dComIfGs_isSwitch(i_this->mSwitchNo,
                                                (s32)(s8)i_this->current.roomNo) &&
-                            i_this->m057C != 1) {
+                            i_this->mElfType != 1) {
                             DaioctaHD_mDoAud_seStart(
                                 0x806); /* mDoAud_seStart(JA_SE_READ_RIDDLE_1) */
                         }
@@ -1302,14 +1302,14 @@ void daDaiocta_c::modeDelete() {
                 }
             }
         }
-        if (cut_name == 0 && i_this->m057C == 1)
+        if (cut_name == 0 && i_this->mElfType == 1)
             return;
-        if (i_this->m057C != 1 &&
+        if (i_this->mElfType != 1 &&
             oct_endCheck(gabi::guest_addr("DAIOCTA_DEAD"))) { /* "DAIOCTA_DEAD" */
             dComIfGp_event_reset();
             fopAcM_delete(i_this);
         }
-    } else if (i_this->m057C == 1) {
+    } else if (i_this->mElfType == 1) {
         oct_orderOtherEvent(t, gabi::guest_addr("DAIOCTA_DEAD_ELF")); /* "DAIOCTA_DEAD_ELF" */
     } else {
         oct_orderOtherEvent(t, gabi::guest_addr("DAIOCTA_DEAD")); /* "DAIOCTA_DEAD" */
@@ -1346,8 +1346,8 @@ void daDaiocta_c::setAnm() {
     for (u32 k = 0; k < 0x90; k += 4)
         store<u32>(p + k, u32(l_anmParameters.mWords[k / 4]));
     for (u32 i = 1; i < 9; i++) {
-        fcpy(p + i * 0x10 + 4, A(DaioctaArray(l_HIO.m0BC, i))); /* m0BC[i] */
-        fcpy(p + i * 0x10 + 8, A(DaioctaArray(l_HIO.m098, i))); /* m098[i] */
+        fcpy(p + i * 0x10 + 4, A(DaioctaArray(l_HIO.mAnmMorf, i))); /* mAnmMorf[i] */
+        fcpy(p + i * 0x10 + 8, A(DaioctaArray(l_HIO.mAnmPlaySpeed, i))); /* mAnmPlaySpeed[i] */
     }
     u32 morf = (u32)i_this->mpMorf.v;
     u32 morf_model_p = (u32)gabi::at<mDoExt_McaMorf>(morf)->mpModel.v;
@@ -1419,11 +1419,11 @@ bool daDaiocta_c::_execute() {
             f32 dist = fopAcM_searchActorDistanceXZ(i_this, dComIfGp_getPlayer(0));
             s16 angle_y = fopAcM_searchActorAngleY(i_this, dComIfGp_getPlayer(0));
             s32 dist_angle_s =
-                cLib_distanceAngleS((s16)((s16)i_this->shape_angle.y + l_HIO.m014), angle_y);
-            if (dist < l_HIO.m084) {
+                cLib_distanceAngleS((s16)((s16)i_this->shape_angle.y + l_HIO.mSuckAngleOffset), angle_y);
+            if (dist < l_HIO.mSuckRange) {
                 s32 m = i_this->mMode;
                 if (m != daDaiocta_c::MODE_DEMO && m != daDaiocta_c::MODE_DELETE &&
-                    dist_angle_s < l_HIO.m012) {
+                    dist_angle_s < l_HIO.mSuckAngle) {
                     i_this->modeProc(daDaiocta_c::PROC_INIT_e, daDaiocta_c::MODE_DEMO);
                 }
             }
@@ -1462,8 +1462,8 @@ bool daDaiocta_c::_execute() {
         i_this->setCollision();
         i_this->setAnm();
         i_this->setMtx();
-        if (l_HIO.m007 != 0) {
-            i_this->mPrmIdx = (s8)l_HIO.m00A;
+        if (l_HIO.mForceAnm != 0) {
+            i_this->mPrmIdx = (s8)l_HIO.mForceAnmIdx;
             i_this->setAnm();
         }
     }
@@ -1476,7 +1476,7 @@ void daDaiocta_c::drawAwa() {
     u32 t = A(i_this);
     dComIfGd_setListBG();
     oct_settingTevStruct(t, 2 /* TEV_TYPE_BG1 */);
-    for (int i = 0; i < l_HIO.m016; i++) {
+    for (int i = 0; i < l_HIO.mAwaNum; i++) {
         u32 pm = A(DaioctaArray(i_this->mpAwaModels, i));
         dScnKy_env_light_c* env = dKy_getEnvlight();
         setLightTevColorType(env, gabi::at<J3DModel>(u32(DaioctaGuest<gptr<J3DModel>>(pm)->v)),
@@ -1558,7 +1558,7 @@ void daDaiocta_c::drawDebug() {
 bool daDaiocta_c::_draw() {
     auto* i_this = this;
     u32 t = A(i_this);
-    if (l_HIO.m004 != 0)
+    if (l_HIO.mDrawDebug != 0)
         i_this->drawDebug();
     s32 mode = i_this->mMode;
     if (mode == daDaiocta_c::MODE_HIDE)
@@ -1581,7 +1581,7 @@ bool daDaiocta_c::_draw() {
     DaioctaHD_mDoExt_brkAnm_entry(A(&i_this->mBrkAnm1),
                                   (u32)DaioctaGuest<J3DModel>(morf_model_p)->mModelData.v,
                                   f32(i_this->mBrkAnm1.mFrameCtrl.mFrame)); /* mBrkAnm1.entry */
-    if (l_HIO.m005 == 0)
+    if (l_HIO.mHideBody == 0)
         DaioctaHD_mDoExt_McaMorf_entryDL((u32)i_this->mpMorf.v); /* mpMorf->entryDL() */
     DaioctaGuest<octoEyeHD::ModelAnimationEntries>(
         DaioctaGuest<J3DModel>(morf_model_p)->mModelData.v)
@@ -1597,11 +1597,11 @@ void daDaiocta_c::getArg() {
     u32 prm = (u32)i_this->mParameters;
     i_this->home.angle.z = 0;
     i_this->mOctoType = (u8)prm;         /* mOctoType */
-    i_this->m575 = (u8)(prm >> 16);      /* m575 */
+    i_this->mExitNo = (u8)(prm >> 16);      /* mExitNo */
     i_this->current.angle.z = 0;         /* current.angle.z */
     i_this->shape_angle.z = 0;           /* shape_angle.z */
     i_this->mSwitchNo = (u8)(prm >> 24); /* mSwitchNo */
-    i_this->m057C = (u8)prm2;            /* m057C */
+    i_this->mElfType = (u8)prm2;            /* mElfType */
     u32 mult = (prm >> 8) & 0xFF;
     if (mult == 0xFF) {
         fcpy(A(&i_this->mAppearRadius), A(&l_HIO.mDefaultAppearRadius)); /* mDefaultAppearRadius */
@@ -1641,13 +1641,13 @@ void daDaiocta_c::getArg() {
 void daDaiocta_c::createInit() {
     auto* i_this = this;
     u32 t = A(i_this);
-    /* m220C = current.pos (integer copy) */
+    /* mCreatePos = current.pos (integer copy) */
     u32 px = (u32)DaioctaBits<u32>(i_this->current.pos.x),
         py = (u32)DaioctaBits<u32>(i_this->current.pos.y),
         pz = (u32)DaioctaBits<u32>(i_this->current.pos.z);
-    DaioctaBits<u32>(i_this->m220C.y) = py;
-    DaioctaBits<u32>(i_this->m220C.z) = pz;
-    DaioctaBits<u32>(i_this->m220C.x) = px;
+    DaioctaBits<u32>(i_this->mCreatePos.y) = py;
+    DaioctaBits<u32>(i_this->mCreatePos.z) = pz;
+    DaioctaBits<u32>(i_this->mCreatePos.x) = px;
     i_this->initAwa();
     i_this->modeProc(daDaiocta_c::PROC_INIT_e, daDaiocta_c::MODE_HIDE);
     i_this->initMtx();
@@ -1770,7 +1770,7 @@ bool daDaiocta_c::_delete() {
         if (oct_searchByID((u32)((*DaioctaArray(i_this->mDaioctaEyePcId, i))), actor_p.get()))
             fopAcM_delete(gabi::at<fopAc_ac_c>(*actor_p));
     }
-    mDoAud_seDeleteObject(&i_this->m2434);
+    mDoAud_seDeleteObject(&i_this->mMouthPos);
     return true;
 }
 

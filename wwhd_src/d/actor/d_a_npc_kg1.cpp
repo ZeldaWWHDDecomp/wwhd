@@ -56,14 +56,14 @@ void* daNpc_Kg1_HIO_ctor(void* self) {
     // HD: the derived HIO vtable follows the NPC HIO array.
     hio->__vtbl = Kg1HioVtable;
     Kg1Core_constructArray(&hio->mNpc, 1, 0x28, Kg1NpcHioCtor);
-    hio->mNpc.m22 = 0;
+    hio->mNpc.mDebugDraw = 0;
     hio->mNpc.mMaxHeadY = 7000;
     hio->mDebug = 0;
     hio->mChild = -1;
     hio->mNpc.mMaxBackboneY = 8000;
     hio->mUsers = -1;
     hio->mNpc.mMinHeadX = -2500;
-    hio->mNpc.m04 = 0.0f;
+    hio->mNpc.mPlayerEyeOffsetY = 0.0f;
     hio->mNpc.mMaxHeadTurnVel = 2000;
     hio->mNpc.mMinBackboneY = -8000;
     hio->mNpc.mAttnYOffset = 35.0f;
@@ -122,7 +122,7 @@ BOOL daNpc_Kg1_nodeCallBack(J3DNode* node, s32 stage) {
     if (index == 8) {
         mDoMtx_stack_c::transM(23.46f, -22.26f, -47.05f);
         Kg1Core_XYZrotM(matrix, 0x1F4B, (s16)0xB100, 0x1F4B);
-        J3DModel* prop = actor->m6C4;
+        J3DModel* prop = actor->mpPropModel;
         copyFloatMatrix(&prop->mBaseTransformMtx, matrix);
     }
     return TRUE;
@@ -149,23 +149,23 @@ void kg1_core::daNpc_Kg1_c::lookBack() {
     if (static_cast<u8>(a->mEventCut.mbAttention)) {
         f32 x = static_cast<f32>(a->mEventCut.mPos.x), y = static_cast<f32>(a->mEventCut.mPos.y);
         a->m_jnt.mbTrn = 1;
-        a->m731 = 1;
+        a->mbAttention = 1;
         target.x = x;
         target.y = y;
         target.z = static_cast<f32>(a->mEventCut.mPos.z);
         targetAddress = &target;
     } else {
-        if (a->m74D == 8) {
+        if (a->mRequestedAnimation == 8) {
             copyVectorWords(&target, &kg1CameraEye());
             targetAddress = &target;
         } else if (distance < static_cast<f32>(kg1HIO().mNpc.mMaxAttnDistXZ)) {
-            dNpc_playerEyePos(&playerEye, static_cast<f32>(kg1HIO().mNpc.m04));
+            dNpc_playerEyePos(&playerEye, static_cast<f32>(kg1HIO().mNpc.mPlayerEyeOffsetY));
             copyVectorWords(&target, &playerEye);
             targetAddress = &target;
             BOOL attention = a->chkAttention();
-            a->m731 = (u8)attention;
+            a->mbAttention = (u8)attention;
         } else
-            a->m731 = 0;
+            a->mbAttention = 0;
         immediate = static_cast<u8>(a->m_jnt.mbTrn) == 0;
     }
     if (immediate) {
@@ -173,7 +173,7 @@ void kg1_core::daNpc_Kg1_c::lookBack() {
         eye.y = static_cast<f32>(a->eyePos.y);
         eye.z = static_cast<f32>(a->eyePos.z);
         s16 facing = static_cast<s16>(a->current.angle.y);
-        a->m72E = 0;
+        a->mLookAtMaxVel = 0;
         kg1LookAt(&a->m_jnt, &a->current.angle.y, targetAddress, &eye, facing, 0, 1);
         return;
     }
@@ -181,11 +181,11 @@ void kg1_core::daNpc_Kg1_c::lookBack() {
         defaultSpeed = static_cast<s16>(kg1HIO().mNpc.mMaxHeadTurnVel);
     if (speed == 0)
         speed = defaultSpeed;
-    cLib_addCalcAngleS2(&a->m72E, speed, 4, 0x800);
+    cLib_addCalcAngleS2(&a->mLookAtMaxVel, speed, 4, 0x800);
     eye.x = static_cast<f32>(a->eyePos.x);
     eye.y = static_cast<f32>(a->eyePos.y);
     eye.z = static_cast<f32>(a->eyePos.z);
-    s16 facing = static_cast<s16>(a->current.angle.y), tracking = static_cast<s16>(a->m72E);
+    s16 facing = static_cast<s16>(a->current.angle.y), tracking = static_cast<s16>(a->mLookAtMaxVel);
     kg1LookAt(&a->m_jnt, &a->current.angle.y, targetAddress, &eye, facing, tracking, 1);
 }
 
@@ -229,10 +229,10 @@ BOOL kg1_core::daNpc_Kg1_c::initTexPatternAnm(s32 index, u32 modify) {
         Kg1Core_assert("d_a_npc_kg1.cpp", 0x1CF, "m_eye_tex_pattern != (0)");
         pattern = a->m_eye_tex_pattern.get();
     }
-    if (!Kg1Core_initBtp(&a->m6F8, data, pattern, 1, 2, 1.0f, 0, -1, (u32)modify, 0))
+    if (!Kg1Core_initBtp(&a->mEyeBtpAnm, data, pattern, 1, 2, 1.0f, 0, -1, (u32)modify, 0))
         return FALSE;
-    a->m720 = 0;
-    a->m72C = 0;
+    a->mBtpFrame = 0;
+    a->mBlinkTimer = 0;
     return TRUE;
 }
 
@@ -240,20 +240,20 @@ BOOL kg1_core::daNpc_Kg1_c::initTexPatternAnm(s32 index, u32 modify) {
 void kg1_core::daNpc_Kg1_c::playTexPatternAnm() {
     auto* a = this;
 
-    if (Kg1Core_calcTimer(&a->m72C) != 0)
+    if (Kg1Core_calcTimer(&a->mBlinkTimer) != 0)
         return;
     J3DAnmTexPattern* anm = a->m_eye_tex_pattern;
     Kg1PatternVtable* vt = kg1Pattern(anm)->mpVtable;
     s32 max = gabi::call_ptr<s32>(vt->mGetFrameMax.get(), anm);
-    if ((s32)a->m720 >= max) {
+    if ((s32)a->mBtpFrame >= max) {
         anm = a->m_eye_tex_pattern;
         vt = kg1Pattern(anm)->mpVtable;
         max = gabi::call_ptr<s32>(vt->mGetFrameMax.get(), anm);
-        u8 frame = a->m720;
-        a->m72C = 120;
-        a->m720 = (u8)(frame - max);
+        u8 frame = a->mBtpFrame;
+        a->mBlinkTimer = 120;
+        a->mBtpFrame = (u8)(frame - max);
     } else
-        a->m720 = (u8)(a->m720 + 1);
+        a->mBtpFrame = (u8)(a->mBtpFrame + 1);
 }
 
 /* 02265CCC */
@@ -273,7 +273,7 @@ void kg1_core::daNpc_Kg1_c::set_mtx() {
     mDoMtx_YrotM(kg1Matrix(), static_cast<s16>(a->current.angle.y));
     model = modelOf(a);
     copyFloatMatrix(&model->mBaseTransformMtx, kg1Matrix());
-    model = a->m6C4.get();
+    model = a->mpPropModel.get();
     x = static_cast<f32>(a->scale.x);
     y = static_cast<f32>(a->scale.y);
     z = static_cast<f32>(a->scale.z);
@@ -313,7 +313,7 @@ BOOL kg1_core::daNpc_Kg1_c::CreateHeap() {
     a->initTexPatternAnm(0, 1);
     J3DModel* prop =
         mDoExt_J3DModel__create(static_cast<J3DModelData*>(objectResource(6)), 0x80000, 0x11020022);
-    a->m6C4 = prop;
+    a->mpPropModel = prop;
     if (!prop)
         return FALSE;
     J3DModelData* propData = static_cast<J3DModelData*>(objectResource(6));
@@ -350,16 +350,16 @@ s32 kg1_core::daNpc_Kg1_c::CreateInit() {
     a->gravity = -9.0f;
     a->mEventCut.setActorInfo2("Auc0", a);
     a->set_mtx();
-    a->m730 = 0;
-    a->m72E = 0;
-    a->m731 = 0;
+    a->mTalking = 0;
+    a->mLookAtMaxVel = 0;
+    a->mbAttention = 0;
     J3DModel* model = modelOf(a);
     a->cullMtx = gabi::ea(model ? &model->mBaseTransformMtx : nullptr);
     a->wait_action_init();
     s32 users = static_cast<s32>(kg1HIO().mUsers);
     if (users < 0) {
         // HD: ASCII source alias for the Japanese debug label; guest bytes unchanged.
-        s32 child = Kg1Core_createChild("Squid-Hunt", &kg1HIO());
+        s32 child = Kg1Core_createChild("海戦ゲーム屋", &kg1HIO());
         users = static_cast<s32>(kg1HIO().mUsers);
         kg1HIO().mChild = (s8)child;
     }
@@ -373,13 +373,13 @@ s32 kg1_core::daNpc_Kg1_c::CreateInit() {
     s16 finalId = Kg1Core_eventIndex(&play->play.mEvtManager, "KAISEN_GETITEM", 0xFF);
     a->mPreviousAnimation = 0;
     a->mEventIds[2] = finalId;
-    a->m74D = 2;
+    a->mRequestedAnimation = 2;
     Kg1Core_setAnm(a);
     u32 y = static_cast<u32>(kg1Words(&a->current.pos)->mWord[1]),
         x = static_cast<u32>(kg1Words(&a->current.pos)->mWord[0]);
     a->m_jnt.mbBackBoneLock = 1;
     kg1Words(&a->mEyePos)->mWord[0] = x;
-    a->m750 = 1;
+    a->mbPlayMorf = 1;
     kg1Words(&a->mEyePos)->mWord[1] = y;
     u32 z = static_cast<u32>(kg1Words(&a->current.pos)->mWord[2]);
     a->m_jnt.mbHeadLock = 1;
@@ -391,10 +391,10 @@ s32 kg1_core::daNpc_Kg1_c::CreateInit() {
 void kg1_core::daNpc_Kg1_c::eventOrder() {
     auto* a = this;
 
-    u8 order = a->m732;
+    u8 order = a->mOrderEvent;
     if (order == 1 || order == 2) {
         u16 flags = static_cast<u16>(a->eventInfo.mCondition);
-        order = a->m732;
+        order = a->mOrderEvent;
         a->eventInfo.mCondition = flags | dEvtCnd_CANTALK_e;
         if (order == 2)
             fopAcM_orderSpeakEvent(a);
@@ -413,18 +413,18 @@ void kg1_core::daNpc_Kg1_c::checkOrder() {
     if (condition == 2) {
         s16 event = a->mEventIds[0];
         auto* play = kg1Play();
-        if (Kg1Core_startCheck(&play->play.mEvtManager, event) && a->m732 == 3)
-            a->m732 = 0;
+        if (Kg1Core_startCheck(&play->play.mEvtManager, event) && a->mOrderEvent == 3)
+            a->mOrderEvent = 0;
         event = a->mEventIds[0];
         play = kg1Play();
         if (Kg1Core_endCheck(&play->play.mEvtManager, event))
-            a->m732 = 0;
+            a->mOrderEvent = 0;
         event = a->mEventIds[2];
         play = kg1Play();
-        if (Kg1Core_startCheck(&play->play.mEvtManager, event) && a->m732 == 5)
-            a->m732 = 0;
-    } else if (condition == 1 && (a->m732 == 2 || a->m732 == 1))
-        a->m730 = 1;
+        if (Kg1Core_startCheck(&play->play.mEvtManager, event) && a->mOrderEvent == 5)
+            a->mOrderEvent = 0;
+    } else if (condition == 1 && (a->mOrderEvent == 2 || a->mOrderEvent == 1))
+        a->mTalking = 1;
 }
 
 /* 02266C90 */
@@ -433,7 +433,7 @@ void kg1_core::daNpc_Kg1_c::kg1_talk_camera() {
 
     s8 cameraIndex = kg1Play()->play.mPlayerInfo[0].mCameraID;
     auto* play = kg1Play();
-    u8 enabled = static_cast<u8>(a->m751);
+    u8 enabled = static_cast<u8>(a->mbTalkCamera);
     camera_class* camera = kg1CameraProcess(play->play.mCameraInfo[cameraIndex].mpCamera);
     if (!enabled || !camera)
         return;
@@ -536,7 +536,7 @@ u16 kg1_core::daNpc_Kg1_c::next_msgStatus(be<u32>* message) {
             if (rupees < 10)
                 *message = 0x1D54;
             else {
-                a->m74D = 1;
+                a->mRequestedAnimation = 1;
                 play = kg1Play();
                 u32 balance = static_cast<u32>(play->play.mItemRupeeCount);
                 play->play.mItemRupeeCount = balance - 10;
@@ -545,7 +545,7 @@ u16 kg1_core::daNpc_Kg1_c::next_msgStatus(be<u32>* message) {
                 position.y = 0.0f;
                 position.z = 250.0f;
                 a->m_jnt.mbHeadLock = 1;
-                a->m751 = 1;
+                a->mbTalkCamera = 1;
                 Kg1PlayerVtable* vt = kg1PlayerVtable(player);
                 gabi::call_ptr(vt->mSetPlayerPosAndAngle.get(), player, &position, 0x2000);
                 *message = 0x1D55;
@@ -601,7 +601,7 @@ void kg1_core::daNpc_Kg1_c::anmAtr(u16 attr) {
     if (attr == 6) {
         u8 requested = static_cast<u8>(kg1Play()->play.mMesgAnime);
         if (requested < 9) {
-            a->m74D = static_cast<s8>(kg1RequestedAnimations().mAnimation[requested]);
+            a->mRequestedAnimation = static_cast<s8>(kg1RequestedAnimations().mAnimation[requested]);
             kg1Play()->play.mMesgAnime = 0xFF;
         }
     }
@@ -617,7 +617,7 @@ s32 kg1_core::daNpc_Kg1_c::_create() {
             Kg1Core_constructNpc(a);
             a->__vtbl = Kg1ActorVtable;
             mDoExt_btpAnm::ct(&a->mBtpAnm);
-            mDoExt_btpAnm::ct(&a->m6F8);
+            mDoExt_btpAnm::ct(&a->mEyeBtpAnm);
             mDoExt_btpAnm::ct(&a->m70C);
             flags = static_cast<u32>(a->actor_condition);
         }
@@ -665,7 +665,7 @@ BOOL daNpc_Kg1Execute(kg1_core::daNpc_Kg1_c* a) {
     a->eventOrder();
     a->playTexPatternAnm();
     Kg1Core_setAnm(a);
-    if (static_cast<u8>(a->m750))
+    if (static_cast<u8>(a->mbPlayMorf))
         a->mpMorf.get()->play(nullptr, 0, 0);
     auto* play = kg1Play();
     a->mObjAcch.CrrPos(&play->play.mBgS);
@@ -696,17 +696,17 @@ BOOL daNpc_Kg1Draw(kg1_core::daNpc_Kg1_c* a) {
     model = morf->mpModel.get();
     setLightTevColorType(environment, model, &a->tevStr);
     environment = dKy_getEnvlight();
-    setLightTevColorType(environment, a->m6C4.get(), &a->tevStr);
-    Kg1Core_entryBtp(&a->m6F8, data, (s32)a->m720);
+    setLightTevColorType(environment, a->mpPropModel.get(), &a->tevStr);
+    Kg1Core_entryBtp(&a->mEyeBtpAnm, data, (s32)a->mBtpFrame);
     a->mpMorf.get()->updateDL();
     reinterpret_cast<Kg1ModelDataView*>(data)->mTextureAnimation = 0;
     if (a->mSpecialAnimation) {
         s16 frame = (s16)gabi::ftoi(static_cast<f32>(a->mBtpAnm.mFrameCtrl.mFrame));
-        J3DModel* prop = a->m6C4;
+        J3DModel* prop = a->mpPropModel;
         Kg1Core_entryBtp(&a->mBtpAnm, prop->getModelData(), frame);
-        mDoExt_modelUpdateDL(a->m6C4.get(), 0);
+        mDoExt_modelUpdateDL(a->mpPropModel.get(), 0);
     }
-    if (static_cast<u8>(a->m779))
+    if (static_cast<u8>(a->mbForceNextStatus))
         kg1Play()->play.mDoStatusForce = 25;
     return TRUE;
 }
@@ -819,7 +819,7 @@ str 1001BD10 "m_jnt.getHeadJntNum() >= 0"
 str 1001BD04 "backbone2"
 str 1001BD2C "m_jnt.getBackboneJntNum() >= 0"
 str 1001BE6C "Auc0"
-str 1001BE74 "Squid-Hunt" renamed
+str 1001BE74 "海戦ゲーム屋"
 str 1001BE84 "MINIGAME_START"
 str 1001BE94 "MINIGAME_END"
 str 1001BEA4 "KAISEN_GETITEM"

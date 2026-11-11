@@ -455,7 +455,7 @@ void bwdgDrawStateCtor(bwdg_draw_state*);
 void bwdgSetDrawMode(u32, bwdg_draw_state*);
 void bwdgApplyDrawState(bwdg_draw_state*);
 void bwdgBindFetchShader(BwdgFetchShader*);
-void bwdgDrawIndexed(u32, u32, void*, u32, u32, u32);
+void bwdgDrawIndexed(u32, u32, u32, const void*, u32, u32); /* GX2DrawIndexedEx: r5 the index type (a value), r6 the indices */
 BwdgHeap* bwdgGetCurrentHeap(BwdgHeapManager*);
 void bwdgBasePacketCtor(void*);
 void bwdgConstructArray(void*, u32, u32, BwdgConstructor);

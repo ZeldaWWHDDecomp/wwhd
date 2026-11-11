@@ -208,7 +208,7 @@ static void empty_virtual(void* p) {
 /* WWHD glue (tools/verify/autoglue.py)
 str 10033A20
 str 10033A84
-str 10033A80 "FALSE" renamed # HD: assertion spells zero.
+str 10033A80 "0"
 data mdl_table 101CDFF0
 data btk_table 101CE000
 data bck_table 101CE010

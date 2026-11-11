@@ -104,7 +104,7 @@ void daTag_MdCb_c::eventEnd() {
     auto *p = play();
     p->play.mEvtCtrl.mEventFlag = (u16)p->play.mEvtCtrl.mEventFlag | 8;
     u32 flags = m2AC;
-    m2B5 = -1;
+    mEventIdx = -1;
     m2AC = flags & ~1u;
 }
 /* 024AE968 */
@@ -119,14 +119,14 @@ BOOL daTag_MdCb_c::checkAreaIn(fopAc_ac_c *other) {
     f32 square = gabi::fmuls_ppc(radius, radius), difference = gabi::fsubs_ppc(otherY, ownY);
     if (!(distance < square) || difference < -10.0f || !(difference < (f32)scale.y))
         return FALSE;
-    m2B9 = 1;
+    mAreaIn = 1;
     return TRUE;
 }
 /* 024AE9FC */
 BOOL daTag_MdCb_c::checkTimer() {
     // HD: preserve the verified GHS prologue and stack placement.
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    return cLib_calcTimer(&m2B2) == 0;
+    return cLib_calcTimer(&mTimer) == 0;
 }
 /* 024AF18C */
 BOOL daTag_MdCb_c::checkEventFinish() {
@@ -161,47 +161,47 @@ BOOL daTag_MdCb_c::checkEventFinish() {
 BOOL daTag_MdCb_c::setAction(MdCbAction *next, void *argument) {
     // HD: preserve the verified GHS prologue and stack placement.
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    s16 index = next->index, oldIndex = m290.index;
+    s16 index = next->index, oldIndex = mActionFn.index;
     if (oldIndex == index && oldIndex == 0)
         return TRUE;
     s16 delta = next->delta;
     u32 target = next->target;
-    if (oldIndex == index && (s16)m290.delta == delta && (u32)m290.target == target)
+    if (oldIndex == index && (s16)mActionFn.delta == delta && (u32)mActionFn.target == target)
         return TRUE;
     if (oldIndex != 0) {
-        m2B6 = -1;
-        invokeAction(&m290, this, gabi::ea(argument));
+        mActionPhase = -1;
+        invokeAction(&mActionFn, this, gabi::ea(argument));
     }
-    m290.target = target;
-    m290.index = index;
-    m290.delta = delta;
+    mActionFn.target = target;
+    mActionFn.index = index;
+    mActionFn.delta = delta;
     m2D0 = 0;
     m2CE = 0;
-    m2B6 = 0;
+    mActionPhase = 0;
     m2CA = 0;
     m2CC = 0;
     m2D8 = 0.0f;
-    invokeAction(&m290, this, gabi::ea(argument));
+    invokeAction(&mActionFn, this, gabi::ea(argument));
     return TRUE;
 }
 /* 024AF0E0 */
 void daTag_MdCb_c::action(void *argument) {
     // HD: preserve the verified GHS prologue and stack placement.
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if ((s16)m290.index == 0) {
+    if ((s16)mActionFn.index == 0) {
         gabi::Local<MdCbAction> initial;
         copyAction(initial, &warp_action);
         setAction(initial, nullptr);
     }
-    invokeAction(&m290, this, gabi::ea(argument));
+    invokeAction(&mActionFn, this, gabi::ea(argument));
 }
 /* 024AFD10 */
 BOOL daTag_MdCb_c::warpAction(void *argument) {
     // HD: preserve the verified GHS prologue and stack placement.
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (m2B6 == 0)
-        m2B6 = 1;
-    else if (m2B6 != -1 && this->argument <= 1) {
+    if (mActionPhase == 0)
+        mActionPhase = 1;
+    else if (mActionPhase != -1 && this->argument <= 1) {
         u16 bit = event_bit.values[(s32)(s8)this->argument];
         onEventBit(bit);
     }
@@ -212,13 +212,13 @@ void daTag_MdCb_c::eventOrder() {
     // HD: preserve the verified GHS prologue and stack placement.
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     if (checkEventFinish()) {
-        m2B4 = -1;
+        mOrderEventIdx = -1;
         return;
     }
-    s8 pending = m2B4;
+    s8 pending = mOrderEventIdx;
     if (pending != -1 && pending < 7) {
-        m2B5 = pending;
-        s16 id = m2BC[(s32)pending];
+        mEventIdx = pending;
+        s16 id = mEventIdxTbl[(s32)pending];
         fopAcM_orderOtherEventId(this, id, 0xFF, 0xFFFF, 0, 4);
     }
 }
@@ -228,31 +228,31 @@ BOOL daTag_MdCb_c::init() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     u32 parameter = mParameters;
     u8 lowX = static_cast<u8>((u16)current.angle.x);
-    m29C = parameter & 0xFFFF;
-    m2A4 = parameter >> 24;
-    m2A0 = (parameter >> 16) & 0xFF;
-    m2B0 = lowX;
+    mParamMsgNo = parameter & 0xFFFF;
+    mSwitchCount = parameter >> 24;
+    mSwitchStart = (parameter >> 16) & 0xFF;
+    mSwitchNo = lowX;
     for (u32 i = 0; i < 7; i++) {
         const char *name = event_name_tbl.values[i];
         s32 id = events()->getEventIdx(name, 0xFF);
-        m2BC[i] = id;
+        mEventIdxTbl[i] = id;
     }
     gabi::Local<MdCbAction> initial;
     copyAction(initial, argument > 1 ? &message_action : &warp_action);
     setAction(initial, nullptr);
-    m2B4 = -1;
+    mOrderEventIdx = -1;
     s8 kind = argument;
     m2B7 = 0;
-    m2BA = 0;
+    mSwitchSeen = 0;
     if (kind == 8 || kind == 11) {
         kind = argument;
-        m2B2 = 0;
+        mTimer = 0;
     }
     if (kind == 3) {
-        m2B2 = 60;
+        mTimer = 60;
         scale.x = 2250.0f;
     } else
-        m2B2 = l_HIO.mPrm.m0A;
+        mTimer = l_HIO.mPrm.mInitTime;
     return TRUE;
 }
 /* 024AF5D0 */
@@ -280,7 +280,7 @@ static s32 daTag_MdCb_create(daTag_MdCb_c *actor) {
             return cPhs_ERROR_e;
     }
     if (l_HIO.mNo < 0) {
-        s32 index = mDoHIO_createChild("Medli/Makar tag", &l_HIO);
+        s32 index = mDoHIO_createChild("メドリ・マコレタグ", &l_HIO);
         l_HIO.mNo = index;
         l_HIO.mpActor = actor;
         l_HIO_counter = 1;
@@ -295,17 +295,17 @@ BOOL daTag_MdCb_c::execute() {
     // HD: preserve the verified GHS prologue and stack placement.
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     s8 kind = argument;
-    m2B8 = (u8)m2B9;
-    m2B9 = 0;
+    m2B8 = (u8)mAreaIn;
+    mAreaIn = 0;
     if (kind <= 1) {
-        scale.x = l_HIO.mPrm.m04;
-        scale.y = l_HIO.mPrm.m00;
+        scale.x = l_HIO.mPrm.mAreaRadius;
+        scale.y = l_HIO.mPrm.mAreaHeight;
     }
     if (!eventProc()) {
         for (u32 i = 0; i < 7; i++) {
             const char *name = event_name_tbl.values[i];
             s32 id = events()->getEventIdx(name, 0xFF);
-            m2BC[i] = id;
+            mEventIdxTbl[i] = id;
         }
         if (checkCondition())
             action(nullptr);
@@ -319,9 +319,9 @@ BOOL daTag_MdCb_c::eventProc() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     if (eventInfo.mCommand != 2)
         return FALSE;
-    if (m2B4 != -1) {
+    if (mOrderEventIdx != -1) {
         u32 flags = m2AC;
-        m2B4 = -1;
+        mOrderEventIdx = -1;
         m2AC = flags | 1;
     }
     s32 staff = getMyStaffId();
@@ -341,7 +341,7 @@ BOOL daTag_MdCb_c::eventProc() {
                 events()->cutEnd(staff);
         }
     }
-    s16 eventId = m2BC[(s32)(s8)m2B5];
+    s16 eventId = mEventIdxTbl[(s32)(s8)mEventIdx];
     if (events()->endCheck(eventId))
         eventEnd();
     return TRUE;
@@ -353,7 +353,7 @@ BOOL daTag_MdCb_c::talk_init() {
     u32 id = l_msgId;
     MessageManager *manager = l_message.mpMessage;
     if (id == fpcM_ERROR_PROCESS_ID_e) {
-        u32 message = m2A8;
+        u32 message = mMsgNo;
         l_msgId = manager->messageSet(message, &eyePos);
         return FALSE;
     }
@@ -367,16 +367,16 @@ u16 daTag_MdCb_c::next_msgStatus(be<u32> *message) {
     switch (number) {
     case 0x19F0:
         onEventBit(0x3320);
-        m2B2 = l_HIO.mPrm.m08;
+        mTimer = l_HIO.mPrm.mNextMsgTime;
         break;
     case 0x19F1:
         onEventBit(0x3310);
         onEventBit(0x4001);
-        m2B2 = l_HIO.mPrm.m08;
+        mTimer = l_HIO.mPrm.mNextMsgTime;
         break;
     case 0x19F2:
     case 0x19F4:
-        m2B2 = l_HIO.mPrm.m08;
+        mTimer = l_HIO.mPrm.mNextMsgTime;
         break;
     case 0x19F3:
         onEventBit(0x3304);
@@ -410,15 +410,15 @@ BOOL daTag_MdCb_c::talk() {
     u16 status = manager->getStatus();
     play();
     if (status == fopMsgStts_MSG_DISPLAYED_e) {
-        u16 next = next_msgStatus(&m2A8);
+        u16 next = next_msgStatus(&mMsgNo);
         manager->setStatus(next);
         if (manager->getStatus() == fopMsgStts_MSG_CONTINUES_e) {
-            u32 message = m2A8;
+            u32 message = mMsgNo;
             manager->messageSet(message, 0);
         }
     } else if (status != fopMsgStts_INPUT_e) {
         if (status == fopMsgStts_MSG_TYPING_e) {
-            s8 kind = m2B5;
+            s8 kind = mEventIdx;
             if (kind == 0 || kind == 2 || kind == 3 || kind == 5 || kind == 6) {
                 fopAc_ac_c *actor = play()->play.mpPlayerPtr[1];
                 if (actor) {
@@ -449,12 +449,12 @@ void daTag_MdCb_c::initialMsgSetEvent(s32 staff) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     l_msgId = fpcM_ERROR_PROCESS_ID_e;
     be<u32> *substance = events()->getMySubstanceP(staff, "msg_number", 3);
-    u32 number = substance ? (u32)*substance : (u32)m29C;
-    m2A8 = number;
+    u32 number = substance ? (u32)*substance : (u32)mParamMsgNo;
+    mMsgNo = number;
     if (number == 0x19F3 || number == 0x1531) {
         fopAc_ac_c *actor = play()->play.mpPlayerPtr[1];
         if (actor) {
-            u32 sound = m2A8 == 0x19F3 ? 0x4993 : 0x4992;
+            u32 sound = mMsgNo == 0x19F3 ? 0x4993 : 0x4992;
             auto *p = play();
             gabi::Local<cXyz> direction;
             direction->x = 0;
@@ -488,11 +488,11 @@ void daTag_MdCb_c::initialPlayerOnDrow(s32 staff) {
 BOOL daTag_MdCb_c::messageAction(void *parameter) {
     // HD: preserve the verified GHS prologue and stack placement.
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (m2B6 == 0) {
-        m2B6 = 1;
+    if (mActionPhase == 0) {
+        mActionPhase = 1;
         return TRUE;
     }
-    if (m2B6 == -1 || argument <= 1 || checkEventFinish())
+    if (mActionPhase == -1 || argument <= 1 || checkEventFinish())
         return TRUE;
     fopAc_ac_c *actor = play()->play.mpPlayerPtr[1];
     if (!actor)
@@ -504,23 +504,23 @@ BOOL daTag_MdCb_c::messageAction(void *parameter) {
     s16 name = actor->mProcName;
     if (name == fpcNm_NPC_MD_e) {
         if (argument == 5)
-            m2B4 = 2;
+            mOrderEventIdx = 2;
         else if ((u32)actor->actor_status & fopAcStts_CARRY_e) {
             if (!((u32) reinterpret_cast<MedliView *>(actor)->mStatus & daMdStts_CARRY_ACTION))
-                m2B4 = 1;
+                mOrderEventIdx = 1;
         } else
-            m2B4 = 0;
+            mOrderEventIdx = 0;
     } else if (actor->mProcName == fpcNm_NPC_CB1_e) {
         s8 kind = argument;
         if (kind == 9)
-            m2B4 = 5;
+            mOrderEventIdx = 5;
         else if (kind == 11)
-            m2B4 = 6;
+            mOrderEventIdx = 6;
         else if ((u32)actor->actor_status & fopAcStts_CARRY_e) {
             if (!((u16)cb1_status & daCbStts_NO_CARRY_ACTION))
-                m2B4 = 4;
+                mOrderEventIdx = 4;
         } else
-            m2B4 = 3;
+            mOrderEventIdx = 3;
     }
     return TRUE;
 }
@@ -538,7 +538,7 @@ BOOL daTag_MdCb_c::checkCondition() {
     if (kind <= 1)
         return checkAreaIn(other) ? TRUE : FALSE;
     if (kind == 2) {
-        if (eventBit(0x3310) || !switchBit(this, m2B0))
+        if (eventBit(0x3310) || !switchBit(this, mSwitchNo))
             return FALSE;
         auto *p = play();
         fopAc_ac_c *player = p->play.mPlayerInfo[0].mpPlayer;
@@ -546,7 +546,7 @@ BOOL daTag_MdCb_c::checkCondition() {
         return !(distance < 250000.0f) ? FALSE : checkTimer();
     }
     if (kind == 3) {
-        if (switchBit(this, m2B0, false)) {
+        if (switchBit(this, mSwitchNo, false)) {
             onEventBit(0x4180);
             onEventBit(0x3310);
         }
@@ -557,9 +557,9 @@ BOOL daTag_MdCb_c::checkCondition() {
         if (checkAreaIn(linkPlayer()) || checkAreaIn(other))
             return checkTimer();
     } else if (kind == 4) {
-        if (switchBit(this, m2B0, false))
+        if (switchBit(this, mSwitchNo, false))
             onEventBit(0x3308);
-        if (switchBit(this, m2A0) && !eventBit(0x3308) && checkAreaIn(other))
+        if (switchBit(this, mSwitchStart) && !eventBit(0x3308) && checkAreaIn(other))
             return checkTimer();
     } else if (kind == 5) {
         if (eventBit(0x3404) && checkAreaIn(linkPlayer()))
@@ -567,37 +567,37 @@ BOOL daTag_MdCb_c::checkCondition() {
     } else if (kind == 6) {
         if (!dComIfGs_isCollect(1, 1))
             return FALSE;
-        if (switchBit(this, m2B0))
+        if (switchBit(this, mSwitchNo))
             onEventBit(0x3302);
         if (eventBit(0x3302))
             return FALSE;
-        u32 count = m2A4, index = m2A0, i = 0;
+        u32 count = mSwitchCount, index = mSwitchStart, i = 0;
         while (i < count) {
             if (switchBit(this, index)) {
-                m2BA = 1;
+                mSwitchSeen = 1;
                 break;
             }
-            count = m2A4;
+            count = mSwitchCount;
             ++i;
             ++index;
         }
-        if (checkAreaIn(other) && m2BA)
+        if (checkAreaIn(other) && mSwitchSeen)
             return checkTimer();
     } else if (kind == 7) {
-        if (switchBit(this, m2B0, false))
+        if (switchBit(this, mSwitchNo, false))
             onEventBit(0x3301);
-        u32 count = m2A4, index = m2A0, i = 0;
+        u32 count = mSwitchCount, index = mSwitchStart, i = 0;
         while (i < count) {
             if (!switchBit(this, index))
                 break;
-            count = m2A4;
+            count = mSwitchCount;
             ++i;
             ++index;
         }
-        if (!eventBit(0x3301) && i == (u32)m2A4 && checkAreaIn(other))
+        if (!eventBit(0x3301) && i == (u32)mSwitchCount && checkAreaIn(other))
             return checkTimer();
     } else if (kind == 8) {
-        if (switchBit(this, m2B0, false))
+        if (switchBit(this, mSwitchNo, false))
             onEventBit(0x3480);
         if (!eventBit(0x3480) && checkAreaIn(other))
             return checkTimer();
@@ -607,16 +607,16 @@ BOOL daTag_MdCb_c::checkCondition() {
     } else if (kind == 10) {
         if (!dComIfGs_checkGetItem(dItemNo_HOOKSHOT_e))
             return FALSE;
-        u32 count = m2A4, index = m2A0, i = 0;
+        u32 count = mSwitchCount, index = mSwitchStart, i = 0;
         while (i < count) {
             if (switchBit(this, index))
                 return checkTimer();
-            count = m2A4;
+            count = mSwitchCount;
             ++i;
             ++index;
         }
     } else if (kind == 11) {
-        if (switchBit(this, m2B0, false))
+        if (switchBit(this, mSwitchNo, false))
             onEventBit(0x3410);
         if (!eventBit(0x3410) && eventBit(0x3440) && checkAreaIn(linkPlayer()))
             return TRUE;
@@ -775,6 +775,6 @@ ext 025E1A7C void mDoAud_monsSeStart(u32,cXyz*,u32,s32)
 ext 025D50BC void mdcb_deleteActorBase(fopAc_ac_c*,s32)
 ext 028ED6F8 void mdcb_constructFirst(HeaderObject*)
 ext 028EAB2C void mdcb_constructSecond(HeaderObject*)
-str 1003FA2C "Medli/Makar tag" renamed
+str 1003FA2C "メドリ・マコレタグ"
 str 1003FA44 "msg_number"
 */

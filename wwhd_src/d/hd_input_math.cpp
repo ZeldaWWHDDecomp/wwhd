@@ -1,11 +1,13 @@
 /* HD orientation matrix operations, kept separate from the merged input controller source. */
 #include "d/hd_input_math.h"
+#include "sead/ElementAt.h"
 static f32 sOne;
 static f32 sZero;
 /* 02617590 */
 void hdOrientationMatrix_c::setColumn(u32 column, hdInputVector* vector) {
     // GHS pure float copies preserve the source bits, including signalling NaNs.
-    for (u32 row = 0; row < 3; ++row) mBits[row][column] = vector->mBits[row];
+    // guest address arithmetic: row + column * 4 wraps at 32 bits as on the console
+    for (u32 row = 0; row < 3; ++row) sead::elementAt<be<u32>>(gabi::ea(mBits[row]), column) = vector->mBits[row];
 }
 /* 026175B4 */
 void hdOrientationMatrix_c::setColumns(hdInputVector* first, hdInputVector* second, hdInputVector* third) {

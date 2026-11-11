@@ -39,26 +39,26 @@ struct daAleaf_c : fopAc_ac_c {
     bool _execute();
     bool _draw();
 
-    /* 0x3AC */ request_of_phase_process_class unk_290;
-    /* 0x3B4 */ gptr<J3DModel> unk_298;
-    /* 0x3B8 */ dCcD_Stts unk_29C;
-    /* 0x3F4 */ dCcD_Cyl unk_2D8;
-    /* 0x524 */ AleafBckAnm unk_408;
-    /* 0x5B0 */ be<u8> unk_418;
-    /* 0x5B1 */ be<u8> unk_419;
+    /* 0x3AC */ request_of_phase_process_class mPhs;  /* was unk_290: _create 02047948 loads the m_arcname resource into it (dComIfG_resLoad); daAleaf_Delete 02047AD4 releases it (tww the same) */
+    /* 0x3B4 */ gptr<J3DModel> mpModel;  /* was unk_298: CreateHeap 020475B4 creates the leaf model; set_mtx 020476D0 sets its scale / matrix, _draw 02047B04 draws it (tww the same) */
+    /* 0x3B8 */ dCcD_Stts mStts;  /* was unk_29C: CreateInit 02047878 inits it (255, 255) and gives it to mCyl; constructed in the constructor, destroyed in daAleaf_dtor 02047FBC (tww the same) */
+    /* 0x3F4 */ dCcD_Cyl mCyl;  /* was unk_2D8: CreateInit 02047878 sets it from l_cyl_src with mStts; constructed / destroyed with the actor (tww the same) */
+    /* 0x524 */ AleafBckAnm mBck;  /* was unk_408: CreateHeap 020475B4 sets up the leaf's bck (EMode_RESET); _execute 02047C00 restarts and plays it while mBckPlay, _draw 02047B04 enters it (tww the same) */
+    /* 0x5B0 */ be<u8> mBckPlay;  /* was unk_418: _execute 02047C00 sets it (and the bck rate 1) when the leaf is disturbed (acorn appears / falls off, the player steps close, a dropped object lands near) and clears it when the bck play ends (tww the same) */
+    /* 0x5B1 */ be<u8> mAcornStuckOld;  /* was unk_419: _execute 02047C00 stores whether the acorn (Tsubo child mAcornId) still sticks (prm_get_stick); when it was stuck last frame and is not now, the leaf sways (tww the same) */
     /* 0x5B2 */ be<u8> unk_41A;
     /* 0x5B3 */ be<u8> unk_41B;
-    /* 0x5B4 */ be<s32> unk_41C;
-    /* 0x5B8 */ be<s32> unk_420;
-    /* 0x5BC */ be<u32> unk_424;
-    /* 0x5C0 */ be<u32> unk_428;
-    /* 0x5C4 */ be<f32> unk_42C;
+    /* 0x5B4 */ be<s32> mAcornWaitCount;  /* was unk_41C: _execute 02047C00 counts it up while the acorn exists and at 69 plays the sway once (then 70); create_acorn_sub 020477B0 clears it (tww the same) */
+    /* 0x5B8 */ be<s32> mRespawnTimer;  /* was unk_420: create_acorn 02047B8C creates a new acorn only while it is 0 and the old one is gone, then sets 60 and counts it down (tww the same) */
+    /* 0x5BC */ be<u32> mAcornId;  /* was unk_424: create_acorn_sub 020477B0 stores the process id of the acorn (a Tsubo child); create_acorn 02047B8C / _execute 02047C00 search it; CreateInit 02047878 sets the error id (tww the same) */
+    /* 0x5C0 */ be<u32> mGrabIdOld;  /* was unk_428: _execute 02047C00 stores the player's grab actor id each frame; when the player has just let go (no grab now) an object dropped within 70 sways the leaf; CreateInit 02047878 sets the error id (tww the same) */
+    /* 0x5C4 */ be<f32> mPlayerDistOld;  /* was unk_42C: _execute 02047C00 stores the XZ distance to the player; a step closer by more than 3 within 50 (and at the same height) sways the leaf (tww the same) */
 };
-WWHD_OFFSET(daAleaf_c, unk_29C, 0x3B8);
-WWHD_OFFSET(daAleaf_c, unk_2D8, 0x3F4);
-WWHD_OFFSET(daAleaf_c, unk_408, 0x524);
-WWHD_OFFSET(daAleaf_c, unk_418, 0x5B0);
-WWHD_OFFSET(daAleaf_c, unk_42C, 0x5C4);
+WWHD_OFFSET(daAleaf_c, mStts, 0x3B8);
+WWHD_OFFSET(daAleaf_c, mCyl, 0x3F4);
+WWHD_OFFSET(daAleaf_c, mBck, 0x524);
+WWHD_OFFSET(daAleaf_c, mBckPlay, 0x5B0);
+WWHD_OFFSET(daAleaf_c, mPlayerDistOld, 0x5C4);
 WWHD_SIZE(daAleaf_c, 0x5C8);
 
 void AleafFrameCtrl_init(J3DFrameCtrl*, s32);

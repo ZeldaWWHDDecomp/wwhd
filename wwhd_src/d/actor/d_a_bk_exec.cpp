@@ -204,7 +204,7 @@ static inline void damage_check(bk_class* i_this) {
                 i_this->mNoHitTimer = 10; /* HD */
             }
 
-            if (l_bkHIO().m007 != 0) {
+            if (l_bkHIO().mResetHealthOnHit != 0) {
                 actor->health = 10;
             }
 
@@ -244,7 +244,7 @@ static inline void damage_check(bk_class* i_this) {
                     cMtx_YrotS(calc_mtx(), player->shape_angle.y + 0x4000);
                 } else if (type == 2) {
                     r27 = 7;
-                    cMtx_YrotS(calc_mtx(), atInfo->m0C.y);
+                    cMtx_YrotS(calc_mtx(), atInfo->mHitAngle.y);
                 } else {
                     generic = true;
                 }
@@ -255,7 +255,7 @@ static inline void damage_check(bk_class* i_this) {
                 } else {
                     r27 = 4;
                 }
-                cMtx_YrotS(calc_mtx(), atInfo->m0C.y);
+                cMtx_YrotS(calc_mtx(), atInfo->mHitAngle.y);
             }
         }
     }
@@ -345,7 +345,7 @@ static inline void damage_check(bk_class* i_this) {
         MtxPosition(sp2C, &i_this->dr.mHitVec);
 
         if (i_this->dr.mKnockbackPower < 25.0f) {
-            i_this->dr.mPushback = -l_bkHIO().m010;
+            i_this->dr.mPushback = -l_bkHIO().mWeakHitPushback;
         } else {
             i_this->dr.mKnockbackPower = cM_rndF(10.0f) + 90.0f;
         }
@@ -759,7 +759,7 @@ BOOL daBk_Execute(bk_class* i_this) {
         return TRUE;
     }
 
-    if (l_bkHIO().m006 == 0 || CPad_CHECK_TRIG_B(0) || CPad_CHECK_HOLD_Y(0)) {
+    if (l_bkHIO().mDebugFrameStep == 0 || CPad_CHECK_TRIG_B(0) || CPad_CHECK_HOLD_Y(0)) {
         i_this->mFrameCounter = i_this->mFrameCounter + 1;
         for (int i = 0; i < 5; i++) {
             if (i_this->mTimers[i] != 0) {
@@ -924,14 +924,14 @@ BOOL daBk_Execute(bk_class* i_this) {
         case 20:
             i_this->mSpitTimer = 1;
             i_this->mEffectAngle.x = -0x4000;
-            i_this->mSmokeTimer = l_bkHIO().m00C + 16;
+            i_this->mSmokeTimer = l_bkHIO().mSmokeTimerBase + 16;
             i_this->mSmokeType = 1;
-            i_this->dr.mDownTimers[2] = l_bkHIO().m08C;
+            i_this->dr.mDownTimers[2] = l_bkHIO().mDownTime;
             break;
         case 21:
             i_this->mSpitTimer = 1;
             i_this->mEffectAngle.x = 0;
-            i_this->dr.mDownTimers[2] = l_bkHIO().m08C;
+            i_this->dr.mDownTimers[2] = l_bkHIO().mDownTime;
             break;
         case 30:
             anm_init(i_this, dRes_INDEX_BK_BCK_BK_AOMUKE_e, 2.0f, 0, 1.0f,

@@ -42,14 +42,14 @@ u8 Act_c::prm_get_mdl() { return (u8)PrmAbstract(this, PRM_MDL_W, PRM_MDL_S); }
 /* 0231A818 */
 BOOL Act_c::CreateHeap() {
     J3DModelData* model_data_yagura = (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_AYGR_BDL_YAGURA_e);
-    JUT_ASSERT(0x50, model_data_yagura != NULL);
+    JUT_ASSERT_MSG(0x50, model_data_yagura != NULL, "model_data_yagura != 0");
     J3DModel* model = mDoExt_J3DModel__create(model_data_yagura, 0, 0x11020203);
     mpModel = model;
     if (model == nullptr)
         return FALSE;
     if (prm_get_mdl()) {
         J3DModelData* model_data_hashigo = (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_AYGR_BDL_HASHIGO_e);
-        JUT_ASSERT(0x59, model_data_hashigo != NULL);
+        JUT_ASSERT_MSG(0x59, model_data_hashigo != NULL, "model_data_hashigo != 0");
         model = mDoExt_J3DModel__create(model_data_hashigo, 0, 0x11020203);
         mpModel2 = model;
         if (model == nullptr)
@@ -222,8 +222,8 @@ static void Act_c_dt(Act_c* p, s32 flags) {
 str 100253D0
 str 10025388
 str 10025318 in 0231A648
-str 1002539C "model_data_yagura != NULL" renamed # HD: original spells NULL as 0
-str 10025370 "model_data_hashigo != NULL" renamed # HD: original spells NULL as 0
+str 1002539C "model_data_yagura != 0" # HD: original spells NULL as 0
+str 10025370 "model_data_hashigo != 0" # HD: original spells NULL as 0
 str 1002532C "(phase_state == cPhs_COMPLEATE_e) || (phase_state == cPhs_ERROR_e)"
 data M_tmp_mtx 1046915C
 */

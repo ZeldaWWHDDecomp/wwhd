@@ -358,7 +358,7 @@ void daObjSwheavy::Act_c::mode_u_l_init() {
     type = mType;
     mVSpeed = static_cast<f32>(params->mPushVSpeed0);
     type = checkedType(this, type, "d_a_obj_swheavy.cpp", "(M_type >=0) && (M_type <Type_Max)");
-    top_bg_aim_req(0.0f, static_cast<s16>(attr(type)->m14));
+    top_bg_aim_req(0.0f, static_cast<s16>(attr(type)->mTopLowerDelay));
 }
 
 /* 02394D50 */

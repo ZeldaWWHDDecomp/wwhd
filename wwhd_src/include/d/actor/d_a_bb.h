@@ -25,7 +25,7 @@ struct enemyice {
     /* 0x006 */ be<s8> mLightShrinkTimer;
     /* 0x007 */ u8 m007;
     /* 0x008 */ be<f32> mYOffset;
-    /* 0x00C */ be<s8> m00C;
+    /* 0x00C */ be<s8> mFreezeType;  /* was m00C: view of enemyice::mFreezeType (c/c_damagereaction.h) */
     /* 0x00D */ be<s8> mMode;
     /* 0x00E */ be<s16> mFreezeTimer;
     /* 0x010 */ be<s16> mMoveDelayTimer;
@@ -34,8 +34,8 @@ struct enemyice {
     /* 0x016 */ u8 m016[2];
     /* 0x018 */ cXyz mSpeed;
     /* 0x024 */ be<f32> mSpeedF;
-    /* 0x028 */ be<f32> m028;
-    /* 0x02C */ be<f32> m02C;
+    /* 0x028 */ be<f32> mBodyLiftY;  /* was m028: view of enemyice::mBodyLiftY (c/c_damagereaction.h) */
+    /* 0x02C */ be<f32> mIceOffsetY;  /* was m02C: view of enemyice::mIceOffsetY (c/c_damagereaction.h) */
     /* 0x030 */ dCcD_Stts mStts;
     /* 0x06C */ dCcD_Cyl mCyl;
     /* 0x19C */ be<f32> mCylHeight;
@@ -106,49 +106,49 @@ struct BbPath {
 /* bbHIO_c (0x80, unchanged; vtable at +0) */
 struct bbHIO_c {
     /* 0x00 */ be<u32> __vtbl;
-    /* 0x04 */ be<u8> unk_04;
-    /* 0x05 */ be<u8> unk_05;
+    /* 0x04 */ be<u8> mResetHealthOnHit;  /* was unk_04: damage_check 0206432C sets health back to 10 on every hit while it is set; __sinit_d_a_bb_cpp 02062394 sets the default 0 */
+    /* 0x05 */ be<u8> mDebugPause;  /* was unk_05: daBb_Execute 0205EA58 counts the timers down, applies the knock-back and runs the move / animation update only while it is 0; __sinit_d_a_bb_cpp 02062394 sets the default 0 */
     /* 0x06 */ be<u8> unk_06;
     /* 0x07 */ u8 _07;
-    /* 0x08 */ be<f32> unk_08;
-    /* 0x0C */ be<f32> unk_0C;
+    /* 0x08 */ be<f32> mSeagullAttackSpeed;  /* was unk_08: bb_kamome_attack (in daBb_Execute 0205EA58): mTargetSpeed while chasing the seagull; __sinit_d_a_bb_cpp 02062394 sets the default 20 */
+    /* 0x0C */ be<f32> mWanderRange;  /* was unk_0C: bb_auto_move 020625E8: the next flight target is home.pos + cM_rndFX(it) in x and z; __sinit_d_a_bb_cpp 02062394 sets the default 2500 */
     /* 0x10 */ be<s16> unk_10;
-    /* 0x12 */ be<s16> unk_12;
-    /* 0x14 */ be<s16> unk_14;
-    /* 0x16 */ be<s16> unk_16;
-    /* 0x18 */ be<s16> unk_18;
+    /* 0x12 */ be<s16> mAttackTimeMin;  /* was unk_12: bb_atack_move (in daBb_Execute 0205EA58), mode 4 entry from the free-flying modes: mTimers[1] (time circling the player before giving up) = random in [it, mAttackTimeMax); __sinit_d_a_bb_cpp 02062394 sets the default 0x258 */
+    /* 0x14 */ be<s16> mAttackTimeMax;  /* was unk_14: bb_atack_move (in daBb_Execute 0205EA58): upper end of that random attack time (mAttackTimeMin); __sinit_d_a_bb_cpp 02062394 sets the default 0x4B0 */
+    /* 0x16 */ be<s16> mWaitAttackTimeMin;  /* was unk_16: bb_atack_move (in daBb_Execute 0205EA58), mode 4 entry from BB_MODE_WAIT / BB_MODE_NEST_WAIT, and damage_check 0206432C when a hit starts BB_MODE_ATTACK: mTimers[1] = random in [it, mWaitAttackTimeMax); __sinit_d_a_bb_cpp 02062394 sets the default 0x1C2 */
+    /* 0x18 */ be<s16> mWaitAttackTimeMax;  /* was unk_18: bb_atack_move (in daBb_Execute 0205EA58) and damage_check 0206432C: upper end of that random attack time (mWaitAttackTimeMin); __sinit_d_a_bb_cpp 02062394 sets the default 0x2EE */
     /* 0x1A */ u8 _1A[2];
-    /* 0x1C */ be<f32> unk_1C;
-    /* 0x20 */ be<f32> unk_20;
-    /* 0x24 */ be<f32> unk_24;
-    /* 0x28 */ be<f32> unk_28;
-    /* 0x2C */ be<f32> unk_2C;
-    /* 0x30 */ be<s16> unk_30;
-    /* 0x32 */ be<s16> unk_32;
-    /* 0x34 */ be<f32> unk_34;
-    /* 0x38 */ be<f32> unk_38;
-    /* 0x3C */ be<f32> unk_3C;
-    /* 0x40 */ be<s16> unk_40;
+    /* 0x1C */ be<f32> mTurnScaleMax;  /* was unk_1C: bb_atack_move (in daBb_Execute 0205EA58), modes 4 / 5: mTurnScale eases toward it (step 0.1 * it); __sinit_d_a_bb_cpp 02062394 sets the default 0.35 */
+    /* 0x20 */ be<f32> mAttackWaitScale;  /* was unk_20: bb_atack_move (in daBb_Execute 0205EA58): mTimers[5] (wait before the next dive, mode 5) = (rnd(30) + 20) * it after a hit, a dive or a crash; __sinit_d_a_bb_cpp 02062394 sets the default 0.5 */
+    /* 0x24 */ be<f32> mFlyAnmSpeed;  /* was unk_24: bb_path_move / bb_atack_move (in daBb_Execute 0205EA58), bb_auto_move 020625E8, wait_move_body (in bb_wait_move 0206348C, x 1.5): speed of the FLY01 animation; __sinit_d_a_bb_cpp 02062394 sets the default 1.5 */
+    /* 0x28 */ be<f32> mHoverAnmSpeed;  /* was unk_28: bb_atack_move (in daBb_Execute 0205EA58): speed of the FLYB01 animation while circling the player (mode 4); __sinit_d_a_bb_cpp 02062394 sets the default 1.0 */
+    /* 0x2C */ be<f32> mDiveAnmSpeed;  /* was unk_2C: bb_atack_move (in daBb_Execute 0205EA58): speed of the ATACK01 animation of the dive (mode 6); __sinit_d_a_bb_cpp 02062394 sets the default 0.85 */
+    /* 0x30 */ be<s16> mCrashTime;  /* was unk_30: bb_atack_move (in daBb_Execute 0205EA58): mTimers[0] after the dive hits a wall (modes 10 GUSYA / 11 FURA) before circling again; __sinit_d_a_bb_cpp 02062394 sets the default 0x2D */
+    /* 0x32 */ be<s16> mDiveWindUpTime;  /* was unk_32: bb_atack_move (in daBb_Execute 0205EA58): mTimers[0] of mode 5 (wind-up before the dive, mode 6); __sinit_d_a_bb_cpp 02062394 sets the default 20 */
+    /* 0x34 */ be<f32> mDiveWindUpAnmSpeed;  /* was unk_34: bb_atack_move (in daBb_Execute 0205EA58): speed of the FLYB01 animation in mode 5 (wind-up before the dive); __sinit_d_a_bb_cpp 02062394 sets the default 2.5 */
+    /* 0x38 */ be<f32> mCrashAnmSpeed;  /* was unk_38: bb_atack_move (in daBb_Execute 0205EA58): speed of the GUSYA01 (crash) animation, mode 10; __sinit_d_a_bb_cpp 02062394 sets the default 0.85 */
+    /* 0x3C */ be<f32> mDizzyAnmSpeed;  /* was unk_3C: bb_atack_move (in daBb_Execute 0205EA58): speed of the FURA01 (wobble) animation after the crash, mode 11; __sinit_d_a_bb_cpp 02062394 sets the default 1.0 */
+    /* 0x40 */ be<s16> mLandDelay;  /* was unk_40: wait_move_body (in bb_wait_move 0206348C): gravity and the LAND02 landing start only once mMoveCounter is above it; __sinit_d_a_bb_cpp 02062394 sets the default 30 */
     /* 0x42 */ u8 _42[2];
-    /* 0x44 */ be<f32> unk_44;
-    /* 0x48 */ be<f32> unk_48;
-    /* 0x4C */ be<f32> unk_4C;
-    /* 0x50 */ be<s16> unk_50;
+    /* 0x44 */ be<f32> mLand1AnmSpeed;  /* was unk_44: wait_move_body (in bb_wait_move 0206348C): speed of the LAND01 animation; __sinit_d_a_bb_cpp 02062394 sets the default 1.0 */
+    /* 0x48 */ be<f32> mLand2AnmSpeed;  /* was unk_48: wait_move_body (in bb_wait_move 0206348C): speed of the LAND02 animation; __sinit_d_a_bb_cpp 02062394 sets the default 1.0 */
+    /* 0x4C */ be<f32> mCarryFlyAnmSpeed;  /* was unk_4C: daBb_Execute 0205EA58, carry state 1: speed of the FLYC (carrying) animation; __sinit_d_a_bb_cpp 02062394 sets the default 1.5 */
+    /* 0x50 */ be<s16> mSwoopDist;  /* was unk_50: bb_atack_move (in daBb_Execute 0205EA58) mode 1, bb_auto_move 020625E8 mode 10 and wait_move_body (in bb_wait_move 0206348C) mode 11: closer than it to mTargetPos it switches to the FLY03 swoop animation and the next mode; __sinit_d_a_bb_cpp 02062394 sets the default 0x44C */
     /* 0x52 */ u8 _52[2];
-    /* 0x54 */ be<f32> unk_54;
-    /* 0x58 */ be<f32> unk_58;
-    /* 0x5C */ be<f32> unk_5C;
+    /* 0x54 */ be<f32> mEsaWalkSpeed;  /* was unk_54: bb_auto_move 020625E8, mode 23: mTargetSpeed while walking to the bait (esa) on the ground; __sinit_d_a_bb_cpp 02062394 sets the default 3.5 */
+    /* 0x58 */ be<f32> mKnockbackDistDead;  /* was unk_58: damage_check 0206432C: mKnockbackDist for a killing hit; __sinit_d_a_bb_cpp 02062394 sets the default 45 */
+    /* 0x5C */ be<f32> mKnockbackDistAlive;  /* was unk_5C: damage_check 0206432C: mKnockbackDist for a hit it survives; __sinit_d_a_bb_cpp 02062394 sets the default 30 */
     /* 0x60 */ be<s16> unk_60;
     /* 0x62 */ be<s16> unk_62;
     /* 0x64 */ be<s16> unk_64;
     /* 0x66 */ u8 _66[2];
-    /* 0x68 */ be<f32> unk_68;
-    /* 0x6C */ be<f32> unk_6C;
-    /* 0x70 */ be<s16> unk_70;
-    /* 0x72 */ be<s16> unk_72;
-    /* 0x74 */ be<f32> unk_74;
-    /* 0x78 */ be<f32> unk_78;
-    /* 0x7C */ be<f32> unk_7C;
+    /* 0x68 */ be<f32> mSightDist;  /* was unk_68: bb_player_view_check 0205DFC0: the player is out of sight farther than it (XZ), except in the wait modes and with mSightRangePrm; __sinit_d_a_bb_cpp 02062394 sets the default 8000 */
+    /* 0x6C */ be<f32> mWaitSightDist;  /* was unk_6C: bb_player_view_check 0205DFC0: the same in BB_MODE_WAIT / BB_MODE_NEST_WAIT; __sinit_d_a_bb_cpp 02062394 sets the default 1500 */
+    /* 0x70 */ be<s16> mViewAngle;  /* was unk_70: bb_player_view_check 0205DFC0: angle window toward the player outside the wait modes; __sinit_d_a_bb_cpp 02062394 sets the default 0x6D60 */
+    /* 0x72 */ be<s16> mWaitViewAngle;  /* was unk_72: bb_player_view_check 0205DFC0: angle window in BB_MODE_WAIT / BB_MODE_NEST_WAIT; __sinit_d_a_bb_cpp 02062394 sets the default 0x59D8 */
+    /* 0x74 */ be<f32> mViewHeight;  /* was unk_74: bb_player_view_check 0205DFC0: the player is in sight only while the height difference to eyePos is below it (outside the wait modes); __sinit_d_a_bb_cpp 02062394 sets the default 3000 */
+    /* 0x78 */ be<f32> mWaitViewHeight;  /* was unk_78: bb_player_view_check 0205DFC0: the same height limit in BB_MODE_WAIT / BB_MODE_NEST_WAIT; __sinit_d_a_bb_cpp 02062394 sets the default 2000 */
+    /* 0x7C */ be<f32> mGiveUpDist;  /* was unk_7C: bb_atack_move (in daBb_Execute 0205EA58): farther than it from mTargetPos (or the target blocked) the attack ends and mBehavior returns to mPrmMode; __sinit_d_a_bb_cpp 02062394 sets the default 10000 */
 };
 WWHD_SIZE(bbHIO_c, 0x80);
 

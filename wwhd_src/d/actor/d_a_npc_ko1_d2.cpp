@@ -95,7 +95,7 @@ BOOL daNpc_Ko1_c::talk_2() {
         fopNpc_npc_c* partner = Ko1_searchByID(this, (u32)mPartners.mIds[i]);
         // HD: assert text is "(0) != a_actor".
         if (partner == nullptr)
-            JUT_ASSERT_fail("d_a_npc_ko1.cpp", 0xD5F, "partner != NULL");
+            JUT_ASSERT_fail("d_a_npc_ko1.cpp", 0xD5F, "(0) != a_actor");
         if ((u8)partner->mTalkState != 0) {
             partner->mTalkState = 3;
             i++;
@@ -543,7 +543,7 @@ static void SafeString_assureTerminationImpl(SafeString*) {
 /* WWHD glue (tools/verify/autoglue.py)
 data a_prm_tbl 101BFC74
 str 1001CD5C "d_a_npc_ko1.cpp"
-str 1001CD6C "partner != NULL" renamed
+str 1001CD6C "(0) != a_actor"
 ext 02275738 void Ko1_endEvent(daNpc_Ko1_c*)
 ext 022758B8 void Ko1_lookBack(daNpc_Ko1_c*)
 ext 02276D18 void Ko1_setAnm_NUM(daNpc_Ko1_c*, s32, s32)

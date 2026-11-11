@@ -136,13 +136,18 @@ enum BehaviorType {
 
 namespace Stalfos {
 struct HIO_c {
-    be<s8> mNo;
-    u8 mPad01;
-    be<s16> m06, m08, m0A, m0C;
-    u8 mPad0A[2];
-    be<f32> m10, m14;
-    be<s16> m18, m1A;
-    be<u32> __vtbl;
+    /* 0x00 */ be<s8> mNo;
+    /* 0x01 */ u8 mPad01;
+    /* 0x02 */ be<s16> mStepStartFrame1;  /* was m06: jyunkai (inlined in St_move 024972A4): from this walk frame to mStepEndFrame1 the Stalfos moves at mPatrolSpeed and turns, and on it the step sound 0x3832 plays; static_initialize 024960B4 9 (tww the same) */
+    /* 0x04 */ be<s16> mStepStartFrame2;  /* was m08: jyunkai (inlined in St_move 024972A4): the second step window, from this walk frame to mStepEndFrame2, the step sound plays on it; static_initialize 024960B4 0x2C (tww the same) */
+    /* 0x06 */ be<s16> mStepEndFrame1;  /* was m0A: jyunkai (inlined in St_move 024972A4): the last walk frame of the first step window; static_initialize 024960B4 0x15 (tww the same) */
+    /* 0x08 */ be<s16> mStepEndFrame2;  /* was m0C: jyunkai (inlined in St_move 024972A4): the last walk frame of the second step window; static_initialize 024960B4 0x35 (tww the same) */
+    /* 0x0A */ u8 mPad0A[2];
+    /* 0x0C */ be<f32> mPatrolSpeed;  /* was m10: jyunkai (inlined in St_move 024972A4): mTargetSpeed inside the step windows (0 outside); static_initialize 024960B4 6.0 (tww m02DC = it) */
+    /* 0x10 */ be<f32> m14;
+    /* 0x14 */ be<s16> mCoffinWaitTime;  /* was m18: kan_wait (inlined in St_move 024972A4): after the ambush trigger mTimers[0] = it (mTimers[2] = it + 20); the coffin animation waits until it runs out; static_initialize 024960B4 0x46 (tww the same) */
+    /* 0x16 */ be<s16> mReassembleTime;  /* was m1A: st_break_wait 024963A4: on entering the broken wait mTimers[0] and mReassembleWait = it; when the timer runs out the parts are called back (mPartCommand 2); static_initialize 024960B4 200 (tww the same) */
+    /* 0x18 */ be<u32> __vtbl;
 };
 WWHD_SIZE(HIO_c, 0x1C);
 } // namespace Stalfos
@@ -240,10 +245,10 @@ WWHD_SIZE(StEmitter, 0x258);
 struct StPlayerView : fopAc_ac_c {
     be<u8> mCutType, mCutCount;
     u8 mPadding3AE[0x69E8 - 0x3AE];
-    be<u8> mJumpCutExtraDamage;
+    be<u8> mStrongJumpCut;  /* was mJumpCutExtraDamage (misnamed): view of daPy_lk_c::mStrongJumpCut (d_a_player_main.h), set by the player's spun-up jump cut; the extra spin damage / hit timer here is what it does in this reader */
 };
 WWHD_OFFSET(StPlayerView, mCutType, 0x3AC);
-WWHD_OFFSET(StPlayerView, mJumpCutExtraDamage, 0x69E8);
+WWHD_OFFSET(StPlayerView, mStrongJumpCut, 0x69E8);
 WWHD_SIZE(StPlayerView, 0x69E9);
 
 struct StHeldWeapon : fopAc_ac_c {
@@ -295,31 +300,39 @@ struct StSinCosEntry {
 WWHD_SIZE(StSinCosEntry, 8);
 
 struct st_p {
-    gptr<void> mpPartModel;
-    be<s8> mPartState, m05;
-    u8 pad06[2];
-    cXyz mPartPos, mPartPrevPos, mPartVelocity;
-    csXyz mPartRot, mPartRotAdd;
-    be<s16> m38, m3A, m3C, m3E;
-    be<s8> mWaitTimer;
-    u8 pad41[3];
-    be<f32> m44;
-    dPa_smokeEcallBack m48;
-    u8 pad68[4];
+    /* 0x00 */ gptr<void> mpPartModel;
+    /* 0x04 */ be<s8> mPartState;
+    /* 0x05 */ be<s8> mDetached;  /* was m05: part_move 024925B8: 0 while the part follows its joint matrix, 1 while it moves on its own (switch at the end); scatter_part (inlined) and the break code set 1, the return to the joint sets 0 (tww the same) */
+    /* 0x06 */ u8 pad06[2];
+    /* 0x08 */ cXyz mPartPos;
+    /* 0x14 */ cXyz mPartPrevPos;
+    /* 0x20 */ cXyz mPartVelocity;
+    /* 0x2C */ csXyz mPartRot;
+    /* 0x32 */ csXyz mPartRotAdd;
+    /* 0x38 */ be<s16> mFlyAngleX;  /* was m38: part_move 024925B8 state 1: the part's pitch toward its joint, eased by cLib_addCalcAngleS2 (step 0x2000) and used for the flight matrix; the head (joint 15) takes it as mPartRot.x (tww the same) */
+    /* 0x3A */ be<s16> mFlyAngleY;  /* was m3A: part_move 024925B8 state 1: the part's yaw toward its joint, eased by cLib_addCalcAngleS2 and used for the flight matrix; the head takes it as mPartRot.y (tww the same) */
+    /* 0x3C */ be<s16> mFlyAngleZ;  /* was m3C: part_move 024925B8 state 1: the head (joint 15) takes it as mPartRot.z with mFlyAngleX / mFlyAngleY; never written in WWHD or tww (tww the same read) */
+    /* 0x3E */ be<s16> mWobbleCount;  /* was m3E: part_move 024925B8: counts up every frame (random start when a part breaks off); in state 1 the flight back wobbles by sin(it * 1000) / cos(it * 1100) / cos(it * 1200) (tww the same) */
+    /* 0x40 */ be<s8> mWaitTimer;
+    /* 0x41 */ u8 pad41[3];
+    /* 0x44 */ be<f32> mFlySpeed;  /* was m44: part_move 024925B8 state 1: the flight step is it * 20 along the flight direction, eased toward 1 by 0.01; 0 or 0.5 when the part breaks off (tww the same) */
+    /* 0x48 */ dPa_smokeEcallBack m48;
+    /* 0x68 */ u8 pad68[4];
 };
 WWHD_SIZE(st_p, 0x6C);
 struct st_ke_s {
-    cXyz m000[10], m078[10];
-    csXyz m0F0;
+    cXyz mPos[10];  /* was m000: ke_control 02491458: the positions of the 10 points of the ke chain; part_move 024925B8 puts point 0 at the part joint; ke_control moves points 1-9 after the previous one with mSpeed and keeps them above the ground (tww ke_control the same) */
+    cXyz mSpeed[10];  /* was m078: ke_control 02491458: the per-point velocity of the ke chain, the damped difference of the new and old positions (tww ke_control the same) */
+    csXyz mRootAngle;  /* was m0F0: part_move 024925B8 copies the part rotation into it and spreads the three chains by 0x800 in y (chain 1 + 0x500 in x); ke_control 02491458 turns the chain direction by it (tww the same) */
     u8 padF6[0x36];
 };
 WWHD_SIZE(st_ke_s, 0x12C);
 
 struct st_nun_s {
-    cXyz m00[3];
-    csXyz m24[3];
+    cXyz mPos[3];  /* was m00: nun_control 0249196C: the positions of the 3 nunchaku chain points; point 1 is placed at the hand joint, point 2 moves from it by the swung offset and is drawn there (tww nun_control the same) */
+    csXyz mAngle[3];  /* was m24: nun_control 0249196C stores the pitch / yaw of point 2 as seen from point 1 in [1] and turns the nunchaku model by them (tww the same) */
     u8 pad36[2];
-    cXyz m38[3];
+    cXyz mSpeed[3];  /* was m38: nun_control 0249196C: per-point velocity, the damped difference of the new and old position of point 2, added to the next step (tww the same; as st_ke_s::mSpeed) */
 };
 WWHD_SIZE(st_nun_s, 0x5C);
 
@@ -407,7 +420,7 @@ struct st_class : fopEn_enemy_c {
     /* 0x2020 */ be<s8> mHeadState;  /* was m1DD8: part_move 024925B8: 1 when the head part 15 is knocked off, 2 while it is drawn / moved with mpMorf2, 0 when it is back; daSt_Draw 02491F34, ke_control 02491458, damage_check / cc_set (in daSt_Execute 02493FB0) treat the loose head separately */
     /* 0x2021 */ u8 pad2021;
     /* 0x2022 */ be<s16> mHeadTargetAngleY;  /* was m1DDA: part_move 024925B8: target of the loose head part's rotation y (cLib_addCalcAngleS2), set to its angle when it falls off and when it turns */
-    /* 0x2024 */ be<s16> mReassembleWait;  /* was m1DDC: st_break_wait 024963A4 sets l_HIO.m1A / 100; daSt_Execute 02493FB0 counts it down; part_move 024925B8 moves the loose parts back only when it is 0 */
+    /* 0x2024 */ be<s16> mReassembleWait;  /* was m1DDC: st_break_wait 024963A4 sets l_HIO.mReassembleTime / 100; daSt_Execute 02493FB0 counts it down; part_move 024925B8 moves the loose parts back only when it is 0 */
     /* 0x2026 */ be<s16> mKnockbackAngleY;  /* was m1DDE: speed_pos_calc 024961B8: direction of the extra speed mKnockbackSpeed added to speed; never written in WWHD's d_a_st (zeldaret/tww d_a_st.cpp: only the VERSION_DEMO damage_check sets it to the hit angle atInfo.m0C.y) */
     /* 0x2028 */ be<f32> mKnockbackSpeed;  /* was m1DE0: speed_pos_calc 024961B8: while > 0.1 adds this speed in direction mKnockbackAngleY to speed, then eases it to 0 (cLib_addCalc0, step 2.5); never set in WWHD (zeldaret/tww d_a_st.cpp: the VERSION_DEMO damage_check sets 40 on a hit) */
     /* 0x202C */ be<s8> mShakeTimer;  /* was m1DE4: damage_check (in daSt_Execute 02493FB0) sets 5 / 8 / 10 / 20 on a hit and counts it down; part_move 024925B8 shakes the attached parts by it * 2 */
@@ -486,7 +499,7 @@ struct GroundCheckLocal {
 struct AttackInfo {
     gptr<void> mpObj, mpActor;
     be<u8> mDamage, mbDead, mResultingAttackType, pad;
-    csXyz m0C;
+    csXyz mHitAngle;  /* was m0C: the CcAtInfo copy of this unit; see d/d_cc_uty.h */
     be<u16> mPlCutBit;
     gptr<cXyz> pParticlePos;
     be<s32> mHitSoundId;

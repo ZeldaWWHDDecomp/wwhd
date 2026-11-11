@@ -9,12 +9,12 @@ enum { dRes_INDEX_GNNBTLTAKI_BDL_GNN_BTL_TAKI_e = 4,
 /* 0234AEBC */
 BOOL daObjGnnbtaki_c::create_heap() {
     auto* mdl_data = (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_GNNBTLTAKI_BDL_GNN_BTL_TAKI_e);
-    JUT_ASSERT(0x5A, mdl_data != NULL);
+    JUT_ASSERT_MSG(0x5A, mdl_data != NULL, "mdl_data != 0");
     if (mdl_data == NULL) return FALSE;
     mpModel = mDoExt_J3DModel__create(mdl_data, 0, 0x11020203);
     if (mpModel == NULL) return FALSE;
     auto* btk_data = (J3DAnmTextureSRTKey*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_GNNBTLTAKI_BTK_GNN_BTL_TAKI_e);
-    JUT_ASSERT(0x61, btk_data != NULL);
+    JUT_ASSERT_MSG(0x61, btk_data != NULL, "btk_data != 0");
     if (btk_data == NULL) return FALSE;
     return mBtkAnm.init(mdl_data, btk_data, true, J3DFrameCtrl::EMode_LOOP, 1.0f, 0, -1, false, 0) != 0;
 }
@@ -36,15 +36,15 @@ s32 daObjGnnbtaki_c::_create() {
     if (phase != cPhs_COMPLEATE_e) return phase;
     if (!fopAcM_entrySolidHeap(this, (BOOL (*)(fopAc_ac_c*))solidHeapCB, 0)) return cPhs_ERROR_e;
     u8 type = fopAcM_GetParam(this) & 0xF;
-    field_0x2B1 = type == 0xF ? 0 : type;
+    mType = type == 0xF ? 0 : type;
     cullMtx = mpModel == NULL ? 0 : gabi::ea(mpModel->getBaseTRMtx());
     init_mtx();
     mBtkAnm.mFrameCtrl.mFrame = (f32)(s16)mBtkAnm.mFrameCtrl.mStart;
-    if (field_0x2B1 == 1) {
-        field_0x2B0 = 0;
+    if (mType == 1) {
+        mAnmStarted = 0;
         mBtkAnm.mFrameCtrl.mRate = 0.0f;
     } else {
-        field_0x2B0 = 1;
+        mAnmStarted = 1;
         mBtkAnm.mFrameCtrl.mRate = 1.0f;
     }
     return cPhs_COMPLEATE_e;
@@ -57,11 +57,11 @@ BOOL daObjGnnbtaki_c::_delete() {
 /* 0234B184 */
 BOOL daObjGnnbtaki_c::_execute() {
     // HD: SafeString comparison and the global demo-frame number replace GC helpers.
-    if (field_0x2B1 == 1 && gnnbtaki_isTowerStage() && dComIfGp_event_runCheck()) {
+    if (mType == 1 && gnnbtaki_isTowerStage() && dComIfGp_event_runCheck()) {
         auto* play = (gnnbtaki_play_c*)dComIfGp_get();
         if (gnnbtaki_startCheck(&play->mEventManager, "g2before") &&
-            !field_0x2B0 && l_demoFrame >= 0x126F) {
-            field_0x2B0 = 1;
+            !mAnmStarted && l_demoFrame >= 0x126F) {
+            mAnmStarted = 1;
             mBtkAnm.mFrameCtrl.mFrame = (f32)(s16)mBtkAnm.mFrameCtrl.mStart;
             mBtkAnm.mFrameCtrl.mRate = 1.0f;
         }
@@ -71,7 +71,7 @@ BOOL daObjGnnbtaki_c::_execute() {
 }
 /* 0234B32C */
 BOOL daObjGnnbtaki_c::_draw() {
-    if (field_0x2B0) {
+    if (mAnmStarted) {
     g_env_light.settingTevStruct(TEV_TYPE_BG3, &current.pos, &tevStr);
     g_env_light.setLightTevColorType(mpModel, &tevStr);
     // HD: capture the frame before fetching model data.
@@ -119,8 +119,8 @@ daObjGnnbtaki_c::daObjGnnbtaki_c() {
 /* WWHD glue (tools/verify/autoglue.py): local HD data and binding
 str 10029730 "Gnnbtltaki"
 str 100296F0 "d_a_obj_gnnbtltaki.cpp"
-str 100296D0 "mdl_data != NULL" renamed
-str 100296E0 "btk_data != NULL" renamed
+str 100296D0 "mdl_data != 0"
+str 100296E0 "btk_data != 0"
 ext 025D50BC void gnnbtaki_actor_dt(void*, s32)
 ext 025445B8 BOOL gnnbtaki_startCheck(void*, const char*)
 data l_demoFrame 101D600C

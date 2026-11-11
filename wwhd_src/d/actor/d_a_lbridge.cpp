@@ -205,11 +205,11 @@ void daLbridge_c::sw_check() {
 /* 021B2C8C */
 void daLbridge_c::demo() {
     if (eventInfo.checkCommandDemoAccrpt()) {
-        if (dComIfGp_evmng_startCheck(mAppearEventIdx) && unk31C == APPEAR_DEMO) {
-            unk31C = NO_DEMO;
+        if (dComIfGp_evmng_startCheck(mAppearEventIdx) && mDemoState == APPEAR_DEMO) {
+            mDemoState = NO_DEMO;
         }
-        if (dComIfGp_evmng_startCheck(mDisappearEventIdx) && unk31C == DISAPPEAR_DEMO) {
-            unk31C = NO_DEMO;
+        if (dComIfGp_evmng_startCheck(mDisappearEventIdx) && mDemoState == DISAPPEAR_DEMO) {
+            mDemoState = NO_DEMO;
         }
         if (dComIfGp_evmng_endCheck(mAppearEventIdx)) {
             dComIfGp_event_reset();
@@ -220,11 +220,11 @@ void daLbridge_c::demo() {
             dSv_event_onEventBit(dComIfGs_getEvent(), UNK_0F40);
         }
     } else {
-        if (dSv_event_isEventBit(dComIfGs_getEvent(), UNK_0E01) == FALSE && unk31C == APPEAR_DEMO) {
+        if (dSv_event_isEventBit(dComIfGs_getEvent(), UNK_0E01) == FALSE && mDemoState == APPEAR_DEMO) {
             fopAcM_orderOtherEventId(this, mAppearEventIdx, 0xFF, 0xFFFF, 0, 1);
             eventInfo.onCondition(dEvtCnd_UNK2_e); /* onCondition(dEvtCnd_UNK2_e) */
         } else if (dSv_event_isEventBit(dComIfGs_getEvent(), UNK_0F40) == FALSE &&
-                   unk31C == DISAPPEAR_DEMO) {
+                   mDemoState == DISAPPEAR_DEMO) {
             fopAcM_orderOtherEventId(this, mDisappearEventIdx, 0xFF, 0xFFFF, 0, 1);
             eventInfo.onCondition(dEvtCnd_UNK2_e);
         }
@@ -265,7 +265,7 @@ void daLbridge_c::appear_bridge() {
     }
 
     mTimer = 31;
-    unk31C = APPEAR_DEMO;
+    mDemoState = APPEAR_DEMO;
 }
 
 /* 021B2A38 */
@@ -277,7 +277,7 @@ void daLbridge_c::disappear_bridge() {
     set_off_se();
     mBpkAnm.mFrameCtrl.setFrame((f32)(s16)mBpkAnm.mFrameCtrl.mEnd /* getEndFrame */);
     mBpkAnm.mFrameCtrl.setRate(-1.0f);
-    unk31C = DISAPPEAR_DEMO;
+    mDemoState = DISAPPEAR_DEMO;
 }
 
 /* 021B2838 */

@@ -18,7 +18,7 @@ struct FrameColors {
 };
 WWHD_SIZE(FrameColors, 0x28);
 struct dScnKy_env_light_c : KankyoEnvLight {
-    be<f32> &monotoneBlend() { return field_0x10e8; }
+    be<f32> &monotoneBlend() { return mMonotoneBlend; }
     be<f32> &skyBrightness() { return field_0x103c; }
     FrameColors &colors() { return *reinterpret_cast<FrameColors *>(&mHdField_0xb64); }
     void drawKankyo();

@@ -242,7 +242,7 @@ bool daNpcPeople_c::_execute() {
 
     chkAttention();
     checkOrder();
-    if (!dComIfGp_event_runCheck() || (eventInfo.getCommand() == 1 && m79C != 0)) {
+    if (!dComIfGp_event_runCheck() || (eventInfo.getCommand() == 1 && mModeInTalk != 0)) {
         (this->*moveProc[mExecuteMode].fn)();
     } else {
         eventMove();
@@ -333,7 +333,7 @@ bool daNpcPeople_c::_execute() {
 
     playTexPatternAnm();
     playAnm();
-    if (m7A1 != 0) {
+    if (mCanMove != 0) {
         if (mAnmIdx == 2) {
             cLib_chaseF(&speedF, mTargetSpeed, 0.1f);
             f32 speed = speedF * mpNpcDat->mWalkAnmRate;
@@ -402,13 +402,13 @@ bool daNpcPeople_c::executeCommon() {
                 f32 mag = std_sqrtf(PSVECSquareMag(diff.get()));
                 if (mag < 200.0f && dComIfGs_isEventBit(0x2880) && dComIfGs_isEventBit(0x2B08) &&
                     !dComIfGs_isEventBit(0x2B04) && !dComIfGs_isTmpBit(0x0208)) {
-                    m79C = 0;
+                    mModeInTalk = 0;
                     actor_status = actor_status & ~fopAcStts_NOCULLEXEC_e; /* fopAcM_OffStatus(NOCULLEXEC) */
                     eventInfo.setEventId(mEventIdx[0]);
                 } else {
                     eventInfo.setEventId(-1);
                     actor_status = actor_status | fopAcStts_NOCULLEXEC_e;
-                    m79C = 1;
+                    mModeInTalk = 1;
                 }
             }
         }
@@ -433,11 +433,11 @@ bool daNpcPeople_c::executeCommon() {
         executeSetMode(0xB);
         return true;
     }
-    if (mTalk == 1 && m79C != 0 && mExecuteMode != 1) {
+    if (mTalk == 1 && mModeInTalk != 0 && mExecuteMode != 1) {
         executeSetMode(1);
     }
     bool ret = false;
-    if (mTalk != 0 && m79C != 0) {
+    if (mTalk != 0 && mModeInTalk != 0) {
         ret = true;
     }
     return ret;
@@ -458,7 +458,7 @@ s32 daNpcPeople_c::executeWaitInit() {
 
 /* 022C3E78 */
 BOOL daNpcPeople_c::checkPig() {
-    if (dComIfGs_isTmpBit(0x0280) && (mInAttention != 0 || m78A != 0)) {
+    if (dComIfGs_isTmpBit(0x0280) && (mInAttention != 0 || mInLookDist != 0)) {
         for (int i = 0; i < 3; i++) {
             PeoplePigView* pPig = static_cast<PeoplePigView*>(peopleSearchFromName("Pig", 0xF00, l_pig_para[i]));
             if (pPig != nullptr && pPig->mTauraPosSet == 0 /* mTauraPosSet */) {
@@ -498,7 +498,7 @@ BOOL daNpcPeople_c::checkPig() {
 /* 022C4074 */
 void daNpcPeople_c::executeWait() {
     if (!executeCommon()) {
-        if (mPathRun.mPath.get() != nullptr && mWaitTimer != 0 && mInAttention == 0 && m78A == 0) {
+        if (mPathRun.mPath.get() != nullptr && mWaitTimer != 0 && mInAttention == 0 && mInLookDist == 0) {
             mWaitTimer = mWaitTimer - 1;
             if (mWaitTimer == 0) {
                 executeSetMode(3);
@@ -532,15 +532,15 @@ void daNpcPeople_c::executeWait() {
                         if (dKy_moon_look_chk() && !(mEtcFlag & 0x100)) {
                             dComIfGs_onEventBit(0x2308);
                             mEtcFlag = mEtcFlag | 0x100;
-                            m7A7 = 0;
+                            mSkyLookNo = 0;
                             mOrderEventNum = 0xB;
                         } else if (dKy_orion_look_chk() && !(mEtcFlag & 0x200)) {
                             mEtcFlag = mEtcFlag | 0x200;
-                            m7A7 = 1;
+                            mSkyLookNo = 1;
                             mOrderEventNum = 0xB;
                         } else if (dKy_hokuto_look_chk() && !(mEtcFlag & 0x400)) {
                             mEtcFlag = mEtcFlag | 0x400;
-                            m7A7 = 2;
+                            mSkyLookNo = 2;
                             mOrderEventNum = 0xB;
                         }
                     }
@@ -567,7 +567,7 @@ void daNpcPeople_c::executeWait() {
 
 /* 022C43A8 */
 s32 daNpcPeople_c::executeTalkInit() {
-    if (m79C) {
+    if (mModeInTalk) {
         if (mExecuteMode == 4) {
             setAnmTbl(l_npc_anm_wait, 1);
         }
@@ -587,31 +587,31 @@ void daNpcPeople_c::executeTalk() {
             mEtcFlag = mEtcFlag & ~0x1;
             executeSetMode(0);
 
-            if (m77E & 0x1) {
-                m77E = m77E & ~0x1;
+            if (mEventFlags & 0x1) {
+                mEventFlags = mEventFlags & ~0x1;
                 mOrderEventNum = 3;
-            } else if (m77E & 0x2) {
-                m77E = m77E & ~0x2;
+            } else if (mEventFlags & 0x2) {
+                mEventFlags = mEventFlags & ~0x2;
                 mOrderEventNum = 7;
-            } else if (m77E & 0x4) {
-                m77E = m77E & ~0x4;
+            } else if (mEventFlags & 0x4) {
+                mEventFlags = mEventFlags & ~0x4;
                 mOrderEventNum = 8;
-            } else if (m77E & 0x8) {
-                m77E = m77E & ~0x8;
+            } else if (mEventFlags & 0x8) {
+                mEventFlags = mEventFlags & ~0x8;
                 mOrderEventNum = 9;
-            } else if (m77E & 0x10) {
-                m77E = m77E & ~0x10;
+            } else if (mEventFlags & 0x10) {
+                mEventFlags = mEventFlags & ~0x10;
                 mOrderEventNum = 0xC;
-            } else if (m77E & 0x20) {
-                m77E = m77E & ~0x20;
+            } else if (mEventFlags & 0x20) {
+                mEventFlags = mEventFlags & ~0x20;
                 mOrderEventNum = 0xD;
-            } else if (m77E & 0x40) {
-                m77E = m77E & ~0x40;
+            } else if (mEventFlags & 0x40) {
+                mEventFlags = mEventFlags & ~0x40;
                 mOrderEventNum = 0xF;
             } else {
-                m77E = m77E | 0x8000;
+                mEventFlags = mEventFlags | 0x8000;
                 if (mNpcNo == NPC_UB1 || mNpcNo == NPC_UB2) {
-                    m79C = 0;
+                    mModeInTalk = 0;
                 }
             }
 
@@ -650,7 +650,7 @@ void daNpcPeople_c::executeWalk() {
             }
         }
 
-        if (mInAttention != 0 || m78A != 0) {
+        if (mInAttention != 0 || mInLookDist != 0) {
             executeSetMode(0);
         } else if (!temp) {
             if (mExecuteMode != 8) {
@@ -749,7 +749,7 @@ void daNpcPeople_c::executeTurn() {
 
 /* 022C4B30 */
 s32 daNpcPeople_c::executeBikkuriInit() {
-    m79A = m79A | 0x1;
+    mSurpriseFlags = mSurpriseFlags | 0x1;
     setAnmTbl(l_npc_anm_bikkuri, 1);
     mReactTimer = 0x15;
     return 4;
@@ -787,10 +787,10 @@ void daNpcPeople_c::executeFurue() {
                 mFurueTimer = mFurueTimer - 1;
             } else {
                 f32 r = cM_rndF(20.0f);
-                m79A = m79A ^ 2;
+                mSurpriseFlags = mSurpriseFlags ^ 2;
                 mFurueTimer = (s16)gabi::ftoi(r + 10.0f);
             }
-            if (m79A & 2) {
+            if (mSurpriseFlags & 2) {
                 mLookAngleY = current.angle.y + 0x4000;
             } else {
                 mLookAngleY = current.angle.y - 0x4000;
@@ -801,7 +801,7 @@ void daNpcPeople_c::executeFurue() {
             if (mReactTimer == 0) {
                 mMorf = 8.0f;
                 executeSetMode(0);
-                m79A = m79A & ~0x1;
+                mSurpriseFlags = mSurpriseFlags & ~0x1;
             }
         }
         mPsoNo = 0;

@@ -273,7 +273,7 @@ static void kamome_auto_move(kamome_class* i_this) {
         moveType = 1;
         i_this->mLookAround = 1;
         frame = getFrame(i_this->mpMorf);
-        if ((frame >= l_kamomeHIO.m06) && (frame <= l_kamomeHIO.m08)) {
+        if ((frame >= l_kamomeHIO.mMoveStartFrame) && (frame <= l_kamomeHIO.mMoveEndFrame)) {
             i_this->mVelocityFwdTarget = i_this->mScale * 5.0f;
             a_this->speedF = i_this->mScale * 5.0f;
             i_this->mRotVel = 4000.0f;
@@ -368,7 +368,7 @@ static void kamome_auto_move(kamome_class* i_this) {
         kamome_ground_pos_move(i_this);
         if (i_this->mMoveState != 0x19) {
             if (a_this->current.pos.y - GetGroundH(i_this) > 200.0f ||
-                fopAcM_searchActorDistance(a_this, dComIfGp_getPlayer0()) < l_kamomeHIO.m0C) {
+                fopAcM_searchActorDistance(a_this, dComIfGp_getPlayer0()) < l_kamomeHIO.mTakeOffDist) {
                 i_this->mMoveState = 0;
                 fopAc_ac_c* pfVar5 = fopAcM_SearchByID(i_this->mEsaProcID);
                 if (pfVar5 != nullptr) {

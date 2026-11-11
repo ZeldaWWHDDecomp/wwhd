@@ -363,7 +363,7 @@ cPhs_State daNpc_Kg2_c::_create() {
     a->cullMtx = model ? gabi::ea(&kg2Model(model)->mBaseTransformMtx) : 0;
     // HD: descriptive debug label replaces the original Japanese display text.
     if ((s8)kg2Hio().mNo < 0)
-        kg2Hio().mNo = Kg2Core_createHioChild("Salvatore Cannon Game", &kg2Hio());
+        kg2Hio().mNo = Kg2Core_createHioChild("海戦ゲーム親父２", &kg2Hio());
     if (!a->CreateInit())
         return cPhs_ERROR_e;
     return phase;
@@ -1174,7 +1174,7 @@ str 1001C124 "KG2_START_DEMO" in 0226856C
 str 1001C134 "KG2_CLEAR_DEMO" in 0226856C
 str 1001C144 "CANON_GAME" in 0226856C
 str 1001C150 "Kg" in 02268864
-str 1001C154 "Salvatore Cannon Game" renamed in 02268864
+str 1001C154 "海戦ゲーム親父２" in 02268864
 str 1001C168 "Kg" in 0226898C
 str 1001C170 "AnmNo" in 02268DA0
 str 1001C178 "count" in 02268DA0

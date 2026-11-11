@@ -15,7 +15,8 @@ struct daSTBox_shadowEcallBack_c {
     be<s16> field_0x4;
     u8 pad6[2];
     be<f32> mWaterY, mWaterFlatY, mDepth;
-    cXyz field_0x14[3], mPos;
+    cXyz mPrevRibbonPos[3];  /* was field_0x14: daSTBox_shadowEcallBack_c::draw 02468C20 keeps the first three particle positions of the shadow ribbon in it (each step writes them as the previous vertex position and stores the new ones); _create 024682CC constructs the array (tww draw the same) */
+    cXyz mPos;
     gptr<csXyz> mpAngle;
     be<f32> mExTransY, mExScaleY, field_0x50;
     gptr<void> mpEmitter;
@@ -42,18 +43,22 @@ struct daSTBox_c : fopAc_ac_c {
     s32 actWait(s32 staff);
     /* 0x3AC */ request_of_phase_process_class mPhase;
     /* 0x3B4 */ gptr<J3DModel> mpModel;
-    /* 0x3B8 */ gptr<void> field_0x29C[3]; // tww unknown name, HD emitter pointers
+    /* 0x3B8 */ gptr<void> mpDropEmitter[3];  /* was field_0x29C: CreateInit 02467F24 starts the water-drop emitters (STBOX_WATER_DROP; [2] only for box types 1 / 2), setupEmitter places them, _execute 02468550 updates them and clearEmitters invalidates and clears them (HD emitter pointers; tww the same three) */
     u8 pad3c4[4], mRippleCallBack[0x14];
     /* 0x3DC */ daSTBox_shadowEcallBack_c mShadowCallback;
-    cXyz mParticlePos, field_0x324;
-    be<u8> field_0x330, field_0x331;
+    cXyz mParticlePos;
+    cXyz mShadowPos;  /* was field_0x324: CreateInit 02467F24 sets it to the ship's crane top at the water height (or the crane point) and starts the STBOX_SALVAGE_SHADOW particle there, copying it to mShadowCallback.mPos (tww the same) */
+    be<u8> mItemNo;  /* was field_0x330: CreateInit 02467F24 sets the low parameter byte (1 .. 4 become 5); actWait 0246933C creates that item from the box (stboxCreateItem) for box types 1 / 2 (tww the same) */
+    be<u8> mBoxType;  /* was field_0x331: _create 024682CC sets parameter bits 8..11; CreateHeap 02467D9C picks the model by it, actWait 0246933C / actWait02 02469554 the crane offset (crane_offset[it]), types 1 / 2 carry an item, _delete 024683D8 tests 2 (tww the same) */
     be<s16> field_0x332;
-    be<u8> field_0x334, field_0x335, field_0x336;
+    be<u8> mSplashDone;  /* was field_0x334: actDrop 024695C4 plays the splash sound and water pillar once when the box falls below the water and sets it; CreateInit 02467F24 clears it (tww the same) */
+    be<u8> mRippleSet;  /* was field_0x335: actWait 0246933C starts the STBOX_RIPPLE particle once the box rises to the water surface and sets it (tww the same) */
+    be<u8> mBgmStarted;  /* was field_0x336: actWait 0246933C starts the salvage sub BGM once a type 1 / 2 box rises above the water and sets it; CreateInit 02467F24 clears it (tww the same) */
     u8 pad453;
     be<u32> mItemPID;
 };
 WWHD_OFFSET(daSTBox_c, mShadowCallback, 0x3DC);
-WWHD_OFFSET(daSTBox_c, field_0x331, 0x44D);
+WWHD_OFFSET(daSTBox_c, mBoxType, 0x44D);
 WWHD_SIZE(daSTBox_c, 0x458);
 
 void stboxChaseS(void *, s32, s32);
@@ -377,21 +382,21 @@ struct STBoxRippleCallback {
 WWHD_SIZE(STBoxRippleCallback, 0x14);
 WWHD_OFFSET(daSTBox_c, mPhase, 0x3AC);
 WWHD_OFFSET(daSTBox_c, mpModel, 0x3B4);
-WWHD_OFFSET(daSTBox_c, field_0x29C, 0x3B8);
+WWHD_OFFSET(daSTBox_c, mpDropEmitter, 0x3B8);
 WWHD_OFFSET(daSTBox_c, mRippleCallBack, 0x3C8);
 WWHD_OFFSET(daSTBox_c, mParticlePos, 0x434);
-WWHD_OFFSET(daSTBox_c, field_0x324, 0x440);
-WWHD_OFFSET(daSTBox_c, field_0x330, 0x44C);
+WWHD_OFFSET(daSTBox_c, mShadowPos, 0x440);
+WWHD_OFFSET(daSTBox_c, mItemNo, 0x44C);
 WWHD_OFFSET(daSTBox_c, field_0x332, 0x44E);
-WWHD_OFFSET(daSTBox_c, field_0x334, 0x450);
-WWHD_OFFSET(daSTBox_c, field_0x335, 0x451);
-WWHD_OFFSET(daSTBox_c, field_0x336, 0x452);
+WWHD_OFFSET(daSTBox_c, mSplashDone, 0x450);
+WWHD_OFFSET(daSTBox_c, mRippleSet, 0x451);
+WWHD_OFFSET(daSTBox_c, mBgmStarted, 0x452);
 WWHD_OFFSET(daSTBox_c, mItemPID, 0x454);
 WWHD_OFFSET(daSTBox_shadowEcallBack_c, field_0x4, 0x4);
 WWHD_OFFSET(daSTBox_shadowEcallBack_c, mWaterY, 0x8);
 WWHD_OFFSET(daSTBox_shadowEcallBack_c, mWaterFlatY, 0xC);
 WWHD_OFFSET(daSTBox_shadowEcallBack_c, mDepth, 0x10);
-WWHD_OFFSET(daSTBox_shadowEcallBack_c, field_0x14, 0x14);
+WWHD_OFFSET(daSTBox_shadowEcallBack_c, mPrevRibbonPos, 0x14);
 WWHD_OFFSET(daSTBox_shadowEcallBack_c, mPos, 0x38);
 WWHD_OFFSET(daSTBox_shadowEcallBack_c, mpAngle, 0x44);
 WWHD_OFFSET(daSTBox_shadowEcallBack_c, mExTransY, 0x48);

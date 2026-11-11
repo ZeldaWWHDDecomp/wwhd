@@ -112,8 +112,11 @@ struct NamePointer { gptr<const char> mName; };
 WWHD_SIZE(NamePointer, 4);
 struct HeapSizes { be<u32> values[2]; };
 WWHD_SIZE(HeapSizes, 8);
-struct BtpEntry { be<u8> m00[0x20]; be<u8> m20; };
-WWHD_OFFSET(BtpEntry, m20, 0x20);
+struct BtpEntry {
+    be<u8> mFileName[0x20];  /* was m00: initTexPatternAnm 022846EC loads the eye btp of that file name; static btpAnmTbl, never written (tww initTexPatternAnm btp_anm_tbl the same) */
+    be<u8> mbSyncBody;  /* was m20: initTexPatternAnm 022846EC copies it into daNpc_Md_c::mBtpSyncBody (0 / 1; while it is 1 the btp frame follows the body bck instead of blinking); static btpAnmTbl, never written (tww the same: m3136, playTexPatternAnm) */
+};
+WWHD_OFFSET(BtpEntry, mbSyncBody, 0x20);
 WWHD_SIZE(BtpEntry, 0x21);
 struct BtpTable { BtpEntry values[16]; };
 WWHD_SIZE(BtpTable, 0x210);

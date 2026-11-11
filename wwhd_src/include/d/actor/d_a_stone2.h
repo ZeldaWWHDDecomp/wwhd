@@ -19,18 +19,39 @@ WWHD_SIZE(MoveBgView, 0x3E0);
 namespace daStone2 {
 struct Attr_c {
     gptr<const char> resName;
-    be<s16> m04, resIndex;
+    be<s16> mModelResIdx;  /* was m04: CreateHeap 0249E5B8: dComIfG_getObjectRes(resName, it) is the model data (tww the same); M_attr is read only, never written in WWHD or tww */
+    be<s16> resIndex;
     be<u32> heapSize;
-    be<u8> m0C;
+    be<u8> mCarryAttnDist;  /* was m0C: Create 0249E8BC: attention_info.distances[fopAc_Attn_TYPE_CARRY_e] (tww the same) */
     u8 pad0D;
-    be<s16> m0E, m10, m12, m14;
+    be<s16> mShadowSize;  /* was m0E: never read in WWHD (HD draws no simple shadow for the rock); tww Act_c::draw_shadow passes it as dComIfGd_setSimpleShadow / setSimpleShadow2's size */
+    be<s16> mRoofCrrHeight;  /* was m10: Create 0249E8BC: mAcch.SetRoofCrrHeight(it) (tww the same) */
+    be<s16> mRadius;  /* was m12: Create 0249E8BC: mCyl's radius and mAcchCir's wall radius (tww mCyl.SetR / mAcchCir.SetWall) */
+    be<s16> mHeight;  /* was m14: Create 0249E8BC: mCyl's height (tww mCyl.SetH) */
     u8 pad16[2];
-    be<u32> m18, m1C;
-    be<s16> m20, m22, m24, m26, m28, m2A, m2C, m2E;
-    be<f32> m30, m34, m38, m3C, m40, m44, m48, m4C;
-    be<s16> m50;
+    be<u32> mDamageSE;  /* was m18: damaged 0249EEAC: the sound started on a hit (tww fopAcM_seStart(this, it, 0)) */
+    be<u32> m1C;
+    be<s16> mMoveCullX;  /* was m20: cull_set_move 0249EC74: the cull sphere's x (tww fopAcM_setCullSizeSphere) */
+    be<s16> mMoveCullY;  /* was m22: cull_set_move 0249EC74: the cull sphere's y (tww fopAcM_setCullSizeSphere) */
+    be<s16> mMoveCullZ;  /* was m24: cull_set_move 0249EC74: the cull sphere's z (tww fopAcM_setCullSizeSphere) */
+    be<s16> mMoveCullRadius;  /* was m26: cull_set_move 0249EC74: the cull sphere's radius; below 0 the rock is always executed (mForceExecute) (tww the same) */
+    be<s16> mDrawCullX;  /* was m28: cull_set_draw 0249F57C: the cull sphere's x (tww fopAcM_setCullSizeSphere) */
+    be<s16> mDrawCullY;  /* was m2A: cull_set_draw 0249F57C: the cull sphere's y (tww fopAcM_setCullSizeSphere) */
+    be<s16> mDrawCullZ;  /* was m2C: cull_set_draw 0249F57C: the cull sphere's z (tww fopAcM_setCullSizeSphere) */
+    be<s16> mDrawCullRadius;  /* was m2E: cull_set_draw 0249F57C: the cull sphere's radius (tww fopAcM_setCullSizeSphere) */
+    be<f32> mGravity;  /* was m30: Create 0249E8BC / mode_drop_init 0249FD5C set gravity to it (tww the same) */
+    be<f32> mPivotHeight;  /* was m34: set_mtx 0249E6DC: while dropping the model rotates about the point it above pos (translate up, rotate, translate back) (tww the same) */
+    be<f32> mAttnHeight;  /* was m38: Create 0249E8BC / Execute 0249F6CC: attention_info.position.y = pos.y + it (tww the same) */
+    be<f32> mDropSpeedY;  /* was m3C: mode_drop_init 0249FD5C: speed.y (tww the same) */
+    be<f32> mDropSpeedF;  /* was m40: mode_drop_init 0249FD5C: speedF (tww the same) */
+    be<f32> mResistLinear;  /* was m44: mode_drop 0249FE90: posMoveF_stream's linear resistance (tww posMoveF_resist_acc param_4) */
+    be<f32> mResistQuad;  /* was m48: mode_drop 0249FE90: posMoveF_stream's quadratic resistance (tww posMoveF_resist_acc param_5) */
+    be<f32> m4C;
+    be<s16> mShockStrength;  /* was m50: damaged 0249EEAC: dComIfGp_getVibration().StartShock(it, ...) when above 0 (tww the same) */
     u8 pad52[2];
-    be<f32> m54, m58, m5C;
+    be<f32> mMBreakEffScale;  /* was m54: eff_m_break 024A018C: the break particles' scale (tww the same) */
+    be<f32> mBBreakEffScale;  /* was m58: eff_b_break 024A02F0: the break particles' scale (tww the same) */
+    be<f32> mLiftSmokeScale;  /* was m5C: eff_lift_smoke_start 0249FA68: the smoke particles' scale (tww the same) */
 };
 WWHD_SIZE(Attr_c, 0x60);
 struct Act_c : stone2::MoveBgView {

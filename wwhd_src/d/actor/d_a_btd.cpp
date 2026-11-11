@@ -227,7 +227,7 @@ void btdActionWait(btd_class *i_this) {
                 i_this->mAttackAnmIdx = (s8)(5);
                 i_this->mAttackHand = (s8)(0);
             }
-            u8 forced = (u8)l_HIO.m10;
+            u8 forced = (u8)l_HIO.mDebugAttackType;
             if (forced == 0) {
                 if (view > 0x400) {
                     f32 turnChoice = cM_rndF(1.0f);
@@ -238,12 +238,12 @@ void btdActionWait(btd_class *i_this) {
                 }
                 bool phase = (u8)i_this->mBattlePhase != 0;
                 f32 first = cM_rndF(1.0f);
-                if (first < (phase ? (f32)l_HIO.m20 : (f32)l_HIO.m18))
+                if (first < (phase ? (f32)l_HIO.mAttack0RatePhase1 : (f32)l_HIO.mAttack0Rate))
                     i_this->mAttackType = (s8)(0);
                 else {
                     f32 second = cM_rndF(1.0f);
                     i_this->mAttackType =
-                        (s8)(second < (phase ? (f32)l_HIO.m24 : (f32)l_HIO.m1C) ? 1 : 2);
+                        (s8)(second < (phase ? (f32)l_HIO.mAttack1RatePhase1 : (f32)l_HIO.mAttack1Rate) ? 1 : 2);
                 }
             } else if (forced <= 3)
                 i_this->mAttackType = (s8)(forced - 1);
@@ -343,7 +343,7 @@ void btdActionReset(btd_class *i_this) {
     i_this->mAction = ACT_WAIT;
     i_this->mGohmaState = (s16)(0);
     f32 delay = cM_rndF(50.0f);
-    i_this->mTimers[0] = (s16)(s16(gabi::ftoi(delay + (f32)l_HIO.m14)));
+    i_this->mTimers[0] = (s16)(s16(gabi::ftoi(delay + (f32)l_HIO.mWaitTime)));
 }
 void btdActionLevelSound(btd_class *i_this, u32 id, u32 position) {
     s32 reverb = btdGuest_dComIfGp_getReverb(s32((s8)i_this->current.roomNo));
@@ -444,7 +444,7 @@ void btdActionPunch(btd_class *i_this) {
         if (btdActionStopped(morf)) {
             btdActionNextAnimation(btdActor(p), punch_bck, 0.0f, 2);
             f32 random = cM_rndF(100.0f);
-            f32 timer = random + (f32)l_HIO.m28;
+            f32 timer = random + (f32)l_HIO.mPunchWaitTime;
             state = s16((s16)i_this->mGohmaState + 1);
             i_this->mTimers[0] = (s16)(s16(gabi::ftoi(timer)));
             i_this->mGohmaState = (s16)(state);
@@ -476,7 +476,7 @@ void btdActionPunch(btd_class *i_this) {
             i_this->mAction = ACT_WAIT;
             i_this->mGohmaState = (s16)(0);
             f32 delay = cM_rndF(50.0f);
-            f32 total = delay + (f32)l_HIO.m14;
+            f32 total = delay + (f32)l_HIO.mWaitTime;
             state = (s16)i_this->mGohmaState;
             i_this->mTimers[0] = (s16)(s16(gabi::ftoi(total)));
         }
@@ -556,7 +556,7 @@ void btdActionFire(btd_class *i_this) {
                 actorSoundNN(p, 0x5810);
             } else {
                 btdActionAnimation(btdActor(p), 0xF, 0.0f, 2);
-                i_this->mTimers[0] = (s16)(s16((s16)l_HIO.m2C * 9));
+                i_this->mTimers[0] = (s16)(s16((s16)l_HIO.mFireTime * 9));
                 i_this->mGohmaState = (s16)(3);
             }
         }
@@ -619,7 +619,7 @@ void btdActionFire(btd_class *i_this) {
         i_this->mAtMode = (u8)(3);
         if (btdActionStopped(morf)) {
             btdActionAnimation(btdActor(p), 0xF, 15.0f, 2);
-            i_this->mTimers[0] = (s16)(s16((s16)l_HIO.m2C * 4));
+            i_this->mTimers[0] = (s16)(s16((s16)l_HIO.mFireTime * 4));
             i_this->mGohmaState = (s16)(3);
         }
         state = (s16)i_this->mGohmaState;
@@ -647,7 +647,7 @@ void btdActionHighFire(btd_class *i_this, bool sideFire) {
     case 1:
         if (btdActionStopped(morf)) {
             btdActionAnimation(btdActor(p), sideFire ? 0x37 : 0x31, 1.0f, 2);
-            s16 duration = (s16)l_HIO.m2C, next = s16((s16)i_this->mGohmaState + 1);
+            s16 duration = (s16)l_HIO.mFireTime, next = s16((s16)i_this->mGohmaState + 1);
             i_this->mTimers[0] = (s16)(s16(duration * (sideFire ? 7 : 9)));
             i_this->mGohmaState = (s16)(next);
         }
@@ -793,7 +793,7 @@ void btdActionTurningPunch(btd_class *i_this) {
     }
     case 5:
         if (btdActionStopped(morf)) {
-            u8 forced = (u8)l_HIO.m10;
+            u8 forced = (u8)l_HIO.mDebugAttackType;
             i_this->mGohmaState = (s16)(0);
             if (forced == 4)
                 i_this->mAttackAnmIdx = (s8)(5);
@@ -835,9 +835,9 @@ void btdActionBreakShell(btd_class *i_this, u32 morf) {
         if (emitter)
             btdActionParticleMatrix(morf, emitter, 0xA50);
     }
-    if ((u8)l_HIO.m06)
+    if ((u8)l_HIO.mDebugBreak)
         i_this->mCrackStage = (u8)(3);
-    u8 debug = (u8)l_HIO.m07;
+    u8 debug = (u8)l_HIO.mDebugNoBreak;
     if (debug && (u8)i_this->mCrackStage >= 3)
         i_this->mCrackStage = (u8)(2);
 }
@@ -845,29 +845,29 @@ void btdActionBreakShell(btd_class *i_this, u32 morf) {
 void btdActionBurst(btd_class *i_this, u32 morf) {
     const u32 p = gabi::ea(i_this);
     u32 dragon = (u32)dr2.v;
-    btdDragon(dragon)->m4BA = 10;
+    btdDragon(dragon)->mRockState = 10;
     u32 game = play();
     btdGuest_bgmStart(gabi::load<u8>(game + PLAY_OFF(mCurStage.mName)) == 0x58 ? 0x80000054u
                                                                                : 0x80000010u);
     for (u32 i = 0; i < 35; ++i) {
         u32 piece = gabi::ea(&i_this->hahen[i]);
-        if ((u8)btdDebris(piece)->m04 == 0) {
+        if ((u8)btdDebris(piece)->mActive == 0) {
             s32 joint = 2;
             if (i >= 5)
                 joint = gabi::ftoi(cM_rndF(18.999000549316406f));
             u32 position = gabi::ea(&i_this->mJointPos[0].x) + u32(joint * 12);
-            (btdDebris(piece)->m04 = (u8)(1));
+            (btdDebris(piece)->mActive = (u8)(1));
             f32 x = (f32)btdVector(position)->x;
-            (btdDebris(piece)->m08.x = (f32)(x));
-            (btdDebris(piece)->m08.y = (f32)((f32)btdVector(position)->y));
-            (btdDebris(piece)->m08.z = (f32)((f32)btdVector(position)->z));
+            (btdDebris(piece)->mPos.x = (f32)(x));
+            (btdDebris(piece)->mPos.y = (f32)((f32)btdVector(position)->y));
+            (btdDebris(piece)->mPos.z = (f32)((f32)btdVector(position)->z));
             f32 random = cM_rndFX((f32)l_debugRegisters.floats[2] + 50.0f);
-            (btdDebris(piece)->m08.x = (f32)(x + random));
+            (btdDebris(piece)->mPos.x = (f32)(x + random));
             random = cM_rndFX((f32)l_debugRegisters.floats[2] + 50.0f);
-            (btdDebris(piece)->m08.y = (f32)((f32)btdDebris(piece)->m08.y + random));
+            (btdDebris(piece)->mPos.y = (f32)((f32)btdDebris(piece)->mPos.y + random));
             random = cM_rndFX((f32)l_debugRegisters.floats[2] + 50.0f);
-            f32 z = (f32)btdDebris(piece)->m08.z + random, xNow = (f32)btdDebris(piece)->m08.x;
-            (btdDebris(piece)->m08.z = (f32)(z));
+            f32 z = (f32)btdDebris(piece)->mPos.z + random, xNow = (f32)btdDebris(piece)->mPos.x;
+            (btdDebris(piece)->mPos.z = (f32)(z));
             s32 angle = btdGuest_cM_atan2sFullResult(xNow, z);
             u32 m = matrix();
             s16 angleRandom = s16(gabi::ftoi(cM_rndFX(2000.0f)));
@@ -880,8 +880,8 @@ void btdActionBurst(btd_class *i_this, u32 morf) {
             f32 zRandom = cM_rndF(5.0f) + 20.0f;
             velocity.z = zRandom + (f32)l_debugRegisters.floats[0];
             MtxPosition(&velocity, btdVector(piece + 0x14));
-            (btdDebris(piece)->m22 = (s16)(s16(gabi::ftoi(cM_rndF(65536.0f)))));
-            (btdDebris(piece)->m20 = (s16)(s16(gabi::ftoi(cM_rndF(65536.0f)))));
+            (btdDebris(piece)->mAngleY = (s16)(s16(gabi::ftoi(cM_rndF(65536.0f)))));
+            (btdDebris(piece)->mAngleX = (s16)(s16(gabi::ftoi(cM_rndF(65536.0f)))));
         }
     }
     for (u32 i = 0; i < 12; ++i) {
@@ -910,7 +910,7 @@ void btdActionDamage(btd_class *i_this) {
     case 1:
         if (btdActionStopped(morf)) {
             btdActionAnimation(btdActor(p), 10, 1.0f, 2);
-            s16 stun = (s16)l_HIO.m0C, next = s16((s16)i_this->mGohmaState + 1);
+            s16 stun = (s16)l_HIO.mStunTime, next = s16((s16)i_this->mGohmaState + 1);
             i_this->mStunTimer = (s16)(stun);
             i_this->mGohmaState = (s16)(next);
         }
@@ -1095,9 +1095,9 @@ void btdActionTrack(btd_class *i_this, u32 player) {
         }
         u32 dragon = (u32)dr2.v;
         if (dragon != 0) {
-            s16 action = (s16)btdDragon(dragon)->m4BA;
+            s16 action = (s16)btdDragon(dragon)->mRockState;
             if (action == 0 || action >= 10) {
-                s16 mode = (s16)btdDragon(dragon)->m4CA;
+                s16 mode = (s16)btdDragon(dragon)->mRockFallTimer;
                 if (mode == 0 || mode >= 98) {
                     s16 target = (s16)i_this->mTurnTargetAngleY;
                     if (target == 0) {
@@ -1264,25 +1264,25 @@ void btdExecCameraStep(btd_class *i_this, be<f32> &value, f32 target, f32 multip
 void btdExecDebrisMove(btd_class *i_this) {
     for (u32 i = 0; i < 35; ++i) {
         u32 piece = gabi::ea(&i_this->hahen[i]);
-        if (!(u8)btdDebris(piece)->m04)
+        if (!(u8)btdDebris(piece)->mActive)
             continue;
         PSVECAdd(btdVector(piece + 8), btdVector(piece + 0x14), btdVector(piece + 8));
-        f32 x = (f32)btdDebris(piece)->m08.x;
-        s16 ax = (s16)btdDebris(piece)->m20, ay = (s16)btdDebris(piece)->m22;
-        f32 y = (f32)btdDebris(piece)->m08.y, vy = (f32)btdDebris(piece)->m14.y,
-            z = (f32)btdDebris(piece)->m08.z;
-        (btdDebris(piece)->m20 = (s16)((s16)(ax + 0x900)));
-        (btdDebris(piece)->m22 = (s16)((s16)(ay + 0x600)));
-        (btdDebris(piece)->m14.y = (f32)(gabi::fsubs_ppc(vy, 3.0f)));
+        f32 x = (f32)btdDebris(piece)->mPos.x;
+        s16 ax = (s16)btdDebris(piece)->mAngleX, ay = (s16)btdDebris(piece)->mAngleY;
+        f32 y = (f32)btdDebris(piece)->mPos.y, vy = (f32)btdDebris(piece)->mSpeed.y,
+            z = (f32)btdDebris(piece)->mPos.z;
+        (btdDebris(piece)->mAngleX = (s16)((s16)(ax + 0x900)));
+        (btdDebris(piece)->mAngleY = (s16)((s16)(ay + 0x600)));
+        (btdDebris(piece)->mSpeed.y = (f32)(gabi::fsubs_ppc(vy, 3.0f)));
         MtxTrans(x, y, z, 0);
-        ay = (s16)btdDebris(piece)->m22;
+        ay = (s16)btdDebris(piece)->mAngleY;
         btdGuest_mDoMtx_YrotM(btdExecMatrix(), ay);
-        ax = (s16)btdDebris(piece)->m20;
+        ax = (s16)btdDebris(piece)->mAngleX;
         btdGuest_mDoMtx_XrotM(btdExecMatrix(), ax);
         u32 matrix = btdExecMatrix(), model = (u32)btdDebris(piece)->model.v;
         btdExecModelMatrix(model, matrix);
-        if ((f32)btdDebris(piece)->m08.y < -100.0f)
-            (btdDebris(piece)->m04 = (u8)(0));
+        if ((f32)btdDebris(piece)->mPos.y < -100.0f)
+            (btdDebris(piece)->mActive = (u8)(0));
     }
 }
 void btdExecSimple(u32 position, u32 effect) {
@@ -1299,43 +1299,43 @@ void btdExecSplashMove(btd_class *i_this) {
 
     for (u32 i = 0; i < 50; ++i) {
         u32 splash = gabi::ea(&i_this->mBtdSibukiS[i]), sphere = gabi::ea(&i_this->mSibukiSphs[i]);
-        s8 status = (s8)btdSplash(splash)->m00;
+        s8 status = (s8)btdSplash(splash)->mState;
         if (status == 0)
             continue;
         if (status > 2) {
             s8 next = (s8)(status + 1);
-            (btdSplash(splash)->m00 = (s8)(next == 30 ? 0 : next));
+            (btdSplash(splash)->mState = (s8)(next == 30 ? 0 : next));
             continue;
         }
-        bool track = i == 0 && (u8)l_HIO.m54 != 0;
+        bool track = i == 0 && (u8)l_HIO.mSplashFollow != 0;
         bool updateCollision;
         if (track) {
             btdExecCalc(splash + 4, (f32)btdPlayer(player)->current.pos.x, 1.0f, 30.0f);
             btdExecCalc(splash + 8, gabi::fadds_ppc((f32)btdPlayer(player)->current.pos.y, 70.0f),
                         1.0f, 30.0f);
             btdExecCalc(splash + 12, (f32)btdPlayer(player)->current.pos.z, 1.0f, 30.0f);
-            status = (s8)btdSplash(splash)->m00;
-            (btdSplash(splash)->m10.y = (f32)(-10.0f));
+            status = (s8)btdSplash(splash)->mState;
+            (btdSplash(splash)->mSpeed.y = (f32)(-10.0f));
             updateCollision = true;
         } else {
-            f32 gravity = (f32)l_HIO.m50, vy = (f32)btdSplash(splash)->m10.y;
-            (btdSplash(splash)->m10.y = (f32)(gabi::fsubs_ppc(vy, gravity)));
+            f32 gravity = (f32)l_HIO.mSplashGravity, vy = (f32)btdSplash(splash)->mSpeed.y;
+            (btdSplash(splash)->mSpeed.y = (f32)(gabi::fsubs_ppc(vy, gravity)));
             PSVECAdd(btdVector(splash + 4), btdVector(splash + 0x10), btdVector(splash + 4));
-            updateCollision = (f32)btdSplash(splash)->m10.y < 0.0f;
+            updateCollision = (f32)btdSplash(splash)->mSpeed.y < 0.0f;
             if (updateCollision)
-                status = (s8)btdSplash(splash)->m00;
+                status = (s8)btdSplash(splash)->mState;
         }
         bool grounded = false, hit = false;
         if (updateCollision) {
             if (status == 1) {
                 btdGuest_dCcD_Sph_StartCAt(sphere, splash + 4);
-                (btdSplash(splash)->m00 = (s8)((u8)((u8)btdSplash(splash)->m00 + 1)));
+                (btdSplash(splash)->mState = (s8)((u8)((u8)btdSplash(splash)->mState + 1)));
                 btdExecSetCollision(sphere);
-                grounded = (f32)btdSplash(splash)->m04.y < 0.0f;
+                grounded = (f32)btdSplash(splash)->mPos.y < 0.0f;
             } else {
                 btdGuest_dCcD_Sph_MoveCAt(sphere, splash + 4);
                 btdExecSetCollision(sphere);
-                grounded = (f32)btdSplash(splash)->m04.y < 0.0f;
+                grounded = (f32)btdSplash(splash)->mPos.y < 0.0f;
             }
         }
         if (!grounded)
@@ -1345,9 +1345,9 @@ void btdExecSplashMove(btd_class *i_this) {
             continue;
         }
         if (grounded)
-            (btdSplash(splash)->m04.y = (f32)(0.0f));
+            (btdSplash(splash)->mPos.y = (f32)(0.0f));
         btdGuest_cXyz_op_sub(gabi::ea(&btdPlayer(player)->current.pos), &difference, splash + 4);
-        (btdSplash(splash)->m00 = (s8)(0));
+        (btdSplash(splash)->mState = (s8)(0));
         f32 square = PSVECSquareMag(&difference), distance = btdGuest_sqrtf(square);
         // Native blt and fallthrough of bge both require strict LT.
         bool close = distance < 1500.0f;
@@ -1357,7 +1357,7 @@ void btdExecSplashMove(btd_class *i_this) {
                 i_this->mSplashPopCount = (s8)((u8)(count + 1));
                 btdExecSimple(splash + 4, 0x8064);
                 btdExecSound(btdActor(actor), splash + 4, 0x6942);
-                (btdSplash(splash)->m00 = (s8)(0));
+                (btdSplash(splash)->mState = (s8)(0));
             }
         }
     }
@@ -2040,7 +2040,7 @@ BOOL daBtd_Draw(btd_class *i_this) {
     btdMorph(morf)->entryDL();
     for (u32 i = 0; i < 35; ++i) {
         u32 piece = gabi::ea(&i_this->hahen[i]);
-        if ((u8)btdDebris(piece)->m04) {
+        if ((u8)btdDebris(piece)->mActive) {
             env = btdGuest_getEnvironmentLight();
             u32 pieceModel = (u32)btdDebris(piece)->model.v;
             btdGuest_setLightTevColorType(env, pieceModel, gabi::ea(&i_this->mTevstr));
@@ -2260,9 +2260,9 @@ void sibuki_set(btd_class *i_this) {
     i_this->mSplashPopCount = (s8)(0);
     for (u32 i = 0; i < 50; ++i) {
         u32 spray = gabi::ea(&i_this->mBtdSibukiS[i]);
-        if ((s8)btdSplash(spray)->m00 != 0)
+        if ((s8)btdSplash(spray)->mState != 0)
             continue;
-        (btdSplash(spray)->m00 = (s8)(1));
+        (btdSplash(spray)->mState = (s8)(1));
         u32 m = matrix();
         f32 random = cM_rndFX(32768.0f);
         btdGuest_mDoMtx_YrotS(m, (s16)gabi::ftoi(random));
@@ -2272,9 +2272,9 @@ void sibuki_set(btd_class *i_this) {
         local.z = gabi::fadds_ppc(radius, debug);
         local.y = cM_rndF(50.0f);
         MtxPosition(&local, btdVector(spray + 4));
-        f32 forward = (f32)l_HIO.m48;
+        f32 forward = (f32)l_HIO.mSplashSpeedF;
         random = cM_rndF(gabi::fmuls_ppc(forward, 0.5f));
-        f32 upward = (f32)l_HIO.m4C;
+        f32 upward = (f32)l_HIO.mSplashSpeedY;
         f32 vz = gabi::fadds_ppc(forward, random);
         local.z = vz;
         random = cM_rndF(gabi::fmuls_ppc(upward, 0.5f));
@@ -2576,7 +2576,7 @@ void end(btd_class *i_this) {
         i_this->mMagmaRiseCenter = (u8)(0);
         if (timer == 2) {
             u32 dragon = (u32)dr2.v;
-            btdDragon(dragon)->m43C = 1;
+            btdDragon(dragon)->mFloorBroken = 1;
             timer = (s16)i_this->mTimers[0];
             i_this->mMagmaBallOffsetY = (f32)(-200.0f);
         }
@@ -2772,7 +2772,7 @@ void btd_kankyo(btd_class *i_this) {
         i_this->mKankyoTimer = (s16)((s16)(timer - 1));
         i_this->mKankyoState = (u8)(2);
     }
-    f32 time = (f32)l_HIO.m30;
+    f32 time = (f32)l_HIO.mCustomTime;
     btdGuest_dKy_custom_timeset(time);
     u8 state = (u8)i_this->mKankyoState;
     u32 palette = 0;
@@ -2782,18 +2782,18 @@ void btd_kankyo(btd_class *i_this) {
         break;
     case 1:
         btdGuest_cLib_addCalc2(gabi::ea(&i_this->mLightRate), 1.0f, 1.0f, 0.065f);
-        i_this->mLightColorR = (u8)((u8)(s16)l_HIO.m3C);
-        i_this->mLightColorG = (u8)((u8)(s16)l_HIO.m3E);
-        i_this->mLightColorB = (u8)((u8)(s16)l_HIO.m40);
+        i_this->mLightColorR = (u8)((u8)(s16)l_HIO.mLightRState1);
+        i_this->mLightColorG = (u8)((u8)(s16)l_HIO.mLightGState1);
+        i_this->mLightColorB = (u8)((u8)(s16)l_HIO.mLightBState1);
         break;
     case 2:
         btdGuest_cLib_addCalc2(gabi::ea(&i_this->mKankyoBlend), 1.0f, 1.0f, 0.2f);
         btdGuest_cLib_addCalc2(gabi::ea(&i_this->mLightRate), 1.0f, 1.0f, 0.22500001f);
-        time = (f32)l_HIO.m34;
+        time = (f32)l_HIO.mCustomTimeState2;
         btdGuest_dKy_custom_timeset(time);
-        i_this->mLightColorR = (u8)((u8)(s16)l_HIO.m42);
-        i_this->mLightColorG = (u8)((u8)(s16)l_HIO.m44);
-        i_this->mLightColorB = (u8)((u8)(s16)l_HIO.m46);
+        i_this->mLightColorR = (u8)((u8)(s16)l_HIO.mLightRState2);
+        i_this->mLightColorG = (u8)((u8)(s16)l_HIO.mLightGState2);
+        i_this->mLightColorB = (u8)((u8)(s16)l_HIO.mLightBState2);
         break;
     case 3:
         btdGuest_cLib_addCalc2(gabi::ea(&i_this->mKankyoBlend), 0.6f, 1.0f, 0.01f);
@@ -2811,7 +2811,7 @@ void btd_kankyo(btd_class *i_this) {
         break;
     case 7:
         btdGuest_cLib_addCalc2(gabi::ea(&i_this->mKankyoBlend), 1.0f, 1.0f, 0.03333f);
-        time = (f32)l_HIO.m38;
+        time = (f32)l_HIO.mCustomTimeState7;
         palette = 2;
         btdGuest_dKy_custom_timeset(time);
         break;
@@ -2881,7 +2881,7 @@ BOOL daBtd_Execute(btd_class *i_this) {
     if (actionTimer)
         i_this->mActionState = (s16)((s16)(actionTimer - 1));
     btdGuest_move(p);
-    f32 scale = (f32)l_HIO.m08;
+    f32 scale = (f32)l_HIO.mScale;
     i_this->scale.z = (f32)(scale);
     i_this->scale.y = (f32)(scale);
     i_this->scale.x = (f32)(scale);
@@ -2901,7 +2901,7 @@ BOOL daBtd_Execute(btd_class *i_this) {
     angle = (s16)i_this->current.angle.z;
     btdGuest_mDoMtx_ZrotM(stackMatrix, angle);
     btdExecModelMatrix(model, stackMatrix);
-    if (!(u8)l_HIO.m05)
+    if (!(u8)l_HIO.mNoAnmPlay)
         btdMorph(morf)->play(&i_this->eyePos, 0, 0);
     btdMorph(morf)->calc();
     u8 phase = (u8)i_this->mBattlePhase;
@@ -3049,12 +3049,12 @@ BOOL daBtd_Delete(btd_class *i_this) {
     for (u32 i = 0; i < 19; ++i)
         btdGuest_JAIZelBasic_seDeleteObject(gabi::ea(&i_this->mHitSePos[i]));
     for (u32 i = 0; i < 50; ++i)
-        btdGuest_JAIZelBasic_seDeleteObject(gabi::ea(&i_this->mBtdSibukiS[i].m04));
+        btdGuest_JAIZelBasic_seDeleteObject(gabi::ea(&i_this->mBtdSibukiS[i].mPos));
     for (u32 i = 0; i < 19; ++i)
         btdGuest_JAIZelBasic_seDeleteObject(gabi::ea(&i_this->mJointPos[i]));
     u32 peg = (u32)dr2.v;
     if (peg)
-        btdGuest_JAIZelBasic_seDeleteObject(gabi::ea(&btdDragon(peg)->m4A8));
+        btdGuest_JAIZelBasic_seDeleteObject(gabi::ea(&btdDragon(peg)->mRockPos));
     btdGuest_JAIZelBasic_seDeleteObject(gabi::ea(&static_center_pos));
     btdGuest_dKy_efplight_cut(gabi::ea(&i_this->mLightInfluence));
     return TRUE;
@@ -3183,9 +3183,9 @@ s32 daBtd_Create(btd_class *i_this) {
         return status;
     (kui.v = (u32)(0));
     (dr2.v = (u32)(0));
-    (i_this->mPa_SmokeEcallBack[0].m12 = (u8)(1));
-    (i_this->mPa_SmokeEcallBack[1].m12 = (u8)(1));
-    (i_this->mPa_SmokeEcallBack[2].m12 = (u8)(1));
+    (i_this->mPa_SmokeEcallBack[0].mFollowOff = (u8)(1));
+    (i_this->mPa_SmokeEcallBack[1].mFollowOff = (u8)(1));
+    (i_this->mPa_SmokeEcallBack[2].mFollowOff = (u8)(1));
     u32 save = dComIfGs_ea();
     s32 completed = btdGuest_dSv_memBit_c_isDungeonItem(save + 0x798, 3);
     if (completed && gabi::load<u8>(gabi::ea(&btdPlay()->mCurStage.mName[0])) != 0x58)
@@ -3217,7 +3217,7 @@ s32 daBtd_Create(btd_class *i_this) {
         btdCylinder(cyl)->mStts.v = stts;
     }
     f32 random = cM_rndF(50.0f);
-    f32 duration = (f32)l_HIO.m14;
+    f32 duration = (f32)l_HIO.mWaitTime;
     i_this->mTimers[0] = (s16)((s16)gabi::ftoi(gabi::fadds_ppc(random, duration)));
     btdGuest_dKy_efplight_set(gabi::ea(&i_this->mLightInfluence));
     i_this->health = (s8)(10);
@@ -3269,7 +3269,7 @@ s32 daBtd_Create(btd_class *i_this) {
                                              gabi::guest_addr("i_this->floor != (0)"));
     }
     btdGuest_fopAcM_create(0x18D, 0x10FF00, gabi::ea(&i_this->current.pos), -1, 0, 0, -1, 0);
-    f32 time = (f32)l_HIO.m30;
+    f32 time = (f32)l_HIO.mCustomTime;
     btdGuest_dKy_custom_timeset(time);
     return 4;
 }
@@ -3338,35 +3338,35 @@ void *daBtd_HIO_ct(void *self) {
         p = btdGuest_allocate(0x58);
     if (p) {
         daBtd_HIO_c *object = gabi::at<daBtd_HIO_c>(p);
-        object->m1C = 0.5f;
-        object->m30 = 4.0f;
+        object->mAttack1Rate = 0.5f;
+        object->mCustomTime = 4.0f;
         object->mNo = -1;
-        object->m18 = 0.5f;
-        object->m28 = 150.0f;
-        object->m14 = 100.0f;
-        object->m34 = 20.0f;
-        object->m24 = 0.2f;
-        object->m20 = 0.2f;
-        object->m2C = 10;
-        object->m05 = 0;
-        object->m0C = 150;
+        object->mAttack0Rate = 0.5f;
+        object->mPunchWaitTime = 150.0f;
+        object->mWaitTime = 100.0f;
+        object->mCustomTimeState2 = 20.0f;
+        object->mAttack1RatePhase1 = 0.2f;
+        object->mAttack0RatePhase1 = 0.2f;
+        object->mFireTime = 10;
+        object->mNoAnmPlay = 0;
+        object->mStunTime = 150;
         object->vtable = gabi::ea(&l_hioVtable);
-        object->m54 = 0;
-        object->m42 = 255;
-        object->m07 = 0;
-        object->m06 = 0;
-        object->m10 = 0;
-        object->m38 = 6.0f;
-        object->m3C = 182;
-        object->m48 = 12.0f;
-        object->m4C = 35.0f;
-        object->m3E = 156;
-        object->m0E = 5;
-        object->m46 = 36;
-        object->m40 = 86;
-        object->m50 = 1.0f;
-        object->m08 = 1.0f;
-        object->m44 = 142;
+        object->mSplashFollow = 0;
+        object->mLightRState2 = 255;
+        object->mDebugNoBreak = 0;
+        object->mDebugBreak = 0;
+        object->mDebugAttackType = 0;
+        object->mCustomTimeState7 = 6.0f;
+        object->mLightRState1 = 182;
+        object->mSplashSpeedF = 12.0f;
+        object->mSplashSpeedY = 35.0f;
+        object->mLightGState1 = 156;
+        object->mDamageLimit = 5;
+        object->mLightBState2 = 36;
+        object->mLightBState1 = 86;
+        object->mSplashGravity = 1.0f;
+        object->mScale = 1.0f;
+        object->mLightGState2 = 142;
     }
     return gabi::at<void>(p);
 }

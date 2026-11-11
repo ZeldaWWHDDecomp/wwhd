@@ -12,7 +12,7 @@ static vmsms_save_ptr l_save;
 BOOL daObjVmsms_c::create_heap() {
     J3DModelData* mdl_data =
         (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_VMSMS_BDL_VMSMS_e);
-    JUT_ASSERT(0x5B, mdl_data != NULL);
+    JUT_ASSERT_MSG(0x5B, mdl_data != NULL, "mdl_data != 0");
     if (mdl_data == NULL)
         return FALSE;
     mModel = mDoExt_J3DModel__create(mdl_data, 0, 0x11020203);
@@ -124,7 +124,7 @@ daObjVmsms_c::daObjVmsms_c() {
 data l_save 101F84DC
 str 10032F40 "VmsMS"
 str 10032EFC "d_a_obj_vmsms.cpp"
-str 10032F10 "mdl_data != NULL" renamed # HD spells NULL as 0
+str 10032F10 "mdl_data != 0" # HD spells NULL as 0
 str 10032F20 "master_sword"
 ext 025B8B94 BOOL vmsms_isEventBit(void*, u16)
 ext 025445B8 BOOL vmsms_startCheckOld(void*, const char*)

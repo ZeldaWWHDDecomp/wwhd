@@ -76,9 +76,11 @@ WWHD_OFFSET(BombCameraView, mAngle, 0x234);
 
 struct daBomb_fuseSmokeEcallBack {
   be<u32> __vtbl;
-  be<s16> field_0x04;
+  be<s16> mPrevLife;  /* was field_0x04: daBomb_fuseSmokeEcallBack::executeAfter 020C6860 stores this frame's particle life in it; the next frame steps the in-between particles' life from it to the new one; setFuseEffect 020C584C sets 20 (tww set() the same) */
   u8 _6[2];
-  gptr<cXyz> mpPos, field_0x0C, field_0x10;
+  gptr<cXyz> mpPos;
+  gptr<cXyz> mpOldPos;  /* was field_0x0C: setFuseEffect 020C584C points it at daBomb_c::mFusePos2 (last frame's fuse point); executeAfter 020C6860 fills the smoke trail from mpPos back to it (distance, spline end) (tww set() the same) */
+  gptr<cXyz> mpOldOldPos;  /* was field_0x10: setFuseEffect 020C584C points it at daBomb_c::mFusePos3 (the fuse point two frames back); executeAfter 020C6860 takes the spline tangent at mpOldPos from it (tww set() the same) */
   gptr<void> mpEmitter;
   void executeAfter(void *);
   void execute(void *);
@@ -97,7 +99,9 @@ struct daBomb_fuseSparksEcallBack {
 };
 struct BombWindInfluence {
   cXyz mPos, mDir;
-  be<f32> mRadius, mStrength, field_0x20;
+  be<f32> mRadius;
+  be<f32> mStrength;
+  be<f32> field_0x20;
   be<s32> mRegistIdx;
   be<u8> mbConstant;
   u8 padding[3];
@@ -120,30 +124,49 @@ struct daBomb_c : fopAc_ac_c {
   dBgS_Acch mAcch;
   dBgS_AcchCir mCir;
   dBgS_GndChk mGndChk; // HD: lava filter uses group 4.
-  be<f32> field_0x554, field_0x558, field_0x55C;
-  be<u8> field_0x560, mbWaterIn, field_0x562;
+  be<f32> mLavaY;  /* was field_0x554: bgCrrPos_lava 020C5980 stores the lava ground height (GroundCross with the lava filter); chk_lava_hit 020C7AF4 is true below it, chk_dead_zone 020C7EB0 tests it with mWaterY / ground; create_init 020C6408 sets -1e9 (tww the same) */
+  be<f32> mWaterY;  /* was field_0x558: bgCrrPos_water 020C59EC stores the water surface height (the water BG or the sea wave, -1e9 without); chk_water_sink 020C7A98 (30 below it), water_tention 020C6E44 and eff_water_splash 020C7B24 use it; create_init 020C6408 sets -1e9 (tww the same) */
+  be<f32> mWaterYOld;  /* was field_0x55C: bgCrrPos_water 020C59EC copies mWaterY into it before the update; water_tention 020C6E44 reads it as the old surface height; create_init 020C6408 sets -1e9 (tww the same) */
+  be<u8> mWaterLand;  /* was field_0x560: bgCrrPos_water 020C59EC sets it on the frame the bomb enters water (in water and mbWaterIn still 0); chk_water_land 020C7AEC returns it; create_init 020C6408 clears it (tww the same) */
+  be<u8> mbWaterIn;
+  be<u8> mWaterIsSea;  /* was field_0x562: bgCrrPos_water 020C59EC sets 1 when mWaterY is the sea wave (daSea_calcWave), 0 for the water BG; eff_water_splash 020C7B24 then passes no water polygon to the splash; create_init 020C6408 clears it (tww the same) */
   u8 _8e3;
   dCcD_Stts mStts;
   dCcD_Sph mSph;
   daBomb_fuseSmokeEcallBack mSmoke;
   daBomb_fuseSparksEcallBack mSparks;
-  be<u8> field_0x6F0, field_0x6F1, mBombFire, field_0x6F3, field_0x6F4,
-      field_0x6F5, field_0x6F6, field_0x6F7;
+  be<u8> mInPlayerBombCnt;  /* was field_0x6F0: create_init 020C6408 sets 1 for a bomb in STATE_3 (Link's); procExplode_init 020C5EF8 and bombDelete 020C50BC take 1 off Link's mBombCnt while it is set (explode then clears it) (tww the same) */
+  be<u8> mBombCheckFlag;  /* was field_0x6F1: getBombCheck_Flag 020CB678 returns it, setBombCheck_Flag 020CB6A8 sets 1 (tww accessor names; d_a_am / d_a_nz skip a bomb whose flag is set) */
+  be<u8> mBombFire;
+  be<u8> mNoHit;  /* was field_0x6F3: setBombNoHit 020CB710 sets 1 (tww accessor name); posMoveF 020C6EB4 skips water_tention and the ground-slope handling while it is 1 */
+  be<u8> mFuseLit;  /* was field_0x6F4: waitState_bomtyu 020C713C sets 1 when the bomb flower bomb is lit (mBombFire); execute 020C4D84 plays the fuse sound 0x6100 every frame while it is 1 (or ATTR_STATE_10); create_init 020C6408 clears it (tww the same) */
+  be<u8> field_0x6F5;
+  be<u8> field_0x6F6;
+  be<u8> field_0x6F7;
   be<s32> mInitialState;
-  be<s16> mRestTime, field_0x6FE, mNoGravityTime, field_0x702;
+  be<s16> mRestTime;
+  be<s16> mExplodeCcTimer;  /* was field_0x6FE: procExplode_init 020C5EF8 sets 2; procExplode 020C74A0 registers the explosion sphere (mSph at current.pos) while it counts down, then waits for mExplodeLightStep (tww the same) */
+  be<s16> mNoGravityTime;
+  be<s16> field_0x702;
   cXyz mFusePos, mFusePos2, mFusePos3;
   LIGHT_INFLUENCE mPntLight;
   BombWindInfluence mPntWind;
-  be<u8> field_0x774;
+  be<u8> mExplodeLightStep;  /* was field_0x774: procExplode_init 020C5EF8 clears it; procExplode 020C74A0: 0 brightens mExplodeLight to 1, 1 fades it to 0, then the bomb deletes itself (mDeleteReq) once it is above 1 (tww the same) */
   u8 _af9[3];
-  be<f32> field_0x778;
-  be<u8> field_0x77C, field_0x77D, field_0x77E, field_0x77F, field_0x780,
-      field_0x781, field_0x782;
+  be<f32> mExplodeLight;  /* was field_0x778: procExplode 020C74A0 eases it per mExplodeLightStep and scales the explosion's actor / BG ambient and diffuse add colours (dKy_*addcol*_set) by it; procExplode_init 020C5EF8 clears it (tww the same) */
+  be<u8> mFireEffectSet;  /* was field_0x77C: execute 020C4D84 makes the fire effect (makeFireEffect) once in STATE_4 and sets it; create_init 020C6408 clears it (tww the same) */
+  be<u8> mWaterExplodeEffDone;  /* was field_0x77D: makeWaterEffect 020C7CC0 runs once (water pillar, sound, the water explosion sphere) and sets it; draw 020C4660 hides the bomb in STATE_4 once it is set; create_init 020C6408 clears it (tww the same) */
+  be<u8> mFuseEffectSet;  /* was field_0x77E: setFuseEffect 020C584C starts the fuse sparks / smoke once and sets it; create_init 020C6408 clears it (tww the same) */
+  be<u8> mCannonFlySeOn;  /* was field_0x77F: se_cannon_fly_set 020C70DC sets it; se_cannon_fly_stop 020C5078 stops the flying sound only while it is set and clears it; create_init 020C6408 clears it (tww the same) */
+  be<u8> mThrown;  /* was field_0x780: procCarry 020C76E0 sets it when the bomb leaves the hand with speedF > 0; bound 020C71FC clears it on a ground bounce slower than 19.5; while it is set a bomb nut explodes on a CO hit (checkExplodeCc_nut 020C789C) or a wall / ground hit (checkExplodeBg_nut 020C7DC4) (tww the same) */
+  be<u8> mDeleteReq;  /* was field_0x781: checkExplodeBg_norm 020C7C34 / _nut 020C7DC4 / _cannon 020C7EEC (sinking, the cannon bomb also in the dead zone) and procExplode 020C74A0 (end) set it; execute 020C4D84 deletes the actor while it is set; procWait 020C7358 returns before bound then (tww the same) */
+  be<u8> mExplodeCcSet;  /* was field_0x782: set when the explosion sphere is first registered (procExplode_init 020C5EF8, procExplode 020C74A0, makeWaterEffect 020C7CC0); execute 020C4D84 counts mExplodeFrame up while it is set (tww the same) */
   u8 _b07;
-  be<s32> field_0x784;
+  be<s32> mExplodeFrame;  /* was field_0x784: execute 020C4D84 adds 1 per frame while mExplodeCcSet; get_explode_instant 020CB98C is true at 1; create_init 020C6408 clears it (tww the same) */
   cXyz mWindVec;
   u8 field_0x794[0x30];
-  be<s32> mMassCounter, field_0x7C8;
+  be<s32> mMassCounter;
+  be<s32> mDrawDelay;  /* was field_0x7C8: create_init 020C6408 sets 2 for a bomb in STATE_3, else 0; draw 020C4660 draws nothing while it is above 0; set_real_shadow_flag 020C506C counts it down and keeps the real shadow at 1 (tww the same) */
   s32 prm_get_state() const { return gabi::call<s32>(0x020CB8F0, this); }
   bool chk_state(s32 state) const {
     return gabi::call<bool>(0x020CB92C, this, state);
@@ -363,39 +386,39 @@ WWHD_OFFSET(daBomb_c, mBrk1, 0x550);
 WWHD_OFFSET(daBomb_c, hdExtra, 0x5CC);
 WWHD_OFFSET(daBomb_c, mCir, 0x840);
 WWHD_OFFSET(daBomb_c, mGndChk, 0x880);
-WWHD_OFFSET(daBomb_c, field_0x554, 0x8D4);
-WWHD_OFFSET(daBomb_c, field_0x558, 0x8D8);
-WWHD_OFFSET(daBomb_c, field_0x55C, 0x8DC);
-WWHD_OFFSET(daBomb_c, field_0x560, 0x8E0);
+WWHD_OFFSET(daBomb_c, mLavaY, 0x8D4);
+WWHD_OFFSET(daBomb_c, mWaterY, 0x8D8);
+WWHD_OFFSET(daBomb_c, mWaterYOld, 0x8DC);
+WWHD_OFFSET(daBomb_c, mWaterLand, 0x8E0);
 WWHD_OFFSET(daBomb_c, mbWaterIn, 0x8E1);
-WWHD_OFFSET(daBomb_c, field_0x562, 0x8E2);
+WWHD_OFFSET(daBomb_c, mWaterIsSea, 0x8E2);
 WWHD_OFFSET(daBomb_c, mSph, 0x920);
 WWHD_OFFSET(daBomb_c, mSmoke, 0xA4C);
 WWHD_OFFSET(daBomb_c, mSparks, 0xA64);
-WWHD_OFFSET(daBomb_c, field_0x6F0, 0xA70);
+WWHD_OFFSET(daBomb_c, mInPlayerBombCnt, 0xA70);
 WWHD_OFFSET(daBomb_c, mBombFire, 0xA72);
-WWHD_OFFSET(daBomb_c, field_0x6F3, 0xA73);
-WWHD_OFFSET(daBomb_c, field_0x6F4, 0xA74);
+WWHD_OFFSET(daBomb_c, mNoHit, 0xA73);
+WWHD_OFFSET(daBomb_c, mFuseLit, 0xA74);
 WWHD_OFFSET(daBomb_c, mInitialState, 0xA78);
-WWHD_OFFSET(daBomb_c, field_0x6FE, 0xA7E);
+WWHD_OFFSET(daBomb_c, mExplodeCcTimer, 0xA7E);
 WWHD_OFFSET(daBomb_c, mNoGravityTime, 0xA80);
 WWHD_OFFSET(daBomb_c, mFusePos, 0xA84);
 WWHD_OFFSET(daBomb_c, mFusePos2, 0xA90);
 WWHD_OFFSET(daBomb_c, mFusePos3, 0xA9C);
 WWHD_OFFSET(daBomb_c, mPntWind, 0xACC);
-WWHD_OFFSET(daBomb_c, field_0x774, 0xAF8);
-WWHD_OFFSET(daBomb_c, field_0x778, 0xAFC);
-WWHD_OFFSET(daBomb_c, field_0x77C, 0xB00);
-WWHD_OFFSET(daBomb_c, field_0x77D, 0xB01);
-WWHD_OFFSET(daBomb_c, field_0x77E, 0xB02);
-WWHD_OFFSET(daBomb_c, field_0x77F, 0xB03);
-WWHD_OFFSET(daBomb_c, field_0x780, 0xB04);
-WWHD_OFFSET(daBomb_c, field_0x781, 0xB05);
-WWHD_OFFSET(daBomb_c, field_0x782, 0xB06);
-WWHD_OFFSET(daBomb_c, field_0x784, 0xB08);
+WWHD_OFFSET(daBomb_c, mExplodeLightStep, 0xAF8);
+WWHD_OFFSET(daBomb_c, mExplodeLight, 0xAFC);
+WWHD_OFFSET(daBomb_c, mFireEffectSet, 0xB00);
+WWHD_OFFSET(daBomb_c, mWaterExplodeEffDone, 0xB01);
+WWHD_OFFSET(daBomb_c, mFuseEffectSet, 0xB02);
+WWHD_OFFSET(daBomb_c, mCannonFlySeOn, 0xB03);
+WWHD_OFFSET(daBomb_c, mThrown, 0xB04);
+WWHD_OFFSET(daBomb_c, mDeleteReq, 0xB05);
+WWHD_OFFSET(daBomb_c, mExplodeCcSet, 0xB06);
+WWHD_OFFSET(daBomb_c, mExplodeFrame, 0xB08);
 WWHD_OFFSET(daBomb_c, mWindVec, 0xB0C);
 WWHD_OFFSET(daBomb_c, field_0x794, 0xB18);
 WWHD_OFFSET(daBomb_c, mMassCounter, 0xB48);
-WWHD_OFFSET(daBomb_c, field_0x7C8, 0xB4C);
+WWHD_OFFSET(daBomb_c, mDrawDelay, 0xB4C);
 WWHD_SIZE(daBomb_fuseSmokeEcallBack, 0x18);
 WWHD_SIZE(daBomb_fuseSparksEcallBack, 0xC);

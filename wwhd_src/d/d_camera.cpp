@@ -56,8 +56,8 @@ u8 dCamera_c::Pause() { return mPause; }
 
 /* 024F8D4C */
 static bool dCamForcusLine_Off(dCamForcusLine* i_this) {
-    i_this->m49 = 0;
-    return true; /* m49 == 0 */
+    i_this->mbOn = 0;
+    return true; /* mbOn == 0 */
 }
 
 /* cXyz copy construction into the return slot (allocates when the slot is NULL) */

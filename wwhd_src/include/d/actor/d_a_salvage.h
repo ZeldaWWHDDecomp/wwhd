@@ -207,18 +207,18 @@ struct daSalvage_c : fopAc_ac_c {
     /* 0x3f8 */ gptr<mDoExt_brkAnm> mpBrk;
     /* 0x3fc */ gptr<mDoExt_btkAnm> mpBtk;
     /* 0x400 */ gptr<salvage_actor::Emitter> mEmitter;
-    /* 0x404 */ be<s8> m2E8; // HD: mPreviousRoom
-    /* 0x405 */ be<u8> m2E9, m2EA;
+    /* 0x404 */ be<s8> mPrevRoomNo;  /* was m2E8: CreateInit 02465914 stores the start room; _create 02465A8C, on a room change, stores the old mNowRoomNo (tww getSRoomNo()); never read in WWHD or tww; HD: mPreviousRoom */
+    /* 0x405 */ be<u8> mOrderType, mInitDone;  /* mOrderType was m2E9: proc_wait 02467364: 1 / 2 get item (crane left / right), 3 / 4 nothing found (left / right); eventOrder 024662F0 orders the event it selects; checkOrder 02465EC4 starts the salvage for the matching event and clears it; mInitDone was m2EA: CreateInit 02465914 sets 1 (tww true); _delete 02465C68 stops mEmitter and cleans up only while it is set (tww the same) */
     u8 pad407;
-    /* 0x408 */ be<u32> m2EC;
+    /* 0x408 */ be<u32> mTboxId;  /* was m2EC: checkOrder 02465EC4: process ID of the fpcNm_SALVAGE_TBOX_e chest it creates at the crane top; checks it exists after mSearchWait and deletes it at the end; proc_wait_init 02465E9C sets -1 */
     /* 0x40c */ be<s16> mSalvageGetItemEventIdx, mSalvageHazureEventIdx, mSlvgGetItemLeftEventIdx,
         mEventIdx;
     /* 0x414 */ be<s8> mStayNo;
     u8 pad415[3];
-    /* 0x418 */ be<s32> m2FC;
-    /* 0x41c */ be<u8> mRndDepthIdx, m301, m302;
+    /* 0x418 */ be<s32> mShowDelay;  /* was m2FC: onSalvageForOship 024679F4 sets 90 when it moves a point under the ship; calcAlpha 02466578 counts it down outside events and keeps kind 2 points hidden while it is not 0 (tww the same) */
+    /* 0x41c */ be<u8> mRndDepthIdx, mHasSbox, mSearchWait;  /* mHasSbox was m301: checkOrder 02465EC4: 1 when the fpcNm_SBOX_e box was created with the chest (get item events), 0 for the nothing-found events and after the cleanup; the existence check and cleanup include mSboxId only while set; mSearchWait was m302: checkOrder 02465EC4 sets 99 when the salvage starts and counts it down; at 0 it checks that mTboxId / mSboxId still exist and resets the event otherwise */
     u8 pad41f;
-    /* 0x420 */ be<u32> m304;
+    /* 0x420 */ be<u32> mSboxId;  /* was m304: checkOrder 02465EC4: process ID of the fpcNm_SBOX_e box created at the crane top (or -1); checked and deleted with mTboxId */
     /* 0x424 */ be<s16> mProcAdjustment, mProcIndex;
     /* 0x428 */ be<u32> mProc;
 };

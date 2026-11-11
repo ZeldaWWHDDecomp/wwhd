@@ -126,7 +126,7 @@ WWHD_OFFSET(Dr2Btd, mJointPos, 0x424);
 struct daDr2_HIO_c {
     /* 0x00 */ be<s8> mNo;
     /* 0x01 */ u8 _01[3];
-    /* 0x04 */ be<f32> m08;
+    /* 0x04 */ be<f32> mScale;  /* was m08: daDr2_Execute 0212B3D0: scale.x/y/z are set to it every frame (tww the same) */
     /* 0x08 */ be<u32> __vtbl;
 };
 WWHD_SIZE(daDr2_HIO_c, 0xC);

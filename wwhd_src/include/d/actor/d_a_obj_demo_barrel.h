@@ -68,10 +68,10 @@ public:
     /* 0x3B4 */ gptr<J3DModel> mpModel;
     /* 0x3B8 */ gptr<mDoExt_McaMorf> mpMorf;
     /* 0x3BC */ u8 m2A0[0x3EC - 0x3BC];
-    /* 0x3EC */ cXyz m2D0;
-    /* 0x3F8 */ be<s16> m2DC;
-    /* 0x3FA */ be<s16> m2DE;
+    /* 0x3EC */ cXyz mSplashPos;  /* was m2D0: setParticleSibuki 02334098: current.pos with y from dBgS_ObjGndChk_Wtr_Func (the water surface), the position of the HAMON / SUIMEN / MIZUBASHIRA / SHIBUKI splash particles (tww the same) */
+    /* 0x3F8 */ be<s16> mUnbroken;  /* was m2DC: daObj_Demo_BarrelCreate 02333EB4 sets 1; daObj_Demo_BarrelExecute 02334294 clears it at demo prm id 1 (onCollect, setParticleHahen: the barrel breaks); daObj_Demo_BarrelDraw 02334494 draws only while set (tww the same) */
+    /* 0x3FA */ be<s16> mSplashDone;  /* was m2DE: daObj_Demo_BarrelCreate 02333EB4 clears it; daObj_Demo_BarrelExecute 02334294 calls setParticleSibuki once at demo prm id 2 and sets it (tww the same) */
 };
-WWHD_OFFSET(daObj_Demo_Barrel_c, m2D0, 0x3EC);
-WWHD_OFFSET(daObj_Demo_Barrel_c, m2DE, 0x3FA);
+WWHD_OFFSET(daObj_Demo_Barrel_c, mSplashPos, 0x3EC);
+WWHD_OFFSET(daObj_Demo_Barrel_c, mSplashDone, 0x3FA);
 WWHD_SIZE(daObj_Demo_Barrel_c, 0x3FC);

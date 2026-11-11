@@ -274,24 +274,24 @@ f64 dDemo_actor_c::getPrm_Morf() {
     // HD: these parameter bytes are unsigned; the GameCube fields are signed.
     switch (type) {
     case ID_UNK_1:
-        if (mPrm.field_0x54 >= 4)
-            return f32(data->field_0x4);
+        if (mPrm.mDataSize >= 4)
+            return f32(data->mMorfPrm1);
         break;
     case ID_UNK_2:
-        if (mPrm.field_0x54 >= 7)
-            return f32(data->field_0x7);
+        if (mPrm.mDataSize >= 7)
+            return f32(data->mMorfPrm2);
         break;
     case ID_UNK_4:
-        if (mPrm.field_0x54 >= 6)
-            return f32(data->field_0x6);
+        if (mPrm.mDataSize >= 6)
+            return f32(data->mMorfPrm4);
         break;
     case ID_UNK_5:
-        if (mPrm.field_0x54 >= 0xB)
-            return f32(data->field_0xb);
+        if (mPrm.mDataSize >= 0xB)
+            return f32(data->mMorfPrm5);
         break;
     case ID_UNK_6:
-        if (mPrm.field_0x54 >= 0xF)
-            return f32(data->field_0xf);
+        if (mPrm.mDataSize >= 0xF)
+            return f32(data->mMorfPrm6);
         break;
     }
     return l_zero;
@@ -398,7 +398,7 @@ void dDemo_actor_c::JSGSetData(u32 a, const void* b, u32 c) {
     u16 flags = mFlags;
     mPrm.mId = a;
     mPrm.mData = static_cast<u8*>(const_cast<void*>(b));
-    mPrm.field_0x54 = c;
+    mPrm.mDataSize = c;
     mFlags = flags | ENABLE_UNK_e;
 }
 
@@ -1249,7 +1249,7 @@ dDemo_prm_c* dDemo_prm_ct(dDemo_prm_c* self) {
         self = static_cast<dDemo_prm_c*>(operator_new(sizeof(dDemo_prm_c)));
     if (self) {
         self->mId = 0;
-        self->field_0x54 = 0;
+        self->mDataSize = 0;
         self->mData = nullptr;
     }
     return self;

@@ -17,7 +17,7 @@ struct dScnOpen_c : scene_class {
     /* 0x1C8 */ request_of_phase_process_class mPhs;
     /* 0x1D0 */ gptr<void> solid_heap;
     /* 0x1D4 */ gptr<dScnOpen_proc_c> mpProc;
-    /* 0x1D8 */ be<u8> field_0x1d4;
+    /* 0x1D8 */ be<u8> mSkipRequested;  /* was field_0x1d4: execute 025AED3C sets 1 on a skip or a button press (and stops the BGM), then changes to the game scene once the stream buffer heap is free while it is set; dScnOpen__ct 025AF024 clears it (tww the same) */
     u8 padding[3];
     /* 0x1DC */ be<u32> mStreamTimer;
     BOOL draw();
@@ -28,7 +28,7 @@ struct dScnOpen_c : scene_class {
 WWHD_OFFSET(dScnOpen_c, mPhs, 0x1c8);
 WWHD_OFFSET(dScnOpen_c, solid_heap, 0x1d0);
 WWHD_OFFSET(dScnOpen_c, mpProc, 0x1d4);
-WWHD_OFFSET(dScnOpen_c, field_0x1d4, 0x1d8);
+WWHD_OFFSET(dScnOpen_c, mSkipRequested, 0x1d8);
 WWHD_OFFSET(dScnOpen_c, mStreamTimer, 0x1dc);
 WWHD_SIZE(dScnOpen_c, 0x1e0);
 struct dScnOpen_UI {

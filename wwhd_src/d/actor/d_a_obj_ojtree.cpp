@@ -29,7 +29,7 @@ Act_c::Act_c() {
 /* 0237FDF4 */
 BOOL Act_c::CreateHeap() {
     J3DModelData* model_data = (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_OJTREE_BDL_OJTREE_e);
-    JUT_ASSERT(67, model_data != NULL);
+    JUT_ASSERT_MSG(67, model_data != NULL, "model_data != 0");
     J3DModel* model = mDoExt_J3DModel__create(model_data, 0x80000, 0x11000022);
     mpModel = model;
     return model != nullptr; /* HD: tests the returned pointer */
@@ -166,7 +166,7 @@ static void Act_c_dt(Act_c* p, s32 flags) {
 str 1002E088
 str 1002E050
 str 1002DFE8 in 0237FCD8
-str 1002E040 "model_data != NULL" renamed # HD: 0 rather than NULL.
+str 1002E040 "model_data != 0" # HD: 0 rather than NULL.
 str 1002DFFC "(phase_state == cPhs_COMPLEATE_e) || (phase_state == cPhs_ERROR_e)"
 data M_tmp_mtx 1046BAF8
 */

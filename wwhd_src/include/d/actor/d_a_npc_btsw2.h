@@ -43,24 +43,24 @@ struct daNpc_Btsw2_c : fopNpc_npc_c {
     /* 0x888 */ csXyz m714;
     u8 _88E[3];
     /* 0x891 */ be<u8> mHasAttention;
-    /* 0x892 */ be<u8> m71E;
+    /* 0x892 */ be<u8> mTalking;  /* was m71E: checkOrder 0221CFBC sets 1 on the talk command (and clears mOrderEvent); wait01 0221DC90 switches mMode to the talk (2) while it is set; talk01 0221DCB4 clears it when the box closes (tww the same); same code as daNpc_Ba1_c / daNpc_Km1_c::mTalking */
     u8 _893[5];
     /* 0x898 */ be<u8> m724;
     u8 _899[3];
     /* 0x89C */ gabi::ptmf<BOOL (daNpc_Btsw2_c::*)(void*)> mCurrActionFunc;
     /* 0x8A4 */ be<s8> mPathNo;
     /* 0x8A5 */ be<u8> m735;
-    /* 0x8A6 */ be<u8> m736;
+    /* 0x8A6 */ be<u8> mbTurnToPath;  /* was m736: talk01 0221DCB4 sets 1 when the talk ends while the actor walks (mWaitTimer 0); pathMove 0221D72C then stops (speedF 0) and turns to the next path point, clearing it and starting the walk animation (7) once within 0x10; CreateInit 0221CAEC 0 (tww the same) */
     u8 _8A7;
     /* 0x8A8 */ gptr<void> mpPath;
     /* 0x8AC */ be<s16> mFinalPathPntIdx;
-    /* 0x8AE */ be<s16> m73E;
+    /* 0x8AE */ be<s16> mStopPointCount;  /* was m73E: CreateInit 0221CAEC / pathMove 0221D72C (when a stop ends) set 1-3 (1 + cM_rndF(3)); pathMove counts it down at each reached path point and stops at the point where it is 0 (tww the same) */
     /* 0x8B0 */ be<s16> mPathPntIdx;
-    /* 0x8B2 */ be<s16> m742;
-    /* 0x8B4 */ be<s8> m744;
-    /* 0x8B5 */ be<s8> m745;
-    /* 0x8B6 */ be<s8> m746;
-    /* 0x8B7 */ be<s8> m747;
+    /* 0x8B2 */ be<s16> mWaitTimer;  /* was m742: CreateInit 0221CAEC 90-390; pathMove 0221D72C: while it is above 0 the actor stands (counts it down, walk animation at 0), set to HIO mWaitTimeBase + cM_rndF(mWaitTimeRange) at each stop; talk01 0221DCB4 tests it for 0 (tww the same) */
+    /* 0x8B4 */ be<s8> mBtpIdx;  /* was m744: CreateHeap 0221C790 sets 0; tww initTexPatternAnm loads l_btp_ix_tbl[it] (WWHD's initTexPatternAnm 0221C68C always takes entry 0); after tww's use */
+    /* 0x8B5 */ be<s8> mAnmIdx;  /* was m745: setAnm 0221D410 returns when the new animation equals it (or it is -1), stores it and loads l_bck_ix_tbl[it]; m_jnt.mbHeadLock while it is 7 / 8; anmAtr 0221D5FC / pathMove 0221D72C test it (tww the same); same role as daNpc_Mk_c::mAnmIdx */
+    /* 0x8B6 */ be<s8> mOrderEvent;  /* was m746: wait01 0221DC90 sets 2, eventOrder 0221CFFC orders the speak event at 1 and sets dEvtCmd_INTALK_e at 1 / 2; checkOrder 0221CFBC clears it on the talk command; wait_action 0221DD2C clears it each frame (tww the same); same code as daNpc_Ba1_c / daNpc_Km1_c::mOrderEvent */
+    /* 0x8B7 */ be<s8> mMode;  /* was m747: wait_action 0221DD2C sets 1 at the start and runs wait01 + pathMove at 1, talk01 at 2; wait01 0221DC90 sets 2 (talk), talk01 0221DCB4 1; setAnm 0221D410 picks the morf / speed / loop mode from a_*_tbl[it]; lookBack 0221DAD8 looks only at 1 / 2 (turns at 2) (tww the same) */
     u8 _8B8[2];
     /* 0x8BA */ be<s8> mActionStatus;
     u8 _8BB[1];
@@ -131,14 +131,20 @@ struct daNpc_Btsw2_HIO_c {
     /* 0x00 */ be<s8> mNo;
     u8 pad1[3];
     /* 0x04 */ dNpc_HIO_c mNpc;
-    /* 0x2C */ be<s16> m30, m32;
-    /* 0x30 */ be<f32> m34, m38;
-    /* 0x38 */ be<s16> m3C, m3E;
+    /* mPathTurnMaxStep (0x2C) was m30: pathMove 0221D72C: cLib_addCalcAngleS2's maxStep while turning to the next path point; daNpc_Btsw2_HIO_construct 0221DE30 600 (tww the same, 0x258) */
+    /* mPathTurnScale (0x2E) was m32: pathMove 0221D72C: cLib_addCalcAngleS2's scale while turning to the next path point; daNpc_Btsw2_HIO_construct 0221DE30 5 (tww the same) */
+    /* 0x2C */ be<s16> mPathTurnMaxStep, mPathTurnScale;
+    /* mWalkSpeed (0x30) was m34: pathMove 0221D72C: speedF starts at it each frame; daNpc_Btsw2_HIO_construct 0221DE30 (tww 0.8f) (tww the same) */
+    /* mWalkDirSpeedRate (0x34) was m38: pathMove 0221D72C: speedF += it * (direction to the point . facing); daNpc_Btsw2_HIO_construct 0221DE30 (tww 0.95f) (tww the same) */
+    /* 0x30 */ be<f32> mWalkSpeed, mWalkDirSpeedRate;
+    /* mWaitTimeBase (0x38) was m3C: pathMove 0221D72C: mWaitTimer = it + cM_rndF(mWaitTimeRange) at each stop; daNpc_Btsw2_HIO_construct 0221DE30 90 (tww the same) */
+    /* mWaitTimeRange (0x3A) was m3E: pathMove 0221D72C: the cM_rndF range added to mWaitTimeBase for mWaitTimer; daNpc_Btsw2_HIO_construct 0221DE30 90 (tww the same) */
+    /* 0x38 */ be<s16> mWaitTimeBase, mWaitTimeRange;
     /* 0x3C */ be<u32> __vtbl;
 };
 WWHD_OFFSET(daNpc_Btsw2_HIO_c, mNpc, 4);
-WWHD_OFFSET(daNpc_Btsw2_HIO_c, m30, 0x2C);
-WWHD_OFFSET(daNpc_Btsw2_HIO_c, m34, 0x30);
+WWHD_OFFSET(daNpc_Btsw2_HIO_c, mPathTurnMaxStep, 0x2C);
+WWHD_OFFSET(daNpc_Btsw2_HIO_c, mWalkSpeed, 0x30);
 WWHD_OFFSET(daNpc_Btsw2_HIO_c, __vtbl, 0x3C);
 WWHD_SIZE(daNpc_Btsw2_HIO_c, 0x40);
 struct Btsw2HeaderZero {
@@ -229,7 +235,7 @@ WWHD_OFFSET(daNpc_Btsw2_c, mBtpAnm, 0x7F0);
 WWHD_OFFSET(daNpc_Btsw2_c, m714, 0x888);
 WWHD_OFFSET(daNpc_Btsw2_c, m724, 0x898);
 WWHD_OFFSET(daNpc_Btsw2_c, mpPath, 0x8A8);
-WWHD_OFFSET(daNpc_Btsw2_c, m745, 0x8B5);
-WWHD_OFFSET(daNpc_Btsw2_HIO_c, m38, 0x34);
-WWHD_OFFSET(daNpc_Btsw2_HIO_c, m3C, 0x38);
-WWHD_OFFSET(daNpc_Btsw2_HIO_c, m3E, 0x3A);
+WWHD_OFFSET(daNpc_Btsw2_c, mAnmIdx, 0x8B5);
+WWHD_OFFSET(daNpc_Btsw2_HIO_c, mWalkDirSpeedRate, 0x34);
+WWHD_OFFSET(daNpc_Btsw2_HIO_c, mWaitTimeBase, 0x38);
+WWHD_OFFSET(daNpc_Btsw2_HIO_c, mWaitTimeRange, 0x3A);

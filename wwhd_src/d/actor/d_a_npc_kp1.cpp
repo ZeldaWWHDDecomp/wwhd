@@ -76,7 +76,7 @@ static daNpc_Kp1_HIO_c* daNpc_Kp1_HIO_c_ct(daNpc_Kp1_HIO_c* i_this) {
     i_this->__vtbl = 0x1001CDFC;
     memcpy_g(&i_this->mPrmTbl, &a_prm_tbl, 0x1C); /* a_prm_tbl */
     i_this->mNo = -1;
-    i_this->field_0x8 = -1;
+    i_this->mRefCount = -1;
     return i_this;
 }
 
@@ -148,7 +148,7 @@ bool daNpc_Kp1_c::createInit() {
     mCyl.SetStts(&mStts);
     mCyl.Set(&dNpc_cyl_src /* dNpc_cyl_src */);
     mpMorf->setMorf(0.0f);
-    field_0x7BC = 1;
+    mbInitEyePos = 1;
     setMtx();
     return true;
 }
@@ -592,7 +592,7 @@ void daNpc_Kp1_c::lookBack() {
         break;
     }
     if (m_jnt.mbTrn != 0) { /* m_jnt.trnChk() */
-        cLib_addCalcAngleS2(&mLookAtMaxVel, l_HIO.mPrmTbl.field_12, 4, 0x800);
+        cLib_addCalcAngleS2(&mLookAtMaxVel, l_HIO.mPrmTbl.mMaxHeadTurnVel, 4, 0x800);
     } else {
         mLookAtMaxVel = 0;
     }
@@ -622,7 +622,7 @@ void daNpc_Kp1_c::setAttention() {
     attPos->x = x;
     attPos->y = y;
     attPos->z = current.pos.z;
-    if (!field_0x7BC && !mbSetEyePos) {
+    if (!mbInitEyePos && !mbSetEyePos) {
         return;
     }
     f32 z = mEyePos.z;
@@ -631,7 +631,7 @@ void daNpc_Kp1_c::setAttention() {
     f32 ey = mEyePos.y;
     eyePos.x = ex;
     eyePos.y = ey;
-    field_0x7BC = 0;
+    mbInitEyePos = 0;
 }
 
 /* 0227B700 */
@@ -935,7 +935,7 @@ BOOL daNpc_Kp1_c::_draw() {
         mDoExt_modelEntryDL(item);
     }
     /* debug leftovers: function-local static colours initialised on first use */
-    if (l_HIO.mPrmTbl.field_18) {
+    if (l_HIO.mPrmTbl.mDebug) {
         Kp1_initDebugColour(&l_red_guard, &l_red_colour, &a_red_colour);
         Kp1_initDebugColour(&l_blue_guard, &l_blue_colour, &a_blue_colour);
     }
@@ -954,8 +954,8 @@ BOOL daNpc_Kp1_c::_execute() {
         mbRanExecute = 1;
     }
     daNpc_Kp1_HIO_c::hio_prm_c& prm = l_HIO.mPrmTbl;
-    m_jnt.setParam(prm.field_8, prm.field_A, prm.field_C, prm.field_E, prm.field_0, prm.field_2,
-                   prm.field_4, prm.field_6, prm.field_10);
+    m_jnt.setParam(prm.mMaxBackboneX, prm.mMaxBackboneY, prm.mMinBackboneX, prm.mMinBackboneY, prm.mMaxHeadX, prm.mMaxHeadY,
+                   prm.mMinHeadX, prm.mMinHeadY, prm.mMaxTurnStep);
     checkOrder();
     if (demo() == 0) {
         if (dComIfGp_event_runCheck() &&

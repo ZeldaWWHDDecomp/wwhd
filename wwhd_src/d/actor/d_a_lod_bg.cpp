@@ -1,6 +1,7 @@
 // HD: LOD uses a resource-name handle and an HD member-function dispatch pair.
 // Retail member names are retained; HD also draws Dragon Roost Island extra models.
 #include "d/actor/d_a_lod_bg.h"
+#include "sead/ElementAt.h"
 using Lod = daLodbg_c;
 static LodText lodbgFile;
 static LodText lodbgModelAssert;
@@ -353,7 +354,8 @@ BOOL daLodbg_c::execDeleteWait() {
                 return 1;
             }
             play();
-            LodRoomState *roomState = &roomStates[room];
+            /* guest address arithmetic: roomStates + room * 0x22C wraps at 32 bits as on the console */
+            LodRoomState *roomState = &sead::elementAt<LodRoomState>(gabi::ea(roomStates), room);
             if (roomState->mStatus & 1) {
                 play();
                 if (!(roomState->mStatus & 4)) {

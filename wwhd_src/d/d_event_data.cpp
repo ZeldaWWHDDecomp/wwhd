@@ -1,5 +1,6 @@
 /* Event cuts, flags and special staff handlers. Verified HD behavior. */
 #include "d/d_event_data.h"
+#include "sead/ElementAt.h"
 using gabi::call_ptr;
 static const f32 zero = 0.0f;
 static const f32 one = 1.0f;
@@ -129,7 +130,7 @@ u32 dEvDtEvent_c::finish_check() {
 /* 025426C4 */
 void dEvDtEvent_c::specialStaffProc(dEvDtStaff_c* staff) {
     for (s32 i = 0; i < (s32)mNStaff; ++i)
-        staff[(u32)mStaffIdx[i]].specialProc();
+        sead::elementPtr(staff, (u32)mStaffIdx[i])->specialProc();
 }
 /* 025409B4 */
 void dEvDtStaff_c::init() {
@@ -181,13 +182,15 @@ void dEvDtBase_c::init() {
     mCutP = NULL;
     mStaffP = NULL;
 }
+// Guest EA arithmetic: mCutP + index * sizeof(dEvDtCut_c) wraps at 32 bits as on the console (a host index on a NULL
+// cut table reached host addresses past 4 GB).
 /* 02542764 */
 u32 dEvDtBase_c::advanceCutLocal(dEvDtStaff_c* staff) {
     dEvDtCut_c* cuts = mCutP.get();
-    dEvDtCut_c* cutP = &cuts[(u32)staff->mCurCutIdx];
+    dEvDtCut_c* cutP = sead::elementPtr(cuts, (u32)staff->mCurCutIdx);
     u32 next = cutP->mNextCutIdx;
     if (next != 0xFFFFFFFF) {
-        u32 status = cuts[next].startCheck();
+        u32 status = sead::elementPtr(cuts, next)->startCheck();
         if (status == 0xFFFFFFFF) {
             u32 flag_id = cutP->mFlagIdx;
             if (eventManager()->mFlags.flagCheck(flag_id)) {
@@ -209,7 +212,7 @@ void dEvDtBase_c::advanceCut(dEvDtEvent_c* evt) {
     for (s32 i = 0; i < (s32)evt->mNStaff; ++i) {
         u32 idx = evt->mStaffIdx[i];
         dEvDtStaff_c* staff = mStaffP.get();
-        advanceCutLocal(&staff[idx]);
+        advanceCutLocal(sead::elementPtr(staff, idx));
     }
 }
 /* 025428F8 */

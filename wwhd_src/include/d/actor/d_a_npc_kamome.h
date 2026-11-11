@@ -288,13 +288,13 @@ struct daNpc_kam_c : daPy_npc_c {
     u32 isNoBgCheck() { return mHitFlags & 0x10; }
     static void onHyoiKamome() { l_hyoi_kamome = 1; }
     static void offHyoiKamome() { l_hyoi_kamome = 0; }
-    /* daPy_npc_c inlines (m4E4) */
-    void returnLink() { m4E4 = m4E4 | 1; }
-    void offReturnLink() { m4E4 = m4E4 & ~1u; }
-    u32 isReturnLink() { return m4E4 & 1; }
-    void onEventAccept() { m4E4 = m4E4 | 2; }
-    void offEventAccept() { m4E4 = m4E4 & ~2u; }
-    u32 isEventAccept() { return m4E4 & 2; }
+    /* daPy_npc_c inlines (mNpcFlags) */
+    void returnLink() { mNpcFlags = mNpcFlags | 1; }
+    void offReturnLink() { mNpcFlags = mNpcFlags & ~1u; }
+    u32 isReturnLink() { return mNpcFlags & 1; }
+    void onEventAccept() { mNpcFlags = mNpcFlags | 2; }
+    void offEventAccept() { mNpcFlags = mNpcFlags & ~2u; }
+    u32 isEventAccept() { return mNpcFlags & 2; }
 
     s16 XyCheckCB(int);
     BOOL callDemoStartCheck();
@@ -381,9 +381,9 @@ struct daNpc_kam_c : daPy_npc_c {
     /* 0xBA9 */ be<s8> mActionStatus;
     /* 0xBAA */ be<u8> mUnusedC06;
     /* 0xBAB */ u8 mC07[1];
-    /* 0xBAC */ be<s16> mC08;
-    /* 0xBAE */ be<s16> mC0A;
-    /* 0xBB0 */ be<s16> mC0C;
+    /* 0xBAC */ be<s16> mActionTimer;  /* was mC08: the current action's timer: setAction 0225DDF0 clears it on every action change; waitPlayerAction 02260510 sets 60-150 at the start and, counted to 0, plays the sing animation and restarts at 90-180; damagePlayerAction 022608A4 sets 30 and returns Link at 0 (tww the same; tww waitNpcAction also times its wander phases with it) */
+    /* 0xBAE */ be<s16> mTurnTargetAngleY;  /* was mC0A: setAction 0225DDF0 / waitPlayerAction 02260510 clear it, never read in WWHD (the HD waitNpcAction 02260220 waits hidden and no longer wanders); after tww waitNpcAction, which picks it from l_turn_angleY and steers to it in the turn phase */
+    /* 0xBB0 */ be<s16> mIdleAnmTimer;  /* was mC0C: setAction 0225DDF0 clears it, never read in WWHD (the HD waitNpcAction 02260220 no longer wanders); after tww waitNpcAction, which counts it down and plays a random idle animation (l_anm_type) at 0, restarting it at 10-90 */
     /* 0xBB2 */ be<s16> mUnusedC0E;
     /* 0xBB4 */ u8 mC10[4];
     /* 0xBB8 */ be<f32> mUnusedC14;
@@ -424,7 +424,7 @@ struct KamomeAnmPrm {
     be<s32> mLoopMode;
     be<f32> mMorf;
     be<f32> mPlaySpeed;
-    be<s32> m10;
+    be<s32> mStartAtEnd;  /* was m10: setAnm 022602DC: when it is negative the new bck starts at its end frame (setFrame(getEndFrame())); static l_anmPrm (all three entries 0), never written (tww setAnm the same; as OsMainAnmPrm::mStartAtEnd) */
 };
 struct KamomeAnmTbl { be<s8> mBckFileIdx; be<s8> mSoundFileIdx; };
 WWHD_SIZE(KamomeAnmPrm, 0x14);

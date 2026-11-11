@@ -49,18 +49,18 @@ u8 Btsw_getNextNo(u8 previous_no);
 struct SwMail2_c {
     /* 0x00 */ BtswActionFunc mFunc;
     /* 0x08 */ gptr<J3DModel> mpModel;
-    /* 0x0C */ mDoExt_btpAnm field_0x10; /* mDoExt_btpAnm (GameCube field_0x10) */
-    /* 0x80 */ cXyz field_0x24;          /* GameCube field_0x24 */
+    /* 0x0C */ mDoExt_btpAnm mMailBtpAnm;  /* was field_0x10: MailCreateInit 022181EC sets it up with the letter's texture pattern; SwMail2_c::draw 022197C8 enters it at mBoxNo (tww the same) */
+    /* 0x80 */ cXyz mPos;  /* was field_0x24: init 02217E74 starts it below the camera point; Appear 02219C1C / Wait 02219D88 / Throw 02219F20 / End 0221A1E0 move it; set_mtx 02217D98 / set_mtx_throw 022199FC place the model at it plus mPosOffset (tww the same) */
     /* 0x8C */ cXyz field_0x30;          /* GameCube field_0x30 (throw target, then velocity) */
-    /* 0x98 */ cXyz field_0x3C;          /* GameCube field_0x3C */
-    /* 0xA4 */ csXyz field_0x48;         /* GameCube field_0x48 */
+    /* 0x98 */ cXyz mPosOffset;  /* was field_0x3C: init 02217E74 zero; Throw 02219F20 raises its y in an arc while the letter flies, End 0221A1E0 eases it back to zero; set_mtx 02217D98 / set_mtx_throw 022199FC add it to mPos (tww the same) */
+    /* 0xA4 */ csXyz mAngle;  /* was field_0x48: the letter model's rotation: set_mtx 02217D98 (ZXY) / set_mtx_throw 022199FC (X, Y) rotate by it; Appear / Wait / Throw / End turn it (tww the same) */
     /* 0xAA */ csXyz field_0x4E;         /* GameCube field_0x4E */
-    /* 0xB0 */ be<u8> field_0x54;        /* GameCube field_0x54: the letter's box (texture frame) */
-    /* 0xB1 */ be<u8> field_0x55;        /* GameCube field_0x55: the box it was thrown at */
-    /* 0xB2 */ be<u8> field_0x56;        /* GameCube field_0x56 */
+    /* 0xB0 */ be<u8> mBoxNo;  /* was field_0x54: the box the letter belongs to (the texture frame): MailCreateInit 022181EC / init 02217E74 0, DummyInit 02218114 / AppearInit 02219B24 getNextNo; Throw 02219F20 scores when it equals mThrownBoxNo; draw 022197C8 enters mMailBtpAnm at it (tww the same) */
+    /* 0xB1 */ be<u8> mThrownBoxNo;  /* was field_0x55: ThrowInit 02219EA0 stores the box the cursor threw the letter at; Throw 02219F20 / End 0221A1E0 compare it with mBoxNo (right / wrong); init 02217E74 0 (tww the same) */
+    /* 0xB2 */ be<u8> mThrowPhase;  /* was field_0x56: ThrowInit 02219EA0 / init 02217E74 / AppearInit 02219B24 0; Throw 02219F20 moves the letter to the throw start while 0 and sets 1 to fly it to the box (tww the same) */
     /* 0xB3 */ u8 _B3;
-    /* 0xB4 */ gptr<cXyz> field_0x58; /* GameCube field_0x58 */
-    /* 0xB8 */ gptr<cXyz> field_0x5C; /* GameCube field_0x5C */
+    /* 0xB4 */ gptr<cXyz> mpCamCenter;  /* was field_0x58: MailCreateInit 022181EC stores &mSwCam.mCenter there (CreateHeap 022182F4 passes it first); Appear 02219C1C / Wait 02219D88 / Throw 02219F20 turn the letter by cLib_targetAngleY(it, mpCamEye), Appear / Wait place the letter 120 from mpCamEye towards it (tww the same; tww's accessor getEyeP() returns this point, its getEyeP / getCenterP names are swapped: dCamera_c::Set takes (center, eye)) */
+    /* 0xB8 */ gptr<cXyz> mpCamEye;  /* was field_0x5C: MailCreateInit 022181EC stores &mSwCam.mEye there (CreateHeap 022182F4 passes it second); init 02217E74 / DummyInit 02218114 / AppearInit 02219B24 start the letter 200 below it; Appear 02219C1C / Wait 02219D88 place the letter 120 from it towards mpCamCenter; Throw 02219F20 starts the throw from it (tww the same; tww's accessor getCenterP() returns this point, its getEyeP / getCenterP names are swapped: dCamera_c::Set takes (center, eye)) */
 
     BOOL MailCreateInit(cXyz*, cXyz*);
     static u8 getNextNo(u8 previous_no) { return Btsw_getNextNo(previous_no); }
@@ -81,18 +81,18 @@ struct SwMail2_c {
     void move();
     void draw(void* tevStr);
 };
-WWHD_OFFSET(SwMail2_c, field_0x24, 0x80);
-WWHD_OFFSET(SwMail2_c, field_0x5C, 0xB8);
+WWHD_OFFSET(SwMail2_c, mPos, 0x80);
+WWHD_OFFSET(SwMail2_c, mpCamEye, 0xB8);
 WWHD_SIZE(SwMail2_c, 0xBC);
 
 /* SwCam2_c (0x20) */
 struct SwCam2_c {
-    /* 0x00 */ cXyz field_0x00; /* getEyeP() */
-    /* 0x0C */ cXyz field_0x0C; /* getCenterP() */
-    /* 0x18 */ be<f32> field_0x18;
-    /* 0x1C */ be<s8> field_0x1C;
-    /* 0x1D */ be<s8> field_0x1D;
-    /* 0x1E */ be<u8> field_0x1E;
+    /* 0x00 */ cXyz mCenter;  /* was field_0x00: the camera's centre: daNpc_Btsw_c_ct 022186EC / talk01 0221ACDC load it from camera_center_data[0][1]; SwCam2_c::Move 0221949C eases it to camera_center_data[mAimY][mAimX + 1] and passes it as dCamera_c::Set's first argument, the center (02514F88, tww d_camera.cpp Set(cXyz center, cXyz eye, ...)) (tww the same; tww's accessor getEyeP() returns it, its getEyeP / getCenterP names are swapped) */
+    /* 0x0C */ cXyz mEye;  /* was field_0x0C: the camera's eye: daNpc_Btsw_c_ct 022186EC / talk01 0221ACDC load it from camera_eye; SwCam2_c::Move 0221949C passes it as dCamera_c::Set's second argument, the eye (02514F88, tww d_camera.cpp Set(cXyz center, cXyz eye, ...)) (tww the same; tww's accessor getCenterP() returns it, its getEyeP / getCenterP names are swapped) */
+    /* 0x18 */ be<f32> mFovy;  /* was field_0x18: talk01 0221ACDC 58.0; SwCam2_c::Move 0221949C passes it to the camera Set as the field of view (tww the same) */
+    /* 0x1C */ be<s8> mAimX;  /* was field_0x1C: shiwake_game_action 0221B3A8 sets it to mCursorX (tww setAimIdx); SwCam2_c::Move 0221949C picks the camera_center_data column + 1 by it; talk01 0221ACDC 0 */
+    /* 0x1D */ be<s8> mAimY;  /* was field_0x1D: shiwake_game_action 0221B3A8 sets it to mCursorY (tww setAimIdx); SwCam2_c::Move 0221949C picks the camera_center_data row by it; talk01 0221ACDC 0 */
+    /* 0x1E */ be<u8> mbActive;  /* was field_0x1E: talk01 0221ACDC sets 1 (tww ActiveOn) at the game-start message; shiwake_game_action 0221B3A8 0 at the end (ActiveOff); SwCam2_c::Move 0221949C drives the camera only while it is set (tww the same) */
     /* 0x1F */ u8 _1F;
     void Move();
 };
@@ -143,47 +143,47 @@ struct daNpc_Btsw_c : fopNpc_npc_c {
     /* 0x7DD */ be<s8> m_handR;
     /* 0x7DE */ u8 _7DE[2];
     /* 0x7E0 */ u8 mPhs[8];
-    /* 0x7E8 */ gptr<J3DModel> field_0x6D0;  /* GameCube field_0x6D0 */
-    /* 0x7EC */ BtswLetterLight field_0x6D4; /* dKy_tevstr_c (GameCube field_0x6D4) */
+    /* 0x7E8 */ gptr<J3DModel> mpLetterModel;  /* was field_0x6D0: CreateHeap 022182F4 creates it from the letter model data; set_mtx 02218958 places it; _draw 02219840 lights it with mLetterTevStr and draws it (tww the same) */
+    /* 0x7EC */ BtswLetterLight mLetterTevStr;  /* was field_0x6D4: CreateInit 02218D58 dKy_tevstr_init; _draw 02219840 sets it up for the actor, overrides mColorK0 / mColorC0 and lights mpLetterModel with it (tww the same) */
     /* 0xA14 */ gptr<J3DAnmTexPattern> m_head_tex_pattern;
-    /* 0xA18 */ mDoExt_btpAnm field_0x7E8; /* GameCube field_0x7E8 */
-    /* 0xA8C */ be<u8> field_0x7FC;        /* GameCube field_0x7FC */
+    /* 0xA18 */ mDoExt_btpAnm mBtpAnm;  /* was field_0x7E8: initTexPatternAnm 02217C94 sets it up with m_head_tex_pattern; _draw 02219840 enters it at mBtpFrame and removes it (tww the same) */
+    /* 0xA8C */ be<u8> mBtpFrame;  /* was field_0x7FC: initTexPatternAnm 02217C94 0; playTexPatternAnm 0221914C steps it through m_head_tex_pattern's frames once mBlinkTimer runs out; _draw 02219840 enters mBtpAnm at it (tww the same); same role as daNpc_Btsw2_c::mBtpFrame */
     /* 0xA8D */ u8 _A8D[3];
     /* 0xA90 */ SwMail2_c mSwMail0, mSwMail1, mSwMail2;
-    /* 0xCC4 */ gptr<SwMail2_c> field_0x920[3]; /* GameCube field_0x920 */
-    /* 0xCD0 */ be<u8> field_0x92C;             /* GameCube field_0x92C */
+    /* 0xCC4 */ gptr<SwMail2_c> mpMails[3];  /* was field_0x920: the three sorting-game letters (mSwMail0-2): shiwake_game_action 0221B3A8 inits, appears, throws and moves them; checkNextMailThrowOK 0221B300 tests the next one's proc; _draw 02219840 draws them while mbDrawMails is set (tww the same) */
+    /* 0xCD0 */ be<u8> mMailIdx;  /* was field_0x92C: shiwake_game_action 0221B3A8 0 at the start, throws mpMails[it] and moves on to the next (0-2); checkNextMailThrowOK 0221B300 looks one past it (tww the same) */
     /* 0xCD1 */ u8 _CD1[3];
     /* 0xCD4 */ SwCam2_c mSwCam;
     /* 0xCF4 */ be<s16> field_0x950;
-    /* 0xCF6 */ be<u8> field_0x952;  /* GameCube field_0x952 */
-    /* 0xCF7 */ be<u8> field_0x953;  /* GameCube field_0x953 */
-    /* 0xCF8 */ be<s16> field_0x954; /* GameCube field_0x954 */
+    /* 0xCF6 */ be<u8> mbTimerCreated;  /* was field_0x952: shiwake_game_action 0221B3A8 creates the game timer (and starts the minigame) only while it is 0, then sets 1; 0 at the action's end and in CreateInit 02218D58 (tww the same) */
+    /* 0xCF7 */ be<u8> mbDrawMails;  /* was field_0x953: shiwake_game_action 0221B3A8 sets 1 when the game starts and 0 at the action's end; _draw 02219840 draws mpMails only while it is set; CreateInit 02218D58 0 (tww the same) */
+    /* 0xCF8 */ be<s16> mBlinkTimer;  /* was field_0x954: initTexPatternAnm 02217C94 0; playTexPatternAnm 0221914C holds the head pattern while it counts down and restarts it at 30-130 (tww the same); same role as daNpc_Ba1_c::mBlinkTimer */
     /* 0xCFA */ u8 _CFA[2];
     /* 0xCFC */ be<u32> mpShopCursor;
     /* 0xD00 */ cXyz mAttPos;
     /* 0xD0C */ u8 _D0C[2];
-    /* 0xD0E */ be<s16> field_0x96A; /* GameCube field_0x96A */
+    /* 0xD0E */ be<s16> mLookAtMaxVel;  /* was field_0x96A: lookBack 0221AA40: cLib_addCalcAngleS2 moves it toward the HIO mMaxHeadTurnVel while turning (else 0) and passes it as the look-at speed (tww the same); same code as daNpc_Ba1_c::mLookAtMaxVel */
     /* 0xD10 */ u8 _D10[2];
     /* 0xD12 */ csXyz field_0x96E; /* GameCube field_0x96E */
     /* 0xD18 */ u8 _D18[4];
-    /* 0xD1C */ BtswSTControl field_0x978; /* GameCube field_0x978 */
-    /* 0xD44 */ be<s8> field_0x9A0;        /* GameCube field_0x9A0 */
-    /* 0xD45 */ be<s8> field_0x9A1;        /* GameCube field_0x9A1 */
+    /* 0xD1C */ BtswSTControl mStickControl;  /* was field_0x978: the STControl: CreateInit 02218D58 / _execute 02219618 setWaitParm on it (tww shiwake_game_action reads the cursor triggers from it; WWHD reads the pad trigger words instead) */
+    /* 0xD44 */ be<s8> mCursorX;  /* was field_0x9A0: shiwake_game_action 0221B3A8: the sorting cursor's column (-1..1), 0 at the start, moved left / right, picks the cursor and aim position and the box number (tww the same) */
+    /* 0xD45 */ be<s8> mCursorY;  /* was field_0x9A1: shiwake_game_action 0221B3A8: the sorting cursor's row (0..1), 0 at the start, moved up / down (tww the same) */
     /* 0xD46 */ u8 _D46[2];
-    /* 0xD48 */ be<s32> field_0x9A4; /* GameCube field_0x9A4 */
+    /* 0xD48 */ be<s32> mNextTimerSeMs;  /* was field_0x9A4: TimerCountDown 0221B254: plays the countdown sound once the game timer's rest time drops below it, then lowers it by 1000 (10000 above 10 s); shiwake_game_action 0221B3A8 20000 at the start (tww the same) */
     /* 0xD4C */ be<u8> mHasAttention;
-    /* 0xD4D */ be<u8> field_0x9A9; /* GameCube field_0x9A9 */
+    /* 0xD4D */ be<u8> mTalking;  /* was field_0x9A9: checkOrder 02219210 sets 1 on the talk command; wait01 0221ABCC switches mMode to the talk (2) while it is set; talk01 0221ACDC clears it when the talk ends (tww the same); same code as daNpc_Btsw2_c::mTalking */
     /* 0xD4E */ u8 _D4E[6];
-    /* 0xD54 */ be<u32> field_0x9B0; /* GameCube field_0x9B0 */
+    /* 0xD54 */ be<u32> mPendingMsgNo;  /* was field_0x9B0: shiwake_game_action 0221B3A8 stores the game-end message; getMsg 0221A840 returns it once instead of the normal message and resets it to fpcM_ERROR_PROCESS_ID_e; CreateInit 02218D58 the same (tww the same); same role as daNpc_Ds1_c::mPendingMsgNo */
     /* 0xD58 */ be<s8> field_0x9B4;
     /* 0xD59 */ u8 _D59[3];
     /* 0xD5C */ BtswActionFunc mCurrActionFunc;
-    /* 0xD64 */ be<s8> field_0x9C4;  /* GameCube field_0x9C4 */
-    /* 0xD65 */ be<s8> field_0x9C5;  /* GameCube field_0x9C5 */
-    /* 0xD66 */ be<s8> field_0x9C6;  /* GameCube field_0x9C6 */
-    /* 0xD67 */ be<s8> field_0x9C7;  /* GameCube field_0x9C7 */
-    /* 0xD68 */ be<s16> field_0x9C8; /* GameCube field_0x9C8 */
-    /* 0xD6A */ be<s8> field_0x9CA;  /* GameCube field_0x9CA */
+    /* 0xD64 */ be<s8> mBtpIdx;  /* was field_0x9C4: CreateHeap 022182F4 0; tww initTexPatternAnm loads l_btp_ix_tbl[it] (WWHD's initTexPatternAnm 02217C94 always takes entry 0); same as daNpc_Btsw2_c::mBtpIdx */
+    /* 0xD65 */ be<s8> mAnmIdx;  /* was field_0x9C5: setAnm 0221A3CC skips a repeat, stores the animation number and plays its table entries; anmAtr 0221A960 tests it (tww the same); same name as daNpc_Btsw2_c::mAnmIdx */
+    /* 0xD66 */ be<s8> mIdleLoopCount;  /* was field_0x9C6: wait01 0221ABCC counts it down at each end of the wait animation and switches between the idle animations 9 / 10 at 0 (reloads 1 or 2-5); talk01 0221ACDC / wait_action 0221AF2C 1 (tww the same) */
+    /* 0xD67 */ be<s8> mOrderEvent;  /* was field_0x9C7: eventOrder 022195A4: 1 / 2 the talk (1 orders the speak event), 3 GETMOTHERLETTER, 4 mEventIdx; checkOrder 02219210 clears it when those start (tww the same); same code as daNpc_Btsw2_c::mOrderEvent */
+    /* 0xD68 */ be<s16> mEventIdx;  /* was field_0x9C8: shiwake_game_action 0221B3A8 BTSW_TALK_SUGOI's index (-1 otherwise); eventOrder 022195A4 orders it at mOrderEvent 4; dummy_event_action 0221B03C waits for its end; CreateInit 02218D58 -1 (tww the same) */
+    /* 0xD6A */ be<s8> mMode;  /* was field_0x9CA: wait_action 0221AF2C runs wait01 at 1, talk01 at 2; wait01 0221ABCC sets 2, talk01 0221ACDC 1, shiwake_game_action 3; lookBack 0221AA40 looks at Link at 1 / 2 (tww the same); same code as daNpc_Btsw2_c::mMode */
     /* 0xD6B */ u8 _D6B[2];
     /* 0xD6D */ be<s8> mActionStatus;
     /* 0xD6E */ u8 _D6E[2];
@@ -215,16 +215,16 @@ struct daNpc_Btsw_c : fopNpc_npc_c {
     cPhs_State _create();
     BOOL CreateHeap();
 };
-WWHD_OFFSET(daNpc_Btsw_c, field_0x6D0, 0x7E8);
+WWHD_OFFSET(daNpc_Btsw_c, mpLetterModel, 0x7E8);
 WWHD_OFFSET(daNpc_Btsw_c, m_head_tex_pattern, 0xA14);
 WWHD_OFFSET(daNpc_Btsw_c, mSwMail0, 0xA90);
 WWHD_OFFSET(daNpc_Btsw_c, mSwMail1, 0xB4C);
 WWHD_OFFSET(daNpc_Btsw_c, mSwMail2, 0xC08);
-WWHD_OFFSET(daNpc_Btsw_c, field_0x920, 0xCC4);
+WWHD_OFFSET(daNpc_Btsw_c, mpMails, 0xCC4);
 WWHD_OFFSET(daNpc_Btsw_c, mSwCam, 0xCD4);
 WWHD_OFFSET(daNpc_Btsw_c, mpShopCursor, 0xCFC);
-WWHD_OFFSET(daNpc_Btsw_c, field_0x978, 0xD1C);
-WWHD_OFFSET(daNpc_Btsw_c, field_0x9B0, 0xD54);
+WWHD_OFFSET(daNpc_Btsw_c, mStickControl, 0xD1C);
+WWHD_OFFSET(daNpc_Btsw_c, mPendingMsgNo, 0xD54);
 WWHD_OFFSET(daNpc_Btsw_c, mCurrActionFunc, 0xD5C);
 WWHD_OFFSET(daNpc_Btsw_c, mActionStatus, 0xD6D);
 WWHD_SIZE(daNpc_Btsw_c, 0xD70);
@@ -234,18 +234,21 @@ struct daNpc_Btsw_HIO_c {
     be<s8> mNo;
     u8 pad01[3];
     dNpc_HIO_c mNpc;
-    be<s16> field_0x30, field_0x32, field_0x34;
+    /* mTimerLimit (+0x2C) was field_0x30: shiwake_game_action 0221B3A8 creates the game timer with it (dTimer_createTimer's u16 time; HIO default 30, tww the same) */
+    be<s16> mTimerLimit, field_0x32, field_0x34;
     be<s16> r_1, g_1, b_1, r_2, g_2, b_2;
     u8 pad3E[2];
-    be<f32> field_0x44, field_0x48, field_0x4C, field_0x50, field_0x54;
+    /* mMailThrowSpeed (+0x40) was field_0x44: SwMail2_c::Throw 02219F20: cLib_addCalcPos maxStep of the flying letter (tww the same); default 40.0 */
+    be<f32> mMailThrowSpeed, field_0x48, field_0x4C, field_0x50, field_0x54;
     be<u8> field_0x58;
     u8 pad55[3];
-    be<f32> field_0x5C;
+    /* mAnm56MorfFrames (+0x58) was field_0x5C: setAnm 0221A3CC morphs with it instead of a_morf_frame_tbl when the current animation is 5 or 6 (tww the same); default 10.0 */
+    be<f32> mAnm56MorfFrames;
     be<u32> __vtbl;
 };
 WWHD_SIZE(daNpc_Btsw_HIO_c, 0x60);
-WWHD_OFFSET(daNpc_Btsw_HIO_c, field_0x30, 0x2C);
-WWHD_OFFSET(daNpc_Btsw_HIO_c, field_0x44, 0x40);
+WWHD_OFFSET(daNpc_Btsw_HIO_c, mTimerLimit, 0x2C);
+WWHD_OFFSET(daNpc_Btsw_HIO_c, mMailThrowSpeed, 0x40);
 WWHD_OFFSET(daNpc_Btsw_HIO_c, __vtbl, 0x5C);
 
 /* addresses of this unit */

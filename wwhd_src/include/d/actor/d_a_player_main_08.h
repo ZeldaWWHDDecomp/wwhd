@@ -123,7 +123,10 @@ struct Link08AnmRatioPack {
 WWHD_OFFSET(Link08AnmRatioPack, mpAnmTransform, 4);
 WWHD_SIZE(Link08AnmRatioPack, 0x10);
 struct Link08AnmHeap {
-    be<u16> mIdx, field_0x2, field_0x4, field_0x6;
+    /* 0x0 */ be<u16> mIdx;
+    /* 0x2 */ be<u16> mPriIdx;  /* was field_0x2: view of daPy_anmHeap_c::mPriIdx (evidence in d_a_player_main_01.h) */
+    /* 0x4 */ be<u16> mDemoIdx;  /* was field_0x4: view of daPy_anmHeap_c::mDemoIdx (evidence in d_a_player_main_01.h) */
+    /* 0x6 */ be<u16> mDemoAnmNo;  /* was field_0x6: view of daPy_anmHeap_c::mDemoAnmNo (evidence in d_a_player_main_01.h) */
     gptr<void> m_buffer;
     gptr<JKRSolidHeap> mpAnimeHeap;
 };
@@ -145,7 +148,7 @@ inline Link08AnmRatioPack* link08UpperRatios(daPy_lk_c* player) {
     return reinterpret_cast<Link08AnmRatioPack*>(player->mAnmRatioUpper);
 }
 inline be<u8>& link08JumpCutFollowUp(daPy_lk_c* player) {
-    return *reinterpret_cast<be<u8>*>(player->m69E8);
+    return player->mStrongJumpCut;
 }
 inline Link08LineCheck& link08LineCheck(daPy_lk_c* player) {
     return *reinterpret_cast<Link08LineCheck*>(player->mLinkLinChk);

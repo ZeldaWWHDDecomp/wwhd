@@ -102,9 +102,7 @@ struct pw_class : fopEn_enemy_c {
     /* 0x49A */ be<s16> mWanderTurnTimer;  /* was m37E: action_dousa / action_big_demo 024500C0: when 0, adds a random yaw to mTargetAngleY and reloads rnd(15)+15; action_itai sets 3 and runs alpha_anime only when it is 0 */
     /* 0x49C */ be<s16> mAnmHoldTimer;  /* was m380: action_dousa mode 8 sets 2 every frame, action_itai clears; daPW_Execute 0244B3E4 plays the body animation only while it is 0 */
     /* 0x49E */ be<s16> mLanternSettleTimer;  /* was m382: action_dousa sets 5 / 3 after creating the lantern (fopAcM_create 0xC1); daPW_Execute 0244B3E4 runs kantera_atari_check and kantera_calc 0244F730 only while 0, body_atari_check 0244E960 ignores light while set */
-    /* 0x4A0 */ be<s16> m384;
-    /* 0x4A2 */ be<s16> m386;
-    /* 0x4A4 */ be<s16> m388;
+    /* 0x4A0 */ be<s16> m384[3];  /* was m384, m386, m388: tww d217e2b declares m384[4] (0x384..0x38B) and clears all four in action_dousa mode 13 (`for (i < 4) m384[i] = 0`); the fourth element is mSilentVanish below, named from its own use; our six clear loops in d_a_pw.cpp (pwM384At(actor, 0..3)) clear the same four halfwords */
     /* 0x4A6 */ be<s16> mSilentVanish;  /* was m38A: action_torituku 0244FE24 sets 1 when the possession ends (light, button or hit); action_itai mode 60/61 then skips the death sound/voice and fopAcM_createDisappear */
     /* 0x4A8 */ be<s16> mTargetAngleY;  /* was m38C: daPW_Execute 0244B3E4 turns current.angle.y toward it; set by hani_check 0244B058 (atan2 home), Line_check, Big_pow_gattai_check 0244A5A8, action_dousa wander */
     /* 0x4AA */ be<s16> mAlphaPhase;  /* was m38E: alpha_anime 0244A9E4: +0x400 per frame, the sine of it pulses mAlpha around mAlphaBase */
@@ -186,8 +184,7 @@ WWHD_OFFSET(pw_class, mWanderTurnTimer, 0x49A);
 WWHD_OFFSET(pw_class, mAnmHoldTimer, 0x49C);
 WWHD_OFFSET(pw_class, mLanternSettleTimer, 0x49E);
 WWHD_OFFSET(pw_class, m384, 0x4A0);
-WWHD_OFFSET(pw_class, m386, 0x4A2);
-WWHD_OFFSET(pw_class, m388, 0x4A4);
+static_assert(sizeof(pw_class::m384) == 6);
 WWHD_OFFSET(pw_class, mSilentVanish, 0x4A6);
 WWHD_OFFSET(pw_class, mTargetAngleY, 0x4A8);
 WWHD_OFFSET(pw_class, mAlphaPhase, 0x4AA);
@@ -591,7 +588,9 @@ struct PwPlayerActionView {
     u8 _0[0x3AC];
     be<u8> mCutType;
 };
-inline be<s16>& pwDamageTimer(pw_class* actor, u32 index) {
+/* element index (0..3) of tww's m384[4] block: m384[0..2], then mSilentVanish (was pwDamageTimer (misnamed):
+ * its only callers clear all four halfwords in a loop, as tww's action_dousa mode 13; they are not damage timers) */
+inline be<s16>& pwM384At(pw_class* actor, u32 index) {
     return *gabi::at<be<s16>>(gabi::ea(actor) + offsetof(pw_class, m384) + index * sizeof(s16));
 }
 inline be<s16>& pwTimer(pw_class* actor, u32 index) {

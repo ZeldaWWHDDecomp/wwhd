@@ -51,9 +51,9 @@ struct daWbird_c : fopAc_ac_c {
 
     /* 0x3AC */ u8 field_0x290[0x3B8 - 0x3AC]; /* GameCube 0x290 */
     /* 0x3B8 */ be<u8> mAction;
-    /* 0x3B9 */ be<u8> field_0x29D;
-    /* 0x3BA */ be<s16> field_0x29E;
-    /* 0x3BC */ be<f32> field_0x2A0;
+    /* 0x3B9 */ be<u8> mStartWindSe;  /* was field_0x29D: actionSelect 024DE55C sets it when the wind direction is decided; actionMove 024DE768 then plays JA_SE_TAKT_WIND_DEMO once and clears it (tww the same) */
+    /* 0x3BA */ be<s16> mTimer;  /* was field_0x29E: CreateInit 024DE9F0 clears it; actionSelect 024DE55C counts it up (the wind window opens at 10); setStartPos 024DE334 sets 90 and actionMove 024DE768 counts it down: the bird moves while it is above 30, the tact wind starts at 20, the move ends at 0 */
+    /* 0x3BC */ be<f32> mAccelY;  /* was field_0x2A0: setStartPos 024DE334 sets 1.0; actionMove 024DE768 adds it to speed.y every moving frame (tww the same) */
     /* 0x3C0 */ be<s16> mAngle;
     /* 0x3C2 */ be<s16> mEventIdx;
 };

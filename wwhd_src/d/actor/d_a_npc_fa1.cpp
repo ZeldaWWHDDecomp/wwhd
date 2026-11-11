@@ -70,12 +70,12 @@ static f32 Fa1_horizontalRadius(const cXyz *vector) {
 
 /* inlined into daNpc_Fa1_c::areaMove */
 static void Fa1_areaTurn(daNpc_Fa1_c *actor, s32 angle) {
-    if (!fa1_calcAreaTimer(&actor->m798)) {
-        actor->m79A = s16(u16(actor->m79A) ^ 1);
+    if (!fa1_calcAreaTimer(&actor->mWanderTimer)) {
+        actor->mWanderDir = s16(u16(actor->mWanderDir) ^ 1);
         u32 timer = fa1_randomTimer(15, 20);
-        actor->m798 = s16(u8(timer));
+        actor->mWanderTimer = s16(u8(timer));
     }
-    s32 turn = actor->m79A == 0 ? 0x2000 : -0x2000;
+    s32 turn = actor->mWanderDir == 0 ? 0x2000 : -0x2000;
     cLib_addCalcAngleS(&actor->current.angle.y, s16(u32(angle) + u32(turn)), 0x20, 0x800, 1);
 }
 
@@ -111,13 +111,13 @@ static void Fa1_copyPosition(daNpc_Fa1_c *actor, const cXyz *position) {
 
 /* inlined into daNpc_Fa1_c::bottle_baba_move */
 static void Fa1_babaPosition(daNpc_Fa1_c *actor) {
-    auto *flower = actor->m764.get();
-    f32 forward = f32(l_HIO.m50.prm.m08);
+    auto *flower = actor->mpTargetActor.get();
+    f32 forward = f32(l_HIO.mBottleBabaHio.prm.mBabaSpeed);
     actor->speedF = forward;
     gabi::Local<cXyz> difference;
     fa1_vectorSubtract(&flower->current.pos, difference.get(), &actor->current.pos);
     s32 direction = fa1_atan2s(f32(difference->x), f32(difference->z));
-    s16 turn = s16(l_HIO.m50.prm.m20);
+    s16 turn = s16(l_HIO.mBottleBabaHio.prm.mBabaAngleOffset);
     forward = actor->speedF;
     u16 angle = u16(u32(direction) + u32(s32(turn)));
     actor->current.angle.y = s16(angle);
@@ -194,8 +194,8 @@ void *daNpc_Fa1_HIO_c__ct(void *hio) {
     if (hio) {
         auto *object = static_cast<daNpc_Fa1_HIO_c *>(hio);
         object->__vtbl = l_hioVtable;
-        daNpc_Fa1_HIO2_c__ct(&object->m50);
-        daNpc_Fa1_HIO3_c__ct(&object->m78);
+        daNpc_Fa1_HIO2_c__ct(&object->mBottleBabaHio);
+        daNpc_Fa1_HIO3_c__ct(&object->mHoverHio);
         object->mNo = -1;
         // HD: copy tuning data as words, including packed signed timer fields.
         auto *words = reinterpret_cast<be<u32> *>(&object->prm);
@@ -255,12 +255,12 @@ BOOL daNpc_Fa1_c::createInit() {
 
     f32 zero = l_zero;
     u32 parameters = u32(mParameters);
-    m768.y = zero;
-    m768.x = zero;
+    mPlayerOffset.y = zero;
+    mPlayerOffset.x = zero;
     s8 type = s8(parameters);
-    m768.z = zero;
+    mPlayerOffset.z = zero;
     mStatus = 0;
-    m764 = nullptr;
+    mpTargetActor = nullptr;
     mType = type;
     bool bottle = type == Type_BABA_e || type == Type_LINK_e || type == Type_LINK_DOWN_e;
     bool hover = type == Type_HOVER_e;
@@ -279,7 +279,7 @@ BOOL daNpc_Fa1_c::createInit() {
             this->scale.x = radius;
             type = reloadedType;
         } else {
-            f32 radius = f32(l_HIO.prm.m10);
+            f32 radius = f32(l_HIO.prm.mMoveRadius);
             type = mType;
             this->scale.x = radius;
         }
@@ -384,10 +384,10 @@ BOOL daNpc_Fa1_c::checkBinCatch() {
         fopAcM_delete(this);
         return TRUE;
     }
-    s16 timer = s16(l_HIO.prm.m48);
-    f32 radius = f32(l_HIO.prm.m1C);
-    f32 lower = f32(l_HIO.prm.m24);
-    f32 upper = f32(l_HIO.prm.m20);
+    s16 timer = s16(l_HIO.prm.mCatchAngle);
+    f32 radius = f32(l_HIO.prm.mCatchHorizontalDist);
+    f32 lower = f32(l_HIO.prm.mCatchDownDist);
+    f32 upper = f32(l_HIO.prm.mCatchUpDist);
     auto *play = reinterpret_cast<dComIfG_inf_c *>(dComIfGp_get());
     fa1_attentionCatchRequest(reinterpret_cast<fa1_hd::Attention *>(&play->play.mAttention)->mCatch,
                               this, dItemNo_FAIRY_BOTTLE_e, timer, 1, radius, upper, lower);
@@ -450,18 +450,18 @@ void daNpc_Fa1_c::BGCheck() {
     if (ground == invalid) {
         f32 zero = l_zero;
         f32 one = l_one;
-        m774.x = zero;
-        m774.y = one;
-        m774.z = zero;
+        mGroundNormal.x = zero;
+        mGroundNormal.y = one;
+        mGroundNormal.z = zero;
         return;
     }
     play = reinterpret_cast<dComIfG_inf_c *>(dComIfGp_get());
     u16 index = u16(this->mGndChk.mPolyIndex);
     u16 background = u16(this->mGndChk.mBgIndex);
     u32 normal = gabi::ea(fa1_getTriPlane(&play->play.mBgS, background, index));
-    fa1_word(this->m774.x) = u32(fa1_word(gabi::at<cXyz>(normal)->x));
-    fa1_word(this->m774.y) = u32(fa1_word(gabi::at<cXyz>(normal)->y));
-    fa1_word(this->m774.z) = u32(fa1_word(gabi::at<cXyz>(normal)->z));
+    fa1_word(this->mGroundNormal.x) = u32(fa1_word(gabi::at<cXyz>(normal)->x));
+    fa1_word(this->mGroundNormal.y) = u32(fa1_word(gabi::at<cXyz>(normal)->y));
+    fa1_word(this->mGroundNormal.z) = u32(fa1_word(gabi::at<cXyz>(normal)->z));
     play = reinterpret_cast<dComIfG_inf_c *>(dComIfGp_get());
     u8 room = fa1_getRoomId(&play->play.mBgS, &this->mGndChk.cBgS_PolyInfo::mPolyIndex);
     tevStr.mRoomNo = s8(room);
@@ -477,11 +477,11 @@ void daNpc_Fa1_c::init_normal_move() {
     f32 fall = l_normalMaxFallSpeed;
     f32 gravity = l_normalGravity;
     mMode = Mode_NORMAL_MOVE_e;
-    f32 speed = f32(l_HIO.prm.m08);
+    f32 speed = f32(l_HIO.prm.mNormalSpeed);
     maxFallSpeed = fall;
     speedF = speed;
     this->gravity = gravity;
-    u16 timer = fa1_getRndValueU16(u16(l_HIO.prm.m44), 60);
+    u16 timer = fa1_getRndValueU16(u16(l_HIO.prm.mNormalTimer), 60);
     s8 type = mType;
     mTimer = timer;
     if (type == Type_AREA_e) {
@@ -495,7 +495,7 @@ void daNpc_Fa1_c::init_normal_move() {
 void daNpc_Fa1_c::normal_move() {
 
     u8 submode = mSubMode;
-    speedF = f32(l_HIO.prm.m08);
+    speedF = f32(l_HIO.prm.mNormalSpeed);
     auto *move = gabi::at<fa1_hd::MovePtmf>(gabi::ea(&moveSubProc) +
                                             u32(submode) * sizeof(fa1_hd::MovePtmf));
     (this->*(*move))();
@@ -534,7 +534,7 @@ void daNpc_Fa1_c::init_straight2() {
 /* 02234E60 */
 void daNpc_Fa1_c::straight() {
 
-    this->scale.x = f32(l_HIO.prm.m10);
+    this->scale.x = f32(l_HIO.prm.mMoveRadius);
     if (!fa1_calcMoveTimer(&mMoveTimer)) {
         gabi::Local<cXyz> difference;
         fa1_vectorSubtract(&this->current.pos, difference.get(), &this->home.pos);
@@ -580,8 +580,8 @@ void daNpc_Fa1_c::init_areaMove() {
 
     mSubMode = NormalSubMode_AREAMOVE_e;
     gravity = l_one;
-    m798 = 0;
-    m79A = 0;
+    mWanderTimer = 0;
+    mWanderDir = 0;
 }
 
 /* 02234FA4 */
@@ -603,8 +603,8 @@ void daNpc_Fa1_c::init_areaOutMove() {
 
     mSubMode = NormalSubMode_AREAOUTMOVE_e;
     gravity = l_normalGravity;
-    m798 = 0;
-    m79A = 0;
+    mWanderTimer = 0;
+    mWanderDir = 0;
 }
 
 /* 0223509C */
@@ -625,12 +625,12 @@ void daNpc_Fa1_c::areaOutMove() {
 void daNpc_Fa1_c::init_get_player_move() {
 
     mMode = Mode_PLAYER_MOVE_e;
-    u16 timer = u16(l_HIO.prm.m42);
+    u16 timer = u16(l_HIO.prm.mGetTimer);
     f32 radius = l_playerRadius;
     mTimer = timer;
-    s16 turn = s16(l_HIO.prm.m3C);
+    s16 turn = s16(l_HIO.prm.mGetOrbitSpeed);
     mMcaMorfCallback1.mNeckAngle = 0;
-    m78A = turn;
+    mOrbitSpeed = turn;
     mPlayerR = radius;
     this->current.angle.y = 0;
     auto *play = reinterpret_cast<dComIfG_inf_c *>(dComIfGp_get());
@@ -645,29 +645,29 @@ void daNpc_Fa1_c::init_get_player_move() {
 void daNpc_Fa1_c::get_player_move() {
 
     Fa1_speedAnimation(this);
-    s16 turn = m78A;
+    s16 turn = mOrbitSpeed;
     s16 angle = s16(u16(this->current.angle.y) - u16(turn));
     this->current.angle.y = angle;
-    s16 acceleration = s16(l_HIO.prm.m40);
-    s16 limit = s16(l_HIO.prm.m3E);
+    s16 acceleration = s16(l_HIO.prm.mGetOrbitAccel);
+    s16 limit = s16(l_HIO.prm.mGetOrbitSpeedMax);
     turn = s16(turn + acceleration);
     if (turn > limit) {
         turn = limit;
     }
-    m78A = turn;
+    mOrbitSpeed = turn;
     u16 orbitAngle = u16(u16(angle) + 0x4000);
     auto *play = reinterpret_cast<dComIfG_inf_c *>(dComIfGp_get());
     u16 tableAngle = orbitAngle;
     f32 radius = mPlayerR;
     f32 x = gabi::fmuls_ppc(radius, cM_ssin(tableAngle));
     auto *player = play->play.mPlayerInfo[0].mpPlayer.get();
-    m768.x = x;
+    mPlayerOffset.x = x;
     f32 z = gabi::fmuls_ppc(radius, cM_scos(tableAngle));
-    f32 y = m768.y;
-    m768.z = z;
-    m768.y = gabi::fadds_ppc(y, f32(l_HIO.prm.m0C));
+    f32 y = mPlayerOffset.y;
+    mPlayerOffset.z = z;
+    mPlayerOffset.y = gabi::fadds_ppc(y, f32(l_HIO.prm.mGetRiseSpeed));
     gabi::Local<cXyz> position;
-    fa1_vectorAdd(&player->current.pos, position.get(), &m768);
+    fa1_vectorAdd(&player->current.pos, position.get(), &mPlayerOffset);
     Fa1_copyPosition(this, position.get());
     BGCheck();
     if (!mTimer) {
@@ -680,9 +680,9 @@ void daNpc_Fa1_c::get_player_move() {
 void daNpc_Fa1_c::init_escape_move() {
 
     mMode = Mode_ESCAPE_MOVE_e;
-    gravity = f32(l_HIO.prm.m18);
-    maxFallSpeed = f32(l_HIO.prm.m14);
-    mTimer = u16(l_HIO.prm.m46);
+    gravity = f32(l_HIO.prm.mEscapeGravity);
+    maxFallSpeed = f32(l_HIO.prm.mEscapeMaxSpeed);
+    mTimer = u16(l_HIO.prm.mEscapeTimer);
 }
 
 /* 0223434C */
@@ -726,9 +726,9 @@ void daNpc_Fa1_c::escape_move() {
 void daNpc_Fa1_c::init_hover_move() {
 
     mMode = Mode_HOVER_MOVE_e;
-    f32 gravity = f32(l_HIO.m78.prm.m0C);
+    f32 gravity = f32(l_HIO.mHoverHio.prm.mHoverGravity);
     this->gravity = gravity;
-    f32 rise = f32(l_HIO.m78.prm.m08);
+    f32 rise = f32(l_HIO.mHoverHio.prm.mHoverSpeedY);
     f32 zero = l_zero;
     speedF = zero;
     maxFallSpeed = -rise;
@@ -737,8 +737,8 @@ void daNpc_Fa1_c::init_hover_move() {
 /* 0223447C */
 void daNpc_Fa1_c::hover_move() {
 
-    f32 speed = f32(l_HIO.m78.prm.m08);
-    f32 height = f32(l_HIO.m78.prm.m10);
+    f32 speed = f32(l_HIO.mHoverHio.prm.mHoverSpeedY);
+    f32 height = f32(l_HIO.mHoverHio.prm.mHoverHeight);
     position_move(height, speed);
     BGCheck();
     auto *play = reinterpret_cast<dComIfG_inf_c *>(dComIfGp_get());
@@ -762,15 +762,15 @@ void daNpc_Fa1_c::bottle_appear_move() {
 
     Fa1_speedAnimation(this);
     s16 angle = this->current.angle.y;
-    s16 turn = m78A;
-    s16 acceleration = m78E;
-    s16 limit = m78C;
+    s16 turn = mOrbitSpeed;
+    s16 acceleration = mOrbitAccel;
+    s16 limit = mOrbitSpeedMax;
     angle = s16(angle - turn);
     turn = s16(turn + acceleration);
     this->current.angle.y = angle;
-    m78A = turn;
+    mOrbitSpeed = turn;
     if (turn > limit) {
-        m78A = limit;
+        mOrbitSpeed = limit;
     }
     u16 orbitAngle = u16(u16(angle) + 0x4000);
     auto *play = reinterpret_cast<dComIfG_inf_c *>(dComIfGp_get());
@@ -779,13 +779,13 @@ void daNpc_Fa1_c::bottle_appear_move() {
     u16 tableAngle = orbitAngle;
     f32 x = gabi::fmuls_ppc(radius, cM_ssin(tableAngle));
     auto *player = play->play.mPlayerInfo[0].mpPlayer.get();
-    f32 y = gabi::fadds_ppc(f32(m768.y), vertical);
-    m768.x = x;
+    f32 y = gabi::fadds_ppc(f32(mPlayerOffset.y), vertical);
+    mPlayerOffset.x = x;
     f32 z = gabi::fmuls_ppc(radius, cM_scos(tableAngle));
-    m768.y = y;
-    m768.z = z;
+    mPlayerOffset.y = y;
+    mPlayerOffset.z = z;
     gabi::Local<cXyz> position;
-    fa1_vectorAdd(&player->current.pos, position.get(), &m768);
+    fa1_vectorAdd(&player->current.pos, position.get(), &mPlayerOffset);
     Fa1_copyPosition(this, position.get());
     f32 zero = l_zero;
     f32 fall = maxFallSpeed;
@@ -828,14 +828,14 @@ void daNpc_Fa1_c::bottle_appear_move() {
 void daNpc_Fa1_c::init_up1() {
 
     mSubMode = BottleSubMode_UP1_e;
-    mTimer = u16(l_HIO.prm.m4A);
-    maxFallSpeed = f32(l_HIO.prm.m30);
-    this->speed.y = f32(l_HIO.prm.m28);
-    f32 gravity = f32(l_HIO.prm.m34);
-    m78A = 0;
+    mTimer = u16(l_HIO.prm.mBottleTimer);
+    maxFallSpeed = f32(l_HIO.prm.mUp1MaxSpeed);
+    this->speed.y = f32(l_HIO.prm.mUp1SpeedY);
+    f32 gravity = f32(l_HIO.prm.mUp1Gravity);
+    mOrbitSpeed = 0;
     this->gravity = gravity;
-    m78C = 0;
-    m78E = 0;
+    mOrbitSpeedMax = 0;
+    mOrbitAccel = 0;
     auto *play = reinterpret_cast<dComIfG_inf_c *>(dComIfGp_get());
     auto *player = play->play.mPlayerInfo[0].mpPlayer.get();
     gabi::Local<cXyz> difference;
@@ -846,16 +846,16 @@ void daNpc_Fa1_c::init_up1() {
     f32 y = difference->y;
     gabi::Local<cXyz> horizontal;
     horizontal->y = zero;
-    m768.x = x;
-    m768.y = y;
+    mPlayerOffset.x = x;
+    mPlayerOffset.y = y;
     horizontal->x = x;
     horizontal->z = z;
-    m768.z = z;
+    mPlayerOffset.z = z;
     f32 square = PSVECSquareMag(horizontal.get());
     f32 radius = fa1_sqrtf(square);
-    z = m768.z;
+    z = mPlayerOffset.z;
     mPlayerR = radius;
-    x = m768.x;
+    x = mPlayerOffset.x;
     s32 angle = fa1_atan2s(x, z);
     this->current.angle.y = s16(u32(angle) - 0x4000);
 }
@@ -872,14 +872,14 @@ void daNpc_Fa1_c::up1() {
 void daNpc_Fa1_c::init_down() {
 
     mSubMode = BottleSubMode_DOWN_e;
-    m78C = s16(l_HIO.prm.m4C);
-    m78E = s16(l_HIO.prm.m4E);
+    mOrbitSpeedMax = s16(l_HIO.prm.mDownOrbitSpeedMax);
+    mOrbitAccel = s16(l_HIO.prm.mDownOrbitAccel);
 }
 
 /* 02235238 */
 void daNpc_Fa1_c::down() {
 
-    if (m768.y < f32(l_HIO.prm.m38)) {
+    if (mPlayerOffset.y < f32(l_HIO.prm.mDownEndY)) {
         init_up2();
     }
 }
@@ -889,7 +889,7 @@ void daNpc_Fa1_c::init_up2() {
 
     mSubMode = BottleSubMode_UP2_e;
     s8 room = s8(this->current.roomNo);
-    maxFallSpeed = f32(l_HIO.prm.m2C);
+    maxFallSpeed = f32(l_HIO.prm.mUp2MaxSpeed);
     s32 reverb = fa1_getReverb(room);
     fa1_seStart(JA_SE_OBJ_BOTTLE_FAILY, &this->current.pos, nullptr, reverb);
 }
@@ -908,7 +908,7 @@ void daNpc_Fa1_c::init_bottle_baba_wait() {
     this->speed.y = zero;
     speedF = zero;
     gravity = zero;
-    mTimer = u16(l_HIO.m50.prm.m24);
+    mTimer = u16(l_HIO.mBottleBabaHio.prm.mBabaWaitTimer);
 }
 
 /* 022347E4 */
@@ -923,19 +923,19 @@ void daNpc_Fa1_c::bottle_baba_wait() {
 void daNpc_Fa1_c::init_bottle_baba_move() {
 
     mMode = Mode_BOTTLE_BABA_MOVE_e;
-    fa1_searchByName(fpcNm_NPC_BA1_e, &m764);
-    auto *flower = m764.get();
-    mTimer = u16(l_HIO.m50.prm.m22);
-    f32 speed = f32(l_HIO.m50.prm.m08);
-    m798 = 1;
+    fa1_searchByName(fpcNm_NPC_BA1_e, &mpTargetActor);
+    auto *flower = mpTargetActor.get();
+    mTimer = u16(l_HIO.mBottleBabaHio.prm.mBabaMoveTimer);
+    f32 speed = f32(l_HIO.mBottleBabaHio.prm.mBabaSpeed);
+    mWanderTimer = 1;
     speedF = speed;
-    m79C = f32(l_HIO.m50.prm.m10);
-    m7A0 = f32(l_HIO.m50.prm.m0C);
+    mBabaDownMaxSpeed = f32(l_HIO.mBottleBabaHio.prm.mBabaMoveDownMaxSpeed);
+    mBabaUpMaxSpeed = f32(l_HIO.mBottleBabaHio.prm.mBabaMoveUpMaxSpeed);
     if (flower) {
         f32 x = f32(flower->current.pos.x);
         f32 offset = l_flowerOffsetX;
         x = gabi::fadds_ppc(x, offset);
-        flower = m764.get();
+        flower = mpTargetActor.get();
         this->current.pos.x = x;
         this->current.pos.z = f32(flower->current.pos.z);
     }
@@ -945,7 +945,7 @@ void daNpc_Fa1_c::init_bottle_baba_move() {
 /* 02234894 */
 void daNpc_Fa1_c::bottle_baba_move() {
 
-    if (!m764.get()) {
+    if (!mpTargetActor.get()) {
         init_bottle_baba_move();
         BGCheck();
         return;
@@ -956,7 +956,7 @@ void daNpc_Fa1_c::bottle_baba_move() {
                                             u32(submode) * sizeof(fa1_hd::MovePtmf));
     (this->*(*move))();
     if (submode == BottleBabaSubMode_UP2_e) {
-        auto *flower = m764.get();
+        auto *flower = mpTargetActor.get();
         f32 height = l_flowerDeleteHeight;
         f32 top = gabi::fadds_ppc(f32(flower->current.pos.y), height);
         if (this->current.pos.y > top) {
@@ -971,19 +971,19 @@ void daNpc_Fa1_c::init_bottle_baba_move2() {
     mMode = Mode_BOTTLE_BABA_MOVE2_e;
     auto *play = reinterpret_cast<dComIfG_inf_c *>(dComIfGp_get());
     auto *player = play->play.mPlayerInfo[0].mpPlayer.get();
-    m764 = player;
-    f32 speed = f32(l_HIO.m50.prm.m08);
-    m798 = 0;
+    mpTargetActor = player;
+    f32 speed = f32(l_HIO.mBottleBabaHio.prm.mBabaSpeed);
+    mWanderTimer = 0;
     speedF = speed;
-    m79C = f32(l_HIO.m50.prm.m18);
-    m7A0 = f32(l_HIO.m50.prm.m14);
+    mBabaDownMaxSpeed = f32(l_HIO.mBottleBabaHio.prm.mBabaMove2DownMaxSpeed);
+    mBabaUpMaxSpeed = f32(l_HIO.mBottleBabaHio.prm.mBabaMove2UpMaxSpeed);
     init_baba_down();
 }
 
 /* 02234A60 */
 void daNpc_Fa1_c::bottle_baba_move2() {
 
-    if (!m764.get()) {
+    if (!mpTargetActor.get()) {
         init_bottle_baba_move2();
         BGCheck();
         return;
@@ -992,7 +992,7 @@ void daNpc_Fa1_c::bottle_baba_move2() {
     auto *move = gabi::at<fa1_hd::MovePtmf>(gabi::ea(&bottleBabaSubProc) +
                                             u32(u8(mSubMode)) * sizeof(fa1_hd::MovePtmf));
     (this->*(*move))();
-    auto *flower = m764.get();
+    auto *flower = mpTargetActor.get();
     f32 height = l_playerBabaHeight;
     f32 top = gabi::fadds_ppc(f32(flower->current.pos.y), height);
     if (this->current.pos.y > top) {
@@ -1003,13 +1003,13 @@ void daNpc_Fa1_c::bottle_baba_move2() {
 /* 022346FC */
 void daNpc_Fa1_c::init_baba_down() {
 
-    f32 fall = m79C;
+    f32 fall = mBabaDownMaxSpeed;
     mSubMode = BottleBabaSubMode_BABADOWN_e;
     f32 zero = l_zero;
     u8 mode = mMode;
     this->speed.y = zero;
     maxFallSpeed = fall;
-    f32 gravity = f32(l_HIO.m50.prm.m1C);
+    f32 gravity = f32(l_HIO.mBottleBabaHio.prm.mBabaGravity);
     this->gravity = gravity;
     if (mode == Mode_BOTTLE_BABA_MOVE_e) {
         s32 reverb = fa1_getReverb(s8(this->current.roomNo));
@@ -1020,7 +1020,7 @@ void daNpc_Fa1_c::init_baba_down() {
 /* 02234CA0 */
 void daNpc_Fa1_c::baba_down() {
 
-    if (f32(this->current.pos.y) < f32(m764->current.pos.y)) {
+    if (f32(this->current.pos.y) < f32(mpTargetActor->current.pos.y)) {
         init_baba_up();
     }
 }
@@ -1029,7 +1029,7 @@ void daNpc_Fa1_c::baba_down() {
 void daNpc_Fa1_c::init_baba_up() {
 
     u8 mode = mMode;
-    f32 rise = m7A0;
+    f32 rise = mBabaUpMaxSpeed;
     mSubMode = BottleBabaSubMode_UP2_e;
     maxFallSpeed = rise;
     if (mode == Mode_BOTTLE_BABA_MOVE2_e) {
@@ -1045,7 +1045,7 @@ void daNpc_Fa1_c::init_bigelf_change() {
     u16 angle = this->current.angle.y;
     mMode = Mode_BIGELF_CHANGE_e;
     actor_status = flags | fopAcStts_UNK4000_e;
-    f32 speed = f32(l_HIO.m78.prm.m14);
+    f32 speed = f32(l_HIO.mHoverHio.prm.mBigelfSpeed);
     speedF = speed;
     u16 tableAngle = angle;
     this->speed.x = gabi::fmuls_ppc(speed, cM_ssin(tableAngle));
@@ -1059,7 +1059,7 @@ void daNpc_Fa1_c::bigelf_change() {
     gabi::Local<cXyz> difference;
     fa1_vectorSubtract(&this->home.pos, difference.get(), &this->current.pos);
     s32 direction = fa1_atan2s(f32(difference->x), f32(difference->z));
-    s16 turn = s16(l_HIO.m78.prm.m18);
+    s16 turn = s16(l_HIO.mHoverHio.prm.mBigelfAngleOffset);
     u16 angle = u16(u32(direction) + u32(s32(turn)));
     f32 speed = speedF;
     this->current.angle.y = s16(angle);
@@ -1154,7 +1154,7 @@ s32 daNpc_Fa1_c::_create() {
     cullMtx = model ? gabi::ea(&gabi::at<J3DModel>(model)->mBaseTransformMtx) : 0;
     if (s8(l_HIO.mNo) < 0) {
         // HD: the guest label retains its original Shift-JIS recovery-fairy text.
-        s32 id = fa1_hioCreateChild("Recovery fairy", &l_HIO);
+        s32 id = fa1_hioCreateChild("回復妖精", &l_HIO);
         l_HIO.mNo = s8(id);
         l_hio_counter = 1;
     } else {
@@ -1374,7 +1374,7 @@ data l_hioInitial 10019EF0
 data l_areaHioInitial 10019ED0
 data l_hoverHioInitial 10019EBC
 str 10019E5C "neck"
-str 10019E88 "Recovery fairy" renamed
+str 10019E88 "回復妖精"
 data l_one 10019E50
 data l_zero 10019E64
 data l_normalGravity 10019E68

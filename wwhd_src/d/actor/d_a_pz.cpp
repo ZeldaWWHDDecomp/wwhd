@@ -111,7 +111,7 @@ void daPz_c::_nodeWaistControl(J3DNode* i_node, J3DModel* i_model) {
     l_waistDebugAngle = (s16)(l_waistDebugAngle + 0x1000);
     s32 jntNo = J3DJoint_getJntNo(joint);
     PSMTXCopy(getAnmMtx(i_model, jntNo), mDoMtx_stack_c::get());
-    if ((u32)(m06D3 - 4) <= 2) {
+    if ((u32)(mAnm - 4) <= 2) {
         mDoMtx_ZrotM(mDoMtx_stack_c::get(), 0xDAC);
         mDoMtx_YrotM(mDoMtx_stack_c::get(), 0x5DC);
     }
@@ -121,7 +121,7 @@ void daPz_c::_nodeWaistControl(J3DNode* i_node, J3DModel* i_model) {
         mDoMtx_XrotM(mDoMtx_stack_c::get(), m_jnt.mAngles[1][1]);
         mDoMtx_ZrotM(mDoMtx_stack_c::get(), (s16)-m_jnt.mAngles[1][0]);
     }
-    if ((u32)(m06D3 - 4) <= 2) {
+    if ((u32)(mAnm - 4) <= 2) {
         mDoMtx_YrotM(mDoMtx_stack_c::get(), -0x5DC);
         mDoMtx_ZrotM(mDoMtx_stack_c::get(), -0xDAC);
     }
@@ -320,10 +320,10 @@ void daPz_c::checkOrder() {
 
     u16 cmd = eventInfo.getCommand();
     if (cmd == 2 /* dEvtCmd_INDEMO_e */) {
-        m0F82 = 0;
+        mEventType = 0;
     } else if (cmd == 1 /* dEvtCmd_INTALK_e */) {
-        if (m0F82 == 1 || m0F82 == 2) {
-            m0F82 = 0;
+        if (mEventType == 1 || mEventType == 2) {
+            mEventType = 0;
             modeProc(PROC_INIT_e, MODE_TALK);
         }
     }
@@ -332,9 +332,9 @@ void daPz_c::checkOrder() {
 /* 02453A00 */
 void daPz_c::eventOrder() {
 
-    if (m0F82 == 1 || m0F82 == 2) {
+    if (mEventType == 1 || mEventType == 2) {
         eventInfo.onCondition(dEvtCnd_CANTALK_e);
-        if (m0F82 == 1)
+        if (mEventType == 1)
             fopAcM_orderSpeakEvent(this);
     }
 }

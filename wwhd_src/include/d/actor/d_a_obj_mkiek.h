@@ -73,14 +73,14 @@ struct Act_c : dBgS_MoveBgActor {
     /* 0x3F0 */ MkiekBrkAnm mBrkAnm; // HD: brk storage occupies 0x78 bytes here.
     /* 0x468 */ dCcD_Stts mStts;
     /* 0x4A4 */ dCcD_Sph mSph;
-    /* 0x5D0 */ be<u8> m458;
+    /* 0x5D0 */ be<u8> mVanish;  /* was m458: demo_wait 02371CBC sets 1 when the wall breaks (vanish particles, switch on); Draw 0237205C then draws mpModelV with the brk animation instead of mpModel; Create 02371B3C 0 (tww the same) */
     /* 0x5D1 */ u8 _5D1;
     /* 0x5D2 */ be<s16> mDieEventIdx;
     /* 0x5D4 */ be<u32> mState;
-    /* 0x5D8 */ be<s32> m460;
+    /* 0x5D8 */ be<s32> mFrameCount;  /* was m460: check 02371C14 counts frames of light / hit, the die event at 20, else 0; demo_wait 02371CBC counts on to 20 before breaking; Create 02371B3C 0 (tww the same) */
 };
 WWHD_OFFSET(Act_c, mStts, 0x468);
 WWHD_OFFSET(Act_c, mSph, 0x4A4);
-WWHD_OFFSET(Act_c, m460, 0x5D8);
+WWHD_OFFSET(Act_c, mFrameCount, 0x5D8);
 WWHD_SIZE(Act_c, 0x5DC);
 }  // namespace daObjMkiek

@@ -80,14 +80,59 @@ ADDR)`. Fields without enough evidence keep their offset name and are listed as 
 | 0x6538 | `m6324` | `mShutterOffsetY` | obj_move 0206FC6C: y offset (+ 9800) of the S_TSHUTTER group (mp6310[3]); daBdk_Create 02069C8C sets -70, demo_camera 0206FEF0 eases it to 0 once mShutterSlide is within 1 |
 | 0x6540 | `m632C` | `mObjBgwMtx` | useHeapInit 02069428: cBgW_Set(mp63BC[i], ..., &it[i]); obj_move 0206FC6C copies each object matrix into it |
 
-Open (no name yet): `m2B4` (set 1 in daBdk_Create, cleared by demo_camera, tested in damage_check),
-`m2F8` (many timer values, several meanings), `m2FC`, `m970`, `m9EC`, `m9FC`, `mA0C`, `mF00` (mask piece motion
-terms in kamen_break_move, not separable from the use), the head swing terms `m1120` .. `m1134`, `m1138`,
-`m113A`, `m113C`, `m1140`, `m1144`/`m1150` (one is last frame's copy of the other; the meaning of m1150 differs between
-head_swing and demo_camera), `m1168` (feather effect / wind point), `m259E`,
-`m25A2`, `m25D8`, `m25DC`/`m25E8`/`m25F4`/`m2608` (kankyo_cont wind
-environment terms), `m61C4` (follow callbacks, only constructed and destroyed), the `mp`-prefixed pointers (`mp8F0`, `mp2598`,
-`mp6214`, `mp62D8`, `mp6310`, `mp63BC`, `mp63C8`; not in the census pattern), unused `m259C`/`m2600`/`m6328`.
+Named in round 2 (the crest joints are DK_JNT_J_DK_TOSAKA_A1 .. B2, rotated in nodeCallBack 02065794):
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x03D0 | `m2B4` | `mTowerBattle` | daBdk_Create 02069C8C sets 1 and then starts ACTION_T_FLY with JA_BGM_MJ_TOWER_BATTLE; demo_camera 0206FEF0 clears it when the main battle starts (ACTION_FLY, JA_BGM_DK_BATTLE); while 1 daBdk_Execute 02066A38 scales the body 0.85, kankyo_cont 0206F9E0 makes the wind spheres 600 (else 300) and damage_check (in daBdk_Execute) sends a hammer hit to ACTION_T_DOWN (tww the same; tww's create also loads fopAcM_GetParam first) |
+| 0x040C | `m2F8` | `mDamageTimer` | damage_check (in daBdk_Execute 02066A38) takes no hit while it is set and sets 0xC / 0x1E / 3 / 6 / 0x14 after a hit; t_fly 0206C3AC sets 5, end 0206BAA8 / after_fight 0206D638 10; wind_attack 0206AE64 lands at once while it is set; daBdk_Execute counts it down (as bgn_class mDamageTimer) |
+| 0x0410 | `m2FC` | `mFlyPoint` | fly (in move 0206D644): which fly home point is used (0 = 6500 / 11000 / 2600, 1 = 9800 / 12000 / -1500, 2 = -1000 / 12000 / -2900); chosen at random, then alternates 1 / 2 (20 % back to 0); at 0 the arrival always lands, at 1 / 2 a fly_attack may follow |
+| 0x0A80 | `m970` | `mMaskPieceSpeed` | kamen_demo 0206B22C sets [i] to the break direction of mask piece i (kamen_break_sd_x / z); kamen_break_move (in daBdk_Execute 02066A38) adds it to mMaskPiecePos, lowers .y by 5 per frame (gravity), bounces it on the ground and sets .x / .z from mMaskPieceSlideSpeed / mMaskPieceSlideYaw or a hit |
+| 0x0AEC | `m9EC` | `mMaskPieceRockAmp` | kamen_break_move (in daBdk_Execute 02066A38): set 3000 when mask piece i bounces, then eased to 0; the piece's z angle rocks by sin * it |
+| 0x0AFC | `m9FC` | `mMaskPieceSlideSpeed` | kamen_break_move (in daBdk_Execute 02066A38): a type-8 hit sets [i] to 7 + rnd(2); while on the ground mask piece i slides at it along mMaskPieceSlideYaw and spins its y angle by mMaskPieceSpinRate * it; eased to 0, cleared on another hit or a wall |
+| 0x0B0C | `mA0C` | `mMaskPieceSlideYaw` | kamen_break_move (in daBdk_Execute 02066A38): set from the hitting actor's shape_angle.y + rnd(+-2000) on a type-8 hit; the direction of mask piece i's mMaskPieceSlideSpeed |
+| 0x1000 | `mF00` | `mMaskPieceSpinRate` | kamen_break_move (in daBdk_Execute 02066A38): set rnd(+-200) on a type-8 hit; mask piece i's y angle turns by it * mMaskPieceSlideSpeed per frame |
+| 0x121C | `m1120` | `mTosakaYaw` | head_swing (in daBdk_Execute 02066A38) eases it to the head-velocity angle + a sway + 4500; nodeCallBack 02065794 rotates the crest joints (TOSAKA_A1 .. B2) about y by it (A side negated); daBdk_Create 02069C8C sets -2000 |
+| 0x121E | `m1122` | `mTosakaRoll` | head_swing (in daBdk_Execute 02066A38) eases it to 4; nodeCallBack 02065794 rotates the crest joints about z by it (A side negated) |
+| 0x1220 | `m1124` | `mTosakaWobbleYawB` | head_swing (in daBdk_Execute 02066A38): sin(mTosakaPhase * 1500) * mTosakaWobbleAmp; nodeCallBack 02065794 adds it to the y rotation of the B crest joints |
+| 0x1222 | `m1126` | `mTosakaWobbleRollB` | head_swing (in daBdk_Execute 02066A38): cos(mTosakaPhase * 1200) * mTosakaWobbleAmp; nodeCallBack 02065794 adds it to the z rotation of the B crest joints |
+| 0x1224 | `m1128` | `mTosakaWobbleYawA` | head_swing (in daBdk_Execute 02066A38): sin(mTosakaPhase * 1500 + 0x4000) * mTosakaWobbleAmp; nodeCallBack 02065794 adds it to the (negated) y rotation of the A crest joints |
+| 0x1226 | `m112A` | `mTosakaWobbleRollA` | head_swing (in daBdk_Execute 02066A38): cos(mTosakaPhase * 1200 + 0x4000) * mTosakaWobbleAmp; nodeCallBack 02065794 adds it to the (negated) z rotation of the A crest joints |
+| 0x1228 | `m112C` | `mTosakaHitRoll` | head_swing (in daBdk_Execute 02066A38): while mTosakaHitTimer runs, sin(frame * 7000) * the x of the hit direction (mHitAngleY) * timer * 500; nodeCallBack 02065794 adds it to the z rotation of all crest joints |
+| 0x122A | `m112E` | `mTosakaHitYaw` | head_swing (in daBdk_Execute 02066A38): while mTosakaHitTimer runs, sin(frame * 7000) * the z of the hit direction (mHitAngleY) * timer * 500; nodeCallBack 02065794 adds it to the y rotation of all crest joints |
+| 0x122C | `m1130` | `mTosakaPhase` | head_swing (in daBdk_Execute 02066A38) adds 1 per frame (2 while mTosakaWobbleTarget is above 3000): the phase of the crest sway and wobble terms |
+| 0x122E | `m1132` | `mTosakaWobbleAmp` | head_swing (in daBdk_Execute 02066A38) eases it to mTosakaWobbleTarget (step 500) and multiplies the four wobble terms by it; cleared while a hit shake runs or the swing is off |
+| 0x1230 | `m1134` | `mTosakaWobbleTarget` | head_swing (in daBdk_Execute 02066A38) eases mTosakaWobbleAmp to it and resets it to 1500 each frame; kuti_attack (in move 0206D644) sets 2500 each frame of the attack, kamen_demo 0206B22C 500, end 0206BAA8 4000 |
+| 0x1234 | `m1138` | `mTosakaHitTimer` | damage_check (in daBdk_Execute 02066A38) sets 30 on a crest hit (0 on a mask hit), kuti_attack (in move 0206D644) 30 at the beak strike frame; daBdk_Execute counts it down; head_swing shakes the crest by it (mTosakaHitRoll / mTosakaHitYaw) |
+| 0x1236 | `m113A` | `mTosakaSwingOn` | kamen_demo 0206B22C sets 1 once the mask is broken; head_swing (in daBdk_Execute 02066A38) moves the crest only while set and clears the crest terms otherwise |
+| 0x1238 | `m113C` | `mTosakaTurnRate` | head_swing (in daBdk_Execute 02066A38) eases it from 0 to 1; mTosakaYaw / mTosakaRoll move at most 4000 * it per frame |
+| 0x123C | `m1140` | `mTosakaSwayScale` | head_swing (in daBdk_Execute 02066A38) eases it from 0 to 1 once mDemoTimer passes 0x41; the sway term of mTosakaYaw is sin * -2000 * it |
+| 0x1240 | `m1144` | `mHeadPosOld` | col_set (in daBdk_Execute 02066A38) copies mHeadPos into it before updating mHeadPos; head_swing takes mHeadPos - it as the head movement |
+| 0x124C | `m1150` | `mHeadPos` | col_set (in daBdk_Execute 02066A38): the head point (ATAMA1 joint + offset), centre of mHeadTgSph; damage_check tests .y < 10000; demo_camera 0206FEF0 centres the camera on it |
+| 0x1264 | `m1168` | `mBodyCenter` | col_set (in daBdk_Execute 02066A38): current.pos + 380 in y, centre of mBodyCCSph; fly_attack 0206A610, wind_attack 0206AE64, t_down 0206D0FC, landing / kuti_attack (in move 0206D644) spawn feathers there (eff_hane_set) |
+| 0x269A | `m259E` | `mBlurRate` | daBdk_Draw 02065AB4 sets l_blur.mRate to it while above 1 and clears it at 1; t_down 0206D0FC sets 0xB4 and eases it to 1; demo_camera 0206FEF0 clears it (as bgn_class mBlurRate) |
+| 0x269E | `m25A2` | `mFinalHitHigh` | damage_check (in daBdk_Execute 02066A38) (end_set) sets 1 when health runs out while current.pos.y is at least 9810 (end state 2); demo_camera 0206FEF0 then lets the eye height follow the boss instead of keeping 9950 |
+| 0x26D4 | `m25D8` | `mDemoStepReq` | demo_camera 0206FEF0 sets 1 at given cutscene frames; start 0206B67C goes to its next state (fly up, then the S_DEMO2 animation) when it is set and clears it |
+
+HIO block daBdk_HIO_c (offsets within the struct; constructor daBdk_HIO_c_ct 0206A43C, defaults as tww):
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x01 | `m005` | `mStopMove` | daBdk_Execute 02066A38 skips the animation play, move, ground check and damage_check while set; daBdk_HIO_c_ct 0206A43C sets 0 (tww the same) |
+| 0x04 | `m008` | `mBodyScale` | daBdk_Execute 02066A38 sets actor scale and model scale to it (0.85 * it in the tower battle, mTowerBattle); daBdk_HIO_c_ct 0206A43C sets 1.0 (tww the same) |
+| 0x08 | `m00C` | `mTailScale` | daBdk_Draw 02065AB4 (tail_draw) scales each tail feather part by tial_scale * it; tail_control (in daBdk_Execute 02066A38) multiplies the part spacing by it; daBdk_HIO_c_ct 0206A43C sets 4.0 (tww the same) |
+| 0x0C | `m010` | `mTailSpacing` | tail_control (in daBdk_Execute 02066A38): the feather part spacing is 2 * 20 * (0.25 + 0.03 * i) * mTailScale * it; daBdk_HIO_c_ct 0206A43C sets 1.5 (tww the same) |
+| 0x10 | `m014` | `mForceAttack` | wait (in move 0206D644): when the wait ends, 1 always starts kuti_attack, 2 always wind_attack, 0 picks by distance; daBdk_HIO_c_ct 0206A43C sets 0 (tww the same) |
+| 0x14 | `m018` | `mWalkSpeed` | wait (in move 0206D644) state 2 (walking to the player) sets mTargetSpeed to it; daBdk_HIO_c_ct 0206A43C sets 20 (tww the same) |
+| 0x18 | `m01C` | `mWalkAnmSpeed` | wait (in move 0206D644) starts the WALK1 animation with it as the play speed; daBdk_HIO_c_ct 0206A43C sets 2.0 (tww the same) |
+| 0x1C | `m020` | `mFlySpeed` | fly (in move 0206D644) sets mTargetSpeed to it; daBdk_Create 02069C8C starts with speedF = it; daBdk_HIO_c_ct 0206A43C sets 60 (tww the same) |
+| 0x20 | `m024` | `mFlyAttackSpeed` | fly_attack 0206A610 sets mTargetSpeed to it while it chases the player; daBdk_HIO_c_ct 0206A43C sets 100 (tww the same) |
+| 0x24 | `m028` | `mTowerAttackWait` | t_fly 0206C3AC (tower battle) sets mTimers[0] to it after starting a foot attack (ATTACK_T2), the wait before the next one; daBdk_HIO_c_ct 0206A43C sets 0x2D0 (tww the same) |
+
+Open (no name yet): `m25DC` / `m25E8` / `m25F4` / `m2608` (kankyo_cont writes the position, facing direction and wind
+term every frame, wind_attack raises `m2608`; nothing in WWHD or tww reads the vectors), `m61C4` (follow callbacks, only
+constructed and destroyed), the `mp`-prefixed pointers (`mp8F0`, `mp2598`, `mp6214`, `mp62D8`, `mp6310`, `mp63BC`, `mp63C8`;
+not in the census pattern), unused `m259C` / `m2600` / `m6328`, HIO `m006` (constructor only).
 
 Tail helper struct bdk_tail_s (offsets within the struct; bdk_class mTails[4], one per tail feather chain):
 
@@ -161,8 +206,8 @@ Open in bdk_tail_s / bdk_eff_s: the padding only. The view `BdkBaseFragment` of 
 | 0x1B38 | `m18B4` | `mTargetPos` | fly_pos_move 020F9F80 flies toward it (x/y/z minus current.pos) |
 | 0x1B48 | `m18C4` | `mTurnSpeed` | end 020FEA30 sets 1000 (+REG); fly_pos_move 020F9F80: angle step = it * mTurnSpeedRate |
 | 0x1B4C | `m18C8` | `mTurnSpeedRate` | fly_pos_move 020F9F80 multiplies mTurnSpeed by it and eases it to 1 |
-| 0x1B50 | `m18CC` | `mTimers` | bwd_execute 020FA614 counts [0] / [1] down each frame (one sweep of five halfwords with mActionTimer and the two padding words, as zeldaret/tww daBwd_Execute m18CC[i] for i < 5; view Timers in d_a_bwd_execute.h); wait / reset / sita_hit / eat_attack / fly / s_fly (in move 020FF80C) and end 020FEA30 load them and act at 0 or at a given count (as bgn_class / bwds_class mTimers) |
-| 0x1B54 | `m18D0` | `mActionTimer` | wait / eat_attack / fly / s_fly (in move 020FF80C) set 0xDE / 100 / 0xB4 / 0x12E and act at 0 or at 0x50 |
+| 0x1B50 | `m18CC` | `mTimers` | bwd_execute 020FA614 counts all 5 down each frame (zeldaret/tww daBwd_Execute: m18CC[i] for i < 5; view Timers::mTimers); wait / reset / sita_hit / eat_attack / fly / s_fly (in move 020FF80C) and end 020FEA30 load [0] / [1] and act at 0 or at a given count (as bgn_class / bwds_class mTimers). Declared [5]: [2] is the former mActionTimer (m18D0), [3] / [4] the former padding (never loaded) |
+| 0x1B54 | `m18D0` | `mTimers[2]` | wait / eat_attack / fly / s_fly (in move 020FF80C) set 0xDE / 100 / 0xB4 / 0x12E and act at 0 or at 0x50 (was declared `mActionTimer`; folded into mTimers[5]) |
 | 0x1B5A | `m18D6` | `mTongueNoHitTimer` | damage_check (in bwd_execute 020FA614) checks the tongue for hits only while it is 0 and sets 6 after a hit; sita_move 5, fly (in move 020FF80C) 10; bwd_execute 020FA614 counts it down |
 | 0x1B5C | `m18D8` | `mBwdgCreated` | bwd_execute 020FA614 creates the BWDG (sand surface) actor once and sets 1 |
 | 0x1B64 | `m18E0` | `mItemId` | demo_camera 02101F30: ID of the item created at mItemPos (bwdCameraCreateItem), looked up with fopAcM_SearchByID |
@@ -220,10 +265,10 @@ Open in bdk_tail_s / bdk_eff_s: the padding only. The view `BdkBaseFragment` of 
 | 0x3EC4 | `m3C4C` | `mDemoCamShake` | fly_pos_move 020F9F80 sets 50, demo_camera 02101F30 5 / 1.5 / 2 (+ reg); demo_camera shakes the camera by it and eases it to 0 |
 | 0x3EC8 | `m3C50` | `mCamTypeState` | daBwd_Create 020FE0B4 sets 1, fly (in move 020FF80C) 2, demo_camera 02101F30 0; bwd_execute 020FA614 forces camera type "Boss03" at 2 (then 1) and "WindBoss" at 1 |
 | 0x3EC9 | `m3C51` | `mHioOwner` | daBwd_Create 020FE0B4 sets 1 when it created the l_HIO child; daBwd_Delete 020FD578 deletes the HIO child only then |
+| 0x1E1C | `m1BA4` | `mTongueSegStep` | control1 (in bwd_execute 020FA614): the forward length of the step added to every tongue segment along the body's angle (with the previous segment's offset); never written in WWHD or tww (always 0) |
 
 Open (no name yet): `m02BC` (param byte, only stored), `m02CC` / `m0324` (models created by useHeapInit, not
-used), `m03C4b`, `m18DC` (only stored), `m1BA4` (control1 reads it
-as the forward step of every tongue segment; nothing sets it, also in zeldaret/tww), `m3B3C` / `m3B40` / `m3B44`
+used), `m03C4b`, `m18DC` (only stored), `m3B3C` / `m3B40` / `m3B44`
 (only stored) and the padding. The tongue terms `mTongueTipPos` .. `mTongueRetract` were named from sita_move,
 control1 / control2 and damage_check (in bwd_execute 020FA614) and sita_hit (in move 020FF80C); `mWobblePhaseSin` /
 `mWobblePhaseCos` name the phases (as bgn move_s mPhaseSin / mPhaseCos), not what fly_pos_move does with the terms;
@@ -231,6 +276,41 @@ control1 / control2 and damage_check (in bwd_execute 020FA614) and sita_hit (in 
 mDemoCamSpeed, and the turn speed of the orbit that places mDemoCamEye). (`struct Timers` in d_a_bwd_execute.h is a
 separate view of the five-halfword timer sweep; its `mAction` was corrected to `mTimers` (misnamed); `EffectTimers::mEffect` in the same header is the ten-word view of
 `mSmokeTimer` .. `mSmokeTimer6`.)
+
+### daBwd_HIO_c (l_HIO; d_a_bwd.h)
+
+Round 3: Molgera's HIO values. In WWHD the vtable sits at the end, so each field is 4 below its GameCube name. Each is set only by daBwd_HIO_c_ct 020FE7BC (default in parentheses) and never written elsewhere in WWHD or tww; the reads are in our d_a_bwd*.cpp (wait, reset, sita_hit, eat_attack, fly and s_fly are inlined into move 020FF80C; sita_move, control1 and control2 into bwd_execute 020FA614) and match zeldaret/tww d217e2b.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x00001 | `m05` | `mNoMove` | bwd_execute 020FA614: move and the head animation run only while it is 0 (tww daBwd_Execute the same) (0) |
+| 0x00002 | `m06` | `mDebugLastHit` | sita_hit (in move 020FF80C): a tongue hit becomes the last hit (end action 12) when it is set, as at 4 tongue damage (tww the same) (0) |
+| 0x00003 | `m07` | `mDebugFlyAfterHit` | sita_hit (in move 020FF80C): after the tongue hit the action becomes fly (10) when it is set, as at 2 tongue damage (tww the same) (0) |
+| 0x00008 | `m0C` | `mWaitHeight` | wait (in move 020FF80C): current.pos.y eases to mBaseHeight + it (tww the same) (-400) |
+| 0x0000C | `m10` | `mPushPower` | bwd_execute 020FA614: the setOutPower strength (scaled down with the distance) that pushes the player away from mSandDentCenter (tww daBwd_Execute the same) (6) |
+| 0x00010 | `m14` | `mTonguePulledTime` | sita_move (in bwd_execute 020FA614): mTonguePulledTimer when the tongue is pulled (tww the same) (120) |
+| 0x00014 | `m18` | `mEatAttackDistance` | wait (in move 020FF80C): the action becomes eat_attack (5) when the player's XZ distance (mPlayerDistXZ) is below it (tww the same) (700) |
+| 0x00018 | `m1C` | `mResetDistance` | wait (in move 020FF80C): the action becomes reset (2) when mPlayerDistXZ is above it (tww the same) (3000) |
+| 0x0001C | `m20` | `mBodyScale` | bwd_execute 020FA614: the head model's scale and the factor on the body spheres' radii, except while flying / ending (tww daBwd_Execute the same) (1.3) |
+| 0x00020 | `m24` | `mHitLarvaCount` | sita_hit (in move 020FF80C): a larva (BWDS) is created on each of frames 0x30.. 0x30 + it - 1 of the dive while ko_count is below mLarvaMax (tww the same) (3) |
+| 0x00022 | `m26` | `mLarvaMax` | ko_s_sub 020F9A28 / bwd_execute 020FA614 / sita_hit (in move 020FF80C): the number of larvae (BWDS) gathered into ko_ac and the cap on creating more (tww the same) (5) |
+| 0x00024 | `m28` | `mBaseHeight` | start, wait, reset, sita_hit, eat_attack, fly, s_fly (in move 020FF80C), bwd_execute 020FA614, demo_camera 02101F30, end 020FEA30: the base height the boss, camera, larvae and platform positions are offset from (tww the same) (800) |
+| 0x00028 | `m2C` | `mPlatformHeight` | bwd_execute 020FA614: the Triforce platform model's y offset from mBaseHeight (tww daBwd_Execute the same) (-500) |
+| 0x0002C | `m30` | `mSplashScaleXZ` | bwd_execute 020FA614: the sand splash (Gsp) model's x and z scale (tww daBwd_Execute the same) (3.5) |
+| 0x00030 | `m34` | `mSplashScaleY` | bwd_execute 020FA614: the sand splash (Gsp) model's y scale (tww daBwd_Execute the same) (2) |
+
+Open (no name yet): `m08`, `m38`, `m3A`, `m3C`, `m3E` (set by the constructor only, read nowhere in WWHD or tww); padding `_05`, `_12`.
+
+### sita_s (the tongue segments mTongueSegments[32]; d_a_bwd.h)
+
+Round 3.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x00000 | `m00` | `mpModel` | useHeapInit 020FD6F8 creates the segment's model (BERO, the tip BERO_SAKI) into it; daBwd_Draw 020F9C1C draws it and sita_move (in bwd_execute 020FA614) sets its base matrix (tww the same) |
+| 0x00004 | `m04` | `mPos` | the tongue segment's position: daBwd_Create 020FE0B4 sets it, control1 / control2 (in bwd_execute 020FA614) chain each segment to its neighbour, sita_move places the model, the eye position and the tongue spheres on it (tww the same) |
+
+Open (no name yet): `m10` (u8[4], used nowhere).
 
 ## btd_class (Gohma; d_a_btd.h)
 
@@ -305,6 +385,44 @@ d_a_himo2.h (`himo2_btd_c`) use the same names. The zeldaret/tww d_a_btd.cpp (CC
 follow the uses; it has no names for these fields, and the "K MAIN COUNT" / "K SUB  COUNT" report strings are the
 original's.
 
+The view `BtdDragonHD` (d_a_btd.h) of dr2_class takes dr2_class's names (d_a_dr2.h): `m43C` -> `mFloorBroken` (end 020F52B8 sets 1 when the demo timer reaches 2), `m4A8` -> `mRockPos` (daBtd_Delete 020F34A8 deletes the sound object at it), `m4BA` -> `mRockState` (btdActionBurst (in move 020F6004) sets 10; btdActionTrack turns Gohma only while it is 0 or >= 10), `m4CA` -> `mRockFallTimer` (btdActionTrack: only while it is 0 or >= 98).
+
+### daBtd_HIO_c (l_HIO; d_a_btd.h; view BtdHioDamageHD in d_a_btd_damage.h)
+
+Round 3: Gohma's HIO values. In WWHD the vtable sits at the end, so each field is 4 below its GameCube name. Each is set only by daBtd_HIO_ct 020F4744 (default in parentheses) and never written elsewhere in WWHD or tww; the reads are in our d_a_btd.cpp / d_a_btd_damage.cpp (the btdAction* and btdExec* helpers are inlined into daBtd_Execute 020F1494) and match zeldaret/tww d217e2b. The view BtdHioDamageHD takes the class's names.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x01 | `m05` | `mNoAnmPlay` | daBtd_Execute 020F1494: the body morf plays only while it is 0 (tww the same) (0) |
+| 0x02 | `m06` | `mDebugBreak` | btdActionBreakShell (inlined into daBtd_Execute 020F1494): when set the crack stage goes straight to 3; damage_check 020F4D80 (d_a_btd_damage.cpp): when set any hit counts as the last one (tww the same) (0) |
+| 0x03 | `m07` | `mDebugNoBreak` | btdActionBreakShell (inlined into daBtd_Execute 020F1494): when set a crack stage of 3 or more is held at 2 (tww damage the same) (0) |
+| 0x04 | `m08` | `mScale` | daBtd_Execute 020F1494: scale (x, y, z) and the model base scale (tww the same) (1.0) |
+| 0x08 | `m0C` | `mStunTime` | btdActionDamage (inlined into daBtd_Execute 020F1494): the stun timer of the damage action (tww damage mStunTimer) (150) |
+| 0x0A | `m0E` | `mDamageLimit` | damage_check 020F4D80 (d_a_btd_damage.cpp): in action 2, once mTotalDamage reaches it, it is cleared and mGohmaState becomes 10 (tww the same) (5) |
+| 0x0C | `m10` | `mDebugAttackType` | btdActionWait / btdActionTurningPunch (inlined into daBtd_Execute 020F1494): 0 picks the attack at random, 1..3 force attack type it - 1, 4 the turning punch (tww the same) (0) |
+| 0x10 | `m14` | `mWaitTime` | btdActionReset / btdActionPunch (inlined into daBtd_Execute 020F1494): ACT_WAIT's mTimers[0] is cM_rndF(50) + it (tww the same) (100) |
+| 0x14 | `m18` | `mAttack0Rate` | btdActionWait (inlined into daBtd_Execute 020F1494): in battle phase 0 attack type 0 is chosen when cM_rndF(1) < it (tww wait the same) (0.5) |
+| 0x18 | `m1C` | `mAttack1Rate` | btdActionWait (inlined into daBtd_Execute 020F1494): in battle phase 0 otherwise attack type 1 when cM_rndF(1) < it, else 2 (tww wait the same) (0.5) |
+| 0x1C | `m20` | `mAttack0RatePhase1` | btdActionWait (inlined into daBtd_Execute 020F1494): mAttack0Rate in battle phase 1 (tww wait the same) (0.2) |
+| 0x20 | `m24` | `mAttack1RatePhase1` | btdActionWait (inlined into daBtd_Execute 020F1494): mAttack1Rate in battle phase 1 (tww wait the same) (0.2) |
+| 0x24 | `m28` | `mPunchWaitTime` | btdActionPunch (inlined into daBtd_Execute 020F1494): mTimers[0] after the punch is cM_rndF(100) + it (tww punch_attack the same) (150) |
+| 0x28 | `m2C` | `mFireTime` | btdActionFire / btdActionHighFire (inlined into daBtd_Execute 020F1494): the fire timers (it * 9, it * 4, it) (tww fire_attack the same) (10) |
+| 0x2C | `m30` | `mCustomTime` | btd_kankyo 020F94DC / daBtd_Create 020F4308: dKy_custom_timeset(it) every frame (tww the same) (4.0) |
+| 0x30 | `m34` | `mCustomTimeState2` | btd_kankyo 020F94DC: dKy_custom_timeset(it) in kankyo state 2 (tww the same) (20.0) |
+| 0x34 | `m38` | `mCustomTimeState7` | btd_kankyo 020F94DC: dKy_custom_timeset(it) in kankyo state 7 (tww the same) (6.0) |
+| 0x38 | `m3C` | `mLightRState1` | btd_kankyo 020F94DC: mLightColorR in kankyo state 1 (tww the same) (182) |
+| 0x3A | `m3E` | `mLightGState1` | btd_kankyo 020F94DC: mLightColorG in kankyo state 1 (tww the same) (156) |
+| 0x3C | `m40` | `mLightBState1` | btd_kankyo 020F94DC: mLightColorB in kankyo state 1 (tww the same) (86) |
+| 0x3E | `m42` | `mLightRState2` | btd_kankyo 020F94DC: mLightColorR in kankyo state 2 (tww the same) (255) |
+| 0x40 | `m44` | `mLightGState2` | btd_kankyo 020F94DC: mLightColorG in kankyo state 2 (tww the same) (142) |
+| 0x42 | `m46` | `mLightBState2` | btd_kankyo 020F94DC: mLightColorB in kankyo state 2 (tww the same) (36) |
+| 0x44 | `m48` | `mSplashSpeedF` | sibuki_set 020F10B4: the splash's forward speed it + cM_rndF(it / 2) (tww the same) (12.0) |
+| 0x48 | `m4C` | `mSplashSpeedY` | sibuki_set 020F10B4: the splash's upward speed it + cM_rndF(it / 2) (tww the same) (35.0) |
+| 0x4C | `m50` | `mSplashGravity` | btdExecSplashMove (inlined into daBtd_Execute 020F1494): subtracted from the splash's speed.y each frame (tww sibuki_move the same) (1.0) |
+| 0x50 | `m54` | `mSplashFollow` | btdExecSplashMove (inlined into daBtd_Execute 020F1494): when set the first splash follows the player (tww sibuki_move the same) (0) |
+
+Open (no name yet): `m11`, `m12`, `m13`, `m2E` (written and read nowhere in WWHD or tww); padding `_pad51`.
+
 ## bgn_class (Puppet Ganon, first form; d_a_bgn.h)
 
 | WWHD offset | Old (GameCube name) | New | Evidence |
@@ -368,12 +486,141 @@ original's.
 | 0x15764 | `mCC90` | `mFormRequest` | daBgn_Execute 0207E7B4: 1 switches to the bgn3 form (mForm = 2), 2 starts the next stage (GanonK); the demo camera / bgn2 set it |
 | 0x15765 | `mCC91` | `mHioOwner` | daBgn_Create 02080BA4 sets 1 when it created the l_HIO child; daBgn_Delete 0207FC64 deletes the HIO child only then |
 
-Open (no name yet): `mC744` (a Y rotation in part_mtx_set, eased in move; which joint is unclear), `mC764` (two
-meanings in tail_attack: target angle and spin speed), `mC774` (eased term of body_attack / damage, not separable
-from the use), `mCC38` (no uses), and the padding bytes. The private views of bgn_class in d_a_bgn2.h
+Named in round 2:
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x14EB0 | `mC744` | `mHeadCutYaw` | move 0208857C eases it (step 0x400) to +8000 while head string mMove[0] is cut, -8000 while mMove[1] is cut (0 for both or neither); part_mtx_set 0207DE64 adds it to the head part's y rotation (with l_HIO.mHeadRotY); the head hangs to the side of the cut string (tww the same) |
+| 0x14EE0 | `mC774` | `mRedRopeSway` | action_main 02086130 swings the 60 points of mRedRopeMat by sin * it * (59 - i) / 59 and eases it to 0; damage 02084804, hensin 02084D6C and body_attack (in action_main) ease it to 250 (tww the same) |
+
+Open (no name yet): `mC764` (two meanings in tail_attack: target angle and spin speed), `mCC38` (no uses), and the
+padding bytes. The private views of bgn_class in d_a_bgn2.h
 (`bgn2BgnView`), d_a_bgn3.h (`Bgn3BossView`) and d_a_att.h (`bgn_att_view_c`) use the same names. The zeldaret/tww
 d_a_bgn.cpp (CC0) was read alongside our decomp to follow the uses; names it already has (`mCSMode`, `mKSubCount`,
-`mCSCamEye`, ...) were kept.
+`mCSCamEye`, ...) were kept. The keese view `BgnKeeseView` (d_a_bgn_main.h, used by ki_a_d_sub 0207B0D8) takes ki_class's
+name `mModelPacket` for 0x3D4 (was `m2B8`).
+
+HIO block daBgn_HIO_c (HD offsets = GameCube - 4; constructor daBgn_HIO_c_ct 02083558, defaults as tww d_a_bgn.cpp
+except the DEMO_SELECT values noted):
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x000 | `m004` | `mChestRotX` | move 0208857C (shape_calc) rotates the chest model about x by it after the body rotation and scale; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x004 | `m008` | `mPartDrawDist` | part_draw 0207ACD0 draws a part's model only while its camera distance is above it * mPartScale; daBgn_HIO_c_ct 02083558 sets 200 (tww the same) |
+| 0x008 | `m00C` | `mReflectionOn` | part_draw 0207ACD0 / daBgn_Draw 0207B2CC update the model packets (mPartPacket, mChestPacket) and run obj_disp only while set; daBgn_HIO_c_ct 02083558 sets 1 (tww the same, also for bgn2 / bgn3) |
+| 0x009 | `m00D` | `mRoomReflectionOn` | daBgn_Draw 0207B2CC runs room_disp (mpRoomReflectionModel into mRoomReflectionPacket) only while set; water0_disp (in daBgn_Draw) keeps mWaterAlphaPct then instead of the bgn2-height value; daBgn_HIO_c_ct 02083558 sets 1 (tww the same) |
+| 0x00C | `m010` | `mWaterAlphaPct` | water0_disp (in daBgn_Draw 0207B2CC): the water konst alpha is it * 2.559 (percent; 50..90 from the bgn2 height in form 1 while mRoomReflectionOn is 0); daBgn_HIO_c_ct 02083558 sets 50 (tww the same) |
+| 0x021 | `m025` | `mPoseEditMode` | while set action_main 02086130 runs no action, action_s 02085630 clears mCut and loads every string's mPoseTarget from mPoseEdit*, and move 0208857C takes mPoseEditAngleY as the body yaw; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x023 | `m027` | `mDebugHealth` | daBgn_Execute 0207E7B4 sets health to it while it is not 0; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x024 | `m028` | `mAttackOn` | dance_0 (in action_main 02086130) leaves the dance for an attack (mTimers[0] 0, no keese left) only while set; daBgn_HIO_c_ct 02083558 sets 1 (tww the same) |
+| 0x025 | `m029` | `mForceCutString0` | move 0208857C sets mMove[0].mCut while set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x026 | `m02A` | `mForceCutString1` | move 0208857C sets mMove[1].mCut while set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x027 | `m02B` | `mForceCutString2` | move 0208857C sets mMove[2].mCut while set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x028 | `m02C` | `mForceCutString3` | move 0208857C sets mMove[3].mCut while set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x029 | `m02D` | `mForceCutString4` | move 0208857C sets mMove[4].mCut while set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x02A | `m02E` | `mForceCutString5` | move 0208857C sets mMove[5].mCut while set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x02B | `m02F` | `mForceCutString6` | move 0208857C sets mMove[6].mCut while set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x02C | `m030` | `mForceCutString7` | move 0208857C sets mMove[7].mCut while set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x030 | `m034` | `mHeadOffsetY` | part_mtx_set 0207DE64 (head part) translates by (0, it, mHeadOffsetZ) before the mHeadRotX rotation; daBgn_HIO_c_ct 02083558 sets -20 (tww the same) |
+| 0x034 | `m038` | `mHeadOffsetZ` | part_mtx_set 0207DE64 (head part) translates by (0, mHeadOffsetY, it) before the mHeadRotX rotation; daBgn_HIO_c_ct 02083558 sets -30 (tww the same) |
+| 0x038 | `m03C` | `mHeadRotY` | part_mtx_set 0207DE64 (head part) rotates about y by mHeadCutYaw + it + the pluck shake; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x03A | `m03E` | `mHeadRotX` | part_mtx_set 0207DE64 (head part) rotates about x by it after the mHeadOffsetY / Z translation; daBgn_HIO_c_ct 02083558 sets 22000 (tww the same) |
+| 0x03C | `m040` | `mHeadRotZ` | part_mtx_set 0207DE64 (head part) rotates about z by it + the pluck shake; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x03E | `m042` | `mPoseEditAngleY` | move 0208857C takes it as the body yaw target (instead of shape_angle.y) while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x048 | `m04C` | `mBodyHeight` | move 0208857C adds it to mBodyPos.y (current.pos + mBodyOffset; at least mGroundY + 100); daBgn_HIO_c_ct 02083558 sets 950 (tww the same) |
+| 0x050 | `m054` | `mHeadEndPosX` | x of the cXyz move 0208857C passes to bgn_limb_end for the head string: rotated by the body yaw, + mMove[0].mPose, + mBodyPos gives mHeadParts[1].mPartPos; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x054 | `m058` | `mHeadEndPosY` | y of the head-string end cXyz at mHeadEndPosX (bgn_limb_end in move 0208857C); daBgn_HIO_c_ct 02083558 sets 2000 (tww the same) |
+| 0x058 | `m05C` | `mHeadEndPosZ` | z of the head-string end cXyz at mHeadEndPosX (bgn_limb_end in move 0208857C); daBgn_HIO_c_ct 02083558 sets 800 (tww the same) |
+| 0x05C | `m060` | `mPelvisEndPosX` | x of the cXyz move 0208857C passes to bgn_limb_end for the pelvis string (mMove[2]): gives mPelvisParts[1].mPartPos; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x060 | `m064` | `mPelvisEndPosY` | y of the pelvis-string end cXyz at mPelvisEndPosX (bgn_limb_end in move 0208857C); daBgn_HIO_c_ct 02083558 sets -800 (tww the same) |
+| 0x064 | `m068` | `mPelvisEndPosZ` | z of the pelvis-string end cXyz at mPelvisEndPosX (bgn_limb_end in move 0208857C); daBgn_HIO_c_ct 02083558 sets -800 (tww the same) |
+| 0x068 | `m06C` | `mLeftHandPosX` | move 0208857C: x of the left hand rest position (rotated by the body yaw, + mMove[3].mPose, + mBodyPos) for mLeftArmParts[BGN_HAND_MAX] while not punching; daBgn_HIO_c_ct 02083558 sets 700 (tww the same) |
+| 0x06C | `m070` | `mLeftHandPosY` | move 0208857C: y of the left hand rest position (see mLeftHandPosX); daBgn_HIO_c_ct 02083558 sets -900 (tww the same) |
+| 0x070 | `m074` | `mLeftHandPosZ` | move 0208857C: z of the left hand rest position (see mLeftHandPosX); daBgn_HIO_c_ct 02083558 sets 300 (tww the same) |
+| 0x074 | `m078` | `mRightHandPosX` | move 0208857C: x of the right hand rest position (rotated by the body yaw, + mMove[4].mPose, + mBodyPos) for mRightArmParts[BGN_HAND_MAX] while not punching; daBgn_HIO_c_ct 02083558 sets -700 (tww the same) |
+| 0x078 | `m07C` | `mRightHandPosY` | move 0208857C: y of the right hand rest position (see mRightHandPosX); daBgn_HIO_c_ct 02083558 sets -900 (tww the same) |
+| 0x07C | `m080` | `mRightHandPosZ` | move 0208857C: z of the right hand rest position (see mRightHandPosX); daBgn_HIO_c_ct 02083558 sets 300 (tww the same) |
+| 0x080 | `m084` | `mLeftFootPosX` | x of the cXyz move 0208857C passes to bgn_limb_end for the left leg string (mMove[5]): gives mLeftLegParts[3].mPartPos; daBgn_HIO_c_ct 02083558 sets 500 (tww the same) |
+| 0x084 | `m088` | `mLeftFootPosY` | y of the left-foot cXyz at mLeftFootPosX (bgn_limb_end in move 0208857C); daBgn_HIO_c_ct 02083558 sets -1300 (tww the same) |
+| 0x088 | `m08C` | `mLeftFootPosZ` | z of the left-foot cXyz at mLeftFootPosX (bgn_limb_end in move 0208857C); daBgn_HIO_c_ct 02083558 sets -100 (tww the same) |
+| 0x08C | `m090` | `mRightFootPosX` | x of the cXyz move 0208857C passes to bgn_limb_end for the right leg string (mMove[6]): gives mRightLegParts[3].mPartPos; daBgn_HIO_c_ct 02083558 sets -500 (tww the same) |
+| 0x090 | `m094` | `mRightFootPosY` | y of the right-foot cXyz at mRightFootPosX (bgn_limb_end in move 0208857C); daBgn_HIO_c_ct 02083558 sets -1300 (tww the same) |
+| 0x094 | `m098` | `mRightFootPosZ` | z of the right-foot cXyz at mRightFootPosX (bgn_limb_end in move 0208857C); daBgn_HIO_c_ct 02083558 sets -100 (tww the same) |
+| 0x098 | `m09C` | `mTailEndPosX` | move 0208857C: x of the tail end position (rotated by the body yaw, + mMove[7].mPose, + mBodyPos, not below mGroundY) for mTailParts[BGN_TAIL_MAX]; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x09C | `m0A0` | `mTailEndPosY` | move 0208857C: y of the tail end position (see mTailEndPosX); daBgn_HIO_c_ct 02083558 sets -700 (tww the same) |
+| 0x0A0 | `m0A4` | `mTailEndPosZ` | move 0208857C: z of the tail end position (see mTailEndPosX); daBgn_HIO_c_ct 02083558 sets -1200 (tww the same) |
+| 0x0A4 | `m0A8` | `mBodyDrawOffsetY` | move 0208857C (shape_calc) starts the body matrix (chest and all part roots) at mBodyPos.y + it (at least mGroundY + 100); daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x0A6 | `m0AA` | `mPoseEdit0X` | action_s 02085630 copies it to mMove[0].mPoseTarget.x while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x0A8 | `m0AC` | `mPoseEdit0Y` | action_s 02085630 copies it to mMove[0].mPoseTarget.y while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x0AA | `m0AE` | `mPoseEdit0Z` | action_s 02085630 copies it to mMove[0].mPoseTarget.z while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x0AC | `m0B0` | `mPoseEdit2X` | action_s 02085630 copies it to mMove[2].mPoseTarget.x while mPoseEditMode is set (string 1 has no entry); daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x0AE | `m0B2` | `mPoseEdit2Y` | action_s 02085630 copies it to mMove[2].mPoseTarget.y while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x0B0 | `m0B4` | `mPoseEdit2Z` | action_s 02085630 copies it to mMove[2].mPoseTarget.z while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x0B2 | `m0B6` | `mPoseEdit3X` | action_s 02085630 copies it to mMove[3].mPoseTarget.x while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x0B4 | `m0B8` | `mPoseEdit3Y` | action_s 02085630 copies it to mMove[3].mPoseTarget.y while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x0B6 | `m0BA` | `mPoseEdit3Z` | action_s 02085630 copies it to mMove[3].mPoseTarget.z while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x0B8 | `m0BC` | `mPoseEdit4X` | action_s 02085630 copies it to mMove[4].mPoseTarget.x while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x0BA | `m0BE` | `mPoseEdit4Y` | action_s 02085630 copies it to mMove[4].mPoseTarget.y while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x0BC | `m0C0` | `mPoseEdit4Z` | action_s 02085630 copies it to mMove[4].mPoseTarget.z while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x0BE | `m0C2` | `mPoseEdit5X` | action_s 02085630 copies it to mMove[5].mPoseTarget.x while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x0C0 | `m0C4` | `mPoseEdit5Y` | action_s 02085630 copies it to mMove[5].mPoseTarget.y while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x0C2 | `m0C6` | `mPoseEdit5Z` | action_s 02085630 copies it to mMove[5].mPoseTarget.z while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x0C4 | `m0C8` | `mPoseEdit6X` | action_s 02085630 copies it to mMove[6].mPoseTarget.x while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x0C6 | `m0CA` | `mPoseEdit6Y` | action_s 02085630 copies it to mMove[6].mPoseTarget.y while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x0C8 | `m0CC` | `mPoseEdit6Z` | action_s 02085630 copies it to mMove[6].mPoseTarget.z while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x0CA | `m0CE` | `mPoseEdit7X` | action_s 02085630 copies it to mMove[7].mPoseTarget.x while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x0CC | `m0D0` | `mPoseEdit7Y` | action_s 02085630 copies it to mMove[7].mPoseTarget.y while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x0CE | `m0D2` | `mPoseEdit7Z` | action_s 02085630 copies it to mMove[7].mPoseTarget.z while mPoseEditMode is set; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x0D0 | `m0D4` | `mPoseSpeedBase` | action_main 02086130 resets mPoseSpeedTarget to it every frame (punch_LR raises it for its frame); daBgn_HIO_c_ct 02083558 sets 40 (tww the same) |
+| 0x0D4 | `m0D8` | `mKeeseDanceTime` | dance_0 (in action_main 02086130) sets mTimers[0] to it for the first dance (mDanceCount 0, the one that calls the keese); daBgn_HIO_c_ct 02083558 sets 120 (tww the same) |
+| 0x0D6 | `m0DA` | `mDanceAStepTime` | dance_A (in action_main 02086130) sets mTimers[3] to it at each switch between dance_pause_1 and dance_pause_2; daBgn_HIO_c_ct 02083558 sets 20 (tww the same) |
+| 0x0D8 | `m0DC` | `mDanceASpin3HP` | dance_A (in action_main 02086130) eases mDanceAngleSpeed to it at 3 health; daBgn_HIO_c_ct 02083558 sets 1200 (tww the same) |
+| 0x0DA | `m0DE` | `mDanceASpin2HP` | dance_A (in action_main 02086130) eases mDanceAngleSpeed to it at 2 health; daBgn_HIO_c_ct 02083558 sets 1500 (tww the same) |
+| 0x0DC | `m0E0` | `mDanceASpin1HP` | dance_A (in action_main 02086130) eases mDanceAngleSpeed to it at 1 health; daBgn_HIO_c_ct 02083558 sets 2000 (tww the same) |
+| 0x0DE | `m0E2` | `mDanceTime3HP` | dance_0 (in action_main 02086130) sets mTimers[0] to it for the later dances (mDanceCount not 0) at 3 health; daBgn_HIO_c_ct 02083558 sets 300 (tww DEMO_SELECT(150, 300)) |
+| 0x0E0 | `m0E4` | `mDanceTime2HP` | dance_0 (in action_main 02086130) sets mTimers[0] to it for the later dances at 2 health; daBgn_HIO_c_ct 02083558 sets 200 (tww DEMO_SELECT(100, 200)) |
+| 0x0E2 | `m0E6` | `mDanceTime1HP` | dance_0 (in action_main 02086130) sets mTimers[0] to it for the later dances at 1 health; daBgn_HIO_c_ct 02083558 sets 150 (tww DEMO_SELECT(80, 150)) |
+| 0x0E4 | `m0E8` | `mDanceBStepTime3HP` | dance_B (in action_main 02086130) sets mTimers[3] to it at each switch between dance_pause_3 and dance_pause_4 at 3 health; daBgn_HIO_c_ct 02083558 sets 15 (tww DEMO_SELECT(20, 15)) |
+| 0x0E6 | `m0EA` | `mDanceBStepTime2HP` | dance_B (in action_main 02086130) sets mTimers[3] to it at each pose switch at 2 health; daBgn_HIO_c_ct 02083558 sets 15 (tww the same) |
+| 0x0E8 | `m0EC` | `mDanceBStepTime1HP` | dance_B (in action_main 02086130) sets mTimers[3] to it at each pose switch at 1 health; daBgn_HIO_c_ct 02083558 sets 15 (tww DEMO_SELECT(10, 15)) |
+| 0x0EA | `m0EE` | `mDanceBTurnStep` | dance_B (in action_main 02086130): the max step of mDanceAngleY toward +-0x1555; daBgn_HIO_c_ct 02083558 sets 500 (tww the same) |
+| 0x0EC | `m0F0` | `mHandMax` | daBgn_Create 02080BA4 and move 0208857C copy it to BGN_HAND_MAX (the arm part count); daBgn_HIO_c_ct 02083558 sets 5 (tww the same) |
+| 0x0EE | `m0F2` | `mTailMax` | daBgn_Create 02080BA4 and move 0208857C copy it to BGN_TAIL_MAX (the tail part count); daBgn_HIO_c_ct 02083558 sets 10 (tww the same) |
+| 0x0F0 | `m0F4` | `mScale` | part_mtx_set 0207DE64 scales every part by mPartScale * it; move 0208857C scales the chest (mChestScale), pelvis (mPelvisScale) and the part spacings by it; daBgn_HIO_c_ct 02083558 sets 1.3 (tww the same) |
+| 0x0F4 | `m0F8` | `mHeadScale` | move 0208857C (size_set) sets mHeadParts[0].mPartScale to it; daBgn_HIO_c_ct 02083558 sets 1.6 (tww the same) |
+| 0x0F8 | `m0FC` | `mChestScale` | move 0208857C (shape_calc) scales the chest matrix and mBodyAtSph by it * mScale; daBgn_HIO_c_ct 02083558 sets 3.25 (tww the same) |
+| 0x0FC | `m100` | `mPelvisScale` | move 0208857C (size_set) sets mPelvisParts[0] / [1].mPartScale to it and scales the leg / tail root matrix by it * mScale; daBgn_HIO_c_ct 02083558 sets 1.8 (tww the same) |
+| 0x100 | `m104` | `mArmRootScale` | move 0208857C (size_set): the arm parts' mPartScale runs from it at the shoulder down to mArmTipScale; daBgn_HIO_c_ct 02083558 sets 1.2 (tww the same) |
+| 0x104 | `m108` | `mArmTipScale` | move 0208857C (size_set): mPartScale of the hand part (mLeft / mRightArmParts[BGN_HAND_MAX]), the end of the mArmRootScale run; daBgn_HIO_c_ct 02083558 sets 0.3 (tww the same) |
+| 0x108 | `m10C` | `mLegRootScale` | move 0208857C (size_set): the leg parts' mPartScale runs from it at the hip down to mLegTipScale; daBgn_HIO_c_ct 02083558 sets 1.2 (tww the same) |
+| 0x10C | `m110` | `mLegTipScale` | move 0208857C (size_set): mPartScale of the foot part (mLeft / mRightLegParts[3]); daBgn_HIO_c_ct 02083558 sets 0.4 (tww the same) |
+| 0x110 | `m114` | `mTailRootScale` | move 0208857C (size_set): the tail parts' mPartScale runs from it down to mTailTipScale (the last part 0.7 * it); daBgn_HIO_c_ct 02083558 sets 1.2 (tww the same) |
+| 0x114 | `m118` | `mTailTipScale` | move 0208857C (size_set): the end of the mTailRootScale run; daBgn_HIO_c_ct 02083558 sets 0.1 (tww the same) |
+| 0x118 | `m11C` | `mBodyPartSpacing` | move 0208857C passes it * mScale to part_control_0 0207D858 / part_control_2 0207DC84 as the part spacing of the head and pelvis chains; daBgn_HIO_c_ct 02083558 sets 185 (tww the same) |
+| 0x11C | `m120` | `mLegPartSpacing` | move 0208857C passes it * mScale to part_control_0 / part_control_2 as the part spacing of both leg chains; daBgn_HIO_c_ct 02083558 sets 185 (tww the same) |
+| 0x120 | `m124` | `mArmPartSpacing` | move 0208857C eases mArmLength (the arm chains' spacing) to it + the punch stretch; part_mtx_set 0207DE64 stretches the arm parts by mArmLength - it; daBgn_HIO_c_ct 02083558 sets 185 (tww the same) |
+| 0x124 | `m128` | `mTailPartSpacing` | move 0208857C passes it * mScale to part_control_0 / part_control_2 as the part spacing of the tail chain; daBgn_HIO_c_ct 02083558 sets 185 (tww the same) |
+| 0x128 | `m12C` | `mHeadRootPosX` | move 0208857C: x of the head root in the body matrix (MtxPosition into mHeadParts[0].mPartPos); daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x12C | `m130` | `mHeadRootPosY` | move 0208857C: y of the head root in the body matrix; daBgn_HIO_c_ct 02083558 sets -10 (tww the same) |
+| 0x130 | `m134` | `mHeadRootPosZ` | move 0208857C: z of the head root in the body matrix; daBgn_HIO_c_ct 02083558 sets 120 (tww the same) |
+| 0x134 | `m138` | `mShoulderPosX` | move 0208857C: x of the left shoulder in the body matrix (* mPartLengthScale; the right one takes -it) for mLeft / mRightArmParts[0]; daBgn_HIO_c_ct 02083558 sets 100 (tww the same) |
+| 0x138 | `m13C` | `mShoulderPosY` | move 0208857C: y of both shoulders in the body matrix (* mPartLengthScale); daBgn_HIO_c_ct 02083558 sets 25 (tww the same) |
+| 0x13C | `m140` | `mShoulderPosZ` | move 0208857C: z of both shoulders in the body matrix (* mPartLengthScale); daBgn_HIO_c_ct 02083558 sets 20 (tww the same) |
+| 0x140 | `m144` | `mPelvisRootPosX` | move 0208857C: x of the pelvis root in the body matrix (* mPartLengthScale) for mPelvisParts[0]; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x144 | `m148` | `mPelvisRootPosY` | move 0208857C: y of the pelvis root in the body matrix ((it + 20) * mPartLengthScale); daBgn_HIO_c_ct 02083558 sets -115 (tww the same) |
+| 0x148 | `m14C` | `mPelvisRootPosZ` | move 0208857C: z of the pelvis root in the body matrix (* mPartLengthScale); daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x14C | `m150` | `mHipPosX` | move 0208857C: x of the left hip in the pelvis matrix (* mPartLengthScale; the right one takes -it), + the pelvis position, for mLeft / mRightLegParts[0]; daBgn_HIO_c_ct 02083558 sets 80 (tww the same) |
+| 0x150 | `m154` | `mHipPosY` | move 0208857C: y of both hips in the pelvis matrix (* mPartLengthScale); daBgn_HIO_c_ct 02083558 sets -20 (tww the same) |
+| 0x154 | `m158` | `mHipPosZ` | move 0208857C: z of both hips in the pelvis matrix (* mPartLengthScale); daBgn_HIO_c_ct 02083558 sets 100 (tww the same) |
+| 0x158 | `m15C` | `mTailRootPosX` | move 0208857C: x of the tail root in the pelvis matrix (* mPartLengthScale), + the pelvis position, for mTailParts[0]; daBgn_HIO_c_ct 02083558 sets 0 (tww the same) |
+| 0x15C | `m160` | `mTailRootPosY` | move 0208857C: y of the tail root in the pelvis matrix (* mPartLengthScale); daBgn_HIO_c_ct 02083558 sets -60 (tww the same) |
+| 0x160 | `m164` | `mTailRootPosZ` | move 0208857C: z of the tail root in the pelvis matrix (* mPartLengthScale); daBgn_HIO_c_ct 02083558 sets 150 (tww the same) |
+| 0x164 | `m168` | `mPartOffsetZ` | part_mtx_set 0207DE64 translates every part matrix by (0, 0, it) after the scale and places the string tops of the non-head parts there; daBgn_HIO_c_ct 02083558 sets 100 (tww the same) |
+| 0x168 | `m16C` | `mPartDropHung` | part_control_0 0207D858 adds it to each part's y (not below the ground) while the part's string is intact; daBgn_HIO_c_ct 02083558 sets -50 (tww the same) |
+| 0x16C | `m170` | `mPartDropCut` | part_control_0 0207D858 and part_control_0Z (in move 0208857C) add it to each part's y while the string is cut (-40 in a cut scene); daBgn_HIO_c_ct 02083558 sets -100 (tww the same) |
+
+Open in daBgn_HIO_c: `m014`, `m016`, `m018`, `m01C`, `m020`, `m026`, `m044`, `m048`, `m050` (constructor only, no read in
+WWHD or tww), `m024` (tww's form change counts it up, nothing reads it; HD sets mForm directly).
 
 String helper struct move_s (offsets within the struct; bgn_class mMove[8]):
 
@@ -519,6 +766,34 @@ Open (no name yet): the padding bytes (`m2D40` has no uses). zeldaret/tww (CC0) 
 the d_a_bgn2 unit spec comment follows. Names shared with bgn_class (`mFogColorAdd`, `mFogStartAdd`, `mFogFade`,
 `mCoreHitFrame`, `mHioOwner`, ...) have the same use there.
 
+### daBgn2_HIO_c (l_HIO; d_a_bgn2.h)
+
+Round 3: the second form's HIO values. In WWHD the vtable sits at the end, so each field is 4 below its GameCube name. Each is set only by daBgn2_HIO_c_ct 0208F7C8 (default in parentheses) and never written elsewhere in WWHD or tww; the reads are in our d_a_bgn2.cpp / d_a_bgn2_exec.cpp (plesattack, jumpattack, mahi, hensin and ki_set are inlined into daBgn2_Execute 0208B6A4) and match zeldaret/tww d217e2b.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x00001 | `m05` | `mNoMove` | daBgn2_Execute 0208B6A4: move and the animations run only while it is 0 (tww the same) (0) |
+| 0x00002 | `m06` | `mDebugHealth` | daBgn2_Execute 0208B6A4: when not 0, health is set to it (tww the same) (0) |
+| 0x00004 | `m08` | `mGroundHeight` | checkGround 0208B340: the floor height; current.pos.y is clamped to it and speed.y cleared there (tww the same) (280) |
+| 0x00008 | `m0C` | `mPressHeight` | plesattack (in daBgn2_Execute 0208B6A4): the height it rises to before the drop (cLib_addCalc2 target) (tww the same) (3000) |
+| 0x0000C | `m10` | `mPressRiseStep` | plesattack (in daBgn2_Execute 0208B6A4): the largest cLib_addCalc2 step of the rise to mPressHeight (tww the same) (15) |
+| 0x00010 | `m14` | `mGravity` | plesattack (in daBgn2_Execute 0208B6A4) / hensin (in daBgn2_Execute 0208B6A4): added to speed.y each frame (taken off again while mTimers[0] runs before the drop) (tww the same) (-2) |
+| 0x00014 | `m18` | `mSpinSpeedHealth3` | jumpattack (in daBgn2_Execute 0208B6A4): mSpinSpeedTarget at health 3 (random sign) (tww the same) (0x5DC) |
+| 0x00016 | `m1A` | `mSpinSpeedHealth2` | jumpattack (in daBgn2_Execute 0208B6A4): mSpinSpeedTarget at health 2 (tww the same) (0xA28) |
+| 0x00018 | `m1C` | `mSpinSpeedHealth1` | jumpattack (in daBgn2_Execute 0208B6A4): mSpinSpeedTarget at health 1 (tww the same) (0xED8) |
+| 0x0001A | `m1E` | `mPressHangTimeHealth3` | plesattack (in daBgn2_Execute 0208B6A4): mTimers[0] at the top before the drop at health 3 (tww the same) (60) |
+| 0x0001C | `m20` | `mPressHangTimeHealth2` | plesattack (in daBgn2_Execute 0208B6A4): mTimers[0] at the top before the drop at health 2 (tww the same) (50) |
+| 0x0001E | `m22` | `mPressHangTimeHealth1` | plesattack (in daBgn2_Execute 0208B6A4): mTimers[0] at the top before the drop at health 1 (tww the same) (40) |
+| 0x00020 | `m24` | `mPressLandTimeHealth3` | plesattack (in daBgn2_Execute 0208B6A4): mTimers[0] after landing at health 3; at 0 the action becomes jumpattack (2) (tww the same) (100) |
+| 0x00022 | `m26` | `mPressLandTimeHealth2` | plesattack (in daBgn2_Execute 0208B6A4): mTimers[0] after landing at health 2 (tww the same) (100) |
+| 0x00024 | `m28` | `mPressLandTimeHealth1` | plesattack (in daBgn2_Execute 0208B6A4): mTimers[0] after landing at health 1 (tww the same) (100) |
+| 0x00026 | `m2A` | `mMahiTime` | mahi (in daBgn2_Execute 0208B6A4): mTimers[0] for the stunned (mahi) state; at 0 the action becomes jumpattack (2) (tww the same) (600) |
+| 0x00028 | `m2C` | `mKiSetInterval` | ki_set (in daBgn2_Execute 0208B6A4) / daBgn2_Execute: mKiSetTimer, the wait before the next Ki wave (tww the same) (100) |
+| 0x0002A | `m2E` | `mKiPerLanding` | ki_set (in daBgn2_Execute 0208B6A4): mKiSetCount, the Ki created per landing (tww the same) (3) |
+| 0x0002C | `m30` | `mKiMax` | daBgn2_Execute 0208B6A4: a Ki is created only while ki_check counts fewer than it (tww the same) (10) |
+
+Open (no name yet): padding `_03`, `_2E`. `CcAtInfo_l::m0C` (the CcAtInfo copy) became `mHitAngle` with the CcAtInfo copies as a group (other.md, round 12).
+
 ## bgn3_class (Puppet Ganon, third form; d_a_bgn3.h)
 
 | WWHD offset | Old (GameCube name) | New | Evidence |
@@ -575,6 +850,56 @@ names zeldaret/tww (CC0) already has for it (`mpPart3Model`, `mPart3TevStr`, `mP
 
 Open in part_s3: the padding only. The draw view `bgn_draw::part_s3` (d_a_bgn_draw.h) uses the same names. Its
 `mPart3Packet` is declared `mDoExt_J3DModelPacketS_l` there but `u8[0xB0]` in d_a_bgn3.h (type left as it is).
+
+### daBgn3_HIO_c (l_HIO; d_a_bgn3.h)
+
+Round 3: the third form's HIO values. In WWHD the vtable sits at the end, so each field is 4 below its GameCube name. Each is set only by hioCtor 020914F4 (default in parentheses) and never written elsewhere in WWHD or tww; the reads are in our d_a_bgn3.cpp (move0, damage_check, part_control and setModels are inlined into move 02091730) and match zeldaret/tww d217e2b. m50 / m52 / m54 are named from tww's reads under the 2026-11-11 rule (WWHD writes them only in the constructor; HD's draw uses the same values as constants).
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x00001 | `m05` | `mNoMove` | move 02091730: the actions run only while it is 0 (tww the same) (0) |
+| 0x00002 | `m06` | `mDebugHealth` | daBgn3_Execute 02090680: when not 0, health is set to it (tww the same) (0) |
+| 0x00004 | `m08` | `mSpeedHealth3` | move0 (in move 02091730): the speedF target at health 3 (tww the same) (50) |
+| 0x00008 | `m0C` | `mTurnSpeedHealth3` | move0 (in move 02091730): mTurnSpeed at health 3 (tww the same) (800) |
+| 0x0000A | `m0E` | `mWallHitsHealth3` | move0 (in move 02091730): at health 3 the chase (mChaseTimer) starts after this many wall hits (tww the same) (3) |
+| 0x0000C | `m10` | `mSpeedHealth2` | move0 (in move 02091730): the speedF target at health 2 (tww the same) (60) |
+| 0x00010 | `m14` | `mTurnSpeedHealth2` | move0 (in move 02091730): mTurnSpeed at health 2 (tww the same) (1000) |
+| 0x00012 | `m16` | `mWallHitsHealth2` | move0 (in move 02091730): the wall hits before the chase at health 2 (tww the same) (3) |
+| 0x00014 | `m18` | `mSpeedHealth1` | move0 (in move 02091730): the speedF target at health 1 (tww the same) (80) |
+| 0x00018 | `m1C` | `mTurnSpeedHealth1` | move0 (in move 02091730): mTurnSpeed at health 1 (tww the same) (1200) |
+| 0x0001A | `m1E` | `mWallHitsHealth1` | move0 (in move 02091730): the wall hits before the chase at health 1 (tww the same) (3) |
+| 0x0001C | `m20` | `mChaseTimeHealth3` | move0 (in move 02091730): mChaseTimer after the wall hits at health 3 (tww the same) (60) |
+| 0x0001E | `m22` | `mChaseTimeHealth2` | move0 (in move 02091730): mChaseTimer after the wall hits at health 2 (tww the same) (40) |
+| 0x00020 | `m24` | `mChaseTimeHealth1` | move0 (in move 02091730): mChaseTimer after the wall hits at health 1 (tww the same) (30) |
+| 0x00022 | `m26` | `mOtherHitTime` | damage_check (in move 02091730): mTimers[0] after a hit that is none of the cases below (tww the same) (10) |
+| 0x00024 | `m28` | `mArrowHitTime` | damage_check (in move 02091730): mTimers[0] after an arrow hit (tww the same) (20) |
+| 0x00026 | `m2A` | `mSwordHitTime` | damage_check (in move 02091730): mTimers[0] after a sword hit (attack type 1) whose AtSpl is not 1 (tww the same) (45) |
+| 0x0002A | `m2E` | `mBombHitTime` | damage_check (in move 02091730): mTimers[0] after a bomb hit (attack type 2) (tww the same) (200) |
+| 0x0002C | `m30` | `mHammerHitTime` | damage_check (in move 02091730): mTimers[0] after a Skull Hammer hit (attack type 9) (tww the same) (250) |
+| 0x00030 | `m34` | `mPartDistanceTarget` | part_control (in move 02091730): mPartDistance eases to it (tww the same) (5.0) |
+| 0x00034 | `m38` | `mPartStiffnessTarget` | part_control (in move 02091730): mPartStiffness eases to it (tww the same) (0.5) |
+| 0x00038 | `m3C` | `mWallKiCount` | move0 (in move 02091730): a wall hit sets mKiSetCount to it; daBgn3_Execute 02090680 then creates one Ki (0xCD) per frame (tww the same) (3) |
+| 0x0003A | `m3E` | `mHairOn` | daBgn3_Draw 0208FC64 / ke_move 02090420 / setModels (in move 02091730): the hair lines are moved and drawn only while it is set (tww the same) (1) |
+| 0x00078 | `m40` | `mHairPullY` | setModels (in move 02091730): each hair's mPull is (0, it, 0) in the hair's frame (tww move the same) (150) |
+| 0x00040 | `m44` | `mHairLength` | setModels (in move 02091730): ke_move's segment length is 2 * it (the parts: their scale * it) (tww the same) (45) |
+| 0x00044 | `m48` | `mHairWidth` | daBgn3_Draw 0208FC64: mDoExt_3DlineMat0_c::update's width for the hair lines (tww the same) (8) |
+| 0x00048 | `m4C` | `mHairGravity` | ke_move 02090420: added to each hair point's y (tww ke_control the same) (-8) |
+| 0x0004C | `m50` | `mHairColorR` | written in WWHD only by hioCtor 020914F4 (188); HD daBgn3_Draw uses the constant 188; tww daBgn3_Create reads it as ke_color.r |
+| 0x0004E | `m52` | `mHairColorG` | written in WWHD only by hioCtor 020914F4 (152); HD daBgn3_Draw uses the constant 152; tww daBgn3_Create reads it as ke_color.g |
+| 0x00050 | `m54` | `mHairColorB` | written in WWHD only by hioCtor 020914F4 (66); HD daBgn3_Draw uses the constant 66; tww daBgn3_Create reads it as ke_color.b |
+
+Open (no name yet): `m2C` (damage_check: mTimers[0] after a sword hit whose AtSpl is 1; the meaning of that AtSpl value is not known, tww dCcG_At_Spl_UNK1); padding `_00003`, `_0002E`, `_0003B`, `_00052`.
+
+### bgn3_ke_s (the hair strands mHairs[40] and the parts' hair; d_a_bgn3.h)
+
+Round 3.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x00000 | `m00` | `mPos` | ke_move 02090420: the five hair points, each the previous plus a segment toward mPull; copied into the line material's positions; setModels sets the root (tww the same) |
+| 0x00000 | `m78` | `mPull` | setModels (in move 02091730): (0, mHairPullY, 0) in the hair's frame minus the root; ke_move 02090420 bends each segment toward it (tww the same) |
+
+Open (no name yet): `m3C` (cXyz[5], read and written nowhere in WWHD or tww).
 
 ## bwdg_class (Molgera sand surface; d_a_bwdg.h)
 
@@ -671,10 +996,10 @@ separate `mCoreBloodEffTimer` (GameCube `mA8C`), but eff_cont indexes it 0..2; i
 | 0x03D6 | `m2BA` | `mAction` | hand_move (in daBmdhand_Execute 020B8D9C) switch on the Bmdhand_* actions (Attached, Cut, BossDown, Intro, Disappear, RegrowWait); daBmdhand_Create 020BAD4C sets Intro |
 | 0x03D8 | `m2BC` | `mHandStep` | hand_calc (in daBmdhand_Execute 020B8D9C) switch: 0 reach the ceiling, 1 hold, 2 move the hand to a new place; hand_move lets the tentacle be cut only above 0 |
 | 0x03DA | `m2BE` | `mIntroStep` | hand_move (in daBmdhand_Execute 020B8D9C), Intro action: 0 wait for mVineCommand 5, 1 random delay, 2 grow to the ceiling (adds to mVineCount), 3 grown |
-| 0x03DC | `m2C0` | `mTimers` | daBmdhand_Execute 020B8D9C counts all 4 down; hand_calc / hand_move load [0] (hand moves, regrow delay l_HIO.m0C) and [1] (boss-down delay) and wait on them |
+| 0x03DC | `m2C0` | `mTimers` | daBmdhand_Execute 020B8D9C counts all 4 down; hand_calc / hand_move load [0] (hand moves, regrow delay l_HIO.mRegrowTime) and [1] (boss-down delay) and wait on them |
 | 0x03E4 | `m2C8` | `mCcOffTimer` | hand_move (in daBmdhand_Execute 020B8D9C) sets 20 / 10 / 70 and moves both spheres out of reach (no lock-on) while it runs; daBmdhand_Execute counts it down |
 | 0x03E6 | `m2CA` | `mBloodTimer` | hand_move (in daBmdhand_Execute 020B8D9C) sets 2 when the tentacle is cut; cut_control 020B88C4 emits ID_AK_SN_O_BKMTENTACLEBLOOD00 at the cut end while it runs; daBmdhand_Execute counts it down |
-| 0x03E8 | `m2CC` | `mCeilingPos` | hand_ceiling_check (in daBmdhand_Execute 020B8D9C): the ceiling hit of a line 2500 up from mHandPos, + l_HIO.m08; hand_calc holds the hand at its height; daBmdhand_Execute opens / closes the hand model when it crosses it |
+| 0x03E8 | `m2CC` | `mCeilingPos` | hand_ceiling_check (in daBmdhand_Execute 020B8D9C): the ceiling hit of a line 2500 up from mHandPos, + l_HIO.mCeilingOffsetY; hand_calc holds the hand at its height; daBmdhand_Execute opens / closes the hand model when it crosses it |
 | 0x03F4 | `m2D8` | `mHandPos` | hand_calc (in daBmdhand_Execute 020B8D9C) moves it toward mHandTargetPos; control2 pulls the last chain point to it; the vine-set sound plays there; daBmdhand_Delete 020BABAC deletes its sound object |
 | 0x0400 | `m2E4` | `mHandTargetPos` | hand_calc / start_hand_calc (in daBmdhand_Execute 020B8D9C) set it 250 / 350 in front of the root at the ceiling height and move mHandPos toward it |
 | 0x040C | `m2F0` | `mHandModelPos` | control_tail (in daBmdhand_Execute 020B8D9C) copies the last chain point; hand_mtx_set 020B8724 places the hand model there; cut_control3 020B8C74 eases it to the ceiling |
@@ -694,17 +1019,16 @@ separate `mCoreBloodEffTimer` (GameCube `mA8C`), but eff_cont indexes it 0..2; i
 | 0x0960 | `m6F8` | `mChainSph` | daBmdhand_Create 020BAD4C sets it up; hand_move (in daBmdhand_Execute 020B8D9C) centres it on chain point 3 + 4 * (mFrameCounter & 3); a hit cuts the tentacle |
 | 0x0A8C | `m824` | `mHioOwner` | daBmdhand_Create 020BAD4C sets 1 when it created the l_HIO child; daBmdhand_Delete 020BABAC deletes the HIO child only then (same use as bgn_class mHioOwner) |
 
-Open (no name yet): the members of `hand_s` (`m00` chain point, `m0C` its previous step in cut_control, `m18`
-line width; two-digit names, outside the readable_lint pattern) and the padding bytes.
+Open (no name yet): the padding bytes. The members of `hand_s` are named in round 8 (section "daBmdhand_HIO_c and hand_s" below).
 
 ## bmdfoot_class (Kalle Demos floor tentacle; d_a_bmdfoot.h)
 
 | WWHD offset | Old (GameCube name) | New | Evidence |
 |---|---|---|---|
 | 0x03D4 | `m2B8` | `mFrameCounter` | daBmdfoot_Execute 020B5DC4 adds 1 per frame (daBmdfoot_Create 020B7FC8 starts it random); ug_move 020B5904 starts it random and wobbles the crawl direction by sin(it); attack_1 (in daBmdfoot_Execute) picks the attack sphere joints by it & 7 |
-| 0x03D6 | `m2BA` | `mAction` | move (in daBmdfoot_Execute 020B5DC4) switch on the Bmdfoot_* actions (Wait, Attack1, Attack2, Damage, Start, End); daBmdfoot_Create 020B7FC8 sets Start; daBmdfoot_Execute tilts the vine by l_HIO.m08 below 3 |
+| 0x03D6 | `m2BA` | `mAction` | move (in daBmdfoot_Execute 020B5DC4) switch on the Bmdfoot_* actions (Wait, Attack1, Attack2, Damage, Start, End); daBmdfoot_Create 020B7FC8 sets Start; daBmdfoot_Execute tilts the vine by l_HIO.mActivePitch below 3 |
 | 0x03D8 | `m2BC` | `mMode` | the step inside mAction: wait / attack_1 / attack_2 / damage / start (in daBmdfoot_Execute 020B5DC4) switch on it |
-| 0x03DA | `m2BE` | `mAimAngle` | attack_1 (in daBmdfoot_Execute 020B5DC4) turns it toward the player (within l_HIO.m06) at mAimSpeed + 128; daBmdfoot_Execute 020B5DC4 adds it to the model's y and twice to its z rotation and eases it to 0 |
+| 0x03DA | `m2BE` | `mAimAngle` | attack_1 (in daBmdfoot_Execute 020B5DC4) turns it toward the player (within l_HIO.mAttackAngle) at mAimSpeed + 128; daBmdfoot_Execute 020B5DC4 adds it to the model's y and twice to its z rotation and eases it to 0 |
 | 0x03DC | `m2C0` | `mTimers` | daBmdfoot_Execute 020B5DC4 counts all 4 down; wait / attack_1 / attack_2 / damage / start load [0] and [2] and wait on them |
 | 0x03E8 | `m2CC` | `mJointRot` | nodeCallBack 020B5580 rotates joint i about x by [i].x and about z by [i].z; daBmdfoot_Execute 020B5DC4 eases [i].z to the sway and [i].x to 0; wait / damage bend [i].x |
 | 0x04C0 | `m3A4` | `mJointSwayAmp` | daBmdfoot_Execute 020B5DC4 eases mJointRot[i].z to sin(mSwayPhase + i * 9000) * [i]; wait / damage (in daBmdfoot_Execute) set random amplitudes, attack_1 / start 0 |
@@ -880,7 +1204,37 @@ Open (no name yet): `m38A`, `m39A`, `m3DC`, `m40B`, `m673`, `mB74`, `mB8B` (no u
 the padding bytes `m2D1`, `m3BA`, `m691`, `m6AD`, `mB58`, `mB78`. zeldaret/tww (CC0) has offset names only for
 these fields; its d_a_fganon.cpp was read alongside our decomp to follow the uses. The dark ball's view of this
 class, `FgmahouBossHD` (d_a_fgmahou.h), uses the same name (`mLaughRequest`). The cape position view
-`FganonCape` is a view of mant_class and keeps mant's names. The HIO block `daFganon_HIO_c` is not renamed.
+`FganonCape` is a view of mant_class and keeps mant's names. The HIO block `daFganon_HIO_c` is named in round 3 (below).
+
+### daFganon_HIO_c (l_HIO; d_a_fganon.h)
+
+Round 3: Phantom Ganon's HIO values. In WWHD the vtable sits at the end, so each field is 4 below its GameCube name. Each is set only by hioCtor 0213846C (default in parentheses) and never written elsewhere in WWHD or tww; the reads are in our d_a_fganon.cpp (deru, standby, fly_common, spinattack and kabe_check are inlined into move 0213B3AC; execute_model, aimEnergyBall, energy_ball_move and execute_collision into daFganon_Execute 02134B28) and match zeldaret/tww d217e2b (fly_common is tww's fly and fly2).
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x00001 | `m05` | `mNoMove` | execute_model (in daFganon_Execute 02134B28): move, the background check and the animations run only while it is 0 (tww daFganon_Execute the same) (0) |
+| 0x00002 | `m06` | `mDebugAppearAction` | deru (in move 0213B3AC): when not 0, picks the action after appearing instead of the random choice: 1 fly, 2 spinattack, 3 fly2, 4 spinattack2 (tww the same) (0) |
+| 0x00004 | `m08` | `mStandbyTime` | standby (in move 0213B3AC): mTimers[0] when standby starts or the player comes within mStartDist; at 0 the action becomes deru (tww the same) (60) |
+| 0x00006 | `m0A` | `mFlyTime` | deru (in move 0213B3AC): mTimers[2] when fly / fly2 start; fly_common (in move 0213B3AC) changes to kieru when it reaches 0 (tww the same) (500) |
+| 0x00008 | `m0C` | `mFlyDistance` | fly_common (in move 0213B3AC), fly: the target position's z offset from the player in the turned frame (tww fly the same) (1500) |
+| 0x0000C | `m10` | `mFlyHeight` | fly_common (in move 0213B3AC), fly: the height above the player on appearing and the target's y offset (tww fly the same) (400) |
+| 0x00010 | `m14` | `mFly2Distance` | fly_common (in move 0213B3AC), fly2: the target position's z offset from the player (tww fly2 the same) (1500) |
+| 0x00014 | `m18` | `mFly2Height` | fly_common (in move 0213B3AC), fly2: the height above the player on appearing and the target's y offset (tww fly2 the same) (400) |
+| 0x00018 | `m1C` | `mBallSpeedType0` | aimEnergyBall (in daFganon_Execute 02134B28): the energy ball's first speed (mBallSpeed) when mType is 0 (tww energy_ball_move the same) (45) |
+| 0x0001C | `m20` | `mBallSpeedOtherType` | aimEnergyBall (in daFganon_Execute 02134B28): the energy ball's first speed (mBallSpeed) when mType is not 0 (tww energy_ball_move the same) (45) |
+| 0x00020 | `m24` | `mBallSpeedUpType0` | energy_ball_move (in daFganon_Execute 02134B28): added to mBallSpeed on each reflect when mType is 0 (tww the same) (2) |
+| 0x00024 | `m28` | `mBallSpeedUpOtherType` | energy_ball_move (in daFganon_Execute 02134B28): added to mBallSpeed on each reflect when mType is not 0 (tww the same) (2) |
+| 0x00028 | `m2C` | `mSpinHeight` | spinattack (in move 0213B3AC) / spinattack2 02139194: the y offset from the player where the spin attack starts (spinattack adds 100) (tww the same) (30) |
+| 0x0002C | `m30` | `mSpinDistance` | spinattack (in move 0213B3AC): the z offset from the player where the spin attack starts (tww the same) (-270) |
+| 0x00030 | `m34` | `mSpin2Distance` | spinattack2 02139194: the z offset from the player where the second spin attack starts; kabe_check (in move 0213B3AC) tests lines of it + 100 for walls before choosing it (tww the same) (-600) |
+| 0x00034 | `m38` | `mSpin2SwingDistance` | spinattack2 02139194: the swing starts once the distance to the stored player position is below it (tww the same) (270) |
+| 0x00038 | `m3C` | `mShot2ChargeTime` | shot2 02138670: mTimers[0] after the charge animation; the throw starts at 0 (tww the same) (50) |
+| 0x0003A | `m3E` | `mSwingHitFrame` | spinattack (in move 0213B3AC) / spinattack2 02139194: at this swing frame mBtAttackTimer is started (tww the same) (1) |
+| 0x0003C | `m40` | `mSwingHitEndFrame` | spinattack (in move 0213B3AC) / spinattack2 02139194: mBtAttackTimer = it - mSwingHitFrame (tww the same) (32) |
+| 0x00040 | `m44` | `mSwingBtMaxDis` | execute_collision (in daFganon_Execute 02134B28): mBtMaxDis while mBtAttackTimer runs (tww setBtMaxDis the same) (600) |
+| 0x00044 | `m48` | `mDownTime` | down 02139680: mTimers[0] while falling; after landing the action becomes kieru when it reaches 0 (tww the same) (150) |
+
+Open (no name yet): `m07`, `m42` (read nowhere in WWHD or tww; tww never writes them either); padding `_pad46`.
 
 ## bwds_class (Molgera larva; d_a_bwds.h)
 
@@ -930,9 +1284,23 @@ class, `FgmahouBossHD` (d_a_fgmahou.h), uses the same name (`mLaughRequest`). Th
 
 Open (no name yet): `m0500` (two meanings: the spin speed added to shape_angle.z while ug_move falls, and
 the target roll that hook_chance eases shape_angle.z to) and the padding bytes `m0308`. The HIO block
-`daBwds_HIO_c` is not renamed. zeldaret/tww (CC0) has offset names only for these fields; its d_a_bwds.cpp
+zeldaret/tww (CC0) has offset names only for these fields; its d_a_bwds.cpp
 was read alongside our decomp. Molgera's view of this class, `bwd_detail::Larva` (d_a_bwd.h), uses the same
 name (`mDeleteRequest`).
+
+### daBwds_HIO_c (l_HIO; d_a_bwds.h)
+
+The read HIO values (round 2). Each is set only by daBwds_HIO_c_ct (default in parentheses) and never written elsewhere in WWHD or tww; the reads are all inlined into daBwds_Execute 0210602C (d_a_bwds_exec.cpp).
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x01 | `m005` | `mNoMove` | daBwds_Execute 0210602C: the move / ground checks and the attack / push collision bits run only while it is 0 (tww the same) (0) |
+| 0x04 | `m008` | `mBodyScale` | body_control / move (in daBwds_Execute 0210602C): scales the body model, the joint offsets and the body / hookshot sphere radii (tww the same) (0.8) |
+| 0x08 | `m00C` | `mSplashScale` | daBwds_Execute 0210602C: scale of the sand splash models (tww the same) (0.7) |
+| 0x0C | `m010` | `mMoveSpeed` | ug_move (in daBwds_Execute 0210602C): the speedF of each jump out of the sand (tww the same) (7.0) |
+| 0x10 | `m014` | `mHookChanceTime` | hook_chance (in daBwds_Execute 0210602C): mTimers[0] at the start; at 0 the larva goes back to ug_move (tww the same) (220) |
+| 0x14 | `m018` | `mSwayMax` | ug_move (in daBwds_Execute 0210602C): upper limit of the sway amplitude (distance * 7) (tww the same) (2000) |
+| 0x18 | `m01C` | `mHsSphRadius` | daBwds_Execute 0210602C: radius of the hookshot sphere mHsSph (times mBodyScale) (tww the same) (300) |
 
 ## bdkobj_class (Helmaroc King's breakable tower parts; d_a_bdkobj.h)
 
@@ -961,7 +1329,7 @@ Fragment helper struct bdo_eff_s (offsets within the struct):
 | 0x01B2 | `m1AA` | `mPushSpinY` | top_hahen_move (in daBdkobj_Execute 020729A8): random +-400 on a push, added to mAngle.y while the push runs |
 | 0x01B4 | `m1AC` | `mFrameCounter` | hahen_move (in daBdkobj_Execute 020729A8) adds 1 per frame; tower_kaidan_move sets a random start; kaidan_hahen_move uses it as the phase of the rocking sines |
 
-Open (no name yet): the padding bytes, and `m0C` of `BdkObjAttackInfo` (the CcAtInfo copy; no uses here).
+Open (no name yet): the padding bytes, `m0C` of `BdkObjAttackInfo` (the CcAtInfo copy) became `mHitAngle` with the CcAtInfo copies (other.md, round 12).
 bdo_eff_s keeps its GameCube offset names in the evidence (HD inserted `mHorizontalSpeedX` / `Z` after
 `m020`, so the old names after it no longer match the WWHD offsets).
 
@@ -996,7 +1364,7 @@ header, `FgmahouBossHD`, is covered in the fganon_class section.
 | 0x03D4 | `m03D4` | `mBgmParam` | daGnd_Create 02157B30: parameter bits 0-3; starts BGM 0x8000004D when not 0 (name from the decomp view gndExecFields::mBgmParam, d_a_gnd_exec.h) |
 
 Both fields take the names of the decomp's own views of gnd_class (gndMainFields, gndExecFields).
-`m0C` of `CcAtInfo_gnd` (the CcAtInfo copy; no uses) stays open.
+`m0C` of `CcAtInfo_gnd` (the CcAtInfo copy) became `mHitAngle` with the CcAtInfo copies (other.md, round 12).
 
 ## dr2_class (Valoo's tail and the rock in Gohma's room; d_a_dr2.h)
 
@@ -1103,3 +1471,85 @@ Open (no name yet): the padding bytes `unk290`, `unk2B4`.
 
 bita_class (`field_0x2a7`: mode_dead sets a random 0..3, nothing reads it) and swtdoor_class (`field_0x29c`:
 daSwtdoor_Create stores parameter byte 0, nothing reads it) have no field with enough evidence; both stay open.
+
+## daDaiocta_Eye_c and its HIO view (Big Octo eye; d_a_daiocta_eye.h)
+
+Old names are the GameCube offsets (zeldaret/tww `mXXX`, unnamed there). The three fields are the minimum step of the eye's random look target, the counterparts of tww's mEyeRndRotMaxX / Y / Z; the HIO view `octoEyeHD::Hio` holds the values the eye copies (mRndRotMinX / Y / Z: a different spelling, so that each file keeps one old name per new name).
+
+| Struct / WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| daDaiocta_Eye_c 0x4C8 | `m2EC` | `mEyeRndRotMinX` | setRotEye 0211A1E8 (d_a_daiocta.cpp) passes it to oct_rndRotEyeAxis as the minimum: a random target closer than it to the current angle is pushed away by it (tww rndRotEye the same); _execute 0211DCAC copies the HIO value each frame |
+| daDaiocta_Eye_c 0x4CA | `m2EE` | `mEyeRndRotMinY` | the same for the Y axis |
+| daDaiocta_Eye_c 0x4CC | `m2F0` | `mEyeRndRotMinZ` | the same for the Z axis |
+| Hio 0x24 | `m24` | `mRndRotMinX` | daDaiocta_Eye_HIO_construct 0211E4F4 sets 0x4000; _execute 0211DCAC copies it into the eye |
+| Hio 0x26 | `m26` | `mRndRotMinY` | the constructor sets 0x1000; copied into the eye |
+| Hio 0x28 | `m28` | `mRndRotMinZ` | the constructor sets 0x1000; copied into the eye |
+
+Open: daDaiocta_Eye_c `m295` (set to 1 only; tww the same), `m498` (set from shape_angle.y only; tww the same); Hio `m04`, `m08`, `m0C` and the padding.
+
+## btd_hahen_s and btd_sibuki_s (btd_class::hahen[35], mBtdSibukiS[50]; d_a_btd.h)
+
+Round 5 (two-digit offset names). Gohma's shell debris pieces (btd_hahen_s) and lava splashes (btd_sibuki_s): their active flag / state, position, speed and spin. Same meanings in zeldaret/tww d217e2b.
+
+btd_hahen_s:
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x04 | `m04` | `mActive` | btdActionBurst (in btdActionDamage, move 020F6004; tww damage) sets 1 on a free piece; btdExecDebrisMove (in daBtd_Execute 020F1494; tww hahen_move) moves only active pieces and clears it below y -100; daBtd_Draw 020F0A74 draws only active pieces (tww the same) |
+| 0x08 | `m08` | `mPos` | btdActionBurst: a joint position plus a random offset; btdExecDebrisMove adds mSpeed every frame and puts the piece's model there (tww the same) |
+| 0x14 | `m14` | `mSpeed` | btdActionBurst: 20..25 up and out, turned toward the piece's direction; btdExecDebrisMove adds it to mPos and lowers its y by 3 per frame (tww the same) |
+| 0x20 | `m20` | `mAngleX` | btdActionBurst random; btdExecDebrisMove adds 0x900 per frame and turns the piece's model by it about x (tww the same) |
+| 0x22 | `m22` | `mAngleY` | btdActionBurst random; btdExecDebrisMove adds 0x600 per frame and turns the piece's model by it about y (tww the same) |
+
+btd_sibuki_s:
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x00 | `m00` | `mState` | sibuki_set 020F10B4 sets 1 on a free splash (0); btdExecSplashMove (in daBtd_Execute 020F1494; tww sibuki_move) flies states 1 / 2 (1 -> 2 on the first collision update), counts states above 2 up to 30 and back to 0, and clears it when the splash lands or hits (tww the same) |
+| 0x04 | `m04` | `mPos` | sibuki_set 020F10B4: a random point 300..500 around the boss; btdExecSplashMove adds mSpeed, follows Link for splash 0 with HIO mSplashFollow, and puts the attack sphere and the 0x8063 / 0x8064 effects there; daBtd_Delete 020F34A8 deletes the sound object at it (tww the same) |
+| 0x10 | `m10` | `mSpeed` | sibuki_set 020F10B4: HIO mSplashSpeedF / mSplashSpeedY plus random, turned to a random direction; btdExecSplashMove lowers its y by HIO mSplashGravity and adds it to mPos (tww the same) |
+
+Open (no name yet): padding `btd_hahen_s::m05`, `m24`, `btd_sibuki_s::m01`, `m1C`.
+
+
+## daBmd_HIO_c (l_HIO(); d_a_bmd.h)
+
+Round 8 (two-digit offset names). Kalle Demos' HIO: the chance to start a move, the custom environment time and how long the flower stays open. Same meanings in zeldaret/tww; in WWHD the vtable is last, so the offsets are 4 lower than the names.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x04 | `m08` | `mMoveChance` | wait (d_a_bmd_move.cpp, inlined into daBmd_Execute 020AEBCC): every 30-80 frames Kalle Demos switches to mode 1 (Link within 1300) or 2 (farther) when cM_rndF(1) is below it; daBmd_HIO_c_ct 020B1CB4 0.8 (tww the same) |
+| 0x08 | `m0C` | `mCustomTime` | bmd_kankyo (inlined into daBmd_Execute 020AEBCC): passed to dKy_custom_timeset every frame; daBmd_HIO_c_ct 020B1CB4 1.0 (tww the same) |
+| 0x10 | `m14` | `mOpenTime` | damage (d_a_bmd_move.cpp, inlined into daBmd_Execute 020AEBCC): when the flower's open animation (HIRAKU) stops, mTimers[0] is set to it; sub mode 3 closes the flower (HANA_TOJIRU) when it runs out; daBmd_HIO_c_ct 020B1CB4 100 (tww m308[0] the same) |
+
+Open (no name yet): `m05` (0) and `m10` (0.5), set by daBmd_HIO_c_ct 020B1CB4 and read nowhere in WWHD or tww; padding `_02`, `_12`.
+
+## daBmdfoot_HIO_c (l_HIO; d_a_bmdfoot.h)
+
+Round 8 (two-digit offset names). The Kalle Demos floor tentacle's HIO: the attack angle range and the raised pitch. Same meanings in zeldaret/tww; in WWHD the vtable is last, so the offsets are 4 lower than the names.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x02 | `m06` | `mAttackAngle` | wait (inlined into daBmdfoot_Execute 020B5DC4): the tentacle attacks (Bmdfoot_Attack1) only when the angle to Link is below it; attack_1 (the same): the aim angle toward Link is clamped to +-it; daBmdfoot_HIO_c_ct 020B8458 3500 (tww the same) |
+| 0x04 | `m08` | `mActivePitch` | daBmdfoot_Execute 020B5DC4: current.angle.x is eased to it while mAction is Wait / Attack1 / Attack2, to 0 otherwise; daBmdfoot_HIO_c_ct 020B8458 1000 (tww the same) |
+
+Open (no name yet): `m05` (not even set by daBmdfoot_HIO_c_ct 020B8458; read nowhere in WWHD or tww), padding `_06`.
+
+## daBmdhand_HIO_c and hand_s (l_HIO, bmdhand_class::mChain; d_a_bmdhand.h)
+
+Round 8 (two-digit offset names). The Kalle Demos ceiling tentacle's HIO (ceiling offset, regrow time; in WWHD the vtable is last, so the offsets are 4 lower than the names) and its 20 chain segments (hand_s: position, velocity, line width). Same meanings in zeldaret/tww.
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x04 | `m08` | `mCeilingOffsetY` | hand_ceiling_check (inlined into daBmdhand_Execute 020B8D9C through hand_calc / start_hand_calc): added to the y of the ceiling the upward line check found, giving mCeilingPos; daBmdhand_HIO_c_ct 020BAF50 -20 (tww the same) |
+| 0x08 | `m0C` | `mRegrowTime` | hand_move (inlined into daBmdhand_Execute 020B8D9C), Bmdhand_Attached: a cut tentacle sets mTimers[0] to it; Bmdhand_Cut shrinks the hand below 100 and re-attaches it at 0; daBmdhand_HIO_c_ct 020BAF50 1000 (tww the same) |
+
+hand_s:
+
+| WWHD offset | Old (GameCube name) | New | Evidence |
+|---|---|---|---|
+| 0x00 | `m00` | `mPos` | the tentacle segment's position: control1 / control2 (inlined into daBmdhand_Execute 020B8D9C) and cut_control 020B88C4 chain each segment to the previous one, control2 pulls segment 0x13 to mHandPos, the blood effect is set at it (tww the same) |
+| 0x0C | `m0C` | `mSpeed` | cut_control 020B88C4: first a copy of the old position, then (new - old) * factor, added in the next step's position; the segment's velocity (tww the same) |
+| 0x18 | `m18` | `mLineSize` | control3 020B882C and cut_control3 020B8C74 set it per segment (10.5, then tapering); hand_move (inlined into daBmdhand_Execute 020B8D9C) passes it to Bmdhand_setLineSize, the tentacle line's width (tww the same) |
+
+Open (no name yet): daBmdhand_HIO_c padding `_01`, `_0A`.

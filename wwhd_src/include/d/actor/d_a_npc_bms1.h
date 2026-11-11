@@ -81,17 +81,17 @@ WWHD_SIZE(Bms1ShopItems, 0x44);
 /* ShopCursor_c: only the members the NPCs touch (show/hide flag +0xB4, setScale +0x98..+0xB0) */
 struct Bms1ShopCursor : ShopCursor_c {
     void show() {
-        m54 = 1;
+        mbShow = 1;
     }
     void hide() {
-        m54 = 0;
+        mbShow = 0;
     }
     void setScale(f32 a, f32 b, f32 c, f32 d, f32 e) {
-        m48 = a;
-        m4C = b;
-        m50 = c;
-        m38 = d;
-        m3C = e;
+        mPieceScale = a;
+        mPieceScaleYFar = b;
+        mPieceScaleYNear = c;
+        mPieceDistFar = d;
+        mPieceDistNear = e;
     }
     void setPos(cXyz* p) {
         gabi::call(0x025BD31C, this, p);
@@ -112,7 +112,7 @@ struct daNpc_Bms1_HIO_c {
     /* 0x01 */ u8 _01[3];
     /* 0x04 */ be<s32> m8;
     /* 0x08 */ be<u32> child_unk; /* child +0: not written by the constructors */
-    /* 0x0C */ be<f32> m04;       /* dNpc_HIO_c: playerEyePos offset */
+    /* 0x0C */ be<f32> mPlayerEyeOffsetY;  /* was m04: dNpc_HIO_c's field inlined into the bms1 HIO (d/d_npc.h), see there; lookBack passes it to dNpc_playerEyePos_l; dNpc_HIO_c: playerEyePos offset */
     /* 0x10 */ be<s16> mMaxHeadX;
     /* 0x12 */ be<s16> mMaxBackboneX;
     /* 0x14 */ be<s16> mMaxHeadY;
@@ -125,11 +125,11 @@ struct daNpc_Bms1_HIO_c {
     /* 0x22 */ be<s16> mMaxHeadTurnVel;
     /* 0x24 */ be<f32> mAttnYOffset;
     /* 0x28 */ be<s16> mMaxAttnAngleY;
-    /* 0x2A */ be<u8> m22;
+    /* 0x2A */ be<u8> mDebugDraw;  /* was m22: dNpc_HIO_c's field inlined into the bms1 HIO (d/d_npc.h), see there; the bms1 HIO constructor clears it */
     /* 0x2B */ u8 _2B;
     /* 0x2C */ be<f32> mMaxAttnDistXZ;
     /* 0x30 */ be<u32> npc_vtbl;        /* dNpc_HIO_c vtable (HD: after its members) */
-    /* 0x34 */ be<f32> mCursorScale[5]; /* ShopCursor scale (Bs1 m30..m40) */
+    /* 0x34 */ be<f32> mCursorScale[5]; /* ShopCursor scale (Bs1 mCursorScale..mCursorDistNear) */
     /* 0x48 */ be<f32> mHairSpring;     /* hair: velocity gain */
     /* 0x4C */ be<f32> mHairDamp;       /* hair: velocity damping */
     /* 0x50 */ be<f32> mHairSlerp;      /* hair: quaternion slerp rate */

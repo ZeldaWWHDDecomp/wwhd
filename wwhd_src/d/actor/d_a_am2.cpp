@@ -588,7 +588,7 @@ static s32 daAM2_Create(am2_class* actor) {
         return phase;
     if (!fopAcM_entrySolidHeap(actor, useHeapInit, 0x1AA0))
         return 5;
-    actor->mSmokeCb.m11 = 0;
+    actor->mSmokeCb.mRateOff = 0;
     u32 params = actor->mParameters;
     actor->mType = (u8)params;
     actor->mPrmAreaRadius = (u8)(actor->mParameters >> 8);

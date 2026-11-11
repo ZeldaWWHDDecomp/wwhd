@@ -55,7 +55,7 @@ static u8 solidHeapCB(fopAc_ac_c* a_this) {
 /* 024CA3D0 */
 bool Act_c::create_heap() {
     J3DModelData* modelData =
-        (J3DModelData*)dComIfG_getObjectRes(M_arcname(mType), data(this)->m6C, TSUBO_SAFESTRING_VTBL);
+        (J3DModelData*)dComIfG_getObjectRes(M_arcname(mType), data(this)->mModelIdx, TSUBO_SAFESTRING_VTBL);
     if (modelData == nullptr) /* JUT_ASSERT(1881, modelData != NULL) */
         JUT_ASSERT_fail("d_a_tsubo.cpp", 0x759, "modelData != 0");
 
@@ -117,7 +117,7 @@ void Act_c::create_init_cull() {
         StageInfoView* info = tsuboStageInfo();
         f32 fVar1 = (f32)info->mCullPoint; /* dStage_stagInfo_GetCullPoint */
         if (fVar1 > 1.0f) {
-            cullSizeFar = data(this)->mB0 / fVar1;
+            cullSizeFar = data(this)->mCullSizeFar / fVar1;
         }
     }
 }
@@ -125,11 +125,11 @@ void Act_c::create_init_cull() {
 
 /* 024CA804 */
 void Act_c::create_init_cc() {
-    mStts.Init(data(this)->m10, 0xff, this);
+    mStts.Init(data(this)->mWeight, 0xff, this);
     mCyl.Set(M_cyl_src);
     mCyl.SetStts(&mStts);
     mCyl.SetR((f32)data(this)->mAcchCirRad);
-    mCyl.SetH((f32)data(this)->m70);
+    mCyl.SetH((f32)data(this)->mCylHeight);
     mCyl.mGObjAt.mVec.copy(*cXyz_Zero); /* SetAtVec */
     mCyl.mGObjTg.mVec.copy(*cXyz_Zero); /* SetTgVec */
     /* OnTgShield (GObjTg SPrm bit 1) / OnTgNoHitMark (bit 4) */
@@ -238,7 +238,7 @@ cPhs_State Act_c::_create() {
     m800 = 0;
     if (mType == 7) {
         if (!prm_get_stick(this)) {
-            m800 = 0x4B0; /* M_attrSpine.m30 */
+            m800 = 0x4B0; /* M_attrSpine.mFuseTime */
         }
     }
 
@@ -263,8 +263,8 @@ cPhs_State Act_c::_create() {
 
     if (mType == 2) {
         for (s32 i = 0; i < 3; i++) {
-            m70C[i].m10 |= 1;
-            m748[i].m10 |= 1;
+            m70C[i].mFlag |= 1;
+            m748[i].mFlag |= 1;
         }
     }
     if (mType == 14) {
@@ -307,12 +307,12 @@ bool Act_c::_delete() {
 void Act_c::spec_make_boko(int arg1) {
     Act_c::M7A0* ptr = &m7A0[0];
     for (s32 i = 0; i < arg1; i++, ptr++) {
-        ptr->m00 = fopAcM_create(fpcNm_BOKO_e, 0 /* daBoko_c::Type_BOKO_STICK_e */, &current.pos,
+        ptr->mBokoId = fopAcM_create(fpcNm_BOKO_e, 0 /* daBoko_c::Type_BOKO_STICK_e */, &current.pos,
                                  home.roomNo, nullptr, nullptr, -1, 0);
-        s16 a = M_data_spec_boko(i)->m00;
-        ptr->m06 = a;
+        s16 a = M_data_spec_boko(i)->mYaw;
+        ptr->mStickYaw = a;
         ptr->m08 = a;
-        ptr->m10 = M_data_spec_boko(i)->m04;
+        ptr->mHeight = M_data_spec_boko(i)->mRestHeight;
     }
 }
 
@@ -321,14 +321,14 @@ void Act_c::spec_make_boko(int arg1) {
 void Act_c::spec_init() {
     Act_c::M7A0* ptr = &m7A0[0];
     for (s32 i = 0; i < 3; i++, ptr++) {
-        ptr->m00 = fpcM_ERROR_PROCESS_ID_e;
-        ptr->m04 = 0;
-        ptr->m06 = 0;
+        ptr->mBokoId = fpcM_ERROR_PROCESS_ID_e;
+        ptr->mbCarried = 0;
+        ptr->mStickYaw = 0;
         ptr->m08 = 0;
         ptr->m0C = 0.0f;
-        ptr->m10 = 0.0f;
-        ptr->m14 = 0.0f;
-        ptr->m18 = 0;
+        ptr->mHeight = 0.0f;
+        ptr->mHeightSpeed = 0.0f;
+        ptr->mBounceCount = 0;
         M_spec_act()[i] = nullptr;
     }
 
@@ -342,7 +342,7 @@ void Act_c::spec_init() {
             spec_make_boko(3);
         }
         /* (GameCube bug kept: ptr is one past the array, i.e. mWindVec.x) */
-        if (ptr->m00 != fpcM_ERROR_PROCESS_ID_e) {
+        if (ptr->mBokoId != fpcM_ERROR_PROCESS_ID_e) {
             prm_set_cull_non(this);
         }
     }
@@ -358,10 +358,10 @@ void Act_c::spec_set_actor() {
     if (spec != 0x3f && spec_is_boko(spec)) {
         Act_c::M7A0* ptr = &m7A0[0];
         for (s32 i = 0; i < 3; i++, ptr++) {
-            if (ptr->m00 == fpcM_ERROR_PROCESS_ID_e) {
+            if (ptr->mBokoId == fpcM_ERROR_PROCESS_ID_e) {
                 M_spec_act()[i] = nullptr;
-            } else if (!tsuboSearchByID(ptr->m00, &M_spec_act()[i])) {
-                ptr->m00 = fpcM_ERROR_PROCESS_ID_e;
+            } else if (!tsuboSearchByID(ptr->mBokoId, &M_spec_act()[i])) {
+                ptr->mBokoId = fpcM_ERROR_PROCESS_ID_e;
             }
         }
     }
@@ -385,9 +385,9 @@ void Act_c::spec_carry_spec() {
     if (spec != 0x3f && spec_is_boko(spec)) {
         Act_c::M7A0* ptr = &m7A0[0];
         for (s32 i = 0; i < 3; i++, ptr++) {
-            if (ptr->m04 == 0 && M_spec_act()[i] != nullptr) {
+            if (ptr->mbCarried == 0 && M_spec_act()[i] != nullptr) {
                 tsuboSetCarryNow(M_spec_act()[i], 0);
-                ptr->m04 = 1;
+                ptr->mbCarried = 1;
             }
         }
     }
@@ -400,15 +400,15 @@ void Act_c::spec_remove() {
     if (spec != 0x3f && spec_is_boko(spec)) {
         Act_c::M7A0* ptr = &m7A0[0];
         for (s32 i = 0; i < 3; i++, ptr++) {
-            if (ptr->m04 != 0) {
+            if (ptr->mbCarried != 0) {
                 fopAc_ac_c* boko = M_spec_act()[i];
                 if (boko != nullptr) {
                     boko->current.roomNo = fopAcM_GetRoomNo(this); /* fopAcM_SetRoomNo */
                     fopAcM_cancelCarryNow(boko);
-                    boko->current.angle.y = (s16)(shape_angle.y - ptr->m06 - 0x8000);
+                    boko->current.angle.y = (s16)(shape_angle.y - ptr->mStickYaw - 0x8000);
                     fopAcM_SetSpeedF(boko, cM_rndF(9.0f));
                     boko->speed.y = cM_rndF(13.0f);
-                    ptr->m00 = fpcM_ERROR_PROCESS_ID_e;
+                    ptr->mBokoId = fpcM_ERROR_PROCESS_ID_e;
                 }
             }
         }
@@ -427,9 +427,9 @@ void Act_c::spec_mtx() {
                 gabi::Local<Mtx34> sp08;
                 PSMTXCopy(mDoMtx_stack_c::get(), sp08);
                 mDoMtx_stack_push();
-                mDoMtx_YrotS(mDoMtx_stack_c::get(), (s16)-ptr->m06);
-                mDoMtx_stack_c::transM(0.0f, ptr->m10, M_data_spec_boko(i)->m08);
-                mDoMtx_XrotM(mDoMtx_stack_c::get(), M_data_spec_boko(i)->m02);
+                mDoMtx_YrotS(mDoMtx_stack_c::get(), (s16)-ptr->mStickYaw);
+                mDoMtx_stack_c::transM(0.0f, ptr->mHeight, M_data_spec_boko(i)->mOffsetZ);
+                mDoMtx_XrotM(mDoMtx_stack_c::get(), M_data_spec_boko(i)->mTiltX);
                 gabi::Local<Mtx34> sp38;
                 tsuboMtxConcat(sp08, mDoMtx_stack_c::get(), sp38);
                 /* daBoko_c::setMatrix: the model (HD +0x3B4) gets the matrix */
@@ -477,9 +477,9 @@ void Act_c::mode_appear_init() {
     attn_offBit(this, fopAc_Attn_ACTION_CARRY_e);
 
     if (prm_get_spec(this) == 4) {
-        m808 = 0.2f; /* M_attrSpine.m10 */
-        m80C = 0.2f; /* M_attrSpine.m14 */
-        m802 = 0x50; /* M_attrSpine.m18 */
+        m808 = 0.2f; /* M_attrSpine.mSwellSpeedXZInit */
+        m80C = 0.2f; /* M_attrSpine.mSwellSpeedYInit */
+        m802 = 0x50; /* M_attrSpine.mRegrowTime */
     } else {
         speed.y = cM_rndF(5.0f) + 29.0f;
         gravity = data(this)->mGravity;
@@ -501,7 +501,7 @@ void Act_c::mode_wait_init() {
     mAcch.OffLineCheck();
     m67F = 0;
     fopAcM_SetSpeedF(this, 0.0f);
-    mStts.Init(data(this)->m10, 0xff, this);
+    mStts.Init(data(this)->mWeight, 0xff, this);
     m802 = 0;
     mMode = 2;
 }
@@ -556,9 +556,9 @@ void Act_c::set_mtx() {
         PSMTXTrans(now, current.pos.x, current.pos.y + mOffsetY + fVar1, current.pos.z);
         tsuboMtxConcat(now, &mPoseMtx, now);
     } else {
-        PSMTXTrans(now, current.pos.x, current.pos.y + data(this)->m04 + mOffsetY + fVar1, current.pos.z);
+        PSMTXTrans(now, current.pos.x, current.pos.y + data(this)->mCenterHeight + mOffsetY + fVar1, current.pos.z);
         tsuboMtxConcat(now, &mPoseMtx, now);
-        mDoMtx_stack_c::transM(0.0f, -data(this)->m04, 0.0f);
+        mDoMtx_stack_c::transM(0.0f, -data(this)->mCenterHeight, 0.0f);
     }
     J3DModel_setBaseTRMtx(mpModel, now);
 
@@ -577,7 +577,7 @@ void Act_c::set_mtx() {
 
 /* 024CB088 */
 void Act_c::set_tensor(const cXyz* pos) {
-    tsuboQuatRotAxisRad(tsuboQuatStack(), pos, (f32)(s16)m68E * sAngleToRadian);
+    tsuboQuatRotAxisRad(tsuboQuatStack(), pos, (f32)(s16)mRotAngle * sAngleToRadian);
     tsuboMtxQuat(&mPoseMtx, tsuboQuatStack());
     mDoMtx_ZXYrotM(&mPoseMtx, shape_angle.x, shape_angle.y, shape_angle.z);
 }
@@ -585,12 +585,12 @@ void Act_c::set_tensor(const cXyz* pos) {
 
 /* 024CAA54 */
 void Act_c::init_rot_clean() {
-    cSAngle_Val(&m688, cSAngle__0);
-    cSAngle_Val(&m68A, cSAngle__0);
-    cSAngle_Val(&m68C, cSAngle__0);
-    cSAngle_Val(&m68E, cSAngle__0);
-    cSAngle_Val(&m690, cSAngle__0);
-    cSAngle_Val(&m692, (s16)current.angle.y);
+    cSAngle_Val(&mRotAxisRoll, cSAngle__0);
+    cSAngle_Val(&mRotAxisPitch, cSAngle__0);
+    cSAngle_Val(&mRotAxisPitchSpeed, cSAngle__0);
+    cSAngle_Val(&mRotAngle, cSAngle__0);
+    cSAngle_Val(&mRotAngleSpeed, cSAngle__0);
+    cSAngle_Val(&mRotAxisYaw, (s16)current.angle.y);
 }
 
 
@@ -686,12 +686,12 @@ static Act_c* Act_c_ct(Act_c* i_this) {
     }
     dCcD_Cyl_ct(&i_this->mCyl, TSUBO_CYL_AAB_VTBL);
     dCcD_Stts_ct(&i_this->mStts);
-    cSAngle_ct(&i_this->m688);
-    cSAngle_ct(&i_this->m68A);
-    cSAngle_ct(&i_this->m68C);
-    cSAngle_ct(&i_this->m68E);
-    cSAngle_ct(&i_this->m690);
-    cSAngle_ct(&i_this->m692);
+    cSAngle_ct(&i_this->mRotAxisRoll);
+    cSAngle_ct(&i_this->mRotAxisPitch);
+    cSAngle_ct(&i_this->mRotAxisPitchSpeed);
+    cSAngle_ct(&i_this->mRotAngle);
+    cSAngle_ct(&i_this->mRotAngleSpeed);
+    cSAngle_ct(&i_this->mRotAxisYaw);
     tsuboConstructArray(i_this->m70C, 3, sizeof(dPa_followEcallBack), gabi::guest_fn((const void*)&followEcallBack_ct_a)); /* __construct_array */
     tsuboConstructArray(i_this->m748, 3, sizeof(dPa_followEcallBack), gabi::guest_fn((const void*)&followEcallBack_ct_b));
     dPa_followEcallBack_ct(&i_this->mKutaniCb, 0, 0);

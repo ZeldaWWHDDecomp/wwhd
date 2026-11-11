@@ -40,7 +40,7 @@ static void sound(Act_c* a, u32 id) {
 /* 02350EDC */
 s32 Act_c::CreateHeap() {
     J3DModelData* model_data = (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_HBRF1_BDL_HBRF1_e);
-    JUT_ASSERT(0x5E, model_data != NULL);
+    JUT_ASSERT_MSG(0x5E, model_data != NULL, "model_data != 0");
     mpModel = mDoExt_J3DModel__create(model_data, 0, 0x11020203);
     return mpModel != nullptr;
 }
@@ -70,7 +70,7 @@ s32 Act_c::Create() {
     s16 index = dComIfGp_evmng_getEventIdx(M_evname);
     eyePos.copy(home.pos);
     mEventIdx = index;
-    m2E4 = 0;
+    mEventOrdered = 0;
     return TRUE;
 }
 
@@ -80,7 +80,7 @@ s32 Act_c::Mthd_Create() {
     s32 phase = dComIfG_resLoad(&mPhs, M_arcname);
     if (phase == cPhs_COMPLEATE_e) {
         phase = MoveBGCreate(M_arcname, dRes_INDEX_HBRF1_DZB_HBRF1_e, dBgS_MoveBGProc_Trans, 0);
-        JUT_ASSERT(0x93, (phase == cPhs_COMPLEATE_e) || (phase == cPhs_ERROR_e)); // HD: line 147.
+        JUT_ASSERT_MSG(0x93, (phase == cPhs_COMPLEATE_e) || (phase == cPhs_ERROR_e), "(phase_state == cPhs_COMPLEATE_e) || (phase_state == cPhs_ERROR_e)"); // HD: line 147.
     }
     return phase;
 }
@@ -140,11 +140,11 @@ void Act_c::daObjHbrf1_down_stop() {
             dComIfGs_onEventBit(dSv_event_flag_c::UNK_1540);
             order(this);
             mMode = Mode_UP_DEMO_WAIT_e;
-            m2E4 = 1;
+            mEventOrdered = 1;
         } else if (event == 1 && !dComIfGs_isEventBit(dSv_event_flag_c::UNK_1510)) {
             dComIfGs_onEventBit(dSv_event_flag_c::UNK_1510);
             order(this);
-            m2E4 = 1;
+            mEventOrdered = 1;
             mMode = Mode_UP_DEMO_WAIT_e;
         } else
             mMode = Mode_UP_DEMO_e;
@@ -174,9 +174,9 @@ void Act_c::daObjHbrf1_up_demo() {
     current.pos.y = next;
     if (!(next < target)) {
         current.pos.y = target;
-        if (m2E4 != 0) {
+        if (mEventOrdered != 0) {
             dComIfGp_event_reset();
-            m2E4 = 0;
+            mEventOrdered = 0;
         }
         mMode = Mode_UP_STOP_e;
         sound(this, JA_SE_OBJ_B_LIFT_STOP);
@@ -215,11 +215,11 @@ void Act_c::daObjHbrf1_up_stop() {
             dComIfGs_onEventBit(dSv_event_flag_c::UNK_1520);
             order(this);
             mMode = Mode_DOWN_DEMO_WAIT_e;
-            m2E4 = 1;
+            mEventOrdered = 1;
         } else if (event == 1 && !dComIfGs_isEventBit(dSv_event_flag_c::UNK_1508)) {
             dComIfGs_onEventBit(dSv_event_flag_c::UNK_1508);
             order(this);
-            m2E4 = 1;
+            mEventOrdered = 1;
             mMode = Mode_DOWN_DEMO_WAIT_e;
         } else
             mMode = Mode_DOWN_DEMO_e;
@@ -250,9 +250,9 @@ void Act_c::daObjHbrf1_down_demo() {
     current.pos.y = next;
     if (!(next > target)) {
         current.pos.y = target;
-        if (m2E4 != 0) {
+        if (mEventOrdered != 0) {
             dComIfGp_event_reset();
-            m2E4 = 0;
+            mEventOrdered = 0;
         }
         mMode = Mode_DOWN_STOP_e;
         sound(this, JA_SE_OBJ_B_LIFT_STOP);
@@ -353,7 +353,7 @@ str 1002A040
 str 1002A024
 str 10029FF8
 str 10029F90 in 02350DBC
-str 10029FE8 "model_data != NULL" renamed # HD: assertion spells zero instead of NULL.
-str 10029FA4 "(phase == cPhs_COMPLEATE_e) || (phase == cPhs_ERROR_e)" renamed
+str 10029FE8 "model_data != 0" # HD: assertion spells zero instead of NULL.
+str 10029FA4 "(phase_state == cPhs_COMPLEATE_e) || (phase_state == cPhs_ERROR_e)"
 data M_tmp_mtx 10469DEC
 */

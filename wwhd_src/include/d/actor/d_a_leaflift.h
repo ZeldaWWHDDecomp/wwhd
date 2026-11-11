@@ -13,7 +13,7 @@ struct daLlift_c : fopAc_ac_c {
     dCcD_Cyl mCyl;
     gptr<LeafBgWorld> mpBgW;
     Mtx34 mMtx;
-    be<u8> m43C, m43D, m43E, m43F;
+    be<u8> mbPlayerRiding, mbRiseWobble, mbDescendReady, mStartDelay;  /* was m43C: rideCallBack 021B3028 sets 1 when the rider is the player (fopAcM_GetName 0xA8); _execute 021B3D04 resets the tilt and lets the lift sink only while it is 0, then clears it every frame (tww the same); was m43D: MoveUpLift 021B4090 sets 1 while the lift is still below home.y + 560; rideCallBack 021B3028 then uses a random sine wobble (mActorLifetimeFrameCount << 11) as the tilt factor instead of 2, and clears it after each call (tww the same); was m43E: set to 1 by _execute 021B3D04 when mStartDelay runs out and by rideCallBack 021B3028 when the player rides; while set and not mbPlayerRiding, _execute resets the tilt and starts the descent (mbIsDescending) once the player is 270 away (tww the same); was m43F: CreateInit 021B35F4 sets 30; _execute 021B3D04 counts it down and sets mbDescendReady when it reaches 0 (tww the same) */
     be<s16> mTiltAngle;
     u8 m442[2];
     be<s16> mActorLifetimeFrameCount;
@@ -40,7 +40,7 @@ struct daLlift_c : fopAc_ac_c {
 };
 WWHD_OFFSET(daLlift_c, mpModel, 0x3B4);
 WWHD_OFFSET(daLlift_c, mpBgW, 0x524);
-WWHD_OFFSET(daLlift_c, m43C, 0x558);
+WWHD_OFFSET(daLlift_c, mbPlayerRiding, 0x558);
 WWHD_OFFSET(daLlift_c, mCurrentRotation, 0x564);
 WWHD_OFFSET(daLlift_c, mBGMtx, 0x588);
 WWHD_OFFSET(daLlift_c, mWaterY, 0x5CC);

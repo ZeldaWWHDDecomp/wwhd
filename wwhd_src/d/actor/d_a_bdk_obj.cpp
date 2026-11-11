@@ -45,7 +45,7 @@ void kankyo_cont(bdk_class* i_this) {
         dCcD_Sph* sph = &i_this->mWindAtSph[i];
         if (i_this->mWindAge[i] != 0) {
             PSVECAdd(&i_this->mWindPos[i], &i_this->mWindSpeed[i], &i_this->mWindPos[i]);
-            if (i_this->m2B4 == 1) {
+            if (i_this->mTowerBattle == 1) {
                 sph->SetR(fadds_ppc(REG8_F(7), 600.0f));
             } else {
                 sph->SetR(fadds_ppc(REG8_F(6), 300.0f));

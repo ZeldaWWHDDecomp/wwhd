@@ -112,10 +112,10 @@ struct dSv_player_collect_c {
 WWHD_SIZE(dSv_player_collect_c, 0xD);
 
 struct dSv_player_map_c {
-    /* 0x00 */ be<u32> field_0x0[4][4];
+    /* 0x00 */ be<u32> mMapFlags[4][4];  /* was field_0x0: four 128-bit map flag sets: [1] onGetMap 025B7EF4 / isGetMap 025B7F68, [2] onOpenMap 025B7FE0 / offOpenMap 025B8054 / isOpenMap 025B80C8, [3] onCompleteMap 025B8140 / offCompleteMap 025B81B4 / isCompleteMap 025B8228 (bit no >> 5 word, no & 31 bit); init 025B7E74 clears all four ([0] has no other use); same code TWW d_save.cpp */
     /* 0x40 */ be<u8> mFmapBits[0x31];   /* dIsleIdx_COUNT_e */
     /* 0x71 */ be<u8> field_0x71[16];
-    /* 0x81 */ be<u8> field_0x81;
+    /* 0x81 */ be<u8> mTriforceBits;  /* was field_0x81: onTriforce 025B82A0 / isTriforce 025B8308 set and test bit no (0..7); init 025B7E74 sets 0xEA (TWW: 0); same code TWW d_save.cpp dSv_player_map_c::onTriforce / offTriforce / isTriforce */
     /* 0x82 */ u8 field_0x82[0x84 - 0x82];
 };
 WWHD_SIZE(dSv_player_map_c, 0x84);
@@ -143,10 +143,10 @@ struct dSv_player_config_c {
 };
 
 struct dSv_player_priest_c {
-    /* 0x0 */ cXyz field_0x0;
-    /* 0xC */ be<s16> field_0xc;
-    /* 0xE */ be<s8> field_0xe;
-    /* 0xF */ be<u8> field_0xf;
+    /* 0x0 */ cXyz mPos;  /* was field_0x0: set 025B8880 stores the position; daNpc_Cb1_c create 0221F700 passes the record to the restart setup; TWW accessor getPos */
+    /* 0xC */ be<s16> mRotate;  /* was field_0xc: set 025B8880 stores the angle; daNpc_Cb1_c create 0221F700 reads it for the restart option; TWW accessor getRotate */
+    /* 0xE */ be<s8> mRoomNo;  /* was field_0xe: set 025B8880 stores the room number; daNpc_Cb1_c create 0221F700 reads it for the restart option; TWW accessor getRoomNo */
+    /* 0xF */ be<u8> mFlag;  /* was field_0xf: set 025B8880 stores its first argument, init 025B8874 clears it; daNpc_Cb1_c create 0221F700 restarts at the record when it is 1; TWW accessor getFlag */
 };
 WWHD_SIZE(dSv_player_priest_c, 0x10);
 
@@ -207,7 +207,7 @@ struct dSv_memBit_c {
 WWHD_SIZE(dSv_memBit_c, 0x24);
 
 struct dSv_ocean_c {
-    /* 0x00 */ be<u16> field_0x0[50];
+    /* 0x00 */ be<u16> mOceanSvBits[50];  /* was field_0x0: one u16 of save bits per sea grid: onOceanSvBit 025B89B4 sets and isOceanSvBit 025B8A50 tests bit `bit` of [grid]; init 025B8998 clears them; same code TWW d_save.cpp */
 };
 WWHD_SIZE(dSv_ocean_c, 0x64);
 

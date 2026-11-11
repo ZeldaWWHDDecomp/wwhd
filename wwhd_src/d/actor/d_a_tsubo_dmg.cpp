@@ -32,7 +32,7 @@ static inline void dCamera_ForceLockOff(fopAc_ac_c* a) {
     tsuboDamage_cameraForceLockOff(&camera->mCamera, a->mBsPcId);
 }
 /* dPa_followEcallBack::isEnd(): bit 0 of +0x10 */
-static inline bool followEcallBack_isEnd(dPa_followEcallBack* f) { return (f->m10 & 1) != 0; }
+static inline bool followEcallBack_isEnd(dPa_followEcallBack* f) { return (f->mFlag & 1) != 0; }
 
 /* the material sound of the first poly info hit (bg index below 0x100) */
 static inline u32 mtrl_snd(cBgS_PolyInfo* p0, cBgS_PolyInfo* p1, u32 def, bool nullchk) {
@@ -51,8 +51,8 @@ static inline cBgS_PolyInfo* Yogan_poly(Act_c* a) { return static_cast<cBgS_Poly
 
 static inline void limit_speed(Act_c* a) {
     f32 sp = std_sqrtf(gabi::fmadds(a->speed.y, a->speed.y, a->speedF * a->speedF));
-    if (sp > data(a)->m50) {
-        f32 fVar4 = data(a)->m50 / sp;
+    if (sp > data(a)->mWaterEntrySpeedMax) {
+        f32 fVar4 = data(a)->mWaterEntrySpeedMax / sp;
         PSVECScale(&a->speed, &a->speed, fVar4);
         a->speedF = a->speedF * fVar4;
     }
@@ -64,7 +64,7 @@ void daTsuboDamage::Act_c::spec_mode_carry_init() {
     if (spec != 0x3F && daTsubo::spec_is_boko(spec)) {
         Act_c::M7A0* ptr = &m7A0[0];
         for (s32 i = 0; i < 3; i++, ptr++) {
-            if (ptr->m04 != 0 && daTsubo::M_spec_act()[i] != nullptr) {
+            if (ptr->mbCarried != 0 && daTsubo::M_spec_act()[i] != nullptr) {
                 fopAcM_setStageLayer(daTsubo::M_spec_act()[i]);
             }
         }
@@ -77,11 +77,11 @@ void daTsuboDamage::Act_c::spec_kill() {
     if (spec != 0x3F && daTsubo::spec_is_boko(spec)) {
         Act_c::M7A0* ptr = &m7A0[0];
         for (s32 i = 0; i < 3; i++, ptr++) {
-            if (ptr->m04 != 0) {
+            if (ptr->mbCarried != 0) {
                 fopAc_ac_c* boko = daTsubo::M_spec_act()[i];
                 if (boko != nullptr) {
                     s8 room = fopAcM_GetRoomNo(this);
-                    ptr->m00 = fpcM_ERROR_PROCESS_ID_e;
+                    ptr->mBokoId = fpcM_ERROR_PROCESS_ID_e;
                     boko->current.roomNo = room; /* fopAcM_SetRoomNo */
                     fopAcM_cancelCarryNow(boko);
                     fopAcM_delete(boko);
@@ -126,7 +126,7 @@ void daTsuboDamage::Act_c::mode_carry_init() {
     m802 = 6;
     m684 = (actor_status & fopAcStts_HOOK_CARRY_e) != 0; /* fopAcM_checkHookCarryNow */
     if (mType == 7 && prm_get_stick(this)) {
-        m800 = 0x4B0; /* M_attrSpine.m30 */
+        m800 = 0x4B0; /* M_attrSpine.mFuseTime */
         se_pickup_carry_init();
     }
     prm_off_stick(this);
@@ -147,7 +147,7 @@ void daTsuboDamage::Act_c::mode_sink_init() {
     daTsubo::Acch_ClrWaterNone(&mAcch);
     mAcch.OffLineCheck();
     m67F = 0;
-    gravity = data(this)->mGravity + data(this)->m3C;
+    gravity = data(this)->mGravity + data(this)->mBuoyancy;
     limit_speed(this);
     daTsubo::attn_offBit(this, fopAc_Attn_ACTION_CARRY_e);
     mMode = 6;
@@ -191,7 +191,7 @@ void daTsuboDamage::Act_c::damaged(s32 arg1, cBgS_PolyInfo* arg2, bool arg3, con
         }
         // HD: the original assert text calls these M_type and Type_Max.
         if ((u32)mType >= 0x10)
-            JUT_ASSERT_fail("d_a_tsubo.cpp", 0xD62, "mType < ARRAY_SIZE(eff_break_proc)");
+            JUT_ASSERT_fail("d_a_tsubo.cpp", 0xD62, "M_type >= 0 && M_type < Type_Max");
         (this->*eff_break_proc.mProc[mType])();
         se_break(arg2);
     } else {
@@ -302,7 +302,7 @@ bool daTsuboDamage::Act_c::damage_cc_proc() {
             } else {
                 if (damage_tg_acc() && mMode == 2 && mType == 7) {
                     if (prm_get_stick(this)) {
-                        m800 = 0x4B0; /* M_attrSpine.m30 */
+                        m800 = 0x4B0; /* M_attrSpine.mFuseTime */
                         if (prm_get_stick(this)) {
                             se_pickup();
                         }
@@ -355,7 +355,7 @@ bool daTsuboDamage::Act_c::damage_cc_proc() {
             /* harness workaround: the facts say HitSeStart reads r7; the original holds the data row there */
             Act_c::Data_c* d = data(this);
             tsuboDamage_daObj_HitSeStart(&eyePos, current.roomNo, &mCyl, d->mSoundID_Hit, gabi::ea(d));
-            tsuboDamage_set_senv(this, data(this)->m62, data(this)->m63);
+            tsuboDamage_set_senv(this, data(this)->mHitNoiseLevel, data(this)->mHitNoiseTimer);
             s32 type = mType;
             if (type == 3 || type == 4 || type == 7) {
                 tsuboDamage_daObj_HitEff_kikuzu(this, &mCyl);
@@ -381,7 +381,7 @@ bool daTsuboDamage::Act_c::damage_bg_proc() {
             eff_hit_water_splash();
             tsuboDamage_init_rot_clean(this);
             // HD: NaN goes to mode_afl_init (bge)
-            if (data(this)->mGravity + data(this)->m3C < 0.0f) {
+            if (data(this)->mGravity + data(this)->mBuoyancy < 0.0f) {
                 mode_sink_init();
             } else {
                 mode_afl_init();
@@ -396,7 +396,7 @@ bool daTsuboDamage::Act_c::damage_bg_proc() {
         if (cVar2) {
             se_fall_water();
             eff_hit_water_splash();
-            if (data(this)->mGravity + data(this)->m3C < 0.0f) {
+            if (data(this)->mGravity + data(this)->mBuoyancy < 0.0f) {
                 mode_sink_init();
             } else {
                 mode_afl_init();
@@ -429,7 +429,7 @@ bool daTsuboDamage::Act_c::damage_bg_proc_directly() {
 
     if (mMode == 2 || mMode == 3) {
         bool uVar7 = (flags & dBgS_Acch::ROOF_HIT) != 0;
-        if (uVar8 && mFallStartY - current.pos.y > data(this)->m38) {
+        if (uVar8 && mFallStartY - current.pos.y > data(this)->mBreakFallHeight) {
             damaged(2, nullptr);
             iVar10 = true;
         } else if (uVar11 && uVar7) {
@@ -448,7 +448,7 @@ bool daTsuboDamage::Act_c::damage_bg_proc_directly() {
         bool cVar5 = chk_sink_water();
         bool cVar3 = chk_sink_lava();
         if (mType == 7) {
-            if (uVar8 && mFallStartY - current.pos.y > data(this)->m38) {
+            if (uVar8 && mFallStartY - current.pos.y > data(this)->mBreakFallHeight) {
                 damaged(2, nullptr);
                 iVar10 = true;
             }
@@ -483,10 +483,10 @@ bool daTsuboDamage::Act_c::damage_bg_proc_directly() {
                         eff_drop_water();
                     }
                     if (mType == 7) {
-                        fopAcM_seStart_raw(this, data(this)->m88, 0x2D);
+                        fopAcM_seStart_raw(this, data(this)->mSoundID_Land, 0x2D);
                     } else {
                         u32 snd = GetMtrlSndId(daTsubo::Acch_gnd(&mAcch));
-                        fopAcM_seStart_raw(this, data(this)->m88, snd);
+                        fopAcM_seStart_raw(this, data(this)->mSoundID_Land, snd);
                     }
                     if (!chk_sink_water()) {
                         eff_land_smoke();
@@ -549,7 +549,7 @@ void daTsuboDamage::Act_c::crr_pos_water() {
     f32 fVar1 = mAcch.m_wtr.GetHeight(); /* m_wtr.GetHeight() */
     bool bVar5 = daSea_ChkArea(current.pos.x, current.pos.z);
     f32 fVar7 = daSea_calcWave(current.pos.x, current.pos.z);
-    f32 fVar2 = current.pos.y + data(this)->m04;
+    f32 fVar2 = current.pos.y + data(this)->mCenterHeight;
     bool bVar3 = mAcch.ChkWaterIn() && fVar2 < fVar1;
     bool bVar4 = bVar5 && fVar2 < fVar7;
 
@@ -581,7 +581,7 @@ void daTsuboDamage::Act_c::crr_pos_lava() {
     if (m67F != 0) {
         mLavaY = G_CM3D_F_INF_NEG;
     } else {
-        f32 y = old.pos.y + data(this)->m04 + 1.0f;
+        f32 y = old.pos.y + data(this)->mCenterHeight + 1.0f;
         cXyz* p = &reinterpret_cast<dBgS_GndChk*>(&mGndChkYogan)->m_pos; /* SetPos */
         p->z = current.pos.z;
         p->x = current.pos.x;
@@ -733,21 +733,21 @@ void daTsuboDamage::Act_c::eff_drop_water() {
 
 /* 024CDA98 */
 void daTsuboDamage::Act_c::eff_land_smoke() {
-    tsuboDamage_daObj_make_land_effect(this, &mAcch.m_gnd, data(this)->mC8);
+    tsuboDamage_daObj_make_land_effect(this, &mAcch.m_gnd, data(this)->mLandEffectScale);
 }
 
 /* 024CCCEC */
 void daTsuboDamage::Act_c::eff_hit_water_splash() {
     cXyz sp08;
     sp08.set(current.pos.x, mWaterY, current.pos.z);
-    fopKyM_createWpillar(&sp08, data(this)->mBC, data(this)->mC0, 0);
+    fopKyM_createWpillar(&sp08, data(this)->mWpillarScaleXZ, data(this)->mWpillarScaleY, 0);
 }
 
 /* 024CD0B8 */
 void daTsuboDamage::Act_c::eff_hit_lava_splash() {
     cXyz sp08;
     sp08.set(current.pos.x, mLavaY, current.pos.z);
-    tsuboDamage_fopKyM_createMpillar(&sp08, data(this)->mC4);
+    tsuboDamage_fopKyM_createMpillar(&sp08, data(this)->mMpillarSize);
 }
 
 /* 024CCB4C */
@@ -755,7 +755,7 @@ bool daTsuboDamage::Act_c::chk_sink_lava() {
     if (m67F != 0) {
         return false;
     }
-    f32 m04 = data(this)->m04;
+    f32 m04 = data(this)->mCenterHeight;
     f32 fVar1 = (20.0f - m04 >= 0.0f) ? m04 : 20.0f; /* fsel */
     return mLavaY > current.pos.y + fVar1;
 }
@@ -776,14 +776,14 @@ void daTsuboDamage::Act_c::se_fall_water() {
     cBgS_PolyInfo* p0 = m505 ? nullptr : Acch_wtr(this);
     u32 snd = mtrl_snd(p0, daTsubo::Acch_gnd(&mAcch), 0x13, true);
     fopAcM_seStart_raw(this, data(this)->mSoundID_FallWater, snd);
-    tsuboDamage_set_senv(this, data(this)->m64, data(this)->m65);
+    tsuboDamage_set_senv(this, data(this)->mFallInNoiseLevel, data(this)->mFallInNoiseTimer);
 }
 
 /* 024CCF84 */
 void daTsuboDamage::Act_c::se_fall_lava() {
     u32 snd = mtrl_snd(Yogan_poly(this), daTsubo::Acch_gnd(&mAcch), 0x17, false);
     fopAcM_seStart_raw(this, data(this)->mSoundID_FallLava, snd);
-    tsuboDamage_set_senv(this, data(this)->m64, data(this)->m65);
+    tsuboDamage_set_senv(this, data(this)->mFallInNoiseLevel, data(this)->mFallInNoiseTimer);
 }
 
 /* 024CBE2C */
@@ -791,7 +791,7 @@ void daTsuboDamage::Act_c::se_break(cBgS_PolyInfo* p) {
     u32 snd = mtrl_snd(p, daTsubo::Acch_gnd(&mAcch), 0, true);
     fopAcM_seStart_raw(this, data(this)->mSoundID_Break, snd);
     Act_c::Data_c* d = data(this);
-    tsuboDamage_set_senv_r6(this, d->m60, d->m61, gabi::ea(d));
+    tsuboDamage_set_senv_r6(this, d->mBreakNoiseLevel, d->mBreakNoiseTimer, gabi::ea(d));
 }
 
 /* 024CD4B0 */
@@ -815,7 +815,7 @@ void daTsuboDamage::Act_c::cam_lockoff() {
 
 /* WWHD glue
 str 10040CAC
-str 10040CBC "mType < ARRAY_SIZE(eff_break_proc)" renamed
+str 10040CBC "M_type >= 0 && M_type < Type_Max"
 data eff_break_proc 10040CE0
 ext 024CAA54 void tsuboDamage_init_rot_clean(daTsuboDamage::Act_c* a)
 ext 024CAC44 void tsuboDamage_mode_wait_init(daTsuboDamage::Act_c* a)

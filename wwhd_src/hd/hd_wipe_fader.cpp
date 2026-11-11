@@ -1,5 +1,6 @@
 /* HD WipeFader draws four mirrored texture quadrants on each output. Private decomp source. */
 #include "hd/hd_wipe_fader.h"
+#include "sead/ElementAt.h"
 static hdWipeFaderHeaderZero_c sWipeFaderHeaderZero;
 static hdWipeFaderHeaderDescriptor_c sWipeFaderHeaderDescriptor;
 static hdWipeFaderHeaderDescriptor_c sWipeFaderRotationDescriptor;
@@ -153,7 +154,9 @@ static void resetWipeFader() { resetWipeProgress(); }
 void hdWipeFader_c::draw(hdMaskRenderInfo_c* info) {
     hdMaskScreenMgr_l* screens = sWipeFaderWipeScreens;
     u32 screen = info->mScreen;
-    hdMaskViewport_l* viewport = &screens->mScreens[screen].mViewport;
+    // Guest EA arithmetic: mScreens + screen * size wraps at 32 bits as on the console (a host index on a NULL screen manager
+    // reached host addresses past 4 GB).
+    hdMaskViewport_l* viewport = &sead::elementAt<hdMaskScreen_l>(gabi::ea(screens->mScreens), screen).mViewport;
     hdMaskBounds_c bounds;
     calculateWipeBounds(&bounds, viewport);
     applyWipeViewport(&bounds, viewport);

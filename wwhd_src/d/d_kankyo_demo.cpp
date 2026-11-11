@@ -21,7 +21,7 @@ void dKydm_demo_plight_entry(void* light, void* pos, s32 type, u32 group, u32 de
     plight->mLightInfluence.mPos.x= position->x;
     plight->mLightInfluence.mPos.y= position->y;
     u32 combined = (u32)type + group * 100u;
-    plight->field_0x04 = (s32)combined;
+    plight->mType = (s32)combined;
     plight->mLightInfluence.mPos.z= position->z;
     plight->mLightInfluence.mPower = initialPower;
     if ((s32)combined < 100) {
@@ -33,7 +33,7 @@ void dKydm_demo_plight_entry(void* light, void* pos, s32 type, u32 group, u32 de
         dKy_plight_set(&plight->mLightInfluence);
         plight->mUpdateDelay = delay;
         plight->field_0x00 = 0;
-        plight->field_0x04 = type;
+        plight->mType = type;
     } else {
         plight->mLightInfluence.mColorR = 255;
         plight->mLightInfluence.mColorB = 120;
@@ -47,7 +47,7 @@ void dKydm_demo_plight_entry(void* light, void* pos, s32 type, u32 group, u32 de
         }
         dKy_efplight_set(&plight->mLightInfluence);
         plight->mUpdateDelay = delay;
-        plight->field_0x04 = type;
+        plight->mType = type;
         plight->field_0x00 = 0;
     }
 }
@@ -57,7 +57,7 @@ void dKydm_demo_plight_delete(void* light) {
     dKy_getEnvlight();
     if (!light) return;
     DEMO_PLIGHT* plight = (DEMO_PLIGHT*)light;
-    if (plight->field_0x04 < 100) dKy_plight_cut(&plight->mLightInfluence);
+    if (plight->mType < 100) dKy_plight_cut(&plight->mLightInfluence);
     else dKy_efplight_cut(&plight->mLightInfluence);
 }
 

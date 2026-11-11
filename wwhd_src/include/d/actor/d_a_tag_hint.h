@@ -9,19 +9,19 @@ namespace hint {
 enum { fpcNm_Obj_Movebox_e = 0x2B };
 }
 struct daTag_Hint_c : fopAc_ac_c {
-    /* 0x3AC */ be<u32> m290;
-    /* 0x3B0 */ be<s8> m294;
+    /* 0x3AC */ be<u32> mTalkMsgId;  /* was m290: talk 024A9E68 stores getMsg() at the first step and drives the message with it (hintMessageSet / next_msgStatus) (tww the same) */
+    /* 0x3B0 */ be<s8> mTalkState;  /* was m294: talkInit 024A9CF8 clears it; talk 024A9E68 steps it 0 -> 1 (message created) -> 2 (shown) and -1 at the end (tww the same) */
     u8 pad[3];
     /* 0x3B4 */ be<u32> mMsgNo;
-    /* 0x3B8 */ be<s32> m29C;
-    /* 0x3BC */ be<s16> m2A0;
+    /* 0x3B8 */ be<s32> mStaffId;  /* was m29C: startProc 024A97E4 stores getMyStaffId("TAGHINT"); actionEvent 024A9FAC reads the event actions and ends the cuts with it (tww the same) */
+    /* 0x3BC */ be<s16> mHintDelay;  /* was m2A0: arrivalTerms 024A9284 sets 600 / 3600 / 1800 / 900 / 0 by hint type; otherCheck 024A996C counts it down (types 4 / 8 / 9 / 12 before the range check, the others while no message is open) and allows the hint only at 0; daTag_Hint_Create 024AA334 clears it (tww the same) */
     /* 0x3BE */ be<u8> mCurProc;
-    /* 0x3BF */ be<u8> m2A3;
-    /* 0x3C0 */ be<s16> m2A4;
-    /* 0x3C2 */ be<u16> m2A6;
-    /* 0x3C4 */ be<f32> m2A8;
-    /* 0x3C8 */ be<f32> m2AC;
-    /* 0x3CC */ be<f32> m2B0;
+    /* 0x3BF */ be<u8> mGrabHint;  /* was m2A3: makeEventId 024A94A0 sets 1 when Link holds an actor (event DEFAULT_HINT2), else 0; setPlayerAngle 024A95C4 then uses search_angle_table_grab (tww the same) */
+    /* 0x3C0 */ be<s16> mHintEventIdx;  /* was m2A4: makeEventId 024A94A0 stores the event index of HIRL_HINT / DEFAULT_HINT2 / DEFAULT_HINT; actionHunt 024A9B78 / actionArrival 024A9C74 order it (eventInfo.setEventId) (tww the same) */
+    /* 0x3C2 */ be<u16> mFlags;  /* was m2A6: actionEvent 024A9FAC sets bit 0 when the event advances (action 2 ends the cut only with it); tww chkFlag / setFlag on it */
+    /* 0x3C4 */ be<f32> mRangeXZSq;  /* was m2A8: daTag_Hint_Create 024AA334: (scale.x * 100) squared; rangeCheck_local 024A8BC0 needs the squared XZ distance below it (tww the same) */
+    /* 0x3C8 */ be<f32> mRangeY;  /* was m2AC: daTag_Hint_Create 024AA334: scale.y * 100 (2410 for type 14); rangeCheck_local 024A8BC0 needs the height difference within it (tww the same) */
+    /* 0x3CC */ be<f32> mDarkRatio;  /* was m2B0: startProc 024A97E4 sets 1; actionEvent 024A9FAC lowers it by 0.05 to 0.15 during the hint talk, actionLight 024A8F08 raises it back to 1; darkProc 024A8D2C passes it to dKy_set_vrboxcol_ratio / dKy_set_fogcol_ratio (tww the same) */
     u8 getEventNo();
     u8 getSwbit();
     u8 getSwbit2();
@@ -53,19 +53,19 @@ struct daTag_Hint_c : fopAc_ac_c {
     u16 talk();
     s32 actionEvent();
 };
-WWHD_OFFSET(daTag_Hint_c, m2A0, 0x3BC);
-WWHD_OFFSET(daTag_Hint_c, m2B0, 0x3CC);
+WWHD_OFFSET(daTag_Hint_c, mHintDelay, 0x3BC);
+WWHD_OFFSET(daTag_Hint_c, mDarkRatio, 0x3CC);
 WWHD_SIZE(daTag_Hint_c, 0x3D0);
-WWHD_OFFSET(daTag_Hint_c, m290, 0x3AC);
-WWHD_OFFSET(daTag_Hint_c, m294, 0x3B0);
+WWHD_OFFSET(daTag_Hint_c, mTalkMsgId, 0x3AC);
+WWHD_OFFSET(daTag_Hint_c, mTalkState, 0x3B0);
 WWHD_OFFSET(daTag_Hint_c, mMsgNo, 0x3B4);
-WWHD_OFFSET(daTag_Hint_c, m29C, 0x3B8);
+WWHD_OFFSET(daTag_Hint_c, mStaffId, 0x3B8);
 WWHD_OFFSET(daTag_Hint_c, mCurProc, 0x3BE);
-WWHD_OFFSET(daTag_Hint_c, m2A3, 0x3BF);
-WWHD_OFFSET(daTag_Hint_c, m2A4, 0x3C0);
-WWHD_OFFSET(daTag_Hint_c, m2A6, 0x3C2);
-WWHD_OFFSET(daTag_Hint_c, m2A8, 0x3C4);
-WWHD_OFFSET(daTag_Hint_c, m2AC, 0x3C8);
+WWHD_OFFSET(daTag_Hint_c, mGrabHint, 0x3BF);
+WWHD_OFFSET(daTag_Hint_c, mHintEventIdx, 0x3C0);
+WWHD_OFFSET(daTag_Hint_c, mFlags, 0x3C2);
+WWHD_OFFSET(daTag_Hint_c, mRangeXZSq, 0x3C4);
+WWHD_OFFSET(daTag_Hint_c, mRangeY, 0x3C8);
 
 s32 hintGetEventIdx(dEvent_manager_c* manager, const char* name, u8 event);
 s32 hintGetMyStaffId(dEvent_manager_c* manager, const char* name, u32 actor, u32 id);

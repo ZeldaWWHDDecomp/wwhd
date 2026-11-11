@@ -19,7 +19,7 @@ s32 Act_c::prm_get_type() { return Smplbg_PrmAbstract(this, PRM_TYPE_W, PRM_TYPE
 /* 02390168 */
 BOOL Act_c::CreateHeap() {
     J3DModelData* model_data = (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_QTKHD_BDL_QTKHD_e);
-    JUT_ASSERT(0x6b, model_data != NULL);
+    JUT_ASSERT_MSG(0x6b, model_data != NULL, "model_data != 0");
     J3DModel* model = mDoExt_J3DModel__create(model_data, 0x80000, 0x11000022);
     mpModel = model;
     return model != nullptr;
@@ -172,7 +172,7 @@ data farCullFactor 1047C6F0
 str 1002F5A0 # "Qtkhd"
 str 1002F628 in 02390168 # "d_a_obj_smplbg.cpp"
 str 1002F5C0 in 02390024 # "d_a_obj_smplbg.cpp"
-str 1002F618 "model_data != NULL" renamed # HD: null printed as 0
+str 1002F618 "model_data != 0" # HD: null printed as 0
 str 1002F5D4
 ext 025D6768 void fopAcM_setCullSizeSphere(fopAc_ac_c*, f32, f32, f32, f32)
 ext 022ED834 s32 Smplbg_PrmAbstract(fopAc_ac_c*, s32, s32)

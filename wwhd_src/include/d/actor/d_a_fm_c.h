@@ -32,70 +32,70 @@ inline const be<u8>* stringBytes(const char* string) { return gabi::at<const be<
 // GC HIO fields retain their offsets in the HD object. Unused fields stay opaque.
 struct HIO {
     u8 mUnaccessed0[0xD];
-    be<u8> field_0x00D;
+    be<u8> mNoGrabDemo;  /* was field_0x00D: as fm_main::HIO::mNoGrabDemo */
     u8 mUnaccessedE[0x5A];
-    be<s16> field_0x068;
+    be<s16> mBikubikuTime;  /* was field_0x068: as fm_main::HIO::mBikubikuTime */
     u8 mUnaccessed6A[0x26];
-    be<s16> field_0x090;
-    be<s16> field_0x092;
+    be<s16> mGrabLinkSinkTime;  /* was field_0x090: as fm_main::HIO::mGrabLinkSinkTime */
+    be<s16> mItemThrowTime;  /* was field_0x092: as fm_main::HIO::mItemThrowTime */
     u8 mUnaccessed94[0x2];
-    be<s16> field_0x096;
+    be<s16> mTurnStep;  /* was field_0x096: as fm_main::HIO::mTurnStep */
     u8 mUnaccessed98[0x2];
-    be<s16> field_0x09A;
+    be<s16> mTurnAngleMin;  /* was field_0x09A: as fm_main::HIO::mTurnAngleMin */
     u8 mUnaccessed9C[0x2];
-    be<s16> field_0x09E;
-    be<s16> field_0x0A0;
+    be<s16> mGrabNpcSinkTime;  /* was field_0x09E: as fm_main::HIO::mGrabNpcSinkTime */
+    be<s16> mRndMoveTime;  /* was field_0x0A0: as fm_main::HIO::mRndMoveTime */
     u8 mUnaccessedA2[0x4];
-    be<s16> field_0x0A6;
+    be<s16> mDamageTime;  /* was field_0x0A6: as fm_main::HIO::mDamageTime */
     u8 mUnaccessedA8[0x8];
-    be<f32> field_0x0B0;
-    be<f32> field_0x0B4;
-    be<f32> field_0x0B8;
+    be<f32> mRndMoveStep;  /* was field_0x0B0: as fm_main::HIO::mRndMoveStep */
+    be<f32> mEscapeRange;  /* was field_0x0B4: as fm_main::HIO::mEscapeRange */
+    be<f32> mRndEscapeDist;  /* was field_0x0B8: as fm_main::HIO::mRndEscapeDist */
     u8 mUnaccessedBC[0x8];
-    be<f32> field_0x0C4;
+    be<f32> mReachDist;  /* was field_0x0C4: as fm_main::HIO::mReachDist */
     u8 mUnaccessedC8[0x4];
-    be<f32> field_0x0CC;
+    be<f32> mChaseSpeed;  /* was field_0x0CC: as fm_main::HIO::mChaseSpeed */
     u8 mUnaccessedD0[0x20];
-    be<f32> field_0x0F0;
-    be<f32> field_0x0F4;
-    be<f32> field_0x0F8;
-    be<f32> field_0x0FC;
+    be<f32> mThrowSpeedF;  /* was field_0x0F0: as fm_main::HIO::mThrowSpeedF */
+    be<f32> mThrowSpeedY;  /* was field_0x0F4: as fm_main::HIO::mThrowSpeedY */
+    be<f32> mThrowGravity;  /* was field_0x0F8: as fm_main::HIO::mThrowGravity */
+    be<f32> mThrowFrame;  /* was field_0x0FC: as fm_main::HIO::mThrowFrame */
     u8 mUnaccessed100[0x10];
-    be<f32> field_0x110;
-    be<f32> field_0x114;
-    be<f32> field_0x118;
-    be<s16> field_0x11C;
+    be<f32> mPullDistMin;  /* was field_0x110: as fm_main::HIO::mPullDistMin */
+    be<f32> mPullDistMax;  /* was field_0x114: as fm_main::HIO::mPullDistMax */
+    be<f32> mPullPower;  /* was field_0x118: as fm_main::HIO::mPullPower */
+    be<s16> mParalysisTime;  /* was field_0x11C: as fm_main::HIO::mParalysisTime */
     u8 mUnaccessed11E[0x2];
-    be<f32> field_0x120;
-    be<f32> field_0x124;
-    be<f32> field_0x128;
+    be<f32> mHoleScaleClosed;  /* was field_0x120: as fm_main::HIO::mHoleScaleClosed */
+    be<f32> mHoleScaleOpen;  /* was field_0x124: as fm_main::HIO::mHoleScaleOpen */
+    be<f32> mHoleScaleStep;  /* was field_0x128: as fm_main::HIO::mHoleScaleStep */
     u8 mUnaccessed12C[0x15C - 0x12C];
 };
-WWHD_OFFSET(HIO, field_0x00D, 0xD);
-WWHD_OFFSET(HIO, field_0x068, 0x68);
-WWHD_OFFSET(HIO, field_0x090, 0x90);
-WWHD_OFFSET(HIO, field_0x092, 0x92);
-WWHD_OFFSET(HIO, field_0x096, 0x96);
-WWHD_OFFSET(HIO, field_0x09A, 0x9A);
-WWHD_OFFSET(HIO, field_0x09E, 0x9E);
-WWHD_OFFSET(HIO, field_0x0A0, 0xA0);
-WWHD_OFFSET(HIO, field_0x0A6, 0xA6);
-WWHD_OFFSET(HIO, field_0x0B0, 0xB0);
-WWHD_OFFSET(HIO, field_0x0B4, 0xB4);
-WWHD_OFFSET(HIO, field_0x0B8, 0xB8);
-WWHD_OFFSET(HIO, field_0x0C4, 0xC4);
-WWHD_OFFSET(HIO, field_0x0CC, 0xCC);
-WWHD_OFFSET(HIO, field_0x0F0, 0xF0);
-WWHD_OFFSET(HIO, field_0x0F4, 0xF4);
-WWHD_OFFSET(HIO, field_0x0F8, 0xF8);
-WWHD_OFFSET(HIO, field_0x0FC, 0xFC);
-WWHD_OFFSET(HIO, field_0x110, 0x110);
-WWHD_OFFSET(HIO, field_0x114, 0x114);
-WWHD_OFFSET(HIO, field_0x118, 0x118);
-WWHD_OFFSET(HIO, field_0x11C, 0x11C);
-WWHD_OFFSET(HIO, field_0x120, 0x120);
-WWHD_OFFSET(HIO, field_0x124, 0x124);
-WWHD_OFFSET(HIO, field_0x128, 0x128);
+WWHD_OFFSET(HIO, mNoGrabDemo, 0xD);
+WWHD_OFFSET(HIO, mBikubikuTime, 0x68);
+WWHD_OFFSET(HIO, mGrabLinkSinkTime, 0x90);
+WWHD_OFFSET(HIO, mItemThrowTime, 0x92);
+WWHD_OFFSET(HIO, mTurnStep, 0x96);
+WWHD_OFFSET(HIO, mTurnAngleMin, 0x9A);
+WWHD_OFFSET(HIO, mGrabNpcSinkTime, 0x9E);
+WWHD_OFFSET(HIO, mRndMoveTime, 0xA0);
+WWHD_OFFSET(HIO, mDamageTime, 0xA6);
+WWHD_OFFSET(HIO, mRndMoveStep, 0xB0);
+WWHD_OFFSET(HIO, mEscapeRange, 0xB4);
+WWHD_OFFSET(HIO, mRndEscapeDist, 0xB8);
+WWHD_OFFSET(HIO, mReachDist, 0xC4);
+WWHD_OFFSET(HIO, mChaseSpeed, 0xCC);
+WWHD_OFFSET(HIO, mThrowSpeedF, 0xF0);
+WWHD_OFFSET(HIO, mThrowSpeedY, 0xF4);
+WWHD_OFFSET(HIO, mThrowGravity, 0xF8);
+WWHD_OFFSET(HIO, mThrowFrame, 0xFC);
+WWHD_OFFSET(HIO, mPullDistMin, 0x110);
+WWHD_OFFSET(HIO, mPullDistMax, 0x114);
+WWHD_OFFSET(HIO, mPullPower, 0x118);
+WWHD_OFFSET(HIO, mParalysisTime, 0x11C);
+WWHD_OFFSET(HIO, mHoleScaleClosed, 0x120);
+WWHD_OFFSET(HIO, mHoleScaleOpen, 0x124);
+WWHD_OFFSET(HIO, mHoleScaleStep, 0x128);
 WWHD_SIZE(HIO, 0x15C);
 inline HIO& hio() { return *gabi::at<HIO>(0x10463E0C); }
 struct Demo {

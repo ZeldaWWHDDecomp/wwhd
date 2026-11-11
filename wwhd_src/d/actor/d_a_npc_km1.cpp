@@ -58,7 +58,7 @@ static daNpc_Km1_HIO_c* daNpc_Km1_HIO_c_ct(daNpc_Km1_HIO_c* i_this) {
     i_this->__vtbl = 0x1001C63C;
     memcpy_g(&i_this->mPrmTbl, a_prm_tbl, 0x1C); /* a_prm_tbl; 028FEAC0 memcpy */
     i_this->mNo = -1;
-    i_this->field_0x8 = -1;
+    i_this->mRefCount = -1;
     return i_this;
 }
 
@@ -119,7 +119,7 @@ bool daNpc_Km1_c::createInit() {
     mCyl.SetStts(&mStts);
     mCyl.Set(&dNpc_cyl_source);
     mpMorf->setMorf(0.0f);
-    field_0x7BC = 1;
+    mbInitEyePos = 1;
     setMtx();
     return true;
 }
@@ -369,7 +369,7 @@ void daNpc_Km1_c::lookBack() {
         break;
     }
     if (m_jnt.mbTrn != 0) { /* m_jnt.trnChk() */
-        cLib_addCalcAngleS2(&mLookAtMaxVel, l_HIO.mPrmTbl.field_12, 4, 0x800);
+        cLib_addCalcAngleS2(&mLookAtMaxVel, l_HIO.mPrmTbl.mMaxHeadTurnVel, 4, 0x800);
     } else {
         mLookAtMaxVel = 0;
     }
@@ -397,7 +397,7 @@ void daNpc_Km1_c::setAttention() {
     attPos->x = x;
     attPos->y = y;
     attPos->z = current.pos.z;
-    if (!field_0x7BC && !mbSetEyePos) {
+    if (!mbInitEyePos && !mbSetEyePos) {
         return;
     }
     f32 z = mEyePos.z;
@@ -406,7 +406,7 @@ void daNpc_Km1_c::setAttention() {
     f32 ey = mEyePos.y;
     eyePos.x = ex;
     eyePos.y = ey;
-    field_0x7BC = 0;
+    mbInitEyePos = 0;
 }
 
 /* 02271A7C */
@@ -508,12 +508,12 @@ bool daNpc_Km1_c::set_action(Km1ActionFunc* i_action, void* param_2) {
 /* 02272DAC */
 BOOL daNpc_Km1_c::wait01() {
     if (mTalking != 0) {
-        field_0x7B7 = 0xFF;
+        mItemNo = 0xFF;
         if (dComIfGp_event_chkTalkXY()) {
             if (dComIfGp_evmng_ChkPresentEnd() == 0) {
                 return TRUE;
             }
-            field_0x7B7 = dComIfGp_event_getPreItemNo();
+            mItemNo = dComIfGp_event_getPreItemNo();
         }
         setStt(KM1_TALK);
     } else {
@@ -536,7 +536,7 @@ BOOL daNpc_Km1_c::talk01() {
     /* HD: the message status comes from the message manager (GameCube: mpCurrMsg->mStatus) */
     if (mbHasMsg) {
         if ((int)fopNpc_npc_c::mpCurrMsg->mStatus == KM1_MSG_DESTROYED) {
-            field_0x7B7 = 0xFF;
+            mItemNo = 0xFF;
             setStt(mPrevStt);
             field_0x7C8 = 0;
             mTalking = 0;
@@ -604,7 +604,7 @@ BOOL daNpc_Km1_c::_draw() {
     Km1_view<Km1ModelAnimation>(model_data)->mpBtpAnimation = 0; /* mBtpAnm.remove() */
     /* HD: no shadow model, no real/simple shadow */
     /* debug leftovers: function-local static colours initialised on first use */
-    if (l_HIO.mPrmTbl.field_18) {
+    if (l_HIO.mPrmTbl.mDebug) {
         Km1_initDebugColour(&l_red_guard, &l_red_colour, Km1_view<be<u32>>(a_red_colour));
         Km1_initDebugColour(&l_blue_guard, &l_blue_colour, Km1_view<be<u32>>(a_blue_colour));
     }
@@ -622,8 +622,8 @@ BOOL daNpc_Km1_c::_execute() {
         mbRanExecute = 1;
     }
     daNpc_Km1_HIO_c::hio_prm_c& prm = l_HIO.mPrmTbl;
-    m_jnt.setParam(prm.field_8, prm.field_A, prm.field_C, prm.field_E, prm.field_0, prm.field_2, prm.field_4,
-                   prm.field_6, prm.field_10);
+    m_jnt.setParam(prm.mMaxBackboneX, prm.mMaxBackboneY, prm.mMinBackboneX, prm.mMinBackboneY, prm.mMaxHeadX, prm.mMaxHeadY, prm.mMinHeadX,
+                   prm.mMinHeadY, prm.mMaxTurnStep);
     checkOrder();
     if (demo() == 0) {
         if (dComIfGp_event_runCheck() && eventInfo.mCommand != 1 /* !eventInfo.checkCommandTalk() */) {
@@ -651,9 +651,9 @@ BOOL daNpc_Km1_c::_delete() {
     if (mpMorf.get() != nullptr) {
         mpMorf->stopZelAnime();
     }
-    if (l_HIO.field_0x8 >= 0) {
-        s32 n = l_HIO.field_0x8 - 1;
-        l_HIO.field_0x8 = n;
+    if (l_HIO.mRefCount >= 0) {
+        s32 n = l_HIO.mRefCount - 1;
+        l_HIO.mRefCount = n;
         if (n < 0) {
             mDoHIO_deleteChild(l_HIO.mNo);
         }
@@ -685,10 +685,10 @@ cPhs_State daNpc_Km1_c::_create() {
     if (resLoadResult != cPhs_COMPLEATE_e) {
         return resLoadResult;
     }
-    if (l_HIO.field_0x8 < 0) {
+    if (l_HIO.mRefCount < 0) {
         l_HIO.mNo = mDoHIO_createChild("\u008b\u00e0\u008e\u009d\u0082\u00bf\u0083\u0080\u0081|\u0083\u008b" /* "金持ちム−ル" */, &l_HIO);
     }
-    l_HIO.field_0x8 = l_HIO.field_0x8 + 1;
+    l_HIO.mRefCount = l_HIO.mRefCount + 1;
     /* a_heap_size_tbl (.data 0x101BF6B8; HD: always entry 0) */
     if (!fopAcM_entrySolidHeap(this, 0x02271A78 /* CheckCreateHeap */, a_heap_size_tbl[0])) {
         return cPhs_ERROR_e;

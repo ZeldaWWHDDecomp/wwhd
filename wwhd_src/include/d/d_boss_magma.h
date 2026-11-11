@@ -133,13 +133,13 @@ WWHD_OFFSET(dMagma_ball_c, mTexProjMtx, 0xD98);
 WWHD_OFFSET(dMagma_ball_c, mVtable, 0xDCC);
 WWHD_SIZE(dMagma_ball_c, 0xDD0);
 struct dMagma_ballBoss_c : dMagma_ball_c {
-    /* 0xDD0 */ be<s16> field_0x7C;
+    /* 0xDD0 */ be<s16> mWaveSpeed;  /* was field_0x7C: dMagma_ballBoss_c::calc 024F60E8 adds it to mWave each frame (the sine bob of mPos.y), sets 1000 near the boss wave ring; setup 024F637C 400 + cM_rndF(100) */
     u8 _DD2[2];
     void calc(f32 param_1, u8 param_2, s32 param_3);
     void update();
     void setup(f32 param_1, u8 param_2, s32 param_3);
 };
-WWHD_OFFSET(dMagma_ballBoss_c, field_0x7C, 0xDD0);
+WWHD_OFFSET(dMagma_ballBoss_c, mWaveSpeed, 0xDD0);
 WWHD_SIZE(dMagma_ballBoss_c, 0xDD4);
 struct dMagma_HeapVtableHD {
     u8 _00[0x3C];

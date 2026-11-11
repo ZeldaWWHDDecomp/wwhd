@@ -68,22 +68,22 @@ WWHD_SIZE(Bs1ActionFunc, 8);
 struct daNpc_Bs1_childHIO_c {
     /* 0x00 */ be<u32> unk0;
     /* 0x04 */ dNpc_HIO_c mNpc;
-    /* 0x2C */ be<u8> m2C;
+    /* 0x2C */ be<u8> mDrawHelmet;  /* was m2C: _draw 02214104 draws mpHelmetModel on the head joint only while it is set; daNpc_Bs1_HIO_ct 022176B4 sets it to the child's index (0 for mType 0, 1 for mType 1) (tww the same) */
     /* 0x2D */ u8 _2D[3];
-    /* 0x30 */ be<f32> m30; /* ShopCursor scale .. */
-    /* 0x34 */ be<f32> m34;
-    /* 0x38 */ be<f32> m38;
-    /* 0x3C */ be<f32> m3C;
-    /* 0x40 */ be<f32> m40;
+    /* 0x30 */ be<f32> mCursorScale;  /* was m30: CreateHeap 02212818 passes it as ShopCursor_create's scale; lookBack 022163B0 stores it in the cursor's mPieceScale (setScale); HIO ctor 0.65 (tww the same); ShopCursor scale .. */
+    /* 0x34 */ be<f32> mCursorScaleYFar;  /* was m34: lookBack 022163B0 stores it in the cursor's mPieceScaleYFar (setScale); HIO ctor 0.9 (tww the same) */
+    /* 0x38 */ be<f32> mCursorScaleYNear;  /* was m38: lookBack 022163B0 stores it in the cursor's mPieceScaleYNear (setScale); HIO ctor 0.5 (tww the same) */
+    /* 0x3C */ be<f32> mCursorDistFar;  /* was m3C: lookBack 022163B0 stores it in the cursor's mPieceDistFar (setScale); HIO ctor 27 (tww the same) */
+    /* 0x40 */ be<f32> mCursorDistNear;  /* was m40: lookBack 022163B0 stores it in the cursor's mPieceDistNear (setScale); HIO ctor 20 (tww the same) */
     /* 0x44 */ be<u32> __vtbl;
 };
 WWHD_SIZE(daNpc_Bs1_childHIO_c, 0x48);
 
-/* daNpc_Bs1_HIO_c (HD 0x9C): mNo +0, m8 +4, two children +8, vtable +0x98. l_HIO at 0x10466878 */
+/* daNpc_Bs1_HIO_c (HD 0x9C): mNo +0, mRefCount +4, two children +8, vtable +0x98. l_HIO at 0x10466878 */
 struct daNpc_Bs1_HIO_c {
     /* 0x00 */ be<s8> mNo;
     /* 0x01 */ u8 _01[3];
-    /* 0x04 */ be<s32> m8;
+    /* 0x04 */ be<s32> mRefCount;  /* was m8: _create 02213610 creates the HIO child while it is < 0, then adds 1; _delete 02213894 subtracts 1 and deletes the child when it falls below 0; daNpc_Bs1_HIO_ct 022176B4 sets -1 (tww the same); as the other NPC HIOs' mRefCount */
     /* 0x08 */ daNpc_Bs1_childHIO_c mChild[2];
     /* 0x98 */ be<u32> __vtbl;
 };
@@ -603,7 +603,7 @@ inline u32 bs1m_nextMsgStatus(daNpc_Bs1_c* a, be<u32>* p, be<u32>* p2) {
 }
 inline void bs1m_getItemZoomPos(Bs1ShopCam* cam, cXyz* out) {
     gabi::Local<cXyz> dir;
-    cXyz_mi(&cam->m18, dir.get(), &cam->m24);
+    cXyz_mi(&cam->mCenter, dir.get(), &cam->mEye);
     if (!bs1m_normalizeRS(dir.get())) {
         dir->x = 0.0f;
         dir->z = 1.0f;
@@ -612,7 +612,7 @@ inline void bs1m_getItemZoomPos(Bs1ShopCam* cam, cXyz* out) {
     gabi::Local<cXyz> scaled;
     cXyz_ml(dir.get(), scaled.get(), 100.0f);
     gabi::Local<cXyz> zoom;
-    cXyz_pl(&cam->m24, zoom.get(), scaled.get());
+    cXyz_pl(&cam->mEye, zoom.get(), scaled.get());
     f32 x = zoom->x, y = zoom->y, z = zoom->z;
     out->x = x;
     out->y = y;

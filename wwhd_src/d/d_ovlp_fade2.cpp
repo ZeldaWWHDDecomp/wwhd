@@ -112,12 +112,12 @@ void dOvlpFd2_c::execFadeOut() {
 
     fd2GameInfoView* p = fd2_getGameInfo();
     p->mWindowNum = 0;
-    fd2_chaseAngleS(&field_0x112, 2000, 100);
-    s32 a = field_0x110, b = field_0x112;
+    fd2_chaseAngleS(&mTurnSpeed, 2000, 100);
+    s32 a = mTurnAngle, b = mTurnSpeed;
     u32 cross = (u32(a + 0x4000) & 0x8000) | 0x4000;
     s32 sum = a + b;
     s32 diff = s16(s32(cross) - b - sum);
-    field_0x110 = s16(sum);
+    mTurnAngle = s16(sum);
     s32 timer = mTimer;
     bool transitioned = false;
     if (diff * b < 0 && timer == 0) {
@@ -125,7 +125,7 @@ void dOvlpFd2_c::execFadeOut() {
             fopOvlpM_SceneIsStart();
             phase(this, fd2::NEXT);
             mTimer = 15;
-            field_0x110 = -0x4000;
+            mTurnAngle = -0x4000;
             fd2_calcTimer(&mTimer);
             transitioned = true;
         } else
@@ -152,7 +152,7 @@ void dOvlpFd2_c::execNextSnap() {
 
     if (!fd2_calcTimer(&mTimer) && !fd2_startFadeIn(l_fadeManager, 16, 1)) {
         mHasSnap = 0;
-        field_0x110 = s16(s32(field_0x110) + s32(field_0x112));
+        mTurnAngle = s16(s32(mTurnAngle) + s32(mTurnSpeed));
         fd2GameInfoView* p = fd2_getGameInfo();
         p->mWindowNum = 1;
         p = fd2_getGameInfo();
@@ -168,9 +168,9 @@ void dOvlpFd2_c::execFadeIn() {
     f32 f2 = l_scaleInStep + 0.03f;
     fd2_addCalc0(&scale, 1.0f, f2);
     if (scale < 0.001f) {
-        if (!field_0x11e) {
+        if (!mSceneStarted) {
             fopOvlpM_SceneIsStart();
-            field_0x11e = 1;
+            mSceneStarted = 1;
         } else {
             fopOvlpM_Done(this);
             fd2GameInfoView* p = fd2_getGameInfo();

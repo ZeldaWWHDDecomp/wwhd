@@ -16,7 +16,7 @@ static Mtx34 M_tmp_mtx;
 /* 023AEA04 */
 BOOL Act_c::CreateHeap() {
     J3DModelData* model_data = (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_USOVMC_BDL_VMCBX_e);
-    JUT_ASSERT(0x4A, model_data != NULL);
+    JUT_ASSERT_MSG(0x4A, model_data != NULL, "model_data != 0");
     J3DModel* model = mDoExt_J3DModel__create(model_data, 0, 0x11020203);
     mModel = model;
     return model != nullptr; /* HD: tests the returned pointer */
@@ -152,6 +152,6 @@ data M_tmp_mtx 1046C7DC
 str 100328C8 # "Usovmc"
 str 10032898 in 023AEA04 # "d_a_obj_usovmc.cpp"
 str 10032830 in 023AE8E8 # "d_a_obj_usovmc.cpp"
-str 10032888 "model_data != NULL" renamed # HD: model_data != 0
+str 10032888 "model_data != 0" # HD: model_data != 0
 str 10032844 "(phase_state == cPhs_COMPLEATE_e) || (phase_state == cPhs_ERROR_e)" renamed # HD: numeric phase names
 */

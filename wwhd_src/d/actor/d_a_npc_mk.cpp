@@ -280,7 +280,7 @@ u32 daNpc_Mk_c::next_msgStatus(be<u32>* pMsgNo) { /* u16 */
             setFlag(0x8);
             msgStatus = 0x10; /* fopMsgStts_MSG_ENDS_e */
         } else {
-            field_0x6A4 = 1;
+            mIgnoreLinkTimer = 1;
             *pMsgNo = 0x26CB;
         }
         break;
@@ -448,23 +448,23 @@ BOOL daNpc_Mk_c::init() {
                 actor_status = actor_status | 0x4000; /* fopAcM_OnStatus(this, fopAcStts_UNK4000_e) */
             }
         }
-        dNpc_PathRun_setInf(&field_0x688, getPath(), fopAcM_GetRoomNo(this), true);
-        if (field_0x688.mPath.get() == nullptr) {
+        dNpc_PathRun_setInf(&mPathRun, getPath(), fopAcM_GetRoomNo(this), true);
+        if (mPathRun.mPath.get() == nullptr) {
             return FALSE;
         }
-        dNpc_PathRun_setInfDrct(&field_0x690, dNpc_PathRun_nextPath(&field_0x688, fopAcM_GetRoomNo(this)));
-        if (field_0x690.mPath.get() == nullptr) {
+        dNpc_PathRun_setInfDrct(&mChaseAreaPath, dNpc_PathRun_nextPath(&mPathRun, fopAcM_GetRoomNo(this)));
+        if (mChaseAreaPath.mPath.get() == nullptr) {
             return FALSE;
         }
-        dNpc_PathRun_setInfDrct(&field_0x698, dNpc_PathRun_nextPath(&field_0x690, fopAcM_GetRoomNo(this)));
-        if (field_0x698.mPath.get() == nullptr) {
+        dNpc_PathRun_setInfDrct(&mNoticeAreaPath, dNpc_PathRun_nextPath(&mChaseAreaPath, fopAcM_GetRoomNo(this)));
+        if (mNoticeAreaPath.mPath.get() == nullptr) {
             return FALSE;
         }
         break;
     case TYPE_MINIGAME:
         mStts.m_weight = 0xFE; /* SetWeight */
-        dNpc_PathRun_setInf(&field_0x688, getPath(), fopAcM_GetRoomNo(this), true);
-        if (field_0x688.mPath.get() == nullptr) {
+        dNpc_PathRun_setInf(&mPathRun, getPath(), fopAcM_GetRoomNo(this), true);
+        if (mPathRun.mPath.get() == nullptr) {
             return FALSE;
         }
         if (dComIfGs_isTmpBit(0x0040) && !dComIfGs_isTmpBit(0x0020)) {
@@ -507,17 +507,17 @@ u8 daNpc_Mk_c::nextVisitMode() {
     case VISIT_START:
         return VISIT_WALK_PATH;
     case VISIT_TALK:
-        if (field_0x6A4 != 0) {
+        if (mIgnoreLinkTimer != 0) {
             return VISIT_WALK_PATH_FAST;
         }
         return VISIT_RUN_LINK;
     case VISIT_WALK_PATH:
-        if (mk_abs2XZ(pLink, this) < 160000.0f && dNpc_PathRun_chkInside(&field_0x698, &pLink->current.pos)) {
+        if (mk_abs2XZ(pLink, this) < 160000.0f && dNpc_PathRun_chkInside(&mNoticeAreaPath, &pLink->current.pos)) {
             return VISIT_NOTICE_LINK;
         }
         return VISIT_WALK_PATH;
     case VISIT_RUN_LINK:
-        if (!dNpc_PathRun_chkInside(&field_0x690, &pLink->current.pos)) {
+        if (!dNpc_PathRun_chkInside(&mChaseAreaPath, &pLink->current.pos)) {
             return VISIT_LEFT_PATH;
         }
         if (mk_abs2XZ(pLink, this) < 22500.0f) {
@@ -526,7 +526,7 @@ u8 daNpc_Mk_c::nextVisitMode() {
         return VISIT_RUN_LINK;
     case VISIT_WALK_AROUND_LINK:
     case VISIT_REACHED_LINK:
-        if (!dNpc_PathRun_chkInside(&field_0x690, &pLink->current.pos)) {
+        if (!dNpc_PathRun_chkInside(&mChaseAreaPath, &pLink->current.pos)) {
             return VISIT_LEFT_PATH;
         }
         if (mk_abs2XZ(pLink, this) > 32400.0f) {
@@ -546,19 +546,19 @@ u8 daNpc_Mk_c::nextVisitMode() {
             mWaitTimer = mWaitTimer - 1;
             break;
         }
-        if (mk_abs2XZ(pLink, this) < 160000.0f && dNpc_PathRun_chkInside(&field_0x698, &pLink->current.pos)) {
+        if (mk_abs2XZ(pLink, this) < 160000.0f && dNpc_PathRun_chkInside(&mNoticeAreaPath, &pLink->current.pos)) {
             return VISIT_RUN_LINK;
         }
         return VISIT_WALK_PATH;
     case VISIT_WALK_PATH_FAST:
-        if (field_0x6A4 != 0) {
-            field_0x6A4 = field_0x6A4 - 1;
+        if (mIgnoreLinkTimer != 0) {
+            mIgnoreLinkTimer = mIgnoreLinkTimer - 1;
             break;
         }
         return VISIT_WALK_PATH_IGNORE_LINK;
     case VISIT_WALK_PATH_IGNORE_LINK:
-        if (field_0x6A4 != 0) {
-            field_0x6A4 = field_0x6A4 - 1;
+        if (mIgnoreLinkTimer != 0) {
+            mIgnoreLinkTimer = mIgnoreLinkTimer - 1;
             break;
         }
         return VISIT_WALK_PATH;
@@ -570,7 +570,7 @@ u8 daNpc_Mk_c::nextVisitMode() {
 void daNpc_Mk_c::visitInit(u8 i_nextVisitMode) {
     switch (i_nextVisitMode) {
     case VISIT_WALK_PATH:
-        dNpc_PathRun_setNearPathIndx(&field_0x688, &current.pos, 100.0f);
+        dNpc_PathRun_setNearPathIndx(&mPathRun, &current.pos, 100.0f);
         setAnm(4);
         break;
     case VISIT_RUN_LINK:
@@ -599,13 +599,13 @@ void daNpc_Mk_c::visitInit(u8 i_nextVisitMode) {
         mWaitTimer = 0x19;
         break;
     case VISIT_WALK_PATH_FAST:
-        dNpc_PathRun_setNearPathIndx(&field_0x688, &current.pos, 100.0f);
+        dNpc_PathRun_setNearPathIndx(&mPathRun, &current.pos, 100.0f);
         setAnm(5);
-        field_0x6A4 = 0x64;
+        mIgnoreLinkTimer = 0x64;
         break;
     case VISIT_WALK_PATH_IGNORE_LINK:
         setAnm(4);
-        field_0x6A4 = 0x258;
+        mIgnoreLinkTimer = 0x258;
         break;
     default: /* JUT_ASSERT(1113, 0) */
         JUT_ASSERT_fail("d_a_npc_mk.cpp", 0x459, "0");
@@ -664,7 +664,7 @@ void daNpc_Mk_c::runawayInit() {
         setFlag(0x40);
         setAnm(9);
         mState = STATE_JUMP;
-        current.angle.y = field_0x6F0;
+        current.angle.y = mTargetAngleY;
         mk_seStart(this, 0x4907 /* JA_SE_CV_TR_KO_A_CAUGHT */);
         break;
     }
@@ -672,7 +672,7 @@ void daNpc_Mk_c::runawayInit() {
 
 /* 02297F40 */
 void daNpc_Mk_c::walkPath(u8 param_1) {
-    if (mMkStatic.walkPath(this, &field_0x688, param_1)) {
+    if (mMkStatic.walkPath(this, &mPathRun, param_1)) {
         setFlag(0x80);
     }
 }
@@ -753,13 +753,13 @@ bool daNpc_Mk_c::demoProc() {
             cXyz* a_xyz = (cXyz*)mk_dComIfGp_evmng_getMyXyzP(mStaffIdx, "Pos" );
             if (a_xyz == nullptr) /* JUT_ASSERT(1306, a_xyz) */
                 JUT_ASSERT_fail("d_a_npc_mk.cpp", 0x51A, "a_xyz");
-            field_0x6D0.copy(current.pos);
-            field_0x6DC.copy(*a_xyz);
+            mMoveStartPos.copy(current.pos);
+            mMoveGoalPos.copy(*a_xyz);
             void* pTimer = dComIfGp_evmng_getMyIntegerP(mStaffIdx, "Timer" );
             if (pTimer != nullptr) {
-                field_0x6E8 = static_cast<MkEventInteger*>(pTimer)->mLowHalf; /* (s16)*pTimer */
+                mMoveTimer = static_cast<MkEventInteger*>(pTimer)->mLowHalf; /* (s16)*pTimer */
             } else {
-                field_0x6E8 = -1;
+                mMoveTimer = -1;
             }
             break;
         }
@@ -842,7 +842,7 @@ bool daNpc_Mk_c::demoProc() {
             void* a_intP = dComIfGp_evmng_getMyIntegerP(mStaffIdx, "Angle" );
             if (a_intP == nullptr) /* JUT_ASSERT(1398, a_intP) */
                 JUT_ASSERT_fail("d_a_npc_mk.cpp", 0x576, "a_intP");
-            field_0x6F0 = (s16)(s32)*static_cast<be<s32>*>(a_intP);
+            mTargetAngleY = (s16)(s32)*static_cast<be<s32>*>(a_intP);
             break;
         }
         }
@@ -854,24 +854,24 @@ bool daNpc_Mk_c::demoProc() {
         gabi::Local<be<f32>> temp2;
         gabi::Local<be<s16>> temp3;
         *from = current.pos.get();
-        *to = field_0x6DC.get();
+        *to = mMoveGoalPos.get();
         dNpc_calc_DisXZ_AngY(from, to, temp2, temp3);
-        if (*temp2 < speedF || mMkStatic.chkPointPass(&field_0x6D0, &field_0x6DC, &current.pos) != 0) {
+        if (*temp2 < speedF || mMkStatic.chkPointPass(&mMoveStartPos, &mMoveGoalPos, &current.pos) != 0) {
             if (mEventAction == 4) {
-                current.pos.x = field_0x6DC.x;
-                current.pos.z = field_0x6DC.z;
+                current.pos.x = mMoveGoalPos.x;
+                current.pos.z = mMoveGoalPos.z;
                 speedF = 0.0f;
             }
             dComIfGp_evmng_cutEnd(mStaffIdx);
         } else {
             cLib_addCalcAngleS(&current.angle.y, *temp3, 8, 0x1000, 0x400);
             cLib_chaseF(&speedF, 12.0f, 1.1f);
-            if (field_0x6E8 < 0) {
+            if (mMoveTimer < 0) {
                 return true;
             }
-            if (field_0x6E8 > 0) {
-                s16 t = (s16)(field_0x6E8 - 1);
-                field_0x6E8 = t;
+            if (mMoveTimer > 0) {
+                s16 t = (s16)(mMoveTimer - 1);
+                mMoveTimer = t;
                 if (t != 0) {
                     return true;
                 }
@@ -932,7 +932,7 @@ bool daNpc_Mk_c::demoProc() {
         }
         break;
     case 16:
-        if (cLib_addCalcAngleS(&current.angle.y, field_0x6F0, 8, 0x1000, 0x400) == 0) {
+        if (cLib_addCalcAngleS(&current.angle.y, mTargetAngleY, 8, 0x1000, 0x400) == 0) {
             dComIfGp_evmng_cutEnd(mStaffIdx);
         }
         break;
@@ -968,7 +968,7 @@ u8 daNpc_Mk_c::getLookBackMode() {
     if (chkFlag(0x20)) {
         return 0;
     }
-    if (field_0x6A4 != 0) {
+    if (mIgnoreLinkTimer != 0) {
         return 2;
     }
     if (chkFlag(0x400) || mAnmIdx == 7 || mAnmIdx == 8) {
@@ -1183,7 +1183,7 @@ bool daNpc_Mk_c::visit01() {
                 mOrderFlags = (u8)(mOrderFlags & ~0x01);
             }
         }
-        if (field_0x6A4 != 0) {
+        if (mIgnoreLinkTimer != 0) {
             mOrderFlags = (u8)(mOrderFlags & ~0x01);
         }
         if (dComIfGs_isEventBit(0x1F80) && !dComIfGs_isEventBit(0x1E02) && dComIfGs_isTmpBit(0x0580)) {
@@ -1233,7 +1233,7 @@ bool daNpc_Mk_c::drop01() {
 
 /* 02299A80 */
 bool daNpc_Mk_c::runaway() {
-    u8 temp = mMkStatic.runAwayProc(this, &field_0x688, &mCyl, &field_0x6F0);
+    u8 temp = mMkStatic.runAwayProc(this, &mPathRun, &mCyl, &mTargetAngleY);
     if (temp != mMkStatic.m0) {
         if ((temp == 1 && mMkStatic.m0 == 2) || (temp == 2 && mMkStatic.m0 == 1)) {
             if (cM_rndF(1.0f) < 0.5f) {
@@ -1371,7 +1371,7 @@ BOOL daNpc_Mk_c::seek_action(void*) {
         if (dComIfGs_isTmpBit(0x0002)) {
             mState = STATE_RUNAWAY;
             mMkStatic.init(0x50, 0x12C);
-            mMkStatic.setRndPathPos(this, &field_0x688);
+            mMkStatic.setRndPathPos(this, &mPathRun);
         } else {
             mState = STATE_CLIMB01;
         }

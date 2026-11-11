@@ -9,12 +9,12 @@ enum { dRes_INDEX_GNNDEMOTAKIS_BDL_GNN_DEMO_TAKI_S_e = 4,
 /* 0234B8E0 */
 BOOL daObjGnntakis_c::create_heap() {
     auto* mdl_data = (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_GNNDEMOTAKIS_BDL_GNN_DEMO_TAKI_S_e);
-    JUT_ASSERT(156, mdl_data != NULL);
+    JUT_ASSERT_MSG(156, mdl_data != NULL, "mdl_data != 0");
     if (mdl_data == NULL) return FALSE;
     mpModel = mDoExt_J3DModel__create(mdl_data, 0, 0x11020203);
     if (mpModel == NULL) return FALSE;
     auto* btk_data = (J3DAnmTextureSRTKey*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_GNNDEMOTAKIS_BTK_GNN_DEMO_TAKI_S_e);
-    JUT_ASSERT(163, btk_data != NULL);
+    JUT_ASSERT_MSG(163, btk_data != NULL, "btk_data != 0");
     BOOL ret = FALSE;
     if (btk_data != NULL)
         ret = mpBtkAnm.init(mdl_data, btk_data, true, 0, 1.0f, 0, -1, false, 0) != 0;
@@ -45,7 +45,7 @@ s32 daObjGnntakis_c::_create() {
     cullMtx = mpModel == NULL ? 0 : gabi::ea(mpModel->getBaseTRMtx());
     init_mtx();
     s16 start = mpBtkAnm.mFrameCtrl.mStart;
-    m2B0 = FALSE;
+    mAnmStarted = FALSE;
     mpBtkAnm.mFrameCtrl.mFrame = (f32)start;
     mpBtkAnm.mFrameCtrl.mRate = 0.0f;
     return cPhs_COMPLEATE_e;
@@ -61,12 +61,12 @@ BOOL daObjGnntakis_c::_execute() {
     if (gnntakis_isTowerStage() && dComIfGp_event_runCheck()) {
         auto* play = (gnntakis_play_c*)dComIfGp_get();
         if (gnntakis_startCheck(&play->mEventManager, "g2before")) {
-            s32 playing = m2B0;
+            s32 playing = mAnmStarted;
             u32 demoFrame = l_demoFrame;
             if (!playing) {
                 if (demoFrame >= 0x11D9) {
                     s16 start = mpBtkAnm.mFrameCtrl.mStart;
-                    m2B0 = TRUE;
+                    mAnmStarted = TRUE;
                     mpBtkAnm.mFrameCtrl.mFrame = (f32)start;
                     mpBtkAnm.mFrameCtrl.mRate = 1.0f;
                 }
@@ -126,8 +126,8 @@ daObjGnntakis_c::daObjGnntakis_c() {
 /* WWHD glue (tools/verify/autoglue.py): local HD data and binding
 str 10029868 "Gnndemotakis"
 str 10029820 "d_a_obj_gnndemotakis.cpp"
-str 10029800 "mdl_data != NULL" renamed
-str 10029810 "btk_data != NULL" renamed
+str 10029800 "mdl_data != 0"
+str 10029810 "btk_data != 0"
 ext 025D50BC void gnntakis_actor_dt(void*, s32)
 ext 027F596C void gnntakis_applyModelFlags(J3DModel*, u32)
 ext 025445B8 BOOL gnntakis_startCheck(void*, const char*)

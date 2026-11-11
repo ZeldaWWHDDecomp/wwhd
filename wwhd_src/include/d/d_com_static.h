@@ -42,8 +42,8 @@ public:
     void dig_main();
     void kb_dig(fopAc_ac_c*);
     /* 0x3AC */ request_of_phase_process_class mPhase;
-    /* 0x3B4 */ be<u8> field_0x298;
-    /* 0x3B5 */ be<u8> field_0x299;
+    /* 0x3B4 */ be<u8> mDigDone;  /* was field_0x298: daTagKbItem_c::dig_main 02526330: returns at once while set; set 1 once the item was dropped or the enemy kind handed to the pig (tww the same) */
+    /* 0x3B5 */ be<u8> mDigRequest;  /* was field_0x299: kb_dig 02526560 sets 1 (with the pig mpActor) and calls dig_main; dig_main 02526330 does nothing unless it is set and clears it at the end (tww the same) */
     u8 padding[2];
     /* 0x3B8 */ be<u32> mItemBitNo;
     /* 0x3BC */ be<u8> mItemNo, mEnemyKind;
@@ -56,9 +56,9 @@ struct StandItem : fopAc_ac_c {
     u8 prefix[0x734 - 0x3AC];
     be<u8> mItemNo;
     u8 padding[0x74C - 0x735];
-    Mtx34 m630, m660;
+    Mtx34 mBaseJointMtx, mHeadJointMtx;  /* was m630: view of daStandItem_c::mBaseJointMtx (d_a_dai_item.h); was m660: view of daStandItem_c::mHeadJointMtx (d_a_dai_item.h) */
     u8 padding_7AC[0x7D0 - 0x7AC];
-    be<s16> m6B4;
+    be<s16> mSpinAngle;  /* was m6B4: view of daStandItem_c::mSpinAngle (d_a_dai_item.h) */
 };
 struct Joint { u8 prefix[4]; be<u16> mJointNo; };
 struct MtxBuffer {
@@ -85,9 +85,9 @@ WWHD_SIZE(daTagKbItem_c, 0x3C8);
 WWHD_OFFSET(daTagKbItem_c, mItemNo, 0x3BC);
 WWHD_OFFSET(daTagKbItem_c, mpActor, 0x3C4);
 WWHD_OFFSET(ComStatic::StandItem, mItemNo, 0x734);
-WWHD_OFFSET(ComStatic::StandItem, m630, 0x74C);
-WWHD_OFFSET(ComStatic::StandItem, m660, 0x77C);
-WWHD_OFFSET(ComStatic::StandItem, m6B4, 0x7D0);
+WWHD_OFFSET(ComStatic::StandItem, mBaseJointMtx, 0x74C);
+WWHD_OFFSET(ComStatic::StandItem, mHeadJointMtx, 0x77C);
+WWHD_OFFSET(ComStatic::StandItem, mSpinAngle, 0x7D0);
 WWHD_OFFSET(ComStatic::StandModel, mMtxBuffer, 0x2C);
 WWHD_OFFSET(ComStatic::StandModel, mUserArea, 0xB8);
 WWHD_SIZE(ComStatic::MtxBuffer, 0x14);

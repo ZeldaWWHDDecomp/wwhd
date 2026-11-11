@@ -209,9 +209,9 @@ struct daNpc_Ba1_c : fopNpc_npc_c {
     /* 0x8E4 */ be<u32> mPartnerProcID;
     /* 0x8E8 */ cXyz mInitialPos;
     /* 0x8F4 */ csXyz mInitialAngle;
-    /* 0x8FA */ csXyz m78A;
+    /* 0x8FA */ csXyz mAngle;  /* was m78A: createInit 021EF4BC sets current.angle and copies it to shape_angle; setMtx 021EF2A0 rotates the model by its y; eMove_MOV_POS_ 021F04DC turns it to the player; _execute 021F1064 copies it to shape_angle (tww the same); same name as daNpc_Hi1_c::mAngle (after tww daNpc_Ls1_c mAngle) */
     /* 0x900 */ cXyz mTransformedEyePos;
-    /* 0x90C */ cXyz m79C;
+    /* 0x90C */ cXyz mLookPos;  /* was m79C: createInit 021EF4BC current.pos; lookBack 021F0B18 looks at it (dstPos) (tww the same); same code as daNpc_Bm1_c / daNpc_Km1_c::mLookPos */
     /* 0x918 */ u8 field_0x918[0x930 - 0x918];
     /* 0x930 */ be<f32> mPrevMorfFrame;
     /* 0x934 */ be<f32> mEyeOffset;
@@ -229,43 +229,43 @@ struct daNpc_Ba1_c : fopNpc_npc_c {
     /* 0x95C */ u8 field_0x95C[2];
     /* 0x95E */ be<s8> mbMorfAnimStopped;
     /* 0x95F */ be<u8> m7EF;
-    /* 0x960 */ be<s8> m7F0;
+    /* 0x960 */ be<s8> mbSoupGiven;  /* was m7F0: event_proc 021F0D58 sets 1 when the soup event (mEventIdx 1, the bottle gets dItemNo_SOUP_BOTTLE_e) ends after GRANDMA_HEALED; getMsg_BA1_3 021F1B70 then gives 0x801 (0x7f6 before GRANDMA_HEALED); talk_1 021F217C clears it when message 0x801 closes (tww the same) */
     /* 0x961 */ be<u8> mItemNo;
-    /* 0x962 */ be<u8> m7F2;
+    /* 0x962 */ be<u8> mHealedDays;  /* was m7F2: createInit 021EF4BC copies event register 0xA60F, which dKankyo_DayProc 025542BC raises by 1 each day after GRANDMA_HEALED (at most 3); getMsg_BA1_3 021F1B70 gives 0x7fc / 0x7fd at 3 or more (0x7fb / 0x7fa below) and sets the register back to 0 (tww the same) */
     /* 0x963 */ u8 field_0x963;
     /* 0x964 */ be<u8> mbInitGrandma0;
-    /* 0x965 */ be<u8> m7F5;
-    /* 0x966 */ be<u8> m7F6;
-    /* 0x967 */ be<u8> m7F7;
+    /* 0x965 */ be<u8> mbNoShapeAngle;  /* was m7F5: _execute 021F1064: shape_angle takes mAngle only while it is 0; eInit_MOV_POS_ 021EFF78 / eMove_MOV_POS_ 021F04DC set it during the move and clear it at the end (tww the same); same role as daNpc_Ac1_c / our decomp's daNpc_Pf1_c mbNoShapeAngle */
+    /* 0x966 */ be<u8> mSkipPosMove;  /* was m7F6: _execute 021F1064 clears it each frame and moves the actor (fopAcM_posMoveF) only while it is 0 (tww the same); same code as daNpc_Bm1_c / daNpc_Ac1_c::mSkipPosMove */
+    /* 0x967 */ be<u8> mNoDraw;  /* was m7F7: eInit_ACTOR_DRW_CONTROL_ 021EFFDC sets and clears it by the cut, eInit_MOV_POS_ 021EFF78 sets it; _draw 021F128C draws nothing while it (or mbInitGrandma0) is set (tww the same); same role as daNpc_Bm1_c::mNoDraw */
     /* 0x968 */ be<u8> m7F8;
     /* 0x969 */ be<u8> mbHoldEvent;
-    /* 0x96A */ be<u8> m7FA;
-    /* 0x96B */ be<u8> m7FB;
+    /* 0x96A */ be<u8> mbTalkedBefore;  /* was m7FA: getMsg_BA1_3 021F1B70 sets it with the first message after healing (0x7fc / 0x7fb) and gives the repeat message (0x7fd / 0x7fa) while it is set; wait_action1 021F2818 loads it from tmp bit 0x0310 (set by wait_0 021F1F0C's greeting when the player comes near) and clears that bit; getMsg_BA1_0 021F19AC gives 0x7d8 while it is set (tww the same); same pattern as daNpc_Bs1_c::mbTalkedBefore */
+    /* 0x96B */ be<u8> mbMsg7E4Done;  /* was m7FB: talk_1 021F217C sets it when message 0x7e4 closes; getMsg_BA1_0 021F19AC then gives 0x7e5 instead of 0x7e4 (tww the same) */
     /* 0x96C */ be<u8> mFairyUsed;
-    /* 0x96D */ be<u8> m7FD;
-    /* 0x96E */ be<u8> m7FE;
-    /* 0x96F */ be<u8> m7FF;
+    /* 0x96D */ be<u8> mbSmallCyl;  /* was m7FD: _execute 021F1064: setCollision with radius 30 instead of 50 while it is set; never written in WWHD or tww */
+    /* 0x96E */ be<u8> mbNoCollision;  /* was m7FE: eInit_MOV_POS_ 021EFF78 sets it; event_proc 021F0D58 clears it when the healing event (mEventIdx 2) ends; _execute 021F1064 skips setCollision while it (or mbInDemo) is set (tww the same) */
+    /* 0x96F */ be<u8> mbGoLinkRM;  /* was m7FF: wait_2 021F24B8 sets 1 after moving to (-290, 0, 110) (event bit 0x3202, not collect 1) when the player is on her floor, and orders event 1; while it and mTalking are set wait_2 calls dComIfGp_setNextStage("LinkRM", 201) (tww the same) */
     /* 0x970 */ be<u8> mbRanExecute;
     /* 0x971 */ u8 _971[3];
     /* 0x974 */ be<s32> mbSetEyePos;
     /* 0x978 */ be<u8> mbAttention;
-    /* 0x979 */ be<u8> m809;
+    /* 0x979 */ be<u8> mTalking;  /* was m809: checkOrder 021EF8B4 sets 1 on the talk command; wait_1 021F2040 / wait_2 021F24B8 / ZZZwai 021F26D4 start the talk while it is set; talk_1 021F217C clears it (tww the same); same code as daNpc_Km1_c / daNpc_Hi1_c::mTalking */
     /* 0x97A */ be<u8> mHeadOnlyFollow;
     /* 0x97B */ be<u8> mbInDemo;
     /* 0x97C */ be<s8> mActionIndex;
     /* 0x97D */ be<s8> mActNo;
-    /* 0x97E */ be<u8> m80E;
+    /* 0x97E */ be<u8> mAnmAtrNo;  /* was m80E: chg_anmAtr 021F1560 stores the attribute; setAnm_ATR 021F14F0 plays a_anm_prm_tbl[it]; control_anmAtr 021F1584 switches on it; anmAtr 021F15B8 / endEvent 021EFC9C / setStt 021F1E78 0xFF (tww the same); same code as daNpc_Km1_c / daNpc_Hi1_c::mAnmAtrNo */
     /* 0x97F */ be<u8> mMesgAnimeTagInfo;
     /* 0x980 */ be<s8> mBtpNum;
     /* 0x981 */ be<s8> mAnmNum;
-    /* 0x982 */ be<s8> m812;
+    /* 0x982 */ be<s8> mOrderEvent;  /* was m812: eventOrder 021F0F78 orders by it (1 / 2 the talk); checkOrder 021EF8B4 starts it and clears it; event_proc 021F0D58 1 / 5, wait_0 021F1F0C set it (tww the same); same code as daNpc_Km1_c / daNpc_Hi1_c::mOrderEvent */
     /* 0x983 */ be<s8> mStatus;
     /* 0x984 */ be<s8> mPrevStatus;
     /* 0x985 */ be<s8> mLookBackState;
     /* 0x986 */ be<s8> mType;
     /* 0x987 */ be<s8> mSpecificType;
-    /* 0x988 */ be<s8> m818;
-    /* 0x989 */ be<s8> m819;
+    /* 0x988 */ be<s8> mActionStatus;  /* was m818: set_action 021EECEC sets PROC_END (9) for the leaving action and PROC_START (0) for the new one; wait_action1 021F2818 / partner_srch 021EF848 switch on it and step it (tww the same); after tww daNpc_Bs1_c mActionStatus */
+    /* 0x989 */ be<s8> mAnmAtrSetCnt;  /* was m819: anmAtr 021F15B8: applies the message's animation attribute only when it is 0, then adds 1; resets it (tww the same); same code as daNpc_Km1_c / daNpc_Hi1_c::mAnmAtrSetCnt */
     /* 0x98A */ u8 _98A[2];
 };
 WWHD_OFFSET(daNpc_Ba1_c, mPhs, 0x7DC);
@@ -275,7 +275,7 @@ WWHD_OFFSET(daNpc_Ba1_c, mEventCut, 0x878);
 WWHD_OFFSET(daNpc_Ba1_c, mInitialPos, 0x8E8);
 WWHD_OFFSET(daNpc_Ba1_c, mPrevMorfFrame, 0x930);
 WWHD_OFFSET(daNpc_Ba1_c, mbRanExecute, 0x970);
-WWHD_OFFSET(daNpc_Ba1_c, m819, 0x989);
+WWHD_OFFSET(daNpc_Ba1_c, mAnmAtrSetCnt, 0x989);
 WWHD_SIZE(daNpc_Ba1_c, 0x98C);
 
 struct daNpc_Ba1_HIO_c {
@@ -291,15 +291,15 @@ struct daNpc_Ba1_HIO_c {
         /* 0x10 */ be<s16> mMaxTurnStep;
         /* 0x12 */ be<s16> mCalcAngleTarget;
         /* 0x14 */ be<f32> mAttPosOffsetY;
-        /* 0x18 */ be<u8> m18;
+        /* 0x18 */ be<u8> mDebugDraw;  /* was m18: _draw 021F128C: the debug-colour block runs only while it is set (tww _draw the same: tww d_a_npc_ba1.cpp _draw guards only an unused debug position (current.pos at eyePos.y, per specific type) with it, the same shape as the block before d_a_npc_bm1.cpp's stripped "// Debug:" dDbVw_drawSphereXlu / dDbVw_drawCircleOpa calls; tww ba1 keeps no "// Debug:" comment itself) */
         /* 0x19 */ u8 pad19[3];
-        /* 0x1C */ be<f32> m1C;
-        /* 0x20 */ be<f32> m20;
+        /* 0x1C */ be<f32> mUseFairyRadius;  /* was m1C: check_useFairyArea 021F1DA8: the player counts as in the fairy area within it (XZ, and within 100 in y) (tww the same) */
+        /* 0x20 */ be<f32> mFairyEventRadius;  /* was m20: wait_0 021F1F0C: within it (XZ, 100 in y) tmp bit 0x0310 is set and event 6 is ordered (tww the same) */
     };
     /* 0x00 */ be<u32> __vtbl;
     /* 0x04 */ be<s8> mNo;
     /* 0x05 */ u8 _05[3];
-    /* 0x08 */ be<s32> field_0x8;
+    /* 0x08 */ be<s32> mRefCount;  /* was field_0x8: daNpc_Ba1_HIO_c_ct 021F2BB8 -1; never read in WWHD or tww d_a_npc_ba1 (no _create / _delete count); after tww daTag_Ba1_HIO_c mRefCount: the same HIO layout (mNo at 0x04, s32 at 0x08, then the parameter block at 0x0C) and the same constructor value -1 */
     /* 0x0C */ hio_prm_c mPrmTbl;
 };
 WWHD_SIZE(daNpc_Ba1_HIO_c, 0x30);
@@ -400,7 +400,7 @@ enum dRes_ID_BA {
 };
 
 WWHD_OFFSET(daNpc_Ba1_HIO_c, mPrmTbl, 0xC);
-WWHD_OFFSET(daNpc_Ba1_HIO_c::hio_prm_c, m18, 0x18);
+WWHD_OFFSET(daNpc_Ba1_HIO_c::hio_prm_c, mDebugDraw, 0x18);
 WWHD_SIZE(daNpc_Ba1_HIO_c::hio_prm_c, 0x24);
 
 WWHD_OFFSET(Ba1ActionDescriptor, action, 0);

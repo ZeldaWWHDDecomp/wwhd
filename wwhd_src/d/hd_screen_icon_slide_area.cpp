@@ -1,5 +1,6 @@
 /* HD equipped-item slide-area controller. */
 #include "d/hd_screen_icon_slide_area.h"
+#include "sead/ElementAt.h"
 #include "hd/hd_ui_02001084.h"
 static hdButtonEventManager_l* sControllerEventManager;
 
@@ -255,7 +256,7 @@ u32 hdIconSlideArea_c::hasItemEvent() {
 /* 0267021C */
 Pair32 hdIconSlideArea_c::itemPosition(u32 slot) {
     u32 index = slot < u32(mItemPaneCount) ? slot : 0;
-    hdPartsPane_c* pane = mpItemPanes[index];
+    hdPartsPane_c* pane = sead::elementAt(mpItemPanes, index); /* panes + index * 4, wrapped at 32 bits as on the console */
     if (!pane) return {0, 0};
     hdIconSlidePanePosition_c output;
     iconSlidePanePosition(&output, pane);

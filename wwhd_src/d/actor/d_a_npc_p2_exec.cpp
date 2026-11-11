@@ -165,7 +165,7 @@ void daNpc_P2_c::lookBack() {
         if ((u32)(s32)mode == 2) {
             m_jnt.mbTrn = 1;
             cXyz res;
-            dNpc_playerEyePos(&res, p2_child(mType)->mNpc.m04);
+            dNpc_playerEyePos(&res, p2_child(mType)->mNpc.mPlayerEyeOffsetY);
             px = current.pos.x;
             pz = current.pos.z;
             P2_copyPos(&tgt, &res);
@@ -180,7 +180,7 @@ void daNpc_P2_c::lookBack() {
             target = &tgt;
         } else if (mbAttention != 0) {
             cXyz res;
-            dNpc_playerEyePos(&res, p2_child(mType)->mNpc.m04);
+            dNpc_playerEyePos(&res, p2_child(mType)->mNpc.mPlayerEyeOffsetY);
             ey = eyePos.y;
             P2_copyPos(&tgt, &res);
             pz = current.pos.z;

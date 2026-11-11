@@ -61,17 +61,17 @@ void dTimer_timerHide() {
 
 /* 025C5794 */
 u32 dTimer_c::stop(u32 reason) {
-    if (field_0x162 == 1 || field_0x163 != 0 || mStatus != RUNNING) return FALSE;
-    field_0x163 = reason;
-    field_0x162 = 1;
+    if (mIsStopped == 1 || mStopReason != 0 || mStatus != RUNNING) return FALSE;
+    mStopReason = reason;
+    mIsStopped = 1;
     return TRUE;
 }
 
 /* 025C57D4 */
 u32 dTimer_c::restart(u32 reason) {
-    if (field_0x162 != 1 || field_0x163 != reason || mStatus != RUNNING) return FALSE;
-    field_0x162 = 0;
-    field_0x163 = 0;
+    if (mIsStopped != 1 || mStopReason != reason || mStatus != RUNNING) return FALSE;
+    mIsStopped = 0;
+    mStopReason = 0;
     return TRUE;
 }
 
@@ -106,7 +106,7 @@ u32 dTimer_c::getLimitTimeMs() { return mLimitFrames; }
 u32 dTimer_c::end(s32 delay) {
     if (mStatus != RUNNING) return FALSE;
     mStatus = ENDING;
-    if (delay != -1) field_0x158 = delay;
+    if (delay != -1) mEndDelay = delay;
     return TRUE;
 }
 
@@ -125,14 +125,14 @@ void dTimer_c::timerShow() {
 /* 025C591C */
 u32 dTimer_c::RestTimeCheck(s32 threshold) {
     s32 now = getRestTimeMs();
-    return now <= threshold && threshold > field_0x150;
+    return now <= threshold && threshold > mPrevRestTimeMs;
 }
 
 /* 025C5960 */
 void dTimer_c::SetSE() {
-    if (field_0x162 == 0 && mTimerMode != SILENT) {
+    if (mIsStopped == 0 && mTimerMode != SILENT) {
         s32 now = getRestTimeMs();
-        if (now / 1000 < field_0x150 / 1000) dTimer_seStart(JA_SE_MINIGAME_TIMER_EACH);
+        if (now / 1000 < mPrevRestTimeMs / 1000) dTimer_seStart(JA_SE_MINIGAME_TIMER_EACH);
     }
     if (!RestTimeCheck(mSeTimeLeft)) return;
     dTimerSeEntry* seTable;
@@ -155,7 +155,7 @@ s32 dTimer_c::_execute() {
     auto* play = dTimer_getPlay();
     // HD: Special game state freezes the frame timer and hides both HUD groups.
     if (play->mGameStatus & dTimerPlayView::TIMER_FREEZE) {
-        field_0x162 = 1;
+        mIsStopped = 1;
         dTimer_hideObject(this);
         return TRUE;
     }
@@ -167,12 +167,12 @@ s32 dTimer_c::_execute() {
         if (shouldStop) stop(1);
         else restart(1);
     }
-    if (field_0x162 != 1) {
-        field_0x150 = getRestTimeMs();
+    if (mIsStopped != 1) {
+        mPrevRestTimeMs = getRestTimeMs();
         status = mStatus;
         if (status == START_DELAY || status == STOCK_DELAY) {
-            s16 delay = s16(u16(u16(field_0x160) - 1));
-            field_0x160 = delay;
+            s16 delay = s16(u16(u16(mStartDelay) - 1));
+            mStartDelay = delay;
             if (delay <= 0) {
                 if (mStatus == STOCK_DELAY) stock_start();
                 else start();
@@ -193,16 +193,16 @@ s32 dTimer_c::_execute() {
     status = mStatus;
     if (status == DELETE_REQUEST) dTimer_deleteMessage(this);
     else if (status == ENDING) {
-        s32 delay = field_0x158;
-        if (delay > 0) field_0x158 = u32(delay) - 1;
+        s32 delay = mEndDelay;
+        if (delay > 0) mEndDelay = u32(delay) - 1;
         else if (mTimerMode == VOLCANO) deleteRequest();
         else mStatus = FINISHED;
     }
     // HD: Visibility is delayed by a decrementing counter; the GameCube animates the draw object.
-    u32 showDelay = field_0x15c;
+    u32 showDelay = mShowDelay;
     if (showDelay) {
         --showDelay;
-        field_0x15c = showDelay;
+        mShowDelay = showDelay;
         if (showDelay == 0) timerShow();
     }
     SetSE();
@@ -254,7 +254,7 @@ void dTimer_setIconType(u32 ignored, u32 type) { l_iconType.mType = type; }
 /* 025C5E90 */
 u32 dTimer_c::stock_startDelay(s16 delay) {
     if (mStatus != WAITING) return FALSE;
-    field_0x160 = delay;
+    mStartDelay = delay;
     mStatus = STOCK_DELAY;
     return TRUE;
 }
@@ -296,11 +296,11 @@ s32 dTimer_c::_create() {
         dTimer_getPlay()->mTimerInfo.mTimerMode = mode;
         dTimer_getPlay()->mTimerInfo.mTimerPtr = this;
     }
-    field_0x163 = 0;
-    field_0x162 = 0;
-    field_0x158 = 120;
+    mStopReason = 0;
+    mIsStopped = 0;
+    mEndDelay = 120;
     mSeTimeLeft = 0;
-    field_0x15c = 6;
+    mShowDelay = 6;
     mSeTableIndex = 0;
     mode = mTimerMode;
     if (mode == SHIP_RACE || mode == VOLCANO) {
@@ -340,7 +340,7 @@ u32 dTimer_createStockTimer() {
 /* 025C6250 */
 u32 dTimer_c::startDelay(s16 delay) {
     if (mStatus != WAITING) return FALSE;
-    field_0x160 = delay;
+    mStartDelay = delay;
     mStatus = START_DELAY;
     return TRUE;
 }

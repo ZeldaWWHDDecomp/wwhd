@@ -39,12 +39,12 @@ static inline void damage_check(bdk_class *i_this) {
         atInfo->mpObj = gabi::ea(i_this->mTosakaTgSph.GetTgHitObj());
         atInfo->pParticlePos = gabi::ea(i_this->mTosakaTgSph.GetTgHitPosP());
     }
-    if (i_this->m2F8 != 0)
+    if (i_this->mDamageTimer != 0)
         return;
     at_power_check_bdk(atInfo);
     if (hit_type == 1) {
-        i_this->m2F8 = 0xC;
-        if (atInfo->mResultingAttackType == 9 && i_this->m1150.y < 10000.0f) {
+        i_this->mDamageTimer = 0xC;
+        if (atInfo->mResultingAttackType == 9 && i_this->mHeadPos.y < 10000.0f) {
             actor->health = 0x14; /* health */
             mDoAud_seStart(JA_SE_LK_HAMMER_HIT, &actor->eyePos, 0x32,
                            dComIfGp_getReverb(fopAcM_GetRoomNo(actor)));
@@ -52,11 +52,11 @@ static inline void damage_check(bdk_class *i_this) {
                 player->mHammerHitMode = 0xB;
                 player->mHammerHitTimer = (s16)(REG_S(18, 7) + 0xFA0);
             }
-            if (i_this->m2B4 == 1) {
+            if (i_this->mTowerBattle == 1) {
                 i_this->mAction = ACTION_T_DOWN;
                 i_this->mState = 0;
                 i_this->mMaskShakeTimer = (s16)(REG0_S(3) + 10);
-                i_this->m2F8 = 0x1E;
+                i_this->mDamageTimer = 0x1E;
                 bdk_monsSeStart_e(actor, JA_SE_CV_DK_LAST_DAMAGE, 0);
                 mDoAud_bgmStop_bdk(30);
             } else {
@@ -71,10 +71,10 @@ static inline void damage_check(bdk_class *i_this) {
                 } else {
                     i_this->mMaskShakeTimer = (s16)(REG0_S(3) + 10);
                     i_this->mTimers[2] = 0xF;
-                    i_this->m2F8 = 0x1E;
+                    i_this->mDamageTimer = 0x1E;
                 }
             }
-            i_this->m1138 = 0;
+            i_this->mTosakaHitTimer = 0;
             gabi::Local<cXyz> pos;
             gabi::Local<csXyz> angle;
             pos->x = 2.0f;
@@ -98,13 +98,13 @@ static inline void damage_check(bdk_class *i_this) {
     /* hit_type 2 */
     u8 type = atInfo->mResultingAttackType;
     if (type == 9) {
-        i_this->m2F8 = 0xC;
+        i_this->mDamageTimer = 0xC;
     } else {
-        i_this->m2F8 = type == 1 ? 3 : 6;
+        i_this->mDamageTimer = type == 1 ? 3 : 6;
     }
     atInfo->mpActor = cc_at_check_bdk(actor, atInfo);
     bdk_monsSeStart(actor, JA_SE_CV_DK_DAMAGE, 0);
-    i_this->m1138 = (s16)(REG0_S(5) + 0x1E);
+    i_this->mTosakaHitTimer = (s16)(REG0_S(5) + 0x1E);
     {
         f32 px = player->current.pos.x;
         f32 ex = actor->eyePos.x;
@@ -112,14 +112,14 @@ static inline void damage_check(bdk_class *i_this) {
         f32 pz = player->current.pos.z;
         i_this->mHitAngleY = cM_atan2s(fsubs_ppc(ex, px), fsubs_ppc(ez, pz));
     }
-    if (i_this->mAction == ACTION_KUTI_ATTACK && i_this->m1150.y < 10000.0f) {
+    if (i_this->mAction == ACTION_KUTI_ATTACK && i_this->mHeadPos.y < 10000.0f) {
         anm_init(i_this, dRes_INDEX_BDK_BCK_DAMAGE1_e, 2.0f, 0, 1.0f, -1, 0);
         s8 n = (s8)(i_this->mHitCount + 1);
         i_this->mState = 10;
         i_this->mHitCount = n;
         if (n >= 6) {
             i_this->mTimers[2] = 10;
-            i_this->m2F8 = 0x14;
+            i_this->mDamageTimer = 0x14;
         }
     } else if (i_this->mGroundTimer != 0) {
         if (i_this->mAction != ACTION_WAIT) {
@@ -140,9 +140,9 @@ static inline void damage_check(bdk_class *i_this) {
         i_this->mAction = ACTION_END;
         if (actor->current.pos.y < 9810.0f) {
             i_this->mDemoMode = 100;
-            i_this->mState = (i_this->m1150.y < 10000.0f) ? 0 : 1;
+            i_this->mState = (i_this->mHeadPos.y < 10000.0f) ? 0 : 1;
         } else {
-            i_this->m25A2 = 1;
+            i_this->mFinalHitHigh = 1;
             i_this->mState = 2;
             i_this->mDemoMode = 100;
         }
@@ -168,9 +168,9 @@ static inline void col_set(bdk_class *i_this) {
     gabi::Local<cXyz> offset;
     {
         f32 y = actor->current.pos.y;
-        BdkExe_copyFloat(i_this->m1168.z, actor->current.pos.z);
-        i_this->m1168.y = fadds_ppc(y, 380.0f);
-        BdkExe_copyFloat(i_this->m1168.x, actor->current.pos.x);
+        BdkExe_copyFloat(i_this->mBodyCenter.z, actor->current.pos.z);
+        i_this->mBodyCenter.y = fadds_ppc(y, 380.0f);
+        BdkExe_copyFloat(i_this->mBodyCenter.x, actor->current.pos.x);
     }
     PSMTXCopy(bdk_morfAnmMtx(i_this, DK_JNT_J_DK_ATAMA1_e), calc_mtx());
     offset->x = fadds_ppc(REG8_F(0), 40.0f);
@@ -182,8 +182,8 @@ static inline void col_set(bdk_class *i_this) {
         offset->z = fadds_ppc(REG8_F(2), -70.0f);
         cM3dGSph_SetR_bdk(&i_this->mHeadTgSph.mSph, 110.0f);
     }
-    BdkExe_copyVector(&i_this->m1144, &i_this->m1150);
-    MtxPosition(offset, &i_this->m1150);
+    BdkExe_copyVector(&i_this->mHeadPosOld, &i_this->mHeadPos);
+    MtxPosition(offset, &i_this->mHeadPos);
     if (i_this->mAttackPart == 1) {
         PSMTXCopy(bdk_morfAnmMtx(i_this, DK_JNT_J_DK_AGO_e), calc_mtx());
         BdkExe_copyFloat(offset->z, BdkExe_register(8, 5)); /* REG8_F(5) */
@@ -196,8 +196,8 @@ static inline void col_set(bdk_class *i_this) {
     cM3dGSph_SetR_bdk(&i_this->mHeadAtSph.mSph, fadds_ppc(REG8_F(6), 70.0f));
     cM3dGSph_SetR_bdk(&i_this->mBodyCCSph.mSph, i_this->mAction == ACTION_T_LASTATTACK ? 400.0f : 250.0f);
     cM3dGSph_SetC_bdk(&i_this->mHeadAtSph.mSph, &i_this->mHeadAtPos);
-    cM3dGSph_SetC_bdk(&i_this->mHeadTgSph.mSph, &i_this->m1150);
-    cM3dGSph_SetC_bdk(&i_this->mBodyCCSph.mSph, &i_this->m1168);
+    cM3dGSph_SetC_bdk(&i_this->mHeadTgSph.mSph, &i_this->mHeadPos);
+    cM3dGSph_SetC_bdk(&i_this->mBodyCCSph.mSph, &i_this->mBodyCenter);
     ccs_Set_bdk(&i_this->mHeadAtSph);
     ccs_Set_bdk(&i_this->mHeadTgSph);
     ccs_Set_bdk(&i_this->mBodyCCSph);
@@ -255,10 +255,10 @@ static inline void col_set(bdk_class *i_this) {
 /* the head swing after the mask broke (inlined into Execute) */
 static inline void head_swing(bdk_class *i_this) {
     fopAc_ac_c *actor = i_this;
-    if (i_this->m113A == 0) {
-        i_this->m1138 = 0;
-        i_this->m1134 = 0;
-        i_this->m1132 = 0;
+    if (i_this->mTosakaSwingOn == 0) {
+        i_this->mTosakaHitTimer = 0;
+        i_this->mTosakaWobbleTarget = 0;
+        i_this->mTosakaWobbleAmp = 0;
         return;
     }
     {
@@ -269,7 +269,7 @@ static inline void head_swing(bdk_class *i_this) {
     gabi::Local<cXyz> out;
     {
         gabi::Local<cXyz> tmp;
-        cXyz_mi(&i_this->m1150, tmp, &i_this->m1144);
+        cXyz_mi(&i_this->mHeadPos, tmp, &i_this->mHeadPosOld);
         BdkExe_copyVector(offset.get(), tmp.get());
     }
     MtxPosition(offset, out);
@@ -280,49 +280,49 @@ static inline void head_swing(bdk_class *i_this) {
         angle = -8000;
     }
     s32 k = REG_S(8, 4) + 2500;
-    s16 m1130 = i_this->m1130;
+    s16 mTosakaPhase = i_this->mTosakaPhase;
     f32 f9 = fadds_ppc(REG0_F(5), -2000.0f);
-    f32 f13 = fmuls_ppc(f9, i_this->m1140);
-    f32 f0 = fmuls_ppc(4000.0f, i_this->m113C);
-    s16 iVar4 = (s16)gabi::ftoi(fmuls_ppc(cM_ssin(m1130 * k), f13));
+    f32 f13 = fmuls_ppc(f9, i_this->mTosakaSwayScale);
+    f32 f0 = fmuls_ppc(4000.0f, i_this->mTosakaTurnRate);
+    s16 iVar4 = (s16)gabi::ftoi(fmuls_ppc(cM_ssin(mTosakaPhase * k), f13));
     s16 iVar11 = (s16)gabi::ftoi(f0);
-    cLib_addCalc2(&i_this->m113C, 1.0f, 1.0f, fadds_ppc(REG0_F(4), 0.01f));
+    cLib_addCalc2(&i_this->mTosakaTurnRate, 1.0f, 1.0f, fadds_ppc(REG0_F(4), 0.01f));
     if (i_this->mDemoTimer > REG0_S(9) + 0x41) {
-        cLib_addCalc2(&i_this->m1140, 1.0f, 1.0f, fadds_ppc(REG0_F(2), 0.4f));
+        cLib_addCalc2(&i_this->mTosakaSwayScale, 1.0f, 1.0f, fadds_ppc(REG0_F(2), 0.4f));
     }
-    cLib_addCalcAngleS2(&i_this->m1120, (s16)(angle + iVar4 + 4500), 4, iVar11);
-    cLib_addCalcAngleS2(&i_this->m1122, 4, 10, iVar11);
-    s16 c = (s16)(i_this->m1130 + 1);
-    i_this->m1130 = c;
-    if (i_this->m1138 != 0) {
-        f32 t = (f32)(s32)i_this->m1138;
-        i_this->m1134 = 0;
-        i_this->m1132 = 0;
+    cLib_addCalcAngleS2(&i_this->mTosakaYaw, (s16)(angle + iVar4 + 4500), 4, iVar11);
+    cLib_addCalcAngleS2(&i_this->mTosakaRoll, 4, 10, iVar11);
+    s16 c = (s16)(i_this->mTosakaPhase + 1);
+    i_this->mTosakaPhase = c;
+    if (i_this->mTosakaHitTimer != 0) {
+        f32 t = (f32)(s32)i_this->mTosakaHitTimer;
+        i_this->mTosakaWobbleTarget = 0;
+        i_this->mTosakaWobbleAmp = 0;
         offset->x = 0.0f;
         offset->y = 0.0f;
         offset->z = fmuls_ppc(t, fadds_ppc(REG0_F(7), 500.0f));
         cMtx_YrotS(calc_mtx(), i_this->mHitAngleY);
         MtxPosition(offset, out);
         s16 frame = i_this->mFrameCounter;
-        i_this->m112E = (s16)gabi::ftoi(fmuls_ppc(cM_ssin(frame * (REG0_S(4) + 7000)), out->z));
-        i_this->m112C = (s16)gabi::ftoi(fmuls_ppc(cM_ssin(frame * (REG0_S(4) + 7000)), out->x));
-        c = i_this->m1130;
+        i_this->mTosakaHitYaw = (s16)gabi::ftoi(fmuls_ppc(cM_ssin(frame * (REG0_S(4) + 7000)), out->z));
+        i_this->mTosakaHitRoll = (s16)gabi::ftoi(fmuls_ppc(cM_ssin(frame * (REG0_S(4) + 7000)), out->x));
+        c = i_this->mTosakaPhase;
     }
-    if (i_this->m1134 > 3000) {
+    if (i_this->mTosakaWobbleTarget > 3000) {
         c = (s16)(c + 1);
-        i_this->m1130 = c;
+        i_this->mTosakaPhase = c;
     }
     {
-        f32 m1132 = (f32)(s32)i_this->m1132;
-        i_this->m1124 = (s16)gabi::ftoi(fmuls_ppc(cM_ssin(c * 1500), m1132));
-        c = i_this->m1130;
-        i_this->m1126 = (s16)gabi::ftoi(fmuls_ppc(cM_scos(c * 1200), m1132));
-        i_this->m1128 = (s16)gabi::ftoi(fmuls_ppc(cM_ssin(c * 1500 + 0x4000), m1132));
-        f32 m1132b = (f32)(s32)i_this->m1132;
-        i_this->m112A = (s16)gabi::ftoi(fmuls_ppc(cM_scos(c * 1200 + 0x4000), m1132b));
+        f32 mTosakaWobbleAmp = (f32)(s32)i_this->mTosakaWobbleAmp;
+        i_this->mTosakaWobbleYawB = (s16)gabi::ftoi(fmuls_ppc(cM_ssin(c * 1500), mTosakaWobbleAmp));
+        c = i_this->mTosakaPhase;
+        i_this->mTosakaWobbleRollB = (s16)gabi::ftoi(fmuls_ppc(cM_scos(c * 1200), mTosakaWobbleAmp));
+        i_this->mTosakaWobbleYawA = (s16)gabi::ftoi(fmuls_ppc(cM_ssin(c * 1500 + 0x4000), mTosakaWobbleAmp));
+        f32 m1132b = (f32)(s32)i_this->mTosakaWobbleAmp;
+        i_this->mTosakaWobbleRollA = (s16)gabi::ftoi(fmuls_ppc(cM_scos(c * 1200 + 0x4000), m1132b));
     }
-    cLib_addCalcAngleS2(&i_this->m1132, i_this->m1134, 2, 500);
-    i_this->m1134 = 1500;
+    cLib_addCalcAngleS2(&i_this->mTosakaWobbleAmp, i_this->mTosakaWobbleTarget, 2, 500);
+    i_this->mTosakaWobbleTarget = 1500;
 }
 
 /* tail_control (inlined) */
@@ -381,8 +381,8 @@ static inline void tail_control(bdk_class *i_this, bdk_tail_s *tail) {
         tail->mAngle[i - 1].x = sVar1;
         f32 l = fmuls_ppc(fmuls_ppc(gabi::fadds_ppc(fmuls_ppc(20.0f, gabi::fmadds((f32)i, 0.03f, 0.25f)),
                                                     fmuls_ppc(20.0f, gabi::fmadds((f32)i, 0.03f, 0.25f))),
-                                    l_HIO.m00C),
-                          l_HIO.m010);
+                                    l_HIO.mTailScale),
+                          l_HIO.mTailSpacing);
         sp10->x = 0.0f;
         sp10->y = 0.0f;
         sp10->z = l;
@@ -434,7 +434,7 @@ static inline void kamen_break_move(bdk_class *i_this) {
         rots[0] = 0;
         rots[1] = 0;
         cXyz *p = &i_this->mMaskPiecePos[i];
-        cXyz *v = &i_this->m970[i];
+        cXyz *v = &i_this->mMaskPieceSpeed[i];
         if (i_this->mMaskPieceBreakTime[i] != 0) {
             s8 t = (s8)(i_this->mMaskPieceBreakTime[i] - 1);
             i_this->mMaskPieceBreakTime[i] = t;
@@ -461,41 +461,41 @@ static inline void kamen_break_move(bdk_class *i_this) {
                 p->y = ground_y;
                 if (v->y < fadds_ppc(REG0_F(2), -30.0f)) {
                     v->y = fadds_ppc(REG0_F(3), 20.0f);
-                    i_this->m9EC[i] = fadds_ppc(REG0_F(4), 3000.0f);
+                    i_this->mMaskPieceRockAmp[i] = fadds_ppc(REG0_F(4), 3000.0f);
                     i_this->mMaskPieceAngle[i].z = BdkExe_tables().z_d2[i];
                     mDoAud_seStart(JA_SE_CM_MAGBALL_BOUND, p, 0x63,
                                    dComIfGp_getReverb(fopAcM_GetRoomNo(actor)));
                 } else {
                     v->y = 0.0f;
                     s16 target = (s16)gabi::ftoi(
-                        fmuls_ppc(cM_ssin(i_this->mFrameCounter * 0x2000 + i * 0x3000), i_this->m9EC[i]));
-                    cLib_addCalc0(&i_this->m9EC[i], 1.0f, fadds_ppc(REG0_F(5), 200.0f));
+                        fmuls_ppc(cM_ssin(i_this->mFrameCounter * 0x2000 + i * 0x3000), i_this->mMaskPieceRockAmp[i]));
+                    cLib_addCalc0(&i_this->mMaskPieceRockAmp[i], 1.0f, fadds_ppc(REG0_F(5), 200.0f));
                     cLib_addCalcAngleS2(&i_this->mMaskPieceAngle[i].z, (s16)(BdkExe_tables().z_d[i] + target), 1,
                                         0x1000);
                 }
                 vec1->x = 0.0f;
                 vec1->y = 0.0f;
-                BdkExe_copyFloat(vec1->z, i_this->m9FC[i]);
-                cMtx_YrotS(calc_mtx(), i_this->mA0C[i]);
+                BdkExe_copyFloat(vec1->z, i_this->mMaskPieceSlideSpeed[i]);
+                cMtx_YrotS(calc_mtx(), i_this->mMaskPieceSlideYaw[i]);
                 MtxPosition(vec1, vec2);
                 BdkExe_copyFloat(v->x, vec2->x);
                 BdkExe_copyFloat(v->z, vec2->z);
                 i_this->mMaskPieceAngle[i].y =
-                    (s16)(i_this->mMaskPieceAngle[i].y + (s16)gabi::ftoi(fmuls_ppc(i_this->mF00[i], i_this->m9FC[i])));
-                cLib_addCalc0(&i_this->m9FC[i], 1.0f, fadds_ppc(REG0_F(5), 0.2f));
-                if (sph->ChkTgHit() && i_this->m9FC[i] < 1.0f) {
+                    (s16)(i_this->mMaskPieceAngle[i].y + (s16)gabi::ftoi(fmuls_ppc(i_this->mMaskPieceSpinRate[i], i_this->mMaskPieceSlideSpeed[i])));
+                cLib_addCalc0(&i_this->mMaskPieceSlideSpeed[i], 1.0f, fadds_ppc(REG0_F(5), 0.2f));
+                if (sph->ChkTgHit() && i_this->mMaskPieceSlideSpeed[i] < 1.0f) {
                     atInfo->pParticlePos = 0;
                     atInfo->mpObj = gabi::ea(sph->GetTgHitObj());
                     atInfo->mpActor = at_power_check_bdk(atInfo);
                     if (atInfo->mResultingAttackType == 8) {
                         f32 b = fadds_ppc(REG0_F(4), 7.0f);
-                        i_this->m9FC[i] = fadds_ppc(b, cM_rndF(2.0f));
+                        i_this->mMaskPieceSlideSpeed[i] = fadds_ppc(b, cM_rndF(2.0f));
                         u32 a = atInfo->mpActor;
                         if (a != 0) {
                             s16 r = (s16)gabi::ftoi(cM_rndFX(2000.0f));
-                            i_this->mA0C[i] = (s16)(gabi::at<fopAc_ac_c>(a)->shape_angle.y + r);
+                            i_this->mMaskPieceSlideYaw[i] = (s16)(gabi::at<fopAc_ac_c>(a)->shape_angle.y + r);
                         }
-                        i_this->mF00[i] = (f32)(s32)(s16)gabi::ftoi(cM_rndFX(200.0f));
+                        i_this->mMaskPieceSpinRate[i] = (f32)(s32)(s16)gabi::ftoi(cM_rndFX(200.0f));
                     } else {
                         gabi::Local<cXyz> tmp;
                         cXyz_mi(p, tmp, sph->GetTgHitPosP());
@@ -526,7 +526,7 @@ static inline void kamen_break_move(bdk_class *i_this) {
                                 (s16)(BdkExe_maskAngles(i_this).mTargetYaw[i] + r);
                         }
                         MtxPosition(vec1, v);
-                        i_this->m9FC[i] = 0.0f;
+                        i_this->mMaskPieceSlideSpeed[i] = 0.0f;
                         mDoAud_seStart(JA_SE_CM_MAGBALL_BOUND, p, 0x63,
                                        dComIfGp_getReverb(fopAcM_GetRoomNo(actor)));
                     }
@@ -559,7 +559,7 @@ static inline void kamen_break_move(bdk_class *i_this) {
                 if (bdk_LineCross(linChk.get())) {
                     BdkExe_copyFloat(p->x, i_this->mMaskPiecePosOld[i].x);
                     BdkExe_copyFloat(p->z, i_this->mMaskPiecePosOld[i].z);
-                    i_this->m9FC[i] = 0.0f;
+                    i_this->mMaskPieceSlideSpeed[i] = 0.0f;
                 }
             }
         }
@@ -591,16 +591,16 @@ static BOOL daBdk_Execute(bdk_class *i_this) {
             i_this->mTimers[i] = i_this->mTimers[i] - 1;
         }
     }
-    if (i_this->m2F8 != 0) {
-        i_this->m2F8 = i_this->m2F8 - 1;
+    if (i_this->mDamageTimer != 0) {
+        i_this->mDamageTimer = i_this->mDamageTimer - 1;
     }
     if (i_this->mMaskShakeTimer != 0) {
         i_this->mMaskShakeTimer = i_this->mMaskShakeTimer - 1;
     }
-    if (i_this->m1138 != 0) {
-        i_this->m1138 = i_this->m1138 - 1;
+    if (i_this->mTosakaHitTimer != 0) {
+        i_this->mTosakaHitTimer = i_this->mTosakaHitTimer - 1;
     }
-    if (!l_HIO.m005) {
+    if (!l_HIO.mStopMove) {
         i_this->mpMorf->play(&actor->eyePos, 0, 0); /* mDoExt_McaMorf::play */
         move(i_this);                               /* move */
         if (i_this->mAction != ACTION_START && i_this->mAction < 0x64) {
@@ -617,8 +617,8 @@ static BOOL daBdk_Execute(bdk_class *i_this) {
         damage_check(i_this);
     }
     J3DModel *model;
-    if (i_this->m2B4 == 1) {
-        f32 s = fmuls_ppc(l_HIO.m008, 0.85f);
+    if (i_this->mTowerBattle == 1) {
+        f32 s = fmuls_ppc(l_HIO.mBodyScale, 0.85f);
         actor->scale.z = s;
         actor->scale.y = s;
         actor->scale.x = s;
@@ -627,7 +627,7 @@ static BOOL daBdk_Execute(bdk_class *i_this) {
         BdkExe_modelScale(model).y = s;
         BdkExe_modelScale(model).z = s;
     } else {
-        u32 s = BdkExe_word(l_HIO.m008);
+        u32 s = BdkExe_word(l_HIO.mBodyScale);
         BdkExe_word(actor->scale.z) = s;
         BdkExe_word(actor->scale.y) = s;
         BdkExe_word(actor->scale.x) = s;

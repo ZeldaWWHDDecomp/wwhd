@@ -54,7 +54,7 @@ struct daDaiocta_Eye_c : fopAc_ac_c {
     /* 0x448 */ mDoExt_btkAnm mBtkAnm;
     /* 0x4BC */ be<s16> mEyeRotTargetX, mEyeRotTargetY, mEyeRotTargetZ;
     /* 0x4C2 */ csXyz mCurEyeRot;
-    /* 0x4C8 */ be<s16> m2EC, m2EE, m2F0;
+    /* 0x4C8 */ be<s16> mEyeRndRotMinX, mEyeRndRotMinY, mEyeRndRotMinZ;  /* mEyeRndRotMinX was m2EC: setRotEye 0211A1E8 (d_a_daiocta.cpp) passes it to oct_rndRotEyeAxis as the minimum: a new random target X angle closer than it to the current one is pushed away by it; _execute 0211DCAC copies l_HIO's mEyeRndRotMinX each frame (tww daDaiocta_Eye_c::rndRotEye does the same with m2EC / m2EE / m2F0); the counterpart of mEyeRndRotMaxX; mEyeRndRotMinY was m2EE: setRotEye 0211A1E8 (d_a_daiocta.cpp) passes it to oct_rndRotEyeAxis as the minimum: a new random target Y angle closer than it to the current one is pushed away by it; _execute 0211DCAC copies l_HIO's mEyeRndRotMinY each frame (tww daDaiocta_Eye_c::rndRotEye does the same with m2EC / m2EE / m2F0); the counterpart of mEyeRndRotMaxY; mEyeRndRotMinZ was m2F0: setRotEye 0211A1E8 (d_a_daiocta.cpp) passes it to oct_rndRotEyeAxis as the minimum: a new random target Z angle closer than it to the current one is pushed away by it; _execute 0211DCAC copies l_HIO's mEyeRndRotMinZ each frame (tww daDaiocta_Eye_c::rndRotEye does the same with m2EC / m2EE / m2F0); the counterpart of mEyeRndRotMaxZ */
     /* 0x4CE */ be<s16> mEyeRndRotMaxX, mEyeRndRotMaxY, mEyeRndRotMaxZ;
     /* 0x4D4 */ dCcD_Sph mSph;
     /* 0x600 */ dCcD_Stts mStts;
@@ -151,7 +151,8 @@ struct Hio {
     be<f32> mParticleTranslationX, mParticleTranslationY, mParticleTranslationZ;
     be<f32> mSphRadius;
     be<s16> mEyeRotStep, mEyeRotScale;
-    be<s16> m24, m26, m28;
+    /* mRndRotMinX (0x24) was m24: daDaiocta_Eye_HIO_construct 0211E4F4 sets 0x4000; daDaiocta_Eye_c::_execute 0211DCAC copies it into the eye's mEyeRndRotMinX (tww m24, the counterpart of mEyeRndRotMaxX); mRndRotMinY (0x26) was m26: daDaiocta_Eye_HIO_construct 0211E4F4 sets 0x1000; daDaiocta_Eye_c::_execute 0211DCAC copies it into the eye's mEyeRndRotMinY (tww m26, the counterpart of mEyeRndRotMaxY); mRndRotMinZ (0x28) was m28: daDaiocta_Eye_HIO_construct 0211E4F4 sets 0x1000; daDaiocta_Eye_c::_execute 0211DCAC copies it into the eye's mEyeRndRotMinZ (tww m28, the counterpart of mEyeRndRotMaxZ) */
+    be<s16> mRndRotMinX, mRndRotMinY, mRndRotMinZ;
     be<s16> mEyeRndRotMaxX, mEyeRndRotMaxY, mEyeRndRotMaxZ;
     u8 m30[0x2C];
 };
@@ -166,7 +167,7 @@ WWHD_OFFSET(CallbackVtable, mRemove, 0x44);
 WWHD_SIZE(CallbackVtable, 0x48);
 WWHD_SIZE(CollisionVtables, 8);
 WWHD_OFFSET(Hio, mSphRadius, 0x1C);
-WWHD_OFFSET(Hio, m24, 0x24);
+WWHD_OFFSET(Hio, mRndRotMinX, 0x24);
 WWHD_OFFSET(Hio, m30, 0x30);
 WWHD_SIZE(Hio, 0x5C);
 } // namespace octoEyeHD

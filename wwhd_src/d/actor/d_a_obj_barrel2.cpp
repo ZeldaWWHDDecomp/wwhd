@@ -67,7 +67,7 @@ static void effect_position(Act_c *a, const char *file, const char *expr, cXyz *
     f32 x = a->current.pos.x;
     t0 = attr(a, file, expr);
     t1 = attr(a, file, expr);
-    f32 y = gabi::fmadds((f32)t0->m14 * (f32)t1->m50, mag, a->current.pos.y);
+    f32 y = gabi::fmadds((f32)t0->mBarrelHeight * (f32)t1->mFloatDepthRate, mag, a->current.pos.y);
     f32 z = a->current.pos.z;
     pos->set(x, y, z);
     scale->set(mag, mag, mag);
@@ -84,7 +84,7 @@ static bool solidHeapCB(Act_c *a) { return a->create_heap(); }
 /* 0231E670 */
 bool daObjBarrel2::Act_c::create_heap() {
     Attr_c *t = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-    u16 index = t->m00;
+    u16 index = t->mModelResIdx;
     J3DModelData *mdl =
         (J3DModelData *)dComIfG_getObjectRes("Ktaru_00", index, barrel2_hd::ResourceStringVtable);
     if (!mdl) {
@@ -92,7 +92,7 @@ bool daObjBarrel2::Act_c::create_heap() {
     }
     mpModel = mDoExt_J3DModel__create(mdl, 0x80000, 0x11000022);
     t = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-    index = t->m02;
+    index = t->mBrkResIdx;
     void *brk = dComIfG_getObjectRes("Ktaru_00", index, barrel2_hd::ResourceStringVtable);
     if (!brk) {
         Barrel_assertion("d_a_obj_barrel2.cpp", 0x221, "brk_data != 0");
@@ -143,7 +143,7 @@ s32 daObjBarrel2::Act_c::_create() {
     };
     Attr_c *t = attribute();
     if (!Barrel_entrySolidHeap(this, gabi::at<void>(gabi::guest_fn((const void *)solidHeapCB)),
-                               (u32)t->m04)) {
+                               (u32)t->mHeapSize)) {
         return 5;
     }
     J3DModel *mdl = mpModel;
@@ -152,9 +152,9 @@ s32 daObjBarrel2::Act_c::_create() {
     Barrel_setCylinder(&mCyl, &barrelCylinderSource.mData);
     mCyl.mStts = &mStts;
     t = attribute();
-    Barrel_setCylinderRadius(&mCyl.mCyl, (f32)t->m08);
+    Barrel_setCylinderRadius(&mCyl.mCyl, (f32)t->mCylRadius);
     t = attribute();
-    Barrel_setCylinderHeight(&mCyl.mCyl, (f32)t->m0C);
+    Barrel_setCylinderHeight(&mCyl.mCyl, (f32)t->mCylHeight);
     gbaName = 0x3D;
     mCyl.mGObjTg.mHitCallback = gabi::guest_fn((const void *)tg_hitCB);
     mCyl.mGObjCo.mHitCallback = gabi::guest_fn((const void *)co_hitCB);
@@ -166,25 +166,25 @@ s32 daObjBarrel2::Act_c::_create() {
         Attr_c *t0 = attribute();
         Attr_c *t1 = attribute();
         Attr_c *t2 = attribute();
-        mPosYOffset = -(((f32)t0->m18 * (f32)t1->m20) * (f32)t2->m24) - 50.f;
+        mPosYOffset = -(((f32)t0->mCenterHeight * (f32)t1->m20) * (f32)t2->m24) - 50.f;
         if (mType == 2) {
-            m440 = cM_rndFX(1.f);
-            m444 = cM_rndFX(1.f);
+            mTiltX = cM_rndFX(1.f);
+            mTiltZ = cM_rndFX(1.f);
         } else {
-            m440 = 0.f;
-            m444 = 0.f;
+            mTiltX = 0.f;
+            mTiltZ = 0.f;
         }
     } else {
         mPosYOffset = 0.f;
-        m440 = 0.f;
-        m444 = 0.f;
+        mTiltX = 0.f;
+        mTiltZ = 0.f;
     }
-    m448 = 0.f;
-    m44C = 0.f;
-    m42C = 0.f;
-    m430 = 0.f;
-    m434 = 0.f;
-    m438 = 0.f;
+    mTiltVelX = 0.f;
+    mTiltVelZ = 0.f;
+    mWobbleX = 0.f;
+    mWobbleZ = 0.f;
+    mWobbleVelX = 0.f;
+    mWobbleVelZ = 0.f;
     set_water_pos();
     set_pos_y();
     attention_info.position.x = current.pos.x;
@@ -192,7 +192,7 @@ s32 daObjBarrel2::Act_c::_create() {
     Attr_c *t1 = attribute();
     Attr_c *t2 = attribute();
     f32 z = current.pos.z;
-    f32 y = gabi::fmadds((f32)t0->m18 * (f32)t1->m20, t2->m24, current.pos.y);
+    f32 y = gabi::fmadds((f32)t0->mCenterHeight * (f32)t1->m20, t2->m24, current.pos.y);
     f32 x = attention_info.position.x;
     eyePos.z = z;
     eyePos.x = x;
@@ -202,7 +202,7 @@ s32 daObjBarrel2::Act_c::_create() {
     t0 = attribute();
     t1 = attribute();
     t2 = attribute();
-    f32 cy = ((f32)t0->m18 * (f32)t1->m24) * (f32)t2->m20;
+    f32 cy = ((f32)t0->mCenterHeight * (f32)t1->m24) * (f32)t2->m20;
     Barrel_setCullSphere(this, 0.f, cy, 0.f, 300.f);
     gabi::Local<cXyz> pos, scale;
     pos->set(current.pos.x, current.pos.y, current.pos.z);
@@ -218,9 +218,9 @@ s32 daObjBarrel2::Act_c::_create() {
     s8 room = home.roomNo;
     mItemId =
         Barrel_createRaceItem(pos.get(), item, save, room, angle.get(), scale.get(), spawn != 0);
-    m468 = 0;
+    mMineFlash = 0;
     mChildPid = fpcM_ERROR_PROCESS_ID_e;
-    m470 = 0;
+    mHitType = 0;
     mItemDistance = barrelItemDistanceMax;
     if (!PrmAbstract(this, PRM_BUOY_W, PRM_BUOY_S)) {
         f32 x = current.pos.x;
@@ -229,7 +229,7 @@ s32 daObjBarrel2::Act_c::_create() {
         t2 = attribute();
         f32 mag = (f32)t1->m24 * (f32)t2->m20;
         gabi::Local<cXyz> flagpos;
-        flagpos->set(x, gabi::fmadds((f32)t0->m14 - 5.f, mag, current.pos.y), current.pos.z);
+        flagpos->set(x, gabi::fmadds((f32)t0->mBarrelHeight - 5.f, mag, current.pos.y), current.pos.z);
         s32 type = mType;
         u32 param = (type == 2 || type == 3) ? 2 : 1;
         if (type == 3) {
@@ -259,7 +259,7 @@ bool daObjBarrel2::Act_c::_delete() {
 static void tg_hitCB(Act_c *a, dCcD_GObjInf *obj, fopAc_ac_c *other, dCcD_GObjInf *otherobj) {
     void *hit = obj->GetTgHitObj();
     if (hit && ((u32) static_cast<dCcD_GObjInf *>(hit)->mAtType & 0x20)) {
-        a->m470 = 3;
+        a->mHitType = 3;
     }
 }
 
@@ -269,11 +269,11 @@ static void co_hitCB(Act_c *a, dCcD_GObjInf *obj, fopAc_ac_c *other, dCcD_GObjIn
         return;
     }
     if (a->mType != 0) {
-        a->m470 = 2;
+        a->mHitType = 2;
         return;
     }
     Attr_c *t = attr(a, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-    if (!((f32)other->speedF > (f32)t->m38)) {
+    if (!((f32)other->speedF > (f32)t->mShipHitSpeed)) {
         return;
     }
     gabi::Local<cXyz> delta, velocity;
@@ -283,9 +283,9 @@ static void co_hitCB(Act_c *a, dCcD_GObjInf *obj, fopAc_ac_c *other, dCcD_GObjIn
     velocity->set(other->speed.x, 0, other->speed.z);
     Attr_c *t0 = attr(a, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
     Attr_c *t1 = attr(a, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-    f32 sq = (f32)t0->m3C * (f32)t1->m3C;
+    f32 sq = (f32)t0->mShipHitDot * (f32)t1->mShipHitDot;
     if (Barrel_innerProduct(delta.get(), velocity.get()) < sq) {
-        a->m470 = 1;
+        a->mHitType = 1;
         auto *shipFlags = gabi::at<barrel2_hd::Ship>(gabi::ea(other));
         shipFlags->mFlags = shipFlags->mFlags | 4;
         return;
@@ -309,7 +309,7 @@ void daObjBarrel2::Act_c::cull_set_draw() {
     for (int i = 0; i < 5; i++) {
         t[i] = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
     }
-    f32 y = ((f32)t[0]->m18 * (f32)t[1]->m24) * (f32)t[2]->m20;
+    f32 y = ((f32)t[0]->mCenterHeight * (f32)t[1]->m24) * (f32)t[2]->m20;
     Barrel_setCullSphere(this, 0.f, y, 0.f, (75.f * (f32)t[3]->m24) * (f32)t[4]->m20);
 }
 
@@ -319,8 +319,8 @@ void daObjBarrel2::Act_c::cull_set_move() {
     for (int i = 0; i < 4; i++) {
         t[i] = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
     }
-    f32 y = ((f32)t[0]->m18 * (f32)t[1]->m24) * (f32)t[2]->m20;
-    Barrel_setCullSphere(this, 0.f, y, 0.f, (f32)t[3]->m10);
+    f32 y = ((f32)t[0]->mCenterHeight * (f32)t[1]->m24) * (f32)t[2]->m20;
+    Barrel_setCullSphere(this, 0.f, y, 0.f, (f32)t[3]->mMoveCullRadius);
 }
 
 /* 0231FD50 */
@@ -349,22 +349,22 @@ bool daObjBarrel2::Act_c::mode_afl() {
     mPosYOffsetSpeed = vel;
     mPosYOffset = pos;
     Attr_c *t = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-    if (mPosYOffset > (f32)t->m14 * limit) {
+    if (mPosYOffset > (f32)t->mBarrelHeight * limit) {
         t = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-        mPosYOffset = (f32)t->m14 * limit;
+        mPosYOffset = (f32)t->mBarrelHeight * limit;
     }
     t = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-    f32 step = (f32)(s16)t->m58;
+    f32 step = (f32)(s16)t->mBobAngleStep;
     f32 rnd = cM_rnd();
-    m43C = (s16)((s16)m43C + (s16)gabi::ftoi(step * (rnd + 1.f)));
+    mBobAngle = (s16)((s16)mBobAngle + (s16)gabi::ftoi(step * (rnd + 1.f)));
     set_pos_y();
     f32 x = current.pos.x, z = current.pos.z;
-    f32 vx = gabi::fmadds(x - (f32)home.pos.x, -0.002f, m414) * 0.9f;
-    f32 vz = gabi::fmadds(z - (f32)home.pos.z, -0.002f, m418) * 0.9f;
+    f32 vx = gabi::fmadds(x - (f32)home.pos.x, -0.002f, mDriftVelX) * 0.9f;
+    f32 vz = gabi::fmadds(z - (f32)home.pos.z, -0.002f, mDriftVelZ) * 0.9f;
     f32 nx = x + ((f32)mStts.m_cc_move.x + vx);
     f32 nz = z + ((f32)mStts.m_cc_move.z + vz);
-    m414 = vx;
-    m418 = vz;
+    mDriftVelX = vx;
+    mDriftVelZ = vz;
     current.pos.x = nx;
     current.pos.z = nz;
     afl_sway();
@@ -391,7 +391,7 @@ bool daObjBarrel2::Act_c::mode_exit_v() {
     for (int i = 0; i < 4; i++) {
         t[i] = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
     }
-    f32 lower = -(((f32)t[0]->m18 * (f32)t[1]->m20) * (f32)t[2]->m24) - (f32)t[3]->m30;
+    f32 lower = -(((f32)t[0]->mCenterHeight * (f32)t[1]->m20) * (f32)t[2]->m24) - (f32)t[3]->m30;
     if ((f32)mPosYOffset > lower) {
         return true;
     }
@@ -418,7 +418,7 @@ bool daObjBarrel2::Act_c::mode_exit_h() {
     for (int i = 0; i < 4; i++) {
         t[i] = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
     }
-    f32 lower = -(((f32)t[0]->m18 * (f32)t[1]->m20) * (f32)t[2]->m24) - (f32)t[3]->m30;
+    f32 lower = -(((f32)t[0]->mCenterHeight * (f32)t[1]->m20) * (f32)t[2]->m24) - (f32)t[3]->m30;
     if ((f32)mPosYOffset > lower) {
         return true;
     }
@@ -445,7 +445,7 @@ bool daObjBarrel2::Act_c::mode_exit_mine() {
     for (int i = 0; i < 3; i++) {
         t[i] = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
     }
-    f32 lower = -(((f32)t[0]->m18 * (f32)t[1]->m20) * (f32)t[2]->m24) - 50.f;
+    f32 lower = -(((f32)t[0]->mCenterHeight * (f32)t[1]->m20) * (f32)t[2]->m24) - 50.f;
     if ((f32)mPosYOffset > lower) {
         return true;
     }
@@ -478,14 +478,14 @@ bool daObjBarrel2::Act_c::mode_explode() {
     mPosYOffsetSpeed = velocity;
     mPosYOffset = pos;
     Attr_c *t = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-    if (mPosYOffset > (f32)t->m14 * 0.2f) {
+    if (mPosYOffset > (f32)t->mBarrelHeight * 0.2f) {
         t = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-        mPosYOffset = (f32)t->m14 * 0.2f;
+        mPosYOffset = (f32)t->mBarrelHeight * 0.2f;
     }
     t = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-    f32 step = (f32)(s16)t->m58;
+    f32 step = (f32)(s16)t->mBobAngleStep;
     f32 rnd = cM_rnd();
-    m43C = (s16)((s16)m43C + (s16)gabi::ftoi(step * (rnd + 1.f)));
+    mBobAngle = (s16)((s16)mBobAngle + (s16)gabi::ftoi(step * (rnd + 1.f)));
     set_pos_y();
     item_drop();
     return true;
@@ -581,11 +581,11 @@ void daObjBarrel2::Act_c::set_pos_y() {
     Attr_c *t0 = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
     Attr_c *t1 = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
     Attr_c *t2 = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-    f32 sin = (f32)barrelSinCos.mData[(u16)m43C >> 3].mSin;
+    f32 sin = (f32)barrelSinCos.mData[(u16)mBobAngle >> 3].mSin;
     Attr_c *t3 = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
     Attr_c *t4 = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-    f32 x = (f32)t0->m50 * (f32)t1->m14;
-    f32 sway = gabi::fmsubs(t2->m54, sin, x);
+    f32 x = (f32)t0->mFloatDepthRate * (f32)t1->mBarrelHeight;
+    f32 sway = gabi::fmsubs(t2->mBobAmplitude, sin, x);
     f32 y = (f32)mWaterY + (f32)mPosYOffset;
     current.pos.y = gabi::fmadds(sway * (f32)t3->m20, t4->m24, y);
 }
@@ -608,9 +608,9 @@ void daObjBarrel2::Act_c::set_mtx() {
     J3DModel_setBaseScale(mpModel, scaled.get());
     mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
     gabi::Local<cXyz> axis;
-    axis->set(m440, 1.f, m444);
+    axis->set(mTiltX, 1.f, mTiltZ);
     Attr_c *t = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-    mDoMtx_stack_c::transM(0.f, (f32)t->m18 * mag, 0.f);
+    mDoMtx_stack_c::transM(0.f, (f32)t->mCenterHeight * mag, 0.f);
     gabi::Local<u8[16]> quat;
     Barrel_quaternionRotBaseY(quat.get(), axis.get());
     Barrel_quaternionMatrix(quat.get());
@@ -620,18 +620,18 @@ void daObjBarrel2::Act_c::set_mtx() {
     }
     Barrel_zxyRotation(mDoMtx_stack_c::get(), (s16)shape_angle.x, (s16)shape_angle.y, z);
     t = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-    mDoMtx_stack_c::transM(0.f, -((f32)t->m18 * mag), 0.f);
+    mDoMtx_stack_c::transM(0.f, -((f32)t->mCenterHeight * mag), 0.f);
     J3DModel_setBaseTRMtx(mpModel, mDoMtx_stack_c::get());
-    Barrel_copyMatrix(mDoMtx_stack_c::get(), &m478);
+    Barrel_copyMatrix(mDoMtx_stack_c::get(), &mBaseMtx);
     if (buoy) {
         gabi::Local<cXyz> offset, out;
         if (upright) {
             t = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-            offset->set(0.f, ((f32)t->m14 - 5.f) * mag, 0.f);
+            offset->set(0.f, ((f32)t->mBarrelHeight - 5.f) * mag, 0.f);
         } else {
             Barrel_zRotation(mDoMtx_stack_c::get(), (s16)-0x4000);
             t = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-            offset->set(-((f32)t->m18 * mag), 45.f * mag, 0.f);
+            offset->set(-((f32)t->mCenterHeight * mag), 45.f * mag, 0.f);
         }
         Barrel_matrixVectorSR(mDoMtx_stack_c::get(), offset.get(), out.get());
         Mtx34 *m = &barrelStackMatrix;
@@ -688,7 +688,7 @@ void daObjBarrel2::Act_c::eff_explode() {
     Barrel_particleBombSmoke(ctrl, 0x200A, pos.get(), nullptr, scale.get(), (u8)0xFF);
     Attr_c *t0 = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
     Attr_c *t1 = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-    Barrel_createWaterPillar(&current.pos, (f32)t0->m6C, (f32)t1->m70, 1);
+    Barrel_createWaterPillar(&current.pos, (f32)t0->mPillarScaleXZ, (f32)t1->mPillarScaleY, 1);
     barrel_particle(0x2041, pos.get(), nullptr, scale.get(), 2);
     barrel_particle(0x3C, pos.get(), nullptr, scale.get());
     void *emitter = barrel_particle(0x3E6, pos.get(), nullptr, scale.get());
@@ -708,7 +708,7 @@ void daObjBarrel2::Act_c::set_item_position() {
         mItemDistance = barrelItemDistanceMax;
         return;
     }
-    u8 event = m46C;
+    u8 event = mEventRun;
     f32 x = current.pos.x;
     if (event) {
         Attr_c *t = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
@@ -869,22 +869,22 @@ void daObjBarrel2::Act_c::set_water_pos() {
     u32 play = dComIfGp_ea();
     BOOL found = Barrel_specialGroupCheck(&gabi::at<dComIfG_inf_c>(play)->play.mBgS, check);
     mWaterY = found ? (f32)check->mHeight : 0.f;
-    f32 oldx = m42C;
+    f32 oldx = mWobbleX;
     f32 random = cM_rndFX(0.001f);
     f32 ax = gabi::fmadds(oldx, -0.2f, random);
-    f32 oldz = m430;
+    f32 oldz = mWobbleZ;
     random = cM_rndFX(0.001f);
     f32 az = gabi::fmadds(oldz, -0.2f, random);
-    f32 vx = ((f32)m434 + ax) * 0.99f;
-    f32 px = (f32)m42C + vx;
-    f32 vz = ((f32)m438 + az) * 0.99f;
-    f32 pz = (f32)m430 + vz;
-    m434 = vx;
-    m42C = px;
+    f32 vx = ((f32)mWobbleVelX + ax) * 0.99f;
+    f32 px = (f32)mWobbleX + vx;
+    f32 vz = ((f32)mWobbleVelZ + az) * 0.99f;
+    f32 pz = (f32)mWobbleZ + vz;
+    mWobbleVelX = vx;
+    mWobbleX = px;
     mWaterNormal.y = 1.f;
     mWaterNormal.x = px;
-    m438 = vz;
-    m430 = pz;
+    mWobbleVelZ = vz;
+    mWobbleZ = pz;
     mWaterNormal.z = pz;
     gabi::Local<cXyz> out;
     Barrel_normalize(&mWaterNormal, out.get());
@@ -894,36 +894,36 @@ void daObjBarrel2::Act_c::set_water_pos() {
 void daObjBarrel2::Act_c::afl_sway() {
     Attr_c *t0 = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
     Attr_c *t1 = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-    f32 maxsq = (f32)t0->m5C * (f32)t1->m5C;
+    f32 maxsq = (f32)t0->mTiltTargetMax * (f32)t1->mTiltTargetMax;
     Attr_c *t = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-    f32 x = (f32)mWaterNormal.x * (f32)t->m68;
+    f32 x = (f32)mWaterNormal.x * (f32)t->mWaveTiltRate;
     t = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-    f32 z = (f32)mWaterNormal.z * (f32)t->m68;
+    f32 z = (f32)mWaterNormal.z * (f32)t->mWaveTiltRate;
     f32 sq = gabi::fmadds(x, x, z * z);
     if (sq > maxsq) {
         t = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
         f32 root = Barrel_sqrt(sq);
-        f32 ratio = (f32)t->m5C / root;
+        f32 ratio = (f32)t->mTiltTargetMax / root;
         x *= ratio;
         z *= ratio;
     }
-    x = (f32)m440 - x;
-    z = (f32)m444 - z;
+    x = (f32)mTiltX - x;
+    z = (f32)mTiltZ - z;
     t = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-    f32 ax = -(x * (f32)t->m60);
+    f32 ax = -(x * (f32)t->mTiltSpring);
     t = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-    f32 az = -(z * (f32)t->m60);
+    f32 az = -(z * (f32)t->mTiltSpring);
     t = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-    f32 dx = -((f32)m448 * (f32)t->m64);
+    f32 dx = -((f32)mTiltVelX * (f32)t->mTiltDamping);
     t = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-    f32 vx = (f32)m448 + (ax + dx);
-    f32 vz = (f32)m44C + gabi::fnmsubs(m44C, t->m64, az);
-    f32 px = (f32)m440 + vx;
-    m448 = vx;
-    m440 = px;
-    f32 pz = (f32)m444 + vz;
-    m44C = vz;
-    m444 = pz;
+    f32 vx = (f32)mTiltVelX + (ax + dx);
+    f32 vz = (f32)mTiltVelZ + gabi::fnmsubs(mTiltVelZ, t->mTiltDamping, az);
+    f32 px = (f32)mTiltX + vx;
+    mTiltVelX = vx;
+    mTiltX = px;
+    f32 pz = (f32)mTiltZ + vz;
+    mTiltVelZ = vz;
+    mTiltZ = pz;
 }
 
 /* 023209E4 */
@@ -932,7 +932,7 @@ bool daObjBarrel2::Act_c::mine_chk_range_flash() {
     void *ship = reinterpret_cast<dComIfG_inf_c *>(gabi::at<void>(play))->play.mpPlayerPtr[2].get();
     Attr_c *t0 = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
     Attr_c *t1 = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-    f32 sq = (f32)t0->m40 * (f32)t1->m40;
+    f32 sq = (f32)t0->mFlashRange * (f32)t1->mFlashRange;
     return ship && (Barrel_actorDistanceXZ2(this, ship) < sq);
 }
 
@@ -942,7 +942,7 @@ bool daObjBarrel2::Act_c::mine_chk_range_explode() {
     void *ship = reinterpret_cast<dComIfG_inf_c *>(gabi::at<void>(play))->play.mpPlayerPtr[2].get();
     Attr_c *t0 = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
     Attr_c *t1 = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-    f32 sq = (f32)t0->m44 * (f32)t1->m44;
+    f32 sq = (f32)t0->mExplodeRange * (f32)t1->mExplodeRange;
     return ship && (Barrel_actorDistanceXZ2(this, ship) < sq);
 }
 
@@ -953,7 +953,7 @@ bool daObjBarrel2::Act_c::mine_chk_range_damage() {
         reinterpret_cast<dComIfG_inf_c *>(gabi::at<void>(play))->play.mpPlayerPtr[2].get();
     Attr_c *t0 = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
     Attr_c *t1 = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-    f32 sq = (f32)t0->m48 * (f32)t1->m48;
+    f32 sq = (f32)t0->mDamageRange * (f32)t1->mDamageRange;
     if (!ship) {
         return false;
     }
@@ -961,7 +961,7 @@ bool daObjBarrel2::Act_c::mine_chk_range_damage() {
         return false;
     }
     Attr_c *t = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-    if (!((f32)ship->current.pos.y < (f32)current.pos.y + (f32)t->m4C)) {
+    if (!((f32)ship->current.pos.y < (f32)current.pos.y + (f32)t->mDamageHeight)) {
         return false;
     }
     play = dComIfGp_ea();
@@ -974,7 +974,7 @@ bool daObjBarrel2::Act_c::mine_chk_range_damage() {
     velocity->set(ship->speed.x, 0, ship->speed.z);
     t0 = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
     t1 = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-    sq = (f32)t0->m3C * (f32)t1->m3C;
+    sq = (f32)t0->mShipHitDot * (f32)t1->mShipHitDot;
     if (Barrel_innerProduct(delta.get(), velocity.get()) < sq) {
         auto *shipFlags = gabi::at<barrel2_hd::Ship>(gabi::ea(ship));
         shipFlags->mFlags = shipFlags->mFlags | 4;
@@ -985,8 +985,8 @@ bool daObjBarrel2::Act_c::mine_chk_range_damage() {
 
 /* 02320AD4 */
 void daObjBarrel2::Act_c::execute_sub() {
-    s32 hit = m470;
-    m470 = 0;
+    s32 hit = mHitType;
+    mHitType = 0;
     if (mType == 2) {
         s32 mode = mMode;
         if (mode != 4) {
@@ -1022,7 +1022,7 @@ void daObjBarrel2::Act_c::execute_sub() {
     }
     Attr_c *t0 = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
     Attr_c *t1 = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
-    f32 sq = (f32)t0->m34 * (f32)t1->m34;
+    f32 sq = (f32)t0->mItemGiveDist * (f32)t1->mItemGiveDist;
     if (mItemDistance < sq) {
         item_give();
     }
@@ -1031,7 +1031,7 @@ void daObjBarrel2::Act_c::execute_sub() {
             mode_exit_v_init();
         } else if (mType == 1) {
             mode_exit_h_init();
-        } else if (mType == 2 && m468 == 0) {
+        } else if (mType == 2 && mMineFlash == 0) {
             mode_exit_mine_init();
         }
     }
@@ -1052,7 +1052,7 @@ void daObjBarrel2::Act_c::execute_sub() {
             t[i] = attr(this, "d_a_obj_barrel2.cpp", "(M_type >= 0) && (M_type < Type_Max)");
         }
         f32 z = current.pos.z;
-        f32 y = gabi::fmadds((f32)t[0]->m18 * (f32)t[1]->m20, t[2]->m24, current.pos.y);
+        f32 y = gabi::fmadds((f32)t[0]->mCenterHeight * (f32)t[1]->m20, t[2]->m24, current.pos.y);
         f32 x = attention_info.position.x;
         attention_info.position.z = z;
         eyePos.z = z;
@@ -1060,15 +1060,15 @@ void daObjBarrel2::Act_c::execute_sub() {
         attention_info.position.y = y;
         eyePos.y = y;
         if (mType == 2 && mine_chk_range_flash()) {
-            m468 = 1;
+            mMineFlash = 1;
         }
-        if (mMode == MODE_AFL && m468 && Barrel_brkPlay((mDoExt_brkAnm *)mpBrkAnm)) {
+        if (mMode == MODE_AFL && mMineFlash && Barrel_brkPlay((mDoExt_brkAnm *)mpBrkAnm)) {
             mode_explode_init();
         }
     } else {
         remove = true;
     }
-    if (m475) {
+    if (mDeleteReq) {
         item_delete();
         remove = true;
     }
@@ -1088,9 +1088,9 @@ bool daObjBarrel2::Act_c::_execute() {
             event = 1;
         }
     }
-    m46C = event;
-    if (mMode != MODE_AFL || !(actor_condition & 4) || !Barrel_cullingCheck(this) || m46C != 0 ||
-        mExitReq != 0 || m475 != 0) {
+    mEventRun = event;
+    if (mMode != MODE_AFL || !(actor_condition & 4) || !Barrel_cullingCheck(this) || mEventRun != 0 ||
+        mExitReq != 0 || mDeleteReq != 0) {
         execute_sub();
     }
     cull_set_draw();

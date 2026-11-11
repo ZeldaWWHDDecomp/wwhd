@@ -98,29 +98,29 @@ void daMbdoor_c::calcMtx() {
     PSMTXMultVec(mDoMtx_stack_c::get(), offset.get(), &mGoalPos);
     offset->set(0.0f, 0.0f, -400.0f);
     PSMTXMultVec(mDoMtx_stack_c::get(), offset.get(), &mGoal2Pos);
-    if ((u8)field_0x2ad == 0) {
+    if ((u8)mOpenSide == 0) {
         copyMatrix(mpLModel);
-        if ((s16)field_0x2b2 != 0) {
+        if ((s16)mDoorAngle != 0) {
             f32 dx = getROffset();
             mDoMtx_stack_transM(dx, 0.0f, 0.0f);
-            mDoMtx_YrotM(mDoMtx_stack_c::get(), field_0x2b2);
+            mDoMtx_YrotM(mDoMtx_stack_c::get(), mDoorAngle);
             dx = getROffset();
             mDoMtx_stack_transM(-dx, 0.0f, 0.0f);
         }
         offset->set(80.0f, 0.0f, 75.0f);
-        PSMTXMultVec(mDoMtx_stack_c::get(), offset.get(), &field_0x2c4);
+        PSMTXMultVec(mDoMtx_stack_c::get(), offset.get(), &mPlayerGoalPos);
     }
     copyMatrix(mpRModel);
-    if ((u8)field_0x2ad == 1) {
-        if ((s16)field_0x2b2 != 0) {
+    if ((u8)mOpenSide == 1) {
+        if ((s16)mDoorAngle != 0) {
             f32 dx = getLOffset();
             mDoMtx_stack_transM(dx, 0.0f, 0.0f);
-            mDoMtx_YrotM(mDoMtx_stack_c::get(), (s16) - (s16)field_0x2b2);
+            mDoMtx_YrotM(mDoMtx_stack_c::get(), (s16) - (s16)mDoorAngle);
             dx = getLOffset();
             mDoMtx_stack_transM(-dx, 0.0f, 0.0f);
         }
         offset->set(-80.0f, 0.0f, 75.0f);
-        PSMTXMultVec(mDoMtx_stack_c::get(), offset.get(), &field_0x2c4);
+        PSMTXMultVec(mDoMtx_stack_c::get(), offset.get(), &mPlayerGoalPos);
         copyMatrix(mpLModel);
     }
     x = current.pos.x;
@@ -128,10 +128,10 @@ void daMbdoor_c::calcMtx() {
     z = current.pos.z;
     PSMTXTrans(mDoMtx_stack_c::get(), x, y, z);
     mDoMtx_YrotM(mDoMtx_stack_c::get(), home.angle.y);
-    if ((s16)field_0x2b0 != 0) {
+    if ((s16)mBarAngle != 0) {
         f32 dx = getToOffset();
         mDoMtx_stack_transM(dx, 231.0f, 0.0f);
-        mDoMtx_ZrotM(mDoMtx_stack_c::get(), field_0x2b0);
+        mDoMtx_ZrotM(mDoMtx_stack_c::get(), mBarAngle);
         dx = getToOffset();
         mDoMtx_stack_transM(-dx, -231.0f, 0.0f);
     }
@@ -224,9 +224,9 @@ BOOL daMbdoor_c::checkUnlock() {
         return mbdoorIsSwitch(&save->mSwitch, sw, room);
     }
     if (type == 1 && !mbdoorSearchEnemy((s8)current.roomNo)) {
-        s32 timer = field_0x2bc;
+        s32 timer = mUnlockDelay;
         if (timer > 0) {
-            field_0x2bc = timer - 1;
+            mUnlockDelay = timer - 1;
             return FALSE;
         }
         if (sw != 0xFF) {
@@ -288,7 +288,7 @@ void daMbdoor_c::demoProc() {
         switch (action) {
         case ACT_SET_START:
             calcMtx();
-            goal->copy(field_0x2c4);
+            goal->copy(mPlayerGoalPos);
             setGoal(goal.get());
             break;
         case ACT_SET_ANGLE:
@@ -297,12 +297,12 @@ void daMbdoor_c::demoProc() {
             break;
         case ACT_OPEN:
             sound(this, 0x2863);
-            field_0x2b4 = 0;
+            mAngleSpeed = 0;
             break;
         case ACT_STOP_OPEN:
             sound(this, 0x2864);
-            field_0x2b4 = 0;
-            field_0x2b6 = 1;
+            mAngleSpeed = 0;
+            mBarOpening = 1;
             break;
         case ACT_SET_GOAL:
             goal->copy(mGoalPos);
@@ -328,42 +328,42 @@ void daMbdoor_c::demoProc() {
     case ACT_END:
         return;
     case ACT_OPEN: {
-        s16 speed = field_0x2b4, openingAngle = field_0x2b2;
+        s16 speed = mAngleSpeed, openingAngle = mDoorAngle;
         if (speed < 250) {
             speed = (s16)(speed + 50);
-            field_0x2b4 = speed;
+            mAngleSpeed = speed;
         }
         s32 next = (s32)openingAngle - speed;
         if (next < -0x1C71) {
-            field_0x2b2 = -0x1C71;
+            mDoorAngle = -0x1C71;
             cutEnd(this);
         } else
-            field_0x2b2 = (s16)next;
+            mDoorAngle = (s16)next;
         calcMtx();
-        u8 side = field_0x2ad;
-        s16 yaw = current.angle.y, door = field_0x2b2;
+        u8 side = mOpenSide;
+        s16 yaw = current.angle.y, door = mDoorAngle;
         *angle = (s16)(yaw + 0x7FFF + (side ? -(s32)door : (s32)door));
-        setPlayerGoal(player, &field_0x2c4, *angle);
+        setPlayerGoal(player, &mPlayerGoalPos, *angle);
         return;
     }
     case ACT_STOP_OPEN: {
-        if (!(u8)field_0x2b6) {
+        if (!(u8)mBarOpening) {
             cutEnd(this);
             return;
         }
-        s16 speed = field_0x2b4, bar = field_0x2b0;
+        s16 speed = mAngleSpeed, bar = mBarAngle;
         if (speed < 400) {
             speed = (s16)(speed + 40);
-            field_0x2b4 = speed;
+            mAngleSpeed = speed;
         }
         s32 next = (s32)bar - speed;
         if (next < -0x3F65) {
-            field_0x2b0 = -0x3F65;
+            mBarAngle = -0x3F65;
             cutEnd(this);
-            field_0x2b6 = 0;
+            mBarOpening = 0;
             sound(this, 0x2865);
         } else
-            field_0x2b0 = (s16)next;
+            mBarAngle = (s16)next;
         calcMtx();
         return;
     }
@@ -371,7 +371,7 @@ void daMbdoor_c::demoProc() {
         s16 yaw = current.angle.y;
         *angle = (s16)player->shape_angle.y;
         mbdoorAddCalcAngle(angle.get(), (s16)(yaw + 0x7FFF), 10, 0x800);
-        f32 px = (f32)player->current.pos.x, gx = field_0x2c4.x, gz = field_0x2c4.z;
+        f32 px = (f32)player->current.pos.x, gx = mPlayerGoalPos.x, gz = mPlayerGoalPos.z;
         f32 ax = gx * 0.1f, az = gz * 0.1f;
         goal->x = px;
         goal->y = (f32)player->current.pos.y;
@@ -433,7 +433,7 @@ BOOL daMbdoor_c::checkArea() {
         return FALSE;
     if (mbdoorSeenAngle(player, this) > 0x2000)
         return FALSE;
-    field_0x2ad = lateral > 0.0f ? 1 : 0;
+    mOpenSide = lateral > 0.0f ? 1 : 0;
     return TRUE;
 }
 
@@ -447,7 +447,7 @@ static BOOL daMbdoor_actionCloseWait(daMbdoor_c* a) {
         auto play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
         dBgW* bg = a->mpBgW;
         mbdoorRelease(&play->play.mBgS, bg);
-        a->field_0x2ac = 0;
+        a->mBgRegistered = 0;
     } else if (a->checkArea()) {
         mbdoorSetEventName(&a->eventInfo, "MBDOOR_OPEN");
         a->eventInfo.mCondition = (u16)a->eventInfo.mCondition | dEvtCnd_CANDOOR_e;
@@ -501,10 +501,10 @@ BOOL daMbdoor_c::execute() {
         actor = mbdoorGetDemoActor(manager, demo);
     }
     if (actor) {
-        field_0x2ad = 0;
+        mOpenSide = 0;
         if ((u16)actor->mEnabled & 8) {
-            field_0x2b2 = (s16)actor->mRotate.y;
-            field_0x2b0 = (s16)actor->mRotate.z;
+            mDoorAngle = (s16)actor->mRotate.y;
+            mBarAngle = (s16)actor->mRotate.z;
         }
         calcMtx();
     } else {
@@ -538,7 +538,7 @@ BOOL daMbdoor_c::CreateInit() {
     if (mbdoorRegister(&play->play.mBgS, bg, this))
         JUT_ASSERT_fail("d_a_mbdoor.cpp", 334, "0");
     u8 room = current.roomNo;
-    field_0x2ac = 1;
+    mBgRegistered = 1;
     tevStr.mRoomNo = room;
     bool locked = type == 2;
     if (type == 0 && sw != 0xFF) {
@@ -554,10 +554,10 @@ BOOL daMbdoor_c::CreateInit() {
             locked = mbdoorIsSwitch(&save->mSwitch, sw, r) != 0;
         }
     }
-    field_0x2b0 = locked ? 0 : -0x3F65;
-    field_0x2b2 = 0;
+    mBarAngle = locked ? 0 : -0x3F65;
+    mDoorAngle = 0;
     attention_info.flags = fopAc_Attn_ACTION_DOOR_e;
-    field_0x2bc = 30;
+    mUnlockDelay = 30;
     mCurActionIdx = locked ? STATE_LOCK_WAIT : STATE_CLOSE_WAIT;
     f32 attention = (f32)attention_info.position.y, eye = eyePos.y;
     attention_info.position.y = attention + 250.0f;

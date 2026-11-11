@@ -4,11 +4,14 @@
  * Every address remains verified.
  */
 #include "d/actor/d_a_boko.h"
+#include "sead/ElementAt.h"
 static dCcD_SrcCps l_cps_src;
 static dCcD_SrcSph l_sph_src;
 static GXColor l_particleColor;
 static GXColor l_lineColor;
 
+/* siblings (be<>-viewed tables indexed by the u32 type = mParameters before any check): sead::elementAt / elementPtr
+ * wrap the address at 32 bits as on the console */
 static u32 m_bound_se[6] = {0x5811, 0x5814, 0x6999, 0x6998, 0x5807, 0x6998};
 static u32 m_heap_size[6] = {0x2300, 0x1240, 0x1240, 0x1240, 0x4200, 0x2000};
 static u32 model_idx[6] = {0x3, 0x3, 0x3, 0x3, 0x3, 0x4};
@@ -148,9 +151,9 @@ void daBoko_c::keCalc1(ke_c_s* chainObject, s32 index) {
   f32 sway = 0.6667f * damping;
   u32 phaseX = u32(index) * 0x1388 - 0x2328, phaseZ = (u32(index) - 1) * 0x1B58;
   for (u32 i = 1; i < 10; i++) {
-    cXyz& position = chainObject->m000[i];
-    cXyz& previous = chainObject->m000[i - 1];
-    cXyz& velocity = chainObject->m078[i];
+    cXyz& position = chainObject->mNodePos[i];
+    cXyz& previous = chainObject->mNodePos[i - 1];
+    cXyz& velocity = chainObject->mNodeSpeed[i];
     f32 px = f32(position.x), pz = f32(position.z);
     f32 dx = (px - f32(previous.x)) + f32(velocity.x);
     f32 dz = (pz - f32(previous.z)) + f32(velocity.z);
@@ -199,11 +202,12 @@ void daBoko_c::keCalc1(ke_c_s* chainObject, s32 index) {
     phaseX -= 0x2328;
   }
   LineKe* lineData = this->mpLineKe;
-  cXyz* output = lineData->mRows.get()[index].mPositions;
+  /* guest address arithmetic: rows + index * 0x10 wraps at 32 bits as on the console */
+  cXyz* output = sead::elementAt<BokoLineRow>(lineData->mRows, u32(index)).mPositions;
   for (u32 i = 0; i < 10; i++) {
-    bokoWord(output[i].x) = u32(bokoWord(chainObject->m000[i].x));
-    bokoWord(output[i].y) = u32(bokoWord(chainObject->m000[i].y));
-    bokoWord(output[i].z) = u32(bokoWord(chainObject->m000[i].z));
+    bokoWord(output[i].x) = u32(bokoWord(chainObject->mNodePos[i].x));
+    bokoWord(output[i].y) = u32(bokoWord(chainObject->mNodePos[i].y));
+    bokoWord(output[i].z) = u32(bokoWord(chainObject->mNodePos[i].z));
   }
   ground.payload.dBgS_PolyPassChk::__vtbl = BOKO_GROUND_POLY_PASS_VTABLE;
   ground.payload.cBgS_PolyInfo::__vtbl = BOKO_GROUND_POLY_INFO_VTABLE;
@@ -213,7 +217,7 @@ void daBoko_c::keCalc1(ke_c_s* chainObject, s32 index) {
 
 /* 020C1684 */
 void daBoko_c::keCalc() {
-  ke_c_s* chain = this->mpLineKe->m001C;
+  ke_c_s* chain = this->mpLineKe->mKe;
   f32 goal = (u32(bokoWord(this->actor_status)) & 0x2000)
                  ? bokoChainDamping + 0.7f
                  : 0.0f;
@@ -290,13 +294,13 @@ void daBoko_c::getTopPos(cXyz* out) {
   J3DModel* model = this->mpModel;
   if (model) {
     u32 type = this->mParameters;
-    bokoTransformVector(&model->mBaseTransformMtx, &m_top_offset[type],
+    bokoTransformVector(&model->mBaseTransformMtx, sead::elementPtr(m_top_offset, type),
                      out);
   } else {
     u32 type = this->mParameters;
     BokoVectorFrame pos;
     bokoVectorAdd(&this->current.pos, &pos.payload,
-                     &m_top_offset[type]);
+                     sead::elementPtr(m_top_offset, type));
     u32 x = u32(bokoWord(pos.payload.x)),
         z = u32(bokoWord(pos.payload.z));
     bokoWord(out->x) = x;
@@ -311,13 +315,13 @@ void daBoko_c::getBlurRootPos(cXyz* out) {
   J3DModel* model = this->mpModel;
   if (model) {
     u32 type = this->mParameters;
-    bokoTransformVector(&model->mBaseTransformMtx, &m_blur_root_offset[type],
+    bokoTransformVector(&model->mBaseTransformMtx, sead::elementPtr(m_blur_root_offset, type),
                      out);
   } else {
     u32 type = this->mParameters;
     BokoVectorFrame pos;
     bokoVectorAdd(&this->current.pos, &pos.payload,
-                     &m_blur_root_offset[type]);
+                     sead::elementPtr(m_blur_root_offset, type));
     u32 x = u32(bokoWord(pos.payload.x)),
         z = u32(bokoWord(pos.payload.z));
     bokoWord(out->x) = x;
@@ -340,10 +344,10 @@ void daBoko_c::setTopRootPos(s32 usePosition) {
     J3DModel* model = this->mpModel;
     bokoCopyMatrix(model->getBaseTRMtx(), mDoMtx_stack_c::get());
   }
-  bokoTransformVector(mDoMtx_stack_c::get(), &m_top_offset[type],
-                   &this->m2D0);
-  bokoTransformVector(mDoMtx_stack_c::get(), &m_root_offset[type],
-                   &this->m2DC);
+  bokoTransformVector(mDoMtx_stack_c::get(), sead::elementPtr(m_top_offset, type),
+                   &this->mTopPos);
+  bokoTransformVector(mDoMtx_stack_c::get(), sead::elementPtr(m_root_offset, type),
+                   &this->mRootPos);
 }
 
 /* 020C2088 */
@@ -370,7 +374,7 @@ void daBoko_c::setBaseMatrix() {
 
 /* 020C0BFC */
 BOOL daBoko_c::checkNoDraw() {
-  if (this->m2B9 || this->mNowMode == Mode_4_e)
+  if (this->mNoDraw || this->mNowMode == Mode_4_e)
     return 1;
   if (this->mNowMode == Mode_PLAYER_CARRY_e) {
     auto* p = bokoGameInfo();
@@ -389,15 +393,15 @@ void daBoko_c::setFlameEffect() {
         rate = 0.5f;
     for (u32 i = 0; i < 4; i++) {
       f32 random = bokoRandom(randomRange);
-      bokoApproachFloat(&this->m7E4, random + one, rate,
+      bokoApproachFloat(&this->mFlameScale, random + one, rate,
                        step);
       s16 factor = base_angle[i];
       u32 count = bokoFrameCounter;
       f32 radius = f32(data->mShadowRadius[i]),
-          scale = f32(this->m7E4);
+          scale = f32(this->mFlameScale);
       s16 angle = s16(count * u32(s32(factor)));
       f32 size = radius * scale;
-      f32 x = this->m2D0.x, z = this->m2D0.z, y = this->m2D0.y;
+      f32 x = this->mTopPos.x, z = this->mTopPos.z, y = this->mTopPos.y;
       bokoMatrixTranslation(mDoMtx_stack_c::get(), x, y, z);
       bokoRotateZXY(mDoMtx_stack_c::get(), 0, angle, angle);
       bokoScaleMatrix(size, size, size);
@@ -408,24 +412,24 @@ void daBoko_c::setFlameEffect() {
   if (!emitter) {
     auto* p = bokoGameInfo();
   dPa_control_c* manager = p->play.mParticle;
-    bokoSetParticle(manager, 0, 0x1EA, &this->m2D0, 0, &this->scale,
+    bokoSetParticle(manager, 0, 0x1EA, &this->mTopPos, 0, &this->scale,
                      255, &this->mParticleCallBack, -1, 0, 0, 0);
-    u32 y = u32(bokoWord(this->m2D0.y)), z = u32(bokoWord(this->m2D0.z));
-    bokoWord(this->m320.y) = y;
-    bokoWord(this->m320.z) = z;
-    u32 x = u32(bokoWord(this->m2D0.x));
+    u32 y = u32(bokoWord(this->mTopPos.y)), z = u32(bokoWord(this->mTopPos.z));
+    bokoWord(this->mOldTopPos.y) = y;
+    bokoWord(this->mOldTopPos.z) = z;
+    u32 x = u32(bokoWord(this->mTopPos.x));
     emitter = reinterpret_cast<BokoEmitterHD*>(this->mParticleCallBack.mpEmitter.get());
-    bokoWord(this->m320.x) = x;
+    bokoWord(this->mOldTopPos.x) = x;
   }
   if (emitter) {
     f32 rate = bokoFlameScaleRate + -0.03f;
-    f32 x = (f32(this->m2D0.x) - f32(this->m320.x)) * rate,
+    f32 x = (f32(this->mTopPos.x) - f32(this->mOldTopPos.x)) * rate,
         low = -1.0f;
     if (x > one)
       x = one;
     else if (x < low)
       x = low;
-    f32 z = (f32(this->m2D0.z) - f32(this->m320.z)) * rate;
+    f32 z = (f32(this->mTopPos.z) - f32(this->mOldTopPos.z)) * rate;
     if (z > one)
       z = one;
     else if (z < low)
@@ -447,19 +451,19 @@ void daBoko_c::setFlameEffect() {
     emitter->mGlobalScale.z = one;
     emitter->mGlobalScale.x = one;
     emitter->mGlobalScale.y = scale;
-    u32 y = u32(bokoWord(this->m2D0.y)), xword = u32(bokoWord(this->m2D0.x));
-    bokoWord(this->m320.y) = y;
+    u32 y = u32(bokoWord(this->mTopPos.y)), xword = u32(bokoWord(this->mTopPos.x));
+    bokoWord(this->mOldTopPos.y) = y;
     s8 room = s8(this->current.roomNo);
-    u32 zword = u32(bokoWord(this->m2D0.z));
-    bokoWord(this->m320.x) = xword;
-    bokoWord(this->m320.z) = zword;
+    u32 zword = u32(bokoWord(this->mTopPos.z));
+    bokoWord(this->mOldTopPos.x) = xword;
+    bokoWord(this->mOldTopPos.z) = zword;
     s32 reverb = bokoReverb(s32(room));
-    bokoStartSound(0x6103, &this->m2D0, 0, reverb);
+    bokoStartSound(0x6103, &this->mTopPos, 0, reverb);
   }
   if (!this->checkNoDraw()) {
     auto* p = bokoGameInfo();
   dPa_control_c* manager = p->play.mParticle;
-    bokoSetSimpleParticle(manager, 0x4004, &this->m2D0, 255,
+    bokoSetSimpleParticle(manager, 0x4004, &this->mTopPos, 255,
                      &l_particleColor, &l_particleColor, 0);
   }
 }
@@ -492,9 +496,9 @@ void daBoko_c::setThrowReverse(s16 direction) {
   s32 reverb = bokoReverb(s32(room));
   bokoStartSound(sound, &this->eyePos, 100, reverb);
   this->procMove_init();
-  this->m2C2 = this->shape_angle.x < 0 ? 0x7FF : -0x7FF;
+  this->mRotAngleSpeed = this->shape_angle.x < 0 ? 0x7FF : -0x7FF;
   type = this->mParameters;
-  this->m2C0 = 0;
+  this->mPitchSpeed = 0;
   this->gravity = -3.0f;
   f32 spin;
   if (type == Type_MOBLIN_SPEAR_e) {
@@ -522,12 +526,12 @@ void daBoko_c::setThrowReverse(s16 direction) {
   if (distance < 0x4000) {
     s16 rotation = s16(gabi::ftoi(spin + random));
     this->shape_angle.y = this->current.angle.y;
-    this->m2C2 = rotation;
+    this->mRotAngleSpeed = rotation;
   } else {
     f32 value = spin + random;
     s16 angle = this->current.angle.y, rotation = s16(gabi::ftoi(-value));
     this->shape_angle.y = s16(u16(angle) + 0x8000);
-    this->m2C2 = rotation;
+    this->mRotAngleSpeed = rotation;
   }
 }
 
@@ -538,8 +542,8 @@ BOOL daBoko_c::procWait_init() {
   this->mCurrentProc = 0x020C3964;
   this->mNowMode = Mode_WAIT_e;
   bokoWord(this->attention_info.flags) = flags | 0x10;
-  this->m2C2 = 0;
-  this->m2C0 = 0;
+  this->mRotAngleSpeed = 0;
+  this->mPitchSpeed = 0;
   this->speedF = zero;
   this->mProcSlot = -1;
   this->mProcDelta = 0;
@@ -568,16 +572,16 @@ BOOL daBoko_c::procWait() {
   ground.payload.cBgS_Chk::mPolyPassChk = g + 0x40;
   ground.payload.cBgS_Chk::__vtbl = BOKO_GROUND_CHECK_VTABLE;
   ground.payload.cBgS_PolyInfo::__vtbl = BOKO_GROUND_POLY_INFO_VTABLE;
-  ground.payload.m_pos.z = f32(this->m2DC.z);
-  ground.payload.m_pos.y = f32(this->m2DC.y) + heightOffset;
-  ground.payload.m_pos.x = f32(this->m2DC.x);
+  ground.payload.m_pos.z = f32(this->mRootPos.z);
+  ground.payload.m_pos.y = f32(this->mRootPos.y) + heightOffset;
+  ground.payload.m_pos.x = f32(this->mRootPos.x);
   auto* play = bokoGameInfo();
   f32 rootFloor = bokoGroundCross(&play->play.mBgS, &ground.payload);
-  ground.payload.m_pos.z = f32(this->m2D0.z);
-  ground.payload.m_pos.x = f32(this->m2D0.x);
-  ground.payload.m_pos.y = f32(this->m2D0.y) + heightOffset;
+  ground.payload.m_pos.z = f32(this->mTopPos.z);
+  ground.payload.m_pos.x = f32(this->mTopPos.x);
+  ground.payload.m_pos.y = f32(this->mTopPos.y) + heightOffset;
   BokoVectorFrame difference;
-  bokoVectorSubtract(&this->m2D0, &difference.payload, &this->m2DC);
+  bokoVectorSubtract(&this->mTopPos, &difference.payload, &this->mRootPos);
   play = bokoGameInfo();
   dBgS* world = &play->play.mBgS;
   f32 zero = 0.0f;
@@ -671,7 +675,7 @@ BOOL daBoko_c::procMove_init() {
   bokoWord(this->attention_info.flags) = u32(bokoWord(this->attention_info.flags)) & ~0x10u;
   s16 count = bokoCarryHideTimer;
   this->mbFloorFlg = 0;
-  this->m2BB = u8(s32(count) + 5);
+  this->mGroundSnapCount = u8(s32(count) + 5);
   return 1;
 }
 
@@ -680,25 +684,25 @@ BOOL daBoko_c::procMove() {
   bool bounced = false;
   this->mChainTimer = 20;
   bokoMovePosition(this, 0);
-  f32 previousRootY = this->m2DC.y, previousTopY = this->m2D0.y;
+  f32 previousRootY = this->mRootPos.y, previousTopY = this->mTopPos.y;
   this->setTopRootPos(1);
   dBgS_GndChk* ground = &m_ground_check;
-  m_ground_check.m_pos.x = f32(this->m2DC.x);
+  m_ground_check.m_pos.x = f32(this->mRootPos.x);
   m_ground_check.m_pos.y = previousRootY + 50.0f;
-  m_ground_check.m_pos.z = f32(this->m2DC.z);
+  m_ground_check.m_pos.z = f32(this->mRootPos.z);
   auto* play = bokoGameInfo();
   f32 rootFloor = bokoGroundCross(&play->play.mBgS, ground);
   if (rootFloor == -1000000000.0f)
     rootFloor = f32(this->mAcch.m_ground_h);
-  m_ground_check.m_pos.x = f32(this->m2D0.x);
+  m_ground_check.m_pos.x = f32(this->mTopPos.x);
   m_ground_check.m_pos.y = previousTopY + 50.0f;
-  f32 rootGap = f32(this->m2DC.y) - rootFloor;
-  m_ground_check.m_pos.z = f32(this->m2D0.z);
+  f32 rootGap = f32(this->mRootPos.y) - rootFloor;
+  m_ground_check.m_pos.z = f32(this->mTopPos.z);
   play = bokoGameInfo();
   f32 topFloor = bokoGroundCross(&play->play.mBgS, ground);
   if (topFloor == -1000000000.0f)
     topFloor = f32(this->mAcch.m_ground_h);
-  f32 topGap = f32(this->m2D0.y) - topFloor, upLimit = 20.0f,
+  f32 topGap = f32(this->mTopPos.y) - topFloor, upLimit = 20.0f,
       damping = 0.7f, uintThreshold = 2147483648.0f;
   auto volume = [uintThreshold](f32 value) {
     u32 result;
@@ -715,16 +719,16 @@ BOOL daBoko_c::procMove() {
       vertical *= -0.5f;
       this->speed.y = vertical > upLimit ? upLimit : vertical;
     }
-    if (this->m2BB) {
+    if (this->mGroundSnapCount) {
       f32 selected = (rootGap - topGap) >= 0 ? topGap : rootGap;
-      u8 count = this->m2BB;
-      this->m2BB = u8(count - 1);
+      u8 count = this->mGroundSnapCount;
+      this->mGroundSnapCount = u8(count - 1);
       this->current.pos.y = f32(this->current.pos.y) - selected;
     }
     BokoVectorFrame direction;
-    direction.payload.x = f32(this->m2D0.x) - f32(this->m2DC.x);
+    direction.payload.x = f32(this->mTopPos.x) - f32(this->mRootPos.x);
     direction.payload.y = 0.0f;
-    direction.payload.z = f32(this->m2D0.z) - f32(this->m2DC.z);
+    direction.payload.z = f32(this->mTopPos.z) - f32(this->mRootPos.z);
     f32 difference = topFloor - rootFloor;
     f32 square = bokoVectorSquareMagnitude(&direction.payload),
         length = bokoSqrt(square);
@@ -733,28 +737,28 @@ BOOL daBoko_c::procMove() {
     f32 correction = bokoGroundCorrection + 0.15f;
     s16 angular = s16(gabi::ftoi(-(f32(s32(angleDifference)) * correction)));
     if (angular)
-      this->m2C0 = angular;
+      this->mPitchSpeed = angular;
     else {
-      this->m2C0 = angleDifference ? s16(-angleDifference) : 0;
-      if (!this->m2C0 &&
+      this->mPitchSpeed = angleDifference ? s16(-angleDifference) : 0;
+      if (!this->mPitchSpeed &&
           __builtin_fabsf(f32(this->speedF)) < 1.0f) {
-        this->m2C0 = s16(-angleDifference);
-        u8 count = this->m2BB;
-        this->m2BB = count > 2 ? u8(count - 2) : 0;
-        this->m2C0 = this->shape_angle.x > 0 ? -90 : 90;
+        this->mPitchSpeed = s16(-angleDifference);
+        u8 count = this->mGroundSnapCount;
+        this->mGroundSnapCount = count > 2 ? u8(count - 2) : 0;
+        this->mPitchSpeed = this->shape_angle.x > 0 ? -90 : 90;
       }
     }
     u32 loudness = volume(f32(this->speed.y) * 8.0f),
         type = this->mParameters, sound = m_bound_se[type];
     s32 reverb = bokoReverb(s32(s8(this->current.roomNo)));
     bokoStartSound(sound, &this->eyePos, loudness, reverb);
-    s16 rotation = this->m2C2;
+    s16 rotation = this->mRotAngleSpeed;
     this->speedF = f32(this->speedF) * damping;
     f32 rate = bokoMoveDamping + damping;
-    this->m2C2 = s16(gabi::ftoi(f32(s32(rotation)) * rate));
+    this->mRotAngleSpeed = s16(gabi::ftoi(f32(s32(rotation)) * rate));
     bounced = true;
   }
-  s32 rotation = this->m2C2, angular = this->m2C0;
+  s32 rotation = this->mRotAngleSpeed, angular = this->mPitchSpeed;
   auto magnitude = [](s32 value) { return value < 0 ? -value : value; };
   s16 pitch =
       s16(s32(s16(this->shape_angle.x)) +
@@ -766,7 +770,7 @@ BOOL daBoko_c::procMove() {
     else if (pitch < -0x3A00)
       this->shape_angle.x = -0x3A00;
   }
-  if (this->m2C0) {
+  if (this->mPitchSpeed) {
     s32 roll = this->shape_angle.z;
     bokoApproachAngle(&this->shape_angle.z,
                      magnitude(roll) > 0x4000 ? -0x8000 : 0, 5, 0x1000, 0x100);
@@ -811,15 +815,15 @@ BOOL daBoko_c::procMove() {
       } else
         difference = s16(-s32(s16(this->shape_angle.x)));
       s32 threshold = s32(bokoSlopeAngle) + 0x800;
-      if (magnitude(difference) > threshold && this->m2BB) {
+      if (magnitude(difference) > threshold && this->mGroundSnapCount) {
         f32 speed = this->speedF;
-        u8 count = this->m2BB;
+        u8 count = this->mGroundSnapCount;
         this->speed.y = bounce;
         if (speed < bounce)
           this->speedF = bounce;
-        this->m2C2 = 0;
-        this->m2C0 = s16(-(s32(difference) >> 2));
-        this->m2BB = count > 4 ? u8(count - 4) : 0;
+        this->mRotAngleSpeed = 0;
+        this->mPitchSpeed = s16(-(s32(difference) >> 2));
+        this->mGroundSnapCount = count > 4 ? u8(count - 4) : 0;
       } else {
         this->shape_angle.x = s16(desired);
         this->shape_angle.z = 0;
@@ -845,9 +849,9 @@ BOOL daBoko_c::procMove() {
 /* 020C2978 */
 BOOL daBoko_c::procThrow() {
   BokoVectorFrame previous;
-  previous.payload.x = this->m2DC.x;
-  previous.payload.y = this->m2DC.y;
-  previous.payload.z = this->m2DC.z;
+  previous.payload.x = this->mRootPos.x;
+  previous.payload.y = this->mRootPos.y;
+  previous.payload.z = this->mRootPos.z;
   this->mChainTimer = 20;
   bokoMovePosition(this, 0);
   f32 zero = 0.0f;
@@ -860,12 +864,12 @@ BOOL daBoko_c::procThrow() {
   s32 pitch = bokoAtan2(-f32(this->speed.y), length);
   this->shape_angle.x = s16(pitch);
   s32 yaw = bokoAtan2(f32(this->speed.x), f32(this->speed.z));
-  s16 timer = this->m2C8;
+  s16 timer = this->mThrowGravityDelay;
   this->shape_angle.y = s16(yaw);
   this->current.angle.y = s16(yaw);
   if (timer > 0) {
     timer = s16(timer - 1);
-    this->m2C8 = timer;
+    this->mThrowGravityDelay = timer;
     if (!timer)
       this->gravity = -3.0f;
   }
@@ -890,12 +894,12 @@ BOOL daBoko_c::procThrow() {
     else
       direction = this->current.angle.y;
   }
-  bokoSetCapsuleEnds(&this->mCps.mStart, &previous.payload, &this->m2D0);
+  bokoSetCapsuleEnds(&this->mCps.mStart, &previous.payload, &this->mTopPos);
   play = bokoGameInfo();
   bokoRegisterCollision(&play->play.mCcS, &this->mCps);
   if (!collision) {
     dBgS_LinChk* line = &m_line_check;
-    bokoSetLine(line, &this->old.pos, &this->m2D0, this);
+    bokoSetLine(line, &this->old.pos, &this->mTopPos, this);
     play = bokoGameInfo();
     if (bokoLineCross(&play->play.mBgS, line)) {
       play = bokoGameInfo();
@@ -943,7 +947,7 @@ BOOL daBoko_c::procCarry() {
   f32 zero = 0.0f;
   dBgS_LinChk* line = &m_line_check;
   if (this->mbThrow) {
-    u16 angle = u16(this->m2CA);
+    u16 angle = u16(this->mThrowAngle);
     this->gravity = zero;
     this->mProcDelta = 0;
     this->mNowMode = Mode_THROW_e;
@@ -956,7 +960,7 @@ BOOL daBoko_c::procCarry() {
     this->speedF = 70.0f * cM_scos(angle);
     this->mbThrow = 0;
     this->speed.y = -70.0f * cM_ssin(angle);
-    this->m2C8 = 2;
+    this->mThrowGravityDelay = 2;
     bokoResetAttackHit(&this->mCps);
     bokoSetLine(line, &playerPosition.payload,
                      &this->current.pos, this);
@@ -1045,7 +1049,7 @@ BOOL daBoko_c::procCarry() {
   this->gravity = -3.0f;
   this->old.pos.x = x;
   this->old.pos.z = z;
-  this->m2C0 = 0;
+  this->mPitchSpeed = 0;
   this->current.pos.y = originalY - five;
   bokoCallMove(this);
   return 1;
@@ -1081,7 +1085,7 @@ BOOL daBoko_c::execute() {
         }
       } else if (flags & 0x20200) {
         s32 reverb = bokoReverb(s32(s8(this->current.roomNo)));
-        bokoStartSound(0x6902, &this->m2D0, 0, reverb);
+        bokoStartSound(0x6902, &this->mTopPos, 0, reverb);
         this->cullType = 21;
         this->mFlameTimer = 900;
       }
@@ -1096,32 +1100,32 @@ BOOL daBoko_c::execute() {
     bool wet = extinguish;
     if (!wet) {
       BokoFloatFrame height;
-      if (bokoWaterHeight(&this->m2D0, &height.payload))
-        wet = !(f32(height.payload) < f32(this->m2D0.y));
+      if (bokoWaterHeight(&this->mTopPos, &height.payload))
+        wet = !(f32(height.payload) < f32(this->mTopPos.y));
     }
     bool stopped = wet || !this->mFlameTimer;
     if (wet) {
       if (this->mFlameTimer) {
         auto* play = bokoGameInfo();
         bokoSetParticle(play->play.mParticle.get(), 0, 0x35A,
-                         &this->m2D0, 0, 0, 255, 0, -1, 0, 0, 0);
+                         &this->mTopPos, 0, 0, 255, 0, -1, 0, 0, 0);
       }
-      this->m7E4 = zero;
+      this->mFlameScale = zero;
       this->cullType = 14;
       this->mFlameTimer = 0;
     } else if (this->mFlameTimer)
       this->setFlameEffect();
     else {
       this->cullType = 14;
-      this->m7E4 = zero;
+      this->mFlameScale = zero;
     }
     if (stopped && u32(bokoWord(this->mParticleCallBack.mpEmitter.v))) {
       s32 reverb = bokoReverb(s32(s8(this->current.roomNo)));
-      bokoStartSound(0x6904, &this->m2D0, 0, reverb);
+      bokoStartSound(0x6904, &this->mTopPos, 0, reverb);
       bokoEndFlame(&this->mParticleCallBack);
     }
-    u32 topY = u32(bokoWord(this->m2D0.y)), topZ = u32(bokoWord(this->m2D0.z)),
-        topX = u32(bokoWord(this->m2D0.x));
+    u32 topY = u32(bokoWord(this->mTopPos.y)), topZ = u32(bokoWord(this->mTopPos.z)),
+        topX = u32(bokoWord(this->mTopPos.x));
     bokoWord(this->mLight.mPos.z) = topZ;
     bokoWord(this->mLight.mPos.x) = topX;
     f32 factor = 1.0f;
@@ -1132,7 +1136,7 @@ BOOL daBoko_c::execute() {
       if (kind == 1 || kind == 4)
         factor = 0.65217394f;
     }
-    this->mLight.mPower = (150.0f * factor) * f32(this->m7E4);
+    this->mLight.mPower = (150.0f * factor) * f32(this->mFlameScale);
   } else {
     bokoResetTargetHit(&this->mSph);
     this->mLight.mPower = zero;
@@ -1140,7 +1144,7 @@ BOOL daBoko_c::execute() {
   if (this->mParameters == Type_BOKO_STICK_e) {
     u32 flags = u32(this->mSph.mObjAt.mSPrm);
     this->mSph.mObjAt.mSPrm = this->mFlameTimer > 0 ? flags | 1 : flags & ~1u;
-    bokoSetSphereCenter(&this->mSph.mSph, &this->m2D0);
+    bokoSetSphereCenter(&this->mSph.mSph, &this->mTopPos);
     auto* play = bokoGameInfo();
     bokoRegisterCollision(&play->play.mCcS, &this->mSph);
     u8 mode = this->mNowMode;
@@ -1173,11 +1177,11 @@ BOOL daBoko_IsDelete(daBoko_c *a) {
 
 /* 020C1D18 */
 BOOL daBoko_c::bokoDelete() {
-  bokoDeleteSound(&this->m2D0);
+  bokoDeleteSound(&this->mTopPos);
   this->mParticleCallBack.remove();
   bokoCutLight(&this->mLight);
   u32 type = this->mParameters;
-  char* name = m_arc_name[type].get();
+  char* name = sead::elementAt<BokoArchivePtr>(gabi::ea(m_arc_name), type).get();
   bokoDeleteResource(&this->mPhase, name);
   return 1;
 }
@@ -1202,7 +1206,7 @@ BOOL daBoko_c::createHeap() {
   void* controller = bokoResourceControl.get();
   u32
       index = model_idx[type],
-      text = gabi::ea(m_arc_name[type].get());
+      text = gabi::ea(sead::elementAt<BokoArchivePtr>(gabi::ea(m_arc_name), type).get());
   name.payload.vtable = BOKO_SAFE_STRING_VTABLE;
   name.payload.string = text;
   void *data =
@@ -1271,7 +1275,7 @@ s32 daBoko_c::create() {
       this->speedF = speed;
     }
     offset = type * 4;
-    name = m_arc_name[offset / 4].get();
+    name = sead::elementAt<BokoArchivePtr>(gabi::ea(m_arc_name), offset / 4).get();
   }
   s32 phase = bokoLoadResource(&this->mPhase, name);
   if (phase != cPhs_COMPLEATE_e)
@@ -1332,7 +1336,7 @@ s32 daBoko_c::create() {
   this->setTopRootPos(0);
   f32 scale = 1.0f;
   if (this->mFlameTimer) {
-    this->m7E4 = scale;
+    this->mFlameScale = scale;
     bokoCallFlame(this);
   }
   bokoWord(this->mAcch.m_flags) = u32(bokoWord(this->mAcch.m_flags)) & ~8u;
@@ -1351,7 +1355,7 @@ s32 daBoko_c::create() {
       if (kind == 1 || kind == 4)
         scale = 0.65217394f;
     }
-    f32 power = 150.0f * scale, rate = f32(this->m7E4),
+    f32 power = 150.0f * scale, rate = f32(this->mFlameScale),
         distance = 250.0f;
     this->mLight.mFluctuation = distance;
     this->mLight.mPower = power * rate;

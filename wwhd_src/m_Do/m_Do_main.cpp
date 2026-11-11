@@ -26,11 +26,11 @@ static s32 LOAD_COPYDATE(void*) {
 /* 025F1660 */
 void main01() {
     // HD: initialize the startup record before constructing the game information.
-    sStartupRecord.field_0x0 = 0;
-    sStartupRecord.field_0xc = 0xFFFFFFFF;
-    sStartupRecord.field_0x8 = 0;
+    sStartupRecord.mReset = 0;
+    sStartupRecord.m3ButtonResetPort = 0xFFFFFFFF;
+    sStartupRecord.m3ButtonReset = 0;
     sCurrentStartupRecord = &sStartupRecord;
-    sStartupRecord.field_0x4 = 0;
+    sStartupRecord.mResetPrepare = 0;
     dComIfG_inf_c_ct(dComIfGp_get());
     sDevelopmentMode = 1;
     mDoMch_Create();

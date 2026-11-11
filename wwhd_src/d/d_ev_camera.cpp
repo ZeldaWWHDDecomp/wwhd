@@ -348,7 +348,7 @@ u32 EndEventCamera(dCamera_c* camera, u32 id) {
     u32 flags = camera->mEventFlags;
     if (!(flags & DEBUG_EVENT_PARAMS))
         return 0;
-    if (camera->m0E8 != -1 && id != static_cast<u32>(camera->mEventData.field_0x14))
+    if (camera->mEndEventIdCheck != -1 && id != static_cast<u32>(camera->mEventData.field_0x14))
         return 0;
     camera->mEventFlags = flags & ~DEBUG_EVENT_PARAMS;
     return 1;

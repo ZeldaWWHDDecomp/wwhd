@@ -1,5 +1,6 @@
 /* HD staff-roll scene, screen groups and render passes. */
 #include "d/hd_scene_staff_roll.h"
+#include "sead/ElementAt.h"
 #include "JSystem/J3DGraph.h"
 extern void staffUpdateAmbientBubbles(hdStaffAmbientBubbles_c*);
 extern void staffUpdateCharacterBubbles(hdStaffCharacterBubbles_c*);
@@ -153,7 +154,8 @@ void hdStaffAmbientBubbles_c::create() {
   s32 capacity = mDrawList.mCapacity;
   s32 count = mDrawList.mCount;
   hdParts_c* bubble = mpBubbles[i];
-  if(count<capacity) { mDrawList.mpItems[count] = bubble; mDrawList.mCount = mDrawList.mCount+1; }
+  /* guest address arithmetic: mpItems + count * 4 wraps at 32 bits as on the console */
+  if(count<capacity) { sead::elementAt<gptr<hdParts_c>>(mDrawList.mpItems, (u32)count) = bubble; mDrawList.mCount = mDrawList.mCount+1; }
  }
  staffSortBubbles(&mDrawList, &l_staffBubbleSort);
 }
@@ -197,7 +199,8 @@ void hdStaffCharacterBubbles_c::create() {
   s32 capacity = mDrawList.mCapacity;
   s32 count = mDrawList.mCount;
   hdParts_c* bubble = mpBubbles[i];
-  if(count<capacity) { mDrawList.mpItems[count] = bubble; mDrawList.mCount = mDrawList.mCount+1; }
+  /* guest address arithmetic: mpItems + count * 4 wraps at 32 bits as on the console */
+  if(count<capacity) { sead::elementAt<gptr<hdParts_c>>(mDrawList.mpItems, (u32)count) = bubble; mDrawList.mCount = mDrawList.mCount+1; }
  }
  mCursor = 0; mFrame = 0;
 }
@@ -362,7 +365,8 @@ void hdStaffScene_c::drawStaff(void* context) {
  hdRenderLayerRegistry_l* layers = l_staffLayers.mpInstance;
  u32 index = static_cast<hdTitleRenderContext_l*>(context)->mLayerIndex;
  gptr<hdLayerBase_c>* items = layers->mpLayers;
- if(index<layers->mLayerCount) items = items+index;
+ /* guest address arithmetic: items + index * 4 wraps at 32 bits as on the console */
+ if(index<layers->mLayerCount) items = sead::elementPtr(items, index);
  hdLayerBase_c* layer = static_cast<hdLayerBase_c*>(items->get());
  void* info = &layer->mViewport;
  mAmbientBubbles.draw(info); mCharacterBubbles.draw(info);
@@ -382,7 +386,8 @@ void hdStaffScene_c::renderBackground(void* context) {
  u32 index = static_cast<hdTitleRenderContext_l*>(context)->mLayerIndex;
  hdPartsVtbl_c* vtable = screen->mVtable;
  gptr<hdLayerBase_c>* items = layers->mpLayers;
- if(index<count) items = items+index;
+ /* guest address arithmetic: items + index * 4 wraps at 32 bits as on the console */
+ if(index<count) items = sead::elementPtr(items, index);
  hdLayerBase_c* layer = static_cast<hdLayerBase_c*>(items->get());
  gabi::call_ptr<void>(vtable->mDraw.get(), screen, &layer->mViewport);
 }
@@ -395,7 +400,8 @@ void hdStaffScene_c::renderFade(void* context) {
  u32 index = static_cast<hdTitleRenderContext_l*>(context)->mLayerIndex;
  hdPartsVtbl_c* vtable = screen->mVtable;
  gptr<hdLayerBase_c>* items = layers->mpLayers;
- if(index<count) items = items+index;
+ /* guest address arithmetic: items + index * 4 wraps at 32 bits as on the console */
+ if(index<count) items = sead::elementPtr(items, index);
  hdLayerBase_c* layer = static_cast<hdLayerBase_c*>(items->get());
  gabi::call_ptr<void>(vtable->mDraw.get(), screen, &layer->mViewport);
 }

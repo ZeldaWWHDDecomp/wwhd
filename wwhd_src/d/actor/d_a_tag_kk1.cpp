@@ -27,7 +27,7 @@ static daTag_Kk1_HIO_c* daTag_Kk1_HIO_c__ct(daTag_Kk1_HIO_c* i_this) {
 /* 024ACC98 */
 BOOL daTag_Kk1_c::_draw() {
     // HD: the debug path initializes a guarded color, though the drawing itself is absent.
-    if (l_HIO.prm.field_0x10 && !l_debugColorReady) {
+    if (l_HIO.prm.mDebugDraw && !l_debugColorReady) {
         l_debugColorReady = 1;
         memcpy_g(l_debugColor, dummy5, sizeof(dummy5));
     }
@@ -63,7 +63,7 @@ cPhs_State daTag_Kk1_c::_create() {
     }
     if (l_HIO.mNo < 0) {
         // HD: ASCII source label for the original Shift-JIS debug name; guest bytes stay unchanged.
-        l_HIO.mNo = mDoHIO_createChild("Mila chase startup tag", &l_HIO);
+        l_HIO.mNo = mDoHIO_createChild("貧乏ム－ル追跡起動タグ", &l_HIO);
     }
     // HD: createInit is inlined and the unused fpcM_GetName(&name_int) call is absent.
     return cPhs_COMPLEATE_e;
@@ -96,6 +96,6 @@ data a_prm_tbl 101D1C90
 data l_debugColorReady 101FDA48 nocheck
 data l_debugColor 101FEBEC nocheck
 data dummy5 1003F670
-str 1003F6D0 "Mila chase startup tag" renamed in 024ACAC0
+str 1003F6D0 "貧乏ム－ル追跡起動タグ" in 024ACAC0
 ext 028E8DE8 f32 tagKk1_squareDistance(const cXyz* first, const cXyz* second)
 */

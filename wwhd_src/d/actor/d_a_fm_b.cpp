@@ -43,13 +43,13 @@ enum { fpcNm_NPC_CB1_e = 0x14E, fpcNm_NPC_MD_e = 0x16F };
 bool daFm_c::checkTgHit() {
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
     mStts2.Move();
-    if (fm_calcTimer(&field_0x9C4) != 0 || !mSph.ChkTgHit()) {
+    if (fm_calcTimer(&mTgHitTimer) != 0 || !mSph.ChkTgHit()) {
         return false;
     }
     bool temp = true;
     cXyz* hitPos = mSph.GetTgHitPosP();
     void* hitObj = mSph.GetTgHitObj();
-    field_0x9C4 = fm_HIO().field_0x09C;
+    mTgHitTimer = fm_HIO().mTgHitTime;
     if (hitObj == nullptr) {
         return false;
     }
@@ -72,7 +72,7 @@ bool daFm_c::checkTgHit() {
             mHitType = 1;
             // HD: cut types 8 and 9 set the hit cooldown to 12 frames
             if (cut == CUT_TYPE_CUT_TURN || cut == CUT_TYPE_CUT_ROLL) {
-                field_0x9C4 = 0xC;
+                mTgHitTimer = 0xC;
             }
             break;
         default:
@@ -180,8 +180,8 @@ bool daFm_c::checkTgHit() {
         fm_at_check(this, atInfo);
         health = oldHealth;
         fm_setAnm(this, 1, 0);
-        field_0x64C = 0x28;
-        field_0x68C = 0x2B00;
+        mHandShakeTimer = 0x28;
+        mHandShakeAmp = 0x2B00;
     }
     return true;
 }
@@ -208,7 +208,7 @@ u8 daFm_c::checkPlayerGrabNpc() {
 
 /* 02145A60 */
 void daFm_c::searchTarget() {
-    if (dComIfGp_event_runCheck() && field_0x2E4 == 0) {
+    if (dComIfGp_event_runCheck() && mSwAppearDemo == 0) {
         return;
     }
     fopAc_ac_c* actor = fopAcIt_Judge(FM_SEARCH_NEAR_OTHER_ACTOR_CB, this); /* fopAcM_Search(searchNearOtherActor_CB, this) */
@@ -220,8 +220,8 @@ void daFm_c::searchTarget() {
             actor = fm_SearchByName(&keys->k1, fpcNm_NPC_MD_e);
         }
         if (actor != nullptr) {
-            if (fopAcM_searchActorDistanceXZ(this, actor) < fm_HIO().field_0x0E4 || fm_checkHeight(this, actor)) {
-                if (field_0x2DC == 1) {
+            if (fopAcM_searchActorDistanceXZ(this, actor) < fm_HIO().mAttackRange || fm_checkHeight(this, actor)) {
+                if (mBaseTargetType == 1) {
                     if (fm_checkCarryNow(actor)) {
                         mpActorTarget = actor;
                     }
@@ -231,14 +231,14 @@ void daFm_c::searchTarget() {
             }
         }
 
-        if (mpActorTarget == nullptr && field_0x2DC != 2) {
+        if (mpActorTarget == nullptr && mBaseTargetType != 2) {
             fopAc_ac_c* link_actor = dComIfGp_getLinkPlayer();
             fopAc_ac_c* link_player = dComIfGp_getLinkPlayer(); /* daPy_getPlayerLinkActorClass() */
             if (link_actor != nullptr && !fm_checkPlayerStatus0(0x4100 /* HOOKSHOT_AIM | HANG */)) {
                 if (!checkPlayerGrabBomb()) {
                     if (!checkPlayerGrabNpc() && !fm_isLinkControl(this)) {
                         if (!daPy_checkCarryActionNow(dComIfGp_getLinkPlayer()) && daPy_getGrabActorID(link_player) == 0xFFFFFFFFu) {
-                            if (fopAcM_searchActorDistanceXZ(this, link_actor) < fm_HIO().field_0x0E4 || fm_checkHeight(this, mpActorTarget)) {
+                            if (fopAcM_searchActorDistanceXZ(this, link_actor) < fm_HIO().mAttackRange || fm_checkHeight(this, mpActorTarget)) {
                                 mpActorTarget = link_actor;
                             }
                         }
@@ -373,25 +373,25 @@ bool daFm_c::isGrabPos() {
     }
 
     if (fm_isLink(this, mpActorTarget)) {
-        if (!(abs > fm_HIO().field_0x0E0)) {
+        if (!(abs > fm_HIO().mNearRange)) {
             return false;
         }
-    } else if (!(abs > fm_HIO().field_0x0E0) || abs > fm_HIO().field_0x0E4) {
+    } else if (!(abs > fm_HIO().mNearRange) || abs > fm_HIO().mAttackRange) {
         return false;
     }
 
     f32 dy = mGrabPos.y - current.pos.y;
-    if (std::fabs(dy) > fm_HIO().field_0x0A8) {
+    if (std::fabs(dy) > fm_HIO().mHeightRange) {
         return false;
     }
     s16 target = cLib_targetAngleY(&current.pos, &mGrabPos);
-    if (cLib_distanceAngleS(shape_angle.y, target) > fm_HIO().field_0x098) {
+    if (cLib_distanceAngleS(shape_angle.y, target) > fm_HIO().mGrabAngleMax) {
         return false;
     }
-    if (field_0x2D0 != 0) {
+    if (mMoveType != 0) {
         return true;
     }
-    if (fm_absXZ_mi(&field_0x69C, &mGrabPos) > field_0x2E0) {
+    if (fm_absXZ_mi(&mHomePos, &mGrabPos) > mAreaRadius) {
         return false;
     }
     return true;
@@ -399,7 +399,7 @@ bool daFm_c::isGrabPos() {
 
 /* 021461D0 */
 void daFm_c::modeAppear() {
-    if (field_0x2D0 == 0) {
+    if (mMoveType == 0) {
         fm_moveRndBack(this);
     }
     fm_resetInvKine(this);
@@ -409,7 +409,7 @@ void daFm_c::modeAppear() {
     searchTarget();
     if (mpActorTarget != nullptr) {
         setGrabPos();
-        if (field_0x2E4 != 0 && fm_calcTimer(&field_0x650) != 0) {
+        if (mSwAppearDemo != 0 && fm_calcTimer(&mModeTimer) != 0) {
             return;
         }
         if (isGrabPos()) {
@@ -434,20 +434,20 @@ void daFm_c::modeDisappearInit() {
 
 /* 02146310 */
 void daFm_c::modeDisappear() {
-    if (field_0x2D0 != 2) {
-        field_0x690.copy(current.pos);
+    if (mMoveType != 2) {
+        mGoalPos.copy(current.pos);
     }
     fm_resetInvKine(this);
     fm_cancelGrab(this);
     if (mAnmPrmIdx == 8 && mpMorf->isStop()) {
-        if (field_0x2E4 != 0 || field_0x2E5 != 0) {
+        if (mSwAppearDemo != 0 || mSwAppearInEvent != 0) {
             fm_modeProcInit(this, 0x12);
         } else {
             fopAcM_searchActorDistanceXZ(this, dComIfGp_getPlayer(0)); /* fopAcM_searchPlayerDistanceXZ (result unused) */
             if (fm_isGrabFoot(this) && !dComIfGp_event_runCheck()) {
                 fm_modeProcInit(this, 0xF);
             } else {
-                switch ((s32)field_0x2D0) {
+                switch ((s32)mMoveType) {
                 case 0:
                     fm_modeProcInit(this, 1);
                     break;
@@ -465,12 +465,12 @@ void daFm_c::modeDisappear() {
 
 /* 02146434 */
 void daFm_c::modeWaitInit() {
-    field_0x658 = fm_HIO().field_0x088;
-    field_0x650 = fm_setRnd(this, fm_HIO().field_0x08C, fm_HIO().field_0x08E);
+    mFarTimer = fm_HIO().mFarTime;
+    mModeTimer = fm_setRnd(this, fm_HIO().mWaitTimeMin, fm_HIO().mWaitTimeMax);
     mSinkTimer = fm_HIO().field_0x08A;
-    field_0x65C = fm_HIO().field_0x100;
+    mGrabDelayTimer = fm_HIO().mGrabDelayTime;
     field_0x6B4 = 0;
-    field_0x660.copy(current.pos);
+    mMoveTargetPos.copy(current.pos);
 }
 
 /* 021464B4 */
@@ -490,9 +490,9 @@ void daFm_c::modeWait() {
     }
 
     searchTarget();
-    s32 angle = cLib_distanceAngleS(shape_angle.y, field_0x9D0);
+    s32 angle = cLib_distanceAngleS(shape_angle.y, mBaseTargetAngleY);
     if (mpActorTarget != nullptr) {
-        if (field_0x9D4 > fm_HIO().field_0x0E0) {
+        if (mBaseTargetDist > fm_HIO().mNearRange) {
             s16 angle2 = cLib_targetAngleY(&current.pos, &mGrabPos);
             fopAc_ac_c* t = mpActorTarget;
             if (fm_isNpc(this, t) || fm_isLink(this, t)) {
@@ -504,13 +504,13 @@ void daFm_c::modeWait() {
         setGrabPos();
         if (isGrabPos()) {
             if (fm_checkPlayerGrabTarget(this)) {
-                if (fm_calcTimer(&field_0x65C) == 0) {
+                if (fm_calcTimer(&mGrabDelayTimer) == 0) {
                     fm_modeProcInit(this, 8);
                     return;
                 }
             } else {
                 if (fm_isNpc(this, mpActorTarget)) {
-                    if (fm_calcTimer(&field_0x65C) != 0) {
+                    if (fm_calcTimer(&mGrabDelayTimer) != 0) {
                         return;
                     }
                 }
@@ -519,25 +519,25 @@ void daFm_c::modeWait() {
             }
         }
     } else {
-        if (angle > fm_HIO().field_0x09A) {
-            cLib_addCalcAngleS2(&shape_angle.y, field_0x9D0, 10, 0x100);
+        if (angle > fm_HIO().mTurnAngleMin) {
+            cLib_addCalcAngleS2(&shape_angle.y, mBaseTargetAngleY, 10, 0x100);
         }
     }
 
-    if (field_0x2D0 == 2 && fm_absXZ_mi(&mBaseTarget->current.pos, &field_0x69C) > field_0x2E0) {
+    if (mMoveType == 2 && fm_absXZ_mi(&mBaseTarget->current.pos, &mHomePos) > mAreaRadius) {
         fm_modeProcInit(this, 6);
     } else {
         fm_moveRndBack(this);
     }
-    if (field_0x9D4 > fm_HIO().field_0x0E4 && field_0x9D4 < fm_HIO().field_0x0E8) {
+    if (mBaseTargetDist > fm_HIO().mAttackRange && mBaseTargetDist < fm_HIO().mNoticeRange) {
         fm_turnToBaseTarget(this);
     }
-    if (field_0x9D4 > fm_HIO().field_0x0E8) {
-        if (fm_calcTimer(&field_0x658) == 0) {
+    if (mBaseTargetDist > fm_HIO().mNoticeRange) {
+        if (fm_calcTimer(&mFarTimer) == 0) {
             fm_modeProcInit(this, 6);
         }
     } else {
-        field_0x658 = fm_HIO().field_0x088;
+        mFarTimer = fm_HIO().mFarTime;
     }
 }
 
@@ -547,7 +547,7 @@ void daFm_c::modeAttackInit() {
         fm_modeProcInit(this, 7);
     } else {
         fm_setAnm(this, 4, 0);
-        field_0x650 = fm_HIO().field_0x094;
+        mModeTimer = fm_HIO().mAttackTime;
     }
 }
 
@@ -561,14 +561,14 @@ bool daFm_c::isGrab() {
         return false;
     }
     f32 dy = mGrabPos.y - current.pos.y;
-    if (std::fabs(dy) > fm_HIO().field_0x0A8) {
+    if (std::fabs(dy) > fm_HIO().mHeightRange) {
         return false;
     }
     gabi::Local<cXyz> diff;
-    cXyz_mi(&mGrabPos, diff, &field_0x61C);
-    f32 limit = fm_HIO().field_0x0EC;
-    if (field_0x2E4 != 0) {
-        f32 v = fm_HIO().field_0x0EC;
+    cXyz_mi(&mGrabPos, diff, &mHandPos);
+    f32 limit = fm_HIO().mGrabReach;
+    if (mSwAppearDemo != 0) {
+        f32 v = fm_HIO().mGrabReach;
         // HD: doubles with fadds rather than the GC multiplication.
         limit = gabi::fadds_ppc(v, v);
     }
@@ -584,24 +584,24 @@ void daFm_c::calcInvKine(fopAc_ac_c* i_target) {
         return;
     }
     // HD: written as the original tests it (NaN returns)
-    if (!(fopAcM_searchActorDistanceXZ(this, i_target) > fm_HIO().field_0x0DC)) {
+    if (!(fopAcM_searchActorDistanceXZ(this, i_target) > fm_HIO().mFootGrabDist)) {
         return;
     }
     for (int i = 5; i >= 0; i--) {
-        field_0x390 = i;
+        mIkStartJoint = i;
         gabi::Local<cXyz> temp;
-        temp->x = (f32)field_0x2E8[i].x;
-        temp->y = (f32)field_0x2E8[i].y;
-        temp->z = (f32)field_0x2E8[i].z;
-        if (fm_HIO().field_0x00F[i] == 1) {
+        temp->x = (f32)mJointPos[i].x;
+        temp->y = (f32)mJointPos[i].y;
+        temp->z = (f32)mJointPos[i].z;
+        if (fm_HIO().mIkJointOn[i] == 1) {
             gabi::Local<cXyz> diff;
             cXyz_mi(&mGrabPos, diff, temp);
             gabi::Local<cXyz> diff2;
-            cXyz_mi(&field_0x61C, diff2, temp);
+            cXyz_mi(&mHandPos, diff2, temp);
             gabi::Local<Quaternion_fm> quat;
             quat_rotVec(quat, diff2, diff);
             f32 t = gabi::fsubs_ppc(0.75f, fm_invKineDebug());
-            C_QUATSlerp(&field_0x330[i], quat, &field_0x330[i], t); /* mDoMtx_quatSlerp */
+            C_QUATSlerp(&mJointQuat[i], quat, &mJointQuat[i], t); /* mDoMtx_quatSlerp */
         }
         mDoExt_McaMorf* morf = mpMorf;
         morf->calc();
@@ -610,15 +610,15 @@ void daFm_c::calcInvKine(fopAc_ac_c* i_target) {
 
 /* setOutPower toward the grab position (modeAttack, both grab states) */
 static inline void fm_pushLink(daFm_c* i_this, fopAc_ac_c* pLink, f32 dist) {
-    s16 targetAngle = cLib_targetAngleY(&i_this->field_0x63C, &i_this->mGrabPos);
-    f32 h0 = fm_HIO().field_0x110;
-    f32 h1 = fm_HIO().field_0x114;
+    s16 targetAngle = cLib_targetAngleY(&i_this->mPullPos, &i_this->mGrabPos);
+    f32 h0 = fm_HIO().mPullDistMin;
+    f32 h1 = fm_HIO().mPullDistMax;
     f32 range = std::fabs(gabi::fsubs_ppc(h1, h0));
     if (range == 0.0f) {
         range = 1.0f;
     }
     f32 ratio = fm_fdivs_ppc(std::fabs(gabi::fsubs_ppc(dist, h0)), range);
-    f32 power = gabi::fmuls_ppc(fm_HIO().field_0x118, ratio);
+    f32 power = gabi::fmuls_ppc(fm_HIO().mPullPower, ratio);
     daPy_setOutPower(pLink, power, targetAngle, 0);
 }
 
@@ -626,10 +626,10 @@ static inline void fm_pushLink(daFm_c* i_this, fopAc_ac_c* pLink, f32 dist) {
 void daFm_c::modeAttack() {
     if (mAnmPrmIdx != 5 && !isGrab()) {
         f32 dist = fm_absXZ_mi(&mGrabPos, &current.pos);
-        if (!(dist > fm_HIO().field_0x0E0 && dist < fm_HIO().field_0x0C4) && dist < fm_HIO().field_0x0E4 + 10.0f) {
-            field_0x660.copy(mGrabPos);
-            f32 step = gabi::fmuls_ppc(gabi::fmuls_ppc(0.005f, gabi::fadds_ppc(fm_HIO().field_0x0CC, 1.0f)), field_0x394);
-            fm_addCalcPosXZ2(&current.pos, &field_0x660, step, 40.0f);
+        if (!(dist > fm_HIO().mNearRange && dist < fm_HIO().mReachDist) && dist < fm_HIO().mAttackRange + 10.0f) {
+            mMoveTargetPos.copy(mGrabPos);
+            f32 step = gabi::fmuls_ppc(gabi::fmuls_ppc(0.005f, gabi::fadds_ppc(fm_HIO().mChaseSpeed, 1.0f)), mSpeedRate);
+            fm_addCalcPosXZ2(&current.pos, &mMoveTargetPos, step, 40.0f);
         }
     }
 
@@ -647,11 +647,11 @@ void daFm_c::modeAttack() {
 
     calcInvKine(mpActorTarget);
     s16 actorAngle = fopAcM_searchActorAngleY(this, mpActorTarget);
-    if (cLib_distanceAngleS(shape_angle.y, actorAngle) > fm_HIO().field_0x09A) {
-        cLib_addCalcAngleS2(&shape_angle.y, actorAngle, 4, fm_HIO().field_0x096);
+    if (cLib_distanceAngleS(shape_angle.y, actorAngle) > fm_HIO().mTurnAngleMin) {
+        cLib_addCalcAngleS2(&shape_angle.y, actorAngle, 4, fm_HIO().mTurnStep);
     }
 
-    if (field_0xAE4 == 0) {
+    if (mInArea == 0) {
         fm_modeProcInit(this, 6);
         return;
     }
@@ -680,8 +680,8 @@ void daFm_c::modeAttack() {
                 if (pLink->speedF < 1.0f) {
                     return;
                 }
-                f32 dist = fm_absXZ_mi(&mGrabPos, &field_0x63C);
-                if (!(dist > fm_HIO().field_0x110 && dist < fm_HIO().field_0x114)) {
+                f32 dist = fm_absXZ_mi(&mGrabPos, &mPullPos);
+                if (!(dist > fm_HIO().mPullDistMin && dist < fm_HIO().mPullDistMax)) {
                     return;
                 }
                 fm_pushLink(this, pLink, dist);
@@ -695,7 +695,7 @@ void daFm_c::modeAttack() {
             fm_seStart(this, JA_SE_CM_FM_GRAB_HAND, 0);
             fm_setCarryNow(mpActorTarget, 0);
             fopAc_ac_c* npc = mpActorTarget;
-            field_0x684 = 4;
+            mGrabKind = 4;
             if (npc != nullptr && fpcM_GetName(npc) == fpcNm_NPC_CB1_e) {
                 /* daNpc_Cb1_c::noCarryAction(): static flag word |= 1 */
                 fm_makarCarryFlags() |= 1;
@@ -705,7 +705,7 @@ void daFm_c::modeAttack() {
                 /* daNpc_Md_c::noCarryAction(): flags +0x420C |= 0x800 */
                 static_cast<Fm_Medli*>(npc)->mNoCarryFlags |= 0x800;
             }
-            u8 sw = field_0x2E4;
+            u8 sw = mSwAppearDemo;
             field_0x6B8 = 1;
             if (sw != 0) {
                 if (fm_startCheckOld(dComIfGp_getPEvtManager(), "DEFAULT_FM_SW_APEEAR")) {
@@ -715,7 +715,7 @@ void daFm_c::modeAttack() {
             } else {
                 f32 playerDist = fopAcM_searchActorDistanceXZ(this, dComIfGp_getPlayer(0));
                 fopAc_ac_c* pLink = dComIfGp_getLinkPlayer();
-                if ((playerDist > fm_HIO().field_0x0BC || std::fabs(pLink->current.pos.y - current.pos.y) > fm_HIO().field_0x0A8) &&
+                if ((playerDist > fm_HIO().mNpcDemoPlayerDist || std::fabs(pLink->current.pos.y - current.pos.y) > fm_HIO().mHeightRange) &&
                     !dComIfGp_event_runCheck()) {
                     fm_modeProcInit(this, 0x10);
                 } else {
@@ -733,7 +733,7 @@ void daFm_c::modeAttack() {
                     return;
                 }
                 fm_setCarryNow(t, 0);
-                field_0x684 = 2;
+                mGrabKind = 2;
                 fm_seStart(this, JA_SE_CM_FM_GRAB, 0);
                 fm_modeProcInit(this, 0xD);
             } else if (t != nullptr && fpcM_GetName(t) == fpcNm_TSUBO_e) {
@@ -742,7 +742,7 @@ void daFm_c::modeAttack() {
                     return;
                 }
                 fm_setCarryNow(t, 0);
-                field_0x684 = 3;
+                mGrabKind = 3;
                 fm_seStart(this, JA_SE_CM_FM_GRAB, 0);
                 fm_modeProcInit(this, 0xD);
             }
@@ -753,18 +753,18 @@ void daFm_c::modeAttack() {
             if (mAnmPrmIdx != 4) {
                 return;
             }
-            f32 dist = fm_absXZ_mi(&mGrabPos, &field_0x63C);
-            if (dist > fm_HIO().field_0x110 && dist < fm_HIO().field_0x114) {
+            f32 dist = fm_absXZ_mi(&mGrabPos, &mPullPos);
+            if (dist > fm_HIO().mPullDistMin && dist < fm_HIO().mPullDistMax) {
                 fopAc_ac_c* pLink = dComIfGp_getLinkPlayer();
                 if (pLink->speedF < 1.0f) {
                     return;
                 }
                 fm_pushLink(this, pLink, dist);
-            } else if (mpMorf->isStop() && fm_calcTimer(&field_0x650) == 0) {
+            } else if (mpMorf->isStop() && fm_calcTimer(&mModeTimer) == 0) {
                 fm_setAnm(this, 5, 0);
             }
         } else if (mAnmPrmIdx == 4) {
-            if (mpMorf->isStop() && fm_calcTimer(&field_0x650) == 0) {
+            if (mpMorf->isStop() && fm_calcTimer(&mModeTimer) == 0) {
                 fm_setAnm(this, 5, 0);
             }
         }

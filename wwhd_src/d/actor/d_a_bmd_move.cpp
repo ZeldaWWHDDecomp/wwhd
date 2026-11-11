@@ -122,13 +122,13 @@ static inline void wait(bmd_class* i_this) {
             f32 dVar6 = fopAcM_searchPlayerDistance(actor);
             if (dVar6 < 1300.0f) {
                 i_this->mTimers[2] = (s16)gabi::ftoi(cM_rndF(50.0f) + 30.0f);
-                if (cM_rndF(1.0f) < l_HIO().m08) {
+                if (cM_rndF(1.0f) < l_HIO().mMoveChance) {
                     i_this->mMode = 1;
                     i_this->mSubMode = 0;
                 }
             } else {
                 i_this->mTimers[2] = (s16)gabi::ftoi(cM_rndF(50.0f) + 30.0f);
-                if (cM_rndF(1.0f) < l_HIO().m08) {
+                if (cM_rndF(1.0f) < l_HIO().mMoveChance) {
                     i_this->mMode = 2;
                     i_this->mSubMode = 0;
                 }
@@ -251,7 +251,7 @@ static inline void damage(bmd_class* i_this) {
         if (i_this->mpBodyMorf->isStop()) {
             anm_init(i_this, dRes_INDEX_BMD_BCK_HIRAKU_WAIT_e, 5.0f, J3DFrameCtrl::EMode_LOOP, 1.0f, -1);
             i_this->mSubMode = 3;
-            i_this->mTimers[0] = l_HIO().m14;
+            i_this->mTimers[0] = l_HIO().mOpenTime;
             i_this->mPetalAngle = 0;
         }
         if (frame_s16(i_this->mpBodyMorf) > 25) {

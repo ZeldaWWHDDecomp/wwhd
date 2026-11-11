@@ -58,7 +58,7 @@ cPhs_State Act_c::_create() {
     if (fopAcM_entrySolidHeap(this, solidHeapCB, 0)) {
         set_mtx();
         fopAcM_SetMtx(this, &mMtx);
-        field_0x298 = Macore_is_playing();
+        mMusicPlaying = Macore_is_playing();
         fopAcM_setCullSizeSphere(this, 0.0f, 0.0f, 0.0f, 300.0f);
         init_se();
     } else {
@@ -103,14 +103,14 @@ void Act_c::manage_se(int cull) {
             mDoAud_cbPracticePlay(&current.pos);
             // HD: fused multiply-add and PowerPC integer conversion.
             mTimer = (s16)gabi::ftoi(gabi::fmadds(60.0f, cM_rndF(1.0f), 120.0f));
-        } else if (cull == 0 && field_0x29c == 1) {
+        } else if (cull == 0 && mEmitting == 1) {
             mpEmitter->stopCreateParticle();
-            field_0x29c = 0;
+            mEmitting = 0;
         }
     } else {
-        if (cull == 0 && field_0x29c == 0) {
+        if (cull == 0 && mEmitting == 0) {
             mpEmitter->playCreateParticle();
-            field_0x29c = 1;
+            mEmitting = 1;
         }
     }
 }
@@ -119,30 +119,30 @@ void Act_c::manage_se(int cull) {
 /* 021C612C */
 bool Act_c::_execute() {
     if (mpEmitter == nullptr) {
-        if (field_0x298 == 1) {
+        if (mMusicPlaying == 1) {
             set_mtx();
             /* GameCube: an unused cXyz scale(1, 1, 1) */
             MmusicEmitter* emtr = reinterpret_cast<MmusicEmitter*>(dComIfGp_particle_set(dPa_name::ID_AK_SN_MACOREMUSIC00, &current.pos));
             mpEmitter = emtr;
             if (emtr != nullptr) {
                 emtr->setGlobalRTMatrix(&mMtx);
-                field_0x298 = 0;
-                field_0x29c = 1;
+                mMusicPlaying = 0;
+                mEmitting = 1;
             }
         } else {
-            field_0x298 = Macore_is_playing();
+            mMusicPlaying = Macore_is_playing();
         }
     } else {
         int cull = fopAcM_cullingCheck(this);
         if (cull == 1) {
-            if (field_0x29c == 1) {
+            if (mEmitting == 1) {
                 mpEmitter->stopCreateParticle();
-                field_0x29c = 0;
+                mEmitting = 0;
             }
         } else {
-            if (field_0x29c == 0) {
+            if (mEmitting == 0) {
                 mpEmitter->playCreateParticle();
-                field_0x29c = 1;
+                mEmitting = 1;
             }
         }
         manage_se(cull);

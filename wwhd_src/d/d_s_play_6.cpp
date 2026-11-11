@@ -132,7 +132,7 @@ static s32 phase_4(dScnPly::dScnPly_ply_c *i_this) {
     dScnPlyAPI_setTickRate(((u32)*gabi::at<be<u32>>(clk) >> 2) /
                            30); /* mDoGph_gInf_c::setTickRate((OS_BUS_CLOCK / 4) / 30) */
     g_darkHIO.mNo = (u8)dScnPlyAPI_createHIOChild(
-        gabi::guest_addr("Darkness Spot"),
+        gabi::guest_addr("暗闇スポット"),
         gabi::ea(&g_darkHIO)); /* g_darkHIO.mNo = mDoHIO_createChild */
 
     u32 att = gabi::ea(&dScnPly_gameInfo()->play.mAttention); /* placement new of the attention */
@@ -268,5 +268,5 @@ str 100533B0 "Particle" in 025B1FF8
 str 100533BC "Particle.bfres" in 025B1FF8
 str 100533CC "Pscene%03d.jpc" in 025B1FF8
 str 100533DC "d_s_play.cpp" in 025B1FF8
-str 100533EC "Darkness Spot" renamed in 025B1FF8
+str 100533EC "暗闇スポット" in 025B1FF8
 */

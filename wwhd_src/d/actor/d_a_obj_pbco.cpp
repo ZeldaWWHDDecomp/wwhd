@@ -29,7 +29,7 @@ daObj_Pbco_c::daObj_Pbco_c() {
 BOOL daObj_Pbco_c::CreateHeap() {
     J3DModelData* modelData = static_cast<J3DModelData*>(dComIfG_getObjectRes(
         M_arcname, counterClosed() ? dRes_INDEX_PBCO_BDL_PBCO_e : dRes_INDEX_PBCO_BDL_PBC2_e));
-    JUT_ASSERT(0xA9, modelData != NULL);
+    JUT_ASSERT_MSG(0xA9, modelData != NULL, "modelData != (0)");
     mpModel = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
     // HD: the event and item checks are repeated after model creation.
     if (counterClosed()) {
@@ -161,6 +161,6 @@ static void SafeString_assureTerminationImpl() {
 /* WWHD glue (tools/verify/autoglue.py)
 str 1002E5C8
 str 1002E58C
-str 1002E5A0 "modelData != NULL" renamed # HD: original uses 0.
+str 1002E5A0 "modelData != (0)" # HD: original uses 0.
 data l_HIO 1046BBBC
 */

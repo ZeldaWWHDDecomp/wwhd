@@ -599,7 +599,7 @@ static enemyfire_l* enemyfire_ct(enemyfire_l* p) {
         operator_new(0xC);
     dCcD_Stts_ct(&p->mStts);
     ksMain_sphereCtor(&p->mSph); /* dCcD_Sph::dCcD_Sph */
-    p->m228 = 1.0f;
+    p->mHD20 = 1.0f;
     return p;
 }
 

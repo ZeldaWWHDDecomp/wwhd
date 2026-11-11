@@ -57,8 +57,8 @@ struct esa_class : fopAc_ac_c {
     /* 0x3BD */ be<s8> mState;
     /* 0x3BE */ u8 _3BE[2];
     /* 0x3C0 */ EsaRippleCallback mRippleCb;  /* was field_0x2A4: esa_setRipple (in daEsa_Execute 021300C4): the callback of the ripple particle (rate 0.3), its emitter checked; daEsa_Delete 02130D6C ends it (dPa_rippleEcallBack_end); daEsa_Create 02130E30 constructs it; after TWW mRippleCallBack / mRipple (dPa_rippleEcallBack members of other actors) */
-    /* 0x3D4 */ be<u8> mAppendNum;  /* was field_0x2B9: daEsa_Create 02130E30: parameter bits 0-7; while field_0x2BA (bits 8-15) is 0 that many more baits are created at Link's left hand (esaCreateAppend / esaCreate) */
-    /* 0x3D5 */ be<u8> field_0x2BA;
+    /* 0x3D4 */ be<u8> mAppendNum;  /* was field_0x2B9: daEsa_Create 02130E30: parameter bits 0-7; while mNoAppend (bits 8-15) is 0 that many more baits are created at Link's left hand (esaCreateAppend / esaCreate) */
+    /* 0x3D5 */ be<u8> mNoAppend;  /* was field_0x2BA: daEsa_Create 02130E30: parameter bits 8-15; only while it is 0 the bait creates mAppendNum more baits at Link's left hand (tww the same; tww's REG0 debug override sets 1) */
     /* 0x3D6 */ u8 _3D6[2];
     /* 0x3D8 */ gptr<J3DModel> mpModel;
     /* 0x3DC */ be<s16> mTimer[2];
@@ -75,7 +75,7 @@ WWHD_OFFSET(esa_class, mGroundHeight, 0x3B8);
 WWHD_OFFSET(esa_class, mActionState, 0x3BC);
 WWHD_OFFSET(esa_class, mState, 0x3BD);
 WWHD_OFFSET(esa_class, mAppendNum, 0x3D4);
-WWHD_OFFSET(esa_class, field_0x2BA, 0x3D5);
+WWHD_OFFSET(esa_class, mNoAppend, 0x3D5);
 WWHD_OFFSET(esa_class, mTimer, 0x3DC);
 
 struct EsaPlayerView : fopAc_ac_c {

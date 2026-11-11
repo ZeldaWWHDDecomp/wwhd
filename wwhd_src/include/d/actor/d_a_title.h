@@ -16,20 +16,20 @@ struct daTitle_Attr_c {
     /* 0x00 */ be<u32> __vtbl;
     /* 0x04 */ union {
         struct {
-            be<f32> field_0x00;
-            /* 0x08 */ be<f32> field_0x04;
-            /* 0x0C */ be<f32> field_0x08;
-            /* 0x10 */ be<f32> field_0x0C;
-            /* 0x14 */ be<f32> field_0x10;
-            /* 0x18 */ be<f32> field_0x14;
-            /* 0x1C */ be<f32> field_0x18;
-            /* 0x20 */ be<f32> field_0x1C;
-            /* 0x24 */ be<f32> field_0x20;
-            /* 0x28 */ be<f32> field_0x24;
-            /* 0x2C */ be<f32> field_0x28;
-            /* 0x30 */ be<f32> field_0x2C;
-            /* 0x34 */ be<f32> field_0x30;
-            /* 0x38 */ be<f32> field_0x34;
+            be<f32> mShipPosX;  /* was field_0x00: set_mtx 024B83F4 places the ship model at x = it + mShipOffsetX (tww L_attr 0.0) */
+            /* 0x08 */ be<f32> mShipPosY;  /* was field_0x04: set_mtx 024B83F4 places the ship model at y = it (tww L_attr 0.0) */
+            /* 0x0C */ be<f32> mShipScale;  /* was field_0x08: set_mtx 024B83F4 sets the ship model's base scale to it (tww L_attr 0.9) */
+            /* 0x10 */ be<f32> mShipMoveRate;  /* was field_0x0C: calc_2d_alpha 024B7CFC: mShipOffsetX = mShipMoveFrame^2 * it (sign by direction); daTitle_proc_ct 024B89D8 starts at 2500 * it (tww L_attr 0.1) */
+            /* 0x14 */ be<f32> mSubtitlePosX;  /* was field_0x10: set_mtx 024B83F4 places the subtitle and kirari models at x = it (tww L_attr -57) */
+            /* 0x18 */ be<f32> mSubtitlePosY;  /* was field_0x14: set_mtx 024B83F4 places the subtitle and kirari models at y = it (tww L_attr -19 JPN / -3) */
+            /* 0x1C */ be<f32> mSubtitleScaleX;  /* was field_0x18: set_mtx 024B83F4 sets the subtitle and kirari models' x scale to it (tww L_attr 1.0) */
+            /* 0x20 */ be<f32> mSubtitleScaleY;  /* was field_0x1C: set_mtx 024B83F4 sets the subtitle and kirari models' y scale to it (tww L_attr 1.0) */
+            /* 0x24 */ be<f32> mKirariIntervalRnd;  /* was field_0x20: daTitle_proc_ct 024B89D8 sets mKirariTimer to rnd(it) + mKirariIntervalBase + 130; tww calc_2d_alpha reloads mKirariTimer the same way after each kirari (HD has no kirari animation) (tww L_attr 120) */
+            /* 0x28 */ be<f32> mKirariIntervalBase;  /* was field_0x24: daTitle_proc_ct 024B89D8: base of mKirariTimer (rnd(mKirariIntervalRnd) + it + 130); tww calc_2d_alpha the same (tww L_attr 10) */
+            /* 0x2C */ be<f32> mWindIntervalRnd;  /* was field_0x28: calc_2d_alpha 024B7CFC and daTitle_proc_ct 024B89D8 set mWindTimer to rnd(it) + mWindIntervalBase (the layout's wind interval wins when set) (tww L_attr 120) */
+            /* 0x30 */ be<f32> mWindIntervalBase;  /* was field_0x2C: calc_2d_alpha 024B7CFC and daTitle_proc_ct 024B89D8: base of mWindTimer (rnd(mWindIntervalRnd) + it) (tww L_attr 10) */
+            /* 0x34 */ be<f32> mSmokeOffsetX;  /* was field_0x30: calc_2d_alpha 024B7CFC adds it to the x of the TITLESMOKE00 emitter (the layout smoke position +- mShipOffsetX) (tww L_attr 85 / 78 JPN) */
+            /* 0x38 */ be<f32> mSmokeOffsetY;  /* was field_0x34: calc_2d_alpha 024B7CFC adds it to the y of the TITLESMOKE00 emitter (tww L_attr 5 / 8 JPN) */
         };
         be<u32> words[14];
     };
@@ -49,13 +49,13 @@ struct daTitle_proc_c {
     /* 0x004 */ daTitle_Attr_c mAttr;
     /* 0x040 */ gptr<title_actor::EmitterHD> mpEmitter;
     /* 0x044 */ gptr<title_actor::EmitterHD> mpEmitter2;
-    /* 0x048 */ cXyz m00C;
-    /* 0x054 */ be<s32> m018;
-    /* 0x058 */ be<s32> m01C;
-    /* 0x05C */ be<s32> m020;
-    /* 0x060 */ be<s32> m024;
+    /* 0x048 */ cXyz mKiraPos;  /* was m00C: calc_2d_alpha 024B7CFC sets it to the layout kira position at the kira start frame, starts the TITLEKIRAKIRA00 emitter mpEmitter2 there and moves it right by 320 / (end - start) per frame until the kira end (tww the same) */
+    /* 0x054 */ be<s32> mFrameCount;  /* was m018: calc_2d_alpha 024B7CFC adds 1 per frame; the intro ends at 200 (ENTER_WAIT), the layout intro starts at 30, the kira effect runs between the layout's kira start and end frames; daTitle_proc_ct 024B89D8 clears it (tww the same) */
+    /* 0x058 */ be<s32> mStartDelay;  /* was m01C: daTitle_proc_ct 024B89D8 sets 120; proc_execute 024B8670 counts it down (JA_SE_TITLE_WIND at 0) and runs calc_2d_alpha only once it is 0; a button press in the intro clears it (tww the same) */
+    /* 0x05C */ be<s32> mWindTimer;  /* was m020: calc_2d_alpha 024B7CFC counts it down and at 0 starts a TITLEWIND00 particle and reloads it (rnd(mWindIntervalRnd) + mWindIntervalBase or the layout's interval); daTitle_proc_ct 024B89D8 sets the first value (tww the same) */
+    /* 0x060 */ be<s32> mKirariTimer;  /* was m024: daTitle_proc_ct 024B89D8 sets rnd(mKirariIntervalRnd) + mKirariIntervalBase + 130; tww calc_2d_alpha counts it down and at 0 plays the 20-frame kirari animation (mKirariFrame), then reloads it (HD has no kirari animation, nothing else uses it) */
     /* 0x064 */ be<s32> m028;
-    /* 0x068 */ be<s32> m02C;
+    /* 0x068 */ be<s32> mKirariFrame;  /* was m02C: daTitle_proc_ct 024B89D8 clears it; tww calc_2d_alpha steps it 1..20 as the mBtkKirari frame while mKirariTimer is 0, then clears it (HD has no kirari animation) */
     /* 0x06C */ be<s32> mEnterMode;
     /* 0x070 */ u8 m034[4];
     /* 0x074 */ gptr<J3DModel> mModel_ship;
@@ -68,10 +68,10 @@ struct daTitle_proc_c {
     /* 0x1FC */ mDoExt_btkAnm mBtkKirari;
     /* 0x270 */ be<u8> m090;
     /* 0x271 */ u8 _271[3];
-    /* 0x274 */ be<f32> m094;
-    /* 0x278 */ be<s32> m098;
+    /* 0x274 */ be<f32> mShipOffsetX;  /* was m094: calc_2d_alpha 024B7CFC sets it to mShipMoveFrame^2 * mShipMoveRate (negated once the ship leaves); set_mtx 024B83F4 adds it to the ship x, calc_2d_alpha moves the smoke emitter with it; daTitle_proc_ct 024B89D8 starts at 2500 * mShipMoveRate (tww the same, sign flipped) */
+    /* 0x278 */ be<s32> mShipMoveFrame;  /* was m098: daTitle_proc_ct 024B89D8 sets -50; calc_2d_alpha 024B7CFC counts it up to 0 in the intro (the ship sails in), proc_execute 024B8670 sets 0 on a button press and counts it up while leaving; it drives mShipOffsetX and the ship bpk frame (100 +- 2 * it) (tww the same) */
     /* 0x27C */ be<u32> m_Screen;
-    /* 0x280 */ be<u32> m0A0[6];
+    /* 0x280 */ be<u32> mScreenPanes[6];  /* was m0A0: tww proc_init3D: the J2DPane pointers m_Screen->search('zeld' / 'zelj' / 'pres' / 'nint' / 'eft1' / 'eft2'), passed to fopMsgM_setPaneData for pane[i] (HD: the 2D logo is a separate layout; no use) */
     /* 0x298 */ u8 pane[6][0x38]; /* fopMsgM_pane_class */
     /* 0x3E8 */ be<u32> m_exp_heap;
     /* 0x3EC */ gptr<title_actor::HeapHD> m_solid_heap;
@@ -80,20 +80,20 @@ struct daTitle_proc_c {
 };
 WWHD_OFFSET(daTitle_proc_c, mEnterMode, 0x6C);
 WWHD_OFFSET(daTitle_proc_c, mBckShip, 0x88);
-WWHD_OFFSET(daTitle_proc_c, m094, 0x274);
+WWHD_OFFSET(daTitle_proc_c, mShipOffsetX, 0x274);
 WWHD_OFFSET(daTitle_proc_c, pane, 0x298);
 WWHD_SIZE(daTitle_proc_c, 0x3F0);
 
 struct daTitle_c : fopAc_ac_c {
     /* 0x3AC */ request_of_phase_process_class mPhs;
     /* 0x3B4 */ gptr<daTitle_proc_c> mpTitleProc;
-    /* 0x3B8 */ be<u8> m29C;
+    /* 0x3B8 */ be<u8> mSceneChangeReq;  /* was m29C: daTitle_Execute 024B87A4 requests the scene change (to the name scene in ENTER mode 3, else back to the title scene) only while it is 0 and then sets it; daTitle_Create 024B8F44 clears it (tww the same) */
     u8 paddingActor[3];
 };
-WWHD_OFFSET(daTitle_c, m29C, 0x3B8);
+WWHD_OFFSET(daTitle_c, mSceneChangeReq, 0x3B8);
 
-WWHD_OFFSET(daTitle_Attr_c, field_0x00, 4);
-WWHD_OFFSET(daTitle_Attr_c, field_0x34, 0x38);
+WWHD_OFFSET(daTitle_Attr_c, mShipPosX, 4);
+WWHD_OFFSET(daTitle_Attr_c, mSmokeOffsetY, 0x38);
 WWHD_OFFSET(daTitle_proc_c, mAttr, 4);
 WWHD_OFFSET(daTitle_proc_c, mpEmitter, 0x40);
 WWHD_OFFSET(daTitle_proc_c, mModel_ship, 0x74);
@@ -103,7 +103,7 @@ WWHD_OFFSET(daTitle_proc_c, mInvisible, 0x80);
 WWHD_OFFSET(daTitle_proc_c, mBpkShip, 0x114);
 WWHD_OFFSET(daTitle_proc_c, mBtkSub, 0x188);
 WWHD_OFFSET(daTitle_proc_c, mBtkKirari, 0x1FC);
-WWHD_OFFSET(daTitle_proc_c, m098, 0x278);
+WWHD_OFFSET(daTitle_proc_c, mShipMoveFrame, 0x278);
 WWHD_OFFSET(daTitle_proc_c, m_solid_heap, 0x3EC);
 WWHD_OFFSET(daTitle_c, mPhs, 0x3AC);
 WWHD_OFFSET(daTitle_c, mpTitleProc, 0x3B4);

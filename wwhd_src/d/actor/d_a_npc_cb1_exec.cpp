@@ -194,7 +194,7 @@ void daNpc_Cb1_c::initAnm(s8 param_1, BOOL param_2) {
         mPrevAnmFrame = 0.0f;
         f32 morf = 0.0f;
         if (param_2) {
-            morf = (f32)(s8)data.field_0x02;
+            morf = (f32)(s8)data.mMorf;
         }
         s8 file = data.mAnmFileIdx;
         cb1_dNpc_setAnm(mpMorf.get(), data.mLoopMode, morf, (f32)(s8)data.mSpeed,
@@ -226,17 +226,17 @@ void daNpc_Cb1_c::playAnm() {
         mAnmLoopCount = (s8)(mAnmLoopCount + 1);
         cb1_execute::AnmData &data =
             *gabi::at<cb1_execute::AnmData>(gabi::ea(&cbExec_anmTable) + (s8)mAnmTblIdx * 6);
-        s8 temp = data.field_0x04;
+        s8 temp = data.mLoopCount;
         if (fopAcM_GetParam(this) == 5 && temp == 0x18) { /* isTypeKazeBoss() */
             temp = 0xD;
         }
         if (mAnmLoopCount >= temp) {
-            if (data.field_0x05 == 0x13) {
+            if (data.mNextAnmTblIdx == 0x13) {
                 musicStop();
-            } else if (data.field_0x05 == 0x11) {
+            } else if (data.mNextAnmTblIdx == 0x11) {
                 musicPlay();
             }
-            initAnm(data.field_0x05, 1);
+            initAnm(data.mNextAnmTblIdx, 1);
         }
     }
     mPrevAnmFrame = mpMorf->getFrame();
@@ -553,7 +553,7 @@ void daNpc_Cb1_c::lookBack(BOOL param_1) {
     }
     if (param_1) {
         cXyz eye;
-        dNpc_playerEyePos(&eye, cb1_HIO().mNpc.m04);
+        dNpc_playerEyePos(&eye, cb1_HIO().mNpc.mPlayerEyeOffsetY);
         vec2 = eye;
         dstPos = &vec2;
         vec.x = current.pos.x;
@@ -613,7 +613,7 @@ BOOL daNpc_Cb1_c::walkAction(f32 targetSpeed, f32 accel, s16 targetAngle) {
 /* 02222EF4 */
 BOOL daNpc_Cb1_c::sowCheck() {
 
-    if (!cb1_event_runCheck() && !(m4E4 & 1) /* !isReturnLink() */) {
+    if (!cb1_event_runCheck() && !(mNpcFlags & 1) /* !isReturnLink() */) {
         u32 list = cb1_getActionBtnB(cb1_attention());
         /* HD: null check on the list's actor */
         fopAc_ac_c *actor;
@@ -781,7 +781,7 @@ BOOL daNpc_Cb1_c::waitNpcAction(void *param_1) {
             f32 dist_sq = fopAcM_searchActorDistance2(this, dComIfGp_getPlayer(0));
             if (!(mNoResetFlg1 & 2)) { /* !checkNpcCallCommand() */
                 if (cb1_isEventBit(0x1610) &&
-                    dist_sq < (f32)cb1_HIO().field_0xC0 * (f32)cb1_HIO().field_0xC0) {
+                    dist_sq < (f32)cb1_HIO().mNpcCallDist * (f32)cb1_HIO().mNpcCallDist) {
                     fopAc_ac_c *link = dComIfGp_getLinkPlayer();
                     gabi::at<daPy_py_l>(gabi::ea(link))->mNoResetFlg1 =
                         gabi::at<daPy_py_l>(gabi::ea(link))->mNoResetFlg1 | 2; /* onNpcCall() */
@@ -858,9 +858,9 @@ BOOL daNpc_Cb1_c::carryNpcAction(void *) {
             if (oldPlaySpeed != mpMorf->getPlaySpeed()) {
                 mpMorf->setMorf(4.0f);
             }
-            cLib_chaseF(&mCarryOffset.x, cb1_HIO().field_0x74, 1.0f);
-            cLib_chaseF(&mCarryOffset.y, cb1_HIO().field_0x78, 1.0f);
-            cLib_chaseF(&mCarryOffset.z, cb1_HIO().field_0x7C, 1.0f);
+            cLib_chaseF(&mCarryOffset.x, cb1_HIO().mCarryOffsetX, 1.0f);
+            cLib_chaseF(&mCarryOffset.y, cb1_HIO().mCarryOffsetY, 1.0f);
+            cLib_chaseF(&mCarryOffset.z, cb1_HIO().mCarryOffsetZ, 1.0f);
             cLib_chaseAngleS(&mCarryAngle, 0, 0x800);
             shape_angle.y = pPlayer->shape_angle.y + mCarryAngle;
         }
@@ -890,12 +890,12 @@ BOOL daNpc_Cb1_c::flyNpcAction(void *) {
         speed.y = cb1_HIO().mNpcFlyLaunchSpeedY;
         setAnm(4);
         cb1_m_flyingTimer() = cb1_HIO().mNpcFlyTimer;
-        mFlyHeight = (f32)(cb1_HIO().field_0xD8 + 1);
+        mFlyHeight = (f32)(cb1_HIO().mFlyAnmHeight + 1);
         cb1_monsSeStart(this, cb1_execute::JA_SE_CV_CB_THROW, 0);
     } else if (temp != -1) {
         flyAction(mFlyLiftCycle ? FALSE : TRUE, 0.0f, 0, FALSE);
         if (temp != 1) {
-            mFlyLiftCycle = (s8)((mFlyLiftCycle + 1) % cb1_HIO().field_0xDE);
+            mFlyLiftCycle = (s8)((mFlyLiftCycle + 1) % cb1_HIO().mFlyLiftPeriod);
         }
     }
     return TRUE;
@@ -930,9 +930,9 @@ static inline void cb1_flyAir(daNpc_Cb1_c *i_this, bool isMakarPlayer, f32 param
     i_this->mFallDist = 0.0f;
     cXyz temp;
     temp.x = 0.0f;
-    temp.y = gabi::fadds_ppc(temp3, hio.field_0xA0);
+    temp.y = gabi::fadds_ppc(temp3, hio.mFlyGravity);
     temp.z = 0.0f;
-    f32 temp5 = hio.field_0x9C;
+    f32 temp5 = hio.mFlyMaxSpeed;
     if (i_this->m8F2) {
         temp.x = gabi::fmuls_ppc(param_2, cM_ssin(param_3));
         temp.z = gabi::fmuls_ppc(param_2, cM_scos(param_3));
@@ -953,7 +953,7 @@ static inline void cb1_flyAir(daNpc_Cb1_c *i_this, bool isMakarPlayer, f32 param
         cXyz wind;
         gabi::Local<be<f32>> power;
         CbExec_allWindVector(&i_this->current.pos, (&wind), power.get()); /* dKyw_get_AllWind_vec */
-        *power = gabi::fmuls_ppc(*power, hio.field_0xB8);
+        *power = gabi::fmuls_ppc(*power, hio.mFlyWindScale);
         cXyz v;
         cXyz_ml(&wind, &v, *power);
         PSVECAdd(&temp, &v, &temp);
@@ -968,14 +968,14 @@ static inline void cb1_flyAir(daNpc_Cb1_c *i_this, bool isMakarPlayer, f32 param
     f32 mag = std_sqrtf(gabi::fmadds(temp.x, temp.x, temp.z * temp.z));
     f32 temp6_2 = (mag - temp5 >= 0.0f) ? temp5 : mag; /* cLib_maxLimit (fsel) */
     angle = angle - i_this->shape_angle.y;
-    f32 temp6 = temp6_2 * hio.field_0xA8;
+    f32 temp6 = temp6_2 * hio.mFlyTiltScale;
     if (temp6 > 14000.0f) {
         temp6 = 14000.0f;
     }
     s16 cs = (s16)gabi::ftoi(cM_scos(angle) * temp6);
     s16 sn = (s16)gabi::ftoi(-(cM_ssin(angle) * temp6));
-    cLib_chaseAngleS(&i_this->shape_angle.x, cs, hio.field_0xE0);
-    cLib_chaseAngleS(&i_this->shape_angle.z, sn, hio.field_0xE0);
+    cLib_chaseAngleS(&i_this->shape_angle.x, cs, hio.mFlyTiltStep);
+    cLib_chaseAngleS(&i_this->shape_angle.z, sn, hio.mFlyTiltStep);
     i_this->lookBack(0);
     PSVECAdd(&i_this->speed, &temp, &i_this->speed);
     gabi::Local<be<f32>> temp8;
@@ -1001,15 +1001,15 @@ BOOL daNpc_Cb1_c::flyAction(BOOL param_1, f32 param_2, s16 param_3, BOOL param_4
 
     cb1_execute::daNpc_Cb1_HIO_c &hio = cb1_HIO();
     bool isMakarPlayer = dComIfGp_getPlayer(0) == this;
-    f32 ySpeedLimit = hio.field_0x98;
-    f32 temp3 = gabi::fmuls_ppc((f32)(s16)mPropellerSpeed, hio.field_0x8C);
+    f32 ySpeedLimit = hio.mFlyMaxSpeedY;
+    f32 temp3 = gabi::fmuls_ppc((f32)(s16)mPropellerSpeed, hio.mPropellerLiftScale);
     BOOL temp4 = FALSE;
 
     if (mAcch.ChkGroundHit()) {
         breaking();
-        cLib_chaseAngleS(&shape_angle.x, 0, hio.field_0xE0);
-        cLib_chaseAngleS(&shape_angle.z, 0, hio.field_0xE0);
-        gravity = gabi::fadds_ppc(hio.field_0xA0, temp3);
+        cLib_chaseAngleS(&shape_angle.x, 0, hio.mFlyTiltStep);
+        cLib_chaseAngleS(&shape_angle.z, 0, hio.mFlyTiltStep);
+        gravity = gabi::fadds_ppc(hio.mFlyGravity, temp3);
     } else if (mActionStatus < 3) {
         cb1_flyAir(this, isMakarPlayer, param_2, param_3, temp3, ySpeedLimit, temp4);
         gravity = 0.0f;
@@ -1018,8 +1018,8 @@ BOOL daNpc_Cb1_c::flyAction(BOOL param_1, f32 param_2, s16 param_3, BOOL param_4
     if (mActionStatus == 1) {
         if (mAnmLooped) {
             if (!mAcch.ChkGroundHit()) {
-                mPropellerSpeed = hio.field_0xDA;
-                speed.y = gabi::fadds_ppc(speed.y, hio.field_0xB0);
+                mPropellerSpeed = hio.mPropellerOpenSpeed;
+                speed.y = gabi::fadds_ppc(speed.y, hio.mFlyOpenSpeedY);
                 setAnm(7);
             } else {
                 setAnm(5);
@@ -1043,33 +1043,33 @@ BOOL daNpc_Cb1_c::flyAction(BOOL param_1, f32 param_2, s16 param_3, BOOL param_4
             }
         }
     } else if (mActionStatus == 2) {
-        if (isMakarPlayer && (temp4 || cb1_m_flyingTimer() < hio.field_0xCE)) {
+        if (isMakarPlayer && (temp4 || cb1_m_flyingTimer() < hio.mFlyEndWarnTime)) {
             if (setAnm(0x15) && temp4) {
                 cb1_monsSeStart(this, cb1_execute::JA_SE_CV_CB_FLY_END, 0);
             }
-        } else if (mAnmTblIdx != 6 && mFlyHeight > (f32)(s16)hio.field_0xD8) {
+        } else if (mAnmTblIdx != 6 && mFlyHeight > (f32)(s16)hio.mFlyAnmHeight) {
             setAnm(7);
         }
         if (cb1_m_flyingTimer() != 0 && param_1) {
-            CbExec_chaseS(&mPropellerSpeed, (s16)hio.field_0xD0, (s16)hio.field_0xD4); /* cLib_chaseS */
+            CbExec_chaseS(&mPropellerSpeed, (s16)hio.mPropellerSpeedMax, (s16)hio.mPropellerAccel); /* cLib_chaseS */
             mLandIdleCount = 0;
         } else {
-            CbExec_chaseS(&mPropellerSpeed, mAcch.ChkGroundHit() ? (s16)hio.field_0xD2 : (s16)0,
-                          (s16)hio.field_0xD6);
+            CbExec_chaseS(&mPropellerSpeed, mAcch.ChkGroundHit() ? (s16)hio.mPropellerIdleSpeed : (s16)0,
+                          (s16)hio.mPropellerDecel);
         }
         mPropellerAngle = (s16)(mPropellerAngle + mPropellerSpeed);
         mFlyHeight = gabi::fadds_ppc(mFlyHeight, gabi::fsubs_ppc(current.pos.y, old.pos.y));
-        if (mFlyHeight > hio.field_0xA4) {
+        if (mFlyHeight > hio.mFlyDriftHeight) {
             m8F2 = 1;
         }
         cb1_seStart(this, cb1_execute::JA_SE_CM_PRAPELLO_ROLLING,
-                    cb1_ftou((f32)(s16)mPropellerSpeed * (100.0f / (f32)(s16)hio.field_0xD0)));
+                    cb1_ftou((f32)(s16)mPropellerSpeed * (100.0f / (f32)(s16)hio.mPropellerSpeedMax)));
         if (param_4 || (!isMakarPlayer && mAcch.ChkWallHit()) ||
             (!mAcch.ChkGroundHit() && mPropellerSpeed == 0) ||
-            (mAcch.ChkGroundHit() && mPropellerSpeed <= hio.field_0xD2 &&
+            (mAcch.ChkGroundHit() && mPropellerSpeed <= hio.mPropellerIdleSpeed &&
              (!(CbExec_stickValue(0) /* CPad_GET_STICK_VALUE(0), f1 unrounded */ <
-                (f64)hio.field_0x80) ||
-              /* bge: unordered taken */ (mLandIdleCount = (s16)(mLandIdleCount + 1)) > hio.field_0xCC))) {
+                (f64)hio.mStickTurnMin) ||
+              /* bge: unordered taken */ (mLandIdleCount = (s16)(mLandIdleCount + 1)) > hio.mLandIdleMax))) {
             setAnm(6);
             mpMorf->mFrameCtrl.mFrame = 8.0f; /* setFrame(8.0f) */
             mActionStatus = (s8)(mActionStatus + 1);
@@ -1077,7 +1077,7 @@ BOOL daNpc_Cb1_c::flyAction(BOOL param_1, f32 param_2, s16 param_3, BOOL param_4
         } else if (mAcch.ChkGroundHit() && mAnmTblIdx == 6) {
             setAnm(5);
         }
-        maxFallSpeed = hio.field_0x90;
+        maxFallSpeed = hio.mFlyMaxFallSpeed;
     } else {
         if (mAnmTblIdx == 4 && mAnmLooped) {
             setAnm(2);
@@ -1086,7 +1086,7 @@ BOOL daNpc_Cb1_c::flyAction(BOOL param_1, f32 param_2, s16 param_3, BOOL param_4
         if (mAcch.ChkGroundHit()) {
             if (mGroundHit == 0 && mActionStatus == 3) {
                 if (cb1_GetSpecialCode(cb1_gnd(this)) != 1) {
-                    speed.y = hio.field_0x64;
+                    speed.y = hio.mFlyLandSpeedY;
                     checkLanding();
                 }
                 mActionStatus = (s8)(mActionStatus + 1);
@@ -1131,7 +1131,7 @@ BOOL daNpc_Cb1_c::eventProc() {
             gabi::at<dEvt_control_c>(evt)->mPtTalk = CbExec_convActor(evt, link);
             CbExec_controlSound(0x886); /* mDoAud_seStart(JA_SE_CTRL_NPC_TO_LINK) */
         }
-        m4E4 = m4E4 | 2; /* onEventAccept() */
+        mNpcFlags = mNpcFlags | 2; /* onEventAccept() */
         mOrderEvent = -1;
     }
 
@@ -1162,13 +1162,13 @@ BOOL daNpc_Cb1_c::eventProc() {
             mNpcAction.i = 0;
             mNpcAction.f = 0;
         }
-        if (m4E4 & 2) { /* isEventAccept() */
+        if (mNpcFlags & 2) { /* isEventAccept() */
             if (dComIfGp_evmng_endCheck(mEventIdx[(s8)mOrderedEvent])) {
                 dComIfGp_event_reset();
-                m4E4 = m4E4 & ~2u; /* offEventAccept() */
+                mNpcFlags = mNpcFlags & ~2u; /* offEventAccept() */
                 if (mOrderedEvent == 1) {
                     returnLinkPlayer();
-                    m4E4 = m4E4 & ~1u; /* offReturnLink() */
+                    mNpcFlags = mNpcFlags & ~1u; /* offReturnLink() */
                 }
                 mOrderedEvent = -1;
             }
@@ -1234,9 +1234,9 @@ static inline BOOL cb1_execRoom(daNpc_Cb1_c *i_this) {
 /* inlined into 0222091C */
 static inline void cb1_execFallCheck(daNpc_Cb1_c *i_this) {
     if (i_this->isFlyAction() && i_this->mFlyHeight > -400.0f) {
-        i_this->m4E8 = 0;
-    } else if (i_this->m4E8 < 0x1E) {
-        i_this->m4E8 = (u8)(i_this->m4E8 + 1);
+        i_this->mFallTimer = 0;
+    } else if (i_this->mFallTimer < 0x1E) {
+        i_this->mFallTimer = (u8)(i_this->mFallTimer + 1);
     } else {
         bool reset = cb1_pmfIs(&i_this->mNpcAction,
                                cb1_execute::HD_fallResetNpcAction); /* HD: an extra NPC action
@@ -1262,7 +1262,7 @@ static inline void cb1_execFallCheck(daNpc_Cb1_c *i_this) {
             i_this->shape_angle.y = i_this->home.angle.y;
             currentWords->angleXY = homeWords->angleXY;
             i_this->speedF = 0.0f;
-            i_this->m4E8 = 0;
+            i_this->mFallTimer = 0;
             currentWords->y = homeWords->y;
             cb1_seStart(i_this, cb1_execute::JA_SE_CV_CB_LEFT_ALONE, 0);
             /* HD: back to the wait action */
@@ -1328,7 +1328,7 @@ static inline void cb1_execDamage(daNpc_Cb1_c *i_this, u32 pmf, bool player) {
         cXyz temp;
         cXyz_mi(&i_this->current.pos, &temp, i_this->mCyl.GetTgHitPosP() /* GetTgHitPosP() */);
         i_this->current.angle.y = cM_atan2s(temp.x, temp.z);
-        i_this->speedF = cb1_HIO().field_0xC4;
+        i_this->speedF = cb1_HIO().mDamageSpeedF;
         ProcFunc_l fn;
         md_pmf_load(&fn, pmf);
         if (player) {
@@ -1364,14 +1364,14 @@ BOOL daNpc_Cb1_c::execute() {
 
     if (!(actor_status & 0x2000) && !(cb1_m_status() & daCbStts_SHIP_RIDE)) {
         if (CbExec_checkNowPosMove(this, gabi::guest_str("Cb1")) /* checkNowPosMove("Cb1") */ &&
-            !(m4E4 & 1)) {
+            !(mNpcFlags & 1)) {
             f32 temp4 = current.pos.y;
             fopAcM_posMoveF(this, &mStts.m_cc_move /* mStts.GetCCMoveP() */);
             mFallDist = gabi::fadds_ppc(mFallDist, gabi::fsubs_ppc(temp4, current.pos.y));
             current.pos.x = gabi::fadds_ppc(current.pos.x, mSlideSpeed.x);
             current.pos.z = gabi::fadds_ppc(current.pos.z, mSlideSpeed.z);
             maxFallSpeed = -100.0f;
-            gravity = hio.field_0x70;
+            gravity = hio.mGravity;
         }
         mGroundHit = mAcch.ChkGroundHit();
         mAcch.CrrPos(dComIfG_Bgsp());
@@ -1380,7 +1380,7 @@ BOOL daNpc_Cb1_c::execute() {
             CbExec_getGroundCode(dComIfG_Bgsp(), cb1_gnd(this)) == 4 /* GetGroundCode */) {
             cb1_execFallCheck(this);
         } else {
-            m4E8 = 0;
+            mFallTimer = 0;
         }
         if (mAcch.m_ground_h != -1000000000.0f) {
             cb1_execGround(this, &temp2, temp3);
@@ -1430,7 +1430,7 @@ BOOL daNpc_Cb1_c::execute() {
             }
             actor_status =
                 (actor_status & ~0x3Fu) | 0x32; /* fopAcM_SetStatusMap(this, 0x12) (HD 0x32) */
-            if (m4E4 & 1) {                     /* isReturnLink() */
+            if (mNpcFlags & 1) {                     /* isReturnLink() */
                 mOrderEvent = 1;
             } else {
                 if (cb1_m_status() & daCbStts_NO_CARRY_ACTION) {
@@ -1439,14 +1439,14 @@ BOOL daNpc_Cb1_c::execute() {
                         &fn,
                         gabi::ea(&cbExec_carryPlayerAction)); /* &daNpc_Cb1_c::carryPlayerAction */
                     setPlayerAction(&fn, nullptr);
-                    m4E4 = m4E4 | 1; /* returnLink() */
+                    mNpcFlags = mNpcFlags | 1; /* returnLink() */
                 }
                 if (!cb1_event_runCheck() &&
                     (u8) reinterpret_cast<dComIfG_inf_c *>(dComIfGp_get())->play.mRStatusForce ==
                         7 &&
                     !cb1_event_runCheck() &&
                     CbExec_trigROrStart(0) /* CPad_CHECK_TRIG_R(0) || CPad_CHECK_TRIG_START(0) */) {
-                    m4E4 = m4E4 | 1; /* returnLink() */
+                    mNpcFlags = mNpcFlags | 1; /* returnLink() */
                 }
                 playerAction(nullptr);
                 cb1_execDamage(this, gabi::ea(&cbExec_hitPlayerAction), true);

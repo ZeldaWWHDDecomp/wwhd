@@ -35,7 +35,7 @@ public:
     /* 0x08 */ gptr<J3DModel> mpModel;
     /* 0x0C */ gptr<mDoExt_brkAnm> mpBrkAnm;
     /* 0x10 */ be<u8> mAnmIdx;
-    /* 0x11 */ be<u8> m11;
+    /* 0x11 */ be<u8> mUseMode;  /* was m11: dDoor_hkyo_construct 0252C0BC clears it; resLoad / proc 0252C574 and the other methods act only while it is not 0, proc picks the animation by it (1, 4, ...) (tww chkUse / onUse(arg) / offUse) */
     /* 0x12 */ u8 _12[2];
     s32 resLoad();
     void resDelete();
@@ -51,7 +51,7 @@ public:
 WWHD_OFFSET(dDoor_hkyo_c, mpModel, 8);
 WWHD_OFFSET(dDoor_hkyo_c, mpBrkAnm, 0xC);
 WWHD_OFFSET(dDoor_hkyo_c, mAnmIdx, 0x10);
-WWHD_OFFSET(dDoor_hkyo_c, m11, 0x11);
+WWHD_OFFSET(dDoor_hkyo_c, mUseMode, 0x11);
 WWHD_SIZE(dDoor_hkyo_c, 0x14);
 
 // HD: archive stream and embedded fixed buffer; no GameCube equivalent.

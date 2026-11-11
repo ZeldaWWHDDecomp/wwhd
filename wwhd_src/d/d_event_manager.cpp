@@ -656,7 +656,7 @@ u32 event_manager::dEvent_manager_c::getToolId(s32 id, s32 target) {
     if ((match == 255 && remaining == 0) ||
         (match != 255 && match == u32(target)))
       return u32(id);
-    id = (u8)view<dStage_Event_dt_c>(entry)->field_0x0;
+    id = (u8)view<dStage_Event_dt_c>(entry)->mNextEventNo;
     if (id == 255)
       return 255;
     --remaining;

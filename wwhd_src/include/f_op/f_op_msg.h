@@ -14,7 +14,7 @@ struct msg_class : leafdraw_class {
     /* 0xE0 */ gptr<fopAc_ac_c> mpActor;
     /* 0xE4 */ union { cXyz mPos; position_words mPosWords; };
     /* 0xF0 */ be<u32> mMsgNo;
-    /* 0xF4 */ be<u32> field_0xf0;
+    /* 0xF4 */ be<u32> mStartMsgNo;  /* was field_0xf0: fopMsg_Create 025DB150 copies it from the request (mStartMsgNo); after tww: fopMsgM_messageSet sets it with mMsgNo, d_msg resets mMsgNo to it when B cancels */
     /* 0xF8 */ be<u32> field_0xf4;
     /* 0xFC */ be<u16> mStatus;
     /* 0xFE */ be<u8> mSelectNum;
@@ -33,7 +33,7 @@ struct fopMsg_prm_class {
     /* 0x00 */ gptr<fopAc_ac_c> mpActor;
     /* 0x04 */ union { cXyz mPos; position_words mPosWords; };
     /* 0x10 */ be<u32> mMsgNo;
-    /* 0x14 */ be<u32> field_0x14;
+    /* 0x14 */ be<u32> mStartMsgNo;  /* was field_0x14: fopMsg_Create 025DB150 copies it into msg_class::mStartMsgNo; after tww: fopMsgM_messageTypeSelect passes the message number for it (createAppend p4) */
     /* 0x18 */ be<u32> field_0x18;
 };
 WWHD_SIZE(fopMsg_prm_class, 0x1C);

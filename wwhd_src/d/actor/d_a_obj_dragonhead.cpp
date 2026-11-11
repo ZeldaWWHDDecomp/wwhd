@@ -65,18 +65,18 @@ void Act_c::CreateInit() {
   fopAcM_SetMtx(this, mpModel->getBaseTRMtx());
   fopAcM_setCullSizeFar(this, 1.0f);
   set_mtx();
-  field_0x40c=0;
+  mBgRegistered=0;
   s8 room=home.roomNo;
   u32 switchNo=(mParameters >> 8) & 255;
   if (dComIfGs_isSwitch(switchNo, room)) {
     mAlpha=0;
     mSwitchOn=1;
   } else {
-    u8 registered=field_0x40c;
+    u8 registered=mBgRegistered;
     mSwitchOn=0;
     mAlpha=255;
     if (!registered && !dComIfG_Bgsp()->Regist(mpBgW,this))
-      field_0x40c=1;
+      mBgRegistered=1;
   }
   mStts.Init(255,255,this);
   mSph.Set(&sph_check_src);
@@ -109,7 +109,7 @@ s32 Create(Act_c* actor) {
 }
 /* 02337CAC */
 BOOL Delete(Act_c* actor) {
-  if (actor->heap && actor->field_0x40c)
+  if (actor->heap && actor->mBgRegistered)
     dComIfG_Bgsp()->Release(actor->mpBgW);
   mDoAud_seDeleteObject(&actor->mSphCenter);
   dComIfG_resDelete(&actor->mPhs,M_arcname);
@@ -176,20 +176,20 @@ BOOL Execute(Act_c* actor) {
   u32 parameters=actor->mParameters;
   s8 room=actor->home.roomNo;
   if (dComIfGs_isSwitch((parameters >> 8) & 255,room)) {
-    if (actor->field_0x40c) {
+    if (actor->mBgRegistered) {
       s32 ret=dComIfG_Bgsp()->Release(actor->mpBgW);
       s8 soundRoom=actor->current.roomNo;
-      if (!ret) actor->field_0x40c=0;
+      if (!ret) actor->mBgRegistered=0;
       s32 reverb=dComIfGp_getReverb(soundRoom);
       mDoAud_seStart(JA_SE_OBJ_ICEVERG_MELT,&actor->eyePos,0,reverb);
     }
     u8 alpha=actor->mAlpha;
     if (alpha) actor->mAlpha=alpha >= 2 ? alpha-2 : 0;
   } else {
-    u8 registered=actor->field_0x40c;
+    u8 registered=actor->mBgRegistered;
     actor->mSwitchOn=0;
     if (!registered && !dComIfG_Bgsp()->Regist(actor->mpBgW,actor))
-      actor->field_0x40c=1;
+      actor->mBgRegistered=1;
     u8 alpha=actor->mAlpha;
     if (alpha < 255) actor->mAlpha=alpha <= 253 ? alpha+2 : 255;
   }

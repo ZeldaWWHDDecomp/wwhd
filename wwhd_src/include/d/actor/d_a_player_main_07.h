@@ -311,13 +311,13 @@ WWHD_OFFSET(MatrixModel, mpMtxBuffer, 0x2C);
 // HD: the blur object is separately allocated; the GC point arrays follow a larger header.
 struct SwordBlur {
     /* 0x000 */ u8 mWork[0x9C];
-    /* 0x09C */ be<s32> field_0x014;
+    /* 0x09C */ be<s32> mSegmentNum;  /* was field_0x014: view of daPy_swBlur_c::mSegmentNum (d_a_player_main_04_item.h) */
     /* 0x0A0 */ u8 mPointWork[0x1C];
-    /* 0x0BC */ cXyz field_0x034[60];
+    /* 0x0BC */ cXyz mTopPos[60];  /* was field_0x034: view of daPy_swBlur_c::mTopPos (d_a_player_main_04_item.h) */
 };
 WWHD_SIZE(SwordBlur, 0x38C);
-WWHD_OFFSET(SwordBlur, field_0x014, 0x9C);
-WWHD_OFFSET(SwordBlur, field_0x034, 0xBC);
+WWHD_OFFSET(SwordBlur, mSegmentNum, 0x9C);
+WWHD_OFFSET(SwordBlur, mTopPos, 0xBC);
 struct HammerGuards {
     be<u32> mSmokeInitialized;
     be<u32> mScaleInitialized;
@@ -395,22 +395,22 @@ WWHD_OFFSET(BlendCalc, mpModel, 0x80);
 struct SwimTailCallback {
     /* 0x00 */ be<u32> __vtbl;
     /* 0x04 */ be<u8> mbEnd;
-    /* 0x05 */ be<u8> field_0x05;
+    /* 0x05 */ be<u8> mRightFlg;  /* was field_0x05: view of daPy_swimTailEcallBack_c::mRightFlg (d_a_player_main_04b.h) */
     /* 0x06 */ u8 mPadding[2];
     /* 0x08 */ be<f32> mSpeedRate;
     /* 0x0C */ be<f32> mWaterY;
     /* 0x10 */ be<f32> mWaterFlatY;
     /* 0x14 */ cXyz mPos;
-    /* 0x20 */ gptr<const csXyz> field_0x20;
+    /* 0x20 */ gptr<const csXyz> mpAngle;  /* was field_0x20: view of daPy_swimTailEcallBack_c::mpAngle (d_a_player_main_04b.h) */
     /* 0x24 */ gptr<void> mpEmitter;
     void onEnd() {
         mbEnd = 1;
-        field_0x20 = nullptr;
+        mpAngle = nullptr;
     }
 };
 WWHD_SIZE(SwimTailCallback, 0x28);
 WWHD_OFFSET(SwimTailCallback, mbEnd, 4);
-WWHD_OFFSET(SwimTailCallback, field_0x20, 0x20);
+WWHD_OFFSET(SwimTailCallback, mpAngle, 0x20);
 WWHD_OFFSET(SwimTailCallback, mpEmitter, 0x24);
 struct TailState {
     /* 0x00 */ be<u32> mSwimTalkBlocked;
@@ -688,7 +688,7 @@ struct FrameBlendObject {
 };
 WWHD_SIZE(FrameBlendObject, 0x58);
 inline FrameBlendObject& frameBlend(daPy_lk_c* player, int part) {
-    return *gabi::at<FrameBlendObject>(gabi::ea(player->m644) + part * sizeof(FrameBlendObject));
+    return *gabi::at<FrameBlendObject>(gabi::ea(player->mTexAnmCtrl) + part * sizeof(FrameBlendObject));
 }
 struct AnimationVtable {
     /* 0x00 */ u8 mSlots[0x14];

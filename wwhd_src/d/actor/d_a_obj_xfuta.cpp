@@ -16,7 +16,7 @@ static s32 tev_mode[14] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 91, 92, 93, 94};
 /* 023BBF28 */
 bool Act_c::create_heap() {
     J3DModelData* mdl_data = (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_X_FUTA_BDL_X_FUTA_e);
-    JUT_ASSERT(0x105, mdl_data != NULL);
+    JUT_ASSERT_MSG(0x105, mdl_data != NULL, "mdl_data != 0");
     mpModel = mDoExt_J3DModel__create(mdl_data, 0, 0x11000002);
     return mdl_data != NULL && mpModel != NULL;
 }
@@ -118,7 +118,7 @@ static BOOL Mthd_IsDelete(void*) { return TRUE; }
 /* WWHD glue (tools/verify/autoglue.py): translation-unit data
 str 10033910 # "X_futa"
 str 100338E0 # "d_a_obj_xfuta.cpp"
-str 100338F4 "mdl_data != NULL" renamed # HD: assertion prints null as 0
+str 100338F4 "mdl_data != 0" # HD: assertion prints null as 0
 data l_demoMode 101D6010
 data tev_mode 101CDEB0
 ext 023BBF28 u32 Xfuta_create_heap_result(Act_c*)

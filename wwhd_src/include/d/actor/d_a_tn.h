@@ -70,26 +70,26 @@ WWHD_SIZE(tn_enemyfire, 0x22C);
 struct tn_p {
     /* 0x00 */ gptr<J3DModel> mpPartModel;
     /* 0x04 */ gptr<mDoExt_brkAnm> mpPartBrkAnm;
-    /* 0x08 */ be<s8> m08;
-    /* 0x09 */ be<s8> m09;
+    /* 0x08 */ be<s8> mPartState;  /* was m08: part_move 024BC3EC: 0 follows the body joint, 1 coming loose (set when the actor's part-break bits ask for it), 5 flying, -1 broken (yoroi_break); part_draw 024BA0F0 skips the part below 0 (tww the same) */
+    /* 0x09 */ be<s8> mbDetached;  /* was m09: part_move 024BC3EC: 0 takes the body joint's matrix, 1 (set when the part comes off) builds the matrix from mPos and mAngle (tww the same) */
     /* 0x0A */ u8 _0A[2];
-    /* 0x0C */ cXyz m0C;
-    /* 0x18 */ cXyz m18;
-    /* 0x24 */ cXyz m24;
-    /* 0x30 */ csXyz m30;
-    /* 0x36 */ csXyz m36;
+    /* 0x0C */ cXyz mPos;  /* was m0C: part_move 024BC3EC: the part's position, taken from the body joint while attached; tn_moveFlyingPart (inline of part_move) adds mSpeed each frame; yoroi_break's effect position (tww the same) */
+    /* 0x18 */ cXyz mOldPos;  /* was m18: tn_moveFlyingPart (inline of part_move 024BC3EC): mPos before this frame's step, restored on a wall hit and used for the motion vector (tww the same) */
+    /* 0x24 */ cXyz mSpeed;  /* was m24: tn_moveFlyingPart (inline of part_move 024BC3EC): added to mPos each frame, y minus 5 per frame (gravity), bounced and damped on the ground (tww the same) */
+    /* 0x30 */ csXyz mAngle;  /* was m30: part_move 024BC3EC: the flying part's rotation (Y, X, Z rotM) and its start angle; tn_moveFlyingPart adds mAngleSpeed (tww the same) */
+    /* 0x36 */ csXyz mAngleSpeed;  /* was m36: tn_moveFlyingPart (inline of part_move 024BC3EC): added to mAngle each frame; random on launch and bounce, 0 when the part settles (tww the same) */
     /* 0x3C */ u8 _3C[6];
     /* 0x42 */ be<s16> m42;
-    /* 0x44 */ be<s8> m44;
+    /* 0x44 */ be<s8> mTimer;  /* was m44: part_move 024BC3EC counts it down each frame: the delay before a loose part flies, then 30 / 20 frames until it breaks at 1 (tww the same) */
     /* 0x45 */ u8 _45[7];
 };
-WWHD_OFFSET(tn_p, m0C, 0x0C);
-WWHD_OFFSET(tn_p, m18, 0x18);
-WWHD_OFFSET(tn_p, m24, 0x24);
-WWHD_OFFSET(tn_p, m30, 0x30);
-WWHD_OFFSET(tn_p, m36, 0x36);
+WWHD_OFFSET(tn_p, mPos, 0x0C);
+WWHD_OFFSET(tn_p, mOldPos, 0x18);
+WWHD_OFFSET(tn_p, mSpeed, 0x24);
+WWHD_OFFSET(tn_p, mAngle, 0x30);
+WWHD_OFFSET(tn_p, mAngleSpeed, 0x36);
 WWHD_OFFSET(tn_p, m42, 0x42);
-WWHD_OFFSET(tn_p, m44, 0x44);
+WWHD_OFFSET(tn_p, mTimer, 0x44);
 WWHD_SIZE(tn_p, 0x4C);
 
 using tn_enemyice = enemyice;
@@ -177,7 +177,7 @@ struct tn_class : fopEn_enemy_c {
     /* 0x04F0 */ be<u32> mFrameCount;  /* was m03D8: executePrefix (in daTn_Execute 024BD170) adds 1 every frame; tn_combatDefensiveReaction (in Tn_move 024C3E64) and yogan_fail 024C2BEC act only every 4th frame (& 3) */
     /* 0x04F4 */ u8 _04F4[4];
     /* 0x04F8 */ be<s16> mCountDownTimers[5];
-    /* 0x0502 */ be<s16> mWeponRunTimer;  /* was m03EA: wepon_search 024C1A3C sets l_tnHIO.m082 when the Darknut starts running to a dropped weapon and gives up (mWeponSearchGaveUp) when it reaches 0; counted down by executePrefix (in daTn_Execute 024BD170) */
+    /* 0x0502 */ be<s16> mWeponRunTimer;  /* was m03EA: wepon_search 024C1A3C sets l_tnHIO.mWeponRunTime when the Darknut starts running to a dropped weapon and gives up (mWeponSearchGaveUp) when it reaches 0; counted down by executePrefix (in daTn_Execute 024BD170) */
     /* 0x0504 */ be<s16> mAnmLock;  /* was m03EC: anm_init 024B91E4, tate_anm_init 024B931C and yoroi_anm_init 024B93E8 return at once while it is set, and tn_moveCombat (in Tn_move 024C3E64) skips the turn toward mTargetAngle; nothing sets it (same in tww d217e2b) */
     /* 0x0506 */ be<s16> mWeponTurnWait;  /* was m03EE: wepon_search 024C1A3C sets 5 and turns toward the weapon only once it is 0; counted down in updateDemoCameraAndSmoke (in daTn_Execute 024BD170) */
     /* 0x0508 */ be<s16> mNoDamageTimer;  /* was m03F0: prepareDamage (in daTn_Execute 024BD170) returns at once while it runs and sets REG0_S(7) + 5 after a hit; applyArmoredHit sets 20; updateCollisionShapes moves the head sphere away while it runs; counted down by executePrefix */
@@ -198,7 +198,7 @@ struct tn_class : fopEn_enemy_c {
     /* 0x0538 */ cXyz mSmokePos;  /* was m041C: updateDemoCameraAndSmoke (in daTn_Execute 024BD170) puts it on the smoke ring around the body (MtxPosition) or 25000 above mSpawnY when idle; smoke_set_s 024B94C0 drops it to the ground and emits the smoke there */
     /* 0x0544 */ csXyz mEffectAngle;  /* was m0428: updateDemoCameraAndSmoke (in daTn_Execute 024BD170) sets y = mSmokeAngle for the ground smoke; updateCollisionShapes sets y = angle.y for particle 0x0E at mHeadPos; updateDamageAnimation / updateKnockback set x (-0x4000 / 0) */
     /* 0x054A */ be<s16> mSmokeAngle;  /* was m042E: tn_attackAnimation (in Tn_move 024C3E64) seeds it from the heading; updateDemoCameraAndSmoke (in daTn_Execute 024BD170) rotates mSmokePos by it and adds a step each frame */
-    /* 0x054C */ be<s16> mGroundSmokeTimer;  /* was m0430: tn_attackAnimation (in Tn_move 024C3E64) and updateDamageAnimation (in daTn_Execute 024BD170) set it (l_tnHIO.m020 + 16 ...); updateDemoCameraAndSmoke emits ground smoke while it counts down; applyIceOrShatter clears it */
+    /* 0x054C */ be<s16> mGroundSmokeTimer;  /* was m0430: tn_attackAnimation (in Tn_move 024C3E64) and updateDamageAnimation (in daTn_Execute 024BD170) set it (l_tnHIO.mGroundSmokeEnd + 16 ...); updateDemoCameraAndSmoke emits ground smoke while it counts down; applyIceOrShatter clears it */
     /* 0x054E */ be<u8> mGroundSmokeType;  /* was m0432: tn_attackAnimation (in Tn_move 024C3E64) sets 0 (attack ring, radius 200), updateDamageAnimation (in daTn_Execute 024BD170) 1 (fall, radius 55); updateDemoCameraAndSmoke picks the smoke ring by it */
     /* 0x054F */ be<u8> mSmokeCount;  /* was m0433: smoke_set_s 024B94C0 counts the smoke puffs (the first one differs); updateDemoCameraAndSmoke (in daTn_Execute 024BD170) clears it when the ground smoke ends */
     /* 0x0550 */ dPa_smokeEcallBack mSmokeCb1;
@@ -333,46 +333,46 @@ struct tnHIO_c {
     be<u32> __vtbl;
     /* 0x004 */ be<s8> mNo;
     /* 0x005 */ be<u8> m005;
-    /* 0x006 */ be<u8> m006;
-    /* 0x007 */ be<u8> m007;
+    /* 0x006 */ be<u8> mPadStep;  /* was m006: written only by the HIO constructor tn_staticInit 024C161C (0); read only in tww daTn_Execute: while it is not 0 the Darknut's frame (timers and move) runs only on a pad B trigger or Y hold (frame-step debugging) */
+    /* 0x007 */ be<u8> mDebugHealth;  /* was m007: written only by the HIO constructor tn_staticInit 024C161C (0); read only in tww damage_check: after a hit 1 sets health 10, 2 sets health 0 */
     /* 0x008 */ be<u8> m008;
     /* 0x009 */ u8 m009[0x00A - 0x009];
     /* 0x00A */ be<s16> m00A;
     /* 0x00C */ be<f32> m00C;
     /* 0x010 */ u8 m010[0x014 - 0x010];
     /* 0x014 */ be<f32> m014;
-    /* 0x018 */ be<f32> m018;
+    /* 0x018 */ be<f32> mDropOffsetY;  /* was m018: fail 024C2AAC: the fopAcM_createDisappear drop point is current.pos.y + it + 100; set only by the HIO constructor (tn_staticInit 024C161C), never written in WWHD or tww */
     /* 0x01C */ be<s16> m01C;
-    /* 0x01E */ be<s16> m01E;
-    /* 0x020 */ be<s16> m020;
+    /* 0x01E */ be<s16> mSmokeAlpha;  /* was m01E: smoke_set_s 024B94C0: alpha of the ground-smoke particle 0x2022; set only by the HIO constructor (tn_staticInit 024C161C), never written in WWHD or tww */
+    /* 0x020 */ be<s16> mGroundSmokeEnd;  /* was m020: tn_attackAnimation (in Tn_move 024C3E64) / updateDamageAnimation (in daTn_Execute 024BD170) load mGroundSmokeTimer with it + 14 / + 16; updateDemoCameraAndSmoke (in daTn_Execute) sets the smoke only while the timer is still >= it; set only by the HIO constructor (tn_staticInit 024C161C), never written in WWHD or tww */
     /* 0x022 */ u8 m022[0x024 - 0x022];
-    /* 0x024 */ be<f32> m024;
-    /* 0x028 */ be<f32> m028;
-    /* 0x02C */ be<f32> m02C;
-    /* 0x030 */ be<f32> m030;
-    /* 0x034 */ be<s16> m034;
-    /* 0x036 */ be<s16> m036;
-    /* 0x038 */ be<f32> m038;
-    /* 0x03C */ be<f32> m03C;
-    /* 0x040 */ be<f32> m040;
-    /* 0x044 */ be<f32> m044;
-    /* 0x048 */ be<f32> m048;
-    /* 0x04C */ be<f32> m04C;
-    /* 0x050 */ be<f32> m050;
-    /* 0x054 */ be<f32> m054;
-    /* 0x058 */ be<f32> m058;
-    /* 0x05C */ be<f32> m05C;
-    /* 0x060 */ be<f32> m060;
+    /* 0x024 */ be<f32> mAttentionOffsetY;  /* was m024: nodeCallBack 024B97A0: attention_info.position.y = eyePos.y + it; set only by the HIO constructor (tn_staticInit 024C161C), never written in WWHD or tww */
+    /* 0x028 */ be<f32> mNoticeRange;  /* was m028: tn_movePatrol (in Tn_move 024C3E64): the patrol checks the player view only while mPlayerDistance < it; set only by the HIO constructor (tn_staticInit 024C161C), never written in WWHD or tww */
+    /* 0x02C */ be<f32> mFightRange;  /* was m02C: tn_combatLocomotion / tn_combatRangeTransition / tn_finishAttack (in Tn_move 024C3E64), hukki 024C25F8: within it the fight run goes to the fight stance (mode 2), beyond it + 75 the Darknut runs again; set only by the HIO constructor (tn_staticInit 024C161C), never written in WWHD or tww */
+    /* 0x030 */ be<f32> mAttackRange;  /* was m030: tn_combatLocomotion / tn_combatRangeTransition / tn_attackCircle (in Tn_move 024C3E64): an attack starts at mPlayerDistance < it (and within it +- 62.5 / 25); set only by the HIO constructor (tn_staticInit 024C161C), never written in WWHD or tww */
+    /* 0x034 */ be<s16> mViewAngle;  /* was m034: get_view_H 024BAA68: the view half-angle for daTn_player_view_check / search_wepon without the helmet; set only by the HIO constructor (tn_staticInit 024C161C), never written in WWHD or tww */
+    /* 0x036 */ be<s16> mViewAngleHelmet;  /* was m036: get_view_H 024BAA68: the view half-angle while the helmet is on (EQUIPMENT_PIECE_HELMET); set only by the HIO constructor (tn_staticInit 024C161C), never written in WWHD or tww */
+    /* 0x038 */ be<f32> mViewHeight;  /* was m038: daTn_player_view_check 024BB404, search_wepon 024BAFAC: no sight when the height difference to the target is more than it; set only by the HIO constructor (tn_staticInit 024C161C), never written in WWHD or tww */
+    /* 0x03C */ be<f32> mViewBoxX;  /* was m03C: daTn_player_view_check 024BB404, search_wepon 024BAFAC: sight box, |local x| < it; set only by the HIO constructor (tn_staticInit 024C161C), never written in WWHD or tww */
+    /* 0x040 */ be<f32> mViewBoxY;  /* was m040: daTn_player_view_check 024BB404, search_wepon 024BAFAC: sight box, |local y| < it; set only by the HIO constructor (tn_staticInit 024C161C), never written in WWHD or tww */
+    /* 0x044 */ be<f32> mViewBoxFront;  /* was m044: daTn_player_view_check 024BB404, search_wepon 024BAFAC, search_bomb 024BAB8C: sight box, local z < it; set only by the HIO constructor (tn_staticInit 024C161C), never written in WWHD or tww */
+    /* 0x048 */ be<f32> mViewBoxBack;  /* was m048: daTn_player_view_check 024BB404, search_wepon 024BAFAC, search_bomb 024BAB8C: sight box, local z > it (-125); set only by the HIO constructor (tn_staticInit 024C161C), never written in WWHD or tww */
+    /* 0x04C */ be<f32> mPathWalkSpeed;  /* was m04C: tn_patrolLocomotion (in Tn_move 024C3E64): patrol speed along the path; tn_combatLocomotion: * 1.5 is the fight-run speed with the body armor; set only by the HIO constructor (tn_staticInit 024C161C), never written in WWHD or tww */
+    /* 0x050 */ be<f32> mWalkSpeed;  /* was m050: tn_patrolLocomotion (in Tn_move 024C3E64): patrol speed without a path; set only by the HIO constructor (tn_staticInit 024C161C), never written in WWHD or tww */
+    /* 0x054 */ be<f32> mRunSpeed;  /* was m054: tn_combatLocomotion (in Tn_move 024C3E64): fight-run speed without the body armor; tn_moveReturnHome: run speed back home; set only by the HIO constructor (tn_staticInit 024C161C), never written in WWHD or tww */
+    /* 0x058 */ be<f32> mWeponRunSpeed;  /* was m058: wepon_search 024C1A3C: speed while running to the dropped weapon; b_nige 024C1ED4: speed while fleeing a bomb; set only by the HIO constructor (tn_staticInit 024C161C), never written in WWHD or tww */
+    /* 0x05C */ be<f32> mFightStepSpeed;  /* was m05C: tn_combatLocomotion / tn_attackCircle (in Tn_move 024C3E64): speedF target (+ / -) of the fight-stance steps forward / back; set only by the HIO constructor (tn_staticInit 024C161C), never written in WWHD or tww */
+    /* 0x060 */ be<f32> mSideStepSpeed;  /* was m060: tn_combatLocomotion / tn_attackCircle (in Tn_move 024C3E64): speedF target of the side steps (mSideStepAngle 0x4000 / 0xC000); set only by the HIO constructor (tn_staticInit 024C161C), never written in WWHD or tww */
     /* 0x064 */ be<f32> m064;
     /* 0x068 */ be<f32> m068;
-    /* 0x06C */ be<s16> m06C;
+    /* 0x06C */ be<s16> mAttackCheckDelay;  /* was m06C: tn_combatRangeTransition (in Tn_move 024C3E64): mCountDownTimers[3] reload after each attack roll; set only by the HIO constructor (tn_staticInit 024C161C), never written in WWHD or tww */
     /* 0x06E */ u8 m06E[0x070 - 0x06E];
-    /* 0x070 */ be<f32> m070;
+    /* 0x070 */ be<f32> mAttackChance;  /* was m070: tn_combatRangeTransition (in Tn_move 024C3E64): the attack starts only when cM_rndF(100) < it; set only by the HIO constructor (tn_staticInit 024C161C), never written in WWHD or tww */
     /* 0x074 */ be<f32> m074;
-    /* 0x078 */ be<f32> m078;
-    /* 0x07C */ be<f32> m07C;
-    /* 0x080 */ be<s16> m080;
-    /* 0x082 */ be<s16> m082;
+    /* 0x078 */ be<f32> mVerticalCutChance;  /* was m078: tn_chooseAttack (in Tn_move 024C3E64): with the weapon, cM_rndF(100) < it picks the vertical cut (YAT_TATE1, mAttackType 0), else the side cut (YAT_YOKO1, 1); set only by the HIO constructor (tn_staticInit 024C161C), never written in WWHD or tww */
+    /* 0x07C */ be<f32> mPalmStrikeChance;  /* was m07C: tn_chooseAttack (in Tn_move 024C3E64): without the weapon, cM_rndF(100) < it (or the body armor on) picks the palm strike BAT_SYOUTEI_S1 (mAttackType 2); set only by the HIO constructor (tn_staticInit 024C161C), never written in WWHD or tww */
+    /* 0x080 */ be<s16> mDownRecoverDelay;  /* was m080: updateDamageAnimation (in daTn_Execute 024BD170): mDamageReaction.mDownTimers[2] (the recovery delay) for the reactions 20 / 21; set only by the HIO constructor (tn_staticInit 024C161C), never written in WWHD or tww */
+    /* 0x082 */ be<s16> mWeponRunTime;  /* was m082: wepon_search 024C1A3C: mWeponRunTimer at the start of the run to the dropped weapon; set only by the HIO constructor (tn_staticInit 024C161C), never written in WWHD or tww */
     /* 0x084 */ be<f32> m084;
     /* 0x088 */ be<f32> m088;
     /* 0x08C */ be<f32> m08C;
@@ -395,12 +395,12 @@ struct tnHIO_c {
     /* 0x0CA */ be<s16> m0CA;
     /* 0x0CC */ be<s16> m0CC;
     /* 0x0CE */ be<s16> m0CE;
-    /* 0x0D0 */ be<f32> m0D0;
-    /* 0x0D4 */ be<f32> m0D4;
+    /* 0x0D0 */ be<f32> mWeakHitPushback;  /* was m0D0: updateKnockback (in daTn_Execute 024BD170): mDamageReaction.mPushback = -it for a hit with mKnockbackPower < 25; set only by the HIO constructor (tn_staticInit 024C161C), never written in WWHD or tww */
+    /* 0x0D4 */ be<f32> mWeponHitMaxDis;  /* was m0D4: tn_attackAnimation (in Tn_move 024C3E64): copied to mBtMaxDis for every attack; set only by the HIO constructor (tn_staticInit 024C161C), never written in WWHD or tww */
     u8 mJntHitHIO[0x2C];
 };
 WWHD_SIZE(tnHIO_c, 0x104);
-WWHD_OFFSET(tnHIO_c, m024, 0x24);
+WWHD_OFFSET(tnHIO_c, mAttentionOffsetY, 0x24);
 
 // HD: these entry points keep the exact result/register widths used by this TU.
 inline f32 tn_sqrtf(f32 value) {
@@ -916,10 +916,10 @@ inline void tn_assureTermination(SafeString* string) {
 struct TnPlayer : fopAc_ac_c {
     /* 0x3AC */ be<u8> mCutType;
     u8 _3AD[0x3CC - 0x3AD];
-    /* 0x3CC */ be<f32> field_0x2b0;
+    /* 0x3CC */ be<f32> mGrabItemOffsetY;  /* was field_0x2b0: view of daPy_py_c::mGrabItemOffsetY (d_a_player.h) */
 };
 WWHD_OFFSET(TnPlayer, mCutType, 0x3AC);
-WWHD_OFFSET(TnPlayer, field_0x2b0, 0x3CC);
+WWHD_OFFSET(TnPlayer, mGrabItemOffsetY, 0x3CC);
 WWHD_SIZE(TnPlayer, 0x3D0);
 
 // Embedded shape attribute vtables inside dCcD_Cyl::mShapeAttr.
@@ -952,7 +952,7 @@ struct TnBoko : fopAc_ac_c {
     u8 _3AC[8];
     /* 0x3B4 */ gptr<J3DModel> mpModel;
     u8 _3B8[0x43A - 0x3B8];
-    /* 0x43A */ be<s16> m2C2;
+    /* 0x43A */ be<s16> mRotAngleSpeed;  /* was m2C2: view of daBoko_c 0x43A (d_a_boko.h mRotAngleSpeed): updateHeldWeapon (in daTn_Execute 024BD170) sets the random spin cM_rndFX(2000) when the Darknut drops its weapon */
     u8 _43C[0xA34 - 0x43C];
 };
 WWHD_SIZE(TnBoko, 0xA34);
@@ -964,7 +964,7 @@ WWHD_OFFSET(TnMantle, mWindTimer, 0x365A);
 WWHD_OFFSET(TnMantle, mMeshHitOn, 0x4280);
 WWHD_OFFSET(TnMantle, mHitWait, 0x4282);
 WWHD_OFFSET(TnBoko, mpModel, 0x3B4);
-WWHD_OFFSET(TnBoko, m2C2, 0x43A);
+WWHD_OFFSET(TnBoko, mRotAngleSpeed, 0x43A);
 WWHD_OFFSET(TnEmitterColors, mGlobalParticleWidthScale, 0x238);
 
 struct TnSpinColor { be<u8> r, g, b, a; };

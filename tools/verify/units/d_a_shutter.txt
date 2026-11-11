@@ -18,11 +18,11 @@ ret 02542EDC -1,0,1,2,3,4      # getMyActIdx
 ret 0207A9A0 0,1               # calcTimer
 fret 0200ECD4 0 1              # addCalc remaining distance (0 = arrived, drawn often)
 field * r3+0x451 u8 0,1        # mType
-field * r3+0x43C i32 0,1,2,3   # field_0x320
+field * r3+0x43C i32 0,1,2,3   # mEventOrder
 field * r3+0x452 u8 0,1        # mbIsSwitch
 field * r3+0x453 i8 -1,0,1     # mFrameTimer
-field * r3+0x455 u8 0,1        # field_0x339
-field * r3+0x456 u8 0,74,75    # field_0x33A
+field * r3+0x455 u8 0,1        # mActionStarted
+field * r3+0x456 u8 0,74,75    # mOpenFrame
 field * r3+0xF8 u16 0,1,2,3    # eventInfo.mCommand
 field * r3+0x44C i16 0,1,5     # mOpenEventIdx
 field * r3+0x44E i16 0,1,5     # mCloseEventIdx

@@ -22,11 +22,11 @@ void Act_c::set_mtx() {
 /* 0238847C */
 bool Act_c::create_heap() {
     J3DModelData* mdl_data = (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_STPTETU_BDL_STPTETU_e);
-    JUT_ASSERT(0x57, mdl_data != NULL);
+    JUT_ASSERT_MSG(0x57, mdl_data != NULL, "mdl_data != 0");
     mpModel = mDoExt_J3DModel__create(mdl_data, 0, 0x11000002);
     set_mtx();
     cBgD_t* bgw_data = (cBgD_t*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_STPTETU_DZB_STPTETU_e);
-    JUT_ASSERT(0x64, bgw_data != NULL);
+    JUT_ASSERT_MSG(0x64, bgw_data != NULL, "bgw_data != 0");
     if (bgw_data != NULL) {
         mpBgw = (RforceBgW*)new_dBgW();
         if (mpBgw != NULL && mpBgw->Set(bgw_data, dBgW::MOVE_BG_e, &mtx)) {
@@ -129,7 +129,7 @@ static BOOL Mthd_IsDelete(void*) {
 /* WWHD glue (tools/verify/autoglue.py): translation-unit data
 str 1002EDD8 # "StpTetu"
 str 1002EDB8 # "d_a_obj_rforce.cpp"
-str 1002ED98 "mdl_data != NULL" renamed # HD: assertion prints null as 0
-str 1002EDA8 "bgw_data != NULL" renamed # HD: assertion prints null as 0
+str 1002ED98 "mdl_data != 0" # HD: assertion prints null as 0
+str 1002EDA8 "bgw_data != 0" # HD: assertion prints null as 0
 ext 0238847C u32 Rforce_create_heap_result(Act_c*)
 */

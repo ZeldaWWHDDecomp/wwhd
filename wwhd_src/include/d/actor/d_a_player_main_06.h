@@ -360,10 +360,10 @@ WWHD_OFFSET(PlayerMoveCalcObject, mFlags, 0x50);
 WWHD_SIZE(PlayerMoveCalcObject, 0x54);
 struct PlayerMoveFoot {
     u8 beforePoint[0x18];
-    cXyz field_0x018;
+    cXyz mToePos;  /* was field_0x018: view of daPy_footData_c::mToePos (evidence in d_a_player_main_01.h) */
     u8 afterPoint[0x118-0x24];
 };
-WWHD_OFFSET(PlayerMoveFoot, field_0x018, 0x18);
+WWHD_OFFSET(PlayerMoveFoot, mToePos, 0x18);
 WWHD_SIZE(PlayerMoveFoot, 0x118);
 struct PlayerMoveSwBlur {
     u8 beforeBuffer[0xAC];

@@ -1,6 +1,7 @@
 /** Salvage registration and distance tracking, WWHD. */
 #include "d/d_salvage.h"
 #include "gc_api/d/d_com_inf_game.h"
+#include "sead/ElementAt.h"
 
 s32 isCompleteCollectMap(dSv_player_map_c*, u32);
 s32 isOceanSvBit(dSv_ocean_c*, u32, u32);
@@ -8,11 +9,16 @@ s32 dKy_moon_type_chk();
 f32 squareMagnitudeGuest(const cXyz*);
 f32 sqrtMagnitudeGuest(f32);
 static salvage_layout::SaveLabels m_savelabel;
+// Guest EA arithmetic: mInfo + no * sizeof(dSalvage_info_c) wraps at 32 bits as on the console (a host index from a
+// NULL or garbage control object reached host addresses past 4 GB).
+static inline dSalvage_info_c& salvageInfo(dSalvage_info_c* info, s32 no) {
+    return sead::elementAt<dSalvage_info_c>(gabi::ea(info), u32(no));
+}
 
 /* 025B44A0 */
 void dSalvage_control_c::entry(fopAc_ac_c* pact, JPABaseEmitter* emtr) {
     if (pact == nullptr)
-        JUT_ASSERT_fail("d_salvage.cpp", 139, "pact != NULL");
+        JUT_ASSERT_fail("d_salvage.cpp", 139, "pact != (0)");
     s32 roomNo = pact->current.roomNo;
     u32 params = pact->mParameters;
     u32 switchNo = (u16)pact->home.angle.z & 255;
@@ -100,7 +106,7 @@ void dSalvage_control_c::entry(fopAc_ac_c* pact, JPABaseEmitter* emtr) {
 }
 
 /* 025B48BC */
-s32 dSalvage_control_c::checkRegist(s32 no) { return mInfo[no].mRoomNo != -1; }
+s32 dSalvage_control_c::checkRegist(s32 no) { return salvageInfo(mInfo, no).mRoomNo != -1; }
 
 /* 025B48DC */
 void dSalvage_control_c::calcDistanceXZ() {
@@ -119,11 +125,11 @@ void dSalvage_control_c::calcDistanceXZ() {
 }
 
 /* 025B4998 */
-void dSalvage_control_c::setPos(s32 no, cXyz* pos) { mInfo[no].mPos = *pos; }
+void dSalvage_control_c::setPos(s32 no, cXyz* pos) { salvageInfo(mInfo, no).mPos = *pos; }
 /* 025B49BC */
-void dSalvage_control_c::setNowAlpha(s32 no, u32 value) { mInfo[no].mNowAlpha = value; }
+void dSalvage_control_c::setNowAlpha(s32 no, u32 value) { salvageInfo(mInfo, no).mNowAlpha = value; }
 /* 025B49CC */
-void dSalvage_control_c::setDrawMode(s32 no, s32 value) { mInfo[no].mDrawMode = value; }
+void dSalvage_control_c::setDrawMode(s32 no, s32 value) { salvageInfo(mInfo, no).mDrawMode = value; }
 /* 025B49DC */
 void dSalvage_control_c::init() {
     for (s32 i = 0; i < MAX_TOTAL; ++i) {
@@ -135,21 +141,21 @@ void dSalvage_control_c::init() {
 }
 /* 025B4A10 */
 void dSalvage_control_c::init_one_sub(s32 no) {
-    salvage_layout::Emitter* emtr = reinterpret_cast<salvage_layout::Emitter*>(mInfo[no].mEmtr.get());
+    salvage_layout::Emitter* emtr = reinterpret_cast<salvage_layout::Emitter*>(salvageInfo(mInfo, no).mEmtr.get());
     if (emtr != nullptr) {
         u32 status = emtr->mStatus;
         emtr->mMaxFrame = -1;
         emtr->mStatus = status | 1;
     }
-    mInfo[no].mRoomNo = -1;
-    mInfo[no].mPos = *cXyz_Zero;
-    mInfo[no].mScale = *cXyz_Zero;
-    mInfo[no].mSaveNo = 0;
-    mInfo[no].mItemNo = 0;
-    mInfo[no].mFlag = 0;
-    mInfo[no].mSwitchNo = 0;
-    mInfo[no].mType = 0;
-    mInfo[no].mEmtr = nullptr;
+    salvageInfo(mInfo, no).mRoomNo = -1;
+    salvageInfo(mInfo, no).mPos = *cXyz_Zero;
+    salvageInfo(mInfo, no).mScale = *cXyz_Zero;
+    salvageInfo(mInfo, no).mSaveNo = 0;
+    salvageInfo(mInfo, no).mItemNo = 0;
+    salvageInfo(mInfo, no).mFlag = 0;
+    salvageInfo(mInfo, no).mSwitchNo = 0;
+    salvageInfo(mInfo, no).mType = 0;
+    salvageInfo(mInfo, no).mEmtr = nullptr;
 }
 /* 025B4A98 */
 void dSalvage_control_c::init_end() {
@@ -173,9 +179,9 @@ void dSalvage_control_c::init_one(s32 no) {
         mSeaNum = mSeaNum - 1;
 }
 /* 025B4B4C */
-void dSalvage_control_c::setFlag(s32 no, u32 flag) { mInfo[no].mFlag = mInfo[no].mFlag | flag; }
+void dSalvage_control_c::setFlag(s32 no, u32 flag) { salvageInfo(mInfo, no).mFlag = salvageInfo(mInfo, no).mFlag | flag; }
 /* 025B4B64 */
-void dSalvage_control_c::clrFlag(s32 no, u32 flag) { mInfo[no].mFlag = mInfo[no].mFlag & ~flag; }
+void dSalvage_control_c::clrFlag(s32 no, u32 flag) { salvageInfo(mInfo, no).mFlag = salvageInfo(mInfo, no).mFlag & ~flag; }
 
 // HD: these two guest ABI adapters retain GHS hidden result storage, null allocation and float copies.
 /* 025B4B7C */
@@ -184,50 +190,50 @@ void* getPosGuest(dSalvage_control_c* self, void* out, s32 no) {
         out = operator_new(12);
     if (out != nullptr) {
         cXyz* result = static_cast<cXyz*>(out);
-        result->x = self->mInfo[no].mPos.x;
-        result->y = self->mInfo[no].mPos.y;
-        result->z = self->mInfo[no].mPos.z;
+        result->x = salvageInfo(self->mInfo, no).mPos.x;
+        result->y = salvageInfo(self->mInfo, no).mPos.y;
+        result->z = salvageInfo(self->mInfo, no).mPos.z;
     }
     return out;
 }
 /* 025B4BE0 */
-cXyz* dSalvage_control_c::getPosP(s32 no) { return &mInfo[no].mPos; }
+cXyz* dSalvage_control_c::getPosP(s32 no) { return &salvageInfo(mInfo, no).mPos; }
 /* 025B4BF0 */
 void getScaleGuest(dSalvage_control_c* self, void* out, s32 no) {
     if (out == nullptr)
         out = operator_new(12);
     if (out != nullptr) {
         cXyz* result = static_cast<cXyz*>(out);
-        result->x = self->mInfo[no].mScale.x;
-        result->y = self->mInfo[no].mScale.y;
-        result->z = self->mInfo[no].mScale.z;
+        result->x = salvageInfo(self->mInfo, no).mScale.x;
+        result->y = salvageInfo(self->mInfo, no).mScale.y;
+        result->z = salvageInfo(self->mInfo, no).mScale.z;
     }
 }
 /* 025B4C54 */
-f32 dSalvage_control_c::getR(s32 no) { return mInfo[no].mR; }
+f32 dSalvage_control_c::getR(s32 no) { return salvageInfo(mInfo, no).mR; }
 /* 025B4C64 */
-f32 dSalvage_control_c::getH(s32 no) { return mInfo[no].mH; }
+f32 dSalvage_control_c::getH(s32 no) { return salvageInfo(mInfo, no).mH; }
 /* 025B4C74 */
-s8 dSalvage_control_c::getRoomNo(s32 no) { return mInfo[no].mRoomNo; }
+s8 dSalvage_control_c::getRoomNo(s32 no) { return salvageInfo(mInfo, no).mRoomNo; }
 /* 025B4C88 */
-u8 dSalvage_control_c::getItemNo(s32 no) { return mInfo[no].mItemNo; }
+u8 dSalvage_control_c::getItemNo(s32 no) { return salvageInfo(mInfo, no).mItemNo; }
 /* 025B4C98 */
-s32 dSalvage_control_c::getSwitchNo(s32 no) { return mInfo[no].mSwitchNo; }
+s32 dSalvage_control_c::getSwitchNo(s32 no) { return salvageInfo(mInfo, no).mSwitchNo; }
 /* 025B4CA8 */
-u8 dSalvage_control_c::getSaveNo(s32 no) { return mInfo[no].mSaveNo; }
+u8 dSalvage_control_c::getSaveNo(s32 no) { return salvageInfo(mInfo, no).mSaveNo; }
 /* 025B4CB8 */
-u8 dSalvage_control_c::getType(s32 no) { return mInfo[no].mType; }
+u8 dSalvage_control_c::getType(s32 no) { return salvageInfo(mInfo, no).mType; }
 /* 025B4CC8 */
-u8 dSalvage_control_c::getKind(s32 no) { return mInfo[no].mKind; }
+u8 dSalvage_control_c::getKind(s32 no) { return salvageInfo(mInfo, no).mKind; }
 // HD: like GameCube, getDrawMode reads the alpha byte rather than mDrawMode.
 /* 025B4CEC */
-s32 dSalvage_control_c::getDrawMode(s32 no) { return mInfo[no].mNowAlpha; }
+s32 dSalvage_control_c::getDrawMode(s32 no) { return salvageInfo(mInfo, no).mNowAlpha; }
 /* 025B4CFC */
-f32 dSalvage_control_c::getDistance(s32 no) { return mInfo[no].mDistance; }
+f32 dSalvage_control_c::getDistance(s32 no) { return salvageInfo(mInfo, no).mDistance; }
 /* 025B4CD8 */
-void* dSalvage_control_c::getAlphaPtr(s32 no) { return &mInfo[no].mNowAlpha; }
+void* dSalvage_control_c::getAlphaPtr(s32 no) { return &salvageInfo(mInfo, no).mNowAlpha; }
 /* 025B4D0C */
-s32 dSalvage_control_c::checkUsed(s32 no) { return !(mInfo[no].mFlag & 1); }
+s32 dSalvage_control_c::checkUsed(s32 no) { return !(salvageInfo(mInfo, no).mFlag & 1); }
 
 // HD: compiler-generated header statics of this translation unit.
 /* 025B4D2C */
@@ -235,7 +241,7 @@ void __sinit_d_salvage_cpp() { sinit_header_statics(0x1047C8E4, 0x101EAD7C); }
 
 /* WWHD glue
 str 100535F0
-str 100535E4 "pact != NULL"
+str 100535E4 "pact != (0)"
 ext 025B8228 s32 isCompleteCollectMap(dSv_player_map_c*, u32)
 ext 025B8A50 s32 isOceanSvBit(dSv_ocean_c*, u32, u32)
 ext 02560828 s32 dKy_moon_type_chk()

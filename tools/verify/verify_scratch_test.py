@@ -87,8 +87,10 @@ def main():
         if "WWHD_VERIFY_SCRATCH" in err:
             fails.append("scratch run printed a note: %s" % err[-300:])
 
+        # --no-nulltrap: verify_all runs -nulltrap by default since 2026-11-03; this check compares its rows with the plain
+        # verify.py reference run above (the scratch handling is what is tested here, not the zero-page rule)
         r = subprocess.run([sys.executable, os.path.join(HERE, "verify_all.py"), UNIT, "-n", "200", "-seed", "3", "-j", "1",
-                            "--clean"], cwd=ROOT, capture_output=True, text=True, env=env(WWHD_VERIFY_SCRATCH=S))
+                            "--clean", "--no-nulltrap"], cwd=ROOT, capture_output=True, text=True, env=env(WWHD_VERIFY_SCRATCH=S))
         log = os.path.join(BUILD, "verify_all.log")
         if r.returncode or not os.path.exists(log) or rows(open(log).read()) != ref:
             fails.append("verify_all --clean: rc %d, log %s: %s" % (r.returncode, os.path.exists(log), (r.stdout + r.stderr)[-300:]))

@@ -190,11 +190,11 @@ void daNpc_Btsw2_c::playTexPatternAnm() {
 
 /* 0221D410 */
 void daNpc_Btsw2_c::setAnm(s8 animation) {
-    s8 current = m745;
+    s8 current = mAnmIdx;
     if (animation == current || current == -1)
         return;
-    s8 mode = m747;
-    m745 = animation;
+    s8 mode = mMode;
+    mAnmIdx = animation;
     u32 animationOffset = u32(s32(animation)) * 4;
     u32 modeOffset = u32(s32(mode)) * 4;
     u32 morf = gabi::ea(mpMorf.get());
@@ -203,7 +203,7 @@ void daNpc_Btsw2_c::setAnm(s8 animation) {
     f32 speed = a_play_speed_tbl[(s32)modeOffset / 4];
     s32 loop = a_play_mode_tbl[(s32)modeOffset / 4];
     dNpc_setAnm(gabi::at<mDoExt_McaMorf>(morf), loop, morph, speed, resource, -1, "Btsw");
-    current = m745;
+    current = mAnmIdx;
     m_jnt.mbHeadLock = current == 7 || current == 8;
 }
 
@@ -235,9 +235,9 @@ bool daNpc_Btsw2_c::chkAttention(cXyz* position, s16 facing) {
 
 /* 0221CFFC */
 void daNpc_Btsw2_c::eventOrder() {
-    s8 state = m746;
+    s8 state = mOrderEvent;
     if (state == 1 || state == 2) {
-        s8 orderedState = m746;
+        s8 orderedState = mOrderEvent;
         u16 condition = eventInfo.mCondition;
         eventInfo.mCondition = condition | dEvtCmd_INTALK_e;
         if (orderedState == 1)
@@ -250,10 +250,10 @@ void daNpc_Btsw2_c::checkOrder() {
     // HD: only the talk command is tested here.
     if (eventInfo.mCommand != dEvtCmd_INTALK_e)
         return;
-    s8 state = m746;
+    s8 state = mOrderEvent;
     if (state == 1 || state == 2) {
-        m746 = 0;
-        m71E = 1;
+        mOrderEvent = 0;
+        mTalking = 1;
     }
 }
 
@@ -267,7 +267,7 @@ void daNpc_Btsw2_c::anmAtr(u16 messageStatus) {
     s16 end = gabi::at<mDoExt_McaMorf>(morf)->mFrameCtrl.mEnd;
     f32 frame = f32(end) - 1.0f;
     if (gabi::at<mDoExt_McaMorf>(morf)->checkFrame(frame)) {
-        s8 animation = m745;
+        s8 animation = mAnmIdx;
         if (animation == 4 || animation == 6)
             setAnm(1);
     }
@@ -305,7 +305,7 @@ void daNpc_Btsw2_c::lookBack() {
     f32 zero = l_zero;
     f32 x = zero, y = zero, z = zero;
     int headOnly = 1;
-    s8 mode = m747;
+    s8 mode = mMode;
     s16 facing = current.angle.y;
     gabi::Local<cXyz> eye;
     cXyz* target = nullptr;
@@ -317,7 +317,7 @@ void daNpc_Btsw2_c::lookBack() {
             attention = mHasAttention;
             if (!attention) {
                 gabi::Local<cXyz> playerEye;
-                f32 offset = l_HIO.mNpc.m04;
+                f32 offset = l_HIO.mNpc.mPlayerEyeOffsetY;
                 Btsw2PlayerEye(playerEye.get(), offset);
                 eye->copy(*playerEye.get());
                 s16 desired = cLib_targetAngleY(&current.pos, eye.get());
@@ -328,7 +328,7 @@ void daNpc_Btsw2_c::lookBack() {
             attention = mHasAttention;
         if (attention) {
             gabi::Local<cXyz> playerEye;
-            f32 offset = l_HIO.mNpc.m04;
+            f32 offset = l_HIO.mNpc.mPlayerEyeOffsetY;
             Btsw2PlayerEye(playerEye.get(), offset);
             y = eyePos.y;
             eye->copy(*playerEye.get());
@@ -384,7 +384,7 @@ BOOL daNpc_Btsw2_c::CreateHeap() {
     mpTirasiModel = static_cast<J3DModel*>(flyer);
     if (!flyer)
         return FALSE;
-    m744 = 0;
+    mBtpIdx = 0;
     if (!initTexPatternAnm(false))
         return FALSE;
     u32 currentMorf = gabi::ea(mpMorf.get());
@@ -459,18 +459,18 @@ BOOL daNpc_Btsw2_c::CreateInit() {
     mpPath = path;
     if (!path) {
         // HD: assertion text names this field m_move_path.
-        JUT_ASSERT_fail("d_a_npc_btsw2.cpp", 0x2DE, "mpPath != NULL");
+        JUT_ASSERT_fail("d_a_npc_btsw2.cpp", 0x2DE, "m_move_path != (0)");
         path = mpPath.get();
     }
     u16 count = static_cast<Btsw2Path*>(path)->m_num;
     mFinalPathPntIdx = s16(count - 1);
     f32 random = cM_rndF(3.0f);
-    m73E = s16(gabi::ftoi(gabi::fadds_ppc(random, 1.0f)));
+    mStopPointCount = s16(gabi::ftoi(gabi::fadds_ppc(random, 1.0f)));
     random = cM_rndF(300.0f);
     f32 timer = gabi::fadds_ppc(random, 90.0f);
     m735 = 0;
-    m736 = 0;
-    m742 = s16(gabi::ftoi(timer));
+    mbTurnToPath = 0;
+    mWaitTimer = s16(gabi::ftoi(timer));
     mPathPntIdx = 0;
     mEventCut.setActorInfo2("Btsw2", this);
     attention_info.distances[fopAc_Attn_TYPE_TALK_e] = 0xAB;
@@ -480,40 +480,40 @@ BOOL daNpc_Btsw2_c::CreateInit() {
 
 /* 0221DC90 */
 void daNpc_Btsw2_c::wait01() {
-    if (m71E)
-        m747 = 2;
+    if (mTalking)
+        mMode = 2;
     else
-        m746 = 2;
+        mOrderEvent = 2;
 }
 
 /* 0221DCB4 */
 void daNpc_Btsw2_c::talk01() {
     if (talk(1) != fopMsgStts_BOX_CLOSED_e)
         return;
-    m747 = 1;
+    mMode = 1;
     u32 play = dComIfGp_ea();
     u16 flags = gabi::at<dComIfG_inf_c>(play)->play.mEvtCtrl.mEventFlag;
     gabi::at<dComIfG_inf_c>(play)->play.mEvtCtrl.mEventFlag = flags | 8;
-    s16 waitTimer = m742;
-    m71E = 0;
+    s16 waitTimer = mWaitTimer;
+    mTalking = 0;
     if (waitTimer == 0)
-        m736 = 1;
+        mbTurnToPath = 1;
     setAnm(0);
 }
 
 /* 0221D72C */
 void daNpc_Btsw2_c::pathMove() {
-    s16 timer = m742;
+    s16 timer = mWaitTimer;
     f32 one = l_one;
     if (timer > 0) {
         timer = s16(timer - 1);
-        m742 = timer;
+        mWaitTimer = timer;
         if (timer == 0) {
             setAnm(7);
             f32 random = cM_rndF(3.0f);
-            m73E = s16(gabi::ftoi(gabi::fadds_ppc(random, one)));
+            mStopPointCount = s16(gabi::ftoi(gabi::fadds_ppc(random, one)));
         }
-        if (s8(m745) == 8) {
+        if (s8(mAnmIdx) == 8) {
             u32 morf = gabi::ea(mpMorf.get());
             s16 end = gabi::at<mDoExt_McaMorf>(morf)->mFrameCtrl.mEnd;
             if (gabi::at<mDoExt_McaMorf>(morf)->checkFrame(gabi::fsubs_ppc(f32(end), one)))
@@ -535,12 +535,12 @@ void daNpc_Btsw2_c::pathMove() {
     destination->y = y;
     destination->z = z;
     s16 desired = cLib_targetAngleY(&current.pos, destination.get());
-    s16 maxStep = l_HIO.m30;
-    s16 divisor = l_HIO.m32;
+    s16 maxStep = l_HIO.mPathTurnMaxStep;
+    s16 divisor = l_HIO.mPathTurnScale;
     cLib_addCalcAngleS2(&current.angle.y, desired, divisor, maxStep);
     gabi::Local<cXyz> direction;
     cXyz_mi(destination.get(), direction.get(), &current.pos);
-    f32 baseSpeed = l_HIO.m34;
+    f32 baseSpeed = l_HIO.mWalkSpeed;
     speedF = baseSpeed;
     BOOL normalized = Btsw2NormalizeRS(direction.get());
     f32 zero = l_zero;
@@ -554,17 +554,17 @@ void daNpc_Btsw2_c::pathMove() {
         forward->x = sine;
         forward->z = cosine;
         f32 dot = PSVECDotProduct(direction.get(), forward.get());
-        f32 acceleration = l_HIO.m38;
+        f32 acceleration = l_HIO.mWalkDirSpeedRate;
         f32 speed = speedF;
         speedF = gabi::fmadds(acceleration, dot, speed);
     }
-    if (m736) {
+    if (mbTurnToPath) {
         s16 facing = current.angle.y;
         speedF = zero;
         s16 delta = Btsw2DistanceAngle(facing, desired);
         cLib_addCalcAngleS2(&current.angle.y, desired, 4, 0x1800);
         if (delta < 0x10) {
-            m736 = 0;
+            mbTurnToPath = 0;
             setAnm(7);
         }
     }
@@ -582,19 +582,19 @@ void daNpc_Btsw2_c::pathMove() {
     f32 distance = std_sqrtf(square);
     if (!(distance < 10.0f))
         return;
-    timer = m73E;
+    timer = mStopPointCount;
     mPathPntIdx = nextPoint;
     if (timer > 0) {
-        m73E = s16(timer - 1);
+        mStopPointCount = s16(timer - 1);
         return;
     }
     f32 random = cM_rndF(one);
     s8 animation = random < 0.5f ? 0 : 8;
     setAnm(animation);
-    s16 randomRange = l_HIO.m3E;
+    s16 randomRange = l_HIO.mWaitTimeRange;
     random = cM_rndF(f32(randomRange));
-    s16 randomBase = l_HIO.m3C;
-    m742 = s16(gabi::ftoi(gabi::fadds_ppc(random, f32(randomBase))));
+    s16 randomBase = l_HIO.mWaitTimeBase;
+    mWaitTimer = s16(gabi::ftoi(gabi::fadds_ppc(random, f32(randomBase))));
 }
 
 /* 0221DD2C */
@@ -602,7 +602,7 @@ BOOL daNpc_Btsw2_c::wait_action(void* argument) {
     s8 status = mActionStatus;
     if (status == ACTION_STARTING) {
         u8 current = u8(mActionStatus);
-        m747 = 1;
+        mMode = 1;
         mActionStatus = s8(u8(current + 1));
         return TRUE;
     }
@@ -620,9 +620,9 @@ BOOL daNpc_Btsw2_c::wait_action(void* argument) {
     position->z = z;
     // HD: retain the guest call and its full verified u8 return width.
     u8 attention = Btsw2CallChkAttention(this, position.get(), s16(u16(facing) + u16(neck) + u16(head)));
-    s8 mode = m747;
+    s8 mode = mMode;
     mHasAttention = attention;
-    m746 = 0;
+    mOrderEvent = 0;
     if (mode == 1) {
         wait01();
         // HD: GHS keeps r3 across the void wait01 leaf.
@@ -819,22 +819,22 @@ void* daNpc_Btsw2_HIO_construct(void* object) {
     f32 attentionHeight = l_attentionHeight;
     gabi::at<daNpc_Btsw2_HIO_c>(a)->mNpc.mMaxTurnStep = 1000;
     gabi::at<daNpc_Btsw2_HIO_c>(a)->mNpc.mMaxHeadY = 8000;
-    gabi::at<daNpc_Btsw2_HIO_c>(a)->mNpc.m22 = 0;
+    gabi::at<daNpc_Btsw2_HIO_c>(a)->mNpc.mDebugDraw = 0;
     gabi::at<daNpc_Btsw2_HIO_c>(a)->mNpc.mMinHeadY = -8000;
     gabi::at<daNpc_Btsw2_HIO_c>(a)->mNpc.mAttnYOffset = attentionHeight;
-    gabi::at<daNpc_Btsw2_HIO_c>(a)->m34 = speed;
+    gabi::at<daNpc_Btsw2_HIO_c>(a)->mWalkSpeed = speed;
     f32 attentionDistance = l_attentionDistance;
     gabi::at<daNpc_Btsw2_HIO_c>(a)->mNpc.mMinHeadX = -3000;
-    gabi::at<daNpc_Btsw2_HIO_c>(a)->m32 = 5;
-    gabi::at<daNpc_Btsw2_HIO_c>(a)->m38 = damping;
-    gabi::at<daNpc_Btsw2_HIO_c>(a)->mNpc.m04 = zero;
+    gabi::at<daNpc_Btsw2_HIO_c>(a)->mPathTurnScale = 5;
+    gabi::at<daNpc_Btsw2_HIO_c>(a)->mWalkDirSpeedRate = damping;
+    gabi::at<daNpc_Btsw2_HIO_c>(a)->mNpc.mPlayerEyeOffsetY = zero;
     gabi::at<daNpc_Btsw2_HIO_c>(a)->mNpc.mMaxBackboneY = 8000;
     gabi::at<daNpc_Btsw2_HIO_c>(a)->mNpc.mMaxAttnDistXZ = attentionDistance;
-    gabi::at<daNpc_Btsw2_HIO_c>(a)->m3E = 90;
-    gabi::at<daNpc_Btsw2_HIO_c>(a)->m30 = 600;
+    gabi::at<daNpc_Btsw2_HIO_c>(a)->mWaitTimeRange = 90;
+    gabi::at<daNpc_Btsw2_HIO_c>(a)->mPathTurnMaxStep = 600;
     gabi::at<daNpc_Btsw2_HIO_c>(a)->mNpc.mMaxAttnAngleY = 0x2000;
     gabi::at<daNpc_Btsw2_HIO_c>(a)->mNpc.mMaxHeadTurnVel = 1600;
-    gabi::at<daNpc_Btsw2_HIO_c>(a)->m3C = 90;
+    gabi::at<daNpc_Btsw2_HIO_c>(a)->mWaitTimeBase = 90;
     gabi::at<daNpc_Btsw2_HIO_c>(a)->mNpc.mMinBackboneY = -8000;
     gabi::at<daNpc_Btsw2_HIO_c>(a)->mNpc.mMaxHeadX = 8000;
     return object;
@@ -891,7 +891,7 @@ str 10018A98 "m_btp != (0)"
 str 10018AE0 "modelData != (0)"
 str 10018AF4 "m_jnt.getHeadJntNum() >= 0"
 str 10018B1C "m_jnt.getBackboneJntNum() >= 0"
-str 10018B70 "mpPath != NULL" renamed
+str 10018B70 "m_move_path != (0)"
 str 10018B54 "Btsw2"
 str 10018ABC "head"
 str 10018B10 "backbone"

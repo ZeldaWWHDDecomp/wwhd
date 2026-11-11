@@ -50,7 +50,7 @@ static BOOL CheckCreateHeap(fopAc_ac_c* i_this) {
 /* 024840DC */
 BOOL daShutter_c::CreateHeap() {
     J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes(m_arcname[mType], m_bdlidx[mType]);
-    JUT_ASSERT(289, modelData != NULL);
+    JUT_ASSERT_MSG(289, modelData != NULL, "modelData != (0)");
 
     for (int i = 0; i < 2; i++) {
         mpModel[i] = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000022);
@@ -159,19 +159,19 @@ void daShutter_c::shutter_move() {
     switch ((u32)actionIndex) {
     case ACT_WAIT:
         mTimer = 0xf;
-        field_0x33A = 0;
+        mOpenFrame = 0;
         dComIfGp_evmng_cutEnd(mStaffId);
         break;
     case ACT_WAIT02:
         if (shutter_calcTimer(&mTimer) == 0) {
-            field_0x339 = 0;
+            mActionStarted = 0;
             dComIfGp_evmng_cutEnd(mStaffId);
         }
         break;
     case ACT_OPEN:
-        field_0x33A = (u8)(field_0x33A + 1);
-        if (field_0x339 == 0) {
-            field_0x339 = 1;
+        mOpenFrame = (u8)(mOpenFrame + 1);
+        if (mActionStarted == 0) {
+            mActionStarted = 1;
             if (shutter_getSaveTable(dComIfGp_getStageStagInfo()) == STAGE_TOTG) {
                 fopAcM_seStart(this, JA_SE_OBJ_B_SHUTTER_OPEN, 0);
             }
@@ -179,7 +179,7 @@ void daShutter_c::shutter_move() {
         // HD: GHS fuses the half-width and travel-distance arithmetic.
         fVar4 = cLib_addCalc(&mcXyz[0].x, gabi::fnmsubs(m_width[mType], 0.5f, -m_move_len[mType]), 0.1f, maxVel, minVel);
         fVar5 = cLib_addCalc(&mcXyz[1].x, gabi::fmadds(m_width[mType], 0.5f, m_move_len[mType]), 0.1f, maxVel, minVel);
-        if (shutter_getSaveTable(dComIfGp_getStageStagInfo()) == STAGE_TOTG && field_0x33A == 75) {
+        if (shutter_getSaveTable(dComIfGp_getStageStagInfo()) == STAGE_TOTG && mOpenFrame == 75) {
             fopAcM_seStart(this, JA_SE_OBJ_B_SHUTTER_STOP, 0);
             gabi::Local<cXyz> shock;
             shock->x = 0.0f;
@@ -196,8 +196,8 @@ void daShutter_c::shutter_move() {
         dComIfGp_evmng_cutEnd(mStaffId);
         break;
     case ACT_CLOSE:
-        if (field_0x339 == 0) {
-            field_0x339 = 1;
+        if (mActionStarted == 0) {
+            mActionStarted = 1;
         }
         fVar4 = cLib_addCalc(&mcXyz[0].x, -(m_width[mType] * 0.5f), 0.1f, maxVel, minVel);
         fVar5 = cLib_addCalc(&mcXyz[1].x, m_width[mType] * 0.5f, 0.1f, maxVel, minVel);
@@ -218,31 +218,31 @@ void daShutter_c::shutter_move() {
 /* 02484B10 */
 void daShutter_c::demo() {
     u8 isSwitch = (u8)fopAcM_isSwitch(this, mSwitchNo);
-    if (field_0x320 == 0) {
+    if (mEventOrder == 0) {
         if ((isSwitch != mbIsSwitch) && (mFrameTimer < 0)) {
             if (!isSwitch) {
-                field_0x320 = 2;
+                mEventOrder = 2;
             } else {
-                field_0x320 = 1;
+                mEventOrder = 1;
             }
         }
     }
     if (eventInfo.checkCommandDemoAccrpt()) {
-        if (dComIfGp_evmng_startCheck(mOpenEventIdx) && (field_0x320 == 1)) {
-            field_0x320 = 0;
+        if (dComIfGp_evmng_startCheck(mOpenEventIdx) && (mEventOrder == 1)) {
+            mEventOrder = 0;
         }
-        if (dComIfGp_evmng_startCheck(mCloseEventIdx) && (field_0x320 == 2)) {
-            field_0x320 = 0;
+        if (dComIfGp_evmng_startCheck(mCloseEventIdx) && (mEventOrder == 2)) {
+            mEventOrder = 0;
         }
         if (dComIfGp_evmng_endCheck(mOpenEventIdx) || dComIfGp_evmng_endCheck(mCloseEventIdx)) {
             dComIfGp_event_reset();
         }
         mStaffId = dComIfGp_evmng_getMyStaffId(m_staff_name[mType], nullptr, 0);
         shutter_move();
-    } else if ((field_0x320 == 1) && (mOpenEventIdx != 0)) {
+    } else if ((mEventOrder == 1) && (mOpenEventIdx != 0)) {
         fopAcM_orderOtherEventId(this, mOpenEventIdx, 0xFF, 0xFFFF, 0, 1);
         eventInfo.onCondition(dEvtCnd_UNK2_e);
-    } else if ((field_0x320 == 2) && (mCloseEventIdx != 0)) {
+    } else if ((mEventOrder == 2) && (mCloseEventIdx != 0)) {
         fopAcM_orderOtherEventId(this, mCloseEventIdx, 0xFF, 0xFFFF, 0, 1);
         eventInfo.onCondition(dEvtCnd_UNK2_e);
     }
@@ -325,7 +325,7 @@ str 1003CA4C
 str 1003CA58
 str 1003CA64
 str 1003CA74
-str 1003CA84 "modelData != NULL"
+str 1003CA84 "modelData != (0)"
 str 1003CAA8
 str 1003CAB0
 str 1003CAB8

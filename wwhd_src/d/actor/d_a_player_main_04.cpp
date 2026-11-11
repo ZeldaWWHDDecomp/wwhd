@@ -271,7 +271,7 @@ static f32 lk_colorGamma(u32 c) {
 
 /* 02406DE0 */
 void daPy_lk_c::setCutWaterSplash() {
-    if (LinkItem(this).m336C.mpEmitter != nullptr) { /* m336C.getEmitter() */
+    if (LinkItem(this).mBodyWaterDropEcallBack.mpEmitter != nullptr) { /* mBodyWaterDropEcallBack.getEmitter() */
         gabi::Local<cXyz> pos;
         Mtx34* mtx = lk_getAnmMtx(mpCLModel, LinkItemConstants::CL_JNT_CHEST_JNT_e);
         pos->x = mtx->m[0][3]; /* mDoMtx_multVecZero */
@@ -359,32 +359,32 @@ BOOL daPy_lk_c::playerDelete() {
         reinterpret_cast<LinkUpdateEmitter*>(fanSwing.mpEmitter.get())->mpEmitterCallback = nullptr;
         fanSwing.mpEmitter = nullptr;
     }
-    LinkItemApi::endFollow(reinterpret_cast<LinkItemFollowCallback*>(m338C));
-    LinkItemApi::endMtxFollow(reinterpret_cast<LinkItemMtxCallback*>(m33A8));
-    LinkUpdateApi::endRipple(m3280);
-    LinkUpdateApi::endWaterDrop(m334C);
-    LinkUpdateApi::endWaterDrop(m336C);
+    LinkItemApi::endFollow(reinterpret_cast<LinkItemFollowCallback*>(mTalismanFlashEcallBack));
+    LinkItemApi::endMtxFollow(reinterpret_cast<LinkItemMtxCallback*>(mProcEffectEcallBack2));
+    LinkUpdateApi::endRipple(mRippleEcallBack);
+    LinkUpdateApi::endWaterDrop(mNeckWaterDropEcallBack);
+    LinkUpdateApi::endWaterDrop(mBodyWaterDropEcallBack);
     LinkUpdateApi::removeSwimTail(&LinkAura(this).mSwimTailEcallBack[0]);
     LinkUpdateApi::removeSwimTail(&LinkAura(this).mSwimTailEcallBack[1]);
-    LinkItemApi::endMtxFollow(reinterpret_cast<LinkItemMtxCallback*>(&m32E4));
-    LinkItemApi::endMtxFollow(reinterpret_cast<LinkItemMtxCallback*>(&m32F0));
-    LinkItemApi::endMtxFollow(reinterpret_cast<LinkItemMtxCallback*>(&m33E8));
+    LinkItemApi::endMtxFollow(reinterpret_cast<LinkItemMtxCallback*>(&mProcEffectEcallBack0));
+    LinkItemApi::endMtxFollow(reinterpret_cast<LinkItemMtxCallback*>(&mProcEffectEcallBack1));
+    LinkItemApi::endMtxFollow(reinterpret_cast<LinkItemMtxCallback*>(&mFanWindEcallBack));
     LinkUpdate_removeCallback(mSmokeEcallBack);
-    LinkUpdateApi::endCutTurn(m331C);
-    LinkUpdateApi::endCutTurn(m332C);
-    LinkUpdateApi::endCutTurn(m333C);
-    LinkItemApi::endMtxFollow(reinterpret_cast<LinkItemMtxCallback*>(m3400));
-    LinkItemApi::endFollow(&LinkItem(this).m3410);
-    LinkItemApi::endFollow(&LinkItem(this).m3438);
-    LinkItemApi::endMtxFollow(reinterpret_cast<LinkItemMtxCallback*>(&m342C));
-    LinkItemApi::endMtxFollow(reinterpret_cast<LinkItemMtxCallback*>(&m3454));
-    LinkItemApi::endMtxFollow(reinterpret_cast<LinkItemMtxCallback*>(m3460));
-    LinkItemApi::endMtxFollow(reinterpret_cast<LinkItemMtxCallback*>(m3460 + 0x10));
+    LinkUpdateApi::endCutTurn(mCutTurnEcallBack0);
+    LinkUpdateApi::endCutTurn(mCutTurnEcallBack1);
+    LinkUpdateApi::endCutTurn(mCutTurnEcallBack2);
+    LinkItemApi::endMtxFollow(reinterpret_cast<LinkItemMtxCallback*>(mWaterfallSplashEcallBack));
+    LinkItemApi::endFollow(&LinkItem(this).mWadeSplashEcallBack);
+    LinkItemApi::endFollow(&LinkItem(this).mShieldLightHitEcallBack);
+    LinkItemApi::endMtxFollow(reinterpret_cast<LinkItemMtxCallback*>(&mMirrorShieldEcallBack));
+    LinkItemApi::endMtxFollow(reinterpret_cast<LinkItemMtxCallback*>(&mLightSaverEcallBack));
+    LinkItemApi::endMtxFollow(reinterpret_cast<LinkItemMtxCallback*>(mRainDropEcallBack));
+    LinkItemApi::endMtxFollow(reinterpret_cast<LinkItemMtxCallback*>(mRainDropEcallBack + 0x10));
     LinkUpdateApi::endDamageEmitter(this);
     dKy_plight_cut(reinterpret_cast<LIGHT_INFLUENCE*>(mLightInfluence));
     mDoAud_seDeleteObject(&mSwordTopPos);
     mDoAud_seDeleteObject(&mRopePos);
-    mDoAud_seDeleteObject(&reinterpret_cast<LinkItemFollowCallback*>(m338C)->mPos);
+    mDoAud_seDeleteObject(&reinterpret_cast<LinkItemFollowCallback*>(mTalismanFlashEcallBack)->mPos);
     mDoAud_seDeleteObject(&reinterpret_cast<LinkItemCapsuleGeometry*>(mFanWindCps.mCps)->mEnd);
     for (int i = 0; i < 2; i++) {
         mDoExt_destroySolidHeap(LinkPose(this).m_anm_heap_under[i].mpAnimeHeap);
@@ -400,7 +400,7 @@ BOOL daPy_lk_c::playerDelete() {
     LinkUpdateApi::stopAnimeSound(mJAIZelAnime);
     if (noResetFlg1() & daPyFlg1_CASUAL_CLOTHES) {
         // HD: restoring the other texture uses the renderer's texture swap operation.
-        LinkUpdateApi::swapTexture(mpCurrLinktex, m48C);
+        LinkUpdateApi::swapTexture(mpCurrLinktex, mOtherLinktex);
     }
     dComIfGp_clearPlayerStatus0(0, 0x400000); // daPyStts0_BOOMERANG_WAIT_e
     dComIfGp_clearPlayerStatus1(0, 0x40000); // daPyStts1_UNK40000_e
@@ -428,7 +428,7 @@ void daPy_lk_c::setFootMark(cXyz* i_pos) {
         LinkItemApi::createFootMark(LinkItemConstants::fpcNm_WATER_MARK_e,
                                     ((u32)(s32)shape_angle.y << 16) | 2, pos.get(), &scale, 0);
     }
-    if (LinkItem(this).m336C.mpEmitter != nullptr) { /* m336C.getEmitter() */
+    if (LinkItem(this).mBodyWaterDropEcallBack.mpEmitter != nullptr) { /* mBodyWaterDropEcallBack.getEmitter() */
         LinkItemApi::createFootMark(LinkItemConstants::fpcNm_WATER_MARK_e, (u32)(s32)shape_angle.y << 16,
                                     i_pos, &scale, 0);
     }
@@ -439,27 +439,27 @@ void daPy_swBlur_c::initSwBlur(Mtx34* mtx, int idx, f32 blurTopRate, int blurCol
     int i = idx * 2;
     mBlurTopRate = blurTopRate;
     mBlurColorType = blurColorType;
-    PSMTXMultVec(mtx, mpPosBuffer.get() + i, &field_0x034[0]);
-    PSMTXMultVec(mtx, mpPosBuffer.get() + i + 1, &field_0x304[0]);
+    PSMTXMultVec(mtx, mpPosBuffer.get() + i, &mTopPos[0]);
+    PSMTXMultVec(mtx, mpPosBuffer.get() + i + 1, &mRootPos[0]);
     gabi::Local<cXyz> d;
-    cXyz_mi(&field_0x034[0], d, &field_0x304[0]);
+    cXyz_mi(&mTopPos[0], d, &mRootPos[0]);
     gabi::Local<cXyz> s;
     cXyz_ml(d, s, mBlurTopRate);
-    PSVECAdd(&field_0x034[0], s, &field_0x034[0]);
-    field_0x034[1].copy(field_0x034[0]);
-    field_0x304[1].copy(field_0x304[0]);
-    field_0x014 = 0;
-    field_0x018 = idx;
-    u32 m = gabi::ea(mtx); /* field_0x028.set(mtx[0][3], mtx[1][3], mtx[2][3]) */
-    fcpy_l(gabi::ea(&field_0x028) + 0, m + 0x0C);
-    fcpy_l(gabi::ea(&field_0x028) + 8, m + 0x2C);
-    fcpy_l(gabi::ea(&field_0x028) + 4, m + 0x1C);
+    PSVECAdd(&mTopPos[0], s, &mTopPos[0]);
+    mTopPos[1].copy(mTopPos[0]);
+    mRootPos[1].copy(mRootPos[0]);
+    mSegmentNum = 0;
+    mBufferIdx = idx;
+    u32 m = gabi::ea(mtx); /* mPrevBasePos.set(mtx[0][3], mtx[1][3], mtx[2][3]) */
+    fcpy_l(gabi::ea(&mPrevBasePos) + 0, m + 0x0C);
+    fcpy_l(gabi::ea(&mPrevBasePos) + 8, m + 0x2C);
+    fcpy_l(gabi::ea(&mPrevBasePos) + 4, m + 0x1C);
 }
 
 /* 02407310 */
 void daPy_swBlur_c::copySwBlur(Mtx34* mtx, int index) {
-    int sampleCount = (s32)((u32)index - (u32)(s32)field_0x018);
-    field_0x018 = index;
+    int sampleCount = (s32)((u32)index - (u32)(s32)mBufferIdx);
+    mBufferIdx = index;
     int sampleStep;
     if (sampleCount > 0) {
         sampleStep = -2;
@@ -478,42 +478,42 @@ void daPy_swBlur_c::copySwBlur(Mtx34* mtx, int index) {
         sampleStep = 0;
     }
     for (int i = 59 - sampleCount; i >= 0; i--) {
-        field_0x034[i + sampleCount].copy(field_0x034[i]);
-        field_0x304[i + sampleCount].copy(field_0x304[i]);
+        mTopPos[i + sampleCount].copy(mTopPos[i]);
+        mRootPos[i + sampleCount].copy(mRootPos[i]);
     }
     f32 interpolation = 0.0f;
     f32 frac = 1.0f / (f32)sampleCount;
-    s32 buffIdx = (s32)((u32)(s32)field_0x018 << 1); /* wraps like the original */
+    s32 buffIdx = (s32)((u32)(s32)mBufferIdx << 1); /* wraps like the original */
     gabi::Local<cXyz> origin;
     u32 m = gabi::ea(mtx);
     fcpy_l(gabi::ea(origin.get()) + 4, m + 0x1C);
     fcpy_l(gabi::ea(origin.get()) + 0, m + 0x0C);
     fcpy_l(gabi::ea(origin.get()) + 8, m + 0x2C);
     gabi::Local<cXyz> d;
-    cXyz_mi(&field_0x028, d, origin);
+    cXyz_mi(&mPrevBasePos, d, origin);
     gabi::Local<cXyz> originDelta;
     originDelta->copy(*d);
-    field_0x028.copy(*origin);
+    mPrevBasePos.copy(*origin);
     gabi::Local<cXyz> t;
     gabi::Local<cXyz> u;
     for (int i = 0; i < sampleCount && buffIdx >= 0; i++) {
-        PSMTXMultVec(mtx, mpPosBuffer.get() + (u32)buffIdx, &field_0x034[i]);
-        PSMTXMultVec(mtx, mpPosBuffer.get() + (u32)buffIdx + 1, &field_0x304[i]);
-        cXyz_mi(&field_0x034[i], t, &field_0x304[i]);
+        PSMTXMultVec(mtx, mpPosBuffer.get() + (u32)buffIdx, &mTopPos[i]);
+        PSMTXMultVec(mtx, mpPosBuffer.get() + (u32)buffIdx + 1, &mRootPos[i]);
+        cXyz_mi(&mTopPos[i], t, &mRootPos[i]);
         cXyz_ml(t, u, mBlurTopRate);
-        PSVECAdd(&field_0x034[i], u, &field_0x034[i]);
+        PSVECAdd(&mTopPos[i], u, &mTopPos[i]);
         cXyz_ml(originDelta, t, interpolation);
-        PSVECAdd(&field_0x034[i], t, &field_0x034[i]);
+        PSVECAdd(&mTopPos[i], t, &mTopPos[i]);
         cXyz_ml(originDelta, t, interpolation);
-        PSVECAdd(&field_0x304[i], t, &field_0x304[i]);
+        PSVECAdd(&mRootPos[i], t, &mRootPos[i]);
         interpolation += frac;
         buffIdx = (s32)((u32)buffIdx + (u32)sampleStep);
     }
-    s32 n = (s32)((u32)(s32)field_0x014 + (u32)sampleCount);
+    s32 n = (s32)((u32)(s32)mSegmentNum + (u32)sampleCount);
     if (n >= 59) {
         n = 58;
     }
-    field_0x014 = n;
+    mSegmentNum = n;
 }
 
 /* 024036E4 */
@@ -578,27 +578,27 @@ void daPy_lk_c::setSwordAtCollision() {
         gabi::Local<cXyz> t0;
         gabi::Local<cXyz> t1;
         gabi::Local<cXyz> t2;
-        cXyz_mi(swordTop, t0, &m36C4);
-        cXyz_ml(t0, t1, m35FC);
-        cXyz_pl(t1, t2, &m36C4);
+        cXyz_mi(swordTop, t0, &mSwordRootPos);
+        cXyz_ml(t0, t1, mSwordAtScale);
+        cXyz_pl(t1, t2, &mSwordRootPos);
         local_34->copy(*t2);
-        cXyz_mi(&m36D0, t2, &m36DC);
-        cXyz_ml(t2, t1, m35FC);
-        cXyz_pl(t1, t0, &m36DC);
+        cXyz_mi(&mOldSwordTopPos, t2, &mOldSwordRootPos);
+        cXyz_ml(t2, t1, mSwordAtScale);
+        cXyz_pl(t1, t0, &mOldSwordRootPos);
         local_58->copy(*t0);
     } else {
         local_34->copy(*swordTop);
-        local_58->copy(m36D0);
+        local_58->copy(mOldSwordTopPos);
     }
-    LinkItem_setStartEnd(&mAtCps[0], &m36C4, local_34); /* mAtCps[0] */
+    LinkItem_setStartEnd(&mAtCps[0], &mSwordRootPos, local_34); /* mAtCps[0] */
     LinkItem_setStartEnd(&mAtCps[1], local_58, local_34);
-    LinkItem_setStartEnd(&mAtCps[2], &m36C4, local_58);
+    LinkItem_setStartEnd(&mAtCps[2], &mSwordRootPos, local_58);
     gabi::Local<cXyz> local_7c;
     if (resetFlg0() & LinkItemConstants::daPyRFlg0_UNK1) {
         local_7c->copy(*cXyz_Zero);
     } else {
         gabi::Local<cXyz> d;
-        cXyz_mi(swordTop, d, &m36D0);
+        cXyz_mi(swordTop, d, &mOldSwordTopPos);
         local_7c->copy(*d);
     }
     LinkItem_setAtVec(&mAtCps[0], local_7c);
@@ -614,7 +614,7 @@ void daPy_lk_c::setSwimWaterDrop(void* i_cb) {
     u32 waterDrop = noResetFlg1() & LinkWaterConstants::daPyFlg1_WATER_DROP;
     if (waterDrop || !(mNoResetFlg0 & LinkItemConstants::daPyFlg0_UNK80) ||
         (callBack.mPos.y > tmp && !(mModeFlg & LinkPoseConstants::ModeFlg_SWIM))) {
-        if (callBack.mpEmitter == nullptr && (callBack.field_0x1C != 0 || waterDrop)) {
+        if (callBack.mpEmitter == nullptr && (callBack.mReady != 0 || waterDrop)) {
             JPABaseEmitter* emitter = dPa_control_set(
                 dComIfGp_getParticle(), 1, LinkWaterConstants::ID_IT_JN_LK_NURE_POTA00,
                 &callBack.mPos, nullptr, nullptr, 0xFF,
@@ -623,12 +623,12 @@ void daPy_lk_c::setSwimWaterDrop(void* i_cb) {
                 LinkWaterEmitterView(emitter).mpParticleCallBack = (&l_waterDropPcallBack);
             }
         }
-        callBack.field_0x1C = 0;
+        callBack.mReady = 0;
         setNoResetFlg1(noResetFlg1() & ~LinkWaterConstants::daPyFlg1_WATER_DROP);
     } else if (callBack.mPos.y < waterY) {
         daPy_waterDropEcallBack_end(&callBack);
         if (mCurProc != LinkPoseConstants::daPyProc_VOMIT_WAIT_e) {
-            callBack.field_0x1C = 1;
+            callBack.mReady = 1;
         }
     }
 }
@@ -637,12 +637,12 @@ void daPy_lk_c::setSwimWaterDrop(void* i_cb) {
 /* 0240CBE0 */
 void daPy_lk_c::setWaterDrop() {
     Mtx34* neck_jnt_mtx = lk_getAnmMtx(mpCLModel, LinkWaterConstants::CL_JNT_NECK_JNT_e);
-    LinkWaterCallback& neckDrop = LinkWaterDrop(m334C);
+    LinkWaterCallback& neckDrop = LinkWaterDrop(mNeckWaterDropEcallBack);
     fcpy_l(gabi::ea(&neckDrop.mPos.z), gabi::ea(&neck_jnt_mtx->m[2][3]));
     fcpy_l(gabi::ea(&neckDrop.mPos.y), gabi::ea(&neck_jnt_mtx->m[1][3]));
     fcpy_l(gabi::ea(&neckDrop.mPos.x), gabi::ea(&neck_jnt_mtx->m[0][3]));
     Mtx34* body_jnt_mtx = lk_getAnmMtx(mpCLModel, LinkWaterConstants::CL_JNT_BODY_CHN_e);
-    LinkWaterCallback& bodyDrop = LinkWaterDrop(m336C);
+    LinkWaterCallback& bodyDrop = LinkWaterDrop(mBodyWaterDropEcallBack);
     fcpy_l(gabi::ea(&bodyDrop.mPos.z), gabi::ea(&body_jnt_mtx->m[2][3]));
     fcpy_l(gabi::ea(&bodyDrop.mPos.y), gabi::ea(&body_jnt_mtx->m[1][3]));
     fcpy_l(gabi::ea(&bodyDrop.mPos.x), gabi::ea(&body_jnt_mtx->m[0][3]));
@@ -693,7 +693,7 @@ void daPy_lk_c::setHammerWaterSplash() {
     }
     cXyz* swordTop = &mSwordTopPos;
     gabi::Local<cXyz> t;
-    cXyz_mi(&m36C4, t, swordTop);
+    cXyz_mi(&mSwordRootPos, t, swordTop);
     gabi::Local<cXyz> splashPos;
     splashPos->copy(*t);
     LinkEffectApi::normalize(splashPos.get(), t.get());
@@ -779,16 +779,16 @@ void daPy_lk_c::checkLightHit() {
         }
         if (mFanLightCps.ChkAtHit()) {
             doEnd = false;
-            if ((u32)LinkItem(this).m3438.mpEmitter.v == 0) { /* m3438.getEmitter() */
+            if ((u32)LinkItem(this).mShieldLightHitEcallBack.mpEmitter.v == 0) { /* mShieldLightHitEcallBack.getEmitter() */
                 /* dComIfGp_particle_setP1(dPa_name::ID_AK_SN_HITSHIELDLIGHT00, &current.pos, NULL, NULL,
-                 * 0xFF, &m3438) */
+                 * 0xFF, &mShieldLightHitEcallBack) */
                 dPa_control_set(dComIfGp_getParticle(), 1, 0x8232, &current.pos, nullptr, nullptr, 0xFF,
                                 gabi::at<dPa_levelEcallBack>(b + 0x684C), -1, nullptr, nullptr, nullptr);
             }
             LinkItemApi::lineVsPositionCross(
                 &reinterpret_cast<LinkItemCapsuleGeometry*>(mFanLightCps.mCps)->mStart,
                 &reinterpret_cast<LinkItemCapsuleGeometry*>(mFanLightCps.mCps)->mEnd,
-                &mFanLightCps.mGObjAt.mHitPos, &LinkItem(this).m3438.mPos);
+                &mFanLightCps.mGObjAt.mHitPos, &LinkItem(this).mShieldLightHitEcallBack.mPos);
             gabi::Local<cXyz> xz; /* lightVec.absXZ() */
             xz->x = lightVec->x;
             xz->y = 0.0f;
@@ -796,10 +796,10 @@ void daPy_lk_c::checkLightHit() {
             f32 d = std_sqrtf(PSVECSquareMag(xz));
             s16 ax = cM_atan2s(-lightVec->y, d);
             s16 angleY = cM_atan2s(lightVec->x, lightVec->z);
-            LinkItem(this).m3438.mAngle.z = 0; /* m3438.setAngle(ax, angleY, 0) */
-            LinkItem(this).m3438.mAngle.y = angleY;
-            LinkItem(this).m3438.mAngle.x = ax;
-            if ((u32)LinkItem(this).m3438.mpEmitter.v != 0) {
+            LinkItem(this).mShieldLightHitEcallBack.mAngle.z = 0; /* mShieldLightHitEcallBack.setAngle(ax, angleY, 0) */
+            LinkItem(this).mShieldLightHitEcallBack.mAngle.y = angleY;
+            LinkItem(this).mShieldLightHitEcallBack.mAngle.x = ax;
+            if ((u32)LinkItem(this).mShieldLightHitEcallBack.mpEmitter.v != 0) {
                 u32 sc = normal_scale;
                 if (gabi::ea(mFanLightCps.GetAtHitAc()) != 0) {
                     u32 ac = gabi::ea(mFanLightCps.GetAtHitAc());
@@ -808,7 +808,7 @@ void daPy_lk_c::checkLightHit() {
                     }
                 }
                 u32 e =
-                    (u32)LinkItem(this).m3438.mpEmitter.v; /* setGlobalScale (HD: also the particle scale) */
+                    (u32)LinkItem(this).mShieldLightHitEcallBack.mpEmitter.v; /* setGlobalScale (HD: also the particle scale) */
                 fcpy_l(e + 0x220, sc + 0);
                 fcpy_l(e + 0x224, sc + 4);
                 fcpy_l(e + 0x238, sc + 0);
@@ -819,7 +819,7 @@ void daPy_lk_c::checkLightHit() {
         }
     }
     if (doEnd) {
-        LinkItemApi::endFollow(&LinkItem(this).m3438); /* m3438.end() */
+        LinkItemApi::endFollow(&LinkItem(this).mShieldLightHitEcallBack); /* mShieldLightHitEcallBack.end() */
     }
     if (resetFlg0() & LinkItemConstants::daPyRFlg0_LIGHT_REFLECT) {
         if (!(mFanLightCps.mObjAt.mSPrm & 1) /* !mFanLightCps.ChkAtSet() */) {
@@ -830,15 +830,15 @@ void daPy_lk_c::checkLightHit() {
         resetCurse();
     }
     if (!(dComIfGp_getPlayerStatus0() & 0x2000) /* daPyStts0_SUBJECT_e */ && (resetFlg0() & 0x200000)) {
-        if ((u32)LinkItem(this).m342C.mpEmitter.v == 0) { /* m342C.getEmitter() */
+        if ((u32)LinkItem(this).mMirrorShieldEcallBack.mpEmitter.v == 0) { /* mMirrorShieldEcallBack.getEmitter() */
             u32 shield = (u32)LinkItem(this).mpEquippedShieldModel.v;
-            LinkItemApi::makeMtxEmitter(&LinkItem(this).m342C, LinkItemConstants::ID_AK_SN_MIRRORSHIELD00,
+            LinkItemApi::makeMtxEmitter(&LinkItem(this).mMirrorShieldEcallBack, LinkItemConstants::ID_AK_SN_MIRRORSHIELD00,
                                         shield != 0 ? gabi::at<J3DModel>(shield)->getBaseTRMtx() : nullptr,
                                         &current.pos, 0);
         }
-    } else if ((u32)LinkItem(this).m342C.mpEmitter.v != 0) {
-        LinkEmitter(LinkItem(this).m342C.mpEmitter.v).mGlobalColor.a = 0; /* setGlobalAlpha(0) */
-        LinkItemApi::endMtxFollow(&LinkItem(this).m342C);
+    } else if ((u32)LinkItem(this).mMirrorShieldEcallBack.mpEmitter.v != 0) {
+        LinkEmitter(LinkItem(this).mMirrorShieldEcallBack.mpEmitter.v).mGlobalColor.a = 0; /* setGlobalAlpha(0) */
+        LinkItemApi::endMtxFollow(&LinkItem(this).mMirrorShieldEcallBack);
     }
 }
 
@@ -969,15 +969,15 @@ BOOL daPy_lk_c::jointCB1() {
     }
     LinkPoseTransformInfo* trans_info = fdata->mOldFrameTransInfo; /* getOldFrameTransInfo(0) */
     Quaternion* quaternion = fdata->mOldFrameQuaternion;           /* getOldFrameQuaternion(0) */
-    LinkPoseApi::mDoMtx_ZrotS(mDoMtx_stack_c::get(), (s32)LinkPose(this).mFootData[1].field_0x008.get());
+    LinkPoseApi::mDoMtx_ZrotS(mDoMtx_stack_c::get(), (s32)LinkPose(this).mFootData[1].mLegAAngle.get());
     LinkPoseApi::PSMTXConcat(mpCLModel->getAnmMtx(LinkPoseConstants::CL_JNT_LLEGA_JNT_e),
                              mDoMtx_stack_c::get(), mDoMtx_stack_c::get());
     mpCLModel->setAnmMtx(32, mDoMtx_stack_c::get());
     LinkPose_transQuatM(trans_info, quaternion, 33);
-    mDoMtx_ZrotM(mDoMtx_stack_c::get(), LinkPose(this).mFootData[1].field_0x00A.get());
+    mDoMtx_ZrotM(mDoMtx_stack_c::get(), LinkPose(this).mFootData[1].mLegBJointAngle.get());
     mpCLModel->setAnmMtx(LinkPoseConstants::CL_JNT_LLEGB_JNT_e, mDoMtx_stack_c::get());
     LinkPose_transQuatM(trans_info, quaternion, 34);
-    mDoMtx_ZrotM(mDoMtx_stack_c::get(), LinkPose(this).mFootData[1].field_0x002.get());
+    mDoMtx_ZrotM(mDoMtx_stack_c::get(), LinkPose(this).mFootData[1].mFootAngle.get());
     mpCLModel->setAnmMtx(LinkPoseConstants::CL_JNT_LFOOT_JNT_e, mDoMtx_stack_c::get());
     LinkPose_transQuatM(trans_info, quaternion, 35);
     mpCLModel->setAnmMtx(LinkPoseConstants::CL_JNT_LTOE_JNT_e, mDoMtx_stack_c::get());
@@ -985,15 +985,15 @@ BOOL daPy_lk_c::jointCB1() {
     fdata = LinkPose(this).m_old_fdata;
     trans_info = fdata->mOldFrameTransInfo;
     quaternion = fdata->mOldFrameQuaternion;
-    LinkPoseApi::mDoMtx_ZrotS(mDoMtx_stack_c::get(), (s32)LinkPose(this).mFootData[0].field_0x008.get());
+    LinkPoseApi::mDoMtx_ZrotS(mDoMtx_stack_c::get(), (s32)LinkPose(this).mFootData[0].mLegAAngle.get());
     LinkPoseApi::PSMTXConcat(mpCLModel->getAnmMtx(LinkPoseConstants::CL_JNT_RLEGA_JNT_e),
                              mDoMtx_stack_c::get(), mDoMtx_stack_c::get());
     mpCLModel->setAnmMtx(37, mDoMtx_stack_c::get());
     LinkPose_transQuatM(trans_info, quaternion, 38);
-    mDoMtx_ZrotM(mDoMtx_stack_c::get(), LinkPose(this).mFootData[0].field_0x00A.get());
+    mDoMtx_ZrotM(mDoMtx_stack_c::get(), LinkPose(this).mFootData[0].mLegBJointAngle.get());
     mpCLModel->setAnmMtx(LinkPoseConstants::CL_JNT_RLEGB_JNT_e, mDoMtx_stack_c::get());
     LinkPose_transQuatM(trans_info, quaternion, 39);
-    mDoMtx_ZrotM(mDoMtx_stack_c::get(), LinkPose(this).mFootData[0].field_0x002.get());
+    mDoMtx_ZrotM(mDoMtx_stack_c::get(), LinkPose(this).mFootData[0].mFootAngle.get());
     mpCLModel->setAnmMtx(LinkPoseConstants::CL_JNT_RFOOT_JNT_e, mDoMtx_stack_c::get());
     LinkPose_transQuatM(trans_info, quaternion, 40);
     mpCLModel->setAnmMtx(LinkPoseConstants::CL_JNT_RTOE_JNT_e, mDoMtx_stack_c::get());
@@ -1216,7 +1216,7 @@ void daPy_lk_c::setFootEffect() {
     if (!(mAcch.m_flags & 0x20) /* !mAcch.ChkGroundHit() */ ||
         (mNoResetFlg0 & LinkItemConstants::daPyFlg0_UNK80000000)) {
         LinkItemApi::resetFootEffect(this);
-        LinkItemApi::endFollow(&LinkItem(this).m3410); /* m3410.end() */
+        LinkItemApi::endFollow(&LinkItem(this).mWadeSplashEcallBack); /* mWadeSplashEcallBack.end() */
         return;
     }
     gabi::Local<cXyz> pos;
@@ -1230,19 +1230,19 @@ void daPy_lk_c::setFootEffect() {
     }
     if ((resetFlg0() & LinkItemConstants::daPyRFlg0_UNK10) &&
         mCurrAttributeCode == LinkItemConstants::dBgS_Attr_WATER_e && mWaterY > current.pos.y + 25.0f) {
-        cXyz& splashPosition = LinkItem(this).m3410.mPos;
+        cXyz& splashPosition = LinkItem(this).mWadeSplashEcallBack.mPos;
         u32 p = gabi::ea(&splashPosition);
         u16 a = (u16)current.angle.y;
         f32 s = cM_ssin(a);
         splashPosition.y = mWaterY;
         splashPosition.x = gabi::fmadds(45.0f, s, current.pos.x);
-        LinkItem(this).m3410.mAngle.y =
-            (s16)(a + 0x8000); /* m3410.setAngle(0, current.angle.y + 0x8000, 0) */
-        LinkItem(this).m3410.mAngle.z = 0;
-        LinkItem(this).m3410.mAngle.x = 0;
+        LinkItem(this).mWadeSplashEcallBack.mAngle.y =
+            (s16)(a + 0x8000); /* mWadeSplashEcallBack.setAngle(0, current.angle.y + 0x8000, 0) */
+        LinkItem(this).mWadeSplashEcallBack.mAngle.z = 0;
+        LinkItem(this).mWadeSplashEcallBack.mAngle.x = 0;
         splashPosition.z = gabi::fmadds(45.0f, cM_scos(a), current.pos.z);
         bool noSplash = lk_checkNoSplashCamera();
-        bool updateSeaColor = LinkItem(this).m3410.mpEmitter != nullptr;
+        bool updateSeaColor = LinkItem(this).mWadeSplashEcallBack.mpEmitter != nullptr;
         if (!updateSeaColor) {
             if (!noSplash) {
                 gabi::Local<GXColor> amb;
@@ -1259,7 +1259,7 @@ void daPy_lk_c::setFootEffect() {
                     LinkEmitter(e).mRate = 4.0f;              /* setRate */
                     LinkEmitter(e).mLifeTime = 15;            /* setLifeTime */
                 }
-                updateSeaColor = LinkItem(this).m3410.mpEmitter != nullptr;
+                updateSeaColor = LinkItem(this).mWadeSplashEcallBack.mpEmitter != nullptr;
             }
         }
         if (updateSeaColor) {
@@ -1267,13 +1267,13 @@ void daPy_lk_c::setFootEffect() {
             gabi::Local<GXColor> amb2;
             gabi::Local<GXColor> dif2;
             LinkItemApi::getSeaColor(amb2.get(), dif2.get());
-            u32 e = (u32)LinkItem(this).m3410.mpEmitter.v;
+            u32 e = (u32)LinkItem(this).mWadeSplashEcallBack.mpEmitter.v;
             LinkEmitter(e).mGlobalColor.r = amb2->r;
             LinkEmitter(e).mGlobalColor.b = amb2->b;
             LinkEmitter(e).mGlobalColor.g = amb2->g;
         }
     } else {
-        LinkItemApi::endFollow(&LinkItem(this).m3410); /* m3410.end() */
+        LinkItemApi::endFollow(&LinkItem(this).mWadeSplashEcallBack); /* mWadeSplashEcallBack.end() */
     }
     {
         /* strcmp(dComIfGp_getStartStageName(), "Adanmae") == 0 */
@@ -1423,7 +1423,7 @@ void daPy_lk_c::setGrabItemPos() {
         if (mCurProc != LinkEffectConstants::daPyProc_DEMO_STAND_ITEM_PUT_e) {
             grab_actor->shape_angle.y = shape_angle.y;
         }
-        grab_actor->shape_angle.z = m351C;
+        grab_actor->shape_angle.z = mMoveSlantAngle;
         if (mNoResetFlg0 & LinkEffectConstants::daPyFlg0_UNK400) {
             f32 grabOffset;
             if (mCurProc == LinkEffectConstants::daPyProc_GRAB_PUT_e) {
@@ -1433,12 +1433,12 @@ void daPy_lk_c::setGrabItemPos() {
             } else {
                 grabOffset = -85.0f;
             }
-            field_0x2b0 = field_0x2b0 + m35D8;
-            LinkPoseApi::addCalc(&field_0x2b0, grabOffset, 0.5f, 20.0f, 1.0f);
-            f32 v = field_0x2b0;
+            mGrabItemOffsetY = mGrabItemOffsetY + m35D8;
+            LinkPoseApi::addCalc(&mGrabItemOffsetY, grabOffset, 0.5f, 20.0f, 1.0f);
+            f32 v = mGrabItemOffsetY;
             f32 spd = speedF;
             if (v < -85.0f) {
-                field_0x2b0 = -85.0f;
+                mGrabItemOffsetY = -85.0f;
                 m35D8 = v - -85.0f;
             } else {
                 m35D8 = 0.0f;
@@ -1468,7 +1468,7 @@ void daPy_lk_c::setGrabItemPos() {
     f32 hy = half->y;
     grab_actor->current.pos.y = hy;
     grab_actor->current.pos.z = half->z;
-    grab_actor->current.pos.y = hy + field_0x2b0;
+    grab_actor->current.pos.y = hy + mGrabItemOffsetY;
     if (LinkEffect(this).mUnderAnimationIndex == LinkEffectConstants::dRes_INDEX_LKANM_BCK_GRABUP_e /* m_anm_heap_under[0].mIdx == dRes_INDEX_LKANM_BCK_GRABUP_e */) {
         s16 st = mFrameCtrlUnder[0].getStart();
         s16 en = mFrameCtrlUnder[0].getEnd();
@@ -1501,9 +1501,9 @@ void daPy_lk_c::setGrabItemPos() {
             grab_actor->current.pos.y = gabi::fmadds(40.0f /* magtail_offset */, 1.0f - grabOffset, grab_actor->current.pos.y);
         }
     } else if (fpcM_GetName(grab_actor) == LinkEffectConstants::fpcNm_MT_e) {
-        f32 horizontalOffset = -40.0f * cM_ssin((u16)m351C);
+        f32 horizontalOffset = -40.0f * cM_ssin((u16)mMoveSlantAngle);
         grab_actor->current.pos.x = gabi::fmadds(horizontalOffset, cM_scos((u16)shape_angle.y), grab_actor->current.pos.x);
-        grab_actor->current.pos.y = gabi::fmadds(40.0f, cM_scos((u16)m351C), grab_actor->current.pos.y);
+        grab_actor->current.pos.y = gabi::fmadds(40.0f, cM_scos((u16)mMoveSlantAngle), grab_actor->current.pos.y);
         grab_actor->current.pos.z = gabi::fnmsubs(horizontalOffset, cM_ssin((u16)shape_angle.y), grab_actor->current.pos.z);
     }
     if (mCurProc == LinkEffectConstants::daPyProc_GRAB_UP_e && grab_actor->current.pos.y < cStack_58->y) {
@@ -1512,20 +1512,20 @@ void daPy_lk_c::setGrabItemPos() {
         grab_actor->current.pos.z = cStack_58->z;
     }
     if (mNoResetFlg0 & LinkEffectConstants::daPyFlg0_UNK400) {
-        m35CC = 0.0f;
+        mGrabItemBounceY = 0.0f;
         grab_actor->current.pos.y = grab_actor->current.pos.y + 0.0f;
     } else if ((mModeFlg & LinkEffectConstants::ModeFlg_MIDAIR) && speed.y < 0.0f) {
-        f32 v = gabi::fnmsubs(speed.y, 0.2f, m35CC);
+        f32 v = gabi::fnmsubs(speed.y, 0.2f, mGrabItemBounceY);
         if (v > 40.0f) {
-            m35CC = 40.0f;
+            mGrabItemBounceY = 40.0f;
             grab_actor->current.pos.y = grab_actor->current.pos.y + 40.0f;
         } else {
-            m35CC = v;
+            mGrabItemBounceY = v;
             grab_actor->current.pos.y = grab_actor->current.pos.y + v;
         }
     } else {
-        cLib_chaseF(&m35CC, 0.0f, 5.0f);
-        f32 v = m35CC;
+        cLib_chaseF(&mGrabItemBounceY, 0.0f, 5.0f);
+        f32 v = mGrabItemBounceY;
         grab_actor->current.pos.y = grab_actor->current.pos.y + v;
     }
 }
@@ -1602,19 +1602,19 @@ void daPy_lk_c::setLightSaver() {
         LinkEffect_resourceFrame(LinkItem(this).mpSwordBtk.mpAnm) = fr;
         lk_setAnimationFrame(&LinkItem(this).mpSwordBtk.mpFrameValue, fr);
         JPABaseEmitter* e;
-        if (LinkEffect(this).m3454.mpEmitter.v == 0 /* m3454.getEmitter() */ && (checkChanceMode() || (noResetFlg1() & daPyFlg1_SOUP_POWER_UP))) {
+        if (LinkEffect(this).mLightSaverEcallBack.mpEmitter.v == 0 /* mLightSaverEcallBack.getEmitter() */ && (checkChanceMode() || (noResetFlg1() & daPyFlg1_SOUP_POWER_UP))) {
             Mtx34* mtx = lk_getAnmMtx(gabi::at<J3DModel>(LinkItem(this).mpSwordModel1.v), LinkEffectConstants::YMSLI00_JNT_SWMSA_JNT_e);
-            e = LinkEffectApi::makeMtxEmitter(&LinkEffect(this).m3454, LinkEffectConstants::ID_AK_JN_LIGHTSAVER00,
+            e = LinkEffectApi::makeMtxEmitter(&LinkEffect(this).mLightSaverEcallBack, LinkEffectConstants::ID_AK_JN_LIGHTSAVER00,
                                             mtx, &current.pos, 0);
             if (e != NULL && lk_checkMasterSwordEquip()) {
                 LinkEffect_storeScale(&LinkEffectParticle(e).mGlobalDynamicsScale, &l_sword_d_scale); /* setGlobalDynamicsScale */
                 LinkEffect_storeScale(&LinkEffectParticle(e).mGlobalParticleScale, &l_sword_p_scale); /* setGlobalParticleScale */
             }
         } else if (!checkChanceMode() && !(noResetFlg1() & daPyFlg1_SOUP_POWER_UP) && lk_selectSword() == LinkEffectConstants::dItemNo_MASTER_SWORD_3_e) {
-            LinkItemApi::endMtxFollow(&LinkEffect(this).m3454); /* m3454.end() */
+            LinkItemApi::endMtxFollow(&LinkEffect(this).mLightSaverEcallBack); /* mLightSaverEcallBack.end() */
         }
         BOOL chance = checkChanceMode();
-        u32 em = LinkEffect(this).m3454.mpEmitter.v;
+        u32 em = LinkEffect(this).mLightSaverEcallBack.mpEmitter.v;
         GXColor* prm0;
         GXColor* env0;
         if (chance) {
@@ -1684,7 +1684,7 @@ void daPy_lk_c::setLightSaver() {
             }
         }
     } else {
-        LinkItemApi::endMtxFollow(&LinkEffect(this).m3454); /* m3454.end() */
+        LinkItemApi::endMtxFollow(&LinkEffect(this).mLightSaverEcallBack); /* mLightSaverEcallBack.end() */
         LinkItem(this).mpSwordBtk.mFrameCtrl.mFrame = 0.0f;                     /* mpSwordBtk->setFrame(0.0f) */
         LinkEffect_resourceFrame(LinkItem(this).mpSwordBtk.mpAnm) = 0.0f;
         lk_setAnimationFrame(&LinkItem(this).mpSwordBtk.mpFrameValue, 0.0f);
@@ -1974,10 +1974,10 @@ void daPy_lk_c::setWaterRipple() {
                 l_demo07_ripple_pos.y = -3555.0f;
             }
         }
-        if (gabi::ea(effects.m3280.mpEmitter.get()) == 0) { /* m3280.getEmitter() */
-            /* dComIfGp_particle_setShipTail(dPa_name::ID_AK_JN_HAMON00, &pos, NULL, NULL, 0xFF, &m3280) */
+        if (gabi::ea(effects.mRippleEcallBack.mpEmitter.get()) == 0) { /* mRippleEcallBack.getEmitter() */
+            /* dComIfGp_particle_setShipTail(dPa_name::ID_AK_JN_HAMON00, &pos, NULL, NULL, 0xFF, &mRippleEcallBack) */
             dPa_control_set(dComIfGp_getParticle(), 5, LinkAuraConstants::ID_AK_JN_HAMON00, gabi::at<cXyz>(pos),
-                            nullptr, nullptr, 0xFF, reinterpret_cast<dPa_levelEcallBack*>(&effects.m3280), -1, nullptr,
+                            nullptr, nullptr, 0xFF, reinterpret_cast<dPa_levelEcallBack*>(&effects.mRippleEcallBack), -1, nullptr,
                             nullptr, nullptr);
         }
         f32 var_f1 = std::fabs((f32)speedF) * 0.1f;
@@ -1985,13 +1985,13 @@ void daPy_lk_c::setWaterRipple() {
         if (var_f1 > 1.0f) {
             var_f1 = 1.0f;
         }
-        effects.m3280.mRate = var_f1; /* m3280.setRate(var_f1) */
+        effects.mRippleEcallBack.mRate = var_f1; /* mRippleEcallBack.setRate(var_f1) */
         // HD: advance the embedded animation, then update its renderer channel.
         LinkItemApi::playAnimation(&effects.mpSuimenMunyaBtk);
         f32 fr = effects.mpSuimenMunyaBtk.mFrameCtrl.mFrame;
         gabi::at<LinkItemAnimationResource>(effects.mpSuimenMunyaBtk.mpAnm)->mFrame = fr;
         lk_setAnimationFrame(&effects.mpSuimenMunyaBtk.mpFrameValue, fr);
-        u32 e = gabi::ea(effects.m3280.mpEmitter.get());
+        u32 e = gabi::ea(effects.mRippleEcallBack.mpEmitter.get());
         if (e != 0) {
             f32 sx = LinkAura_emitter(e)->mGlobalParticleScale.x; /* getGlobalParticleScale().x */
             u32 f80 = mNoResetFlg0 & daPyFlg0_UNK80;
@@ -2004,10 +2004,10 @@ void daPy_lk_c::setWaterRipple() {
                 remove = f80 == 0;
             }
             if (remove) {
-                LinkAuraApi::endRipple(&effects.m3280);
+                LinkAuraApi::endRipple(&effects.mRippleEcallBack);
                 e = gabi::ea(dPa_control_set(dComIfGp_getParticle(), 5, LinkAuraConstants::ID_AK_JN_HAMON00,
                                              gabi::at<cXyz>(pos), nullptr, nullptr, 0xFF,
-                                             reinterpret_cast<dPa_levelEcallBack*>(&effects.m3280), -1, nullptr,
+                                             reinterpret_cast<dPa_levelEcallBack*>(&effects.mRippleEcallBack), -1, nullptr,
                                              nullptr, nullptr));
                 if (e != 0) {
                     f80 = mNoResetFlg0 & daPyFlg0_UNK80;
@@ -2021,8 +2021,8 @@ void daPy_lk_c::setWaterRipple() {
                 }
             }
         }
-    } else if (gabi::ea(effects.m3280.mpEmitter.get()) != 0) {
-        LinkAuraApi::endRipple(&effects.m3280); /* m3280.remove() */
+    } else if (gabi::ea(effects.mRippleEcallBack.mpEmitter.get()) != 0) {
+        LinkAuraApi::endRipple(&effects.mRippleEcallBack); /* mRippleEcallBack.remove() */
     }
 
     if (mModeFlg & LinkPoseConstants::ModeFlg_SWIM) {
@@ -2154,14 +2154,14 @@ void daPy_lk_c::setWaterRipple() {
         mCurrAttributeCode == LinkAuraConstants::dBgS_Attr_WATERFALL_e) {
         wf = true;
     } else {
-        wf = (mModeFlg & LinkAuraConstants::ModeFlg_HANG) && m3588 == LinkAuraConstants::dBgS_Attr_WATERFALL_e;
+        wf = (mModeFlg & LinkAuraConstants::ModeFlg_HANG) && mHangAttributeCode == LinkAuraConstants::dBgS_Attr_WATERFALL_e;
     }
     if (wf) {
-        if (gabi::ea(effects.m3400.mpEmitter.get()) == 0) { /* m3400.getEmitter() */
+        if (gabi::ea(effects.mWaterfallSplashEcallBack.mpEmitter.get()) == 0) { /* mWaterfallSplashEcallBack.getEmitter() */
             Mtx34* hm = lk_getAnmMtx(mpCLModel, LinkItemConstants::CL_JNT_HEAD_JNT_e);
-            LinkItemApi::makeMtxEmitter(&effects.m3400, LinkItemConstants::ID_AK_JN_ELEMENTSHIBUKI00, hm, &current.pos,
+            LinkItemApi::makeMtxEmitter(&effects.mWaterfallSplashEcallBack, LinkItemConstants::ID_AK_JN_ELEMENTSHIBUKI00, hm, &current.pos,
                                         0);
-            u32 e = gabi::ea(effects.m3400.mpEmitter.get());
+            u32 e = gabi::ea(effects.mWaterfallSplashEcallBack.mpEmitter.get());
             if (e != 0) {
                 LinkAura_emitter(e)->mSpread = 1.0f; /* setSpread */
                 LinkAura_emitter(e)->mRate = 4.0f;   /* setRate */
@@ -2169,7 +2169,7 @@ void daPy_lk_c::setWaterRipple() {
                             waterfall_splash_trans); /* setEmitterTranslation */
             }
         }
-        if (m34CD == 0) {
+        if (mWaterfallRippleTimer == 0) {
             gabi::Local<cXyz> local_ac;
             lk_jntPos(mpCLModel, LinkItemConstants::CL_JNT_LINK_ROOT_e, local_ac);
             /* dComIfGp_particle_setSingleRipple(dPa_name::ID_IT_JN_WP_HAMON03, &local_ac, NULL,
@@ -2178,30 +2178,30 @@ void daPy_lk_c::setWaterRipple() {
                             &l_waterfall_ripple_scale, 0xFF,
                             reinterpret_cast<dPa_levelEcallBack*>(&l_waterfall_ripple_callback), -1, nullptr, nullptr,
                             nullptr);
-            m34CD = 15;
+            mWaterfallRippleTimer = 15;
             gabi::Local<cXyz> v;
             v->x = 0.0f;
             v->y = 1.0f;
             v->z = 0.0f;
             LinkAuraApi::StartQuake(dComIfGp_getVibration(), 4, 1, v.get());
         } else {
-            u8 n = (u8)(m34CD - 1);
-            m34CD = n;
+            u8 n = (u8)(mWaterfallRippleTimer - 1);
+            mWaterfallRippleTimer = n;
             if (n == 5) {
                 LinkAuraApi::StopQuake(dComIfGp_getVibration(), -1);
             }
         }
     } else {
-        if (gabi::ea(effects.m3400.mpEmitter.get()) != 0) {
+        if (gabi::ea(effects.mWaterfallSplashEcallBack.mpEmitter.get()) != 0) {
             LinkAuraApi::StopQuake(dComIfGp_getVibration(), -1);
         }
-        LinkItemApi::endMtxFollow(&effects.m3400); /* m3400.end() */
+        LinkItemApi::endMtxFollow(&effects.mWaterfallSplashEcallBack); /* mWaterfallSplashEcallBack.end() */
     }
-    if (gabi::ea(effects.m3400.mpEmitter.get()) != 0) {
+    if (gabi::ea(effects.mWaterfallSplashEcallBack.mpEmitter.get()) != 0) {
         gabi::Local<GXColor> amb;
         gabi::Local<GXColor> dif;
         LinkItemApi::getSeaColor(amb.get(), dif.get());
-        u32 e = gabi::ea(effects.m3400.mpEmitter.get()); /* setGlobalPrmColor(amb.r, amb.g, amb.b) */
+        u32 e = gabi::ea(effects.mWaterfallSplashEcallBack.mpEmitter.get()); /* setGlobalPrmColor(amb.r, amb.g, amb.b) */
         u8 bl = amb->b;
         u8 g = amb->g;
         u8 r = amb->r;
@@ -2253,8 +2253,8 @@ void daPy_lk_c::setHatAngle() {
     gabi::Local<cXyz> sp7C;
     PSMTXMultVecSR(mpCLModel->getAnmMtx(LinkPoseConstants::CL_JNT_HEAD_JNT_e), &l_neck_front, sp88);
     PSMTXMultVecSR(mpCLModel->getAnmMtx(LinkPoseConstants::CL_JNT_HEAD_JNT_e), &l_neck_top, sp7C);
-    s16 r25 = m3528;
-    s16 r26 = m352A;
+    s16 r25 = mHeadFrontAngleX;
+    s16 r26 = mHeadFrontAngleY;
     s16 newX;
     gabi::Local<cXyz> xz;
     if (sp7C->y < 0.0f) {
@@ -2262,21 +2262,21 @@ void daPy_lk_c::setHatAngle() {
         xz->x = sp88->x;
         xz->z = sp88->z;
         f32 d = std_sqrtf(PSVECSquareMag(xz));
-        m3528 = cM_atan2s(sp88->y, -d);
+        mHeadFrontAngleX = cM_atan2s(sp88->y, -d);
         newX = (s16)(cM_atan2s(sp88->x, sp88->z) + 0x8000);
     } else {
         xz->y = 0.0f;
         xz->x = sp88->x;
         xz->z = sp88->z;
         f32 d = std_sqrtf(PSVECSquareMag(xz));
-        m3528 = cM_atan2s(sp88->y, d);
+        mHeadFrontAngleX = cM_atan2s(sp88->y, d);
         newX = cM_atan2s(sp88->x, sp88->z);
     }
     if (std::fabs((f32)sp88->y) > 0.7f) {
         newX = r26;
     }
-    s16 cur3528 = m3528;
-    m352A = newX;
+    s16 cur3528 = mHeadFrontAngleX;
+    mHeadFrontAngleY = newX;
     s16 r28_r29 = (s16)(cur3528 - r25) >> 1;
     s16 r25_r28 = (s16)(newX - r26) >> 1;
     if (r28_r29 > 0x200) {
@@ -2290,10 +2290,10 @@ void daPy_lk_c::setHatAngle() {
         r25_r28 = -0x800;
     }
     gabi::Local<cXyz> sp94;
-    sp94->y = (m3718.y - spA0->y) - 7.5f;
-    sp94->x = m3718.x - spA0->x;
-    sp94->z = m3718.z - spA0->z;
-    if (!(mModeFlg & LinkPoseConstants::ModeFlg_WHIDE) || field_0x2b0 < 0.0f /* checkGrabWear() */) {
+    sp94->y = (mHatPrevPos.y - spA0->y) - 7.5f;
+    sp94->x = mHatPrevPos.x - spA0->x;
+    sp94->z = mHatPrevPos.z - spA0->z;
+    if (!(mModeFlg & LinkPoseConstants::ModeFlg_WHIDE) || mGrabItemOffsetY < 0.0f /* checkGrabWear() */) {
         gabi::Local<cXyz> t;
         cXyz_ml(spAC, t, f29);
         PSVECAdd(sp94, t, sp94);
@@ -2308,26 +2308,26 @@ void daPy_lk_c::setHatAngle() {
     f32 py = sp94->y;
     f32 pz = sp94->z;
     f32 f28 = gabi::fmadds(pz, f30, px * f31);
-    s16 r26_2 = m34F6;
-    s16 r27 = m34F8;
+    s16 r26_2 = mHatAAngleZ;
+    s16 r27 = mHatAAngleY;
     s32 r4_3 = cM_atan2s(-f28, -py);
-    if (m34F6 < 0) {
+    if (mHatAAngleZ < 0) {
         r4_3 = 0x7800;
     } else if (r4_3 < 0x800 && -0x7800 < r4_3) {
         r4_3 = 0x800;
     } else if (0x7800 < r4_3 || r4_3 <= -0x7800) {
         r4_3 = 0x7800;
     }
-    cLib_addCalcAngleS2(&m34F6, (s16)r4_3, 5, 0x400);
+    cLib_addCalcAngleS2(&mHatAAngleZ, (s16)r4_3, 5, 0x400);
     {
-        s32 v = m34F6 + (m3502 + r28_r29);
-        s16 r0 = m3528;
+        s32 v = mHatAAngleZ + (mHatASpeedZ + r28_r29);
+        s16 r0 = mHeadFrontAngleX;
         s16 t = (s16)(v - 0x4000 + r0);
-        m34F6 = (s16)v;
+        mHatAAngleZ = (s16)v;
         if (t < -0x3000) {
-            m34F6 = (s16)(0x1000 - r0);
+            mHatAAngleZ = (s16)(0x1000 - r0);
         } else if (t > 0x3800) {
-            m34F6 = (s16)(0x7800 - r0);
+            mHatAAngleZ = (s16)(0x7800 - r0);
         }
     }
     f32 f0_2 = std_sqrtf(gabi::fmadds(f28, f28, py * py));
@@ -2337,78 +2337,78 @@ void daPy_lk_c::setHatAngle() {
     } else if (r4_5 < -0x3800) {
         r4_5 = -0x3800;
     }
-    cLib_addCalcAngleS2(&m34F8, (s16)r4_5, 5, 0x400);
+    cLib_addCalcAngleS2(&mHatAAngleY, (s16)r4_5, 5, 0x400);
     {
-        s16 v = (s16)(m34F8 + (m3504 - r25_r28));
+        s16 v = (s16)(mHatAAngleY + (mHatASpeedY - r25_r28));
         if (v > 0x3800) {
             v = 0x3800;
         } else if (v < -0x3800) {
             v = -0x3800;
         }
-        s16 r3 = (s16)(m34F6 - r26_2);
-        m34F8 = v;
-        m3502 = lk_ftos((f32)r3 * 0.2f);
-        s16 r4 = (s16)(m34F8 - r27);
-        m3504 = lk_ftos((f32)r4 * 0.2f);
-        m34FA = (s16)(m34FA - r3);
-        m34FC = (s16)(m34FC - r4);
+        s16 r3 = (s16)(mHatAAngleZ - r26_2);
+        mHatAAngleY = v;
+        mHatASpeedZ = lk_ftos((f32)r3 * 0.2f);
+        s16 r4 = (s16)(mHatAAngleY - r27);
+        mHatASpeedY = lk_ftos((f32)r4 * 0.2f);
+        mHatBAngleZ = (s16)(mHatBAngleZ - r3);
+        mHatBAngleY = (s16)(mHatBAngleY - r4);
     }
-    s16 r27_2 = m34FA;
-    s16 r26_3 = m34FC;
-    cLib_addCalcAngleS2(&m34FA, 0, 5, 0x400);
-    cLib_addCalcAngleS2(&m34FC, 0, 5, 0x400);
+    s16 r27_2 = mHatBAngleZ;
+    s16 r26_3 = mHatBAngleY;
+    cLib_addCalcAngleS2(&mHatBAngleZ, 0, 5, 0x400);
+    cLib_addCalcAngleS2(&mHatBAngleY, 0, 5, 0x400);
     {
-        s16 a = (s16)(m34FA + (m3506 + r28_r29));
-        s16 c = (s16)(m34FC + (m3508 - r25_r28));
-        m34FA = a;
-        m34FC = c;
+        s16 a = (s16)(mHatBAngleZ + (mHatBSpeedZ + r28_r29));
+        s16 c = (s16)(mHatBAngleY + (mHatBSpeedY - r25_r28));
+        mHatBAngleZ = a;
+        mHatBAngleY = c;
         if (a > 0x1000) {
-            m34FA = 0x1000;
+            mHatBAngleZ = 0x1000;
         } else if (a < -0x800) {
-            m34FA = -0x800;
+            mHatBAngleZ = -0x800;
         }
-        s16 f8v = m34F8;
-        s16 r0 = (s16)(m34FC + f8v);
+        s16 f8v = mHatAAngleY;
+        s16 r0 = (s16)(mHatBAngleY + f8v);
         if (r0 > 0x3800) {
-            m34FC = (s16)(0x3800 - f8v);
+            mHatBAngleY = (s16)(0x3800 - f8v);
         } else if (r0 < -0x3800) {
-            m34FC = (s16)(-0x3800 - f8v);
+            mHatBAngleY = (s16)(-0x3800 - f8v);
         }
-        s32 d1 = m34FA - r27_2;
-        m3506 = lk_ftos((f32)d1 * 0.2f);
-        s32 d2 = m34FC - r26_3;
-        m3508 = lk_ftos((f32)d2 * 0.2f);
-        m34FE = (s16)(m34FE - (s16)(m34FA - r27_2));
-        m3500 = (s16)(m3500 - (s16)d2);
+        s32 d1 = mHatBAngleZ - r27_2;
+        mHatBSpeedZ = lk_ftos((f32)d1 * 0.2f);
+        s32 d2 = mHatBAngleY - r26_3;
+        mHatBSpeedY = lk_ftos((f32)d2 * 0.2f);
+        mHatCAngleZ = (s16)(mHatCAngleZ - (s16)(mHatBAngleZ - r27_2));
+        mHatCAngleY = (s16)(mHatCAngleY - (s16)d2);
     }
-    s16 r27_3 = m34FE;
-    s16 r26_4 = m3500;
-    cLib_addCalcAngleS2(&m34FE, 0, 5, 0x400);
-    cLib_addCalcAngleS2(&m3500, 0, 5, 0x400);
+    s16 r27_3 = mHatCAngleZ;
+    s16 r26_4 = mHatCAngleY;
+    cLib_addCalcAngleS2(&mHatCAngleZ, 0, 5, 0x400);
+    cLib_addCalcAngleS2(&mHatCAngleY, 0, 5, 0x400);
     {
-        s16 a = (s16)(m34FE + (m350A + r28_r29));
-        s16 c = (s16)(m3500 + (m350C - r25_r28));
-        m34FE = a;
-        m3500 = c;
+        s16 a = (s16)(mHatCAngleZ + (mHatCSpeedZ + r28_r29));
+        s16 c = (s16)(mHatCAngleY + (mHatCSpeedY - r25_r28));
+        mHatCAngleZ = a;
+        mHatCAngleY = c;
         if (a > 0x1000) {
-            m34FE = 0x1000;
+            mHatCAngleZ = 0x1000;
         } else if (a < -0x800) {
-            m34FE = -0x800;
+            mHatCAngleZ = -0x800;
         }
-        s16 fc = m34FC;
-        s16 f8v = m34F8;
-        s16 r4_6 = (s16)(m3500 + fc + f8v);
+        s16 fc = mHatBAngleY;
+        s16 f8v = mHatAAngleY;
+        s16 r4_6 = (s16)(mHatCAngleY + fc + f8v);
         if (r4_6 > 0x3800) {
-            m3500 = (s16)((0x3800 - f8v) - fc);
+            mHatCAngleY = (s16)((0x3800 - f8v) - fc);
         } else if (r4_6 < -0x3800) {
-            m3500 = (s16)((-0x3800 - f8v) - fc);
+            mHatCAngleY = (s16)((-0x3800 - f8v) - fc);
         }
-        s32 d1 = m34FE - r27_3;
-        m350A = lk_ftos((f32)d1 * 0.2f);
-        s32 d2 = m3500 - r26_4;
-        m350C = lk_ftos((f32)d2 * 0.2f);
+        s32 d1 = mHatCAngleZ - r27_3;
+        mHatCSpeedZ = lk_ftos((f32)d1 * 0.2f);
+        s32 d2 = mHatCAngleY - r26_4;
+        mHatCSpeedY = lk_ftos((f32)d2 * 0.2f);
     }
-    f32 dist = std_sqrtf(LinkPoseApi::PSVECSquareDistance(&m3718, spA0.get()));
+    f32 dist = std_sqrtf(LinkPoseApi::PSVECSquareDistance(&mHatPrevPos, spA0.get()));
     f32 f28_2 = gabi::fmadds(dist, 0.65f, f29) / 30.0f;
     if (f28_2 > 1.0f) {
         f28_2 = 1.0f;
@@ -2420,22 +2420,22 @@ void daPy_lk_c::setHatAngle() {
         mDoAud_seStart(LinkPoseConstants::JA_SE_LK_HAT_SWING, &eyePos, 0, (s32)(s8)mReverb);
     }
     s16 r25_2 = lk_ftos(gabi::fmadds(f28_2, 4060.0f, 1500.0f));
-    s32 m14 = m3514 + r25_2;
-    m3514 = (s16)m14;
+    s32 m14 = mHatSwingPhase + r25_2;
+    mHatSwingPhase = (s16)m14;
     f32 f0 = cM_scos((u16)m14);
-    m350E = lk_ftos((f29_2 * 2280.0f) * f0);
+    mHatASwingZ = lk_ftos((f29_2 * 2280.0f) * f0);
     f32 fr = (f32)(s32)r25_2;
     f32 fm = (f32)(s32)(s16)m14;
     u16 i1 = (u16)gabi::ftoi(gabi::fnmsubs(3.0f, fr, fm));
-    m3510 = lk_ftos((f29_2 * 3908.0f) * cM_scos(i1));
+    mHatBSwingZ = lk_ftos((f29_2 * 3908.0f) * cM_scos(i1));
     u16 i2 = (u16)gabi::ftoi(gabi::fnmsubs(6.0f, fr, fm));
     u32 mf = mModeFlg;
-    m3718.copy(*spA0);
-    m3512 = lk_ftos((f29_2 * 7568.0f) * cM_scos(i2));
+    mHatPrevPos.copy(*spA0);
+    mHatCSwingZ = lk_ftos((f29_2 * 7568.0f) * cM_scos(i2));
     if (mf & LinkPoseConstants::ModeFlg_SWIM) {
-        m351A = 0;
-        m3516 = 0;
-        m3518 = 0;
+        mMomiAngleZ = 0;
+        mLMomiAngleY = 0;
+        mRMomiAngleY = 0;
         return;
     }
     f32 ax = spAC->x;
@@ -2446,13 +2446,13 @@ void daPy_lk_c::setHatAngle() {
     f32 ws = *sp18;
     s16 v16 = lk_ftos(((-8192.0f * sx) * ws) * f5);
     s16 v1a = lk_ftos(((-8192.0f * sz) * ws) * f5);
-    m3516 = v16;
-    m3518 = v16;
-    m351A = v1a;
+    mLMomiAngleY = v16;
+    mRMomiAngleY = v16;
+    mMomiAngleZ = v1a;
     if (v16 > 0x1000) {
-        m3516 = 0x1000;
-    } else if (m3518 < -0x1000) {
-        m3518 = -0x1000;
+        mLMomiAngleY = 0x1000;
+    } else if (mRMomiAngleY < -0x1000) {
+        mRMomiAngleY = -0x1000;
     }
 }
 
@@ -2541,36 +2541,36 @@ void daPy_lk_c::setNeckAngle() {
         gabi::Local<cXyz> xz;
         bool done = false;
         if (LinkPoseApi::checkHeavyStateOn(this)) {
-            xz->x = m373C.x;
+            xz->x = mWindAnmSpeed.x;
             xz->y = 0.0f;
-            xz->z = m373C.z;
+            xz->z = mWindAnmSpeed.z;
             if (PSVECSquareMag(xz) > 25.0f) {
-                f32 x = gabi::fnmsubs(100.0f, m373C.x, current.pos.x);
+                f32 x = gabi::fnmsubs(100.0f, mWindAnmSpeed.x, current.pos.x);
                 f32 y = current.pos.y + 120.0f;
                 spA0->x = x;
                 spA0->y = y;
-                spA0->z = gabi::fnmsubs(100.0f, m373C.z, current.pos.z);
+                spA0->z = gabi::fnmsubs(100.0f, mWindAnmSpeed.z, current.pos.z);
                 done = true;
             }
         }
         if (!done) {
             if (!LinkPoseApi::checkHeavyStateOn(this)) {
                 gabi::Local<cXyz> xz2;
-                xz2->x = m3730.x;
+                xz2->x = mWindSpeed.x;
                 xz2->y = 0.0f;
-                xz2->z = m3730.z;
+                xz2->z = mWindSpeed.z;
                 if (PSVECSquareMag(xz2) > 25.0f) {
                     f32 y = current.pos.y + 120.0f;
                     spA0->y = y;
-                    spA0->x = gabi::fnmsubs(100.0f, m3730.x, current.pos.x);
-                    spA0->z = gabi::fnmsubs(100.0f, m3730.z, current.pos.z);
+                    spA0->x = gabi::fnmsubs(100.0f, mWindSpeed.x, current.pos.x);
+                    spA0->z = gabi::fnmsubs(100.0f, mWindSpeed.z, current.pos.z);
                     done = true;
                 }
             }
         }
         if (!done) {
-            f32 k = 100.0f * m3644;
-            u16 a = (u16)m3640;
+            f32 k = 100.0f * mOutPower;
+            u16 a = (u16)mOutPowerAngle;
             f32 y = current.pos.y + 120.0f;
             spA0->y = y;
             spA0->x = gabi::fnmsubs(k, cM_ssin(a), current.pos.x);
@@ -2603,8 +2603,8 @@ void daPy_lk_c::setNeckAngle() {
                 *sp18 = gabi::ea(spA0.get());
                 r28 = TRUE;
             } else if (m34C3 == 10) {
-                f32 sx = m3730.x + m36B8.x;
-                f32 sz = m3730.z + m36B8.z;
+                f32 sx = mWindSpeed.x + mBeltConveyerSpeed.x;
+                f32 sz = mWindSpeed.z + mBeltConveyerSpeed.z;
                 f32 y = current.pos.y + 120.0f;
                 spA0->y = y;
                 spA0->x = gabi::fnmsubs(10.0f, sx, current.pos.x);
@@ -2641,8 +2641,8 @@ void daPy_lk_c::setNeckAngle() {
     xz0->y = 0.0f;
     xz0->x = acx;
     xz0->z = acz;
-    s16 r24_4 = (s16)(cM_atan2s(-acy, std_sqrtf(PSVECSquareMag(xz0))) - m3564.x);
-    s16 r25_3 = (s16)((cM_atan2s(acx, acz) - m34DE) - m3564.y);
+    s16 r24_4 = (s16)(cM_atan2s(-acy, std_sqrtf(PSVECSquareMag(xz0))) - mNeckAngle.x);
+    s16 r25_3 = (s16)((cM_atan2s(acx, acz) - m34DE) - mNeckAngle.y);
     s16 r4;
     s16 r23;
     if ((mModeFlg & (LinkPoseConstants::ModeFlg_00000080 | LinkPoseConstants::ModeFlg_08000000)) &&
@@ -2664,7 +2664,7 @@ void daPy_lk_c::setNeckAngle() {
         xz2->y = 0.0f;
         xz2->z = bz;
         if (std_sqrtf(PSVECSquareMag(xz2)) < 30.0f) {
-            r23_3 = m3564.y;
+            r23_3 = mNeckAngle.y;
         }
         if (r27 > 8000) {
             r27 = 8000;
@@ -2699,8 +2699,8 @@ void daPy_lk_c::setNeckAngle() {
             r23 = 0;
         }
     } else if (mCurProc == LinkPoseConstants::daPyProc_DAMAGE_e) {
-        r4 = m3564.x;
-        r23 = m3564.y;
+        r4 = mNeckAngle.x;
+        r23 = mNeckAngle.y;
     } else if ((mCurProc == LinkPoseConstants::daPyProc_LADDER_MOVE_e ||
                 mCurProc == LinkPoseConstants::daPyProc_CLIMB_MOVE_UP_DOWN_e) &&
                mDirection == 0 /* DIR_FORWARD */) {
@@ -2715,9 +2715,9 @@ void daPy_lk_c::setNeckAngle() {
             r4 = 0;
         }
         r23 = lk_ftos(6144.0f * cM_ssin((u16)v));
-    } else if (m34C3 == 1 && m3580 != 8) {
+    } else if (m34C3 == 1 && mGroundCode != 8) {
         r28 = FALSE;
-        r4 = (s16)(m34E2 >> 1);
+        r4 = (s16)(mGroundAngle >> 1);
         if (r4 > 8000) {
             r4 = 8000;
         } else if (r4 < -10000) {
@@ -2733,18 +2733,18 @@ void daPy_lk_c::setNeckAngle() {
         r23 = 0;
         r29 = 0;
     }
-    cLib_addCalcAngleS(&m3564.x, r4, 3, 0x1000, 0x100);
-    cLib_addCalcAngleS(&m3564.y, r23, 3, 0x1000, 0x100);
+    cLib_addCalcAngleS(&mNeckAngle.x, r4, 3, 0x1000, 0x100);
+    cLib_addCalcAngleS(&mNeckAngle.y, r23, 3, 0x1000, 0x100);
     if (mModeFlg & LinkPoseConstants::ModeFlg_00000080) {
-        s16 v = (s16)(r25_3 + m3564.y);
+        s16 v = (s16)(r25_3 + mNeckAngle.y);
         if (v > 0x3800) {
-            m3564.y = (s16)(0x3800 - r25_3);
+            mNeckAngle.y = (s16)(0x3800 - r25_3);
         } else if (v < -0x3800) {
-            m3564.y = (s16)(-0x3800 - r25_3);
+            mNeckAngle.y = (s16)(-0x3800 - r25_3);
         }
     }
     if (mCurProc != LinkPoseConstants::daPyProc_DAMAGE_e) {
-        cLib_addCalcAngleS(&m3564.z, 0, 3, 0x1000, 0x100);
+        cLib_addCalcAngleS(&mNeckAngle.z, 0, 3, 0x1000, 0x100);
     }
     f32 f31v = 0.0f; /* eye 0 x */
     f32 f30v = 0.0f; /* eye 1 x */
@@ -2783,7 +2783,7 @@ void daPy_lk_c::setNeckAngle() {
             f0 = 0.0f;
             f1 = m35A0;
         } else {
-            s16 a0 = cM_atan2s(m36A0.x, m36A0.z);
+            s16 a0 = cM_atan2s(mSlipSpeed.x, mSlipSpeed.z);
             u16 a = (u16)(a0 - shape_angle.y);
             f0 = std::fabs(cM_scos(a));
             f1 = cM_ssin(a);
@@ -2809,8 +2809,8 @@ void daPy_lk_c::setNeckAngle() {
         f29v = f0 * fy;
         eyes = true;
     } else {
-        s16 m = m351C;
-        f32 f1 = (f32)(s32)m * 0.00024414062f; /* m351C / 4096.0f */
+        s16 m = mMoveSlantAngle;
+        f32 f1 = (f32)(s32)m * 0.00024414062f; /* mMoveSlantAngle / 4096.0f */
         u32 fl = mNoResetFlg1.get();
         if (f1 > 1.0f) {
             f1 = 1.0f;
@@ -3506,7 +3506,7 @@ void daPy_lk_c::setCollision() {
         c->z = z;
     }
     cM3dGCyl* cyl = &mCyl.mCyl;
-    cyl->SetR(fsel_l(field_0x2b0, 30.0f, 50.0f)); /* checkGrabWear() ? 50 : 30 */
+    cyl->SetR(fsel_l(mGrabItemOffsetY, 30.0f, 50.0f)); /* checkGrabWear() ? 50 : 30 */
     u32 mode = mModeFlg;
     if (mode & LinkCollisionConstants::ModeFlg_IN_SHIP) { /* ModeFlg_IN_SHIP: mCyl.OnCoSPrmBit(NoCrr) */
         mCyl.mObjCo.mSPrm = mCyl.mObjCo.mSPrm | 0x100;
@@ -3638,13 +3638,13 @@ void daPy_lk_c::setCollision() {
                     }
                     JPABaseEmitter* e1 =
                         LinkCollision_cutTurnEmitter(this, LinkCollisionConstants::ID_AK_JN_ROUNDATTACK00,
-                                                     &LinkCollision(this).m331C, prm0, env);
+                                                     &LinkCollision(this).mCutTurnEcallBack0, prm0, env);
                     JPABaseEmitter* e2 =
                         LinkCollision_cutTurnEmitter(this, LinkCollisionConstants::ID_AK_JN_ROUNDATTACK01,
-                                                     &LinkCollision(this).m332C, prm1, env);
+                                                     &LinkCollision(this).mCutTurnEcallBack1, prm1, env);
                     JPABaseEmitter* e3 =
                         LinkCollision_cutTurnEmitter(this, LinkCollisionConstants::ID_AK_JN_ROUNDATTACK02,
-                                                     &LinkCollision(this).m333C, prm0, env);
+                                                     &LinkCollision(this).mCutTurnEcallBack2, prm0, env);
                     if (e1 != 0) { /* setGlobalParticleWidthScale */
                         LinkCollisionEmitterView(e1).mGlobalParticleWidthScale = w;
                     }
@@ -3657,7 +3657,7 @@ void daPy_lk_c::setCollision() {
                 }
             }
         } else if (mCurProc == LinkCollisionConstants::daPyProc_CUT_ROLL_e /* daPyProc_CUT_ROLL_e */) {
-            cXyz* pos = LinkCollisionBlur(mpSwBlur)->field_0x304; /* mSwBlur.field_0x304 */
+            cXyz* pos = LinkCollisionBlur(mpSwBlur)->mRootPos; /* mSwBlur.mRootPos */
             gabi::Local<cXyz> d1;
             gabi::Local<cXyz> d2;
             gabi::Local<cXyz> spAC;
@@ -3670,7 +3670,7 @@ void daPy_lk_c::setCollision() {
             PSMTXCopy(cl != nullptr ? cl->getBaseTRMtx() : nullptr, stk);
             LinkCollisionApi::pushMtx();
             LinkCollisionApi::inverseMtx(stk, stk);
-            PSMTXMultVec(stk, &m36C4, spA0.get());
+            PSMTXMultVec(stk, &mSwordRootPos, spA0.get());
             LinkCollisionApi::popMtx();
             for (s32 i = 0; i < 10; i++, pos++) {
                 PSMTXMultVec(stk, spA0.get(), pos);
@@ -3682,14 +3682,14 @@ void daPy_lk_c::setCollision() {
             PSMTXCopy(cl != nullptr ? cl->getBaseTRMtx() : nullptr, stk);
             mDoMtx_YrotM(stk, -0x2BC);
             PSMTXMultVec(stk, spA0.get(), sp98.get());
-            if (LinkCollision(this).m331C.mAlpha == 0xFF) { /* m331C.getAlpha() */
-                cXyz* arr = LinkCollisionBlur(mpSwBlur)->field_0x304;
-                LinkCollision(this).m331C.mCount = 10;
-                LinkCollision(this).m332C.mCount = 10;
-                LinkCollision(this).m333C.mCount = 10;
-                LinkCollision(this).m331C.mpPos = arr;
-                LinkCollision(this).m332C.mpPos = arr;
-                LinkCollision(this).m333C.mpPos = arr;
+            if (LinkCollision(this).mCutTurnEcallBack0.mAlpha == 0xFF) { /* mCutTurnEcallBack0.getAlpha() */
+                cXyz* arr = LinkCollisionBlur(mpSwBlur)->mRootPos;
+                LinkCollision(this).mCutTurnEcallBack0.mCount = 10;
+                LinkCollision(this).mCutTurnEcallBack1.mCount = 10;
+                LinkCollision(this).mCutTurnEcallBack2.mCount = 10;
+                LinkCollision(this).mCutTurnEcallBack0.mpPos = arr;
+                LinkCollision(this).mCutTurnEcallBack1.mpPos = arr;
+                LinkCollision(this).mCutTurnEcallBack2.mpPos = arr;
             }
             LinkCollisionApi::MoveCAt(&mAtCyl, &current.pos);
             seStartSwordCut(LinkCollisionConstants::JA_SE_LK_SUGOI_KAITEN /* JA_SE_LK_SUGOI_KAITEN */);
@@ -3698,7 +3698,7 @@ void daPy_lk_c::setCollision() {
             proc = mCurProc;
             f32 fr = mFrameCtrlUnder[0].mFrame;
             s32 n = gabi::ftoi(fr * 10.0f);
-            s32 r26 = (s32)blur->field_0x018; /* mSwBlur.field_0x018 */
+            s32 r26 = (s32)blur->mBufferIdx; /* mSwBlur.mBufferIdx */
             if (proc != LinkCollisionConstants::daPyProc_CUT_F_e &&
                 proc != LinkCollisionConstants::daPyProc_BT_VERTICAL_JUMP_CUT_e &&
                 proc != LinkCollisionConstants::daPyProc_FAN_SWING_e) {
@@ -3721,20 +3721,20 @@ void daPy_lk_c::setCollision() {
                              gabi::at<cXyz>(gabi::ea(pb) + (u32)n * sizeof(cXyz) * 2 + sizeof(cXyz) * 3),
                              sp98.get());
                 LinkCollisionApi::MoveCAt(&mAtCyl, &current.pos);
-                u8 alpha = LinkCollision(this).m331C.mAlpha;
+                u8 alpha = LinkCollision(this).mCutTurnEcallBack0.mAlpha;
                 daPy_swBlur_c* bl = LinkCollisionBlur(mpSwBlur);
                 if (alpha == 0xFF) {
                     daPy_swBlur_c* bl2 = LinkCollisionBlur(mpSwBlur);
-                    cXyz* arr = bl2->field_0x304;
-                    s16 cnt = (s16)((s32)bl2->field_0x018 - r26);
-                    LinkCollision(this).m331C.mpPos = arr;
-                    LinkCollision(this).m332C.mpPos = arr;
-                    LinkCollision(this).m331C.mCount = cnt;
-                    LinkCollision(this).m332C.mCount = cnt;
-                    LinkCollision(this).m333C.mCount = cnt;
-                    LinkCollision(this).m333C.mpPos = arr;
+                    cXyz* arr = bl2->mRootPos;
+                    s16 cnt = (s16)((s32)bl2->mBufferIdx - r26);
+                    LinkCollision(this).mCutTurnEcallBack0.mpPos = arr;
+                    LinkCollision(this).mCutTurnEcallBack1.mpPos = arr;
+                    LinkCollision(this).mCutTurnEcallBack0.mCount = cnt;
+                    LinkCollision(this).mCutTurnEcallBack1.mCount = cnt;
+                    LinkCollision(this).mCutTurnEcallBack2.mCount = cnt;
+                    LinkCollision(this).mCutTurnEcallBack2.mpPos = arr;
                 }
-                bl->field_0x014 = 0; /* mSwBlur.field_0x014 */
+                bl->mSegmentNum = 0; /* mSwBlur.mSegmentNum */
             } else {
                 setSwordAtCollision();
             }
@@ -3771,8 +3771,8 @@ void daPy_lk_c::setCollision() {
         }
     } else {
         daPy_swBlur_c* blur = LinkCollisionBlur(mpSwBlur);
-        s32 v = (s32)blur->field_0x014;
-        blur->field_0x014 = v < 10 ? 0 : v - 10;
+        s32 v = (s32)blur->mSegmentNum;
+        blur->mSegmentNum = v < 10 ? 0 : v - 10;
         if (mCurProc == LinkCollisionConstants::daPyProc_BOTTLE_OPEN_e /* daPyProc_BOTTLE_OPEN_e */ &&
             mProcVar3 != 0) {
             mAtCps[0].mObjAt.mSPrm = mAtCps[0].mObjAt.mSPrm | 1;
@@ -3795,9 +3795,9 @@ void daPy_lk_c::setCollision() {
         mAtCyl.mObjAt.mSPrm = mAtCyl.mObjAt.mSPrm & ~1u;
         mNoResetFlg0 = mNoResetFlg0 &
                        ~LinkCollisionConstants::daPyFlg0_CUT_AT_FLG; /* offNoResetFlg0(daPyFlg0_CUT_AT_FLG) */
-        LinkCollisionApi::endCutTurn(&LinkCollision(this).m331C);
-        LinkCollisionApi::endCutTurn(&LinkCollision(this).m332C);
-        LinkCollisionApi::endCutTurn(&LinkCollision(this).m333C);
+        LinkCollisionApi::endCutTurn(&LinkCollision(this).mCutTurnEcallBack0);
+        LinkCollisionApi::endCutTurn(&LinkCollision(this).mCutTurnEcallBack1);
+        LinkCollisionApi::endCutTurn(&LinkCollision(this).mCutTurnEcallBack2);
     }
     if (fanWindCrashEffectDraw()) {
         s16 mx = LinkCollision(this).mpYbafo00Btk.mFrameCtrl.mEnd;
@@ -3817,11 +3817,11 @@ void daPy_lk_c::setCollision() {
     cXyz* p88 = sp88.get();
     cXyz* pC4 = spC4.get();
     f32 radius = 0.0f;
-    if (m3534 != 0) { /* m3534 */
+    if (mFanWindTimer != 0) { /* mFanWindTimer */
         p94->copy(LinkCollisionCapsule(mFanWindCps).mEnd);
-        f32 t = (f32)m3534 / 10.0f;
-        u32 ia = (u32)(u16)m3536 >> 3;
-        u32 ib = (u32)(u16)m3538 >> 3;
+        f32 t = (f32)mFanWindTimer / 10.0f;
+        u32 ia = (u32)(u16)mFanWindAngleY >> 3;
+        u32 ib = (u32)(u16)mFanWindAngleX >> 3;
         f32 len = gabi::fmadds(t, 100.0f, 100.0f);
         f32 sa = (f32)l_collisionSinCos.m[ia].sin;
         f32 sb = (f32)l_collisionSinCos.m[ib].sin;
@@ -3851,8 +3851,8 @@ void daPy_lk_c::setCollision() {
                 crash = (f32)pla->mNormal.y < 0.5f; /* !cBgW_CheckBGround(ny) */
             }
             if (crash) {
-                m3534 = 0;
-                LinkItemApi::endMtxFollow(reinterpret_cast<LinkItemMtxCallback*>(&m33E8)); /* m33E8.end() */
+                mFanWindTimer = 0;
+                LinkItemApi::endMtxFollow(reinterpret_cast<LinkItemMtxCallback*>(&mFanWindEcallBack)); /* mFanWindEcallBack.end() */
                 LinkCollision_anmSetFrame(
                     LinkCollision(this).mpYuchw00Brk,
                     gabi::fsubs_ppc((f32)LinkCollision(this).mpYuchw00Brk.mFrameCtrl.mEnd, 0.001f));
@@ -3886,16 +3886,16 @@ void daPy_lk_c::setCollision() {
                 }
             } else {
                 p88->y = gabi::fadds_ppc(cy, 70.0f);
-                m3538 = LinkItemApi::getGroundAngle(
-                    this, static_cast<cBgS_PolyInfo*>(&LinkCollision(this).mArrowLinChk), (s32)m3536);
+                mFanWindAngleX = LinkItemApi::getGroundAngle(
+                    this, static_cast<cBgS_PolyInfo*>(&LinkCollision(this).mArrowLinChk), (s32)mFanWindAngleY);
             }
         }
         wind = true;
         radius = gabi::fmadds(gabi::fsubs_ppc(1.0f, t), 230.0f, 70.0f);
-        if (m3534 != 0) {
-            m3534 = (s16)(m3534 - 1);
+        if (mFanWindTimer != 0) {
+            mFanWindTimer = (s16)(mFanWindTimer - 1);
             PSMTXTrans(mDoMtx_stack_c::get(), (f32)p88->x, (f32)p88->y, (f32)p88->z);
-            LinkCollisionApi::ZXYrotM(stk, (s32)m3538, (s32)m3536, 0);
+            LinkCollisionApi::ZXYrotM(stk, (s32)mFanWindAngleX, (s32)mFanWindAngleY, 0);
             LinkCollision_modelMatrix(LinkCollision(this).mpYuchw00Model, stk);
             LinkCollision_yuchwPlay(this);
         }
@@ -3905,7 +3905,7 @@ void daPy_lk_c::setCollision() {
         f32 f = gabi::fadds_ppc(LinkCollision(this).mpYuchw00Brk.mFrameCtrl.mFrame, 1.0f);
         if (f > gabi::fsubs_ppc(mx, 0.5f)) {
             f = gabi::fsubs_ppc(mx, 0.001f);
-            LinkItemApi::endMtxFollow(reinterpret_cast<LinkItemMtxCallback*>(&m33E8)); /* m33E8.end() */
+            LinkItemApi::endMtxFollow(reinterpret_cast<LinkItemMtxCallback*>(&mFanWindEcallBack)); /* mFanWindEcallBack.end() */
         }
         LinkCollision_anmSetFrame(LinkCollision(this).mpYuchw00Brk, f);
     } else if (LinkCollision(this).mpYbafo00Btk.mFrameCtrl.mFrame < 5.0f) {
@@ -3943,7 +3943,7 @@ void daPy_lk_c::setCollision() {
         mDoAud_seStart(LinkCollisionConstants::JA_SE_LK_FAN_WIND /* JA_SE_LK_FAN_WIND */,
                        &LinkCollisionCapsule(mFanWindCps).mEnd, 0, (s32)rev);
     }
-    if (m353A != 0) { /* m353A */
+    if (mFanWindSphTimer != 0) { /* mFanWindSphTimer */
         dCcD_Sph* sph = &mFanWindSph;
         if (mCurProc == LinkCollisionConstants::daPyProc_FAN_GLIDE_e /* daPyProc_FAN_GLIDE_e */) {
             Mtx34* m = lk_getAnmMtx(mpCLModel, LinkCollisionConstants::CL_JNT_LINK_ROOT_e);
@@ -3957,7 +3957,7 @@ void daPy_lk_c::setCollision() {
         }
         LinkCollision_setCollider(sph);
         LinkCollision_setMass(sph);
-        m353A = (s16)(m353A - 1);
+        mFanWindSphTimer = (s16)(mFanWindSphTimer - 1);
     } else {
         LinkCollisionApi::ResetAtHit(&mFanWindSph);
     }
@@ -4085,7 +4085,7 @@ BOOL daPy_lk_c::execute() {
     LinkUpdate_copyAngles(shape_angle, l_debug_shape_angle);
     LinkUpdate_copyAngles(current.angle, l_debug_current_angle);
     mCameraInfoIdx = (s32)dComIfGp_getPlayerCameraID(0); /* mCameraInfoIdx */
-    m3748.copy(current.pos);
+    mExecStartPos.copy(current.pos);
     if (mCurProc != LinkUpdateConstants::daPyProc_HOOKSHOT_FLY_e /* daPyProc_HOOKSHOT_FLY_e */ && !(dComIfGp_getPlayerStatus0() & LinkPoseConstants::daPyStts0_SHIP_RIDE_e) &&
         !(mModeFlg & (LinkUpdateConstants::ModeFlg_ROPE | LinkUpdateConstants::ModeFlg_CLIMB | LinkUpdateConstants::ModeFlg_LADDER)) && mCurProc != LinkUpdateConstants::daPyProc_DEMO_TOOL_e && mAcch.m_ground_h != -1000000000.0f &&
         !(mNoResetFlg0 & (daPyFlg0_UNK20000000 | daPyFlg0_UNK80000000)) && LinkUpdateApi::ChkPolySafe(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mAcch.m_gnd)) &&
@@ -4099,9 +4099,9 @@ BOOL daPy_lk_c::execute() {
     fcpy_l(gabi::ea(oldPos.get()) + 8, gabi::ea(&old.pos.z));
     fcpy_l(gabi::ea(oldPos.get()) + 4, gabi::ea(&old.pos.y));
     m34DE = shape_angle.y; /* m34DE */
-    m34EA = m34DC; /* m34EA = m34DC */
+    mOldStickAngle = mStickAngle; /* mOldStickAngle = mStickAngle */
     fcpy_l(gabi::ea(oldPos.get()) + 0, gabi::ea(&old.pos.x));
-    m35B4 = mStickDistance; /* m35B4 = mStickDistance */
+    mOldStickDistance = mStickDistance; /* mOldStickDistance = mStickDistance */
     dComIfGp_setDoStatus(0); /* dComIfGp_setDoStatus(dActStts_BLANK_e) */
     dComIfGp_setRStatus(0); /* dComIfGp_setRStatus */
     dComIfGp_setAStatus(0); /* dComIfGp_setAStatus */
@@ -4129,13 +4129,13 @@ BOOL daPy_lk_c::execute() {
         LinkUpdateApi::stopDoButtonQuake(this, z != 0 ? 0 : 1);
     }
     {
-        u8 m = m34C2; /* m34C2 */
+        u8 m = mRootMoveMode; /* mRootMoveMode */
         if (m == 8) {
             if (!((f32)LinkPose(this).m_old_fdata->mOldFrameMorfCounter > 0.0f)) { /* m_old_fdata->getOldFrameMorfCounter() */
-                m34C2 = 9;
+                mRootMoveMode = 9;
             }
         } else if (m != 0xC) {
-            m34C2 = 0;
+            mRootMoveMode = 0;
         }
     }
     {
@@ -4195,18 +4195,18 @@ BOOL daPy_lk_c::execute() {
         changeBoomerangCatchProc();
     }
     checkItemAction();
-    if (mEquipItem == LinkItemConstants::daPyItem_SWORD_e && (m34C4 == 2 || m34C4 == 3)) { /* m34C4 */
+    if (mEquipItem == LinkItemConstants::daPyItem_SWORD_e && (mCutComboCount == 2 || mCutComboCount == 3)) { /* mCutComboCount */
         if (mAtCps[0].ChkAtHit() || mAtCps[1].ChkAtHit() ||
             mAtCps[2].ChkAtHit()) {
-            m34C4 = (u8)(m34C4 + 2);
+            mCutComboCount = (u8)(mCutComboCount + 2);
         }
     }
     {
-        s16 t = m3522; /* m3522 */
+        s16 t = mCutComboTimer; /* mCutComboTimer */
         if (t > 0) {
-            m3522 = (s16)(t - 1);
+            mCutComboTimer = (s16)(t - 1);
         } else {
-            m34C4 = 0;
+            mCutComboCount = 0;
         }
     }
     setShieldGuard();
@@ -4290,8 +4290,8 @@ BOOL daPy_lk_c::execute() {
     s32 roomNo;
     if (mAcch.m_ground_h != -1000000000.0f) {
         roomNo = setRoomInfo();
-        (*reinterpret_cast<be<u32>*>(&m357C)) = (*reinterpret_cast<be<u32>*>(&m3580)); /* m357C = m3580 */
-        (*reinterpret_cast<be<u32>*>(&m3580)) = LinkUpdateApi::GetGroundCode(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mAcch.m_gnd));
+        (*reinterpret_cast<be<u32>*>(&mOldGroundCode)) = (*reinterpret_cast<be<u32>*>(&mGroundCode)); /* mOldGroundCode = mGroundCode */
+        (*reinterpret_cast<be<u32>*>(&mGroundCode)) = LinkUpdateApi::GetGroundCode(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mAcch.m_gnd));
         if (mNoResetFlg0 & daPyFlg0_UNK80000000) {
             (*reinterpret_cast<be<u32>*>(&mCurrAttributeCode)) = 0; /* mCurrAttributeCode = dBgS_Attr_NORMAL_e */
         } else {
@@ -4342,21 +4342,21 @@ BOOL daPy_lk_c::execute() {
             }
             if (r0 & 0x80000000) {
                 mMtrlSndId = 0; /* mMtrlSndId */
-                m34E2 = 0; /* m34E2 */
+                mGroundAngle = 0; /* mGroundAngle */
             } else {
                 mMtrlSndId = LinkUpdateApi::GetMtrlSndId(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mAcch.m_gnd));
                 s16 ga = LinkItemApi::getGroundAngle(this, &mAcch.m_gnd, (s32)shape_angle.y);
-                m34E2 = ga;
+                mGroundAngle = ga;
             }
             if (mModeFlg & LinkUpdateConstants::ModeFlg_02000000) {
                 setShapeAngleOnGround();
             }
         } else {
-            if ((mode & LinkPoseConstants::ModeFlg_SWIM) && m3580 == 4) {
+            if ((mode & LinkPoseConstants::ModeFlg_SWIM) && mGroundCode == 4) {
                 startRestartRoom(5, 0xC9, -1.0f, 0);
             }
             s32 p = mCurProc;
-            m34E2 = 0;
+            mGroundAngle = 0;
             if (p == LinkUpdateConstants::daPyProc_DEMO_TOOL_e) {
                 mMtrlSndId = LinkUpdateApi::GetMtrlSndId(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mAcch.m_gnd));
             } else if (p == LinkUpdateConstants::daPyProc_SHIP_READY_e || p == LinkUpdateConstants::daPyProc_SHIP_GET_OFF_e) {
@@ -4388,12 +4388,12 @@ BOOL daPy_lk_c::execute() {
         u8 grp = LinkUpdateApi::GetGrpSoundId(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mAcch.m_gnd));
         LinkUpdateApi::setLinkGroupInfo((u32)grp);
     } else {
-        u32 c3580 = (*reinterpret_cast<be<u32>*>(&m3580));
-        m34E2 = 0;
+        u32 c3580 = (*reinterpret_cast<be<u32>*>(&mGroundCode));
+        mGroundAngle = 0;
         (*reinterpret_cast<be<u32>*>(&mCurrAttributeCode)) = 0x1B; /* dBgS_Attr_UNK1B_e */
-        (*reinterpret_cast<be<u32>*>(&m357C)) = c3580;
+        (*reinterpret_cast<be<u32>*>(&mOldGroundCode)) = c3580;
         mMtrlSndId = 0;
-        (*reinterpret_cast<be<u32>*>(&m3580)) = 0xFFFFFFFF;
+        (*reinterpret_cast<be<u32>*>(&mGroundCode)) = 0xFFFFFFFF;
         (*reinterpret_cast<be<u32>*>(&mRestartPoint)) = 0xFF; /* mRestartPoint */
         roomNo = current.roomNo;
         checkFallCode();
@@ -4491,42 +4491,42 @@ BOOL daPy_lk_c::execute() {
     }
     PSMTXMultVec(lk_getAnmMtx(mpCLModel, 19 /* CL_JNT_CL_EYE_e */), &l_eye_offset, &eyePos);
     {
-        u32 t0 = (*reinterpret_cast<be<u32>*>(&mSwordTopPos.x)), c0 = (*reinterpret_cast<be<u32>*>(&m36C4.x));
-        (*reinterpret_cast<be<u32>*>(&m36D0.x)) = t0; /* m36D0 = mSwordTopPos */
+        u32 t0 = (*reinterpret_cast<be<u32>*>(&mSwordTopPos.x)), c0 = (*reinterpret_cast<be<u32>*>(&mSwordRootPos.x));
+        (*reinterpret_cast<be<u32>*>(&mOldSwordTopPos.x)) = t0; /* mOldSwordTopPos = mSwordTopPos */
         u32 t1 = (*reinterpret_cast<be<u32>*>(&mSwordTopPos.y));
-        (*reinterpret_cast<be<u32>*>(&m36D0.y)) = t1;
+        (*reinterpret_cast<be<u32>*>(&mOldSwordTopPos.y)) = t1;
         u32 t2 = (*reinterpret_cast<be<u32>*>(&mSwordTopPos.z));
-        (*reinterpret_cast<be<u32>*>(&m36DC.x)) = c0; /* m36DC = m36C4 */
-        (*reinterpret_cast<be<u32>*>(&m36D0.z)) = t2;
-        u32 c2 = (*reinterpret_cast<be<u32>*>(&m36C4.z)), c1 = (*reinterpret_cast<be<u32>*>(&m36C4.y));
-        (*reinterpret_cast<be<u32>*>(&m36DC.z)) = c2;
-        (*reinterpret_cast<be<u32>*>(&m36DC.y)) = c1;
+        (*reinterpret_cast<be<u32>*>(&mOldSwordRootPos.x)) = c0; /* mOldSwordRootPos = mSwordRootPos */
+        (*reinterpret_cast<be<u32>*>(&mOldSwordTopPos.z)) = t2;
+        u32 c2 = (*reinterpret_cast<be<u32>*>(&mSwordRootPos.z)), c1 = (*reinterpret_cast<be<u32>*>(&mSwordRootPos.y));
+        (*reinterpret_cast<be<u32>*>(&mOldSwordRootPos.z)) = c2;
+        (*reinterpret_cast<be<u32>*>(&mOldSwordRootPos.y)) = c1;
     }
     {
         u32 item = mEquipItem;
         if (item == LinkItemConstants::daPyItem_BOKO_e && mActorKeepEquip.mActor.v != 0) {
             fopAc_ac_c* boko = mActorKeepEquip.mActor;
             LinkUpdateApi::getBokoTopPos(boko, &mSwordTopPos);
-            LinkUpdateApi::getBokoBlurRootPos(boko, &m36C4);
+            LinkUpdateApi::getBokoBlurRootPos(boko, &mSwordRootPos);
         } else if (item == LinkItemConstants::dItemNo_SKULL_HAMMER_e) {
             u32 m = LinkItem(this).mpEquipItemModel.v;
             PSMTXMultVec(gabi::at<Mtx34>(m != 0 ? m + 0xC8 : 0), &l_execute_hammer_top, &mSwordTopPos);
             m = LinkItem(this).mpEquipItemModel.v;
-            PSMTXMultVec(gabi::at<Mtx34>(m != 0 ? m + 0xC8 : 0), &l_execute_hammer_root, &m36C4);
+            PSMTXMultVec(gabi::at<Mtx34>(m != 0 ? m + 0xC8 : 0), &l_execute_hammer_root, &mSwordRootPos);
         } else if (item == LinkItemConstants::daPyItem_SWORD_e) {
             if (lk_selectSword() == 0x38 || dComIfGp_getMiniGameType() == 2) {
                 PSMTXMultVec(lk_getAnmMtx(gabi::at<J3DModel>(LinkItem(this).mpEquipItemModel.v), 1), &l_execute_nsword_top, &mSwordTopPos);
-                lk_jntTrans(gabi::ea(lk_getAnmMtx(gabi::at<J3DModel>(LinkItem(this).mpEquipItemModel.v), 2)), gabi::ea(&m36C4));
+                lk_jntTrans(gabi::ea(lk_getAnmMtx(gabi::at<J3DModel>(LinkItem(this).mpEquipItemModel.v), 2)), gabi::ea(&mSwordRootPos));
             } else {
-                lk_jntTrans(gabi::ea(lk_getAnmMtx(gabi::at<J3DModel>(LinkItem(this).mpEquipItemModel.v), 1)), gabi::ea(&m36C4));
+                lk_jntTrans(gabi::ea(lk_getAnmMtx(gabi::at<J3DModel>(LinkItem(this).mpEquipItemModel.v), 1)), gabi::ea(&mSwordRootPos));
                 PSMTXMultVec(lk_getAnmMtx(gabi::at<J3DModel>(LinkItem(this).mpEquipItemModel.v), 1), &l_execute_msword_top, &mSwordTopPos);
             }
         } else if (mCurProc == LinkUpdateConstants::daPyProc_FAN_SWING_e /* daPyProc_FAN_SWING_e */) {
             u32 m = LinkItem(this).mpEquipItemModel.v;
-            lk_jntTrans(m != 0 ? m + 0xC8 : 0, gabi::ea(&m36C4));
+            lk_jntTrans(m != 0 ? m + 0xC8 : 0, gabi::ea(&mSwordRootPos));
             PSMTXMultVec(lk_getAnmMtx(gabi::at<J3DModel>(LinkItem(this).mpEquipItemModel.v), 6), &l_execute_fan_top, &mSwordTopPos);
         } else {
-            lk_jntTrans(gabi::ea(lk_getAnmMtx(mpCLModel, 13)), gabi::ea(&m36C4));
+            lk_jntTrans(gabi::ea(lk_getAnmMtx(mpCLModel, 13)), gabi::ea(&mSwordRootPos));
             lk_jntTrans(gabi::ea(lk_getAnmMtx(mpCLModel, 13)), b + 0x3E4);
         }
     }

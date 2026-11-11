@@ -286,13 +286,13 @@ struct daNpc_Bm1_c : fopNpc_npc_c {
     /* 0x9DC */ be<s16> mEvTimer;  /* was m86C: eInit_setEvTimer 021FF328 sets the cut's timer (tww it = *i_param_1, else 0); eMove_ATTENTION_ 021FFCA8 / eMove_WLK_ 021FFCFC count it down (tww cLib_calcTimer(&it)); named after eInit_setEvTimer */
     /* 0x9DE */ be<s16> mLookTimer;  /* was m86E: wait_1 02202C2C / wait_4 02203124 / h_wait 02203348 / wait_7 02203414 / wait_3 02203508 reset it to 0x28 while the player is in attention and look at the player (mLookBackState 1) while it counts down (tww); talk_1 02202CF0 0x28; setStt 02202838 0 */
     /* 0x9E0 */ be<s16> mSttTimer;  /* was m870: setStt 02202838 sets it per state (0x50, 0x5A, 180 + rnd(180), 0x3C) (tww); flyawy 02203200 deletes the actor, wait_3 02203508 / CHKwai 02203830 change the state when it runs out (tww cLib_calcTimer(&it) == 0) */
-    /* 0x9E2 */ be<s16> m872;
+    /* 0x9E2 */ be<s16> mWaitAnmLoops;  /* was m872: setStt 02202838: 1..4 ((l_counter & 3) + 1) when state 0x10 starts; wait_8 02203648 counts it down at each animation end and returns to state 8 at 0 (tww the same) */
     /* 0x9E4 */ be<s16> mHeadLookAtMaxVel;
     /* 0x9E6 */ be<s16> mDesiredYRot;  /* was m876: lookBack 021FFFFC: the look-at's default Y angle (tww desiredYrot = it); h_wait 02203348 / wait_7 02203414 set mInitialAngle.y (tww); after daNpcMt_c::mDesiredYRot (npcs.md) */
     /* 0x9E8 */ be<u16> mOldMsgStat;
     /* 0x9EA */ be<s8> mbMorfAnimStopped;
     /* 0x9EB */ be<s8> mAnmLoopCount;  /* was m87B: setAnm_anm 021FEAB4 0 (tww); control_anmAtr 0220141C counts the morf stops in attribute 8 and switches to attribute 6 at 2 (tww if (++it >= 2)); after daNpc_Cb1_c::mAnmLoopCount */
-    /* 0x9EC */ be<s8> m87C;
+    /* 0x9EC */ be<s8> mPostEventMsg;  /* was m87C: event_proc 0220026C sets 1 when event 0 ends; getMsg_BMB_2 022020EC / getMsg_BMC_2 022022B4 then answer 0x199C / 0x1EF7; talk_1 02202CF0 clears it after message 0x1EF7 (tww the same) */
     /* 0x9ED */ be<u8> mPreItemNo;  /* was m87D: chk_talk 0220163C: dComIfGp_event_getPreItemNo(), else 0xFF (tww); getMsg_BMB_2 022020EC picks the message by it (tww if (it == 0x47)); talk_1 02202CF0 0xFF */
     /* 0x9EE */ be<u8> mPointArg;  /* was m87E: walk_1 02203734: mPathRun.pointArg of the current point (tww it = mPathRun.pointArg(mPathRun.getIdx())) and tests it (tww) */
     /* 0x9EF */ be<u8> mbResLoadIsComplete;  /* was m87F: _create 021FDF08: the phase result == cPhs_COMPLEATE_e (tww it = state == cPhs_COMPLEATE_e); _delete tests it before deleting the resources (tww); after tww daNpc_Ls1_c mbResLoadIsComplete */
@@ -545,23 +545,23 @@ struct Bm1SetupHioParam {
     /* 0x10 */ be<s16> mMaxTurnStep;
     /* 0x12 */ be<s16> mCalcAngleTarget;
     /* 0x14 */ be<f32> mAttPosOffsetY;
-    /* 0x18 */ be<u8> m18;
+    /* 0x18 */ be<u8> mDebugDraw;  /* was m18: copy of Bm1BehaviorHioPrm (d/actor/d_a_npc_bm1_b.h), see there */
     /* 0x19 */ u8 _19;
     /* 0x1A */ be<s16> mFlyScale;
     /* 0x1C */ be<s16> mFlyMaxStep;
     /* 0x1E */ u8 _1E[2];
-    /* 0x20 */ be<f32> m20;
-    /* 0x24 */ be<f32> m24;
-    /* 0x28 */ be<f32> m28;
-    /* 0x2C */ be<f32> m2C;
-    /* 0x30 */ be<f32> m30;
-    /* 0x34 */ be<s16> m34;
-    /* 0x36 */ be<s16> m36;
-    /* 0x38 */ be<f32> m38;
-    /* 0x3C */ be<f32> m3C;
-    /* 0x40 */ be<f32> m40;
-    /* 0x44 */ be<f32> m44;
-    /* 0x48 */ be<f32> m48;
+    /* 0x20 */ be<f32> mFlySpeed;  /* was m20: daNpc_Bm1_c::eInit_FLY_ 021FEECC: mTargetFlySpeed when the event gives no speed (tww the same); filled only by the HIO constructor's memcpy from a_prm_tbl (Bm1BehaviorHio_ct 02204158), never written elsewhere in WWHD or tww */
+    /* 0x24 */ be<f32> mFlyAccel;  /* was m24: daNpc_Bm1_c::eInit_FLY_ 021FEECC: mTargetFlyStep (speedF's chase step) when the event gives no accel (tww the same); filled only by the HIO constructor's memcpy from a_prm_tbl (Bm1BehaviorHio_ct 02204158), never written elsewhere in WWHD or tww */
+    /* 0x28 */ be<f32> mFlyUpSpeed;  /* was m28: daNpc_Bm1_c::eInit_FLY_ 021FEECC / setStt 02202838: mFlySpeedY (the event's spd_y default) (tww the same); filled only by the HIO constructor's memcpy from a_prm_tbl (Bm1BehaviorHio_ct 02204158), never written elsewhere in WWHD or tww */
+    /* 0x2C */ be<f32> mFlyUpAccel;  /* was m2C: daNpc_Bm1_c::eInit_FLY_ 021FEECC / setStt 02202838: mFlyAccelY (the event's acc_y default) (tww the same); filled only by the HIO constructor's memcpy from a_prm_tbl (Bm1BehaviorHio_ct 02204158), never written elsewhere in WWHD or tww */
+    /* 0x30 */ be<f32> mFlyPassDist;  /* was m30: daNpc_Bm1_c::eInit_FLY_ 021FEECC / setStt 02202838: mPassDist while flying (tww m858 the same); filled only by the HIO constructor's memcpy from a_prm_tbl (Bm1BehaviorHio_ct 02204158), never written elsewhere in WWHD or tww */
+    /* 0x34 */ be<s16> mTurnScale;  /* was m34: daNpc_Bm1_c::bm_clcMovSpd 02200A40: cLib_addCalcAngleS's scale for turning to mTargetPos (tww the same); filled only by the HIO constructor's memcpy from a_prm_tbl (Bm1BehaviorHio_ct 02204158), never written elsewhere in WWHD or tww */
+    /* 0x36 */ be<s16> mTurnMaxStep;  /* was m36: daNpc_Bm1_c::bm_clcMovSpd 02200A40: cLib_addCalcAngleS's largest step for turning to mTargetPos (tww the same); filled only by the HIO constructor's memcpy from a_prm_tbl (Bm1BehaviorHio_ct 02204158), never written elsewhere in WWHD or tww */
+    /* 0x38 */ be<f32> mWalkAnmSpeed;  /* was m38: daNpc_Bm1_c::bm_nMove 02200AF8: the walk animations (0xE / 0x14) play at speedF * it (at least 0.5) (tww the same); filled only by the HIO constructor's memcpy from a_prm_tbl (Bm1BehaviorHio_ct 02204158), never written elsewhere in WWHD or tww */
+    /* 0x3C */ be<f32> mWalkSpeed;  /* was m3C: daNpc_Bm1_c::eInit_WLK_ 021FF5D0 / setStt 02202838: mTargetFlySpeed for walking (the event's speed default) (tww the same); filled only by the HIO constructor's memcpy from a_prm_tbl (Bm1BehaviorHio_ct 02204158), never written elsewhere in WWHD or tww */
+    /* 0x40 */ be<f32> mWalkAccel;  /* was m40: daNpc_Bm1_c::eInit_WLK_ 021FF5D0 / setStt 02202838: mTargetFlyStep for walking (the event's accel default) (tww the same); filled only by the HIO constructor's memcpy from a_prm_tbl (Bm1BehaviorHio_ct 02204158), never written elsewhere in WWHD or tww */
+    /* 0x44 */ be<f32> mWalkPassDist;  /* was m44: daNpc_Bm1_c::eInit_WLK_ 021FF5D0 / setStt 02202838: mPassDist while walking (tww m858 the same); filled only by the HIO constructor's memcpy from a_prm_tbl (Bm1BehaviorHio_ct 02204158), never written elsewhere in WWHD or tww */
+    /* 0x48 */ be<f32> mEventOrderDist;  /* was m48: daNpc_Bm1_c::wait_5 0220325C: event 4 is ordered (mOrderEvent) when the player's XZ distance is below it and the height difference within -40..300 (tww the same); filled only by the HIO constructor's memcpy from a_prm_tbl (Bm1BehaviorHio_ct 02204158), never written elsewhere in WWHD or tww */
 };
 WWHD_SIZE(Bm1SetupHioParam, 0x4C);
 struct Bm1SetupChildHio {

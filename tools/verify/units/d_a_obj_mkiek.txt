@@ -16,9 +16,9 @@ ret 023722C8 0 1              # PrmAbstract
 arg 023722C8 r4 0,1,8,31,32,33,63
 arg 023722C8 r5 0,1,8,24,31,32,33,63
 field * r3+0x5D4 u32 0,1,2,3   # mState
-field * r3+0x5D8 i32 0,18,19,20,21   # m460
+field * r3+0x5D8 i32 0,18,19,20,21   # mFrameCount
 field * r3+0xF8 u16 0,2        # event command
-field * r3+0x5D0 u8 0 1        # m458
+field * r3+0x5D0 u8 0 1        # mVanish
 field 02371E6C r3+0x3FF u8 0,1,2,3     # frame ctrl state
 field 02371E6C r3+0x3F0 f32 0,0,1,-1   # frame ctrl rate
 field * r3+0xD u8 2,3,4        # create result

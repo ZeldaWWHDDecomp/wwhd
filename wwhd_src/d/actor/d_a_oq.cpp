@@ -292,7 +292,7 @@ static enemyfire* enemyfire_ct(enemyfire* self) {
     if (gabi::ea(&self->mDirection) == 0) operator_new(0xC);
     dCcD_Stts_ct(&self->mStts);
     oqSphereCtor(&self->mSph); /* dCcD_Sph::dCcD_Sph */
-    self->m228 = 1.0f;
+    self->mHD20 = 1.0f;
     return self;
 }
 

@@ -135,13 +135,13 @@ u8 daKnob00_c::getShapeType() { return (u8)getSwbit2(); }
 /* 021A4318 */
 void daKnob00_c::setEventPrm() {
     u8 action = mAction;
-    m2C6 = mFrontCheck == 0 ? 7 : 8;
+    mEventKind = mFrontCheck == 0 ? 7 : 8;
     if (action == 4 || action == 5 || action == 8 || action == 10)
-        m2C6 = 9;
+        mEventKind = 9;
     if (!knobCheckArea(this, 6400.0f, 12100.0f, 62500.0f)) {
         mFlags = (u8)mFlags & 0xFB;
     } else {
-        u8 event = m2C6;
+        u8 event = mEventKind;
         u16 flags = (u16)eventInfo.mCondition;
         eventInfo.mEventId = (s16)mEventIdx[event];
         u8 tool = (u8)mToolId[event];
@@ -473,7 +473,7 @@ BOOL daKnob00_c::demoProc() {
             mAdjustTimer = 10;
             break;
         case DEMO_MESSAGE:
-            m2D0.init((s16)home.angle.z);
+            mDoorMsg.init((s16)home.angle.z);
             break;
         }
     }
@@ -501,7 +501,7 @@ BOOL daKnob00_c::demoProc() {
             if (mt)
                 position = &mt->attention_info.position;
         }
-        return m2D0.proc(position) != 0;
+        return mDoorMsg.proc(position) != 0;
     }
     default:
         cutEnd(this);
@@ -532,10 +532,10 @@ BOOL daKnob00_c::actionWait() {
 
 /* 021A4ED0 */
 BOOL daKnob00_c::actionDemo() {
-    s16 event = (s16)mEventIdx[(u8)m2C6];
+    s16 event = (s16)mEventIdx[(u8)mEventKind];
     KnobGameInfo* p = knobGameInfo();
     if (knobEndCheck(&p->mEventManager, event)) {
-        u8 no = m2C6;
+        u8 no = mEventKind;
         if (no != 7 && no != 8) {
             mAction = ACTION_WAIT;
             resetEvent();
@@ -576,7 +576,7 @@ BOOL daKnob00_c::actionTalkWait() {
 
 /* 021A4808 */
 BOOL daKnob00_c::actionPassward2() {
-    auto msg = &m2D0;
+    auto msg = &mDoorMsg;
     switch ((u8)mPasswordState) {
     case 0:
         if (demoProc2()) {

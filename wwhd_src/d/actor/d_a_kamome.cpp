@@ -449,12 +449,12 @@ static void __sinit_d_a_kamome_cpp() {
     kamomeMain_registerGlobal(gabi::ea(&kamomeGlobalRecord3));
     /* kamomeHIO_c::kamomeHIO_c() */
     kamomeHIO_c& h = l_kamomeHIO;
-    h.m06 = 1;
-    h.m05 = 0;
-    h.m0C = 400.0f;
+    h.mMoveStartFrame = 1;
+    h.mStopMove = 0;
+    h.mTakeOffDist = 400.0f;
     h.__vtbl = KAMOME_HIO_VTABLE;
-    h.m10 = 300.0f;
-    h.m08 = 8;
+    h.mImoutoPlayerDist = 300.0f;
+    h.mMoveEndFrame = 8;
 }
 
 /*  kamomeHIO_c deleting destructor (HD: classes with a virtual destructor) */

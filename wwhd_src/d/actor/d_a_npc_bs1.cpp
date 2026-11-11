@@ -558,7 +558,7 @@ void daNpc_Bs1_c::lookBack() {
     case 1:
         if (mbAttention != 0) {
             gabi::Local<cXyz> eye;
-            bs1_playerEyePos(eye.get(), (f32)bs1_child(mType)->mNpc.m04); /* dNpc_playerEyePos */
+            bs1_playerEyePos(eye.get(), (f32)bs1_child(mType)->mNpc.mPlayerEyeOffsetY); /* dNpc_playerEyePos */
             z = current.pos.z;
             u32 ey = (u32)bs1_words(eye.get())->y;
             u32 ex = (u32)bs1_words(eye.get())->x;
@@ -579,7 +579,7 @@ void daNpc_Bs1_c::lookBack() {
     case 2:
         if ((s16)mShopCamAction.mCurrActionFunc.mVtableIndex == 0) { /* mShopCamAction.checkCamAction(NULL) */
             gabi::Local<cXyz> eye;
-            bs1_playerEyePos(eye.get(), (f32)bs1_child(mType)->mNpc.m04); /* dNpc_playerEyePos */
+            bs1_playerEyePos(eye.get(), (f32)bs1_child(mType)->mNpc.mPlayerEyeOffsetY); /* dNpc_playerEyePos */
             y = eyePos.y;
             u32 ez = (u32)bs1_words(eye.get())->z;
             u32 ex = (u32)bs1_words(eye.get())->x;
@@ -595,14 +595,14 @@ void daNpc_Bs1_c::lookBack() {
             gabi::Local<cXyz> dir;
             gabi::Local<cXyz> scaled;
             gabi::Local<cXyz> res;
-            cXyz_mi(&mShopCamAction.m18, dir.get(), &mShopCamAction.m24);
+            cXyz_mi(&mShopCamAction.mCenter, dir.get(), &mShopCamAction.mEye);
             if (!bs1_normalizeRS(dir.get())) { /* cXyz::normalizeRS */
                 dir->x = 0.0f;
                 dir->y = 0.0f;
                 dir->z = 1.0f;
             }
             cXyz_ml(dir.get(), scaled.get(), 100.0f);
-            cXyz_pl(&mShopCamAction.m24, res.get(), scaled.get());
+            cXyz_pl(&mShopCamAction.mEye, res.get(), scaled.get());
             f32 ry = res->y;
             x = current.pos.x;
             sp74->y = ry;
@@ -627,12 +627,12 @@ void daNpc_Bs1_c::lookBack() {
             mpShopCursor->setPos(basePos.get());
             daNpc_Bs1_childHIO_c* c = bs1_child(mType);
             Bs1ShopCursor* cur = mpShopCursor;
-            f32 s3c = c->m3C, s34 = c->m34, s38 = c->m38, s30 = c->m30, s40 = c->m40;
-            cur->m48 = s30; /* setScale */
-            cur->m4C = s34;
-            cur->m50 = s38;
-            cur->m38 = s3c;
-            cur->m3C = s40;
+            f32 s3c = c->mCursorDistFar, s34 = c->mCursorScaleYFar, s38 = c->mCursorScaleYNear, s30 = c->mCursorScale, s40 = c->mCursorDistNear;
+            cur->mPieceScale = s30; /* setScale */
+            cur->mPieceScaleYFar = s34;
+            cur->mPieceScaleYNear = s38;
+            cur->mPieceDistFar = s3c;
+            cur->mPieceDistNear = s40;
             mpShopCursor->anm_play();
             x = current.pos.x;
             y = eyePos.y;
@@ -689,7 +689,7 @@ bool daNpc_Bs1_c::talk01() {
         mShopItems.getSelectItemBuyMsg();
     }
     /* HD: the CHOOSE / CANCEL button prompts follow the cursor's visibility */
-    if (mpShopCursor->m54 != 0) {
+    if (mpShopCursor->mbShow != 0) {
         dComIfGp_setDoStatusForce(0x17); /* dComIfGp_setDoStatusForce(dActStts_CHOOSE_e) */
         dComIfGp_setAStatusForce(0x27);  /* dComIfGp_setAStatusForce(dActStts_CANCEL_e) */
     }
@@ -993,7 +993,7 @@ BOOL daNpc_Bs1_c::_draw() {
     J3DModel* pHelmetModel = mpHelmetModel;
     setLightTevColorType(dKy_getEnvlight(), pHelmetModel, &tevStr);
     mpMorf->updateDL();
-    if (bs1_child(mType)->m2C != 0) {
+    if (bs1_child(mType)->mDrawHelmet != 0) {
         PSMTXCopy(gabi::at<Mtx34>(bs1_getAnmMtx(pModel, m_head_jnt_num)), mDoMtx_stack_c::get());
         mDoMtx_stack_c::transM(4.0f, 0.0f, 0.0f);
         J3DModel_setBaseTRMtx(pHelmetModel, mDoMtx_stack_c::get());
@@ -1069,10 +1069,10 @@ BOOL daNpc_Bs1_c::_delete() {
         mpMorf->stopZelAnime();
     }
     daNpc_Bs1_HIO_c* hio = bs1_HIO();
-    s32 n = hio->m8;
+    s32 n = hio->mRefCount;
     if (n >= 0) {
         n = n - 1;
-        hio->m8 = n;
+        hio->mRefCount = n;
         if (n < 0) {
             mDoHIO_deleteChild(hio->mNo);
         }
@@ -1123,10 +1123,10 @@ cPhs_State daNpc_Bs1_c::_create() {
         }
         cullMtx = gabi::ea(J3DModel_getBaseTRMtx(mpMorf->getModel())); /* fopAcM_SetMtx */
         daNpc_Bs1_HIO_c* hio = bs1_HIO();
-        if (hio->m8 < 0) {
+        if (hio->mRefCount < 0) {
             hio->mNo = mDoHIO_createChild("\203{\201|\203g\203V\203\207\203b\203v\223X\210\365", hio);
         }
-        hio->m8 = hio->m8 + 1;
+        hio->mRefCount = hio->mRefCount + 1;
         if (!CreateInit()) {
             return cPhs_ERROR_e;
         }
@@ -1181,7 +1181,7 @@ BOOL daNpc_Bs1_c::CreateHeap() {
     mAcch.Set(&current.pos, &old.pos, this, 1, &mAcchCir, &speed, nullptr, nullptr);
     void* brk = bs1_getRes2(0x1A);
     J3DModelData* cursorData = (J3DModelData*)bs1_getRes2(0x17);
-    mpShopCursor = bs1_createCursor(cursorData, brk, (f32)bs1_child(mType)->m30); /* ShopCursor_create */
+    mpShopCursor = bs1_createCursor(cursorData, brk, (f32)bs1_child(mType)->mCursorScale); /* ShopCursor_create */
     if (mpShopCursor.get() == nullptr) {
         return FALSE;
     }
@@ -1229,12 +1229,12 @@ static daNpc_Bs1_childHIO_c* daNpc_Bs1_childHIO_ct(daNpc_Bs1_childHIO_c* self) {
     self->__vtbl = 0x10018424;
     bs1_constructHIO(gabi::ea(self) + 4); /* dNpc_HIO_c::dNpc_HIO_c */
     /* HD: the members are zeroed */
-    self->m2C = 0;
-    self->m40 = 0.0f;
-    self->m30 = 0.0f;
-    self->m3C = 0.0f;
-    self->m34 = 0.0f;
-    self->m38 = 0.0f;
+    self->mDrawHelmet = 0;
+    self->mCursorDistNear = 0.0f;
+    self->mCursorScale = 0.0f;
+    self->mCursorDistFar = 0.0f;
+    self->mCursorScaleYFar = 0.0f;
+    self->mCursorScaleYNear = 0.0f;
     return self;
 }
 
@@ -1250,7 +1250,7 @@ static daNpc_Bs1_HIO_c* daNpc_Bs1_HIO_ct(daNpc_Bs1_HIO_c* self) {
     bs1_constructChildren(self->mChild, 2, 0x48, 0x0221763C); /* __construct_array */
     for (int i = 0; i < 2; i++) {
         daNpc_Bs1_childHIO_c* c = &self->mChild[i];
-        c->mNpc.m04 = -64.0f;
+        c->mNpc.mPlayerEyeOffsetY = -64.0f;
         c->mNpc.mMaxHeadX = 0x1FFE;
         c->mNpc.mMaxHeadY = 0x38E0;
         c->mNpc.mMaxBackboneX = 0;
@@ -1262,17 +1262,17 @@ static daNpc_Bs1_HIO_c* daNpc_Bs1_HIO_ct(daNpc_Bs1_HIO_c* self) {
         c->mNpc.mMaxTurnStep = 0x1000;
         c->mNpc.mMaxHeadTurnVel = 0x800;
         c->mNpc.mAttnYOffset = 55.0f;
-        c->mNpc.m22 = 0;
+        c->mNpc.mDebugDraw = 0;
         c->mNpc.mMaxAttnDistXZ = 300.0f;
-        c->m2C = (u8)i;
-        c->m30 = 0.65f;
-        c->m34 = 0.9f;
-        c->m38 = 0.5f;
-        c->m3C = 27.0f;
-        c->m40 = 20.0f;
+        c->mDrawHelmet = (u8)i;
+        c->mCursorScale = 0.65f;
+        c->mCursorScaleYFar = 0.9f;
+        c->mCursorScaleYNear = 0.5f;
+        c->mCursorDistFar = 27.0f;
+        c->mCursorDistNear = 20.0f;
     }
     self->mNo = -1;
-    self->m8 = -1;
+    self->mRefCount = -1;
     return self;
 }
 

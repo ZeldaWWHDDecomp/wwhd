@@ -9,7 +9,8 @@ struct fapGm_HIO_c {
     be<u8> mDisplayMeter;
     be<u8> mDisplayFlag;
     be<u8> field_0x08;
-    be<u8> field_0x09;
+    /* mDrawMap (0x05) was field_0x09: WWHD: fapGm_HIO_c__ct 025D4384 sets 1, nothing reads it here; tww: dMap_c::draw draws the map and its icons only while it is set (2026-11-11 rule) */
+    be<u8> mDrawMap;
     be<u8> field_0x0a;
     be<u8> field_0x0b;
     be<f32> mAspectRatio;
@@ -53,7 +54,7 @@ WWHD_OFFSET(fapGm_HIO_c, mUsingHostIO, 0x01);
 WWHD_OFFSET(fapGm_HIO_c, mDisplayMeter, 0x02);
 WWHD_OFFSET(fapGm_HIO_c, mDisplayFlag, 0x03);
 WWHD_OFFSET(fapGm_HIO_c, field_0x08, 0x04);
-WWHD_OFFSET(fapGm_HIO_c, field_0x09, 0x05);
+WWHD_OFFSET(fapGm_HIO_c, mDrawMap, 0x05);
 WWHD_OFFSET(fapGm_HIO_c, field_0x0a, 0x06);
 WWHD_OFFSET(fapGm_HIO_c, field_0x0b, 0x07);
 WWHD_OFFSET(fapGm_HIO_c, mAspectRatio, 0x08);

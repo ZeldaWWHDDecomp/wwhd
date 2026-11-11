@@ -202,12 +202,12 @@ u32 dSnap_Obj_ctor(u32 s) {
         object->mCullAngle = 32767;
         object->mMinY = 0;
         object->mRadius = 0;
-        object->field_0x1b = 0;
+        object->mGeoFlags = 0;
         object->mCapturedRatio = 0;
         object->mPhotoNo = 0;
         object->mHeight = 0;
         object->mCapturedPixels = 0;
-        object->field_0x19 = 4;
+        object->mCylSegments = 4;
         object->mAngleY = 0;
         object->mMinX = 0;
         object->field_0x1a = 255;
@@ -222,7 +222,7 @@ f32 dSnap_Obj::CalcArea2D() {
 
     f32 x = (f32)mCenter.x, y = (f32)mCenter.y, z = (f32)mCenter.z;
 
-    bool sphere = ((u8)field_0x1b & 1) != 0;
+    bool sphere = ((u8)mGeoFlags & 1) != 0;
 
     f32 radius = (f32)mRadius, height = (f32)mHeight;
 
@@ -264,7 +264,7 @@ f32 dSnap_Obj::CalcArea2D() {
         vset(top.a, 0, 1, 0);
         snap_api::MTXMultVec(gabi::ea(mDoMtx_stack_c::get()), top.a, top.a);
 
-        for (u32 i = 0; i < (u8)field_0x19; ++i) {
+        for (u32 i = 0; i < (u8)mCylSegments; ++i) {
 
             const cXyz *curr = &cylvtx[i];
             const cXyz *next = &cylvtx[i + 1];
@@ -345,7 +345,7 @@ void dSnap_Obj::draw(s32 alpha) {
     color->b = 0;
     color->a = f32(alpha) / 255.0f;
     f32 diameter = (f32)mRadius * 2;
-    bool sphere = ((u8)field_0x1b & 1) != 0;
+    bool sphere = ((u8)mGeoFlags & 1) != 0;
     f32 x = (f32)mCenter.x, y = (f32)mCenter.y, z = (f32)mCenter.z;
     if (!sphere) {
         f32 h = (f32)mHeight;
@@ -370,7 +370,7 @@ void dSnap_Obj::draw(s32 alpha) {
 void dSnap_Obj::SetGeo(u32 v, f32 radius, f32 height, s16 angle) {
     cXyz *center = gabi::at<cXyz>(v);
 
-    field_0x1b = (u8)field_0x1b & 0xFE;
+    mGeoFlags = (u8)mGeoFlags & 0xFE;
     mCenter.x = (f32)center->x;
     mCenter.y = (f32)center->y;
     f32 z = (f32)center->z;
@@ -384,7 +384,7 @@ void dSnap_Obj::SetGeo(u32 v, f32 radius, f32 height, s16 angle) {
 void dSnap_Obj::SetGeoSph(u32 v, f32 radius) {
     cXyz *center = gabi::at<cXyz>(v);
 
-    field_0x1b = (u8)field_0x1b | 1;
+    mGeoFlags = (u8)mGeoFlags | 1;
     mCenter.x = (f32)center->x;
     mCenter.y = (f32)center->y;
     f32 z = (f32)center->z;
@@ -399,7 +399,7 @@ void dSnap_Obj::SetInf(u32 type, u32 actor, u32 room, u32 points, s16 angle) {
 
     mPhotoNo = u8(type);
     u32 id = actor ? (u32)gabi::at<fopAc_ac_c>(actor)->mBsPcId : 0xFFFFFFFF;
-    field_0x19 = u8(points);
+    mCylSegments = u8(points);
     field_0x1a = u8(room);
     mCullAngle = angle;
     mActorPID = id;
@@ -447,7 +447,7 @@ u32 dSnap_Obj::ChkSuccess(s32 area, f32 ratio) {
 /* 025BE268 */
 u32 dSnap_Obj::ChkCamCull() {
 
-    if (!((u8)field_0x1b & 1) && (s16)mCullAngle != 32767) {
+    if (!((u8)mGeoFlags & 1) && (s16)mCullAngle != 32767) {
         u32 play = snap_api::getPlay();
         s32 index = (s8)gabi::at<dComIfG_play_c>(play + 0x12A0)->mPlayerInfo[0].mCameraID;
         play = snap_api::getPlay();
@@ -472,7 +472,7 @@ u32 dSnap_RegistObjElm_ctor(u32 s) {
         dSnap_RegistObjElm *object = gabi::at<dSnap_RegistObjElm>(s);
         object->__elmVtable = 0x100546BC;
         dSnap_Obj_ctor(s);
-        object->field_0x34 = 0;
+        object->mPlayerDistSq = 0;
     }
     return s;
 }
@@ -487,9 +487,9 @@ u32 dSnap_RegistObjElm::Regist(u32 src) {
     mHeight = (f32)source->mHeight;
     mActorPID = (u32)source->mActorPID;
     mPhotoNo = (u8)source->mPhotoNo;
-    field_0x19 = (u8)source->field_0x19;
+    mCylSegments = (u8)source->mCylSegments;
     field_0x1a = (u8)source->field_0x1a;
-    field_0x1b = (u8)source->field_0x1b;
+    mGeoFlags = (u8)source->mGeoFlags;
     mCullAngle = (s16)source->mCullAngle;
     mAngleY = (s16)source->mAngleY;
     mCapturedPixels = (u32)source->mCapturedPixels;
@@ -649,8 +649,8 @@ void dSnap_packet::Execute() {
         PORT_PICTO(0x025BE898, gabi::ea(this), 0);
         mFlag = (u32)mFlag & ~2u;
         for (u32 i = 0; i < SnapObjectCount; ++i)
-            m_tbl[i].field_0x34 = 1000000000.0f;
-        field_0x14 = 0;
+            m_tbl[i].mPlayerDistSq = 1000000000.0f;
+        mRegistNum = 0;
     }
 }
 
@@ -660,7 +660,7 @@ u32 dSnap_packet::Regist(u32 obj) {
     if (!ChkCapture() || ChkReleaseShutter())
         return 0;
     u32 play = snap_api::getPlay();
-    s32 count = (s32)field_0x14;
+    s32 count = (s32)mRegistNum;
     u32 actor = gabi::ea(gabi::at<dComIfG_play_c>(play + 0x12A0)->mPlayerInfo[0].mpPlayer.get()),
         base = gabi::ea(this) + 0xA0;
     if (count >= SnapObjectCount) {
@@ -669,7 +669,7 @@ u32 dSnap_packet::Regist(u32 obj) {
         bool found = false;
         for (u32 i = 0; i < SnapObjectCount; ++i) {
             dSnap_RegistObjElm *elem = &m_tbl[i];
-            f32 distance = (f32)elem->field_0x34;
+            f32 distance = (f32)elem->mPlayerDistSq;
             if (far < distance && (u8)elem->mPhotoNo >= 72) {
                 far = distance;
                 best = i;
@@ -684,15 +684,15 @@ u32 dSnap_packet::Regist(u32 obj) {
         u32 registered = gabi::at<dSnap_RegistObjElm>(base + best * 60)->Regist(obj);
         dSnap_RegistObjElm *registeredView = gabi::at<dSnap_RegistObjElm>(registered);
 
-        registeredView->field_0x34 = distance;
+        registeredView->mPlayerDistSq = distance;
         return 0;
     }
     gabi::at<dSnap_RegistObjElm>(base + u32(count) * 60)->Regist(obj);
-    count = (s32)field_0x14;
+    count = (s32)mRegistNum;
     f32 distance = snap_api::VECSquareDistance(actor + 0x314, base + u32(count) * 60);
-    count = (s32)field_0x14;
-    m_tbl[u32(count)].field_0x34 = distance;
-    field_0x14 = (u32)field_0x14 + 1;
+    count = (s32)mRegistNum;
+    m_tbl[u32(count)].mPlayerDistSq = distance;
+    mRegistNum = (u32)mRegistNum + 1;
     return 1;
 }
 
@@ -1104,7 +1104,7 @@ void dSnap_packet::Judge() {
     }
 
     snap_api::endTextureRead(reader.a);
-    for (s32 i = 0; i < (s32)field_0x14; ++i) {
+    for (s32 i = 0; i < (s32)mRegistNum; ++i) {
         dSnap_RegistObjElm *elem = &m_tbl[u32(i)];
         if (!(u32)elem->mCapturedPixels)
             continue;
@@ -1121,7 +1121,7 @@ s32 dSnap_packet::FindPhoto(s32 start, u32 type) {
 
     if (start < 0)
         return -1;
-    s32 count = (s32)field_0x14;
+    s32 count = (s32)mRegistNum;
     if (start >= count)
         return -1;
     dSnap_RegistObjElm *object = &m_tbl[u32(start)];
@@ -1278,7 +1278,7 @@ void dSnap_packet::SetResult() {
     for (u32 k = 0; k < SnapJudgeCount; ++k)
         (*seen)[k] = 0;
 
-    for (s32 i = 0; i < (s32)field_0x14; ++i) {
+    for (s32 i = 0; i < (s32)mRegistNum; ++i) {
         dSnap_RegistObjElm *elem = &m_tbl[u32(i)];
         if (!(u32)elem->mCapturedPixels)
             continue;
@@ -1303,7 +1303,7 @@ void dSnap_packet::SetResult() {
         (*seen)[type] = 1;
     }
 
-    for (s32 i = 0; i < (s32)field_0x14; ++i) {
+    for (s32 i = 0; i < (s32)mRegistNum; ++i) {
         dSnap_RegistObjElm *elem = &m_tbl[u32(i)];
         s32 pixels = (s32)elem->mCapturedPixels;
         if (!pixels)
@@ -1612,7 +1612,7 @@ void dSnap_packet::DebugDraw(u32 context) {
     flagsView->mSecondaryFlags = 0;
     flagsView->mFlags = 3;
 
-    for (s32 i = 0; i < (s32)field_0x14; ++i)
+    for (s32 i = 0; i < (s32)mRegistNum; ++i)
         m_tbl[u32(i)].draw(u32(i) * 4);
 
     if (drawer)
@@ -1838,7 +1838,7 @@ u32 dSnap_packet_ctor(u32 s) {
         snap_api::packetCtor(s);
         object->mPhotoNo = 0;
         object->__vtbl = 0x100552B0;
-        object->field_0x14 = 0;
+        object->mRegistNum = 0;
         snap_api::constructArray(s + 0xA0, 63, 60, 0x025BD7B4);
         object->mpDepthTexture = 0;
         object->mpViewport = 0;

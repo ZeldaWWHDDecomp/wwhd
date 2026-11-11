@@ -43,9 +43,9 @@ void dDoor_key2_c::keyInit(dDoor_info_c* door) {
             s32 reverb = dComIfGp_getReverb(room);
             mDoAud_seStart(sound, &door->eyePos, 0, reverb);
         }
-        m20 = 1;
+        mbUnlocking = 1;
     } else {
-        m20 = 0;
+        mbUnlocking = 0;
     }
 }
 
@@ -56,14 +56,14 @@ void dDoor_key2_c::keyOff() {
 
 /* 0252B5B4 */
 BOOL dDoor_key2_c::keyProc() {
-    if (!m20) {
+    if (!mbUnlocking) {
         return TRUE;
     }
     if (!mBckAnim.play()) {
         return FALSE;
     }
     keyOff();
-    m20 = 0;
+    mbUnlocking = 0;
     return TRUE;
 }
 
@@ -96,12 +96,12 @@ static BOOL keyCreate(dDoor_key2_c* key, bool big, const char* name,
 
 /* 0252B63C */
 BOOL dDoor_key2_c::keyCreate_Bkey() {
-    return ::keyCreate(this, true, "Key", "d_door.cpp", "modelData != NULL");
+    return ::keyCreate(this, true, "Key", "d_door.cpp", "modelData != (0)");
 }
 
 /* 0252B738 */
 BOOL dDoor_key2_c::keyCreate_Nkey() {
-    return ::keyCreate(this, false, "Key", "d_door.cpp", "modelData != NULL");
+    return ::keyCreate(this, false, "Key", "d_door.cpp", "modelData != (0)");
 }
 
 /* 0252B834 */
@@ -177,8 +177,8 @@ str 1004C7E0 "Key" in 0252B63C
 str 1004C804 "Key" in 0252B738
 str 1004C7E4 "d_door.cpp" renamed in 0252B63C
 str 1004C808 "d_door.cpp" renamed in 0252B738
-str 1004C7F0 "modelData != NULL" renamed in 0252B63C
-str 1004C814 "modelData != NULL" renamed in 0252B738
+str 1004C7F0 "modelData != (0)" in 0252B63C
+str 1004C814 "modelData != (0)" in 0252B738
 data l_zero 1004C590
 data l_keyRate 1004C7C8
 data l_bossKeyHeight 1004C828

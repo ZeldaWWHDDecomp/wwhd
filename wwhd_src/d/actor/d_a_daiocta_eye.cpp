@@ -303,9 +303,9 @@ BOOL daDaiocta_Eye_c::_execute() {
         return 0;
     if (mbIsDead)
         mSph.mObjTg.mSPrm = mSph.mObjTg.mSPrm & ~1u;
-    m2EC = l_HIO.m24;
-    m2EE = l_HIO.m26;
-    m2F0 = l_HIO.m28;
+    mEyeRndRotMinX = l_HIO.mRndRotMinX;
+    mEyeRndRotMinY = l_HIO.mRndRotMinY;
+    mEyeRndRotMinZ = l_HIO.mRndRotMinZ;
     mEyeRndRotMaxX = l_HIO.mEyeRndRotMaxX;
     mEyeRndRotMaxY = l_HIO.mEyeRndRotMaxY;
     mEyeRndRotMaxZ = l_HIO.mEyeRndRotMaxZ;
@@ -480,10 +480,10 @@ void* daDaiocta_Eye_HIO_construct(void* object) {
     hio->__vtbl = 0x1000D4DC;
     eyeInitJntHio(hio->m30);
     hio->mEyeRotStep = 0x1000;
-    hio->m26 = 0x1000;
+    hio->mRndRotMinY = 0x1000;
     hio->m04 = 0xF;
     hio->mSphRadius = 195.0f;
-    hio->m28 = 0x1000;
+    hio->mRndRotMinZ = 0x1000;
     hio->mEyeRndRotMaxY = 0x2000;
     hio->mEyeRndRotMaxZ = 0x2000;
     hio->mParticleTranslationZ = 30;
@@ -493,7 +493,7 @@ void* daDaiocta_Eye_HIO_construct(void* object) {
     hio->mEyeRotScale = 4;
     hio->m0C = 8;
     hio->mParticleTranslationX = 0;
-    hio->m24 = 0x4000;
+    hio->mRndRotMinX = 0x4000;
     return hio;
 }
 /* 0211E5C4 */

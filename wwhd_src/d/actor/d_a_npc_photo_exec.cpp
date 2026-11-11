@@ -33,7 +33,7 @@ void daNpcPhoto_c::chkAttention() {
         gabi::Local<cXyz> lpos;
         lpos->x = link->current.pos.x;
         lpos->y = link->current.pos.y;
-        f32 temp = l_npc_dat.field_0x2C;
+        f32 temp = l_npc_dat.mMaxAttnDistXZ;
         lpos->z = link->current.pos.z;
         s32 temp2 = mMaxAttnAngleY;
         gabi::Local<be<f32>> temp3;
@@ -48,7 +48,7 @@ void daNpcPhoto_c::chkAttention() {
         s32 abs_ang = ang < 0 ? -ang : ang;
         if ((temp > *temp3 && temp2 > abs_ang) || mCounterHit) {
             gabi::Local<cXyz> eye;
-            dNpc_playerEyePos(eye.get(), l_npc_dat.field_0x00);
+            dNpc_playerEyePos(eye.get(), l_npc_dat.mPlayerEyeOffsetY);
             mLookHeadOnly = (mBodyTurn == 0);
             mLookAtPos.copy(*eye);
             mLookMode = 1;
@@ -69,7 +69,7 @@ void daNpcPhoto_c::chkAttention() {
                 mHomeTurnDelay = 30;
             }
             mLookMode = 0;
-            if (c0 == 0 && field_0x9C1 != 3) {
+            if (c0 == 0 && mPlaceState != 3) {
                 if (mHomeTurnDelay != 0) {
                     mHomeTurnDelay = mHomeTurnDelay - 1;
                 } else {
@@ -81,7 +81,7 @@ void daNpcPhoto_c::chkAttention() {
             }
         }
     }
-    mLookMaxVelTarget = l_npc_dat.field_0x16;
+    mLookMaxVelTarget = l_npc_dat.mMaxHeadTurnVel;
 }
 /* 022CCFAC */
 void daNpcPhoto_c::setAnm(u32 param_1, int param_2, f32 param_3) {
@@ -95,20 +95,20 @@ void daNpcPhoto_c::setAnm(u32 param_1, int param_2, f32 param_3) {
 }
 /* 022CD0B8 */
 bool daNpcPhoto_c::setAnmTbl(sPhotoAnmDat* i_anmDat) {
-    if (field_0x9C9 & 4) {
+    if (mAnmFlags & 4) {
         return false;
     }
-    if (i_anmDat->field_0x00 == 0xFF) {
+    if (i_anmDat->mAnmIdx == 0xFF) {
         mpAnmDat = nullptr;
         return true;
     }
     mpAnmDat = i_anmDat;
-    mAnmLoopCount = (s8)i_anmDat->field_0x02;
-    u8 no = i_anmDat->field_0x00;
+    mAnmLoopCount = (s8)i_anmDat->mLoopCount;
+    u8 no = i_anmDat->mAnmIdx;
     if (mAnmLoopCount > 0) {
-        setAnm(no, 0, (f32)i_anmDat->field_0x01);
+        setAnm(no, 0, (f32)i_anmDat->mMorf);
     } else if (mAnmIdx != no) {
-        setAnm(no, 2, (f32)i_anmDat->field_0x01);
+        setAnm(no, 2, (f32)i_anmDat->mMorf);
     }
     return false;
 }
@@ -118,14 +118,14 @@ void daNpcPhoto_c::executeSetMode(u32 param_1) {
     switch (param_1) {
     case 0: {
         setAnmTbl(l_npc_anm_wait);
-        f32 r = cM_rndF((f32)(s32)(l_npc_dat.field_0x4C - l_npc_dat.field_0x4A));
-        mWaitTimer = (s16)gabi::ftoi(r + (f32)(s32)l_npc_dat.field_0x4A);
+        f32 r = cM_rndF((f32)(s32)(l_npc_dat.mWaitTimeMax - l_npc_dat.mWaitTimeMin));
+        mWaitTimer = (s16)gabi::ftoi(r + (f32)(s32)l_npc_dat.mWaitTimeMin);
         break;
     }
     case 2: {
         setAnmTbl(l_npc_anm_walk);
-        f32 r = cM_rndF((f32)(s32)(l_npc_dat.field_0x50 - l_npc_dat.field_0x4E));
-        mWaitTimer = (s16)gabi::ftoi(r + (f32)(s32)l_npc_dat.field_0x4E);
+        f32 r = cM_rndF((f32)(s32)(l_npc_dat.mWalkTimeMax - l_npc_dat.mWalkTimeMin));
+        mWaitTimer = (s16)gabi::ftoi(r + (f32)(s32)l_npc_dat.mWalkTimeMin);
         break;
     }
     case 3: {
@@ -144,8 +144,8 @@ void daNpcPhoto_c::executeSetMode(u32 param_1) {
         if (*angle == current.angle.y) {
             param_1 = 2;
             setAnmTbl(l_npc_anm_walk);
-            f32 r = cM_rndF((f32)(s32)(l_npc_dat.field_0x50 - l_npc_dat.field_0x4E));
-            mWaitTimer = (s16)gabi::ftoi(r + (f32)(s32)l_npc_dat.field_0x4E);
+            f32 r = cM_rndF((f32)(s32)(l_npc_dat.mWalkTimeMax - l_npc_dat.mWalkTimeMin));
+            mWaitTimer = (s16)gabi::ftoi(r + (f32)(s32)l_npc_dat.mWalkTimeMin);
         }
         break;
     }
@@ -154,7 +154,7 @@ void daNpcPhoto_c::executeSetMode(u32 param_1) {
 }
 /* 022CED84 */
 void daNpcPhoto_c::playTexPatternAnm() {
-    if (!(field_0x9C9 & 0x80) && cLib_calcTimer(&mTimer) == 0) {
+    if (!(mAnmFlags & 0x80) && cLib_calcTimer(&mTimer) == 0) {
         s32 frame_max = J3DAnm_getFrameMax(m_head_tex_pattern);
         if ((s32)mFrame >= frame_max) {
             s32 max = J3DAnm_getFrameMax(m_head_tex_pattern);
@@ -167,7 +167,7 @@ void daNpcPhoto_c::playTexPatternAnm() {
 }
 /* 022CEE30 */
 void daNpcPhoto_c::playAnm() {
-    field_0x9C9 = field_0x9C9 & 0xFE;
+    mAnmFlags = mAnmFlags & 0xFE;
     u32 mtrlSndId;
     if (mObjAcch.ChkGroundHit()) {
         mtrlSndId = dBgS_GetMtrlSndId(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mObjAcch.m_gnd) /* m_gnd */);
@@ -176,17 +176,17 @@ void daNpcPhoto_c::playAnm() {
     }
     s32 reverb = dComIfGp_getReverb(fopAcM_GetRoomNo(this));
     if (mpMorf->play(&eyePos, mtrlSndId, reverb)) {
-        field_0x9C9 = field_0x9C9 & ~0x4;
+        mAnmFlags = mAnmFlags & ~0x4;
         if (mpAnmDat.get() != nullptr) {
             if (mAnmLoopCount > 0) {
                 mAnmLoopCount = mAnmLoopCount - 1;
                 if (mAnmLoopCount == 0) {
                     mpAnmDat = mpAnmDat.get() + 1;
                     if (setAnmTbl(mpAnmDat)) {
-                        field_0x9C9 = field_0x9C9 | 1;
+                        mAnmFlags = mAnmFlags | 1;
                     }
                 } else {
-                    setAnm(mpAnmDat->field_0x00, 0, 0.0f);
+                    setAnm(mpAnmDat->mAnmIdx, 0, 0.0f);
                 }
             }
         }
@@ -236,10 +236,10 @@ void daNpcPhoto_c::lookBack() {
 /* 022CF17C */
 bool daNpcPhoto_c::_execute() {
     NpcDatStruct& dat = l_npc_dat;
-    m_jnt.setParam(dat.field_0x08, dat.field_0x0A, dat.field_0x10, dat.field_0x12, dat.field_0x04, dat.field_0x06,
-                   dat.field_0x0C, dat.field_0x0E, dat.field_0x14);
+    m_jnt.setParam(dat.mMaxBackboneX, dat.mMaxBackboneY, dat.mMinBackboneX, dat.mMinBackboneY, dat.mMaxHeadX, dat.mMaxHeadY,
+                   dat.mMinHeadX, dat.mMinHeadY, dat.mMaxTurnStep);
     chkAttention();
-    f32 y = current.pos.y + dat.field_0x30;
+    f32 y = current.pos.y + dat.mEyeYOffset;
     mEyePos.z = current.pos.z;
     mEyePos.x = current.pos.x;
     mEyePos.y = y;
@@ -254,7 +254,7 @@ bool daNpcPhoto_c::_execute() {
     playAnm();
     if (mAnmIdx == 3) {
         cLib_chaseF(&speedF, mTargetSpeed, 0.1f);
-        f32 temp = speedF * dat.field_0x38;
+        f32 temp = speedF * dat.mWalkAnmRate;
         mDoExt_McaMorf* morf = mpMorf;
         if (temp < 0.5f) {
             temp = 0.5f;
@@ -268,7 +268,7 @@ bool daNpcPhoto_c::_execute() {
     gabi::Local<cXyz> center;
     cXyz_pl(&current.pos, center.get(), &mCylOffset);
     setCollision(&mCyl, center.get(), mCylR, 150.0f);
-    if (field_0x9C1 == 2) {
+    if (mPlaceState == 2) {
         for (int i = 0; i < 2; i++) {
             cXyz* counterPos = &l_counter_pos[i];
             gabi::Local<cXyz> pos;
@@ -279,9 +279,9 @@ bool daNpcPhoto_c::_execute() {
         }
     }
     gabi::Local<cXyz> temp;
-    temp->x = dat.field_0x1C;
-    temp->y = dat.field_0x20;
-    temp->z = dat.field_0x24;
+    temp->x = dat.mAttnOffsetX;
+    temp->y = dat.mAttnOffsetY;
+    temp->z = dat.mAttnOffsetZ;
     mDoMtx_YrotS(mDoMtx_stack_c::get(), current.angle.y);
     PSMTXMultVec(mDoMtx_stack_c::get(), temp.get(), temp.get());
     PSVECAdd(temp.get(), &current.pos, temp.get());
@@ -314,17 +314,17 @@ bool daNpcPhoto_c::_draw() {
     mpMorf->updateDL();
     gabi::object_at<PhotoModelMaterialState>(gabi::ea(model_data)).mTexturePattern = 0; /* mBtpAnm.remove(model_data) */
     // HD: no dComIfGd_setShadow
-    if (field_0x9C1 == 4) {
+    if (mPlaceState == 4) {
         gabi::Local<dSnap_Obj> obj;
         dSnap_Obj_ct(obj.get());
         PsoData* pso = &l_pso_photo; /* l_pso_photo */
         gabi::Local<cXyz> temp;
-        temp->x = pso->field_0x00;
-        temp->y = pso->field_0x04;
-        temp->z = pso->field_0x08;
+        temp->x = pso->mOffsetX;
+        temp->y = pso->mOffsetY;
+        temp->z = pso->mOffsetZ;
         PSVECAdd(temp.get(), &current.pos, temp.get());
-        dSnap_Obj_SetInf(obj.get(), DSNAP_TYPE_UNK05, this, pso->field_0x16, pso->field_0x17, 0x7FFF);
-        dSnap_Obj_SetGeo(obj.get(), temp.get(), pso->field_0x0C, pso->field_0x10, pso->field_0x14 + current.angle.y);
+        dSnap_Obj_SetInf(obj.get(), DSNAP_TYPE_UNK05, this, pso->field_0x16, pso->mCylDivNum, 0x7FFF);
+        dSnap_Obj_SetGeo(obj.get(), temp.get(), pso->mRadius, pso->mHeight, pso->mAngleY + current.angle.y);
         dSnap_RegistSnapObj(obj.get());
     } else {
         dSnap_RegistFig(DSNAP_TYPE_NPC_PHOTO, this, 1.0f, 1.0f, 1.0f);
@@ -358,14 +358,14 @@ void daNpcPhoto_c::executeWait() {
     if (!dComIfGs_isEventBit(0x1701 /* l_save_dat.field_0x02 */)) {
         mCylR = 150.0f;
         mCylOffset.x = 0.0f;
-        mCylOffset.z = l_npc_dat.field_0x34;
+        mCylOffset.z = l_npc_dat.mCylOffsetZ;
         mCylOffset.y = 0.0f;
         if (mCyl.ChkCoHit()) {
             if (photo_isPlayer(mCyl.GetCoHitAc())) {
                 mOrderEvent = 2;
             }
         }
-    } else if (field_0x9C1 == 4 && !(field_0x9C6 & 0x10)) {
+    } else if (mPlaceState == 4 && !(mEventFlags & 0x10)) {
         fopAc_ac_c* link = dComIfGp_getLinkPlayer();
         if (link->current.pos.y < 10.0f && link->current.pos.x > -300.0f && link->current.pos.z > -500.0f) {
             mOrderEvent = 10;
@@ -377,7 +377,7 @@ void daNpcPhoto_c::executeWait() {
                 mOrderEvent = 7;
             }
         }
-        if (field_0x9C1 == 2) {
+        if (mPlaceState == 2) {
             eventInfo_setEventId(this, -1);
             mModeInTalk = true;
             for (int i = 0; i < 2; i++) {
@@ -389,14 +389,14 @@ void daNpcPhoto_c::executeWait() {
                 }
             }
         }
-        if (field_0x9C1 == 1 && !mInAttention) {
+        if (mPlaceState == 1 && !mInAttention) {
             fopAc_ac_c* link = dComIfGp_getLinkPlayer();
             if (link->current.pos.y < current.pos.y + -50.0f) {
                 executeSetMode(3);
-                field_0x9C1 = 3;
+                mPlaceState = 3;
             }
         }
-        if (field_0x9C1 == 3 && !mInAttention) {
+        if (mPlaceState == 3 && !mInAttention) {
             if (mWaitTimer == 0) {
                 executeSetMode(3);
             } else {
@@ -412,22 +412,22 @@ void daNpcPhoto_c::executeTalk() {
         if (talk2(1) == fopMsgStts_BOX_CLOSED_e) {
             mTalking = false;
             executeSetMode(0);
-            u8 temp = field_0x9C6;
+            u8 temp = mEventFlags;
             if (temp & 1) {
-                field_0x9C6 = temp & 0xFE;
+                mEventFlags = temp & 0xFE;
                 mItemNo = 0x26; // HD: dItemNo_DELUXE_PICTO_BOX_e (GameCube 31)
                 mOrderEvent = 4;
             } else if (temp & 2) {
-                field_0x9C6 = temp & ~0x02;
+                mEventFlags = temp & ~0x02;
                 mItemNo = 0x1F; /* HD (GameCube 38, event 5) */
                 mOrderEvent = 4;
             } else if (temp & 4) {
-                field_0x9C6 = temp & ~0x04;
+                mEventFlags = temp & ~0x04;
                 mOrderEvent = 3;
                 setAnmTbl(l_npc_anm_spit /* l_npc_anm_spit */);
-                field_0x9C9 = field_0x9C9 | 4;
+                mAnmFlags = mAnmFlags | 4;
             } else {
-                field_0x9C6 = temp | 0x40;
+                mEventFlags = temp | 0x40;
             }
         } else {
             setAnmFromMsgTag();
@@ -466,9 +466,9 @@ void daNpcPhoto_c::executeWalk() {
         mLookHeadOnly = false;
         mLookAngleY = *angle;
         mLookMode = 2;
-        mLookMaxVelTarget = l_npc_dat.field_0x18;
+        mLookMaxVelTarget = l_npc_dat.mWalkHeadTurnVel;
         m_jnt.mbTrn = 1; /* setTrn() */
-        mTargetSpeed = l_npc_dat.field_0x3C;
+        mTargetSpeed = l_npc_dat.mWalkSpeed;
         u8 pointIndex = mPathRun.mIdx;
         if (mPathRun.mbDir) {
             pointIndex--;
@@ -478,11 +478,11 @@ void daNpcPhoto_c::executeWalk() {
         gabi::Local<cXyz> point2;
         mPathRun.getPoint(point2.get(), pointIndex);
         if (point2->y - py > 400.0f) {
-            mTargetSpeed = l_npc_dat.field_0x3C * l_npc_dat.field_0x40;
+            mTargetSpeed = l_npc_dat.mWalkSpeed * l_npc_dat.mClimbSpeedRate;
         }
     } else {
         executeSetMode(0);
-        field_0x9C1 = 2;
+        mPlaceState = 2;
         mTargetAngleY = home.angle.y;
     }
 }

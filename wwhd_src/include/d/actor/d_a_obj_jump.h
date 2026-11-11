@@ -11,9 +11,9 @@ struct Attr_c {
   be<u8> hasShadow;
   u8 _15;
   be<u16> springJntNum;
-  be<f32> field_0x018;
-  be<f32> field_0x01C;
-  be<f32> field_0x020;
+  be<f32> mStrokeLowY;  /* was field_0x018: set_mtx 023660A4 and the spring joint callback 02365DD8 move the spring by (mStrokeHighY - it) * (mScale - 1): the low end of the spring stroke (tww L_attr 40 / 160) */
+  be<f32> mStrokeHighY;  /* was field_0x01C: set_mtx 023660A4 and the spring joint callback 02365DD8 move the spring by (it - mStrokeLowY) * (mScale - 1): the high end of the spring stroke (tww L_attr 125 / 270) */
+  be<f32> mBodyTopY;  /* was field_0x020: set_mtx 023660A4 scales the body height between mScalePivotY and it (span = it - mScalePivotY) so that its top follows the stroke (tww L_attr 150 / 300; tww set_mtx the same) */
   /* 0x24 */ be<f32> mScalePivotY;  /* was field_0x024: set_mtx 023660A4: the Y about which the body is scaled (tww transM(0, it, 0), scaleM, transM(0, -it, 0)) */
   /* 0x28 */ be<f32> mSpringDamping;  /* was field_0x028: calc_vib_pos 02366668: mScaleSpeed -= mScaleSpeed * it (tww) */
   /* 0x2C */ be<f32> mSpringStiffness;  /* was field_0x02C: calc_vib_pos 02366668: mScaleSpeed -= (mScale - mScaleTarget) * it (tww) */
@@ -34,7 +34,7 @@ struct Attr_c {
   /* 0x4C */ be<f32> mFastRideSpeed;  /* was field_0x04C: rideCB 02366268: mbFastRide when the riding player's speedF exceeds it */
 };
 WWHD_OFFSET(Attr_c, springJntNum, 0x16);
-WWHD_OFFSET(Attr_c, field_0x018, 0x18);
+WWHD_OFFSET(Attr_c, mStrokeLowY, 0x18);
 WWHD_OFFSET(Attr_c, mHeavyRideFrames, 0x40);
 WWHD_OFFSET(Attr_c, mFastRideSpeed, 0x4C);
 WWHD_SIZE(Attr_c, 0x50);

@@ -83,10 +83,10 @@ void dKyr_drawSun(u32 unusedMatrix, u32 input, u32 unusedColor, u32 unusedImages
     at<Color>(color2)->channels[3] = 255;
     game = sun_sdk::gameInfo<u32>();
     if (!(u32)(at<GameInfo>(game)->view)) {
-        u8 timer = (u8)(at<SunPacket>(packet)->field_0x3c);
+        u8 timer = (u8)(at<SunPacket>(packet)->mOcclusionDelayHD);
         if (timer < 5)
-            at<SunPacket>(packet)->field_0x3c = timer + 2;
-        at<SunPacket>(packet)->field_0x3d = 1;
+            at<SunPacket>(packet)->mOcclusionDelayHD = timer + 2;
+        at<SunPacket>(packet)->mHasVisiblePointHD = 1;
         return;
     }
     game = sun_sdk::gameInfo<u32>();

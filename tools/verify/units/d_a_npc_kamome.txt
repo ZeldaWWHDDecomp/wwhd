@@ -46,7 +46,7 @@ field 0225E598 54005B2C u32 0x40000000,0x12340000
 field 0225E598 1047B688 i16 0,1       # REG0_S(0)
 ret 02445950 0,1                      # checkNowPosMove
 field 0225E598 r3+0xBCA u8 0,1        # mHidden
-field 0225E598 r3+0x600 u32 0,1,2,3   # m4E4
+field 0225E598 r3+0x600 u32 0,1,2,3   # mNpcFlags
 field 0225E598 r3+0xB70 u32 0,8,0x10,0x18
 field 0225E598 54005134 u32 0x73656100,0x41424300
 field 0225E598 r3+0x326 i8 44,0

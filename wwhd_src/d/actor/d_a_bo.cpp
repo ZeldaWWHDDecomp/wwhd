@@ -717,7 +717,7 @@ static bool boMoveMode5(bo_class *actor) {
     }
     if (type == bo::AT_TYPE_ICE_ARROW) {
         f32 duration = (f32)l_iceDurationExtra;
-        actor->mEnemyIce.m00C = 1;
+        actor->mEnemyIce.mFreezeType = 1;
         actor->mDamageType = 2;
         actor->mEnemyIce.mFreezeDuration = (s16)gabi::ftoi((f32)(duration + 80.f));
         actor->health = 30;
@@ -1167,7 +1167,7 @@ static BOOL damage_check(bo_class *actor) {
             case bo::AT_TYPE_ICE_ARROW: {
                 f32 timer = (f32)l_iceDurationExtra + 80.f;
                 actor->mDamageType = 2;
-                actor->mEnemyIce.m00C = 1;
+                actor->mEnemyIce.mFreezeType = 1;
                 actor->mEnemyIce.mFreezeDuration = (s16)gabi::ftoi(timer);
                 actor->health = 30;
                 actor->attention_info.flags = 0;

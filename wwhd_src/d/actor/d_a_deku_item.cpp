@@ -168,8 +168,8 @@ void daDekuItem_c::checkOrder() {
   u32 play = sdk::play<u32>();
   if (sdk::eventStartCheck<s32>(playView(play)->eventManager,
                                 view<void>(EventCheckName)) &&
-      unk630)
-    unk630 = 0;
+      mGetEventOrder)
+    mGetEventOrder = 0;
   play = sdk::play<u32>();
   if (sdk::eventEndCheck<s32>(playView(play)->eventManager,
                               view<void>(EventCheckName))) {
@@ -197,7 +197,7 @@ void daDekuItem_c::mode_proc_call() {
 }
 /* 0211EE80 */
 void daDekuItem_c::eventOrder() {
-  if (unk630 == 1) {
+  if (mGetEventOrder == 1) {
     sdk::orderOtherEvent(this, view<void>(EventOrderName), 1, 0xffff);
     eventInfo.mCondition = (u16)(eventInfo.mCondition | dEvtCnd_UNK2_e);
   }
@@ -254,11 +254,11 @@ void daDekuItem_c::mode_getdemo_init() {
   sdk::offDraw(&draw_tag);
   invalidateEmitter(this);
   mMode = Mode_GETDEMO_WAIT_e;
-  unk630 = 1;
+  mGetEventOrder = 1;
 }
 /* 0211F134 */
 void daDekuItem_c::mode_getdemo_wait() {
-  if (!unk630) {
+  if (!mGetEventOrder) {
     s32 room = current.roomNo;
     u32 pid = sdk::createDemoItem<u32>(&current.pos, LeafItem, -1, room,
                                        (void *)nullptr, (void *)nullptr);

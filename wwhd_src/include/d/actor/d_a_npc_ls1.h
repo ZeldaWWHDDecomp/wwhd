@@ -236,20 +236,20 @@ struct daNpc_Ls1_c : fopNpc_npc_c {
     /* 0xA05 */ be<u8> m835;
     /* 0xA06 */ be<u8> m836;
     /* 0xA07 */ be<u8> mbResLoadIsComplete;
-    /* 0xA08 */ be<u8> m838;
+    /* 0xA08 */ be<u8> mEyeFollow;  /* was m838: lookBack 02280C40 sets it in the look modes with a target position and clears it otherwise; play_btk_anm 0227F514 runs eye_ctrl instead of the btk while set; play_animation 0227F5AC turns the eye control on (setEyeCtrl) with btk 0 while set, else clrEyeCtrl; wait_2 02282B54 / wait_3 02282D94 set it (tww the same); same role as the mEyeFollow of the NPC with field_0x7D0 in docs/field-names/npcs.md */
     /* 0xA09 */ be<u8> mbEyeCtrlSet;
     /* 0xA0A */ be<u8> m83A;
-    /* 0xA0B */ be<u8> m83B;
+    /* 0xA0B */ be<u8> mbSetShapeAngle;  /* was m83B: checkOrder 0227FFEC sets it at the event index 1; demo 022801BC / event_proc 02280A1C clear it; _execute 02281074 copies current.angle into shape_angle only while it is clear (tww the same); after tww daNpc_Bm1_c mbSetShapeAngle (same code) */
     /* 0xA0C */ be<u8> m83C;
     /* 0xA0D */ be<u8> mbRanExecute;  /* was m83D: _execute 02281074: 0 on the first run, when mInitialPos and mInitialAngle are taken, then 1 (tww); after tww daNpc_Bm1_c mbRanExecute (same code) */
     /* 0xA0E */ be<u8> mbAttention;
     /* 0xA0F */ be<u8> mTalking;  /* was m83F: checkOrder 0227FFEC sets 1 on the talk command (tww); wait_2 02282B54 / wait_3 02282D94 / wait_4 02282EB0 start the talk while it is set; talk_1 02282F6C clears it (tww); after daNpc_Hi1_c / daNpcMt_c::mTalking */
-    /* 0xA10 */ be<u8> m840;
+    /* 0xA10 */ be<u8> mLookHeadOnly;  /* was m840: lookBack 02280C40 passes it to lookAtTarget_2 as the head-only flag (d_npc.h lookAtTarget headOnly; tww bool temp_m840 = it); cut_init_LOK_PLYER 02280720 and wait_2 02282B54 / wait_3 02282D94 / wait_4 02282EB0 set 1 while waiting and 0 when the talk starts (tww the same); same name as daNpc_Hi1_c::mLookHeadOnly */
     /* 0xA11 */ be<u8> mInDemo;  /* was m841: demo 022801BC: 1 while demoActorID is set, 0 otherwise (tww); setMtx 0227F6F0 / _execute 02281074 test it (tww); same code as daNpc_Hi1_c::mInDemo */
     /* 0xA12 */ be<s16> mHalfHeadAngleY;
     /* 0xA14 */ be<s16> mHalfHeadAngleX;
-    /* 0xA16 */ be<s16> mEyeAngleY;  /* was m846: lookBack 02280C40: -mHalfHeadAngleY (tww it = -mHalfHeadAngleY); eye_ctrl 0227F2DC moves the eye texture by it / HIO m30 (tww); after daNpc_Zl1_c::mEyeAngleY (npcs.md) */
-    /* 0xA18 */ be<s16> mEyeAngleX;  /* was m848: lookBack 02280C40: mHalfHeadAngleX (tww it = mHalfHeadAngleX); eye_ctrl 0227F2DC moves the eye texture by it / HIO m30 (tww); after daNpc_Zl1_c::mEyeAngleX (npcs.md) */
+    /* 0xA16 */ be<s16> mEyeAngleY;  /* was m846: lookBack 02280C40: -mHalfHeadAngleY (tww it = -mHalfHeadAngleY); eye_ctrl 0227F2DC moves the eye texture by it / HIO mEyeAngleDiv (tww); after daNpc_Zl1_c::mEyeAngleY (npcs.md) */
+    /* 0xA18 */ be<s16> mEyeAngleX;  /* was m848: lookBack 02280C40: mHalfHeadAngleX (tww it = mHalfHeadAngleX); eye_ctrl 0227F2DC moves the eye texture by it / HIO mEyeAngleDiv (tww); after daNpc_Zl1_c::mEyeAngleX (npcs.md) */
     /* 0xA1A */ be<s8> mActionIndex;
     /* 0xA1B */ be<u8> mAnmAtrNo;  /* was m84B: chngAnmAtr 02281758 stores the attribute (tww it = param_1); setAnm_ATR 022816E4 / ctrlAnmAtr 022818EC use it; setStt 022805B8 / endEvent 022806DC / checkOrder 0227FFEC 0xFF; same code as daNpc_Hi1_c::mAnmAtrNo */
     /* 0xA1C */ be<u8> mMesgAnimeTag;
@@ -307,16 +307,16 @@ struct daNpc_Ls1_HIO_c {
         /* 0x0C */ be<s16> mMinBackBoneX;
         /* 0x0E */ be<s16> mMinBackBoneY;
         /* 0x10 */ be<s16> mMaxTurnStep;
-        /* 0x12 */ be<s16> m12;
+        /* 0x12 */ be<s16> mMaxHeadTurnVel;  /* was m12: lookBack 02280C40 passes it to the look-at (lookAtTarget_2) as the max turn speed; HIO 0x960 (tww the same); same role as daNpc_Hi1_HIO_c::hio_prm_c::mMaxHeadTurnVel */
         /* 0x14 */ be<f32> mAttPosOffsetY;
-        /* 0x18 */ be<u8> m18;
+        /* 0x18 */ be<u8> mDebugDraw;  /* was m18: _draw 02281318: only gates the debug-colour statics (tww: a dead debug block); HIO 0, never written elsewhere in WWHD or tww; same slot and role as daNpc_Aj1_HIO_c::hio_prm_c::mDebugDraw */
         /* 0x19 */ u8 _19[3];
-        /* 0x1C */ be<f32> m1C;
-        /* 0x20 */ be<f32> m29;
-        /* 0x24 */ be<f32> m24;
-        /* 0x28 */ be<f32> m28;
-        /* 0x2C */ be<f32> m2C;
-        /* 0x30 */ be<s16> m30;
+        /* 0x1C */ be<f32> mTelescopeDist;  /* was m1C: wait_2 02282B54: telescope_proc runs only while Link is within it (xz, with 100 height) and looking through the telescope; HIO 700 (tww the same) */
+        /* 0x20 */ be<f32> mOmedetoDist;  /* was m29: wait_1 02282A60: Link within it (xz, with 100 height) orders event 4, tww l_evn_tbl[1] "omedeto" (the birthday greeting); HIO 200 (tww the same) */
+        /* 0x24 */ be<f32> mZoomMsgScale;  /* was m24: telescope_proc 022825A0 step 1: with the Rito (bm1_npc_p) in view the hint is message 0xBCA below this camera zoom scale, else 0xBCB; HIO 2.0 (tww the same) */
+        /* 0x28 */ be<f32> mZoomDoneScale;  /* was m28: telescope_proc 022825A0 step 2: once the camera zoom scale reaches it the camera focuses on the Rito (bm1 setFocus) and the step goes to 3; HIO 9.0 (tww the same) */
+        /* 0x2C */ be<f32> mScopeScreenRadius;  /* was m2C: telescope_proc 022825A0 passes it to chkTelescope_sph 02282380: bm1_npc_p's (the Rito's) projected attention point must lie within it of the screen centre (319.5, 186.5); HIO 50 (tww the same) */
+        /* 0x30 */ be<s16> mEyeAngleDiv;  /* was m30: eye_ctrl 0227F2DC: the eye texture offset is mEyeAngleX / mEyeAngleY divided by it, * 0.1, clamped to +-1; HIO 0x1A2C (tww the same) */
         /* 0x32 */ u8 _32[2];
         /* 0x34 */ be<f32> mPlayerEyePosOffsetY;
     };

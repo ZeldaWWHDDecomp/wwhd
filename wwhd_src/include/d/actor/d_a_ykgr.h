@@ -11,24 +11,24 @@ struct daYkgr_HIO_c {
     /* 0x04 */ be<s8> mNo;
     /* 0x05 */ u8 _05[3];
     /* 0x08 */ be<s32> m08;
-    /* 0x0C */ be<s32> m0C;
+    /* 0x0C */ be<s32> mAlphaStep;  /* was m0C: daYkgrExecute 024EAAE8 (_execute inlined): m_alpha moves by it per frame toward 0 (stopped) or 0xFF (started); __sinit_d_a_ykgr_cpp 024EAD68 3 (tww the same) */
     /* 0x10 */ be<f32> m10;
-    /* 0x14 */ be<f32> m14;
-    /* 0x18 */ be<f32> m18;
-    /* 0x1C */ be<f32> m1C;
-    /* 0x20 */ be<f32> m20;
-    /* 0x24 */ be<f32> m24;
+    /* 0x14 */ be<f32> mStrengthLow;  /* was m14: daYkgrExecute 024EAAE8: setParam(rate * mStrengthHigh + (1 - rate) * it), the haze strength (the ind-matrix scale exponent and mantissa) at rate 0; __sinit_d_a_ykgr_cpp 024EAD68 -5 (tww the same) */
+    /* 0x18 */ be<f32> mStrengthHigh;  /* was m18: daYkgrExecute 024EAAE8: the haze strength passed to setParam at rate 1 (rate = half mAimRate + half mPosRate); __sinit_d_a_ykgr_cpp 024EAD68 -3 (tww the same) */
+    /* 0x1C */ be<f32> mAimRateTarget;  /* was m1C: daYkgrExecute 024EAAE8: m_aim_rate eases toward it, and mAimRate toward m_aim_rate; __sinit_d_a_ykgr_cpp 024EAD68 0 (tww the same) */
+    /* 0x20 */ be<f32> mPathDistMax;  /* was m20: getPosRate 024EA984: the player's xz distance to the nearest path point is clamped to [mPathDistMin, it]; the rate is 1 - (dist - min) / (it - min); __sinit_d_a_ykgr_cpp 024EAD68 1500 (tww the same) */
+    /* 0x24 */ be<f32> mPathDistMin;  /* was m24: getPosRate 024EA984: the lower clamp of the path distance, where the position rate is 1; __sinit_d_a_ykgr_cpp 024EAD68 500 (tww the same) */
 };
 
 struct dPa_YkgrPcallBack {
     /* 0x00 */ be<u32> __vtbl;
-    /* 0x04 */ be<f32> m04;
-    /* 0x08 */ be<f32> m08;
-    /* 0x0C */ be<f32> m0C;
-    /* 0x10 */ be<f32> m10;
-    /* 0x14 */ be<f32> m14;
-    /* 0x18 */ be<f32> m18;
-    /* 0x1C */ be<s8> m1C;
+    /* 0x04 */ be<f32> mIndMtx00;  /* was m04: YkgrPcallBack_draw 024EAD4C passes &it to JPASetIndTexMtx as the 2x3 indirect texture matrix (tww GXSetIndTexMtx(GX_ITM_0, &m04, m1C)); row 0 column 0, the mantissa setParam 024EA58C computes */
+    /* 0x08 */ be<f32> mIndMtx01;  /* was m08: YkgrPcallBack_draw 024EAD4C: row 0 column 1 of the indirect texture matrix starting at mIndMtx00; setParam 024EA58C and __sinit_d_a_ykgr_cpp 024EAD68 0 (tww the same) */
+    /* 0x0C */ be<f32> mIndMtx02;  /* was m0C: YkgrPcallBack_draw 024EAD4C: row 0 column 2 of the indirect texture matrix; setParam 024EA58C and __sinit_d_a_ykgr_cpp 024EAD68 0 (tww the same) */
+    /* 0x10 */ be<f32> mIndMtx10;  /* was m10: YkgrPcallBack_draw 024EAD4C: row 1 column 0 of the indirect texture matrix; setParam 024EA58C and __sinit_d_a_ykgr_cpp 024EAD68 0 (tww the same) */
+    /* 0x14 */ be<f32> mIndMtx11;  /* was m14: YkgrPcallBack_draw 024EAD4C: row 1 column 1 of the indirect texture matrix; setParam 024EA58C stores the same mantissa as mIndMtx00 (tww m04 = m14 = ..) */
+    /* 0x18 */ be<f32> mIndMtx12;  /* was m18: YkgrPcallBack_draw 024EAD4C: row 1 column 2 of the indirect texture matrix; setParam 024EA58C and __sinit_d_a_ykgr_cpp 024EAD68 0 (tww the same) */
+    /* 0x1C */ be<s8> mIndScaleExp;  /* was m1C: YkgrPcallBack_draw 024EAD4C passes it to JPASetIndTexMtx as the matrix's scale exponent (tww GXSetIndTexMtx scale_exp); setParam 024EA58C stores its parameter rounded down; __sinit_d_a_ykgr_cpp 024EAD68 1 (tww the same) */
     void setParam(f32 arg1);
 };
 
@@ -40,10 +40,10 @@ struct daYkgr_c : fopAc_ac_c {
     /* 0x3AC */ request_of_phase_process_class mPhase;
     /* 0x3B4 */ Mtx34 mMtx;
     /* 0x3E4 */ u8 m2C8[4];
-    /* 0x3E8 */ be<f32> m2CC;
-    /* 0x3EC */ be<f32> m2D0;
+    /* 0x3E8 */ be<f32> mAimRate;  /* was m2CC: daYkgrExecute 024EAAE8 eases it toward the global m_aim_rate and blends it half and half with mPosRate into the particle callback parameter (between l_HIO mStrengthLow and mStrengthHigh); _create 024EA6A0 sets 0.5 (tww the same) */
+    /* 0x3EC */ be<f32> mPosRate;  /* was m2D0: daYkgrExecute 024EAAE8 eases it toward getPosRate() and blends it with mAimRate into the particle callback parameter; _create 024EA6A0 sets 0 (tww the same) */
 };
-WWHD_OFFSET(daYkgr_c, m2D0, 0x3EC);
+WWHD_OFFSET(daYkgr_c, mPosRate, 0x3EC);
 WWHD_SIZE(daYkgr_c, 0x3F0);
 
 // HD: emitter fields at GameCube offsets minus four.

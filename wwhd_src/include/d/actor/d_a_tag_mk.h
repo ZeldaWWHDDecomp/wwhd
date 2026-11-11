@@ -47,32 +47,32 @@ struct daTag_Mk_c : fopAc_ac_c {
     BOOL execute();
     u8 getType();
     void setTagWpEvId();
-    /* 0x3AC */ be<u32> m290;
-    /* 0x3B0 */ be<s8> m294;
+    /* 0x3AC */ be<u32> mMsgNo;  /* was m290: talk 024B08E8 sets it from getMsg, shows it (setMessage) and steps it with next_msgStatus (tww the same) */
+    /* 0x3B0 */ be<s8> mTalkState;  /* was m294: talkInit 024B065C sets 0; talk 024B08E8 turns it into 1 (message chosen), 2 (message shown) and -1 (talk over) (tww the same) */
     u8 pad3B1;
-    /* 0x3B2 */ be<s16> m296;
+    /* 0x3B2 */ be<s16> mDaichiStep;  /* was m296: actionDaichi 024B0BD4: its step (0 / 10 wait for tmp bit 0x440, 1 the first switch, 2 / 11 the cut timer and sub BGM, 3 / 12 the second switch); daTag_Mk_Create 024B0F4C sets 0, 10 or 20 by the switches already set (tww the same) */
     u8 pad3B4[4];
-    /* 0x3B8 */ cXyz m29C;
+    /* 0x3B8 */ cXyz mFacingDir;  /* was m29C: daTag_Mk_Create 024B0F4C sets (sin, 0, cos) of current.angle.y for the villa tag; checkArea 024B0668 projects the player offset on it for the area depth / width test (tww the same) */
     /* 0x3C4 */ be<u8> mActionTypes;
     u8 pad3C5;
     /* 0x3C6 */ be<s16> mEventIdx;
     /* 0x3C8 */ be<s32> mStaffIdx;
     /* 0x3CC */ be<s16> mCutEndTimer;
     u8 pad3CE[2];
-    /* 0x3D0 */ be<u32> m2B4;
-    /* 0x3D4 */ gptr<const char> m2B8;
+    /* 0x3D0 */ be<u32> mItemId;  /* was m2B4: demoInitMake 024B01C4 stores the created item's process id; demoInitSetgoal 024B031C and demoInitDelete 024B02D0 search the item by it (tww the same) */
+    /* 0x3D4 */ gptr<const char> mStaffName;  /* was m2B8: daTag_Mk_Create 024B0F4C points it at the guest string "TagMk"; actionReady 024B0538 passes it to the event manager's getMyStaffId (tww the same) */
 };
 static_assert(sizeof(daTag_Mk_c) == 0x3D8);
-static_assert(offsetof(daTag_Mk_c, m290) == 0x3AC);
-static_assert(offsetof(daTag_Mk_c, m294) == 0x3B0);
-static_assert(offsetof(daTag_Mk_c, m296) == 0x3B2);
-static_assert(offsetof(daTag_Mk_c, m29C) == 0x3B8);
+static_assert(offsetof(daTag_Mk_c, mMsgNo) == 0x3AC);
+static_assert(offsetof(daTag_Mk_c, mTalkState) == 0x3B0);
+static_assert(offsetof(daTag_Mk_c, mDaichiStep) == 0x3B2);
+static_assert(offsetof(daTag_Mk_c, mFacingDir) == 0x3B8);
 static_assert(offsetof(daTag_Mk_c, mActionTypes) == 0x3C4);
 static_assert(offsetof(daTag_Mk_c, mEventIdx) == 0x3C6);
 static_assert(offsetof(daTag_Mk_c, mStaffIdx) == 0x3C8);
 static_assert(offsetof(daTag_Mk_c, mCutEndTimer) == 0x3CC);
-static_assert(offsetof(daTag_Mk_c, m2B4) == 0x3D0);
-static_assert(offsetof(daTag_Mk_c, m2B8) == 0x3D4);
+static_assert(offsetof(daTag_Mk_c, mItemId) == 0x3D0);
+static_assert(offsetof(daTag_Mk_c, mStaffName) == 0x3D4);
 
 void orderOtherEventRegister(daTag_Mk_c*, s32, s32, s32, s32, s32);
 fopAc_ac_c* fopAcM_createItemForKP2(cXyz*, s32, s32, csXyz*, cXyz*, f32, f32, f32, s32);

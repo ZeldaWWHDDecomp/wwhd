@@ -154,12 +154,12 @@ static void *ji1EventInitPosObjectHD(void *pActor, void *pData) {
       a->shape_angle.y = (s16)a->home.angle.y;
       a->shape_angle.z = (s16)a->home.angle.z;
 
-      ji1EventAngleCopyHD(&a->m688, &l_zeroAngle);
-      ji1EventAngleCopyHD(&a->m68A, &l_zeroAngle);
-      ji1EventAngleCopyHD(&a->m68C, &l_zeroAngle);
-      ji1EventAngleCopyHD(&a->m68E, &l_zeroAngle);
-      ji1EventAngleCopyHD(&a->m690, &l_zeroAngle);
-      ji1EventAngleSetHD(&a->m692, a->current.angle.y);
+      ji1EventAngleCopyHD(&a->mRotAxisRoll, &l_zeroAngle);
+      ji1EventAngleCopyHD(&a->mRotAxisPitch, &l_zeroAngle);
+      ji1EventAngleCopyHD(&a->mRotAxisPitchSpeed, &l_zeroAngle);
+      ji1EventAngleCopyHD(&a->mRotAngle, &l_zeroAngle);
+      ji1EventAngleCopyHD(&a->mRotAngleSpeed, &l_zeroAngle);
+      ji1EventAngleSetHD(&a->mRotAxisYaw, a->current.angle.y);
       ji1EventIdentityHD(&a->mPoseMtx);
     }
   }
@@ -203,7 +203,7 @@ void daNpc_Ji1_c::createItem() {
     itemNo = dItemNo_PURPLE_RUPEE_e;
   } else if (dComIfGs_getEventReg(0xD003) == 2) {
     itemNo = dItemNo_ORANGE_RUPEE_e;
-  } else if (mTeachStep >= l_hio.field_0x60[3] &&
+  } else if (mTeachStep >= l_hio.mLevelHits[3] &&
              dComIfGs_isEventBit(0x0F10)) {
     itemNo = dItemNo_SILVER_RUPEE_e;
   } else {

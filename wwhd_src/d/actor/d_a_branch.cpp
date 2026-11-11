@@ -27,7 +27,7 @@ static BranchDemoActor* dComIfGp_demo_getActor(u8 id) {
         return nullptr;
     BranchDemoObject* obj = l_demoObject;
     if (obj == nullptr) {
-        JUT_ASSERT(0x23A, obj != nullptr);
+        (obj != nullptr) ? (void)0 : JUTAssertion::showAssert("d_demo.h", 0x23A, "m_object != (0)"); /* the original's assert is in d_demo.h */
         obj = l_demoObject;
     }
     return obj->getActor(id);
@@ -84,7 +84,7 @@ BOOL daBranch_c::CreateHeap() {
     for (int i = 0; i < 2; i++) {
         J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectIDRes(m_arcname, bmd[i]);
         dComIfG_getObjectIDRes(m_arcname, bck[i]); /* bckData (unused) */
-        JUT_ASSERT(0x1CE, modelData != nullptr);
+        JUT_ASSERT_MSG(0x1CE, modelData != nullptr, "modelData != (0)");
         J3DModelData* md = (J3DModelData*)dComIfG_getObjectIDRes(m_arcname, bmd[i]);
         J3DAnmTransform* anm = (J3DAnmTransform*)dComIfG_getObjectIDRes(m_arcname, bck[i]);
         mDoExt_McaMorf* morf = mDoExt_McaMorf::create(nullptr, md, nullptr, nullptr, anm, -1, 1.0f, 0, -1, 1, nullptr, 0, 0x11020203);
@@ -108,7 +108,7 @@ BOOL daBranch_c::CreateHeap() {
 /* draw() inlined */
 BOOL daBranch_c::draw() {
     int activeIdx = 0;
-    if (m02B8 == 5) {
+    if (mShapeId == 5) {
         activeIdx = 1;
     }
     settingTevStruct(dKy_getEnvlight(), TEV_TYPE_BG0, &current.pos, &tevStr);
@@ -126,18 +126,18 @@ static BOOL daBranch_Draw(daBranch_c* i_this) {
 BOOL daBranch_c::execute() {
     u8 demoId = demoActorID;
     if (demoId == 0) {
-        if (m02B8 == 5) {
+        if (mShapeId == 5) {
             if (mAnims[1]) {
                 ((mDoExt_McaMorf*)mAnims[1])->play(nullptr, 0, 0);
             }
-        } else if (m02B8 == 6 && mAnims[0]) {
+        } else if (mShapeId == 6 && mAnims[0]) {
             ((mDoExt_McaMorf*)mAnims[0])->play(nullptr, 0, 0);
         }
     } else {
         BranchDemoActor* demoActor = dComIfGp_demo_getActor(demoId);
         if (demoActor) {
             u32 shape = demoActor->getShapeId();
-            m02B8 = shape;
+            mShapeId = shape;
             if (shape == 6) {
                 demoPlay(mAnims[0]);
             } else if (shape == 5) {
@@ -196,7 +196,7 @@ cPhs_State daBranch_c::create() {
         } else {
             fopAcM_SetMtx(this, mModel[0]->getBaseTRMtx());
             fopAcM_setCullSizeBox(this, 0.0f, 0.0f, -50.0f, 300.0f, 100.0f, 50.0f);
-            m02B8 = 6;
+            mShapeId = 6;
             m02BC = 0;
             m02BD = 0;
             set_mtx();
@@ -233,7 +233,7 @@ static void SafeString_assureTermination(void*) {
 /* 020DF7A8 */
 Mtx34* daBranch_c::getJointMtx(const char* name) {
     J3DModel* model = mModel[0];
-    JUT_ASSERT(0x16, model != nullptr);
+    (model != nullptr) ? (void)0 : JUTAssertion::showAssert("d_a_branch_static.cpp", 0x16, "mModel[0] != (0)"); /* the original's assert is in d_a_branch_static.cpp */
     model = mModel[0]; // HD: reread after the assertion.
     s32 idx = model->getModelData()->getJointName()->getIndex(name);
     if (idx < 0)
@@ -248,12 +248,12 @@ static void __sinit_d_a_branch_static_cpp() {
 
 /* WWHD glue (tools/verify/autoglue.py)
 str 1000B4F0
-str 1000B49C "d_a_branch.cpp" renamed in 020DF140 # HD file d_demo.h
-str 1000B48C "obj != nullptr" renamed # original HD spelling names the demo object
+str 1000B49C "d_demo.h" in 020DF140
+str 1000B48C "m_object != (0)"
 str 1000B4B4 in 020DF34C
-str 1000B4C4 "modelData != nullptr" renamed
-str 1000B500 "d_a_branch.cpp" renamed in 020DF7A8 # HD file d_a_branch_static.cpp
-str 1000B518 "model != nullptr" renamed
+str 1000B4C4 "modelData != (0)"
+str 1000B500 "d_a_branch_static.cpp" in 020DF7A8
+str 1000B518 "mModel[0] != (0)"
 data anim_table 101926E0
 data l_demoObject 101D5FFC
 ext 025F19F8 void mDoMtx_XYZrotM(Mtx34*, s16, s16, s16)

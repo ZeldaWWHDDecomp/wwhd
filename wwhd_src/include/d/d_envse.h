@@ -11,15 +11,18 @@ struct dEnvSe_words {
 WWHD_SIZE(dEnvSe_words, 12);
 struct dEnvSe_soundEntry {
     u8 mUnaccessed[0x14];
-    be<u8> field_0x14;
+    /* mSeParam (0x14) was field_0x14: dEnvSe_c::execute 0252FEB8 passes it to mDoAud_seaEnvSePlay / mDoAud_riverSePlay / mDoAud_waterfallSePlay as the sound parameter of the entry (tww stage_sound_data field_0x14 the same) */
+    be<u8> mSeParam;
     u8 mPadding[2];
-    be<u8> field_0x17;
-    be<u8> field_0x18;
+    /* mType (0x17) was field_0x17: dEnvSe_c::execute 0252FEB8 switches on it (dEnvSe_type: sea, shore, river, window, waterfall) (tww the same) */
+    be<u8> mType;
+    /* mPathNo (0x18) was field_0x18: dEnvSe_c::execute 0252FEB8: the room path number of the sound (dEnvSe_getRoomPath(it, room)), walked for the nearest position (tww the same) */
+    be<u8> mPathNo;
     u8 mRemaining[3];
 };
 WWHD_SIZE(dEnvSe_soundEntry, 0x1C);
-WWHD_OFFSET(dEnvSe_soundEntry, field_0x17, 0x17);
-WWHD_OFFSET(dEnvSe_soundEntry, field_0x18, 0x18);
+WWHD_OFFSET(dEnvSe_soundEntry, mType, 0x17);
+WWHD_OFFSET(dEnvSe_soundEntry, mPathNo, 0x18);
 struct dEnvSe_soundInfo {
     be<u32> num;
     gptr<dEnvSe_soundEntry> m_entries;
@@ -72,17 +75,19 @@ class dEnvSe_c : public base_process_class {
     cXyz mPos;
     u8 mKankyoRemaining[0xFC - 0xEC];
     union {
-        be<u32> field_0xf8;
+        /* mWaveCounter (0xFC) was field_0xf8: dEnvSe_c::execute 0252FEB8 (shore): counts 0..99 and wraps; its low half goes to the play mWaveFrame; the shore sound restarts (mDoAud_startSeaShoreSE) when it is 0 (tww the same) */
+        be<u32> mWaveCounter;
         struct {
             u8 mHigh[2];
             be<u16> mLow;
         } mWaveWords;
     };
-    be<u32> field_0xfc;
+    /* mShoreSeArg (0x100) was field_0xfc: dEnvSe_c::execute 0252FEB8 (shore): the nearest shore path's mArg0 when the shore sound starts, passed to mDoAud_continueSeaShoreSE afterwards (tww the same) */
+    be<u32> mShoreSeArg;
 };
 WWHD_OFFSET(dEnvSe_c, mPos, 0xE0);
-WWHD_OFFSET(dEnvSe_c, field_0xf8, 0xFC);
-WWHD_OFFSET(dEnvSe_c, field_0xfc, 0x100);
+WWHD_OFFSET(dEnvSe_c, mWaveCounter, 0xFC);
+WWHD_OFFSET(dEnvSe_c, mShoreSeArg, 0x100);
 WWHD_SIZE(dEnvSe_c, 0x104);
 enum dEnvSe_type {
     dEnvSe_SEA_e = 0,

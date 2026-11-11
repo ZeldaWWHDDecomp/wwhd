@@ -56,7 +56,7 @@ static inline f32 half_y(f32 home_y, s32 n) { return gabi::fmadds(gabi::fmsubs((
 /* 0237B880 */
 BOOL Act_c::CreateHeap() {
     J3DModelData* model_data = (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_MSDAN_BDL_MSDAN_e);
-    JUT_ASSERT(93, model_data != NULL);
+    JUT_ASSERT_MSG(93, model_data != NULL, "model_data != 0");
     J3DModel* model = mDoExt_J3DModel__create(model_data, 0, 0x11020203);
     mModel = model;
     return model != nullptr; /* HD: tests the returned pointer */
@@ -354,7 +354,7 @@ static void Act_c_dt(Act_c* p, s32 flags) {
 str 1002D928
 str 1002D8DC
 str 1002D870 in 0237B760
-str 1002D8CC "model_data != NULL" renamed # HD: assertion spells zero instead of NULL.
+str 1002D8CC "model_data != 0" # HD: assertion spells zero instead of NULL.
 str 1002D888 "(phase_state == cPhs_COMPLEATE_e) || (phase_state == cPhs_ERROR_e)"
 data M_tmp_mtx 1046B960
 */

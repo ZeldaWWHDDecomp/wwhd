@@ -1,5 +1,6 @@
 /** Background ground, water and special-group queries. */
 #include "d/d_bg_s_func.h"
+#include "sead/ElementAt.h"
 
 static const f32 noGround = -1000000000.0f;
 static const u32 headerPiMinBits = 0xC0490FDB;
@@ -106,7 +107,9 @@ BOOL dBgS_SplGrpChk_In_ObjGnd(const cXyz *pos, SpecialGroupCheck *group, f32 off
             JUT_ASSERT_fail(gabi::at<char>(0x10043B58), 93, gabi::at<char>(0x10043B68));
         // HD: accessor side effect precedes the fixed room-status table lookup.
         dComIfGp_getGameInfo();
-        cBgW *world = roomStatus[room].mBgW.get();
+        // Guest EA arithmetic: the room status + room * size wraps at 32 bits as on the console (a generated room reached host
+        // addresses far above the guest window).
+        cBgW *world = sead::elementAt<BackgroundRoomStatus>(gabi::ea(roomStatus), room).mBgW.get();
         if (world != NULL) {
             GetTopUnder(world, &bounds->top, &bounds->bottom);
             f32 px = pos->x, pz = pos->z, top = bounds->top;

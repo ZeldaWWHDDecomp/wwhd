@@ -13,7 +13,7 @@ void hdScreenBattleship_c::updateDisplay() {
     text->mBuffer = buffer->characters;
     text->__vtbl = gabi::ea(&battleshipTextVtable);
     text->mCapacity = 3;
-    minigameFormatCount(text, "battleship count format", mRevealedHits);
+    minigameFormatCount(text, "", mRevealedHits);
     minigameSetText(mpTextPanes[0].get(), text, 0);
 }
 
@@ -34,7 +34,7 @@ void hdScreenBattleship_c::reveal(u32 first, u32 second) {
 
 /* WWHD glue
 data battleshipTextVtable 100E49F4
-str 100E4AAC "battleship count format" renamed
+str 100E4AAC ""
 ext 02759D3C void minigameFormatCount(MinigameText*, const char*, u32)
 ext 027046D4 void minigameSetText(void*, MinigameText*, u32)
 */

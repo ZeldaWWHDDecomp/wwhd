@@ -25,12 +25,12 @@ void daNpc_Kg1_wait_action(daNpc_Kg1_c *actor) {
         if (board)
             daMgBoard_clrGInfoDraw(board);
         daNpc_Kg1_clr_seq_flag(actor);
-        u8 attentive = a->mbAttention, talk = a->mTalkActive;
-        a->mEventOrder = attentive != 0;
+        u8 attentive = a->mbAttention, talk = a->mTalking;
+        a->mOrderEvent = attentive != 0;
         if (!talk)
             break;
         a->mWaitMode = 1;
-        a->mTalkAnimationWeight = 0.0f;
+        a->mBtpAnm.setFrame(0.0f);
         [[fallthrough]];
     }
     case 1: {
@@ -49,11 +49,11 @@ void daNpc_Kg1_wait_action(daNpc_Kg1_c *actor) {
             resetTalkEvent();
             if (a->mSequenceFlags[0]) {
                 a->mTalkEnabled = 0;
-                a->mTalkActive = 0;
-                a->mEventOrder = 3;
+                a->mTalking = 0;
+                a->mOrderEvent = 3;
                 a->mWaitMode = 2;
             } else {
-                a->mTalkActive = 0;
+                a->mTalking = 0;
                 a->mWaitMode = 0;
                 a->mRequestedAnimation = 2;
             }
@@ -74,7 +74,7 @@ void daNpc_Kg1_wait_action(daNpc_Kg1_c *actor) {
         break;
     }
     case 3: {
-        if (a->mEventOrder || !board)
+        if (a->mOrderEvent || !board)
             break;
         u32 finished = daMgBoard_checkEndGame(board);
         a->mSequenceFlags[2] = finished != 0;
@@ -98,40 +98,40 @@ void daNpc_Kg1_wait_action(daNpc_Kg1_c *actor) {
         }
         play = Kg1_getPlay();
         play->mEvtCtrl.mHindFlag = u16(play->mEvtCtrl.mHindFlag) & 0xFFFD;
-        a->m779 = 1;
+        a->mbForceNextStatus = 1;
         break;
     }
     case 4:
         if (!Kg1_rewardMessageReady(0))
             break;
-        a->m779 = 0;
+        a->mbForceNextStatus = 0;
         Kg1_onEventBit(saveEvent(), 0x2540);
         if (board) {
             board->mbForceEnd = 1;
             daMgBoard_clrGInfoDraw(board);
         }
         a->mWaitMode = 5;
-        a->mEventOrder = 2;
+        a->mOrderEvent = 2;
         play = Kg1_getPlay();
         Kg1_cutEnd(play->mEvtManager, staff);
         resetTalkEvent();
         break;
     case 5:
-        if (a->mTalkActive != 1)
+        if (a->mTalking != 1)
             break;
         a->mTalkEnabled = 1;
         if (Kg1_talk(actor, 1) != 0x12)
             break;
-        a->mEventOrder = 0;
+        a->mOrderEvent = 0;
         resetTalkEvent();
         {
             u8 success = a->mSequenceFlags[1];
-            a->mTalkActive = 0;
+            a->mTalking = 0;
             if (success) {
-                a->mEventOrder = 5;
+                a->mOrderEvent = 5;
                 a->mWaitMode = 6;
             } else if (a->mSequenceFlags[0]) {
-                a->mEventOrder = 3;
+                a->mOrderEvent = 3;
                 a->mWaitMode = 2;
             } else {
                 a->mWaitMode = 0;
@@ -140,7 +140,7 @@ void daNpc_Kg1_wait_action(daNpc_Kg1_c *actor) {
         }
         break;
     case 6: {
-        if (a->mEventOrder)
+        if (a->mOrderEvent)
             break;
         a->mTalkEnabled = 0;
         struct Rewards {
@@ -171,7 +171,7 @@ void daNpc_Kg1_wait_action(daNpc_Kg1_c *actor) {
         if (!Kg1_endCheck(play->mEvtManager, event))
             break;
         resetTalkEvent();
-        a->mEventOrder = 2;
+        a->mOrderEvent = 2;
         a->mRequestedAnimation = 11;
         a->mWaitMode = 8;
         a->mSequenceFlags[3] = 1;
@@ -180,16 +180,16 @@ void daNpc_Kg1_wait_action(daNpc_Kg1_c *actor) {
     case 8:
         a->m_jnt.mbBackBoneLock = 1;
         a->m_jnt.mbHeadLock = 1;
-        if (a->mTalkActive == 1) {
+        if (a->mTalking == 1) {
             bool wasReward = a->mRequestedAnimation == 11;
             a->mTalkEnabled = 1;
             if (Kg1_talk(actor, 1) == 0x12) {
                 resetTalkEvent();
                 u8 highscore = a->mSequenceFlags[5];
-                a->mTalkActive = 0;
-                a->mEventOrder = 0;
+                a->mTalking = 0;
+                a->mOrderEvent = 0;
                 if (highscore) {
-                    a->mEventOrder = 5;
+                    a->mOrderEvent = 5;
                     a->mWaitMode = 9;
                 } else {
                     a->mWaitMode = 0;
@@ -200,7 +200,7 @@ void daNpc_Kg1_wait_action(daNpc_Kg1_c *actor) {
         }
         break;
     case 9: {
-        if (a->mEventOrder)
+        if (a->mOrderEvent)
             break;
         a->mTalkEnabled = 0;
         struct Rewards {
@@ -227,20 +227,20 @@ void daNpc_Kg1_wait_action(daNpc_Kg1_c *actor) {
         if (!Kg1_endCheck(play->mEvtManager, event))
             break;
         resetTalkEvent();
-        a->mEventOrder = 2;
+        a->mOrderEvent = 2;
         a->mSequenceFlags[4] = 1;
         a->mWaitMode = 11;
         break;
     }
     case 11:
-        if (a->mTalkActive == 1) {
+        if (a->mTalking == 1) {
             a->mTalkEnabled = 1;
             if (Kg1_talk(actor, 1) == 0x12) {
                 resetTalkEvent();
                 a->mRequestedAnimation = 2;
-                a->mEventOrder = 0;
+                a->mOrderEvent = 0;
                 a->mWaitMode = 0;
-                a->mTalkActive = 0;
+                a->mTalking = 0;
             }
         }
         break;

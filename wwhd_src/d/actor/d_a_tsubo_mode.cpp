@@ -37,11 +37,11 @@ static cXyz stoolParticleScale;
 
 static inline void* acch_gnd(Act_c* a) { return &a->mAcch.m_gnd; }
 
-/* the common tail of the set_tensor_* functions: the axis BaseX rotated by m692/m68A/m688 */
+/* the common tail of the set_tensor_* functions: the axis BaseX rotated by mRotAxisYaw/mRotAxisPitch/mRotAxisRoll */
 static inline void tensor_axis(Act_c* a) {
-    mDoMtx_YrotS(mDoMtx_stack_c::get(), a->m692);
-    mDoMtx_XrotM(mDoMtx_stack_c::get(), a->m68A);
-    mDoMtx_ZrotM(mDoMtx_stack_c::get(), a->m688);
+    mDoMtx_YrotS(mDoMtx_stack_c::get(), a->mRotAxisYaw);
+    mDoMtx_XrotM(mDoMtx_stack_c::get(), a->mRotAxisPitch);
+    mDoMtx_ZrotM(mDoMtx_stack_c::get(), a->mRotAxisRoll);
     gabi::Local<cXyz> sp;
     PSMTXMultVecSR(mDoMtx_stack_c::get(), &BaseX, sp);
     tsuboMode_set_tensor(a, sp);
@@ -118,29 +118,29 @@ void daTsuboMode::Act_c::spec_mode_carry(bool arg1) {
     if (spec != 0x3F && spec_is_boko(spec)) {
         Act_c::M7A0* ptr = &m7A0[0];
         for (s32 i = 0; i < 3; i++, ptr++) {
-            if (ptr->m04 != 0 && M_spec_act()[i] != nullptr) {
-                f32 fVar1 = M_data_spec_boko(i)->m04;
+            if (ptr->mbCarried != 0 && M_spec_act()[i] != nullptr) {
+                f32 fVar1 = M_data_spec_boko(i)->mRestHeight;
                 f32 m10;
                 if (arg1) {
                     f32 r = cM_rndF(3.0f);
-                    m10 = ptr->m10 + r;
-                    ptr->m18 = 2;
-                    ptr->m10 = m10;
-                    ptr->m14 = r;
+                    m10 = ptr->mHeight + r;
+                    ptr->mBounceCount = 2;
+                    ptr->mHeight = m10;
+                    ptr->mHeightSpeed = r;
                 } else {
-                    f32 v = ptr->m14 - 0.8f;
-                    m10 = ptr->m10 + v;
-                    ptr->m10 = m10;
-                    ptr->m14 = v;
+                    f32 v = ptr->mHeightSpeed - 0.8f;
+                    m10 = ptr->mHeight + v;
+                    ptr->mHeight = m10;
+                    ptr->mHeightSpeed = v;
                 }
                 if (m10 < fVar1) {
-                    ptr->m18 = (s8)(ptr->m18 - 1);
-                    if (ptr->m18 <= 0) {
-                        ptr->m10 = fVar1;
-                        ptr->m14 = 0.0f;
+                    ptr->mBounceCount = (s8)(ptr->mBounceCount - 1);
+                    if (ptr->mBounceCount <= 0) {
+                        ptr->mHeight = fVar1;
+                        ptr->mHeightSpeed = 0.0f;
                     } else {
-                        ptr->m10 = gabi::fmadds(ptr->m10 - fVar1, -0.5f, fVar1);
-                        ptr->m14 = ptr->m14 * -0.5f;
+                        ptr->mHeight = gabi::fmadds(ptr->mHeight - fVar1, -0.5f, fVar1);
+                        ptr->mHeightSpeed = ptr->mHeightSpeed * -0.5f;
                     }
                 }
             }
@@ -154,11 +154,11 @@ void daTsuboMode::Act_c::spec_mode_put_init() {
     if (spec != 0x3F && spec_is_boko(spec)) {
         Act_c::M7A0* ptr = &m7A0[0];
         for (s32 i = 0; i < 3; i++, ptr++) {
-            if (ptr->m04 != 0 && M_spec_act()[i] != nullptr) {
+            if (ptr->mbCarried != 0 && M_spec_act()[i] != nullptr) {
                 tsuboMode_fopAcM_setRoomLayer(M_spec_act()[i], fopAcM_GetRoomNo(this));
                 ptr->m0C = 0.0f;
-                ptr->m10 = M_data_spec_boko(i)->m04;
-                ptr->m14 = 0.0f;
+                ptr->mHeight = M_data_spec_boko(i)->mRestHeight;
+                ptr->mHeightSpeed = 0.0f;
             }
         }
     }
@@ -170,7 +170,7 @@ void daTsuboMode::Act_c::spec_set_room() {
     if (spec != 0x3F && spec_is_boko(spec)) {
         Act_c::M7A0* ptr = &m7A0[0];
         for (s32 i = 0; i < 3; i++, ptr++) {
-            if (ptr->m04 != 0) {
+            if (ptr->mbCarried != 0) {
                 fopAc_ac_c* boko = M_spec_act()[i];
                 if (boko != nullptr) {
                     s8 room = fopAcM_GetRoomNo(this);
@@ -194,13 +194,13 @@ void daTsuboMode::Act_c::mode_hide() {
 void daTsuboMode::Act_c::mode_appear() {
     if (prm_get_spec(this) == 4) {
         m802 = (s16)(m802 - 1);
-        if (m802 == 0x46 /* M_attrSpine.m1C */) {
+        if (m802 == 0x46 /* M_attrSpine.mRecoverSeTime */) {
             tsuboMode_seStart(this, JA_SE_OBJ_BOKKURI_RECOVER, 0);
         }
-        if (m802 == 0xD /* M_attrSpine.m1E */) {
+        if (m802 == 0xD /* M_attrSpine.mSwellSeTime */) {
             tsuboMode_seStart(this, JA_SE_OBJ_BOKKURI_SWELL, 0);
         }
-        if (m802 >= 0xE /* M_attrSpine.m1A */) {
+        if (m802 >= 0xE /* M_attrSpine.mRegrowGrowEnd */) {
             tsuboMode_cLib_addCalc(&scale.x, 0.5f, 0.1f, 0.02f, 0.001f);
             scale.y = scale.x;
             scale.z = scale.x;
@@ -272,9 +272,9 @@ void daTsuboMode::Act_c::mode_walk(u32 r4, u32 r5, u32 r6, u32 r7, u32 harness_r
     PSVECAdd(&m6F0, &m814, &m6F0);
     if (pNorm != nullptr) {
         Act_c::Data_c* d = data(this);
-        s16 deg = (s16)gabi::ftoi(((f32)(s16)d->m56 - 0.5f) * 182.04445f); /* cM_deg2s */
+        s16 deg = (s16)gabi::ftoi(((f32)(s16)d->mNoGradeAngle - 0.5f) * 182.04445f); /* cM_deg2s */
         gabi::Local<u32> r8tmp; /* harness: the original's r8 is this stack address here */
-        tsuboMode_daObj_posMoveF_grade(this, &mStts.m_cc_move, &mWindVec, *sp0C, *sp10, pNorm, d->m5C, cM_scos((u16)deg), &m6F0,
+        tsuboMode_daObj_posMoveF_grade(this, &mStts.m_cc_move, &mWindVec, *sp0C, *sp10, pNorm, d->mGradeFriction, cM_scos((u16)deg), &m6F0,
                              gabi::ea(r8tmp.get()));
     } else {
         tsuboMode_daObj_posMoveF_grade(this, &mStts.m_cc_move, &mWindVec, *sp0C, *sp10, nullptr, 0.0f, 0.0f, &m6F0, harness_r8);
@@ -352,16 +352,16 @@ void daTsuboMode::Act_c::mode_carry(u32 r4, u32 harness_r5) {
 void daTsuboMode::Act_c::mode_drop_init() {
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
     Act_c::Data_c* d = data(this);
-    f32 fVar1 = gabi::fmadds(player->speedF, d->m1C, d->m18);
+    f32 fVar1 = gabi::fmadds(player->speedF, d->mDropSpeedFPlayerRate, d->mDropSpeedF);
     mCyl.OnAtSPrmBit(1);
     mCyl.OnTgSPrmBit(1);
     mCyl.OnCoSPrmBit(1);
     mAcch.m_flags = (mAcch.m_flags & ~0x40Eu) | dBgS_Acch::LINE_CHECK;
     m67F = 0;
-    mStts.Init(d->m10, 0xFF, this);
+    mStts.Init(d->mWeight, 0xFF, this);
     attn_offBit(this, fopAc_Attn_ACTION_CARRY_e);
     if (m810 == 0) {
-        speed.y = data(this)->m14;
+        speed.y = data(this)->mDropSpeedY;
     }
     speedF = fVar1;
     m810 = 0;
@@ -390,7 +390,7 @@ void daTsuboMode::Act_c::mode_sink() {
     tsuboMode_daObj_SetCurrentRoomNo(this, acch_gnd(this));
     water_tention();
     Act_c::Data_c* d = data(this);
-    daObj_posMoveF_stream(this, &mStts.m_cc_move, cXyz_Zero, d->m40, d->m44);
+    daObj_posMoveF_stream(this, &mStts.m_cc_move, cXyz_Zero, d->mWaterResistLinear, d->mWaterResistQuad);
 }
 
 /* 024CFD3C */
@@ -398,7 +398,7 @@ void daTsuboMode::Act_c::mode_afl() {
     tsuboMode_daObj_SetCurrentRoomNo(this, acch_gnd(this));
     cXyz* pStreamSpd = tsuboMode_daObj_get_path_spd(Acch_gnd(&mAcch), 30.0f);
     cXyz sp20;
-    cXyz_ml(&mWindVec, &sp20, data(this)->m20);
+    cXyz_ml(&mWindVec, &sp20, data(this)->mAirResistLinear);
     gabi::Local<be<f32>> sp08, sp0C, sp10;
     calc_afl_param(sp08, sp0C, sp10);
     s32 t = gabi::ftoi(cM_rndF(400.0f));
@@ -546,13 +546,13 @@ void daTsuboMode::Act_c::moment_proc_call() {
 
 /* 024CF4E0 */
 void daTsuboMode::Act_c::init_rot_throw() {
-    cSAngle_Val(&m688, (s16)data(this)->m28);
-    cSAngle_muleq(&m688, cM_rnd());
-    cSAngle_Val(&m68A, (s16)gabi::ftoi(cM_rndFX(32768.0f)));
-    cSAngle_Val(&m68C, (s16)data(this)->m2A);
-    cSAngle_Val(&m68E, cSAngle__0);
-    cSAngle_Val(&m690, (s16)data(this)->m2C);
-    cSAngle_Val(&m692, (s16)current.angle.y);
+    cSAngle_Val(&mRotAxisRoll, (s16)data(this)->mThrowRotAxisRollMax);
+    cSAngle_muleq(&mRotAxisRoll, cM_rnd());
+    cSAngle_Val(&mRotAxisPitch, (s16)gabi::ftoi(cM_rndFX(32768.0f)));
+    cSAngle_Val(&mRotAxisPitchSpeed, (s16)data(this)->mThrowRotAxisPitchSpeed);
+    cSAngle_Val(&mRotAngle, cSAngle__0);
+    cSAngle_Val(&mRotAngleSpeed, (s16)data(this)->mThrowRotAngleSpeed);
+    cSAngle_Val(&mRotAxisYaw, (s16)current.angle.y);
 }
 
 /* 024CFF40 */
@@ -576,12 +576,12 @@ void daTsuboMode::Act_c::set_tensor_walk() {
     cXyz_mi(&current.pos, &sp28, &old.pos);
     f32 len = std_sqrtf(PSVECSquareMag(&sp28));
     f32 abs = (len + len) / (f32)(u8)data(this)->mAcchRoofHeight;
-    f32 r = tsuboMode_cSAngle_Radian(&m690);
-    cSAngle_Val(&m690, tsuboMode_cM_rad2s(gabi::fmadds(abs - r, 0.7f, r)));
-    cSAngle_addeq(&m68E, &m690);
+    f32 r = tsuboMode_cSAngle_Radian(&mRotAngleSpeed);
+    cSAngle_Val(&mRotAngleSpeed, tsuboMode_cM_rad2s(gabi::fmadds(abs - r, 0.7f, r)));
+    cSAngle_addeq(&mRotAngle, &mRotAngleSpeed);
     gabi::Local<be<s16>> sp08;
     be<s16>* p = tsuboMode_cSAngle_ct_s16(sp08, current.angle.y);
-    m692 = *p;
+    mRotAxisYaw = *p;
     tensor_axis(this);
 }
 
@@ -592,31 +592,31 @@ void daTsuboMode::Act_c::set_tensor_carry() {
 
 /* 024D0074 */
 void daTsuboMode::Act_c::set_tensor_drop() {
-    tensor_damp(&m68C, this, &Act_c::Data_c::m30, &Act_c::Data_c::m34);
-    cSAngle_addeq(&m68A, &m68C);
-    tensor_damp(&m690, this, &Act_c::Data_c::m30, &Act_c::Data_c::m34);
-    cSAngle_addeq(&m68E, &m690);
+    tensor_damp(&mRotAxisPitchSpeed, this, &Act_c::Data_c::mDropRotResistLinear, &Act_c::Data_c::mDropRotResistQuad);
+    cSAngle_addeq(&mRotAxisPitch, &mRotAxisPitchSpeed);
+    tensor_damp(&mRotAngleSpeed, this, &Act_c::Data_c::mDropRotResistLinear, &Act_c::Data_c::mDropRotResistQuad);
+    cSAngle_addeq(&mRotAngle, &mRotAngleSpeed);
     tensor_axis(this);
 }
 
 /* 024D0184 */
 void daTsuboMode::Act_c::set_tensor_sink() {
-    tensor_damp(&m68C, this, &Act_c::Data_c::m48, &Act_c::Data_c::m4C);
-    cSAngle_addeq(&m68A, &m68C);
-    tensor_damp(&m690, this, &Act_c::Data_c::m48, &Act_c::Data_c::m4C);
-    cSAngle_addeq(&m68E, &m690);
+    tensor_damp(&mRotAxisPitchSpeed, this, &Act_c::Data_c::mWaterRotResistLinear, &Act_c::Data_c::mWaterRotResistQuad);
+    cSAngle_addeq(&mRotAxisPitch, &mRotAxisPitchSpeed);
+    tensor_damp(&mRotAngleSpeed, this, &Act_c::Data_c::mWaterRotResistLinear, &Act_c::Data_c::mWaterRotResistQuad);
+    cSAngle_addeq(&mRotAngle, &mRotAngleSpeed);
     tensor_axis(this);
 }
 
 /* 024D0294 */
 void daTsuboMode::Act_c::set_tensor_afl() {
-    tensor_damp(&m68C, this, &Act_c::Data_c::m48, &Act_c::Data_c::m4C);
-    cSAngle_addeq(&m68A, &m68C);
-    f32 r = tsuboMode_cSAngle_Radian(&m68E);
-    cSAngle_addeq(&m690, tsuboMode_cM_rad2s(r * -0.0005f));
-    cSAngle_addeq(&m690, (s16)gabi::ftoi(cM_ssin(m806) * 4.0f));
-    tensor_damp(&m690, this, &Act_c::Data_c::m48, &Act_c::Data_c::m4C);
-    cSAngle_addeq(&m68E, &m690);
+    tensor_damp(&mRotAxisPitchSpeed, this, &Act_c::Data_c::mWaterRotResistLinear, &Act_c::Data_c::mWaterRotResistQuad);
+    cSAngle_addeq(&mRotAxisPitch, &mRotAxisPitchSpeed);
+    f32 r = tsuboMode_cSAngle_Radian(&mRotAngle);
+    cSAngle_addeq(&mRotAngleSpeed, tsuboMode_cM_rad2s(r * -0.0005f));
+    cSAngle_addeq(&mRotAngleSpeed, (s16)gabi::ftoi(cM_ssin(m806) * 4.0f));
+    tensor_damp(&mRotAngleSpeed, this, &Act_c::Data_c::mWaterRotResistLinear, &Act_c::Data_c::mWaterRotResistQuad);
+    cSAngle_addeq(&mRotAngle, &mRotAngleSpeed);
     tensor_axis(this);
 }
 
@@ -647,10 +647,10 @@ void daTsuboMode::Act_c::eff_break_barrel() {
 
 /* 024D0550 */
 void daTsuboMode::Act_c::eff_break_tsubo() {
-    u16 textureIndex = (u16)data(this)->m80;
+    u16 textureIndex = (u16)data(this)->mBreakTexIdx;
     J3DModelData* mdl = (J3DModelData*)dComIfG_getObjectRes("Always", dRes_INDEX_ALWAYS_BDL_MPM_TUBO_e, TSUBO_SAFESTRING_VTBL);
     void* btp = dComIfG_getObjectRes("Always", dRes_INDEX_ALWAYS_BTP_MPM_TUBO_e, TSUBO_SAFESTRING_VTBL);
-    JPABaseEmitter* e = dComIfGp_particle_set(ID_AK_JN_M_TUBOHAHEN, &current.pos, nullptr, &data(this)->m74);
+    JPABaseEmitter* e = dComIfGp_particle_set(ID_AK_JN_M_TUBOHAHEN, &current.pos, nullptr, &data(this)->mBreakParticleScale);
     if (e != nullptr) {
         void* me = new_dPa_J3DmodelEmitter(e, mdl, 0, &tevStr, btp, textureIndex, 0);
         if (me != nullptr) {
@@ -663,8 +663,8 @@ void daTsuboMode::Act_c::eff_break_tsubo() {
     color.b = (u8)tevStr.mColorC0.b;
     color.a = (u8)tevStr.mColorC0.a;
     Act_c::Data_c* d = data(this);
-    auto* cb = reinterpret_cast<dPa_levelEcallBack*>(&tsuboCallbacks.mTsubo[d->m80]); /* dPa_control_c::getTsuboSelectTexEcallBack(m80) */
-    dComIfGp_particle_set(ID_AK_JN_TUBOKONAGONA, &current.pos, nullptr, &d->m74, 0xFF, cb, -1,
+    auto* cb = reinterpret_cast<dPa_levelEcallBack*>(&tsuboCallbacks.mTsubo[d->mBreakTexIdx]); /* dPa_control_c::getTsuboSelectTexEcallBack(m80) */
+    dComIfGp_particle_set(ID_AK_JN_TUBOKONAGONA, &current.pos, nullptr, &d->mBreakParticleScale, 0xFF, cb, -1,
                           tev_colorK0(this), &color); // HD: particle primary/environment colors are reversed from GameCube.
 }
 
@@ -739,16 +739,16 @@ void daTsuboMode::Act_c::calc_drop_param(be<f32>* outArg1, be<f32>* outArg2, be<
             f0 = -(f3 * (0.5f / (f32)(u8)d->mAcchRoofHeight));
         }
         f32 f6 = 1.0f - f0;
-        *outArg2 = gabi::fmadds(f0, d->m40, f6 * d->m20);
+        *outArg2 = gabi::fmadds(f0, d->mWaterResistLinear, f6 * d->mAirResistLinear);
         d = data(this);
-        *outArg3 = gabi::fmadds(f0, d->m44, f6 * d->m24);
+        *outArg3 = gabi::fmadds(f0, d->mWaterResistQuad, f6 * d->mAirResistQuad);
         d = data(this);
         f32 gmax = d->mGravity * 0.1f;
-        f32 g = gabi::fmadds(f0, d->m3C, d->mGravity);
+        f32 g = gabi::fmadds(f0, d->mBuoyancy, d->mGravity);
         *outArg1 = (gmax - g >= 0.0f) ? g : gmax; /* GHS fsel preserves the unordered comparison. */
     } else {
-        *outArg2 = data(this)->m20;
-        *outArg3 = data(this)->m24;
+        *outArg2 = data(this)->mAirResistLinear;
+        *outArg3 = data(this)->mAirResistQuad;
         *outArg1 = data(this)->mGravity;
     }
 }
@@ -767,14 +767,14 @@ void daTsuboMode::Act_c::calc_afl_param(be<f32>* outArg1, be<f32>* outArg2, be<f
             f0 = -(f3 / (f32)(u8)d->mAcchRoofHeight);
         }
         f32 f6 = 1.0f - f0;
-        *outArg2 = gabi::fmadds(f0, d->m40, f6 * d->m20);
+        *outArg2 = gabi::fmadds(f0, d->mWaterResistLinear, f6 * d->mAirResistLinear);
         d = data(this);
-        *outArg3 = gabi::fmadds(f0, d->m44, f6 * d->m24);
+        *outArg3 = gabi::fmadds(f0, d->mWaterResistQuad, f6 * d->mAirResistQuad);
         d = data(this);
-        *outArg1 = gabi::fmadds(f0, d->m3C, d->mGravity);
+        *outArg1 = gabi::fmadds(f0, d->mBuoyancy, d->mGravity);
     } else {
-        *outArg2 = data(this)->m20;
-        *outArg3 = data(this)->m24;
+        *outArg2 = data(this)->mAirResistLinear;
+        *outArg3 = data(this)->mAirResistQuad;
         *outArg1 = data(this)->mGravity;
     }
 }
@@ -853,7 +853,7 @@ bool daTsuboMode::Act_c::_draw() {
         auto* anm = reinterpret_cast<Animation*>(((mDoExt_brkAnm*)mpBrk)->mpAnm.get());
         s32 maxFrame = anm->getFrameMax();
         f32 maxf = (f32)maxFrame;
-        f32 f = maxf * (1.0f - (f32)m800 / 1200.0f /* M_attrSpine.m30 */);
+        f32 f = maxf * (1.0f - (f32)m800 / 1200.0f /* M_attrSpine.mFuseTime */);
         if (m800 == 0 || f < 0.0f) {
             f = 0.0f;
         } else if (!(f < maxf)) {

@@ -69,7 +69,7 @@ static void lagSet(Act_c* a) {
 
 /* 023561E4 */
 s32 Act_c::CreateHeap() {
-    s16 resource = M_data_size.mValues[u32(s32(mSizeIdx))].field_0x00;
+    s16 resource = M_data_size.mValues[u32(s32(mSizeIdx))].mBdlResIdx;
     auto* model_data = static_cast<J3DModelData*>(dComIfG_getObjectRes("Hlift", resource, gc_tu.safeString));
     if (!model_data)
         JUT_ASSERT_fail("d_a_obj_hlift.cpp", 0x120, "model_data != 0");
@@ -120,8 +120,8 @@ cPhs_State Act_c::Mthd_Create() {
         s32 size = Hlift_PrmAbstract(this, Act_c::PRM_SIZE_W, Act_c::PRM_SIZE_S);
         mSizeIdx = size;
         auto* row = &M_data_size.mValues[u32(size)];
-        u32 heap = row->field_0x02;
-        s16 dzb = row->field_0x01;
+        u32 heap = row->mHeapSize;
+        s16 dzb = row->mDzbResIdx;
         state = MoveBGCreate("Hlift", dzb, gabi::guest_fn(reinterpret_cast<const void*>(Hlift_MoveBGProc)), heap);
         if (state != 4 && state != 5)
             JUT_ASSERT_fail("d_a_obj_hlift.cpp", 0x16E,

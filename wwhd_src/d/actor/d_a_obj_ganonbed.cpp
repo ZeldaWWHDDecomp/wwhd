@@ -148,6 +148,6 @@ static void SafeString_assureTerminationImpl(void* object) {
 /* WWHD glue (tools/verify/autoglue.py)
 str 1002955C
 str 10029590
-str 1002958C "FALSE" renamed # HD: original uses "0".
+str 1002958C "0"
 ext 025F19F8 void mDoMtx_XYZrotM(Mtx34*, s16, s16, s16)
 */

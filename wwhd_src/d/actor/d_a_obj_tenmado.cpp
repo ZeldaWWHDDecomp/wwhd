@@ -41,14 +41,14 @@ u32 Act_c::prm_get_swSave2() { return PrmAbstract(this, PRM_SWSAVE2_W, PRM_SWSAV
 /* 0239FC78 */
 BOOL Act_c::CreateHeap() {
     J3DModelData* model_data_l = (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_TENMADO_BDL_MMADOL_e);
-    JUT_ASSERT(85, model_data_l != NULL);
+    JUT_ASSERT_MSG(85, model_data_l != NULL, "model_data_l != 0");
     J3DModel* model = mDoExt_J3DModel__create(model_data_l, 0, 0x11020203);
     mModel1 = model;
     if (model == nullptr) {
         return FALSE;
     }
     J3DModelData* model_data_r = (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_TENMADO_BDL_MMADOR_e);
-    JUT_ASSERT(94, model_data_r != NULL);
+    JUT_ASSERT_MSG(94, model_data_r != NULL, "model_data_r != 0");
     model = mDoExt_J3DModel__create(model_data_r, 0, 0x11020203);
     mModel2 = model;
     if (model == nullptr) {
@@ -64,11 +64,11 @@ BOOL Act_c::Create() {
     fopAcM_setCullSizeBox(this, -500.0f, -500.0f, -500.0f, 500.0f, 500.0f, 500.0f);
     if (fopAcM_isSwitch(this, prm_get_swSave())) {
         dComIfGs_onSwitch(prm_get_swSave2(), home.roomNo); /* fopAcM_onSwitch */
-        m2C8 = 200.0f;
-        m2CC = MODE_OPEN_e;
+        mOpenX = 200.0f;
+        mMode = MODE_OPEN_e;
     } else {
-        m2C8 = 0.0f;
-        m2CC = MODE_WAIT_e;
+        mOpenX = 0.0f;
+        mMode = MODE_WAIT_e;
     }
     return TRUE;
 }
@@ -97,11 +97,11 @@ void Act_c::set_mtx() {
     mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
     mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), shape_angle.x, shape_angle.y, shape_angle.z);
     MTXCopy(mDoMtx_stack_c::get(), &M_tmp_mtx);
-    mDoMtx_stack_c::transM(-m2C8, 0.0f, 0.0f);
+    mDoMtx_stack_c::transM(-mOpenX, 0.0f, 0.0f);
     mModel1->setBaseTRMtx(mDoMtx_stack_c::get());
     mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
     mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), shape_angle.x, shape_angle.y, shape_angle.z);
-    mDoMtx_stack_c::transM(m2C8, 0.0f, 0.0f);
+    mDoMtx_stack_c::transM(mOpenX, 0.0f, 0.0f);
     mModel2->setBaseTRMtx(mDoMtx_stack_c::get());
 }
 
@@ -114,24 +114,24 @@ void Act_c::init_mtx() {
 
 /* 023A0060 */
 BOOL Act_c::Execute(gptr<Mtx34>* mtx) {
-    switch ((u32)(s32)m2CC) {
+    switch ((u32)(s32)mMode) {
     case MODE_WAIT_e:
         if (fopAcM_isSwitch(this, prm_get_swSave())) {
-            m2CC = MODE_START_e;
+            mMode = MODE_START_e;
         }
         break;
     case MODE_START_e:
         mDoAud_seStart(JA_SE_OBJ_TENMADO_SHTR_OP, &current.pos, 0, dComIfGp_getReverb(fopAcM_GetRoomNo(this))); /* fopAcM_seStartCurrent */
-        m2CC = MODE_OPENING_e;
+        mMode = MODE_OPENING_e;
         break;
     case MODE_OPENING_e: {
         // HD: unordered floating comparisons take the same branch as reaching the limit.
-        f32 v = m2C8 + 1.0f;
+        f32 v = mOpenX + 1.0f;
         if (!(v < 100.0f)) {
-            m2C8 = 100.0f;
-            m2CC = MODE_OPEN_e;
+            mOpenX = 100.0f;
+            mMode = MODE_OPEN_e;
         } else {
-            m2C8 = v;
+            mOpenX = v;
             if (!(v < 80.0f)) {
                 dComIfGs_onSwitch(prm_get_swSave2(), home.roomNo); /* fopAcM_onSwitch */
             }
@@ -220,8 +220,8 @@ static void Act_c_dt(Act_c* p, s32 flags) {
 str 10030AE8
 str 10030A88
 str 10030A30 in 0239FB5C
-str 10030A9C "model_data_l != NULL" renamed # HD: 0 rather than NULL.
-str 10030AB0 "model_data_r != NULL" renamed # HD: 0 rather than NULL.
+str 10030A9C "model_data_l != 0" # HD: 0 rather than NULL.
+str 10030AB0 "model_data_r != 0" # HD: 0 rather than NULL.
 str 10030A44 "(phase_state == cPhs_COMPLEATE_e) || (phase_state == cPhs_ERROR_e)"
 data M_tmp_mtx 1046C470
 */

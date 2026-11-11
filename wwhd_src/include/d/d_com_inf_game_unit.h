@@ -61,7 +61,7 @@ struct EntryList {
 };
 struct Ship {
     u8 padding[0xE];
-    be<u8> field_0xe;
+    be<u8> mShipId;  /* was field_0xe: view of dStage_Ship_dt_c (d_stage.h) 0xE mShipId: hdGameInfo_dComIfGp_getShip 02520584 returns the entry whose it equals the asked id (tww dComIfGp_getShip the same) */
     u8 padding2;
 };
 struct Multi {
@@ -99,7 +99,7 @@ WWHD_SIZE(Matrix34, 0x30);
 WWHD_SIZE(Matrix44, 0x40);
 WWHD_SIZE(EntryList, 8);
 WWHD_SIZE(Ship, 0x10);
-WWHD_OFFSET(Ship, field_0xe, 0xE);
+WWHD_OFFSET(Ship, mShipId, 0xE);
 WWHD_SIZE(StageInfo, 0x10);
 WWHD_OFFSET(StageInfo, mSaveTableBits, 9);
 WWHD_OFFSET(StageInfo, mStageTypeBits, 0xC);

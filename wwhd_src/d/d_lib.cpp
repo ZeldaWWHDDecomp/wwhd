@@ -116,13 +116,13 @@ static void dLib_animations(u32 arc, u32 model, u32 animation, u32 parameter,
  * STControl_checkUpTrigger and STControl_checkDownTrigger */
 static s32 STControl_repeat(STControl *control, u8 bit, be<s16> *timer,
                             be<s16> *current, be<s16> *delay) {
-  if (*timer != 0 || !(control->field_0x0c & bit))
+  if (*timer != 0 || !(control->mDirectionTrig & bit))
     return 0;
   s16 remaining = *delay;
   *timer = *current;
   if (remaining == 0) {
-    s16 next = s16(*current - control->field_0x16);
-    s16 minimum = control->field_0x14;
+    s16 next = s16(*current - control->mRepeatDelayStep);
+    s16 minimum = control->mRepeatDelayX;
     *current = next;
     if (next < minimum)
       *current = minimum;
@@ -147,29 +147,29 @@ void dLib_getPosFromMtx(u32 m, u32 out) {
 /* 025885C4 */
 void STControl_setWaitParm(u32 p, s32 first, s32 minimum, s32 step, s32 delay,
                            s32 margin, s32 sector, f64 high, f64 low) {
-  dLib_at<STControl>(p)->field_0x12 = first;
-  dLib_at<STControl>(p)->field_0x14 = minimum;
-  dLib_at<STControl>(p)->field_0x16 = step;
-  dLib_at<STControl>(p)->field_0x1c = delay;
-  dLib_at<STControl>(p)->field_0x04 = high;
-  dLib_at<STControl>(p)->field_0x08 = low;
-  dLib_at<STControl>(p)->field_0x24 = margin;
-  dLib_at<STControl>(p)->field_0x26 = sector;
+  dLib_at<STControl>(p)->mRepeatDelayY = first;
+  dLib_at<STControl>(p)->mRepeatDelayX = minimum;
+  dLib_at<STControl>(p)->mRepeatDelayStep = step;
+  dLib_at<STControl>(p)->mStepDelayCount = delay;
+  dLib_at<STControl>(p)->mThreshold = high;
+  dLib_at<STControl>(p)->mReleaseThreshold = low;
+  dLib_at<STControl>(p)->mAngleMargin = margin;
+  dLib_at<STControl>(p)->mDiagonalWidth = sector;
 }
 
 /* 025885E8 */
 void STControl_init(u32 p) {
-  s16 first = dLib_at<STControl>(p)->field_0x12;
-  dLib_at<STControl>(p)->field_0x10 = 0;
-  s16 delay = dLib_at<STControl>(p)->field_0x1c;
-  dLib_at<STControl>(p)->field_0x18 = first;
-  dLib_at<STControl>(p)->field_0x1e = delay;
-  dLib_at<STControl>(p)->field_0x22 = 0;
-  dLib_at<STControl>(p)->field_0x20 = delay;
-  dLib_at<STControl>(p)->field_0x0c = 0;
-  dLib_at<STControl>(p)->field_0x0e = 0;
-  dLib_at<STControl>(p)->field_0x0d = 0;
-  dLib_at<STControl>(p)->field_0x1a = first;
+  s16 first = dLib_at<STControl>(p)->mRepeatDelayY;
+  dLib_at<STControl>(p)->mYrepeatTimer = 0;
+  s16 delay = dLib_at<STControl>(p)->mStepDelayCount;
+  dLib_at<STControl>(p)->mXwaitTimer = first;
+  dLib_at<STControl>(p)->mXstepDelayCount = delay;
+  dLib_at<STControl>(p)->mAngleShift = 0;
+  dLib_at<STControl>(p)->mYstepDelayCount = delay;
+  dLib_at<STControl>(p)->mDirectionTrig = 0;
+  dLib_at<STControl>(p)->mXrepeatTimer = 0;
+  dLib_at<STControl>(p)->mPrevDirectionTrig = 0;
+  dLib_at<STControl>(p)->mYwaitTimer = first;
 }
 
 /* 025886D8 */
@@ -180,55 +180,55 @@ void STControl_delete(u32 p, u32 flags) {
 
 /* 025886EC */
 void STControl_Xinit(u32 p) {
-  s16 first = dLib_at<STControl>(p)->field_0x12;
-  u8 flags = dLib_at<STControl>(p)->field_0x0c & 0xfc;
-  s16 delay = dLib_at<STControl>(p)->field_0x1c;
-  dLib_at<STControl>(p)->field_0x0e = 0;
-  dLib_at<STControl>(p)->field_0x0c = flags;
-  dLib_at<STControl>(p)->field_0x18 = first;
-  dLib_at<STControl>(p)->field_0x1e = delay;
+  s16 first = dLib_at<STControl>(p)->mRepeatDelayY;
+  u8 flags = dLib_at<STControl>(p)->mDirectionTrig & 0xfc;
+  s16 delay = dLib_at<STControl>(p)->mStepDelayCount;
+  dLib_at<STControl>(p)->mXrepeatTimer = 0;
+  dLib_at<STControl>(p)->mDirectionTrig = flags;
+  dLib_at<STControl>(p)->mXwaitTimer = first;
+  dLib_at<STControl>(p)->mXstepDelayCount = delay;
 }
 
 /* 02588714 */
 void STControl_Yinit(u32 p) {
-  s16 first = dLib_at<STControl>(p)->field_0x12;
-  u8 flags = dLib_at<STControl>(p)->field_0x0c & 0xf3;
-  s16 delay = dLib_at<STControl>(p)->field_0x1c;
-  dLib_at<STControl>(p)->field_0x10 = 0;
-  dLib_at<STControl>(p)->field_0x0c = flags;
-  dLib_at<STControl>(p)->field_0x1a = first;
-  dLib_at<STControl>(p)->field_0x20 = delay;
+  s16 first = dLib_at<STControl>(p)->mRepeatDelayY;
+  u8 flags = dLib_at<STControl>(p)->mDirectionTrig & 0xf3;
+  s16 delay = dLib_at<STControl>(p)->mStepDelayCount;
+  dLib_at<STControl>(p)->mYrepeatTimer = 0;
+  dLib_at<STControl>(p)->mDirectionTrig = flags;
+  dLib_at<STControl>(p)->mYwaitTimer = first;
+  dLib_at<STControl>(p)->mYstepDelayCount = delay;
 }
 
 /* 02588A0C */
 s32 STControl_checkLeftTrigger(u32 p) {
   return STControl_repeat(dLib_at<STControl>(p), STControl::LEFT,
-                          &dLib_at<STControl>(p)->field_0x0e,
-                          &dLib_at<STControl>(p)->field_0x18,
-                          &dLib_at<STControl>(p)->field_0x1e);
+                          &dLib_at<STControl>(p)->mXrepeatTimer,
+                          &dLib_at<STControl>(p)->mXwaitTimer,
+                          &dLib_at<STControl>(p)->mXstepDelayCount);
 }
 
 /* 02588A7C */
 s32 STControl_checkRightTrigger(u32 p) {
   return STControl_repeat(dLib_at<STControl>(p), STControl::RIGHT,
-                          &dLib_at<STControl>(p)->field_0x0e,
-                          &dLib_at<STControl>(p)->field_0x18,
-                          &dLib_at<STControl>(p)->field_0x1e);
+                          &dLib_at<STControl>(p)->mXrepeatTimer,
+                          &dLib_at<STControl>(p)->mXwaitTimer,
+                          &dLib_at<STControl>(p)->mXstepDelayCount);
 }
 
 /* 02588AEC */
 s32 STControl_checkUpTrigger(u32 p) {
   return STControl_repeat(
-      dLib_at<STControl>(p), STControl::UP, &dLib_at<STControl>(p)->field_0x10,
-      &dLib_at<STControl>(p)->field_0x1a, &dLib_at<STControl>(p)->field_0x20);
+      dLib_at<STControl>(p), STControl::UP, &dLib_at<STControl>(p)->mYrepeatTimer,
+      &dLib_at<STControl>(p)->mYwaitTimer, &dLib_at<STControl>(p)->mYstepDelayCount);
 }
 
 /* 02588B5C */
 s32 STControl_checkDownTrigger(u32 p) {
   return STControl_repeat(dLib_at<STControl>(p), STControl::DOWN,
-                          &dLib_at<STControl>(p)->field_0x10,
-                          &dLib_at<STControl>(p)->field_0x1a,
-                          &dLib_at<STControl>(p)->field_0x20);
+                          &dLib_at<STControl>(p)->mYrepeatTimer,
+                          &dLib_at<STControl>(p)->mYwaitTimer,
+                          &dLib_at<STControl>(p)->mYstepDelayCount);
 }
 
 /* 02588BCC */
@@ -391,21 +391,21 @@ s32 dLib_pathInfo(u32 out, s32 point) {
 
 /* 0258873C */
 u32 STControl_checkTrigger(u32 p) {
-  u8 old = dLib_at<STControl>(p)->field_0x0c;
+  u8 old = dLib_at<STControl>(p)->mDirectionTrig;
   u32 table = dLib_at<STControl>(p)->mpVtable.v;
-  dLib_at<STControl>(p)->field_0x0d = old;
+  dLib_at<STControl>(p)->mPrevDirectionTrig = old;
   f64 value =
       gabi::call_ptr<f64>(dLib_at<STControlVtable>(table)->getValueStick, p);
   table = dLib_at<STControl>(p)->mpVtable.v;
   s32 angle =
       gabi::call_ptr<s32>(dLib_at<STControlVtable>(table)->getAngleStick, p);
-  s16 sector = s16((0x2000 - dLib_at<STControl>(p)->field_0x26) >> 1);
+  s16 sector = s16((0x2000 - dLib_at<STControl>(p)->mDiagonalWidth) >> 1);
   if (std::fabs(value) < l_epsilon) {
-    dLib_at<STControl>(p)->field_0x0c = 0;
+    dLib_at<STControl>(p)->mDirectionTrig = 0;
     STControl_Xinit(p);
     STControl_Yinit(p);
   } else {
-    s32 shift = dLib_at<STControl>(p)->field_0x22;
+    s32 shift = dLib_at<STControl>(p)->mAngleShift;
     u8 bits;
     if (angle < shift + sector - 0x7000)
       bits = 4;
@@ -426,42 +426,42 @@ u32 STControl_checkTrigger(u32 p) {
     else
       bits = 4;
     u8 flags;
-    if (!(value < dLib_at<STControl>(p)->field_0x04))
+    if (!(value < dLib_at<STControl>(p)->mThreshold))
       flags = bits;
-    else if (value < dLib_at<STControl>(p)->field_0x08)
+    else if (value < dLib_at<STControl>(p)->mReleaseThreshold)
       flags = 0;
     else
-      flags = dLib_at<STControl>(p)->field_0x0c & ~bits;
-    u8 previous = dLib_at<STControl>(p)->field_0x0d;
-    dLib_at<STControl>(p)->field_0x0c = flags;
+      flags = dLib_at<STControl>(p)->mDirectionTrig & ~bits;
+    u8 previous = dLib_at<STControl>(p)->mPrevDirectionTrig;
+    dLib_at<STControl>(p)->mDirectionTrig = flags;
     if (flags != previous) {
       if (!flags)
-        dLib_at<STControl>(p)->field_0x22 = 0;
+        dLib_at<STControl>(p)->mAngleShift = 0;
       else
-        dLib_at<STControl>(p)->field_0x22 =
-            (angle & 0x1fff) > 0x1000 ? dLib_at<STControl>(p)->field_0x24
-                                      : -dLib_at<STControl>(p)->field_0x24;
+        dLib_at<STControl>(p)->mAngleShift =
+            (angle & 0x1fff) > 0x1000 ? dLib_at<STControl>(p)->mAngleMargin
+                                      : -dLib_at<STControl>(p)->mAngleMargin;
     }
-    if (!(dLib_at<STControl>(p)->field_0x0c & 3))
+    if (!(dLib_at<STControl>(p)->mDirectionTrig & 3))
       STControl_Xinit(p);
-    if (!(dLib_at<STControl>(p)->field_0x0c & 12))
+    if (!(dLib_at<STControl>(p)->mDirectionTrig & 12))
       STControl_Yinit(p);
   }
-  u8 flags = dLib_at<STControl>(p)->field_0x0c,
-     overlap = dLib_at<STControl>(p)->field_0x0d & flags;
+  u8 flags = dLib_at<STControl>(p)->mDirectionTrig,
+     overlap = dLib_at<STControl>(p)->mPrevDirectionTrig & flags;
   if (overlap & 3) {
-    s16 timer = dLib_at<STControl>(p)->field_0x0e;
+    s16 timer = dLib_at<STControl>(p)->mXrepeatTimer;
     if (timer > 0) {
       overlap =
-          dLib_at<STControl>(p)->field_0x0d & dLib_at<STControl>(p)->field_0x0c;
-      dLib_at<STControl>(p)->field_0x0e = timer - 1;
+          dLib_at<STControl>(p)->mPrevDirectionTrig & dLib_at<STControl>(p)->mDirectionTrig;
+      dLib_at<STControl>(p)->mXrepeatTimer = timer - 1;
     }
   }
   if (overlap & 12) {
-    s16 timer = dLib_at<STControl>(p)->field_0x10;
+    s16 timer = dLib_at<STControl>(p)->mYrepeatTimer;
     if (timer > 0) {
-      flags = dLib_at<STControl>(p)->field_0x0c;
-      dLib_at<STControl>(p)->field_0x10 = timer - 1;
+      flags = dLib_at<STControl>(p)->mDirectionTrig;
+      dLib_at<STControl>(p)->mYrepeatTimer = timer - 1;
     }
   }
   return flags;

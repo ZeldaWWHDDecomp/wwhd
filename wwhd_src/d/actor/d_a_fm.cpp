@@ -95,32 +95,32 @@ void daFm_c::_nodeControl(J3DNode* node, J3DModel* model) {
     f32 x = mtx->m[0][3];
     mtx->m[0][3] = 0.0f;
     mDoMtx_stack_c::transS(x, y, z);
-    if (jntNo < FM_JNT_CYUBIA_e && jntNo >= field_0x390 && fm_main::hio().field_0x00F[jntNo] == 1) {
-        mDoMtx_stack_quatM(&field_0x330[jntNo]);
+    if (jntNo < FM_JNT_CYUBIA_e && jntNo >= mIkStartJoint && fm_main::hio().mIkJointOn[jntNo] == 1) {
+        mDoMtx_stack_quatM(&mJointQuat[jntNo]);
     }
     PSMTXConcat_g(fm_main::stackMtx(), mtx, fm_main::stackMtx());
 
     if (jntNo == FM_JNT_TE_e) {
-        if (fm_calcTimer(&field_0x64C) != 0) {
-            field_0x68A = (s16)(field_0x68A + (REG_S(12, 2) + 0x1830));
-            cLib_addCalcAngleS2(&field_0x68C, 0, 10, 0x1C8);
-            s16 a = field_0x68A;
-            f32 amp = (f32)(s16)field_0x68C;
+        if (fm_calcTimer(&mHandShakeTimer) != 0) {
+            mHandShakePhase = (s16)(mHandShakePhase + (REG_S(12, 2) + 0x1830));
+            cLib_addCalcAngleS2(&mHandShakeAmp, 0, 10, 0x1C8);
+            s16 a = mHandShakePhase;
+            f32 amp = (f32)(s16)mHandShakeAmp;
             s16 temp3 = (s16)gabi::ftoi(amp * cM_ssin(a));
             mDoMtx_YrotM(fm_main::stackMtx(), temp3);
         }
         gabi::Local<cXyz> temp2;
-        temp2->copy(*(&fm_main::hio().field_0x038));
-        PSMTXMultVec(fm_main::stackMtx(), temp2, &field_0x61C);
-        temp2->copy(*(&fm_main::hio().field_0x104));
-        PSMTXMultVec(fm_main::stackMtx(), temp2, &field_0x63C);
-        field_0x2E8[jntNo].x = fm_main::stackMtx()->m[0][3];
-        field_0x2E8[jntNo].y = fm_main::stackMtx()->m[1][3];
-        field_0x2E8[jntNo].z = fm_main::stackMtx()->m[2][3];
+        temp2->copy(*(&fm_main::hio().mHandOffset));
+        PSMTXMultVec(fm_main::stackMtx(), temp2, &mHandPos);
+        temp2->copy(*(&fm_main::hio().mPullOffset));
+        PSMTXMultVec(fm_main::stackMtx(), temp2, &mPullPos);
+        mJointPos[jntNo].x = fm_main::stackMtx()->m[0][3];
+        mJointPos[jntNo].y = fm_main::stackMtx()->m[1][3];
+        mJointPos[jntNo].z = fm_main::stackMtx()->m[2][3];
     } else if (jntNo < FM_JNT_CYUBIA_e) {
-        field_0x2E8[jntNo].x = fm_main::stackMtx()->m[0][3];
-        field_0x2E8[jntNo].y = fm_main::stackMtx()->m[1][3];
-        field_0x2E8[jntNo].z = fm_main::stackMtx()->m[2][3];
+        mJointPos[jntNo].x = fm_main::stackMtx()->m[0][3];
+        mJointPos[jntNo].y = fm_main::stackMtx()->m[1][3];
+        mJointPos[jntNo].z = fm_main::stackMtx()->m[2][3];
     }
 
     mtx_copy(fm_main::anmMtx(model, jntNo), fm_main::stackMtx()); /* model->setAnmMtx(jntNo, mDoMtx_stack_c::get()) */
@@ -221,11 +221,11 @@ BOOL daFm_c::_pathMove(cXyz* param_1, cXyz* param_2, cXyz* param_3) {
 
     cXyz_mi(&current.pos, rel, param_1);
     f32 dist = std_sqrtf(PSVECSquareMag(rel));
-    if (dist < fm_main::hio().field_0x0D4 + 1.0f) {
+    if (dist < fm_main::hio().mPathReachDist + 1.0f) {
         f32 temp2 = cM_rndF(9.0f) + 1.0f;
-        field_0x394 = cM_rndF(9.0f) + 1.0f;
+        mSpeedRate = cM_rndF(9.0f) + 1.0f;
         gabi::Local<cXyz> a, b, c;
-        cXyz_ml(temp, a, fm_main::hio().field_0x0D8);
+        cXyz_ml(temp, a, fm_main::hio().mPathRndOffset);
         cXyz_ml(a, b, temp2);
         cXyz_pl(param_1, c, b);
         param_1->copy(*c);
@@ -251,7 +251,7 @@ bool daFm_c::checkHeight(fopAc_ac_c* i_actor) {
         return false;
     }
     f32 dy = i_actor->current.pos.y - current.pos.y;
-    return !(std::fabs(dy) > fm_main::hio().field_0x0A8 * 0.5f); /* GHS: ble */
+    return !(std::fabs(dy) > fm_main::hio().mHeightRange * 0.5f); /* GHS: ble */
 }
 
 /* 02140D04 */
@@ -264,7 +264,7 @@ fopAc_ac_c* daFm_c::searchNearOtherActor(fopAc_ac_c* i_actor) {
             return nullptr;
         }
         f32 dist = fopAcM_searchActorDistanceXZ(this, i_actor);
-        if (dist < fm_main::hio().field_0x0E4) {
+        if (dist < fm_main::hio().mAttackRange) {
             if (fopAcM_GetName(i_actor) == fpcNm_BOMB_e) {
                 mpActorTarget = i_actor;
                 if (!daBomb_chk_state(i_actor, 0)) {
@@ -274,7 +274,7 @@ fopAc_ac_c* daFm_c::searchNearOtherActor(fopAc_ac_c* i_actor) {
                 fopAc_ac_c* pLink = dComIfGp_getLinkPlayer();
                 f32 dist2 = fopAcM_searchPlayerDistanceXZ(this);
                 f32 dist3 = fopAcM_searchPlayerDistanceXZ(i_actor);
-                if (dist2 < fm_main::hio().field_0x0E8) {
+                if (dist2 < fm_main::hio().mNoticeRange) {
                     if (dist3 > REG_F(12, 0) + 80.0f || fopAcM_GetID(i_actor) == daPy_getGrabActorID(pLink)) {
                         u32 type = daObj_PrmAbstract(i_actor, 4, 0x18); /* daTsubo::Act_c::prm_get_type */
                         switch (type) {
@@ -299,19 +299,19 @@ static void* searchNearOtherActor_CB(void* param_1, void* param_2) {
 void* daFm_c::searchNearFm(fopAc_ac_c* i_actor) {
     if (fopAc_IsActor(i_actor) && fopAc_IsActor(i_actor) && fopAcM_GetName(i_actor) == fpcNm_FM_e) {
         gabi::Local<cXyz> rel, xz;
-        cXyz_mi(&field_0x3E4, rel, &current.pos);
+        cXyz_mi(&mNearFmPos, rel, &current.pos);
         xz->y = 0.0f;
         xz->x = rel->x;
         xz->z = rel->z;
-        f32 abs = std_sqrtf(PSVECSquareMag(xz)); /* (field_0x3E4 - current.pos).absXZ() */
+        f32 abs = std_sqrtf(PSVECSquareMag(xz)); /* (mNearFmPos - current.pos).absXZ() */
         f32 dist = fopAcM_searchActorDistanceXZ(this, i_actor);
         if (dist != 0.0f) {
             gabi::Local<cXyz> xz2;
-            xz2->x = field_0x3E4.x;
+            xz2->x = mNearFmPos.x;
             xz2->y = 0.0f;
-            xz2->z = field_0x3E4.z;
+            xz2->z = mNearFmPos.z;
             if ((f64)std_sqrtf(PSVECSquareMag(xz2)) == 0.0 || dist < abs) {
-                field_0x3E4.copy(i_actor->current.pos);
+                mNearFmPos.copy(i_actor->current.pos);
             }
         }
     }
@@ -352,32 +352,32 @@ void daFm_c::getArg() {
     u32 params = fopAcM_GetParam(this); /* fopAcM_GetParam */
     s16 homeAngleX = home.angle.x;
     s16 homeAngleZ = home.angle.z;
-    field_0x2C7 = (u8)params;
-    field_0x2D0 = (params >> 8) & 3;
-    field_0x2DC = (params >> 10) & 3;
+    mExitSclsNo = (u8)params;
+    mMoveType = (params >> 8) & 3;
+    mBaseTargetType = (params >> 10) & 3;
     m_path_no = (params >> 16) & 0xFF;
-    field_0x2D4 = params >> 0x18;
-    field_0x2D8 = homeAngleX & 0xFF;
-    field_0x2C8 = (homeAngleX >> 8) & 0xFF;
+    mAppearSwitchNo = params >> 0x18;
+    mNoCreateSwitchNo = homeAngleX & 0xFF;
+    mNpcRestartPoint = (homeAngleX >> 8) & 0xFF;
     u32 p = homeAngleZ & 0xFF;
 
     if (p == 0xFF) {
-        field_0x2E0 = 0.0f;
+        mAreaRadius = 0.0f;
     } else {
-        field_0x2E0 = (f32)p * 100.0f;
+        mAreaRadius = (f32)p * 100.0f;
     }
 
-    if ((f32)(s16)home.angle.y != 0.0f && field_0x2D4 != 0xFF) {
-        field_0x2E4 = 1;
+    if ((f32)(s16)home.angle.y != 0.0f && mAppearSwitchNo != 0xFF) {
+        mSwAppearDemo = 1;
     }
-    if (field_0x2D0 == 3) {
-        field_0x2D0 = 0;
+    if (mMoveType == 3) {
+        mMoveType = 0;
     }
-    if (field_0x2DC == 3) {
-        field_0x2DC = 0;
+    if (mBaseTargetType == 3) {
+        mBaseTargetType = 0;
     }
-    if (field_0x2E0 == 0.0f) {
-        field_0x2E0 = 3000.0f;
+    if (mAreaRadius == 0.0f) {
+        mAreaRadius = 3000.0f;
     }
 
     home.angle.z = 0;
@@ -401,39 +401,39 @@ void daFm_c::bodySetMtx() {
     J3DModel_setBaseScale(pModel, &scale);
     mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
     mDoMtx_stack_c::YrotM(shape_angle.y);
-    mDoMtx_stack_transM(field_0x610.x, field_0x610.y, field_0x610.z);
+    mDoMtx_stack_transM(mBodyOffset.x, mBodyOffset.y, mBodyOffset.z);
     J3DModel_setBaseTRMtx(pModel, fm_main::stackMtx());
 }
 
 /* 0214162C */
 void daFm_c::holeSetMtx() {
-    f32 s = field_0x3E0;
+    f32 s = mHoleScale;
     J3DModel* m = mpModel;
     fm_main::model(m)->mBaseScale.y = s; /* setBaseScale({s, s, s}) */
     fm_main::model(m)->mBaseScale.z = s;
     fm_main::model(m)->mBaseScale.x = s;
     mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
     mDoMtx_stack_c::YrotM(current.angle.y);
-    cXyz* o = (&fm_main::hio().field_0x020);
+    cXyz* o = (&fm_main::hio().mHoleOffset);
     mDoMtx_stack_transM(o->x, o->y, o->z);
     J3DModel_setBaseTRMtx(mpModel, fm_main::stackMtx());
 }
 
 /* 02141714 */
 void daFm_c::setBaseTarget() {
-    switch ((u32)field_0x2DC) {
+    switch ((u32)mBaseTargetType) {
     case 0: {
         fopAcM_SearchByName(fpcNm_NPC_CB1_e);
         fopAc_ac_c* pMdActor = fopAcM_SearchByName(fpcNm_NPC_MD_e);
         fopAc_ac_c* pLink = dComIfGp_getLinkPlayer();
         if (pMdActor == nullptr) {
             mBaseTarget = pLink;
-        } else if (field_0x2D0 == 1 || field_0x2D0 == 2) {
+        } else if (mMoveType == 1 || mMoveType == 2) {
             f32 dist = fopAcM_searchActorDistanceXZ(this, pLink);
             f32 dist2 = fopAcM_searchActorDistanceXZ(this, pMdActor);
-            if (dist2 < fm_main::hio().field_0x0E8) {
+            if (dist2 < fm_main::hio().mNoticeRange) {
                 mBaseTarget = pMdActor;
-            } else if (dist < fm_main::hio().field_0x0E8) {
+            } else if (dist < fm_main::hio().mNoticeRange) {
                 mBaseTarget = pLink;
             }
         } else {
@@ -459,11 +459,11 @@ void daFm_c::setBaseTarget() {
     }
 
     if (mBaseTarget == nullptr) {
-        field_0x9D0 = 0;
-        field_0x9D4 = 0.0f;
+        mBaseTargetAngleY = 0;
+        mBaseTargetDist = 0.0f;
     } else {
-        field_0x9D0 = fopAcM_searchActorAngleY(this, mBaseTarget);
-        field_0x9D4 = fopAcM_searchActorDistanceXZ(this, mBaseTarget);
+        mBaseTargetAngleY = fopAcM_searchActorAngleY(this, mBaseTarget);
+        mBaseTargetDist = fopAcM_searchActorDistanceXZ(this, mBaseTarget);
     }
 }
 
@@ -487,7 +487,7 @@ void daFm_c::createInit() {
     mAcchCir.SetWall(30.0f, 200.0f);
     mObjAcch.Set(&current.pos, &old.pos, this, 1, &mAcchCir, &speed, nullptr, nullptr);
     mObjAcch.SetRoofNone();
-    if (field_0x2E4 != 0) {
+    if (mSwAppearDemo != 0) {
         mObjAcch.SetWallNone();
     }
 
@@ -501,7 +501,7 @@ void daFm_c::createInit() {
     }
 
     for (int i = 0; i < 6; i++) {
-        auto* q = reinterpret_cast<fm_main::QuaternionWords*>(&field_0x330[i]);
+        auto* q = reinterpret_cast<fm_main::QuaternionWords*>(&mJointQuat[i]);
         q->x = fm_main::zeroQuat().x; /* ZeroQuat */
         q->y = fm_main::zeroQuat().y;
         q->z = fm_main::zeroQuat().z;
@@ -513,11 +513,11 @@ void daFm_c::createInit() {
     mpMorf->calc();
     settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &current.pos, &tevStr);
 
-    if (field_0x2D0 == 0) {
+    if (mMoveType == 0) {
         itemTableIdx = fm_charNameIndex("Fmaster" /* "Fmaster" */, 0);
-    } else if (field_0x2D0 == 1) {
+    } else if (mMoveType == 1) {
         itemTableIdx = fm_charNameIndex("Fmastr1" /* "Fmastr1" */, 0);
-    } else if (field_0x2D0 == 2) {
+    } else if (mMoveType == 2) {
         itemTableIdx = fm_charNameIndex("Fmastr2" /* "Fmastr2" */, 0);
     }
 
@@ -529,7 +529,7 @@ void daFm_c::createInit() {
     }
 
     mEnemyIce.mpActor = this;
-    mEnemyIce.m00C = 1;
+    mEnemyIce.mFreezeType = 1;
     mEnemyIce.mWallRadius = 100.0f;
     mEnemyIce.mCylHeight = 200.0f;
 
@@ -541,19 +541,19 @@ void daFm_c::createInit() {
     health = max_health;
     mGrabPos.copy(current.pos);
 
-    field_0x684 = 0;
+    mGrabKind = 0;
     mpActorTarget = nullptr;
-    field_0x69C.copy(current.pos);
+    mHomePos.copy(current.pos);
     setBaseTarget();
-    field_0x690.copy(current.pos);
+    mGoalPos.copy(current.pos);
     setAnm(8, false);
-    field_0x394 = cM_rndF(9.0f) + 1.0f;
-    field_0x610.copy(*(&fm_main::hio().field_0x02C));
+    mSpeedRate = cM_rndF(9.0f) + 1.0f;
+    mBodyOffset.copy(*(&fm_main::hio().mBodyOffsetInit));
     if (mMode != MODE_PLAYER_START_DEMO) {
-        if (field_0x2D4 != 0xFF && !dComIfGs_isSwitch(field_0x2D4, current.roomNo)) {
+        if (mAppearSwitchNo != 0xFF && !dComIfGs_isSwitch(mAppearSwitchNo, current.roomNo)) {
             modeProc(PROC_INIT_e, MODE_SW_WAIT);
         } else {
-            switch ((u32)field_0x2D0) {
+            switch ((u32)mMoveType) {
             case 0:
                 modeProc(PROC_INIT_e, MODE_UNDERFOOT);
                 break;
@@ -592,10 +592,10 @@ cPhs_State daFm_c::_create() {
 
         if (mMode != MODE_PLAYER_START_DEMO) {
             getArg();
-            if (field_0x2D8 != 0xFF && dComIfGs_isSwitch(field_0x2D8, current.roomNo)) {
+            if (mNoCreateSwitchNo != 0xFF && dComIfGs_isSwitch(mNoCreateSwitchNo, current.roomNo)) {
                 return cPhs_ERROR_e;
             }
-            if (field_0x2D4 != 0xFF && dComIfGs_isSwitch(field_0x2D4, current.roomNo) && field_0x2E4 != 0) {
+            if (mAppearSwitchNo != 0xFF && dComIfGs_isSwitch(mAppearSwitchNo, current.roomNo) && mSwAppearDemo != 0) {
                 return cPhs_ERROR_e;
             }
         }
@@ -622,7 +622,7 @@ u8 daFm_c::checkPlayerGrabTarget() {
 /* 02142028 */
 void daFm_c::cancelGrab() {
     if (mpActorTarget != nullptr) {
-        if (field_0x684 != 0 && (mpActorTarget->actor_status & 0x2000) /* fopAcM_checkCarryNow */ && !checkPlayerGrabTarget()) {
+        if (mGrabKind != 0 && (mpActorTarget->actor_status & 0x2000) /* fopAcM_checkCarryNow */ && !checkPlayerGrabTarget()) {
             mpActorTarget->gravity = 0.0f;
             mpActorTarget->speedF = 0.0f;
             mpActorTarget->speed.x = 0.0f;
@@ -634,7 +634,7 @@ void daFm_c::cancelGrab() {
             mpActorTarget->shape_angle.z = 0;
             fopAcM_cancelCarryNow(mpActorTarget);
         }
-        field_0x684 = 0;
+        mGrabKind = 0;
     }
 }
 
@@ -667,7 +667,7 @@ void daFm_c::setHoleEffect() {
     }
     JPABaseEmitter* emitter = mpFollowEcallBack.getEmitter();
     if (emitter != nullptr) {
-        f32 s = field_0x3E0; /* emitter->setGlobalScale({s, s, s}) */
+        f32 s = mHoleScale; /* emitter->setGlobalScale({s, s, s}) */
         auto* e = reinterpret_cast<fm_main::Emitter*>(emitter);
         e->mGlobalParticleScale.y = s;
         e->mGlobalScale.x = s;
@@ -680,7 +680,7 @@ void daFm_c::setHoleEffect() {
 
 /* 02142200 */
 void daFm_c::holeExecute() {
-    if (field_0x3E0 > 0.015f) { /* isHoleAppear */
+    if (mHoleScale > 0.015f) { /* isHoleAppear */
         mBtkAnm.play();
         fm_seStart(this, JA_SE_CM_FM_SPOT, 0);
         actor_status = (actor_status & ~0x3Fu) | 0x20; /* fopAcM_SetStatusMap(this, 0x20) */
@@ -694,15 +694,15 @@ void daFm_c::holeExecute() {
 /* 021422A4 */
 void daFm_c::setAttention() {
     s32 m = mMode;
-    if (field_0x2E4 != 0 || (u32)m == 0 || ((u32)m >= 0xE && (u32)m <= 0x11)) {
+    if (mSwAppearDemo != 0 || (u32)m == 0 || ((u32)m >= 0xE && (u32)m <= 0x11)) {
         (&attention_info.position)->copy(current.pos);
         eyePos.copy(current.pos);
         return;
     }
     cXyz* att = (&attention_info.position);
-    f32 ax = field_0x61C.x;
-    f32 ay = field_0x61C.y;
-    f32 az = field_0x61C.z;
+    f32 ax = mHandPos.x;
+    f32 ay = mHandPos.y;
+    f32 az = mHandPos.z;
     att->x = ax;
     att->z = az;
     att->y = ay + 20.0f;
@@ -712,9 +712,9 @@ void daFm_c::setAttention() {
     head->x = top->x;
     head->y = top->y;
     head->z = top->z;
-    cXyz_mi(head, d, &field_0x61C);
+    cXyz_mi(head, d, &mHandPos);
     f32 abs = std_sqrtf(PSVECSquareMag(d));
-    if (!dComIfGp_checkPlayerStatus0(0, 0x402) && mMode == MODE_ATTACK && !(abs > fm_main::hio().field_0x0EC)) {
+    if (!dComIfGp_checkPlayerStatus0(0, 0x402) && mMode == MODE_ATTACK && !(abs > fm_main::hio().mGrabReach)) {
         f32 x = current.pos.x;
         f32 y = current.pos.y;
         f32 z = current.pos.z;
@@ -722,14 +722,14 @@ void daFm_c::setAttention() {
         eyePos.z = z;
         eyePos.y = y + 200.0f;
     } else {
-        eyePos.copy(field_0x61C);
+        eyePos.copy(mHandPos);
     }
 }
 
 /* 02142450 */
 bool daFm_c::setHoleScale(f32 param_1, f32 param_2, f32 param_3) {
-    cLib_addCalc2(&field_0x3E0, param_1, param_2, param_3);
-    return !(std::fabs(field_0x3E0 - param_1) > param_3);
+    cLib_addCalc2(&mHoleScale, param_1, param_2, param_3);
+    return !(std::fabs(mHoleScale - param_1) > param_3);
 }
 
 /* 021424D0 */
@@ -739,7 +739,7 @@ void daFm_c::iceProc() {
     J3DModel_setBaseTRMtx(pModel, fm_main::stackMtx());
     mpMorf->calc();
     if (mEnemyIce.mLightShrinkTimer != 0 || !(health > 0)) {
-        setHoleScale(fm_main::hio().field_0x120, 0.1f, fm_main::hio().field_0x128);
+        setHoleScale(fm_main::hio().mHoleScaleClosed, 0.1f, fm_main::hio().mHoleScaleStep);
     }
     holeSetMtx();
     cancelGrab();
@@ -759,11 +759,11 @@ bool daFm_c::lineCheck(cXyz* param_1, cXyz* param_2) {
 bool daFm_c::areaCheck() {
     bool ret = true;
     for (int i = 0; i < 12; i++) {
-        f32 r = fm_main::hio().field_0x0E0;
+        f32 r = fm_main::hio().mNearRange;
         mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
         mDoMtx_stack_c::YrotM((s16)(i * 0x1555));
         mDoMtx_stack_transM(r, -30.0f, 0.0f);
-        cXyz* p = &field_0xA48[i];
+        cXyz* p = &mAreaPoints[i];
         f32 x = fm_main::stackMtx()->m[0][3];
         p->x = x;
         p->y = fm_main::stackMtx()->m[1][3];
@@ -774,26 +774,26 @@ bool daFm_c::areaCheck() {
         temp2->y = p->y + 60.0f;
         temp2->z = p->z;
 
-        if (field_0x2D0 == 0 || field_0x2D0 == 1) {
+        if (mMoveType == 0 || mMoveType == 1) {
             gabi::Local<cXyz> d, xz;
-            cXyz_mi(p, d, &field_0x69C);
+            cXyz_mi(p, d, &mHomePos);
             xz->x = d->x;
             xz->y = 0.0f;
             xz->z = d->z;
-            if (std_sqrtf(PSVECSquareMag(xz)) > field_0x2E0) {
-                field_0xAD8[i] = 0;
+            if (std_sqrtf(PSVECSquareMag(xz)) > mAreaRadius) {
+                mAreaPointOk[i] = 0;
                 ret = false;
             } else {
-                field_0xAD8[i] = 1;
+                mAreaPointOk[i] = 1;
             }
         }
 
-        if (field_0xAD8[i] != 0 || field_0x2D0 == 2) {
+        if (mAreaPointOk[i] != 0 || mMoveType == 2) {
             if (!lineCheck(temp2, p)) {
-                field_0xAD8[i] = 0;
+                mAreaPointOk[i] = 0;
                 ret = false;
             } else {
-                field_0xAD8[i] = 1;
+                mAreaPointOk[i] = 1;
             }
         }
     }
@@ -865,19 +865,19 @@ static void* daFm_HIO_c_ct(void* p) {
     }
     auto* h = reinterpret_cast<fm_main::HIO*>(p);
     h->__vtbl = fm_main::HIOVtable;   /* vtable */
-    fm_jointHitHIO_ct(h->field_0x130); /* JntHit_HIO_c::JntHit_HIO_c */
-    h->field_0x006 = 0;
-    h->field_0x007 = 0;
+    fm_jointHitHIO_ct(h->mJntHitHIO); /* JntHit_HIO_c::JntHit_HIO_c */
+    h->mDebugGrabAxis = 0;
+    h->mDebugHandAxis = 0;
     h->field_0x008 = 0;
-    h->field_0x004 = 0;
+    h->mDebugTargets = 0;
     h->field_0x01F = 0;
-    h->field_0x00B = 0;
-    h->field_0x009 = 0;
-    h->field_0x00A = 0;
-    h->field_0x00C = 0;
-    h->field_0x005 = 0;
+    h->mDebugJoints = 0;
+    h->mDebugAngles = 0;
+    h->mDebugGoalLine = 0;
+    h->mDebugArea = 0;
+    h->mDebugHeadTop = 0;
 
-    h->field_0x068 = 0x1E;
+    h->mBikubikuTime = 0x1E;
     h->mSpAttackVJumpHeight = 240.0f; /* mSpAttackVJumpHeight */
     h->mSpAttackVJumpRadius = 100.0f;
     h->mSpAttackVJumpStartFrame = 0;
@@ -886,18 +886,18 @@ static void* daFm_HIO_c_ct(void* p) {
     h->mSpAttackJumpRadius = 100.0f;
     h->mSpAttackJumpStartFrame = 5;
     h->mSpAttackJumpEndFrame = 0xF;
-    h->field_0x11C = 100;
+    h->mParalysisTime = 100;
     h->field_0x00E = 0;
-    h->field_0x00D = 0;
+    h->mNoGrabDemo = 0;
     h->mFreezeDuration = 0x78; /* mFreezeDuration */
 
     for (int i = 0; i < 6; i++) {
         switch (i) {
         case 0: case 1: case 2: case 3: case 5:
-            h->field_0x00F[i] = 1;
+            h->mIkJointOn[i] = 1;
             break;
         default:
-            h->field_0x00F[i] = 0;
+            h->mIkJointOn[i] = 0;
             break;
         }
     }
@@ -907,72 +907,72 @@ static void* daFm_HIO_c_ct(void* p) {
     h->field_0x05C.x = 0;
     h->field_0x05C.y = 0;
     h->field_0x05C.z = 0;
-    h->field_0x020.x = -10.0f;
-    h->field_0x020.y = 5.0f;
-    h->field_0x020.z = -10.0f;
-    h->field_0x02C.x = 0.0f;
-    h->field_0x02C.y = 0.0f;
-    h->field_0x02C.z = -30.0f;
-    h->field_0x038.x = 40.0f;
-    h->field_0x038.y = -20.0f;
-    h->field_0x038.z = 0.0f;
+    h->mHoleOffset.x = -10.0f;
+    h->mHoleOffset.y = 5.0f;
+    h->mHoleOffset.z = -10.0f;
+    h->mBodyOffsetInit.x = 0.0f;
+    h->mBodyOffsetInit.y = 0.0f;
+    h->mBodyOffsetInit.z = -30.0f;
+    h->mHandOffset.x = 40.0f;
+    h->mHandOffset.y = -20.0f;
+    h->mHandOffset.z = 0.0f;
     h->field_0x044.x = 0.0f;
     h->field_0x044.y = 0.0f;
     h->field_0x044.z = 0.0f;
-    h->field_0x104.x = 0.0f;
-    h->field_0x104.y = -20.0f;
-    h->field_0x104.z = -0.0f;
+    h->mPullOffset.x = 0.0f;
+    h->mPullOffset.y = -20.0f;
+    h->mPullOffset.z = -0.0f;
 
-    h->field_0x0A8 = 600.0f;
+    h->mHeightRange = 600.0f;
     h->mMaxHealth = 0xC; /* mMaxHealth */
-    h->field_0x066 = 0x28;
-    h->field_0x084 = 0x5A;
-    h->field_0x086 = 0xF0;
-    h->field_0x088 = 0x3C;
+    h->mUnderFootTime = 0x28;
+    h->mHideTimeMin = 0x5A;
+    h->mHideTimeMax = 0xF0;
+    h->mFarTime = 0x3C;
     h->field_0x08A = 1;
-    h->field_0x08C = 0x3C;
-    h->field_0x08E = 0x78;
-    h->field_0x090 = 10;
-    h->field_0x092 = 0x11;
-    h->field_0x094 = 0;
-    h->field_0x096 = 500;
-    h->field_0x098 = 18000;
-    h->field_0x09A = 7000;
-    h->field_0x0C0 = 15.0f;
-    h->field_0x120 = 0.01f;
-    h->field_0x124 = 1.0f;
-    h->field_0x128 = 0.1f;
-    h->field_0x12C = 0.02f;
-    h->field_0x0C4 = 290.0f;
+    h->mWaitTimeMin = 0x3C;
+    h->mWaitTimeMax = 0x78;
+    h->mGrabLinkSinkTime = 10;
+    h->mItemThrowTime = 0x11;
+    h->mAttackTime = 0;
+    h->mTurnStep = 500;
+    h->mGrabAngleMax = 18000;
+    h->mTurnAngleMin = 7000;
+    h->mUnderFootStep = 15.0f;
+    h->mHoleScaleClosed = 0.01f;
+    h->mHoleScaleOpen = 1.0f;
+    h->mHoleScaleStep = 0.1f;
+    h->mHoleScaleStepUnderFoot = 0.02f;
+    h->mReachDist = 290.0f;
     // HD: GameCube uses 80.0f for the body sphere radius.
-    h->field_0x0C8 = 50.0f;
-    h->field_0x0CC = 7.0f;
-    h->field_0x0D0 = 2.0f;
-    h->field_0x0D4 = 5.0f;
-    h->field_0x0D8 = 80.0f;
-    h->field_0x0DC = 100.0f;
-    h->field_0x0E0 = 150.0f;
-    h->field_0x0E4 = 500.0f;
-    h->field_0x0E8 = 800.0f;
-    h->field_0x0EC = 30.0f;
-    h->field_0x0F0 = 25.0f;
-    h->field_0x0F4 = 9.0f;
-    h->field_0x0F8 = -2.5f;
-    h->field_0x0FC = 16.0f;
-    h->field_0x09C = 5;
-    h->field_0x100 = 0x1E;
-    h->field_0x110 = 20.0f;
-    h->field_0x114 = 50.0f;
-    h->field_0x118 = -20.0f;
-    h->field_0x0B0 = 30.0f;
-    h->field_0x0A0 = 0x14;
+    h->mSphRadius = 50.0f;
+    h->mChaseSpeed = 7.0f;
+    h->mPathSpeed = 2.0f;
+    h->mPathReachDist = 5.0f;
+    h->mPathRndOffset = 80.0f;
+    h->mFootGrabDist = 100.0f;
+    h->mNearRange = 150.0f;
+    h->mAttackRange = 500.0f;
+    h->mNoticeRange = 800.0f;
+    h->mGrabReach = 30.0f;
+    h->mThrowSpeedF = 25.0f;
+    h->mThrowSpeedY = 9.0f;
+    h->mThrowGravity = -2.5f;
+    h->mThrowFrame = 16.0f;
+    h->mTgHitTime = 5;
+    h->mGrabDelayTime = 0x1E;
+    h->mPullDistMin = 20.0f;
+    h->mPullDistMax = 50.0f;
+    h->mPullPower = -20.0f;
+    h->mRndMoveStep = 30.0f;
+    h->mRndMoveTime = 0x14;
     h->field_0x0A2 = 0x96;
-    h->field_0x0B4 = 1000.0f;
-    h->field_0x0B8 = 1000.0f;
-    h->field_0x09E = 0x96;
-    h->field_0x0AC = 300.0f;
-    h->field_0x0BC = 750.0f;
-    h->field_0x0A6 = 10;
+    h->mEscapeRange = 1000.0f;
+    h->mRndEscapeDist = 1000.0f;
+    h->mGrabNpcSinkTime = 0x96;
+    h->mRndBackDist = 300.0f;
+    h->mNpcDemoPlayerDist = 750.0f;
+    h->mDamageTime = 10;
     return p;
 }
 

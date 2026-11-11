@@ -32,7 +32,7 @@ BOOL nodeCallBack1(J3DNode *node, int calcTiming) {
         mDoMtx_XrotM(now, i_this->m_jnt.mAngles[1][1]);
         mDoMtx_ZrotM(now, (s16)-i_this->m_jnt.mAngles[1][0]);
         for (int i = 0; i < 3; i++) {
-          ji1DrawMultVecHD(now, &l_hio.field_0xC4[i], &i_this->mBackbonePos[i]);
+          ji1DrawMultVecHD(now, &l_hio.mBackboneOffsets[i], &i_this->mBackbonePos[i]);
         }
       }
       mtx_copy(model->getAnmMtx(jntNo), now); /* setAnmMtx */
@@ -277,7 +277,7 @@ BOOL daNpc_Ji1_c::chkAttention(cXyz *param_1, s16 param_2) {
 
   fopAc_ac_c *player = daPy_getPlayerActorClass();
   f32 temp = 800.0f;
-  s32 temp2 = l_hio.field_0x10 + l_hio.field_0x12;
+  s32 temp2 = l_hio.mMaxHeadY + l_hio.mMaxBackboneY;
   f32 x = player->current.pos.x - param_1->x;
   f32 z = player->current.pos.z - param_1->z;
   f32 dist = std_sqrtf(gabi::fmadds(x, x, z * z));
@@ -344,17 +344,17 @@ BOOL daNpc_Ji1_c::lookBack() {
       dstPos = nullptr;
     }
   }
-  s16 maxHeadRot = l_hio.field_0x10;
-  s16 maxSpineRot = l_hio.field_0x12;
+  s16 maxHeadRot = l_hio.mMaxHeadY;
+  s16 maxSpineRot = l_hio.mMaxBackboneY;
   if (mAnimation == Ji1Draw_BCK_BTKAMASI || mAnimation == Ji1Draw_BCK_BTKAMAE) {
     maxHeadRot = 0x3E80;
     maxSpineRot = 0x1F40;
   }
-  m_jnt.setParam(l_hio.field_0x0E, maxSpineRot, -l_hio.field_0x0E, -maxHeadRot,
-                 l_hio.field_0x0C, maxHeadRot, -l_hio.field_0x0C, -maxHeadRot,
-                 l_hio.field_0x14);
+  m_jnt.setParam(l_hio.mMaxBackboneX, maxSpineRot, -l_hio.mMaxBackboneX, -maxHeadRot,
+                 l_hio.mMaxHeadX, maxHeadRot, -l_hio.mMaxHeadX, -maxHeadRot,
+                 l_hio.mMaxTurnStep);
   if (m_jnt.mbTrn) {
-    cLib_addCalcAngleS2(&mLookMaxVel, l_hio.field_0x18, l_hio.field_0x16,
+    cLib_addCalcAngleS2(&mLookMaxVel, l_hio.mMaxHeadTurnVel, l_hio.mHeadTurnVelScale,
                         0x800);
     temp2 = false;
     ret = true;
@@ -469,8 +469,8 @@ void daNpc_Ji1_c::harpoonMove() {
   temp4->y = (f32)mSpearButtPos.y;
   temp3->z = (f32)mSpearTipPos.z;
   temp3->y = (f32)mSpearTipPos.y;
-  f32 hio_bc = l_hio.field_0xBC;
-  f32 hio_c0 = l_hio.field_0xC0;
+  f32 hio_bc = l_hio.mHarpoonBounce;
+  f32 hio_c0 = l_hio.mHarpoonGravity;
 
   ji1DrawQuatMultiplyHD(&mHarpoonRot, &mHarpoonRotStep, &mHarpoonRot);
   ji1DrawQuatNormalizeHD(&mHarpoonRot, &mHarpoonRot);

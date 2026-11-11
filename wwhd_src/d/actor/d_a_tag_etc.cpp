@@ -74,8 +74,8 @@ void daTag_Etc_c::demoProc() {
         switch (getType2()) {
         case 0:
             if (pMedli == NULL || !static_cast<TagEtcMedli*>(pMedli)->checkStatusFly()) {
-                if (field_0x29A > 0) {
-                    field_0x29A = field_0x29A - 1;
+                if (mCutEndDelay > 0) {
+                    mCutEndDelay = mCutEndDelay - 1;
                 } else {
                     dComIfGp_evmng_cutEnd(staffIdx);
                 }
@@ -95,7 +95,7 @@ void daTag_Etc_c::demoInitProc() {
     case 0:
         pActor = fopAcM_SearchByID(mMedliPID);
         TagEtc_setItemPartner(pActor);
-        field_0x29A = 15;
+        mCutEndDelay = 15;
         break;
     }
 }

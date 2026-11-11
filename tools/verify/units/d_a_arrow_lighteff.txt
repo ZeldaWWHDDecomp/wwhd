@@ -22,7 +22,7 @@ stackfill periodic
 # the arrow (fopAcM_SearchByID): null or a fixed actor whose fields are steered
 ret 025D5218 0,0x55000000,0x55000000,0x55000000
 field * 550000B0 u32 0,1,1,2,3      # arrow parameter (state)
-field * 550007FC u8 0,0,0,1         # arrow field_0x6e4
+field * 550007FC u8 0,0,0,1         # arrow mFlewFar
 field * 550003AC u8 0 1             # isSetByZelda
 field * 101F4829 u8 0 1             # isMonotone
 field * r3+0x3CC f32 18 21          # scale z

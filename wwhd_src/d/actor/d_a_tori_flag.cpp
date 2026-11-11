@@ -60,7 +60,7 @@ BOOL daTori_Flag_c::CreateHeap() {
     BOOL ret;
     J3DModelData *modelData = (J3DModelData *)dComIfG_getObjectRes("Trflag", dRes_INDEX_TRFLAG_BDL_ETHATA_e);
     if (modelData == nullptr) /* JUT_ASSERT(0x120, modelData != NULL) */
-        JUT_ASSERT_fail("d_a_tori_flag.cpp", 0x120, "modelData != NULL");
+        JUT_ASSERT_fail("d_a_tori_flag.cpp", 0x120, "modelData != (0)");
     mpModel = mDoExt_J3DModel__create(modelData, 0, 0x11020203U);
     if (!mpModel) {
         ret = FALSE;
@@ -240,7 +240,7 @@ str 100408A4 in 024C7AD8 # "Cloth"
 str 1004084C in 024C7FF4 # "Cloth"
 str 100408D4 in 024C80D8 # "Cloth"
 str 100408AC "d_a_tori_flag.cpp"
-str 100408C0 "modelData != NULL"
+str 100408C0 "modelData != (0)"
 ext 0251B638 void ToriFlagClothHD::setMtx(Mtx34*)
 ext 0251E7A8 void ToriFlagClothHD::setGlobalWind(cXyz*)
 ext 0251BC80 ToriFlagClothHD* dCloth_packet_create(ResTIMG*, ResTIMG*, s32, s32, f32, f32, dKy_tevstr_c*, void*)

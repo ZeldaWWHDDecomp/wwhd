@@ -21,7 +21,7 @@ struct Act_c : dBgS_MoveBgActor {
     /* 0x5B6 */ be<u8> mRideFlag, field_0x49F;
     /* 0x5B8 */ be<s16> mTargetAngleY, mAngleChaseY;
     /* 0x5BC */ cXyz mHitDir, field_0x4B0, mPrevPos;
-    /* 0x5E0 */ be<f32> field_0x4C8, field_0x4CC, field_0x4D0, field_0x4D4, mRotTimer;
+    /* 0x5E0 */ be<f32> mLastPrevY, mOlderPrevY, field_0x4D0, field_0x4D4, mRotTimer;  /* mLastPrevY was field_0x4C8: set_mtx 023384F0 stores mPrevPos.y before mPrevPos takes the new matrix position (the previous mLastPrevY moves to mOlderPrevY); Create 023388B0 sets current.pos.y; never read in WWHD or tww (tww the same writes); mOlderPrevY was field_0x4CC: set_mtx 023384F0 takes mLastPrevY before it is updated (the y one step further back); Create 023388B0 sets current.pos.y; never read in WWHD or tww (tww the same writes) */
     s32 Mthd_Create();
     BOOL Mthd_Delete();
     BOOL CreateHeap();
@@ -175,8 +175,8 @@ static_assert(offsetof(Act_c, mAngleChaseY) == 0x5BA);
 static_assert(offsetof(Act_c, mHitDir) == 0x5BC);
 static_assert(offsetof(Act_c, field_0x4B0) == 0x5C8);
 static_assert(offsetof(Act_c, mPrevPos) == 0x5D4);
-static_assert(offsetof(Act_c, field_0x4C8) == 0x5E0);
-static_assert(offsetof(Act_c, field_0x4CC) == 0x5E4);
+static_assert(offsetof(Act_c, mLastPrevY) == 0x5E0);
+static_assert(offsetof(Act_c, mOlderPrevY) == 0x5E4);
 static_assert(offsetof(Act_c, field_0x4D0) == 0x5E8);
 static_assert(offsetof(Act_c, field_0x4D4) == 0x5EC);
 static_assert(offsetof(Act_c, mRotTimer) == 0x5F0);

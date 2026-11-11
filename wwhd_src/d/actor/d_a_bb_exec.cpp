@@ -61,7 +61,7 @@ static inline void bb_path_move(bb_class* i_this) {
     case 1:
         if (!(i_this->current.pos.y > i_this->mTargetPos.y)) {
             i_this->mFlyAnmState = 0;
-            anm_init(i_this, dRes_INDEX_BB_BCK_FLY01_e, 5.0f, 2, l_bbHIO.unk_24, dRes_INDEX_BB_BAS_FLY01_e);
+            anm_init(i_this, dRes_INDEX_BB_BCK_FLY01_e, 5.0f, 2, l_bbHIO.mFlyAnmSpeed, dRes_INDEX_BB_BAS_FLY01_e);
         }
         break;
     }
@@ -221,7 +221,7 @@ static inline void bb_path_move(bb_class* i_this) {
         break;
     case 25:
         r29 = 1;
-        anm_init(i_this, dRes_INDEX_BB_BCK_FLY01_e, 5.0f, 2, l_bbHIO.unk_24, dRes_INDEX_BB_BAS_FLY01_e);
+        anm_init(i_this, dRes_INDEX_BB_BCK_FLY01_e, 5.0f, 2, l_bbHIO.mFlyAnmSpeed, dRes_INDEX_BB_BAS_FLY01_e);
         i_this->mMode = -1;
         i_this->mTurnSpeed = gabi::fmadds(REG0_F(4), 10.0f, 5000.0f);
         i_this->speedF = 0.0f;
@@ -279,7 +279,7 @@ static inline void bb_kamome_attack(bb_class* i_this) {
     case 1:
         if (!(i_this->current.pos.y > i_this->mTargetPos.y)) {
             i_this->mFlyAnmState = 0;
-            anm_init(i_this, dRes_INDEX_BB_BCK_FLY01_e, 5.0f, 2, l_bbHIO.unk_24, dRes_INDEX_BB_BAS_FLY01_e);
+            anm_init(i_this, dRes_INDEX_BB_BCK_FLY01_e, 5.0f, 2, l_bbHIO.mFlyAnmSpeed, dRes_INDEX_BB_BAS_FLY01_e);
         }
         break;
     default:
@@ -317,7 +317,7 @@ static inline void bb_kamome_attack(bb_class* i_this) {
         break;
     }
 
-    i_this->mTargetSpeed = l_bbHIO.unk_08;
+    i_this->mTargetSpeed = l_bbHIO.mSeagullAttackSpeed;
     cXyz diff;
     cXyz_mi(&i_this->mTargetPos, &diff, &i_this->current.pos);
     cXyz tmp;
@@ -393,8 +393,8 @@ static inline void bb_atack_move(bb_class* i_this) {
 
     if (i_this->mWasHit != 0) {
         i_this->mWasHit = 0;
-        i_this->mTimers[5] = (s16)gabi::ftoi((cM_rndF(30.0f) + 20.0f) * hio.unk_20);
-        anm_init(i_this, dRes_INDEX_BB_BCK_FLYB01_e, 10.0f, 2, hio.unk_28, dRes_INDEX_BB_BAS_FLYB01_e);
+        i_this->mTimers[5] = (s16)gabi::ftoi((cM_rndF(30.0f) + 20.0f) * hio.mAttackWaitScale);
+        anm_init(i_this, dRes_INDEX_BB_BCK_FLYB01_e, 10.0f, 2, hio.mHoverAnmSpeed, dRes_INDEX_BB_BAS_FLYB01_e);
         i_this->mTurnScale = 0.0f;
         i_this->mAttackTurnScale = 0.0f;
         i_this->mMode = 4;
@@ -431,7 +431,7 @@ static inline void bb_atack_move(bb_class* i_this) {
         f32 sq = gabi::fmadds(x, x, y * y);
         if (st == 1) {
             i_this->mTurnSpeed = 400.0f;
-            if (std_sqrtf(gabi::fmadds(z, z, sq)) < (f32)hio.unk_50) {
+            if (std_sqrtf(gabi::fmadds(z, z, sq)) < (f32)hio.mSwoopDist) {
                 i_this->mMode = 2;
                 anm_init(i_this, dRes_INDEX_BB_BCK_FLY03_e, 10.0f, 0, 1.0f, dRes_INDEX_BB_BAS_FLY03_e);
                 kuti_open(i_this, 0x15, JA_SE_CV_BB_FIND);
@@ -452,15 +452,15 @@ static inline void bb_atack_move(bb_class* i_this) {
             i_this->mMode = 4;
             i_this->mTimers[0] = 0;
             if (i_this->mPrmMode == BB_MODE_WAIT || i_this->mPrmMode == BB_MODE_NEST_WAIT) {
-                f32 r = cM_rndF((f32)(s32)(hio.unk_18 - hio.unk_16));
-                i_this->mTimers[1] = (s16)gabi::ftoi(r + (f32)(s32)hio.unk_16);
+                f32 r = cM_rndF((f32)(s32)(hio.mWaitAttackTimeMax - hio.mWaitAttackTimeMin));
+                i_this->mTimers[1] = (s16)gabi::ftoi(r + (f32)(s32)hio.mWaitAttackTimeMin);
             } else {
-                f32 r = cM_rndF((f32)(s32)(hio.unk_14 - hio.unk_12));
-                i_this->mTimers[1] = (s16)gabi::ftoi(r + (f32)(s32)hio.unk_12);
+                f32 r = cM_rndF((f32)(s32)(hio.mAttackTimeMax - hio.mAttackTimeMin));
+                i_this->mTimers[1] = (s16)gabi::ftoi(r + (f32)(s32)hio.mAttackTimeMin);
             }
             i_this->mTurnScale = 0.0f;
             i_this->mAttackTurnScale = 0.0f;
-            anm_init(i_this, dRes_INDEX_BB_BCK_FLYB01_e, 5.0f, 2, hio.unk_28, dRes_INDEX_BB_BAS_FLYB01_e);
+            anm_init(i_this, dRes_INDEX_BB_BCK_FLYB01_e, 5.0f, 2, hio.mHoverAnmSpeed, dRes_INDEX_BB_BAS_FLYB01_e);
             kuti_open(i_this, 0x30, JA_SE_CV_BB_NORMAL);
         }
         break;
@@ -474,7 +474,7 @@ static inline void bb_atack_move(bb_class* i_this) {
         cLib_addCalc2(&i_this->current.pos.x, gabi::fmadds(sx, 200.0f, i_this->mTargetPos.x), 0.1f, 20.0f * i_this->mTurnScale);
         cLib_addCalc2(&i_this->current.pos.y, gabi::fmadds(sy, 100.0f, i_this->mTargetPos.y), 0.1f, 20.0f * i_this->mTurnScale);
         cLib_addCalc2(&i_this->current.pos.z, gabi::fmadds(cz, 200.0f, i_this->mTargetPos.z), 0.1f, 20.0f * i_this->mTurnScale);
-        cLib_addCalc2(&i_this->mTurnScale, hio.unk_1C, 1.0f, 0.1f * hio.unk_1C);
+        cLib_addCalc2(&i_this->mTurnScale, hio.mTurnScaleMax, 1.0f, 0.1f * hio.mTurnScaleMax);
 
         cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mPlayerAngleY, 5, (s16)gabi::ftoi(1280.0f * i_this->mAttackTurnScale));
         cLib_addCalcAngleS2(&i_this->current.angle.x, i_this->mPlayerAngleX, 5, (s16)gabi::ftoi(768.0f * i_this->mAttackTurnScale));
@@ -502,12 +502,12 @@ static inline void bb_atack_move(bb_class* i_this) {
         }
 
         if (i_this->mTimers[5] == 0) {
-            i_this->mTimers[5] = (s16)gabi::ftoi((cM_rndF(30.0f) + 20.0f) * hio.unk_20);
+            i_this->mTimers[5] = (s16)gabi::ftoi((cM_rndF(30.0f) + 20.0f) * hio.mAttackWaitScale);
             f32 dist = i_this->mPlayerDistXZ;
             if (dist > gabi::fmadds(REG0_F(5), 10.0f, 200.0f) && dist < gabi::fmadds(REG0_F(6), 10.0f, 350.0f)) {
                 i_this->mMode = 5;
-                i_this->mTimers[0] = hio.unk_32;
-                anm_init(i_this, dRes_INDEX_BB_BCK_FLYB01_e, 2.0f, 2, hio.unk_34, dRes_INDEX_BB_BAS_FLYB01_e);
+                i_this->mTimers[0] = hio.mDiveWindUpTime;
+                anm_init(i_this, dRes_INDEX_BB_BCK_FLYB01_e, 2.0f, 2, hio.mDiveWindUpAnmSpeed, dRes_INDEX_BB_BAS_FLYB01_e);
                 tex_anm_set(i_this, 0);
             }
         }
@@ -522,14 +522,14 @@ static inline void bb_atack_move(bb_class* i_this) {
         cLib_addCalc2(&i_this->current.pos.x, gabi::fmadds(sx, 200.0f, i_this->mTargetPos.x), 0.1f, 30.0f * i_this->mTurnScale);
         cLib_addCalc2(&i_this->current.pos.y, player->current.pos.y + 175.0f, 0.1f, 30.0f * i_this->mTurnScale);
         cLib_addCalc2(&i_this->current.pos.z, gabi::fmadds(cz, 200.0f, i_this->mTargetPos.z), 0.1f, 30.0f * i_this->mTurnScale);
-        cLib_addCalc2(&i_this->mTurnScale, hio.unk_1C, 1.0f, 0.1f * hio.unk_1C);
+        cLib_addCalc2(&i_this->mTurnScale, hio.mTurnScaleMax, 1.0f, 0.1f * hio.mTurnScaleMax);
 
         cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mPlayerAngleY, 5, (s16)gabi::ftoi(2048.0f * i_this->mAttackTurnScale));
         cLib_addCalc2(&i_this->mAttackTurnScale, 1.0f, 1.0f, 0.05f);
 
         if (i_this->mTimers[0] == 0) {
             i_this->mMode = 6;
-            anm_init(i_this, dRes_INDEX_BB_BCK_ATACK01_e, 2.0f, 0, hio.unk_2C, dRes_INDEX_BB_BAS_ATACK01_e);
+            anm_init(i_this, dRes_INDEX_BB_BCK_ATACK01_e, 2.0f, 0, hio.mDiveAnmSpeed, dRes_INDEX_BB_BAS_ATACK01_e);
             i_this->mTargetPos.x = (f32)player->current.pos.x;
             i_this->mTargetPos.y = player->current.pos.y + 100.0f;
             i_this->mTargetPos.z = (f32)player->current.pos.z;
@@ -554,8 +554,8 @@ static inline void bb_atack_move(bb_class* i_this) {
 
         if (i_this->mpMorf->isStop()) {
             i_this->mMode = 4;
-            anm_init(i_this, dRes_INDEX_BB_BCK_FLYB01_e, 3.0f, 2, hio.unk_28, dRes_INDEX_BB_BAS_FLYB01_e);
-            i_this->mTimers[5] = (s16)gabi::ftoi((cM_rndF(30.0f) + 20.0f) * hio.unk_20);
+            anm_init(i_this, dRes_INDEX_BB_BCK_FLYB01_e, 3.0f, 2, hio.mHoverAnmSpeed, dRes_INDEX_BB_BAS_FLYB01_e);
+            i_this->mTimers[5] = (s16)gabi::ftoi((cM_rndF(30.0f) + 20.0f) * hio.mAttackWaitScale);
             i_this->mTurnScale = 0.0f;
             i_this->mAttackTurnScale = 0.0f;
             tex_anm_set(i_this, 3);
@@ -570,8 +570,8 @@ static inline void bb_atack_move(bb_class* i_this) {
                 scale.y = 4.0f;
                 dComIfGp_particle_set(ID_AK_JN_NG, &i_this->eyePos, nullptr, &scale);
                 i_this->mMode = 10;
-                i_this->mTimers[0] = hio.unk_30;
-                anm_init(i_this, dRes_INDEX_BB_BCK_GUSYA01_e, 0.0f, 0, hio.unk_38, dRes_INDEX_BB_BAS_GUSYA01_e);
+                i_this->mTimers[0] = hio.mCrashTime;
+                anm_init(i_this, dRes_INDEX_BB_BCK_GUSYA01_e, 0.0f, 0, hio.mCrashAnmSpeed, dRes_INDEX_BB_BAS_GUSYA01_e);
                 i_this->mTargetSpeed = REG0_F(7);
                 i_this->mSpeedStep = 1.0f;
                 r28 = 0;
@@ -589,15 +589,15 @@ static inline void bb_atack_move(bb_class* i_this) {
         bb_pos_move(i_this);
         if (i_this->mpMorf->isStop() && i_this->mMode == 10) {
             i_this->mMode = 11;
-            anm_init(i_this, dRes_INDEX_BB_BCK_FURA01_e, 0.0f, 2, hio.unk_3C, dRes_INDEX_BB_BAS_FURA01_e);
+            anm_init(i_this, dRes_INDEX_BB_BCK_FURA01_e, 0.0f, 2, hio.mDizzyAnmSpeed, dRes_INDEX_BB_BAS_FURA01_e);
         }
         if (i_this->mMode == 11 && (i_this->mTimers[0] & 7) == 5) {
             kuti_open(i_this, 0x12, JA_SE_CV_BB_FURAFURA);
         }
         if (i_this->mTimers[0] == 0) {
             i_this->mMode = 4;
-            i_this->mTimers[5] = (s16)gabi::ftoi((cM_rndF(30.0f) + 20.0f) * hio.unk_20);
-            anm_init(i_this, dRes_INDEX_BB_BCK_FLYB01_e, 10.0f, 2, hio.unk_28, dRes_INDEX_BB_BAS_FLYB01_e);
+            i_this->mTimers[5] = (s16)gabi::ftoi((cM_rndF(30.0f) + 20.0f) * hio.mAttackWaitScale);
+            anm_init(i_this, dRes_INDEX_BB_BCK_FLYB01_e, 10.0f, 2, hio.mHoverAnmSpeed, dRes_INDEX_BB_BAS_FLYB01_e);
             i_this->mTurnScale = 0.0f;
             i_this->mAttackTurnScale = 0.0f;
             tex_anm_set(i_this, 5);
@@ -610,7 +610,7 @@ static inline void bb_atack_move(bb_class* i_this) {
         x = i_this->mTargetPos.x - i_this->current.pos.x;
         y = i_this->mTargetPos.y - i_this->current.pos.y;
         z = i_this->mTargetPos.z - i_this->current.pos.z;
-        BOOL hit = std_sqrtf(gabi::fmadds(z, z, gabi::fmadds(x, x, y * y))) > hio.unk_7C;
+        BOOL hit = std_sqrtf(gabi::fmadds(z, z, gabi::fmadds(x, x, y * y))) > hio.mGiveUpDist;
         if (!hit) hit = bb_player_bg_check(i_this);
         if (!hit) hit = bb_setpos_bg_check(i_this) | r29;
         if (hit) {
@@ -622,7 +622,7 @@ static inline void bb_atack_move(bb_class* i_this) {
             }
             if (i_this->mBehavior == BB_MODE_WAIT || i_this->mBehavior == BB_MODE_NEST_WAIT) {
                 i_this->mMode = 10;
-                anm_init(i_this, dRes_INDEX_BB_BCK_FLY01_e, 5.0f, 2, hio.unk_24, dRes_INDEX_BB_BAS_FLY01_e);
+                anm_init(i_this, dRes_INDEX_BB_BCK_FLY01_e, 5.0f, 2, hio.mFlyAnmSpeed, dRes_INDEX_BB_BAS_FLY01_e);
             } else {
                 i_this->mMode = 0;
                 i_this->mTimers[0] = 0;
@@ -670,7 +670,7 @@ static inline void bb_eye_tex_anm(bb_class* i_this) {
 BOOL daBb_Execute(bb_class* i_this) {
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
 
-    i_this->mEnemyIce.m02C = REG0_F(5) + 50.0f;
+    i_this->mEnemyIce.mIceOffsetY = REG0_F(5) + 50.0f;
 
     if (enemy_ice(&i_this->mEnemyIce)) {
         i_this->mpMorf->setPlayMode(J3DFrameCtrl::EMode_NONE);
@@ -710,7 +710,7 @@ BOOL daBb_Execute(bb_class* i_this) {
     i_this->attention_info.flags = fopAc_Attn_LOCKON_BATTLE_e;
     i_this->actor_status |= fopAcStts_SHOWMAP_e;
 
-    if (l_bbHIO.unk_05 == 0) {
+    if (l_bbHIO.mDebugPause == 0) {
         for (s32 i = 0; i < 6; i++) {
             if (i_this->mTimers[i] != 0) {
                 i_this->mTimers[i] = (s16)(i_this->mTimers[i] - 1);
@@ -759,7 +759,7 @@ BOOL daBb_Execute(bb_class* i_this) {
         }
     }
 
-    MtxTrans(i_this->current.pos.x, i_this->current.pos.y + i_this->mEnemyIce.m028, i_this->current.pos.z, false);
+    MtxTrans(i_this->current.pos.x, i_this->current.pos.y + i_this->mEnemyIce.mBodyLiftY, i_this->current.pos.z, false);
 
     s16 x = i_this->mJointRot[0].x / 2;
     s16 z = i_this->mJointRot[0].z / 2;
@@ -781,7 +781,7 @@ BOOL daBb_Execute(bb_class* i_this) {
     if (i_this->mCarryState != 0) {
         switch (i_this->mCarryState) {
         case 1:
-            anm_init(i_this, dRes_INDEX_BB_BCK_FLYC_e, 1.0f, 2, l_bbHIO.unk_4C, dRes_INDEX_BB_BAS_FLYC_e);
+            anm_init(i_this, dRes_INDEX_BB_BCK_FLYC_e, 1.0f, 2, l_bbHIO.mCarryFlyAnmSpeed, dRes_INDEX_BB_BAS_FLYC_e);
             i_this->mCarryState = 2;
             break;
         case 2: {

@@ -98,14 +98,21 @@ struct dPa_trackEcallBack {
 WWHD_SIZE(dPa_trackEcallBack, 0x50);
 struct daObjPirateShipHIO_c {
     be<s8> mNo;
-    be<u8> m05;
+    be<u8> mNoPathMove;  /* was m05: executeShip (in daObjPirateship::Act_c::_execute 02385B70): the path move and the sway run only while it is 0 (tww _execute the same); pirateship_sinit 02385FA0 sets the default, never written elsewhere in WWHD or tww (0) */
     be<s16> m06;
-    be<f32> m08, m0C;
-    be<s16> m10, m12;
+    be<f32> mPathSpeed;  /* was m08: path_move_call_back 02384078: the speed toward the next path point is (it + 5) * |cos| of the turn left (tww the same); pirateship_sinit 02385FA0 sets the default, never written elsewhere in WWHD or tww (2) */
+    be<f32> mSwayHeight;  /* was m0C: executeShip (in daObjPirateship::Act_c::_execute 02385B70): pos.y = home.pos.y + (it + 10) * sin(mSwayAngle) (tww _execute the same); pirateship_sinit 02385FA0 sets the default, never written elsewhere in WWHD or tww (100) */
+    be<s16> mSwaySpeedRising;  /* was m10: executeShip (in daObjPirateship::Act_c::_execute 02385B70): mSwaySpeed's target while mSwayAngle is within +-0x4000 (the ship rising) (tww _execute the same); pirateship_sinit 02385FA0 sets the default, never written elsewhere in WWHD or tww (250) */
+    be<s16> mSwaySpeedFalling;  /* was m12: executeShip (in daObjPirateship::Act_c::_execute 02385B70): mSwaySpeed's target while mSwayAngle is outside +-0x4000 (the ship sinking) (tww _execute the same); pirateship_sinit 02385FA0 sets the default, never written elsewhere in WWHD or tww (500) */
     be<s8> m14;
     u8 reserved11[3];
-    cXyz m18;
-    be<f32> m24, m28, m2C, m30, m34, m38;
+    cXyz mWakeOffset;  /* was m18: daObjPirateship::Act_c::SetWave 02384C2C: the wake emitter's position in ship space (mWakePos is the ship matrix times it) (tww the same); pirateship_sinit 02385FA0 sets the default, never written elsewhere in WWHD or tww (0, 0, 0) */
+    be<f32> mWakeScale;  /* was m24: daObjPirateship::Act_c::SetWave 02384C2C: the wake emitter's particle and dynamics scale (tww the same); pirateship_sinit 02385FA0 sets the default, never written elsewhere in WWHD or tww (4) */
+    be<f32> mWakeIndirectOffset;  /* was m28: daObjPirateship::Act_c::SetWave 02384C2C: mWakeCb.mIndirectOffset (tww setIndirectTexData's first argument) (tww the same); pirateship_sinit 02385FA0 sets the default, never written elsewhere in WWHD or tww (-0.02) */
+    be<f32> mWakeIndirectScale;  /* was m2C: daObjPirateship::Act_c::SetWave 02384C2C: mWakeCb.mIndirectScale (tww setIndirectTexData's second argument) (tww the same); pirateship_sinit 02385FA0 sets the default, never written elsewhere in WWHD or tww (5) */
+    be<f32> mWakeSpeed;  /* was m30: daObjPirateship::Act_c::SetWave 02384C2C: mWakeCb.mSpeed (tww setSpeed) (tww the same); pirateship_sinit 02385FA0 sets the default, never written elsewhere in WWHD or tww (300) */
+    be<f32> mWakeLimitSpeed;  /* was m34: daObjPirateship::Act_c::SetWave 02384C2C: mWakeCb.mLimitSpeed (tww setLimitSpeed) (tww the same); pirateship_sinit 02385FA0 sets the default, never written elsewhere in WWHD or tww (3) */
+    be<f32> mWakeDirectionalSpeed;  /* was m38: daObjPirateship::Act_c::SetWave 02384C2C: the wake emitter's mInitialVelDir (tww setDirectionalSpeed) (tww the same); pirateship_sinit 02385FA0 sets the default, never written elsewhere in WWHD or tww (17) */
     be<u32> __vtbl;
 };
 WWHD_SIZE(daObjPirateShipHIO_c, 0x3C);
@@ -213,14 +220,14 @@ void cBgS_GndChk__dt(void*, s32);
 void cCcD_Stts__ct(void*);
 void cM3dGCyl__ct(void*);
 void csXyz__ct(csXyz*, s32, s32, s32);
-void pirateshipLineDestruct(void*, s32);
+void pirateshipBgAcchDestruct(void*, s32); /* 024EFD9C dBgS_Acch::~dBgS_Acch (was pirateshipLineDestruct (misnamed)) */
 void pirateshipAcchConstruct(void*);
 void dBgS_MoveBgActor__ct(daObjPirateship::Act_c*);
 s32 pirateshipMoveBGCreate(daObjPirateship::Act_c*, const char*, s32, u32, u32);
 s32 pirateshipMoveBGExecute(daObjPirateship::Act_c*);
 s32 pirateshipMoveBGDelete(daObjPirateship::Act_c*);
 void pirateshipStatusDestruct(void*, s32);
-void pirateshipAcchDestruct(void*, s32);
+void pirateshipCylDestruct(void*, s32); /* 02515A70 dCcD_Cyl::~dCcD_Cyl (was pirateshipAcchDestruct (misnamed)) */
 void dCcD_GStts__ct(void*);
 void dCcD_GObjInf__ct(void*);
 void dComIfG_deleteObjectRes(const char*);

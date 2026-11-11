@@ -326,7 +326,7 @@ bool dCamera_c::followCamera(s32 style) {
         cXyz x;
         cXyz e;
         if (mFollowMoveBg != 0)
-            cameraFollowMoveBgPosition(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mBG.m5C.m04), 1,
+            cameraFollowMoveBgPosition(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mBG.mCameraGround.mGndChk), 1,
                                        &p->m3C0, 0, 0); /* MoveBgMatrixCrrPos */
         f32 r = (f32)(s32)((s32)p->m37C - (s32)mCurModeTimer);
         f32 k = r / p->m380;

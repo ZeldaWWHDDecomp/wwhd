@@ -24,7 +24,7 @@ callee 02008E0C r3=255        # cBgS_GndChk ct
 callee 02008FEC r3=255        # cBgS_LinChk ct
 field 0229249C r3+0x734 u32 0,2,6
 field * r3+0x464 u32 0,0x20,0xFFFFFFDF,0xFFFFFFFF   # mAcch flags (GROUND_HIT 0x20)
-field * r3+0x4246 i8 0 1      # m312A (animation end)
+field * r3+0x4246 i8 0 1      # mAnmEnd (animation end)
 field 0229310C 10467C64 u32 0,1
 callee 025CB374 r6=12         # dVibration_c::StartShock(vib, strength, flags, cXyz copy)
 field * r3+0x420C u32 0,1,0x17,0xFFFFFFFF,0x12345678

@@ -38,41 +38,41 @@ void daNpc_Ji1_c::battleGameSetTimer() {
   f32 temp2;
   daNpc_Ji1_HIO_c &h = l_hio;
   s32 n = mTeachStep;
-  if (n < h.field_0x60[0]) {
-    f32 temp = (f32)n / (f32)(s16)h.field_0x60[0];
+  if (n < h.mLevelHits[0]) {
+    f32 temp = (f32)n / (f32)(s16)h.mLevelHits[0];
     f32 r = 1.0f - temp;
     temp2 =
-        gabi::fmadds(temp, (f32)(s16)h.field_0x8E, r * (f32)(s16)h.field_0x8A);
+        gabi::fmadds(temp, (f32)(s16)h.mBattleTimerBase2, r * (f32)(s16)h.mBattleTimerBase0);
     temp1 =
-        gabi::fmadds(temp, (f32)(s16)h.field_0x9A, r * (f32)(s16)h.field_0x96);
-  } else if (n < h.field_0x60[1]) {
-    s32 a = h.field_0x60[0];
-    f32 temp = (f32)(n - a) / (f32)(h.field_0x60[1] - a);
+        gabi::fmadds(temp, (f32)(s16)h.mBattleTimerRange2, r * (f32)(s16)h.mBattleTimerRange0);
+  } else if (n < h.mLevelHits[1]) {
+    s32 a = h.mLevelHits[0];
+    f32 temp = (f32)(n - a) / (f32)(h.mLevelHits[1] - a);
     f32 r = 1.0f - temp;
     temp2 =
-        gabi::fmadds(temp, (f32)(s16)h.field_0x90, r * (f32)(s16)h.field_0x8C);
+        gabi::fmadds(temp, (f32)(s16)h.mBattleTimerBase3, r * (f32)(s16)h.mBattleTimerBase1);
     temp1 =
-        gabi::fmadds(temp, (f32)(s16)h.field_0x9C, r * (f32)(s16)h.field_0x98);
-  } else if (n < h.field_0x60[2]) {
-    s32 a = h.field_0x60[1];
-    f32 temp = (f32)(n - a) / (f32)(h.field_0x60[2] - a);
+        gabi::fmadds(temp, (f32)(s16)h.mBattleTimerRange3, r * (f32)(s16)h.mBattleTimerRange1);
+  } else if (n < h.mLevelHits[2]) {
+    s32 a = h.mLevelHits[1];
+    f32 temp = (f32)(n - a) / (f32)(h.mLevelHits[2] - a);
     f32 r = 1.0f - temp;
     temp2 =
-        gabi::fmadds(temp, (f32)(s16)h.field_0x92, r * (f32)(s16)h.field_0x8E);
+        gabi::fmadds(temp, (f32)(s16)h.mBattleTimerBase4, r * (f32)(s16)h.mBattleTimerBase2);
     temp1 =
-        gabi::fmadds(temp, (f32)(s16)h.field_0x9E, r * (f32)(s16)h.field_0x9A);
-  } else if (n < h.field_0x60[3]) {
-    s32 a = h.field_0x60[2];
-    f32 temp = (f32)(n - a) / (f32)(h.field_0x60[3] - a);
+        gabi::fmadds(temp, (f32)(s16)h.mBattleTimerRange4, r * (f32)(s16)h.mBattleTimerRange2);
+  } else if (n < h.mLevelHits[3]) {
+    s32 a = h.mLevelHits[2];
+    f32 temp = (f32)(n - a) / (f32)(h.mLevelHits[3] - a);
     f32 r = 1.0f - temp;
     temp2 =
-        gabi::fmadds(temp, (f32)(s16)h.field_0x94, r * (f32)(s16)h.field_0x8C);
+        gabi::fmadds(temp, (f32)(s16)h.mBattleTimerBase5, r * (f32)(s16)h.mBattleTimerBase1);
     temp1 =
-        gabi::fmadds(temp, (f32)(s16)h.field_0xA0, r * (f32)(s16)h.field_0x98);
+        gabi::fmadds(temp, (f32)(s16)h.mBattleTimerRange5, r * (f32)(s16)h.mBattleTimerRange1);
   } else {
     JUT_ASSERT_fail("d_a_npc_ji1.cpp", 0xFB0, "0");
-    temp2 = (f32)(s16)h.field_0x94;
-    temp1 = (f32)(s16)h.field_0xA0;
+    temp2 = (f32)(s16)h.mBattleTimerBase5;
+    temp1 = (f32)(s16)h.mBattleTimerRange5;
   }
   mBattleTimer = gabi::ftoi(temp2 + cM_rndF(temp1));
 }
@@ -140,7 +140,7 @@ BOOL daNpc_Ji1_c::battleMove(f32 param_1) {
       setAnm(Ji1Battle_BCK_KROT, 4.0f, 0);
     }
     if (mAnimation == Ji1Battle_BCK_KROT) {
-      mpOrcaMorf->setPlaySpeed(l_hio.field_0x48 * param_1);
+      mpOrcaMorf->setPlaySpeed(l_hio.mKrotAnmSpeed * param_1);
     }
     return TRUE;
   }
@@ -233,7 +233,7 @@ static inline BOOL attack_begin(daNpc_Ji1_c *a, f32 frame, f32 start, f32 end,
 static inline void attack_speed(daNpc_Ji1_c *a, f32 limit, be<f32> &fast,
                                 be<f32> &slow) {
   if (ji1BattleCalcTimerHD(&a->mNockBackTimer) > 0) {
-    a->mpOrcaMorf->setPlaySpeed(l_hio.field_0x84);
+    a->mpOrcaMorf->setPlaySpeed(l_hio.mNockBackAnmSpeed);
     s32 t = a->mNockBackTimer;
     a->mArmShakePhase = (s16)(t * 0x2800);
     a->mArmShakeAmp = (s16)(t * 0x100);
@@ -244,8 +244,8 @@ static inline void attack_speed(daNpc_Ji1_c *a, f32 limit, be<f32> &fast,
       a->mpOrcaMorf->setPlaySpeed(slow);
       if (ChkTgShieldHit(&a->mGuardCyl)) {
         a->setGuardParticle();
-        a->mNockBackTimer = (s16)l_hio.field_0x88;
-        a->mpOrcaMorf->setPlaySpeed(l_hio.field_0x84);
+        a->mNockBackTimer = (s16)l_hio.mNockBackTime;
+        a->mpOrcaMorf->setPlaySpeed(l_hio.mNockBackAnmSpeed);
       }
     }
   }
@@ -260,7 +260,7 @@ BOOL daNpc_Ji1_c::battleSubActionAttack() {
   if (attack_begin(this, frame, 0.0f, 12.0f, 2)) {
     return FALSE;
   }
-  attack_speed(this, 10.0f, l_hio.field_0x70, l_hio.field_0x6C);
+  attack_speed(this, 10.0f, l_hio.mAttackSwingAnmSpeed, l_hio.mAttackAnmSpeed);
   if (frame > 12.0f) {
     if (frame < 28.0f) {
       gabi::Local<cXyz> temp2;
@@ -288,7 +288,7 @@ BOOL daNpc_Ji1_c::battleSubActionTateAttack() {
   if (attack_begin(this, frame, 5.0f, 20.0f, 2)) {
     return FALSE;
   }
-  attack_speed(this, 26.0f, l_hio.field_0x74, l_hio.field_0x78);
+  attack_speed(this, 26.0f, l_hio.mTateYokoSwingAnmSpeed, l_hio.mTateAnmSpeed);
   if (frame > 28.0f && frame < 35.0f) {
     battleAtSet();
     mSmokePos.copy(mSpearTipPos);
@@ -315,7 +315,7 @@ BOOL daNpc_Ji1_c::battleSubActionYokoAttack() {
   if (attack_begin(this, frame, 0.0f, 20.0f, 1)) {
     return FALSE;
   }
-  attack_speed(this, 25.0f, l_hio.field_0x74, l_hio.field_0x78);
+  attack_speed(this, 25.0f, l_hio.mTateYokoSwingAnmSpeed, l_hio.mTateAnmSpeed);
   if (frame > 25.0f && frame < 35.0f) {
     battleAtSet();
     f32 x = current.pos.x;
@@ -438,7 +438,7 @@ BOOL daNpc_Ji1_c::battleSubActionDamage() {
 /* 0225C660 */
 BOOL daNpc_Ji1_c::battleSubActionJpGuard() {
 
-  cLib_addCalc2(&mBackSlideDist, l_hio.field_0x34, 0.25f, l_hio.field_0x38);
+  cLib_addCalc2(&mBackSlideDist, l_hio.mJpGuardSlideDist, 0.25f, l_hio.mJpGuardSlideStep);
   gabi::Local<cXyz> temp;
   back_pos(this, temp);
   f32 temp2 = 25.0f;
@@ -459,7 +459,7 @@ BOOL daNpc_Ji1_c::battleSubActionJpGuard() {
 /* 0225C7EC */
 BOOL daNpc_Ji1_c::battleSubActionGuard() {
 
-  cLib_addCalc2(&mBackSlideDist, 70.0f, 0.35f, l_hio.field_0x40);
+  cLib_addCalc2(&mBackSlideDist, 70.0f, 0.35f, l_hio.mGuardSlideStep);
   gabi::Local<cXyz> temp;
   s16 ang = current.angle.y;
   f32 c9c = mBackSlideDist;

@@ -96,7 +96,7 @@ void hdJpegMgrCreateThread(HdJpegMgr* self) {
     gabi::Local<HdJpegSafeString> storage;
     HdJpegSafeString* name = storage.get();
     name->mVTable = &l_stringVTable;
-    name->mText = gabi::at<const char>(gabi::guest_addr("JpegWorkerHeap"));
+    name->mText = gabi::at<const char>(gabi::guest_addr("JpegEncodeMgr"));
     HdJpegHeap* parent = hdJpegGetParentHeap();
     HdJpegHeap* heap = hdJpegCreateHeap(0,name,parent,1,0);
     HdJpegThread* thread = static_cast<HdJpegThread*>(hdJpegHeapNew(0x98,heap,4));
@@ -332,7 +332,7 @@ data l_upper 10005248
 data l_registration1 1018F3D0
 data l_registration2 1018F3DC
 data l_registration3 1018F3E8
-str 10005234 "JpegWorkerHeap" renamed
+str 10005234 "JpegEncodeMgr"
 str 10005220 "JpegEncodeMgrThread" renamed
 ext 0273AD10 void* hdJpegAllocate(u32)
 ext 0273B0D4 void* hdJpegHeapAllocate(u32,HdJpegHeap*,u32)

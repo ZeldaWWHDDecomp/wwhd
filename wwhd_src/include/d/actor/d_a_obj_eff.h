@@ -51,17 +51,17 @@ struct Act_c : fopAc_ac_c {
 };
 struct BarrelSmokeCB : dPa_smokeEcallBack {
     BarrelSmokeCB();
-    be<s32> field_0x20;
+    be<s32> mLifeTimer;  /* was field_0x20: BarrelSmokeCB::BarrelSmokeCB 0233A258 sets 60; execute 0233A2C4 counts it down, fades the smoke alpha below 50 (* 3.6) and ends the smoke at 0 (tww the same) */
     void execute(JPABaseEmitter*);
 };
 struct StoolSmokeCB : dPa_smokeEcallBack {
     StoolSmokeCB();
-    be<s32> field_0x20;
+    be<s32> mLifeTimer;  /* was field_0x20: StoolSmokeCB::StoolSmokeCB 0233A35C sets 60; execute 0233A3C8 counts it down, fades the smoke alpha below 50 and ends the smoke at 0 (tww the same) */
     void execute(JPABaseEmitter*);
 };
 struct SkullSmokeCB : dPa_smokeEcallBack {
     SkullSmokeCB();
-    be<s32> field_0x20;
+    be<s32> mLifeTimer;  /* was field_0x20: SkullSmokeCB::SkullSmokeCB 0233A460 sets 60; execute 0233A4CC counts it down, fades the smoke alpha below 50 and ends the smoke at 0 (tww the same) */
     void execute(JPABaseEmitter*);
 };
 struct LandSmokeCB : dPa_smokeEcallBack {
@@ -69,12 +69,12 @@ struct LandSmokeCB : dPa_smokeEcallBack {
 };
 struct PineconeSmokeCB : dPa_smokeEcallBack {
     PineconeSmokeCB();
-    be<s32> field_0x20;
+    be<s32> mLifeTimer;  /* was field_0x20: PineconeSmokeCB::PineconeSmokeCB 0233A5BC sets 60; execute 0233A628 counts it down, fades the smoke alpha below 50 and ends the smoke at 0 (tww the same) */
     void execute(JPABaseEmitter*);
 };
 struct WoodBoxSmokeCB : dPa_smokeEcallBack {
     WoodBoxSmokeCB();
-    be<s32> field_0x20;
+    be<s32> mLifeTimer;  /* was field_0x20: WoodBoxSmokeCB::WoodBoxSmokeCB 0233A6C0 sets 60; execute 0233A72C counts it down, fades the smoke alpha below 50 and ends the smoke at 0 (tww the same) */
     void execute(JPABaseEmitter*);
 };
 } // namespace daObjEff
@@ -82,4 +82,4 @@ WWHD_SIZE(daObjEff::Act_c, 0x3B4);
 WWHD_OFFSET(daObjEff::Act_c, mType, 0x3AC);
 WWHD_OFFSET(daObjEff::Act_c, mParticleCallback, 0x3B0);
 WWHD_SIZE(daObjEff::BarrelSmokeCB, 0x24);
-WWHD_OFFSET(daObjEff::BarrelSmokeCB, field_0x20, 0x20);
+WWHD_OFFSET(daObjEff::BarrelSmokeCB, mLifeTimer, 0x20);

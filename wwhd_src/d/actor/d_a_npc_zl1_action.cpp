@@ -21,29 +21,29 @@ void daNpc_Zl1_c::chngAnmAtr(u8 param_1) {
         break;
     case 0x15E3:
         mLookMode = 5;
-        field_0x7BC = 10;
+        mTurnStepMode = 10;
         break;
     case 0x15E4:
         mLookMode = 1;
-        field_0x7BC = -1;
+        mTurnStepMode = -1;
         break;
     case 0x15E7: {
         mLookMode = 2;
-        field_0x7D0 = true;
+        mEyeFollow = true;
         // HD: retain four player reads and fused coordinate arithmetic in this order.
         f32 c1 = cM_scos(dComIfGp_getPlayer(0)->shape_angle.y);
         f32 s1 = cM_ssin(dComIfGp_getPlayer(0)->shape_angle.y);
-        mLookPos.x = field_0x830.x + gabi::fmadds(c1, -20.0f, s1 * -40.0f);
+        mLookPos.x = mLightPos.x + gabi::fmadds(c1, -20.0f, s1 * -40.0f);
         f32 s2 = cM_ssin(dComIfGp_getPlayer(0)->shape_angle.y);
         f32 c2 = cM_scos(dComIfGp_getPlayer(0)->shape_angle.y);
-        f32 z = field_0x830.z + gabi::fmsubs(c2, -40.0f, s2 * -20.0f);
-        mLookPos.y = field_0x830.y;
+        f32 z = mLightPos.z + gabi::fmsubs(c2, -40.0f, s2 * -20.0f);
+        mLookPos.y = mLightPos.y;
         mLookPos.z = z;
         break;
     }
     case 0x15EC: {
         mLookMode = 2;
-        field_0x7D0 = false;
+        mEyeFollow = false;
         cXyz pos;
         kyoroPos(&pos, 0xB);
         mLookPos.copy(pos);
@@ -275,9 +275,9 @@ BOOL daNpc_Zl1_c::demo_2() {
         return TRUE;
     }
     cXyz pos; /* passed by value: a copy */
-    pos.x = field_0x764.x;
-    pos.y = field_0x764.y;
-    pos.z = field_0x764.z;
+    pos.x = mDemoAreaPos.x;
+    pos.y = mDemoAreaPos.y;
+    pos.z = mDemoAreaPos.z;
     if (chk_areaIN(Zl1_hio().mPrmTbl.field_24, 100.0f, 0x7FFF, &pos)) {
         mOrderEvent = 4;
     }
@@ -294,7 +294,7 @@ BOOL daNpc_Zl1_c::demo_3() {
         return TRUE;
     }
     // HD: this distance is rounded to float before the comparison.
-    f32 dist = std_sqrtf(PSVECSquareDistance(&field_0x764, &dComIfGp_getPlayer(0)->current.pos));
+    f32 dist = std_sqrtf(PSVECSquareDistance(&mDemoAreaPos, &dComIfGp_getPlayer(0)->current.pos));
     if (dist < Zl1_hio().mPrmTbl.field_28) {
         mOrderEvent = 5;
     }
@@ -332,10 +332,10 @@ BOOL daNpc_Zl1_c::optn_1() {
         if (abs((int)(s16)(angle - current.angle.y)) < 0x1800) {
             setStt(4);
             if (actorDistSq > Zl1_hio().mPrmTbl.field_4C * Zl1_hio().mPrmTbl.field_4C) {
-                field_0x7AE = Zl1_hio().mPrmTbl.field_32;
+                mLookPlayerTimer = Zl1_hio().mPrmTbl.field_32;
                 mKyoroTimer = Zl1_hio().mPrmTbl.field_2E;
             } else {
-                field_0x7AE = Zl1_hio().mPrmTbl.field_30;
+                mLookPlayerTimer = Zl1_hio().mPrmTbl.field_30;
                 mKyoroTimer = Zl1_hio().mPrmTbl.field_2C;
             }
             mKyoroPosNo = 0;
@@ -347,17 +347,17 @@ BOOL daNpc_Zl1_c::optn_1() {
     }
     mOrderEvent = 2;
     if (mAnmNo == 0xC) {
-        if (mbMorfAnimStopped != 0 && Zl1_calcTimer(&field_0x7BA) == 0) {
+        if (mbMorfAnimStopped != 0 && Zl1_calcTimer(&mIdleAnmLoops) == 0) {
             setAnm_NUM(8, 1);
-            field_0x7B8 = (s16)Zl1_getRndValue(0x5A, 0xB4);
+            mIdleAnmTimer = (s16)Zl1_getRndValue(0x5A, 0xB4);
         }
         mLookMode = 0;
         return TRUE;
     }
-    if (Zl1_calcTimer(&field_0x7B8) == 0) {
+    if (Zl1_calcTimer(&mIdleAnmTimer) == 0) {
         setAnm_NUM(0xC, 1);
         mLookMode = 0;
-        field_0x7BA = (s16)((Zl1_counter() & 1) + 1);
+        mIdleAnmLoops = (s16)((Zl1_counter() & 1) + 1);
         return TRUE;
     }
     mLookMode = 1;
@@ -367,8 +367,8 @@ BOOL daNpc_Zl1_c::optn_1() {
 /* 023099F4 */
 BOOL daNpc_Zl1_c::optn_2() {
     // HD: retain fused distance subtraction, fsel comparisons and jump-store order.
-    if (field_0x7CC) {
-        field_0x7CC = move_jmp();
+    if (mJumping) {
+        mJumping = move_jmp();
         return TRUE;
     }
     f32 actorDist = fopAcM_searchActorDistance2(this, dComIfGp_getPlayer(0));
@@ -391,13 +391,13 @@ BOOL daNpc_Zl1_c::optn_2() {
     if (((u32)mObjAcch.m_flags & dBgS_Acch::WALL_HIT)  && setFrontWallType()) {
         setAnm_NUM(10, 1);
         speedF = Zl1_hio().mPrmTbl.field_58;
-        field_0x7CC = true;
+        mJumping = true;
         speed.y = Zl1_hio().mPrmTbl.field_54;
         return TRUE;
     }
     if (!((u32)mObjAcch.m_flags & dBgS_Acch::GROUND_HIT)  && mObjAcch.GetGroundH() - current.pos.y < -30.1f) {
         setAnm_NUM(10, 1);
-        field_0x7CC = true;
+        mJumping = true;
         speed.y = Zl1_hio().mPrmTbl.field_54;
         return TRUE;
     }
@@ -412,7 +412,7 @@ BOOL daNpc_Zl1_c::optn_2() {
     f32 spd = speedF * Zl1_hio().mPrmTbl.field_50;
     spd = (spd - 0.9f >= 0.0f) ? spd : 0.9f; /* cLib_minLimit (fsel) */
     mpMorf->setPlaySpeed(spd);
-    mLookMode = Zl1_calcTimer(&field_0x7AE) != 0 ? 1 : 5;
+    mLookMode = Zl1_calcTimer(&mLookPlayerTimer) != 0 ? 1 : 5;
     return TRUE;
 }
 
@@ -491,7 +491,7 @@ BOOL daNpc_Zl1_c::demo_action2(void*) {
             setStt(8);
             current.pos.set(-37692.0f, 2200.0f, 8016.0f);
             current.angle.y = -0x5C72;
-            field_0x764.y = current.pos.y;
+            mDemoAreaPos.y = current.pos.y;
             mActionStatus = mActionStatus + 1;
         } else {
             setStt(7);

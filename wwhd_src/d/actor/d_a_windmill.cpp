@@ -297,7 +297,7 @@ void daWindMill_c::hane_move() {
         if (tag) {
             auto *windTag = static_cast<WindTagView *>(tag);
             u8 type = windTag->mType;
-            f32 scale = windTag->field_0x49c;
+            f32 scale = windTag->mHeightScale;
             f32 length = windData[2u * type] * scale;
             wind = windTag->mOffsY / length;
         }
@@ -351,7 +351,7 @@ void daWindMill_c::set_at() {
     if (type == daWindMill_c::SMALL)
         multiply(&(*small)[0]);
     for (int i = 0; i < 4; i++) {
-        WindmillCapsuleData *data = &a->m1244[i];
+        WindmillCapsuleData *data = &a->mCpsShape[i];
         if (type == daWindMill_c::SMALL) {
             multiply(&(*small)[i + 1]);
             data->mStart.copy((*small)[0]);

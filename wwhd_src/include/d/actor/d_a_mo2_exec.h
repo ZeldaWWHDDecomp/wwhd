@@ -36,8 +36,8 @@ struct JntHit_HIO_l {
 };
 
 struct ke_s {
-    /* 0x000 */ cXyz m000[10];
-    /* 0x078 */ cXyz m078[10];
+    /* 0x000 */ cXyz mPointPos[10];  /* was m000: ke_control 021C6F14: the 10 spear-hair points, each placed 21.875 from the previous one (floor-clamped); nodeCallBack_P 021C6BE0 sets [0] on joint MO_JNT_MO_YARI_e; ke_disp (in daMo2_Draw 021C7344) copies them into the 3D line (tww the same; after our decomp's tt_ke_s mPos) */
+    /* 0x078 */ cXyz mPointVelocity[10];  /* was m078: ke_control 021C6F14: holds the old x / z, then (new - old) * damping, added to the next step's point (tww the same; after our decomp's tt_ke_s mVelocity) */
     /* 0x0F0 */ u8 m0F0[0x124 - 0x0F0];
 };
 WWHD_SIZE(ke_s, 0x124);
@@ -174,13 +174,15 @@ struct damagereaction_l {
     /* 0x07EC */ be<u32> mHangBridgeId;
 };
 WWHD_SIZE(damagereaction_l, 0x7F0);
+WWHD_OFFSET(damagereaction_l, mJntGroundState, 0x400);
+WWHD_OFFSET(damagereaction_l, mJnt10LineBlocked, 0x438);
 struct enemyice_l {
     /* 0x0000 */ gptr<fopAc_ac_c> mpActor;
     /* 0x0004 */ be<s16> mFreezeDuration;
     /* 0x0006 */ be<s8> mLightShrinkTimer;
     /* 0x0007 */ u8 _0007[0x1];
     /* 0x0008 */ be<f32> mYOffset;
-    /* 0x000C */ be<s8> m00C;
+    /* 0x000C */ be<s8> mFreezeType;  /* was m00C: view of enemyice::mFreezeType (c/c_damagereaction.h) */
     /* 0x000D */ be<s8> mMode;
     /* 0x000E */ be<s16> mFreezeTimer;
     /* 0x0010 */ be<s16> mMoveDelayTimer;
@@ -189,8 +191,8 @@ struct enemyice_l {
     /* 0x0016 */ u8 _0016[0x2];
     /* 0x0018 */ cXyz mSpeed;
     /* 0x0024 */ be<f32> mSpeedF;
-    /* 0x0028 */ be<f32> m028;
-    /* 0x002C */ be<f32> m02C;
+    /* 0x0028 */ be<f32> mBodyLiftY;  /* was m028: view of enemyice::mBodyLiftY (c/c_damagereaction.h) */
+    /* 0x002C */ be<f32> mIceOffsetY;  /* was m02C: view of enemyice::mIceOffsetY (c/c_damagereaction.h) */
     /* 0x0030 */ dCcD_Stts mStts;
     /* 0x006C */ dCcD_Cyl mCyl;
     /* 0x019C */ be<f32> mCylHeight;
@@ -252,13 +254,13 @@ struct mo2_class : fopEn_enemy_c {
     /* 0x0464 */ u8 _0464[0x284];
     /* 0x06E8 */ mDoExt_3DlineMat0_l m0570;
     /* 0x0830 */ gptr<J3DModel> mpBlurModel;  /* was m058C: createHeap 021CC524: mDoExt_J3DModel__create of the spear-trail BMD (HD index 0x7E); br_draw (in daMo2_Draw 021C7344) places it on joint MO_JNT_MO_YARI_e and draws it */
-    /* 0x0834 */ be<f32> mBlurScaleX;  /* was m0590: fight (in Mo2_move 021D0A14): moveHIO m0E0[] / m110[] by the attack frame; br_draw (in daMo2_Draw 021C7344) scales the blur model x by l_mo2HIO.m014 * it */
+    /* 0x0834 */ be<f32> mBlurScaleX;  /* was m0590: fight (in Mo2_move 021D0A14): moveHIO mAttack1BlurScaleX[] / mAttack2BlurScaleX[] by the attack frame; br_draw (in daMo2_Draw 021C7344) scales the blur model x by l_mo2HIO.mBlurScale * it */
     /* 0x0838 */ be<s32> mBlurOn;  /* was m0594: daMo2_Execute 021C9B1C clears it each frame; fight (in Mo2_move 021D0A14) sets 1 inside the swing frames of attack kinds 1 / 2; br_draw (in daMo2_Draw 021C7344) draws only while it is set */
     /* 0x083C */ be<s32> mBlurUseB;  /* was m0598: daMo2_Execute 021C9B1C clears it each frame; fight (in Mo2_move 021D0A14) sets 1 for the middle swing frames; br_draw (in daMo2_Draw 021C7344) shows the blur model's shape 2 instead of 1 when set */
     /* 0x0840 */ be<s32> mFrameCounter;  /* was m059C: daMo2_Execute 021C9B1C adds 1 per frame; p_lost 021CDE6C / yogan_fail 021CEEB0 / hip_damage 021CF900 / ground_smoke_set (in daMo2_Execute) / fight_run (in Mo2_move 021D0A14) test its low bits */
     /* 0x0844 */ be<s32> mOshiCount;  /* was m05A0: fight_run (in Mo2_move 021D0A14) adds 1 per frame while the armed Moblin is close and sees the target, at 15 starts ACTION_OSHI (push) with 50 %, else clears it; damage_check (in daMo2_Execute 021C9B1C) clears it on a hit */
     /* 0x0848 */ be<s16> mTimers[5];  /* was m05A4: daMo2_Execute 021C9B1C counts all 5 down each frame; the actions load [0]..[4] (e.g. wait_set 021C8E30 [1], nage 021CD958 [0]/[1]/[2], attack_set 021C9310 [4]) */
-    /* 0x0852 */ be<s16> mWeaponRunTimer;  /* was m05AE: wepon_search 021CF0F4 sets l_mo2HIO.m08A when the run to a weapon starts and gives up at 0; yari_off_check (in daMo2_Execute 021C9B1C) sets it when it spawns the dropped weapon actor; daMo2_Execute counts it down; jyunkai (in Mo2_move 021D0A14) sets mWeaponSearchGaveUp at 0 */
+    /* 0x0852 */ be<s16> mWeaponRunTimer;  /* was m05AE: wepon_search 021CF0F4 sets l_mo2HIO.mWeaponRunTime when the run to a weapon starts and gives up at 0; yari_off_check (in daMo2_Execute 021C9B1C) sets it when it spawns the dropped weapon actor; daMo2_Execute counts it down; jyunkai (in Mo2_move 021D0A14) sets mWeaponSearchGaveUp at 0 */
     /* 0x0854 */ be<s16> mDashStopTimer;  /* was m05B0: fight_run (in Mo2_move 021D0A14) sets rnd(10)+15 when a dash longer than 20 frames stops (BCK GAKEDEMO) and waits for it; anm_init 021C6440 sets no new animation while it is not 0; daMo2_Execute 021C9B1C counts it down and keeps smoke type 4 going */
     /* 0x0856 */ be<s16> mAnmStopTimer;  /* was m05B2: wepon_search 021CF0F4 sets 5 when it sees a weapon and turns only once it is 0; daMo2_Execute 021C9B1C counts it down and plays mpMorf only while it is 0 */
     /* 0x0858 */ be<s16> mNoHitTimer;  /* was m05B4: damage_check (in daMo2_Execute 021C9B1C) takes a Tg hit only while it is 0 and reloads it (4, 10, 0x32, 200); fail 021CED78 / yogan_fail 021CEEB0 / d_sit 021CFFA4 / d_dozou 021D0064 / e3_demo 021D0570 / Mo2_move 021D0A14 hold it at 5; daMo2_Execute moves the head sphere 20000 down while it is not 0 */
@@ -279,7 +281,7 @@ struct mo2_class : fopEn_enemy_c {
     /* 0x0884 */ cXyz mSmokePos;  /* was m05DC: ground_smoke_set (in daMo2_Execute 021C9B1C) computes it (MtxPosition); smoke_set_s 021C6578 drops it to the ground and sets the ELEMENTSMOKE particle there */
     /* 0x0890 */ csXyz mEffectAngle;  /* was m05E8: smoke_set_s 021C6578 / ground_smoke_set (in daMo2_Execute 021C9B1C): smoke particle angle; daMo2_Execute / yogan_fail 021CEEB0: TUBA00 particle angle */
     /* 0x0896 */ be<s16> mSmokeAngleY;  /* was m05EE: ground_smoke_set (in daMo2_Execute 021C9B1C) rotates the smoke offset by it and adds 2000 / 0x1FA0 / 0x2000 per call; fight (in Mo2_move 021D0A14) seeds it from angle.y */
-    /* 0x0898 */ be<s16> mSmokeTimer;  /* was m05F0: ground_smoke_set (in daMo2_Execute 021C9B1C) counts it down and sets smoke while it is >= l_mo2HIO.m024; b_nige 021CE138 / hukki 021CE6E8 / wepon_search 021CF0F4 / fight load m024 + n */
+    /* 0x0898 */ be<s16> mSmokeTimer;  /* was m05F0: ground_smoke_set (in daMo2_Execute 021C9B1C) counts it down and sets smoke while it is >= l_mo2HIO.mSmokeTimerBase; b_nige 021CE138 / hukki 021CE6E8 / wepon_search 021CF0F4 / fight load mSmokeTimerBase + n */
     /* 0x089A */ be<u8> mSmokeType;  /* was m05F2: ground_smoke_set (in daMo2_Execute 021C9B1C): switch 0..4 selects where the smoke comes from; b_nige 021CE138 sets 4, hukki 021CE6E8 3, daMo2_Execute 1 */
     /* 0x089B */ be<u8> mSmokeCount;  /* was m05F3: ground_smoke_set (in daMo2_Execute 021C9B1C) clears it; smoke_set_s 021C6578 adds 1 per smoke set and tests it with the ground attribute */
     /* 0x089C */ dPa_smokeEcallBack_l mSmokeCallBack;  /* was m05F4: mo2_class_ct 021CC91C: dPa_smokeEcallBack_ct; smoke_set_s 021C6578 passes it to the smoke emitter; daMo2_Delete 021CC44C removes it */
@@ -300,7 +302,7 @@ struct mo2_class : fopEn_enemy_c {
     /* 0x2474 */ be<f32> mAtStartFrame;  /* was m206C: attack_set 021C9310 sets 3..36 per kind; yari_hit_check (in Mo2_move 021D0A14): no At before it, attack SE at it */
     /* 0x2478 */ be<f32> mAtEndFrame;  /* was m2070: attack_set 021C9310 sets 8..52 per kind; yari_hit_check (in Mo2_move 021D0A14): no At after it */
     /* 0x247C */ be<f32> mLookStartFrame;  /* was m2074: attack_set 021C9310 sets 0 / 10 / 59 / 75 per attack kind (hukki 021CE6E8 0, wepon_search 021CF0F4 75); fight (in Mo2_move 021D0A14) sets mDamageReaction.mLookMode = 1 (head toward mpLookTarget) once mAttackFrame is past it and the target is in view */
-    /* 0x2480 */ be<f32> mTurnEndFrame;  /* was m2078: attack_set 021C9310: l_mo2HIO m0CC..m0D6 per kind; fight (in Mo2_move 021D0A14) keeps turning to mTargetAngleY while mAttackFrame is below it */
+    /* 0x2480 */ be<f32> mTurnEndFrame;  /* was m2078: attack_set 021C9310: l_mo2HIO mAttack0TurnEndFrame..mAttack5TurnEndFrame per kind; fight (in Mo2_move 021D0A14) keeps turning to mTargetAngleY while mAttackFrame is below it */
     /* 0x2484 */ be<s16> mAtWaitTimer;  /* was m207C: yari_hit_check (in Mo2_move 021D0A14) counts it down and does no spear hit check while it runs; nothing sets it (same in tww d217e2b) */
     /* 0x2486 */ be<s8> mAttackDir;  /* was m207E: attack_set 021C9310 sets 1; fight (in Mo2_move 021D0A14) sets -1 when the player guards (plays back) and steps by it; yari_hit_check has no At while < 0 */
     /* 0x2487 */ u8 _2487[0xD];
@@ -320,16 +322,16 @@ struct mo2_class : fopEn_enemy_c {
     /* 0x2D18 */ cXyz mAt2Pos;  /* was m2910: yari_hit_check (in Mo2_move 021D0A14): mSpearShaftPos for the spear kinds; mWeapon2Sph starts / moves there */
     /* 0x2D24 */ cXyz mPrevAtPos;  /* was m291C: yari_hit_check (in Mo2_move 021D0A14) copies mAtPos here before it picks the new one; never read */
     /* 0x2D30 */ cXyz mDefenseSphPos;  /* was m2928: defence 021CE46C copies mSpearShaftPos; damage_check (in daMo2_Execute 021C9B1C) centres mDefenseSph on it, sets the KIKUZU particle there and moves it to y -10000 */
-    /* 0x2D3C */ cXyz m2934;
+    /* 0x2D3C */ cXyz mClangEffectPos;  /* was m2934: fight (in Mo2_move 021D0A14) sets particle ID_AK_JN_NG and starts JA_SE_LK_ROPE_HOOK_METAL at it on the spear-bounce branch (m2940 != 0); daMo2_Delete 021CC44C deletes its sound object; never written (tww the same) */
     /* 0x2D48 */ be<u8> m2940;
     /* 0x2D49 */ be<u8> mAtStarted;  /* was m2941: attack_set 021C9310 clears it; yari_hit_check (in Mo2_move 021D0A14) starts the At spheres while it is 0 and sets it, then only moves them */
     /* 0x2D4A */ be<u8> mTurnAlways;  /* was m2942: hukki 021CE6E8 sets 1 when it attacks out of getting up, attack_set 021C9310 clears it; fight (in Mo2_move 021D0A14) keeps turning to the target while it is set */
     /* 0x2D4B */ be<u8> mWeaponSearchGaveUp;  /* was m2943: wepon_search 021CF0F4 sets 1 when the run to a weapon ends at a cliff / wall / timeout and clears it at the start; jyunkai (in Mo2_move 021D0A14) sets it when mWeaponRunTimer ran out; has_weapon / wait_set 021C8E30 / path_check 021C9004 treat it as armed */
     /* 0x2D4C */ be<s16> mBtCounter;  /* was m2944: attack_set 021C9310 clears it for attack kinds 1 / 2 / 5; daMo2_Execute 021C9B1C adds 1 per frame up to 200 (then -1 = off) and opens the parry window at mBtWindow1Start / mBtWindow2Start; damage_check sets -1 */
-    /* 0x2D4E */ be<s16> mBtWindow1Start;  /* was m2946: attack_set 021C9310: l_mo2HIO m144 / m14C / m154; daMo2_Execute 021C9B1C loads mBtWindowTimer with mBtWindow1Len when mBtCounter reaches it */
-    /* 0x2D50 */ be<s16> mBtWindow1Len;  /* was m2948: attack_set 021C9310: l_mo2HIO m146 / m14E / m156; daMo2_Execute 021C9B1C copies it to mBtWindowTimer at mBtWindow1Start */
-    /* 0x2D52 */ be<s16> mBtWindow2Start;  /* was m294A: attack_set 021C9310: l_mo2HIO m148 / m150 / m158; daMo2_Execute 021C9B1C loads mBtWindowTimer with mBtWindow2Len when mBtCounter reaches it */
-    /* 0x2D54 */ be<s16> mBtWindow2Len;  /* was m294C: attack_set 021C9310: l_mo2HIO m14A / m152 / m15A; daMo2_Execute 021C9B1C copies it to mBtWindowTimer at mBtWindow2Start */
+    /* 0x2D4E */ be<s16> mBtWindow1Start;  /* was m2946: attack_set 021C9310: l_mo2HIO mAttack1BtWindow1Start / mAttack2BtWindow1Start / mAttack5BtWindow1Start; daMo2_Execute 021C9B1C loads mBtWindowTimer with mBtWindow1Len when mBtCounter reaches it */
+    /* 0x2D50 */ be<s16> mBtWindow1Len;  /* was m2948: attack_set 021C9310: l_mo2HIO mAttack1BtWindow1Len / mAttack2BtWindow1Len / mAttack5BtWindow1Len; daMo2_Execute 021C9B1C copies it to mBtWindowTimer at mBtWindow1Start */
+    /* 0x2D52 */ be<s16> mBtWindow2Start;  /* was m294A: attack_set 021C9310: l_mo2HIO mAttack1BtWindow2Start / mAttack2BtWindow2Start / mAttack5BtWindow2Start; daMo2_Execute 021C9B1C loads mBtWindowTimer with mBtWindow2Len when mBtCounter reaches it */
+    /* 0x2D54 */ be<s16> mBtWindow2Len;  /* was m294C: attack_set 021C9310: l_mo2HIO mAttack1BtWindow2Len / mAttack2BtWindow2Len / mAttack5BtWindow2Len; daMo2_Execute 021C9B1C copies it to mBtWindowTimer at mBtWindow2Start */
     /* 0x2D56 */ be<s16> mBtWindowTimer;  /* was m294E: daMo2_Execute 021C9B1C counts it down and sets mBtNowFrame 5 (inside the parry window) while it is not 0, else 100; damage_check clears it */
     /* 0x2D58 */ be<u8> mParryOpeningType;
     /* 0x2D59 */ be<s8> mItemStolen;  /* was m2951: damage_check (in daMo2_Execute 021C9B1C) sets 1 at the first steal hit (type 0xE) and starts ACTION_P_LOST; daMo2_Draw 021C7344 hides the mo_e1 shape while it is set */
@@ -389,48 +391,48 @@ WWHD_OFFSET(mo2_class, mpJntHit, 0x3438);
 /* mo2HIO_c: GameCube offsets - 4 (GHS: vtable pointer after the members) */
 struct mo2HIO_c {
     /* 0x0000 */ be<s8> mNo;
-    /* 0x0001 */ be<u8> m005;
-    /* 0x0002 */ be<u8> m006;
-    /* 0x0003 */ be<u8> m007;
-    /* 0x0004 */ be<u8> m008;
-    /* 0x0005 */ be<u8> m009;
-    /* 0x0006 */ be<s16> m00A;
-    /* 0x0008 */ be<s16> m00C;
+    /* 0x0001 */ be<u8> mDrawSearchArea;  /* was m005: search_check_draw (in daMo2_Draw 021C7344) returns at once while it is 0, else builds the search circles / view box geometry from the ranges below (HD draws nothing); __sinit_d_a_mo2_cpp 021CD5B4 0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0002 */ be<u8> mFrameStep;  /* was m006: daMo2_Execute 021C9B1C runs the timers, damage_check and Mo2_move only while it is 0 or on a B trigger / Y hold (frame stepping); __sinit_d_a_mo2_cpp 021CD5B4 0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0003 */ be<u8> mKeepHealth;  /* was m007: __sinit_d_a_mo2_cpp 021CD5B4 0; no read in WWHD (daMo2_Execute: "HD: health debug reset removed"); tww d217e2b damage_check sets health = 10 after a hit while it is set (d_a_mo2.cpp line 3127); never written in WWHD or tww (tww genMessage registers nothing) */
+    /* 0x0004 */ be<u8> mHeadFollowsBody;  /* was m008: nodeCallBack 021C6854: 0 = mHeadAngleY from the face joint direction (atan2), else mHeadAngleY = current.angle.y; __sinit_d_a_mo2_cpp 021CD5B4 0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0005 */ be<u8> mNoAttack;  /* was m009: hukki 021CE6E8 (mode 14) and wepon_search 021CF0F4 start an attack only while it is 0; __sinit_d_a_mo2_cpp 021CD5B4 0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0006 */ be<s16> mAlertCheckTime;  /* was m00A: nage 021CD958: mTimers[1] = it + mAlertCheckDelay (length of the KKEIKAI alert look), so the alert runs this long after the view check opens; __sinit_d_a_mo2_cpp 021CD5B4 20; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0008 */ be<s16> mAlertCheckDelay;  /* was m00C: nage 021CD958: mTimers[2] = it at the alert start; the player view re-check waits until mTimers[2] is 0; __sinit_d_a_mo2_cpp 021CD5B4 40; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
     /* 0x000A */ u8 _000A[0x2];
-    /* 0x000C */ be<f32> m010;
-    /* 0x0010 */ be<f32> m014;
+    /* 0x000C */ be<f32> mModelScale;  /* was m010: daMo2_Execute 021C9B1C: MtxScale(it, it, it) for the model base matrix; __sinit_d_a_mo2_cpp 021CD5B4 1.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0010 */ be<f32> mBlurScale;  /* was m014: br_draw (in daMo2_Draw 021C7344): MtxScale(it * mBlurScaleX, it, it) for the spear-trail blur model; __sinit_d_a_mo2_cpp 021CD5B4 1.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
     /* 0x0014 */ be<f32> m018;
-    /* 0x0018 */ be<f32> m01C;
-    /* 0x001C */ be<s16> m020;
-    /* 0x001E */ be<s16> m022;
-    /* 0x0020 */ be<s16> m024;
+    /* 0x0018 */ be<f32> mDisappearOffsetY;  /* was m01C: fail 021CED78: fopAcM_createDisappear at current.pos with y + it + 100; __sinit_d_a_mo2_cpp 021CD5B4 25.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x001C */ be<s16> mHairMode;  /* was m020: ke_control 021C6F14: 0 = ground check under each spear-hair point, else the floor is dr.mSpawnY + 2.5; daMo2_Draw 021C7344 draws the hair (ke_disp) only while it is <= 1; daMo2_Create 021CCB00 and __sinit_d_a_mo2_cpp 021CD5B4 set 0 (tww the same) */
+    /* 0x001E */ be<s16> mSmokeAlpha;  /* was m022: smoke_set_s 021C6578: alpha of the ID_AK_JT_ELEMENTSMOKE00 toon particle (dComIfGp_particle_setToon); __sinit_d_a_mo2_cpp 021CD5B4 185; never written in WWHD or tww (tww genMessage registers nothing) */
+    /* 0x0020 */ be<s16> mSmokeTimerBase;  /* was m024: ground_smoke_set (in daMo2_Execute 021C9B1C) sets smoke only while mSmokeTimer >= it; b_nige / hukki / wepon_search / fight (in Mo2_move 021D0A14) load mSmokeTimer with it + 3..16; __sinit_d_a_mo2_cpp 021CD5B4 12; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
     /* 0x0022 */ u8 _0022[0x2];
-    /* 0x0024 */ be<f32> m028;
-    /* 0x0028 */ be<f32> m02C;
-    /* 0x002C */ be<f32> m030;
-    /* 0x0030 */ be<f32> m034;
-    /* 0x0034 */ be<s16> m038;
+    /* 0x0024 */ be<f32> mAttentionOffsetY;  /* was m028: nodeCallBack 021C6854: attention_info.position = eyePos with y + it; __sinit_d_a_mo2_cpp 021CD5B4 25.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0028 */ be<f32> mSearchDist;  /* was m02C: jyunkai (in Mo2_move 021D0A14): an armed Moblin notices the player within it (and in view); daMo2_Execute 021C9B1C sets 800 / 1200 while the player has the grab wear in patrol; search_check_draw circle radius; __sinit_d_a_mo2_cpp 021CD5B4 1250.0 */
+    /* 0x002C */ be<f32> mFightDist;  /* was m030: fight_run (in Mo2_move 021D0A14) stops the run and strafes within it, goes back to patrol beyond it + 75; nage 021CD958 / e3_demo 021D0570 walk until within it; hukki / wepon_search attack within it; __sinit_d_a_mo2_cpp 021CD5B4 575.0; never written in WWHD or tww (tww genMessage registers nothing) */
+    /* 0x0030 */ be<f32> mAttackDist;  /* was m034: fight_run (in Mo2_move 021D0A14): attacks within it (random chance at it +-62.5), walks back below it, pushes (mOshiCount) below it - 62.5; __sinit_d_a_mo2_cpp 021CD5B4 375.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0034 */ be<s16> mViewAngle;  /* was m038: half angle of the view cone: jyunkai / fight_run / fight (in Mo2_move 021D0A14), nage 021CD958, p_lost 021CDE6C pass it to daMo2_player_view_check 021C8C14; search_bomb 021C8378 the same; __sinit_d_a_mo2_cpp 021CD5B4 12740; daMo2_Execute 021C9B1C 0x1932 with the grab wear */
     /* 0x0036 */ u8 _0036[0x2];
-    /* 0x0038 */ be<f32> m03C;
-    /* 0x003C */ cXyz m040;
-    /* 0x0048 */ be<f32> m04C;
-    /* 0x004C */ be<f32> m050;
-    /* 0x0050 */ be<f32> m054;
-    /* 0x0054 */ be<f32> m058;
-    /* 0x0058 */ be<f32> m05C;
-    /* 0x005C */ be<f32> m060;
-    /* 0x0060 */ be<f32> m064;
-    /* 0x0064 */ be<f32> m068;
-    /* 0x0068 */ be<f32> m06C;
-    /* 0x006C */ be<f32> m070;
-    /* 0x0070 */ be<s16> m074;
+    /* 0x0038 */ be<f32> mViewHeight;  /* was m03C: daMo2_player_view_check 021C8C14 / daMo2_wepon_view_check 021C872C / search_bomb 021C8378 reject a target whose y + 50 differs from eyePos.y by more than it; __sinit_d_a_mo2_cpp 021CD5B4 400.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x003C */ cXyz mViewBox;  /* was m040: daMo2_player_view_check 021C8C14 / daMo2_wepon_view_check 021C872C / search_bomb 021C8378: target in the body frame within |x| < it.x, |y| < it.y, z < it.z is seen; __sinit_d_a_mo2_cpp 021CD5B4 (500, 130, 500); daMo2_Execute 021C9B1C x / z 340 with the grab wear */
+    /* 0x0048 */ be<f32> mViewBoxBackZ;  /* was m04C: the same view checks (daMo2_player_view_check 021C8C14, daMo2_wepon_view_check 021C872C, search_bomb 021C8378): rear z limit of the view box (z > it); __sinit_d_a_mo2_cpp 021CD5B4 -125.0; daMo2_Execute 021C9B1C -200 with the grab wear */
+    /* 0x004C */ be<f32> mPatrolSpeedArmed;  /* was m050: jyunkai (in Mo2_move 021D0A14): speedF target (and path-point reach distance) while the Moblin has its weapon; __sinit_d_a_mo2_cpp 021CD5B4 12.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0050 */ be<f32> mPatrolSpeedUnarmed;  /* was m054: jyunkai (in Mo2_move 021D0A14): speedF target without a weapon (turn speed 0x1000); __sinit_d_a_mo2_cpp 021CD5B4 60.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0054 */ be<f32> mRunSpeedArmed;  /* was m058: fight_run (in Mo2_move 021D0A14): speedF target with the weapon (no dash); nage 021CD958 / e3_demo 021D0570 walk toward the target at it; __sinit_d_a_mo2_cpp 021CD5B4 45.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0058 */ be<f32> mRunSpeedUnarmed;  /* was m05C: fight_run (in Mo2_move 021D0A14): speedF target without a weapon; __sinit_d_a_mo2_cpp 021CD5B4 70.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x005C */ be<f32> mSprintSpeed;  /* was m060: b_nige 021CE138 (run from a bomb) and wepon_search 021CF0F4 (run to a weapon) set speedF to it; __sinit_d_a_mo2_cpp 021CD5B4 90.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0060 */ be<f32> mStrafeSpeed;  /* was m064: fight_run (in Mo2_move 021D0A14) modes 3 / 4: speedF eased to +it (forward) / -it (back); __sinit_d_a_mo2_cpp 021CD5B4 20.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0064 */ be<f32> mSideStepSpeed;  /* was m068: fight_run (in Mo2_move 021D0A14) modes 5 / 6 (move angle +-0x4000): speedF eased to it; __sinit_d_a_mo2_cpp 021CD5B4 20.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0068 */ be<f32> mDashSpeed;  /* was m06C: fight_run (in Mo2_move 021D0A14): speedF target while mDashFrames runs (DASH animation, smoke type 4); __sinit_d_a_mo2_cpp 021CD5B4 70.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x006C */ be<f32> mDashAnmSpeed;  /* was m070: fight_run (in Mo2_move 021D0A14): play speed of the looping BCK DASH animation (anm_init); __sinit_d_a_mo2_cpp 021CD5B4 1.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0070 */ be<s16> mAttackCheckWait;  /* was m074: fight_run (in Mo2_move 021D0A14): mTimers[4] = it each time it rolls the attack chance at mAttackDist +-62.5; __sinit_d_a_mo2_cpp 021CD5B4 15; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
     /* 0x0072 */ u8 _0072[0x2];
-    /* 0x0074 */ be<f32> m078;
-    /* 0x0078 */ be<f32> m07C;
-    /* 0x007C */ be<f32> m080;
-    /* 0x0080 */ be<f32> m084;
-    /* 0x0084 */ be<s16> m088;
-    /* 0x0086 */ be<s16> m08A;
+    /* 0x0074 */ be<f32> mAttackChance;  /* was m078: fight_run (in Mo2_move 021D0A14): attacks when cM_rndF(100) < it at that roll; __sinit_d_a_mo2_cpp 021CD5B4 80.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0078 */ be<f32> mAttack0Chance;  /* was m07C: attack_set 021C9310 (armed, on the player way): rnd(100) < it picks attack kind 0; __sinit_d_a_mo2_cpp 021CD5B4 40.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x007C */ be<f32> mAttack1Chance;  /* was m080: attack_set 021C9310: the next it percent (after mAttack0Chance) pick attack kind 1, the rest kind 2; __sinit_d_a_mo2_cpp 021CD5B4 30.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0080 */ be<f32> mAttack4Chance;  /* was m084: attack_set 021C9310 (unarmed): rnd(100) < it picks attack kind 4, else kind 5; __sinit_d_a_mo2_cpp 021CD5B4 50.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0084 */ be<s16> mDownRecoverDelay;  /* was m088: daMo2_Execute 021C9B1C damage results 0x14 / 0x15 set dr.mDownTimers[2] (recovery delay) to it; __sinit_d_a_mo2_cpp 021CD5B4 30; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0086 */ be<s16> mWeaponRunTime;  /* was m08A: wepon_search 021CF0F4 / yari_off_check (in daMo2_Execute 021C9B1C) set mWeaponRunTimer to it; __sinit_d_a_mo2_cpp 021CD5B4 300; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
     /* 0x0088 */ be<f32> m08C;
     /* 0x008C */ be<f32> m090;
     /* 0x0090 */ be<f32> m094;
@@ -447,37 +449,37 @@ struct mo2HIO_c {
     /* 0x00BC */ be<f32> m0C0;
     /* 0x00C0 */ be<f32> m0C4;
     /* 0x00C4 */ be<f32> m0C8;
-    /* 0x00C8 */ be<s16> m0CC;
-    /* 0x00CA */ be<s16> m0CE;
-    /* 0x00CC */ be<s16> m0D0;
-    /* 0x00CE */ be<s16> m0D2;
-    /* 0x00D0 */ be<s16> m0D4;
-    /* 0x00D2 */ be<s16> m0D6;
-    /* 0x00D4 */ be<s16> m0D8;
-    /* 0x00D6 */ be<s16> m0DA;
-    /* 0x00D8 */ be<s16> m0DC;
-    /* 0x00DA */ be<s16> m0DE;
-    /* 0x00DC */ be<f32> m0E0[10];
-    /* 0x0104 */ be<s16> m108;
-    /* 0x0106 */ be<s16> m10A;
-    /* 0x0108 */ be<s16> m10C;
-    /* 0x010A */ be<s16> m10E;
-    /* 0x010C */ be<f32> m110[10];
-    /* 0x0134 */ be<f32> m138;
-    /* 0x0138 */ be<f32> m13C;
-    /* 0x013C */ be<f32> m140;
-    /* 0x0140 */ be<s16> m144;
-    /* 0x0142 */ be<s16> m146;
-    /* 0x0144 */ be<s16> m148;
-    /* 0x0146 */ be<s16> m14A;
-    /* 0x0148 */ be<s16> m14C;
-    /* 0x014A */ be<s16> m14E;
-    /* 0x014C */ be<s16> m150;
-    /* 0x014E */ be<s16> m152;
-    /* 0x0150 */ be<s16> m154;
-    /* 0x0152 */ be<s16> m156;
-    /* 0x0154 */ be<s16> m158;
-    /* 0x0156 */ be<s16> m15A;
+    /* 0x00C8 */ be<s16> mAttack0TurnEndFrame;  /* was m0CC: attack_set 021C9310 sets mTurnEndFrame to it for attack kind 0; __sinit_d_a_mo2_cpp 021CD5B4 14; never written in WWHD or tww (tww genMessage registers nothing) */
+    /* 0x00CA */ be<s16> mAttack1TurnEndFrame;  /* was m0CE: attack_set 021C9310 sets mTurnEndFrame to it for attack kind 1; __sinit_d_a_mo2_cpp 021CD5B4 10; never written in WWHD or tww (tww genMessage registers nothing) */
+    /* 0x00CC */ be<s16> mAttack2TurnEndFrame;  /* was m0D0: attack_set 021C9310 sets mTurnEndFrame to it for attack kind 2; wepon_search 021CF0F4 uses it for its kind-2 attack; __sinit_d_a_mo2_cpp 021CD5B4 10; never written in WWHD or tww (tww genMessage registers nothing) */
+    /* 0x00CE */ be<s16> mAttack3TurnEndFrame;  /* was m0D2: attack_set 021C9310 sets mTurnEndFrame to it for attack kind 3; __sinit_d_a_mo2_cpp 021CD5B4 5; never written in WWHD or tww (tww genMessage registers nothing) */
+    /* 0x00D0 */ be<s16> mAttack4TurnEndFrame;  /* was m0D4: attack_set 021C9310 sets mTurnEndFrame to it for attack kind 4; __sinit_d_a_mo2_cpp 021CD5B4 100; never written in WWHD or tww (tww genMessage registers nothing) */
+    /* 0x00D2 */ be<s16> mAttack5TurnEndFrame;  /* was m0D6: attack_set 021C9310 sets mTurnEndFrame to it for attack kind 5; hukki 021CE6E8 uses it for its kind-5 attack; __sinit_d_a_mo2_cpp 021CD5B4 10; never written in WWHD or tww (tww genMessage registers nothing) */
+    /* 0x00D4 */ be<s16> mAttack1BlurStart;  /* was m0D8: fight (in Mo2_move 021D0A14), attack kind 1: the spear blur (mBlurOn) starts at this attack frame; mAttack1BlurScaleX is indexed from it; __sinit_d_a_mo2_cpp 021CD5B4 29; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x00D6 */ be<s16> mAttack1BlurPreLen;  /* was m0DA: fight (in Mo2_move 021D0A14), attack kind 1: blur frames before the mBlurUseB part (start + it .. start + it + mAttack1BlurBLen); __sinit_d_a_mo2_cpp 021CD5B4 1; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x00D8 */ be<s16> mAttack1BlurBLen;  /* was m0DC: fight (in Mo2_move 021D0A14), attack kind 1: length of the part with mBlurUseB = 1; __sinit_d_a_mo2_cpp 021CD5B4 2; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x00DA */ be<s16> mAttack1BlurPostLen;  /* was m0DE: fight (in Mo2_move 021D0A14), attack kind 1: blur frames after the mBlurUseB part (blur ends at start + pre + B + it); __sinit_d_a_mo2_cpp 021CD5B4 1; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x00DC */ be<f32> mAttack1BlurScaleX[10];  /* was m0E0: fight (in Mo2_move 021D0A14), attack kind 1: mBlurScaleX = it[attack frame - mAttack1BlurStart] (10 entries); __sinit_d_a_mo2_cpp 021CD5B4 1.0 / 1.25 / 1.25 / 1.0 / 0.5 ...; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0104 */ be<s16> mAttack2BlurStart;  /* was m108: fight (in Mo2_move 021D0A14), attack kind 2: the spear blur (mBlurOn) starts at this attack frame; mAttack2BlurScaleX is indexed from it; __sinit_d_a_mo2_cpp 021CD5B4 40; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0106 */ be<s16> mAttack2BlurPreLen;  /* was m10A: fight (in Mo2_move 021D0A14), attack kind 2: blur frames before the mBlurUseB part (start + it .. start + it + mAttack2BlurBLen); __sinit_d_a_mo2_cpp 021CD5B4 1; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0108 */ be<s16> mAttack2BlurBLen;  /* was m10C: fight (in Mo2_move 021D0A14), attack kind 2: length of the part with mBlurUseB = 1; __sinit_d_a_mo2_cpp 021CD5B4 3; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x010A */ be<s16> mAttack2BlurPostLen;  /* was m10E: fight (in Mo2_move 021D0A14), attack kind 2: blur frames after the mBlurUseB part (blur ends at start + pre + B + it); __sinit_d_a_mo2_cpp 021CD5B4 1; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x010C */ be<f32> mAttack2BlurScaleX[10];  /* was m110: fight (in Mo2_move 021D0A14), attack kind 2: mBlurScaleX = it[attack frame - mAttack2BlurStart] (10 entries); __sinit_d_a_mo2_cpp 021CD5B4 1.0 / 1.1 / 1.15 / 1.25 / 1.1 / 1.0 ...; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0134 */ be<f32> mBlurOffsetX;  /* was m138: br_draw (in daMo2_Draw 021C7344): the blur model sits at x = it + 150 on the spear joint MO_JNT_MO_YARI_e; __sinit_d_a_mo2_cpp 021CD5B4 -22.25; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0138 */ be<f32> mHitPushback;  /* was m13C: damage_check (in daMo2_Execute 021C9B1C): dr.mPushback = -it for a hit with mKnockbackPower < 25; __sinit_d_a_mo2_cpp 021CD5B4 30.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x013C */ be<f32> mBtMaxDistance;  /* was m140: daMo2_Execute 021C9B1C: mBtMaxDis (parry max distance) = it each frame; __sinit_d_a_mo2_cpp 021CD5B4 650.0; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0140 */ be<s16> mAttack1BtWindow1Start;  /* was m144: attack_set 021C9310 copies it to mo2_class mBtWindow1Start for attack kind 1 (parry window, opened by daMo2_Execute 021C9B1C); __sinit_d_a_mo2_cpp 021CD5B4 8; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0142 */ be<s16> mAttack1BtWindow1Len;  /* was m146: attack_set 021C9310 copies it to mo2_class mBtWindow1Len for attack kind 1 (parry window, opened by daMo2_Execute 021C9B1C); __sinit_d_a_mo2_cpp 021CD5B4 12; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0144 */ be<s16> mAttack1BtWindow2Start;  /* was m148: attack_set 021C9310 copies it to mo2_class mBtWindow2Start for attack kind 1 (parry window, opened by daMo2_Execute 021C9B1C); __sinit_d_a_mo2_cpp 021CD5B4 34; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0146 */ be<s16> mAttack1BtWindow2Len;  /* was m14A: attack_set 021C9310 copies it to mo2_class mBtWindow2Len for attack kind 1 (parry window, opened by daMo2_Execute 021C9B1C); __sinit_d_a_mo2_cpp 021CD5B4 25; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0148 */ be<s16> mAttack2BtWindow1Start;  /* was m14C: attack_set 021C9310 copies it to mo2_class mBtWindow1Start for attack kind 2 (parry window, opened by daMo2_Execute 021C9B1C); __sinit_d_a_mo2_cpp 021CD5B4 16; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x014A */ be<s16> mAttack2BtWindow1Len;  /* was m14E: attack_set 021C9310 copies it to mo2_class mBtWindow1Len for attack kind 2 (parry window, opened by daMo2_Execute 021C9B1C); __sinit_d_a_mo2_cpp 021CD5B4 12; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x014C */ be<s16> mAttack2BtWindow2Start;  /* was m150: attack_set 021C9310 copies it to mo2_class mBtWindow2Start for attack kind 2 (parry window, opened by daMo2_Execute 021C9B1C); __sinit_d_a_mo2_cpp 021CD5B4 45; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x014E */ be<s16> mAttack2BtWindow2Len;  /* was m152: attack_set 021C9310 copies it to mo2_class mBtWindow2Len for attack kind 2 (parry window, opened by daMo2_Execute 021C9B1C); __sinit_d_a_mo2_cpp 021CD5B4 30; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0150 */ be<s16> mAttack5BtWindow1Start;  /* was m154: attack_set 021C9310 copies it to mo2_class mBtWindow1Start for attack kind 5 (parry window, opened by daMo2_Execute 021C9B1C); __sinit_d_a_mo2_cpp 021CD5B4 8; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0152 */ be<s16> mAttack5BtWindow1Len;  /* was m156: attack_set 021C9310 copies it to mo2_class mBtWindow1Len for attack kind 5 (parry window, opened by daMo2_Execute 021C9B1C); __sinit_d_a_mo2_cpp 021CD5B4 12; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0154 */ be<s16> mAttack5BtWindow2Start;  /* was m158: attack_set 021C9310 copies it to mo2_class mBtWindow2Start for attack kind 5 (parry window, opened by daMo2_Execute 021C9B1C); __sinit_d_a_mo2_cpp 021CD5B4 40; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
+    /* 0x0156 */ be<s16> mAttack5BtWindow2Len;  /* was m15A: attack_set 021C9310 copies it to mo2_class mBtWindow2Len for attack kind 5 (parry window, opened by daMo2_Execute 021C9B1C); __sinit_d_a_mo2_cpp 021CD5B4 25; never written in WWHD or tww (tww genMessage registers nothing) (tww the same) */
     /* 0x0158 */ JntHit_HIO_l mJntHitHIO;
     /* 0x0184 */ be<u32> __vtbl;
 };
@@ -690,7 +692,7 @@ struct Mo2AtInfo {
     /* 0x09 */ be<u8> mbDead;
     /* 0x0A */ be<u8> mResultingAttackType;
     /* 0x0B */ u8 _0B;
-    /* 0x0C */ csXyz m0C;
+    /* 0x0C */ csXyz mHitAngle;  /* was m0C: cc_at_check 025192A8 sets .y = cc_atan2s(-x, -z) of the hit direction; damage_check (in daMo2_Execute 021C9B1C) rotates calc_mtx by .y (cMtx_YrotS) for the paralysis / knock-down hit reactions (tww the same; as the CcAtInfo copies in d_a_mt_exec.h / d_a_pt.h) */
     /* 0x12 */ be<u16> mPlCutBit;
     /* 0x14 */ gptr<cXyz> pParticlePos;
     /* 0x18 */ be<s32> mHitSoundId;

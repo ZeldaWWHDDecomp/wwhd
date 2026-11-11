@@ -26,8 +26,8 @@ void daTagKbItem_c::CreateInit() {
     mItemBitNo = (s8)((prm >> 8) & 0xFF);
     mEnemyKind = (prm >> 16) & 0xFF;
     mSwBitNo = (prm >> 24) & 0xFF;
-    field_0x298 = false;
-    field_0x299 = 0;
+    mDigDone = false;
+    mDigRequest = 0;
     mpActor = nullptr;
 }
 

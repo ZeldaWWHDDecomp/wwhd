@@ -17,12 +17,12 @@ WWHD_OFFSET(ShopClothView, mScale, 0xD8);
 WWHD_SIZE(ShopClothView, 0xE4);
 struct daShopItem_c_m_data {
     cXyz mScale;
-    cXyz field_0x0C;
-    csXyz field_0x18;
+    cXyz mOffset;  /* was field_0x0C: daShopItem_c::set_mtx 02483508 translates the item model by mData[m_itemNo]'s it after the actor position / angle (tww daShopItem_c::set_mtx the same) */
+    csXyz mRotation;  /* was field_0x18: daShopItem_c::set_mtx 02483508 rotates the item model by mData[m_itemNo]'s it (ZXY) after mOffset (tww set_mtx the same) */
     u8 _1E[2];
 };
-WWHD_OFFSET(daShopItem_c_m_data, field_0x0C, 0xC);
-WWHD_OFFSET(daShopItem_c_m_data, field_0x18, 0x18);
+WWHD_OFFSET(daShopItem_c_m_data, mOffset, 0xC);
+WWHD_OFFSET(daShopItem_c_m_data, mRotation, 0x18);
 WWHD_SIZE(daShopItem_c_m_data, 0x20);
 struct ShopItemResource {
     gptr<const char> mArcname;

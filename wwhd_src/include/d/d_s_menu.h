@@ -109,7 +109,7 @@ class menu_of_scene_class : public scene_class {
     /* 0x1DC */ gptr<void> fontRes;
     /* 0x1E0 */ gptr<MenuScene::Font> font;
     /* 0x1E4 */ be<u8> startCode;
-    /* 0x1E5 */ be<u8> field_0x1e1, field_0x1e2;
+    /* 0x1E5 */ be<u8> mStageRepeatTimer, mRoomRepeatTimer;  /* mStageRepeatTimer was field_0x1e1: dScnMenu_Execute 025AC798: the key-repeat timer of up / down (stage cursor): REPEAT_DELAY on the press, REPEAT_INTERVAL each time it runs out (tww the same); mRoomRepeatTimer was field_0x1e2: dScnMenu_Execute 025AC798: the key-repeat timer of A / B (room selection): REPEAT_DELAY on the press, REPEAT_INTERVAL each time it runs out (tww the same) */
     u8 padding;
 };
 WWHD_OFFSET(menu_of_scene_class, mPhs, 0x1C8);
@@ -119,8 +119,8 @@ WWHD_OFFSET(menu_of_scene_class, info, 0x1D8);
 WWHD_OFFSET(menu_of_scene_class, fontRes, 0x1DC);
 WWHD_OFFSET(menu_of_scene_class, font, 0x1E0);
 WWHD_OFFSET(menu_of_scene_class, startCode, 0x1E4);
-WWHD_OFFSET(menu_of_scene_class, field_0x1e1, 0x1E5);
-WWHD_OFFSET(menu_of_scene_class, field_0x1e2, 0x1E6);
+WWHD_OFFSET(menu_of_scene_class, mStageRepeatTimer, 0x1E5);
+WWHD_OFFSET(menu_of_scene_class, mRoomRepeatTimer, 0x1E6);
 WWHD_SIZE(menu_of_scene_class, 0x1E8);
 WWHD_OFFSET(menu_of_scene_class::room_inf, stageName, 0x21);
 WWHD_OFFSET(menu_of_scene_class::room_inf, roomNo, 0x29);

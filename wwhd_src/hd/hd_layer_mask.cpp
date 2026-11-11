@@ -1,5 +1,6 @@
 /* HD LayerMask draws upper and lower masking bars. Private decomp source. */
 #include "hd/hd_layer_mask.h"
+#include "sead/ElementAt.h"
 static hdLayerMaskHeaderZero_c sLayerMaskHeaderZero;
 static hdLayerMaskHeaderDescriptor_c sLayerMaskHeaderDescriptor;
 static hdLayerMaskHeaderDescriptor_c sLayerMaskRotationDescriptor;
@@ -118,7 +119,9 @@ static void drawLayerMask(hdLayerMask_c*, hdMaskRenderInfo_c* info) {
     applyMaskState(&state);
     u32 screen = info->mScreen;
     hdMaskScreenMgr_l* screens = sLayerMaskScreens;
-    hdMaskViewport_l* viewport = &screens->mScreens[screen].mViewport;
+    // Guest EA arithmetic: mScreens + screen * size wraps at 32 bits as on the console (a host index on a NULL screen manager
+    // reached host addresses past 4 GB).
+    hdMaskViewport_l* viewport = &sead::elementAt<hdMaskScreen_l>(gabi::ea(screens->mScreens), screen).mViewport;
     hdMaskBounds_c bounds;
     calculateMaskBounds(&bounds, viewport);
     applyMaskViewport(&bounds, viewport);

@@ -66,7 +66,7 @@ static s32 phase_1(dScnPly::dScnPly_ply_c *i_this) {
     dScnPly_gameInfo()->play.mNextStage.enable = 0; /* offEnableNextStage */
     u32 stage = gabi::ea(&dScnPly_gameInfo()->play.mCurStage);
     s32 room = (s8)dScnPly_gameInfo()->play.mCurStage.mRoomNo;
-    dScnPlyAPI_reportStage(gabi::guest_addr("Start StageName:RoomNo [%s:%d]\\n"), stage,
+    dScnPlyAPI_reportStage(gabi::guest_addr("Start StageName:RoomNo [%s:%d]\n"), stage,
                            room); /* JUTReportConsole_f("Start StageName:RoomNo [%s:%d]\n") */
     dScnPly_gameInfo()->play.mStatus = 0; /* dComIfGp_setStatus(0) */
     s32 rt = dScnPlyAPI_setStageResource(gabi::guest_addr("Stage"),
@@ -83,6 +83,6 @@ static s32 phase_1(dScnPly::dScnPly_ply_c *i_this) {
 str 1005328C "LkD%02d" in 025B1418
 str 10053294 "rt == 1" in 025B1590
 str 1005329C "Stage" in 025B1590
-str 100532A4 "Start StageName:RoomNo [%s:%d]\\n" renamed in 025B1590
+str 100532A4 "Start StageName:RoomNo [%s:%d]\n" in 025B1590
 str 100532C4 "d_s_play.cpp" in 025B1590
 */

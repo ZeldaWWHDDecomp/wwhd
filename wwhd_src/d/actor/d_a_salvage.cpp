@@ -60,7 +60,7 @@ BOOL daSalvage_c::CreateHeap() {
         static_cast<J3DModelData*>(resource(salvage_actor::dRes_INDEX_YSLVG00_BDL_YSLVG00_e));
     this->mModelData = data;
     if (!data) {
-        JUT_ASSERT_fail("d_a_salvage.cpp", 0x156, "mModelData != NULL");
+        JUT_ASSERT_fail("d_a_salvage.cpp", 0x156, "mModelData != (0)");
         data = this->mModelData;
     }
     for (int i = 0; i < 16; i++) {
@@ -74,7 +74,7 @@ BOOL daSalvage_c::CreateHeap() {
     J3DAnmTevRegKey* pbrk =
         static_cast<J3DAnmTevRegKey*>(resource(salvage_actor::dRes_INDEX_YSLVG00_BRK_YSLVG00_e));
     if (!pbrk)
-        JUT_ASSERT_fail("d_a_salvage.cpp", 0x16B, "pbrk != NULL");
+        JUT_ASSERT_fail("d_a_salvage.cpp", 0x16B, "pbrk != (0)");
     mDoExt_brkAnm* brk = salvageCreateBrk(0);
     this->mpBrk = brk;
     if (!brk)
@@ -85,7 +85,7 @@ BOOL daSalvage_c::CreateHeap() {
     J3DAnmTextureSRTKey* pbtk = static_cast<J3DAnmTextureSRTKey*>(
         resource(salvage_actor::dRes_INDEX_YSLVG00_BTK_YSLVG00_e));
     if (!pbtk)
-        JUT_ASSERT_fail("d_a_salvage.cpp", 0x179, "pbtk != NULL");
+        JUT_ASSERT_fail("d_a_salvage.cpp", 0x179, "pbtk != (0)");
     mDoExt_btkAnm* btk = salvageCreateBtk(0);
     this->mpBtk = btk;
     if (!btk)
@@ -100,9 +100,9 @@ BOOL daSalvage_c::CreateInit() {
     s8 room = this->current.roomNo;
     mNowRoomNo = room;
     setProc(&daSalvage_c::proc_wait_init);
-    this->m2E8 = room;
+    this->mPrevRoomNo = room;
     fopAcM_setStageLayer(this);
-    this->m2EA = 1;
+    this->mInitDone = 1;
     const char* names[] = {"SALVAGE_GETITEM", "SALVAGE_HAZURE", "SLVG_GETITEM_LEFT",
                            "SLVG_HAZURE_LEFT"};
     be<s16>* events[] = {&this->mSalvageGetItemEventIdx, &this->mSalvageHazureEventIdx,
@@ -141,7 +141,7 @@ cPhs_State daSalvage_c::_create() {
         CreateInit();
         reg = registry();
         if (!reg) {
-            JUT_ASSERT_fail("d_a_salvage.cpp", 0x1DE, "mTagData_p != NULL");
+            JUT_ASSERT_fail("d_a_salvage.cpp", 0x1DE, "daSalvage_c::mTagData_p != (0)");
             reg = registry();
         }
         reg->entry(this, 0);
@@ -155,7 +155,7 @@ cPhs_State daSalvage_c::_create() {
                 mDoAud_seDeleteObject(pos);
             }
         registry()->init_room(old);
-        this->m2E8 = mNowRoomNo;
+        this->mPrevRoomNo = mNowRoomNo;
         current = this->current.roomNo;
         reg = registry();
         mNowRoomNo = current;
@@ -167,7 +167,7 @@ cPhs_State daSalvage_c::_create() {
 /* 02465C68 */
 BOOL daSalvage_c::_delete() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (this->m2EA) {
+    if (this->mInitDone) {
         salvage_actor::Emitter* emitter = this->mEmitter;
         if (emitter) {
             u32 flags = emitter->mStatus;
@@ -223,25 +223,25 @@ void daSalvage_c::checkOrder() {
     if (eventInfo.mCommand != 2)
         return;
     BOOL skipCountdown = FALSE;
-    BOOL starting = (eventStart(this->mSalvageGetItemEventIdx) && this->m2E9 == 2) ||
-                    (eventStart(this->mSlvgGetItemLeftEventIdx) && this->m2E9 == 1) ||
-                    (eventStart(this->mSalvageHazureEventIdx) && this->m2E9 == 4) ||
-                    (eventStart(this->mEventIdx) && this->m2E9 == 3);
+    BOOL starting = (eventStart(this->mSalvageGetItemEventIdx) && this->mOrderType == 2) ||
+                    (eventStart(this->mSlvgGetItemLeftEventIdx) && this->mOrderType == 1) ||
+                    (eventStart(this->mSalvageHazureEventIdx) && this->mOrderType == 4) ||
+                    (eventStart(this->mEventIdx) && this->mOrderType == 3);
     if (starting) {
         ship->mStateFlag = ship->mStateFlag | 0x800;
-        u8 order = this->m2E9;
+        u8 order = this->mOrderType;
         type = 1;
         cXyz* top = ship->mCraneTop;
-        this->m304 = 0xFFFFFFFF;
+        this->mSboxId = 0xFFFFFFFF;
         if (order == 3 || order == 4) {
-            this->m301 = 0;
+            this->mHasSbox = 0;
             type = 0;
         } else {
             s8 room = mNowRoomNo;
-            this->m304 =
+            this->mSboxId =
                 salvageCreateActor(salvage_actor::fpcNm_SBOX_e, 0, top, room, &this->current.angle,
                                    0, -1, gabi::guest_fn((const void*)&salvage_createCB));
-            this->m301 = 1;
+            this->mHasSbox = 1;
             if (kind == 0)
                 type = 2;
         }
@@ -250,37 +250,37 @@ void daSalvage_c::checkOrder() {
         u32 chest = salvageCreateActor(salvage_actor::fpcNm_SALVAGE_TBOX_e, ((u32)type << 8) | item,
                                        top, room, &this->current.angle, &this->scale, -1,
                                        gabi::guest_fn((const void*)&salvage_createCB));
-        this->m2EC = chest;
-        this->m2E9 = 0;
-        if (chest == 0xFFFFFFFF || (this->m304 == 0xFFFFFFFF && this->m301))
+        this->mTboxId = chest;
+        this->mOrderType = 0;
+        if (chest == 0xFFFFFFFF || (this->mSboxId == 0xFFFFFFFF && this->mHasSbox))
             eventReset();
         else {
             setProc(&daSalvage_c::proc_salvage_init); // HD: consume the first countdown frame when
                                                       // ordering succeeds.
-            this->m302 = 99;
+            this->mSearchWait = 99;
             skipCountdown = TRUE;
         }
     }
     if (!skipCountdown) {
-        if (this->m302 == 0) {
+        if (this->mSearchWait == 0) {
             gabi::Local<be<u32>> actor1, actor2;
-            BOOL found = salvageSearchActor((u32)this->m2EC, actor1.get());
-            if (this->m301)
-                found &= salvageSearchActor((u32)this->m304, actor2.get());
+            BOOL found = salvageSearchActor((u32)this->mTboxId, actor1.get());
+            if (this->mHasSbox)
+                found &= salvageSearchActor((u32)this->mSboxId, actor2.get());
             if (!found) {
-                salvageDeleteActor((u32)this->m2EC);
-                salvageDeleteActor((u32)this->m304);
-                this->m301 = 0;
+                salvageDeleteActor((u32)this->mTboxId);
+                salvageDeleteActor((u32)this->mSboxId);
+                this->mHasSbox = 0;
                 eventReset();
             }
         }
-        this->m302--;
+        this->mSearchWait--;
     }
     if (eventEnd(this->mSalvageGetItemEventIdx) || eventEnd(this->mSalvageHazureEventIdx) ||
         eventEnd(this->mSlvgGetItemLeftEventIdx) || eventEnd(this->mEventIdx)) {
         ship->mStateFlag = ship->mStateFlag & ~0x800U;
-        salvageDeleteActor((u32)this->m2EC);
-        this->m301 = 0;
+        salvageDeleteActor((u32)this->mTboxId);
+        this->mHasSbox = 0;
         end_salvage();
         eventReset();
         if ((eventEnd(this->mSalvageHazureEventIdx) || eventEnd(this->mEventIdx)) &&
@@ -296,7 +296,7 @@ void daSalvage_c::eventOrder() {
     dComIfG_inf_c* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
     if (!(play->play.mPlayerStatus[0][0] & 0x10000))
         return;
-    u8 order = this->m2E9;
+    u8 order = this->mOrderType;
     s16 event;
     if (order == 2)
         event = this->mSalvageGetItemEventIdx;
@@ -316,7 +316,7 @@ void daSalvage_c::eventOrder() {
 BOOL daSalvage_c::proc_wait_init() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     setProc(&daSalvage_c::proc_wait);
-    this->m2EC = 0xFFFFFFFF;
+    this->mTboxId = 0xFFFFFFFF;
     return TRUE;
 }
 
@@ -432,9 +432,9 @@ BOOL daSalvage_c::proc_wait() {
     attentionWords->y = y;
     attentionWords->z = z;
     if (type == 1)
-        this->m2E9 = ship->mCraneAngle < 0 ? 1 : 2;
+        this->mOrderType = ship->mCraneAngle < 0 ? 1 : 2;
     else if (kind == 5 || type == 0 || type == 2 || type == 3)
-        this->m2E9 = ship->mCraneAngle < 0 ? 3 : 4;
+        this->mOrderType = ship->mCraneAngle < 0 ? 3 : 4;
     return TRUE;
 }
 
@@ -476,12 +476,12 @@ void daSalvage_c::calcAlpha() {
         if (used && valid && !(dist > 25000) && !(dist < minimum * 100)) {
             play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
             if (!play->play.mEvtCtrl.mMode) {
-                s32 delay = this->m2FC;
+                s32 delay = this->mShowDelay;
                 if (delay > 0)
-                    this->m2FC = delay - 1;
+                    this->mShowDelay = delay - 1;
             }
             kind = registry()->getKind(i);
-            if (kind == 2 && this->m2FC != 0)
+            if (kind == 2 && this->mShowDelay != 0)
                 continue;
             be<u8>* alpha = static_cast<be<u8>*>(registry()->getAlphaPtr(i));
             cLib_chaseUC(alpha, 255, step);
@@ -595,7 +595,7 @@ BOOL daSalvage_c::onSalvageForOship(void* other) {
         moved->z = z;
         registry()->setPos(i, moved.get());
         registry()->setNowAlpha(i, 255);
-        this->m2FC = 90;
+        this->mShowDelay = 90;
         return TRUE;
     }
     return FALSE;
@@ -953,10 +953,10 @@ str 100399D4 "SLVG_GETITEM_LEFT"
 str 100399F8 "SLVG_HAZURE_LEFT"
 str 10039A0C "d_a_salvage.cpp" in 02465A8C
 str 10039988 "d_a_salvage.cpp" in 024656EC
-str 10039A1C "mTagData_p != NULL" renamed
-str 100399B0 "mModelData != NULL" renamed
-str 10039998 "pbrk != NULL" renamed
-str 100399A4 "pbtk != NULL" renamed
+str 10039A1C "daSalvage_c::mTagData_p != (0)"
+str 100399B0 "mModelData != (0)"
+str 10039998 "pbrk != (0)"
+str 100399A4 "pbtk != (0)"
 data m_arcname 101CFED4
 data mTagData_p 10475634
 data mSalvageId 10475638

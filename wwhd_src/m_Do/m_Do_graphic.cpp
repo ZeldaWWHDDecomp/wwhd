@@ -32,11 +32,11 @@ void mDoGph_gInf_c::createHeap() {
     mDoGph_HeapHD *first = mDoGph_createHeapHD(0x10000, parent, 0);
     l_graphics.mHeap[0] = first;
     if (!first)
-        JUT_ASSERT_fail("m_Do_graphic.cpp", 0xFB, "mHeap[0] != NULL");
+        JUT_ASSERT_fail("m_Do_graphic.cpp", 0xFB, "mHeap[0] != (0)");
     mDoGph_HeapHD *second = mDoGph_createHeapHD(0x10000, parent, 0);
     l_graphics.mHeap[1] = second;
     if (!second)
-        JUT_ASSERT_fail("m_Do_graphic.cpp", 0xFD, "mHeap[1] != NULL");
+        JUT_ASSERT_fail("m_Do_graphic.cpp", 0xFD, "mHeap[1] != (0)");
     l_graphics.mHeap[0]->setName("描画用一時ヒープ[0]");
     l_graphics.mHeap[1]->setName("描画用一時ヒープ[1]");
     l_graphics.mCurrentHeap = 0;
@@ -66,7 +66,7 @@ void mDoGph_create() {
 static BOOL mDoGph_Create() {
     mDoGph_HeapHD *heap = mDoGph_createGameHeap(0, 0, 0);
     if (!heap)
-        JUT_ASSERT_fail("m_Do_graphic.cpp", 0xD1C, "heap != NULL");
+        JUT_ASSERT_fail("m_Do_graphic.cpp", 0xD1C, "heap != (0)");
     heap->setName("ドルフィングラフィック(mDoGph)");
     mDoGph_create();
     mDoGph_GameInfoHD *play = mDoGph_getGameInfo();
@@ -260,9 +260,9 @@ data l_minAngle 10058F58
 data l_maxAngle 10058F5C
 str 10058EF4 in 025F041C # "m_Do_graphic.cpp"
 str 10058F14 in 025F0550 # "m_Do_graphic.cpp"
-str 10058EAC "mHeap[0] != NULL"
-str 10058EBC "mHeap[1] != NULL"
-str 10058F08 "heap != NULL"
+str 10058EAC "mHeap[0] != (0)"
+str 10058EBC "mHeap[1] != (0)"
+str 10058F08 "heap != (0)"
 str 10058ECC "\u63cf\u753b\u7528\u4e00\u6642\u30d2\u30fc\u30d7[0]" renamed
 str 10058EE0 "\u63cf\u753b\u7528\u4e00\u6642\u30d2\u30fc\u30d7[1]" renamed
 str 10058F28 "\u30c9\u30eb\u30d5\u30a3\u30f3\u30b0\u30e9\u30d5\u30a3\u30c3\u30af(mDoGph)" renamed

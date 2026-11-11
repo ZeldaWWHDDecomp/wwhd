@@ -130,28 +130,28 @@ WWHD_OFFSET(pirate_flag_class, mWindPhase, 0x3C4);
 WWHD_OFFSET(pirate_flag_class, mPacket, 0x3D4);
 struct daPirate_Flag_HIO_c {
     /* 0x000 */ be<s8> mNo;
-    /* 0x001 */ be<u8> m05;
+    /* 0x001 */ be<u8> mDrawDebugLines;  /* was m05: daPirate_Flag_Draw 023D116C: while it is set, lines for the first light's direction, the flag's facing and its escape-normal angle are drawn around the flag; __sinit 0 (tww the same) */
     /* 0x002 */ be<u8> m06;
-    /* 0x003 */ be<u8> m07;
-    /* 0x004 */ be<u32> m08;
-    /* 0x008 */ be<f32> m0C;
-    /* 0x00C */ be<f32> m10;
-    /* 0x010 */ be<f32> m14;
-    /* 0x014 */ be<f32> m18;
-    /* 0x018 */ be<f32> m1C;
+    /* 0x003 */ be<u8> mStopMove;  /* was m07: daPirate_Flag_Execute 023D2610 returns at once while it is set (the cloth stops moving); __sinit 0 (tww the same) */
+    /* 0x004 */ be<u32> mWindPhaseStep;  /* was m08: pirate_flag_move 023D1EA4 adds it to mWindPhase every frame; the sine of that phase blends the wind strength; __sinit 0x40 (tww the same) */
+    /* 0x008 */ be<f32> mWindStrengthMax;  /* was m0C: pirate_flag_move 023D1EA4: the wind strength is it * f + mWindStrengthMin * (1 - f), f = 0.5 + 0.5 sin(mWindPhase); __sinit 13 (tww the same) */
+    /* 0x00C */ be<f32> mWindStrengthMin;  /* was m10: pirate_flag_move 023D1EA4: the wind strength's value at the low point of the wind wave (see mWindStrengthMax); __sinit 7 (tww the same) */
+    /* 0x010 */ be<f32> mGravity;  /* was m14: pirate_flag_move 023D1EA4 adds it to each cloth point's y force; __sinit -3.5 (tww the same) */
+    /* 0x014 */ be<f32> mSpringRate;  /* was m18: get_cloth_anim_sub_factor 023D176C: the force between neighbouring cloth points is (length - rest length) * it; __sinit 0.45 (tww the same) */
+    /* 0x018 */ be<f32> mEscapeNrmAngle;  /* was m1C: daPirate_Flag_packet_c::setCorrectNrmAngle 023D1804: the escape angle in degrees (scaled by 1 - wind strength / 2) the normals turn to when the wind blows along the flag; __sinit 0 (tww the same) */
     /* 0x01C */ be<u32> __vtbl;
 };
 WWHD_SIZE(daPirate_Flag_HIO_c, 0x20);
 WWHD_OFFSET(daPirate_Flag_HIO_c, mNo, 0x0);
-WWHD_OFFSET(daPirate_Flag_HIO_c, m05, 0x1);
+WWHD_OFFSET(daPirate_Flag_HIO_c, mDrawDebugLines, 0x1);
 WWHD_OFFSET(daPirate_Flag_HIO_c, m06, 0x2);
-WWHD_OFFSET(daPirate_Flag_HIO_c, m07, 0x3);
-WWHD_OFFSET(daPirate_Flag_HIO_c, m08, 0x4);
-WWHD_OFFSET(daPirate_Flag_HIO_c, m0C, 0x8);
-WWHD_OFFSET(daPirate_Flag_HIO_c, m10, 0xC);
-WWHD_OFFSET(daPirate_Flag_HIO_c, m14, 0x10);
-WWHD_OFFSET(daPirate_Flag_HIO_c, m18, 0x14);
-WWHD_OFFSET(daPirate_Flag_HIO_c, m1C, 0x18);
+WWHD_OFFSET(daPirate_Flag_HIO_c, mStopMove, 0x3);
+WWHD_OFFSET(daPirate_Flag_HIO_c, mWindPhaseStep, 0x4);
+WWHD_OFFSET(daPirate_Flag_HIO_c, mWindStrengthMax, 0x8);
+WWHD_OFFSET(daPirate_Flag_HIO_c, mWindStrengthMin, 0xC);
+WWHD_OFFSET(daPirate_Flag_HIO_c, mGravity, 0x10);
+WWHD_OFFSET(daPirate_Flag_HIO_c, mSpringRate, 0x14);
+WWHD_OFFSET(daPirate_Flag_HIO_c, mEscapeNrmAngle, 0x18);
 WWHD_OFFSET(daPirate_Flag_HIO_c, __vtbl, 0x1C);
 
 void pirateAddCalcAngle(void *, s32, u32, u32);

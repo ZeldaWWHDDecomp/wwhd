@@ -378,7 +378,7 @@ static inline void action_omoi(ks_class* i_this) {
 
     // HD: instead of `if (mFirstStuck == 1 && HEAVY_IN) link->onHeavyState()`, a counter in the link
 // player is bumped every frame
-    be<s16>& heavy = ksPlayer(link)->mHeavyCount;
+    be<s16>& heavy = ksPlayer(link)->mHeavyStateCounter;
     heavy = heavy + 1;
 
     switch (i_this->mMode) {

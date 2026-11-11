@@ -50,13 +50,13 @@ static daBwds_HIO_c* daBwds_HIO_c_ct(daBwds_HIO_c* hio) {
             return hio;
     }
     hio->mNo = -1;
-    hio->m005 = 0;
-    hio->m008 = 0.79999995f;
-    hio->m00C = 0.7f;
-    hio->m010 = 7.0f;
-    hio->m014 = 220;
-    hio->m018 = 2000.0f;
-    hio->m01C = 300.0f;
+    hio->mNoMove = 0;
+    hio->mBodyScale = 0.79999995f;
+    hio->mSplashScale = 0.7f;
+    hio->mMoveSpeed = 7.0f;
+    hio->mHookChanceTime = 220;
+    hio->mSwayMax = 2000.0f;
+    hio->mHsSphRadius = 300.0f;
     hio->__vtbl = BWDS_HIO_VTBL;
     return hio;
 }

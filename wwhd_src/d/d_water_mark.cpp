@@ -61,7 +61,7 @@ u32 dWaterMark_c::setMatrix() {
         return FALSE;
     }
     s16 direction = cM_atan2s(tri->mNormal.x, tri->mNormal.z);
-    u32 relative = u16(s32(direction) - s32(field_0x12e));
+    u32 relative = u16(s32(direction) - s32(mAngleY));
     gabi::Local<cXyz> normalXZ;
     normalXZ->x = tri->mNormal.x;
     normalXZ->z = tri->mNormal.z;
@@ -71,7 +71,7 @@ u32 dWaterMark_c::setMatrix() {
     mDoMtx_stack_c::transS(mPos.x, gabi::fadds_ppc(mPos.y, surfaceOffset), mPos.z);
     WaterSinCosPair* angles = &sincosTable.entries[relative >> 3];
     s16 rotX = cM_atan2s(gabi::fmuls_ppc(norm_xz_mag, angles->cosine), tri->mNormal.y);
-    s16 heading = field_0x12e;
+    s16 heading = mAngleY;
     s16 rotZ = cM_atan2s(-gabi::fmuls_ppc(norm_xz_mag, angles->sine), tri->mNormal.y);
     Water_ZXYrotM(mDoMtx_stack_c::get(), rotX, heading, rotZ);
     // HD: load all twelve words before the original nonsequential matrix stores.
@@ -94,20 +94,20 @@ u32 dWaterMark_c::setMatrix() {
     dst.m[0][0] = matrix[0];
     dst.m[0][3] = matrix[3];
     dst.m[0][1] = matrix[1];
-    field_0x12c = Water_ChkMoveBG(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&m_ground_check));
+    mOnMoveBg = Water_ChkMoveBG(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&m_ground_check));
     return TRUE;
 }
 
 /* 025CC4A4 */
 u32 dWaterMark_c::execute() {
-    bool play = field_0x134 == -1;
+    bool play = mFootId == -1;
     if (!play) {
-        s16 start = field_0x130;
-        s16 end = field_0x132;
+        s16 start = mFadeStartId;
+        s16 end = mFadeEndId;
         s16 now = m_player_foot_now_id;
         if ((start < end && start <= now && end > now) ||
             (start >= end && (start <= now || end > now))) {
-            field_0x134 = -1;
+            mFootId = -1;
             play = true;
         }
     }
@@ -118,7 +118,7 @@ u32 dWaterMark_c::execute() {
     if (!remove) {
         if (mBrk.mFrameCtrl.mRate == zero) {
             remove = true;
-        } else if (field_0x12c == 1) {
+        } else if (mOnMoveBg == 1) {
             remove = setMatrix() == FALSE;
         }
     }
@@ -157,7 +157,7 @@ u32 dWaterMark_c::create() {
     }
     u32 params = mParam;
     u32 kind = params & 0xFFFF;
-    field_0x12e = u16(params >> 16);
+    mAngleY = u16(params >> 16);
     mParam = kind;
     if (kind > 2) {
         return cPhs_ERROR_e;
@@ -194,22 +194,22 @@ u32 dWaterMark_c::create() {
     heap->mDebugName = gabi::ea(&heapDebugName);
     gabi::Local<WaterResourceName> modelName;
     modelName->__vtbl = gabi::ea(&safeStringVtable);
-    modelName->mString = gabi::guest_addr("Always");
+    modelName->mString = gabi::guest_addr("");
     J3DModelData* modelData = static_cast<J3DModelData*>(
         Water_getResource(dComIfG_resControl(), modelName.get(), dRes_INDEX_ALWAYS_BDL_MPA_SIMI_e));
     if (modelData == NULL) {
-        Water_assert("d_water_mark.cpp", 0x14E, "modelData != NULL");
+        Water_assert("d_water_mark.cpp", 0x14E, "modelData != (0)");
     }
     mpModel = mDoExt_J3DModel__create(modelData, 0x80000, 0x11020022);
     gabi::Local<WaterResourceName> brkName;
-    brkName->mString = gabi::guest_addr("Always");
+    brkName->mString = gabi::guest_addr("");
     brkName->__vtbl = gabi::ea(&safeStringVtable);
     void* brk = Water_getResource(dComIfG_resControl(), brkName.get(), dRes_INDEX_ALWAYS_BRK_MPA_SIMI_e);
     f32 rate = playRate;
     u32 brk_rt = Water_brkInit(&mBrk, modelData, brk, TRUE, J3DFrameCtrl::EMode_NONE,
                               0, 0xFFFFFFFF, 0, 0, rate);
     gabi::Local<WaterResourceName> btpName;
-    btpName->mString = gabi::guest_addr("Always");
+    btpName->mString = gabi::guest_addr("");
     btpName->__vtbl = gabi::ea(&safeStringVtable);
     void* btp = Water_getResource(dComIfG_resControl(), btpName.get(), dRes_INDEX_ALWAYS_BTP_MPA_SIMI_e);
     u32 is_anm_init = brk_rt & Water_btpInit(&mBtp, modelData, btp, FALSE,
@@ -232,24 +232,24 @@ u32 dWaterMark_c::create() {
     }
     if (mParam == 2) {
         s16 old = m_player_foot_now_id;
-        field_0x134 = old;
+        mFootId = old;
         s16 next = s16(u16(m_player_foot_now_id) + 1);
         m_player_foot_now_id = next == 40 ? 0 : next;
-        s16 start = s16(u16(field_0x134) + 20);
+        s16 start = s16(u16(mFootId) + 20);
         if (start >= 40) {
             start = s16(u16(start) - 40);
         }
         s16 end = s16(u16(start) + 20);
-        field_0x130 = start;
+        mFadeStartId = start;
         if (end < 40) {
-            field_0x132 = end;
+            mFadeEndId = end;
             mParam = 0;
         } else {
             mParam = 0;
-            field_0x132 = s16(u16(end) - 40);
+            mFadeEndId = s16(u16(end) - 40);
         }
     } else {
-        field_0x134 = -1;
+        mFootId = -1;
     }
     return cPhs_COMPLEATE_e;
 }
@@ -326,9 +326,9 @@ data groundCtorPassVtable 10056600
 data groundDtorPolyVtable 100565A0
 data groundDtorPassVtable 100565C0
 data groundDtorGroupVtable 10056580
-str 10056558 "Always" renamed
+str 10056558 ""
 str 10056610 "d_water_mark.cpp" renamed
-str 10056624 "modelData != NULL" renamed
+str 10056624 "modelData != (0)"
 ext 02838148 u32 Water_clip(void*, Mtx34*, const cXyz*, f32)
 ext 025E83FC void Water_brkEntry(WaterBrkAnm*, J3DModelData*, f32)
 ext 025E7B3C void Water_btpEntry(WaterBtpAnm*, J3DModelData*, s16)

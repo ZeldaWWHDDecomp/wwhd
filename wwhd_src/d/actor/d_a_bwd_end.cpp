@@ -107,7 +107,7 @@ static void end(bwd_class* i_this) {
             }
             i_this->mTargetPos.x = 0.0f;
             i_this->mMode = END_FLY;
-            i_this->mTargetPos.y = l_HIO.m28 + 1500.0f;
+            i_this->mTargetPos.y = l_HIO.mBaseHeight + 1500.0f;
             actor->current.angle.x = -0x4000;
             i_this->mTargetPos.z = 0.0f;
             i_this->mTimers[1] = REG0_S(9) + 0xb4;
@@ -127,7 +127,7 @@ static void end(bwd_class* i_this) {
             i_this->mTargetPos.x = cM_rndFX(REG0_F(16) + 1600.0f);
             f32 b = REG0_F(15) + 2000.0f;
             f32 r = cM_rndFX(500.0f);
-            i_this->mTargetPos.y = (b + r) + l_HIO.m28;
+            i_this->mTargetPos.y = (b + r) + l_HIO.mBaseHeight;
             i_this->mTargetPos.z = cM_rndFX(REG0_F(16) + 1600.0f);
         }
         i_this->mTurnSpeed = REG0_F(18) + 1000.0f;

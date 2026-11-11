@@ -30,12 +30,12 @@ BOOL Act_c::CreateHeap() {
     J3DModel* model;
     if (prm_get_mdl() == 0) {
         model_data = (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_TABLE_BDL_YTBLE_e);
-        JUT_ASSERT(0x51, model_data != NULL);
+        JUT_ASSERT_MSG(0x51, model_data != NULL, "model_data != 0");
         model = mDoExt_J3DModel__create(model_data, 0, 0x11020203);
         mpModel = model;
     } else {
         model_data = (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_TABLE_BDL_QCFIS_e);
-        JUT_ASSERT(0x57, model_data != NULL);
+        JUT_ASSERT_MSG(0x57, model_data != NULL, "model_data != 0");
         model = mDoExt_J3DModel__create(model_data, 0, 0x11020203);
         mpModel = model;
     }
@@ -172,7 +172,7 @@ static void table_Act_c_dt(void* p, s32 flags) {
 str 100305E0 # "Table"
 str 100305B0 in 023991FC # "d_a_obj_table.cpp"
 str 10030548 in 023990AC # "d_a_obj_table.cpp"
-str 100305A0 "model_data != NULL" renamed # HD: "model_data != 0"
+str 100305A0 "model_data != 0" # HD: "model_data != 0"
 str 1003055C "(phase_state == cPhs_COMPLEATE_e) || (phase_state == cPhs_ERROR_e)" renamed # HD assertion uses numeric phase values
 data M_tmp_mtx 1046C0BC
 */

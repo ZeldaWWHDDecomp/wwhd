@@ -196,7 +196,7 @@ node_create_request* fpcNdRq_Request(u32 i_requestSize, u32 i_reqType,
         }
     } else {
         // HD: invalid types assert, unlike the unfinished GameCube switch case.
-        nodeRequestAssert("f_pc_node_req.cpp", 825, "invalid node request");
+        nodeRequestAssert("f_pc_node_req.cpp", 825, "0");
         return NULL;
     }
     if (req != NULL) {
@@ -245,7 +245,7 @@ data deleteMethods 101F3D94
 data changeMethods 101F3D7C
 data executeResults 10058404
 str 1005840C "f_pc_node_req.cpp" renamed
-str 10058407 "invalid node request" renamed
+str 10058407 "0"
 ext 025DD868 BOOL fpcM_IsCreating(u32)
 ext 025DE564 BOOL fpcEx_IsExist(u32)
 ext 025E14A8 u32 fpcSCtRq_Request(layer_class*, s16, u32, node_create_request*, void*)

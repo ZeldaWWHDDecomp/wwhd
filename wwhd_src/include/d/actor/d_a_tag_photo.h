@@ -7,8 +7,8 @@ struct PhotoEventCut {
 };
 struct PhotoLenzo : fopAc_ac_c {
     u8 mPadding[0xB35-sizeof(fopAc_ac_c)];
-    be<u8> field_0x9C1;
-    bool isDate() const { return field_0x9C1 == 4; }
+    be<u8> mPlaceState;  /* was field_0x9C1: view of daNpcPhoto_c::mPlaceState (d_a_npc_photo.h); isDate() tests 4 as tww's daNpc_Photo isDate() */
+    bool isDate() const { return mPlaceState == 4; }
 };
 struct daTagPhoto_c : fopAc_ac_c {
     using ProcFunc_t = void (daTagPhoto_c::*)();
@@ -35,16 +35,16 @@ struct daTagPhoto_c : fopAc_ac_c {
     be<u8> mMessageActive; u8 _3b9[3];
     be<u32> mMsgNo;
     PhotoEventCut mEventCut;
-    gptr<be<u32>> field_0x310;
+    gptr<be<u32>> mpMsgSeq;  /* was field_0x310: eventMesSetInit 024B1F30 / getMsg 024B1FD4 clear it; next_msgStatus 024B1FF0 steps it through a 0-terminated message number list while it is set and clears it at the end (tww the same) */
     be<s16> mPhotoTalkEventIdx, mPhotoTalk2EventIdx;
     be<u8> mTagNo, mMode, _436;
     be<s8> mActIdx;
-    be<u8> field_0x31C; u8 _439[3];
+    be<u8> mTalkEventSet; u8 _439[3];  /* mTalkEventSet was field_0x31C: daTagPhoto_construct 024B1D20 clears it; executeWait 024B24A4: the first time the player comes within 160 it is set and the photo talk event is ordered unless Po is on a date (tww the same) */
 };
 WWHD_SIZE(daTagPhoto_c, 0x43c);
 WWHD_OFFSET(daTagPhoto_c, mMsgID, 0x3b4);
 WWHD_OFFSET(daTagPhoto_c, mEventCut, 0x3c0);
-WWHD_OFFSET(daTagPhoto_c, field_0x310, 0x42c);
+WWHD_OFFSET(daTagPhoto_c, mpMsgSeq, 0x42c);
 WWHD_OFFSET(daTagPhoto_c, mTagNo, 0x434);
 
 void Photo_eventCutConstruct(PhotoEventCut*);
@@ -62,5 +62,5 @@ BOOL Photo_isAdvance(dEvent_manager_c*, s32);
 void Photo_cutEnd(dEvent_manager_c*, s32);
 PhotoLenzo* Photo_searchFromName(const char*, u32, u32);
 
-WWHD_OFFSET(PhotoLenzo, field_0x9C1, 0xB35);
+WWHD_OFFSET(PhotoLenzo, mPlaceState, 0xB35);
 WWHD_SIZE(PhotoEventCut, 0x6C);

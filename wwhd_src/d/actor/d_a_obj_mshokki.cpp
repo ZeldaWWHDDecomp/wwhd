@@ -16,7 +16,7 @@ static u32 unsignedFloat(f32 v) {
 }
 /* 0237CE88 */
 bool daObjMshokki_c::create_heap() {
-    s32 index = (s32)bdl_idx.values[(s32)m60C];
+    s32 index = (s32)bdl_idx.values[(s32)mType];
     auto *data = (J3DModelData *)dComIfG_getObjectRes("Mshokki", index, 0x1002DADC);
     if (!data) {
         JUT_ASSERT_fail(STR(0x1002DBBC), 0x164, STR(0x1002DBB8));
@@ -41,7 +41,7 @@ static void co_hitCallback(fopAc_ac_c *actor, dCcD_GObjInf *own, fopAc_ac_c *oth
     bool aligned = gabi::ea(other) == gabi::ea(static_cast<fopAc_ac_c *>(p->mPlayer)) &&
                    (f32)wrappedAbs((s32)(s16)other->current.angle.y - angle) < 4096.0f;
     f32 speed = other->speedF;
-    if (aligned && !(speed < 17.0f) && wrappedAbs((s32)((u32)self->m618 - (u32)self->m614)) > 2) {
+    if (aligned && !(speed < 17.0f) && wrappedAbs((s32)((u32)self->mLaunchFrame - (u32)self->mFrameCount)) > 2) {
         f32 strength = speed - 17.0f;
         // HD: ble means !GT; NaN is retained, rather than clamped to one.
         if (strength > 1.0f)
@@ -51,23 +51,23 @@ static void co_hitCallback(fopAc_ac_c *actor, dCcD_GObjInf *own, fopAc_ac_c *oth
         f32 vertical = gabi::fmadds(0.0f, strength, 24.0f);
         self->current.angle.y = angle;
         self->shape_angle.y = angle;
-        u32 frame = self->m614;
+        u32 frame = self->mFrameCount;
         self->mCyl.mGObjCo.mHitCallback = 0;
         self->speedF = horizontal;
         self->speed.y = vertical;
-        self->m618 = frame;
+        self->mLaunchFrame = frame;
         return;
     }
     // HD: blt rejects only ordered values below six; unordered values continue.
     if (speed < 6.0f)
         return;
     f32 strength = (speed - 6.0f) / 11.0f;
-    s32 type = self->m60C;
+    s32 type = self->mType;
     if (strength > 1.0f)
         strength = 1.0f;
-    s16 tilt = (s16)gabi::ftoi(strength * (f32)l_data.values[type].m0C);
+    s16 tilt = (s16)gabi::ftoi(strength * (f32)l_data.values[type].mMaxTilt);
     s16 facing = other->current.angle.y;
-    self->m61C = (s16)(facing + 0x2000);
+    self->mPushAngleY = (s16)(facing + 0x2000);
     self->shape_angle.x = tilt;
     self->shape_angle.y = facing;
 }
@@ -85,10 +85,10 @@ cPhs_State daObjMshokki_c::_create() {
     fopAcM_ct(this, daObjMshokki_c);
     if (mInitState == 0) {
         u32 type = paramAbstract(this, PRM_ARG_W, PRM_ARG_S);
-        m60C = (s32)type;
+        mType = (s32)type;
         if (type >= 3) {
             JUT_ASSERT_fail(STR(0x1002DC0C), 0x288, STR(0x1002DC08));
-            m60C = 0;
+            mType = 0;
         }
     }
     cPhs_State result = dComIfG_resLoad(&mPhase, "Mshokki");
@@ -108,8 +108,8 @@ cPhs_State daObjMshokki_c::_create() {
     mCyl.Set(reinterpret_cast<dCcD_SrcCyl *>(&l_cyl_src));
     mCyl.SetStts(&mStts);
     mshStartCTg(&mCyl, &current.pos);
-    mCyl.SetR((f32)l_data.values[(s32)m60C].radius);
-    mCyl.SetH((f32)l_data.values[(s32)m60C].height);
+    mCyl.SetR((f32)l_data.values[(s32)mType].radius);
+    mCyl.SetH((f32)l_data.values[(s32)mType].height);
     mCyl.mGObjCo.mHitCallback = gabi::guest_fn((const void *)co_hitCallback);
     set_mtx();
     cullMtx = gabi::ea(J3DModel_getBaseTRMtx(mModel));
@@ -131,12 +131,12 @@ static bool actorDelete(daObjMshokki_c *self) {
 }
 /* 0237D574 */
 void daObjMshokki_c::set_se() {
-    s16 delta = (s16)((s16)shape_angle.y - (s16)m61C);
+    s16 delta = (s16)((s16)shape_angle.y - (s16)mPushAngleY);
     if (wrappedAbs(delta) >= 4096)
         return;
     f32 tilt = (f32)(s16)shape_angle.x;
-    s32 type = m60C;
-    s16 phase = (s16)gabi::ftoi((tilt / (f32)l_data.values[type].m0C) * 16384.0f);
+    s32 type = mType;
+    s16 phase = (s16)gabi::ftoi((tilt / (f32)l_data.values[type].mMaxTilt) * 16384.0f);
     if (phase > 0x4000)
         phase = 0x4000;
     f32 intensity = cM_ssin(phase) * 100.0f;
@@ -147,7 +147,7 @@ void daObjMshokki_c::set_se() {
 }
 /* 0237D6DC */
 void daObjMshokki_c::break_proc() {
-    u16 particle = (u16)particle_id.values[(s32)m60C];
+    u16 particle = (u16)particle_id.values[(s32)mType];
     MshParticleController *control = mshPlay()->mParticle;
     mshParticleSet(control, 0, particle, &current.pos, &shape_angle, (u8 *)nullptr, 255,
                    (u8 *)nullptr, -1, &tevStr.mColorK0, 0, 0);
@@ -204,11 +204,11 @@ bool daObjMshokki_c::_execute() {
     } else
         shape_angle.x = (s16)((s16)shape_angle.x - 3072);
     u32 flags = mAcch.m_flags;
-    if (m612 == 1 && (flags & dBgS_Acch::GROUND_LANDING))
+    if (mGroundTouched == 1 && (flags & dBgS_Acch::GROUND_LANDING))
         break_proc();
     else {
         if ((flags & dBgS_Acch::GROUND_HIT) && !(flags & dBgS_Acch::GROUND_LANDING))
-            m612 = 1;
+            mGroundTouched = 1;
         mStts.Move();
         if (!checkCollision()) {
             set_mtx();
@@ -216,7 +216,7 @@ bool daObjMshokki_c::_execute() {
             mStts.mRoomId = (u8)(s8)current.roomNo;
             p = mshPlay();
             mshCcSet(&p->mCcS, &mCyl);
-            f32 x = current.pos.x, y = current.pos.y + (f32)l_data.values[(s32)m60C].m00,
+            f32 x = current.pos.x, y = current.pos.y + (f32)l_data.values[(s32)mType].mAttentionOffsetY,
                 z = current.pos.z;
             attention_info.position.x = x;
             attention_info.position.y = y;
@@ -225,7 +225,7 @@ bool daObjMshokki_c::_execute() {
         }
     }
     // HD: retain wrapping arithmetic for the launch cooldown counter.
-    m614 = (u32)m614 + 1;
+    mFrameCount = (u32)mFrameCount + 1;
     return true;
 }
 /* 0237DA70 */

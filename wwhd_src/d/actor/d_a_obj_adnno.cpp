@@ -10,7 +10,7 @@ const gc_tu_data gc_tu = { .safeString = 0x10024714,
 /* 02312FB8 */
 BOOL daObjAdnno_c::CreateHeap() {
     J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes("Adnno", dRes_INDEX_ADNNO_BDL_ADNNO_e);
-    JUT_ASSERT(0x5C, modelData != NULL);
+    JUT_ASSERT_MSG(0x5C, modelData != NULL, "modelData != (0)");
     for (s32 i = 0; i < 16; i++) {
         mpModel[i] = mDoExt_J3DModel__create(modelData, 0x80000, 0x37441422);
         if (!mpModel[i])
@@ -119,5 +119,5 @@ str 1002473C in 02312FB8 # "Adnno"
 str 1002470C in 023132BC # "Adnno"
 str 10024794 in 02313384 # "Adnno"
 str 10024744 # "d_a_obj_adnno.cpp"
-str 10024758 "modelData != NULL" renamed # HD: assertion prints null as 0
+str 10024758 "modelData != (0)" # HD: assertion prints null as 0
 */

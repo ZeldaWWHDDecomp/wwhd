@@ -5,13 +5,13 @@
 struct dSeaFightGame_pos_c { be<u8> x, y; };
 struct dSeaFightGame_ship_data {
     /* 0x0 */ be<u8> m_pos[4][2];
-    /* 0x8 */ be<u8> field_0x8;
-    /* 0x9 */ be<u8> field_0x9;
+    /* 0x8 */ be<u8> mLength;  /* was field_0x8: put_ship 025BB198 stores the ship size (2-4); daMgBoard_c's MgBoardShipHD view (d_a_mgameboard.cpp) picks the ship model by it (mLength there) (tww the same) */
+    /* 0x9 */ be<u8> mLife;  /* was field_0x9: put_ship 025BB198 sets the ship size; attack 025BB470 subtracts 1 per hit and counts the ship as sunk (mAliveShipNum - 1, mDeadShipNum + 1) at 0 (tww the same) */
     /* 0xA */ be<u8> field_0xa;
-    /* 0xB */ be<u8> field_0xb;
-    /* 0xC */ be<u8> field_0xc;
-    /* 0xD */ be<u8> field_0xd;
-    /* 0xE */ be<u8> field_0xe;
+    /* 0xB */ be<u8> mX;  /* was field_0xb: put_ship 025BB198: the ship's first cell x; the board draw (d_a_mgameboard.cpp MgBoardShipHD::mX) places the ship model there (tww the same) */
+    /* 0xC */ be<u8> mY;  /* was field_0xc: put_ship 025BB198: the ship's first cell y; the board draw (MgBoardShipHD::mY) places the ship model there (tww the same) */
+    /* 0xD */ be<u8> mLengthX;  /* was field_0xd: put_ship 025BB198: the ship size when it lies along x (direction 1), else 0 (tww the same) */
+    /* 0xE */ be<u8> mLengthY;  /* was field_0xe: put_ship 025BB198: the ship size when it lies along y (direction 0), else 0; the board draw (MgBoardShipHD::mVertical) turns the model by -0x8000 while it is non-zero, else 0x4000 (tww the same) */
 
     // HD: Full-width inputs preserve the PPC address wrap even outside the four normal positions.
     dSeaFightGame_pos_c* position(u32 index) {
@@ -43,7 +43,7 @@ struct dSeaFightGame_info_c {
     }
 };
 WWHD_SIZE(dSeaFightGame_pos_c, 2);
-WWHD_OFFSET(dSeaFightGame_ship_data, field_0x9, 9);
+WWHD_OFFSET(dSeaFightGame_ship_data, mLife, 9);
 WWHD_SIZE(dSeaFightGame_ship_data, 15);
 WWHD_OFFSET(dSeaFightGame_info_c, mShips, 0x40);
 WWHD_OFFSET(dSeaFightGame_info_c, mBulletNum, 0x7D);

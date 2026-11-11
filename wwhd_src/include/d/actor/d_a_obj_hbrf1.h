@@ -52,7 +52,7 @@ public:
     /* 0x3F4 */ be<s16> mEventIdx;
     /* 0x3F6 */ u8 pad[2];
     /* 0x3F8 */ be<s32> mTimer;
-    /* 0x3FC */ be<u8> m2E4;
+    /* 0x3FC */ be<u8> mEventOrdered;  /* was m2E4: daObjHbrf1_down_stop 02351278 / daObjHbrf1_up_stop 02351580 set 1 when they order the lift demo event (first time or by the event parameter); daObjHbrf1_up_demo 0235146C / daObjHbrf1_down_demo 02351798 reset the event at the end of the move only while it is set, then clear it; Create 0235106C clears it (tww the same) */
     /* 0x3FD */ u8 pad2[3];
 };
 WWHD_OFFSET(Act_c, mYOffset, 0x3E0);

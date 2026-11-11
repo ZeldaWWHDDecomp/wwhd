@@ -33,7 +33,7 @@ static BOOL CheckCreateHeap(fopAc_ac_c* i_this) {
 BOOL daMtoge_c::CreateHeap() {
     J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_MTOGE_BMD_S_MTOGE_e, gc_tu.safeString);
     if (modelData == nullptr) /* JUT_ASSERT(0x70, modelData != NULL) */
-        JUT_ASSERT_fail("d_a_mtoge.cpp", 0x70, "modelData != NULL");
+        JUT_ASSERT_fail("d_a_mtoge.cpp", 0x70, "modelData != (0)");
 
     mpModel = mDoExt_J3DModel__create(modelData, 0, 0x11020203U);
     if (!mpModel) {
@@ -248,7 +248,7 @@ static void daMtoge_SafeString_assureTermination(void* p) {
 str 100158D0
 str 10015874 in 021DFFF4
 str 100158AC in 021E047C
-str 10015884 "modelData != NULL"
+str 10015884 "modelData != (0)"
 str 100158A8 "0"
 data l_action_guard 101FDB3C
 data l_action 101FDB40

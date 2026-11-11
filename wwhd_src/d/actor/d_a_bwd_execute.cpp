@@ -92,14 +92,14 @@ static void control1(bwd_class* i_this, dBgS_GndChk* sharedGround) {
     PSMTXCopy(bd_getAnmMtx(i_this->mpHeadMorf->getModel(), bwd_execute_detail::BWD_JNT_SITA_e),
               calc_mtx());
     local_104->set(REG0_F(2) + -50.0f, REG0_F(3), REG0_F(4));
-    MtxPosition(local_104.get(), &i_this->mTongueSegments[0].m04);
+    MtxPosition(local_104.get(), &i_this->mTongueSegments[0].mPos);
     int i = 1;
     sita_s* sita_i = &i_this->mTongueSegments[1];
     cMtx_YrotS(calc_mtx(), actor->current.angle.y);
     cMtx_XrotM(calc_mtx(), actor->current.angle.x);
     local_104->x = 0.0f;
     local_104->y = 0.0f;
-    local_104->z = i_this->m1BA4;
+    local_104->z = i_this->mTongueSegStep;
     MtxPosition(local_104.get(), local_11c.get());
     local_104->z = i_this->mTongueSegLength;
     f32 dVar9 = i_this->mTongueWaveAmplitude;
@@ -129,10 +129,10 @@ static void control1(bwd_class* i_this, dBgS_GndChk* sharedGround) {
             }
             MtxPosition(local_110.get(), local_128.get());
         }
-        dVar10 = (local_128->y + (sita_i->m04.y + local_11c->y));
+        dVar10 = (local_128->y + (sita_i->mPos.y + local_11c->y));
         if (local_110->y < 0.0f) {
             gabi::Local<cXyz> pos;
-            pos->copy(sita_i->m04);
+            pos->copy(sita_i->mPos);
             pos->y += 200.0f;
             sharedGround->SetPos(pos.get());
             f32 ground = cBgS_GroundCross(dComIfG_Bgsp(), sharedGround);
@@ -142,9 +142,9 @@ static void control1(bwd_class* i_this, dBgS_GndChk* sharedGround) {
                 dVar10 = dVar8;
             }
         }
-        f32 x = ((sita_i->m04.x - sita_i[-1].m04.x) + local_11c->x) + local_128->x;
-        f32 y = (dVar10 - sita_i[-1].m04.y);
-        f32 z = ((sita_i->m04.z - sita_i[-1].m04.z) + local_11c->z) + local_128->z;
+        f32 x = ((sita_i->mPos.x - sita_i[-1].mPos.x) + local_11c->x) + local_128->x;
+        f32 y = (dVar10 - sita_i[-1].mPos.y);
+        f32 z = ((sita_i->mPos.z - sita_i[-1].mPos.z) + local_11c->z) + local_128->z;
         s16 iVar3;
         int iVar2 = cM_atan2s(x, z);
         iVar3 = -cM_atan2s(y, std_sqrtf(gabi::fmadds(x, x, z * z)));
@@ -155,8 +155,8 @@ static void control1(bwd_class* i_this, dBgS_GndChk* sharedGround) {
         bwdExecMtxPull();
         {
             gabi::Local<cXyz> added;
-            bwdExecVectorAdd(&sita_i[-1].m04, added.get(), local_110.get());
-            sita_i->m04.copy(*added.get());
+            bwdExecVectorAdd(&sita_i[-1].mPos, added.get(), local_110.get());
+            sita_i->mPos.copy(*added.get());
         }
     }
     bd_GndChk_dt(sharedGround);
@@ -169,16 +169,16 @@ static void control2(bwd_class* i_this) {
     rel_offset->x = 0;
     rel_offset->y = 0;
     rel_offset->z = i_this->mTongueSegLength;
-    i_this->mTongueSegments[29].m04.copy(i_this->mTongueTipPos);
+    i_this->mTongueSegments[29].mPos.copy(i_this->mTongueTipPos);
 
     int i = 28;
     s16 Yangle;
     int XZangle;
     sita_s* sita_i = &i_this->mTongueSegments[28];
     for (i = 28; i >= 1; i--, sita_i--) {
-        f32 delta_pos_x = sita_i->m04.x - sita_i[1].m04.x;
-        f32 delta_pos_y = sita_i->m04.y - sita_i[1].m04.y;
-        f32 delta_pos_z = sita_i->m04.z - sita_i[1].m04.z;
+        f32 delta_pos_x = sita_i->mPos.x - sita_i[1].mPos.x;
+        f32 delta_pos_y = sita_i->mPos.y - sita_i[1].mPos.y;
+        f32 delta_pos_z = sita_i->mPos.z - sita_i[1].mPos.z;
         XZangle = cM_atan2s(delta_pos_x, delta_pos_z);
         Yangle = -cM_atan2s(delta_pos_y, std_sqrtf(gabi::fmadds(delta_pos_x, delta_pos_x,
                                                                 delta_pos_z * delta_pos_z)));
@@ -187,8 +187,8 @@ static void control2(bwd_class* i_this) {
         MtxPosition(rel_offset.get(), abs_offset.get());
         {
             gabi::Local<cXyz> added;
-            bwdExecVectorAdd(&sita_i[1].m04, added.get(), abs_offset.get());
-            sita_i->m04.copy(*added.get());
+            bwdExecVectorAdd(&sita_i[1].mPos, added.get(), abs_offset.get());
+            sita_i->mPos.copy(*added.get());
         }
     }
 }
@@ -213,7 +213,7 @@ static void sita_move(bwd_class* i_this, fopAc_ac_c* player) {
     local_c8->y = gabi::fmadds(cM_ssin(i_this->mFrameCounter * (REG0_S(4) + 700)), REG0_F(14) + 50.0f,
                                REG0_F(0) + 600.0f);
     local_c8->z = (REG0_F(13) + 100.0f) * cM_ssin(i_this->mFrameCounter * (REG0_S(7) + 900));
-    bwdExecVectorAdd(&i_this->mTongueSegments[0].m04, local_f8.get(), local_c8.get());
+    bwdExecVectorAdd(&i_this->mTongueSegments[0].mPos, local_f8.get(), local_c8.get());
     if (i_this->mTongueTipPos.y < i_this->mSandSurfacePos.y) {
         actor->attention_info.flags = 0;
     }
@@ -233,7 +233,7 @@ static void sita_move(bwd_class* i_this, fopAc_ac_c* player) {
             }
         }
         i_this->mTongueTipStepScale = 0.0f;
-        i_this->mTonguePulledTimer = (s8)l_HIO.m14;
+        i_this->mTonguePulledTimer = (s8)l_HIO.mTonguePulledTime;
         i_this->mTonguePulledPos.copy(i_this->mTongueTipPos);
     } else {
         if (i_this->mTonguePulledTimer != 0) {
@@ -281,17 +281,17 @@ static void sita_move(bwd_class* i_this, fopAc_ac_c* player) {
             local_c8->y = 400.0f;
             local_c8->z =
                 (REG0_F(17) + 400.0f) * cM_ssin((int)i_this->mFrameCounter * (REG0_S(7) + 0x1324));
-            bwdExecVectorAdd(&i_this->mTongueSegments[0].m04, local_f8.get(), local_c8.get());
+            bwdExecVectorAdd(&i_this->mTongueSegments[0].mPos, local_f8.get(), local_c8.get());
             dVar8 = 1.0f;
             dVar9 = 200.0f;
         }
     }
-    bwdExecVectorSubtract(&i_this->mTongueTipPos, local_c8.get(), &i_this->mTongueSegments[0].m04);
+    bwdExecVectorSubtract(&i_this->mTongueTipPos, local_c8.get(), &i_this->mTongueSegments[0].mPos);
     fVar10 = std_sqrtf(PSVECSquareMag(local_c8.get()));
     dVar7 = gabi::fmuls_ppc(
         fVar10, REG0_F(2) + 0.035f); /* fmuls f22,f1,f8: the length is frA (NaN payload order) */
     if (i_this->mTongueRetract != 0) {
-        local_f8->copy(i_this->mTongueSegments[0].m04);
+        local_f8->copy(i_this->mTongueSegments[0].mPos);
         dVar8 = 1.0f;
         dVar9 = 50.0f;
         if (i_this->mTongueRetract != 2) {
@@ -310,22 +310,22 @@ static void sita_move(bwd_class* i_this, fopAc_ac_c* player) {
     control2(i_this);
     sita_s* sita_i = i_this->mTongueSegments;
     for (int i = 0; i < 30; i++, ++sita_i) {
-        MtxTrans(sita_i->m04.x, sita_i->m04.y, sita_i->m04.z, false);
+        MtxTrans(sita_i->mPos.x, sita_i->mPos.y, sita_i->mPos.z, false);
         fVar10 =
             gabi::fmadds(cM_scos((int)i_this->mFrameCounter * (REG0_S(7) + 1000) + i * (REG0_S(8) + 2000)),
                          (0.2f + REG0_F(9)), (1.0f + REG0_F(9)));
         MtxScale(fVar10, fVar10, fVar10, true);
-        J3DModel_setBaseTRMtx(sita_i->m00, calc_mtx());
+        J3DModel_setBaseTRMtx(sita_i->mpModel, calc_mtx());
         if (i == 29) {
-            actor->eyePos = sita_i->m04;
+            actor->eyePos = sita_i->mPos;
             actor->attention_info.position.copy(actor->eyePos);
             actor->attention_info.position.y += 20.0f;
-            i_this->mTongueSph.SetC(&sita_i->m04);
+            i_this->mTongueSph.SetC(&sita_i->mPos);
             i_this->mTongueSph.SetR(REG10_F(15) + 100.0f);
             bwdExecRegisterCollider(dComIfG_Ccsp(), &i_this->mTongueSph);
         } else if ((((i == 0) || (i == 6)) || (i == 12)) || (i == 18 || (i == 24))) {
             int r0 = i / 6;
-            i_this->mTongueCoSph[r0].SetC(&sita_i->m04);
+            i_this->mTongueCoSph[r0].SetC(&sita_i->mPos);
             bwdExecRegisterCollider(dComIfG_Ccsp(), &i_this->mTongueCoSph[r0]);
         }
     }
@@ -411,7 +411,7 @@ static BOOL bwd_execute(bwd_class* i_this) {
     }
     i_this->mTongueRetract = 0;
     ko_count = 0;
-    for (int i = 0; i < l_HIO.m26; i++) {
+    for (int i = 0; i < l_HIO.mLarvaMax; i++) {
         ko_ac()[i] = 0;
     }
     bwdExecSearch(0x020F9A28, i_this);
@@ -443,7 +443,7 @@ static BOOL bwd_execute(bwd_class* i_this) {
     if (i_this->mSandCrossWait != 0) {
         i_this->mSandCrossWait--;
     }
-    if (l_HIO.m05 == 0) {
+    if (l_HIO.mNoMove == 0) {
         bwdExecMove(i_this);
         i_this->mpHeadMorf->play(&actor->eyePos, 0, 0);
         local_110->x = 0.0f;
@@ -513,7 +513,7 @@ static BOOL bwd_execute(bwd_class* i_this) {
         ((i_this->mAction == 0xc) && (i_this->mMode >= 2))) {
         fVar26 = 1.0f;
     } else {
-        fVar26 = l_HIO.m20;
+        fVar26 = l_HIO.mBodyScale;
     }
     mDoMtx_stack_c::scaleM(fVar26, fVar26, fVar26);
     J3DModel_setBaseTRMtx(model, mDoMtx_stack_c::get());
@@ -536,7 +536,7 @@ static BOOL bwd_execute(bwd_class* i_this) {
         if (i_this->mAction == 10) {
             i_this->mBodySph[i].SetR(radius);
         } else {
-            i_this->mBodySph[i].SetR(l_HIO.m20 * radius);
+            i_this->mBodySph[i].SetR(l_HIO.mBodyScale * radius);
         }
         bwdExecRegisterCollider(dComIfG_Ccsp(), &i_this->mBodySph[i]);
     }
@@ -551,7 +551,7 @@ static BOOL bwd_execute(bwd_class* i_this) {
         }
         auto* powerVtable = reinterpret_cast<bwd_execute_detail::Player*>(player)->mVtable.get();
         s16 powerAngle = cM_atan2s(local_110->x, local_110->z);
-        bwd_execute_detail::setOutPower(powerVtable, player, l_HIO.m10 * dVar24, powerAngle);
+        bwd_execute_detail::setOutPower(powerVtable, player, l_HIO.mPushPower * dVar24, powerAngle);
         i_this->mPushPlayer = 0;
     }
     i_this->mpHeadBrkAnm->setPlaySpeed(i_this->mHeadBrkSpeed);
@@ -562,7 +562,7 @@ static BOOL bwd_execute(bwd_class* i_this) {
         i_this->mPlatformShakeOffset.x = cM_rndFX(REG0_F(18) + 4.0f);
         i_this->mPlatformShakeOffset.x = cM_rndFX(REG0_F(18) + 4.0f);
     }
-    mDoMtx_stack_c::transS(i_this->mPlatformShakeOffset.x, l_HIO.m28 + (i_this->mPlatformShakeOffset.y + l_HIO.m2C),
+    mDoMtx_stack_c::transS(i_this->mPlatformShakeOffset.x, l_HIO.mBaseHeight + (i_this->mPlatformShakeOffset.y + l_HIO.mPlatformHeight),
                            i_this->mPlatformShakeOffset.z);
     if (i_this->mPlatformHidden != 0) {
         mDoMtx_stack_c::transM(0.0f, -20000.0f, 0.0f);
@@ -630,7 +630,7 @@ static BOOL bwd_execute(bwd_class* i_this) {
             i_this->mSandfallTimer[i]++;
             i_this->mpSandfallBtk[i]->play();
             model = i_this->mpSandfallModel[i];
-            mDoMtx_stack_c::transS(0.0f, REG0_F(3) + -500.0f + l_HIO.m28, 0.0f);
+            mDoMtx_stack_c::transS(0.0f, REG0_F(3) + -500.0f + l_HIO.mBaseHeight, 0.0f);
             mDoMtx_stack_c::YrotM(i_this->mSandfallAngle[i].y);
             J3DModel_setBaseTRMtx(model, mDoMtx_stack_c::get());
             PSMTXCopy(mDoMtx_stack_c::get(), &i_this->mBgwMtx1[i]);
@@ -686,7 +686,7 @@ static BOOL bwd_execute(bwd_class* i_this) {
             i_this->mpGspBtkAnm[i]->setFrame(fVar26);
             i_this->mpGspBrkAnm[i]->setFrame(fVar26);
             mDoMtx_stack_c::transS(i_this->mSplashPos[i].x, i_this->mSplashPos[i].y, i_this->mSplashPos[i].z);
-            mDoMtx_stack_c::scaleM(l_HIO.m30, l_HIO.m34, l_HIO.m30);
+            mDoMtx_stack_c::scaleM(l_HIO.mSplashScaleXZ, l_HIO.mSplashScaleY, l_HIO.mSplashScaleXZ);
             J3DModel_setBaseTRMtx(i_this->mpGspMorf[i]->getModel(), mDoMtx_stack_c::get());
             i_this->mSplashFrame[i]++;
             if (i_this->mSplashFrame[i] > 0x3c) {

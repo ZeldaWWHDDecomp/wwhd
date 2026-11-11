@@ -276,11 +276,11 @@ void d_kankyo_cpp::dScnKy_env_light_c::CalcTevColor() {
 
 void d_kankyo_cpp::dScnKy_env_light_c::Sndpos() {
 
-    u32 n = u32(this->mSound.field_0x10);
+    u32 n = u32(this->mSound.mNoiseTimer);
     if (n == 0)
         return;
     n--;
-    this->mSound.field_0x10 = n;
+    this->mSound.mNoiseTimer = n;
     if (n == 0)
         dKy_Sound_init();
 }
@@ -550,9 +550,9 @@ void d_kankyo_cpp::dScnKy_env_light_c::drawKankyo() {
     }
     if (flag == 0x10 || flag == 0x20 || flag == 0x30) {
         const f32 one = f32(frameOne.value);
-        frameAddCalc(&env->field_0xc34, one, f32(frameHalf.value), f32(frameArrowFadeInStep.value),
+        frameAddCalc(&env->mColChgRatio, one, f32(frameHalf.value), f32(frameArrowFadeInStep.value),
                      f32(frameMinimumStep.value));
-        if (!(f32(env->field_0xc34) < one)) {
+        if (!(f32(env->mColChgRatio) < one)) {
             flag = (u8)(u8(env->mColChgFlag) + 0x30);
             env->mColChgFlag = flag;
         } else {
@@ -560,11 +560,11 @@ void d_kankyo_cpp::dScnKy_env_light_c::drawKankyo() {
         }
     } else if (flag == 0x40 || flag == 0x50 || flag == 0x60) {
         const f32 zero = f32(frameZero.value);
-        frameAddCalc(&env->field_0xc34, zero, f32(frameHalf.value), f32(frameArrowFadeOutStep.value),
+        frameAddCalc(&env->mColChgRatio, zero, f32(frameHalf.value), f32(frameArrowFadeOutStep.value),
                      f32(frameMinimumStep.value));
-        if (f32(env->field_0xc34) < f32(frameArrowFadeEnd.value)) {
+        if (f32(env->mColChgRatio) < f32(frameArrowFadeEnd.value)) {
             env->mColChgFlag = 0;
-            env->field_0xc34 = zero;
+            env->mColChgRatio = zero;
             return;
         }
         flag = u8(env->mColChgFlag);
@@ -574,23 +574,23 @@ void d_kankyo_cpp::dScnKy_env_light_c::drawKankyo() {
     s32 cr = (*col)[0], cg = (*col)[1], cb = (*col)[2];
     dKy_actor_addcol_amb_set(subtractColorByte(cr, &env->colors().mActorC0.r),
                              subtractColorByte(cg, &env->colors().mActorC0.g),
-                             subtractColorByte(cb, &env->colors().mActorC0.b), f32(env->field_0xc34));
+                             subtractColorByte(cb, &env->colors().mActorC0.b), f32(env->mColChgRatio));
     dKy_bg_addcol_amb_set(subtractColorByte(cr, &env->colors().mBG0_C0.r),
                           subtractColorByte(cg, &env->colors().mBG0_C0.g),
-                          subtractColorByte(cb, &env->colors().mBG0_C0.b), f32(env->field_0xc34));
+                          subtractColorByte(cb, &env->colors().mBG0_C0.b), f32(env->mColChgRatio));
     s32 r3, g3, b3;
     if (stageNameEquals("GTower")) {
         dKy_bg2_addcol_amb_set(subtractColorByte(cr, &env->colors().mBG2_C0.r),
                                subtractColorByte(cg, &env->colors().mBG2_C0.g),
-                               subtractColorByte(cb, &env->colors().mBG2_C0.b), f32(env->field_0xc34));
+                               subtractColorByte(cb, &env->colors().mBG2_C0.b), f32(env->mColChgRatio));
     } else {
         dKy_bg1_addcol_amb_set(subtractColorByte(cr, &env->colors().mBG1_C0.r),
                                subtractColorByte(cg, &env->colors().mBG1_C0.g),
                                subtractColorByte(cb, &env->colors().mBG1_C0.b),
-                               f32(env->field_0xc34) * f32(frameBackgroundAmbientRatio.value));
+                               f32(env->mColChgRatio) * f32(frameBackgroundAmbientRatio.value));
         dKy_bg2_addcol_amb_set(subtractColorByte(cr, &env->colors().mBG2_C0.r),
                                subtractColorByte(cg, &env->colors().mBG2_C0.g),
-                               subtractColorByte(cb, &env->colors().mBG2_C0.b), f32(env->field_0xc34));
+                               subtractColorByte(cb, &env->colors().mBG2_C0.b), f32(env->mColChgRatio));
     }
     r3 = subtractColorByte(cr, &env->colors().mBG3_C0.r);
     g3 = subtractColorByte(cg, &env->colors().mBG3_C0.g);
@@ -600,26 +600,26 @@ void d_kankyo_cpp::dScnKy_env_light_c::drawKankyo() {
         g3 = subtractColorByte(0xB0, &env->colors().mBG3_C0.g);
         b3 = subtractColorByte(0x88, &env->colors().mBG3_C0.b);
     }
-    dKy_bg3_addcol_amb_set(r3, g3, b3, f32(env->field_0xc34));
+    dKy_bg3_addcol_amb_set(r3, g3, b3, f32(env->mColChgRatio));
     s32 kr = (*col)[4], kg = (*col)[5], kb = (*col)[6];
     dKy_actor_addcol_dif_set(subtractColorByte(kr, &env->colors().mActorK0.r),
                              subtractColorByte(kg, &env->colors().mActorK0.g),
-                             subtractColorByte(kb, &env->colors().mActorK0.b), f32(env->field_0xc34));
+                             subtractColorByte(kb, &env->colors().mActorK0.b), f32(env->mColChgRatio));
     dKy_bg_addcol_dif_set(subtractColorByte(kr, &env->colors().mBG0_K0.r),
                           subtractColorByte(kg, &env->colors().mBG0_K0.g),
-                          subtractColorByte(kb, &env->colors().mBG0_K0.b), f32(env->field_0xc34));
+                          subtractColorByte(kb, &env->colors().mBG0_K0.b), f32(env->mColChgRatio));
     if (stageNameEquals("GTower")) {
         dKy_bg2_addcol_dif_set(subtractColorByte(kr, &env->colors().mBG2_K0.r),
                                subtractColorByte(kg, &env->colors().mBG2_K0.g),
-                               subtractColorByte(kb, &env->colors().mBG2_K0.b), f32(env->field_0xc34));
+                               subtractColorByte(kb, &env->colors().mBG2_K0.b), f32(env->mColChgRatio));
     } else {
         dKy_bg1_addcol_dif_set(subtractColorByte(kr, &env->colors().mBG1_K0.r),
                                subtractColorByte(kg, &env->colors().mBG1_K0.g),
                                subtractColorByte(kb, &env->colors().mBG1_K0.b),
-                               f32(env->field_0xc34) * f32(frameBackgroundDiffuseRatio.value));
+                               f32(env->mColChgRatio) * f32(frameBackgroundDiffuseRatio.value));
         dKy_bg2_addcol_dif_set(subtractColorByte(kr, &env->colors().mBG2_K0.r),
                                subtractColorByte(kg, &env->colors().mBG2_K0.g),
-                               subtractColorByte(kb, &env->colors().mBG2_K0.b), f32(env->field_0xc34));
+                               subtractColorByte(kb, &env->colors().mBG2_K0.b), f32(env->mColChgRatio));
     }
     r3 = subtractColorByte(kr, &env->colors().mBG3_K0.r);
     b3 = subtractColorByte(kb, &env->colors().mBG3_K0.b);
@@ -629,7 +629,7 @@ void d_kankyo_cpp::dScnKy_env_light_c::drawKankyo() {
         g3 = subtractColorByte(0x8A, &env->colors().mBG3_C0.g);
         b3 = subtractColorByte(0x44, &env->colors().mBG3_C0.b);
     }
-    dKy_bg3_addcol_dif_set(r3, g3, b3, f32(env->field_0xc34));
+    dKy_bg3_addcol_dif_set(r3, g3, b3, f32(env->mColChgRatio));
 }
 
 /* 0255B2D8 */
@@ -937,7 +937,7 @@ void dKy_plight_priority_set(u32 light) {
         }
     }
     // HD: the guest warning includes leading/trailing newlines; its address remains unchanged.
-    frameReportWarning("POINTLIGHT COUNT OVER!!!");
+    frameReportWarning("\nPOINTLIGHT COUNT OVER!!!\n");
 }
 
 /* 0255A374 */
@@ -1059,7 +1059,7 @@ void dKy_Itemgetcol_chg_move() {
                 env->mColChgLight.mColor.b = 0xFF;
             }
         }
-        frameAddCalc(&env->field_0xc34, one, half, f32(frameItemFadeInStep.value), f32(frameMinimumStep.value));
+        frameAddCalc(&env->mColChgRatio, one, half, f32(frameItemFadeInStep.value), f32(frameMinimumStep.value));
         break;
     case 5:
     case 6:
@@ -1067,33 +1067,33 @@ void dKy_Itemgetcol_chg_move() {
             dKy_plight_cut_hd(gabi::ea(&env->mColChgLight.mPos.x));
             env->mColChgFlag = 6;
         }
-        frameAddCalc(&env->field_0xc34, zero, half, f32(frameItemFadeOutStep.value), f32(frameSmallStep.value));
-        if (f32(env->field_0xc34) < f32(frameItemFadeEnd.value)) {
+        frameAddCalc(&env->mColChgRatio, zero, half, f32(frameItemFadeOutStep.value), f32(frameSmallStep.value));
+        if (f32(env->mColChgRatio) < f32(frameItemFadeEnd.value)) {
             env->mColChgFlag = 0;
-            env->field_0xc34 = zero;
+            env->mColChgRatio = zero;
         }
         break;
     default:
         break;
     }
     flag = u8(env->mColChgFlag);
-    env->field_0xc98 = 0;
+    env->mColChgActive = 0;
     fade = (flag & 7) != 0;
     if (!fade)
         return;
-    f32 s = f32(env->field_0xc34);
-    env->field_0xc98 = 1;
+    f32 s = f32(env->mColChgRatio);
+    env->mColChgActive = 1;
     dKy_set_actcol_ratio(gabi::fnmsubs(s, half, one));
     const f32 k = f32(frameItemRatio.value);
-    dKy_set_bgcol_ratio(gabi::fnmsubs(f32(env->field_0xc34), k, one));
-    dKy_set_fogcol_ratio(gabi::fnmsubs(f32(env->field_0xc34), k, one));
-    dKy_set_vrboxcol_ratio(gabi::fnmsubs(f32(env->field_0xc34), k, one));
-    dKy_set_vrboxsoracol_ratio(gabi::fnmsubs(f32(env->field_0xc34), k, one));
-    dKy_set_vrboxkumocol_ratio(gabi::fnmsubs(f32(env->field_0xc34), k, one));
+    dKy_set_bgcol_ratio(gabi::fnmsubs(f32(env->mColChgRatio), k, one));
+    dKy_set_fogcol_ratio(gabi::fnmsubs(f32(env->mColChgRatio), k, one));
+    dKy_set_vrboxcol_ratio(gabi::fnmsubs(f32(env->mColChgRatio), k, one));
+    dKy_set_vrboxsoracol_ratio(gabi::fnmsubs(f32(env->mColChgRatio), k, one));
+    dKy_set_vrboxkumocol_ratio(gabi::fnmsubs(f32(env->mColChgRatio), k, one));
     s16 nr = (s16)(0 - (s32)u8(env->colors().mActorC0.r)), ng = (s16)(0 - (s32)u8(env->colors().mActorC0.g)),
         nb = (s16)(0 - (s32)u8(env->colors().mActorC0.b));
-    dKy_actor_addcol_amb_set(nr, ng, nb, f32(env->field_0xc34));
-    dKy_actor_addcol_dif_set(0, 0, 0, f32(env->field_0xc34));
+    dKy_actor_addcol_amb_set(nr, ng, nb, f32(env->mColChgRatio));
+    dKy_actor_addcol_dif_set(0, 0, 0, f32(env->mColChgRatio));
 }
 
 /* 0255B930 */
@@ -1101,12 +1101,12 @@ void dKy_Itemgetcol_chg_move() {
 void dKy_Sound_init() {
 
     const f32 far = f32(frameSoundFar.value);
-    frameEnv()->mSound.field_0x0.x = far;
-    frameEnv()->mSound.field_0x0.y = far;
-    frameEnv()->mSound.field_0x0.z = far;
-    frameEnv()->mSound.field_0xc = 0;
-    frameEnv()->mSound.field_0x14 = (u32)-1;
-    frameEnv()->mSound.field_0x10 = 0;
+    frameEnv()->mSound.mNoisePos.x = far;
+    frameEnv()->mSound.mNoisePos.y = far;
+    frameEnv()->mSound.mNoisePos.z = far;
+    frameEnv()->mSound.mNoiseLevel = 0;
+    frameEnv()->mSound.mNoiseActorId = (u32)-1;
+    frameEnv()->mSound.mNoiseTimer = 0;
 }
 
 /* 0255A3D8 */
@@ -1252,7 +1252,7 @@ str 1004F22C "sea" in 0255B300
 str 1004EF54 "sea" in 0255D128
 str 1004F230 "ENDumi" in 0255B300
 str 1004F274 "ADMumi" in 0255BE0C
-str 1004F1E0 "POINTLIGHT COUNT OVER!!!" renamed in 0255A2B8
+str 1004F1E0 "\nPOINTLIGHT COUNT OVER!!!\n" in 0255A2B8
 str 1004F094 "d_kankyo.cpp" in 0255D128
 str 1004EF60 "0" in 0255D128
 data frameSave 101F84DC

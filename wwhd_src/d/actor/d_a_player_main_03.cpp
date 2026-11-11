@@ -11,6 +11,7 @@
  * HD folds the GameCube HIO values (m_HIO->...) into constants; they are written as literals.
  */
 #include "d/actor/d_a_player_main_03.h"
+#include "sead/ElementAt.h"
 #include "port_hooks.h"
 
 static LinkDemoEntry mDemoProcInitFuncTable[] = {
@@ -260,7 +261,7 @@ BOOL daPy_lk_c::procHammerFrontSwingReady_init() {
         (gabi::at<LinkActionAttention>(att)->mFlags & 0x20000000) || !(mStickDistance > 0.05f)) {
         mProcVar2 = shape_angle.y;
     } else {
-        mProcVar2 = m34E8;
+        mProcVar2 = mMoveTargetAngleY;
     }
     setAtParam(0x10000, 4, 0, 5, 0xD, 0x12 /* CUT_TYPE_HAMMER_FRONTSWING */, 50.0f);
     LinkActionVoiceStart(this, 7);
@@ -700,10 +701,10 @@ void daPy_lk_c::setAnimeEquipItem() {
             return;
         }
     }
-    m3562 = (u8)getReadyItem();
+    mAnimeEquipItem = (u8)getReadyItem();
     auto& status = LinkActionPlay().mPlayerStatus[0][0];
     status = (u32)status & ~0x400000u;
-    setAnimeUnequipItem((u32)m3562);
+    setAnimeUnequipItem((u32)mAnimeEquipItem);
 }
 
 /* 023EF7CC */
@@ -964,7 +965,7 @@ BOOL daPy_lk_c::checkNextActionFromButton() {
                     return procCutTurnCharge_init();
                 }
                 if (mItemTrigger & 2 /* swordTrigger() */) {
-                    if (lk_abs(m3578) > 0xF800) {
+                    if (lk_abs(mStickSpinAngle) > 0xF800) {
                         return procCutTurn_init(1);
                     }
                     return changeCutProc();
@@ -980,7 +981,7 @@ BOOL daPy_lk_c::checkNextActionFromButton() {
                 if (mItemTrigger & 1) {
                     fopAc_ac_c* weapon = mActorKeepEquip.mActor;
                     if (weapon != nullptr) {
-                        if (lk_abs(m3578) > 0xF800) {
+                        if (lk_abs(mStickSpinAngle) > 0xF800) {
                             return procCutTurn_init(1);
                         }
                         u32 prm = weapon->mParameters;
@@ -1093,14 +1094,14 @@ BOOL daPy_lk_c::checkNextActionFromButton() {
             }
         } else if (dComIfGp_getDoStatus() == 0xC /* dActStts_ATTACK_e */) {
             if (!lk_checkAttentionLock(mpAttention) && mStickDistance > 0.05f) {
-                shape_angle.y = m34E8;
+                shape_angle.y = mMoveTargetAngleY;
             }
             return procFrontRoll_init(0.0f);
         }
     }
     if (gabi::ea(LinkActionPlay().mPlayerInfo[0].mpPlayer.get()) ==
             gabi::ea(this) /* daPy_getPlayerActorClass() == this */
-        && !dComIfGp_event_runCheck() && !(field_0x2b0 < 0.0f) /* !checkGrabWear() */) {
+        && !dComIfGp_event_runCheck() && !(mGrabItemOffsetY < 0.0f) /* !checkGrabWear() */) {
         mResetFlg0 = mResetFlg0 | LinkActionConstants::daPyRFlg0_SUBJECT_ACCEPT;
         s32 camIdx = mCameraInfoIdx;
         if (dComIfGp_getCameraAttentionStatus(camIdx) & 0x1000) {
@@ -1186,7 +1187,7 @@ BOOL daPy_lk_c::procWaitTurn_init() {
     if (dComIfGp_event_runCheck()) {
         mNormalSpeed = 0.0f;
     }
-    mProcVar2 = m34E8;
+    mProcVar2 = mMoveTargetAngleY;
     current.angle.y = shape_angle.y;
     return TRUE;
 }
@@ -1204,7 +1205,7 @@ BOOL daPy_lk_c::procMoveTurn_init(int param) {
         mProcVar2 = 0x7936;
         mProcVar3 = 0x1770;
         mProcVar0 = 2;
-        current.angle.y = m34E8;
+        current.angle.y = mMoveTargetAngleY;
         mNormalSpeed = mNormalSpeed * 0.5f;
     } else {
         mProcVar2 = 0x1770;
@@ -1254,7 +1255,7 @@ BOOL daPy_lk_c::procVomitWait_init() {
     current.angle.y = shape_angle.y;
     gabi::at<LinkActionActorWords>(me)->mCurrentPos[2] = z;
     gabi::at<LinkActionActorWords>(me)->mOldPos[0] = x;
-    m34C2 = 11;
+    mRootMoveMode = 11;
     gabi::at<LinkActionActorWords>(me)->mOldPos[1] = y;
     mProcVar2 = 0;
     mNormalSpeed = 0.0f;
@@ -1361,7 +1362,7 @@ BOOL daPy_lk_c::checkNextMode(int noStick) {
         mDirection = 4; /* DIR_NONE */
         int dir = getDirectionFromCurrentAngle();
         if (!(std::fabs((f32)mNormalSpeed) > 0.001f)) {
-            if (cLib_distanceAngleS(m34E8, current.angle.y) > 0x7800 && mStickDistance > 0.05f) {
+            if (cLib_distanceAngleS(mMoveTargetAngleY, current.angle.y) > 0x7800 && mStickDistance > 0.05f) {
                 r = procWaitTurn_init();
                 if (!r && !dComIfGp_event_runCheck() &&
                     mDemo.mDemoType == 0 /* !checkPlayerDemoMode() */) {
@@ -1374,12 +1375,12 @@ BOOL daPy_lk_c::checkNextMode(int noStick) {
             s16 angleY = current.angle.y;
             if (mCurProc == LinkActionConstants::daPyProc_MOVE_TURN_e && angleY != shape_angle.y) {
                 r = procMoveTurn_init(0);
-            } else if (cLib_distanceAngleS(m34E8, angleY) > 0x7800 && mStickDistance > 0.05f) {
+            } else if (cLib_distanceAngleS(mMoveTargetAngleY, angleY) > 0x7800 && mStickDistance > 0.05f) {
                 if (speedF / mMaxNormalSpeed > 0.6f &&
                     mCurrAttributeCode != 0xF /* dBgS_Attr_ICE_e */ &&
                     LinkAction(this).m_anm_heap_upper[2].mIdx != 0x95 &&
                     LinkAction(this).m_anm_heap_upper[2].mIdx != 0x96 &&
-                    getDirectionFromAngle((s16)(m34EA - m34DC)) == 1 /* DIR_BACKWARD */) {
+                    getDirectionFromAngle((s16)(mOldStickAngle - mStickAngle)) == 1 /* DIR_BACKWARD */) {
                     r = procSlip_init();
                 } else {
                     r = procMoveTurn_init(1);
@@ -1623,7 +1624,10 @@ BOOL daPy_lk_c::dProcHDBottleThrow_init() {
     u32 body = LinkActionApi::getCameraBody();
     LinkActionApi::endEventCamera(body, mBsPcId);
     s32 camIdx = mCameraInfoIdx;
-    u32 cam = LinkActionPlay().mCameraInfo[camIdx].mpCamera;
+    /* guest address arithmetic: mCameraInfo + camIdx * 0x34 wraps at 32 bits as on the console */
+    u32 cam = sead::elementAt<std::remove_reference_t<decltype(LinkActionPlay().mCameraInfo[0])>>(
+                  gabi::ea(LinkActionPlay().mCameraInfo), (u32)camIdx)
+                  .mpCamera;
     u32 tid = 0xFFFFFFFF;
     if (LinkAction(this).mThrowActor != 0) {
         tid = gabi::at<fopAc_ac_c>(LinkAction(this).mThrowActor)->mBsPcId;
@@ -1705,10 +1709,10 @@ BOOL daPy_lk_c::dProcTool_init() {
     speed.y = 0.0f;
     speedF = 0.0f;
     mNormalSpeed = 0.0f;
-    LinkAction(this).m_anm_heap_under[0].field_0x6 =
-        -1; /* m_anm_heap_under[UNDER_MOVE0_e].field_0x6 */
-    LinkAction(this).m_anm_heap_under[0].field_0x4 =
-        -1;                                         /* m_anm_heap_under[UNDER_MOVE0_e].field_0x4 */
+    LinkAction(this).m_anm_heap_under[0].mDemoAnmNo =
+        -1; /* m_anm_heap_under[UNDER_MOVE0_e].mDemoAnmNo */
+    LinkAction(this).m_anm_heap_under[0].mDemoIdx =
+        -1;                                         /* m_anm_heap_under[UNDER_MOVE0_e].mDemoIdx */
     LinkAction(this).m_anm_heap_upper[0].mIdx = -1; /* m_anm_heap_upper[UPPER_MOVE0_e].mIdx */
     LinkAction(this).m_anm_heap_under[1].mIdx = -1; /* m_anm_heap_under[UNDER_MOVE1_e].mIdx */
     LinkAction(this).m_anm_heap_upper[1].mIdx = -1; /* m_anm_heap_upper[UPPER_MOVE1_e].mIdx */
@@ -1946,7 +1950,7 @@ BOOL daPy_lk_c::procLargeDamage_init(int type, int large, s16 rootX, s16 rootZ) 
             linkIsStartStage(gabi::guest_addr("Xboss1"))) {
             u32 mtx =
                 linkGetAnmMtx(gabi::ea(mpCLModel.get()), LinkActionConstants::CL_JNT_CENTER_e);
-            LinkActionApi::makeEmitter(&m32E4, LinkActionConstants::ID_AK_SN_BKMHAKIDASHIHOUSHI00,
+            LinkActionApi::makeEmitter(&mProcEffectEcallBack0, LinkActionConstants::ID_AK_SN_BKMHAKIDASHIHOUSHI00,
                                        mtx, &current.pos, nullptr);
         }
         linkStartShockUp();
@@ -2616,7 +2620,7 @@ BOOL daPy_lk_c::dProcDead_init() {
             mProcVar2 = 1;
             mNoResetFlg0 = mNoResetFlg0 & ~0x100u;
         } else {
-            m34C2 = 0;
+            mRootMoveMode = 0;
         }
     } else {
         anm = 0x62; /* ANM_DIELONG */
@@ -2669,11 +2673,11 @@ BOOL daPy_lk_c::procAutoJump_init() {
     commonProcInit(LinkMotionConstants::daPyProc_AUTO_JUMP_e);
     f32 z = current.pos.z;
     f32 y = current.pos.y;
-    m3688.z = z;
-    m3688.y = y;
+    mProcStartPos.z = z;
+    mProcStartPos.y = y;
     m35F4 = y;
-    m35F0 = y;
-    m3688.x = current.pos.x;
+    mFallStartY = y;
+    mProcStartPos.x = current.pos.x;
     setSingleMoveAnime(LinkMotionConstants::ANM_JMPST, 0.8f, 1.0f, 5, 1.0f);
     f32 sp = speedF;
     if (sp > 17.0f) {
@@ -2686,8 +2690,8 @@ BOOL daPy_lk_c::procAutoJump_init() {
     mNormalSpeed = (sp * cM_scos(0x2AF8)) * 1.6f;
     speed.y = (speedF * cM_ssin(0x2AF8)) * 1.6f;
     mProcVar6 = 0;
-    linkCopyPositionWords(gabi::ea(&m3700), &cXyz::Zero /* cXyz::Zero */);
-    m34C2 = 1;
+    linkCopyPositionWords(gabi::ea(&mPrevRootTrans), &cXyz::Zero /* cXyz::Zero */);
+    mRootMoveMode = 1;
     current.angle.y = shape_angle.y;
     LinkActionVoiceStart(this, 6);
     mProcVar1 = 3;
@@ -2716,7 +2720,7 @@ BOOL daPy_lk_c::procClimbDownStart_init(s16 angle) {
     current.pos.y = current.pos.y - 20.0f;
     current.pos.z = gabi::fnmsubs(35.0f, cM_scos((u16)angle), current.pos.z);
     mProcVar6 = 1;
-    m35E0 = 43.67353f;
+    mRootTransY = 43.67353f;
     return TRUE;
 }
 
@@ -2866,8 +2870,8 @@ BOOL daPy_lk_c::changeAutoJumpProc() {
     if (!(gndDiff < -30.1f)) {
         return FALSE;
     }
-    f32 dz = ((speed.z + m3730.z) + m36A0.z) + m36B8.z;
-    f32 dx = ((speed.x + m3730.x) + m36A0.x) + m36B8.x;
+    f32 dz = ((speed.z + mWindSpeed.z) + mSlipSpeed.z) + mBeltConveyerSpeed.z;
+    f32 dx = ((speed.x + mWindSpeed.x) + mSlipSpeed.x) + mBeltConveyerSpeed.x;
     f64 len = LinkActionApi::sqrtWide(gabi::fmadds(dx, dx, dz * dz));
     f32 morf;
     if (len > (f64)0.001f) {
@@ -2897,7 +2901,7 @@ BOOL daPy_lk_c::changeAutoJumpProc() {
                 0 ||
             LinkMotionApi::checkBottle(gabi::ea(&LinkActionSave().mSavedata.mPlayer.mPlayerItem),
                                        0x57)) {
-            if (m357C != 3 && !(field_0x2b0 < 0.0f) /* !checkGrabWear() */ && !(nspeed < 9.0f) &&
+            if (mOldGroundCode != 3 && !(mGrabItemOffsetY < 0.0f) /* !checkGrabWear() */ && !(nspeed < 9.0f) &&
                 mStickDistance > 0.85f && cLib_distanceAngleS(a, shape_angle.y) < 0x800) {
                 if (pla != 0) {
                     current.pos.x = (f32)linkMotionQueries(me)
@@ -3004,7 +3008,7 @@ void daPy_lk_c::setSwimTimerStartStop() {
         LinkActionPlay(play).mItemSwimTimerStatus = (u8)(1);
         LinkActionPlay().mItemSwimTimerStatus = (u8)(0); /* dComIfGp_stopItemSwimTimer() */
     }
-    cLib_chaseF(&m3608, target, 3.0f);
+    cLib_chaseF(&mSwimTiredOffsetY, target, 3.0f);
 }
 
 /* 023F8B00 */
@@ -3414,10 +3418,10 @@ BOOL daPy_lk_c::checkNormalDamage(int life) {
     }
     f32 ns = mNormalSpeed;
     f32 k;
-    if (m3580 == 8) {
+    if (mGroundCode == 8) {
         k = 1.0f * ns;
     } else {
-        k = cM_scos((u16)m34E2) * ns;
+        k = cM_scos((u16)mGroundAngle) * ns;
     }
     if (std::fabs(k / mMaxNormalSpeed) < 0.9f) {
         return TRUE;
@@ -3727,7 +3731,7 @@ BOOL daPy_lk_c::changeDamageProc() {
                     setDamagePointWait(0.0f);
                     return TRUE;
                 }
-                if (field_0x2b0 < 0.0f /* checkGrabWear() */ &&
+                if (mGrabItemOffsetY < 0.0f /* checkGrabWear() */ &&
                     LinkActionApi::getCollisionActor(gabi::ea(&mCyl.mGObjTg)) != 0 &&
                     (s16)gabi::at<fopAc_ac_c>(
                         LinkActionApi::getCollisionActor(gabi::ea(&mCyl.mGObjTg)))
@@ -3955,13 +3959,13 @@ void daPy_lk_c::checkItemAction() {
         }
     }
     u16 eq = mEquipItem;
-    if ((eq != 0x100 && eq != 0x103) || (m3562 != 0x100 && m3562 != 0x103)) {
+    if ((eq != 0x100 && eq != 0x103) || (mAnimeEquipItem != 0x100 && mAnimeEquipItem != 0x103)) {
         seStartOnlyReverb(LinkMotionConstants::JA_SE_LK_ITEM_TAKEOUT);
         eq = mEquipItem;
     }
     BOOL had = eq != 0x100;
     deleteEquipItem(0);
-    mEquipItem = m3562;
+    mEquipItem = mAnimeEquipItem;
     if (!dComIfGp_event_runCheck() && LK_demoType == 0) {
         if (mEquipItem != 0x103 || !(noResetFlg1() & LinkMotionConstants::daPyFlg1_UNK4000000)) {
             if (lk_checkAttentionLock(mpAttention) || mEquipItem != 0x103 || had) {
@@ -4067,93 +4071,93 @@ static inline s32 anm_getFrameMax(u32 anm) {
 
 /* 023FBCEC */
 void daPy_lk_c::playTextureAnime() {
-    u16 textureAnime = (u16)linkMotionAnimeHeap(m_tex_anm_heap).field_0x4;
+    u16 textureAnime = (u16)linkMotionAnimeHeap(m_tex_anm_heap).mDemoIdx;
     if (textureAnime != 0xFFFF) {
         if (mCurProc == LinkMotionConstants::daPyProc_DEMO_TOOL_e) {
             u16 frame = (u16)gabi::ftoi(mFrameCtrlUnder[0].mFrame);
-            m3530 = frame;
-            m3532 = frame;
-        } else if ((u16)linkMotionAnimeHeap(m_tex_anm_heap).field_0x6 == 0xFFFE &&
+            mTexAnmFrame = frame;
+            mTexScrollFrame = frame;
+        } else if ((u16)linkMotionAnimeHeap(m_tex_anm_heap).mDemoAnmNo == 0xFFFE &&
                    checkMabaAnimeBtp(textureAnime)) {
-            u16 frame = m3530;
+            u16 frame = mTexAnmFrame;
             if (frame != 0) {
                 frame = (u16)(frame + 1);
-                m3530 = frame;
+                mTexAnmFrame = frame;
                 if ((s32)frame >= anm_getFrameMax(mpAnmTexPatternData)) {
-                    m3530 = 0;
-                    m3532 = 0;
+                    mTexAnmFrame = 0;
+                    mTexScrollFrame = 0;
                 } else {
-                    m3532 = m3530;
+                    mTexScrollFrame = mTexAnmFrame;
                 }
             } else if (LinkMotionApi::randomWide() < (f64)0.012f) {
-                u16 nextFrame = (u16)(m3530 + 1);
-                m3530 = nextFrame;
-                m3532 = nextFrame;
+                u16 nextFrame = (u16)(mTexAnmFrame + 1);
+                mTexAnmFrame = nextFrame;
+                mTexScrollFrame = nextFrame;
             } else {
-                m3532 = m3530;
+                mTexScrollFrame = mTexAnmFrame;
             }
         } else {
-            m3530 = (u16)(m3530 + 1);
-            m3532 = (u16)(m3532 + 1);
+            mTexAnmFrame = (u16)(mTexAnmFrame + 1);
+            mTexScrollFrame = (u16)(mTexScrollFrame + 1);
         }
     } else {
         u32 mode = mModeFlg;
-        if ((u16)linkMotionAnimeHeap(m_tex_anm_heap).field_0x2 != 0xFFFF) {
+        if ((u16)linkMotionAnimeHeap(m_tex_anm_heap).mPriIdx != 0xFFFF) {
             if (mode & LinkMotionConstants::ModeFlg_SWIM) {
-                m3530 = 0;
-                m3532 = 0;
+                mTexAnmFrame = 0;
+                mTexScrollFrame = 0;
             } else {
                 u16 frame = (u16)gabi::ftoi(mFrameCtrlUpper[2].mFrame);
-                m3530 = frame;
-                m3532 = frame;
+                mTexAnmFrame = frame;
+                mTexScrollFrame = frame;
             }
         } else if ((mode & 0x400) || m34C3 == 9 || m34C3 == 10) {
             u16 frame = (u16)gabi::ftoi(mFrameCtrlUnder[0].mFrame);
-            m3530 = frame;
-            m3532 = frame;
+            mTexAnmFrame = frame;
+            mTexScrollFrame = frame;
         } else if (mode & 0x100) {
-            u16 frame = m3530;
+            u16 frame = mTexAnmFrame;
             bool finished = false;
             u16 scrollAnime = 0;
             if (frame != 0) {
                 frame = (u16)(frame + 1);
-                m3530 = frame;
+                mTexAnmFrame = frame;
                 if ((s32)frame >= anm_getFrameMax(mpAnmTexPatternData)) {
                     scrollAnime = (u16)linkMotionAnimeHeap(m_tex_scroll_heap).mIdx;
-                    m3530 = 0;
+                    mTexAnmFrame = 0;
                     finished = true;
                 }
             } else if (LinkMotionApi::randomWide() < (f64)0.012f) {
-                m3530 = (u16)(m3530 + 1);
+                mTexAnmFrame = (u16)(mTexAnmFrame + 1);
             }
             // Preserve the index captured before resetting the blink frame.
             if (!finished) {
                 scrollAnime = (u16)linkMotionAnimeHeap(m_tex_scroll_heap).mIdx;
             }
             if (scrollAnime == LinkMotionConstants::dRes_INDEX_LKANM_BTK_TABEKOBE_e) {
-                u16 nextFrame = (u16)(m3532 + 1);
-                m3532 = nextFrame;
+                u16 nextFrame = (u16)(mTexScrollFrame + 1);
+                mTexScrollFrame = nextFrame;
                 if (!((s32)nextFrame < anm_getFrameMax(mpTexScrollResData))) {
-                    m3532 = 0;
+                    mTexScrollFrame = 0;
                 }
             } else {
-                m3532 = m3530;
+                mTexScrollFrame = mTexAnmFrame;
             }
         }
     }
     s32 max;
-    if ((max = anm_getFrameMax(mpAnmTexPatternData), (s32)(u16)m3530 >= max)) {
+    if ((max = anm_getFrameMax(mpAnmTexPatternData), (s32)(u16)mTexAnmFrame >= max)) {
         if (anm_getFrameMax(mpAnmTexPatternData) == 0) {
-            m3530 = 0;
+            mTexAnmFrame = 0;
         } else {
-            m3530 = (u16)anm_getFrameMax(mpAnmTexPatternData);
+            mTexAnmFrame = (u16)anm_getFrameMax(mpAnmTexPatternData);
         }
     }
-    if ((max = anm_getFrameMax(mpTexScrollResData), (s32)(u16)m3532 >= max)) {
+    if ((max = anm_getFrameMax(mpTexScrollResData), (s32)(u16)mTexScrollFrame >= max)) {
         if (anm_getFrameMax(mpTexScrollResData) == 0) {
-            m3532 = 0;
+            mTexScrollFrame = 0;
         } else {
-            m3532 = (u16)anm_getFrameMax(mpTexScrollResData);
+            mTexScrollFrame = (u16)anm_getFrameMax(mpTexScrollResData);
         }
     }
 }
@@ -4287,9 +4291,9 @@ void daPy_lk_c::setBeltConveyerPower() {
             PSVECScale(vec, vec, 0.0f);
         }
         gabi::Local<cXyz> xz1;
-        xz1->x = m36B8.x;
+        xz1->x = mBeltConveyerSpeed.x;
         xz1->y = 0.0f;
-        xz1->z = m36B8.z;
+        xz1->z = mBeltConveyerSpeed.z;
         f64 a = LinkActionApi::squareMagnitude(xz1.get());
         gabi::Local<cXyz> xz2;
         xz2->x = vec->x;
@@ -4298,9 +4302,9 @@ void daPy_lk_c::setBeltConveyerPower() {
         f64 b = LinkActionApi::squareMagnitude(xz2.get());
         f32 d = (f32)(b - a);
         f32 step = d >= 0.0f ? 1.0f : 3.0f; /* fsel */
-        LinkMotionApi::addCalcPosXZ(&m36B8, vec.get(), 0.5f, step, 0.5f);
+        LinkMotionApi::addCalcPosXZ(&mBeltConveyerSpeed, vec.get(), 0.5f, step, 0.5f);
     } else {
-        linkCopyPositionWords(gabi::ea(&m36B8), gabi::at<cXyz>(zero));
+        linkCopyPositionWords(gabi::ea(&mBeltConveyerSpeed), gabi::at<cXyz>(zero));
     }
 }
 
@@ -4366,19 +4370,19 @@ void daPy_lk_c::setWindAtPower() {
         return;
     }
     if (dComIfGp_event_runCheck() || LK_demoType != 0) {
-        m373C.x = 0.0f;
-        m373C.z = 0.0f;
+        mWindAnmSpeed.x = 0.0f;
+        mWindAnmSpeed.z = 0.0f;
     } else {
-        LinkMotionApi::addCalcPosXZ(&m373C, vec.get(), 0.5f, step, 0.5f);
+        LinkMotionApi::addCalcPosXZ(&mWindAnmSpeed, vec.get(), 0.5f, step, 0.5f);
     }
     if (checkHeavyStateOn() || dComIfGp_event_runCheck() || LK_demoType != 0) {
         // HD: the wind push is cleared only when the heavy state still holds
         if (checkHeavyStateOn()) {
-            m3730.z = 0.0f;
-            m3730.x = 0.0f;
+            mWindSpeed.z = 0.0f;
+            mWindSpeed.x = 0.0f;
         }
     } else {
-        LinkMotionApi::addCalcPosXZ(&m3730, vec.get(), 0.5f, step, 0.5f);
+        LinkMotionApi::addCalcPosXZ(&mWindSpeed, vec.get(), 0.5f, step, 0.5f);
     }
 }
 
@@ -4396,21 +4400,21 @@ void daPy_lk_c::posMoveFromFootPos() {
             ->mOldFrameFlg /* m_old_fdata->getOldFrameFlg() */
         == 0) {
         speedF = 0.0f;
-        /* mFootData[i].field_0x018 / field_0x00C = rtoe_pos_offset / rheel_pos_offset (x mirrored
+        /* mFootData[i].mToePos / mHeelPos = rtoe_pos_offset / rheel_pos_offset (x mirrored
          * for the left foot) */
-        reinterpret_cast<LinkMotionFootData *>(mFootData)[1].field_0x018.x = (f32)(14.05f);
-        reinterpret_cast<LinkMotionFootData *>(mFootData)[0].field_0x018.x = (f32)(-14.05f);
-        reinterpret_cast<LinkMotionFootData *>(mFootData)[1].field_0x018.y = (f32)(0.0f);
-        reinterpret_cast<LinkMotionFootData *>(mFootData)[0].field_0x018.y = (f32)(0.0f);
-        reinterpret_cast<LinkMotionFootData *>(mFootData)[0].field_0x018.z = (f32)(5.02f);
-        reinterpret_cast<LinkMotionFootData *>(mFootData)[0].field_0x00C.x = (f32)(-10.85f);
-        reinterpret_cast<LinkMotionFootData *>(mFootData)[1].field_0x018.z = (f32)(5.02f);
-        reinterpret_cast<LinkMotionFootData *>(mFootData)[1].field_0x00C.x = (f32)(10.85f);
-        reinterpret_cast<LinkMotionFootData *>(mFootData)[1].field_0x00C.y = (f32)(0.0f);
-        reinterpret_cast<LinkMotionFootData *>(mFootData)[1].field_0x00C.z = (f32)(-6.52f);
-        reinterpret_cast<LinkMotionFootData *>(mFootData)[0].field_0x00C.y = (f32)(0.0f);
-        reinterpret_cast<LinkMotionFootData *>(mFootData)[0].field_0x00C.z = (f32)(-6.52f);
-        m34BC = 2;
+        reinterpret_cast<LinkMotionFootData *>(mFootData)[1].mToePos.x = (f32)(14.05f);
+        reinterpret_cast<LinkMotionFootData *>(mFootData)[0].mToePos.x = (f32)(-14.05f);
+        reinterpret_cast<LinkMotionFootData *>(mFootData)[1].mToePos.y = (f32)(0.0f);
+        reinterpret_cast<LinkMotionFootData *>(mFootData)[0].mToePos.y = (f32)(0.0f);
+        reinterpret_cast<LinkMotionFootData *>(mFootData)[0].mToePos.z = (f32)(5.02f);
+        reinterpret_cast<LinkMotionFootData *>(mFootData)[0].mHeelPos.x = (f32)(-10.85f);
+        reinterpret_cast<LinkMotionFootData *>(mFootData)[1].mToePos.z = (f32)(5.02f);
+        reinterpret_cast<LinkMotionFootData *>(mFootData)[1].mHeelPos.x = (f32)(10.85f);
+        reinterpret_cast<LinkMotionFootData *>(mFootData)[1].mHeelPos.y = (f32)(0.0f);
+        reinterpret_cast<LinkMotionFootData *>(mFootData)[1].mHeelPos.z = (f32)(-6.52f);
+        reinterpret_cast<LinkMotionFootData *>(mFootData)[0].mHeelPos.y = (f32)(0.0f);
+        reinterpret_cast<LinkMotionFootData *>(mFootData)[0].mHeelPos.z = (f32)(-6.52f);
+        mBaseFootIdx = 2;
         return;
     }
     const u32 stk = gabi::ea(mDoMtx_stack_c::get());     /* mDoMtx_stack_c::now */
@@ -4419,20 +4423,20 @@ void daPy_lk_c::posMoveFromFootPos() {
     gabi::Local<cXyz> heel[2];
     gabi::Local<cXyz> mid[2];
     gabi::Local<cXyz> tmp;
-    LinkMotionApi::concatMatrix(&m37B4,
+    LinkMotionApi::concatMatrix(&mInvWorldMtx,
                                 gabi::at<Mtx34>(linkGetAnmMtx(gabi::ea(mpCLModel.get()), 0x22)),
                                 gabi::at<Mtx34>(stk));
     LinkMotionApi::multVec(gabi::at<Mtx34>(stk), gabi::at<cXyz>(toePos), toe[1].get());
     LinkMotionApi::multVec(gabi::at<Mtx34>(stk), gabi::at<cXyz>(heelPos), heel[1].get());
-    LinkMotionApi::concatMatrix(&m37B4,
+    LinkMotionApi::concatMatrix(&mInvWorldMtx,
                                 gabi::at<Mtx34>(linkGetAnmMtx(gabi::ea(mpCLModel.get()), 0x27)),
                                 gabi::at<Mtx34>(stk));
     LinkMotionApi::multVec(gabi::at<Mtx34>(stk), gabi::at<cXyz>(toePos), toe[0].get());
     LinkMotionApi::multVec(gabi::at<Mtx34>(stk), gabi::at<cXyz>(heelPos), heel[0].get());
-    LinkMotionApi::concatMatrix(&m37B4,
+    LinkMotionApi::concatMatrix(&mInvWorldMtx,
                                 gabi::at<Mtx34>(linkGetAnmMtx(gabi::ea(mpCLModel.get()), 0x1E)),
                                 gabi::at<Mtx34>(stk));
-    u16 a = (u16)m34E0;
+    u16 a = (u16)mWaistAngleZ;
     f32 sn = cM_ssin(a);
     f32 cs = cM_scos(a);
     f32 h[2];
@@ -4448,19 +4452,19 @@ void daPy_lk_c::posMoveFromFootPos() {
         h[i] = gabi::fmadds(z - m23, sn, t);
     }
     u32 idx = !(h[0] < h[1]);
-    m34BC = idx;
+    mBaseFootIdx = idx;
     gabi::Local<cXyz> d;
     cXyz_mi(toe[idx], d,
             &reinterpret_cast<LinkMotionFootData *>(mFootData)[idx]
-                 .field_0x018 /* mFootData[idx].field_0x018 */);
+                 .mToePos /* mFootData[idx].mToePos */);
     gabi::Local<cXyz> xz;
     xz->x = d->x;
     xz->z = d->z;
     xz->y = 0.0f;
     f64 step = LinkActionApi::sqrtWide(LinkActionApi::squareMagnitude(xz.get()));
     f32 r = m3598;
-    if (r < 1.0f && std::fabs((f32)(m35B4 - mStickDistance)) < 0.2f) {
-        step = lk_fmaddsD(step, 0.3f, m359C * 0.7f);
+    if (r < 1.0f && std::fabs((f32)(mOldStickDistance - mStickDistance)) < 0.2f) {
+        step = lk_fmaddsD(step, 0.3f, mFootMoveDist * 0.7f);
     }
     f32 ns = mNormalSpeed;
     f32 v = ns * (1.0f - r);
@@ -4472,7 +4476,7 @@ void daPy_lk_c::posMoveFromFootPos() {
     if ((mAcch.m_flags & dBgS_Acch::GROUND_HIT) &&
         LinkMotionApi::chkPolySafe(dComIfG_Bgsp(),
                                    gabi::ea(static_cast<cBgS_PolyInfo *>(&mAcch.m_gnd))) &&
-        m3580 != 8) {
+        mGroundCode != 8) {
         s32 ga = LinkMotionApi::getGroundAngle(
             this, gabi::ea(static_cast<cBgS_PolyInfo *>(&mAcch.m_gnd)), (s32)current.angle.y);
         v = v * cM_scos((u16)ga);
@@ -4514,31 +4518,31 @@ void daPy_lk_c::posMoveFromFootPos() {
         speed.x = 0.0f;
         speed.z = 0.0f;
     }
-    z0 = (u32) reinterpret_cast<LinkActionVectorWords *>(&m36A0)->z;
-    x0 = (u32) reinterpret_cast<LinkActionVectorWords *>(&m36A0)->x;
-    y0 = (u32) reinterpret_cast<LinkActionVectorWords *>(&m36A0)->y;
-    reinterpret_cast<LinkActionVectorWords *>(&m36AC)->x = (u32)(x0); /* m36AC = m36A0 */
-    reinterpret_cast<LinkActionVectorWords *>(&m36AC)->y = (u32)(y0);
-    reinterpret_cast<LinkActionVectorWords *>(&m36AC)->z = (u32)(z0);
+    z0 = (u32) reinterpret_cast<LinkActionVectorWords *>(&mSlipSpeed)->z;
+    x0 = (u32) reinterpret_cast<LinkActionVectorWords *>(&mSlipSpeed)->x;
+    y0 = (u32) reinterpret_cast<LinkActionVectorWords *>(&mSlipSpeed)->y;
+    reinterpret_cast<LinkActionVectorWords *>(&mOldSlipSpeed)->x = (u32)(x0); /* mOldSlipSpeed = mSlipSpeed */
+    reinterpret_cast<LinkActionVectorWords *>(&mOldSlipSpeed)->y = (u32)(y0);
+    reinterpret_cast<LinkActionVectorWords *>(&mOldSlipSpeed)->z = (u32)(z0);
     if (!(mModeFlg & 0x11612832) && !dComIfGp_event_runCheck() && LK_demoType == 0 &&
         !checkHeavyStateOn() && mCurrAttributeCode == 0xF /* dBgS_Attr_ICE_e */ &&
         !(mNoResetFlg0 & 0xA0000000) && !(mAcch.m_flags & dBgS_Acch::WALL_HIT) &&
         (mAcch.m_flags & dBgS_Acch::GROUND_HIT)) {
-        LinkMotionApi::addCalc(&m36A0.x, 0.0f, 0.03f, 100.0f, 0.5f);
-        LinkMotionApi::addCalc(&m36A0.z, 0.0f, 0.03f, 100.0f, 0.5f);
+        LinkMotionApi::addCalc(&mSlipSpeed.x, 0.0f, 0.03f, 100.0f, 0.5f);
+        LinkMotionApi::addCalc(&mSlipSpeed.z, 0.0f, 0.03f, 100.0f, 0.5f);
         gabi::Local<cXyz> t1;
         gabi::Local<cXyz> t2;
         cXyz_mi(&mOldSpeed, t1, &speed);
         cXyz_ml(t1, t2, 0.75f);
-        LinkMotionApi::addVector(&m36A0, t2.get(), &m36A0);
+        LinkMotionApi::addVector(&mSlipSpeed, t2.get(), &mSlipSpeed);
         cXyz_mi(&mOldSpeed, t2, &speed);
         cXyz_ml(t2, t1, 0.25f);
         LinkMotionApi::addVector(&speed, t1.get(), &speed);
-        m36A0.y = 0.0f;
+        mSlipSpeed.y = 0.0f;
     } else {
-        m36A0.x = 0.0f;
-        m36A0.z = 0.0f;
-        m36A0.y = 0.0f;
+        mSlipSpeed.x = 0.0f;
+        mSlipSpeed.z = 0.0f;
+        mSlipSpeed.y = 0.0f;
     }
     setBeltConveyerPower();
     setWindAtPower();
@@ -4562,16 +4566,16 @@ void daPy_lk_c::posMoveFromFootPos() {
         }
     }
     if (!(sy > 0.0f) && oldY > 0.0f) {
-        m35F0 = current.pos.y;
+        mFallStartY = current.pos.y;
     }
     LinkMotionApi::addVector(&current.pos, PORT_LINK_MOVE(&speed) /* the port's movement mods (port_hooks.h) */, &current.pos);
     for (int i = 0; i < 2; i++) {
         LinkMotionFootData &footData =
             reinterpret_cast<LinkMotionFootData *>(mFootData)[i]; /* mFootData[i] */
-        linkCopyPositionWords(gabi::ea(&footData.field_0x018), toe[i]);
-        linkCopyPositionWords(gabi::ea(&footData.field_0x00C), heel[i]);
+        linkCopyPositionWords(gabi::ea(&footData.mToePos), toe[i]);
+        linkCopyPositionWords(gabi::ea(&footData.mHeelPos), heel[i]);
     }
-    m359C = (f32)step;
+    mFootMoveDist = (f32)step;
 }
 
 /* 023FD438 */
@@ -4711,12 +4715,12 @@ BOOL daPy_lk_c::startRestartRoom(u32 mode, int eventInfoIdx, f32 damage, int poi
 void daPy_lk_c::posMove() {
 
     u32 me = gabi::ea(this);
-    gabi::Local<cXyz> start; /* m3700 before the move */
-    f32 sz = m3700.z;
+    gabi::Local<cXyz> start; /* mPrevRootTrans before the move */
+    f32 sz = mPrevRootTrans.z;
     u32 oldFrame = m_old_fdata;
     u32 pb0 = m_pbCalc[0];
-    f32 sx = m3700.x;
-    f32 sy = m3700.y;
+    f32 sx = mPrevRootTrans.x;
+    f32 sy = mPrevRootTrans.y;
     start->z = sz;
     start->x = sx;
     start->y = sy;
@@ -4731,7 +4735,7 @@ void daPy_lk_c::posMove() {
     f32 cs = cM_scos(ang);
     f32 tx = (f32)gabi::at<LinkMotionRootTransform>(bt)->mTranslate.x;
     f32 sn = cM_ssin(ang);
-    u8 m = m34C2;
+    u8 m = mRootMoveMode;
     if (m == 11) {
         gabi::Local<cXyz> d;
         cXyz_mi(&current.pos, d, &old.pos);
@@ -4761,7 +4765,7 @@ void daPy_lk_c::posMove() {
     } else if (m == 2 || m == 6) {
         gabi::at<LinkMotionTransform>(ot)->mTranslate.x = (f32)(tx);
         gabi::at<LinkMotionTransform>(ot)->mTranslate.z = (f32)(tz);
-        if (m34C2 == 6) {
+        if (mRootMoveMode == 6) {
             gabi::at<LinkMotionTransform>(ot)->mTranslate.y = (f32)(ty);
         }
     } else if (m == 4) {
@@ -4771,25 +4775,25 @@ void daPy_lk_c::posMove() {
         gabi::at<LinkMotionTransform>(ot)->mTranslate.x = (f32)(0.0f);
         gabi::at<LinkMotionTransform>(ot)->mTranslate.z = (f32)(0.0f);
         gabi::at<LinkMotionTransform>(ot)->mTranslate.y = (f32)(ty);
-        m34C2 = 5;
-        m35E0 = ty;
+        mRootMoveMode = 5;
+        mRootTransY = ty;
     } else if (m == 7 || m == 3) {
         start->x = tx;
         start->y = ty;
         start->z = tz;
-        m34C2 = m == 7 ? 5 : 1;
+        mRootMoveMode = m == 7 ? 5 : 1;
     }
-    m3700.y = ty;
-    m3700.z = tz;
-    m3700.x = tx;
+    mPrevRootTrans.y = ty;
+    mPrevRootTrans.z = tz;
+    mPrevRootTrans.x = tx;
     posMoveFromFootPos();
     if (!checkNoCollisionCorret()) {
         LinkMotionApi::addVector(&current.pos, &mStts.m_cc_move, &current.pos);
         if (!dComIfGp_event_runCheck() && LK_demoType == 0) {
             if (!(noResetFlg1() & LinkMotionConstants::daPyFlg1_UNK10000000) ||
                 !checkHeavyStateOn()) {
-                u16 a = (u16)m3640;
-                f32 k = m3644;
+                u16 a = (u16)mOutPowerAngle;
+                f32 k = mOutPower;
                 current.pos.x = gabi::fmadds(k, cM_ssin(a), current.pos.x);
                 current.pos.z = gabi::fmadds(k, cM_scos(a), current.pos.z);
             }
@@ -4804,8 +4808,8 @@ void daPy_lk_c::posMove() {
                 gabi::Local<cXyz> d;
                 cXyz_mi(&current.pos, d, &gabi::at<fopAc_ac_c>(whirl)->current.pos);
                 u16 a = (u16)(cM_atan2s(d->x, d->z) + 0x5000);
-                cLib_chaseF(&m3610, 40.0f, 5.0f);
-                f32 k = m3610;
+                cLib_chaseF(&mWhirlPullSpeed, 40.0f, 5.0f);
+                f32 k = mWhirlPullSpeed;
                 current.pos.x = gabi::fmadds(k, cM_ssin(a), current.pos.x);
                 gabi::Local<cXyz> xz;
                 xz->y = 0.0f;
@@ -4817,22 +4821,22 @@ void daPy_lk_c::posMove() {
                     startRestartRoom(5, 0xC9, -1.0f, 0);
                 }
             } else {
-                m3610 = 0.0f;
+                mWhirlPullSpeed = 0.0f;
             }
             if ((mAcch.m_flags & dBgS_Acch::GROUND_HIT) &&
                 LinkMotionApi::chkPolySafe(dComIfG_Bgsp(),
                                            gabi::ea(static_cast<cBgS_PolyInfo *>(&mAcch.m_gnd)))) {
                 u16 g = (u16)LinkMotionApi::getGroundAngle(
                     this, gabi::ea(static_cast<cBgS_PolyInfo *>(&mAcch.m_gnd)), 0);
-                current.pos.z = gabi::fmadds(m36A0.z, cM_scos(g), current.pos.z);
+                current.pos.z = gabi::fmadds(mSlipSpeed.z, cM_scos(g), current.pos.z);
                 g = (u16)LinkMotionApi::getGroundAngle(
                     this, gabi::ea(static_cast<cBgS_PolyInfo *>(&mAcch.m_gnd)), 0x4000);
-                current.pos.x = gabi::fmadds(m36A0.x, cM_scos(g), current.pos.x);
+                current.pos.x = gabi::fmadds(mSlipSpeed.x, cM_scos(g), current.pos.x);
             }
-            LinkMotionApi::addVector(&current.pos, &m36B8, &current.pos);
+            LinkMotionApi::addVector(&current.pos, &mBeltConveyerSpeed, &current.pos);
             if (mCurProc != LinkMotionConstants::daPyProc_FAN_GLIDE_e) {
-                current.pos.x = current.pos.x + m3730.x;
-                current.pos.z = current.pos.z + m3730.z;
+                current.pos.x = current.pos.x + mWindSpeed.x;
+                current.pos.z = current.pos.z + mWindSpeed.z;
             }
         }
     } else if (!dComIfGp_event_runCheck() && LK_demoType == 0 &&
@@ -4858,16 +4862,16 @@ void daPy_lk_c::posMove() {
             }
         }
     }
-    m = m34C2;
+    m = mRootMoveMode;
     mStts.m_cc_move.x = 0.0f; /* mStts.ClrCcMove() */
     mStts.m_cc_move.y = 0.0f;
-    m3644 = 0.0f;
+    mOutPower = 0.0f;
     mStts.m_cc_move.z = 0.0f;
     gabi::Local<cXyz> d;
     if (m == 1 || m == 5) {
-        cXyz_mi(&m3700, d, start);
+        cXyz_mi(&mPrevRootTrans, d, start);
     } else if (m >= 8 && m <= 9) {
-        cXyz_mi(start, d, &m3700);
+        cXyz_mi(start, d, &mPrevRootTrans);
     } else {
         return;
     }
@@ -4875,7 +4879,7 @@ void daPy_lk_c::posMove() {
     f32 dz = d->z;
     current.pos.x = current.pos.x + gabi::fmadds(dz, sn, dx * cs);
     current.pos.z = current.pos.z + gabi::fmsubs(dz, cs, dx * sn);
-    if (m34C2 == 5) {
+    if (mRootMoveMode == 5) {
         current.pos.y = current.pos.y + d->y;
     }
 }
@@ -4975,7 +4979,7 @@ BOOL daPy_lk_c::procLavaDamage_init() {
     speed.y = gabi::fmadds(36.0f, k, 32.0f);
     setSingleMoveAnime(LinkMotionConstants::ANM_LAVADAM, 1.0f, 0.0f, -1, 5.0f);
     u32 mtx = linkGetAnmMtx(gabi::ea(mpCLModel.get()), 0 /* CL_JNT_LINK_ROOT_e */);
-    LinkActionApi::makeEmitter(&m32E4, LinkMotionConstants::ID_AK_SN_HIDARUMAFIRE, mtx,
+    LinkActionApi::makeEmitter(&mProcEffectEcallBack0, LinkMotionConstants::ID_AK_SN_HIDARUMAFIRE, mtx,
                                &current.pos, nullptr);
     LinkActionVoiceStart(this, 4);
     seStartMapInfo(LinkMotionConstants::JA_SE_LK_FALL_MAGMA);
@@ -5008,7 +5012,7 @@ BOOL daPy_lk_c::dProcLavaDamage_init() {
     mNormalSpeed = 0.0f;
     setSingleMoveAnime(LinkMotionConstants::ANM_LAVADAM, 1.0f, 0.0f, -1, 5.0f);
     u32 mtx = linkGetAnmMtx(gabi::ea(mpCLModel.get()), 0);
-    LinkActionApi::makeEmitter(&m32E4, 0x8078, mtx, &current.pos, nullptr);
+    LinkActionApi::makeEmitter(&mProcEffectEcallBack0, 0x8078, mtx, &current.pos, nullptr);
     if (linkOrderCompulsoryEvent(this)) {
         dProcLavaDamage_init_sub();
     } else {
@@ -5115,7 +5119,7 @@ void daPy_lk_c::checkFallCode() {
 
     u32 me = gabi::ea(this);
     f32 gh = mAcch.m_ground_h;
-    if (m3580 == 4 || gh == -1000000000.0f) {
+    if (mGroundCode == 4 || gh == -1000000000.0f) {
         u32 mf = mModeFlg;
         bool restart;
         if (!(mWaterY > gh)) {
@@ -5152,7 +5156,7 @@ void daPy_lk_c::checkFallCode() {
           (u32)gabi::at<LinkMotionShip>(ship)->mWhirlActor.v != 0) /* !ship->checkForceMove() */) {
         go = true;
     }
-    if (!go && !(m3580 == 5 && m35F4 - current.pos.y > 500.0f)) {
+    if (!go && !(mGroundCode == 5 && m35F4 - current.pos.y > 500.0f)) {
         return;
     }
     LinkActionPlay().mFwaterTimer = (u8)(1); /* dComIfGs_startFwaterTimer() */
@@ -5177,7 +5181,7 @@ void daPy_lk_c::checkFallCode() {
         type = 0;
     }
     u16 cmd = (u16)eventInfo.mCommand; /* eventInfo command */
-    if (m3580 == 5) {
+    if (mGroundCode == 5) {
         mAcch.m_flags = mAcch.m_flags & ~(u32)dBgS_Acch::GROUND_HIT;
     }
     if (cmd != 3 /* !eventInfo.checkCommandDoor() */ && !linkOrderCompulsoryEvent(this)) {
@@ -5198,7 +5202,7 @@ void daPy_lk_c::checkFallCode() {
         return;
     }
     LK_demoType = 3; /* mDemo.setOriginalDemoType() */
-    if (m3580 == 5) {
+    if (mGroundCode == 5) {
         LK_demoMode = 0x11; /* DEMO_PFALL_e */
     } else if ((mModeFlg & 0x40000) || m34C3 == 1 || m34C3 == 4) {
         mNormalSpeed = mNormalSpeed * 0.75f;
@@ -5276,10 +5280,10 @@ void daPy_lk_c::setShapeAngleOnGround() {
             std::fabs(ny0 - ny1) > 0.05f) {
             ax = (s16)gabi::ftoi((f32)a * m35E4);
         } else {
-            ax = (s16)gabi::ftoi((f32)m34E2 * m35E4);
+            ax = (s16)gabi::ftoi((f32)mGroundAngle * m35E4);
         }
     } else {
-        ax = (s16)gabi::ftoi((f32)m34E2 * k);
+        ax = (s16)gabi::ftoi((f32)mGroundAngle * k);
     }
     shape_angle.x = ax;
     s32 g =
@@ -5292,7 +5296,7 @@ void daPy_lk_c::setShapeAngleOnGround() {
 void daPy_lk_c::setStepsOffset() {
 
     LinkMotionApi::addCalc(&m35C4, 0.0f, 0.5f, 25.0f, 5.0f);
-    u16 a = (u16)m34E2;
+    u16 a = (u16)mGroundAngle;
     f32 t = cM_ssin(a) / cM_scos(a);
     f32 sp = speedF;
     u16 ay = (u16)current.angle.y;
@@ -5353,14 +5357,14 @@ void daPy_lk_c::setWorldMatrix() {
 
     u32 me = gabi::ea(this);
     const u32 stk = gabi::ea(mDoMtx_stack_c::get()); /* mDoMtx_stack_c::now */
-    f32 ty = (current.pos.y + m35C4) + m3608;
+    f32 ty = (current.pos.y + m35C4) + mSwimTiredOffsetY;
     LinkMotionApi::translateMatrix(gabi::at<Mtx34>(stk), (f32)current.pos.x, ty,
                                    (f32)current.pos.z);
     u32 ship = gabi::ea(dComIfGp_getShipActor());
     if (dComIfGp_checkPlayerStatus0(0, 0x10000) && ship != 0) {
-        LinkMotionApi::rotateMatrixZXY(gabi::at<Mtx34>(stk), (s32)m353C,
+        LinkMotionApi::rotateMatrixZXY(gabi::at<Mtx34>(stk), (s32)mShipRideAngleX,
                                        (s32)(s16)gabi::at<fopAc_ac_c>(ship)->shape_angle.y,
-                                       (s32)m353E);
+                                       (s32)mShipRideAngleZ);
         LinkMotionApi::rotateMatrixY(
             gabi::at<Mtx34>(stk),
             (s32)(s16)(shape_angle.y - (s16)gabi::at<fopAc_ac_c>(ship)->shape_angle.y));
@@ -5368,7 +5372,7 @@ void daPy_lk_c::setWorldMatrix() {
         LinkMotionApi::copyMatrix(gabi::at<Mtx34>(stk), rel.get());
         lk_setModelBase(me, stk);
         LinkMotionApi::inverseMatrix(gabi::at<Mtx34>(stk), gabi::at<Mtx34>(stk));
-        LinkMotionApi::copyMatrix(gabi::at<Mtx34>(stk), &m37B4);
+        LinkMotionApi::copyMatrix(gabi::at<Mtx34>(stk), &mInvWorldMtx);
         mDoMtx_YrotS(gabi::at<Mtx34>(stk), (s16)-shape_angle.y);
         LinkMotionApi::concatMatrix(gabi::at<Mtx34>(stk), rel.get(), gabi::at<Mtx34>(stk));
         gabi::Local<cXyz> v;
@@ -5399,7 +5403,7 @@ void daPy_lk_c::setWorldMatrix() {
     }
     lk_setModelBase(me, stk);
     LinkMotionApi::inverseMatrix(gabi::at<Mtx34>(stk), gabi::at<Mtx34>(stk));
-    LinkMotionApi::copyMatrix(gabi::at<Mtx34>(stk), &m37B4);
+    LinkMotionApi::copyMatrix(gabi::at<Mtx34>(stk), &mInvWorldMtx);
 }
 
 /* 023FFB08 */
@@ -5413,13 +5417,13 @@ void daPy_lk_c::setWaistAngle() {
         if (k > 1.0f) {
             k = 1.0f;
         }
-        if (m3580 == 8) {
+        if (mGroundCode == 8) {
             target = 0;
         } else {
-            target = (s16)gabi::ftoi(((f32)m34E2 * 0.7f) * k);
+            target = (s16)gabi::ftoi(((f32)mGroundAngle * 0.7f) * k);
         }
     }
-    cLib_addCalcAngleS(&m34E0, target, 2, 0x800, 0x200);
+    cLib_addCalcAngleS(&mWaistAngleZ, target, 2, 0x800, 0x200);
 }
 
 /* 023FFBE0 */
@@ -5440,15 +5444,15 @@ int daPy_lk_c::setLegAngle(f32 height, int foot, s16 *outUpper, s16 *outLower) {
     gabi::Local<cXyz> knee;                                      /* spDC */
     gabi::Local<cXyz> ankle;                                     /* spD0 */
     gabi::Local<cXyz> tmp;
-    LinkMotionApi::concatMatrix(&m37B4, &footData.field_0x088[0], gabi::at<Mtx34>(stk));
+    LinkMotionApi::concatMatrix(&mInvWorldMtx, &footData.mLegMtx[0], gabi::at<Mtx34>(stk));
     hip->y = (f32)gabi::at<Mtx34>(stk)->m[1][3];
     hip->x = 0.0f;
     hip->z = (f32)gabi::at<Mtx34>(stk)->m[2][3];
-    LinkMotionApi::concatMatrix(&m37B4, &footData.field_0x088[1], gabi::at<Mtx34>(stk));
+    LinkMotionApi::concatMatrix(&mInvWorldMtx, &footData.mLegMtx[1], gabi::at<Mtx34>(stk));
     knee->z = (f32)gabi::at<Mtx34>(stk)->m[2][3];
     knee->x = 0.0f;
     knee->y = (f32)gabi::at<Mtx34>(stk)->m[1][3];
-    LinkMotionApi::concatMatrix(&m37B4, &footData.field_0x088[2], gabi::at<Mtx34>(stk));
+    LinkMotionApi::concatMatrix(&mInvWorldMtx, &footData.mLegMtx[2], gabi::at<Mtx34>(stk));
     f32 ay = (f32)gabi::at<Mtx34>(stk)->m[1][3] + 3.25f;
     ankle->x = 0.0f;
     ankle->z = (f32)gabi::at<Mtx34>(stk)->m[2][3];
@@ -5516,7 +5520,7 @@ int daPy_lk_c::setLegAngle(f32 height, int foot, s16 *outUpper, s16 *outLower) {
     f32 ly = tmp->y;
     f32 lz = tmp->z;
     LinkMotionApi::concatMatrix(
-        &m37B4, gabi::at<Mtx34>(linkGetAnmMtx(gabi::ea(mpCLModel.get()), 0)), gabi::at<Mtx34>(stk));
+        &mInvWorldMtx, gabi::at<Mtx34>(linkGetAnmMtx(gabi::ea(mpCLModel.get()), 0)), gabi::at<Mtx34>(stk));
     s16 root = cM_atan2s(-(f32)gabi::at<Mtx34>(stk)->m[1][3], -(f32)gabi::at<Mtx34>(stk)->m[2][3]);
     s16 aU = cM_atan2s(uy, uz);
     s16 aL = cM_atan2s(ly, lz);
@@ -5547,9 +5551,9 @@ void daPy_lk_c::footBgCheck() {
     u32 model = gabi::ea(mpCLModel.get());
     u32 base = model != 0 ? model + 0xC8 : 0; /* mpCLModel->getBaseTRMtx() */
     u32 mode1 = mModeFlg & 1;
-    LinkMotionApi::concatMatrix(&m37B4, gabi::at<Mtx34>(linkGetAnmMtx(model, 0x1E)),
+    LinkMotionApi::concatMatrix(&mInvWorldMtx, gabi::at<Mtx34>(linkGetAnmMtx(model, 0x1E)),
                                 gabi::at<Mtx34>(stk));
-    u16 wa = (u16)m34E0;
+    u16 wa = (u16)mWaistAngleZ;
     f32 sn = cM_ssin(wa);
     f32 cs = cM_scos(wa);
     f32 h[2];
@@ -5562,41 +5566,41 @@ void daPy_lk_c::footBgCheck() {
     for (int i = 0; i < 2; i++) {
         LinkMotionFootData &footData =
             reinterpret_cast<LinkMotionFootData *>(mFootData)[i]; /* mFootData[i] */
-        linkAddPosition(gabi::ea(&footData.field_0x018), t1, gabi::ea(&footData.field_0x00C));
+        linkAddPosition(gabi::ea(&footData.mToePos), t1, gabi::ea(&footData.mHeelPos));
         cXyz_ml(t1, t2, 0.5f);
         linkCopyPositionWords(gabi::ea(p.get()), t2);
-        cXyz_mi(p, t1, &footData.field_0x024);
+        cXyz_mi(p, t1, &footData.mFootPos);
         xz->z = t1->z;
         xz->x = t1->x;
         xz->y = 0.0f;
         f64 m = LinkActionApi::squareMagnitude(xz.get());
         if (m < 100.0 && mode1) {
-            u8 tm = (u8)footData.field_0x001;
+            u8 tm = (u8)footData.mStopTimer;
             if (tm != 0) {
-                footData.field_0x001 = (u8)((u8)(tm - 1));
+                footData.mStopTimer = (u8)((u8)(tm - 1));
             } else {
-                p->x = (f32)footData.field_0x024.x;
-                p->y = (f32)footData.field_0x024.y;
-                p->z = (f32)footData.field_0x024.z;
+                p->x = (f32)footData.mFootPos.x;
+                p->y = (f32)footData.mFootPos.y;
+                p->z = (f32)footData.mFootPos.z;
             }
         } else {
-            footData.field_0x001 = (u8)(5);
+            footData.mStopTimer = (u8)(5);
         }
         f32 px = p->x;
         f32 py = p->y;
         f32 pz = p->z;
-        footData.field_0x024.y = (f32)(py);
-        footData.field_0x024.x = (f32)(px);
-        footData.field_0x024.z = (f32)(pz);
+        footData.mFootPos.y = (f32)(py);
+        footData.mFootPos.x = (f32)(px);
+        footData.mFootPos.z = (f32)(pz);
         f32 m13 = (f32)gabi::at<Mtx34>(stk)->m[1][3];
         f32 m23 = (f32)gabi::at<Mtx34>(stk)->m[2][3];
         f32 lift = gabi::fmadds(p->z - m23, sn, gabi::fmadds(p->y - m13, cs, m13));
         LinkMotionApi::multVec(gabi::at<Mtx34>(base), p.get(), w.get());
         f32 gy = current.pos.y + 30.1f;
-        footData.field_0x034.m_pos.x = (f32)(w->x); /* field_0x034.SetPos() */
-        footData.field_0x034.m_pos.y = (f32)(gy);
-        footData.field_0x034.m_pos.z = (f32)(w->z);
-        f64 gc = LinkActionApi::groundCross(dComIfG_Bgsp(), &footData.field_0x034);
+        footData.mGndChk.m_pos.x = (f32)(w->x); /* mGndChk.SetPos() */
+        footData.mGndChk.m_pos.y = (f32)(gy);
+        footData.mGndChk.m_pos.z = (f32)(w->z);
+        f64 gc = LinkActionApi::groundCross(dComIfG_Bgsp(), &footData.mGndChk);
         flag[i] = 0;
         if (mNoResetFlg0 & 0x80000000) {
             f32 y = current.pos.y;
@@ -5607,10 +5611,10 @@ void daPy_lk_c::footBgCheck() {
         }
         if (gc != -1000000000.0 && (f32)((f64)gy - gc) < 60.2f) {
             h[i] = (f32)gc;
-            footData.field_0x000 = (u8)(1);
+            footData.mGroundHit = (u8)(1);
         } else {
             h[i] = current.pos.y;
-            footData.field_0x000 = (u8)(0);
+            footData.mGroundHit = (u8)(0);
         }
         f32 v = h[i];
         if (mNoResetFlg0 & 0xA0000000) {
@@ -5637,20 +5641,20 @@ void daPy_lk_c::footBgCheck() {
             target = linkFloatSelect(h[1] - h[0], h[0], h[1]) - current.pos.y;
         }
     }
-    LinkMotionApi::addCalc(&m35B8, target, 0.5f, 7.5f, 2.5f);
-    gabi::at<Mtx34>(base)->m[1][3] = (f32)((f32)gabi::at<Mtx34>(base)->m[1][3] + m35B8);
-    m37B4.m[1][3] = m37B4.m[1][3] - m35B8;
+    LinkMotionApi::addCalc(&mFootBgOffsetY, target, 0.5f, 7.5f, 2.5f);
+    gabi::at<Mtx34>(base)->m[1][3] = (f32)((f32)gabi::at<Mtx34>(base)->m[1][3] + mFootBgOffsetY);
+    mInvWorldMtx.m[1][3] = mInvWorldMtx.m[1][3] - mFootBgOffsetY;
     if (none) {
         for (int i = 0; i < 2; i++) {
             *upper[i].get() = 0;
             *lower[i].get() = 0;
-            reinterpret_cast<LinkMotionFootData *>(mFootData)[i].field_0x030 = 0.0f;
+            reinterpret_cast<LinkMotionFootData *>(mFootData)[i].mClotchShiftX = 0.0f;
         }
     } else {
         int k = (j + 1) & 1;
         LinkMotionFootData &firstFoot = reinterpret_cast<LinkMotionFootData *>(mFootData)[j];
         LinkMotionFootData &secondFoot = reinterpret_cast<LinkMotionFootData *>(mFootData)[k];
-        firstFoot.field_0x030 = (f32)(0.0f);
+        firstFoot.mClotchShiftX = (f32)(0.0f);
         if (!setLegAngle(h[j] - (f32)gabi::at<Mtx34>(base)->m[1][3], j, (s16 *)upper[j].get(),
                          (s16 *)lower[j].get())) {
             *lower[j].get() = 0;
@@ -5658,13 +5662,13 @@ void daPy_lk_c::footBgCheck() {
         }
         f32 d = h[k] - (f32)gabi::at<Mtx34>(base)->m[1][3];
         if (d > 0.0f || mode1) {
-            secondFoot.field_0x030 = (f32)(d * 0.3f);
+            secondFoot.mClotchShiftX = (f32)(d * 0.3f);
             if (!setLegAngle(d * 0.7f, k, (s16 *)upper[k].get(), (s16 *)lower[k].get())) {
                 *lower[k].get() = 0;
                 *upper[k].get() = 0;
             }
         } else {
-            secondFoot.field_0x030 = (f32)(0.0f);
+            secondFoot.mClotchShiftX = (f32)(0.0f);
             *lower[k].get() = 0;
             *upper[k].get() = 0;
         }
@@ -5672,28 +5676,28 @@ void daPy_lk_c::footBgCheck() {
     for (int i = 0; i < 2; i++) {
         LinkMotionFootData &footData = reinterpret_cast<LinkMotionFootData *>(mFootData)[i];
         s32 u = *upper[i].get();
-        s32 cur = (s16)footData.field_0x008;
+        s32 cur = (s16)footData.mLegAAngle;
         if (u * cur < 0 && lk_abs(u - cur) >= 0x8000) {
             u = (s16)(u >= 0 ? u - 0x4000 : u + 0x4000);
             *upper[i].get() = (s16)u;
         }
-        cLib_addCalcAngleS(&footData.field_0x008, (s16)u, 2, 0x1800, 0x10);
-        cLib_addCalcAngleS(&footData.field_0x006, *lower[i].get(), 2, 0x1800, 0x10);
-        s16 f6 = (s16)footData.field_0x006;
-        s16 f8 = (s16)footData.field_0x008;
-        footData.field_0x00A = (s16)((s16)(f6 - f8));
-        footData.field_0x002 = (s16)((s16) - (m34E0 + f6));
+        cLib_addCalcAngleS(&footData.mLegAAngle, (s16)u, 2, 0x1800, 0x10);
+        cLib_addCalcAngleS(&footData.mLegBAngle, *lower[i].get(), 2, 0x1800, 0x10);
+        s16 f6 = (s16)footData.mLegBAngle;
+        s16 f8 = (s16)footData.mLegAAngle;
+        footData.mLegBJointAngle = (s16)((s16)(f6 - f8));
+        footData.mFootAngle = (s16)((s16) - (mWaistAngleZ + f6));
     }
     for (int i = 0; i < 2; i++) {
         LinkMotionFootData &footData = reinterpret_cast<LinkMotionFootData *>(mFootData)[i];
         s32 g;
-        if (flag[i] == 0 && (u8)footData.field_0x000 != 0 && mode1) {
+        if (flag[i] == 0 && (u8)footData.mGroundHit != 0 && mode1) {
             g = LinkMotionApi::getGroundAngle(
-                this, gabi::ea(static_cast<cBgS_PolyInfo *>(&footData.field_0x034)),
+                this, gabi::ea(static_cast<cBgS_PolyInfo *>(&footData.mGndChk)),
                 (s32)shape_angle.y);
-            footData.field_0x002 = (s16)((s16)((s16)footData.field_0x002 + g));
+            footData.mFootAngle = (s16)((s16)((s16)footData.mFootAngle + g));
             g = LinkMotionApi::getGroundAngle(
-                this, gabi::ea(static_cast<cBgS_PolyInfo *>(&footData.field_0x034)),
+                this, gabi::ea(static_cast<cBgS_PolyInfo *>(&footData.mGndChk)),
                 (s32)(s16)(shape_angle.y - 0x4000));
         } else {
             g = 0;
@@ -5707,7 +5711,7 @@ void daPy_lk_c::setMoveSlantAngle() {
 
     f32 k = std::fabs(speedF / mMaxNormalSpeed);
     if (mModeFlg & 0x02000000) {
-        m351C = 0;
+        mMoveSlantAngle = 0;
         mBodyAngle.z = 0; /* mBodyAngle.z */
         return;
     }
@@ -5715,21 +5719,21 @@ void daPy_lk_c::setMoveSlantAngle() {
     if (mCurProc == LinkMotionConstants::daPyProc_MOVE_e && k > 0.95f) {
         f32 t = (k - 0.95f) / 0.050000012f;
         s16 d = (s16)(m34DE - shape_angle.y);
-        cLib_addCalcAngleS(&m351C, (s16)gabi::ftoi(((f32)d * 1.6f) * t), 4, 0xC8, 0x64);
-        v = (s16)(m351C >> 1);
+        cLib_addCalcAngleS(&mMoveSlantAngle, (s16)gabi::ftoi(((f32)d * 1.6f) * t), 4, 0xC8, 0x64);
+        v = (s16)(mMoveSlantAngle >> 1);
         mBodyAngle.z = v;
         shape_angle.z = v;
         return;
     }
-    s16 cur = m351C;
+    s16 cur = mMoveSlantAngle;
     s16 step = (s16)gabi::ftoi((f32)cur * 0.35f);
     if (step == 0) {
-        m351C = 0;
+        mMoveSlantAngle = 0;
         shape_angle.z = 0;
         mBodyAngle.z = 0;
     } else {
         s16 n = (s16)(cur - step);
-        m351C = n;
+        mMoveSlantAngle = n;
         v = (s16)(n >> 1);
         mBodyAngle.z = v;
         shape_angle.z = v;
@@ -5814,8 +5818,8 @@ void daPy_lk_c::setDemoData() {
     if (!dComIfGp_event_runCheck()) {
         if (mDemo.mDemoType != 0)
             endDemoMode();
-        if (m3554 > 0) {
-            m3554 = (s16)(m3554 - 1);
+        if (mForestWaterUseTimer > 0) {
+            mForestWaterUseTimer = (s16)(mForestWaterUseTimer - 1);
         } else {
             mNoResetFlg1 = mNoResetFlg1 & ~0x20000u; /* FOREST_WATER_USE */
         }
@@ -6142,15 +6146,15 @@ void daPy_lk_c::setStickData() {
     mItemTrigger = 0;
     u8 old = mItemButton;
     mItemButton = 0;
-    m34CA = old;
+    mOldItemButton = old;
     if (gabi::ea(LinkActionPlay().mPlayerInfo[0].mpPlayer.get()) != gabi::ea(this)) {
         mStickDistance = 0.0f;
-        m34E8 = 0;
+        mMoveTargetAngleY = 0;
     } else if (mDemo.mDemoMode == 0x44 /* checkBowMiniGame() */) {
         mStickDistance = CPad_GET_STICK_VALUE(0);
-        m34DC = (s16)(CPad_GET_STICK_ANGLE(0) + 0x8000);
+        mStickAngle = (s16)(CPad_GET_STICK_ANGLE(0) + 0x8000);
         s16 cam = lk_camControledAngleY(mCameraInfoIdx);
-        m34E8 = (s16)(cam + m34DC);
+        mMoveTargetAngleY = (s16)(cam + mStickAngle);
         // HD: the bow mini-game shoots with the Z-hold read (GameCube: hold A -> BTN_A)
         if (CPad_CHECK_HOLD_Z(0))
             mItemButton = mItemButton | 0x10;
@@ -6171,33 +6175,33 @@ void daPy_lk_c::setStickData() {
                 have = LinkActionApi::getDemoActor(demo, (u32)id) != 0;
             }
             if (have) {
-                m34E8 = (s16)mDemo.mDemoMoveAngle;
+                mMoveTargetAngleY = (s16)mDemo.mDemoMoveAngle;
                 mStickDistance = 1.0f;
             } else {
                 linkCopyFloatBits(gabi::ea(this) + 0x6A08,
                                   gabi::ea(this) + 0x434); /* mDemo.getStick() */
-                m34E8 = (s16)mDemo.mDemoMoveAngle;
+                mMoveTargetAngleY = (s16)mDemo.mDemoMoveAngle;
             }
         } else {
             mStickDistance = 0.0f;
-            m34E8 = (s16)mDemo.mDemoMoveAngle; /* mDemo.getMoveAngle() */
+            mMoveTargetAngleY = (s16)mDemo.mDemoMoveAngle; /* mDemo.getMoveAngle() */
         }
         if (mDemo.mDemoMode == 0xE /* DEMO_KEEP */)
-            mItemButton = (u8)m34CA;
+            mItemButton = (u8)mOldItemButton;
     } else if (LinkActionApi::isOverlapPeek() == 1) {
         mStickDistance = 0.0f;
-        m34E8 = 0;
+        mMoveTargetAngleY = 0;
     } else {
         mStickDistance = CPad_GET_STICK_VALUE(0);
         if ((mNoResetFlg1 & 0x100 /* CONFUSE */) && !dComIfGp_event_runCheck()) {
-            m34DC = CPad_GET_STICK_ANGLE(0);
+            mStickAngle = CPad_GET_STICK_ANGLE(0);
         } else {
-            m34DC = (s16)(CPad_GET_STICK_ANGLE(0) + 0x8000);
+            mStickAngle = (s16)(CPad_GET_STICK_ANGLE(0) + 0x8000);
         }
         s16 cam = lk_camControledAngleY(mCameraInfoIdx);
-        /* the port's steering (port_hooks.h): the compiled code has this statement twice, after both m34DC branches
+        /* the port's steering (port_hooks.h): the compiled code has this statement twice, after both mStickAngle branches
          * above (instruction hooks @023F35BC, @023F3610) */
-        m34E8 = PORT_STEER_WALK(0x023F35BC, this, cam, m34DC, (s16)(cam + m34DC));
+        mMoveTargetAngleY = PORT_STEER_WALK(0x023F35BC, this, cam, mStickAngle, (s16)(cam + mStickAngle));
         u8 bVar2 = LinkActionPlay().mButtonMode; /* dComIfGp_getButtonActionMode() */
         bool bVar1 = false;
         if (CPad_CHECK_TRIG_B(0)) {
@@ -6309,26 +6313,26 @@ void daPy_lk_c::setStickData() {
         if (checkHeavyStateOn()) {
             mStickDistance = gabi::fmuls_ppc((f32)mStickDistance, 0.5f);
         }
-        if (field_0x2b0 < 0.0f /* checkGrabWear() */) {
+        if (mGrabItemOffsetY < 0.0f /* checkGrabWear() */) {
             mStickDistance = gabi::fmuls_ppc((f32)mStickDistance, 0.8f);
         }
         if (bVar1 && !dComIfGp_event_runCheck() && !dComIfGp_checkPlayerStatus1(0, 8)) {
             LinkActionApi::seStartSystem(LinkActionConstants::JA_SE_ITEM_TARGET_OUT);
         }
     }
-    s16 angle_diff = (s16)(m34DC - m34EA);
-    s32 cnt = m3578;
+    s16 angle_diff = (s16)(mStickAngle - mOldStickAngle);
+    s32 cnt = mStickSpinAngle;
     s32 abs_v = lk_abs(angle_diff);
     if ((s32)((u32)cnt * (u32)(s32)angle_diff) < 0) {
-        m3578 = angle_diff;
-        m3524 = 4;
+        mStickSpinAngle = angle_diff;
+        mStickSpinTimer = 4;
     } else if ((u32)(abs_v - 0x6D5) < 0x641E) {
-        m3578 = cnt + angle_diff;
-        m3524 = 4;
-    } else if (m3524 > 0) {
-        m3524 = (s16)(m3524 - 1);
+        mStickSpinAngle = cnt + angle_diff;
+        mStickSpinTimer = 4;
+    } else if (mStickSpinTimer > 0) {
+        mStickSpinTimer = (s16)(mStickSpinTimer - 1);
     } else {
-        m3578 = 0;
+        mStickSpinAngle = 0;
     }
 }
 

@@ -12,12 +12,12 @@ struct CcActionAtInfo {
     /* 0x09 */ be<u8> mbDead;
     /* 0x0A */ be<u8> mResultingAttackType;
     u8 padding;
-    /* 0x0C */ csXyz m0C;
+    /* 0x0C */ csXyz mHitAngle;  /* was m0C: the CcAtInfo copy of this unit; see d/d_cc_uty.h */
     /* 0x12 */ be<u16> mPlCutBit;
     /* 0x14 */ gptr<cXyz> pParticlePos;
     /* 0x18 */ be<s32> mHitSoundId;
 };
-WWHD_OFFSET(CcActionAtInfo, m0C, 0xC);
+WWHD_OFFSET(CcActionAtInfo, mHitAngle, 0xC);
 WWHD_OFFSET(CcActionAtInfo, pParticlePos, 0x14);
 WWHD_OFFSET(CcActionAtInfo, mHitSoundId, 0x18);
 WWHD_SIZE(CcActionAtInfo, 0x1C);

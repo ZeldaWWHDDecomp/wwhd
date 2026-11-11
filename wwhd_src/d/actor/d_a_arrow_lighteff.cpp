@@ -14,47 +14,47 @@ static void arrowLight_seStartCurrent(fopAc_ac_c* actor, u32 id, u32 param) {
 void daArrow_Lighteff_c::setTopPos() {
     ArrowLightArrow* arrow = static_cast<ArrowLightArrow*>(fopAcM_SearchByID(parentActorID));
     if (arrow) {
-        PSMTXCopy(&arrow->field_0x6b4, mDoMtx_stack_c::get());
+        PSMTXCopy(&arrow->mModelMtx, mDoMtx_stack_c::get());
         mDoMtx_stack_c::transM(0.0f, 0.0f, 62.0f);
-        /* mDoMtx_stack_c::multVecZero(&field_0x29C) */
+        /* mDoMtx_stack_c::multVecZero(&mTopPos) */
         Mtx34* m = mDoMtx_stack_c::get();
-        field_0x29C.x = m->m[0][3];
-        field_0x29C.y = m->m[1][3];
-        field_0x29C.z = m->m[2][3];
+        mTopPos.x = m->m[0][3];
+        mTopPos.y = m->m[1][3];
+        mTopPos.z = m->m[2][3];
     }
 }
 
 /* 0205777C */
 void daArrow_Lighteff_c::setPointLight() {
-    if ((field_0x2EC == 0 || field_0x2EC == 1) && field_0x2E8 != ArrowLightArrow::TYPE_NORMAL) {
-        cLib_addCalc2(&field_0x33C, cM_rndF(0.2f) + 1.0f, 0.5f, 0.05f);
+    if ((mArrowParam == 0 || mArrowParam == 1) && mArrowType != ArrowLightArrow::TYPE_NORMAL) {
+        cLib_addCalc2(&mLightPower, cM_rndF(0.2f) + 1.0f, 0.5f, 0.05f);
     } else {
-        field_0x33C = 0.0f;
+        mLightPower = 0.0f;
     }
 
     /* light_color (0x1000763C): {r, g, b} s16 per type */
-    const be<s16>* color = light_color[field_0x2E8];
-    field_0x31C.mPos.copy(field_0x29C);
-    field_0x31C.mColorR = color[0];
-    field_0x31C.mColorG = color[1];
-    field_0x31C.mColorB = color[2];
-    field_0x31C.mPower = (f32)(s16)gabi::ftoi(field_0x33C * 150.0f);
-    field_0x31C.mFluctuation = 250.0f;
+    const be<s16>* color = light_color[mArrowType];
+    mLight.mPos.copy(mTopPos);
+    mLight.mColorR = color[0];
+    mLight.mColorG = color[1];
+    mLight.mColorB = color[2];
+    mLight.mPower = (f32)(s16)gabi::ftoi(mLightPower * 150.0f);
+    mLight.mFluctuation = 250.0f;
 }
 
 /* 02057510 */
 void daArrow_Lighteff_c::delete_particle() {
-    if (field_0x2F4.getEmitter()) {
-        if (field_0x2E8 == ArrowLightArrow::TYPE_LIGHT) {
-            reinterpret_cast<ArrowLightEmitter*>(field_0x2F4.getEmitter())->setGlobalAlpha(0);
+    if (mParticleCb0.getEmitter()) {
+        if (mArrowType == ArrowLightArrow::TYPE_LIGHT) {
+            reinterpret_cast<ArrowLightEmitter*>(mParticleCb0.getEmitter())->setGlobalAlpha(0);
         }
-        field_0x2F4.remove();
+        mParticleCb0.remove();
     }
-    if (field_0x308.getEmitter()) {
-        if (field_0x2E8 == ArrowLightArrow::TYPE_LIGHT) {
-            reinterpret_cast<ArrowLightEmitter*>(field_0x308.getEmitter())->setGlobalAlpha(0);
+    if (mParticleCb1.getEmitter()) {
+        if (mArrowType == ArrowLightArrow::TYPE_LIGHT) {
+            reinterpret_cast<ArrowLightEmitter*>(mParticleCb1.getEmitter())->setGlobalAlpha(0);
         }
-        field_0x308.remove();
+        mParticleCb1.remove();
     }
 }
 
@@ -66,7 +66,7 @@ static BOOL CheckCreateHeap(fopAc_ac_c* i_this) {
 /* 02056B54 */
 BOOL daArrow_Lighteff_c::CreateHeap() {
     u8 type = (u8)fopAcM_GetParam(this);
-    field_0x2E8 = type;
+    mArrowType = type;
 
     J3DModelData* modelData;
     if (type == ArrowLightArrow::TYPE_FIRE) {
@@ -79,18 +79,18 @@ BOOL daArrow_Lighteff_c::CreateHeap() {
     if (modelData == nullptr) /* JUT_ASSERT(188, modelData != NULL) */
         JUT_ASSERT_fail("d_a_arrow_lighteff.cpp", 0xBC, "modelData != (0)");
 
-    field_0x298 = mDoExt_J3DModel__create(modelData, 0x80000, 0x3F441422);
-    if (field_0x298 == nullptr) {
+    mpModel = mDoExt_J3DModel__create(modelData, 0x80000, 0x3F441422);
+    if (mpModel == nullptr) {
         return FALSE;
     }
 
     J3DAnmTextureSRTKey* btk;
     J3DAnmTevRegKey* brk;
-    if (field_0x2E8 == ArrowLightArrow::TYPE_FIRE) {
+    if (mArrowType == ArrowLightArrow::TYPE_FIRE) {
         btk = (J3DAnmTextureSRTKey*)dComIfG_getObjectRes(l_arcname, dRes_INDEX_LINK_BTK_GARWFI00_e);
         brk = static_cast<J3DAnmTevRegKey*>(
             dComIfG_getObjectRes(l_arcname, dRes_INDEX_LINK_BRK_GARWFI00_e));
-    } else if (field_0x2E8 == ArrowLightArrow::TYPE_ICE) {
+    } else if (mArrowType == ArrowLightArrow::TYPE_ICE) {
         btk = (J3DAnmTextureSRTKey*)dComIfG_getObjectRes(l_arcname, dRes_INDEX_LINK_BTK_GARWFI01_e);
         brk = static_cast<J3DAnmTevRegKey*>(
             dComIfG_getObjectRes(l_arcname, dRes_INDEX_LINK_BRK_GARWFI01_e));
@@ -111,94 +111,94 @@ BOOL daArrow_Lighteff_c::CreateHeap() {
         return FALSE;
     }
 
-    field_0x2E0 = 0.0f;
+    mBrkFrame = 0.0f;
     return TRUE;
 }
 
 /* 0205715C */
 void daArrow_Lighteff_c::CreateInit() {
-    cullMtx = gabi::ea(J3DModel_getBaseTRMtx(field_0x298));
-    field_0x2A8.z = 1.0f;
-    field_0x2A8.y = 1.0f;
-    field_0x2A8.x = 1.0f;
+    cullMtx = gabi::ea(J3DModel_getBaseTRMtx(mpModel));
+    mScale.z = 1.0f;
+    mScale.y = 1.0f;
+    mScale.x = 1.0f;
     fopAcM_setCullSizeBox(this, -100.0f, -100.0f, -100.0f, 100.0f, 100.0f, 100.0f);
     cullSizeFar = 1.0f;
     /* HD: the scale comes from the particle manager when there is one */
     dPa_control_c* pa = dComIfGp_getParticle();
     if (pa != nullptr) {
         f32 s = reinterpret_cast<ArrowLightParticles*>(pa)->mGlobalScale;
-        field_0x2A8.x = s;
-        field_0x2A8.z = s;
-        field_0x2A8.y = s;
+        mScale.x = s;
+        mScale.z = s;
+        mScale.y = s;
     }
 
     set_mtx();
 
-    field_0x2EC = 0;
-    field_0x2E4 = 0;
-    field_0x2F0 = 0;
+    mArrowParam = 0;
+    mEndTimer = 0;
+    mPrevArrowParam = 0;
 
     setTopPos();
 
-    if (field_0x2E8 == ArrowLightArrow::TYPE_FIRE) {
-        if (field_0x2F4.getEmitter() == nullptr) {
+    if (mArrowType == ArrowLightArrow::TYPE_FIRE) {
+        if (mParticleCb0.getEmitter() == nullptr) {
             dComIfGp_particle_setP1(
-                arrow_light_particle::ID_IT_JN_ARWF_HINOKO00, &field_0x29C, &current.angle, nullptr,
-                0xFF, (dPa_levelEcallBack*)&field_0x2F4, -1, nullptr, nullptr, nullptr);
+                arrow_light_particle::ID_IT_JN_ARWF_HINOKO00, &mTopPos, &current.angle, nullptr,
+                0xFF, (dPa_levelEcallBack*)&mParticleCb0, -1, nullptr, nullptr, nullptr);
         }
-    } else if (field_0x2E8 == ArrowLightArrow::TYPE_ICE) {
-        if (field_0x2F4.getEmitter() == nullptr) {
+    } else if (mArrowType == ArrowLightArrow::TYPE_ICE) {
+        if (mParticleCb0.getEmitter() == nullptr) {
             dComIfGp_particle_setP1(
-                arrow_light_particle::ID_IT_JN_ARWI_KIRAKIRA00, &field_0x29C, &current.angle,
-                nullptr, 0xFF, (dPa_levelEcallBack*)&field_0x2F4, -1, nullptr, nullptr, nullptr);
+                arrow_light_particle::ID_IT_JN_ARWI_KIRAKIRA00, &mTopPos, &current.angle,
+                nullptr, 0xFF, (dPa_levelEcallBack*)&mParticleCb0, -1, nullptr, nullptr, nullptr);
         }
-        if (field_0x308.getEmitter() == nullptr) {
+        if (mParticleCb1.getEmitter() == nullptr) {
             dComIfGp_particle_setP1(
-                arrow_light_particle::ID_IT_JN_ARWI_REIKI00, &field_0x29C, &current.angle, nullptr,
-                0xFF, (dPa_levelEcallBack*)&field_0x308, -1, nullptr, nullptr, nullptr);
+                arrow_light_particle::ID_IT_JN_ARWI_REIKI00, &mTopPos, &current.angle, nullptr,
+                0xFF, (dPa_levelEcallBack*)&mParticleCb1, -1, nullptr, nullptr, nullptr);
         }
-    } else if (field_0x2E8 == ArrowLightArrow::TYPE_LIGHT) {
-        if (field_0x2F4.getEmitter() == nullptr) {
+    } else if (mArrowType == ArrowLightArrow::TYPE_LIGHT) {
+        if (mParticleCb0.getEmitter() == nullptr) {
             dComIfGp_particle_setP1(
-                arrow_light_particle::ID_IT_JN_ARWG_TSUBU00, &field_0x29C, &current.angle, nullptr,
-                0xFF, (dPa_levelEcallBack*)&field_0x2F4, -1, nullptr, nullptr, nullptr);
+                arrow_light_particle::ID_IT_JN_ARWG_TSUBU00, &mTopPos, &current.angle, nullptr,
+                0xFF, (dPa_levelEcallBack*)&mParticleCb0, -1, nullptr, nullptr, nullptr);
         }
-        if (field_0x308.getEmitter() == nullptr) {
+        if (mParticleCb1.getEmitter() == nullptr) {
             dComIfGp_particle_setP1(
-                arrow_light_particle::ID_IT_JN_ARWG_FLASH00, &field_0x29C, &current.angle, nullptr,
-                0xFF, (dPa_levelEcallBack*)&field_0x308, -1, nullptr, nullptr, nullptr);
+                arrow_light_particle::ID_IT_JN_ARWG_FLASH00, &mTopPos, &current.angle, nullptr,
+                0xFF, (dPa_levelEcallBack*)&mParticleCb1, -1, nullptr, nullptr, nullptr);
         }
     }
 
     /* HD: the emitters take the model scale */
-    f32 sx = field_0x2A8.x;
-    f32 sy = field_0x2A8.y;
-    f32 sz = field_0x2A8.z;
-    if (field_0x2F4.getEmitter()) {
-        reinterpret_cast<ArrowLightEmitter*>(field_0x2F4.getEmitter())->setGlobalScale(sx, sy, sz);
+    f32 sx = mScale.x;
+    f32 sy = mScale.y;
+    f32 sz = mScale.z;
+    if (mParticleCb0.getEmitter()) {
+        reinterpret_cast<ArrowLightEmitter*>(mParticleCb0.getEmitter())->setGlobalScale(sx, sy, sz);
     }
-    if (field_0x308.getEmitter()) {
-        reinterpret_cast<ArrowLightEmitter*>(field_0x308.getEmitter())->setGlobalScale(sx, sy, sz);
+    if (mParticleCb1.getEmitter()) {
+        reinterpret_cast<ArrowLightEmitter*>(mParticleCb1.getEmitter())->setGlobalScale(sx, sy, sz);
     }
 
-    field_0x2E9 = 1;
-    dKy_plight_set(&field_0x31C);
+    mDraw = 1;
+    dKy_plight_set(&mLight);
 }
 
 /* 02056EB8 */
 void daArrow_Lighteff_c::set_mtx() {
-    J3DModel_setBaseScale(field_0x298, &field_0x2A8);
+    J3DModel_setBaseScale(mpModel, &mScale);
 
     ArrowLightArrow* arrow = static_cast<ArrowLightArrow*>(fopAcM_SearchByID(parentActorID));
     if (arrow) {
-        PSMTXCopy(&arrow->field_0x6b4, mDoMtx_stack_c::get());
+        PSMTXCopy(&arrow->mModelMtx, mDoMtx_stack_c::get());
         mDoMtx_stack_c::transM(0.0f, 0.0f, 62.0f);
-        J3DModel_setBaseTRMtx(field_0x298, mDoMtx_stack_c::get());
+        J3DModel_setBaseTRMtx(mpModel, mDoMtx_stack_c::get());
     } else {
         mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
         mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), current.angle.x, current.angle.y, 0);
         mDoMtx_stack_c::transM(0.0f, 0.0f, 62.0f);
-        J3DModel_setBaseTRMtx(field_0x298, mDoMtx_stack_c::get());
+        J3DModel_setBaseTRMtx(mpModel, mDoMtx_stack_c::get());
     }
 }
 
@@ -212,7 +212,7 @@ cPhs_State daArrow_Lighteff_c::_create() {
         fopAcM_OnCondition(this, fopAcCnd_INIT_e);
     }
 
-    field_0x2EA = 0;
+    mUseArrowEffect = 0;
     if (!fopAcM_entrySolidHeap(this, gabi::guest_fn((void*)CheckCreateHeap), 0x2660)) {
         return cPhs_ERROR_e;
     }
@@ -225,7 +225,7 @@ cPhs_State daArrow_Lighteff_c::_create() {
 bool daArrow_Lighteff_c::_delete() {
     delete_particle();
 
-    if (field_0x2EA != 0) { /* HD: any nonzero flag, unlike GC's ==1. */
+    if (mUseArrowEffect != 0) { /* HD: any nonzero flag, unlike GC's ==1. */
         ArrowLightPlayer* link = static_cast<ArrowLightPlayer*>(dComIfGp_getPlayer(0));
         ArrowLightArrow* arrow = static_cast<ArrowLightArrow*>(fopAcM_SearchByID(parentActorID));
         if (arrow) {
@@ -237,15 +237,15 @@ bool daArrow_Lighteff_c::_delete() {
         }
     }
 
-    dKy_plight_cut(&field_0x31C);
+    dKy_plight_cut(&mLight);
     return true;
 }
 
-// HD: uses the demo draw structure, gated by field_0x2E9.
+// HD: uses the demo draw structure, gated by mDraw.
 /* 0205763C */
 bool daArrow_Lighteff_c::_draw() {
-    if (field_0x2E9 != 0) {
-        J3DModelData* modelData = J3DModel_getModelData(field_0x298);
+    if (mDraw != 0) {
+        J3DModelData* modelData = J3DModel_getModelData(mpModel);
         bool monotone = l_graphics.mMonotone != 0;
         if (monotone)
             dComIfGd_setListP1();
@@ -254,7 +254,7 @@ bool daArrow_Lighteff_c::_draw() {
 
         mBtk.entry(modelData, mBtk.getFrame());
         mBrk.entry(modelData, mBrk.getFrame());
-        mDoExt_modelUpdateDL(field_0x298);
+        mDoExt_modelUpdateDL(mpModel);
         /* mBrk.remove(modelData); mBtk.remove(modelData) */
         reinterpret_cast<ArrowLightModelData*>(modelData)->mBrk = nullptr;
         reinterpret_cast<ArrowLightModelData*>(modelData)->mBtk = nullptr;
@@ -270,32 +270,32 @@ void daArrow_Lighteff_c::brk_play() {
 
     s32 cam = dComIfGp_getPlayerCameraID(0);
     if (!dComIfGp_checkCameraAttentionStatus(cam, dCamAttnStts_00000020_e)) {
-        if (field_0x2E0 < mBrk.getEndFrame()) {
-            field_0x2E0 = field_0x2E0 + 1.0f;
-            if (field_0x2E0 > mBrk.getEndFrame()) {
-                field_0x2E0 = mBrk.getEndFrame();
+        if (mBrkFrame < mBrk.getEndFrame()) {
+            mBrkFrame = mBrkFrame + 1.0f;
+            if (mBrkFrame > mBrk.getEndFrame()) {
+                mBrkFrame = mBrk.getEndFrame();
             }
         }
     } else {
-        if (field_0x2E0 > 5.0f) {
-            field_0x2E0 = field_0x2E0 - 1.0f;
-            if (field_0x2E0 < 5.0f) {
-                field_0x2E0 = 5.0f;
+        if (mBrkFrame > 5.0f) {
+            mBrkFrame = mBrkFrame - 1.0f;
+            if (mBrkFrame < 5.0f) {
+                mBrkFrame = 5.0f;
             }
-        } else if (field_0x2E0 < 5.0f) {
-            field_0x2E0 = field_0x2E0 + 1.0f;
-            if (field_0x2E0 > 5.0f) {
-                field_0x2E0 = 5.0f;
+        } else if (mBrkFrame < 5.0f) {
+            mBrkFrame = mBrkFrame + 1.0f;
+            if (mBrkFrame > 5.0f) {
+                mBrkFrame = 5.0f;
             }
         }
     }
 
-    mBrk.setFrame(field_0x2E0);
+    mBrk.setFrame(mBrkFrame);
 }
 
 /* 02057930 */
 bool daArrow_Lighteff_c::_execute() {
-    field_0x2F0 = (u32)field_0x2EC;
+    mPrevArrowParam = (u32)mArrowParam;
 
     brk_play();
 
@@ -303,46 +303,46 @@ bool daArrow_Lighteff_c::_execute() {
     ArrowLightArrow* arrow = static_cast<ArrowLightArrow*>(fopAcM_SearchByID(parentActorID));
     if (arrow) {
         u32 param = fopAcM_GetParam(arrow);
-        field_0x2EC = param;
-        if (arrow->field_0x6e4 != 0) { /* HD: any nonzero flag, unlike GC's ==1. */
+        mArrowParam = param;
+        if (arrow->mFlewFar != 0) { /* HD: any nonzero flag, unlike GC's ==1. */
             fopAcM_delete(this);
         } else if (param != 0) {
             if (param == 1) {
-                if (field_0x2F0 != 1) {
+                if (mPrevArrowParam != 1) {
                     if (!arrow->isSetByZelda()) {
                         link->onUseArrowEffect();
                     }
-                    field_0x2A8.z = 1.0f;
-                    field_0x2EA = 1;
+                    mScale.z = 1.0f;
+                    mUseArrowEffect = 1;
                 } else {
-                    f32 z = (f32)((f64)field_0x2A8.z + 1.0);
+                    f32 z = (f32)((f64)mScale.z + 1.0);
                     // HD: the unordered result clamps, as the original blt/bgt branches do.
                     if (!(z < 20.0f)) {
                         z = 20.0f;
                     }
                     f32 x =
-                        field_0x2A8.x - 0.025f; /* HD: single-precision subtraction, unlike GC. */
-                    field_0x2A8.z = z;
+                        mScale.x - 0.025f; /* HD: single-precision subtraction, unlike GC. */
+                    mScale.z = z;
                     if (!(x > 0.5f)) {
                         x = 0.5f;
                     }
-                    field_0x2A8.x = x;
-                    field_0x2A8.y = x;
+                    mScale.x = x;
+                    mScale.y = x;
                 }
             } else if (param == 3) {
                 fopAcM_delete(this);
             } else {
-                field_0x2E9 = 0;
+                mDraw = 0;
                 delete_particle();
-                field_0x2E4 = field_0x2E4 + 1;
-                if (0x3C <= field_0x2E4) {
+                mEndTimer = mEndTimer + 1;
+                if (0x3C <= mEndTimer) {
                     fopAcM_delete(this);
                 }
             }
         }
 
         current.pos.copy(arrow->current.pos);
-        csXyz* ang = &arrow->field_0x6e6;
+        csXyz* ang = &arrow->mHitAngle;
         current.angle.x = ang->x;
         current.angle.y = ang->y;
         current.angle.z = ang->z;
@@ -353,29 +353,29 @@ bool daArrow_Lighteff_c::_execute() {
     }
 
     s32 cam = dComIfGp_getPlayerCameraID(0);
-    if (field_0x2E8 == ArrowLightArrow::TYPE_FIRE) {
+    if (mArrowType == ArrowLightArrow::TYPE_FIRE) {
         arrowLight_seStartCurrent(this, JA_SE_OBJ_FIRE_ARROW_AMB, 0);
         if (!dComIfGp_checkCameraAttentionStatus(cam, dCamAttnStts_00000020_e)) {
-            dComIfGp_particle_setSimple(arrow_light_particle::ID_AK_JP_O_KAGEROU00, &field_0x29C);
+            dComIfGp_particle_setSimple(arrow_light_particle::ID_AK_JP_O_KAGEROU00, &mTopPos);
         }
-    } else if (field_0x2E8 == ArrowLightArrow::TYPE_ICE) {
+    } else if (mArrowType == ArrowLightArrow::TYPE_ICE) {
         arrowLight_seStartCurrent(this, JA_SE_OBJ_ICE_ARROW_AMB, 0);
         if (dComIfGp_checkCameraAttentionStatus(cam, dCamAttnStts_00000020_e)) {
-            if (field_0x2F4.getEmitter()) {
-                reinterpret_cast<ArrowLightEmitter*>(field_0x2F4.getEmitter())
+            if (mParticleCb0.getEmitter()) {
+                reinterpret_cast<ArrowLightEmitter*>(mParticleCb0.getEmitter())
                     ->setGlobalAlpha(0x64);
             }
-            if (field_0x308.getEmitter()) {
-                reinterpret_cast<ArrowLightEmitter*>(field_0x308.getEmitter())
+            if (mParticleCb1.getEmitter()) {
+                reinterpret_cast<ArrowLightEmitter*>(mParticleCb1.getEmitter())
                     ->setGlobalAlpha(0x64);
             }
         } else {
-            if (field_0x2F4.getEmitter()) {
-                reinterpret_cast<ArrowLightEmitter*>(field_0x2F4.getEmitter())
+            if (mParticleCb0.getEmitter()) {
+                reinterpret_cast<ArrowLightEmitter*>(mParticleCb0.getEmitter())
                     ->setGlobalAlpha(0xFF);
             }
-            if (field_0x308.getEmitter()) {
-                reinterpret_cast<ArrowLightEmitter*>(field_0x308.getEmitter())
+            if (mParticleCb1.getEmitter()) {
+                reinterpret_cast<ArrowLightEmitter*>(mParticleCb1.getEmitter())
                     ->setGlobalAlpha(0xFF);
             }
         }
@@ -402,9 +402,9 @@ static daArrow_Lighteff_c* daArrow_Lighteff_c_ct(daArrow_Lighteff_c* self) {
     self->__vtbl = 0x100075B0;
     mDoExt_brkAnm::ct(&self->mBrk);
     mDoExt_btkAnm::ct(&self->mBtk);
-    dPa_followEcallBack_ct(&self->field_0x2F4, 0, 0);
-    dPa_followEcallBack_ct(&self->field_0x308, 0, 0);
-    self->field_0x31C.mHD20 = 1.0f; /* LIGHT_INFLUENCE (HD) */
+    dPa_followEcallBack_ct(&self->mParticleCb0, 0, 0);
+    dPa_followEcallBack_ct(&self->mParticleCb1, 0, 0);
+    self->mLight.mHD20 = 1.0f; /* LIGHT_INFLUENCE (HD) */
     return self;
 }
 

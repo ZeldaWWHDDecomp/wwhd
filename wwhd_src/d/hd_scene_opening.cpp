@@ -1,5 +1,6 @@
 /** HD opening-scene lifecycle and input callbacks. Private decomp-derived source. */
 #include "d/hd_scene_opening.h"
+#include "sead/ElementAt.h"
 static void openingDrawTv(hdOpeningScene_c*, hdOpeningDrawInfo_l*);
 static void openingDrawDrc(hdOpeningScene_c*, hdOpeningDrawInfo_l*);
 static void* sOpeningLayoutManager;
@@ -103,7 +104,8 @@ static void openingDrawTv(hdOpeningScene_c* scene, hdOpeningDrawInfo_l* info) {
     u32 index = info->mSlot;
     be<u32>* vtable = reinterpret_cast<be<u32>*>(screen->mVtable.get());
     gptr<hdOpeningSaveSlot_l>* slots = saves->mpSlots;
-    hdOpeningSaveSlot_l* slot = slots[index < count ? index : 0];
+    /* guest address arithmetic: slots + index * 4 wraps at 32 bits as on the console */
+    hdOpeningSaveSlot_l* slot = sead::elementAt<gptr<hdOpeningSaveSlot_l>>(gabi::ea(slots), index < count ? index : 0);
     gabi::call_ptr<void>(vtable[kOpeningDrawSlot].get(), screen, slot->mRenderContext);
 }
 /* 0270CC20 */

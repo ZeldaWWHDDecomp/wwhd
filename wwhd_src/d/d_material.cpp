@@ -18,24 +18,24 @@ static u32 drawBufferXlu;
 
 static void transfer(ExtendedState* dst, State* src) {
     State* state = &dst->base;
-    bool same = state->field_0x4 == src->field_0x4 &&
-                state->field_0x8 == src->field_0x8 &&
-                state->field_0xc == src->field_0xc &&
-                state->field_0x10 == src->field_0x10 &&
-                state->field_0x14 == src->field_0x14 &&
-                state->field_0x18 == src->field_0x18 &&
-                state->field_0x38 == src->field_0x38 &&
-                state->field_0x34 == src->field_0x34 &&
-                state->field_0x1c == src->field_0x1c;
+    bool same = state->mDimension == src->mDimension &&
+                state->mWidth == src->mWidth &&
+                state->mHeight == src->mHeight &&
+                state->mDepth == src->mDepth &&
+                state->mMipCount == src->mMipCount &&
+                state->mFormat == src->mFormat &&
+                state->mSwizzle == src->mSwizzle &&
+                state->mTileMode == src->mTileMode &&
+                state->mSamples == src->mSamples;
     if (!same) {
         copyState(dst, src);
     } else {
-        u32 first = src->field_0x28;
-        u32 second = src->field_0x30;
-        state->field_0x28 = first;
-        dst->field_0xdc = second;
-        dst->field_0xd4 = first;
-        state->field_0x30 = second;
+        u32 first = src->mImage;
+        u32 second = src->mMipImage;
+        state->mImage = first;
+        dst->mNativeMipImage = second;
+        dst->mNativeImage = first;
+        state->mMipImage = second;
     }
 }
 
@@ -53,8 +53,8 @@ static void dMat_setup(Control* self) {
     Resource* b = getResource(resources, &second, 0x93);
     if (!a || !b)
         return;
-    initTexture(&self->source[0], a->field_0x20);
-    initTexture(&self->source[1], b->field_0x20);
+    initTexture(&self->source[0], a->mpTextureRes);
+    initTexture(&self->source[1], b->mpTextureRes);
     transfer(&self->target[0], &self->source[0]);
     transfer(&self->target[1], &self->source[1]);
     mOverride1 = &self->target[1];

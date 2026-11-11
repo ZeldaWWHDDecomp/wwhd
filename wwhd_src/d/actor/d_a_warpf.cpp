@@ -258,8 +258,8 @@ BOOL daWarpf_c::CreateHeap() {
         if (modelData == nullptr)
             JUT_ASSERT_fail("d_a_warpf.cpp", 343, "modelData != (0)");
 
-        m2A8 = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000222);
-        if (!m2A8)
+        mpModel = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000222);
+        if (!mpModel)
             return FALSE;
 
         pbrk = dComIfG_getObjectRes(arcname(), dRes_INDEX_YSBWP00_BRK_YSBWP00_e, gc_tu.safeString);
@@ -267,7 +267,7 @@ BOOL daWarpf_c::CreateHeap() {
             JUT_ASSERT_fail("d_a_warpf.cpp", 358, "pbrk != (0)");
 
         u32 brk = new_mDoExt_brkAnm();
-        m2AC = brk;
+        mpBrkAnm = brk;
         if (brk == 0 || !mDoExt_brkAnm_init(brk, modelData, pbrk, true, J3DFrameCtrl::EMode_NONE, 1.0f, 0, -1, false, 0))
             return FALSE;
 
@@ -278,7 +278,7 @@ BOOL daWarpf_c::CreateHeap() {
         u32 bck = gabi::ea(operator_new(0x8C));
         if (bck != 0)
             mDoExt_bckAnm_ct(bck, warpf_tu.mBckVtable);
-        m2B0 = bck;
+        mpBckAnm = bck;
         if (bck == 0 ||
             !Warpf_view<mDoExt_bckAnm>(bck)->init(modelData, (J3DAnmTransform*)pbck, true, J3DFrameCtrl::EMode_NONE, 1.0f, 0, -1, false))
             return FALSE;
@@ -288,7 +288,7 @@ BOOL daWarpf_c::CreateHeap() {
             JUT_ASSERT_fail("d_a_warpf.cpp", 391, "pbtk != (0)");
 
         u32 btk = new_mDoExt_btkAnm();
-        m2B4 = btk;
+        mpBtkAnm = btk;
         if (btk == 0 || !Warpf_view<mDoExt_btkAnm>(btk)->init(modelData, (J3DAnmTextureSRTKey*)pbtk, true,
                                                               J3DFrameCtrl::EMode_NONE, 1.0f, 0, -1, false, 0))
             return FALSE;
@@ -298,14 +298,14 @@ BOOL daWarpf_c::CreateHeap() {
     case STAGE_ET:
     case STAGE_WT:
         if (!checkEndDemo()) {
-            m2C0 = nullptr;
+            mpEndModel = nullptr;
 
             modelData = (J3DModelData*)dComIfG_getObjectRes(arcname(), dRes_INDEX_GTFGLOW_BDL_GTFGLOW00_e, gc_tu.safeString);
             if (modelData == nullptr)
                 JUT_ASSERT_fail("d_a_warpf.cpp", 411, "modelData != (0)");
 
-            m2A8 = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000022);
-            if (!m2A8)
+            mpModel = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000022);
+            if (!mpModel)
                 return FALSE;
 
             pbrk = dComIfG_getObjectRes(arcname(), dRes_INDEX_GTFGLOW_BRK_GTFGLOW00_e, gc_tu.safeString);
@@ -313,37 +313,37 @@ BOOL daWarpf_c::CreateHeap() {
                 JUT_ASSERT_fail("d_a_warpf.cpp", 424, "pbrk != (0)");
 
             u32 brk = new_mDoExt_brkAnm();
-            m2AC = brk;
+            mpBrkAnm = brk;
             if (brk == 0 || !mDoExt_brkAnm_init(brk, modelData, pbrk, true, J3DFrameCtrl::EMode_NONE, 1.0f, 0, -1, false, 0))
                 return FALSE;
-            anm_setRate(m2AC, 1.0f);
+            anm_setRate(mpBrkAnm, 1.0f);
 
             pbrk = dComIfG_getObjectRes(arcname(), dRes_INDEX_GTFGLOW_BRK_GTFGLOW01_e, gc_tu.safeString);
             if (pbrk == nullptr)
                 JUT_ASSERT_fail("d_a_warpf.cpp", 441, "pbrk != (0)");
 
             brk = new_mDoExt_brkAnm();
-            m2B8 = brk;
+            mpBrkAnm1 = brk;
             if (brk == 0 || !mDoExt_brkAnm_init(brk, modelData, pbrk, true, J3DFrameCtrl::EMode_LOOP, 1.0f, 0, -1, false, 0))
                 return FALSE;
-            anm_setRate(m2B8, 0.0f);
+            anm_setRate(mpBrkAnm1, 0.0f);
 
             pbrk = dComIfG_getObjectRes(arcname(), dRes_INDEX_GTFGLOW_BRK_GTFGLOW02_e, gc_tu.safeString);
             if (pbrk == nullptr)
                 JUT_ASSERT_fail("d_a_warpf.cpp", 457, "pbrk != (0)");
 
             brk = new_mDoExt_brkAnm();
-            m2BC = brk;
+            mpBrkAnm2 = brk;
             if (brk == 0 || !mDoExt_brkAnm_init(brk, modelData, pbrk, true, J3DFrameCtrl::EMode_NONE, 1.0f, 0, -1, false, 0))
                 return FALSE;
-            anm_setRate(m2BC, 0.0f);
+            anm_setRate(mpBrkAnm2, 0.0f);
         } else {
             modelData = (J3DModelData*)dComIfG_getObjectRes(arcname(), dRes_INDEX_GTFGLOW_BDL_GDEMO29_A00_e, gc_tu.safeString);
             if (modelData == nullptr)
                 JUT_ASSERT_fail("d_a_warpf.cpp", 474, "modelData != (0)");
 
-            m2A8 = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000022);
-            if (!m2A8)
+            mpModel = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000022);
+            if (!mpModel)
                 return FALSE;
 
             pbrk = dComIfG_getObjectRes(arcname(), dRes_INDEX_GTFGLOW_BRK_GDEMO29_A01_e, gc_tu.safeString);
@@ -351,21 +351,21 @@ BOOL daWarpf_c::CreateHeap() {
                 JUT_ASSERT_fail("d_a_warpf.cpp", 489, "pbrk != (0)");
 
             u32 brk = new_mDoExt_brkAnm();
-            m2AC = brk;
+            mpBrkAnm = brk;
             if (brk == 0 || !mDoExt_brkAnm_init(brk, modelData, pbrk, true, J3DFrameCtrl::EMode_LOOP, 1.0f, 0, -1, false, 0))
                 return FALSE;
-            anm_setRate(m2AC, 1.0f);
+            anm_setRate(mpBrkAnm, 1.0f);
 
             modelData = (J3DModelData*)dComIfG_getObjectRes(arcname(), dRes_INDEX_GTFGLOW_BDL_GDEMO29_B00_e, gc_tu.safeString);
             if (modelData == nullptr)
                 JUT_ASSERT_fail("d_a_warpf.cpp", 504, "modelData != (0)");
 
-            m2C0 = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000022);
-            if (!m2C0)
+            mpEndModel = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000022);
+            if (!mpEndModel)
                 return FALSE;
 
-            m2B8 = 0;
-            m2BC = 0;
+            mpBrkAnm1 = 0;
+            mpBrkAnm2 = 0;
         }
         break;
     }
@@ -374,21 +374,21 @@ BOOL daWarpf_c::CreateHeap() {
 
 /* 024D717C */
 bool daWarpf_c::_delete() {
-    if (m290 != 0) {
-        JPABaseEmitter_becomeInvalidEmitter(m290);
-        m290 = 0;
+    if (mpBstWarpEmitter != 0) {
+        JPABaseEmitter_becomeInvalidEmitter(mpBstWarpEmitter);
+        mpBstWarpEmitter = 0;
     }
-    if (m294 != 0) {
-        JPABaseEmitter_becomeInvalidEmitter(m294);
-        m294 = 0;
+    if (mpKirakiraEmitter != 0) {
+        JPABaseEmitter_becomeInvalidEmitter(mpKirakiraEmitter);
+        mpKirakiraEmitter = 0;
     }
-    if (m298 != 0) {
-        JPABaseEmitter_becomeInvalidEmitter(m298);
-        m298 = 0;
+    if (mpLightEmitter != 0) {
+        JPABaseEmitter_becomeInvalidEmitter(mpLightEmitter);
+        mpLightEmitter = 0;
     }
-    if (m29C != 0) {
-        JPABaseEmitter_becomeInvalidEmitter(m29C);
-        m29C = 0;
+    if (mpStarEmitter != 0) {
+        JPABaseEmitter_becomeInvalidEmitter(mpStarEmitter);
+        mpStarEmitter = 0;
     }
 
     if (gabi::ea(arcname()) != 0) {
@@ -436,9 +436,9 @@ cPhs_State daWarpf_c::CreateInit() {
     set_effect();
 
     if (!checkEndDemo()) {
-        m2D6 = dComIfGp_evmng_getEventIdx("WARP_WIND" /* "WARP_WIND" */, 0xFF);
+        mEventIdx = dComIfGp_evmng_getEventIdx("WARP_WIND" /* "WARP_WIND" */, 0xFF);
     } else {
-        m2D6 = dComIfGp_evmng_getEventIdx("WARP_WIND_AFTER" /* "WARP_WIND_AFTER" */, 0xFF);
+        mEventIdx = dComIfGp_evmng_getEventIdx("WARP_WIND_AFTER" /* "WARP_WIND_AFTER" */, 0xFF);
         setEndAnim();
     }
     return cPhs_COMPLEATE_e;
@@ -484,12 +484,12 @@ cPhs_State daWarpf_c::_create() {
         }
 
         u32 se = fopKyM_fastCreate(fpcNm_LEVEL_SE_e, seNum, &current.pos, nullptr, nullptr);
-        m2E8 = se;
+        mpLevelSe = se;
         if (se != 0) {
             dLevelSe_seStop(se);
             /* setReverb(0, reverb) */
             s8 roomNo = fopAcM_GetRoomNo(this);
-            u32 p = m2E8; /* reloaded before the reverb lookup */
+            u32 p = mpLevelSe; /* reloaded before the reverb lookup */
             s32 reverb = dComIfGp_getReverb(roomNo);
             Warpf_view<dLevelSe_c>(p)->mReverb = s8(reverb);
             Warpf_view<dLevelSe_c>(p)->mSoundParam = 0;
@@ -501,7 +501,7 @@ cPhs_State daWarpf_c::_create() {
 
 /* 024D7B0C */
 bool daWarpf_c::_execute() {
-    m2E4 = m2E4 + 1;
+    mFrameCount = mFrameCount + 1;
     checkOrder();
     demo_proc();
     set_se();
@@ -512,8 +512,8 @@ bool daWarpf_c::_execute() {
 
 /* 024D79F4 */
 void daWarpf_c::eventOrder() {
-    if (m2D0 == 1) {
-        fopAcM_orderOtherEventId(this, m2D6, 0xFF, 0xFFFF, 0, 1);
+    if (mOrderRequest == 1) {
+        fopAcM_orderOtherEventId(this, mEventIdx, 0xFF, 0xFFFF, 0, 1);
         eventInfo.onCondition(dEvtCnd_UNK2_e);
     }
 }
@@ -521,17 +521,17 @@ void daWarpf_c::eventOrder() {
 /* 024D7628 */
 void daWarpf_c::checkOrder() {
     if (eventInfo.checkCommandDemoAccrpt()) {
-        if (dComIfGp_evmng_startCheck(m2D6) && m2D0 != 0) {
-            m2D0 = 0;
+        if (dComIfGp_evmng_startCheck(mEventIdx) && mOrderRequest != 0) {
+            mOrderRequest = 0;
         }
 
-        if (dComIfGp_evmng_endCheck(m2D6)) {
+        if (dComIfGp_evmng_endCheck(mEventIdx)) {
             dComIfGp_event_reset();
             fopAcM_delete(this);
         }
-    } else if (m2D0 == 0) {
+    } else if (mOrderRequest == 0) {
         if (check_warp_event()) {
-            m2D0 = 1;
+            mOrderRequest = 1;
         }
         set_effect();
     }
@@ -560,17 +560,17 @@ void daWarpf_c::demo_proc() {
 
 /* 024D7BCC */
 void daWarpf_c::initWait(int staffIdx) {
-    if (m294 != 0) {
-        JPABaseEmitter_becomeInvalidEmitter(m294);
-        m294 = 0;
+    if (mpKirakiraEmitter != 0) {
+        JPABaseEmitter_becomeInvalidEmitter(mpKirakiraEmitter);
+        mpKirakiraEmitter = 0;
     }
-    if (m298 != 0) {
-        JPABaseEmitter_becomeInvalidEmitter(m298);
-        m298 = 0;
+    if (mpLightEmitter != 0) {
+        JPABaseEmitter_becomeInvalidEmitter(mpLightEmitter);
+        mpLightEmitter = 0;
     }
-    if (m29C != 0) {
-        JPABaseEmitter_becomeInvalidEmitter(m29C);
-        m29C = 0;
+    if (mpStarEmitter != 0) {
+        JPABaseEmitter_becomeInvalidEmitter(mpStarEmitter);
+        mpStarEmitter = 0;
     }
 
     gabi::Local<cXyz> position;
@@ -587,7 +587,7 @@ void daWarpf_c::initWait(int staffIdx) {
 
 /* 024D7C98 */
 BOOL daWarpf_c::actWait(int staffIdx) {
-    if (m2E4 % 10 == 0) {
+    if (mFrameCount % 10 == 0) {
         set_effect_wind00();
     }
     return TRUE;
@@ -596,7 +596,7 @@ BOOL daWarpf_c::actWait(int staffIdx) {
 /* 024D7CE4 */
 void daWarpf_c::initWarpStart(int staffIdx) {
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
-    m2EC.copy(player->current.pos);
+    mPlayerPos.copy(player->current.pos);
 }
 
 /* 024D8130 */
@@ -634,7 +634,7 @@ BOOL daWarpf_c::actWarpMode_1(int staffIdx) {
             position->z = z;
             u32 r3 = get_angle_wind01();
             u32 r4 = gabi::cpu->r[4];
-            f32 ey = m2EC.y;
+            f32 ey = mPlayerPos.y;
             store_angle(windAngle.get(), r3, r4);
             position->y = ey + 100.0f;
 
@@ -672,7 +672,7 @@ BOOL daWarpf_c::actWarpMode_2(int staffIdx) {
             position->x = x;
             u32 r3 = get_angle_wind01();
             u32 r4 = gabi::cpu->r[4];
-            f32 ey = m2EC.y;
+            f32 ey = mPlayerPos.y;
             store_angle(windAngle.get(), r3, r4);
             position->y = ey + 120.0f;
             Warpf_angle(windAngle.get())->z = s16(Warpf_angle(windAngle.get())->z) + 0x38E;
@@ -703,7 +703,7 @@ BOOL daWarpf_c::actWarpMode_3(int staffIdx) {
             position->z = z;
             u32 r3 = get_angle_wind01();
             u32 r4 = gabi::cpu->r[4];
-            f32 ey = m2EC.y;
+            f32 ey = mPlayerPos.y;
             store_angle(windAngle.get(), r3, r4);
             position->y = ey + 140.0f;
             Warpf_angle(windAngle.get())->y = s16(Warpf_angle(windAngle.get())->y) + 0x71C;
@@ -778,38 +778,38 @@ void daWarpf_c::set_effect() {
 
     switch ((u32)(s32)mStageNo) {
     case STAGE_TOTG:
-        if (m290 == 0) {
+        if (mpBstWarpEmitter == 0) {
             if (daWarpf_prm::getSetType(this) == 0) {
                 dComIfGp_particle_set(ID_AK_SN_BSTWARP00, &current.pos);
                 dComIfGp_particle_set(ID_AK_SN_BSTWARP00 + 1, &current.pos);
                 dComIfGp_particle_set(ID_AK_SN_BSTWARP00 + 2, &current.pos);
             }
-            m290 = gabi::ea(dComIfGp_particle_set(ID_AK_SN_BSTWARP00 + 3, &current.pos));
+            mpBstWarpEmitter = gabi::ea(dComIfGp_particle_set(ID_AK_SN_BSTWARP00 + 3, &current.pos));
         }
         break;
 
     case STAGE_ET:
     case STAGE_WT:
-        if (m298 == 0) {
+        if (mpLightEmitter == 0) {
             if (!checkEndDemo()) {
-                if (daWarpf_prm::getSetType(this) && m2B8 != 0) {
-                    anm_setRate(m2B8, 1.0f);
+                if (daWarpf_prm::getSetType(this) && mpBrkAnm1 != 0) {
+                    anm_setRate(mpBrkAnm1, 1.0f);
                 }
-                m298 = gabi::ea(dComIfGp_particle_set(ID_IT_SN_SHINDENTF_LIGHT00, &current.pos, &current.angle));
-                m29C = gabi::ea(dComIfGp_particle_set(ID_IT_SN_SHINDENTF_STAR00, &current.pos, &current.angle));
-            } else if (m29C == 0) {
-                m29C = gabi::ea(dComIfGp_particle_set(ID_IT_SN_DEMO29_STAR00, &current.pos, &current.angle));
+                mpLightEmitter = gabi::ea(dComIfGp_particle_set(ID_IT_SN_SHINDENTF_LIGHT00, &current.pos, &current.angle));
+                mpStarEmitter = gabi::ea(dComIfGp_particle_set(ID_IT_SN_SHINDENTF_STAR00, &current.pos, &current.angle));
+            } else if (mpStarEmitter == 0) {
+                mpStarEmitter = gabi::ea(dComIfGp_particle_set(ID_IT_SN_DEMO29_STAR00, &current.pos, &current.angle));
             }
         }
         break;
 
     default: {
-        u32 t = (u32)(s32)m2E4;
+        u32 t = (u32)(s32)mFrameCount;
         if (t - ppc_divw(t, (u32)effectInterval) * (u32)effectInterval == 0) {
             set_effect_wind00();
         }
-        if (m294 == 0) {
-            m294 = gabi::ea(dComIfGp_particle_set(ID_AK_SN_BOSSWARPKIRAKIRA00_820C, &current.pos));
+        if (mpKirakiraEmitter == 0) {
+            mpKirakiraEmitter = gabi::ea(dComIfGp_particle_set(ID_AK_SN_BOSSWARPKIRAKIRA00_820C, &current.pos));
         }
         break;
     }
@@ -840,25 +840,25 @@ u32 daWarpf_c::get_angle_wind01() {
 /* 024D7A54 */
 void daWarpf_c::anim_play() {
     if (mStageNo == STAGE_TOTG) {
-        if (m2AC != 0) {
-            mDoExt_baseAnm_play(Warpf_view<void>(m2AC));
+        if (mpBrkAnm != 0) {
+            mDoExt_baseAnm_play(Warpf_view<void>(mpBrkAnm));
         }
-        if (m2B0 != 0) {
-            mDoExt_baseAnm_play(Warpf_view<void>(m2B0));
-            /* GameCube bug kept: tests m2B0 again before playing m2B4 */
-            if (m2B0 != 0) {
-                mDoExt_baseAnm_play(Warpf_view<void>(m2B4));
+        if (mpBckAnm != 0) {
+            mDoExt_baseAnm_play(Warpf_view<void>(mpBckAnm));
+            /* GameCube bug kept: tests mpBckAnm again before playing mpBtkAnm */
+            if (mpBckAnm != 0) {
+                mDoExt_baseAnm_play(Warpf_view<void>(mpBtkAnm));
             }
         }
     } else if (mStageNo == STAGE_ET || mStageNo == STAGE_WT) {
-        if (m2AC != 0) {
-            mDoExt_baseAnm_play(Warpf_view<void>(m2AC));
+        if (mpBrkAnm != 0) {
+            mDoExt_baseAnm_play(Warpf_view<void>(mpBrkAnm));
         }
-        if (m2B8 != 0) {
-            if (m2E4 >= 120) {
-                anm_setRate(m2B8, 1.0f);
+        if (mpBrkAnm1 != 0) {
+            if (mFrameCount >= 120) {
+                anm_setRate(mpBrkAnm1, 1.0f);
             }
-            mDoExt_baseAnm_play(Warpf_view<void>(m2B8));
+            mDoExt_baseAnm_play(Warpf_view<void>(mpBrkAnm1));
         }
     }
 }
@@ -867,21 +867,21 @@ void daWarpf_c::anim_play() {
 void daWarpf_c::setEndAnim() {
     switch ((u32)(s32)mStageNo) {
     case STAGE_TOTG:
-        if (m2AC != 0) {
-            anm_setFrame(m2AC, anm_getEndFrame(m2AC));
+        if (mpBrkAnm != 0) {
+            anm_setFrame(mpBrkAnm, anm_getEndFrame(mpBrkAnm));
         }
-        if (m2B0 != 0) {
-            anm_setFrame(m2B0, anm_getEndFrame(m2B0));
+        if (mpBckAnm != 0) {
+            anm_setFrame(mpBckAnm, anm_getEndFrame(mpBckAnm));
         }
-        if (m2B4 != 0) {
-            anm_setFrame(m2B4, anm_getEndFrame(m2B4));
+        if (mpBtkAnm != 0) {
+            anm_setFrame(mpBtkAnm, anm_getEndFrame(mpBtkAnm));
         }
         break;
 
     case STAGE_ET:
     case STAGE_WT:
-        if (!checkEndDemo() && m2AC != 0) {
-            anm_setFrame(m2AC, anm_getEndFrame(m2AC));
+        if (!checkEndDemo() && mpBrkAnm != 0) {
+            anm_setFrame(mpBrkAnm, anm_getEndFrame(mpBrkAnm));
         }
         break;
     }
@@ -889,13 +889,13 @@ void daWarpf_c::setEndAnim() {
 
 /* 024D78D0 */
 void daWarpf_c::set_se() {
-    s32 t = m2E0 + 1;
+    s32 t = mSeTimer + 1;
     if (t > 20000) {
         t = 20000;
     }
-    m2E0 = t;
+    mSeTimer = t;
 
-    switch ((u32)(s32)m2D8) {
+    switch ((u32)(s32)mSeState) {
     case 0:
         if (daWarpf_prm::getSetType(this) == 0) {
             if (mStageNo == STAGE_TOTG) {
@@ -904,7 +904,7 @@ void daWarpf_c::set_se() {
                 seStart_eye(this, JA_SE_OBJ_BOSS_WARP_APPEAR, 0);
             }
         }
-        m2D8 = 1;
+        mSeState = 1;
         break;
 
     case 1:
@@ -912,25 +912,25 @@ void daWarpf_c::set_se() {
     }
 
     if (mStageNo == STAGE_TOTG) {
-        if (m2E0 >= 45 && m2E8 != 0) {
-            dLevelSe_seStart(m2E8);
+        if (mSeTimer >= 45 && mpLevelSe != 0) {
+            dLevelSe_seStart(mpLevelSe);
         }
-    } else if (m2E8 != 0) {
-        dLevelSe_seStart(m2E8);
+    } else if (mpLevelSe != 0) {
+        dLevelSe_seStart(mpLevelSe);
     }
 }
 
 /* 024D7258 */
 void daWarpf_c::set_mtx() {
     mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
-    if (m2A8) {
-        J3DModel_setBaseScale(m2A8, &scale);
-        J3DModel_setBaseTRMtx(m2A8, mDoMtx_stack_c::get());
+    if (mpModel) {
+        J3DModel_setBaseScale(mpModel, &scale);
+        J3DModel_setBaseTRMtx(mpModel, mDoMtx_stack_c::get());
     }
 
-    if (m2C0) {
-        J3DModel_setBaseScale(m2C0, &scale);
-        J3DModel_setBaseTRMtx(m2C0, mDoMtx_stack_c::get());
+    if (mpEndModel) {
+        J3DModel_setBaseScale(mpEndModel, &scale);
+        J3DModel_setBaseTRMtx(mpEndModel, mDoMtx_stack_c::get());
     }
 }
 
@@ -940,19 +940,19 @@ bool daWarpf_c::_draw() {
     case STAGE_TOTG:
         set_mtx();
         settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &current.pos, &tevStr);
-        setLightTevColorType(dKy_getEnvlight(), m2A8, &tevStr);
+        setLightTevColorType(dKy_getEnvlight(), mpModel, &tevStr);
 
-        if (m2AC != 0) {
-            mDoExt_brkAnm_entry(Warpf_view<mDoExt_brkAnm>(m2AC), J3DModel_getModelData(m2A8), anm_getFrame(m2AC));
+        if (mpBrkAnm != 0) {
+            mDoExt_brkAnm_entry(Warpf_view<mDoExt_brkAnm>(mpBrkAnm), J3DModel_getModelData(mpModel), anm_getFrame(mpBrkAnm));
         }
-        if (m2B0 != 0) {
-            Warpf_view<mDoExt_bckAnm>(m2B0)->entry(J3DModel_getModelData(m2A8), anm_getFrame(m2B0));
+        if (mpBckAnm != 0) {
+            Warpf_view<mDoExt_bckAnm>(mpBckAnm)->entry(J3DModel_getModelData(mpModel), anm_getFrame(mpBckAnm));
         }
-        if (m2B4 != 0) {
-            mDoExt_btkAnm_entry(Warpf_view<mDoExt_btkAnm>(m2B4), J3DModel_getModelData(m2A8), anm_getFrame(m2B4));
+        if (mpBtkAnm != 0) {
+            mDoExt_btkAnm_entry(Warpf_view<mDoExt_btkAnm>(mpBtkAnm), J3DModel_getModelData(mpModel), anm_getFrame(mpBtkAnm));
         }
 
-        mDoExt_modelUpdateDL(m2A8);
+        mDoExt_modelUpdateDL(mpModel);
         break;
 
     case STAGE_ET:
@@ -960,24 +960,24 @@ bool daWarpf_c::_draw() {
         set_mtx();
         settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &current.pos, &tevStr);
 
-        if (m2A8) {
-            setLightTevColorType(dKy_getEnvlight(), m2A8, &tevStr);
+        if (mpModel) {
+            setLightTevColorType(dKy_getEnvlight(), mpModel, &tevStr);
 
             // HD: the brk entries take the model (025E8480)
 
-            if (m2AC != 0) {
-                mDoExt_brkAnm_entry_model(m2AC, m2A8, anm_getFrame(m2AC));
+            if (mpBrkAnm != 0) {
+                mDoExt_brkAnm_entry_model(mpBrkAnm, mpModel, anm_getFrame(mpBrkAnm));
             }
-            if (m2B8 != 0 && anm_getRate(m2B8) > 0.0f) {
-                mDoExt_brkAnm_entry_model(m2B8, m2A8, anm_getFrame(m2B8));
+            if (mpBrkAnm1 != 0 && anm_getRate(mpBrkAnm1) > 0.0f) {
+                mDoExt_brkAnm_entry_model(mpBrkAnm1, mpModel, anm_getFrame(mpBrkAnm1));
             }
 
-            mDoExt_modelUpdateDL(m2A8);
+            mDoExt_modelUpdateDL(mpModel);
         }
 
-        if (m2C0) {
-            setLightTevColorType(dKy_getEnvlight(), m2C0, &tevStr);
-            mDoExt_modelUpdateDL(m2C0);
+        if (mpEndModel) {
+            setLightTevColorType(dKy_getEnvlight(), mpEndModel, &tevStr);
+            mDoExt_modelUpdateDL(mpEndModel);
         }
         break;
     }
