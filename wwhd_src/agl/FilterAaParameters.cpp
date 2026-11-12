@@ -9,6 +9,7 @@
 #include "sead/HeapRegistry.h"
 #include "sead/GraphicsSurface.h"
 #include "sead/GraphicsRuntime.h"
+#include "port_native_draw.h"
 using namespace agl::filter_aa;
 using namespace agl::filter_aa_text;
 void initializeEffectParameter(ParameterBase_l* storage);
@@ -372,6 +373,11 @@ static void drawFilterQuad() {
         u32 primitive=draw->mPrimitive;
         const void* indices=draw->mIndices;
         u32 format=draw->mFormat;
+#if PORT_NATIVE_DRAW
+        // the anti-aliasing filter's draw as a packet of its own (port_native_draw.h)
+        if (port_native_draw_single(PORT_NATIVE_POST,PORT_NATIVE_POST_FILTER_AA,gabi::ea(draw),0,0,primitive,count,format,
+                                    gabi::ea(indices),0,1)) return;
+#endif
         drawFilterIndices(primitive,count,format,indices,0,1);
     }
 }

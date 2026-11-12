@@ -1,5 +1,6 @@
 /* Layout renderer initialization and shared quad buffers from the WWHD binary. */
 #include "nw/lyt/LayoutRenderStorage.h"
+#include "port_native_draw.h"
 using namespace nw::lyt;
 /* 0287EB18 */
 LayoutRenderStorage* LayoutRenderStorage::create(LayoutRenderStorage* device) {
@@ -55,7 +56,12 @@ void LayoutRenderStorage::initialize(void* archive,u32 mode) {
 }
 /* 0287ED2C */
 void LayoutRenderStorage::drawQuad() {
-    gabi::AutoFrame frame{gabi::current_function()}; renderStorageDrawIndexed(0x13,4,4,quadIndices,0,1); }
+    gabi::AutoFrame frame{gabi::current_function()};
+#if PORT_NATIVE_DRAW
+    // inside a layout quad's packet (LayoutQuadDrawing.cpp): the quad is drawn as its instance
+    if (wwhd_native_draw(PORT_NATIVE_LAYOUT,0)) return;
+#endif
+    renderStorageDrawIndexed(0x13,4,4,quadIndices,0,1); }
 /* 0287ED48 */
 void LayoutRenderStorage::bindQuadBuffer() {
     gabi::AutoFrame frame{gabi::current_function()}; renderStorageAttributeBuffer(0,32,8,quadCoordinates); }

@@ -2,6 +2,7 @@
 #include "sead/DisplayTargets.h"
 #include "sead/RuntimeType.h"
 #include "sead/GraphicsDevice.h"
+#include "port_native_draw.h"
 
 static u32 sScanTable;
 static sead::RuntimeType sScanType;
@@ -204,6 +205,9 @@ void sead::DeviceStateCache_l::initialize() {
 
 /* 02751698 */
 static void setCafeViewport(void* device, f32 x, f32 y, f32 width, f32 height) {
+#if PORT_NATIVE_DRAW
+    wwhd_native_pass_viewport(x, y, width, height, 0.0f, 1.0f);  // pass description (port_native_draw.h)
+#endif
     setDisplayViewport(x, y, width, height, 0.0f, 1.0f);
 }
 
@@ -213,6 +217,9 @@ static void setCafeScissor(void* device, f32 x, f32 y, f32 width, f32 height) {
     u32 integerY = scanDimension(y);
     u32 integerWidth = scanDimension(width);
     u32 integerHeight = scanDimension(height);
+#if PORT_NATIVE_DRAW
+    wwhd_native_pass_scissor(integerX, integerY, integerWidth, integerHeight);  // pass description (port_native_draw.h)
+#endif
     setDisplayScissor(integerX, integerY, integerWidth, integerHeight);
 }
 

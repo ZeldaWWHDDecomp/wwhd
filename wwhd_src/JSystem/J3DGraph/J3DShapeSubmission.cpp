@@ -1,5 +1,6 @@
 // HD shape submission and its preparation-only counterpart.
 #include "JSystem/J3DGraph/J3DShapeSubmission.h"
+#include "port_native_draw.h"
 using namespace j3d;
 extern j3d::RenderContext& sRenderContext;
 FrameRecords* shapeFrameRegistry();
@@ -290,6 +291,11 @@ void ShapePacket::submitShape(ShapeDrawInput_l* input) {
         applyShapePassState(input,binding,fixed.get());
         applyShapeBlendState(shapeStatePart(binding,0xC));
     }
+#if PORT_NATIVE_DRAW
+    // the J3D material cache (port_native_draw.h): this draw's key; every GX2 call above and the draw stay the site's
+    wwhd_native_j3d(gabi::ea(resource),gabi::ea(binding),pass,view,
+                    shapeModel(this)->mDirectPrograms!=0?directProgram:gabi::ea(frame));
+#endif
     submitShapeGeometry(this);
 }
 /* 027F1FA8 */

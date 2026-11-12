@@ -1,6 +1,7 @@
 // Cascade update, layer submission and input-bound accumulation from assigned WWHD routines.
 #include "bindings.h"
 #include "agl/CascadeShadow.h"
+#include "port_native_draw.h"
 void resetCascadeUnitState(agl::ShadowUnit_l*);
 void adjustCascadeUnitMargins(agl::ShadowUnit_l*, s32, s32, f32, f32);
 void setCascadeMapLayerLimit(agl::CascadeMapStorage_l*, s32);
@@ -79,6 +80,9 @@ void* agl::CascadeShadow::renderLayers(void* context) {
     if ((u8)mDepthClamp.mValue != 0) setCascadeRasterizerClip(1, 1);
     void* selected = *contextSlot;
     if ((u32)mMap.mRenderMode == 1) selected = finishCascadeMapRendering(&mMap, selected);
+#if PORT_NATIVE_DRAW
+    wwhd_native_pass_end();  // pass description (port_native_draw.h): the cascade layers are rendered
+#endif
     return selected;
 }
 /* 02798C68 */

@@ -4,6 +4,7 @@
 #include "bindings.h"
 #include "agl/ColorCorrection.h"
 #include "sead/ElementAt.h"
+#include "port_native_draw.h"
 using namespace agl;
 using namespace agl::color_correction;
 
@@ -149,6 +150,12 @@ static void drawQuad() {
     bindVertexInput(&sCorrectionShapeInputs->mInputs[6]);
     IndexBufferLayout* quad = &sCorrectionShapes->mIndexedShapes[0].mIndexBuffer;
     u32 count = quad->mIndexCount;
+#if PORT_NATIVE_DRAW
+    // the colour correction's draw as a packet of its own (port_native_draw.h)
+    if (count != 0 && port_native_draw_single(PORT_NATIVE_POST, PORT_NATIVE_POST_COLOR_CORRECTION, gabi::ea(quad), 0, 0,
+                                              quad->mPrimitiveMode, count, quad->mFormat,
+                                              gabi::ea(static_cast<const void*>(quad->mStorage)), 0, 1)) return;
+#endif
     if (count != 0)
         drawIndexed(quad->mPrimitiveMode, count, quad->mFormat, quad->mStorage, 0, 1);
 }

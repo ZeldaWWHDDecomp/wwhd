@@ -7,6 +7,7 @@
 #include "agl/TextureResource.h"
 #include "agl/DepthOfFieldDraw.h"
 #include "agl/RootNode.h"
+#include "port_native_draw.h"
 
 // The depth-of-field object, its vignetting meshes and shape parameter objects (agl/DepthOfFieldDraw.h).
 using agl::dof::DepthOfField;
@@ -365,6 +366,12 @@ static VignettingMesh* selectedRuntimeShape(DepthOfField* runtime, u32 shape) {
 }
 static void drawRuntimeIndexBuffer(agl::IndexBufferLayout* buffer) {
     const u32 count = buffer->mIndexCount;
+#if PORT_NATIVE_DRAW
+    // a depth-of-field draw as a packet of its own (port_native_draw.h)
+    if (count && port_native_draw_single(PORT_NATIVE_POST, PORT_NATIVE_POST_DEPTH_BLUR, gabi::ea(buffer), 0, 0,
+                                         buffer->mPrimitiveMode, count, buffer->mFormat,
+                                         gabi::ea(static_cast<const void*>(buffer->mStorage)), 0, 1)) return;
+#endif
     if (count) drawRuntimeShapeIndices(buffer->mPrimitiveMode, count, buffer->mFormat, buffer->mStorage, 0, 1);
 }
 

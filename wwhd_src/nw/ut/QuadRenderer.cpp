@@ -1,6 +1,7 @@
 /* Library quad rendering and shader setup, reconstructed from WWHD. */
 #include "nw/ut/QuadRenderer.h"
 #include "sead/ElementAt.h"
+#include "port_native_draw.h"
 using namespace nw::ut;
 struct StreamDefaults { be<u32> words[20]; };
 static StreamDefaults sStreamDefaults;
@@ -332,6 +333,36 @@ static void copyAffine(Matrix4* output,const MatrixRows3* source) {
     for(u32 row=0;row<3;++row) for(u32 column=0;column<4;++column) words[row*4+column]=source->values[row][column];
     output->values[3][0]=0;output->values[3][1]=0;output->values[3][2]=0;output->values[3][3]=1;
 }
+#if PORT_NATIVE_DRAW
+// native draw packets (port_native_draw.h): the groups drawn with one shader are instances of the text packet (pass:
+// the shader's index). The shader's display list, the transform (a tagged projection: aspect.cpp) and the shadow
+// values stay the site's own calls before the packet; per group the interpolation values are the instance's register
+// values, its slice of the batch's vertex buffer its vertex input (the fetch shader unchanged) and its quads its own
+// index range of the shared quad indices. The glyph sheet texture stays the site's call.
+static bool nativeTextBegin(QuadRenderer* renderer,ShaderState* shader) {
+    u32 pass=(u32)(shader-&renderer->shaders[0]);
+    if(!wwhd_native_begin(PORT_NATIVE_TEXT,pass,0,gabi::ea(renderer),gabi::ea(shader),0)) return false;
+    wwhd_native_declare_regs(PORT_NATIVE_TEXT,1,shader->interpolateOffset,4);
+    wwhd_native_declare_regs(PORT_NATIVE_TEXT,1,shader->interpolateWidth,4);
+    wwhd_native_declare_check(PORT_NATIVE_TEXT,0,shader->textureUnit);  // (the glyph sheet: the site's own call)
+    wwhd_native_mesh(PORT_NATIVE_TEXT,0,0x13,4,4,renderer->indices);
+    return wwhd_native_commit(PORT_NATIVE_TEXT)!=0;
+}
+#define TEXT_BEGIN(sh) native=nativeTextBegin(this,sh)
+#define TEXT_PIXEL(l,n,v) \
+    if(!(native && wwhd_native_regs(PORT_NATIVE_TEXT,1,l,n,gabi::ea(v)))) quadPixelUniform(l,n,v)
+#define TEXT_ATTRIB(i,n,s,d) \
+    if(!(native && wwhd_native_attrib(PORT_NATIVE_TEXT,i,n,s,d))) quadAttributeBuffer(i,n,s,d)
+#define TEXT_DRAW(n) \
+    if(!(native && wwhd_native_draw_range(PORT_NATIVE_TEXT,0,n,indices))) quadDrawIndexed(0x13,n,4,indices,0,1)
+#define TEXT_END() if(native) { wwhd_native_end(PORT_NATIVE_TEXT);native=false; }
+#else
+#define TEXT_BEGIN(sh)
+#define TEXT_PIXEL(l,n,v) quadPixelUniform(l,n,v)
+#define TEXT_ATTRIB(i,n,s,d) quadAttributeBuffer(i,n,s,d)
+#define TEXT_DRAW(n) quadDrawIndexed(0x13,n,4,indices,0,1)
+#define TEXT_END()
+#endif
 /* 028F8250 */
 void QuadRenderer::draw(const DrawParameters* parameters) {
     gabi::Local<Matrix4> affine,viewProjection,transform;
@@ -348,6 +379,9 @@ void QuadRenderer::draw(const DrawParameters* parameters) {
     QuadBatch* batch=parameters->batch;
     u32 count=batch->groupCount;
     ShaderState* previous=nullptr;
+#if PORT_NATIVE_DRAW
+    bool native=false;
+#endif
     for(u32 index=0;index<count;++index) {
         DrawGroup* entry=&sead::elementAt(batch->groups, index);
         if(!(u32)entry->quadCount) continue;
@@ -356,34 +390,42 @@ void QuadRenderer::draw(const DrawParameters* parameters) {
         if(flags&2) shader=&shaders[((u32)parameters->flags&1)?2:1];
         else shader=&shaders[0];
         if(shader!=previous) {
+            TEXT_END();
             shader->apply();
             quadVertexUniform(shader->transformUniform,16,transform.get());
             quadPixelUniform(shader->shadowOffset,4,parameters->shadowFrom);
             quadPixelUniform(shader->shadowWidth,4,shadowWidth.get());
             flags=entry->flags;previous=shader;
+            TEXT_BEGIN(shader);
         }
         if(flags&1) {
-            quadPixelUniform(shader->interpolateOffset,4,parameters->interpolateFrom);
-            quadPixelUniform(shader->interpolateWidth,4,interpolateWidth.get());
+            TEXT_PIXEL(shader->interpolateOffset,4,parameters->interpolateFrom);
+            TEXT_PIXEL(shader->interpolateWidth,4,interpolateWidth.get());
         } else {
             for(u32 i=0;i<4;++i) zero->values[i]=0;
-            quadPixelUniform(shader->interpolateOffset,4,zero.get());
+            TEXT_PIXEL(shader->interpolateOffset,4,zero.get());
             one->values[0]=1;one->values[2]=1;one->values[1]=1;one->values[3]=interpolateWidth->values[3];
-            quadPixelUniform(shader->interpolateWidth,4,one.get());
+            TEXT_PIXEL(shader->interpolateWidth,4,one.get());
         }
         QuadBatch* current=parameters->batch;
         u32 vertices=(u32)entry->quadCount*0x70;
         u32 active=current->bufferIndex;
         u32 first=(u32)entry->firstVertex*28;
         u32 memory=sead::elementAt(current->vertexBuffers, active);
-        quadAttributeBuffer(0,vertices,28,memory+first);
+        TEXT_ATTRIB(0,vertices,28,memory+first);
         Texture* texture=entry->texture;
         quadApplyTexture(texture->descriptor,shader->textureUnit);
         u32 quads=entry->quadCount;
-        quadDrawIndexed(0x13,quads*4,4,indices,0,1);
+        TEXT_DRAW(quads*4);
         batch=parameters->batch;count=batch->groupCount;
     }
+    TEXT_END();
 }
+#undef TEXT_BEGIN
+#undef TEXT_PIXEL
+#undef TEXT_ATTRIB
+#undef TEXT_DRAW
+#undef TEXT_END
 /* WWHD glue
 ext 0273AD10 void* quadAllocate(u32)
 ext C00088C8 void quadZeroRange(u32,u32)

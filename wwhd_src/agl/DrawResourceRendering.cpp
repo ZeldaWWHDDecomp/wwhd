@@ -1,6 +1,7 @@
 // Own resource rendering caller; protected shader selection/state remain opaque.
 #include "agl/DrawResourceRendering.h"
 #include "agl/DrawRenderingCalls.h"
+#include "port_native_draw.h"
 agl::ShaderProgram* selectOpaqueResourceProgram(u32 kind, u32 format, u32 alternate, u32 zeroA,
     u32 zeroB, u32 zeroC, u32 zeroD, u32 selectorDigit, u32 zeroE, u32 configurationA,
     u32 zeroF, u32 configurationB, u32 configurationC, u32 zeroG);
@@ -146,6 +147,12 @@ void agl::DrawResourceRendering_l::drawResource(DrawResourceRecord_l* record, u3
         u32 indexType = indexBuffer->mFormat;
         u32 primitive = indexBuffer->mPrimitiveMode;
         void* indices = indexBuffer->mStorage;
+#if PORT_NATIVE_DRAW
+        // the draw pair's pass as a packet of its own (port_native_draw.h)
+        if (port_native_draw_single(PORT_NATIVE_AGL_PAIR, 0, gabi::ea(this), gabi::ea(program), 0, primitive, count,
+                                    indexType, gabi::ea(indices), 0, 1))
+            return;
+#endif
         drawPairIndexed(primitive, count, indexType, indices, 0, 1);
     }
 }

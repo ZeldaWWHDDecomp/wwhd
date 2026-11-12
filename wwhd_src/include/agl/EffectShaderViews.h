@@ -6,6 +6,7 @@
 #include "agl/ShaderHolder.h"
 #include "agl/PrimitiveShapes.h"
 #include "agl/DrawProgram.h"
+#include "port_native_draw.h"
 // Bound by each source that uses these helpers (glue `ext` lines; the first is file-local in its own source).
 void refreshEffectProgram(agl::ShaderProgram* program, u32 unused);
 void GX2CallDisplayList(const void* list, u32 size);
@@ -51,6 +52,13 @@ inline void setEffectUniform(ShaderProgram* program, u32 index, const void* valu
 inline void drawFullscreenShape(PrimitiveShapes* shapes) {
     const IndexBufferLayout* packet = &shapes->mIndexedShapes[DrawFullscreenShape].mIndexBuffer;
     u32 count = packet->mIndexCount;
+#if PORT_NATIVE_DRAW
+    // agl's full-screen shape (SSAO, shadow filter) as a packet of its own (port_native_draw.h)
+    if (count != 0 && port_native_draw_single(PORT_NATIVE_AGL_QUAD, 1, gabi::ea(packet), 0, 0, packet->mPrimitiveMode,
+                                              count, packet->mFormat,
+                                              gabi::ea(static_cast<const void*>(packet->mStorage)), 0, 1))
+        return;
+#endif
     if (count != 0) GX2DrawIndexedEx(packet->mPrimitiveMode, count, packet->mFormat, packet->mStorage, 0, 1);
 }
 }

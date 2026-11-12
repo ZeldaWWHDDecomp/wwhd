@@ -11,6 +11,7 @@ template <class T, unsigned N> static inline T &guestSlot(T (&array)[N], u32 ind
 #include "d/d_path.h"
 #include "gc_api/d/d_com_inf_game.h"
 #include "gabi.h"
+#include "port_native_draw.h"
 using namespace gabi;
 using MagmaBall = dMagma::dMagma_ball_c;
 using MagmaBallPath = dMagma::dMagma_ballPath_c;
@@ -388,6 +389,9 @@ static bool magmaDrawMaterial(u32 self, u32 context, bool floor) {
     if (!mode)
         return false;
     Local<MagmaGraphicsState> graphics;
+#if PORT_NATIVE_DRAW
+    bool native = false;
+#endif
     if (mode == 1 || mode == 2) {
         auto &shapes =
             floor ? at<dMagma::HdFloorRenderState>(self)->mShapes : at<dMagma::HdBallRenderState>(self)->mShapes;
@@ -400,10 +404,45 @@ static bool magmaDrawMaterial(u32 self, u32 context, bool floor) {
         s32 first = desc->mVertexLocation, second = desc->mPixelLocation, third = desc->mGeometryLocation;
         // HD: the size goes through an explicit at/ea round trip, as the original object code does.
         u32 data = buffer->mCpuStorage.v, size = ea(at<void>(u32(buffer->mStride)));
+#if PORT_NATIVE_DRAW
+        // native draw packets (port_native_draw.h): a ball's strips as one packet, begun before the ball's own binds:
+        // its blocks (the ball buffer at the material's locations, the render objects' material binds) are declared
+        // instance blocks, so the next ball's strips replay the same lowered state with their own blocks (the register
+        // journal keeps it across the ball's state applies); one mesh: the first strip, as GX2DrawIndexedEx takes it;
+        // each strip is an instance with its own index range. Textures, graphics state and vertex input stay the site's
+        // own
+        if (!floor && s32(magmaBallStripCount.value) > 1 && third == -1 &&
+            wwhd_native_begin(PORT_NATIVE_MAGMA, u32(draw->mMode) & 7, 0, ea(selected), 0, 0) != 0) {
+            if (second != -1)
+                wwhd_native_declare_block(PORT_NATIVE_MAGMA, 1, u32(second));
+            if (first != -1)
+                wwhd_native_declare_block(PORT_NATIVE_MAGMA, 0, u32(first));
+            for (auto *object : {&at<dMagma::HdBallRenderState>(self)->mSecondObject,
+                                 &at<dMagma::HdBallRenderState>(self)->mFirstObject})
+                wwhd_native_declare_pair(PORT_NATIVE_MAGMA, ea(object), ea(selected));
+            if (mode == 2 && draw->mpExtraObject.get())
+                wwhd_native_declare_pair(PORT_NATIVE_MAGMA, ea(draw->mpExtraObject.get()), ea(selected));
+            auto &ix = material->mIndexBuffer;
+            wwhd_native_mesh(PORT_NATIVE_MAGMA, 0, u32(ix.mPrimitiveType), u32(magmaBallStrips.mIndexCounts[0u]),
+                             u32(ix.mFormat), u32(ix.mStorage.v));
+            native = wwhd_native_commit(PORT_NATIVE_MAGMA) != 0;
+        }
+#define MAGMA_BLOCK(stage, call, location)                                                                         \
+    if (!(native && wwhd_native_block(PORT_NATIVE_MAGMA, stage, u32(location), size, data))) call(location, size, data)
+#define MAGMA_BIND(object)                                                                                         \
+    auto *table = at<MagmaRenderVtable>(object->__vtbl);                                                           \
+    if (!(native && wwhd_native_pair(PORT_NATIVE_MAGMA, ea(object), ea(selected))))                                \
+    gabi::call_ptr<void>(table->bindMaterial.get(), object, selected)
+#else
+#define MAGMA_BLOCK(stage, call, location) call(location, size, data)
+#define MAGMA_BIND(object)                                                                                         \
+    auto *table = at<MagmaRenderVtable>(object->__vtbl);                                                           \
+    gabi::call_ptr<void>(table->bindMaterial.get(), object, selected)
+#endif
         if (second != -1)
-            GX2SetPixelUniformBlock(second, size, data);
+            MAGMA_BLOCK(1, GX2SetPixelUniformBlock, second);
         if (first != -1)
-            GX2SetVertexUniformBlock(first, size, data);
+            MAGMA_BLOCK(0, GX2SetVertexUniformBlock, first);
         if (third != -1)
             GX2SetGeometryUniformBlock(third, size, data);
         auto *render = floor ? &at<dMagma::HdFloorRenderState>(self)->mSecondObject
@@ -411,16 +450,16 @@ static bool magmaDrawMaterial(u32 self, u32 context, bool floor) {
         auto *firstRender = floor ? &at<dMagma::HdFloorRenderState>(self)->mFirstObject
                                   : &at<dMagma::HdBallRenderState>(self)->mFirstObject;
         for (auto *object : {render, firstRender}) {
-            auto *table = at<MagmaRenderVtable>(object->__vtbl);
-            gabi::call_ptr<void>(table->bindMaterial.get(), object, selected);
+            MAGMA_BIND(object);
         }
         if (mode == 2) {
             auto *object = draw->mpExtraObject.get();
             if (object) {
-                auto *table = at<MagmaRenderVtable>(object->__vtbl);
-                gabi::call_ptr<void>(table->bindMaterial.get(), object, selected);
+                MAGMA_BIND(object);
             }
         }
+#undef MAGMA_BLOCK
+#undef MAGMA_BIND
         MagmaMaterialTexture *texture = u32(selected->mTextureCount) ? selected->mpTextures.get() : nullptr;
         auto *sampler = floor ? &at<dMagma::HdFloorRenderState>(self)->mColSampler
                               : &at<dMagma::HdBallRenderState>(self)->mColSampler;
@@ -454,17 +493,34 @@ static bool magmaDrawMaterial(u32 self, u32 context, bool floor) {
     if (floor) {
         // HD: the count goes to the glue's void* parameter through at<void>(), as before (object-identical).
         void *count = at<void>(u32(indexBuffer.mIndexCount));
+#if PORT_NATIVE_DRAW
+        // the floor as a one-draw packet of the magma site (port_native_draw.h; pass 7: not a ball pass)
+        if (count && port_native_draw_single(PORT_NATIVE_MAGMA, 7, ea(selected), 0, 0, u32(indexBuffer.mPrimitiveType),
+                                             ea(count), u32(indexBuffer.mFormat), u32(indexBuffer.mStorage.v), 0, 1))
+            count = nullptr;
+#endif
         if (count)
             GX2DrawIndexedEx(indexBuffer.mPrimitiveType, count, indexBuffer.mFormat, indexBuffer.mStorage.v, 0,
                              1);
     } else {
+#if PORT_NATIVE_DRAW
+#define MAGMA_DRAW(count, address)                                                                                 \
+    if (!(native && wwhd_native_draw_range(PORT_NATIVE_MAGMA, 0, ea(count), address)))                             \
+    GX2DrawIndexedEx(indexBuffer.mPrimitiveType, count, indexBuffer.mFormat, address, 0, 1)
+#else
+#define MAGMA_DRAW(count, address) GX2DrawIndexedEx(indexBuffer.mPrimitiveType, count, indexBuffer.mFormat, address, 0, 1)
+#endif
         for (s32 i = 0; i < s32(magmaBallStripCount.value); ++i) {
             void *count = at<void>(u32(magmaBallStrips.mIndexCounts[u32(i)]));
             u32 offset = u32(magmaBallStripVertices.value) * u32(i);
             if (count)
-                GX2DrawIndexedEx(indexBuffer.mPrimitiveType, count, indexBuffer.mFormat,
-                                 u32(indexBuffer.mStorage.v) + u32(indexBuffer.mIndexBytes) * offset, 0, 1);
+                MAGMA_DRAW(count, u32(indexBuffer.mStorage.v) + u32(indexBuffer.mIndexBytes) * offset);
         }
+#if PORT_NATIVE_DRAW
+        if (native)
+            wwhd_native_end(PORT_NATIVE_MAGMA);
+#endif
+#undef MAGMA_DRAW
     }
     magmaApplyGraphicsState(&magmaDefaultGraphicsState);
     return true;

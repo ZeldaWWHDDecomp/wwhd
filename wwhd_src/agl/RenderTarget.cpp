@@ -2,6 +2,7 @@
 #include "agl/RenderTarget.h"
 #include "agl/TextureData.h"
 #include "sead/HeapRegistry.h"
+#include "port_native_draw.h"
 using namespace agl;
 namespace agl {
 struct RenderColorTarget_l {
@@ -65,6 +66,14 @@ static void clearRenderTarget(
     gabi::AutoFrame frame{gabi::current_function()};
     if (!flags) return;
     u32 selected = index < 8 ? index : 0;
+#if PORT_NATIVE_DRAW
+    // pass description (port_native_draw.h): the clears as the open pass's load intent
+    if (flags & 1)
+        wwhd_native_pass_load((flags & 1) | (index == 0 ? flags & 6 : 0), selected, color->red, color->green,
+                              color->blue, color->alpha, depth, stencil & 255);
+    else if (index == 0)
+        wwhd_native_pass_load(flags & 6, 0, 0, 0, 0, 0, depth, stencil & 255);
+#endif
     if (index == 0) {
         RenderDepthTarget_l* d = target->depth;
         if (d) setDepthClear(&d->native, stencil & 255, depth);
@@ -134,6 +143,9 @@ static void bindRenderTarget(RenderTarget* target, u32 mask) {
             temporary->mSliceCount = 1;
             initializeColorBuffer(temporary.get());
             setColorBuffer(temporary.get(), index);
+#if PORT_NATIVE_DRAW
+            wwhd_native_pass_color(index, gabi::ea(temporary.get()));  // (pass description: as bound)
+#endif
         } else {
             if (static_cast<u8>(c->dirty)) {
                 initializeColorTarget(c);
@@ -141,6 +153,9 @@ static void bindRenderTarget(RenderTarget* target, u32 mask) {
                 c = target->colors[index];
             }
             setColorBuffer(&c->native, index);
+#if PORT_NATIVE_DRAW
+            wwhd_native_pass_color(index, gabi::ea(&c->native));
+#endif
         }
     }
     RenderDepthTarget_l* d = target->depth;
@@ -151,7 +166,13 @@ static void bindRenderTarget(RenderTarget* target, u32 mask) {
             d = target->depth;
         }
         setDepthBuffer(&d->native);
+#if PORT_NATIVE_DRAW
+        wwhd_native_pass_depth(gabi::ea(&d->native));
+#endif
     }
+#if PORT_NATIVE_DRAW
+    wwhd_native_pass_begin();  // pass description (port_native_draw.h): the targets bound above
+#endif
 }
 /* WWHD glue
 data sCoreTargetSlots 104A2090

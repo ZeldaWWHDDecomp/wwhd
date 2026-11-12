@@ -3,6 +3,7 @@
  * Every original function and caller workspace
  */
 #include "d/d_grass.h"
+#include "port_native_draw.h"
 using namespace GrassHD;
 // HD: Resource helpers for the GX2 grass rendering path.
 
@@ -851,11 +852,33 @@ void GrassHD::dGrass_packet_c::draw(u32 state) {
     at<RenderState>(render.a)->mRasterMode = (((mode & 0xFFFFFFF0) + 7) & 0xFFFFFF0F) + 16;
     GrassHD::SDK::RenderState_bind((u32)(at<RenderContext>(state)->mPass), render.get());
     GrassHD::SDK::RenderState_apply(render.get());
+#if PORT_NATIVE_DRAW
+    // native draw packets (port_native_draw.h): this pass's packet; the clumps' draws become its instances, with
+    // their matrix blocks (bindMatrix) and the shape binds
+    bool native = wwhd_native_begin(PORT_NATIVE_GRASS, (u32)(at<RenderContext>(state)->mPass), 0, material, 0,
+                                    gabi::ea(&mTexture)) != 0;
+    if (native) {
+        // (the rooms' blocks stay the site's own binds: in pass 2 the shader reads them through support-uniform
+        // entries it gathers, which an instance block cannot patch)
+        native = wwhd_native_pair_slot(PORT_NATIVE_GRASS, material, 2) != 0;
+        for (u32 k = 0; k < 2; ++k) {
+            // GX2DrawIndexedEx(mode, count, indexType, indices), as the site's own draw passes them
+            u32 ib = gabi::ea(&mIndices[0]) + 24 * k;
+            wwhd_native_mesh(PORT_NATIVE_GRASS, k, (u32)(at<IndexBuffer>(ib)->mPrimitiveMode),
+                             (u32)(at<IndexBuffer>(ib)->mCount), (u32)(at<IndexBuffer>(ib)->mFormat),
+                             (u32)(at<IndexBuffer>(ib)->mStorage));
+        }
+        native = native && wwhd_native_commit(PORT_NATIVE_GRASS) != 0;
+    }
+#endif
     u32 packetOffset = 0;
     for (u32 room = 0; room < 64; ++room) {
         u32 data = (u32)(mGrassRoom[room].mpData);
         if (data && (u32)(at<RenderContext>(state)->mPass)) {
             u32 packet = gabi::ea(&mShaderPackets[0]) + room * 0x364;
+#if PORT_NATIVE_DRAW
+            if (!(native && wwhd_native_pair(PORT_NATIVE_GRASS, packet, material)))
+#endif
             gabi::call_ptr<void>((u32)at<DispatchTable>((u32)at<ModelPacket>(packet)->mVtable)->mpGetShape,
                                  packet, material);
         }
@@ -863,6 +886,9 @@ void GrassHD::dGrass_packet_c::draw(u32 state) {
         while (data) {
             if (!((u8)at<dGrass_data_c>(data)->mInitFlags & 2)) {
                 u32 packet = gabi::ea(&mModelPackets[0]) + packetOffset;
+#if PORT_NATIVE_DRAW
+                if (!(native && wwhd_native_pair(PORT_NATIVE_GRASS, packet, material)))
+#endif
                 gabi::call_ptr<void>(
                     (u32)at<DispatchTable>((u32)at<ModelPacket>(packet)->mVtable)->mpGetShape, packet,
                     material);
@@ -876,12 +902,18 @@ void GrassHD::dGrass_packet_c::draw(u32 state) {
                     u32 shape = (u32)(at<MaterialCollection>(collection)->mpItems);
                     if (!animated && (u32)(at<MaterialCollection>(collection)->mCapacity) > 1)
                         shape += 0xF4;
+#if PORT_NATIVE_DRAW
+                    if (!(native && wwhd_native_shape(PORT_NATIVE_GRASS, shape)))
+#endif
                     GrassHD::SDK::Shape_bind(shape);
                     kind = nextKind;
                 }
                 u32 indices = gabi::ea(&mIndices[0]) + (animated ? 0 : 24);
                 u32 count = (u32)(at<IndexBuffer>(indices)->mCount);
                 if (count)
+#if PORT_NATIVE_DRAW
+                    if (!(native && wwhd_native_draw(PORT_NATIVE_GRASS, animated ? 0 : 1)))
+#endif
                     GrassHD::SDK::GX2DrawIndexedEx((u32)(at<IndexBuffer>(indices)->mPrimitiveMode), count,
                                                    (u32)(at<IndexBuffer>(indices)->mFormat),
                                                    (u32)(at<IndexBuffer>(indices)->mStorage), 0, 1);
@@ -889,6 +921,10 @@ void GrassHD::dGrass_packet_c::draw(u32 state) {
             data = (u32)at<dGrass_data_c>(data)->mpNextData;
         }
     }
+#if PORT_NATIVE_DRAW
+    if (native)
+        wwhd_native_end(PORT_NATIVE_GRASS);
+#endif
     GrassHD::SDK::RenderState_apply(Data::defaultRenderState);
 }
 

@@ -3,6 +3,7 @@
 // Mutex extent uses wut coreinit declarations/offsets only; no SDK implementation.
 #include "sead/HeapRegistry.h"
 #include "sead/ElementAt.h"
+#include "port_native_draw.h"
 
 static sead::RegistryMatrix44 sDefaultModel;
 static u32 sTexturedPrimitiveColor[4] = {};
@@ -388,6 +389,12 @@ void sead::PrimitiveRenderer::draw(const RegistryMatrix34* model,const void* top
         setRegistryPixelUniform(textureRegister,4,sPlainPrimitiveColor);
     }
     setRegistryAttribute(0,vertexCount*VertexStride,VertexStride,vertices);
+#if PORT_NATIVE_DRAW
+    // sead's primitive (the Picto Box's subject boxes, debug shapes) as a one-draw packet of agl's quad site
+    // (port_native_draw.h; pass 2)
+    if (port_native_draw_single(PORT_NATIVE_AGL_QUAD,2,gabi::ea(this),0,gabi::ea(texture),TriangleMode,indexCount,
+                                BigEndianIndex16,gabi::ea(indices),0,1)) return;
+#endif
     drawRegistryIndices(TriangleMode,indexCount,BigEndianIndex16,indices,0,1);
 }
 

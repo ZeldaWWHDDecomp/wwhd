@@ -4,6 +4,7 @@
 #include "sead/RenderState.h"
 #include "agl/EffectMatrixSupport.h"
 #include "bindings.h"
+#include "port_native_draw.h"
 using namespace agl::shadow_shader;
 using agl::TextureSampler;
 using agl::ShaderProgram;
@@ -227,6 +228,12 @@ static void drawShadowGeometry() {
     sShadowShapeInputs->mInputs[agl::DrawQuadInput].bind();
     const agl::IndexBufferLayout* packet = &sShadowShapes->mIndexedShapes[agl::DrawQuadShape].mIndexBuffer;
     u32 count = packet->mIndexCount;
+#if PORT_NATIVE_DRAW
+    // the cascade shadow preparation's quad as a packet of its own (port_native_draw.h)
+    if (count != 0 && port_native_draw_single(PORT_NATIVE_SHADOW, 0, gabi::ea(packet), 0, 0, packet->mPrimitiveMode, count,
+                                              packet->mFormat, gabi::ea(static_cast<const void*>(packet->mStorage)), 0, 1))
+        return;
+#endif
     if (count != 0)
         submitShadowDraw(packet->mPrimitiveMode, count, packet->mFormat, packet->mStorage, 0, 1);
 }

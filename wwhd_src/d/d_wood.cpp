@@ -1,5 +1,6 @@
 // Wood and bush animation, collision and HD GX2 rendering.
 #include "d/d_wood.h"
+#include "port_native_draw.h"
 #include "bindings.h"
 #include "sead/ElementAt.h"
 #include "gc_api/d/d_com_inf_game.h"
@@ -1445,12 +1446,92 @@ void dWood::Packet_c::draw_rooms(DrawInfo *draw) {
     state->mDepthBits = ((((u32)state->mDepthBits & ~15u) + 7) & 0xFFFFFF0F) + 16;
     woodApplyDrawMode(mode, state.a);
     woodGraphicsStateApply(state.a);
+#if PORT_NATIVE_DRAW
+    // native draw packets (port_native_draw.h): this pass's packet (by draw mode); the leaf and trunk draws become its
+    // instances, with the units' matrix blocks (bindMatrix), the rooms' blocks (bindMaterial) and the shape binds
+    bool native = wwhd_native_begin(PORT_NATIVE_WOOD, draw->mMode, 0, gabi::ea(material),
+                                    gabi::ea(material->mpProgram), 0) != 0;
+    if (native) {
+        native = wwhd_native_pair_slot(PORT_NATIVE_WOOD, gabi::ea(material), 2) != 0;
+        // (the rooms' blocks are instance blocks except in pass 2, whose shader reads them through gathered
+        // support-uniform entries that an instance block cannot patch: there they stay the site's own binds)
+        if (native && draw->mMode != 2)
+            wwhd_native_pair_slot(PORT_NATIVE_WOOD, gabi::ea(material), 3);
+        // GX2DrawIndexedEx(mode, count, indexType, indices), as drawIndices passes them
+        IndexBuffer *lists[2] = {&mLeafIndices, &mTrunkIndices};
+        for (u32 k = 0; k < 2; ++k)
+            wwhd_native_mesh(PORT_NATIVE_WOOD, k, lists[k]->mPrimitiveMode, lists[k]->mCount, lists[k]->mFormat,
+                             lists[k]->mStorage.v);
+        native = native && wwhd_native_commit(PORT_NATIVE_WOOD) != 0;
+    }
+#define WOOD_APPLY(object, material)                                                                               \
+    if (!(native && wwhd_native_pair(PORT_NATIVE_WOOD, gabi::ea(object), gabi::ea(material))))                    \
+        applyUniform(object, material)
+#define WOOD_SHAPE_BIND(shape)                                                                                     \
+    if (!(native && wwhd_native_shape(PORT_NATIVE_WOOD, shape)))                                                  \
+        woodShapeBind(shape)
+#define WOOD_DRAW(list, kind)                                                                                      \
+    if (!((list)->mCount && native && wwhd_native_draw(PORT_NATIVE_WOOD, kind)))                                   \
+        drawIndices(list)
+#else
+#define WOOD_APPLY(object, material) applyUniform(object, material)
+#define WOOD_SHAPE_BIND(shape) woodShapeBind(shape)
+#define WOOD_DRAW(list, kind) drawIndices(list)
+#endif
     u32 transformIndex = 0, textureIndex = 0;
+#if PORT_NATIVE_DRAW
+    // experiment (WWHD_NATIVE_DRAW_WOOD_SPLIT=1): each room's draws regrouped by kind (leaves, then trunks), each with
+    // the matrix block and shape it has in the original order
+    if (native && wwhd_native_option(PORT_NATIVE_WOOD, 1)) {
+        for (u32 room = 0; room < 64; ++room) {
+            Room_c *header = &mRoom[room];
+            const u32 begin = gabi::ea(header->mpUnits), end = begin + (u32)header->mCount * 4;
+            if (begin != end) {
+                WOOD_APPLY(reinterpret_cast<UniformObject *>(&mRoomTextures[textureIndex]), material);
+                ++textureIndex;
+            }
+            u32 next = transformIndex;
+            for (u32 kind = 0; kind < 2; ++kind) {
+                u32 t = transformIndex;
+                for (u32 address = begin; address != end; address += 4) {
+                    auto *entry = reinterpret_cast<gptr<Unit_c> *>((uintptr_t)address);
+                    Unit_c *unit = *entry;
+                    if ((u32)unit->mFlags & Unit_c::STATE_FRUSTUM_CULLED)
+                        continue;
+                    const u32 animationIndex = unit->mAnmIdx;
+                    const bool simple = animationIndex < 72 && (u8)mAnm[animationIndex].mAlphaScale == 255 &&
+                                        !((u32)(*entry)->mFlags & Unit_c::STATE_CUT);
+                    const u32 leaf = t++, trunk = simple ? t++ : leaf;
+                    if (kind == 0 && !simple)
+                        continue;
+                    WOOD_APPLY(reinterpret_cast<UniformObject *>(&mRoomTransforms[kind == 0 ? leaf : trunk]), material);
+                    mode = draw->mMode;
+                    ShapeGroup *group = &mRoomShapes.mpGroups[mode < (u32)mRoomShapes.mCapacity ? mode : 0];
+                    const u32 select = (u32)mMaterials.mFrameIndex ? 0 : 1;
+                    Shape *array = group->mShapes[select].mpShapes;
+                    const u32 count = group->mShapes[select].mCount;
+                    if (kind == 0) {
+                        WOOD_SHAPE_BIND(gabi::ea(group->mShapes[select].mpShapes));
+                        WOOD_DRAW(&mLeafIndices, 0);
+                    } else {
+                        WOOD_SHAPE_BIND(gabi::ea(&array[count > 1 ? 1 : 0]));
+                        WOOD_DRAW(&mTrunkIndices, 1);
+                    }
+                }
+                next = t;
+            }
+            transformIndex = next;
+        }
+        wwhd_native_end(PORT_NATIVE_WOOD);
+        woodGraphicsStateApply(gabi::ea(&defaultGraphicsState));
+        return;
+    }
+#endif
     for (u32 room = 0; room < 64; ++room) {
         Room_c *header = &mRoom[room];
         const u32 begin = gabi::ea(header->mpUnits), end = begin + (u32)header->mCount * 4;
         if (begin != end) {
-            applyUniform(reinterpret_cast<UniformObject *>(&mRoomTextures[textureIndex]), material);
+            WOOD_APPLY(reinterpret_cast<UniformObject *>(&mRoomTextures[textureIndex]), material);
             ++textureIndex;
         }
         for (u32 address = begin; address != end; address += 4) {
@@ -1464,18 +1545,18 @@ void dWood::Packet_c::draw_rooms(DrawInfo *draw) {
                             gabi::guest_addr("anmID > AnmID_Err && anmID < AnmID_Max"));
             const bool simple = (u8)mAnm[animationIndex].mAlphaScale == 255 &&
                                 !((u32)(*entry)->mFlags & Unit_c::STATE_CUT);
-            applyUniform(reinterpret_cast<UniformObject *>(&mRoomTransforms[transformIndex]),
-                         material);
+            WOOD_APPLY(reinterpret_cast<UniformObject *>(&mRoomTransforms[transformIndex]),
+                       material);
             ++transformIndex;
             if (simple) {
                 mode = draw->mMode;
                 ShapeGroup *group =
                     &mRoomShapes.mpGroups[mode < (u32)mRoomShapes.mCapacity ? mode : 0];
                 const u32 select = (u32)mMaterials.mFrameIndex ? 0 : 1;
-                woodShapeBind(gabi::ea(group->mShapes[select].mpShapes));
-                drawIndices(&mLeafIndices);
-                applyUniform(reinterpret_cast<UniformObject *>(&mRoomTransforms[transformIndex]),
-                             material);
+                WOOD_SHAPE_BIND(gabi::ea(group->mShapes[select].mpShapes));
+                WOOD_DRAW(&mLeafIndices, 0);
+                WOOD_APPLY(reinterpret_cast<UniformObject *>(&mRoomTransforms[transformIndex]),
+                           material);
                 ++transformIndex;
             }
             mode = draw->mMode;
@@ -1483,10 +1564,17 @@ void dWood::Packet_c::draw_rooms(DrawInfo *draw) {
             const u32 select = (u32)mMaterials.mFrameIndex ? 0 : 1;
             Shape *array = group->mShapes[select].mpShapes;
             const u32 count = group->mShapes[select].mCount;
-            woodShapeBind(gabi::ea(&array[count > 1 ? 1 : 0]));
-            drawIndices(&mTrunkIndices);
+            WOOD_SHAPE_BIND(gabi::ea(&array[count > 1 ? 1 : 0]));
+            WOOD_DRAW(&mTrunkIndices, 1);
         }
     }
+#if PORT_NATIVE_DRAW
+    if (native)
+        wwhd_native_end(PORT_NATIVE_WOOD);
+#endif
+#undef WOOD_APPLY
+#undef WOOD_SHAPE_BIND
+#undef WOOD_DRAW
     woodGraphicsStateApply(gabi::ea(&defaultGraphicsState));
 }
 

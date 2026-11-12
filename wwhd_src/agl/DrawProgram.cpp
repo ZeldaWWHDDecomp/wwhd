@@ -9,6 +9,7 @@
 #include "sead/Viewport.h"
 #include "sead/RenderState.h"
 #include "sead/FileDevice.h"
+#include "port_native_draw.h"
 using ShaderHolderPointer = gptr<agl::detail::ShaderHolder>;
 // The shader holder singleton (101F8D6C; its one definition is agl/TimingStatics.cpp's sShaderHolder, which
 // AGL#12's specs do not link): a borrowed per-TU binding, never initialized here.
@@ -184,6 +185,12 @@ static void issueDrawPacket(const agl::IndexBufferLayout* packet) {
         u32 indexType = packet->mFormat;
         const void* indices = packet->mStorage;
         u32 primitive = packet->mPrimitiveMode;
+#if PORT_NATIVE_DRAW
+        // agl's quad (shadow preparation, SSAO, post quads) as a packet of its own (port_native_draw.h)
+        if (port_native_draw_single(PORT_NATIVE_AGL_QUAD, 0, gabi::ea(packet), 0, 0, primitive, count, indexType,
+                                    gabi::ea(indices), 0, 1))
+            return;
+#endif
         drawIndexedPacket(primitive, count, indexType, indices, 0, 1);
     }
 }

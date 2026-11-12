@@ -3,6 +3,7 @@
 #include "agl/DepthBlurValues.h"
 #include "agl/DepthBlurContext.h"
 #include "agl/PrimitiveShapes.h"
+#include "port_native_draw.h"
 
 static agl::depth_blur_value::Vector4 sBloomLuminanceWeights;
 struct BloomPassState {
@@ -183,6 +184,15 @@ static u32 drawSecondaryBloom(BloomRuntime* bloom, u32 pass, void* surfaceArgume
     activateBloomVertices(&sBloomShapeInputs->mInputs[6]);
     agl::IndexBufferLayout* indices = &sBloomShapes->mIndexedShapes[0].mIndexBuffer;
     const u32 count = indices->mIndexCount;
+#if PORT_NATIVE_DRAW
+    // the bloom value pass's draw as a packet of its own (port_native_draw.h)
+    if (count && port_native_draw_single(PORT_NATIVE_POST, PORT_NATIVE_POST_BLOOM_VALUES, gabi::ea(state), program,
+                                         gabi::ea(texture), indices->mPrimitiveMode, count, indices->mFormat,
+                                         gabi::ea(static_cast<const void*>(indices->mStorage)), 0, 1)) {
+        releaseBloomSurface(sBloomTextureCache, temporary);
+        return mode;
+    }
+#endif
     if (count) drawBloomIndices(indices->mPrimitiveMode, count, indices->mFormat, indices->mStorage, 0, 1);
     releaseBloomSurface(sBloomTextureCache, temporary);
     return mode;

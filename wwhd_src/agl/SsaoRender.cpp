@@ -9,6 +9,7 @@
 #include "sead/DisplayTargets.h"
 #include "sead/GraphicsRuntime.h"
 #include "sead/ProjectionState.h"
+#include "port_native_draw.h"
 #include <atomic>
 using namespace agl;
 // The library's default model matrix (borrowed, read only).
@@ -132,6 +133,9 @@ u32 renderSsaoCore(SsaoEffect* effect,u32 targetIndex,u32 width,u32 height,const
         }
     }
     std::atomic_thread_fence(std::memory_order_acquire);
+#if PORT_NATIVE_DRAW
+    wwhd_native_pass_end();  // pass description (port_native_draw.h): the SSAO passes are done
+#endif
     return previousShaderMode;
 }
 // More library singletons: the shader holder, the primitive shapes and the primitive textures.

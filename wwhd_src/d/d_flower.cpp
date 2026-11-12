@@ -1,6 +1,7 @@
 // Flower interactions and pooled animations. HD replaces display lists with GX2 geometry.
 // Register widths, guest layouts, stack objects and call order follow the verified source.
 #include "d/d_flower.h"
+#include "port_native_draw.h"
 using namespace gabi;
 static FlowerRegularIndices regularIndices;
 static FlowerRegularCutIndices regularCutIndices;
@@ -1039,19 +1040,55 @@ void dFlower_packet_c::drawGraphics(flower::DrawInfo* context) {
     state->mDepthBits = (((flags & ~15u) + 7u) & 0xFFFFFF0Fu) + 16u;
     flowerApplyDrawMode(u32(draw->mPass), state.get());
     flowerGraphicsStateApply(state.get());
+#if PORT_NATIVE_DRAW
+    // native draw packets (port_native_draw.h): this pass's packet; the flowers' draws become its instances (mesh
+    // kind = the site's shape: white uncut, white cut, pink uncut, pink cut), with their matrix blocks (bindMatrix),
+    // the rooms' blocks (bindMaterial) and the shape binds. The sampler (white / pink) stays the site's own bind
+    bool native = wwhd_native_begin(PORT_NATIVE_FLOWER, u32(draw->mPass), 0, ea(shader), ea(shader->mpProgram.get()),
+                                    0) != 0;
+    if (native) {
+        native = wwhd_native_pair_slot(PORT_NATIVE_FLOWER, ea(shader), 2) != 0;
+        // (the rooms' blocks are instance blocks except in pass 2, whose shader reads them through gathered
+        // support-uniform entries that an instance block cannot patch: there they stay the site's own binds)
+        if (native && u32(draw->mPass) != 2)
+            wwhd_native_pair_slot(PORT_NATIVE_FLOWER, ea(shader), 3);
+        flower::IndexBuffer* meshes[4] = {&mGeometry[0].mUncut, &mGeometry[0].mCut,
+                                          static_cast<flower::IndexBuffer*>(mpUncutIndices.get()),
+                                          static_cast<flower::IndexBuffer*>(mpCutIndices.get())};
+        // GX2DrawIndexedEx(mode, count, indexType, indices), as flowerIndexedDraw passes them
+        for (u32 k = 0; k < 4; ++k)
+            if (meshes[k])
+                wwhd_native_mesh(PORT_NATIVE_FLOWER, k, meshes[k]->mPrimitiveMode, meshes[k]->mCount,
+                                 meshes[k]->mFormat, meshes[k]->mStorage.v);
+        native = native && wwhd_native_commit(PORT_NATIVE_FLOWER) != 0;
+    }
+#define FLOWER_APPLY(node)                                                                                         \
+    if (!(native && wwhd_native_pair(PORT_NATIVE_FLOWER, ea(node), ea(shader))))                                  \
+        call_ptr<void>(node->mpVtable->mApply.get(), node, shader)
+#define FLOWER_SHAPE_BIND(buffer)                                                                                  \
+    if (!(native && wwhd_native_shape(PORT_NATIVE_FLOWER, ea(buffer))))                                           \
+        flowerShapeBind(buffer)
+#define FLOWER_DRAW(geometry, kind)                                                                                \
+    if (!(geometry->mCount && native && wwhd_native_draw(PORT_NATIVE_FLOWER, kind)))                               \
+        flowerIndexedDraw(geometry)
+#else
+#define FLOWER_APPLY(node) call_ptr<void>(node->mpVtable->mApply.get(), node, shader)
+#define FLOWER_SHAPE_BIND(buffer) flowerShapeBind(buffer)
+#define FLOWER_DRAW(geometry, kind) flowerIndexedDraw(geometry)
+#endif
     u32 drawn = 0;
     for (u32 room = 0; room < 64; ++room) {
         auto* data = mRoom[room].mpHead.get();
         if (data) {
             auto* node = &mTextures[room];
-            call_ptr<void>(node->mpVtable->mApply.get(), node, shader);
+            FLOWER_APPLY(node);
         }
         s32 texture = -1, shape = -1;
         while (data) {
             if (!(data->mFlags & dFlower_data_c::FLAG_CULLED)) {
                 auto* node =
                     at<flower::Transform>(ea(mTransforms) + drawn * sizeof(flower::Transform));
-                call_ptr<void>(node->mpVtable->mApply.get(), node, shader);
+                FLOWER_APPLY(node);
                 ++drawn;
                 bool special = (data->mFlags & dFlower_data_c::FLAG_PINK) != 0;
                 s32 wantedTexture = special ? 1 : 0;
@@ -1075,17 +1112,24 @@ void dFlower_packet_c::drawGraphics(flower::DrawInfo* context) {
                     auto* buffer = selected->mpShapes.get();
                     if (cut && u32(selected->mCount) > 1)
                         buffer = at<flower::Shape>(ea(buffer) + sizeof(flower::Shape));
-                    flowerShapeBind(buffer);
+                    FLOWER_SHAPE_BIND(buffer);
                     shape = wantedShape;
                 }
                 auto* geometry = special ? static_cast<flower::IndexBuffer*>(
                                                cut ? mpCutIndices.get() : mpUncutIndices.get())
                                          : (cut ? &mGeometry[0].mCut : &mGeometry[0].mUncut);
-                flowerIndexedDraw(geometry);
+                FLOWER_DRAW(geometry, (special ? 2 : 0) + (cut ? 1 : 0));
             }
             data = data->mpNext.get();
         }
     }
+#if PORT_NATIVE_DRAW
+    if (native)
+        wwhd_native_end(PORT_NATIVE_FLOWER);
+#endif
+#undef FLOWER_APPLY
+#undef FLOWER_SHAPE_BIND
+#undef FLOWER_DRAW
     flowerGraphicsStateApply(&flowerDefaultGraphicsState);
 }
 

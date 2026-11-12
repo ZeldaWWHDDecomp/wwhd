@@ -1,5 +1,6 @@
 // Own paired draw dispatch. Parked AGL#13/#16 calls stay opaque; no dependency implementation is reproduced.
 #include "agl/DrawRenderingCalls.h"
+#include "port_native_draw.h"
 namespace agl {
 static sead::ColorChannels sDrawPairEmptyColor;
 static ShaderProgram* selectedDrawPairProgram(const DrawProgramSelection_l* selection) {
@@ -143,6 +144,12 @@ void agl::DrawPairRendering_l::drawPair(DrawPairParameterRecord_l* record, u32 s
         u32 indexType = indexBuffer->mFormat;
         void* indices = indexBuffer->mStorage;
         u32 primitive = indexBuffer->mPrimitiveMode;
+#if PORT_NATIVE_DRAW
+        // the draw pair's pass as a packet of its own (port_native_draw.h)
+        if (port_native_draw_single(PORT_NATIVE_AGL_PAIR, 0, gabi::ea(this), gabi::ea(program), 0, primitive, count,
+                                    indexType, gabi::ea(indices), 0, 1))
+            return;
+#endif
         drawPairIndexed(primitive, count, indexType, indices, 0, 1);
     }
 }

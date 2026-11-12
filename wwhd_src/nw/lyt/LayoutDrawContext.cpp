@@ -1,5 +1,6 @@
 /* Matrix uploads and shader-state dispatch reconstructed from WWHD call and field order. */
 #include "nw/lyt/LayoutDrawContext.h"
+#include "port_native_draw.h"
 using namespace nw::lyt;
 
 
@@ -120,6 +121,10 @@ void LayoutDrawContext::uploadAffine() {
     if (u8(affineUploaded) != 0) return;
     affineUploaded = 1;
     u32 location = uniformLocation(1);
+#if PORT_NATIVE_DRAW
+    // inside a layout quad's packet (LayoutQuadDrawing.cpp): the affine is the instance's register values
+    if (wwhd_native_regs(PORT_NATIVE_LAYOUT, 0, location, 12, gabi::ea(&affineB))) return;
+#endif
     drawContextVertexUniforms(location, 12, &affineB);
 }
 

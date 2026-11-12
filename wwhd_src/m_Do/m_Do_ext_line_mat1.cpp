@@ -4,6 +4,7 @@
  * arrays. Verified against WWHD by m_Do_ext_13. Private game-derived source.
  */
 #include "m_Do/m_Do_ext_line_mat1.h"
+#include "port_native_draw.h"
 using namespace line_mat1;
 static ShaderNames l_shaderNames;
 static SafeString l_packetName;
@@ -289,6 +290,30 @@ void line_mat1::mDoExt_3DlineMat1_c::draw(DrawContext* arguments) {
         l_packetName.mTextPtr = gabi::guest_addr("line_packet_mat1");
         __register_global_object(gabi::ea(&l_packetNameDestructor));
     }
+#if PORT_NATIVE_DRAW
+    // native draw packets (port_native_draw.h): the lines' draws as one packet, begun here and completed by the
+    // geometry pool's draw (RenderGeometry.cpp: its index list is the one mesh); each line's vertex input binds (here
+    // and the pool's) and draw become instances, its material, renderer and state applies stay the site's own. The
+    // blocks those applies bind per object (the first line's location table: the pass's renderer, controller and
+    // context binds) are declared instance blocks, read from the registers at each instance, so the next object's
+    // lines replay the same lowered state (the register journal keeps it across the object's applies); passes 0 and 1
+    const bool native = (u32)mNumLines > ((u32)arguments->mPass == 2 ? 1u : 0u) && (u32)arguments->mPass < 4 &&
+                        wwhd_native_begin(PORT_NATIVE_LINE, 0 + (u32)arguments->mPass, 0, 0, 0, 0) != 0;
+    if (native) {
+        const u32 pass = arguments->mPass;
+        const u32 locations = gabi::ea(mpShaders[0u].getEntry(pass)->mpPacket.get());
+        if (pass == 0) {
+            if (arguments->mpController.get())
+                wwhd_native_pair_slot(PORT_NATIVE_LINE, locations, 0);
+            wwhd_native_declare_pair(PORT_NATIVE_LINE, gabi::ea(&mpRenderer->mPrimary), locations);
+        } else if (pass == 1) {
+            for (u32 slot : {0u, 2u, 3u})
+                wwhd_native_pair_slot(PORT_NATIVE_LINE, locations, slot);
+        }
+        // (pass 2's blocks stay undeclared: a declared block whose constants the translation remaps into the support
+        // uniforms of a pixel shader with gather units is refused, so its objects lower one by one as before)
+    }
+#endif
     for (u32 i = 0; i < (u32)mNumLines; i++, buffer++) {
         u32 kind = arguments->mPass;
         DrawPacket* packet = nullptr;
@@ -359,9 +384,17 @@ void line_mat1::mDoExt_3DlineMat1_c::draw(DrawContext* arguments) {
             entry += pass;
         u32 bit = buffer->mpMeshBuffer->mCurArr;
         u32 offset = ((bit == 0 ? 32 : __builtin_clz(bit)) >> 2) & 0x3FFFFFF8;
+#if PORT_NATIVE_DRAW
+        if (!(native && wwhd_native_shape(PORT_NATIVE_LINE,
+                                          gabi::ea(entry->mVertexBindings[offset / sizeof(gptr<void>)].get()))))
+#endif
         texturedLineUseVertexBuffer(entry->mVertexBindings[offset / sizeof(gptr<void>)]);
         texturedLineDrawMesh(buffer->mpMeshBuffer, &l_drawPrimitive, 1, length);
     }
+#if PORT_NATIVE_DRAW
+    if (native)
+        wwhd_native_end(PORT_NATIVE_LINE);
+#endif
     mCurArr = mCurArr ^ 1;
 }
 

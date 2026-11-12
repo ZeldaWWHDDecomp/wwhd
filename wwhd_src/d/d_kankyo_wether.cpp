@@ -3,6 +3,7 @@
 // HD: explicit render resources and double-buffered geometry extend the GC packets.
 #include "d/d_kankyo_wether.h"
 #include "sead/ElementAt.h"
+#include "port_native_draw.h"
 namespace d_kankyo_wether_cpp {
 
 // HD: GHS array constructor and destructor callbacks.
@@ -178,6 +179,23 @@ static u32 weatherTriangleIndices;
 static u32 weatherQuadIndexType;
 static u32 weatherQuadPrimitive;
 static u32 weatherQuadIndices;
+#if PORT_NATIVE_DRAW
+// native draw packets (port_native_draw.h): a weather pass's draws as one packet. Called after the pass's own setup
+// (shader, texture set, renderer texture and uniforms, render state); one mesh (the shared quad or triangle index
+// list, as GX2DrawIndexedEx takes it); with PARTICLE_BLOCKS the particles' own blocks (WeatherTexture: their bind is
+// bindMaterial, slot 3 of the material's location table) are instance blocks. Each particle's vertex input bind and draw become instances
+static bool weather_native_begin(u32 site, u32 pass, u32 material, bool particleBlocks, u32 prim, u32 count, u32 type,
+                                 u32 indices) {
+    if (!wwhd_native_begin(site, pass, 0, material, 0, 0))
+        return false;
+    if (particleBlocks && !wwhd_native_pair_slot(site, material, 3)) {
+        wwhd_native_end(site);
+        return false;
+    }
+    wwhd_native_mesh(site, 0, prim, count, type, indices);
+    return wwhd_native_commit(site) != 0;
+}
+#endif
 
 static u32 environment() { return weatherGetEnvironment(); }
 static dKankyo::dScnKy_env_light_c* dKy_getWeatherEnvlight() {
@@ -1923,6 +1941,23 @@ void dKankyo_star_Packet::setColor(u32 colorIndex) {
 
     weatherBindRenderer(gabi::ea(sead::elementPtr(packetView->mRenderer, colorIndex)), /* sibling: wraps at 32 bits as on the console */
                         static_cast<u32>(packetView->mpMaterial), (u32)0);
+#if PORT_NATIVE_DRAW
+    // native draw packets: this colour's star faces as instances (vertex input + draw; no blocks of their own)
+    const bool native =
+        weather_native_begin(PORT_NATIVE_STAR, 0, static_cast<u32>(packetView->mpMaterial), false,
+                             static_cast<u32>(weatherTrianglePrimitive), 3u,
+                             static_cast<u32>(weatherTriangleIndexType), static_cast<u32>(weatherTriangleIndices));
+#define STAR_SHAPE(e) if (!(native && wwhd_native_shape(PORT_NATIVE_STAR, e))) weatherBindGeometryMaterial(e)
+#define STAR_DRAW()                                                                                                \
+    if (!(native && wwhd_native_draw(PORT_NATIVE_STAR, 0)))                                                       \
+    GX2DrawIndexedEx(static_cast<u32>(weatherTrianglePrimitive), (u32)3, static_cast<u32>(weatherTriangleIndexType), \
+                     static_cast<u32>(weatherTriangleIndices), (u32)0, (u32)1)
+#else
+#define STAR_SHAPE(e) weatherBindGeometryMaterial(e)
+#define STAR_DRAW()                                                                                                \
+    GX2DrawIndexedEx(static_cast<u32>(weatherTrianglePrimitive), (u32)3, static_cast<u32>(weatherTriangleIndexType), \
+                     static_cast<u32>(weatherTriangleIndices), (u32)0, (u32)1)
+#endif
     s32 count = (s16) static_cast<u16>(packetView->mEffectNum);
     for (u32 i = 0; (s32)i < count; ++i) {
         if ((u32)(s32)(s8) static_cast<u8>(packetView->mColorIndex[i]) == colorIndex &&
@@ -1932,15 +1967,19 @@ void dKankyo_star_Packet::setColor(u32 colorIndex) {
             u32 element = gabi::ea(&geometry->mGeometry[side]);
             for (u32 half = 0; half < 2; ++half) {
                 if (static_cast<u32>(geometry->mpMaterial))
-                    weatherBindGeometryMaterial(element + 0x158);
-                GX2DrawIndexedEx(static_cast<u32>(weatherTrianglePrimitive), (u32)3,
-                                 static_cast<u32>(weatherTriangleIndexType),
-                                 static_cast<u32>(weatherTriangleIndices), (u32)0, (u32)1);
+                    STAR_SHAPE(element + 0x158);
+                STAR_DRAW();
                 element += 0x4A8;
             }
             count = (s16) static_cast<u16>(packetView->mEffectNum);
         }
     }
+#if PORT_NATIVE_DRAW
+    if (native)
+        wwhd_native_end(PORT_NATIVE_STAR);
+#endif
+#undef STAR_SHAPE
+#undef STAR_DRAW
 }
 
 static u32 bind_weather_shader(u32 materialField) {
@@ -2057,6 +2096,29 @@ static void bind_weather_uniforms(u32 renderer, u32 materialField) {
     if (geometry != -1)
         GX2SetGeometryUniformBlock((u32)geometry, size, data);
 }
+// the weather particle sites' binds and draws (native draw packets: the instance's when `native`, port_native_draw.h)
+#if PORT_NATIVE_DRAW
+#define WEATHER_PARTICLE_BIND(site, particle, material)                                                            \
+    if (!(native && wwhd_native_pair(site, particle, material))) bind_weather_texture(particle, material)
+#define WEATHER_SHAPE(site, e) if (!(native && wwhd_native_shape(site, e))) weatherBindGeometryMaterial(e)
+#define WEATHER_QUAD_DRAW(site)                                                                                    \
+    if (!(native && wwhd_native_draw(site, 0)))                                                                   \
+    GX2DrawIndexedEx(static_cast<u32>(weatherQuadPrimitive), (u32)4, static_cast<u32>(weatherQuadIndexType),        \
+                     static_cast<u32>(weatherQuadIndices), (u32)0, (u32)1)
+#define WEATHER_NATIVE_BEGIN(site, pass, material)                                                                 \
+    const bool native = weather_native_begin(site, pass, material, true, static_cast<u32>(weatherQuadPrimitive), 4u, \
+                                             static_cast<u32>(weatherQuadIndexType),                               \
+                                             static_cast<u32>(weatherQuadIndices))
+#define WEATHER_NATIVE_END(site) if (native) wwhd_native_end(site)
+#else
+#define WEATHER_PARTICLE_BIND(site, particle, material) bind_weather_texture(particle, material)
+#define WEATHER_SHAPE(site, e) weatherBindGeometryMaterial(e)
+#define WEATHER_QUAD_DRAW(site)                                                                                    \
+    GX2DrawIndexedEx(static_cast<u32>(weatherQuadPrimitive), (u32)4, static_cast<u32>(weatherQuadIndexType),        \
+                     static_cast<u32>(weatherQuadIndices), (u32)0, (u32)1)
+#define WEATHER_NATIVE_BEGIN(site, pass, material)
+#define WEATHER_NATIVE_END(site)
+#endif
 /* 025817B0 */
 void dKankyo_poison_Packet::render() {
     auto* packetView = this;
@@ -2142,19 +2204,19 @@ void dKankyo_cloud_Packet::render(s32 count) {
     weatherBindTextureSet(gabi::ea(&packetView->mTextureSet), material);
     bind_weather_texture(texture, static_cast<u32>(packetView->mpMaterial));
     bind_weather_uniforms(renderer, gabi::ea(&packetView->mpMaterial));
+    WEATHER_NATIVE_BEGIN(PORT_NATIVE_MOYA, 0, static_cast<u32>(packetView->mpMaterial));
     if (count > 0)
         for (u32 i = 0; i < (u32)count; ++i) {
             u32 particle = gabi::ea(&packetView->mTextures[i]);
             weatherUpdateTextureUniforms(particle);
-            bind_weather_texture(particle, static_cast<u32>(packetView->mpMaterial));
+            WEATHER_PARTICLE_BIND(PORT_NATIVE_MOYA, particle, static_cast<u32>(packetView->mpMaterial));
             auto* pair = &packetView->mGeometry[i];
             u32 side = static_cast<u32>(pair->mBufferIndex) == 0 ? 1 : 0;
             if (static_cast<u32>(pair->mpMaterial))
-                weatherBindGeometryMaterial(gabi::ea(&pair->mGeometry[side].mMaterialBinding));
-            GX2DrawIndexedEx(static_cast<u32>(weatherQuadPrimitive), (u32)4,
-                             static_cast<u32>(weatherQuadIndexType),
-                             static_cast<u32>(weatherQuadIndices), (u32)0, (u32)1);
+                WEATHER_SHAPE(PORT_NATIVE_MOYA, gabi::ea(&pair->mGeometry[side].mMaterialBinding));
+            WEATHER_QUAD_DRAW(PORT_NATIVE_MOYA);
         }
+    WEATHER_NATIVE_END(PORT_NATIVE_MOYA);
     weatherApplyRenderState(gabi::ea(&weatherDefaultRenderState));
 }
 /* 02581C34 */
@@ -2196,6 +2258,7 @@ void dKankyo_housi_Packet::render() {
     weatherBindTextureSet(gabi::ea(&packetView->mTextureSet), material);
     bind_weather_texture(texture, static_cast<u32>(packetView->mpMaterial));
     bind_weather_uniforms(renderer, gabi::ea(&packetView->mpMaterial));
+    WEATHER_NATIVE_BEGIN(PORT_NATIVE_HOUSI, 0, static_cast<u32>(packetView->mpMaterial));
     for (u32 group = 0; group < 2; ++group) {
         (state.get()->mBlendMode = group ? 6 : 3);
         weatherApplyRenderState(state.a);
@@ -2203,19 +2266,17 @@ void dKankyo_housi_Packet::render() {
         for (u32 i = 0; (s32)i < count; ++i) {
             u32 index = group * 300 + i;
             if (static_cast<u8>(packetView->mActive[index])) {
-                bind_weather_texture(gabi::ea(&packetView->mTextures[index]),
-                                     static_cast<u32>(packetView->mpMaterial));
+                WEATHER_PARTICLE_BIND(PORT_NATIVE_HOUSI, gabi::ea(&packetView->mTextures[index]), static_cast<u32>(packetView->mpMaterial));
                 auto* pair = &packetView->mGeometry[index];
                 u32 side = static_cast<u32>(pair->mBufferIndex) == 0 ? 1 : 0;
                 if (static_cast<u32>(pair->mpMaterial))
-                    weatherBindGeometryMaterial(gabi::ea(&pair->mGeometry[side].mMaterialBinding));
-                GX2DrawIndexedEx(static_cast<u32>(weatherQuadPrimitive), (u32)4,
-                                 static_cast<u32>(weatherQuadIndexType),
-                                 static_cast<u32>(weatherQuadIndices), (u32)0, (u32)1);
+                    WEATHER_SHAPE(PORT_NATIVE_HOUSI, gabi::ea(&pair->mGeometry[side].mMaterialBinding));
+                WEATHER_QUAD_DRAW(PORT_NATIVE_HOUSI);
             }
             count = (s32) static_cast<u32>(dKy_getWeatherEnvlight()->mHousiCount);
         }
     }
+    WEATHER_NATIVE_END(PORT_NATIVE_HOUSI);
     weatherApplyRenderState(gabi::ea(&weatherDefaultRenderState));
 }
 static void emit_weather_uniforms(u32 infoAddress, u32 descriptorAddress) {
@@ -2276,22 +2337,22 @@ void dKankyo_wave_Packet::render(u32 context) {
         weatherApplyContextMaterial(context, static_cast<u32>(packetView->mpMaterial));
     }
     weatherApplyRenderState(state.a);
+    WEATHER_NATIVE_BEGIN(PORT_NATIVE_WAVE, 0, static_cast<u32>(packetView->mpMaterial));
     s32 count = (s16) static_cast<u16>(dKy_getWeatherEnvlight()->mWaveChan.mWaveCount);
     for (u32 i = 0; (s32)i < count; ++i) {
         if (static_cast<u8>(packetView->mActive[i])) {
             u32 particle = gabi::ea(&packetView->mTextures[i]);
             weatherUpdateTextureUniforms(particle);
-            bind_weather_texture(particle, static_cast<u32>(packetView->mpMaterial));
+            WEATHER_PARTICLE_BIND(PORT_NATIVE_WAVE, particle, static_cast<u32>(packetView->mpMaterial));
             auto* pair = &packetView->mGeometry[i];
             u32 side = static_cast<u32>(pair->mBufferIndex) == 0 ? 1 : 0;
             if (static_cast<u32>(pair->mpMaterial))
-                weatherBindGeometryMaterial(gabi::ea(&pair->mGeometry[side].mMaterialBinding));
-            GX2DrawIndexedEx(static_cast<u32>(weatherQuadPrimitive), (u32)4,
-                             static_cast<u32>(weatherQuadIndexType),
-                             static_cast<u32>(weatherQuadIndices), (u32)0, (u32)1);
+                WEATHER_SHAPE(PORT_NATIVE_WAVE, gabi::ea(&pair->mGeometry[side].mMaterialBinding));
+            WEATHER_QUAD_DRAW(PORT_NATIVE_WAVE);
         }
         count = (s16) static_cast<u16>(dKy_getWeatherEnvlight()->mWaveChan.mWaveCount);
     }
+    WEATHER_NATIVE_END(PORT_NATIVE_WAVE);
     weatherSetFog();
 }
 /* 02583678 */
@@ -2419,24 +2480,24 @@ void dKankyo_rain_Packet::renderSplashes() {
     weatherBindTextureSet(gabi::ea(&packetView->mTextureSet), material);
     bind_weather_texture(texture, static_cast<u32>(packetView->mpMaterial));
     bind_weather_uniforms(renderer, gabi::ea(&packetView->mpMaterial));
+    WEATHER_NATIVE_BEGIN(PORT_NATIVE_RAIN, 0, static_cast<u32>(packetView->mpMaterial));
     s32 count = (s16) static_cast<u16>(packetView->mRainCount);
     for (u32 i = 0; (s32)i < count; ++i) {
         if (static_cast<u8>(packetView->mSplashActive[i])) {
             u32 particle = gabi::ea(&packetView->mSplashTextures[i]);
             weatherUpdateTextureUniforms(particle);
-            bind_weather_texture(particle, static_cast<u32>(packetView->mpMaterial));
+            WEATHER_PARTICLE_BIND(PORT_NATIVE_RAIN, particle, static_cast<u32>(packetView->mpMaterial));
             for (u32 quad = 0; quad < 4; ++quad) {
                 auto* pair = &packetView->mSplashGeometry[i * 4 + quad];
                 u32 side = static_cast<u32>(pair->mBufferIndex) == 0 ? 1 : 0;
                 if (static_cast<u32>(pair->mpMaterial))
-                    weatherBindGeometryMaterial(gabi::ea(&pair->mGeometry[side].mMaterialBinding));
-                GX2DrawIndexedEx(static_cast<u32>(weatherQuadPrimitive), (u32)4,
-                                 static_cast<u32>(weatherQuadIndexType),
-                                 static_cast<u32>(weatherQuadIndices), (u32)0, (u32)1);
+                    WEATHER_SHAPE(PORT_NATIVE_RAIN, gabi::ea(&pair->mGeometry[side].mMaterialBinding));
+                WEATHER_QUAD_DRAW(PORT_NATIVE_RAIN);
             }
             count = (s16) static_cast<u16>(packetView->mRainCount);
         }
     }
+    WEATHER_NATIVE_END(PORT_NATIVE_RAIN);
     weatherApplyRenderState(gabi::ea(&weatherDefaultRenderState));
 }
 /* 0257FB4C */
@@ -2474,17 +2535,17 @@ void dKankyo_rain_Packet::renderStreaks() {
     bind_weather_texture(texture, static_cast<u32>(packetView->mpMaterial));
     bind_weather_uniforms(renderer, gabi::ea(&packetView->mpMaterial));
     bind_weather_texture(extraTexture, static_cast<u32>(packetView->mpMaterial));
+    WEATHER_NATIVE_BEGIN(PORT_NATIVE_RAIN, 1, static_cast<u32>(packetView->mpMaterial));
     s32 count = static_cast<s32>(dKy_getWeatherEnvlight()->mRainCount) >> 1;
     for (u32 i = 0; (s32)i < count; ++i) {
         auto* pair = &packetView->mRainGeometry[i];
         u32 side = static_cast<u32>(pair->mBufferIndex) == 0 ? 1 : 0;
         if (static_cast<u32>(pair->mpMaterial))
-            weatherBindGeometryMaterial(gabi::ea(&pair->mGeometry[side].mMaterialBinding));
-        GX2DrawIndexedEx(static_cast<u32>(weatherQuadPrimitive), (u32)4,
-                         static_cast<u32>(weatherQuadIndexType),
-                         static_cast<u32>(weatherQuadIndices), (u32)0, (u32)1);
+            WEATHER_SHAPE(PORT_NATIVE_RAIN, gabi::ea(&pair->mGeometry[side].mMaterialBinding));
+        WEATHER_QUAD_DRAW(PORT_NATIVE_RAIN);
         count = static_cast<s32>(dKy_getWeatherEnvlight()->mRainCount) >> 1;
     }
+    WEATHER_NATIVE_END(PORT_NATIVE_RAIN);
     weatherApplyRenderState(gabi::ea(&weatherDefaultRenderState));
 }
 /* 02580870 */
@@ -3819,6 +3880,13 @@ void d_kankyo_wether_cpp::dKankyo_sun_Packet::render(u32 firstTexture, u32 enabl
         u32 side = static_cast<u32>(gabi::at<WeatherGeometryPair>(pair)->mBufferIndex) == 0 ? 1 : 0;
         if (static_cast<u32>(gabi::at<WeatherGeometryPair>(pair)->mpMaterial))
             weatherBindGeometryMaterial(pair + side * 0x254 + 0x158);
+#if PORT_NATIVE_DRAW
+        // each sun quad as a packet of its own (port_native_draw.h): its renderer, textures and geometry stay its own
+        if (port_native_draw_single(PORT_NATIVE_SUN, 0, static_cast<u32>(this->mpMaterial), 0, 0,
+                                    static_cast<u32>(weatherQuadPrimitive), (u32)4, static_cast<u32>(weatherQuadIndexType),
+                                    static_cast<u32>(weatherQuadIndices), (u32)0, (u32)1))
+            continue;
+#endif
         GX2DrawIndexedEx(static_cast<u32>(weatherQuadPrimitive), (u32)4,
                          static_cast<u32>(weatherQuadIndexType),
                          static_cast<u32>(weatherQuadIndices), (u32)0, (u32)1);

@@ -2,6 +2,7 @@
 #include "hd/hd_render_layers.h"
 #include "hd/hd_fader.h"
 #include "sead/ElementAt.h"
+#include "port_native_draw.h"
 static hdLayerBase_c* allocateRenderLayer(u32, void *, u32);
 static void
 registerRenderLayer(hdRenderLayerFactory_c *, hdLayerBase_c *, u32, void *, u32, void *);
@@ -330,6 +331,13 @@ static void bindBackendTexture(hdShaderProgram_l* program, void* texture) {
 }
 static void finishBackendDraw(hdShaderBackend_c* backend) {
     bindShaderTextureState(backend->mTextureState);
+#if PORT_NATIVE_DRAW
+    // the backend's draw (the scene depth preparation) as a packet of its own (port_native_draw.h)
+    if (sShaderDraw.mInstances &&
+        port_native_draw_single(PORT_NATIVE_POST, PORT_NATIVE_POST_HD_BACKEND, gabi::ea(backend), 0, 0, sShaderDraw.mStart,
+                                sShaderDraw.mInstances, sShaderDraw.mPrimitive, sShaderDraw.mCount, 0, 1))
+        return;
+#endif
     if (sShaderDraw.mInstances)
         drawShaderVertices(sShaderDraw.mStart,
                            sShaderDraw.mInstances,

@@ -2,6 +2,7 @@
 // GX2 depth-buffer HiZ values: wut facts.
 #include "agl/ShadowMap.h"
 #include "agl/ShaderContext.h"
+#include "port_native_draw.h"
 #include "agl/ParameterConstruction.h"
 using namespace agl;
 // The dynamic texture cache singleton (pointer word owned by agl/DynamicTextureCache.cpp).
@@ -69,6 +70,9 @@ void agl::ShadowMap::finishLayer() {
             mDepth.initializeRegisters();
             mDepth.mBase.mDirty = 0;
         }
+#if PORT_NATIVE_DRAW
+        wwhd_native_pass_copy(PORT_NATIVE_COPY_EXPAND_DEPTH, 0, gabi::ea(&mDepth.mDepth), 1);  // (port_native_draw.h)
+#endif
         GX2ExpandDepthBuffer(&mDepth.mDepth);
         sShaderContext->applyContext();
     }

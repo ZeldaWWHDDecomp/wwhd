@@ -2,6 +2,7 @@
 #include "JSystem/JParticle/JPAParticle_gpu.h"
 #include "sead/ElementAt.h"
 #include "d/d_com_inf_game.h"
+#include "port_native_draw.h"
 void* JPAParticleNew(u32);
 void JPAParticleLinkConstruct(JPAParticleLink*,void*);
 void* JPAParticleAcquirePool(void*,be<u32>*);
@@ -241,23 +242,55 @@ void jpa_particle_extension::JPABaseParticle::finishGpuBuffers(u32 child) {
 void jpa_particle_extension::JPABaseParticle::drawGpu(u32 kind, u32 primitive, u32 count) {
     auto shader = reinterpret_cast<ShaderState*>(mpGpuState.get());
     u32 context = contextState().mDrawContext;
+#if PORT_NATIVE_DRAW
+    // native draw packets (port_native_draw.h): one packet per call (pass = KIND: parent or child; one mesh: the quad
+    // or strip the call draws, from the static index list), its instances the particle's draws: the particle's
+    // material uniform pair (bound with the draw context's location table) and each buffer's vertex input bind; the
+    // renderer's texture binds stay the site's own. The context's frame and matrix slots, which the draw visitor binds
+    // per particle, are declared instance blocks too (read from the registers at each instance). An unchanged packet
+    // keeps its lowered state across calls (the register journal: across the particles' own binds).
+    bool native = false;
+    if ((kind == 0 || (kind == 1 && primitive)) &&
+        wwhd_native_begin(PORT_NATIVE_JPA, kind, 0, context, 0, 0) != 0) {
+        const IndexedDrawState& ix = kind == 0 ? sParentDrawState : sChildDrawState;
+        if (wwhd_native_pair_slot(PORT_NATIVE_JPA, context, 3) != 0) {
+            wwhd_native_pair_slot(PORT_NATIVE_JPA, context, 0);
+            wwhd_native_pair_slot(PORT_NATIVE_JPA, context, 2);
+            wwhd_native_mesh(PORT_NATIVE_JPA, 0, u32(ix.mPrimitive), kind == 0 ? 4u : primitive, u32(ix.mIndexType),
+                             gabi::ea(ix.mIndices.get()));
+            native = wwhd_native_commit(PORT_NATIVE_JPA) != 0;
+        } else
+            wwhd_native_end(PORT_NATIVE_JPA);
+    }
+    if (!(native && wwhd_native_pair(PORT_NATIVE_JPA, gabi::ea(shader), context)))
+#endif
     gabi::call_ptr<void>(shader->__vtbl->apply, shader, context);
     JPAParticleSetDrawContext(mpRenderer, contextState().mDrawContext);
+#if PORT_NATIVE_DRAW
+#define JPA_SHAPE(shape)                                                                                           \
+    if (!(native && wwhd_native_shape(PORT_NATIVE_JPA, gabi::ea(shape)))) JPAParticleShapeDraw(shape)
+#define JPA_DRAW(ix, n)                                                                                            \
+    if (!(native && wwhd_native_draw(PORT_NATIVE_JPA, 0)))                                                         \
+    JPAParticleDrawIndexed(ix.mPrimitive, n, ix.mIndexType, ix.mIndices, 0, 1)
+#else
+#define JPA_SHAPE(shape) JPAParticleShapeDraw(shape)
+#define JPA_DRAW(ix, n) JPAParticleDrawIndexed(ix.mPrimitive, n, ix.mIndexType, ix.mIndices, 0, 1)
+#endif
     if (kind == 0) {
         JPAGpuPool<4>* pool = contextState().mParentPool;
         u32 active = u32(pool->mState.mSwapIndex) == 0 ? 1 : 0;
         for (u32 i = 0; i < count; ++i) {
             JPAGpuBuffer* buffer = &pool->mBuffers[active + i * 2];
-            if (u32(pool->mState.mShapeEnabled)) JPAParticleShapeDraw(buffer->mShape);
-            JPAParticleDrawIndexed(sParentDrawState.mPrimitive, 4, sParentDrawState.mIndexType, sParentDrawState.mIndices, 0, 1);
+            if (u32(pool->mState.mShapeEnabled)) JPA_SHAPE(buffer->mShape);
+            JPA_DRAW(sParentDrawState, 4);
         }
     } else if (kind == 1) {
         auto pool = reinterpret_cast<JPAGpuPool<4>*>(mpSlot.get());
         u32 active = u32(pool->mState.mSwapIndex) == 0 ? 1 : 0;
         for (u32 i = 0; i < count; ++i) {
             JPAGpuBuffer* buffer = &pool->mBuffers[active + i * 2];
-            if (u32(pool->mState.mShapeEnabled)) JPAParticleShapeDraw(buffer->mShape);
-            if (primitive) JPAParticleDrawIndexed(sChildDrawState.mPrimitive, primitive, sChildDrawState.mIndexType, sChildDrawState.mIndices, 0, 1);
+            if (u32(pool->mState.mShapeEnabled)) JPA_SHAPE(buffer->mShape);
+            if (primitive) JPA_DRAW(sChildDrawState, primitive);
         }
     } else {
         f32 size = f32(u32(drawState().mDrawMode));
@@ -266,6 +299,12 @@ void jpa_particle_extension::JPABaseParticle::drawGpu(u32 kind, u32 primitive, u
         u32 active = u32(pool->mState.mSwapIndex) == 0 ? 1 : 0;
         JPAParticleShapeDraw(pool->mBuffers[active].mShape);
     }
+#if PORT_NATIVE_DRAW
+    if (native)
+        wwhd_native_end(PORT_NATIVE_JPA);
+#endif
+#undef JPA_SHAPE
+#undef JPA_DRAW
 }
 
 /* 02825430 */

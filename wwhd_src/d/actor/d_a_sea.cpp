@@ -10,6 +10,7 @@
 #include "sead/ElementAt.h"
 #include "gc_api/d/d_com_inf_game.h"
 #include "gc_api/f_op/f_op_actor.h"
+#include "port_native_draw.h"
 
 const gc_tu_data gc_tu = {.safeString = 0x10039E38};
 
@@ -1318,6 +1319,12 @@ static inline void sea_draw20(u32 buffers, s32 n, u32 count, bool checkCount) {
         if ((u32)gabi::at<SeaRowBufferSet>(buffers)->mpShader != 0)
             seaFetchShaderBind(e + 0x158);
         if (!checkCount || count != 0)
+#if PORT_NATIVE_DRAW
+            // a skirt row as a one-draw packet of the sea site (port_native_draw.h; pass 7: not a grid pass)
+            if (!port_native_draw_single(PORT_NATIVE_SEA, 7, e, 0, 0, (u32)gabi::at<SeaDrawIndices>(0x104B4A84)->mPrimitive,
+                                         count, (u32)gabi::at<SeaDrawIndices>(0x104B4A84)->mFormat,
+                                         (u32)gabi::at<SeaDrawIndices>(0x104B4A84)->mpData, 0, 1))
+#endif
             seaGX2DrawIndexedEx((u32)gabi::at<SeaDrawIndices>(0x104B4A84)->mPrimitive, count,
                                 (u32)gabi::at<SeaDrawIndices>(0x104B4A84)->mFormat,
                                 (u32)gabi::at<SeaDrawIndices>(0x104B4A84)->mpData, 0, 1);
@@ -1337,6 +1344,13 @@ static inline void sea_flush2(u32 packetAddress, u32 off) {
         seaFetchShaderBind(buffers + half * 0x254 + 0x158);
 }
 static inline void sea_drawIdx(u32 count) {
+#if PORT_NATIVE_DRAW
+    // a skirt strip as a one-draw packet of the sea site (port_native_draw.h; pass 7: not a grid pass)
+    if (port_native_draw_single(PORT_NATIVE_SEA, 7, 0, 0, 0, (u32)gabi::at<SeaDrawIndices>(0x104B4A84)->mPrimitive, count,
+                                (u32)gabi::at<SeaDrawIndices>(0x104B4A84)->mFormat,
+                                (u32)gabi::at<SeaDrawIndices>(0x104B4A84)->mpData, 0, 1))
+        return;
+#endif
     seaGX2DrawIndexedEx((u32)gabi::at<SeaDrawIndices>(0x104B4A84)->mPrimitive, count,
                         (u32)gabi::at<SeaDrawIndices>(0x104B4A84)->mFormat,
                         (u32)gabi::at<SeaDrawIndices>(0x104B4A84)->mpData, 0, 1);
@@ -1464,13 +1478,32 @@ void daSea_packet_c::draw(void* i_pass) {
         if (pi2 < n2)
             e2 += pi2 * 0x14;
         seaFetchShaderBind(gabi::load<u32>(e2 + (cur == 0 ? 8 : 0) + 8));
+#if PORT_NATIVE_DRAW
+        // native draw packets (port_native_draw.h): the grid's strips as one packet (everything above is set; one
+        // mesh: the first strip, as GX2DrawIndexedEx takes it); each strip is an instance with its own index range
+        bool native = wwhd_native_begin(PORT_NATIVE_SEA, pi2 & 7, 0, (u32)mpMaterial, program, 0) != 0;
+        if (native) {
+            wwhd_native_mesh(PORT_NATIVE_SEA, 0, (u32)gabi::at<daSea_packet_c>(packetAddress)->mIndexPrimitive, 0x82,
+                             (u32)gabi::at<daSea_packet_c>(packetAddress)->mIndexFormat,
+                             (u32)gabi::at<daSea_packet_c>(packetAddress)->mpIndexBufferData);
+            native = wwhd_native_commit(PORT_NATIVE_SEA) != 0;
+        }
+#define SEA_DRAW(prim, count, format, address)                                                                     \
+    if (!(native && wwhd_native_draw_range(PORT_NATIVE_SEA, 0, count, address)))                                   \
+    seaGX2DrawIndexedEx(prim, count, format, address, 0, 1)
+#else
+#define SEA_DRAW(prim, count, format, address) seaGX2DrawIndexedEx(prim, count, format, address, 0, 1)
+#endif
         for (u32 i = 0; i < 0x40; i++)
-            seaGX2DrawIndexedEx((u32)gabi::at<daSea_packet_c>(packetAddress)->mIndexPrimitive, 0x82,
-                                (u32)gabi::at<daSea_packet_c>(packetAddress)->mIndexFormat,
-                                (u32)gabi::at<daSea_packet_c>(packetAddress)->mpIndexBufferData +
-                                    (u32)gabi::at<daSea_packet_c>(packetAddress)->mIndexStride *
-                                        (i * 0x82),
-                                0, 1);
+            SEA_DRAW((u32)gabi::at<daSea_packet_c>(packetAddress)->mIndexPrimitive, 0x82,
+                     (u32)gabi::at<daSea_packet_c>(packetAddress)->mIndexFormat,
+                     (u32)gabi::at<daSea_packet_c>(packetAddress)->mpIndexBufferData +
+                         (u32)gabi::at<daSea_packet_c>(packetAddress)->mIndexStride * (i * 0x82));
+#if PORT_NATIVE_DRAW
+        if (native)
+            wwhd_native_end(PORT_NATIVE_SEA);
+#endif
+#undef SEA_DRAW
     }
 
     if ((s32)gabi::at<SeaDrawPass>(pass)->mPass == 2) {
@@ -1584,6 +1617,11 @@ void daSea_packet_c::draw(void* i_pass) {
                     x = gabi::fadds_ppc(x, sea_step());
                 }
                 sea_flush2(packetAddress, 0x260);
+#if PORT_NATIVE_DRAW
+                // the non-indexed skirt quad strip as a one-draw packet of the sea site (index address 0: GX2DrawEx)
+                if (!port_native_draw_single(PORT_NATIVE_SEA, 7, 0, 0, 0, (u32)gabi::at<SeaDrawIndices>(0x104B4A84)->mPrimitive,
+                                             0xA, 0, 0, 0, 1))
+#endif
                 seaGX2DrawEx((u32)gabi::at<SeaDrawIndices>(0x104B4A84)->mPrimitive, 0xA, 0, 1);
             }
         }

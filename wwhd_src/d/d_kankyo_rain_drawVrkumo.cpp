@@ -1,5 +1,6 @@
 // Cloud drawing: GameCube particle names and HD renderer setup.
 #include "d/d_kankyo_rain_drawSibuki.h"
+#include "port_native_draw.h"
 namespace RainDraw {
 /* 02575B6C */
 void drawVrkumo(u32 drawMtx, u32 color, u32 images) {
@@ -129,6 +130,24 @@ void drawVrkumo(u32 drawMtx, u32 color, u32 images) {
         cloud_sdk::setGeometryUniform(geometry, size, data);
     cloud_sdk::prepareUniform(cloud_setup_uniform(setup));
     cloud_apply_setup(setup, (u32)at<CloudPacket>(packet)->mResource);
+#if PORT_NATIVE_DRAW
+    // native draw packets (port_native_draw.h): the cloud cards as one packet (one mesh: the card's quad, as the draw
+    // below takes it); each card's uniform pair (bound with the resource's location table) and vertex input bind are
+    // an instance; render state and texture binds stay the site's own
+    bool native = false;
+    {
+        const u32 cards = CloudDrawAddress;
+        if (wwhd_native_begin(PORT_NATIVE_VRKUMO, 0, 0, (u32)at<CloudPacket>(packet)->mResource, 0, 0) != 0) {
+            if (wwhd_native_pair_slot(PORT_NATIVE_VRKUMO, (u32)at<CloudPacket>(packet)->mResource, 3) != 0) {
+                wwhd_native_mesh(PORT_NATIVE_VRKUMO, 0, (u32)(at<CloudDraw>(cards)->count),
+                                 (u32)(at<CloudDraw>(cards)->indices), (u32)(at<CloudDraw>(cards)->primitive),
+                                 (u32)(at<CloudDraw>(cards)->indexType));
+                native = wwhd_native_commit(PORT_NATIVE_VRKUMO) != 0;
+            } else
+                wwhd_native_end(PORT_NATIVE_VRKUMO);
+        }
+    }
+#endif
 
     // HD: only pass 1 is drawn, with three texture layers.
     u32 geometryBase = ea(&at<CloudPacket>(packet)->mGeometry[1]);
@@ -327,6 +346,9 @@ void drawVrkumo(u32 drawMtx, u32 color, u32 images) {
                                       (f32)(*at<be<f32>>(DirectionBias)));
                 cloud_sdk::setUniformColor(mat, ea(&work->highlightColor), 1);
             }
+#if PORT_NATIVE_DRAW
+            if (!(native && wwhd_native_pair(PORT_NATIVE_VRKUMO, mat, (u32)at<CloudPacket>(packet)->mResource)))
+#endif
             cloud_apply_uniform(mat, (u32)at<CloudPacket>(packet)->mResource);
             resource = (u32)(at<CloudPacket>(packet)->mResource);
             u32 textures = (u32)(at<CloudResource>(resource)->textureCount)
@@ -355,17 +377,30 @@ void drawVrkumo(u32 drawMtx, u32 color, u32 images) {
             }
             at<GeometryBank>(geom)->selected = (u32)(at<GeometryBank>(geom)->selected) == 0;
             u32 selected = (u32)(at<GeometryBank>(geom)->selected) == 0;
+#if PORT_NATIVE_DRAW
+            if (!(native && wwhd_native_shape(PORT_NATIVE_VRKUMO,
+                                              ea(&at<BufferSlot>(geom + (2 * (layer * 100 + i) + selected) *
+                                                                            u32(sizeof(BufferSlot)))
+                                                      ->drawObject))))
+#endif
             cloud_sdk::prepareGeometry(
                 ea(&at<BufferSlot>(geom + (2 * (layer * 100 + i) + selected) * u32(sizeof(BufferSlot)))
                         ->drawObject));
             at<GeometryBank>(geom)->selected = (u32)(at<GeometryBank>(geom)->selected) == 0;
             u32 draw = CloudDrawAddress;
             if ((u32)(at<CloudDraw>(draw)->indices))
+#if PORT_NATIVE_DRAW
+                if (!(native && wwhd_native_draw(PORT_NATIVE_VRKUMO, 0)))
+#endif
                 cloud_sdk::drawIndexed((u32)(at<CloudDraw>(draw)->count), (u32)(at<CloudDraw>(draw)->indices),
                                        (u32)(at<CloudDraw>(draw)->primitive),
                                        (u32)(at<CloudDraw>(draw)->indexType), 0, 1);
         }
     }
+#if PORT_NATIVE_DRAW
+    if (native)
+        wwhd_native_end(PORT_NATIVE_VRKUMO);
+#endif
     cloud_sdk::restoreFog();
     u32 flushBase = ea(&at<CloudPacket>(packet)->mGeometry[0]),
         selector = ea(&at<GeometryBank>(flushBase)->selected),

@@ -1,5 +1,6 @@
 /* Particle control and callbacks; verified HD behavior, GameCube naming. */
 #include "d/particle/d_particle_local.h"
+#include "port_native_draw.h"
 using namespace pa;
 /* 025A47E0 */
 void* dPa_modelControlCtor(void* obj, void* firstModel, void* secondModel, void* heap) {
@@ -98,6 +99,12 @@ void dPa_smokeParticleDrawAfter(void* callback, void* emitter, void* particle) {
     pa_bindVertexBuffer(p(block + bank * 0x254 + 0x158));
     u32 buffers = (u32)gabi::at<pa::JPABaseParticle>(q)->hdVertexBuffer, vertex = w(buffers),
         count = w(buffers + 8), index = w(buffers + 4);
+#if PORT_NATIVE_DRAW
+    // the smoke model as a one-draw packet of the particle site while no particle packet is open (port_native_draw.h;
+    // pass 7: not a particle pass); its material, shape and vertex input stay its own calls
+    if (!(wwhd_native_state(PORT_NATIVE_JPA) == 0 &&
+          port_native_draw_single(PORT_NATIVE_JPA, 7, mat, 0, 0, index, u32(6), vertex, count, u32(0), u32(1))))
+#endif
     pa_drawIndexed(p(index), u32(6), p(vertex), count, u32(0), u32(1));
     gabi::at<pa::JPABaseParticle>(q)->mStatus = (u32)gabi::at<pa::JPABaseParticle>(q)->mStatus | 8;
 }

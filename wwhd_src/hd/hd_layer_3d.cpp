@@ -1,6 +1,7 @@
 /* HD Layer3D routes scene targets and render passes. Private decomp source. */
 #include "hd/hd_layer_3d.h"
 #include "agl/TimingHistory_l.h"
+#include "port_native_draw.h"
 static hdLayer3DHeaderZero_c sLayer3DHeaderZero;
 static hdLayer3DHeaderDescriptor_c sLayer3DHeaderDescriptor;
 static hdLayer3DHeaderDescriptor_c sLayer3DRotationDescriptor;
@@ -478,6 +479,9 @@ static void copyLayer3DSceneDepth(hdLayer3D_c* layer, hdFilterRenderInfo_c* info
  hdSceneTexture_l* currentDepth = gabi::at<gptr<hdSceneTexture_l>>(gabi::ea(source)+offsetof(hdSceneViewport_l, mpDepth))->get();
  if(currentDepth->mFormat != 0) {
   if(currentDepth->mNeedsResolve) { resolveSceneDepth(currentDepth); currentDepth->mNeedsResolve = 0; }
+#if PORT_NATIVE_DRAW
+  wwhd_native_pass_copy(PORT_NATIVE_COPY_EXPAND_DEPTH, 0, gabi::ea(currentDepth)+offsetof(hdSceneTexture_l, mFormatState), 1);  // (port_native_draw.h)
+#endif
   expandSceneDepth(gabi::at<void>(gabi::ea(currentDepth)+offsetof(hdSceneTexture_l, mFormatState)));
   synchronizeSceneGraphics(sLayer3DGraphicsContext);
   currentDepth = gabi::at<gptr<hdSceneTexture_l>>(gabi::ea(source)+offsetof(hdSceneViewport_l, mpDepth))->get();
@@ -850,6 +854,9 @@ static void drawSceneBlurObjects(hdLayer3D_c* layer, hdFilterRenderInfo_c* info)
  hdSceneTexture_l* depth = viewport->mpDepth;
  if(depth->mFormat != 0) {
   if(depth->mNeedsResolve) { resolveSceneDepth(depth); depth->mNeedsResolve = 0; }
+#if PORT_NATIVE_DRAW
+  wwhd_native_pass_copy(PORT_NATIVE_COPY_EXPAND_DEPTH, 0, gabi::ea(depth)+offsetof(hdSceneTexture_l, mFormatState), 1);  // (port_native_draw.h)
+#endif
   expandSceneDepth(gabi::at<void>(gabi::ea(depth)+offsetof(hdSceneTexture_l, mFormatState)));
   synchronizeSceneGraphics(sLayer3DGraphicsContext);
   depth = viewport->mpDepth;
@@ -1116,6 +1123,9 @@ static void drawLayer3DPass(hdLayer3D_c* layer, hdFilterRenderInfo_c* info) {
    hdSceneTexture_l* depth = ((hdSceneViewport_l*)info->mpViewport.get())->mpDepth;
    if(depth->mFormat != 0) {
     if(depth->mNeedsResolve) { resolveSceneDepth(depth); depth->mNeedsResolve = 0; }
+#if PORT_NATIVE_DRAW
+    wwhd_native_pass_copy(PORT_NATIVE_COPY_EXPAND_DEPTH, 0, gabi::ea(depth)+offsetof(hdSceneTexture_l, mFormatState), 1);  // (port_native_draw.h)
+#endif
     expandSceneDepth(gabi::at<void>(gabi::ea(depth)+offsetof(hdSceneTexture_l, mFormatState)));
     synchronizeSceneGraphics(sLayer3DGraphicsContext);
    }
@@ -1146,6 +1156,9 @@ static void drawLayer3DPass(hdLayer3D_c* layer, hdFilterRenderInfo_c* info) {
  case 16: drawSceneOverlayManager(sLayer3DOverlayManager); break;
  default: break;
  }
+#if PORT_NATIVE_DRAW
+ wwhd_native_pass_end();  // pass description (port_native_draw.h): this 3D layer pass is done
+#endif
 }
 /* 02733708 */
 static void __sinit_hd_layer_3d_cpp() {

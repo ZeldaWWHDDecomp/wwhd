@@ -79,6 +79,7 @@ void agl::RenderBuffer::destroy(u32 flags) {
 #include "agl/RenderBuffer.h"
 #include "agl/GraphicsAccess.h"
 #include "sead/RuntimeType.h"
+#include "port_native_draw.h"
 using namespace agl;
 // Borrowed from sead/DisplayTargets.cpp.
 struct ScanTargetMethods_l { u8 mPrefix[12]; be<u32> mMatches; };
@@ -132,8 +133,17 @@ void agl::RenderBuffer::resolveColor(sead::ScanTarget* target) {
   temporary->mSurface.mImage=original->mSurface.mImage;
   color=mColors[0];temporary->mAuxBuffer=color->mColor.mAuxBuffer;
   temporary->mSurface.mTileMode=static_cast<u32>(original->mSurface.mTileMode);
+#if PORT_NATIVE_DRAW
+  wwhd_native_pass_copy(PORT_NATIVE_COPY_SCAN, mode == 1 ? 0 : 1, gabi::ea(temporary.get()), 0);  // (port_native_draw.h)
+#endif
   resolveNativeColor(temporary.get(),mode);
- } else {color=mColors[0];resolveNativeColor(&color->mColor,mode);}
+ } else {
+  color=mColors[0];
+#if PORT_NATIVE_DRAW
+  wwhd_native_pass_copy(PORT_NATIVE_COPY_SCAN, mode == 1 ? 0 : 1, gabi::ea(&color->mColor), 0);  // (port_native_draw.h)
+#endif
+  resolveNativeColor(&color->mColor,mode);
+ }
  applyResolveShaderContext(sNativeResources_l);
 }
 /* WWHD glue

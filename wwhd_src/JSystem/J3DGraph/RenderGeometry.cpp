@@ -1,6 +1,7 @@
 // J3D HD renderer: the double-buffered geometry pool (vertex buffers + attribute states per entry).
 // Names are our own; written from the WWHD binary.
 #include "JSystem/J3DGraph/RenderGeometry.h"
+#include "port_native_draw.h"
 
 struct RenderAttributeFormats_l { be<u32> mWords[28]; };
 static RenderAttributeFormats_l sAttributeFetchFormats;
@@ -127,17 +128,41 @@ void j3d::RenderGeometryEntries::configureCustomAttributes(const RenderAttribute
 void j3d::RenderGeometryPool::draw(const agl::IndexBufferLayout_l* indices, u32 repetitions, u32 indexCount) {
     auto frame = gabi::AutoFrame(gabi::current_function());
     RenderStorageSpan* opposite = &mSets[mActiveSet == 0];
+#if PORT_NATIVE_DRAW
+    // native draw packets (port_native_draw.h): inside a line site's packet (m_Do_ext_line*.cpp) the pool's index
+    // list is its mesh (defined at the first draw), each entry's vertex input bind and draw are instances
+    unsigned native = indexCount != 0 ? wwhd_native_state(PORT_NATIVE_LINE) : 0;
+    if (native == 1) {
+        wwhd_native_mesh(PORT_NATIVE_LINE, 0, indices->mPrimitiveMode, indexCount, indices->mFormat,
+                         gabi::ea(indices->mStorage.get()));
+        native = wwhd_native_commit(PORT_NATIVE_LINE) != 0 ? 2 : 0;
+    }
+#define POOL_BIND(a) if (!(native == 2 && wwhd_native_shape(PORT_NATIVE_LINE, gabi::ea(a)))) applyRenderAttributes(a)
+// outside a line site's packet (state 0 at entry: no packet open), each draw is a one-draw packet of the line site
+// (pass 7: not a line pass)
+#define POOL_DRAW()                                                                                                \
+    if (!(native == 2 &&                                                                                           \
+          wwhd_native_draw_range(PORT_NATIVE_LINE, 0, indexCount, gabi::ea(indices->mStorage.get()))) &&           \
+        !(native == 0 && port_native_draw_single(PORT_NATIVE_LINE, 7, gabi::ea(this), 0, 0, indices->mPrimitiveMode,  \
+                                                 indexCount, indices->mFormat, gabi::ea(indices->mStorage.get()), 0, 1))) \
+    GX2DrawIndexedEx(indices->mPrimitiveMode, indexCount, indices->mFormat, indices->mStorage, 0, 1)
+#else
+#define POOL_BIND(a) applyRenderAttributes(a)
+#define POOL_DRAW() GX2DrawIndexedEx(indices->mPrimitiveMode, indexCount, indices->mFormat, indices->mStorage, 0, 1)
+#endif
     u32 index = 0;
     while (repetitions != 0) {
         if (mDirty != 0) {
             auto* object = static_cast<RenderGeometryEntry_l*>(opposite->mStorage.get());
             if (index < (u32)opposite->mCount) object += index;
-            applyRenderAttributes(&object->mAttributes);
+            POOL_BIND(&object->mAttributes);
         }
-        if (indexCount != 0) GX2DrawIndexedEx(indices->mPrimitiveMode, indexCount, indices->mFormat, indices->mStorage, 0, 1);
+        if (indexCount != 0) POOL_DRAW();
         ++index;
         --repetitions;
     }
+#undef POOL_BIND
+#undef POOL_DRAW
 }
 
 /* 027FF1D8 */

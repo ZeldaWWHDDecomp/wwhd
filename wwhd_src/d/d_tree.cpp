@@ -1,6 +1,7 @@
 /* Tree collision, animation and HD native rendering. Verified against the original unit. */
 #include "d/d_tree.h"
 #include "sead/ElementAt.h"
+#include "port_native_draw.h"
 #include <cmath>
 using namespace gabi;
 static const f32 compilerPiMin = -3.1415927410125732f;
@@ -260,6 +261,38 @@ static void tree_drawIndexed(u32 p) {
                          (at<TreeIndexBuffer>(p)->mFormat),
                          at<void>((at<TreeIndexBuffer>(p)->mStorage.v)), 0, 1);
 }
+
+#if PORT_NATIVE_DRAW
+// native draw packets (port_native_draw.h): tree_setShape / tree_drawIndexed with the bind and the draw taken as
+// the packet's (mesh KIND: the part's index buffer, a + 0x1D748 + KIND * 24)
+static void tree_setShapeNative(bool native, u32 record, u32 flag, u32 index, u32 stride) {
+    TreeShapeArray* shapes = &at<TreeMaterialRecord>(record)->mShapes[flag == 0 ? 1 : 0];
+    u32 ptr = (u32)shapes->mpShapes.v;
+    if ((u32)shapes->mCount > index)
+        ptr += stride;
+    if (!(native && wwhd_native_shape(PORT_NATIVE_TREE, ptr)))
+        bindShape(at<void>(ptr));
+}
+static void tree_drawIndexedNative(bool native, u32 p, u32 kind) {
+    u32 count = (at<TreeIndexBuffer>(p)->mCount);
+    if (count && !(native && wwhd_native_draw(PORT_NATIVE_TREE, kind)))
+        GX2DrawIndexedEx((at<TreeIndexBuffer>(p)->mPrimitiveMode), count,
+                         (at<TreeIndexBuffer>(p)->mFormat),
+                         at<void>((at<TreeIndexBuffer>(p)->mStorage.v)), 0, 1);
+}
+#define TREE_SET_SHAPE(record, flag, index, stride) tree_setShapeNative(native, record, flag, index, stride)
+#define TREE_DRAW_INDEXED(p, kind) tree_drawIndexedNative(native, p, kind)
+#define TREE_APPLY(object, material, ...)                                                                          \
+    if (!(native && wwhd_native_pair(PORT_NATIVE_TREE, object, material)))                                        \
+        call_ptr<void>(at<TreeDrawBase>(object)->__vtbl->applyMaterial, at<void>(object), at<void>(material),     \
+                       ##__VA_ARGS__)
+#else
+#define TREE_SET_SHAPE(record, flag, index, stride) tree_setShape(record, flag, index, stride)
+#define TREE_DRAW_INDEXED(p, kind) tree_drawIndexed(p)
+#define TREE_APPLY(object, material, ...)                                                                          \
+    call_ptr<void>(at<TreeDrawBase>(object)->__vtbl->applyMaterial, at<void>(object), at<void>(material),         \
+                   ##__VA_ARGS__)
+#endif
 
 /* inlined into TreePacketState::prepareRender */
 static void tree_matrixUniform(u32 object, u32 source) {
@@ -1023,14 +1056,80 @@ void TreePacketState::draw(u32 draw) {
     u32 material = tree_bindMaterial(a, draw, at<TreeMaterialList>(a + 0x92D0),
                                      at<TreeUniformContainer>(a + 0xAA3C));
     tree_renderState(draw, false);
+#if PORT_NATIVE_DRAW
+    // native draw packets: this pass's packet (by material type); the parts' draws become its instances, with the
+    // trees' matrix blocks (bindMatrix), the rooms' blocks (bindMaterial) and the shape binds
+    bool native = wwhd_native_begin(PORT_NATIVE_TREE, (at<TreeDrawArguments>(draw)->mMaterialType), 0, material,
+                                    (at<TreeMaterial>(material)->mpShader.v), 0) != 0;
+    if (native) {
+        native = wwhd_native_pair_slot(PORT_NATIVE_TREE, material, 2) != 0;
+        // (the rooms' blocks are instance blocks except in pass 2, whose shader reads them through gathered
+        // support-uniform entries that an instance block cannot patch: there they stay the site's own binds)
+        if (native && (at<TreeDrawArguments>(draw)->mMaterialType) != 2)
+            wwhd_native_pair_slot(PORT_NATIVE_TREE, material, 3);
+        for (u32 k = 0; k < 4; ++k) {
+            // GX2DrawIndexedEx(mode, count, indexType, indices), as tree_drawIndexed passes them
+            u32 ib = a + 0x1D748 + k * 24;
+            wwhd_native_mesh(PORT_NATIVE_TREE, k, (at<TreeIndexBuffer>(ib)->mPrimitiveMode),
+                             (at<TreeIndexBuffer>(ib)->mCount), (at<TreeIndexBuffer>(ib)->mFormat),
+                             (at<TreeIndexBuffer>(ib)->mStorage.v));
+        }
+        native = native && wwhd_native_commit(PORT_NATIVE_TREE) != 0;
+    }
+#endif
     u32 small = 0, large = 0;
+#if PORT_NATIVE_DRAW
+    // experiment (WWHD_NATIVE_DRAW_TREE_SPLIT=1): each room's draws regrouped by part (crown, trunk, stumps), each
+    // with the matrix block and shape it has in the original order; measures whether a kind-split batch order stays
+    // inside the picture's noise band
+    if (native && wwhd_native_option(PORT_NATIVE_TREE, 1)) {
+        for (u32 room = 0; room < 64; room++) {
+            u32 list = a + 0x4FBC + room * 268, start = (at<dTree_room_c>(list)->mpData.v),
+                end = start + (at<dTree_room_c>(list)->mCount) * 4;
+            if (start != end) {
+                u32 object = a + 0xFE48 + large * 868;
+                TREE_APPLY(object, material);
+                large++;
+            }
+            u32 next = small;
+            for (u32 o = 0; o < 4; ++o) {
+                const u32 kind = o == 0 ? 0 : o == 1 ? 2 : o == 2 ? 3 : 1;  // crown, trunk, stumps
+                u32 s = small;
+                for (u32 p = start; p != end; p += 4) {
+                    u32 data = at<be<u32>>(p)->get();
+                    if ((at<dTree_data_c>(data)->mState) & TreeState_Clipped)
+                        continue;
+                    u32 status = 0x101EE88C + (at<dTree_data_c>(data)->mCut) * 3;
+                    u8 alpha = (at<dTree_data_c>(data)->mTopAlpha);
+                    u32 first = s++, second = first;
+                    if (alpha == 255)
+                        second = s++;
+                    u8 trunk = at<TreeModelStatus>(status)->mTrunk, stump = at<TreeModelStatus>(status)->mStump;
+                    bool has = kind == 0 ? alpha == 255 && trunk == 3 : kind == 2 ? alpha == 255
+                             : kind == 3 ? stump == 2 : stump == 4;
+                    if (!has)
+                        continue;
+                    u32 object = a + 0xAA48 + (kind == 0 || kind == 2 ? first : second) * 168;
+                    TREE_APPLY(object, material);
+                    u32 record = tree_shapeRecord(a, draw, at<TreeMaterialList>(a + 0x92D0));
+                    TREE_SET_SHAPE(record, (mCollision.mActiveBuffer), kind + 1, (kind + 1) * 244);
+                    TREE_DRAW_INDEXED(a + 0x1D748 + kind * 24, kind);
+                }
+                next = s;
+            }
+            small = next;
+        }
+        wwhd_native_end(PORT_NATIVE_TREE);
+        applyRenderState(at<void>(0x104B474C));
+        return;
+    }
+#endif
     for (u32 room = 0; room < 64; room++) {
         u32 list = a + 0x4FBC + room * 268, start = (at<dTree_room_c>(list)->mpData.v),
             end = start + (at<dTree_room_c>(list)->mCount) * 4;
         if (start != end) {
             u32 object = a + 0xFE48 + large * 868;
-            call_ptr<void>(at<TreeDrawBase>(object)->__vtbl->applyMaterial, at<void>(object),
-                           at<void>(material));
+            TREE_APPLY(object, material);
             large++;
         }
         for (u32 p = start; p != end; p += 4) {
@@ -1040,36 +1139,38 @@ void TreePacketState::draw(u32 draw) {
             u32 status = 0x101EE88C + (at<dTree_data_c>(data)->mCut) * 3;
             u8 alpha = (at<dTree_data_c>(data)->mTopAlpha);
             u32 object = a + 0xAA48 + small * 168;
-            call_ptr<void>(at<TreeDrawBase>(object)->__vtbl->applyMaterial, at<void>(object),
-                           at<void>(material), alpha == 255 ? data : small * 168);
+            TREE_APPLY(object, material, alpha == 255 ? data : small * 168);
             small++;
             if (alpha == 255) {
                 u8 first = at<TreeModelStatus>(status)->mTrunk;
                 if (first == 3) {
                     u32 record = tree_shapeRecord(a, draw, at<TreeMaterialList>(a + 0x92D0));
-                    tree_setShape(record, (mCollision.mActiveBuffer), 1, 244);
-                    tree_drawIndexed(a + 0x1D748);
+                    TREE_SET_SHAPE(record, (mCollision.mActiveBuffer), 1, 244);
+                    TREE_DRAW_INDEXED(a + 0x1D748, 0);
                 }
                 u32 record = tree_shapeRecord(a, draw, at<TreeMaterialList>(a + 0x92D0));
-                tree_setShape(record, (mCollision.mActiveBuffer), 3, 0x2DC);
-                tree_drawIndexed(a + 0x1D778);
+                TREE_SET_SHAPE(record, (mCollision.mActiveBuffer), 3, 0x2DC);
+                TREE_DRAW_INDEXED(a + 0x1D778, 2);
                 object = a + 0xAA48 + small * 168;
-                call_ptr<void>(at<TreeDrawBase>(object)->__vtbl->applyMaterial, at<void>(object),
-                               at<void>(material), small * 168);
+                TREE_APPLY(object, material, small * 168);
                 small++;
             }
             u8 last = at<TreeModelStatus>(status)->mStump;
             if (last == 2) {
                 u32 record = tree_shapeRecord(a, draw, at<TreeMaterialList>(a + 0x92D0));
-                tree_setShape(record, (mCollision.mActiveBuffer), 4, 0x3D0);
-                tree_drawIndexed(a + 0x1D790);
+                TREE_SET_SHAPE(record, (mCollision.mActiveBuffer), 4, 0x3D0);
+                TREE_DRAW_INDEXED(a + 0x1D790, 3);
             } else if (last == 4) {
                 u32 record = tree_shapeRecord(a, draw, at<TreeMaterialList>(a + 0x92D0));
-                tree_setShape(record, (mCollision.mActiveBuffer), 2, 0x1E8);
-                tree_drawIndexed(a + 0x1D760);
+                TREE_SET_SHAPE(record, (mCollision.mActiveBuffer), 2, 0x1E8);
+                TREE_DRAW_INDEXED(a + 0x1D760, 1);
             }
         }
     }
+#if PORT_NATIVE_DRAW
+    if (native)
+        wwhd_native_end(PORT_NATIVE_TREE);
+#endif
     applyRenderState(at<void>(0x104B474C));
 }
 

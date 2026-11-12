@@ -1,6 +1,7 @@
 #include "agl/BloomParameters.h"
 #include "agl/EnvironmentLights.h"
 #include "agl/ShaderCommandState.h"
+#include "port_native_draw.h"
 using namespace agl::environment;
 using gabi::ea;
 template <typename Base>
@@ -324,7 +325,13 @@ void drawBloomTexture(void*,const BloomTextureOwner* owner,void* texture) {
     bindBloomTexture(texture,owner->mSampler.get(),-1,0);
     auto* context=sBloomDrawContext.mContext.get();
     const u32 count=context->mCount;
-    if(count!=0) drawBloomIndexed(context->mPrimitive,count,context->mIndexType,context->mIndices.get(),0,1);
+    if(count==0) return;
+#if PORT_NATIVE_DRAW
+    // one bloom pass draw as a packet of its own (port_native_draw.h)
+    if(port_native_draw_single(PORT_NATIVE_POST,PORT_NATIVE_POST_BLOOM,gabi::ea(owner),0,gabi::ea(texture),
+                               context->mPrimitive,count,context->mIndexType,gabi::ea(context->mIndices.get()),0,1)) return;
+#endif
+    drawBloomIndexed(context->mPrimitive,count,context->mIndexType,context->mIndices.get(),0,1);
 }
 static_assert(sizeof(BloomBufferedEffect)==0x6A8);
 static_assert(offsetof(BloomThresholdFactors,mWidth)==0x1C);
