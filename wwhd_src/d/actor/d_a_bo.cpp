@@ -120,11 +120,15 @@ template <class R = void, class... A> static R boVirtualCall(u32 target, A... ar
     return gabi::call_ptr<R>(target, args...);
 }
 // HD: keep the verified 64-byte outgoing linkage area on nested calls.
+// The verification build only: there a nested call's guest call re-enters the body at depth 0. The game build
+// keeps gabi.h's glue, whose native entries (lcall, hcall, call_ptr, gabi::call) run the body with its scope.
+#ifndef GABI_GAME_BUILD
 #undef WWHD_GLUE_FUNC
 #define WWHD_GLUE_FUNC(addr, R, ...)                                                               \
     if (gabi::Activation::nested())                                                                \
         return boCall<R>(addr __VA_OPT__(, ) __VA_ARGS__);                                         \
     gabi::Activation wwhd_activation_
+#endif
 
 static boShapeAttrView_c *boShapeAttr(void *shape) { return (boShapeAttrView_c *)shape; }
 static dComIfG_inf_c *boGameInfo() { return (dComIfG_inf_c *)boInvoke(dComIfGp_get); }

@@ -16,11 +16,15 @@ template <class R = void, class... A> inline R andsw2CallPtr(u32 target, A... ar
     gabi::store<u32>(linkage.a, callerSp);
     return gabi::call_ptr<R>(target, args...);
 }
+// The verification build only: there a nested call's guest call re-enters the body at depth 0. The game build
+// keeps gabi.h's glue, whose native entries (lcall, hcall, call_ptr, gabi::call) run the body with its scope.
+#ifndef GABI_GAME_BUILD
 #undef WWHD_GLUE_FUNC
 #define WWHD_GLUE_FUNC(addr, R, ...)                                                               \
     if (gabi::Activation::nested())                                                                \
         return andsw2Call<R>(addr __VA_OPT__(, ) __VA_ARGS__);                                     \
     gabi::Activation wwhd_activation_
+#endif
 
 enum Action { ACT_ON_ALL, ACT_TIMER, ACT_ORDER, ACT_EVENT, ACT_OFF, ACT_WAIT };
 enum Type { TYPE_ONE_OFF, TYPE_CONTINUOUS };
