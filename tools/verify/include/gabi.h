@@ -257,6 +257,18 @@ extern "C" [[gnu::const]] __attribute__((visibility("default"))) ThreadState* ga
 #if defined(GABI_THUNK_INL) && (!defined(GABI_FAST) || !defined(GABI_GAME_BUILD) || !defined(GABI_LEAF))
 #error "GABI_THUNK_INL (leaf bodies inlined into their native-entry thunks) is a fast-mode game-build form: it needs GABI_FAST and GABI_LEAF"
 #endif
+#if defined(GABI_LEAF_BARE) && (!defined(GABI_FAST) || !defined(GABI_GAME_BUILD) || !defined(GABI_LEAF) || !defined(GABI_PASS_TS) || !defined(GABI_NOCHECK) || defined(GABI_LEAF_CHECK) || defined(GABI_CHECKCOUNT))
+#error "GABI_LEAF_BARE (bare leaf bodies) is a fast-mode game-build form: it needs GABI_FAST, GABI_LEAF, GABI_PASS_TS (a const block lookup the compiler drops when unused) and GABI_NOCHECK, and no GABI_LEAF_CHECK / GABI_CHECKCOUNT"
+#endif
+#if defined(GABI_BARE_ENTRY) && !defined(GABI_LEAF_BARE)
+#error "GABI_BARE_ENTRY (bare leaves with pointer parameters entered only through their native entry) needs GABI_LEAF_BARE"
+#endif
+#if defined(GABI_FAST_ACCESSOR) && (!defined(GABI_FAST) || !defined(GABI_GAME_BUILD) || !defined(GABI_NATIVE_ENTRIES) || !defined(GABI_FAST_NE))
+#error "GABI_FAST_ACCESSOR (lazy accessors' native entries) is a fast-mode game-build form: it needs GABI_FAST, GABI_NATIVE_ENTRIES and GABI_FAST_NE"
+#endif
+#if defined(GABI_STACKARG) && (!defined(GABI_FAST) || !defined(GABI_GAME_BUILD) || !defined(GABI_LEAN_ENTRY) || !defined(GABI_TP_CACHE) || !defined(GABI_SHARED_TLS))
+#error "GABI_STACKARG (stack-argument calls made native) is a fast-mode game-build form: it needs GABI_FAST, GABI_LEAN_ENTRY (a register-exact entry keeps the r1 it is given), GABI_TP_CACHE and GABI_SHARED_TLS"
+#endif
 #define GABI_TLS_BLOCK 1 /* the port's glue does not define gabi::cpu */
 template <class T, T ThreadState::*M> struct TlsView {
     operator T() const { return GABI_TLS_.*M; }
@@ -283,7 +295,10 @@ struct NativeInfo {
                 * definition reads), bits 8-11 / 12-15: the integer / float argument registers the definition takes
                 * (`this` included), bits 16-17: its result (0 none, 1 r3, 2 r3+r4, 3 f1), 18: its native entry places
                 * r1 (GABI_NATIVE_PLACE), 19: caller=ok only by the per-function A3 rule (GABI_A3_FN), 20: a leaf
-                * (GABI_LEAF) */
+                * (GABI_LEAF), 21: its source may pass unbased pointers (GABI_NOCHECK), 22: a leaf whose unit has no
+                * caller=guest and no unbased function (GABI_LEAF_BARE), 23: such a leaf that no source of its unit calls
+                * by name, so every call enters it through its native entry or from guest code (GABI_BARE_ENTRY), 24: a
+                * reader of its stack arguments made native for do_call_sa only (GABI_STACKARG) */
 };
 /* the native entry signature of a register-exact function (NativeEntry::sig): its argument registers and result as
  * the port's table states them, bit 15 set (0: no native entry) */
@@ -358,6 +373,11 @@ extern "C" __attribute__((visibility("default"))) uint8_t g_decomp_leaf_off;
 /* the port's WWHD_DECOMP_FAST_NSTATS (diagnostics builds only, never shipped): per slot the native entries into the body
  * (NativeScope's native path); null unless WWHD_DECOMP_FAST_NSTATS=PATH */
 extern "C" __attribute__((visibility("default"))) uint64_t* g_decomp_nstats;
+#ifdef GABI_FAST_ACCESSOR
+/* with GABI_FAST_ACCESSOR: a lazy accessor's native entries by the running function at the call (Cpu::decomp_running,
+ * the caller's slot + 1; 0: none) */
+extern "C" __attribute__((visibility("default"))) uint64_t* g_decomp_acc_callers;
+#endif
 #endif
 #ifdef GABI_A3_FN
 /* the port's WWHD_DECOMP_FAST_A3_FN: 1 = bodies with NativeInfo bit 19 keep their calls guest calls (WWHD_DECOMP_FAST_A3_FN=0,
@@ -1404,6 +1424,72 @@ inline R native_invoke(void* fn, const NativePack& p, std::index_sequence<I...>,
         return native_result<R>(((Fn)fn)(p.r[I]..., p.f[J]...));
     }
 }
+#ifdef GABI_STACKARG
+/* GABI_STACKARG (the port's WWHD_DECOMP_FAST_STACKARG): a guest call with stack arguments to a function that reads
+ * them from its entry SP (the port's native_rules.py STACK_ARG_READERS) made a native call. native_rules.py --stackarg
+ * makes such a callee native for this call only (NativeInfo bit 24): its unit exports no wwhd_ne_ for it and registers
+ * no entry with the runtime (NativeReg), so no other call can enter it natively without its stack arguments in place;
+ * its own unit has wwhd_sa_ADDR (gabi_native::Sa<ADDR>), and the port's gen.py --stackarg writes its constant-address
+ * do_call sites as do_call_sa (lcall's guest path below takes it too).
+ *
+ * sa_place: the callee's r1 and the stores do_call makes for P's stack arguments, the same in every case (in the
+ * original's frame; else a new outgoing-argument frame below r1, or below the automatic frame's Locals and save area,
+ * with its back chain): the callee reads and writes its stack arguments at the addresses the guest call gives them,
+ * and the stack bytes stay what the guest call leaves. */
+inline u32 sa_place(Cpu* c, const ArgPack& p) {
+    FrameCtx* fc = frame_ctx;
+    if (fc && fc->active && c->r[1] == fc->entry && fc->sp + 8 + 4 * (u32)p.ns <= (fc->cur > fc->lo ? fc->lo : fc->hi)) {
+        for (int i = 0; i < p.ns; i++) store<u32>(fc->sp + 8 + 4 * i, p.stk[i]);
+        return fc->sp;
+    }
+    u32 size = (8 + 4 * p.ns + 15) & ~15u;
+    u32 sp = c->r[1];
+    u32 top = sp;
+    if (fc && fc->active && sp == fc->entry) top = (fc->cur > fc->lo ? fc->lo : fc->hi) & ~15u;
+    const u32 nsp = top - size;
+    store<u32>(nsp, sp);
+    for (int i = 0; i < p.ns; i++) store<u32>(nsp + 8 + 4 * i, p.stk[i]);
+    return nsp;
+}
+/* the native call: r1 placed (sa_place) while the callee runs, its register arguments as ArgPack put them into the
+ * guest registers (the values the guest entry would take out of them), its result in r3 as the guest entry stores it;
+ * as every register-exact native entry under GABI_LEAN_ENTRY it sets no LR / pc. Its WWHD_GLUE_FUNC sees a nested call
+ * from a caller=ok body and runs natively (bit 24 sets callee=native); a register-exact entry keeps the r1 it is
+ * given (GABI_LEAN_ENTRY), so the body's reads of cpu->r[1] find its stack arguments. */
+template <u32 ADDR> [[gnu::always_inline]] inline void sa_native(Cpu* c, const ArgPack& p) {
+    static constexpr NativeInfo ni = native_info(ADDR);
+    constexpr u32 rk = (ni.flags >> 16) & 3u;
+    static_assert(rk <= 1, "do_call_sa: a result in r3 or none");
+    static_assert(((ni.flags >> 24) & 1u) && (ni.flags & 9u) == 9u, "do_call_sa: a register-exact callee native by bit 24");
+    const u32 sp = c->r[1];
+    c->r[1] = sa_place(c, p);
+    NativePack np;
+    for (int i = 0; i < 8; i++) {
+        np.r[i] = c->r[3 + i];
+        np.f[i] = c->f[1 + i].ps0;
+    }
+    if constexpr (rk == 0) {
+        native_invoke<ni.flags, void>((void*)gabi_native::Sa<ADDR>::fn, np, std::make_index_sequence<(ni.flags >> 8) & 15u>{},
+                                      std::make_index_sequence<(ni.flags >> 12) & 15u>{});
+    } else {
+        const u32 r = native_invoke<ni.flags, u32>((void*)gabi_native::Sa<ADDR>::fn, np, std::make_index_sequence<(ni.flags >> 8) & 15u>{},
+                                                   std::make_index_sequence<(ni.flags >> 12) & 15u>{});
+        c->r[3] = r;
+    }
+    c->r[1] = sp;
+}
+/* a do_call(C, P, ADDR, KIND) site (gen.py --stackarg): the native call when ADDR's unit made it one and the running
+ * body may call natively (caller_ok, as lcall), else do_call as before */
+template <u32 ADDR> inline void do_call_sa(Cpu* c, ArgPack& p, int kind) {
+    if constexpr (gabi_native::Sa<ADDR>::ok) {
+        if (__builtin_expect(GABI_TLS_.caller_ok && p.ns > 0, 1)) {
+            sa_native<ADDR>(c, p);
+            return;
+        }
+    }
+    do_call(c, p, ADDR, kind);
+}
+#endif
 #ifdef GABI_FAST
 /* fast mode, calls through function pointers and vtables (call_ptr): the target's native entry when the runtime
  * enabled one (g_decomp_ptr_tab: a decompiled, register-exact function the direct table still routes to its body) and
@@ -1797,6 +1883,20 @@ template <u32 ADDR, class R = void, class... A> inline R lcall(A... a) {
     } else {
         ThreadState& t = GABI_TLS_;
         Cpu* c = t.cpu;
+#ifdef GABI_STACKARG
+        /* GABI_STACKARG: a stack-argument reader its unit made native for do_call_sa (bit 24, gabi_native::Sa): the
+         * arguments as the guest path puts them (ArgPack), then the native call (sa_native) */
+        if constexpr (((ni.flags >> 24) & 1u) && gabi_native::Sa<ADDR>::ok) {
+            if (__builtin_expect(t.caller_ok, 1)) {
+                ArgPack p{c};
+                (p.put(a), ...);
+                if (__builtin_expect(p.ns > 0, 1)) {
+                    sa_native<ADDR>(c, p);
+                    return result<R>(c);
+                }
+            }
+        }
+#endif
 #ifdef GABI_NE_TABLE
         /* fast mode: the callee's exported native entry, bound by the linker (the port's native/K.h gabi_native::Ne) */
         if constexpr (lcall_native_ok<ni.flags, R, A...>() && gabi_native::Ne<ADDR>::ok) {
@@ -2311,6 +2411,48 @@ struct ActivationT {
 #endif
     [[gnu::always_inline]] ~ActivationT() { t.depth--; }
 };
+#ifdef GABI_LEAF_BARE
+/* GABI_LEAF_BARE (the port's WWHD_DECOMP_FAST_LEAF_BARE): a bare leaf's scope and Activation, which keep nothing (see
+ * WWHD_GLUE_FUNC_IMPL_ below). The same constructor arguments as NativeScope / ActivationT, no work */
+struct BareScope {
+    static constexpr bool leaf = true;
+    template <class... A> [[gnu::always_inline]] BareScope(ThreadState&, const NativeInfo&, uint64_t*, bool, const A&...) {}
+    template <class R> [[gnu::always_inline]] R ret(R r) { return r; }
+    BareScope(const BareScope&) = delete;
+};
+struct BareActivation {
+    [[gnu::always_inline]] BareActivation(ThreadState&, u32, bool) {}
+};
+/* a parameter whose native check the callee keeps for every caller (native_enter_nc: a char, void or function
+ * pointer, which may be a host string literal or a function passed by name) */
+template <class A> constexpr bool bare_checked_arg() {
+    using U = std::remove_cv_t<std::remove_reference_t<A>>;
+    if constexpr (std::is_pointer_v<U>) {
+        using P = std::remove_cv_t<std::remove_pointer_t<U>>;
+        return std::is_same_v<P, char> || std::is_same_v<P, signed char> || std::is_same_v<P, unsigned char> ||
+               std::is_function_v<P> || std::is_void_v<P>;
+    } else return false;
+}
+/* whether the body is bare: NativeInfo bit 22 (a leaf whose unit has no caller=guest and no unbased function:
+ * native_rules.py --bare), the types every native entry needs (native_enter_nc's compile-time part: the result
+ * rewritten, no reference, native types) and no parameter of a kind bare_checked_arg names. Then nothing of the glue
+ * can matter (WWHD_GLUE_FUNC_IMPL_) */
+template <u32 FLAGS, class R, bool RET_OK, class... A> constexpr auto glue_bare_of(const A&...) {
+    constexpr bool types = RET_OK && !std::is_reference_v<R> && (native_type_ok<R>() || std::is_void_v<R>) &&
+                           ((native_type_ok<A>() && !std::is_reference_v<A>) && ...);
+#ifdef GABI_BARE_ENTRY
+    /* GABI_BARE_ENTRY (the port's WWHD_DECOMP_FAST_BARE_ENTRY): NativeInfo bit 23 (native_rules.py --bare-entry: no
+     * line of the leaf's unit, its headers included, calls it by name) lifts the parameter rule. Every call then reaches
+     * the body through its native entry (lcall / hcall / call_ptr / gabi::call: each pointer argument rebuilt from a
+     * guest address by the thunk, gabi::at) or from guest code (the guest entry: guest registers), so a char, void or
+     * function pointer argument is null or inside the guest window and native_enter_nc's check of it always passes */
+    constexpr bool args = !(bare_checked_arg<A>() || ...) || ((FLAGS >> 23) & 1);
+#else
+    constexpr bool args = !(bare_checked_arg<A>() || ...);
+#endif
+    return std::integral_constant<bool, ((FLAGS >> 22) & 1) && ((FLAGS >> 20) & 1) && types && args>{};
+}
+#endif
 #endif
 
 /* WWHD_FUNC's automatic native frame (see FrameCtx) */
@@ -2755,11 +2897,42 @@ template <class C, class R, class... A> constexpr auto nentry_of(R (C::*)(A...) 
 void native_register(u32 addr, void* fn, u32 sig, u32 table_sig);
 /* VERIFY's second half in the game build: a register-exact function (the unit's table, flags 1 | 8) registers its
  * native entry; any other one has nothing to register (no code, no static initialisation) */
+#ifdef GABI_FAST_ACCESSOR
+/* GABI_FAST_ACCESSOR (the port's WWHD_DECOMP_FAST_ACCESSOR): the native entry of a lazy accessor (native_rules.py
+ * --accessor, gabi_native::Acc<ADDR> in its own unit's table: kankyo_getEnvlight). The port checked at configure time
+ * that the body is exactly `if (GUARD.value == 0) { GUARD.value = 1; ... } return &VALUE;` with a be<u32> guard word:
+ * while that word is not 0 the body returns VALUE's address and does nothing else, so the entry returns that guest
+ * address itself (what the thunk returns for it) without entering the body and its scope. While it is 0 the thunk runs
+ * the body as before (the first call constructs). Every native call of the function goes through this entry (NativeReg
+ * registers it, ne_body exports it); the guest entry runs the body as before. */
+template <u32 ADDR, auto F> struct AccEntry {
+    using E = decltype(nentry_of(F));
+    static_assert(E::ok && E::sig == native_sig(native_info(ADDR).flags) && E::sig == (0x8000u | 1u << 8),
+                  "AccEntry: a register-exact accessor without parameters and with an r3 result");
+    static u32 run() {
+#ifdef GABI_NSTATS
+        if (uint64_t* n = g_decomp_acc_callers) __atomic_fetch_add(&n[GABI_TLS_.cpu->decomp_running], 1, __ATOMIC_RELAXED);
+#endif
+        if (__builtin_expect(load<u32>(gabi_native::Acc<ADDR>::guard) != 0, 1)) return gabi_native::Acc<ADDR>::value;
+        return E::Thunk::template run<F>();
+    }
+};
+#endif
 template <u32 ADDR, auto F> struct NativeReg {
     NativeReg() {
         constexpr NativeInfo ni = native_info(ADDR);
+#ifdef GABI_STACKARG
+        /* GABI_STACKARG: a stack-argument reader made native for do_call_sa (bit 24) registers no entry: only
+         * do_call_sa / lcall (sa_native) enter it natively, with its stack arguments in place */
+        if constexpr ((ni.flags >> 24) & 1u) {
+        } else
+#endif
         if constexpr ((ni.flags & 9u) == 9u) {
             using E = decltype(nentry_of(F));
+#ifdef GABI_FAST_ACCESSOR
+            if constexpr (gabi_native::Acc<ADDR>::ok) native_register(ADDR, (void*)&AccEntry<ADDR, F>::run, E::sig, native_sig(ni.flags));
+            else
+#endif
 #ifdef GABI_THUNK_INL
             if constexpr (E::ok && ((ni.flags >> 20) & 1u)) native_register(ADDR, (void*)&E::Thunk::template run_inl<F>, E::sig, native_sig(ni.flags));
             else
@@ -2785,6 +2958,10 @@ template <u32 ADDR, auto F, class CR, class... X> [[gnu::always_inline]] inline 
     using E = decltype(nentry_of(F));
     if constexpr (E::ok) {
         static_assert(E::sig == native_sig(native_info(ADDR).flags), "wwhd_ne_: the definition's shape differs from the table's");
+#ifdef GABI_FAST_ACCESSOR
+        if constexpr (gabi_native::Acc<ADDR>::ok) return AccEntry<ADDR, F>::run(x...);
+        else
+#endif
 #ifdef GABI_THUNK_INL
         if constexpr ((native_info(ADDR).flags >> 20) & 1u) return E::Thunk::template run_inl<F>(x...);
         else
@@ -3342,7 +3519,10 @@ template <u32 ADDR, class R, class... A> [[gnu::cold, gnu::noinline]] R glue_gue
 #define GABI_GLUE_FALLBACK_(addr, R, ...) GABI_GLUE_GUEST_CALL_(addr, R __VA_OPT__(, ) __VA_ARGS__)
 #endif
 #ifdef GABI_TP_CACHE
-#ifdef GABI_LEAF
+#ifdef GABI_LEAF_BARE
+#define GABI_ACTIVATION_T_(addr) \
+    std::conditional_t<wwhd_bare_, ::gabi::BareActivation, ::gabi::ActivationT> wwhd_activation_(wwhd_ts_, addr, wwhd_native_scope_.leaf)
+#elif defined(GABI_LEAF)
 #define GABI_ACTIVATION_T_(addr) ::gabi::ActivationT wwhd_activation_(wwhd_ts_, addr, wwhd_native_scope_.leaf)
 #else
 #define GABI_ACTIVATION_T_(addr) ::gabi::ActivationT wwhd_activation_(wwhd_ts_, addr)
@@ -3359,14 +3539,38 @@ template <u32 ADDR, class R, class... A> [[gnu::cold, gnu::noinline]] R glue_gue
     wwhd_ts_.depth > 0 && !::gabi::native_enter_ok_t<R, RET_OK>(wwhd_ts_, wwhd_native_info_ __VA_OPT__(, ) __VA_ARGS__)
 #endif
 /* GABI_TP_CACHE: the body looks its block up once (wwhd_ts_) and hands it to the check, the scope and Activation */
+#ifdef GABI_LEAF_BARE
+/* GABI_LEAF_BARE (the port's WWHD_DECOMP_FAST_LEAF_BARE): a bare leaf (glue_bare_of) keeps none of the glue: no block
+ * lookup, no refusal check, no scope and no depth count. Nothing of it can matter for such a body:
+ *  - a leaf keeps no call state anyway (GABI_LEAF: its scope saves and restores nothing, Activation::current stays the
+ *    caller's) and makes no call that could read the depth or a scope (its calls reach leaves only: native_rules.py
+ *    --leaf; a leaf of another unit is entered by lcall, which checks caller_ok itself, and its own check passes then);
+ *  - the refusal check (native_enter_nc) can only refuse a nested call from a caller=guest or unbased caller, or with a
+ *    char / void / function pointer argument outside the guest window. Its unit has no caller=guest and no unbased
+ *    function (bit 22), so no caller in its unit is refused; a caller in another unit enters it through its native
+ *    entry (lcall / hcall / call_ptr / gabi::call after their own caller_ok check), whose pointer arguments are rebuilt
+ *    from guest addresses (always inside the window); a body with a char / void / function pointer parameter keeps
+ *    the glue.
+ * The diagnostics run-time switches WWHD_DECOMP_FAST_LEAF=0 and WWHD_DECOMP_FAST_NOCHECK=0 do not reach a bare leaf.
+ * Every other body: the glue below as before (its constant wwhd_bare_ is false) */
+#define GABI_GLUE_BARE_(addr, R, RET_OK, ...) \
+    constexpr bool wwhd_bare_ = decltype(::gabi::glue_bare_of<::gabi::native_info(addr).flags, R, RET_OK>(__VA_ARGS__))::value;
+#define GABI_GLUE_SCOPE_T_ std::conditional_t<wwhd_bare_, ::gabi::BareScope, ::gabi::NativeScope>
+#define GABI_GLUE_IF_NOT_BARE_ !wwhd_bare_ &&
+#else
+#define GABI_GLUE_BARE_(addr, R, RET_OK, ...)
+#define GABI_GLUE_SCOPE_T_ ::gabi::NativeScope
+#define GABI_GLUE_IF_NOT_BARE_
+#endif
 #define WWHD_GLUE_FUNC_IMPL_(addr, R, RET_OK, ...)                                                       \
     using wwhd_ret_t_ [[maybe_unused]] = R;                                                              \
     static constexpr ::gabi::NativeInfo wwhd_native_info_ = ::gabi::native_info(addr);                   \
+    GABI_GLUE_BARE_(addr, R, RET_OK __VA_OPT__(, ) __VA_ARGS__)                                          \
     ::gabi::ThreadState& wwhd_ts_ = GABI_BODY_TS_;                                                       \
-    if (GABI_GLUE_REFUSED_(R, RET_OK __VA_OPT__(, ) __VA_ARGS__))                                        \
+    if (GABI_GLUE_IF_NOT_BARE_ GABI_GLUE_REFUSED_(R, RET_OK __VA_OPT__(, ) __VA_ARGS__))                 \
         return GABI_GLUE_FALLBACK_(addr, R __VA_OPT__(, ) __VA_ARGS__);                                 \
     static constinit uint64_t wwhd_lr_cache_ = 0;                                                        \
-    ::gabi::NativeScope wwhd_native_scope_(wwhd_ts_, wwhd_native_info_, &wwhd_lr_cache_, !std::is_void_v<R> __VA_OPT__(, ) __VA_ARGS__); \
+    GABI_GLUE_SCOPE_T_ wwhd_native_scope_(wwhd_ts_, wwhd_native_info_, &wwhd_lr_cache_, !std::is_void_v<R> __VA_OPT__(, ) __VA_ARGS__); \
     GABI_ACTIVATION_T_(addr)
 #else
 #define WWHD_GLUE_FUNC_IMPL_(addr, R, RET_OK, ...)                                                       \
