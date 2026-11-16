@@ -227,8 +227,10 @@ void hdSeaChartStateHandlers_c::bindMap(hdSeaChartTransitionMap_l* map) {
 
 /* 026854D8 */
 void hdSeaChartStateHandlers_c::scaleViewportPoint(HdPadPoint* input, HdPadPoint* output) {
+    if (!output)
+        return;
     hdSeaChartTransform_c* viewport = mViewport;
-    if (!output || !viewport)
+    if (!viewport)
         return;
     const f32 x = input->x;
     const f32 scale = viewport->mScaleMultiplier;

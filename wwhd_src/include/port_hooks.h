@@ -72,6 +72,25 @@ extern "C" unsigned wwhd_camera_word(Cpu* c, unsigned sp, unsigned site, unsigne
 #define PORT_CAMERA_F(site, obj, value) wwhd_camera_float(gabi::cpu, port_hooks::sp(), (site), gabi::ea(obj), (value))
 #define PORT_CAMERA_W(site, obj, value) wwhd_camera_word(gabi::cpu, port_hooks::sp(), (site), gabi::ea(obj), (unsigned)(value))
 #define PORT_CAMERA_AT(site, obj) ((void)wwhd_camera_word(gabi::cpu, port_hooks::sp(), (site), gabi::ea(obj), 0u))
+/* dCamera_c::CalcSubjectAngle's GamePad (gyro) turn (runtime/src/mods/camera.cpp: the mouse camera in first person and
+ * the item aims): X and Y the turn as formed (x30, before Y's swim inversion), which the hook may change; SPEED, YAW,
+ * PITCH the style's speed, yaw range and pitch range (the swim one while swimming), SWIM whether Link swims */
+extern "C" void wwhd_camera_subject(Cpu* c, unsigned sp, unsigned site, unsigned obj, float* xy, float speed, float yaw,
+                                    float pitch, unsigned swim);
+#define PORT_CAMERA_SUBJECT(site, obj, x, y, speed, yaw, pitch, swim)                                    \
+    do {                                                                                                \
+        f32 port_xy_[2] = {(x), (y)};                                                                   \
+        wwhd_camera_subject(gabi::cpu, port_hooks::sp(), (site), gabi::ea(obj), port_xy_, (speed), (yaw), \
+                            (pitch), (unsigned)(swim));                                                 \
+        (x) = port_xy_[0];                                                                              \
+        (y) = port_xy_[1];                                                                              \
+    } while (0)
+/* dCamera_c::subjectCamera's view ease (the same mod): VALUE the ease factor the hook may replace (cSAngle * VALUE); DIFF
+ * the angle difference it multiplies (target - view, which the hook may change), ANG the subject's angle on that axis */
+extern "C" float wwhd_camera_ease(Cpu* c, unsigned sp, unsigned site, unsigned obj, float value, unsigned diff,
+                                  unsigned ang);
+#define PORT_CAMERA_EASE(site, obj, value, diff, ang) \
+    wwhd_camera_ease(gabi::cpu, port_hooks::sp(), (site), gabi::ea(obj), (value), gabi::ea(diff), gabi::ea(ang))
 /* A projection call (fovy, aspect, near, far or near, far, fovy, aspect: the four float arguments, f1..f4): the port's
  * aspect and field of view may change them before CALL gets them; _ARG: CALL takes a first argument X before them */
 extern "C" void wwhd_projection(Cpu* c, unsigned sp, unsigned site, float* f);
@@ -130,9 +149,10 @@ extern "C" void wwhd_picto(Cpu* c, unsigned sp, unsigned site, unsigned a, unsig
 extern "C" float wwhd_ship(Cpu* c, unsigned sp, unsigned site, unsigned ship, float value);
 #define PORT_SHIP(site, ship, value) wwhd_ship(gabi::cpu, port_hooks::sp(), (site), gabi::ea(ship), (value))
 /* Title, file select, Options and input (runtime/src/mods/one_screen.cpp: One screen; motion/game_hooks.cpp: gyro
- * aiming with a Pro Controller; controller_selection.cpp: the automatic controller choice): VALUE the word the hook may
- * replace (a stored mode or count, a call's result); _STATE: a state descriptor a state machine MACHINE changes to; _AT:
- * a statement (OBJ the Options window); _EVENT: the title's copied input event EVENT (OBJ the selection screen) */
+ * aiming with a Pro Controller, mouse aiming with the game's Gyro off; controller_selection.cpp: the automatic controller
+ * choice): VALUE the word the hook may replace (a stored mode or count, a call's result); _STATE: a state descriptor a
+ * state machine MACHINE changes to; _AT: a statement (OBJ the Options window); _EVENT: the title's copied input event
+ * EVENT (OBJ the selection screen) */
 extern "C" unsigned wwhd_ui_word(Cpu* c, unsigned sp, unsigned site, unsigned obj, unsigned value);
 #define PORT_UI_W(site, obj, value) wwhd_ui_word(gabi::cpu, port_hooks::sp(), (site), gabi::ea(obj), (unsigned)(value))
 #define PORT_UI_AT(site, obj) ((void)wwhd_ui_word(gabi::cpu, port_hooks::sp(), (site), gabi::ea(obj), 0u))
@@ -178,6 +198,8 @@ extern "C" unsigned wwhd_rtl(Cpu* c, unsigned sp, unsigned site, unsigned limite
 #define PORT_CAMERA_F(site, obj, value) (value)
 #define PORT_CAMERA_W(site, obj, value) (value)
 #define PORT_CAMERA_AT(site, obj) ((void)0)
+#define PORT_CAMERA_SUBJECT(site, obj, x, y, speed, yaw, pitch, swim) ((void)0)
+#define PORT_CAMERA_EASE(site, obj, value, diff, ang) (value)
 #define PORT_PROJECTION(site, call, a, b, cc, d) call(a, b, cc, d)
 #define PORT_PROJECTION_ARG(site, call, x, a, b, cc, d) call(x, a, b, cc, d)
 #define PORT_CAMERA_MANUAL(site, obj, value, a, b) (value)

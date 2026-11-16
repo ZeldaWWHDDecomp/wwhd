@@ -101,6 +101,8 @@ bool dCamera_c::CalcSubjectAngle(s16* outV, s16* outU) {
         subject_getMatrixRow(r1.get(), rot.get(), 1);
         x = (r2c->x - r1->x) * 30.0f;
         y = r2c->y * 30.0f;
+        /* the port's point (port_hooks.h, @02506CEC): the turn as formed, before the swim inversion */
+        PORT_CAMERA_SUBJECT(0x02506CEC, this, x, y, speed, yawMax, pitchMax, swim);
         if (swim)
             y = -y;
     }
@@ -525,11 +527,12 @@ bool dCamera_c::subjectCamera(s32 style) {
         f32 rr = mViewCache.mDirection.mRadius;
         mViewCache.mDirection.mRadius = gabi::fmadds(g->mRadius - rr, p20, rr);
         subject_angleSubtract(&g->mV, t2c, &mViewCache.mDirection.mV);
-        subject_angleMultiply(t2c, t2a, p20);
+        /* the port's points (port_hooks.h): the ease factor of V (@02508380) and U (@025083C4) */
+        subject_angleMultiply(t2c, t2a, PORT_CAMERA_EASE(0x02508380, this, p20, t2c.get(), angV.get()));
         subject_angleAdd(&mViewCache.mDirection.mV, t12, t2a);
         mViewCache.mDirection.mV = subjectAngleShortValue(tmp, *t12);
         subject_angleSubtract(&g->mU, t12, &mViewCache.mDirection.mU);
-        subject_angleMultiply(t12, t2a, p20);
+        subject_angleMultiply(t12, t2a, PORT_CAMERA_EASE(0x025083C4, this, p20, t12.get(), angU.get()));
         subject_angleAdd(&mViewCache.mDirection.mU, t2c, t2a);
         mViewCache.mDirection.mU = subjectAngleShortValue(tmp, *t2c);
         if (work->m3A8 < 10)

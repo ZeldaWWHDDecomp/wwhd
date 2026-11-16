@@ -3,6 +3,7 @@
 
 // prim/seadSafeString.h: declarations only; no bodies/comments or conditional slot order used.
 #include "sead/FileRouting.h"
+#include "sead/ElementAt.h"
 using namespace sead;
 using namespace sead::file_routes;
 extern void releaseFileRoute(void*);
@@ -99,7 +100,7 @@ u32 sead::file_routes::MultiDevice::appendDevice(FileDevice* device) {
     s32 count = mDevices.mCount;
     if (count >= (s32)mDevices.mCapacity) return 0;
     auto* storage = static_cast<gptr<FileDevice>*>(mDevices.mStorage.get());
-    storage[count] = device;
+    sead::elementAt(storage, (u32)count) = device; /* storage + count * 4 in 32 bits, as the console */
     mDevices.mCount = (u32)mDevices.mCount+1;
     return 1;
 }
@@ -107,7 +108,7 @@ u32 sead::file_routes::MultiDevice::appendDevice(FileDevice* device) {
 FileDevice* sead::file_routes::MultiDevice::findDevice(SafeText* path) {
     gabi::AutoFrame originalFrame{gabi::current_function()};
     auto* cursor = static_cast<gptr<FileDevice>*>(mDevices.mStorage.get());
-    auto* end = cursor+(s32)mDevices.mCount;
+    auto* end = sead::elementPtr(cursor,(u32)mDevices.mCount);
     if (cursor == end) return NULL;
     gabi::FrameLocal<be<u8>> exists(8);
     do {
@@ -118,8 +119,8 @@ FileDevice* sead::file_routes::MultiDevice::findDevice(SafeText* path) {
             if ((u8)*exists != 0) return device;
         }
         auto* storage = static_cast<gptr<FileDevice>*>(mDevices.mStorage.get());
-        ++cursor;
-        end = storage+(s32)mDevices.mCount;
+        cursor = sead::nextElement(cursor);
+        end = sead::elementPtr(storage,(u32)mDevices.mCount);
     } while (cursor != end);
     return NULL;
 }
@@ -127,13 +128,13 @@ FileDevice* sead::file_routes::MultiDevice::findDevice(SafeText* path) {
 u32 sead::file_routes::MultiDevice::doIsAvailable() {
     gabi::AutoFrame originalFrame{gabi::current_function()};
     auto* cursor = static_cast<gptr<FileDevice>*>(mDevices.mStorage.get());
-    auto* end = cursor+(s32)mDevices.mCount;
+    auto* end = sead::elementPtr(cursor,(u32)mDevices.mCount);
     if (cursor == end) return 0;
     do {
         if ((*cursor)->isAvailable() != 0) return 1;
         auto* storage = static_cast<gptr<FileDevice>*>(mDevices.mStorage.get());
-        ++cursor;
-        end = storage+(s32)mDevices.mCount;
+        cursor = sead::nextElement(cursor);
+        end = sead::elementPtr(storage,(u32)mDevices.mCount);
     } while (cursor != end);
     return 0;
 }
@@ -201,14 +202,14 @@ u32 sead::file_routes::MultiDevice::doIsExistFile(be<u8>* exists,SafeText* path)
 u32 sead::file_routes::MultiDevice::isMatchDevice(HandleBase* handle) {
     gabi::AutoFrame originalFrame{gabi::current_function()};
     auto* cursor = static_cast<gptr<FileDevice>*>(mDevices.mStorage.get());
-    auto* end = cursor+(s32)mDevices.mCount;
+    auto* end = sead::elementPtr(cursor,(u32)mDevices.mCount);
     if (cursor == end) return 0;
     do {
         FileDevice* device = *cursor;
         if (device->dispatchIsMatchDevice(handle) != 0) return 1;
-        ++cursor;
+        cursor = sead::nextElement(cursor);
         auto* storage = static_cast<gptr<FileDevice>*>(mDevices.mStorage.get());
-        end = storage+(s32)mDevices.mCount;
+        end = sead::elementPtr(storage,(u32)mDevices.mCount);
     } while (cursor != end);
     return 0;
 }
@@ -386,12 +387,12 @@ FileDevice* sead::file_routes::MultiDevice::doOpenDirectory(DirectoryHandle* han
     const be<u8>* savedPath = sDirectoryPath.mText;
     if ((u8)*savedPath != 0) return NULL;
     auto* cursor = static_cast<gptr<FileDevice>*>(mDevices.mStorage.get());
-    auto* end = cursor+(s32)mDevices.mCount;
+    auto* end = sead::elementPtr(cursor,(u32)mDevices.mCount);
     FileDevice* selected = NULL;
     while (cursor != end) {
         selected = (*cursor)->tryOpenDirectory(handle,path);
         if (selected != NULL) break;
-        ++cursor;
+        cursor = sead::nextElement(cursor);
     }
     if (selected != NULL) {
         mLastDevice = selected;
@@ -423,14 +424,14 @@ u32 sead::file_routes::MultiDevice::doReadDirectory(be<u32>* count,DirectoryHand
         return 1;
     }
     auto* cursor = static_cast<gptr<FileDevice>*>(mDevices.mStorage.get());
-    auto* end = cursor+(s32)mDevices.mCount;
+    auto* end = sead::elementPtr(cursor,(u32)mDevices.mCount);
     u32 remaining = capacity-obtained;
-    entries += obtained;
+    entries = sead::elementPtr(entries,obtained);
     u32 total = obtained;
     while (cursor != end) {
         FileDevice* current = handle->mDevice;
         FileDevice* candidate = *cursor;
-        ++cursor;
+        cursor = sead::nextElement(cursor);
         if (current == candidate) break;
     }
     for (;;) {
@@ -455,11 +456,11 @@ u32 sead::file_routes::MultiDevice::doReadDirectory(be<u32>* count,DirectoryHand
             return 1;
         }
         remaining -= obtained;
-        ++cursor;
-        entries += obtained;
+        cursor = sead::nextElement(cursor);
+        entries = sead::elementPtr(entries,obtained);
         total += obtained;
         auto* storage = static_cast<gptr<FileDevice>*>(mDevices.mStorage.get());
-        end = storage+(s32)mDevices.mCount;
+        end = sead::elementPtr(storage,(u32)mDevices.mCount);
     }
 }
 /* 02740278 */

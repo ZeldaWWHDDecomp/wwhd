@@ -3731,11 +3731,13 @@ BOOL daPy_lk_c::changeDamageProc() {
                     setDamagePointWait(0.0f);
                     return TRUE;
                 }
+                // HD: the hit actor is fetched again for its name and tested for null once more
+                // before the name is read
+                u32 hitAc;
                 if (mGrabItemOffsetY < 0.0f /* checkGrabWear() */ &&
                     LinkActionApi::getCollisionActor(gabi::ea(&mCyl.mGObjTg)) != 0 &&
-                    (s16)gabi::at<fopAc_ac_c>(
-                        LinkActionApi::getCollisionActor(gabi::ea(&mCyl.mGObjTg)))
-                            ->mProcName == LinkMotionConstants::fpcNm_NZ_e &&
+                    (hitAc = LinkActionApi::getCollisionActor(gabi::ea(&mCyl.mGObjTg))) != 0 &&
+                    (s16)gabi::at<fopAc_ac_c>(hitAc)->mProcName == LinkMotionConstants::fpcNm_NZ_e &&
                     grab != 0) {
                     cXyz *v = getDamageVec(&mCyl);
                     gabi::at<fopAc_ac_c>(grab)->shape_angle.y = (s16)(cM_atan2s(v->x, v->z));

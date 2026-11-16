@@ -3,6 +3,7 @@
 #include "agl/RenderStorageCopies.h"
 #include "agl/RenderQueue.h"
 #include "agl/RootNode.h"
+#include "sead/ElementAt.h"
 using namespace agl::render;
 static sead::DisposerVtable sRenderResourceListMethods;
 static sead::SafeTextVtable sResourceListTextMethods;
@@ -42,11 +43,12 @@ void agl::render::RenderResourceList::sortEntries() {
 u32 agl::render::RenderResourceList::addUnique(void* entry) {
     s32 count = mEntries.mCount;
     gptr<void>* storage = static_cast<gptr<void>*>(static_cast<void*>(mEntries.mStorage));
-    for (gptr<void>* current = storage; current != storage + count; ++current) {
+    gptr<void>* end = sead::elementPtr(storage,(u32)count);   /* storage + count * 4 in 32 bits, as the console */
+    for (gptr<void>* current = storage; current != end; current = sead::nextElement(current)) {
         if (static_cast<void*>(*current) == entry) return 0;
     }
     if (count < (s32)mEntries.mCapacity) {
-        storage[count] = entry;
+        sead::elementAt(storage,(u32)count) = entry;
         mEntries.mCount = (s32)mEntries.mCount + 1;
     }
     return 1;
@@ -55,16 +57,16 @@ u32 agl::render::RenderResourceList::addUnique(void* entry) {
 u32 agl::render::RenderResourceList::removeAll(void* entry) {
     gabi::AutoFrame frame{gabi::current_function()};
     gptr<void>* current = static_cast<gptr<void>*>(static_cast<void*>(mEntries.mStorage));
-    gptr<void>* end = current + (s32)mEntries.mCount;
+    gptr<void>* end = sead::elementPtr(current,(u32)mEntries.mCount);   /* 32-bit wrap, as the console */
     u32 removed = 0;
     s32 index = 0;
     while (current != end) {
         if (static_cast<void*>(*current) == entry) {
             mEntries.erase(index,1);
-            end = static_cast<gptr<void>*>(static_cast<void*>(mEntries.mStorage)) + (s32)mEntries.mCount;
+            end = sead::elementPtr(static_cast<gptr<void>*>(static_cast<void*>(mEntries.mStorage)),(u32)mEntries.mCount);
             ++removed;
         } else {
-            ++current;
+            current = sead::nextElement(current);
             ++index;
         }
     }

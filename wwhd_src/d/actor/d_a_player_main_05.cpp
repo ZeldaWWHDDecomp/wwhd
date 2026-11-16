@@ -2906,7 +2906,8 @@ BOOL daPy_lk_c::dProcGetItem() {
     if (no == -1) {
       return TRUE;
     }
-    u16 maxLife = dComIfGs_getMaxLife(); /* dComIfGs_getMaxLife() */
+    /* HD: the max life is read only for item 7 (the heart container) */
+    u16 maxLife = no == 7 ? dComIfGs_getMaxLife() : 0;
     if (no == 7 && (maxLife & 3) != 0) {
       msg = (maxLife & 3) + 0x7B;
     } else {

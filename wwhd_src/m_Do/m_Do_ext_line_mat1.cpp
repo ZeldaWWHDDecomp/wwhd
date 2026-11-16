@@ -306,12 +306,12 @@ void line_mat1::mDoExt_3DlineMat1_c::draw(DrawContext* arguments) {
             if (arguments->mpController.get())
                 wwhd_native_pair_slot(PORT_NATIVE_LINE, locations, 0);
             wwhd_native_declare_pair(PORT_NATIVE_LINE, gabi::ea(&mpRenderer->mPrimary), locations);
-        } else if (pass == 1) {
+        } else if (pass == 1 || (pass == 2 && wwhd_native_gather_on())) {
+            // (pass 2: its pixel program has gather units, whose declared blocks the port patches only with
+            // WWHD_NATIVE_DRAW_GATHER=1; otherwise they stay undeclared and its objects lower one by one as before)
             for (u32 slot : {0u, 2u, 3u})
                 wwhd_native_pair_slot(PORT_NATIVE_LINE, locations, slot);
         }
-        // (pass 2's blocks stay undeclared: a declared block whose constants the translation remaps into the support
-        // uniforms of a pixel shader with gather units is refused, so its objects lower one by one as before)
     }
 #endif
     for (u32 i = 0; i < (u32)mNumLines; i++, buffer++) {

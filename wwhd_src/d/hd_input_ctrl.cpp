@@ -327,7 +327,8 @@ void hdInputManager::calibrate() {
 /* 02618604 */
 void orientation(hdInputMatrix* out, hdInputManager* self) {
     void* opt = hdInputGetOptions(&sGameInfo->mOptions);
-    if (!hdInputGyroEnabled(opt) || PORT_UI_W(0x0261864C, self, self->isTvMode())) {
+    /* the port's points (port_hooks.h): the Gyro option's answer (@02618634), the mode check (@0261864C) */
+    if (!PORT_UI_W(0x02618634, self, hdInputGyroEnabled(opt)) || PORT_UI_W(0x0261864C, self, self->isTvMode())) {
         for (u32 k = 0; k < 9; k++) out->mBits[k] = sIdentityMatrix.mBits[k];
         return;
     }

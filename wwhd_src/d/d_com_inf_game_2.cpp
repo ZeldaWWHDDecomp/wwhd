@@ -120,10 +120,8 @@ static inline void vss(u32 ss) {
     gabi::call_ptr(GameInfoMemory2::ld((u32)GameInfoHD::view<SafeString>(ss)->__vtbl + 0x14), ss);
 } /* assureTermination */
 
-/* inlined strcmp: equal for the same pointer or equal characters up to a NUL (at most 0x40001) */
-static inline bool str_equal(u32 a, u32 b) {
-    if (a == b)
-        return true;
+/* inlined strcmp after its pointer test: equal characters up to a NUL (at most 0x40001) */
+static inline bool str_chars_equal(u32 a, u32 b) {
     for (u32 i = 0; i < 0x40001; i++) {
         u8 ca = (u8)*GameInfoHD::view<be<u8>>(a + i);
         u8 cb = (u8)*GameInfoHD::view<be<u8>>(b + i);
@@ -135,13 +133,17 @@ static inline bool str_equal(u32 a, u32 b) {
     return false;
 }
 /* a == b for a SafeString object a and the literal SafeString b on the stack: a's
- * assureTermination twice, then b's */
+ * assureTermination twice, then b's. a's text pointer is read before b's assureTermination for
+ * the pointer test and read again after it for the characters. */
 static inline bool ss_eq(u32 a, u32 b) {
     vss(a);
     vss(a);
     u32 ta = (u32)GameInfoHD::view<SafeString>(a)->mTextPtr;
     vss(b);
-    return str_equal(ta, (u32)GameInfoHD::view<SafeString>(b)->mTextPtr);
+    u32 tb = (u32)GameInfoHD::view<SafeString>(b)->mTextPtr;
+    if (ta == tb)
+        return true;
+    return str_chars_equal((u32)GameInfoHD::view<SafeString>(a)->mTextPtr, tb);
 }
 /* the start stage name (gi + 0x5134) compared with a literal: literal SafeString first */
 static inline bool startStageIs(u32 lit) {

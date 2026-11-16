@@ -1,5 +1,6 @@
 /* Virtual DSP buses, gain ramps and modulated delay, reconstructed from WWHD. */
 #include "JSystem/JAudio/JASBridgeMixer.h"
+#include "sead/ElementAt.h"
 static void* voiceMixerHeap;
 static JASBridge::MixerBusMap mixerBusMap;
 static JASBridge::MixerPanTable mixerPanTable;
@@ -42,7 +43,7 @@ JASBridge::VoiceMixer* JASBridge::constructVoiceMixer(VoiceMixer* object) {
 /* 0281B934 */
 be<s16>* JASBridge::VoiceMixer::bus(u32 index) {
     u32 physical = mixerBusMap.physical[index];
-    return buses[physical];
+    return sead::elementAt(buses, physical); /* buses + physical * 4 in 32 bits, as the console */
 }
 /* 0281B94C */
 void JASBridge::VoiceMixer::scaleGains(be<f32>* destination, be<f32>* source, f32 gain) {
@@ -127,7 +128,7 @@ void JASBridge::VoiceMixer::mixExplicitVoice(DSPBuffer_l* voice, be<s16>* sample
         be<s16>* destination = nullptr;
         if (code) {
             s32 physical = physicalBus(code);
-            destination = buses[physical];
+            destination = sead::elementAt(buses, (u32)physical); /* -1 when the code is unknown */
         }
         s32 targetGain = descriptor->targetGain;
         s32 currentGain = descriptor->currentGain;
@@ -264,7 +265,7 @@ void JASBridge::VoiceMixer::clearBuses() {
 void JASBridge::VoiceMixer::addBus(u32 index, be<s16>* samples, s32 gain) {
     gabi::AutoFrame originalFrame{gabi::current_function()};
     s32 physical = physicalBus(index);
-    blendBlock(buses[physical], samples, 80, gain);
+    blendBlock(sead::elementAt(buses, (u32)physical), samples, 80, gain); /* -1 when unknown */
 }
 /* 0281C2F4 */
 void JASBridge::initializeVoiceMixerStatics() {

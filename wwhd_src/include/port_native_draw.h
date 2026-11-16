@@ -25,6 +25,8 @@
  * - wwhd_native_end: the pass's draws are done (the instance effects still pending are applied).
  * - wwhd_native_state: 0 no packet, 1 begun (the mesh and commit still to come), 2 defined: for a packet a callee
  *   completes (the 3D lines: the geometry pool's draw knows the index list).
+ * - wwhd_native_gather_on: nonzero when the port patches declared blocks of a pass whose pixel program has gather
+ *   units (WWHD_NATIVE_DRAW_GATHER=1); otherwise such blocks stay undeclared (the capture would refuse the pass).
  * - wwhd_native_declare_regs: before the commit, an instance register range of STAGE (0 vertex, 1 pixel): OFFSET and
  *   COUNT in words, as GX2Set{Vertex,Pixel}UniformReg take them (the UI's per-quad values).
  * - wwhd_native_regs: where the site would call GX2Set{Vertex,Pixel}UniformReg(OFFSET, COUNT, VALUES). Nonzero: the
@@ -72,6 +74,7 @@ extern "C" unsigned wwhd_native_draw(unsigned site, unsigned kind);
 extern "C" unsigned wwhd_native_draw_range(unsigned site, unsigned kind, unsigned count, unsigned indexAddr);
 extern "C" void wwhd_native_end(unsigned site);
 extern "C" unsigned wwhd_native_state(unsigned site);
+extern "C" unsigned wwhd_native_gather_on(void);
 extern "C" unsigned wwhd_native_declare_regs(unsigned site, unsigned stage, unsigned offset, unsigned count);
 extern "C" unsigned wwhd_native_regs(unsigned site, unsigned stage, unsigned offset, unsigned count, unsigned values);
 extern "C" unsigned wwhd_native_attrib(unsigned site, unsigned index, unsigned size, unsigned stride, unsigned data);

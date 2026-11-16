@@ -2385,7 +2385,11 @@ void daPy_lk_c::makeArrow() {
     if (mDemo.getDemoMode() != 0x44) { /* !checkBowMiniGame() */
         make = dComIfGs_getArrowNum() != 0; /* dComIfGs_getArrowNum() != 0 */
     } else {
-        make = player02FirstEventActor() != 0 && fpcM_GetName(gabi::at<fopAc_ac_c>(player02FirstEventActor())) == player02first::fpcNm_NPC_SO_e &&
+        // HD: the event actor is fetched again for its name and tested for null once more
+        // before the name is read; the third fetch (the arrow count) is not tested
+        u32 so;
+        make = player02FirstEventActor() != 0 && (so = player02FirstEventActor()) != 0 &&
+               fpcM_GetName(gabi::at<fopAc_ac_c>(so)) == player02first::fpcNm_NPC_SO_e &&
                (s32)(10u - player02first::miniGameArrowCount(player02FirstEventActor())) > 0; /* daNpc_So_c::getMiniGameRestArrow() > 0 (wrapping) */
     }
     if (make) {

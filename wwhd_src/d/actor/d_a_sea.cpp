@@ -178,18 +178,6 @@ static inline bool sea_isStartStage(const char* lit) {
     b->__vtbl = SAFESTRING_VTBL;
     return sea_SafeString_eq(a, b);
 }
-/* fmadds a*c+b with the recompiled model's NaN priority: the host (arm64) contracts the
- * recompiled double expression into one fused multiply-add, which returns the addend's NaN
- * first, then a's, then c's (all already quieted by the single->double loads) */
-static inline f32 sea_fmadds_nan(f32 a, f32 c, f32 b) {
-    if (b != b)
-        return gabi::ppc_qnan(b);
-    if (a != a)
-        return gabi::ppc_qnan(a);
-    if (c != c)
-        return gabi::ppc_qnan(c);
-    return gabi::fmadds(a, c, b);
-}
 /* a struct copy GHS does with integer loads/stores (bit-exact) */
 static inline u32 f2u(f32 f) {
     u32 u;
@@ -648,11 +636,11 @@ void daSea_packet_c::execute(cXyz* i_pos) {
 
         for (int x = 1; x < 65 - 1; x++) {
             /* the height table may overlap itself unaligned, so NaN payloads reach memory bit for
-             * bit */
-            f32 y = sea_fmadds_nan(aHeightTable[0], cM_scos(waveTheta0),
-                                   gabi::fmuls_ppc(aHeightTable[1], cM_scos(waveTheta1)));
-            y = sea_fmadds_nan(aHeightTable[2], cM_scos(waveTheta2), y);
-            y = sea_fmadds_nan(aHeightTable[3], cM_scos(waveTheta3), y);
+             * bit: gabi::fmadds keeps the PowerPC NaN priority (frA, then frB, then frC) */
+            f32 y = gabi::fmadds(aHeightTable[0], cM_scos(waveTheta0),
+                                 gabi::fmuls_ppc(aHeightTable[1], cM_scos(waveTheta1)));
+            y = gabi::fmadds(aHeightTable[2], cM_scos(waveTheta2), y);
+            y = gabi::fmadds(aHeightTable[3], cM_scos(waveTheta3), y);
             y = gabi::fadds_ppc(y, BASE_HEIGHT());
             gabi::store<f32>(pHeight, y);
             gabi::store<f32>(pHeight,

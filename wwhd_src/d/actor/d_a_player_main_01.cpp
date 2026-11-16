@@ -2067,19 +2067,19 @@ BOOL daPy_lk_c::jointAfterCB(int jnt_no, u32 param_2 /* J3DTransformInfo* */, u3
         }
         flags[jnt_no] = 0;
     }
-    u32 cl = gabi::ea(mpCLModel.get());
+    // HD: mpCLModel is read inside each joint's branch, never for the other joints
     if (jnt_no == CL_JNT_LFOOT_JNT_e) {
-        PSMTXCopy_l(lk_getAnmMtx(cl, 0x22), gabi::ea(&feet[1].mLegMtx[2])); /* mFootData[1].mLegMtx[2] */
+        PSMTXCopy_l(lk_getAnmMtx(gabi::ea(mpCLModel.get()), 0x22), gabi::ea(&feet[1].mLegMtx[2])); /* mFootData[1].mLegMtx[2] */
     } else if (jnt_no == CL_JNT_RFOOT_JNT_e) {
-        PSMTXCopy_l(lk_getAnmMtx(cl, 0x27), gabi::ea(&feet[0].mLegMtx[2])); /* mFootData[0].mLegMtx[2] */
+        PSMTXCopy_l(lk_getAnmMtx(gabi::ea(mpCLModel.get()), 0x27), gabi::ea(&feet[0].mLegMtx[2])); /* mFootData[0].mLegMtx[2] */
     } else if (jnt_no == CL_JNT_LLEGA_JNT_e) {
-        PSMTXCopy_l(lk_getAnmMtx(cl, 0x20), gabi::ea(&feet[1].mLegMtx[0]));
+        PSMTXCopy_l(lk_getAnmMtx(gabi::ea(mpCLModel.get()), 0x20), gabi::ea(&feet[1].mLegMtx[0]));
     } else if (jnt_no == CL_JNT_LLEGB_JNT_e) {
-        PSMTXCopy_l(lk_getAnmMtx(cl, 0x21), gabi::ea(&feet[1].mLegMtx[1]));
+        PSMTXCopy_l(lk_getAnmMtx(gabi::ea(mpCLModel.get()), 0x21), gabi::ea(&feet[1].mLegMtx[1]));
     } else if (jnt_no == CL_JNT_RLEGA_JNT_e) {
-        PSMTXCopy_l(lk_getAnmMtx(cl, 0x25), gabi::ea(&feet[0].mLegMtx[0]));
+        PSMTXCopy_l(lk_getAnmMtx(gabi::ea(mpCLModel.get()), 0x25), gabi::ea(&feet[0].mLegMtx[0]));
     } else if (jnt_no == CL_JNT_RLEGB_JNT_e) {
-        PSMTXCopy_l(lk_getAnmMtx(cl, 0x26), gabi::ea(&feet[0].mLegMtx[1]));
+        PSMTXCopy_l(lk_getAnmMtx(gabi::ea(mpCLModel.get()), 0x26), gabi::ea(&feet[0].mLegMtx[1]));
     } else if (jnt_no == 0xA || jnt_no == 0xB) {
         /* HD: the arm angles while riding the ship are applied here (and blended with the old frame) */
         if (dComIfGp_checkPlayerStatus0(0, 0x10000) /* daPyStts0_SHIP_RIDE_e */ &&
