@@ -115,6 +115,44 @@ static inline unsigned port_native_draw_single(unsigned site, unsigned pass, uns
     wwhd_native_end(site);
     return drawn;
 }
+// J3D material descriptions (the port's gx2/native_j3d_desc.h, switch WWHD_NATIVE_J3D_DESC; decomp
+// JSystem/J3DGraph/J3DNativeDesc.h has the key layouts and the call order). Game thread, one J3D draw at a time per
+// thread:
+// - wwhd_j3ddesc_mode: 0 off, 1 describe + verify (the site keeps its calls), 2 described draws (the site makes none).
+// - wwhd_j3ddesc_begin(KEY, WORDS): the draw's description key. 0: off (the site draws alone); 1: the description
+//   holds; 2: define it now: run its bind callees between wwhd_j3ddesc_segment(SEG) calls (1 program, 2 material,
+//   3 state; 0 ends; their GX2 commands are captured, never emitted), wwhd_j3ddesc_list(ADDR, BYTES) for the program's
+//   display-list call, then wwhd_j3ddesc_define().
+// - wwhd_j3ddesc_env(KEY, WORDS): the draw's env (frame textures, pass-0 projection). 1: it holds; 2: capture it now
+//   (segment 4), then wwhd_j3ddesc_env_define().
+// - wwhd_j3ddesc_mesh: GX2DrawIndexedEx's arguments of the shape's IndexedMesh::draw (BASEVERTEX: the mesh's).
+// - wwhd_j3ddesc_block(STAGE, LOCATION, ADDRESS, SIZE): one of the draw's uniform blocks, in the site's bind order
+//   (STAGE 0 vertex, 1 pixel, 2 geometry; | 0x100: the pass's extra block, whose ring index another thread flips).
+// - wwhd_j3ddesc_draw: the described draw (OP_J3D_DESC_DRAW). Nonzero: the port draws it (mode 2), the site returns.
+// - wwhd_j3ddesc_skip(REASON): the draw is not described (the inventory; J3DNativeDesc.h Reason).
+extern "C" unsigned wwhd_j3ddesc_mode(void);
+extern "C" unsigned wwhd_j3ddesc_begin(const unsigned* key, unsigned words);
+extern "C" void wwhd_j3ddesc_segment(unsigned segment);
+extern "C" void wwhd_j3ddesc_list(unsigned addr, unsigned bytes);
+extern "C" unsigned wwhd_j3ddesc_define(void);
+extern "C" unsigned wwhd_j3ddesc_env(const unsigned* key, unsigned words);
+extern "C" unsigned wwhd_j3ddesc_env_define(void);
+extern "C" void wwhd_j3ddesc_mesh(unsigned prim, unsigned count, unsigned indexType, unsigned indexAddr,
+                                  unsigned baseVertex);
+extern "C" void wwhd_j3ddesc_block(unsigned stage, unsigned location, unsigned addr, unsigned size);
+extern "C" unsigned wwhd_j3ddesc_draw(void);
+extern "C" void wwhd_j3ddesc_skip(unsigned reason);
+// - wwhd_j3ddesc_flag(FLAG): a property of this draw (1: the site binds the program: the shader is not the render
+//   context's argument; 2, before wwhd_j3ddesc_env: a frame texture the env binds is dirty, the env is captured).
+extern "C" void wwhd_j3ddesc_flag(unsigned flag);
+// - wwhd_j3ddesc_writeset_on / wwhd_j3ddesc_watch(ADDR, BYTES) / wwhd_j3ddesc_watch_done() (the port's
+//   WWHD_NATIVE_J3D_DESC_WRITESET=1, debug, in every mode, mode 0 too): the game memory a J3D draw's site may write
+//   outside its GX2 calls, named at the draw's start; _done when the draw is over (the site's end, or submit's mode-2
+//   return): the port hashes the named bytes then (the draw's post-state), per logic step. BYTES | 0x80000000: hashed
+//   without the address (the current core's render context: the core is the job system's choice).
+extern "C" unsigned wwhd_j3ddesc_writeset_on(void);
+extern "C" void wwhd_j3ddesc_watch(unsigned addr, unsigned bytes);
+extern "C" void wwhd_j3ddesc_watch_done(void);
 #else
 #define PORT_NATIVE_DRAW 0
 #endif

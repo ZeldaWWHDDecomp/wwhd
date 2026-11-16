@@ -6,6 +6,7 @@ src wwhd_src/JSystem/J3DGraph/J3DRenderContext.cpp
 src wwhd_src/JSystem/J3DGraph/J3DPacketAdapter.cpp
 src wwhd_src/JSystem/J3DGraph/J3DShapePacketResources.cpp
 src wwhd_src/JSystem/J3DGraph/J3DShapeSubmission.cpp
+src wwhd_src/JSystem/J3DGraph/J3DNativeDesc.cpp
 src wwhd_src/JSystem/J3DGraph/J3DMaterialResources.cpp
 src wwhd_src/JSystem/J3DGraph/J3DFrameRecords.cpp
 src wwhd_src/JSystem/J3DGraph/J3DMaterialBindings.cpp

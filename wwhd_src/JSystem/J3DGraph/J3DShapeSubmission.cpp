@@ -1,6 +1,7 @@
 // HD shape submission and its preparation-only counterpart.
 #include "JSystem/J3DGraph/J3DShapeSubmission.h"
 #include "port_native_draw.h"
+#include "JSystem/J3DGraph/J3DNativeDesc.h"
 using namespace j3d;
 extern j3d::RenderContext& sRenderContext;
 FrameRecords* shapeFrameRegistry();
@@ -231,6 +232,10 @@ void ShapePacket::submitShape(ShapeDrawInput_l* input) {
         frame=shapeNamedFrame(name.get(),"wii_pipeline");
         program=fallbackShapeProgram(model,materialIndex);
     }
+#if PORT_NATIVE_DRAW
+    // J3D material descriptions (J3DNativeDesc.h): nonzero when the port draws this shape from its description
+    if(j3ddesc::submit(this,input,frame,program,directProgram,binding,bindingIndex)) return;
+#endif
     UniformSlots_l* viewSlots=shapeUniformSlots(frame,0);
     UniformSlots_l* modelSlots=shapeUniformSlots(frame,1);
     UniformSlots_l* shapeSlots=shapeUniformSlots(frame,2);
@@ -297,6 +302,9 @@ void ShapePacket::submitShape(ShapeDrawInput_l* input) {
                     shapeModel(this)->mDirectPrograms!=0?directProgram:gabi::ea(frame));
 #endif
     submitShapeGeometry(this);
+#if PORT_NATIVE_DRAW
+    if(wwhd_j3ddesc_writeset_on()) wwhd_j3ddesc_watch_done();  // (the port's write-set proof, debug: the draw is over)
+#endif
 }
 /* 027F1FA8 */
 void ShapePacket::prepareShape(ShapeDrawInput_l* input) {
