@@ -1,6 +1,7 @@
 // HD: shader preparation surrounds the GC parent/child draw ordering.
 #include "JSystem/JParticle/JPADraw_shader.h"
 #include "JSystem/JParticle/JPA_emitter_calc.h"
+#include "port_hooks.h"
 using namespace JPADrawExtension;
 static JPADrawGlobalContext_l sDrawGlobalContext;
 void JPADrawShaderSetupState(JPADraw_l*);
@@ -22,9 +23,14 @@ void JPADrawShaderParticle(JPADraw_l*);
 void JPADrawShaderApplyState(JPADrawRenderState_l*);
 /* 0282D9C0 */
 void JPADraw_l::drawHD(const Mtx34* drawMtx,const void* projection) {
-    JPADrawShaderSetupState(this);
+    // (port, cheap in-between frames stage 2: while the port builds a replayed pass's particles, no shader, render state
+    // or uniform binding is issued; the vertex state's pair uploads into the buffer the logic pass's list binds)
+    const bool build = PORT_CHEAPIB_PTCL(8, 0, 0, 0) != 0;
+    if (!build) JPADrawShaderSetupState(this);
     auto emitter = reinterpret_cast<jpa_emitter_calc::JPABaseEmitter*>(dc.pbe.get());
+    if (build) PORT_CHEAPIB_PTCL(9, gabi::ea(&emitter->mGpuState.mVertexState), 0, 0);
     JPADrawPrepareVertexState(&emitter->mGpuState.mVertexState);
+    if (!build) {
     auto cache = JPADrawGetShaderCache(&sDrawGlobalContext);
     auto program = gabi::at<jpa_emitter_extension::JPAShaderMaterial>(u32(emitter->mGpuState.mDrawContext));
     auto shader = static_cast<JPADrawShader_l*>(program->mShader.get());
@@ -51,6 +57,7 @@ void JPADraw_l::drawHD(const Mtx34* drawMtx,const void* projection) {
     auto vertexVtable = static_cast<const JPADrawVertexVtable_l*>(emitter->mGpuState.mVertexState.__vtbl.get());
     gabi::call_ptr<void>(vertexVtable->mBind,&emitter->mGpuState.mVertexState,program);
     JPADrawShaderBindTextureUniforms(this);
+    }
     auto cb = gabi::at<JPADrawClipBoard_l>(u32(dc.pcb));
     mUniformsUpdated[1] = 0;
     mUniformsUpdated[0] = 0;
@@ -75,12 +82,12 @@ void JPADraw_l::drawHD(const Mtx34* drawMtx,const void* projection) {
         if (childOrder() && dc.pssp.get()) JPADrawShaderDepthChild(this);
         JPADrawShaderDepthParticle(this);
         if (!childOrder() && dc.pssp.get()) JPADrawShaderDepthChild(this);
-        JPADrawShaderSetupState(this);
+        if (!build) JPADrawShaderSetupState(this);
     }
     if (childOrder() && dc.pssp.get()) JPADrawShaderChild(this);
     JPADrawShaderParticle(this);
     if (!childOrder() && dc.pssp.get()) JPADrawShaderChild(this);
-    JPADrawShaderApplyState(&sDrawGlobalContext.mDefaultState);
+    if (!build) JPADrawShaderApplyState(&sDrawGlobalContext.mDefaultState);
 }
 /* WWHD glue
 data sDrawGlobalContext 104B45C0

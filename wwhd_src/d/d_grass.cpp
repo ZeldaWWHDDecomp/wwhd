@@ -4,6 +4,7 @@
  */
 #include "d/d_grass.h"
 #include "port_native_draw.h"
+#include "port_hooks.h"
 using namespace GrassHD;
 // HD: Resource helpers for the GX2 grass rendering path.
 
@@ -1092,6 +1093,7 @@ void GrassHD::dGrass_packet_c::update() {
     GrassHD::SDK::J3DUClipper__calcViewFrustum(clipper);
     GrassHD::SDK::J3DDrawBuffer__entryImm((u32)(*at<be<u32>>(Data::opaqueDrawBuffer)), self, 0);
     GrassHD::SDK::buildShaders(self);
+    PORT_CHEAPIB_SITE(0, self);  // (port: cheap in-between frames, stage 2)
 }
 
 /* 0254D19C */

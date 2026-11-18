@@ -2,6 +2,7 @@
 #include "JSystem/JParticle/JPADraw.h"
 #include "JSystem/JParticle/JPADraw_gpu_state.h"
 #include "JSystem/JParticle/JPAEmitter.h"
+#include "port_hooks.h"
 using namespace JPADrawExtension;
 void JPADrawStateConstruct(JPADrawRenderState_l*);
 void JPADrawStateApply(JPADrawRenderState_l*);
@@ -36,7 +37,7 @@ void JPADrawHDChildWithState(JPADraw_l* draw) {
     state.mAlphaEnabled = 1;
     state.mChannelEnabled[1] = 1;
     state.mAlphaReference = reference >= 0.0f ? reference : 0.0f;
-    JPADrawStateApply(&state);
+    if (!PORT_CHEAPIB_PTCL(8, 0, 0, 0)) JPADrawStateApply(&state);  // (port: no render state while it builds)
     JPADrawHDChild(draw);
 }
 /* 0282D8EC */
@@ -58,7 +59,7 @@ void JPADrawHDParticleWithState(JPADraw_l* draw) {
     state.mAlphaEnabled = 1;
     state.mChannelEnabled[1] = 1;
     state.mAlphaReference = reference >= 0.0f ? reference : 0.0f;
-    JPADrawStateApply(&state);
+    if (!PORT_CHEAPIB_PTCL(8, 0, 0, 0)) JPADrawStateApply(&state);  // (port: no render state while it builds)
     JPADrawHDParticle(draw);
 }
 /* 0282D3A0 */
@@ -118,7 +119,7 @@ void JPADraw_l::setupRenderState() {
     state.mAlphaReference = f32(alphaReference) / 255.0f;
     auto emitter = reinterpret_cast<jpa_emitter_calc::JPABaseEmitter*>(dc.pbe.get());
     if (u8(emitter->mGpuState.mGroupID) <= 6) state.mLogicMask = 0x17;
-    JPADrawStateApply(&state);
+    if (!PORT_CHEAPIB_PTCL(8, 0, 0, 0)) JPADrawStateApply(&state);  // (port: no render state while it builds)
 }
 /* WWHD glue
 data sBlendSourceFactors 10172124

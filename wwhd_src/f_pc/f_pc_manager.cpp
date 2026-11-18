@@ -1,5 +1,6 @@
 /** Process management. */
 #include "f_pc/f_pc_manager.h"
+#include "port_hooks.h"
 static HDRenderObject* l_renderObject;
 static layer_class rootlayer;
 static ManagerQueue queue;
@@ -54,7 +55,9 @@ void fpcM_Management(u32 callBack1, u32 callBack2) {
         fpcM_callManagement(callBack1);
     }
     fpcEx_Handler(gabi::guest_fn((const void*)fpcM_Execute));
-    fpcDw_Handler(gabi::guest_fn((const void*)fpcM_DrawIterater), gabi::guest_fn((const void*)fpcM_Draw));
+    if (!PORT_CHEAPIB_SKIP_DRAW()) {  // (port: cheap in-between frames)
+        fpcDw_Handler(gabi::guest_fn((const void*)fpcM_DrawIterater), gabi::guest_fn((const void*)fpcM_Draw));
+    }
     if (callBack2) {
         fpcM_callManagement(callBack2);
     }

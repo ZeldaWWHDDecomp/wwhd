@@ -3,6 +3,7 @@
 #include "sead/ElementAt.h"
 #include "d/d_com_inf_game.h"
 #include "port_native_draw.h"
+#include "port_hooks.h"
 void* JPAParticleNew(u32);
 void JPAParticleLinkConstruct(JPAParticleLink*,void*);
 void* JPAParticleAcquirePool(void*,be<u32>*);
@@ -223,13 +224,17 @@ void jpa_particle_extension::JPABaseParticle::finishGpuBuffers(u32 child) {
         auto emitter = reinterpret_cast<jpa_emitter_extension::JPABaseEmitter*>(mpEmitter.get());
         tone = skipAnmTone(this, emitter);
     }
-    if (!tone) JPAParticleResetGpuState(mpGpuState);
+    if (!tone) {
+        PORT_CHEAPIB_PTCL(9, gabi::ea(mpGpuState.get()), 0, 0);  // (port: cheap in-between frames, stage 2)
+        JPAParticleResetGpuState(mpGpuState);
+    }
     JPAGpuPool<4>* pool;
     if (!child) {
         if (!u32(mUseAnmTone)) return;
         pool = contextState().mParentPool;
     } else pool = reinterpret_cast<JPAGpuPool<4>*>(mpSlot.get());
     u32 active = pool->mState.mSwapIndex;
+    if (PORT_CHEAPIB_PTCL(10, gabi::ea(pool), active, 0)) return;  // (port: cheap in-between frames, stage 2)
     for (u32 i = 0; i < 2; ++i) {
         JPAGpuVertexBuffer* buffer = &sead::elementAt(pool->mBuffers, active + i * 2).mVertexBuffer;
         void* data = buffer->mData;
@@ -240,6 +245,8 @@ void jpa_particle_extension::JPABaseParticle::finishGpuBuffers(u32 child) {
 
 /* 02825284 */
 void jpa_particle_extension::JPABaseParticle::drawGpu(u32 kind, u32 primitive, u32 count) {
+    // (port: cheap in-between frames, stage 2; B = the kind | the primitive count << 8)
+    if (PORT_CHEAPIB_PTCL(8, gabi::ea(this), kind | (primitive << 8), count)) return;
     auto shader = reinterpret_cast<ShaderState*>(mpGpuState.get());
     u32 context = contextState().mDrawContext;
 #if PORT_NATIVE_DRAW

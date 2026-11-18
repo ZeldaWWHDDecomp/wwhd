@@ -1,5 +1,6 @@
 /* Tree collision, animation and HD native rendering. Verified against the original unit. */
 #include "d/d_tree.h"
+#include "port_hooks.h"
 #include "sead/ElementAt.h"
 #include "port_native_draw.h"
 #include <cmath>
@@ -1316,6 +1317,7 @@ void TreePacketState::update() {
     game = getGameInfo();
     treeRenderGlobals.mpXluBuffer.v = at<TreeGameView>(game)->mpXluList.v;
     prepareTreeRender(at<void>(a));
+    PORT_CHEAPIB_SITE(2, a);  // (port: cheap in-between frames, stage 2)
 }
 
 // HD: keep the ground result in double until storing the position; preserve random conversion.

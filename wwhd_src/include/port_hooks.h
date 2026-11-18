@@ -20,6 +20,46 @@ extern "C" int wwhd_classic_wind_waker(void); /* the port: runtime/src/mods/spee
 /* Classic Wind Waker: HD's two Wind Waker checks off (procTactWait's falling check, endDemoMode's wait reset) */
 #define PORT_CLASSIC_TACT() (wwhd_classic_wind_waker() != 0)
 
+extern "C" int wwhd_cheapib_skip_draw(void); /* the port: runtime/src/cheapib/cheapib.cpp (WWHD_CHEAPIB, fast mode) */
+/* Cheap in-between frames: nonzero on an in-between pass whose display lists the port replays (fpcM_Management skips
+ * fpcDw_Handler, every process's draw) */
+#define PORT_CHEAPIB_SKIP_DRAW() (wwhd_cheapib_skip_draw() != 0)
+extern "C" int wwhd_cheapib_replay(void); /* the port: runtime/src/cheapib/cheapib.cpp */
+/* nonzero while the painter draws such a pass: RenderQueueManager::collectJobs collects no layer jobs and drawView calls the submitted commands again, as with
+ * the manager's flag 0x200 (which RenderQueueManager::update, run before it, clears) */
+#define PORT_CHEAPIB_REPLAY() (wwhd_cheapib_replay() != 0)
+extern "C" int wwhd_cheapib_site(int kind, unsigned self); /* the port: runtime/src/cheapib/cheapib_s2_sway.cpp */
+/* Cheap in-between frames, stage 2 (blocks-only sites: sway): a site's per-pass update is done (KIND 0 grass, 1 flower, 2 tree, 3 bush);
+ * on logic passes the port notes the plants it placed, and on replayed in-betweens it writes their matrices at that
+ * pass's sway into the uniform buffers the logic pass's lists bind (no game code runs again) */
+#define PORT_CHEAPIB_SITE(kind, self) ((void)wwhd_cheapib_site((kind), (unsigned)(self)))
+extern "C" int wwhd_cheapib_sky_render(int kind, unsigned self, unsigned a, unsigned b); /* the port: runtime/src/cheapib/cheapib_s2_sun.cpp */
+/* Cheap in-between frames, stage 2 (sky and weather sprites): a sky packet's render is about to run (KIND 0 the sun
+ * packet, A/B its moon/sun rows flags; 1 the lens flare; 2 rain, 3 sea spray, 4 spores, 5 poison, 6 stars, 7 cloud
+ * shadows, 8 ash, 9 snow). The port notes the logic pass's; nonzero while the port runs
+ * the packet's draw again on a replayed in-between to compute its vertices: the render (uploads, commands, the slot
+ * flip) is skipped then */
+#define PORT_CHEAPIB_SKY_RENDER(kind, self, a, b) (wwhd_cheapib_sky_render((kind), (unsigned)(self), (unsigned)(a), (unsigned)(b)) != 0)
+extern "C" int wwhd_cheapib_ptcl(int op, unsigned a, unsigned b, unsigned c); /* the port: runtime/src/cheapib/cheapib_s2_particles.cpp */
+/* Cheap in-between frames, stage 2 (particles): OP 1-5 a JPAEmitterManager draw starts (A manager, B draw info, C group:
+ * the logic pass's draws are noted); OP 8 nonzero while the port builds a replayed pass's particles (no draws issued, no
+ * render state applied; A the particle, B the draw kind on drawGpu); OP 9 before a particle's uniform pair advances (A
+ * the pair), OP 10 instead of the vertex pool's flip (A the pool, B its swap index): nonzero = handled by the port */
+#define PORT_CHEAPIB_PTCL(op, a, b, c) wwhd_cheapib_ptcl((op), (unsigned)(a), (unsigned)(b), (unsigned)(c))
+extern "C" void wwhd_cheapib_anm_apply(unsigned backend, unsigned target); /* the port: runtime/src/cheapib/cheapib_s2_material.cpp */
+/* Cheap in-between frames, stage 2 (material animations): a per-model btk/brk calc (mDoExt_btkAnm::calc 025E8048,
+ * mDoExt_brkAnm::calc 025E8480) applied BACKEND (the animator just evaluated) to TARGET (the model's material target)
+ * at once, not through the model data: the port notes it with the logic pass's evaluation, so a replayed in-between
+ * applies it again after its own evaluation */
+#define PORT_CHEAPIB_ANM_APPLY(backend, target) wwhd_cheapib_anm_apply((unsigned)(backend), (unsigned)(target))
+
+/* Port fix (decomp game build only): sead::JobQueue::clear (02758B00) takes the queue's spin lock (mCore.mIndex), the
+ * one take (027588DC) holds while it reads mNext/mCount and stores mNext. The original clear writes mNext = 0 and
+ * mCount = 0 without it, so a worker in a no-op take (begin 1, total 1, count 0) can store its stale mNext = 1 after
+ * the clear; the next frame's job 0 is then never taken and drainWorkerQueues spins (a guest race). The lock only
+ * orders the stores: same values, same order, nothing else changes. */
+#define PORT_JOBQUEUE_CLEAR_LOCKED() 1
+
 namespace port_hooks {
 /* the stack pointer a guest call made here gets (gabi.h do_call): the original's sp inside its automatic frame */
 inline u32 sp() {
@@ -188,6 +228,13 @@ extern "C" unsigned wwhd_rtl(Cpu* c, unsigned sp, unsigned site, unsigned limite
 #define PORT_RTL_AT(site) ((void)wwhd_rtl(gabi::cpu, port_hooks::sp(), (site), 0u, 0u, 0u, 0u))
 #else
 #define PORT_CLASSIC_TACT() 0
+#define PORT_CHEAPIB_SKIP_DRAW() 0
+#define PORT_CHEAPIB_REPLAY() 0
+#define PORT_JOBQUEUE_CLEAR_LOCKED() 0
+#define PORT_CHEAPIB_SITE(kind, self) ((void)0)
+#define PORT_CHEAPIB_SKY_RENDER(kind, self, a, b) 0
+#define PORT_CHEAPIB_PTCL(op, a, b, c) 0
+#define PORT_CHEAPIB_ANM_APPLY(backend, target) ((void)0)
 #define PORT_QUICK_USE(site, link, value) (value)
 #define PORT_QUICK_USE_AT(site, link) ((void)0)
 #define PORT_ITEM_FACING(site, link, extra) ((void)0)

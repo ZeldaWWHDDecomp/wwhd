@@ -1,6 +1,7 @@
 // Draw sequencing starts from tww JPADraw::draw; Cafe adds projection and alternate banks.
 #include "JSystem/JParticle/JPADraw_passes.h"
 #include "JSystem/JParticle/JPADraw_gpu_state.h"
+#include "port_hooks.h"
 using namespace JPADrawExtension;
 static JPADrawRenderState_l sDefaultDrawRenderState;
 void JPADrawProjectionCopy(const void*,void*);
@@ -36,6 +37,7 @@ void JPADraw_l::draw(const Mtx34* drawMtx,const void* projection) {
     if (childOrder() && dc.pssp.get()) JPADrawPassChild(this);
     JPADrawPassParticle(this);
     if (!childOrder() && dc.pssp.get()) JPADrawPassChild(this);
+    if (!PORT_CHEAPIB_PTCL(8, 0, 0, 0))  // (port: no render state while the port builds particles)
     JPADrawApplyPassState(&sDefaultDrawRenderState);
 }
 /* 0282CB9C */

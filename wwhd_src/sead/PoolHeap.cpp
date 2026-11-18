@@ -2,6 +2,7 @@
 
 #include "sead/ElementAt.h"
 #include "sead/PoolHeap.h"
+#include "port_hooks.h"
 static sead::RegistryMutex_l sPoolCreationLock = {{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}};
 static u32 sCoreCount;
 static u32 sCoreOrder[3] = {0,0,0};
@@ -419,6 +420,19 @@ u32 sead::JobQueue::append(u32 job) {
 /* 02758B00 */
 void sead::JobQueue::clear() {
  auto nativeFrame = gabi::AutoFrame(gabi::current_function());
+ if (PORT_JOBQUEUE_CLEAR_LOCKED()) {  // (port fix, decomp game build: take's spin lock around the reset; port_hooks.h)
+  u32 lockAddress = gabi::ea(&mCore.mIndex);
+  while ((u32)mCore.mIndex == 1) {}
+  do {
+   while (gabi::load_reserved(lockAddress) != 0) {}
+  } while (!gabi::store_conditional(lockAddress,1));
+  mState = 5; mWork.clearValues(); mNext = 0; mCount = 0; mWaitMode = 0;
+  memoryBarrier();
+  do {
+   while (gabi::load_reserved(lockAddress) != 1) {}
+  } while (!gabi::store_conditional(lockAddress,0));
+  return;
+ }
  mState = 5; mWork.clearValues(); mNext = 0; mCount = 0; mWaitMode = 0;
 }
 /* 02758B48 */

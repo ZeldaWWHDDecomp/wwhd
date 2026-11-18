@@ -1,4 +1,5 @@
 #include "m_Do/m_Do_ext_more_anm.h"
+#include "port_hooks.h"
 
 static f32 l_one;
 static u32 l_backendVtable;
@@ -114,6 +115,7 @@ void HdBtkAnm::calc(HdAnmModel* model, f32 frame) {
     calculateController(mBackend.mController, frame);
     hdAnmBackendCalc(&mBackend);
     hdAnmBackendApply(&mBackend, &model->mMaterialTarget);
+    PORT_CHEAPIB_ANM_APPLY(gabi::ea(&mBackend), gabi::ea(&model->mMaterialTarget));  // (port: cheap in-between frames)
 }
 
 /* 025E80D0 */
@@ -173,6 +175,7 @@ void HdBrkAnm::calc(HdAnmModel* model, f32 frame) {
     calculateController(mBackend.mController, frame);
     hdAnmBackendCalc(&mBackend);
     hdAnmBackendApply(&mBackend, &model->mMaterialTarget);
+    PORT_CHEAPIB_ANM_APPLY(gabi::ea(&mBackend), gabi::ea(&model->mMaterialTarget));  // (port: cheap in-between frames)
 }
 
 /* 025E8508 */

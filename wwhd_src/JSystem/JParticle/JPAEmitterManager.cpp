@@ -3,6 +3,7 @@
 #include "sead/ElementAt.h"
 #include "d/d_com_inf_game.h"
 #include "JSystem/JParticle/JPAParticle_gpu.h"
+#include "port_hooks.h"
 using namespace jpa_emitter_extension;
 void* JPAManagerNew(u32);
 void JPAManagerDelete(void*);
@@ -367,6 +368,7 @@ static void copyDrawParameters(JPADrawParameters* dst, const JPADrawParameters* 
 
 /* 02821734 */
 void jpa_emitter_extension::JPAEmitterManager::drawView(jpa_emitter_extension::JPADrawInfo* info, u32 group) {
+    if (PORT_CHEAPIB_PTCL(1, gabi::ea(this), gabi::ea(info), group)) return;  // (port: cheap in-between frames, stage 2)
     if (group >= 16) JPAManagerAssert("JPAEmitterManager.cpp", 356, "groupID < 16");
     u32 view = JPAGroupToView(group);
     jpa_emitter_calc::emtrInfo.mCameraFovy[view] = gabi::fmuls_ppc(info->mFovy, 57.2957763671875f);
@@ -388,6 +390,7 @@ void jpa_emitter_extension::JPAEmitterManager::drawView(jpa_emitter_extension::J
 
 /* 02821868 */
 void jpa_emitter_extension::JPAEmitterManager::drawIndirect(jpa_emitter_extension::JPADrawInfo* info, u32 group) {
+    if (PORT_CHEAPIB_PTCL(2, gabi::ea(this), gabi::ea(info), group)) return;  // (port: cheap in-between frames, stage 2)
     if (group >= 16) JPAManagerAssert("JPAEmitterManager.cpp", 408, "groupID < 16");
     u32 view = JPAGroupToView(group);
     jpa_emitter_calc::emtrInfo.mCameraFovy[view] = gabi::fmuls_ppc(info->mFovy, 57.2957763671875f);
@@ -409,6 +412,7 @@ void jpa_emitter_extension::JPAEmitterManager::drawIndirect(jpa_emitter_extensio
 
 /* 028219A8 */
 void jpa_emitter_extension::JPAEmitterManager::drawFirstView(jpa_emitter_extension::JPADrawInfo* info, u32 group) {
+    if (PORT_CHEAPIB_PTCL(3, gabi::ea(this), gabi::ea(info), group)) return;  // (port: cheap in-between frames, stage 2)
     if (group >= 16) JPAManagerAssert("JPAEmitterManager.cpp", 444, "groupID < 16");
     u32 view = JPAGroupToView(group);
     jpa_emitter_calc::emtrInfo.mCameraFovy[view] = gabi::fmuls_ppc(info->mFovy, 57.2957763671875f);
@@ -430,6 +434,7 @@ void jpa_emitter_extension::JPAEmitterManager::drawFirstView(jpa_emitter_extensi
 
 /* 02821AE8 */
 void jpa_emitter_extension::JPAEmitterManager::drawSecondView(jpa_emitter_extension::JPADrawInfo* info, u32 group) {
+    if (PORT_CHEAPIB_PTCL(4, gabi::ea(this), gabi::ea(info), group)) return;  // (port: cheap in-between frames, stage 2)
     if (group >= 16) JPAManagerAssert("JPAEmitterManager.cpp", 479, "groupID < 16");
     u32 view = JPAGroupToView(group);
     jpa_emitter_calc::emtrInfo.mCameraFovy[view] = gabi::fmuls_ppc(info->mFovy, 57.2957763671875f);
@@ -451,6 +456,7 @@ void jpa_emitter_extension::JPAEmitterManager::drawSecondView(jpa_emitter_extens
 
 /* 02821C28 */
 void jpa_emitter_extension::JPAEmitterManager::draw(jpa_emitter_extension::JPADrawInfo* info, u32 group) {
+    if (PORT_CHEAPIB_PTCL(5, gabi::ea(this), gabi::ea(info), group)) return;  // (port: cheap in-between frames, stage 2)
     if (group >= 16) JPAManagerAssert("JPAEmitterManager.cpp", 315, "groupID < 16");
     jpa_emitter_calc::EmitterLink* link = mEmtrGroup[group].first;
     JPADrawParameters parameters;

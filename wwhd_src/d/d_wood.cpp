@@ -1,6 +1,7 @@
 // Wood and bush animation, collision and HD GX2 rendering.
 #include "d/d_wood.h"
 #include "port_native_draw.h"
+#include "port_hooks.h"
 #include "bindings.h"
 #include "sead/ElementAt.h"
 #include "gc_api/d/d_com_inf_game.h"
@@ -1709,6 +1710,7 @@ void hdWood_prepareDraw(u32 self) {
             ++normalIndex;
         }
     }
+    PORT_CHEAPIB_SITE(3, self);  // (port: cheap in-between frames, stage 2)
 }
 
 /* WWHD glue

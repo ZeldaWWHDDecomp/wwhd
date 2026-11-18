@@ -3,6 +3,8 @@
 #include "sead/ElementAt.h"
 #include "JSystem/JParticle/JPADraw_uniform.h"
 #include "JSystem/JParticle/JPAEmitter.h"
+#include "JSystem/J3DGraph/RenderFrameArray.h"
+#include "port_hooks.h"
 using namespace JPADrawExtension;
 using JPADrawViewStatePointer = gptr<JPADrawViewState_l>;
 static JPADrawViewStatePointer sDrawViewState;
@@ -50,7 +52,18 @@ void JPADraw_l::updateUniforms(u32 parity) {
     JPADrawUniformSnapshot(&matrix,&clipboard->mDrawMtx);
     clipboard = gabi::at<JPADrawClipBoard_l>(u32(dc.pcb));
     JPADrawUploadUniform(dynamic,0,&matrix,clipboard->mProjectionMtx,sDrawViewState->mViewWords);
+    // (port, cheap in-between frames stage 2: while the port builds a replayed pass's particles, the frames' pairs
+    // advance from the logic pass's index, so this pass's camera uploads into the buffer the logic list binds; no bind)
+    const bool build = PORT_CHEAPIB_PTCL(8, 0, 0, 0) != 0;
+    if (build) {
+        auto frames = reinterpret_cast<j3d::RenderFrameArray*>(dynamic);
+        for (s32 i = 0; i < s32(frames->mCount); ++i) PORT_CHEAPIB_PTCL(9, gabi::ea(&frames->frames()[i]), 0, 0);
+    }
     JPADrawFlushUniform(dynamic);
+    if (build) {
+        mUniformsUpdated[parity] = 1;
+        return;
+    }
     emitter = reinterpret_cast<jpa_emitter_calc::JPABaseEmitter*>(dc.pbe.get());
     auto uniform = dynamic->mBuffer.get();
     auto program = gabi::at<jpa_emitter_extension::JPAShaderMaterial>(u32(emitter->mGpuState.mDrawContext));

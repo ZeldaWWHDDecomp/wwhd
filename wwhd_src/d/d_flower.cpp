@@ -2,6 +2,7 @@
 // Register widths, guest layouts, stack objects and call order follow the verified source.
 #include "d/d_flower.h"
 #include "port_native_draw.h"
+#include "port_hooks.h"
 using namespace gabi;
 static FlowerRegularIndices regularIndices;
 static FlowerRegularCutIndices regularCutIndices;
@@ -792,6 +793,7 @@ void dFlower_packet_c::update() {
     }
     flowerDrawListEntry(at<void>(flowerDrawList), this, u32(0));
     prepareGraphics();
+    PORT_CHEAPIB_SITE(1, ea(this));  // (port: cheap in-between frames, stage 2)
 }
 
 /* 02548D28 */

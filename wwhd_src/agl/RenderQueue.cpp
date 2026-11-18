@@ -1,6 +1,7 @@
 // AGL queue selection and registration, reconstructed from assigned WWHD instructions.
 #include "agl/RenderQueue.h"
 #include "sead/DisplayTargets.h"
+#include "port_hooks.h"
 namespace agl {}
 using namespace agl;
 static sead::DisposerVtable sQueueConfigurationMethods;
@@ -357,6 +358,7 @@ void agl::RenderQueueManager::collectJobs(u32 index) {
     u32 interval=mFrameInterval,frameIndex=mFrameIndex;
     u32 quotient=interval ? frameIndex/interval:0;
     if(frameIndex-quotient*interval || !isReady()) return;
+    if(PORT_CHEAPIB_REPLAY()) return;  // (port: cheap in-between frames: no layer jobs, drawView replays)
     if(!(static_cast<u32>(mFlags)&4)) { collectRenderViewJobs(indexedView(this,index),nullptr);return; }
     struct JobCollectionStorage_l { sead::PointerBuffer mBuffer;be<u32> mEntries[256]; };
     gabi::FrameLocal<JobCollectionStorage_l> collection(8);
@@ -413,7 +415,7 @@ u32 agl::RenderQueueManager::drawView(u32 index) {
     }
     if(!isReady()) { resetRenderView(indexedView(this,index));finishRenderView(indexedView(this,index));return 1; }
     if(flags&0x80) { mFlags=flags&~0x80u;invalidateRenderView(indexedView(this,index));flags=mFlags; }
-    drawRenderView(indexedView(this,index),(flags&0x200) ? 0:1);
+    drawRenderView(indexedView(this,index),((flags&0x200) || PORT_CHEAPIB_REPLAY()) ? 0:1);  // (port: cheap in-between frames)
     finishRenderView(indexedView(this,index));return 1;
 }
 sead::RegistryHeap* currentVertexInputHeap(sead::RegistryManagerState*);

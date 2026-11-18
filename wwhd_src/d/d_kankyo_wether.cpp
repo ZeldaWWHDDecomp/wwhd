@@ -4,6 +4,7 @@
 #include "d/d_kankyo_wether.h"
 #include "sead/ElementAt.h"
 #include "port_native_draw.h"
+#include "port_hooks.h"
 namespace d_kankyo_wether_cpp {
 
 // HD: GHS array constructor and destructor callbacks.
@@ -2014,6 +2015,8 @@ static u32 bind_weather_shader(u32 materialField) {
 }
 /* 0258115C */
 void dKankyo_star_Packet::render() {
+    if (PORT_CHEAPIB_SKY_RENDER(6, gabi::ea(this), 0, 0))
+        return;
     u32 packet = gabi::ea(this);
     auto* packetView = this;
 
@@ -2121,6 +2124,8 @@ static void bind_weather_uniforms(u32 renderer, u32 materialField) {
 #endif
 /* 025817B0 */
 void dKankyo_poison_Packet::render() {
+    if (PORT_CHEAPIB_SKY_RENDER(5, gabi::ea(this), 0, 0))
+        return;
     auto* packetView = this;
 
     gabi::Local<WeatherRenderState> state;
@@ -2174,6 +2179,8 @@ void dKankyo_poison_Packet::render() {
 }
 /* 025820F4 */
 void dKankyo_cloud_Packet::render(s32 count) {
+    if (PORT_CHEAPIB_SKY_RENDER(7, gabi::ea(this), 0, 0))
+        return;
     auto* packetView = this;
 
     gabi::Local<WeatherRenderState> state;
@@ -2221,6 +2228,8 @@ void dKankyo_cloud_Packet::render(s32 count) {
 }
 /* 02581C34 */
 void dKankyo_housi_Packet::render() {
+    if (PORT_CHEAPIB_SKY_RENDER(4, gabi::ea(this), 0, 0))
+        return;
     auto* packetView = this;
 
     gabi::Local<WeatherRenderState> state;
@@ -2452,6 +2461,8 @@ static void wether_move_moya() {
 }
 /* 0257F804 */
 void dKankyo_rain_Packet::renderSplashes() {
+    if (PORT_CHEAPIB_SKY_RENDER(2, gabi::ea(this), 0, 0))
+        return;
     auto* packetView = this;
 
     gabi::Local<WeatherRenderState> state;
@@ -2502,6 +2513,8 @@ void dKankyo_rain_Packet::renderSplashes() {
 }
 /* 0257FB4C */
 void dKankyo_rain_Packet::renderStreaks() {
+    if (PORT_CHEAPIB_SKY_RENDER(3, gabi::ea(this), 0, 0))
+        return;
     auto* packetView = this;
 
     gabi::Local<WeatherRenderState> state;
@@ -2550,6 +2563,8 @@ void dKankyo_rain_Packet::renderStreaks() {
 }
 /* 02580870 */
 void dKankyo_snow_Packet::renderSplashes() {
+    if (PORT_CHEAPIB_SKY_RENDER(9, gabi::ea(this), 0, 0))
+        return;
     auto* packetView = this;
 
     gabi::Local<WeatherRenderState> state;
@@ -2599,6 +2614,8 @@ void dKankyo_snow_Packet::renderSplashes() {
 }
 /* 02580B98 */
 void dKankyo_snow_Packet::renderParticles(u32 count, u32 blendStart) {
+    if (PORT_CHEAPIB_SKY_RENDER(8, gabi::ea(this), 0, 0))
+        return;
     auto* packetView = this;
 
     gabi::Local<WeatherRenderState> state;
@@ -3847,6 +3864,8 @@ void d_kankyo_wether_cpp::dKankyo_sun_Packet::setColors(u32 index, u32 colorA, u
 /* 0257E9DC */
 void d_kankyo_wether_cpp::dKankyo_sun_Packet::render(u32 firstTexture, u32 enabled, u32 allRows) {
 
+    if (PORT_CHEAPIB_SKY_RENDER(0, gabi::ea(this), enabled, allRows))
+        return;
     gabi::Local<WeatherMatrix> matrix;
     for (u32 i = 0; i < 4; ++i) {
         weatherCopyMatrix(matrix.a, gabi::ea(&weatherViewMatrix));
@@ -3933,6 +3952,8 @@ void d_kankyo_wether_cpp::dKankyo_sunlenz_Packet::destroy(u32 flags) {
 /* 0257EF00 */
 void d_kankyo_wether_cpp::dKankyo_sunlenz_Packet::render() {
 
+    if (PORT_CHEAPIB_SKY_RENDER(1, gabi::ea(this), 0, 0))
+        return;
     gabi::Local<WeatherRenderState> state;
     weatherConstructRenderState(state.a);
     float zero = static_cast<float>(weatherZero.value);

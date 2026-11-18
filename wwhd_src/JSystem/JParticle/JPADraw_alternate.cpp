@@ -1,5 +1,6 @@
 // HD: alternate passes partition a GC-style intrusive walk by traversal ordinal.
 #include "JSystem/JParticle/JPADraw_passes.h"
+#include "port_hooks.h"
 using namespace JPADrawExtension;
 void JPADrawAlternateSetChildClipboard(JPADraw_l*,s32);
 void JPADrawAlternateSetParticleClipboard(JPADraw_l*,s32);
@@ -118,7 +119,7 @@ void JPADraw_l::drawHDChild() {
     while (node) {
         auto particle = node->mpObject.get();
         if (!u8(particle->mHidden)) {
-            JPADrawHDUpdateFrameTexture(this,particle);
+            if (!PORT_CHEAPIB_PTCL(8, 0, 0, 0)) JPADrawHDUpdateFrameTexture(this,particle);
             for (s32 i = 0; i < u8(execution().hdExecChldVisNum); ++i)
                 reinterpret_cast<JPADrawExecVisitor_l*>(execution().mpHDExecChldVis[i].get())->exec(&dc,particle);
         }
@@ -139,7 +140,7 @@ void JPADraw_l::drawHDParticle() {
     while (node) {
         auto particle = node->mpObject.get();
         if (!u8(particle->mHidden)) {
-            JPADrawHDUpdateFrameTexture(this,particle);
+            if (!PORT_CHEAPIB_PTCL(8, 0, 0, 0)) JPADrawHDUpdateFrameTexture(this,particle);
             for (s32 i = 0; i < u8(execution().hdExecPtclVisNum); ++i)
                 reinterpret_cast<JPADrawExecVisitor_l*>(execution().mpHDExecPtclVis[i].get())->exec(&dc,particle);
         }
