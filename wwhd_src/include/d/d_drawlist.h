@@ -547,10 +547,10 @@ WWHD_OFFSET(Resource, mpTexture, 0x3C);
 
 struct ResourceVtable {
     u8 mPadding0[12];
-    /* 0x00C */ be<u32> mIsValid;
+    /* 0x00C */ be<u32> mIsKindOf; // checked-cast virtual: (this, type record)
 };
 WWHD_SIZE(ResourceVtable, 0x10);
-WWHD_OFFSET(ResourceVtable, mIsValid, 0xC);
+WWHD_OFFSET(ResourceVtable, mIsKindOf, 0xC);
 
 struct Packet {
     /* 0x000 */ be<u32> mpModel;

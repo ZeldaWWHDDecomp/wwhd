@@ -407,10 +407,12 @@ void dDlstHD::dDlst_mirrorPacket::drawMaterial(u32 packet) {
         l_textureGuard = 1;
         l_textureVtable = kTextureResourceVtable;
     }
+    // Checked cast of the pass viewport: the virtual takes the type record (r4 = &l_textureVtable)
+    // and fails for any other type; a failed cast reads through guest page 0 below, as on the console.
     if (resource) {
         const u32 target =
-            gabi::at<ResourceVtable>(gabi::at<Resource>(resource)->mVtable.get())->mIsValid.get();
-        if (!gabi::call_ptr<u32>(target, gabi::at<u8>(resource)))
+            gabi::at<ResourceVtable>(gabi::at<Resource>(resource)->mVtable.get())->mIsKindOf.get();
+        if (!gabi::call_ptr<u32>(target, gabi::at<u8>(resource), &l_textureVtable))
             resource = 0;
     }
     resource = gabi::at<Resource>(resource)->mpTexture.get();

@@ -70,6 +70,14 @@ field 0252F5A0 101D6160 f32 -1,0,0.5,1,2
 field 0252F5A0 101D6164 f32 -1,0,0.5,1,2
 # Draw entry only processes mirror pass two.
 field 0252D2A0 r4+12 u32 0,1,2
+# Pass viewport with its real checked-cast virtual (027B9E90, reads r4 = the type record 101FDCF8):
+# argument->target info -> viewport -> vtable +0xC. Without it the generated vtable never resolves to a
+# function, so the live-in check never sees the cast's r4 (game test 2026-11-18: SIGBUS reading
+# guest 0000003C after the cast failed for a missing r4).
+field 0252D2A0 r4+0 u32 0,0x58001000
+field 0252D2A0 58001008 u32 0x58001100
+field 0252D2A0 58001118 u32 0x58001200
+field 0252D2A0 5800120C u32 0x027B9E90
 
 # Owned nonresizing material collection: callbacks may mutate material contents,
 # but cannot replace its allocation or resize the collection during traversal.
