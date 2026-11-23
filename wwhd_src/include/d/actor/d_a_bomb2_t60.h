@@ -13,7 +13,9 @@
  * it. dt 1: the original. Negative control: T60C_NEGCTRL runs _execute on every step at dt. */
 #pragma once
 #include "d/t60_whole.h"
+#include "d/t60_held_pic.h" /* the held picture */
 #include <cstdlib>
+#include <cstring>
 
 namespace bomb2_t60 {
 static inline void get(daBomb2::Act_c* a, f32* v) {
@@ -49,4 +51,18 @@ static inline bool held(daBomb2::Act_c* a) {
            static_cast<s32>(a->mState) == daBomb2::Mode_CARRY_e;
 }
 static const t60w::Ops<daBomb2::Act_c> kOps = {3, 3, get, set, mtx, held};
+/* the execute's earlier-step tail; held, the model from this step's placement (the picture set_mtx
+ * above: no fuse shift, no ignition sound). The fuse emitter's place it writes (mFusePos) is put back: held, no frame-
+ * start put-back runs on the tick30 step, and its set_mtx shifts mFusePos into mFuseOldPos (A's frame-end value).
+ * d/t60_held_pic.h */
+static inline void heldMtx(daBomb2::Act_c* a) {
+    u8 fuse[sizeof(a->mFusePos)];
+    memcpy(fuse, &a->mFusePos, sizeof(fuse));
+    mtx(a);
+    memcpy(&a->mFusePos, fuse, sizeof(fuse));
+}
+static inline bool held_picture(daBomb2::Act_c* a) {
+    t60hp::picture(a, kOps, heldMtx);
+    return true;
+}
 }  // namespace bomb2_t60

@@ -16,6 +16,7 @@
  * dt 1: the original. Negative control: T60C_NEGCTRL runs the execute on every step at dt. */
 #pragma once
 #include "d/t60_objw.h"
+#include "d/t60_held_pic.h" /* the held picture */
 
 struct kb_class;
 namespace kb_t60 {
@@ -26,6 +27,14 @@ static inline void mtx(kb_class*) {}
 static inline bool held(kb_class* a) { return *gabi::at<be<s16>>(gabi::ea(a) + 0x766) /* mMode */ == 1; }
 static constexpr t60w::Ops<kb_class> kOps = {0, 0, get, set, mtx, held};
 static inline const t60w::Ops<kb_class>& ops() { return kOps; }
+/* the execute's earlier-step tail (the Guard skipped); held (carry_move), the model's base matrix
+ * from this step's placement: draw_SUB (on an earlier step only the base TR matrix and the matrix stack scratch; its
+ * mDrawOffsetY ease runs on the tick30 step only, t60_draw_frame_pass). The skeleton's animation stays the frame's.
+ * d/t60_held_pic.h */
+static inline BOOL held_picture(kb_class* a, void (*drawSub)(kb_class*)) {
+    t60hp::picture(a, kOps, drawSub);
+    return TRUE;
+}
 /* daKb_Create's draw_SUB call: the original at dt 1 (create's pose, not a frame step) */
 /* as plain calls (a struct local's constructor / destructor never runs under the source glue: the CreateRun scope
  * object left the call at the step's dt, scopelint): createBegin() sets dt 1 and returns the previous value,

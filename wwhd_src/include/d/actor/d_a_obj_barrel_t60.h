@@ -14,6 +14,7 @@
  * step at dt. */
 #pragma once
 #include "d/t60_whole.h"
+#include "d/t60_held_pic.h" /* the held picture */
 
 namespace barrel_t60 {
 static inline void get(daObjBarrel::Act_c* a, f32* v) {
@@ -31,4 +32,28 @@ static inline bool held(daObjBarrel::Act_c* a) {
            static_cast<s32>(a->mMode) == daObjBarrel::Act_c::MODE_CARRY;
 }
 static const t60w::Ops<daObjBarrel::Act_c> kOps = {6, 3, get, set, mtx, held};
+/* the execute's earlier-step tail; held, the model from this step's placement (set_mtx writes the
+ * model's base matrix and the matrix stack scratch only). The worn barrel's tilt: Link's setGrabItemPos sets shape_angle.z
+ * (his mMoveSlantAngle) on every step and the frame's mode_carry chases it toward mSlantAngle (0x1000) before set_mtx, so
+ * A draws the chased tilt; the picture draws the same, from a copy (the dt 1 cLib_chaseAngleS on a local value: no t60
+ * chase latch), and shape_angle.z is put back (carry route: without it the drawn root alternated by ~4.3 between
+ * the earlier and the tick30 passes). d/t60_held_pic.h */
+static inline void heldMtx(daObjBarrel::Act_c* a) {
+    const s16 z0 = a->shape_angle.z;
+    s32 x = z0, step = 0x1000;
+    const s32 target = (s16)a->mSlantAngle;
+    if ((s16)((u32)x - (u32)target) > 0)
+        step = (s16)(0u - (u32)step);
+    x = (s16)((u32)x + (u32)step);
+    if ((s32)((u32)(s32)(s16)((u32)x - (u32)target) * (u32)step) >= 0)
+        x = target;
+    if (static_cast<s32>(a->mMode) == daObjBarrel::Act_c::MODE_CARRY)
+        a->shape_angle.z = (s16)x;
+    mtx(a);
+    a->shape_angle.z = z0;
+}
+static inline bool held_picture(daObjBarrel::Act_c* a) {
+    t60hp::picture(a, kOps, heldMtx);
+    return true;
+}
 }  // namespace barrel_t60

@@ -697,7 +697,7 @@ static inline f32 clamp10(f32 v) {
 static BOOL daKb_Execute(kb_class *i_this) {
     t60w::Guard<kb_class> t60g(i_this, kb_t60::ops()); /* true60: the whole frame on the tick30 step (end at every return) */
     if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
-        return TRUE;
+        return kb_t60::held_picture(i_this, draw_SUB); /* (held: the holder's placement of this step) */
     t60g.model = true;
     fopAc_ac_c *actor = i_this;
 

@@ -15,6 +15,8 @@
  * none while Link carries it. dt 1: the original. Negative control: T60C_NEGCTRL runs _execute on every step at dt. */
 #pragma once
 #include "d/t60_whole.h"
+#include <cstdlib>
+#include <cstring>
 
 namespace tsubo_t60 {
 static inline void get(daTsuboMode::Act_c* a, f32* v) {
@@ -29,4 +31,32 @@ static inline bool held(daTsuboMode::Act_c* a) {
     return (static_cast<u32>(a->actor_status) & 0x102000) != 0 || static_cast<s32>(a->mMode) == 4;
 }
 static const t60w::Ops<daTsuboMode::Act_c> kOps = {4, 4, get, set, mtx, held};
+/* the held pot's picture (2026-11-23; seen in play: a little stutter on the vase itself while Link was
+ * carrying it around): while Link carries the pot, his setGrabItemPos places it (current.pos, shape_angle) on every
+ * step, but the pot's model matrix (set_mtx, the pose from set_tensor_carry) ran only in the tick30 step's whole run: on
+ * a frame's earlier steps the pot was drawn at the previous frame end's place while Link's hands moved on (pot carry
+ * route, N 2: pot - left hand drawn offset (19.996, 0, 0) on every tick30 pass, up to 12.7 off on the passes
+ * between, the pot standing still there). The picture: on an earlier step of a held pot, its pose and model matrix from
+ * the place its holder gave it on this step, i.e. what set_mtx would show; the logic words those calls write (mPoseMtx,
+ * mWaterDropPos) are put back, so the tick30 run reads what it read before (only the model's base matrix, a picture,
+ * changes; the tick30 run sets it again). dt 1: never (no earlier steps). Negative control WWHD_T60_POTHELD_NEGCTRL=1:
+ * the form before it (held: no picture). */
+static inline bool held_pic_nc() {
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_POTHELD_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
+}
+/* the execute's earlier-step tail (t60w::begin returned true); returns true (the execute's result) */
+static inline bool picture(daTsuboMode::Act_c* a) {
+    if (t60::dt() == 1.0f || t60::tick30() || !held(a) || held_pic_nc())
+        return true;
+    u8 pose[sizeof(a->mPoseMtx)], drop[sizeof(a->mWaterDropPos)];
+    memcpy(pose, &a->mPoseMtx, sizeof(pose));
+    memcpy(drop, &a->mWaterDropPos, sizeof(drop));
+    if (static_cast<s32>(a->mMode) == 4)
+        a->set_tensor_carry(); /* (the carry pose: the axis rotation and Link's shape_angle of this step) */
+    tsuboMode_set_mtx(a);
+    memcpy(&a->mPoseMtx, pose, sizeof(pose));
+    memcpy(&a->mWaterDropPos, drop, sizeof(drop));
+    return true;
+}
 }  // namespace tsubo_t60

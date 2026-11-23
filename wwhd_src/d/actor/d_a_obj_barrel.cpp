@@ -662,7 +662,7 @@ bool daObjBarrel::Act_c::damage_cc_proc() {
 /* 0231D944 */
 bool daObjBarrel::Act_c::_execute() {
     if (t60w::begin(this, barrel_t60::kOps)) /* true60: a step before the tick30 step: the picture only */
-        return true;
+        return barrel_t60::held_picture(this); /* (held: the holder's placement of this step) */
     bool t60Model = false; /* true60: the frame reached its model step */
     this->cull_set_move();
     bool execute = this->mForceExec || (s32)this->mMode != MODE_WAIT ||

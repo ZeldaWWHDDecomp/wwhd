@@ -17,6 +17,7 @@
  * it on every step). dt 1: the original. Negative control: T60C_NEGCTRL runs execute on every step at dt. */
 #pragma once
 #include "d/t60_whole.h"
+#include "d/t60_held_pic.h" /* the held picture */
 
 namespace bomb_t60 {
 static inline void get(daBomb_c* a, f32* v) {
@@ -34,4 +35,10 @@ static inline bool held(daBomb_c* a) {
            static_cast<u32>(a->mFunc.f) == 0x020C76E0u;
 }
 static const t60w::Ops<daBomb_c> kOps = {6, 6, get, set, mtx, held};
+/* the execute's earlier-step tail; held, the model from this step's placement (set_mtx writes the
+ * model's base scale / matrix and the matrix stack scratch only). d/t60_held_pic.h */
+static inline BOOL held_picture(daBomb_c* a) {
+    t60hp::picture(a, kOps, mtx);
+    return TRUE;
+}
 }  // namespace bomb_t60

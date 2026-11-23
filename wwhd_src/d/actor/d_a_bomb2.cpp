@@ -1303,7 +1303,7 @@ void daBomb2::Act_c::tensor_proc_call() {
 /* 020C9E78 */
 bool daBomb2::Act_c::_execute() {
   if (t60w::begin(this, bomb2_t60::kOps)) /* true60: a step before the tick30 step: the picture only */
-    return true;
+    return bomb2_t60::held_picture(this); /* (held: the holder's placement of this step) */
   set_wind_vec();
   mode_proc_call();
   if (mDeleteReq) {

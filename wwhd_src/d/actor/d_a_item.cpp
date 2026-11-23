@@ -506,7 +506,7 @@ cPhs_State daItem_c::_daItem_create() {
 BOOL daItem_c::_daItem_execute() {
     t60w::Guard<daItem_c> t60g(this, item_t60::kOps); /* true60: t60w::end on every return */
     if (t60g.skip) /* true60: a step before the tick30 step: the picture only */
-        return TRUE;
+        return item_t60::held_picture(this); /* (held: the hookshot's placement of this step) */
 
     if (mSpawnSwitchNo != 0xFF && !fopAcM_isSwitch(this, mSpawnSwitchNo)) {
         return TRUE;

@@ -16,6 +16,7 @@
  * the execute on every step at dt. */
 #pragma once
 #include "d/t60_whole.h"
+#include "d/t60_held_pic.h" /* the held picture */
 
 namespace item_t60 {
 static inline void get(daItem_c* a, f32* v) {
@@ -32,4 +33,10 @@ static inline void mtx(daItem_c* a) { a->set_mtx(); }
 /* held: Link's hookshot carries the item (fopAcStts_HOOK_CARRY_e) */
 static inline bool held(daItem_c* a) { return (static_cast<u32>(a->actor_status) & 0x100000u) != 0; }
 static const t60w::Ops<daItem_c> kOps = {7, 3, get, set, mtx, held};
+/* the execute's earlier-step tail; held (the hookshot pulls the item), the model from this step's
+ * placement (set_mtx: the model base matrices). d/t60_held_pic.h */
+static inline BOOL held_picture(daItem_c* a) {
+    t60hp::picture(a, kOps, mtx);
+    return TRUE;
+}
 }  // namespace item_t60

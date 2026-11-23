@@ -797,7 +797,7 @@ void daTsuboMode::Act_c::se_pickup_carry() {
 /* 024CE71C */
 bool daTsuboMode::Act_c::_execute() {
     if (t60w::begin(this, tsubo_t60::kOps)) /* true60: a step before the tick30 step: the picture only */
-        return true;
+        return tsubo_t60::picture(this); /* (held: the holder's placement of this step) */
     bool t60Model = false; /* true60: the frame reached its model step */
     tsuboMode_cull_set_move(this);
     bool hiddenBySwitch;

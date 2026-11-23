@@ -16,6 +16,7 @@
  * dt 1: the original. Negative control: T60C_NEGCTRL runs the execute on every step at dt. */
 #pragma once
 #include "d/t60_whole.h"
+#include "d/t60_held_pic.h" /* the held picture */
 
 namespace stone_t60 {
 static inline void get(daStone::Act_c* a, f32* v) {
@@ -34,4 +35,11 @@ static inline bool held(daStone::Act_c* a) {
     return (static_cast<u32>(a->actor_status) & 0x2000) != 0 || static_cast<s32>(a->mMode) == daStone::MODE_CARRY;
 }
 static const t60w::Ops<daStone::Act_c> kOps = {7, 3, get, set, mtx, held};
+/* the small stones' held picture (seen in play: the same issue as the pot's): the execute's earlier-step tail; held, the
+ * model from this step's placement (set_mtx writes the model's base matrix and the matrix / quaternion stack scratch
+ * only). Returns the execute's result. d/t60_held_pic.h */
+static inline s32 held_picture(daStone::Act_c* a) {
+    t60hp::picture(a, kOps, mtx);
+    return 1;
+}
 }  // namespace stone_t60
