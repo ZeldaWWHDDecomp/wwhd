@@ -12,6 +12,7 @@
  * a base scale; the joint callbacks are installed once in useHeapInit; case 10 always plays the
  * retract sound and smoke. */
 #include "d/actor/d_a_ssk.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 const gc_tu_data gc_tu = {
     .safeString = 0x1003D2AC,
@@ -292,6 +293,9 @@ static inline void body_atari_check(ssk_class* i_this) {
 /* 0248DC20 */
 static BOOL daSsk_Execute(ssk_class* i_this) {
     gabi::AutoFrame frame{gabi::current_function()};
+    t60w::Guard<ssk_class> t60g(i_this, t60objw::Logic<ssk_class>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     switch (i_this->mAction) {
     case 0:
         nomal_move(i_this);
@@ -305,6 +309,7 @@ static BOOL daSsk_Execute(ssk_class* i_this) {
     }
     body_atari_check(i_this);
     i_this->mRetractDist = i_this->mAppearDist + 100.0f;
+    t60g.model = true; /* true60: the frame reached its model step */
     draw_sub(i_this);
     return TRUE;
 }

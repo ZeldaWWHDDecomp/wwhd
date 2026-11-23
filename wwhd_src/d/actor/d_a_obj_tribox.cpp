@@ -4,6 +4,7 @@
   * HD: GHS floating-point order, overlapping input words and PTMF guest wrapping are retained.
   */
 #include "d/actor/d_a_obj_tribox.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using daObjTribox::Act_c;
 static u8 M_angle_dtor;
 static u8 M_random_dtor;
@@ -1115,11 +1116,15 @@ void daObjTribox::Act_c::execute_correct() {
 
 /* 023A9090 */
 BOOL daObjTribox::Act_c::_execute() {
+    t60w::Guard<daObjTribox::Act_c> t60g(this, t60objw::Logic<daObjTribox::Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     u32 type = tribox_parameter(this, 1, 16);
     if (type)
         tribox_execute_correct(this);
     else
         tribox_execute_block(this);
+    t60g.model = true; /* true60: the frame reached its model step (the mode procs set the matrices) */
     if (!this->mLightModel)
         return TRUE;
     u8 flash = (u8)this->mFlash;
@@ -1318,6 +1323,8 @@ void dBgS_ObjLinChk_dtor(void *p, s32 flags) {
 
 /* 023A956C */
 Act_c *push_pullCB(Act_c *a, Act_c *other, s16 pushAngle, u32 label) {
+    if (t60objw::cbSkip()) /* true60: Link's push / pull input counts once a frame, on the tick30 step (execute clears it) */
+        return a;
     u32 mode = label & 3;
     if (!mode)
         return a;

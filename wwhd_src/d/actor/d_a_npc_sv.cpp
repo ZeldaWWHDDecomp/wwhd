@@ -8,6 +8,7 @@
  * names and the TU's function list. "HD:" marks a known difference from the GameCube TU.
  */
 #include "d/actor/d_a_npc_sv.h"
+#include "d/actor/d_a_npc_sv_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule NPC form) */
 
 // HD: this translation unit owns the compiler-generated metadata.
 const gc_tu_data gc_tu = {.safeString = 0x10022430, .safeStringAssure = 0x022E7584,
@@ -213,6 +214,8 @@ BOOL daNpcSv_c::_draw() {
 
 /* 022E6BD4 */
 BOOL daNpcSv_c::_execute() {
+    if (t60w::begin(this, sv_t60::kOps)) /* true60: a step before the tick30 step: the picture only */
+        return FALSE;
     gabi::Local<be<u32>> ship;
     Sv_searchByID(parentActorID, ship);
     chkAttention();
@@ -252,6 +255,7 @@ BOOL daNpcSv_c::_execute() {
     eyePos.z = z;
     lookBack();
     setMtx();
+    t60w::end(this, sv_t60::kOps, true); /* true60: the frame's change kept for the next frame's picture */
     return FALSE;
 }
 

@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_swpush.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule + addendum, d/t60_objw.h): swpush: demo / mode procs, push flag, top position, riders, BG vertices.
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 02398014 0239705C
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 02396B14 023973C8 023974AC 02397564 02397584 023975A4 02397BFC 02397E70 0239833C 02398348 0239842C 02398498 023984AC 02398504 023985AC 02398608 023988E8 02398A98 02398AB4 02398D54 02398E2C 02398E80 02398E8C 02398F10 02399030 02399090
+t60cand 02396B14 023973C8 023974AC 02397564 02397584 023975A4 02397BFC 02397E70 0239833C 02398348 0239842C 02398498 023984AC 02398504 023985AC 02398608 023988E8 02398A98 02398AB4 02398D54 02398E2C 02398E80 02398E8C 02398F10 02399030 02399090
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 02396B14 023973C8 023974AC 02397564 02397584 023975A4 02397BFC 02397E70 0239833C 02398348 0239842C 02398498 023984AC 02398504 023985AC 02398608 023988E8 02398A98 02398AB4 02398D54 02398E2C 02398E80 02398E8C 02398F10 02399030 02399090 024F43DC 024F5B08 02544044 025440C8 025A847C 025D7A58 025D7B24 025F1B48 0273AA24 0274D458

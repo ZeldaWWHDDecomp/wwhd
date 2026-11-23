@@ -1,5 +1,6 @@
 /* Salvatore (Squid-Hunt), reconstructed from WWHD. */
 #include "d/actor/d_a_npc_kg1_core.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 const gc_tu_data gc_tu = {.safeString = 0x1001BC44, .objAcchDt = {0x1001BC5C, 0x1001BC6C}};
 
@@ -653,6 +654,9 @@ BOOL daNpc_Kg1Delete(kg1_core::daNpc_Kg1_c* a) {
 
 /* 02266990 */
 BOOL daNpc_Kg1Execute(kg1_core::daNpc_Kg1_c* a) {
+    t60w::Guard<kg1_core::daNpc_Kg1_c> t60g(a, t60npc::Logic<kg1_core::daNpc_Kg1_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return FALSE;
 
     s16 params[9];
     for (int i = 0; i < 9; ++i)
@@ -679,6 +683,7 @@ BOOL daNpc_Kg1Execute(kg1_core::daNpc_Kg1_c* a) {
     a->eyePos.y = y + 150.0f;
     a->eyePos.x = x;
     a->lookBack();
+    t60g.model = true; /* true60: the frame reached its model step */
     a->set_mtx();
     return FALSE;
 }

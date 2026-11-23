@@ -6,6 +6,7 @@
  * reference, verified against cking.rpx.
  */
 #include "d/actor/d_a_warphr.h"
+#include "d/actor/d_a_warphr_t60.h" /* true60: the whole form (the whole-frame form rule, d/t60_objw.h) */
 namespace {
 static s32 CheckCreateHeap(daWarphr_c* actor);
 static void WarphrStaticInit();
@@ -260,6 +261,9 @@ s32 daWarphr_c::_create() {
 
 /* 024DB310 */
 bool daWarphr_c::_execute() {
+    t60w::Guard<daWarphr_c> t60g(this, t60objw::Logic<daWarphr_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     if (demoActorID == 0) {
         checkOrder();

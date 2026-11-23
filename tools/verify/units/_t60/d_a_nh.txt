@@ -1,0 +1,9 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_nh.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule NPC form; d/t60_npc.h):
+# the Forest firefly (Nh): the execute 021E11A4 in the whole form, logic only (wrapper with it). The tick30 step runs the original execute whole
+# at dt 1 from the frame start; the earlier steps change no state (the picture between steps comes from frame interpolation): net
+# effect = the one step's, byte exact. Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 021E11A4 021E1338
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 02008974 02008DAC 02008E0C 0200E240 020182E0 02018D40 0201ADE0 0211D2F8 021E09DC 021E09E4 021E0B18 021E0BC0 021E0CCC 021E0D1C 021E0E5C 021E0FA4 021E105C 024EBB70 024EEEB8 024EF130 025D57E0 025D57E4 025D6800 025E742C 025F1C28 025F2518 028E8DD0 028E8F64 028E90D4 028E93CC 028F4384

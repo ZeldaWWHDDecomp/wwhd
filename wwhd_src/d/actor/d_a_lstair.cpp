@@ -1,5 +1,6 @@
 /* Tower of the Gods glowing staircase. */
 #include "d/actor/d_a_lstair.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 const gc_tu_data gc_tu = {.safeString = 0x1001407C};
 static BOOL CheckCreateHeap(fopAc_ac_c*);
 // HD: inline construction preserves the embedded animation SDK objects.
@@ -111,6 +112,9 @@ void daLStair_c::moveBG() {
 }
 /* 021B6930 */
 bool daLStair_c::_execute() {
+    t60w::Guard<daLStair_c> t60g(this, t60objw::Logic<daLStair_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
     bool sw = switchOn(this), gone = enemyGone(this);
     checkAppear();
     demoMove();
@@ -119,6 +123,7 @@ bool daLStair_c::_execute() {
     mBpkAnm0.play();
     mBpkAnm1.play();
     mBrkAnm.play();
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     mSwitchStatus = sw;
     mEnemyGone = gone;

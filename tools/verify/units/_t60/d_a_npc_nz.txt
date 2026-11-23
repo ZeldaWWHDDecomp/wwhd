@@ -1,0 +1,9 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_npc_nz.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule NPC form; d/t60_npc.h):
+# the rats (Nz): the execute 022A45E4 in the whole form, logic only (wrapper with it). The tick30 step runs the original execute whole
+# at dt 1 from the frame start; the earlier steps change no state (the picture between steps comes from frame interpolation): net
+# effect = the one step's, byte exact. Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 022A45E4 022A46B4
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200ED84 0200EF78 0200F428 0200F93C 0200FAAC 020195B0 02019918 02055B64 0206BAA8 0207A9A0 020F52B8 020FEA30 0211D2F8 02139E80 022A34AC 022A3574 022A3620 022A369C 022A400C 022A4070 022A415C 022A418C 022A41A8 022A498C 022A4998 022A4B04 022A4B84 022A5368 022A5424 022A5430 022A55AC 022A5600 022A5818 022A58E0 022A5918 022A5924 022A595C 022A5968 022A59A0 022A5A80 022A5C54 022A5D60 022A5DB4 022A5F50 022A5F54 022A5F58 02483FA4 02483FB4 024F08A8 025200D4 02542D88 02542EDC 02543280 025440C8 025447C8 025877F8 0259D54C 0259DED0 0259E08C 025A847C 025D5218 025D54C4 025D57E0 025D57E4 025D76A8 025D7874 025D7970 025E535C 025E55A0 025E742C 025F1884 025F1B48 025F1BF4 0274D458 027F4D5C 028E8DD0 028E8F64 028E90D4 028F4384

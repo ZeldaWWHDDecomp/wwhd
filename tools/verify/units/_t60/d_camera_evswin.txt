@@ -1,0 +1,27 @@
+# true60 N-step spec (not a gate unit): dCamera_c::Run 024FE3E8, the switch INTO an event-engine style (whole
+# form: "check the switch-in and switch-out frames"). The frame starts in style 84 (FLLW,
+# followCamera) with type 3 / mode 0 decided (nextType 024FA410 -> 3, nextMode 024FA9C8 -> 0, onStyleChange 024FB334
+# -> 1): the decision enters style 4 (EN00, event engine). At 30 Hz the frame's one Run switches and runs the event
+# engine once at dt 1. At N steps the switch on an earlier step puts the frame-start state back and holds; the tick30
+# step runs the whole Run at dt 1 from the frame start: byte exact, one engine call (t60calls).
+include _t60/d_camera_run.txt
+include shared/c_angle_statics.txt
+t60conv 024FE3E8
+field 024FE3E8 r3+0x514 s32 84
+ret! 024FB334 1
+# the event camera type stays (type 3 mode 0 -> style 4 EN00, as the Forest Haven / crane events): nextType 024FA410
+# keeps type 3, nextMode 024FA9C8 keeps mode 0 (a generated type / mode left the event style on ~1 % of the inputs:
+# those ran Run's non-event engines, own N-step spec domain)
+field 024FE3E8 r3+0x51C s32 3
+field 024FE3E8 r3+0x13C s32 0
+ret! 024FA410 3
+ret! 024FA9C8 0
+field 024FE3E8 r3+0x510 u32 0,0x400,0x20000000
+ret! 025283F8 0
+field 024FE3E8 r3+0x258 s32 0
+field 024FE3E8 r3+0x518 s32 0
+t60calls 024FF164
+# camera 0 (the game's one camera): its com status block dComIfGp +0x5B00 (a generated id put it at random addresses)
+field 024FE3E8 r3+0x120 s32 0
+field 024FE3E8 r3+0x124 s32 0
+ret! 025200D4 0x54000000

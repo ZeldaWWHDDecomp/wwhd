@@ -1,0 +1,183 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_bridge.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule + addendum, d/t60_objw.h): bridge (rope bridge): ride timer, wind, bridge_move (sag / swing / wave), search partner, rope hit / fire / cut, planks, side ropes; ride_call_back: the rider writes (speed.y, Bokoblin hang fields) on every call, the bridge's own state (sag, ride timer, wave / swing power) once a frame via cbSkip (rule).
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 020E11E8 020DF908
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 020DFE7C 020E0FAC
+t60cand 020DFE7C 020E0FAC
+# execute fixture steered (zero-page rule, 2026-11-19: base d_a_bridge.txt leaves ~85% of the execute's inputs in an
+# original page-0 DSI at depth 0, under 1000 clean of 2000): the player's getBokoFlamePos (vtable +0x74) -> a mocked target
+field 020E11E8 550000B4 u32 0x56000000 0x56000000   # player vtable
+field 020E11E8 56000074 u32 0x0299F000 0x0299F000   # getBokoFlamePos
+ret 0299F000 0,0,1
+# kept across the calls (the trace of gen seed 1000003: wp at 10462948 re-read as 0x302 after the wind calls; the
+# second play-object read of the player pointer fresh)
+stable 10462944 8
+stable 54005B2C 4
+stable 54005292 1
+stable 550000B4 4
+stable 56000074 4
+# the play object always (a plain ret also generates edge values: play 0 sent ~1/4 of the inputs to page 0)
+ret! 025200D4 0x54000000 0x54000000
+# the side ropes' segment arrays (BridgeLine +0 mpSegments, stride 0x10): the bridge's line mat (lines 0x10310000, base
+# spec) and each plank's mLineMat1 (lines 0x10320000 + i * 0x1000, base spec, lines 0..3): valid, distinct, kept
+field 020E11E8 10310000 u32 0x10340000
+stable 10310000 4
+field 020E11E8 10310010 u32 0x10341000
+stable 10310010 4
+field 020E11E8 10320000 u32 0x10350000
+stable 10320000 4
+field 020E11E8 10320010 u32 0x10350100
+stable 10320010 4
+field 020E11E8 10320020 u32 0x10350200
+stable 10320020 4
+field 020E11E8 10320030 u32 0x10350300
+stable 10320030 4
+field 020E11E8 10321000 u32 0x10350400
+stable 10321000 4
+field 020E11E8 10321010 u32 0x10350500
+stable 10321010 4
+field 020E11E8 10321020 u32 0x10350600
+stable 10321020 4
+field 020E11E8 10321030 u32 0x10350700
+stable 10321030 4
+field 020E11E8 10322000 u32 0x10350800
+stable 10322000 4
+field 020E11E8 10322010 u32 0x10350900
+stable 10322010 4
+field 020E11E8 10322020 u32 0x10350A00
+stable 10322020 4
+field 020E11E8 10322030 u32 0x10350B00
+stable 10322030 4
+field 020E11E8 10323000 u32 0x10350C00
+stable 10323000 4
+field 020E11E8 10323010 u32 0x10350D00
+stable 10323010 4
+field 020E11E8 10323020 u32 0x10350E00
+stable 10323020 4
+field 020E11E8 10323030 u32 0x10350F00
+stable 10323030 4
+field 020E11E8 10324000 u32 0x10351000
+stable 10324000 4
+field 020E11E8 10324010 u32 0x10351100
+stable 10324010 4
+field 020E11E8 10324020 u32 0x10351200
+stable 10324020 4
+field 020E11E8 10324030 u32 0x10351300
+stable 10324030 4
+field 020E11E8 10325000 u32 0x10351400
+stable 10325000 4
+field 020E11E8 10325010 u32 0x10351500
+stable 10325010 4
+field 020E11E8 10325020 u32 0x10351600
+stable 10325020 4
+field 020E11E8 10325030 u32 0x10351700
+stable 10325030 4
+field 020E11E8 10326000 u32 0x10351800
+stable 10326000 4
+field 020E11E8 10326010 u32 0x10351900
+stable 10326010 4
+field 020E11E8 10326020 u32 0x10351A00
+stable 10326020 4
+field 020E11E8 10326030 u32 0x10351B00
+stable 10326030 4
+field 020E11E8 10327000 u32 0x10351C00
+stable 10327000 4
+field 020E11E8 10327010 u32 0x10351D00
+stable 10327010 4
+field 020E11E8 10327020 u32 0x10351E00
+stable 10327020 4
+field 020E11E8 10327030 u32 0x10351F00
+stable 10327030 4
+field 020E11E8 10328000 u32 0x10352000
+stable 10328000 4
+field 020E11E8 10328010 u32 0x10352100
+stable 10328010 4
+field 020E11E8 10328020 u32 0x10352200
+stable 10328020 4
+field 020E11E8 10328030 u32 0x10352300
+stable 10328030 4
+field 020E11E8 10329000 u32 0x10352400
+stable 10329000 4
+field 020E11E8 10329010 u32 0x10352500
+stable 10329010 4
+field 020E11E8 10329020 u32 0x10352600
+stable 10329020 4
+field 020E11E8 10329030 u32 0x10352700
+stable 10329030 4
+field 020E11E8 1032A000 u32 0x10352800
+stable 1032A000 4
+field 020E11E8 1032A010 u32 0x10352900
+stable 1032A010 4
+field 020E11E8 1032A020 u32 0x10352A00
+stable 1032A020 4
+field 020E11E8 1032A030 u32 0x10352B00
+stable 1032A030 4
+field 020E11E8 1032B000 u32 0x10352C00
+stable 1032B000 4
+field 020E11E8 1032B010 u32 0x10352D00
+stable 1032B010 4
+field 020E11E8 1032B020 u32 0x10352E00
+stable 1032B020 4
+field 020E11E8 1032B030 u32 0x10352F00
+stable 1032B030 4
+field 020E11E8 1032C000 u32 0x10353000
+stable 1032C000 4
+field 020E11E8 1032C010 u32 0x10353100
+stable 1032C010 4
+field 020E11E8 1032C020 u32 0x10353200
+stable 1032C020 4
+field 020E11E8 1032C030 u32 0x10353300
+stable 1032C030 4
+field 020E11E8 1032D000 u32 0x10353400
+stable 1032D000 4
+field 020E11E8 1032D010 u32 0x10353500
+stable 1032D010 4
+field 020E11E8 1032D020 u32 0x10353600
+stable 1032D020 4
+field 020E11E8 1032D030 u32 0x10353700
+stable 1032D030 4
+# the wind (dKyw_get_wind_vec / dKyw_get_wind_power return the environment's own cXyz / f32, never null)
+ret! 0257DAA8 0x10470000 0x10470000
+ret! 0257DB04 0x10470010 0x10470010
+field 020E11E8 10470000 f32 -1 1
+field 020E11E8 10470004 f32 -1 1
+field 020E11E8 10470008 f32 -1 1
+field 020E11E8 10470010 f32 0 1
+stable 10470000 0x14
+# the planks' models (br_s +0, stride 0x680; Create always sets them): valid, distinct
+field 020E11E8 101005A8 u32 0x10600000
+stable 101005A8 4
+field 020E11E8 10100C28 u32 0x10601000
+stable 10100C28 4
+field 020E11E8 101012A8 u32 0x10602000
+stable 101012A8 4
+field 020E11E8 10101928 u32 0x10603000
+stable 10101928 4
+field 020E11E8 10101FA8 u32 0x10604000
+stable 10101FA8 4
+field 020E11E8 10102628 u32 0x10605000
+stable 10102628 4
+field 020E11E8 10102CA8 u32 0x10606000
+stable 10102CA8 4
+field 020E11E8 10103328 u32 0x10607000
+stable 10103328 4
+field 020E11E8 101039A8 u32 0x10608000
+stable 101039A8 4
+field 020E11E8 10104028 u32 0x10609000
+stable 10104028 4
+field 020E11E8 101046A8 u32 0x1060A000
+stable 101046A8 4
+field 020E11E8 10104D28 u32 0x1060B000
+stable 10104D28 4
+field 020E11E8 101053A8 u32 0x1060C000
+stable 101053A8 4
+field 020E11E8 10105A28 u32 0x1060D000
+stable 10105A28 4
+# the ride callback runs per step for a Bokoblin rider (rule: its hang fields are rider writes on every
+# call; the plank index / side need the original math calls): the whole-form call count only for the other riders
+t60wsel 020DF908 r5+8 s16 0xA8,0xBC,0x126,0x10
+# whole-form calls (tools/t60conv, mixed form): every call of the whole-form execute but its picture, as many over the N steps as in the one step, on the inputs the t60wsel line selects
+t60wcalls 0200ED84 0200EDC8 0200F428 0200FAD8 0200FCD8 020182E0 02018D40 020195B0 02019918 0201AD78 0201ADE0 020DFE7C 020E0FAC 024F43DC 024F5B08 025162A4 02516300 02518DB0 02520540 02555D0C 025626A4 0257DAA8 0257DB04 025CB374 025DE508 025E19CC 025E1A40 025F1884 025F1BF4 025F1C28 025F1C5C 028249B0 028E8D88 028E8DAC 028E8DD0 028F4384 028F43F8

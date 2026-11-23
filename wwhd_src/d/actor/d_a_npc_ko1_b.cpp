@@ -9,6 +9,7 @@
  */
 #define SAFESTRING_VTBL 0x1001C87C /* this TU's sead::SafeString vtable */
 #include "d/actor/d_a_npc_ko1_b.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 // HD: Part A owns TU-wide state. These are aliases, never duplicate definitions.
 static be<s32>& l_check_wrk = gabi::object_at<be<s32>>(0x104677B0);
@@ -683,6 +684,9 @@ BOOL daNpc_Ko1_c::_draw() {
 
 /* 022765B0 */
 BOOL daNpc_Ko1_c::_execute() {
+    t60w::Guard<daNpc_Ko1_c> t60g(this, t60npc::Logic<daNpc_Ko1_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     Ko1MovementFields& fields = Ko1B_fields(this);
     if (!mbRanExecute) {
         mInitialPos.copy(current.pos);
@@ -737,6 +741,7 @@ BOOL daNpc_Ko1_c::_execute() {
         }
     }
     eventOrder();
+    t60g.model = true; /* true60: the frame reached its model step */
     setMtx(0);
     if (!fields.mInDemo) {
         setCollision(30.0f, 80.0f);

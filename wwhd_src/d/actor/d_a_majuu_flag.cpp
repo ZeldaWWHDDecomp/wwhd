@@ -3,6 +3,7 @@
 // GHS wrapped placement-new tests, word copies and call/reload order are preserved.
 // HD: opaque SDK boundaries retain guest address casts; owned records use typed fields.
 #include "d/actor/d_a_majuu_flag.h"
+#include "d/actor/d_a_majuu_flag_t60.h" /* true60: step-length helpers */
 #include "bindings.h"
 static u32 lHioVtable;
 static u32 lActorVtable;
@@ -578,7 +579,7 @@ void majuu_flag_move(daMajuu_Flag_c* actor) {
     u8 previous = u8(actor->mPacket.mCurArr), current = previous ^ 1;
     s16 oldPhase = s16(actor->mWave);
     (actor->mPacket.mCurArr = current);
-    u32 phase = u32(oldPhase) + u32(l_HIO.mWaveSpeed);
+    u32 phase = u32(oldPhase) + u32(majuu60_share(s32(l_HIO.mWaveSpeed))); /* true60: shared */
     f32 amplitude = lWindBlend;
     (actor->mWave = u16(phase));
     f32 sine = f32(lSinCosTable.mValues[(phase & 0xFFFF) >> 3][0]);
@@ -602,7 +603,8 @@ void majuu_flag_move(daMajuu_Flag_c* actor) {
     angle = s16(-s32(s16(actor->current.angle.x)));
     majuuApi_mDoMtx_XrotM(gabi::at<void>(lCalcMtx), angle);
     majuuApi_MtxPosition(wind.get(), transformedWind.get());
-    f32 damping = lDrag;
+    f32 drag = lDrag;
+    f32 damping = majuu60_drag(drag); /* true60: lDrag^dt */
     f32 longRest = lLongRestLength, shortRest = lShortRestLength;
     for (u32 vertex = 0; vertex < 21; ++vertex) {
         u32 offset = vertex * 12;
@@ -623,7 +625,7 @@ void majuu_flag_move(daMajuu_Flag_c* actor) {
             bias->y = f32(lZeroVector.mValues[1]);
             majuuApi_addVector(gabi::at<void>(velocity), bias.get(), gabi::at<void>(velocity));
             majuuApi_scaleVector(gabi::at<void>(velocity), gabi::at<void>(velocity), damping);
-            majuuApi_addVector(output, gabi::at<void>(velocity), output);
+            majuu60_move(output, gabi::at<void>(velocity)); /* true60: + velocity x dt */
             continue;
         }
         majuuApi_scaleNormalByDotResult(gabi::at<void>(oldNormals + offset), scratch.get(), windDot);
@@ -653,9 +655,10 @@ void majuu_flag_move(daMajuu_Flag_c* actor) {
         bias->z = sum->z;
         bias->x = sum->x;
         bias->y = sum->y;
+        majuu60_push(bias.get(), drag); /* true60: the step's share of the frame's push */
         majuuApi_addVector(gabi::at<void>(velocity), bias.get(), gabi::at<void>(velocity));
         majuuApi_scaleVector(gabi::at<void>(velocity), gabi::at<void>(velocity), damping);
-        majuuApi_addVector(output, gabi::at<void>(velocity), output);
+        majuu60_move(output, gabi::at<void>(velocity)); /* true60: + velocity x dt */
     }
     u32 normals = a + 0x18E8 + u8(actor->mPacket.mCurArr) * 252;
     majuuApi_setNormalMatrix(gabi::at<void>(a + 0x3AC));

@@ -1,0 +1,16 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_npc_uk.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule NPC form; d/t60_npc.h):
+# the Killer Bees' (Uk)'s execute 022F1F98 in the whole form, logic only. The tick30 step runs the original execute whole at dt 1 from the
+# frame start (joint params, texture pattern and animation play, order check, the action proc, event order, the mover (posMove when pushed, else posMoveF), CrrPos, the matrix step and morf calc, the collision registration once); the earlier steps change no state (the picture between steps comes from frame interpolation): net effect = the
+# one step's, byte exact. Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 022F1F98
+# the execute's own steps run real (matrix step / order checks), so their state is in the compared memory
+real 022F1E94 022F1EE8
+# calls over the N steps as many as in the one step: daNpc_Uk_c::setCollision (once a frame, the one-sweep-per-frame attack rule) and fopAcM_posMoveF / fopAcM_posMove (the mover once a frame); with these the negative control fails
+t60calls 022F1F10 025D6870 025D6800
+# steering (zero-page rule: < 1000 clean inputs without it): the action member pointer (+0x818 GHS ptmf d / i / f) on the
+# real actions (wait 022F5DB0, hind 022F5E90, visit 022F6058, seek 022F6360)
+field 022F1F98 r3+0x818 i16 0
+field 022F1F98 r3+0x81A i16 -1
+field 022F1F98 r3+0x81C u32 0x022F5DB0,0x022F5E90,0x022F6058,0x022F6360

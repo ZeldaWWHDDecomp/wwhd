@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_npc_ds1.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule NPC form; d_a_npc_ds1_t60.h): Doc Bandam's
+# execute 0222F1BC. The tick30 step runs the original execute whole at dt 1 from the frame start; the earlier steps change
+# no state (no previous frame here: nothing shown): net effect = the one step's, byte exact. Negative control
+# (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 0222F1BC
+# once-per-frame calls: as many over the N steps as in the one step (the mover fopAcM_posMoveF, the morf play)
+t60calls 025D6870 025E535C
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200EDC8 0200FAD8 0200FCD8 020182E0 02018428 020184DC 02018C8C 02018D40 020198D8 02055B64 0222EB1C 0222EBE0 0222EBEC 0222F050 0222F100 024EECAC 024EEEB8 024EF130 024F08A8 025200D4 02520540 0259E08C 025BBE98 025BC438 025BC714 025BCCA4 025D76A8 025D7A58 025E19CC 025E1A40 025E742C

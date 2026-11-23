@@ -1,5 +1,6 @@
 /* Layout ownership, traversal and resource factories reconstructed from WWHD. */
 #include "nw/lyt/LayoutSession.h"
+#include "nw/lyt/LYT_t60.h"
 #include "nw/lyt/LayoutResourceFormatting.h"
 using namespace nw::lyt;
 using nw::ut::HeapLink;
@@ -125,6 +126,8 @@ void Layout::applyAnimations() {
 /* 0287FBFC */
 void Layout::updateMatrices(LayoutDrawContext* context,u32 force) {
     gabi::AutoFrame frame{gabi::current_function()};
+    // true60 (LYT_t60.h): the first step's matrix update of an N > 1 frame, for the port's picture
+    if (t60lyt_recording()) wwhd_t60_lyt_matrices(gabi::ea(this),gabi::ea(context),force);
     if (mRoot) {
         gabi::FrameLocal<PaneUpdateContext> state(8);
         PaneUpdateContext::create(state.get(),context);

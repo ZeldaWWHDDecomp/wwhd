@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_himo3.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 #define SAFESTRING_VTBL 0x10011170
 #define HIMO3_VTBL 0x100111C8 /* HD: himo3_class vtable */
@@ -502,6 +503,9 @@ static inline void ga_move(himo3_class* i_this, cXyz* sp30) {
 
 /* 02172A00 */
 static BOOL daHimo3_Execute(himo3_class* i_this) {
+    t60w::Guard<himo3_class> t60g(i_this, t60objw::Logic<himo3_class>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     fopAc_ac_c* actor = i_this;
     himo3HD::Player* player = reinterpret_cast<himo3HD::Player*>(dComIfGp_getPlayer(0));
 
@@ -637,6 +641,7 @@ static BOOL daHimo3_Execute(himo3_class* i_this) {
 
     i_this->mOldEndPos.copy(i_this->mEndPos);
 
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 

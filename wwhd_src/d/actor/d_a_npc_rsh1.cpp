@@ -9,6 +9,7 @@
  * Movement, path and actions: d_a_npc_rsh1_move.cpp.
  */
 #include "d/actor/d_a_npc_rsh1.h"
+#include "d/actor/d_a_npc_rsh1_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule NPC form) */
 
 const gc_tu_data gc_tu = {
  .safeString = RSH1_SAFESTRING_VTBL,
@@ -192,6 +193,7 @@ static BOOL nodeCallBack_Rsh(J3DNode* i_node, int i_calcTiming) {
                 cMtx_ZrotM(calc_mtx(), (s16)-actor_p->mJntCtrl.mAngles[0][0]);
                 MtxPosition(&temp1, &temp2);
                 f32 x = temp2.x, y = temp2.y, z = temp2.z;
+                if (rsh1_t60::drawStep()) { /* true60: logic stores on the tick30 step's draw only (rule 14) */
                 actor_p->mAttnBasePos.z = z;
                 actor_p->mAttnBasePos.y = y;
                 actor_p->mAttnBasePos.x = x;
@@ -207,6 +209,7 @@ static BOOL nodeCallBack_Rsh(J3DNode* i_node, int i_calcTiming) {
                 actor_p->eyePos.y = y;
                 if (actor_p->m76F != 0xFF) {
                     actor_p->m76F = (u8)(actor_p->m76F + 1);
+                }
                 }
             } else if (jnt_no == (u32)(s32)actor_p->m_backbone_jnt_num) {
                 cMtx_XrotM(calc_mtx(), actor_p->mJntCtrl.mAngles[1][1]);
@@ -699,6 +702,9 @@ BOOL daNpc_Rsh1_c::_draw() {
 
 /* 022D8854 */
 BOOL daNpc_Rsh1_c::_execute() {
+    t60w::Guard<daNpc_Rsh1_c> t60g(this, rsh1_t60::kOps); /* true60: the whole frame on the tick30 step (end at every return) */
+    if (t60g.skip) /* a step before the tick30 step: the picture only */
+        return TRUE;
     // HD: no debug HIO switches
     RshCameraView* cam = rsh1_camera(); /* dComIfGp_getCamera(0) */
     cXyz center;
@@ -739,6 +745,7 @@ BOOL daNpc_Rsh1_c::_execute() {
     tevStr.mEnvrIdxOverride = rsh1_groundColor(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mAcch.m_gnd)); /* GetPolyColor */
     set_mtx();
     setCollision();
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 

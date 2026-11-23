@@ -1,0 +1,46 @@
+# true60 N-step spec (not a gate unit): procCraneUp's swing decision, apart from _t60/d_a_ship because setControllAngle
+# runs real here (a mock there for the other rows)
+include d_a_ship.txt
+# ---- (q6bv, the first-step AI-timer rule / animation-driven decision): procCraneUp 0247FBC4's swing decision. The original pulls the
+# lean (setControllAngle, real here) toward mProcVar1 and then, within 0x400 of it, draws a new target (cM_rnd) and may
+# start the swing sound 0x381E, once a frame on the frame-end lean. Now: on the frame's first step against the projected
+# frame-end lean, the new target held to the tick30 step. Checked: mProcVar1 exact, the draw and the sound start counted
+# (t60calls: cM_rnd 02019788, shipHD_startSound 025E1A40) over the N steps against the one step. The lean itself is the spring of
+# setControllAngle (real, its candidate code: t60cand; cLib_addCalcAngleS's damping is a mock). Steered: the lean near the target (the
+# test's threshold reached from both sides), the crane side, the ripple emitter present (the base spec's 0 / emitter).
+t60conv 0247FBC4 024751E0
+real 024751E0
+t60cand 024751E0
+# cLib_distanceAngleS runs real (a pure helper): the test then reads the projected lean (N steps) and the pulled lean (one step)
+real 0200FAAC
+field 0247FBC4 r3+0x654 i16 -0x900 0x900
+field 0247FBC4 r3+0x656 i16 -0x200 0x200
+field 0247FBC4 r3+0x682 i16 -0x3000,0x3000
+t60tol 0247FBC4 r3+0x68E s16 exact
+t60calls 02019788 025E1A40
+# setControllAngle 024751E0 on this spec's t60conv line too (board N-step spec audit 2026-11-18: a t60cand needs an N-step compare
+# where it runs changed code). The frame-anchored lean spring (Ship60Lean) is exact against the one step only with
+# the damping cLib_addCalcAngleS 0200F378 real (tools/lean_t02.py's form; with the mock the N steps replay the one call's
+# pointee write: |d| up to 71 on the speed). Steering as its row in _t60/d_a_ship: |angle - lean| <= 0x2000, |speed| <= 0x400.
+real 0200F378
+# procCraneUp's crane turn chase cLib_addCalcAngleS(&mCraneTurnAngle +0x684) runs per step through the central converted
+# c_lib (dt share, the frame's full answer pinned on the tick30 step; exact in _t60/c_lib's N-step spec). With 0200F378 real
+# here the harness runs the ORIGINAL per step (N full moves; c_lib.cpp cannot be linked into this unit as t60cand:
+# duplicate cLib_addCalc with d_a_ship.cpp), so +0x684 is not compared here (with the mock it replayed the one write).
+t60tol 0247FBC4 r3+0x684 s16 skip
+arg! 024751E0 r4 -4096,-2048,-512,0,512,2048,4096
+field 024751E0 r3+0x654 i16 -0x1000 0x1000
+field 024751E0 r3+0x656 i16 -0x400 0x400
+t60tol 024751E0 r3+0x656 s16 exact
+t60tol 024751E0 r3+0x654 a16 exact
+# ---- (2026-11-18): procCraneUp's lean (+0x654) and its speed (+0x656) compared exactly (no skip lines, unlike
+# _t60/d_a_ship_crane). mRopeCnt steered 23..40, so no step of the frame reaches 20 and leaves to procCrane: the base
+# spec's 20..22 leaves on every step in the harness, which then runs procCraneUp again on the later steps (the game's
+# 30 Hz visual-motion (2) hold does not), and with a swing decision pending the leave branch hands mProcVar1 the held target early, so
+# those extra steps pull the lean toward the new target (162/4000 at N 4 s1, craneaud6_try / crope_20). The leave branch
+# keeps its check in _t60/d_a_ship_crane (lean skipped there).
+field 0247FBC4 r3+0x686 i16 23 40
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200ECD4 0200EF78 0200F378 0200F428 0200F4FC 0200F564 0200F5C8 0200F8D0
+t60cand 0200ECD4 0200EF78 0200F378 0200F428 0200F4FC 0200F564 0200F5C8 0200F8D0

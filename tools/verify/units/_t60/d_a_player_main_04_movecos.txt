@@ -1,0 +1,21 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+# (2026-11-20, / tmkX2): setSpeedAndAngleNormal 0241650C. On the frame's first step the
+# acceleration's cosine reads the angle after the frame's whole turn (d_a_player_movecos_t60.h), so the speed that
+# setNormalSpeedF takes once per frame is A's.
+include d_a_player_main_04.txt
+t60conv 0241650C
+# (candidate lint): in-unit callees with true60 code run as candidates
+real 02416230
+t60cand 02416230
+# cLib_addCalcAngleS run for real in its dt form (it was mocked: the mock ignores dt, so the first
+# step's turn share never existed and base could not fail)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200F378
+t60cand 0200F378
+# (2026-11-21): mNormalSpeed (r3+0x6A14) steered to the game range 0 .. 30 (Link's run speed ~25; was the
+# generator's word: seed 7000727 started at 2.7e-37, A 6.8e-10 vs B 2.0e-5 with identical loads, calls and arguments)
+field 0241650C r3+0x6A14 f32 0 30
+# (CLASSIFIED, not a form item): the residual (N2/N4 s1/s7 n2000 1995-1997, N2 s1 n10000
+# 9988) is near-zero mNormalSpeed results (seed 7000727: start 0, A 6.8e-10 / B 2.0e-5; seed 1000395 low byte A 8C /
+# B 00) with identical guest loads, calls and call arguments on the first step and the one step: host float values
+# (the acceleration's cosine near 90 deg through the held setNormalSpeedF), no logic difference at game magnitudes.

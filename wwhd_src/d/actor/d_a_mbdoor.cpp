@@ -1,5 +1,7 @@
 /* WWHD double doors. */
 #include "d/actor/d_a_mbdoor.h"
+#include "d/actor/d_a_mbdoor_t60.h"
+#include "d/t60_objw.h" /* true60: t60objw::fsPos (the process-order read rule) */
 static MbdoorSaveData* sSaveData;
 static void* sDemoManager;
 static u32 sDispatchInitialized;
@@ -368,14 +370,22 @@ void daMbdoor_c::demoProc() {
         return;
     }
     case ACT_ADJUSTMENT: {
+        /* true60 (the process-order read rule): Link's shape_angle and position as A reads them: his frame-start
+         * state while he is later in the line (t60objw::fsShapeAngle / fsPos; live at N = 1, for an unconverted Link and when
+         * he is earlier in the line). xbdw1n2: the live read on the tick30 step (after Link's first step) started his turn
+         * ~10 short at frame 212 */
+        gabi::Local<csXyz> fsAng;
+        gabi::Local<cXyz> fsLink;
+        csXyz* shape = t60objw::fsShapeAngle(gabi::ea(player), fsAng.get()) ? fsAng.get() : &player->shape_angle;
+        cXyz* link = t60objw::fsPos(gabi::ea(player), fsLink.get()) ? fsLink.get() : &player->current.pos;
         s16 yaw = current.angle.y;
-        *angle = (s16)player->shape_angle.y;
+        *angle = (s16)shape->y;
         mbdoorAddCalcAngle(angle.get(), (s16)(yaw + 0x7FFF), 10, 0x800);
-        f32 px = (f32)player->current.pos.x, gx = mPlayerGoalPos.x, gz = mPlayerGoalPos.z;
+        f32 px = (f32)link->x, gx = mPlayerGoalPos.x, gz = mPlayerGoalPos.z;
         f32 ax = gx * 0.1f, az = gz * 0.1f;
         goal->x = px;
-        goal->y = (f32)player->current.pos.y;
-        f32 pz = (f32)player->current.pos.z;
+        goal->y = (f32)link->y;
+        f32 pz = (f32)link->z;
         goal->x = gabi::fmadds(px, 0.9f, ax);
         goal->z = gabi::fmadds(pz, 0.9f, az);
         setPlayerGoal(player, goal.get(), *angle);
@@ -422,7 +432,11 @@ BOOL daMbdoor_c::checkArea() {
     gabi::Local<u8[16]> linkage;
     auto play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
     daPy_py_c* player = static_cast<daPy_py_c*>(play->play.getPlayer(0));
-    mbdoorSubtract(&player->current.pos, relative.get(), &home.pos);
+    /* true60 (the process-order read rule): Link's position as A reads it: his frame-start position while he is later in the line
+     * (t60objw::fsPos; live at N = 1, for an unconverted Link and when he is earlier in the line) */
+    gabi::Local<cXyz> fsLink;
+    cXyz* link = t60objw::fsPos(gabi::ea(player), fsLink.get()) ? fsLink.get() : &player->current.pos;
+    mbdoorSubtract(link, relative.get(), &home.pos);
     u16 yaw = current.angle.y;
     MbdoorSinCos* table = &sSinCos.mEntries[(u32)yaw >> 3];
     f32 x = relative->x, sine = (f32)table->mSin, z = relative->z, cosine = (f32)table->mCos;
@@ -507,8 +521,10 @@ BOOL daMbdoor_c::execute() {
             mBarAngle = (s16)actor->mRotate.z;
         }
         calcMtx();
-    } else {
+    } else if (!mbdoorT60::hold()) { /* true60: the actions once per 30 Hz frame, on the tick30 step, at dt 1 */
+        f32 dtPrev = mbdoorT60::dtOneBegin();
         gabi::call_ptr(sDispatch.mActions[(u8)mCurActionIdx].get(), this);
+        mbdoorT60::dtOneEnd(dtPrev);
     }
     return TRUE;
 }

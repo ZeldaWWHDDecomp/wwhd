@@ -1,0 +1,9 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_mozo.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule addendum, the Magtail / Floormaster whole form;
+# d_a_mozo_t60.h): daMozo_c::_execute 021D4734 in the whole form. The tick30 step runs the original execute whole at dt 1 from the frame start;
+# the earlier steps change no state (the picture between steps comes from frame interpolation): net effect = the one step's, byte
+# exact. Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 021D4734
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 021D4538 021D4654 025200D4 0254457C 025D77DC 025E55A0 025F1C28 028E93CC

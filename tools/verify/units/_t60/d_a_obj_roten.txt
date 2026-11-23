@@ -1,0 +1,6 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_roten.txt
+# ---- true60 N-step spec (2026-11-18): a background object that stays put. Its execute daObj_RotenExecute 02388D1C
+# (set_mtx from the unchanged position, the background Move) runs on every step unchanged: no site to convert (scan
+# 2026-11-14: 0 sites). N-step spec shows the N steps leave the same memory as the one step (step-invariant).
+t60conv 02388D1C

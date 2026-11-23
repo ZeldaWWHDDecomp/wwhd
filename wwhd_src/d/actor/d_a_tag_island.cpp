@@ -1,5 +1,6 @@
 /** Island arrival and Wind Waker lesson event tag. Verified HD behaviour; local source. */
 #include "d/actor/d_a_tag_island.h"
+#include "d/actor/d_a_tag_island_t60.h" /* true60: the whole form (the whole-frame form rule, d/t60_objw.h) */
 
 static constexpr u32 tagIslandVtable = 0x1003F3BC;
 enum { ACT_WAIT, ACT_ARRIVAL, ACT_HUNT, ACT_READY, ACT_EVENT, ACT_TACT };
@@ -506,6 +507,9 @@ s32 daTag_Island_c::create() {
 
 /* 024AB6DC */
 BOOL daTag_Island_c::execute() {
+  t60w::Guard<daTag_Island_c> t60g(this, t60objw::Logic<daTag_Island_c>::kOps); /* true60: the whole frame on the tick30 step at dt 1 (whole-frame form) */
+  if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+    return TRUE;
   switch (u8(mAction)) {
   case ACT_ARRIVAL:
     actionArrival();

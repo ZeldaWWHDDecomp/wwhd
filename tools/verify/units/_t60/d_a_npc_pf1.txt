@@ -1,0 +1,9 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_npc_pf1.txt
+# ---- true60 N-step spec (2026-11-20; the whole-frame form rule NPC form; d/t60_npc.h):
+# Maggie's father (poor), Windfall (Pf1): daNpc_Pf1_c::_execute 022CA0A4 in the whole form, logic only (order / action / event order run inside it).
+# The tick30 step runs the original execute whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture between steps comes from frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 022CA0A4
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200E240 02055B64 021E1E78 022C92CC 022C9378 022C941C 022C9470 022C98F8 022C99D0 022C9B8C 022C9BCC 022C9C10 022C9CA8 022C9D4C 022C9DA0 022CA034 024EECAC 024EEEB8 024EF130 024F08A8 025200D4 02520540 02526E70 02527028 02527828 02542D88 02542EDC 02543280 0254407C 025440C8 025447C8 0259D54C 0259E08C 0259E2D4 0259F858 025A15AC 025A847C 025D54C4 025D6870 025D76A8 025D7A58 025E535C 025E55A0 025E742C 025E789C 025F1B48 0273AA24 0274D458 027F4D5C 028E90D4

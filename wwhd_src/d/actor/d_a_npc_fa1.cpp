@@ -1,5 +1,6 @@
 // Recovery fairy, ported from the GameCube source with verified HD behaviour.
 #include "d/actor/d_a_npc_fa1.h"
+#include "d/actor/d_a_npc_fa1_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule addendum) */
 
 const gc_tu_data gc_tu = {
     .safeString = 0x10019CF0,
@@ -348,6 +349,8 @@ BOOL daNpc_Fa1_c::_draw() {
 
 /* 02233A0C */
 BOOL daNpc_Fa1_c::_execute() {
+    if (t60w::begin(this, fa1_t60::kOps)) /* true60: a step before the tick30 step: the picture only */
+        return TRUE;
 
     fa1_calcTimerU16(&mTimer);
     u8 mode = mMode;
@@ -374,6 +377,7 @@ BOOL daNpc_Fa1_c::_execute() {
     f32 lower = l_lookLower;
     fa1_attentionLookRequest(reinterpret_cast<fa1_hd::Attention *>(&play->play.mAttention)->mLook,
                              this, 0x6000, 1, radius, upper, lower);
+    t60w::end(this, fa1_t60::kOps, true); /* true60: the frame's change kept for the next frame's picture */
     return TRUE;
 }
 

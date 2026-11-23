@@ -1,0 +1,6 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_kytag01.txt
+# ---- true60 N-step spec (2026-11-20): kytag01 (ky_tag1, the wave influence tag): daKytag01_Execute
+# 021AF43C returns TRUE and changes nothing (the wave data is made in Create, cleared in Delete), so the execute on
+# every step at dt equals the one step: marking only, no code change.
+t60conv 021AF43C

@@ -7,6 +7,7 @@
  * "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/d_camera_util.h"
+#include "true60.h"
 #include "port_hooks.h"
 
 /* HD pad accessors (out of line, by pad id) */
@@ -203,17 +204,32 @@ void dCamera_c::updateMonitor() {
     f32 dist = cameraUtilHorizontalDistance(playerPos.get(), &mMonitor.mPos); /* dCamMath::xyzHorizontalDistance */
     f32 avg = mMonitor.field_0x0C.y;
     f32 last = mMonitor.field_0x0C.x;
-    mMonitor.field_0x0C.z = dist - last;
-    mMonitor.field_0x0C.y = gabi::fmadds(dist - avg, 0.075f, avg);
-    mMonitor.field_0x0C.x = dist;
-    mMonitor.mPos.copy(*playerPos);
-    if (mManualInactive == 0 && cameraUtilButtonHold(0) == 0 /* no button held on pad 0 */ &&
-        mStickMainValueLast < 0.05f && mStickCValueLast < 0.05f) {
-        mMonitor.field_0x18 = mMonitor.field_0x18 + 1;
+    /* true60 (the per-step smoothing rule and 4): the monitor's x is the player's horizontal move since the last call,
+     * read by the follow camera (standing: < 0.01), Run (> 10) and the ship cameras (y / maximum speed, z > 1.9) as a
+     * per-frame speed: at a step of dt it is the step's move / dt; z the change of that speed per frame
+     * ((x - last) / dt), y its 0.075 average per step 1 - 0.925^dt; the idle count field_0x18 and field_0x1C count / flip
+     * once per 30 Hz frame (tick30). dt = 1: the original arithmetic. */
+    const f32 mdt = t60::dt();
+    if (mdt == 1.0f) {
+        mMonitor.field_0x0C.z = dist - last;
+        mMonitor.field_0x0C.y = gabi::fmadds(dist - avg, 0.075f, avg);
+        mMonitor.field_0x0C.x = dist;
     } else {
-        mMonitor.field_0x18 = 0;
+        f32 speed = dist / mdt;
+        mMonitor.field_0x0C.z = (speed - last) / mdt;
+        mMonitor.field_0x0C.y = gabi::fmadds(speed - avg, t60_ratio(0.075f, mdt), avg);
+        mMonitor.field_0x0C.x = speed;
     }
-    mMonitor.field_0x1C = mDirection.mRadius - mMonitor.field_0x1C;
+    mMonitor.mPos.copy(*playerPos);
+    if (mdt == 1.0f || t60::tick30()) {
+        if (mManualInactive == 0 && cameraUtilButtonHold(0) == 0 /* no button held on pad 0 */ &&
+            mStickMainValueLast < 0.05f && mStickCValueLast < 0.05f) {
+            mMonitor.field_0x18 = mMonitor.field_0x18 + 1;
+        } else {
+            mMonitor.field_0x18 = 0;
+        }
+        mMonitor.field_0x1C = mDirection.mRadius - mMonitor.field_0x1C;
+    }
 }
 
 /* 024FA058 */
@@ -251,6 +267,16 @@ bool dCamera_c::Draw() {
 f32 dCamera_c::shakeCamera() {
     f32 res = 0.0f;
     s32 pos = mShakeFrame;
+    /* true60 (the 30 Hz timer rule and 8): the shake plays its bit pattern one 30 Hz frame per call (mShakeFrame,
+     * the sign flip on odd frames, its cM_rndFX jitter) and counts the blur timer in frames: in a converted context the
+     * pattern frame, its draws and the blur steps run on the tick30 step only (the shake offsets hold over the frame's
+     * other steps, as at 30 Hz); the decay after the pattern (x 0.9 per frame) is a damping, 1 - 0.9^dt of it per step.
+     * The return value is not used by either caller (Run, the event camera). dt 1: the original. */
+    const f32 sdt = t60::dt();
+    const bool perFrame = sdt == 1.0f || t60::tick30();
+    if (pos < mShakeLength && !perFrame) {
+        return res;
+    }
     if (pos < mShakeLength) {
         s32 idx = pos >> 3;
         auto* pattern = reinterpret_cast<CameraUtilShakePatternHD*>(&mShakeCyclePattern[1]);
@@ -331,14 +357,18 @@ f32 dCamera_c::shakeCamera() {
     } else {
         gabi::Local<cXyz> t;
         gabi::Local<cSAngle_l> a;
-        cXyz_ml(&mCenterShake, t, 0.1f);
+        const f32 k = sdt == 1.0f ? 0.1f : t60_ratio(0.1f, sdt); /* true60: the 0.9 per frame decay per step */
+        cXyz_ml(&mCenterShake, t, k);
         cameraUtilVectorSubtract(&mCenterShake, t.get(), &mCenterShake); /* PSVECSubtract */
-        cXyz_ml(&mEyeShake, t, 0.1f);
+        cXyz_ml(&mEyeShake, t, k);
         cameraUtilVectorSubtract(&mEyeShake, t.get(), &mEyeShake);
         f32 fv = mFovYShake;
-        mFovYShake = gabi::fnmsubs(fv, 0.1f, fv);
-        cameraUtilAngleMultiply(&mBankShake, a.get(), 0.1f); /* mBankShake * 0.1 */
+        mFovYShake = gabi::fnmsubs(fv, k, fv);
+        cameraUtilAngleMultiply(&mBankShake, a.get(), k); /* mBankShake * 0.1 */
         cameraUtilAngleSubtractAssign(&mBankShake, a.get());       /* mBankShake -= */
+        if (!perFrame) {
+            return res; /* true60: the blur's frame count and rates once per 30 Hz frame */
+        }
         s32 timer = mBlureTimer;
         if (timer <= 0) {
             gabi::at<CameraUtilGraphicsHD>(0x101F4825)->mBlure = 0; /* mDoGph_gInf_c::offBlure() */

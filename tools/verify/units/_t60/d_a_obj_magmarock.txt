@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_magmarock.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule + addendum, d/t60_objw.h): magmarock (lava slab): fall / buoyancy, timers, demo, effects, process, BG Move; ride_call_back once a frame via cbSkip.
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 0236EAB0 0236D314
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 0236D210 0236DD08 0236DEC4 0236E054 0236E268
+t60cand 0236D210 0236DD08 0236DEC4 0236E054 0236E268
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200ED84 0200F428 0236D210 0236DD08 0236DEC4 0236E054 0236E268 024F43DC 025200D4 02542D88 02543280 0254457C 02588544 0258CAEC 025A847C 025B8B68 025B8B94 025CB374 025D77DC 025F1B48 025F25CC 028E8B48 028E8D88 028E90D4 028E93CC 028E9BC0

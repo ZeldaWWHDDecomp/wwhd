@@ -1,0 +1,16 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_bgn2.txt
+# known-fail dt-1 check input class (tagsweep, 2026-11-21): daBgn2_Execute 1999/2000 memory FFFFFFFD (original unchanged, candidate DB) on an input where the original page-0 faults (no evidence); the base unit's dt-1 check fails the same; same with the fresh and the shared frame tag; not an N-step spec / conversion difference
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule, the Magtail's / Helmaroc's /
+# Puppet Ganon phase 1's form; d_a_bgn2_t60.h): Puppet Ganon phase 2 (the spider): daBgn2_Execute 0208B6A4 in the
+# whole form (move and the actions, the spheres, damage_check, the keese once per frame). The tick30 step runs the
+# original execute whole at dt 1 from the frame start; the earlier steps change no state (the picture between steps
+# comes from frame interpolation): net effect = the one step's, byte exact. Negative control (T60C_NEGCTRL: the execute on every
+# step at dt) must fail.
+t60conv 0208B6A4
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 02008860 0200ED84 0200EDC8 0200F428 0200FAD8 0200FC74 0200FCD8 020182E0 020184DC 02018C8C 02018D40 020195B0 020198D8 02019918 0201AD78 0201ADE0 0208AEF8 0208B0C0 0208B268 0208B340 0208B378 0208B530 024EF0F4 024F08A8 024F1AFC 025162A4 02516300 02518CC8 02518DB0 025200D4 02520540 02555D0C 0255F554 025626A4 025A847C 025CB374 025D5834 025D58B4 025DE508 025E18EC 025E1904 025E19CC 025E1A40 025E1A7C 025E1AA4 025E4A98 025E535C 025E55A0 025E742C 025F1884 025F1BF4 025F1C28 025F1C5C 026066C4 0274D458 027F4D5C 028249B0 028E8DD0 028E90D4 028F4384
+# Gate (2026-11-19): dt-1 check Create ok; Execute 9999/10000 on s1/s7, one row each ("memory FFFFFFFD" s1 /
+# "FFFFFFE1" s7 ... [original page-0 fault on this input: no evidence], gen seed 1000108); whole N-step spec fails only on that
+# same input (N2/N4), NC fails (t60calls 025200D4). The unconverted daBgn2_Execute shows the same rows (base check):
+# the standing page-0 "no evidence" class (rule for npc 400001CA), no action. beprobe PASS.

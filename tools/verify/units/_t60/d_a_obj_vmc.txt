@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_vmc.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule + addendum, d/t60_objw.h): Vmc tree: collider, base / tree demo procs, Link range check.
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 023B2EF4
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 023B2578 023B2B58 023B2C18 023B2C24 023B2D50 023B3450
+t60cand 023B2578 023B2B58 023B2C18 023B2C24 023B2D50 023B3450
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200E240 020182E0 02018D40 0201ADE0 023B2578 023B2B58 023B2C18 023B2C24 023B2D50 023B3450 024EEA6C 025162A4 02516300 02516464 025200D4 02520540 025D6894 025E19CC 025E1A40 025E535C 025E742C 025E789C 025E7CE0 025E8154 025E8508 025EBA58 025F1B48 026066C4 0273AA24 027F2BC0 028E8DD0 028F4384

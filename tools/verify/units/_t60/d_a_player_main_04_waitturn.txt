@@ -1,0 +1,15 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+# (2026-11-20, rider pair): procWait 024177A8. On the frame's first step a
+# checkNextMode that enters MOVE redoes procWait's turn from the frame start at dt 1 (d_a_player_waitturn_t60.h). The
+# harness runs no dispatch hold (lkT60_procEnteredThisFrame is never set), so this spec checks the unchanged per-step
+# path (no catch-up): base = candidate counts. The catch-up itself is proven by the game pair (recipe).
+include d_a_player_main_04.txt
+t60conv 024177A8
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200ECD4 0200EF78 0200F378 0200F428 0200F564 0200F5C8 0200F8D0
+t60cand 0200ECD4 0200EF78 0200F378 0200F428 0200F564 0200F5C8 0200F8D0
+# known-fail clib-real: (sweep: N-step spec N2 differs with the eases converted; fails without them too)
+# (candidate lint): in-unit callees with true60 code run as candidates
+real 02416230 024176A8
+t60cand 02416230 024176A8

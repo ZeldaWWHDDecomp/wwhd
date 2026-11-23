@@ -1,0 +1,9 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_gm.txt
+# ---- true60 N-step spec (gm#2, 2026-11-19; the whole-frame form rule addendum, the Magtail / Floormaster whole
+# form; d_a_gm_t60.h): Mothula: daGM_Execute 0214D128 in the whole form. The tick30 step runs the original execute whole
+# at dt 1 from the frame start; the earlier steps change no state (the picture between steps comes from frame interpolation): net
+# effect = the one step's, byte exact. Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 0214D128
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 02008860 02008B4C 02008FEC 0200E240 0200ED84 0200EDC8 0200F428 0200FAAC 0200FCD8 020182E0 02018428 020184DC 02018C8C 02018D40 020195B0 02019788 020198D8 02019918 0201AD78 0201ADE0 020402C8 0214BDFC 0214C1C8 0214C2F4 0214CDB4 0214CFA4 02151100 021511B8 02151294 021512AC 0215163C 02151B98 02153350 024EECAC 024F1AFC 024F8000 02516C14 025200D4 02520540 025A847C 025D57E0 025D6800 025D6894 025D68EC 025DA088 025E1A40 025E1AA4 025E535C 025E55A0 025E742C 025F1884 025F18EC 025F1BF4 025F1C28 025F1C5C 027F2BF8 028249B0 028E8D88 028E90D4 028F4384

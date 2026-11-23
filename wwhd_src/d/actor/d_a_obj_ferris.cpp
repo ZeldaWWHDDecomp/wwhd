@@ -1,6 +1,7 @@
 /* Windfall ferris wheel: GameCube reconstruction corrected against WWHD
  * disassembly. */
 #include "d/actor/d_a_obj_ferris.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 #include "gc_api/JSystem/JUTAssert.h"
 #include "gc_api/m_Do/m_Do_mtx.h"
 #include "gc_api/d/d_kankyo.h"
@@ -90,6 +91,8 @@ BOOL Act_c::create_heap() {
 
 /* 0233DD10 */
 void ride_call_back(dBgW *bg, Act_c *self, fopAc_ac_c *rider) {
+    if (t60objw::cbSkip()) /* true60: a rider's lean counts once a frame, on the tick30 step (the flags the tick30 execute reads) */
+        return;
     for (s32 i = 0; i < 5; i++)
         if (self->mpBgW[i] == bg) {
             self->mRidePos.copy(rider->current.pos);
@@ -481,6 +484,9 @@ void Act_c::make_lean() {
 
 /* 0233EDE0 */
 BOOL Act_c::_execute() {
+    t60w::Guard<Act_c> t60g(this, t60objw::Logic<Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     s16 speed = mRotSpeed;
     f32 volume = ((f32)speed / 45.0f) * 100.0f;
     mRotAngle = (s16)(mRotAngle + speed);
@@ -490,6 +496,7 @@ BOOL Act_c::_execute() {
     rot_mng();
     exe_event();
     make_lean();
+    t60g.model = true; /* true60: the frame reached its model step */
     for (s32 i = 0; i < 6; i++) {
         set_mtx(i);
         dBgW *bg = mpBgW[i];

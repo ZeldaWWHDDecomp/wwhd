@@ -8,6 +8,7 @@
  */
 #define BWDS_STORAGE_OWNER
 #include "d/actor/d_a_bwds.h"
+#include "d/actor/d_a_bwds_t60.h" /* true60: the draw's light state on the tick30 step (rule 14) */
 #include "gc_api/f_op/f_op_actor_mng.h"
 
 // HD: translation-unit vtables and header constructor storage.
@@ -78,7 +79,8 @@ static void anm_init(bwds_class* i_this, int bckFileIdx, f32 morf, u8 loopMode, 
 static BOOL daBwds_Draw(bwds_class* i_this) {
     fopAc_ac_c* actor = i_this;
     J3DModel* model = i_this->mpMorf->getModel();
-    settingTevStruct(dKy_getEnvlight(), 0 /* TEV_TYPE_ACTOR */, &actor->current.pos, &actor->tevStr);
+    if (bwds_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+        settingTevStruct(dKy_getEnvlight(), 0 /* TEV_TYPE_ACTOR */, &actor->current.pos, &actor->tevStr);
     setLightTevColorType(dKy_getEnvlight(), model, &actor->tevStr);
     i_this->mpMorf->entryDL();
     for (s32 i = 0; i < 0xd - i_this->mBurstCount; i++) {

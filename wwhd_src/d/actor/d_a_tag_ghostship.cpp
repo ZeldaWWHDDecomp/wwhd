@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_tag_ghostship.h"
+#include "d/actor/d_a_tag_ghostship_t60.h" /* true60: the shared-world-state rule whole-execute form */
 
 const gc_tu_data gc_tu = {
     .headerStatics = {0x1046E2B8, 0x101D19E0, 0x1046E2D4},
@@ -131,6 +132,7 @@ static BOOL daTag_GshipDelete(void* i_this) {
 
 /* 024A8780 */
 static BOOL daTag_GshipExecute(void* i_this) {
+    if (!t60c::end()) return TRUE; /* true60 (the shared-world-state rule): the ghost ship tag's frame on the tick30 step at the line place */
     return static_cast<daTag_Gship_c*>(i_this)->_execute();
 }
 

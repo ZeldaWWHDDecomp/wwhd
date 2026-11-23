@@ -1,0 +1,24 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_cloth_packet.txt
+# ---- true60 N-step spec (2026-11-16): the spring cloth (d_cloth_packet_t60.h) on a general
+# step length. Callees are mocks.
+# setNrm 0251C968: the two wave phases (mWave += mWaveSpeed, field_0xF0 += field_0xF2 a frame) shared x dt by
+# cloth60_share (dt of the amount toward zero on the earlier steps, the rest on the tick30 step): the N steps add
+# exactly the frame's amount: exact, no t60tol line. The normals are written through the vector mocks (the same
+# answer on every step): exact as well.
+# cloth_move 0251D4EC is not in the N-step spec list: its result is the vector callees' (getFactor's spring / wind push,
+# PSVEC add / scale), mocks here that do not write their outputs, so the harness has no integrator to compare (the
+# push x dt, drag^dt and move x dt run on the mocks' unwritten vectors). Its N-step form is checked by the paired-run flag
+# pairs and its dt = 1 path by dt-1 check.
+t60conv 0251C968
+# setNrm's arrays in the game's layout: the position, normal and back-normal buffers are separate allocations (the
+# packet's init). Unsteered, the input's random pointers overlap (the normals written on one step move the positions
+# or the other buffer the next step reads: a fixture artifact, e.g. byte 04030203 at seed 1000021); steered to six
+# separate buffers and mCurArr 0 / 1.
+field 0251C968 0x540000B0 u32 0x55000000
+field 0251C968 0x540000B4 u32 0x55000400
+field 0251C968 0x540000B8 u32 0x55000800
+field 0251C968 0x540000BC u32 0x55000C00
+field 0251C968 0x540000C0 u32 0x55001000
+field 0251C968 0x540000C4 u32 0x55001400
+field 0251C968 0x540001C0 u8 0 1

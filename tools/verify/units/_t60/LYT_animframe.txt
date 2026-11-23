@@ -1,0 +1,18 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+src wwhd_src/nw/lyt/LYT_animframe.cpp
+# true60 N-step spec: nw::lyt::Animator::UpdateFrame on a general step length (frame += speed*dt, the animation crossing-check rule and 7).
+# The dt-1 check rows are LYT_animframe.txt's. Domain: the frame inside [0, count) (animations start inside their range:
+# setFrame / play), speeds -4..4 (the UI's play rates are 1, 0.5, 2 and their negatives), play types Once, Loop,
+# Mirror and an unknown one (no bound handling). The frame count is 8 so that most inputs cross an end. Not equivalent
+# by design: a frame that starts outside [0, count) and re-enters within one 30 Hz frame (Loop / Mirror on the first
+# step, where the one step lands inside); the domain excludes it.
+arg! 02872DFC r3 0x50000000 0x50000000
+field 02872DFC r3+0xC f32 0 7.99
+field 02872DFC r3+0x24 f32 -4 4
+field 02872DFC r3+0x28 u32 0,1,2,5
+field 02872DFC r3+0x2C u32 0,1,2,4,7,8,0xFFFFFFFF
+ret! 028713B8 8
+t60conv 02872DFC
+# frame to float rounding; speed exact (0 after an end, the sign after a mirror); the end / wrap latch: OR over the N updates
+t60tol 02872DFC r3+0xC f32 absrel 0.0001 0.00001
+t60tol 02872DFC r3+0x2C u32 orsteps

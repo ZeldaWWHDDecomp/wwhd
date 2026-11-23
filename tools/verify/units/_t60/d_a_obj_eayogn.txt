@@ -1,0 +1,6 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_eayogn.txt
+# ---- true60 N-step spec (2026-11-19): the execute Mthd_Execute 02339744 only returns TRUE (HD:
+# _execute folded into the method-table entry; scan 2026-11-14: 0 sites): nothing to convert. N-step spec shows the N steps
+# leave the same memory as the one step (step-invariant).
+t60conv 02339744

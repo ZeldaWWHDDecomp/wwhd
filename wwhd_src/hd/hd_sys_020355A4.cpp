@@ -1,5 +1,6 @@
 /* HD-only GameTask lifecycle, hold counters and per-frame subsystem scheduling. */
 #include "hd/hd_sys_020355A4.h"
+#include "true60.h"
 
 static HdGameTaskPointer l_currentTask;
 static u32 l_taskVtable;
@@ -145,20 +146,30 @@ static void hdGameTask_updateHoldCounters() {
 }
 
 /* 0203593C */
+// true60: the per-step entry. The port's step driver sets the step state (gabi_t60.h) before each pass of this
+// function; the parts that count 30 Hz frames run on the tick30 step only (as on frame interpolation's in-between
+// passes, where the port holds the same calls): the HOME / system / button / controller hold counters (30-frame
+// thresholds), the HD input manager and its event manager (recalibration counter, cursor inertia, swipe frames) and the
+// boot scene's execute; the input manager on every step that read the GamePad (per-step input, true 60 fps input; its frame
+// counts on the frame's first read, d/hd_input_ctrl.cpp). Everything else (heaps, frame setup, the loop body, lighting,
+// display) runs on every step.
 static void hdGameTask_calc() {
     if (hdGameTaskIsErrorVisible(l_errorViewer.mpValue) != 0) return;
-    hdGameTask_updateHoldCounters();
+    if (t60::tick30()) hdGameTask_updateHoldCounters();
     u32 heap = hdGameTaskGetFrameHeap();
     u32 previousHeap = 1;
     if (heap != 0) previousHeap = hdGameTaskChangeHeap(l_heapManager.mpValue, heap);
-    hdGameTaskInputCalc(l_input.mpValue);
+    // (the HD input manager after each read of the GamePad, per-step input: on the frame's first step,,
+    // and on the frame's later steps, whose controller read is in the frame form, true60.h t60_in_later; at
+    // N = 1 only the first, as before)
+    if (t60::first_step() || t60_in_later()) hdGameTaskInputCalc(l_input.mpValue);
     void* events = l_events.mpValue;
-    if (events != NULL) hdGameTaskEventsCalc(events);
+    if (events != NULL && t60::tick30()) hdGameTaskEventsCalc(events);
     void* frameManager = l_frameManager.mpValue;
     if (frameManager != NULL) hdGameTaskBeginFrame(frameManager);
     hdGameTaskMatrixCalc();
     void* audio = l_audio.mpValue;
-    if (audio != NULL) hdGameTaskAudioCalc(audio);
+    if (audio != NULL && t60::tick30()) hdGameTaskAudioCalc(audio);
     hdGameTaskLightingCalc();
     frameManager = l_frameManager.mpValue;
     if (frameManager != NULL) hdGameTaskEndFrame(frameManager);

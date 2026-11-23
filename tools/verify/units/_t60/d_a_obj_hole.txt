@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_hole.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule + addendum, d/t60_objw.h): the hole's _execute 023578B8 (mode proc, setMtx).
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 023578B8
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 023573BC
+t60cand 023573BC
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 020084C8 02008860 0200A030 02018AE4 02018BA8 0201A478 02357310 023573BC 023579B0 02357AC4 02357AC8 02357BDC 02357E08 024F06B4 024F1AFC 02514F50 02514F88 02516518 0251677C 0252012C 02542D88 0254457C 02587EFC 025881A4 025A847C 025D77DC 025F1B48 025F1C28 0274D458 028E8D88

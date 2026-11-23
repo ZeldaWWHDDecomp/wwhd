@@ -8,6 +8,7 @@
  */
 #define SAFESTRING_VTBL 0x10023448
 #include "d/actor/d_a_npc_ym1_a2.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 // HD: image-checked tables and the scene placement offset used by this actor.
 static const char* l_staff_name[] = {"Ym1", "Ym1", "Ym2", "Ym2", "Ym2", "Ym2", "Ym1", "Ym2"};
@@ -368,6 +369,9 @@ void daNpc_Ym1_c::set_collision_sp() {
 
 /* 022F8C24 */
 BOOL daNpc_Ym1_c::_execute() {
+    t60w::Guard<daNpc_Ym1_c> t60g(this, t60npc::Logic<daNpc_Ym1_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     if (!mbHomeSet) {
         /* the initial pose (word copies) */
         m9A4 = ym1PositionWords(this).x;
@@ -419,6 +423,7 @@ BOOL daNpc_Ym1_c::_execute() {
     }
     tevStr.mRoomNo = dBgS_GetRoomId(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mObjAcch.m_gnd));
     tevStr.mEnvrIdxOverride = dBgS_GetPolyColor(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mObjAcch.m_gnd));
+    t60g.model = true; /* true60: the frame reached its model step */
     Ym1_setMtx(this, 0); /* setMtx(false) */
     set_cutGrass();
     if (mStaff == 0) {

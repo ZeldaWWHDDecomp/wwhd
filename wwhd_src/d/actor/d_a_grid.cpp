@@ -1,5 +1,6 @@
 /* Ship sail: cloth simulation and the HD GX2 material packet. Verified WWHD behavior. */
 #include "d/actor/d_a_grid.h"
+#include "d/actor/d_a_grid_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 // HD: GX2 resources and virtual tables are private to this sail unit.
 namespace grid_tu {
 inline constexpr u32 hioVtable = 0x10010718;
@@ -1022,6 +1023,8 @@ bool daGrid_c::_draw() {
 
 /* 021642D4 */
 bool daGrid_c::_execute() {
+    if (grid_t60::begin(this)) /* true60: a step before the tick30 step: the picture only */
+        return true;
 
     grid_getPlay();
     s32 alpha = static_cast<u8>(this->mPacket.mAlpha);
@@ -1058,10 +1061,14 @@ bool daGrid_c::_execute() {
         if (!static_cast<u8>(gabi::object_at<GridPlayView>(gabi::ea(play)).alternateSail))
             grid_alternateSail() = 0;
     }
+    bool t60Model = false; /* true60: the frame rebuilt the vertices */
     if (static_cast<f32>(this->scale.y) < 0.06f)
         this->openingStarted = 0.f;
-    else
+    else {
         grid_ho_move(this);
+        t60Model = true;
+    }
+    grid_t60::end(this, t60Model); /* true60: the frame's change kept for the next frame's picture */
     return true;
 }
 

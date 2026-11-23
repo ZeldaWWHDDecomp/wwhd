@@ -8,6 +8,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_dk.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 // HD: this translation unit's copies of inline class vtables and header statics.
 const gc_tu_data gc_tu = {
@@ -223,6 +224,9 @@ static inline void tail_control(dk_class *a_this, tail_s *tail) {
 
 /* 02124F00 */
 static BOOL daDk_Execute(dk_class *a_this) {
+    t60w::Guard<dk_class> t60g(a_this, t60npc::Logic<dk_class>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     a_this->mFrameCounter = a_this->mFrameCounter + 1;
 
     for (s32 i = 0; i < 5; i++) {
@@ -287,6 +291,7 @@ static BOOL daDk_Execute(dk_class *a_this) {
     J3DModel *model = a_this->mpMorf->getModel();
     J3DModel_setBaseScale(model, &a_this->scale);
 
+    t60g.model = true; /* true60: the frame reached its model step */
     mDoMtx_stack_c::transS(a_this->current.pos.x, a_this->current.pos.y, a_this->current.pos.z);
     mDoMtx_stack_c::YrotM(a_this->current.angle.y);
     mDoMtx_XrotM(mDoMtx_stack_c::get(), a_this->current.angle.x);

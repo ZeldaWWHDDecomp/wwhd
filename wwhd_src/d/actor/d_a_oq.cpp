@@ -10,6 +10,7 @@
  */
 #include "d/actor/d_a_oq.h"
 #include "gc_api/d/actor/d_a_player.h"
+#include "d/actor/d_a_oq_t60.h"
 
 static u32 oqRegistration[4] = {0, 0, 0, 0};
 static f32 oqAngleMin;
@@ -73,7 +74,9 @@ void draw_SUB(oq_class* i_this) {
         i_this->mpMorf->calc();
         enemy_fire(&i_this->mEnemyFire);
     }
-    if (i_this->mType != OQ_SPAWNER && i_this->mType != OQ_PLACE) {
+    /* true60 (the per-step chance rule): the lighting (it draws) once per frame, on the tick30 step (draw_SUB is last in A's
+     * execute: the frame-end position) */
+    if (i_this->mType != OQ_SPAWNER && i_this->mType != OQ_PLACE && oq_t60_end()) {
         settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &i_this->current.pos, &i_this->tevStr);
     }
 }
@@ -129,6 +132,7 @@ void anm_init(oq_class* i_this, int bckFileIdx, float morf, unsigned char loopMo
         J3DAnmTransform* anm = (J3DAnmTransform*)dComIfG_getObjectRes("Oq", bckFileIdx, SAFESTRING_VTBL_OQ);
         i_this->mpMorf->setAnm(anm, loopMode, morf, playSpeed, 0.0f, -1.0f, nullptr);
     }
+    bk_t60_mark_anm(&i_this->mpMorf); /* true60: set on a middle step, first played next frame (split-actor state) */
 }
 
 /* the splash at pos (by value: the caller's copy is updated) */
@@ -147,36 +151,47 @@ void shibuki_set(oq_class* i_this, cXyz* pos, float scale) {
 /* 023C1080 */
 BOOL sea_water_check(oq_class* i_this) {
 
-    i_this->mWaterPos.y = (f32)i_this->mHomePos.y; /* mWaterPos.y = mHomePos.y */
-    oqPositionWords(i_this->mWaterPos).z = (u32)oqPositionWords(i_this->current.pos).z;
-    oqPositionWords(i_this->mWaterPos).x = (u32)oqPositionWords(i_this->current.pos).x;
+    /* true60: mWaterPos (the ripple's anchor, read by the particle only) takes the frame-start position as in
+     * A: written on the frame's first step; the bob below runs on every step */
+    const bool t60Anchor = oq_t60_first();
+    if (t60Anchor) {
+        i_this->mWaterPos.y = (f32)i_this->mHomePos.y; /* mWaterPos.y = mHomePos.y */
+        oqPositionWords(i_this->mWaterPos).z = (u32)oqPositionWords(i_this->current.pos).z;
+        oqPositionWords(i_this->mWaterPos).x = (u32)oqPositionWords(i_this->current.pos).x;
+    }
     i_this->gravity = -3.0f;
     if (daSea_ChkArea(i_this->current.pos.x, i_this->current.pos.z)) {
         f32 h = daSea_calcWave(i_this->current.pos.x, i_this->current.pos.z);
-        i_this->mWaterPos.y = h;
-        if (!(i_this->current.pos.y < h + 40.0f)) {
+        if (t60Anchor)
+            i_this->mWaterPos.y = h;
+        if (!oq_t60_below(i_this, 0, i_this->current.pos.y < h + 40.0f)) { /* true60: the frame-start test */
             return FALSE;
         }
-        i_this->mBobPhase += 0x800;
+        i_this->mBobPhase += (s16)t60c::share(0x800); /* true60: the frame's phase step, its dt share */
         i_this->gravity = 0.0f;
         cLib_addCalc2(&i_this->current.pos.y, h - gabi::fmadds(cM_ssin(i_this->mBobPhase), 15.0f, 45.0f), 1.0f, 30.0f);
+        oq_t60_bob_mark(i_this); /* true60: the move's y goes to the tick30 step */
     } else if (i_this->mAcch.ChkWaterIn()) {
         f32 h = oq_wtr_height(i_this);
-        i_this->mWaterPos.y = h;
+        if (t60Anchor)
+            i_this->mWaterPos.y = h;
         i_this->gravity = -3.0f;
-        if (!(i_this->current.pos.y < h + 20.0f)) {
+        if (!oq_t60_below(i_this, 4, i_this->current.pos.y < h + 20.0f)) { /* true60: the frame-start test */
             return TRUE;
         }
-        i_this->mBobPhase += 0x800;
+        i_this->mBobPhase += (s16)t60c::share(0x800); /* true60: the frame's phase step, its dt share */
         i_this->gravity = 0.0f;
         cLib_addCalc2(&i_this->current.pos.y, (h + 20.0f) - gabi::fmadds(cM_ssin(i_this->mBobPhase), 15.0f, 45.0f), 1.0f, 30.0f);
+        oq_t60_bob_mark(i_this); /* true60: the move's y goes to the tick30 step */
     } else {
         if (i_this->mType == OQ_LARGE || i_this->mType == OQ_DELAYED || i_this->mType == OQ_CHILD) {
             i_this->gravity = 0.0f;
         }
         return FALSE;
     }
-    if (i_this->mSplashDone == 0) {
+    /* true60: the splash is the frame's dispatch call's (A's one call): a held step's replayed check (the
+     * bob, motion) does not splash (the mode body may clear mSplashDone after the frame's check) */
+    if (i_this->mSplashDone == 0 && !oq_t60_held(i_this)) {
         if (i_this->mType != OQ_CHILD) {
             cXyz scale;
             scale.set(1.0f, 1.0f, 1.0f);
@@ -432,11 +447,16 @@ static inline void oq_hit_effect(oq_class* i_this, fopAc_ac_c* player) {
 BOOL body_atari_check(oq_class* i_this) {
 
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
-    i_this->mStts.Move();
+    /* true60 (the mixed-pair hit-flag rule): the collision results of the tick30 Move (the collider status shift, the bite /
+     * body hits) are read on the frame's first step; the later steps run the radius ease alone */
+    const bool t60Read = oq_t60_hit_read(i_this); /* (the first-step input / mixed-pair hit-flag order: deferred to the tick30 step on a 0x14 init frame) */
+    if (t60Read)
+        i_this->mStts.Move();
     u8 t = i_this->mType;
     if (t == OQ_LARGE || t == OQ_DELAYED || t == OQ_CHILD) {
-        if (i_this->mAnmIdx == dRes_INDEX_OQ_BCK_SHIP_HIT_e) {
-            if (i_this->mpMorf->isStop() && i_this->mMode != 0xA && i_this->mMode != 0xB) {
+        if (!t60Read) {
+        } else if (i_this->mAnmIdx == dRes_INDEX_OQ_BCK_SHIP_HIT_e) {
+            if (oq_t60_isStop(i_this) && i_this->mMode != 0xA && i_this->mMode != 0xB) {
                 i_this->mAction = OQ_ACTION_DOUSA;
                 i_this->mMode = 0xA;
             }
@@ -454,6 +474,9 @@ BOOL body_atari_check(oq_class* i_this) {
         cLib_addCalc2(&i_this->mCollisionRadius, REG_F(8, 12) + 175.0f, 1.0f, 5.0f);
     }
 
+    if (!t60Read) {
+        return FALSE;
+    }
     i_this->mDamageType = 0;
     if (!i_this->mBodyCoCyl.ChkTgHit()) {
         return FALSE;

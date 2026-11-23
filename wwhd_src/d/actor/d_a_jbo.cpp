@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_jbo.h"
+#include "d/actor/d_a_jbo_t60.h" /* true60 (t60conv): step helpers */
 // HD: the native resource archive is spelled "Jbo" (GameCube: "JBO").
 const gc_tu_data gc_tu = {.safeString = 0x10012208, .headerStatics = {0x10464868, 0x101B7B38, 0x10464874}};
 static dCcD_SrcSph co_sph_src;
@@ -70,7 +71,7 @@ void jbo_draw_SUB(jbo_class *i_this) {
         f32 sx = REG_F(8, 1) + 1.1f;
         f32 sy = REG_F(8, 2) + 1.0f;
         f32 sz = REG_F(8, 3) + 0.9f;
-        i_this->mAnimRotation = (s16)(i_this->mAnimRotation + i_this->mAnimationSpeed);
+        if (t60_draw_frame_pass()) i_this->mAnimRotation = (s16)(i_this->mAnimRotation + i_this->mAnimationSpeed); /* true60 (t60conv draw): self-referencing update, once per 30 Hz frame (t60_draw.h) */
         mDoMtx_stack_c::YrotM(i_this->mAnimRotation);
         mDoMtx_stack_c::scaleM(sx, sy, sz);
         mDoMtx_stack_c::YrotM((s16)-i_this->mAnimRotation);
@@ -91,7 +92,7 @@ static BOOL daJBO_Draw(jbo_class *i_this) {
 
 /* inlined into daJBO_Execute */
 // HD: mode update is inlined.
-static inline void jbo_move(jbo_class *i_this) {
+static inline void jbo_move(jbo_class *i_this) { if (!t60c::first()) return; /* true60 (t60conv): frame-level logic on the frame's first step (the first-step AI-timer rule / first-step frame-level) */
     switch (i_this->mMode) {
     case daJbo_Mode_IDLE_e:
         if (jbo_checkPlayerStatus0(0x80 /* daPyStts0_UNK80_e */) && i_this->mCoSph.ChkCoHit()) {
@@ -109,7 +110,10 @@ static inline void jbo_move(jbo_class *i_this) {
         if (i_this->mFramesUntilJump == 1) {
             /* daPy_py_c::onForceVomitJump(): player +0x3BC |= 0x10 */
             JboPlayerHD *player = ((JboPlayHD *)dComIfGp_get())->mpPlayer;
-            player->onForceVomitJump();
+            if (t60c::on())
+                t60c::mark(1, i_this); /* true60: the flag on the tick30 step (daJBO_Execute below; same accesses here) */
+            else
+                player->onForceVomitJump();
         }
         if (jbo_checkPlayerStatus0(0x80000000 /* daPyStts0_UNK80000000_e */)) {
             J3DAnmTransform *anm = (J3DAnmTransform *)dComIfG_getObjectRes("Jbo", dRes_INDEX_JBO_BCK_OUT1_e);
@@ -140,6 +144,7 @@ static inline void jbo_move(jbo_class *i_this) {
 
 /* 021846B8 */
 static BOOL daJBO_Execute(jbo_class *i_this) {
+    if (t60c::first()) t60c::unmark(1, i_this); /* true60: the vomit-jump mark (site 1) starts clear */
     if (i_this->mType == daJbo_Type_APPEAR_AFTER_DEKU_TREE_e) {
         if (dComIfGs_isEventBit(0x1801)) {
             i_this->mType = daJbo_Type_NORMAL_e;
@@ -149,12 +154,19 @@ static BOOL daJBO_Execute(jbo_class *i_this) {
         return TRUE;
     }
     if (i_this->mFramesUntilJump != 0) {
-        i_this->mFramesUntilJump = (s16)(i_this->mFramesUntilJump - 1);
+        if (t60c::first()) { i_this->mFramesUntilJump = (s16)(i_this->mFramesUntilJump - 1); } /* true60 (t60conv): counted on the frame's first step */
     }
     switch (i_this->mAction) {
     case 0:
         jbo_move(i_this);
         break;
+    }
+    /* true60 (hand): A's Link executes before the bud and reads the vomit-jump flag the bud sets
+     * at mFramesUntilJump 1 on the next frame. Set on the frame's first step, the converted Link read it on the same
+     * frame's later step and jumped a frame early (u7jk17n2 f316 vs A f317): the flag is set on the tick30 step */
+    if (t60c::end() && t60c::marked(1, i_this)) { /* (the frame's first-step jbo_move found mFramesUntilJump 1) */
+        JboPlayerHD *player = ((JboPlayHD *)dComIfGp_get())->mpPlayer;
+        player->onForceVomitJump();
     }
     i_this->mpMorf->play(nullptr, 0, 0);
     gabi::Local<cXyz> pos;
@@ -164,7 +176,7 @@ static BOOL daJBO_Execute(jbo_class *i_this) {
     pos->y = (f32)((f64)(f32)pos->y + 30.0);
     i_this->mCoSph.SetC(pos.get());
     i_this->mCoSph.SetR(55.0f);
-    dComIfG_Ccsp_Set(&i_this->mCoSph);
+    if (t60c::end()) dComIfG_Ccsp_Set(&i_this->mCoSph); /* true60 (2026-11-20, the one-sweep-per-frame attack rule / mixed-pair hit-flag): the CO sphere is listed for the frame's tick30 Move only; jbo_move reads its hit on the next first step (per-step listing, 0xD5 unmarked) */
     jbo_draw_SUB(i_this);
     return TRUE;
 }

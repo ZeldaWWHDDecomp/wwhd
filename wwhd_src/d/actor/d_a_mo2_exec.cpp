@@ -8,6 +8,98 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_mo2_exec.h"
+#include "d/actor/d_a_mo2_t60.h"
+#include <unordered_map>
+
+/* true60 (the first-step AI-timer rule): the AI timers (slots 0-10) and the phase counter count on the frame's FIRST
+ * step, before its decisions, as the original counts at the start of its frame: a timer an
+ * action sets on any step of the frame is first counted next frame, as in the original. The catch timers (slots 11, 12:
+ * event work on the 30 Hz grid) still count on the tick30 step; one an action set on an earlier step of the same 30 Hz
+ * frame is not counted in that frame: the frame's first step holds their values before its actions (host memory keyed by
+ * the actor, frame tag g_Counter.mCounter0) and the tick30 step counts one only when it still has that value (a set to
+ * the very value it had is not seen: counted one early). Slots: 0-4 mTimers, 5 mSideStepTimer, 6 mSideStepWait,
+ * 7 mWeaponRunTimer, 8 mWeaponViewWait, 9 mHitStunTimer, 10 mDashStopTimer, 11 mCatchTimer, 12 mCatchDemoDelay. */
+namespace {
+constexpr int kMo2T60Slots = 13;
+struct Mo2T60Count {
+    u32 frame;
+    s16 v[kMo2T60Slots];
+};
+std::unordered_map<u32, Mo2T60Count> s_mo2T60Counts;
+}  // namespace
+static inline s16 mo2_t60_count_value(mo2_class* i_this, int i) {
+    switch (i) {
+    case 5: return i_this->mSideStepTimer;
+    case 6: return i_this->mSideStepWait;
+    case 7: return i_this->mWeaponRunTimer;
+    case 8: return i_this->mWeaponViewWait;
+    case 9: return i_this->mDamageReaction.mHitStunTimer;
+    case 10: return i_this->mDashStopTimer;
+    case 11: return i_this->mCatchTimer;
+    case 12: return i_this->mCatchDemoDelay;
+    default: return i_this->mTimers[i];
+    }
+}
+static void mo2_t60_count_begin(mo2_class* i_this) {
+    if (t60::dt() == 1.0f || !t60::first_step())
+        return;
+    Mo2T60Count& e = s_mo2T60Counts[gabi::ea(i_this)];
+    e.frame = bk_t60_frame_tag();
+    for (int i = 0; i < kMo2T60Slots; i++)
+        e.v[i] = mo2_t60_count_value(i_this, i);
+}
+/* on the tick30 step: count slot i (dt = 1: always) */
+static bool mo2_t60_count(mo2_class* i_this, int i) {
+    if (t60::dt() == 1.0f)
+        return true;
+    auto it = s_mo2T60Counts.find(gabi::ea(i_this));
+    if (it == s_mo2T60Counts.end() || it->second.frame != bk_t60_frame_tag())
+        return true;
+    return it->second.v[i] == mo2_t60_count_value(i_this, i);
+}
+static inline void mo2_t60_count_end(mo2_class* i_this) {
+    if (t60::dt() != 1.0f)
+        s_mo2T60Counts.erase(gabi::ea(i_this));
+}
+
+/* true60 (the process-order read rule, pair): daMo2_Execute plays and calcs its morf
+ * BEFORE Mo2_move, and sets the model's base matrix (position, angle.y, scale) only after it: the original's calc of frame
+ * f runs on the base matrix of frame f - 1's end, so every joint-callback word (mLeftHandPos -> mAtPos, mRightHandPos,
+ * the spear points, eyePos / attention, mJntPos) is placed by the previous frame's transform. At N steps the tick30 calc
+ * ran on the base matrix the first step had set (the frame's half-way angle): f196 the 4096 turn, B's hand rotated
+ * by B's step-0 angle 3392 instead of A's 1344 (10.98 / 35.66 off, decaying to f207; the rigid rotation by 2048 of A's
+ * hand gives B's to 0.6). Now the frame's first step keeps the base matrix it finds (frame f - 1's end) and the later
+ * steps' calcs run on it (host memory keyed by the actor, frame tag). Picture cost: the body's placement (position /
+ * turn) in the in-between picture is the frame-start one, as A's picture of the frame (the pose still plays per step).
+ * dt = 1: nothing. */
+namespace {
+struct Mo2T60Base {
+    u32 frame;
+    f32 m[3][4]; /* host floats (a host map's value holds no guest be<> word; beprobe) */
+};
+std::unordered_map<u32, Mo2T60Base> s_mo2T60Base;
+}  // namespace
+static void mo2_t60_base_frame(mo2_class* i_this) {
+    if (t60::dt() == 1.0f)
+        return;
+    const u32 model = gabi::ea(i_this->mpMorf->getModel());
+    if (model == 0)
+        return;
+    Mtx34* base = gabi::at<Mtx34>(model + 0xC8); /* J3DModel mBaseTransformMtx */
+    if (t60::first_step()) {
+        Mo2T60Base& e = s_mo2T60Base[gabi::ea(i_this)];
+        e.frame = bk_t60_frame_tag();
+        for (int i = 0; i < 3; i++)
+            for (int j = 0; j < 4; j++) e.m[i][j] = base->m[i][j];
+        return;
+    }
+    auto it = s_mo2T60Base.find(gabi::ea(i_this));
+    if (it == s_mo2T60Base.end() || it->second.frame != bk_t60_frame_tag())
+        return;
+    const Mo2T60Base& e = it->second;
+    for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 4; j++) base->m[i][j] = e.m[i][j];
+}
 
 enum {
     AT_TYPE_HD_ICE_ARROW = 0x80000,
@@ -75,6 +167,8 @@ static inline void yari_off_check(mo2_class* i_this) {
 }
 
 /* inlined into daMo2_Execute */
+/* true60: a per-frame spawner with its counter: daMo2_Execute calls it on the tick30 step only (a start
+ * set after the call on an in-between step waits for the next frame) */
 static inline void ground_smoke_set(mo2_class* i_this) {
     fopAc_ac_c* actor = i_this;
     if (i_this->mSmokeTimer == 0) {
@@ -146,6 +240,8 @@ static inline void ground_smoke_set(mo2_class* i_this) {
 }
 
 /* inlined into daMo2_Execute */
+/* true60: daMo2_Execute calls it on the frame's first step only (the blink counts and draws cM_rnd once
+ * per frame, before Mo2_move as in the original) */
 static inline void mo2_eye_tex_anm(mo2_class* i_this) {
     if (i_this->mEyeAnmWait != 0) {
         i_this->mEyeAnmWait--;
@@ -165,6 +261,27 @@ static inline void mo2_eye_tex_anm(mo2_class* i_this) {
 }
 
 /* inlined into daMo2_Execute */
+/* true60 (the one-sweep-per-frame attack rule with the): the guard sphere is also a Co
+ * sphere (defence_sph_src: Co set, vs all): in the push (oshi, R 87.5 on the spear shaft) it shoves Link. Collision
+ * registration is once per 30 Hz frame: its Co set bit is cleared for an in-between step's Move and set again at the
+ * next execute's start (pair frame 44: Link pushed (42, 44) in A, (42, 33) in B, the shove met on two Moves).
+ * Its Tg stays registered every step (the block reads above). dt = 1 and the tick30 step: nothing. Host memory, this
+ * unit only (split-actor state (1)). */
+static std::unordered_map<u32, u8> s_mo2T60CoMasked;
+static inline void mo2_t60_guard_co_restore(mo2_class* i) {
+    auto it = s_mo2T60CoMasked.find(gabi::ea(i));
+    if (it == s_mo2T60CoMasked.end())
+        return;
+    s_mo2T60CoMasked.erase(it);
+    i->mDefenseSph.OnCoSPrmBit(1);
+}
+static inline void mo2_t60_guard_co_mask(mo2_class* i) {
+    if (t60::dt() == 1.0f || t60::tick30() || (i->mDefenseSph.mObjCo.mSPrm & 1) == 0)
+        return;
+    i->mDefenseSph.OffCoSPrmBit(1);
+    s_mo2T60CoMasked[gabi::ea(i)] = 1;
+}
+
 static inline u8 damage_check(mo2_class* i_this) {
     fopAc_ac_c* actor = i_this;
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
@@ -174,10 +291,36 @@ static inline u8 damage_check(mo2_class* i_this) {
     atInfo->mPlCutBit = 0;
     u8 iVar12 = 0;
     u8 iVar11 = 0;
-    i_this->mDamageReaction.mStts.Move();
+    /* true60: the attacker ids of the last hits shift once per 30 Hz frame, on its first step (the
+     * tick30 collision Move pairs the Moblin with unconverted attackers and compares them with the previous frame's) */
+    if (bk_t60_first())
+        i_this->mDamageReaction.mStts.Move();
+    mo2_t60_guard_co_restore(i_this);
+    mo2_t60_guard_co_mask(i_this); /* true60: the guard sphere's Co meets the tick30 Move only (one-sweep-per-frame attack) */
     dComIfG_Ccsp_Set(&i_this->mDefenseSph);
-    i_this->mDefenseSph.SetC(&i_this->mDefenseSphPos);
-    if (i_this->mDefenseSph.ChkTgHit()) {
+    /* true60: the guard sphere's centre is the guard position the previous frame's dispatch left
+     * (defence / oshi copy the spear shaft after this point): taken on the frame's first step, where that is the value
+     * of the frame before (per step it would be the previous step's, a fraction of a frame ahead in the tick30 Move) */
+    if (bk_t60_first())
+        i_this->mDefenseSph.SetC(&i_this->mDefenseSphPos);
+    /* true60 (the mixed-pair hit-flag rule): the guard's block is a mixed-pair result of the tick30 collision Move,
+     * seen only on the next frame's first step (the next step's Move clears it). Read there (its sound, particle and
+     * push-back once per frame, as the original) and held over the frame's other steps (frame-tag latch keyed by the
+     * guard sphere): they return here too, as the original frame did not reach the guard sphere's reset below or the
+     * body checks; without the hold the reset ran on those steps and the guard sphere could miss the tick30 Move */
+    /* One collision Move's hits are read per 30 Hz frame (the original reads one Move per frame). A converted attacker
+     * (Link converted) meets the Moblin on every step's Move, and each Move's result is cleared by the next: a later
+     * step reads its predecessor's Move (block, then body, as the first step would) when no hit was read this frame;
+     * a body hit read this frame (latch keyed by the head sphere) stops the frame's later reads, the guard sphere's
+     * reset and the rest of the execute still run (as cckP2_4's ChuChu) */
+    const bool t60BlockHeld = !bk_t60_first() &&
+                              wwhd_t60_latch_pending(gabi::ea(&i_this->mDefenseSph), bk_t60_frame_tag()) != 0;
+    const bool t60Skip = !bk_t60_first() && bk_t60_pending(&i_this->mHeadSph);
+    if (t60BlockHeld || (!t60Skip && i_this->mDefenseSph.ChkTgHit())) {
+        if (t60BlockHeld)
+            return 0;
+        if (t60::dt() != 1.0f && !t60::tick30())
+            wwhd_t60_latch_set(gabi::ea(&i_this->mDefenseSph), bk_t60_frame_tag());
         void* obj = i_this->mDefenseSph.GetTgHitObj();
         def_se_set(actor, obj, 0x41);
         cMtx_YrotS(calc_mtx(), actor->shape_angle.y);
@@ -210,9 +353,15 @@ static inline u8 damage_check(mo2_class* i_this) {
         }
         return 0;
     }
-    i_this->mDefenseSphPos.y = -10000.0f;
-    i_this->mDefenseSph.SetR(-200.0f);
-    if (i_this->mNoHitTimer == 0 && (i_this->mHeadSph.ChkTgHit() || i_this->mTgCyl.ChkTgHit())) {
+    /* true60: the guard sphere's reset before the dispatch sets it again; on a held step (the state
+     * entered on an earlier step of this frame, d_a_mo2_t60.h) the dispatch does not run: the frame keeps the guard its
+     * dispatch set, as the original frame's Move sees it */
+    if (!mo2_t60_ai_held(i_this)) {
+        i_this->mDefenseSphPos.y = -10000.0f;
+        i_this->mDefenseSph.SetR(-200.0f);
+    }
+    if (i_this->mNoHitTimer == 0 && !t60Skip && (i_this->mHeadSph.ChkTgHit() || i_this->mTgCyl.ChkTgHit())) {
+        bk_t60_mark_set(&i_this->mHeadSph); /* true60: this frame's hit read (above) */
         i_this->mOshiCount = 0;
         i_this->mBtCounter = -1;
         i_this->mBtWindowTimer = 0;
@@ -237,11 +386,15 @@ static inline u8 damage_check(mo2_class* i_this) {
                 if (obj->ChkAtType(AT_TYPE_HD_ICE_ARROW)) {
                     i_this->mDamageReaction.mAction = ACTION_JYUNKAI;
                     i_this->mEnemyIce.mFreezeDuration = REG0_S(3) + 300;
+                    /* true60: set after this execute's enemy_ice call: the freeze starts next frame */
+                    bk_t60_mark_set(&i_this->mEnemyIce.mFreezeDuration);
                     path_check(i_this);
                     wait_set(i_this);
                     i_this->mDamageReaction.mMode = -10;
                 } else {
                     i_this->mEnemyIce.mLightShrinkTimer = 1;
+                    /* true60: set after this execute's enemy_ice call: its phase starts next frame */
+                    bk_t60_mark_set(&i_this->mEnemyIce.mLightShrinkTimer);
                 }
                 Mo2Exec_enemyFireRemove(&i_this->mEnemyFire);
                 i_this->mSmokeTimer = 0;
@@ -286,7 +439,12 @@ static inline u8 damage_check(mo2_class* i_this) {
         }
         i_this->mCutBits |= atInfo->mPlCutBit;
         if (atInfo->mResultingAttackType == 10) {
-            i_this->mParalyzeDelay = REG_S(13, 3) + 8;
+            /* true60: Mo2_move counts it later in this execute, on the frame's first step; set on
+             * another step, it starts with this frame's count already taken (as the original's same-frame count) */
+            s8 delay = (s8)(REG_S(13, 3) + 8);
+            if (!bk_t60_first() && delay > 1)
+                delay = (s8)(delay - 1);
+            i_this->mParalyzeDelay = delay;
             atInfo->mDamage = 1;
             iVar11 = atInfo->mbDead != 0 ? 7 : 4;
             cMtx_YrotS(calc_mtx(), atInfo->mHitAngle.y);
@@ -418,6 +576,7 @@ static inline u8 damage_check(mo2_class* i_this) {
 }
 
 /* inlined into daMo2_Execute */
+/* true60: event camera work on the 30 Hz grid (the event-step rule): daMo2_Execute calls it on the tick30 step */
 static inline void mo2_demo_camera(mo2_class* i_this) {
     fopAc_ac_c* actor = i_this;
     dComIfGp_get();
@@ -522,6 +681,9 @@ static BOOL daMo2_Execute(mo2_class* i_this) {
         }
         return TRUE;
     }
+    /* true60: the AI state before this execute's changes (the ice thaw, the catch demo, damage_check,
+     * Mo2_move, damage_reaction and its results): one state step per 30 Hz frame (mo2_t60_ai_note below) */
+    const uint64_t t60AiState = mo2_t60_ai_state(i_this);
     if (enemy_ice(&i_this->mEnemyIce)) {
         i_this->mpMorf->setPlayMode(J3DFrameCtrl::EMode_NONE);
         i_this->mpMorf->setPlaySpeed(3.0f);
@@ -530,20 +692,29 @@ static BOOL daMo2_Execute(mo2_class* i_this) {
         i_this->mpMorf->calc();
         return TRUE;
     }
-    settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &actor->current.pos, &actor->tevStr);
+    /* true60 (rule 14, the first-step AI-timer rule): the lighting of the draw (it draws the light flicker from cM_rnd)
+     * once per frame, on the frame's first step: the original sets it before Mo2_move from the previous frame's position,
+     * and its draw comes before the AI's draws of the frame */
+    if (bk_t60_first())
+        settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &actor->current.pos, &actor->tevStr);
     enemy_fire(&i_this->mEnemyFire);
-    if (i_this->mSendToPrison != 0 || i_this->mCatchTimer == 1) {
+    /* true60: the timers' values on the frame's first step, before its actions (mo2_t60_count) */
+    mo2_t60_count_begin(i_this);
+    /* true60: the catch timer's stage change at 1 once, on the tick30 step (the timer changes only there) */
+    if (i_this->mSendToPrison != 0 || (i_this->mCatchTimer == 1 && bk_t60_end())) {
         dComIfGp_setNextStage("majroom", 0, 0, -1, 0.0f, 0, 1, 0);
         return TRUE;
     }
-    if (i_this->mCatchTimer != 0) {
+    /* true60 (the 30 Hz timer rule): the catch timers and the catch event count / order on the tick30 step (event work
+     * on the 30 Hz grid) */
+    if (i_this->mCatchTimer != 0 && bk_t60_end() && mo2_t60_count(i_this, 11)) {
         i_this->mCatchTimer--;
         if (i_this->mCatchTimer == 0x1E) {
             mDoAud_seStop(JA_SE_MAJUTOU_ALERM, 30);
         }
     }
     /* HD: no m2970 / fell-4000-below-home deletion here */
-    if (i_this->mCatchEventPending != 0) {
+    if (i_this->mCatchEventPending != 0 && bk_t60_end()) {
         if (actor->eventInfo.checkCommandDemoAccrpt()) {
             i_this->mCatchEventPending = 0;
         } else {
@@ -551,7 +722,7 @@ static BOOL daMo2_Execute(mo2_class* i_this) {
             actor->eventInfo.onCondition(dEvtCnd_UNK2_e);
         }
     }
-    if (i_this->mCatchDemoDelay != 0) {
+    if (i_this->mCatchDemoDelay != 0 && bk_t60_end() && mo2_t60_count(i_this, 12)) {
         i_this->mCatchDemoDelay--;
         if (i_this->mCatchDemoDelay == 0) {
             if (camera_mode() == 0) {
@@ -575,38 +746,48 @@ static BOOL daMo2_Execute(mo2_class* i_this) {
     }
     u8 r23 = 0;
     if (l_mo2HIO().mFrameStep == 0 || CPad_CHECK_TRIG_B(0) || CPad_CHECK_HOLD_Y(0)) {
-        i_this->mFrameCounter++;
-        for (s32 i = 0; i < 5; i++) {
-            if (i_this->mTimers[i] != 0) {
-                i_this->mTimers[i]--;
+        /* true60 (the 30 Hz timer rule, the first-step AI-timer rule): the per-frame counters count on the frame's first step: the hit
+         * gates (mNoHitTimer, mNoGuardTimer), before the collision results of the tick30 Move are read there
+         * (damage_check), and the phase counter and the AI timers, before the decisions they time, so a timer-driven
+         * state change falls on the first step and the new state moves on every step of the frame, as the original
+         * counts, decides, then moves its whole frame */
+        if (bk_t60_first()) {
+            if (i_this->mNoHitTimer != 0) {
+                i_this->mNoHitTimer--;
+            }
+            if (i_this->mNoGuardTimer != 0) {
+                i_this->mNoGuardTimer--;
+            }
+            i_this->mFrameCounter++;
+            for (s32 i = 0; i < 5; i++) {
+                if (i_this->mTimers[i] != 0) {
+                    i_this->mTimers[i]--;
+                }
+            }
+            if (i_this->mSideStepTimer != 0) {
+                i_this->mSideStepTimer--;
+            }
+            if (i_this->mSideStepWait != 0) {
+                i_this->mSideStepWait--;
+            }
+            if (i_this->mWeaponRunTimer != 0) {
+                i_this->mWeaponRunTimer--;
+            }
+            if (i_this->mWeaponViewWait != 0) {
+                i_this->mWeaponViewWait--;
+            }
+            if (i_this->mDashStopTimer != 0) {
+                i_this->mDashStopTimer--;
+                i_this->mSmokeTimer = l_mo2HIO().mSmokeTimerBase + 4;
+                i_this->mSmokeType = 4;
+            }
+            if (i_this->mDamageReaction.mHitStunTimer != 0) {
+                i_this->mDamageReaction.mHitStunTimer--;
             }
         }
-        if (i_this->mSideStepTimer != 0) {
-            i_this->mSideStepTimer--;
-        }
-        if (i_this->mSideStepWait != 0) {
-            i_this->mSideStepWait--;
-        }
-        if (i_this->mWeaponRunTimer != 0) {
-            i_this->mWeaponRunTimer--;
-        }
-        if (i_this->mWeaponViewWait != 0) {
-            i_this->mWeaponViewWait--;
-        }
-        if (i_this->mDashStopTimer != 0) {
-            i_this->mDashStopTimer--;
-            i_this->mSmokeTimer = l_mo2HIO().mSmokeTimerBase + 4;
-            i_this->mSmokeType = 4;
-        }
-        if (i_this->mDamageReaction.mHitStunTimer != 0) {
-            i_this->mDamageReaction.mHitStunTimer--;
-        }
-        if (i_this->mNoHitTimer != 0) {
-            i_this->mNoHitTimer--;
-        }
-        if (i_this->mNoGuardTimer != 0) {
-            i_this->mNoGuardTimer--;
-        }
+        /* the catch timers' snapshot (mo2_t60_count, slots 11 and 12) ends with the frame's tick30 step */
+        if (bk_t60_end())
+            mo2_t60_count_end(i_this);
         if (dComIfGs_isCollect(0, 0) || dComIfGs_isCollect(0, 1) || dComIfGs_isCollect(0, 2) ||
             dComIfGs_isCollect(0, 3)) {
             rouya_mode() = 0;
@@ -628,19 +809,40 @@ static BOOL daMo2_Execute(mo2_class* i_this) {
         actor->actor_status |= fopAcStts_SHOWMAP_e;
         i_this->mBlurOn = 0;
         i_this->mBlurUseB = 0;
-        mo2_eye_tex_anm(i_this);
+        /* true60 (the first-step AI-timer rule): the blink counts and draws once per frame, on the first step, before
+         * the frame's decisions as in the original */
+        if (bk_t60_first())
+            mo2_eye_tex_anm(i_this);
         i_this->mDamageReaction.m438 = 0;
-        if (i_this->mAnmStopTimer == 0) {
+        /* true60: a stop set on an in-between step (wepon_search, after this play) starts next frame:
+         * the frame's remaining steps finish the frame's play, as the original played the whole frame before the set */
+        /* ... an animation set before the tick30 step (anm_init, d_a_mo2.cpp) is a request: the old animation plays to
+         * the frame end and the request is set after the tick30 step's play / calc, at the original's place (before
+         * Mo2_move): its morf blends from the old animation's frame-end pose (d_a_mo2_t60.h) */
+        if (i_this->mAnmStopTimer == 0 || bk_t60_pending(&i_this->mAnmStopTimer)) {
             i_this->mpMorf->play(&actor->eyePos, 0, 0);
         }
         if (i_this->mDamageReaction.mAction < ACTION_CARRY) {
+#ifndef T60C_NEGCTRL
+            mo2_t60_base_frame(i_this); /* true60 (process-order read): the calc on frame f - 1's base matrix, as A's (above) */
+#endif
             i_this->mpMorf->calc();
         }
+        mo2_t60_anm_apply(i_this);
         r23 = damage_check(i_this);
+        /* true60: a state change by damage_check on an in-between step makes this step's Mo2_move the
+         * frame's last dispatch call (d_a_mo2_t60.h mo2_t60_note_before_move) */
+        mo2_t60_note_before_move(i_this, t60AiState);
         Mo2_move(i_this);
-        mo2_demo_camera(i_this);
-        ground_smoke_set(i_this);
-        if (i_this->mAnmStopTimer != 0) {
+        /* true60: the demo camera is event work on the 30 Hz grid (the event-step rule) */
+        if (bk_t60_end())
+            mo2_demo_camera(i_this);
+        /* true60 (the 30 Hz timer rule and 11): the smoke counts and spawns on the tick30 step; a smoke start set after
+         * this point on an in-between step (the damage reaction below) starts next frame, as in the original */
+        if (bk_t60_end() && !bk_t60_pending(&i_this->mSmokeTimer))
+            ground_smoke_set(i_this);
+        /* true60 (the 30 Hz timer rule): set before this point (wepon_search), counted on the tick30 step */
+        if (i_this->mAnmStopTimer != 0 && bk_t60_end()) {
             i_this->mAnmStopTimer--;
         }
         i_this->mDamageReaction.mpEnemy = (fopEn_enemy_c*)actor;
@@ -654,6 +856,7 @@ static BOOL daMo2_Execute(mo2_class* i_this) {
     s32 r3 = damage_reaction(&i_this->mDamageReaction);
     if (r3 != 0) {
         i_this->mSmokeTimer = 1;
+        bk_t60_mark_set(&i_this->mSmokeTimer); /* true60: after this frame's smoke count */
         i_this->mHitActorId = fpcM_ERROR_PROCESS_ID_e;
         switch ((u32)r3) {
         case 1:
@@ -693,6 +896,7 @@ static BOOL daMo2_Execute(mo2_class* i_this) {
             i_this->mEffectAngle.x = -0x4000;
             i_this->mSmokeType = 1;
             i_this->mSmokeTimer = l_mo2HIO().mSmokeTimerBase + 0x10;
+            bk_t60_mark_set(&i_this->mSmokeTimer); /* true60: after this frame's smoke count */
             i_this->mDamageReaction.mDownTimers[2] = l_mo2HIO().mDownRecoverDelay;
             break;
         case 0x15:
@@ -713,6 +917,10 @@ static BOOL daMo2_Execute(mo2_class* i_this) {
             break;
         }
     }
+    /* true60: a state entered on an in-between step waits for the next frame (Mo2_move holds its
+     * dispatch) */
+    mo2_t60_ai_note(i_this, t60AiState);
+
     f32 sc = l_mo2HIO().mModelScale;
     J3DModel* model = i_this->mpMorf->getModel();
     MtxScale(sc, sc, sc, 1);
@@ -767,7 +975,8 @@ static BOOL daMo2_Execute(mo2_class* i_this) {
     dComIfG_Ccsp_Set(&i_this->mTgCyl);
     i_this->mHeadSph.SetC(local_d0);
     dComIfG_Ccsp_Set(&i_this->mHeadSph);
-    if (i_this->mSpitTimer != 0) {
+    /* true60 (the 30 Hz timer rule and 11): set before this point, counted with its particle on the tick30 step */
+    if (i_this->mSpitTimer != 0 && bk_t60_end()) {
         i_this->mSpitTimer--;
         if (i_this->mSpitTimer == 0) {
             i_this->mEffectAngle.y = actor->current.angle.y;
@@ -828,7 +1037,10 @@ static BOOL daMo2_Execute(mo2_class* i_this) {
         }
         dBgS_GndChk_dt(gndChk);
     }
-    if (i_this->mBtCounter >= 0) {
+    /* true60 (the 30 Hz timer rule): the parry (Bt) counter and its window count on the tick30 step (the unconverted
+     * player reads mBtNowFrame there); a counter started by attack_set on an in-between step counts in its frame, as the
+     * original's set before this count */
+    if (i_this->mBtCounter >= 0 && bk_t60_end()) {
         i_this->mBtCounter++;
         if (i_this->mBtCounter == i_this->mBtWindow1Start) {
             i_this->mBtWindowTimer = i_this->mBtWindow1Len;
@@ -847,7 +1059,8 @@ static BOOL daMo2_Execute(mo2_class* i_this) {
     i_this->mBtAttackType = i_this->mParryOpeningType;
     i_this->mBtMaxDis = l_mo2HIO().mBtMaxDistance;
     if (i_this->mBtWindowTimer != 0) {
-        i_this->mBtWindowTimer--;
+        if (bk_t60_end())
+            i_this->mBtWindowTimer--;
         i_this->mBtNowFrame = 5.0f;
     } else {
         i_this->mBtNowFrame = 100.0f;

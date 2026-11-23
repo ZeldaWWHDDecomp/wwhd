@@ -9,6 +9,7 @@
  * d_a_npc_p1_action.cpp (normal/confuse/talk) and d_a_npc_p1_speak.cpp (speak/p1c_speak).
  */
 #include "d/actor/d_a_npc_p1.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 using namespace p1_cpp;
 
@@ -727,6 +728,9 @@ u32 daNpc_P1_c::getKajiID() {
 /* 022B32B0 */
 BOOL daNpc_P1_c::_execute() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    t60w::Guard<daNpc_P1_c> t60g(this, t60npc::Logic<daNpc_P1_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     dComIfGp_get(); /* HD: an unused call */
     mHeadAnm.move();
     if (!demo_move()) {
@@ -760,6 +764,7 @@ BOOL daNpc_P1_c::_execute() {
     u8 color = p1PolyColor(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mObjAcch.m_gnd)); /* GetPolyColor */
     J3DModel* model = mpMorf->getModel();
     tevStr.mEnvrIdxOverride = color; /* tevStr.mEnvrIdxOverride */
+    t60g.model = true; /* true60: the frame reached its model step */
     mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
     mDoMtx_stack_c::YrotM(current.angle.y);
     model->setBaseTRMtx(mDoMtx_stack_c::get());

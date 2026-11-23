@@ -1,5 +1,6 @@
 // WWHD tablet buttons, stick and touch conversion, reconstructed from local instructions.
 #include "sead/TabletInput.h"
+#include "true60.h"
 #include "sead/ElementAt.h"
 
 static sead::RuntimeType sTabletInputType;
@@ -95,7 +96,9 @@ static void updateTabletController(TabletController* controller) {
     u32 selected = controller->mTouchIndex;
     TouchPoint* selectedPoint = &sead::elementAt(controller->mTouchPoints, selected);
     controller->updatePointer((u32)selectedPoint->mFlags & 1,1,&selectedPoint->mPosition);
-    if ((s32)batch->mError == -1) controller->mTouchCount = (u32)controller->mTouchCount + 1;
+    // (true60 per-step input: the error-frame count counts 30 Hz frames: on the frame's first read only, true60.h t60_in_later)
+    if (t60_in_later()) {
+    } else if ((s32)batch->mError == -1) controller->mTouchCount = (u32)controller->mTouchCount + 1;
     else controller->mTouchCount = 0;
     controller->mConnected = 1;
 }

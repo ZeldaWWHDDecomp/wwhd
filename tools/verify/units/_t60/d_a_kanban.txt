@@ -1,0 +1,9 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_kanban.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule NPC form; d/t60_npc.h):
+# the signboard (Kanban): the execute 0218B234 in the whole form, logic only (wrapper with it). The tick30 step runs the original execute whole
+# at dt 1 from the frame start; the earlier steps change no state (the picture between steps comes from frame interpolation): net
+# effect = the one step's, byte exact. Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 0218B234
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200ED84 0200F428 0200FAAC 0200FCD8 020182E0 02018428 020184DC 02018C8C 02018D40 020198D8 02019918 0218A6F8 0218AB94 0218AD44 0218B00C 024EFF44 024F08A8 0251621C 025162A4 02516300 025200D4 025A847C 025A9270 025D54C4 025D57E0 025D57E4 025D6800 025D6894 025D69FC 025D9A70 025F1884 025F74D0 025F795C 025F7DB0 0274D458 028E90D4

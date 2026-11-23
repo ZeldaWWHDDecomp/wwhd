@@ -1,5 +1,6 @@
 /* Wooden and metal bars. WWHD behavior verified against the original. */
 #include "d/actor/d_a_mdoor.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 const gc_tu_data gc_tu = {.safeString = 0x100148F4,
                           .safeStringAssure = 0x021C2060,
@@ -296,6 +297,9 @@ void daMdoor_c::smokeEnd() {
 }
 /* 021C1A04 */
 static BOOL daMdoor_Execute(daMdoor_c* i_this) {
+    t60w::Guard<daMdoor_c> t60g(i_this, t60objw::Logic<daMdoor_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     i_this->smokeEnd();
     if (!actionInitialized) {
         actionInitialized = 1;
@@ -303,6 +307,7 @@ static BOOL daMdoor_Execute(daMdoor_c* i_this) {
     }
     u8 action = i_this->mAction;
     gabi::call_ptr(l_action.entries[action], i_this);
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 /* 021C1A88 */

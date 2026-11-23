@@ -1,0 +1,14 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_npc_zl1_demo.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule NPC form; d/t60_npc.h):
+# Tetra's execute 02307D18 in the whole form, logic only. The tick30 step runs the original execute whole at dt 1 from the
+# frame start (partner search, event order / talk, demo or event cuts or the action proc, lookBack, the mover, CrrPos, the
+# morf play, darkness, the matrix step, the collision registration once); the earlier steps change no state (the picture
+# between steps comes from frame interpolation): net effect = the one step's, byte exact. Negative control (T60C_NEGCTRL: the execute
+# on every step at dt) must fail. (The Execute wrapper 0230808C is in unit d_a_npc_zl1, untouched.)
+t60conv 02307D18
+# the execute's own steps run real (matrix step / partner search / order checks), so their state is in the compared memory
+real 02304C98 02305508 023055A4 02307988
+# calls over the N steps as many as in the one step: fopNpc_npc_c::setCollision (the cylinder registered once a frame,
+# the one-sweep-per-frame attack rule) and fopAcM_posMoveF (the mover once a frame); with these the negative control fails
+t60calls 025A15AC 025D6870

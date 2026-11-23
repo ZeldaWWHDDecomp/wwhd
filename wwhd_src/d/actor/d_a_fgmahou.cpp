@@ -7,6 +7,7 @@
  * verified against cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_fgmahou.h"
+#include "d/actor/d_a_fgmahou_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule addendum) */
 
 #define FGMAHOU_VTBL 0x1000F058    /* fgmahou_class vtable (HD virtual destructor) */
 #define SAFESTRING_VTBL 0x1000F010 /* this TU's sead::SafeString vtable */
@@ -335,6 +336,10 @@ static inline void move(fgmahou_class *i_this) {
 
 /* 0213D594 */
 BOOL daFgmahou_Execute(fgmahou_class *i_this) {
+    t60w::Guard<fgmahou_class> t60g(i_this, fgmahou_t60::ops()); /* true60: the whole frame on the tick30 step */
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
+    t60g.model = true;
     dComIfGp_get(); // HD: leftover accessor call (result unused)
 
     i_this->mAge += 1;

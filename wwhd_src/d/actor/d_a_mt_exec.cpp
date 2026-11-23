@@ -10,6 +10,7 @@
  * GameCube symbols where the code matches them.
  */
 #include "d/actor/d_a_mt_exec.h"
+#include "d/actor/d_a_mt_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule) */
 #include <cmath>
 
 using namespace MtExec;
@@ -1110,6 +1111,12 @@ static inline void mt_bg_line_check(Actor* i_this) {
 
 /* 021D87A0 */
 BOOL daMt_Execute(mt_class* actor) {
+    /* true60: the whole frame on the tick30 step (end at every return); daMt_Create's own call runs at dt 1
+     * (mt_t60::createBegin / createEnd), where the Guard does nothing and the original runs */
+    t60w::Guard<mt_class> t60g(actor, mt_t60::ops());
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
+    t60g.model = true;
     Actor* i_this = reinterpret_cast<Actor*>(actor);
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
 

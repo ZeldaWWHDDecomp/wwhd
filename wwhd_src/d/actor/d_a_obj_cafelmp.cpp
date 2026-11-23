@@ -1,5 +1,6 @@
 /* HD Cafelmp full actor reconstruction derived from zeldaret/tww. */
 #include "d/actor/d_a_obj_cafelmp.h"
+#include "d/t60conv.h" /* true60: per-step form (self-contained turn; the whole-frame form rule, cloth60_share) */
 const gc_tu_data gc_tu = {.safeString = 0x100269F4};
 enum { dRes_INDEX_CAFELMP_BDL_YLAMP_e = 3 };
 static f32 l_cullLow;
@@ -71,7 +72,7 @@ BOOL daObjCafelmp_c::_draw() {
 /* 0232FCB8 */
 BOOL daObjCafelmp_c::_execute() {
     u16 angle = current.angle.y;
-    current.angle.y = (u16)(angle + 0xDAu);
+    current.angle.y = (u16)(angle + (u32)t60c::share(0xDA)); /* true60: the turn, exactly 0xDA per 30 Hz frame */
     set_mtx();
     return TRUE;
 }

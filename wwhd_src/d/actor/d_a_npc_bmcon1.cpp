@@ -9,6 +9,7 @@
  * this actor closely resembles.
  */
 #include "d/actor/d_a_npc_bmcon1.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 static u32 daObj_PrmAbstract(fopAc_ac_c*, u32, u32);
 static BOOL CheckCreateHeap(fopAc_ac_c*);
@@ -372,6 +373,9 @@ bool daNpcBmcon_c::_draw() {
 /* 02206D64 */
 bool daNpcBmcon_c::_execute() {
 
+    t60w::Guard<daNpcBmcon_c> t60g(this, t60npc::Logic<daNpcBmcon_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return false;
     chkAttention();
     checkOrder();
     if (!dComIfGp_event_runCheck() || eventInfo.mCommand == 1 /* eventInfo.checkCommandTalk() */) {
@@ -409,6 +413,7 @@ bool daNpcBmcon_c::_execute() {
     eyePos.y = y + dat->mEyeHeight;
     eyePos.z = z;
     lookBack();
+    t60g.model = true; /* true60: the frame reached its model step */
     setMtx();
     return false;
 }

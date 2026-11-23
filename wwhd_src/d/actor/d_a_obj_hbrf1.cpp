@@ -1,5 +1,6 @@
 /* Wind Temple elevator. GameCube names/layout with verified WWHD semantics. */
 #include "d/actor/d_a_obj_hbrf1.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using daObjHbrf1::Act_c;
 const gc_tu_data gc_tu = {.safeString = 0x10029F78};
 static const char* M_arcname = "Hbrf1";
@@ -267,6 +268,12 @@ void Act_c::daObjHbrf1_down_demo() {
 
 /* 0235189C */
 s32 Act_c::Execute(gptr<Mtx34>* matrix) {
+    t60w::Guard<Act_c> t60g(this, t60objw::Logic<Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) { /* true60: a step before the tick30 step: the picture only (frame interpolation); the background stays: the
+                      * wrapper gets the actor's own mBgMtx (M_tmp_mtx is a static shared by all of them) */
+        *matrix = &mBgMtx;
+        return TRUE;
+    }
     switch ((s32)mMode) {
     case Mode_DOWN_STOP_e:
         daObjHbrf1_down_stop();
@@ -293,6 +300,7 @@ s32 Act_c::Execute(gptr<Mtx34>* matrix) {
         daObjHbrf1_down_demo();
         break;
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     *matrix = &M_tmp_mtx;
     return TRUE;

@@ -1,5 +1,6 @@
 /* WWHD race buoy. */
 #include "d/actor/d_a_obj_buoyrace.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 static BuoyHeaderZeros l_headerZeros;
 static u8 l_registrationZ;
 static u8 l_registrationA;
@@ -196,8 +197,12 @@ void Act_c::afl_calc() {
 }
 /* 0232F748 */
 bool Act_c::_execute() {
+    t60w::Guard<Act_c> t60g(this, t60objw::Logic<Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
     set_water_pos();
     afl_calc();
+    t60g.model = true; /* true60: the frame reached its model step (it also places the goal flag's rope point) */
     set_mtx();
     return true;
 }

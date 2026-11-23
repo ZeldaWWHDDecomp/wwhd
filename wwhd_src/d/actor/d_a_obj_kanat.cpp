@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_obj_kanat.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 const gc_tu_data gc_tu = {
     .safeString = 0x1002BB38,
@@ -96,6 +97,12 @@ void Act_c::init_mtx() {
 
 /* 023670A0 */
 BOOL Act_c::Execute(Mtx34** pMtx) {
+    t60w::Guard<Act_c> t60g(this, t60objw::Logic<Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) { /* true60: a step before the tick30 step: the picture only (frame interpolation); the background stays: the
+                      * wrapper gets the actor's own mBgMtx (M_tmp_mtx is a static shared by all instances) */
+        *reinterpret_cast<gptr<Mtx34>*>(pMtx) = &mBgMtx;
+        return TRUE;
+    }
     if (!mIsBroken) {
         if (fopAcM_isSwitch(this, prm_get_swSave())) {
             GXColor color;
@@ -122,6 +129,7 @@ BOOL Act_c::Execute(Mtx34** pMtx) {
             fopAcM_delete(this);
         }
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     *reinterpret_cast<gptr<Mtx34>*>(pMtx) = &M_tmp_mtx; // HD: guest pointer representation.
     return TRUE;

@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_hmlif.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule + addendum, d/t60_objw.h): path lift: smooth / normal path move, move SE, switch brk frame, arrow hit -> switch, dBgW Move.
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 02176194
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 021757B8 021757CC 02175908 02175AD0 02175C34 02175DE4 02175E04 02175E60 02175F48 021760A8
+t60cand 021757B8 021757CC 02175908 02175AD0 02175C34 02175DE4 02175E04 02175E60 02175F48 021760A8
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200E240 0200ECD4 0200ED84 0200F164 0200F428 02018D40 020195B0 0201ADE0 0201AF98 0201AFD8 021757B8 021757CC 02175908 02175AD0 02175C34 02175DE4 02175E04 02175E60 02175F48 021760A8 0251621C 025162A4 02516300 025200D4 02520540 025AAF88 025AB070 025B9E38 025BA0C0 025E1A40 025E535C 025E742C 025F1884 025F1B48 0273AA24 028E8DD0 028E8F64 028E90D4 028E93CC 028F4384

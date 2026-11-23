@@ -2,7 +2,9 @@
  * GameCube names follow zeldaret/tww. HD rendering and ABI differences are marked below.
  */
 #include "d/actor/d_a_ghostship.h"
+#include "d/actor/d_a_ghostship_t60.h"
 #include <cmath>
+static u32 ghost_counter; /* g_Counter.mCounter0 (true60: the 30 Hz frame id, glued) */
 static f32 l_pathChaseScale;
 static f32 l_circleWobble;
 static f32 l_pathThreshold;
@@ -175,7 +177,7 @@ BOOL daGhostship_c::_pathMove(cXyz* position, cXyz* current, cXyz* next) {
     gabi::Local<u8[16]> linkage;
     cXyz_mi(&this->mNextPntPos, delta.get(), &this->mCurPntPos);
     if (!ghostshipNormalizeVector(delta.get()))
-        return 1;
+        return ghost60_tick30(); /* true60: the point switch on the frame-end step only (d_a_ghostship_t60.h) */
     f32 x = delta->x, z = delta->z;
     s16 target = cM_atan2s(x, z);
     s16 remaining = cLib_addCalcAngleS(&this->current.angle.y, target, 8, 0x200, 8);
@@ -189,12 +191,12 @@ BOOL daGhostship_c::_pathMove(cXyz* position, cXyz* current, cXyz* next) {
     f32 distance = std_sqrtf(PSVECSquareMag(xz.get()));
     f32 factor = static_cast<f32>(l_pathThreshold) + 1.0f;
     if (distance < step * factor)
-        return 1;
+        return ghost60_tick30();
     cXyz_mi(position, secondDifference.get(), &this->mNextPntPos);
     secondXZ->x = secondDifference->x;
     secondXZ->y = 0;
     secondXZ->z = secondDifference->z;
-    return std_sqrtf(PSVECSquareMag(secondXZ.get())) == 0.0f;
+    return std_sqrtf(PSVECSquareMag(secondXZ.get())) == 0.0f && ghost60_tick30();
 }
 /* 0214A2B4 */
 static BOOL pathMove_CB(cXyz* p, cXyz* current, cXyz* next, daGhostship_c* self) {
@@ -383,8 +385,10 @@ BOOL daGhostship_c::_execute() {
         if (this->mAlpha == 0.0f)
             this->actor_status = (u32)this->actor_status & ~(3u | fopAcStts_SHOWMAP_e);
         else {
-            s32 reverb = ghostshipGetReverb((s8)this->current.roomNo);
-            ghostshipStartSound(0x107A, &this->current.pos, 0, reverb);
+            if (ghost60_tick30()) { /* true60: once a frame (d_a_ghostship_t60.h) */
+                s32 reverb = ghostshipGetReverb((s8)this->current.roomNo);
+                ghostshipStartSound(0x107A, &this->current.pos, 0, reverb);
+            }
             this->actor_status = (u32)this->actor_status | (3u | fopAcStts_SHOWMAP_e);
         }
     }
@@ -392,7 +396,9 @@ BOOL daGhostship_c::_execute() {
         auto& circle = this->mPaths[i];
         f32 radius = circle.mRadius, target;
         // HD: bge takes unordered inputs; only an ordered radius below 900 selects this target.
-        if (radius < 900.0f) {
+        if (!ghost60_first()) /* true60: the frame-start decision held on the frame's other steps (d_a_ghostship_t60.h) */
+            target = this->mPathRadiusTarget[i];
+        else if (radius < 900.0f) {
             target = gabi::fmadds((f32)i, 100.0f, 1500.0f);
             this->mPathRadiusTarget[i] = target;
         } else if (radius > gabi::fmadds((f32)i, 100.0f, 1400.0f)) {
@@ -400,7 +406,7 @@ BOOL daGhostship_c::_execute() {
             this->mPathRadiusTarget[i] = target;
         } else
             target = this->mPathRadiusTarget[i];
-        s32 phase = (s32)(s16)circle.mAngle + (s32)(s16)circle.mAngleSpeed;
+        s32 phase = ghost60_phase(i, &circle, ghost_counter); /* true60: d_a_ghostship_t60.h */
         s16 doubled = (s16)((phase * 2) & 0xFFFE);
         f32 vertical = gabi::fmuls_ppc(600.0f, cM_scos(doubled));
         s32 direction = 1;
@@ -408,19 +414,39 @@ BOOL daGhostship_c::_execute() {
             vertical = gabi::fmuls_ppc(600.0f, cM_ssin(doubled));
             direction = -1;
         }
-        cLib_addCalc2(&circle.mRadius, target, 0.1f, 10.0f);
+        if (ghost60_frameEnd(s_ghost60RadiusStart[i], &circle, ghost_counter, [&] { s_ghost60Radius[i] = circle.mRadius; },
+                             [&] { circle.mRadius = s_ghost60Radius[i]; })) {
+            /* true60: the frame's tick30 step: the original chase from the frame start (d_a_ghostship_t60.h) */
+            const f32 prevDt = t60_set_dt(1.0f);
+            cLib_addCalc2(&circle.mRadius, target, 0.1f, 10.0f);
+            t60_set_dt(prevDt);
+        } else
+            cLib_addCalc2(&circle.mRadius, target, 0.1f, 10.0f);
         circle.mWobbleAmplitude = static_cast<f32>(l_circleWobble) + 300.0f;
         s32 base = static_cast<s16>(l_circleSpeed) + 2 * i + 5;
         f32 offset = static_cast<f32>(l_circleOffset) + 500.0f;
-        f32 random = cM_rndF(20.0f);
-        circle.mAngleSpeed = (s16)gabi::ftoi(((f32)base + random) * (f32)direction);
+        if (ghost60_tick30()) { /* true60: the frame's draw on the tick30 step only; held otherwise */
+            f32 random = cM_rndF(20.0f);
+            circle.mAngleSpeed = (s16)gabi::ftoi(((f32)base + random) * (f32)direction);
+        }
         circle.mTranslation.x =
             gabi::fmadds(offset, cM_ssin(this->shape_angle.y), (f32)this->current.pos.x);
         circle.mTranslation.y = gabi::fadds_ppc(gabi::fadds_ppc((f32)this->current.pos.y, 600.0f), vertical);
         circle.mTranslation.z =
             gabi::fmadds(offset, cM_scos(this->shape_angle.y), (f32)this->current.pos.z);
-        ghostshipSetCirclePath(&circle);
-        if (this->mAlpha != 0.0f) {
+        if (t60::dt() == 1.0f) {
+            ghostshipSetCirclePath(&circle);
+        } else {
+            /* true60: the call's start angle and added speed (d_a_ghostship_t60.h) */
+            const s16 held = (s16)circle.mAngleSpeed;
+            s16 from;
+            const s32 add = ghost60_circleAdd(i, &circle, ghost_counter, held, &from);
+            circle.mAngle = from;
+            circle.mAngleSpeed = (s16)add;
+            ghostshipSetCirclePath(&circle);
+            circle.mAngleSpeed = held;
+        }
+        if (this->mAlpha != 0.0f && ghost60_tick30()) {
             play = ghostshipGetPlayAddress();
             dPa_control_c* particles = play->play.mParticle;
             ghostshipSetSimpleParticle(particles, 0x8306, &circle.mPos, 255, &l_particleColor,
@@ -554,7 +580,32 @@ void daGhostship_c::pathMove() {
 void daGhostship_c::modePathMove() {
     if (this->mPathNo != 255) {
         this->mPathSpeed = 10.0f;
-        this->pathMove();
+        /* true60: the frame's tick30 step runs the original path move from the frame start (d_a_ghostship_t60.h) */
+        Ghost60PathState& st = s_ghost60Path;
+        if (ghost60_frameEnd(s_ghost60PathStart, this, ghost_counter,
+                             [&] {
+                                 st.speedF = this->speedF;
+                                 st.px = this->current.pos.x;
+                                 st.pz = this->current.pos.z;
+                                 st.pathPos = this->mPathPos.get();
+                                 st.pntNo = this->mPathPntNo;
+                                 st.angleY = this->current.angle.y;
+                                 st.shapeY = this->shape_angle.y;
+                             },
+                             [&] {
+                                 this->speedF = st.speedF;
+                                 this->current.pos.x = st.px;
+                                 this->current.pos.z = st.pz;
+                                 this->mPathPos = st.pathPos;
+                                 this->mPathPntNo = st.pntNo;
+                                 this->current.angle.y = st.angleY;
+                                 this->shape_angle.y = st.shapeY;
+                             })) {
+            const f32 prevDt = t60_set_dt(1.0f);
+            this->pathMove();
+            t60_set_dt(prevDt);
+        } else
+            this->pathMove();
     }
     this->current.pos.y = ghostshipGetWaterY(&this->current.pos, &this->mAcch);
 }
@@ -627,6 +678,7 @@ str 1000FB48 in 0214A9A4
 str 1000FB5C
 str 1000FAD8
 data l_pathChaseScale 1047BCD0
+data ghost_counter 101FF560
 data l_circleWobble 1047BCD4
 data l_pathThreshold 1047BCE4
 data l_circleOffset 1047BCF8

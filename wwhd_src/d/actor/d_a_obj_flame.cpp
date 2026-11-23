@@ -1,5 +1,6 @@
 /* WWHD flame pillar, reconstructed from HD disassembly. */
 #include "d/actor/d_a_obj_flame.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using daObjFlame::Act_c;
 enum { JA_SE_FIREBLAST_OMEN = 0x704E, JA_SE_FIREBLAST_BLOW = 0x380D, JA_SE_FIREBLAST_NOISE = 0x7009 };
 enum { MODE_WAIT, MODE_WAIT2, MODE_L_BEFORE, MODE_L_U, MODE_U, MODE_U_L, MODE_L_AFTER };
@@ -972,6 +973,9 @@ s32 Flame_Method_Delete(Act_c* actor) {
 }
 /* 023455E0 */
 s32 Flame_Method_Execute(Act_c* actor) {
+    t60w::Guard<Act_c> t60g(actor, t60objw::Logic<Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return 1;
     auto attr = [&]() {
         u32 type = actor->mType;
         if (type >= 4) {
@@ -1008,6 +1012,7 @@ s32 Flame_Method_Execute(Act_c* actor) {
     }
     actor->set_switch();
     Flame_setMtx(actor);
+    t60g.model = true; /* true60: the frame reached its model step */
     return 1;
 }
 

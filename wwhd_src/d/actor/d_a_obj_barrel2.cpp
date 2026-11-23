@@ -2,6 +2,7 @@
 // Binary-derived;
 #include "d/actor/d_a_obj_barrel2.h"
 #include "gc_api/gc_api.h"
+#include "d/actor/d_a_obj_barrel2_t60.h"
 using daObjBarrel2::Act_c;
 using daObjBarrel2::Attr_c;
 // HD: mapped names are aliases of the original guest storage.
@@ -1045,7 +1046,8 @@ void daObjBarrel2::Act_c::execute_sub() {
         set_mtx();
         Barrel_setCylinderCenter(&mCyl.mCyl, &current.pos);
         u32 play = dComIfGp_ea();
-        Barrel_registerCollision(&gabi::at<dComIfG_inf_c>(play)->play.mCcS, &mCyl);
+        if (b2T60::registerHere()) /* true60: marks the frame's model step (d_a_obj_barrel2_t60.h) */
+            Barrel_registerCollision(&gabi::at<dComIfG_inf_c>(play)->play.mCcS, &mCyl);
         attention_info.position.x = current.pos.x;
         Attr_c *t[3];
         for (int i = 0; i < 3; i++) {
@@ -1077,8 +1079,13 @@ void daObjBarrel2::Act_c::execute_sub() {
     }
 }
 
+/* true60 (d_a_obj_barrel2_t60.h): the picture of a step before the frame's tick30 step */
+static void b2_t60_mtx(Act_c *a) { a->set_mtx(); }
+
 /* 0232101C */
 bool daObjBarrel2::Act_c::_execute() {
+    if (b2T60::begin(this, b2_t60_mtx)) /* true60: the whole frame on the tick30 step (the whole-frame form rule) */
+        return true;
     cull_set_move();
     item_connect_check();
     u8 event = 0;
@@ -1094,6 +1101,7 @@ bool daObjBarrel2::Act_c::_execute() {
         execute_sub();
     }
     cull_set_draw();
+    b2T60::end(this); /* true60: the frame's change kept for the next frame's picture */
     return true;
 }
 

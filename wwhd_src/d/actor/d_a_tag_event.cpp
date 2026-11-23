@@ -1,6 +1,7 @@
 /* Event trigger tag. GameCube layout and actions with HD arrival and password handling.
  * Verified against the private WWHD executable. */
 #include "d/actor/d_a_tag_event.h"
+#include "d/actor/d_a_tag_event_t60.h" /* true60: the shared-world-state rule whole-execute form */
 #include "bindings.h"
 #include "gc_api/tu.h"
 
@@ -472,6 +473,7 @@ s32 daTag_Event_Draw(daTag_Event_c* actor) {
 
 /* 024A7BAC */
 s32 daTag_Event_Execute(daTag_Event_c* actor) {
+    if (!t60c::end()) return TRUE; /* true60 (the shared-world-state rule): the event tag's frame on the tick30 step at the line place */
     switch ((u8)actor->mAction) {
     case daTag_Event_c::ACTION_ARRIVAL: actor->actionArrival(); break;
     case daTag_Event_c::ACTION_HUNT: actor->actionHunt(); break;

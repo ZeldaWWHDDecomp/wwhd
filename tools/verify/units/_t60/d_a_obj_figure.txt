@@ -1,0 +1,14 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_figure.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule NPC form; d/t60_npc.h):
+# the Nintendo Gallery figure's (obj_figure) execute 02340858 in the whole form, logic only. The tick30 step runs the
+# original execute whole at dt 1 from the frame start (the move proc or the event move, the two cylinders registered,
+# eye / attention positions, the brk play, the matrix step); the earlier steps change no state (the picture between steps
+# comes from frame interpolation): net effect = the one step's, byte exact. Negative control (T60C_NEGCTRL: the execute on every step
+# at dt) must fail.
+t60conv 02340858
+# the execute's own steps run real (matrix step / event move), so their state is in the compared memory
+real 023407A0 0233FA44
+# calls over the N steps as many as in the one step: cCcS::Set (both cylinders registered once a frame, the one-sweep-per-frame attack rule); with it
+# the negative control fails
+t60calls 0200E240

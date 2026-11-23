@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_paper.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule + addendum, d/t60_objw.h): the notice paper's _execute 02381AEC (hits from the tick30 collision Move, the talk modes behind mode_proc with Link's talk / message state, collider registration).
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 02381AEC
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 02381A54 02381C5C 02381C88 02381D30 02381D34 02381564
+t60cand 02381A54 02381C5C 02381C88 02381D30 02381D34 02381564
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 020182E0 02018D40 02381564 02381A54 024F43DC 02515E50 0251621C 025162A4 025F1B48

@@ -1,0 +1,72 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_npc_kamome.txt
+# ---- true60 N-step spec (2026-11-21; d_a_npc_kamome_t60.h):
+# daNpc_kam_c::execute 0225E598, the player frames (player 0 == this): the gull is the player and runs per step like Link
+# (input per step, the speed / turn-rate chases held, counts on the first step, colliders and the event order on the tick30
+# step). Byte exact against the one step (timers, action, flags, speeds, rates, event state, the steering chases).
+t60conv 0225E598
+field 0225E598 54005B2C u32 0x40000000
+# no event running (dEvt_control_c::mMode, play+0x51D0+0xC2) and no event command on the gull (eventInfo.mCommand). The
+# mode is steered at both of its addresses: through the mocked dComIfGp_get (54005292, eventProc's read) and as the guest
+# word (10474342, kamT60::eventStep's call-free read on the earlier steps).: with EVENTS60 the
+# gull's own area-out event does run at N steps (pairs); its branch once a frame on the tick30 step
+#is proven by the pairs, this spec keeps the event-free frames byte exact. eventProc 0225D7F8
+# and checkCommandTalk 0225D6B4 run for real (callees mocked): a mocked eventProc's generated answer would differ from
+# the earlier steps' answer
+field 0225E598 54005292 u8 1
+field 0225E598 10474342 u8 1
+real 0225D7F8 0225D6B4  # eventProc and its checkCommandTalk (mocked: a generated answer the earlier steps cannot see)
+field 0225E598 r3+0xF8 u16 0
+field 0225E598 10474BDC u32 0x40000000  # player 0 as the form test reads it (the guest word)
+# the callees the form calls on the frame's first step only (the counts: cLib_calcTimer<s16> / <u8>; the held chases:
+# cLib_addCalcAngleS, at dt 1 there) run for real, so the later steps' mock answers stay aligned with the one step's
+real 02055B64 0207A9A0 0200F378
+# cLib_addCalcAngleS also runs on every step in the REG0_S(0) != 0 steering: its converted c_lib form (dt), as in the game
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+t60cand 0200F378
+# flight speeds as the HIO gives them (speedF / mTargetSpeedF 0..30, mAccelF 0..2: generated floats reach 1e14)
+field 0225E598 r3+0x370 f32 0 30
+field 0225E598 r3+0xB88 f32 0 30
+field 0225E598 r3+0xB8C f32 0 2
+# the HIO (l_HIO 10467444, mHio1 at +0x20) in game ranges: speeds, accel, rates, durations
+field 0225E598 10467464 f32 0 30
+field 0225E598 1046746C f32 0 30
+field 0225E598 10467470 f32 0 2
+field 0225E598 10467474 s16 0 0x800
+field 0225E598 10467476 s16 0 0x800
+field 0225E598 10467478 s16 0 0x2000
+field 0225E598 1046747A s16 0 0x800
+field 0225E598 1046747C s16 0 0x800
+field 0225E598 1046747E s16 1 8
+field 0225E598 10467480 s16 0 0x400
+field 0225E598 10467482 s16 0 0x100
+field 0225E598 10467484 s16 0 60
+field 0225E598 10467486 s16 0 90
+field 0225E598 10467488 s16 0 90
+# the Acch result words as the mocked CrrPos leaves them on every step (no water / ground bits) and mHitFlags without
+# the water bit: otherwise the first step's flag update turns the later steps onto another branch (a legit per-step path,
+# the per-step ground-check rule) whose different mock call count shifts the harness's per-step mock answers
+field 0225E598 r3+0x63C u32 0
+field 0225E598 r3+0xB70 u32 0,0x10
+# no t60tol line: every word byte exact at N 2 / 4 (the position mover 025D6800 is a mock here: the per-step motion,
+# the per-step ground-check rule / speed-ramp position-gap, is judged in the pairs)
+# (2026-11-21): dComIfGp_get 025200D4 is pinned for NESTED calls too (a plain `ret` is
+# skipped inside real callees, so the real eventProc / checkCommandTalk read generated memory before); the event state is
+# steered at both addresses with the same value: mode 54005292 = 10474342, talk XY 540052B0 = 10474360. Mode 1: the event branch (kamT60::eventStep once a frame on the tick30 step).
+# Two variants because field picks hash per address: d_a_npc_kamome_pl.txt (mode 0) and d_a_npc_kamome_pl1.txt (mode 1).
+nestedret 025200D4 0x54000000
+field 0225E598 540052B0 u8 0
+field 0225E598 10474360 u8 0
+# (the flight's frame form, kamT60::moveExact): with no collision push the tick30
+# step lands x / y / z on the frame-start place + the frame's speed (t60c::moveBegin / moveEnd, the original's single add in
+# game); the harness's position mover 025D6800 is a mock that does not move, so the one step keeps x / z where the two
+# steps land them: those words are judged in the pairs (the per-step ground-check rule / speed-ramp position-gap), not here (y too: the frame's velocity is held from
+# the first step, y lands exactly as x / z, same keys)
+t60tol 0225E598 r3+0x314 f32 skip
+t60tol 0225E598 r3+0x318 f32 skip
+t60tol 0225E598 r3+0x31C f32 skip
+# dComIfGp_get 025200D4 pinned on EVERY top-level call too (`ret!`; the included `ret LO HI` leaves 1 input in 8
+# unsteered, a generated answer per call index): the frame form's first-step-only velocity block makes two top-level calls
+# fewer on the later steps, so an unsteered index fell on a later call (dComIfGp_getPlayer(0)) and the steps took the
+# player branch where the one step did not (31 / 2000 on r3+0x2E3). In game it is always the one global
+ret! 025200D4 0x54000000

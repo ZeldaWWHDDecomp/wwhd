@@ -4,6 +4,7 @@
  * HD: native vector/math calls, particle layout and header initialization differ from GameCube.
  */
 #include "d/actor/d_a_obj.h"
+#include "d/actor/d_a_obj_t60.h"
 #include "bindings.h"
 #include "gc_api/JSystem/JUTAssert.h"
 #include "gc_api/d/d_com_inf_game.h"
@@ -279,10 +280,11 @@ static void posMoveF_grade_acc(cXyz* pDst, fopAc_ac_c* i_actor, const cXyz* norm
 
 } // namespace
 
-/* 023121C4 */
-void posMoveF_grade(fopAc_ac_c* i_actor, const cXyz* addVelocity, const cXyz* stream, f32 linear,
-                    f32 quadratic, const cXyz* normal, f32 friction, f32 noGradeCos,
-                    const cXyz* addAcceleration) {
+namespace {
+/* posMoveF_grade's speed update (the original instructions up to its fopAcM_posMove) */
+static inline void posMoveF_grade_speed(fopAc_ac_c* i_actor, const cXyz* stream, f32 linear, f32 quadratic,
+                                        const cXyz* normal, f32 friction, f32 noGradeCos,
+                                        const cXyz* addAcceleration) {
     if (!stream)
         JUTAssertion::showAssert("d_a_obj.cpp", 0x118, "stream_spd != 0");
     ObjLocal<cXyz> resistance, grade;
@@ -320,6 +322,79 @@ void posMoveF_grade(fopAc_ac_c* i_actor, const cXyz* addVelocity, const cXyz* st
     i_actor->speedF = length;
     const s16 yaw = cM_atan2s(x, z);
     i_actor->current.angle.y = u16(yaw);
+}
+
+/* true60: the exact frame move at dt != 1 (d_a_obj_t60.h) */
+static void posMoveF_grade_t60(fopAc_ac_c* i_actor, const cXyz* addVelocity, const cXyz* stream, f32 linear,
+                               f32 quadratic, const cXyz* normal, f32 friction, f32 noGradeCos,
+                               const cXyz* addAcceleration) {
+    const u32 actor = gabi::ea(i_actor);
+    const u32 tag = objT60::frameTag();
+    objT60::MoveLatch* e = t60::first_step() ? nullptr : objT60::find(actor, tag);
+    if (!e) {
+        /* the frame's first call: the frame's speed update, whole, from the frame-start state */
+        posMoveF_grade_speed(i_actor, stream, linear, quadratic, normal, friction, noGradeCos, addAcceleration);
+        e = objT60::make(actor, tag);
+        e->actor = actor;
+        e->tag = tag;
+        e->px = i_actor->current.pos.x;
+        e->py = i_actor->current.pos.y;
+        e->pz = i_actor->current.pos.z;
+        e->vx = i_actor->speed.x;
+        e->vy = i_actor->speed.y;
+        e->vz = i_actor->speed.z;
+        e->speedF = i_actor->speedF;
+        e->angleY = (u16)i_actor->current.angle.y;
+        e->push = addVelocity != nullptr;
+        if (e->push) {
+            e->ax = addVelocity->x;
+            e->ay = addVelocity->y;
+            e->az = addVelocity->z;
+        }
+        e->span = 0.0f;
+    } else {
+        /* a later call of the frame: the frame's speed holds */
+        i_actor->speed.x = e->vx;
+        i_actor->speed.y = e->vy;
+        i_actor->speed.z = e->vz;
+        i_actor->speedF = e->speedF;
+        i_actor->current.angle.y = e->angleY;
+    }
+    e->span = gabi::fadds_ppc(e->span, t60::dt());
+    if (t60::tick30()) {
+        /* the frame end: the original's one move from the frame-start position, at dt 1 */
+        i_actor->current.pos.x = e->px;
+        i_actor->current.pos.y = e->py;
+        i_actor->current.pos.z = e->pz;
+        ObjLocal<cXyz> push;
+        if (e->push) {
+            push.get()->x = e->ax;
+            push.get()->y = e->ay;
+            push.get()->z = e->az;
+        }
+        const f32 previous = t60_set_dt(1.0f);
+        fopAcM_posMove(i_actor, e->push ? push.get() : nullptr);
+        t60_set_dt(previous);
+        e->actor = 0;
+        return;
+    }
+    i_actor->current.pos.x = objT60::carry(e->px, e->vx, e->push, e->ax, e->span);
+    i_actor->current.pos.y = objT60::carry(e->py, e->vy, e->push, e->ay, e->span);
+    i_actor->current.pos.z = objT60::carry(e->pz, e->vz, e->push, e->az, e->span);
+}
+
+} // namespace
+
+/* 023121C4 */
+void posMoveF_grade(fopAc_ac_c* i_actor, const cXyz* addVelocity, const cXyz* stream, f32 linear,
+                    f32 quadratic, const cXyz* normal, f32 friction, f32 noGradeCos,
+                    const cXyz* addAcceleration) {
+    if (objT60::on()) {
+        posMoveF_grade_t60(i_actor, addVelocity, stream, linear, quadratic, normal, friction, noGradeCos,
+                           addAcceleration);
+        return;
+    }
+    posMoveF_grade_speed(i_actor, stream, linear, quadratic, normal, friction, noGradeCos, addAcceleration);
     fopAcM_posMove(i_actor, addVelocity);
 }
 

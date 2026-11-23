@@ -2,6 +2,7 @@
  * HD: name lookup uses relative name tables; callbacks mark matrix buffers dirty.
  * HD: the joint rotates around Y while the actor X angle follows its home angle. */
 #include "d/actor/d_a_obj_hami3.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 namespace daObjHami3 {
 static GuestText M_arcname;
 static GuestText M_evname;
@@ -249,6 +250,12 @@ void daObjHami3::Act_c::daObjHami3_close_demo() {
 }
 /* 0234F564 */
 BOOL daObjHami3::Act_c::Execute(be<u32> *output) {
+    t60w::Guard<daObjHami3::Act_c> t60g(this, t60objw::Logic<daObjHami3::Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) { /* true60: a step before the tick30 step: the picture only (frame interpolation); the background stays: the
+                      * wrapper gets the actor's own mBgMtx (M_tmp_mtx is a static shared by all gates) */
+        *output = gabi::ea(&mBgMtx);
+        return TRUE;
+    }
     switch ((s32)mMode) {
     case Act_c::CLOSE_STOP:
         daObjHami3_close_stop();
@@ -271,6 +278,7 @@ BOOL daObjHami3::Act_c::Execute(be<u32> *output) {
     }
     s16 angle = mOpenAngle, homeAngle = (s16)home.angle.x;
     shape_angle.x = homeAngle + angle;
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     *output = gabi::ea(&M_tmp_mtx);
     return 1;

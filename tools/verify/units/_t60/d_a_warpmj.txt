@@ -1,0 +1,8 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_warpmj.txt
+# ---- true60 N-step spec (2026-11-22; the whole-frame form rule + addendum, d/t60_objw.h): the Forsaken Fortress warp (Warpmj)'s execute
+# 024DDF70. The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 024DDF70
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0201ADE0 0246B6A4 0246BA0C 024DD2E0 024DDA78 024DDA98 024DDB54 024DDB98 024DDC6C 024DDE30 024DDE90 024F1478 025200D4 02520540 02526E70 02542D88 02542EDC 02543280 0254407C 025440C8 025447C8 02587EFC 025D7A58 025DA874 025DA884 025DF2B8 025E1A40 025E742C 0273AA24 028E8DD0 028E93CC 028F4384

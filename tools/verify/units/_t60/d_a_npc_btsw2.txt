@@ -1,0 +1,21 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_npc_btsw2.txt
+# ---- true60 N-step spec (npc_btsw2, 2026-11-20; the whole-frame form rule NPC form;
+# d/t60_npc.h): Btsw2, Baito on Dragon Roost (sea room 13): daNpc_Btsw2_c::_execute 0221D034 in the whole form, logic
+# only (texture pattern and morf play, order, event cut or the member-pointer action: wait / talk / path move, the
+# ground check, collision). The tick30 step runs the original execute whole at dt 1 from the frame start; the earlier
+# steps change no state (the picture between steps comes from frame interpolation). Negative control (T60C_NEGCTRL: the execute on
+# every step at dt) must fail.
+t60conv 0221D034
+# zero-page steering for the N-step spec runs (the original's page-0 fetch through a random member-pointer action):
+# mCurrActionFunc a plain member pointer (d 0, i -1) to wait_action 0221DD2C (the base spec's action), kept by the mocked calls
+field 0221D034 r3+0x89C u32 0x0000FFFF
+field 0221D034 r3+0x8A0 u32 0x0221DD2C
+stable 0x4000089C 8
+# the morf's model at a mapped address (unsteered, a random model pointer near the top of the address space makes the
+# base-matrix copy wrap to page 0; the original and the candidate store the 12 words in another order, so the original
+# faults first: no evidence either way). mpMorf (r3+0x44C) -> 0x5A000000, its model (+0x90) -> 0x5B000000
+field 0221D034 r3+0x44C u32 0x5A000000
+field 0221D034 5A000090 u32 0x5B000000
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200E240 0221CEF8 0221CFBC 0221CFFC 024EEEB8 024EF130 024F08A8 025200D4 0259E08C 0259F858 025A15AC 025D76A8 025E535C 025E742C 025F1C28 028E93CC

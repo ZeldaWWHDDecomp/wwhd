@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_obj_smplbg.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using daObjSmplbg::Act_c;
 const gc_tu_data gc_tu = { .safeString=0x1002F5A8, .headerStatics={0x1046BEAC, 0x101CCC38, 0x1046BEB8} };
 static const char M_arcname[] = "Qtkhd";
@@ -88,10 +89,17 @@ void Act_c::exec_qtkhd() {
 /* 023903AC */
 // HD: the one-entry exec_proc table is folded into a direct call
 BOOL Act_c::Execute(Mtx34** matrix) {
+    t60w::Guard<Act_c> t60g(this, t60objw::Logic<Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) { /* true60: a step before the tick30 step: the picture only (frame interpolation); the background stays: the
+                      * wrapper gets the actor's own mBgMtx (M_tmp_mtx is a static shared by all instances) */
+        *reinterpret_cast<gptr<Mtx34>*>(matrix) = &mBgMtx; // HD: guest pointer representation.
+        return TRUE;
+    }
     exec_qtkhd();
     set_mtx();
     // HD: the output matrix is a guest pointer.
     *reinterpret_cast<gptr<Mtx34>*>(matrix) = &M_tmp_mtx;
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 

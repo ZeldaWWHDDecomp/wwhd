@@ -8,6 +8,7 @@
  * action_handou_move and action_itai_move into daAM_Execute: they are inline helpers here.
  */
 #include "d/actor/d_a_am.h"
+#include "d/actor/d_a_am_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule addendum) */
 
 static inline bool am_isStop(am_class* i_this) { return i_this->mpMorf->isStop(); }
 
@@ -602,6 +603,10 @@ static inline void action_itai_move(am_class* i_this) {
 
 /* 0204938C */
 static BOOL daAM_Execute(am_class* i_this) {
+    t60w::Guard<am_class> t60g(i_this, am_t60::ops()); /* true60: the whole frame on the tick30 step (end at every return) */
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
+    t60g.model = true;
 
     fopAcM_setGbaName(i_this, dItemNo_BOW_e, 0xC, 0x2A);
 

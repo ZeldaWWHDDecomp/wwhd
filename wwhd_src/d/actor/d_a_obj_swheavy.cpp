@@ -1,5 +1,6 @@
 /** Wind Temple Iron Boots switch. Verified against the HD image; private decompilation. */
 #include "d/actor/d_a_obj_swheavy.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using daObjSwheavy::Act_c;
 const gc_tu_data gc_tu = {.safeString = 0x1002FB34, .headerStatics = {0x1046C008, 0x101CCF28, 0x1046C014}};
 static SwheavyAttrTable M_attr;
@@ -221,6 +222,8 @@ void daObjSwheavy::Act_c::init_mtx() { // Matcher incorrectly names this PrmAbst
 
 /* 02393EC8 */
 static void rideCB(void* bg, Act_c* a, fopAc_ac_c* rider) {
+    if (t60objw::cbSkip()) /* true60: a rider (riding / heavy riding flags) counts once a frame, on the tick30 step */
+        return;
     if (rider->actor_status & fopAcStts_FREEZE_e) {
         a->mRiding = 1;
         if (rider && rider->mProfName == SWHEAVY_PLAYER_PROC &&
@@ -439,6 +442,9 @@ void daObjSwheavy::Act_c::mode_l_u() {
 
 /* 023948D4 */
 BOOL daObjSwheavy::Act_c::_execute() {
+    t60w::Guard<daObjSwheavy::Act_c> t60g(this, t60objw::Logic<daObjSwheavy::Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     set_push_flag();
     (this->*mode_proc.mProc[static_cast<u32>(mMode)])();
     calc_top_pos();
@@ -447,6 +453,7 @@ BOOL daObjSwheavy::Act_c::_execute() {
     mPrevHeavyRiding = heavy;
     mHeavyRiding = 0;
     mRiding = 0;
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     mpBgW1->Move();
     mpBgW2->Move();

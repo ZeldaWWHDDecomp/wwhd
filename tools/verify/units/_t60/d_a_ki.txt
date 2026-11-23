@@ -1,0 +1,78 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_ki.txt
+# ---- true60 N-step spec (2026-11-18; d_a_ki_t60.h): the Keese's execute 0219AAE8 runs on every
+# step (its dispatch functions are inlined into it, except the attack 02199C48 in d_a_ki_exec.cpp). Timers / timer
+# one-shots / decision draws on the first step (first-step AI-timer), Link-reading decisions on the tick30 step (first-step input addendum), one AI
+# state step per frame with the dispatch motion replayed on held steps, At / Co for the tick30 Move only (one-sweep-per-frame attack), the
+# tick30 push held over the frame (first-step push). Negative control (T60C_NEGCTRL: every helper in the per-step form) must fail.
+t60conv 0219AAE8
+# (the attack 02199C48, the Keese count 021992DC, the hold / ran notes 02199364 and the animation set 02199388 are compared
+# under the execute only: they run inside its steps, and the one-state-step hold is noted by the execute)
+# callees with changed code: the attack, the position move (pos += speed x dt), the animation set (latch), the Keese
+# count (the process-order read rule)
+real 02199C48 02199A64 02199388 02199364 021992DC
+t60cand 02199C48 02199A64 02199388 02199364 021992DC
+# effect starts (cries, burning sound, particles, the drop): as many calls over the N steps as in the one step
+# float rounding of the split motion (pos += v x dt; the arc term): current.pos, |d| <= 1e-4 relative
+# ki_all_count / ki_fight_count: scratch counts that ki_check recomputes right before each read; a tick30 join check
+# that a first-step state change holds (its effects wiped by that change, as in A) leaves them from an older count
+# steering: the debug registers REG0_F / REG8_F the Keese reads are 0.0 in the game (g_regHIO); a NaN there turns the
+# split motion's per-step NaN into a one-step finite eye (N-step spec artifact)
+field * 1047B624 u32 0 0
+field * 1047B62C u32 0 0
+field * 1047B638 u32 0 0
+field * 1047B640 u32 0 0
+field * 1047B644 u32 0 0
+field * 1047BAB0 u32 0 0
+field * 1047BAB4 u32 0 0
+field * 1047BAB8 u32 0 0
+field * 1047BABC u32 0 0
+# float rounding of the split arc / fall (speed.y -= g x dt)
+# the RNG (cM_rndF, cM_rndFX): the game's one stream draws in A's order (first-step draws, then the tick30 step's), but
+# the harness's per-step mock answers restart each step (by call index), so a draw on a later step (the hit reaction's
+# mRand2000, the attack's tick30 timer cM_rndF(50) + 100, ...) got another answer than the one step's later draw
+# (harness artifact). N-step spec fixes each draw's answer; the draw count over the N steps must equal the one step's
+fretf64! 020198D8 0.375
+fretf64! 02019918 0.625
+# the same for the Link angle (fopAcM_searchPlayerAngleY / searchActorAngleY 025D6894): read by the attack on the first
+# step and by the tick30 hit reaction (mKnockbackAngleY); a per-step answer differs from the one step's later call
+ret! 025D6894 0x1A50
+# dComIfGp_get (025200D4, the play / player pointer): the base spec's non-strict `ret` keeps a generated pointer on 1
+# call in 8 by call index, so a later step's call could read another player (as in the other _t60 specs: strict)
+ret! 025200D4 0x54000000 0x54000000
+# steering: Link (dComIfGp_getPlayer(0), play + 0x5B2C) at a fixed block of its own: a generated pointer can name the
+# Keese itself, so "Link's position" moved with the Keese's own motion between the steps (no such alias in the game)
+field 0219AAE8 54005B2C u32 0x10702000 0x10702000
+# cXyz::operator- (0201ADE0, with its PSVECSubtract 028E8DAC; the attack's mPosMove = target - pos on every step): real, its mocked output is per call
+# index (a later step, with fewer earlier calls, read another answer)
+real 0201ADE0 028E8DAC
+# mHeadTargetAngleY / X: a per-call temporary (set by the wait's wake-up in the dispatch, read by the head chase of the
+# same call, cleared at the call's end); it survives only the ice arrow's early return, where A keeps its one call's
+# value and B the value its tick30 step's call left (no logic reads it before the next call sets it)
+# the matrix helpers the motion uses run real in N-step spec (a mock's output buffer is per call index, so a block replayed on
+# a held step read another call's (or no) output): mDoMtx_YrotS / XrotM and MtxPosition
+real 0200FCD8 025F1884 025F1BF4
+# the scratch matrix calc_mtx (0x101FF5F0, 48 bytes): rebuilt (YrotS) before every use; its last contents depend on
+# which step ran the last motion block
+# steering: calc_mtx's pointer (0x1018C7B0) holds 0x101FF5F0 in the game (a generated pointer moved the scratch matrix
+# to a random address the skip line above cannot name)
+field * 1018C7B0 u32 0x101FF5F0 0x101FF5F0
+# the model's base scale / matrix (J3DModel +0xBC / +0xC8): setBaseTRMtx copies calc_mtx after the model matrix build
+# (MtxTrans, then YrotM / XrotM / ZrotM, mocked: a mock's output is per call index, and a held step, with fewer earlier
+# calls, gets another answer; run real, their paired-single stores carry no float mark, so a NaN input's sign differs
+# between the sides at dt 1 too). Its inputs (current.pos with the motion's tolerance, the angles exact) are compared.
+# Steering: mpMorf (r3+0x3D0) and its mpModel (+0x90) at fixed blocks (a generated pointer put the model at a random
+# address no tolerance line can name)
+field 0219AAE8 r3+0x3D0 u32 0x10700000 0x10700000
+field 0219AAE8 10700090 u32 0x10701000 0x10701000
+t60tol * 107010BC u8x60 skip
+# ---- (2026-11-20, rule: the whole form, the whole-frame form rule addendum; d_a_ki_t60.h): daKi_Execute 0219AAE8 runs
+# whole at dt 1 on the tick30 step from the frame start; the earlier steps change no state (picture: frame interpolation): net
+# effect = the one step's, byte exact (the per-step t60tol / t60calls lines above are gone; the whole-form t60calls line
+# comes from tools/t60conv whole). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+# the central smoothers real with their candidates (a mock ignores the dt a caller sets)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200ED84 0200EDC8 0200F428
+t60cand 0200ED84 0200EDC8 0200F428
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 02008860 0200EDC8 0200F428 0200FAD8 0200FCD8 020182E0 020184DC 02018C8C 02018D40 020195B0 020198D8 02019918 0201ADE0 020402C8 02041570 02041C30 02199364 02199388 021994B0 021995BC 02199C48 024F08A8 024F1AFC 024F43DC 02515E50 025160DC 025162A4 02516300 02516464 025192A8 025200D4 02555D0C 025626A4 025AAF88 025D57E0 025D57E4 025D99E8 025DE508 025E1AA4 025E4A98 025E535C 025E55A0 025E742C 025F1884 025F1BF4 025F1C28 025F1C5C 026066C4 0273AA24 027EC9E8 027F4D5C 0282215C 028E8D88 028E8DD0 028E90D4 028F4384

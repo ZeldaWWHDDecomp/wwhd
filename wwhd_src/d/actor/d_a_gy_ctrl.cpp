@@ -1,6 +1,7 @@
 /* Gyorg encounter controller. Restored tww structure with retained HD behavior. */
 #include "d/actor/d_a_gy_ctrl.h"
 #include "gc_api/gc_api.h"
+#include "d/actor/d_a_gy_ctrl_t60.h" /* true60: the whole form (d/t60_objw.h) */
 
 static daGy_Ctrl_HIO_c l_HIO;
 static GyHideRegsHD l_hideRegs;
@@ -357,6 +358,9 @@ void daGy_Ctrl_c::deadCheckGy() {
 
 /* 0216C13C */
 s32 daGy_Ctrl_c::_execute() {
+  t60w::Guard<daGy_Ctrl_c> t60g(this, t60objw::Logic<daGy_Ctrl_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form addendum: Link / ship position and status, the Gyorgs) */
+  if (t60g.skip) /* true60: a step before the tick30 step (no model: nothing to show) */
+    return 0;
   setTarget();
   mTargetInRange = setPathTargetPos();
   mPathClear = checkPath();

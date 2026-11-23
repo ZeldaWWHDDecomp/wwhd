@@ -8,6 +8,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_swhit0.h"
+#include "d/actor/d_a_swhit0_t60.h" /* true60: the whole form (the whole-frame form rule, d/t60_objw.h) */
 
 // HD: GHS emits per-TU copies of the SafeString and inline constructor vtables.
 const gc_tu_data gc_tu = {
@@ -354,6 +355,9 @@ static s32 daSwhit0_Draw(daSwhit0_c *i_this) {
 /* 024A1E20 */
 // HD: execute() is inlined.
 static s32 daSwhit0_Execute(daSwhit0_c *i_this) {
+    t60w::Guard<daSwhit0_c> t60g(i_this, t60objw::Logic<daSwhit0_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return 1;
     i_this->mAnm.play();
     i_this->mTexAnm.play();
     switch (i_this->mState) {

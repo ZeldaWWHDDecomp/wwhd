@@ -1,5 +1,6 @@
 // Pirate ship rope minigame platforms.
 #include "d/actor/d_a_obj_hlift.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using daObjHlift::Act_c;
 const gc_tu_data gc_tu = {.safeString = 0x1002A608, .headerStatics = {0x10469E74, 0x101C9F58, 0x10469E80}};
 // HD: unit data retains the tww names; arrays use guest-layout wrappers.
@@ -350,6 +351,12 @@ void Act_c::se_whole() {
 
 /* 02356828 */
 s32 Act_c::Execute(gptr<Mtx34>* out) {
+    t60w::Guard<daObjHlift::Act_c> t60g(this, t60objw::Logic<daObjHlift::Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) { /* true60: a step before the tick30 step: the picture only (frame interpolation); the background stays: the
+                      * wrapper gets the actor's own mBgMtx (M_tmp_mtx is a static shared by the Hlift lifts) */
+        *out = &mBgMtx;
+        return TRUE;
+    }
     chk_demo_end();
     (this->*mode_proc.mProc[u32(s32(mMode))])();
     s32 mode = mMode;
@@ -362,6 +369,7 @@ s32 Act_c::Execute(gptr<Mtx34>* out) {
     eyePos.z = z;
     eyePos.y = y;
     eyePos.x = x;
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     *out = &M_tmp_mtx;
     return 1;

@@ -8,6 +8,7 @@
  * here is written from the WWHD code (cking.rpx) and verified against it.
  */
 #include "d/actor/d_a_obj_ekskz.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using daObjEkskz::Act_c;
 
 // HD: expanded animation controllers and light objects shift the retail actor fields.
@@ -191,6 +192,12 @@ BOOL daObjEkskz::Act_c::Create() {
 
 /* 0233BEC8 */
 BOOL daObjEkskz::Act_c::Execute(Mtx34 **mtx) {
+    t60w::Guard<daObjEkskz::Act_c> t60g(this, t60objw::Logic<daObjEkskz::Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) { /* true60: a step before the tick30 step: the picture only (frame interpolation); the background stays: the
+                      * wrapper gets the actor's own mBgMtx (M_tmp_mtx is a static shared by the skull pots of this kind) */
+        *reinterpret_cast<gptr<Mtx34> *>(mtx) = &mBgMtx;
+        return TRUE;
+    }
     attention_info.flags = (u32)attention_info.flags | 1; /* attention_info.flags */
     mBckAnm.play();
     mBtkAnm.play();
@@ -227,6 +234,7 @@ BOOL daObjEkskz::Act_c::Execute(Mtx34 **mtx) {
             mBrkAnm.mFrameCtrl.getRate() == 0.0f)
             fopAcM_delete(this);
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     *reinterpret_cast<gptr<Mtx34> *>(mtx) = &M_tmp_mtx;
     return TRUE;

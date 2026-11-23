@@ -13,6 +13,12 @@
  * the frame update and player teardown. Its private views preserve HD callback and renderer tails.
  */
 #include "d/actor/d_a_player_main_04.h"
+#include "true60.h"
+#include "m_Do/m_Do_ext_animation_t60.h"
+#include "d/actor/d_a_player_t60.h"
+#include "d/actor/d_a_player_crawl_t60.h"
+#include "d/actor/d_a_player_at_t60.h"
+#include "d/actor/d_a_player_maba_t60.h"
 #include "d/actor/d_a_player_main_04_item.h"
 #include "d/actor/d_a_player_main_04_effect.h"
 static cXyz l_attention_crawl_offset = {0.0f, 30.0f, 20.0f};
@@ -54,6 +60,9 @@ static const be<u16>* const aura_model_joint = gabi::at<be<u16>>(0x10035AA0);
 #include "d/actor/d_a_player_main_04_water.h"
 #include "d/actor/d_a_player_main_04_collision.h"
 #include "d/actor/d_a_player_main_04_update.h"
+#include "d/actor/d_a_player_bghit_t60.h"
+#include "d/actor/d_a_player_carry_t60.h"
+#include "d/t60_whole_carrier.h"
 
 static cXyz l_debug_keep_pos;
 static csXyz l_debug_shape_angle;
@@ -111,6 +120,25 @@ static inline void LinkPose_transQuatM(LinkPoseTransformInfo* transInfo, Quatern
     cXyz& translation = transInfo[joint].mTranslate;
     mDoMtx_stack_c::transM(translation.x, translation.y, translation.z);
     mDoMtx_stack_c::quatM(&quat[joint]);
+}
+
+/* true60: a step that advances once-per-30-Hz-frame work (every step at dt 1, the tick30 step in converted code) */
+static inline bool lk_t60FrameStep() { return t60::dt() == 1.0f || t60::tick30(); }
+/* true60 (the first-step AI-timer rule): Link's first execute of the 30 Hz frame: the first step when converted; at dt 1 (N = 1, or Link
+ * held at 30 / not converted: he executes on the tick30 step only) every execute */
+static inline bool lk_t60FirstExec() { return t60::dt() == 1.0f || t60::first_step(); }
+/* true60 (rule 1, 2026-11-17; d_a_player_t60.h lkT60_procOpen): the procedure entered on the frame's first step,
+ * taken at the start of the frame's first later-step execute (before that step's own changes); its body is held over
+ * the frame's later steps while it stays the current procedure. Host state of this unit only (the dispatch's). */
+static struct { uint32_t tag; int32_t proc; bool valid; } s_lkT60ProcHold;
+/* true60: the carrier Link rides (the ship, a moving background's actor) runs at 30 Hz: not in the rate
+ * gate's converted table (t60_converted), or unknown (null) */
+static inline bool lk_t60CarrierUnconverted(fopAc_ac_c* carrier) {
+    /* (extension, d/t60_whole_carrier.h): a converted carrier in the whole form moves
+     * once a 30 Hz frame like an unconverted one (pair), also in a frame it does not execute (culled;
+     * nestP1: t60wc::isWhole) */
+    return carrier == nullptr || !t60_converted(fpcM_GetName(carrier)) || t60wc::ranThisFrame(gabi::ea(carrier)) ||
+           t60wc::isWhole(gabi::ea(carrier));
 }
 
 /* ---- local bindings (SHARED-CANDIDATE) ---- */
@@ -217,7 +245,9 @@ enum : u32 {
 /* 02400B14 */
 BOOL daPy_lk_c::checkAttentionPosAngle(fopAc_ac_c* actor, cXyz** pOutPos) {
     if (actor) {
-        s16 targetAngle = cLib_targetAngleY(&current.pos, &actor->eyePos);
+        s16 targetAngle;
+        if (!lkT60_attnAngleY(&current.pos, actor, &targetAngle)) /* true60: the process-order read rule (d_a_player_t60.h) */
+            targetAngle = cLib_targetAngleY(&current.pos, &actor->eyePos);
         int angleDiff = cLib_distanceAngleS(targetAngle, m34DE);
         if (angleDiff <= 0x6000) {
             // HD: the output is a guest pointer slot, with the original word-sized store.
@@ -742,6 +772,19 @@ void daPy_lk_c::setHammerWaterSplash() {
     m355C = 1;
 }
 
+/* true60 (rule 14 / schedule): the light beam's hit on mLightCyl (TG) and the reflected
+ * beam's hit (mFanLightCps AT) come from mixed pairs (an unconverted light source / target), which the collision Move
+ * checks on the tick30 step only; Link reads them on the next frame's first step, and that step's Move clears them.
+ * The 30 Hz game sees such a hit for the whole frame, so the first step's result holds over the frame's other steps:
+ * the reflect flag (and with it the reflected beam's collider, registered again for the tick30 Move, the mirror
+ * light model and the sustained reflect sound on the frame's step) and the shield hit emitter (not ended and
+ * restarted on every frame). A hit seen on a later step (a converted party) still counts. dt 1: unchanged. */
+static bool s_lk04LightTgHeld;
+static bool s_lk04FanLightAtHeld;
+/* true60 (s87 pair): the reflect sound's choice reads mFanLightCps's AT set bit as the frame's first
+ * step saw it (A: the previous frame's setCollision; at N steps the first step's setCollision sets it before the tick30
+ * step's sound: frame 150 played MIRROR_LIGHT where A plays MIRROR_REFLECT, the reflection's start) */
+static struct { uint32_t stamp; bool atSet; bool valid; } s_lk04ReflectAtSet;
 /* 0240584C */
 void daPy_lk_c::checkLightHit() {
     /* static JGeometry::TVec3<f32> normal_scale(1.0f, 1.0f, 1.0f), boss_scale(2.5f, 2.5f, 2.5f) (HD: on first
@@ -772,12 +815,35 @@ void daPy_lk_c::checkLightHit() {
         u32 shield = (u32)LinkItem(this).mpEquippedShieldModel.v; /* mpEquippedShieldModel->getBaseTRMtx() */
         PSMTXMultVecSR(gabi::at<Mtx34>(shield ? shield + 0xC8 : 0),
                        gabi::at<cXyz>(gabi::ea(&l_ms_light_local_vec)) /* l_ms_light_local_vec */, lightVec);
-        if (lightHit) {
-            setResetFlg0(resetFlg0() | 0x200000); /* daPyRFlg0_LIGHT_REFLECT */
-        } else if (mLightCyl.ChkTgHit() && PSVECDotProduct(&mLightCyl.mGObjTg.mRVec, lightVec) < 0.0f) {
-            setResetFlg0(resetFlg0() | 0x200000);
+        if (t60::dt() == 1.0f) {
+            if (lightHit) {
+                setResetFlg0(resetFlg0() | 0x200000); /* daPyRFlg0_LIGHT_REFLECT */
+            } else if (mLightCyl.ChkTgHit() && PSVECDotProduct(&mLightCyl.mGObjTg.mRVec, lightVec) < 0.0f) {
+                setResetFlg0(resetFlg0() | 0x200000);
+            }
+        } else {
+            bool tg = mLightCyl.ChkTgHit() && PSVECDotProduct(&mLightCyl.mGObjTg.mRVec, lightVec) < 0.0f;
+            if (t60::first_step()) {
+                s_lk04LightTgHeld = tg;
+            } else {
+                tg = tg || s_lk04LightTgHeld;
+            }
+            if (lightHit || tg) {
+                setResetFlg0(resetFlg0() | 0x200000);
+            }
         }
-        if (mFanLightCps.ChkAtHit()) {
+        bool atHit = mFanLightCps.ChkAtHit();
+        bool atHeldOnly = false;
+        if (t60::dt() != 1.0f) {
+            if (t60::first_step()) {
+                s_lk04FanLightAtHeld = atHit;
+            } else if (!atHit && s_lk04FanLightAtHeld) {
+                atHeldOnly = true; /* the frame's hit: keep the emitter where the first step put it */
+            }
+        }
+        if (atHeldOnly) {
+            doEnd = false;
+        } else if (atHit) {
             doEnd = false;
             if ((u32)LinkItem(this).mShieldLightHitEcallBack.mpEmitter.v == 0) { /* mShieldLightHitEcallBack.getEmitter() */
                 /* dComIfGp_particle_setP1(dPa_name::ID_AK_SN_HITSHIELDLIGHT00, &current.pos, NULL, NULL,
@@ -821,11 +887,24 @@ void daPy_lk_c::checkLightHit() {
     if (doEnd) {
         LinkItemApi::endFollow(&LinkItem(this).mShieldLightHitEcallBack); /* mShieldLightHitEcallBack.end() */
     }
+    if (t60::dt() != 1.0f && t60::first_step()) { /* true60: s_lk04ReflectAtSet (no read at dt 1) */
+        s_lk04ReflectAtSet.stamp = t60_step_counter();
+        s_lk04ReflectAtSet.atSet = (mFanLightCps.mObjAt.mSPrm & 1) != 0;
+        s_lk04ReflectAtSet.valid = true;
+    }
     if (resetFlg0() & LinkItemConstants::daPyRFlg0_LIGHT_REFLECT) {
-        if (!(mFanLightCps.mObjAt.mSPrm & 1) /* !mFanLightCps.ChkAtSet() */) {
-            seStartOnlyReverb(LinkItemConstants::JA_SE_OBJ_MIRROR_REFLECT);
-        } else {
-            seStartOnlyReverb(LinkItemConstants::JA_SE_OBJ_MIRROR_LIGHT);
+        /* true60 (the one-emitter-per-event rule): the reflect / light sound is a sustained start on every update while the
+         * shield reflects (Link sets the flag above per update): on the frame's step only */
+        if (lk_t60FrameStep()) {
+            bool atSet = (mFanLightCps.mObjAt.mSPrm & 1) != 0; /* mFanLightCps.ChkAtSet() */
+            if (t60::dt() != 1.0f && s_lk04ReflectAtSet.valid &&
+                t60_step_counter() - s_lk04ReflectAtSet.stamp < t60::steps())
+                atSet = s_lk04ReflectAtSet.atSet; /* true60: the frame's first-step value (s_lk04ReflectAtSet) */
+            if (!atSet) {
+                seStartOnlyReverb(LinkItemConstants::JA_SE_OBJ_MIRROR_REFLECT);
+            } else {
+                seStartOnlyReverb(LinkItemConstants::JA_SE_OBJ_MIRROR_LIGHT);
+            }
         }
         resetCurse();
     }
@@ -1210,6 +1289,18 @@ static inline bool lk_checkNoSplashCamera() {
     return mode == 4 || (mode >= 0xA && (mode <= 0xB || mode == 0xE));
 }
 
+/* true60 (the per-step chance rule): the scattered foot-effect positions (posType 4 slides / rolls, the last combo demo)
+ * draw cM_rndFX(17.5) on every update, a per-frame draw: on the frame's step only; the other steps of the frame reuse
+ * the last draw (the emitter keeps following Link's position). Host memory, Link only; dt 1: a draw on every update
+ * (the original). */
+static f32 s_lk04FootRnd;
+static inline f32 lk04_footRnd() {
+    if (lk_t60FrameStep()) {
+        s_lk04FootRnd = cM_rndFX(17.5f);
+    }
+    return s_lk04FootRnd;
+}
+
 /* 02406480 */
 void daPy_lk_c::setFootEffect() {
     u32 b = gabi::ea(this);
@@ -1324,7 +1415,7 @@ void daPy_lk_c::setFootEffect() {
         return;
     }
     if (mCurProc == LinkItemConstants::daPyProc_DEMO_LAST_COMBO_e) {
-        f32 rnd = cM_rndFX(17.5f);
+        f32 rnd = lk04_footRnd(); /* cM_rndFX(17.5f) (true60: frame step only) */
         gabi::Local<cXyz> sp44;
         sp44->x = m370C.x;
         sp44->y = m370C.y;
@@ -1349,7 +1440,7 @@ void daPy_lk_c::setFootEffect() {
             gabi::fnmsubs(rnd, cM_scos((u16)a), m370C.z); /* (the GameCube source uses the cosine here too) */
         setFootEffectType(effectID, pos, 0, effectType);
     } else if (posType == 4) {
-        f32 rnd = cM_rndFX(17.5f);
+        f32 rnd = lk04_footRnd(); /* cM_rndFX(17.5f) (true60: frame step only) */
         u16 a = (u16)current.angle.y;
         f32 x = gabi::fmadds(rnd, cM_scos(a), current.pos.x);
         pos->x = x;
@@ -1393,12 +1484,54 @@ void daPy_lk_c::setFootEffect() {
     }
 }
 
+#if defined(GABI_GAME_BUILD) && GABI_T60
+/* true60 (d_a_player_t60.h lkT60_grabNote / lkT60_grabRelease): the carried actor's frame-start placement */
+namespace lk04_grabfs {
+static uint32_t s_actor = 0, s_stamp = ~0u, s_pos[3];
+static bool negctrl() {
+    static const bool v = [] { const char* e = getenv("WWHD_T60_GRABFS_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+}
+}  // namespace lk04_grabfs
+extern "C" __attribute__((visibility("default"))) void wwhd_t60_grab_fs_note(uint32_t actor, uint32_t posEa) {
+    using namespace lk04_grabfs;
+    if (!t60::first_step() || negctrl())
+        return;
+    const uint32_t now = t60_step_counter();
+    if (s_stamp == now && s_actor == actor)
+        return;
+    s_actor = actor;
+    s_stamp = now;
+    for (int i = 0; i < 3; i++)
+        s_pos[i] = gabi::load<uint32_t>(posEa + 4u * i);
+}
+extern "C" __attribute__((visibility("default"))) void wwhd_t60_grab_fs_release(uint32_t actor, uint32_t posEa) {
+    using namespace lk04_grabfs;
+    if (t60::first_step() || negctrl() || actor != s_actor || t60_step_counter() - s_stamp >= (uint32_t)t60::steps())
+        return;
+    for (int i = 0; i < 3; i++)
+        gabi::store<uint32_t>(posEa + 4u * i, s_pos[i]);
+    s_actor = 0;
+}
+#endif
+
+/* M2f grab bounce NC (WWHD_T60_GRABBOUNCE_NEGCTRL=1: the per-step form; game build only) */
+static inline bool lk04_grabBounceNegctrl() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_GRABBOUNCE_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return false;
+#endif
+}
+
 /* 0240A41C */
 void daPy_lk_c::setGrabItemPos() {
     fopAc_ac_c* grab_actor = mActorKeepGrab.mActor;
     if (grab_actor == NULL) {
         return;
     }
+    lkT60_grabNote(gabi::ea(grab_actor), gabi::ea(&grab_actor->current.pos)); /* true60: the frame-start placement */
     if (mCurProc == LinkEffectConstants::daPyProc_GRAB_READY_e) {
         mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
         mDoMtx_stack_c::YrotM((s16)(shape_angle.y - mProcVar2));
@@ -1451,10 +1584,18 @@ void daPy_lk_c::setGrabItemPos() {
             } else {
                 target_slant_angle = 0;
             }
-            gabi::Local<be<s16>> curr_slant_angle; /* barrel->get_slant_angle() */
-            *curr_slant_angle = gabi::at<LinkEffectBarrel>(gabi::ea(grab_actor))->mSlantAngle;
-            LinkEffectApi::addCalcAngleS(curr_slant_angle.get(), (s32)target_slant_angle, 5, 0x200, 0x80);
-            gabi::at<LinkEffectBarrel>(gabi::ea(grab_actor))->mSlantAngle = *curr_slant_angle;
+            if (t60::dt() == 1.0f) {
+                gabi::Local<be<s16>> curr_slant_angle; /* barrel->get_slant_angle() */
+                *curr_slant_angle = gabi::at<LinkEffectBarrel>(gabi::ea(grab_actor))->mSlantAngle;
+                LinkEffectApi::addCalcAngleS(curr_slant_angle.get(), (s32)target_slant_angle, 5, 0x200, 0x80);
+                gabi::at<LinkEffectBarrel>(gabi::ea(grab_actor))->mSlantAngle = *curr_slant_angle;
+            } else {
+                /* true60 (the per-step smoothing rule): at a step of dt the chase runs on the barrel's own field (the
+                 * GameCube form), not on HD's stack copy: cLib_addCalcAngleS keeps a 30 Hz frame's start per value
+                 * address, which a stack slot shared with other calls does not give */
+                LinkEffectApi::addCalcAngleS(&gabi::at<LinkEffectBarrel>(gabi::ea(grab_actor))->mSlantAngle,
+                                             (s32)target_slant_angle, 5, 0x200, 0x80);
+            }
         }
     }
     if (mCurProc == LinkEffectConstants::daPyProc_GRAB_UP_e) {
@@ -1511,11 +1652,38 @@ void daPy_lk_c::setGrabItemPos() {
         grab_actor->current.pos.x = cStack_58->x;
         grab_actor->current.pos.z = cStack_58->z;
     }
+    /* true60 (M2f, pot): the carried item's bounce is a once-a-frame accumulator
+     * of the frame-end fall speed (A: + 0.2 x -speed.y after the frame's gravity, or a chase of 5 back to 0). Per step
+     * (0.2 x dt x the step's speed.y) it summed the earlier steps' slower speeds (potP4, N 4, autojump fall 263-274: the
+     * bounce B 34.0 / A 36.2, the pot 2 lower; the first falling frame 263 B 0.108 / A 0.269, the earlier steps still
+     * rising). Form: the frame's earlier steps keep the bounce (the pot rides at the frame-start bounce), the step that
+     * ends the frame runs the original arithmetic on the frame-end state. NC WWHD_T60_GRABBOUNCE_NEGCTRL=1 (the per-step
+     * form). dt 1: the original. */
+    if (t60::dt() != 1.0f && !lk04_grabBounceNegctrl()) {
+        if (!t60::tick30()) {
+            grab_actor->current.pos.y = grab_actor->current.pos.y + mGrabItemBounceY;
+            return;
+        }
+        if (mNoResetFlg0 & LinkEffectConstants::daPyFlg0_UNK400) {
+            mGrabItemBounceY = 0.0f;
+        } else if ((mModeFlg & LinkEffectConstants::ModeFlg_MIDAIR) && speed.y < 0.0f) {
+            f32 v = gabi::fnmsubs(speed.y, 0.2f, mGrabItemBounceY);
+            mGrabItemBounceY = v > 40.0f ? 40.0f : v;
+        } else {
+            f32 x = mGrabItemBounceY; /* cLib_chaseF(&b, 0, 5) at the 30 Hz step (no T60_STEP) */
+            mGrabItemBounceY = x > 0.0f ? (x - 5.0f > 0.0f ? x - 5.0f : 0.0f) : (x + 5.0f < 0.0f ? x + 5.0f : 0.0f);
+        }
+        grab_actor->current.pos.y = grab_actor->current.pos.y + (f32)mGrabItemBounceY;
+        return;
+    }
     if (mNoResetFlg0 & LinkEffectConstants::daPyFlg0_UNK400) {
         mGrabItemBounceY = 0.0f;
         grab_actor->current.pos.y = grab_actor->current.pos.y + 0.0f;
     } else if ((mModeFlg & LinkEffectConstants::ModeFlg_MIDAIR) && speed.y < 0.0f) {
-        f32 v = gabi::fnmsubs(speed.y, 0.2f, mGrabItemBounceY);
+        /* true60 (the per-step movement rule): the carried item's lag grows by 0.2 x the fall speed per 30 Hz frame: x dt
+         * per step (dt 1: 0.2, the original) */
+        const f32 lag = t60::dt() == 1.0f ? 0.2f : 0.2f * (f32)t60::dt();
+        f32 v = gabi::fnmsubs(speed.y, lag, mGrabItemBounceY);
         if (v > 40.0f) {
             mGrabItemBounceY = 40.0f;
             grab_actor->current.pos.y = grab_actor->current.pos.y + 40.0f;
@@ -1638,7 +1806,10 @@ void daPy_lk_c::setLightSaver() {
             LinkEffectParticle(gabi::at<JPABaseEmitter>(em)).mGlobalEnvColor.r = r2;
             LinkEffectParticle(gabi::at<JPABaseEmitter>(em)).mGlobalEnvColor.b = b2;
         }
-        bool parry = dComIfGp_getDoStatus() == LinkEffectConstants::dActStts_PARRY_e && m355C == 0;
+        /* true60 (the first-step AI-timer rule for Link): the cooldown's count (end of this function) runs on the frame's first step;
+         * a count that reached 0 there is held over the frame's later steps (the original's next update sees it) */
+        bool parry = dComIfGp_getDoStatus() == LinkEffectConstants::dActStts_PARRY_e && m355C == 0 &&
+                     !lkT60_countHeld(LKT60_KEY_PARRY, 0, 0);
         bool go = parry;
         if (!go) {
             u32 f1 = noResetFlg1();
@@ -1647,7 +1818,8 @@ void daPy_lk_c::setLightSaver() {
         if (go) {
             GXColor* prm;
             GXColor* env;
-            if (dComIfGp_getDoStatus() == LinkEffectConstants::dActStts_PARRY_e && m355C == 0) {
+            if (dComIfGp_getDoStatus() == LinkEffectConstants::dActStts_PARRY_e && m355C == 0 &&
+                !lkT60_countHeld(LKT60_KEY_PARRY, 0, 0)) {
                 prm = &l_sword_g_prm1;
                 env = prm;
                 gabi::Local<cXyz> v1;
@@ -1676,7 +1848,12 @@ void daPy_lk_c::setLightSaver() {
                     // HD: the parry branch returns after its chance-dependent countdown.
                     m355C = 0x1E;
                     if (!checkChanceMode()) {
-                        m355C = m355C - 1;
+                        /* true60 (the 30 Hz timer rule; the first-step AI-timer rule for Link): this stands for the end-of-update
+                         * count the return skips: only on the frame's first step (where that count runs) */
+                        if (lkT60_countStep()) {
+                            m355C = m355C - 1;
+                            lkT60_counted(LKT60_KEY_PARRY, 0, m355C);
+                        }
                     }
                     return;
                 }
@@ -1689,8 +1866,11 @@ void daPy_lk_c::setLightSaver() {
         LinkEffect_resourceFrame(LinkItem(this).mpSwordBtk.mpAnm) = 0.0f;
         lk_setAnimationFrame(&LinkItem(this).mpSwordBtk.mpFrameValue, 0.0f);
     }
-    if (m355C > 0 && !checkChanceMode()) {
+    /* true60 (the 30 Hz timer rule; the first-step AI-timer rule for Link): the parry glow's cooldown (30 frames) counts 30 Hz frames:
+     * on the frame's first step, the 0 it reaches held over the frame (the parry tests above) */
+    if (m355C > 0 && !checkChanceMode() && lkT60_countStep()) {
         m355C = m355C - 1;
+        lkT60_counted(LKT60_KEY_PARRY, 0, m355C);
     }
 }
 
@@ -1739,7 +1919,9 @@ void daPy_lk_c::setAuraEffect() {
             pYmgcs00Brk = gabi::ea(
                 dComIfG_getObjectRes("Link", LinkAuraConstants::dRes_INDEX_LINK_BRK_YMGCS00_MS_e, LK_SAFESTRING_VTBL));
         } else {
-            if (((dComIfG_inf_c*)dComIfGp_get())->play.mEvtCtrl.mMode == 0 /* !dComIfGp_event_runCheck() */) {
+            /* true60 (the 30 Hz timer rule): the Tingle shield's duration counts 30 Hz frames: frame step only */
+            if (((dComIfG_inf_c*)dComIfGp_get())->play.mEvtCtrl.mMode == 0 /* !dComIfGp_event_runCheck() */ &&
+                lk_t60FrameStep()) {
                 mTinkleShieldTimer = mTinkleShieldTimer - 1;
             }
             pYaura00Brk = gabi::ea(
@@ -1770,19 +1952,24 @@ void daPy_lk_c::setAuraEffect() {
             }
         }
         // HD: unordered values take the clamp path; preserve both virtual calls.
-        yauraFrame = yauraFrame + 1.0f;
+        /* true60 (the animation-rate rule): the aura brks (and the six aura entries below) step by hand, 1 frame per
+         * 30 Hz frame: dt per step (dt 1: 1.0, the original) */
+        yauraFrame = yauraFrame + (t60::dt() == 1.0f ? 1.0f : (f32)t60::dt());
         if (!(yauraFrame < (f32)LinkAura_getFrameMax(curYaura00Brk))) {
             yauraFrame = (f32)LinkAura_getFrameMax(curYaura00Brk) - 0.001f;
         }
-        ymgcsFrame = ymgcsFrame + 1.0f;
+        ymgcsFrame = ymgcsFrame + (t60::dt() == 1.0f ? 1.0f : (f32)t60::dt());
         if (!(ymgcsFrame < (f32)LinkAura_getFrameMax(curYmgcs00Brk))) {
             ymgcsFrame = (f32)LinkAura_getFrameMax(curYmgcs00Brk) - 0.001f;
         }
-        seStartMapInfo(LinkAuraConstants::JA_SE_LK_MG_SHELD_USING);
+        /* true60 (the one-emitter-per-event rule): sustained start on every update while the magic armour is on: frame step only
+         * (the aura frames above advance dt per step) */
+        if (lk_t60FrameStep())
+            seStartMapInfo(LinkAuraConstants::JA_SE_LK_MG_SHELD_USING);
     } else {
-        yauraFrame = yauraFrame - 1.0f;
+        yauraFrame = yauraFrame - (t60::dt() == 1.0f ? 1.0f : (f32)t60::dt());
         yauraFrame = fsel_l(yauraFrame, yauraFrame, 0.0f);
-        ymgcsFrame = ymgcsFrame - 1.0f;
+        ymgcsFrame = ymgcsFrame - (t60::dt() == 1.0f ? 1.0f : (f32)t60::dt());
         ymgcsFrame = fsel_l(ymgcsFrame, ymgcsFrame, 0.0f);
     }
     /* mYaura00rBrk.entryFrame(yauraFrame); mYmgcs00Brk.entryFrame(ymgcsFrame) (HD: frame callback objects) */
@@ -1818,7 +2005,7 @@ void daPy_lk_c::setAuraEffect() {
         gabi::Local<cXyz> t1;
         LinkAuraEntry* entry = effects.mMagicArmorAuraEntries;
         for (int idx = 0; idx < 6; idx++, entry++) {
-            f32 var_f0 = entry->mFrame + 1.0f;
+            f32 var_f0 = entry->mFrame + (t60::dt() == 1.0f ? 1.0f : (f32)t60::dt());
             if (!(var_f0 < y00BtkFrameMax)) {
                 var_f0 -= y00BtkFrameMax;
             }
@@ -2073,6 +2260,11 @@ void daPy_lk_c::setWaterRipple() {
         xz->y = 0.0f;
         xz->x = local_4c->x;
         f32 d = std_sqrtf(PSVECSquareMag(xz));
+        /* true60 (the per-step movement rule): the bulge's stretch reads the head's movement since the last update, a
+         * per-frame distance at 30 Hz: per step it is dt of a frame's, so / dt (dt 1: the original) */
+        if (t60::dt() != 1.0f) {
+            d = d / (f32)t60::dt();
+        }
         f32 sz = gabi::fmadds(d / mMaxNormalSpeed, 0.5f, 1.0f);
         if (sz > 1.5f) {
             sz = 1.5f;
@@ -2169,7 +2361,10 @@ void daPy_lk_c::setWaterRipple() {
                             waterfall_splash_trans); /* setEmitterTranslation */
             }
         }
-        if (mWaterfallRippleTimer == 0) {
+        /* true60 (the 30 Hz timer rule): the waterfall ripple + rumble every 16 frames (timer 15, the rumble
+         * stopped at 5) counts 30 Hz frames: the spawn and the count on the frame's step only */
+        if (!lk_t60FrameStep()) {
+        } else if (mWaterfallRippleTimer == 0) {
             gabi::Local<cXyz> local_ac;
             lk_jntPos(mpCLModel, LinkItemConstants::CL_JNT_LINK_ROOT_e, local_ac);
             /* dComIfGp_particle_setSingleRipple(dPa_name::ID_IT_JN_WP_HAMON03, &local_ac, NULL,
@@ -2214,17 +2409,52 @@ void daPy_lk_c::setWaterRipple() {
 /* (s16)ftoi(f) (stfiwx, then the low halfword) */
 static inline s16 lk_ftos(f32 f) { return (s16)gabi::ftoi(f); }
 
+/* true60 (the mixed-pair hit-flag rule): the wind cylinder's TG hit (a fan's or gust's wind: an unconverted party, a
+ * mixed pair) is set by the tick30 collision Move, read on the next frame's first step and cleared by that step's
+ * Move; the hat runs on the frame's (tick30) step, which never saw it. The first step's hit holds for the frame (a
+ * later step's own hit still counts). */
+static bool s_lk04HatWindHeld;
+static uint32_t s_lk04HatWindFrame;
 /* 024022D0 */
 void daPy_lk_c::setHatAngle() {
+    /* true60 (the per-step smoothing rule, 4 and 11): the hat is a per-frame spring: three joint pairs chased toward targets
+     * with a momentum of 0.2 x the last update's move, the head's and the hat's movement since the last update as
+     * forcing (clamped per update), the swing phase advanced per update and JA_SE_LK_HAT_SWING started on every update
+     * in the wind / fan glide / tact window (a sustained start). Run per step it swings N x as fast and starts the sound
+     * N x a frame. It runs on the frame's step only: the 30 Hz spring exactly, its inputs taken over the whole frame
+     * (the head and hat movement since the last frame step); the joint angles hold over the frame's other steps
+     * (relative to the head, which moves on every step). dt 1: every update (the original). */
+    bool windHit = false;
+    if (t60::dt() != 1.0f) {
+        windHit = LinkPoseApi::ChkTgHit(&mWindCyl);
+        const uint32_t now = t60_step_counter();
+        if (t60::first_step()) {
+            s_lk04HatWindFrame = now;
+            s_lk04HatWindHeld = windHit;
+        } else if (!windHit && s_lk04HatWindHeld && now - s_lk04HatWindFrame < t60::steps()) {
+            windHit = true;
+        }
+    }
+    if (!lk_t60FrameStep()) {
+        return;
+    }
     if (LinkPose(this).m_old_fdata->mOldFrameFlg.get() == 0 /* m_old_fdata->getOldFrameFlg() */ ||
         (mNoResetFlg1.get() & daPyFlg1_FREEZE_STATE)) {
         return;
     }
+    /* true60 (c_lib run converted in N-step spec): the frame's step runs the 30 Hz spring whole, so its eases
+     * (cLib_addCalcAngleS2 on the hat joints) run at dt 1 there: at the step's dt they began a partial frame entry on
+     * the tick30 step and took only the step's share of the original's one ease (N-step spec N2 mHatBAngleZ one step 0Exx,
+     * two steps 10xx). dt back at both returns below, as plain calls (the earlier host scope object's constructor /
+     * destructor do not run under the source glue, true60.h t60_set_dt note; audit OBJ2 s9: the eases ran at dt 0.5). */
+    const bool lkHatConv = t60::dt() != 1.0f;
+    const float lkHatPrevDt = lkHatConv ? t60_set_dt(1.0f) : 1.0f;
     Mtx34* head_jnt_mtx = mpCLModel->getAnmMtx(LinkPoseConstants::CL_JNT_HEAD_JNT_e);
     BOOL r31 = TRUE;
     if (!LinkPoseApi::startCheckOld(dComIfGp_getPEvtManager(), "TACT_WINDOW2") &&
         !LinkPoseApi::startCheckOld(dComIfGp_getPEvtManager(), "TACT_WINDOW2_SHIP") &&
-        mCurProc != LinkPoseConstants::daPyProc_FAN_GLIDE_e && !LinkPoseApi::ChkTgHit(&mWindCyl)) {
+        mCurProc != LinkPoseConstants::daPyProc_FAN_GLIDE_e &&
+        !(!lkHatConv ? LinkPoseApi::ChkTgHit(&mWindCyl) : windHit)) {
         r31 = FALSE;
     }
     gabi::Local<cXyz> sp70;
@@ -2436,6 +2666,8 @@ void daPy_lk_c::setHatAngle() {
         mMomiAngleZ = 0;
         mLMomiAngleY = 0;
         mRMomiAngleY = 0;
+        if (lkHatConv)
+            t60_set_dt(lkHatPrevDt); /* true60: dt back */
         return;
     }
     f32 ax = spAC->x;
@@ -2454,12 +2686,41 @@ void daPy_lk_c::setHatAngle() {
     } else if (mRMomiAngleY < -0x1000) {
         mRMomiAngleY = -0x1000;
     }
+    if (lkHatConv)
+        t60_set_dt(lkHatPrevDt); /* true60: dt back */
+}
+
+/* true60 (fight root, rule 2 2026-11-17, the first-step AI-timer rule, probe5): setNeckAngle reads the head
+ * joint's matrix of the last model calc (the end of Link's previous execute) and subtracts the neck angles baked into
+ * it. The original reads the PREVIOUS frame's final pose; on a converted frame's later steps that matrix is a mid-frame
+ * pose (Link 0.75 frame further, the body animation advanced), so the look-at target of the neck chase differs and the
+ * centrally pinned chase lands on another value at the tick30 step (probe5 frame 31, lock-on start: neck A 0293,FFAB,
+ * B 0267,FFBD; Link's eyePos, which the unconverted Bokoblin's head look reads, -52.853 vs -54.328). The first step
+ * (the frame-start pose = A's) keeps the head centre, eye point, head translation and neck angles it used; the later
+ * steps of the frame compute the look-at with those, so the tick30 value equals A's. dt 1: the original. Host state of
+ * this unit only (setNeckAngle runs once per execute). */
+namespace {
+struct LkT60NeckRef {
+    uint32_t tag = 0xFFFFFFFFu;
+    f32 c[3], e[3], t[3]; /* head centre (l_head_center_offset), eye point (l_eye_offset), head translation */
+    s16 nx, ny;           /* the neck angles the first step read */
+    s16 face;             /* m34DE the first step read: the facing the head pose above was taken at (rule 1, probe9) */
+    /* the neck yaw chase's own value before the look-cone clamp of the frame's last step, and the clamped value it
+     * wrote (cLib_addCalcAngleS's frame entry restarts when the value it left was changed since) */
+    uint32_t clampTag = 0xFFFFFFFFu;
+    s16 easeY, clampY;
+};
+LkT60NeckRef g_lkT60NeckRef;
+}
+static inline bool lkT60NeckUseRef() {
+    return t60::dt() != 1.0f && !t60::first_step() && g_lkT60NeckRef.tag == lkT60Maba::frameTag();
 }
 
 /* 02400C4C */
 void daPy_lk_c::setNeckAngle() {
     offNoResetFlg1(daPyFlg1_UNK400);
     Mtx34* r25m = mpCLModel->getAnmMtx(LinkPoseConstants::CL_JNT_HEAD_JNT_e);
+    const bool lkRef = lkT60NeckUseRef();
     gabi::Local<be<u32>> sp18; // HD: guest cXyz* slot; retain the original four-byte stack object.
     *sp18 = 0;
     s16 r30 = 0; /* (GameCube names) */
@@ -2518,11 +2779,11 @@ void daPy_lk_c::setNeckAngle() {
             r28 = TRUE;
         } else {
             u16 a = (u16)m34DE;
-            f32 y = r25m->m[1][3];
-            f32 x = r25m->m[0][3];
+            f32 y = lkRef ? g_lkT60NeckRef.t[1] : (f32)r25m->m[1][3];
+            f32 x = lkRef ? g_lkT60NeckRef.t[0] : (f32)r25m->m[0][3];
             f32 s = cM_ssin(a);
             f32 c = cM_scos(a);
-            f32 z = r25m->m[2][3];
+            f32 z = lkRef ? g_lkT60NeckRef.t[2] : (f32)r25m->m[2][3];
             spA0->y = y;
             spA0->x = gabi::fmadds(20000.0f, s, x);
             *sp18 = gabi::ea(spA0.get());
@@ -2597,6 +2858,7 @@ void daPy_lk_c::setNeckAngle() {
                        LinkPoseApi::checkAttentionPosAngle(this, mpAttnActorY.get(), sp18.get()) ||
                        LinkPoseApi::checkAttentionPosAngle(this, mpAttnActorZ.get(),
                                                            sp18.get())) { /* checkAttentionPosAngle */
+                lkT60_attnLookPoint(sp18.get(), spA0.get()); /* true60: the process-order read rule (d_a_player_t60.h) */
                 r28 = TRUE;
             } else if (LinkPoseApi::detectAttention(LinkPose_getDetect(), spA0.get()) &&
                        cLib_distanceAngleS(cLib_targetAngleY(&current.pos, spA0), m34DE) <= 0x6000) {
@@ -2632,6 +2894,24 @@ void daPy_lk_c::setNeckAngle() {
     gabi::Local<cXyz> sp88;
     PSMTXMultVec(r25m, &l_head_center_offset, spC4);
     PSMTXMultVec(r25m, &l_eye_offset, sp88);
+    if (lkRef) {
+        spC4->x = g_lkT60NeckRef.c[0]; spC4->y = g_lkT60NeckRef.c[1]; spC4->z = g_lkT60NeckRef.c[2];
+        sp88->x = g_lkT60NeckRef.e[0]; sp88->y = g_lkT60NeckRef.e[1]; sp88->z = g_lkT60NeckRef.e[2];
+    } else if (t60::dt() != 1.0f) { /* the first step: the frame-start pose */
+        LkT60NeckRef& r = g_lkT60NeckRef;
+        r.tag = lkT60Maba::frameTag();
+        r.c[0] = spC4->x; r.c[1] = spC4->y; r.c[2] = spC4->z;
+        r.e[0] = sp88->x; r.e[1] = sp88->y; r.e[2] = sp88->z;
+        r.t[0] = r25m->m[0][3]; r.t[1] = r25m->m[1][3]; r.t[2] = r25m->m[2][3];
+        r.nx = mNeckAngle.x;
+        r.ny = mNeckAngle.y;
+        r.face = m34DE;
+    }
+    /* true60 (rule 1 2026-11-17, probe9 frame 32): the look-at yaw is relative to the facing of the frame-start
+     * head pose (m34DE = the facing at the execute's start, the frame start in the original); on a later step m34DE is
+     * the previous step's facing (Link 0x600 further into his lock-on turn at the tick30 step), so with the frame-start
+     * pose the neck target was off by the frame's turn so far (neck yaw A 00AB, B 016C) */
+#define lkFace (lkRef ? g_lkT60NeckRef.face : (s16)m34DE) /* (read at the original's place: dt-1 check access order) */
     gabi::Local<cXyz> spAC;
     cXyz_mi(sp88, spAC, spC4);
     f32 acx = spAC->x;
@@ -2641,8 +2921,8 @@ void daPy_lk_c::setNeckAngle() {
     xz0->y = 0.0f;
     xz0->x = acx;
     xz0->z = acz;
-    s16 r24_4 = (s16)(cM_atan2s(-acy, std_sqrtf(PSVECSquareMag(xz0))) - mNeckAngle.x);
-    s16 r25_3 = (s16)((cM_atan2s(acx, acz) - m34DE) - mNeckAngle.y);
+    s16 r24_4 = (s16)(cM_atan2s(-acy, std_sqrtf(PSVECSquareMag(xz0))) - (lkRef ? g_lkT60NeckRef.nx : (s16)mNeckAngle.x));
+    s16 r25_3 = (s16)((cM_atan2s(acx, acz) - lkFace) - (lkRef ? g_lkT60NeckRef.ny : (s16)mNeckAngle.y));
     s16 r4;
     s16 r23;
     if ((mModeFlg & (LinkPoseConstants::ModeFlg_00000080 | LinkPoseConstants::ModeFlg_08000000)) &&
@@ -2658,13 +2938,14 @@ void daPy_lk_c::setNeckAngle() {
         xz1->x = bx;
         xz1->z = bz;
         s16 r27 = cM_atan2s(-by, std_sqrtf(PSVECSquareMag(xz1)));
-        s16 r23_3 = (s16)(cM_atan2s(bx, bz) - m34DE);
+        s16 r23_3 = (s16)(cM_atan2s(bx, bz) - lkFace);
+#undef lkFace
         gabi::Local<cXyz> xz2;
         xz2->x = bx;
         xz2->y = 0.0f;
         xz2->z = bz;
         if (std_sqrtf(PSVECSquareMag(xz2)) < 30.0f) {
-            r23_3 = mNeckAngle.y;
+            r23_3 = lkRef ? g_lkT60NeckRef.ny : (s16)mNeckAngle.y; /* true60: the frame-start neck */
         }
         if (r27 > 8000) {
             r27 = 8000;
@@ -2734,7 +3015,17 @@ void daPy_lk_c::setNeckAngle() {
         r29 = 0;
     }
     cLib_addCalcAngleS(&mNeckAngle.x, r4, 3, 0x1000, 0x100);
+    /* true60 (c_lib run converted in N-step spec): the look-cone clamp below writes the neck yaw after its chase; on a
+     * converted frame's earlier step that write made the chase's frame entry (c_lib.cpp) start again from the
+     * clamped value on the next step, as a partial frame (the tick30 step then no longer lands on the original's one
+     * chase from the frame start, then clamped: N-step spec N2 neck yaw one step 10xx, two steps 13xx). The chase continues
+     * from its own unclamped value of the step before; the clamp then applies to each step's value as in the
+     * original. Host state only; dt 1: the original. */
+    if (lkRef && g_lkT60NeckRef.clampTag == g_lkT60NeckRef.tag && (s16)mNeckAngle.y == g_lkT60NeckRef.clampY) {
+        mNeckAngle.y = g_lkT60NeckRef.easeY;
+    }
     cLib_addCalcAngleS(&mNeckAngle.y, r23, 3, 0x1000, 0x100);
+    const s16 lkEaseY = mNeckAngle.y;
     if (mModeFlg & LinkPoseConstants::ModeFlg_00000080) {
         s16 v = (s16)(r25_3 + mNeckAngle.y);
         if (v > 0x3800) {
@@ -2742,6 +3033,11 @@ void daPy_lk_c::setNeckAngle() {
         } else if (v < -0x3800) {
             mNeckAngle.y = (s16)(-0x3800 - r25_3);
         }
+    }
+    if (t60::dt() != 1.0f && !t60::tick30()) {
+        g_lkT60NeckRef.clampTag = (s16)mNeckAngle.y != lkEaseY ? g_lkT60NeckRef.tag : 0xFFFFFFFFu;
+        g_lkT60NeckRef.easeY = lkEaseY;
+        g_lkT60NeckRef.clampY = mNeckAngle.y;
     }
     if (mCurProc != LinkPoseConstants::daPyProc_DAMAGE_e) {
         cLib_addCalcAngleS(&mNeckAngle.z, 0, 3, 0x1000, 0x100);
@@ -2957,7 +3253,9 @@ s32 daPy_lk_c::setItemModel() {
     }
     if (LinkItem(this).mpEquipItemBtk.mpAnm != 0) { /* mpEquipItemBtk */
         f32 f = LinkItem(this).mpEquipItemBtk.mFrameCtrl.mFrame;
-        if (f > 0.0f || cM_rnd() < 0.02f) {
+        /* true60 (the animation-rate rule and 8): the item glint btk steps by hand and starts by a per-frame chance: on the
+         * tick30 step only in a converted context (also below: sword grip, mirror shield) */
+        if (lk_t60FrameStep() && (f > 0.0f || cM_rnd() < 0.02f)) {
             lk_btkStep(&LinkItem(this).mpEquipItemBtk, f);
         }
     }
@@ -2995,9 +3293,13 @@ s32 daPy_lk_c::setItemModel() {
             }
         } else if (item == LinkItemConstants::dItemNo_SKULL_HAMMER_e &&
                    LinkItem(this).mHammerSwingTimer != 0) {
+            /* true60 (the 30 Hz timer rule): the hammer's wobble after a hit counts 30 Hz frames: the timer is stored
+             * on the frame's step only; every step of the frame shows the frame's value (timer - 1) */
             s16 t = (s16)(LinkItem(this).mHammerSwingTimer - 1);
             u32 ang = (u16)((s32)t * 0x61A8);
-            LinkItem(this).mHammerSwingTimer = t;
+            if (lk_t60FrameStep()) {
+                LinkItem(this).mHammerSwingTimer = t;
+            }
             f32 amp = (f32)t * 300.0f;
             f32 s = cM_ssin(ang);
             s16 r = (s16)(LinkItem(this).mHammerSwingAngle + lk_ftos(s * amp));
@@ -3067,7 +3369,10 @@ s32 daPy_lk_c::setItemModel() {
                     if (prm != 0) {
                         f32 v = m35EC; /* m35EC */
                         u32 bck = LinkItem(this).mSwordAnim.mpAnm;
-                        m35EC = prm == 1 ? gabi::fadds_ppc(v, 1.0f) : gabi::fsubs_ppc(v, 1.0f);
+                        /* true60 (the animation-rate rule): the hookshot's hand-stepped bck frame, 1 per 30 Hz frame:
+                         * dt per step (dt 1: 1.0, the original) */
+                        const f32 d = t60::dt() == 1.0f ? 1.0f : (f32)t60::dt();
+                        m35EC = prm == 1 ? gabi::fadds_ppc(v, d) : gabi::fsubs_ppc(v, d);
                         s32 n = gabi::call_ptr<s32>(gabi::load<u32>(gabi::load<u32>(bck + 4) + 0x14),
                                                     bck); /* getFrameMax() */
                         f32 mx = (f32)n;
@@ -3082,7 +3387,10 @@ s32 daPy_lk_c::setItemModel() {
             } else if (item == LinkItemConstants::dItemNo_WIND_WAKER_e) {
                 if (mCurProc != LinkItemConstants::daPyProc_TACT_WAIT_e &&
                     LinkItem(this).mpEquipItemBrk.mpAnm.v != 0) {
-                    f32 f = gabi::fsubs_ppc(LinkItem(this).mpEquipItemBrk.mFrameCtrl.mFrame, 1.0f);
+                    /* true60 (the animation-rate rule): the Wind Waker's glow brk steps back by hand, 1 per 30 Hz
+                     * frame: dt per step (dt 1: 1.0, the original) */
+                    f32 f = gabi::fsubs_ppc(LinkItem(this).mpEquipItemBrk.mFrameCtrl.mFrame,
+                                            t60::dt() == 1.0f ? 1.0f : (f32)t60::dt());
                     f = fsel_l(f, f, 0.0f);
                     u32 brk = LinkItem(this).mpEquipItemBrk.mpAnm.v;
                     LinkItem(this).mpEquipItemBrk.mFrameCtrl.mFrame = f;
@@ -3164,7 +3472,7 @@ s32 daPy_lk_c::setItemModel() {
         }
         gripFrame = LinkItem(this).mpTswgripmsBtk.mFrameCtrl.mFrame;
     }
-    if (gripFrame > 0.1f || cM_rnd() < 0.02f) { /* mpTswgripmsBtk */
+    if (lk_t60FrameStep() && (gripFrame > 0.1f || cM_rnd() < 0.02f)) { /* mpTswgripmsBtk */
         lk_btkStep(&LinkItem(this).mpTswgripmsBtk, gripFrame);
     }
     if (mEquipItem == LinkItemConstants::daPyItem_SWORD_e) {
@@ -3195,7 +3503,7 @@ s32 daPy_lk_c::setItemModel() {
         shieldType = 2;
         if (btk != 0) {
             f32 f = LinkItem(this).mpTshmsBtk.mFrameCtrl.mFrame;
-            if (f > 0.0f || cM_rnd() < 0.02f) {
+            if (lk_t60FrameStep() && (f > 0.0f || cM_rnd() < 0.02f)) {
                 lk_btkStep(&LinkItem(this).mpTshmsBtk, f);
             }
         }
@@ -3485,6 +3793,8 @@ static inline void LinkCollision_setStartEnd(dCcD_Cps* collider, const cXyz* sta
 // HD: grab-wear uses the height field; cut widths are constants and colors are gamma corrected.
 // HD: the damage test includes extra procedures, and the roll trail turns by a constant angle.
 void daPy_lk_c::setCollision() {
+    /* true60 (the one-sweep-per-frame attack rule; d_a_player_at_t60.h): the frame's start sword positions */
+    lkT60_atFrameEntry(gabi::ea(&mOldSwordTopPos), gabi::ea(&mOldSwordRootPos));
     Mtx34* root_jnt_mtx = lk_getAnmMtx(mpCLModel, LinkCollisionConstants::CL_JNT_LINK_ROOT_e);
     Mtx34* neck_jnt_mtx = lk_getAnmMtx(mpCLModel, LinkCollisionConstants::CL_JNT_NECK_JNT_e);
     Mtx34* ltoe_jnt_mtx = lk_getAnmMtx(mpCLModel, LinkCollisionConstants::CL_JNT_LTOE_JNT_e);
@@ -3568,11 +3878,15 @@ void daPy_lk_c::setCollision() {
         if (rflg & LinkCollisionConstants::daPyRFlg0_UNK1) { /* daPyRFlg0_UNK1 */
             setCutWaterSplash();
             proc = mCurProc;
-            if (proc == LinkCollisionConstants::daPyProc_CUT_TURN_e ||
-                proc == LinkCollisionConstants::daPyProc_CUT_ROLL_e) {
-                LinkCollisionApi::StartCAt(&mAtCyl, &current.pos);
-            } else {
-                setSwordAtCollision();
+            /* true60 (the one-sweep-per-frame attack rule): at N steps the attack volumes are set on the frame's tick30 step (below) */
+            lkT60_atMarkStart();
+            if (t60::dt() == 1.0f) {
+                if (proc == LinkCollisionConstants::daPyProc_CUT_TURN_e ||
+                    proc == LinkCollisionConstants::daPyProc_CUT_ROLL_e) {
+                    LinkCollisionApi::StartCAt(&mAtCyl, &current.pos);
+                } else {
+                    setSwordAtCollision();
+                }
             }
             mNoResetFlg0 =
                 mNoResetFlg0 | LinkCollisionConstants::daPyFlg0_CUT_AT_FLG; /* daPyFlg0_CUT_AT_FLG */
@@ -3664,6 +3978,13 @@ void daPy_lk_c::setCollision() {
             gabi::Local<cXyz> spA0;
             gabi::Local<cXyz> t;
             cXyz_mi(&old.pos, d1.get(), &current.pos);
+            /* true60 (the per-step movement rule): the trail spacing is a tenth of the last update's move; at N steps
+             * that move is a step's: / dt keeps the 30 Hz frame's spacing (visual) */
+            if (t60::dt() != 1.0f) {
+                d1->x = d1->x / (f32)t60::dt();
+                d1->y = d1->y / (f32)t60::dt();
+                d1->z = d1->z / (f32)t60::dt();
+            }
             cXyz_ml(d1.get(), d2.get(), 0.1f);
             spAC->copy(*d2);
             J3DModel* cl = mpCLModel;
@@ -3691,8 +4012,11 @@ void daPy_lk_c::setCollision() {
                 LinkCollision(this).mCutTurnEcallBack1.mpPos = arr;
                 LinkCollision(this).mCutTurnEcallBack2.mpPos = arr;
             }
-            LinkCollisionApi::MoveCAt(&mAtCyl, &current.pos);
-            seStartSwordCut(LinkCollisionConstants::JA_SE_LK_SUGOI_KAITEN /* JA_SE_LK_SUGOI_KAITEN */);
+            if (t60::dt() == 1.0f) /* true60 (the one-sweep-per-frame attack rule): at N steps on the frame's tick30 step (below) */
+                LinkCollisionApi::MoveCAt(&mAtCyl, &current.pos);
+            /* true60 (the one-emitter-per-event rule): sustained start on every update of the spin (CUT_ROLL): frame step only */
+            if (lk_t60FrameStep())
+                seStartSwordCut(LinkCollisionConstants::JA_SE_LK_SUGOI_KAITEN /* JA_SE_LK_SUGOI_KAITEN */);
         } else {
             daPy_swBlur_c* blur = LinkCollisionBlur(mpSwBlur);
             proc = mCurProc;
@@ -3720,7 +4044,8 @@ void daPy_lk_c::setCollision() {
                 PSMTXMultVec(cl != nullptr ? cl->getBaseTRMtx() : nullptr,
                              gabi::at<cXyz>(gabi::ea(pb) + (u32)n * sizeof(cXyz) * 2 + sizeof(cXyz) * 3),
                              sp98.get());
-                LinkCollisionApi::MoveCAt(&mAtCyl, &current.pos);
+                if (t60::dt() == 1.0f) /* true60 (the one-sweep-per-frame attack rule): at N steps on the frame's tick30 step (below) */
+                    LinkCollisionApi::MoveCAt(&mAtCyl, &current.pos);
                 u8 alpha = LinkCollision(this).mCutTurnEcallBack0.mAlpha;
                 daPy_swBlur_c* bl = LinkCollisionBlur(mpSwBlur);
                 if (alpha == 0xFF) {
@@ -3735,8 +4060,32 @@ void daPy_lk_c::setCollision() {
                     LinkCollision(this).mCutTurnEcallBack2.mpPos = arr;
                 }
                 bl->mSegmentNum = 0; /* mSwBlur.mSegmentNum */
-            } else {
+            } else if (t60::dt() == 1.0f) { /* true60 (the one-sweep-per-frame attack rule): at N steps on the frame's tick30 step (below) */
                 setSwordAtCollision();
+            }
+        }
+        /* true60 (the one-sweep-per-frame attack rule): one attack sweep per 30 Hz frame. At N steps the volumes are
+         * set here on the frame's tick30 step only: the capsules from the frame's start positions (execute's old
+         * positions on the frame's first step) to its end positions, the spin cylinder moved from its last tick30
+         * position (its AT vector = the frame's move); an AT start on any step of the frame takes the start form
+         * (StartCAt; root -> top only, no sweep vector), as the original's one update at the frame's end does. */
+        if (lkT60_atFrameSet()) {
+            const bool started = (rflg & LinkCollisionConstants::daPyRFlg0_UNK1) || lkT60_atStartedInFrame();
+            proc = mCurProc;
+            if (proc == LinkCollisionConstants::daPyProc_CUT_TURN_e ||
+                proc == LinkCollisionConstants::daPyProc_CUT_ROLL_e) {
+                if (started)
+                    LinkCollisionApi::StartCAt(&mAtCyl, &current.pos);
+                else
+                    LinkCollisionApi::MoveCAt(&mAtCyl, &current.pos);
+            } else {
+                const u32 keepReset = mResetFlg0;
+                if (started)
+                    mResetFlg0 = keepReset | LinkCollisionConstants::daPyRFlg0_UNK1;
+                lkT60_atSwapOld(gabi::ea(&mOldSwordTopPos), gabi::ea(&mOldSwordRootPos));
+                setSwordAtCollision();
+                lkT60_atSwapOld(gabi::ea(&mOldSwordTopPos), gabi::ea(&mOldSwordRootPos));
+                mResetFlg0 = keepReset;
             }
         }
         proc = mCurProc;
@@ -3755,7 +4104,7 @@ void daPy_lk_c::setCollision() {
             mAtCps[0].mObjAt.mSPrm = a1 | 1;
             mAtCyl.mObjAt.mSPrm = a0 & ~1u;
             u32 a3 = mAtCps[2].mObjAt.mSPrm;
-            if (rf & 1) {
+            if ((rf & 1) || lkT60_atStartedInFrame()) { /* true60 (the one-sweep-per-frame attack rule): a start on a step of the frame */
                 mAtCps[1].mObjAt.mSPrm = a2 & ~1u;
                 mAtCps[2].mObjAt.mSPrm = a3 & ~1u;
             } else {
@@ -3763,24 +4112,34 @@ void daPy_lk_c::setCollision() {
                 mAtCps[2].mObjAt.mSPrm = a3 | 1;
             }
         }
-        LinkCollision_setCollider(&mAtCyl);
-        LinkCollision_setMass(&mAtCyl);
-        for (u32 i = 0; i < 3; i++) {
-            LinkCollision_setCollider(&mAtCps[i]);
-            LinkCollision_setMass(&mAtCps[i]);
+        /* true60 (the one-sweep-per-frame attack rule): registered for the frame's tick30 collision Move only (one sweep per 30 Hz frame) */
+        if (lkT60_atStep()) {
+            LinkCollision_setCollider(&mAtCyl);
+            LinkCollision_setMass(&mAtCyl);
+            for (u32 i = 0; i < 3; i++) {
+                LinkCollision_setCollider(&mAtCps[i]);
+                LinkCollision_setMass(&mAtCps[i]);
+            }
         }
     } else {
         daPy_swBlur_c* blur = LinkCollisionBlur(mpSwBlur);
         s32 v = (s32)blur->mSegmentNum;
-        blur->mSegmentNum = v < 10 ? 0 : v - 10;
+        /* true60 (the 30 Hz timer rule): the trail fades by 10 segments per 30 Hz frame: on the frame's step */
+        if (lk_t60FrameStep())
+            blur->mSegmentNum = v < 10 ? 0 : v - 10;
         if (mCurProc == LinkCollisionConstants::daPyProc_BOTTLE_OPEN_e /* daPyProc_BOTTLE_OPEN_e */ &&
             mProcVar3 != 0) {
+            /* true60 (the one-sweep-per-frame attack rule scope): the bottle swing's catch capsules are registered
+             * once per 30 Hz frame, for the frame's tick30 collision Move (the frame-end capsules, as the original's
+             * one update) */
             mAtCps[0].mObjAt.mSPrm = mAtCps[0].mObjAt.mSPrm | 1;
-            LinkCollision_setCollider(&mAtCps[0]);
+            if (lkT60_atStep())
+                LinkCollision_setCollider(&mAtCps[0]);
             u32 a = mAtCps[1].mObjAt.mSPrm;
             if (mProcVar2 != 0) {
                 mAtCps[1].mObjAt.mSPrm = a | 1;
-                LinkCollision_setCollider(&mAtCps[1]);
+                if (lkT60_atStep())
+                    LinkCollision_setCollider(&mAtCps[1]);
             } else {
                 mAtCps[1].mObjAt.mSPrm = a & ~1u;
             }
@@ -3802,7 +4161,9 @@ void daPy_lk_c::setCollision() {
     if (fanWindCrashEffectDraw()) {
         s16 mx = LinkCollision(this).mpYbafo00Btk.mFrameCtrl.mEnd;
         f32 fm = (f32)mx;
-        f32 f = gabi::fadds_ppc(LinkCollision(this).mpYbafo00Btk.mFrameCtrl.mFrame, 1.0f);
+        /* true60 (the animation-rate rule): hand-stepped crash-effect frame: + dt */
+        f32 f = gabi::fadds_ppc(LinkCollision(this).mpYbafo00Btk.mFrameCtrl.mFrame,
+                                t60::dt() == 1.0f ? 1.0f : (f32)t60::dt());
         if (f > gabi::fsubs_ppc(fm, 0.5f)) {
             f = gabi::fsubs_ppc(fm, 0.001f);
         }
@@ -3817,7 +4178,14 @@ void daPy_lk_c::setCollision() {
     cXyz* p88 = sp88.get();
     cXyz* pC4 = spC4.get();
     f32 radius = 0.0f;
-    if (mFanWindTimer != 0) { /* mFanWindTimer */
+    /* true60 (the one-sweep-per-frame attack rule scope): the gust is one 30 Hz update a frame, on the
+     * frame's tick30 step (its collision Move): its capsule starts at the previous update's end (the gust travels by
+     * its length an update), so run on every step it travelled N times as far a frame and its model played N times;
+     * the frame's other steps hold the gust (geometry, model, hit flags) */
+    bool gustHold = false;
+    if (mFanWindTimer != 0 && !lkT60_atStep()) {
+        gustHold = true;
+    } else if (mFanWindTimer != 0) { /* mFanWindTimer */
         p94->copy(LinkCollisionCapsule(mFanWindCps).mEnd);
         f32 t = (f32)mFanWindTimer / 10.0f;
         u32 ia = (u32)(u16)mFanWindAngleY >> 3;
@@ -3893,7 +4261,11 @@ void daPy_lk_c::setCollision() {
         wind = true;
         radius = gabi::fmadds(gabi::fsubs_ppc(1.0f, t), 230.0f, 70.0f);
         if (mFanWindTimer != 0) {
-            mFanWindTimer = (s16)(mFanWindTimer - 1);
+            /* true60 (the 30 Hz timer rule): the gust's travel timer (10 frames, its length and radius) counts
+             * 30 Hz frames: on the frame's step; the gust holds over the frame's other steps (exact for the
+             * tick30 collision Move; its model moves on the 30 Hz grid, the 30 Hz visual-motion rule) */
+            if (lk_t60FrameStep())
+                mFanWindTimer = (s16)(mFanWindTimer - 1);
             PSMTXTrans(mDoMtx_stack_c::get(), (f32)p88->x, (f32)p88->y, (f32)p88->z);
             LinkCollisionApi::ZXYrotM(stk, (s32)mFanWindAngleX, (s32)mFanWindAngleY, 0);
             LinkCollision_modelMatrix(LinkCollision(this).mpYuchw00Model, stk);
@@ -3902,12 +4274,16 @@ void daPy_lk_c::setCollision() {
     } else if (LinkCollisionApi::fanWindEffectDraw(this)) {
         LinkCollision_yuchwPlay(this);
         f32 mx = (f32)LinkCollision(this).mpYuchw00Brk.mFrameCtrl.mEnd;
-        f32 f = gabi::fadds_ppc(LinkCollision(this).mpYuchw00Brk.mFrameCtrl.mFrame, 1.0f);
+        /* true60 (the animation-rate rule): hand-stepped fade frame: + dt */
+        f32 f = gabi::fadds_ppc(LinkCollision(this).mpYuchw00Brk.mFrameCtrl.mFrame,
+                                t60::dt() == 1.0f ? 1.0f : (f32)t60::dt());
         if (f > gabi::fsubs_ppc(mx, 0.5f)) {
             f = gabi::fsubs_ppc(mx, 0.001f);
             LinkItemApi::endMtxFollow(reinterpret_cast<LinkItemMtxCallback*>(&mFanWindEcallBack)); /* mFanWindEcallBack.end() */
         }
         LinkCollision_anmSetFrame(LinkCollision(this).mpYuchw00Brk, f);
+    } else if (!lkT60_atStep() && LinkCollision(this).mpYbafo00Btk.mFrameCtrl.mFrame < 5.0f) {
+        gustHold = true; /* true60: the crash's short gust, on the frame's tick30 step (above) */
     } else if (LinkCollision(this).mpYbafo00Btk.mFrameCtrl.mFrame < 5.0f) {
         J3DModel* m = LinkCollision(this).mpYbafo00Model;
         Mtx34* mtx = m != nullptr ? m->getBaseTRMtx() : nullptr;
@@ -3933,12 +4309,18 @@ void daPy_lk_c::setCollision() {
         LinkCollisionWord(mFanWindCps.mGObjAt.mVec.y, v2);
         LinkCollisionCapsule(mFanWindCps).mRadius = radius; /* SetR */
         LinkCollisionWord(mFanWindCps.mGObjAt.mVec.z, v0);
-        LinkCollision_setCollider(&mFanWindCps);
-        LinkCollision_setMass(&mFanWindCps);
-    } else {
+        /* true60 (the one-sweep-per-frame attack rule scope): the Deku Leaf gust pushes once per 30 Hz frame: its
+         * capsule (frame-constant: the gust's timer counts on the frame's step) is registered for the frame's tick30
+         * collision Move only (registered on every step a converted target was pushed N times a frame) */
+        if (lkT60_atStep()) {
+            LinkCollision_setCollider(&mFanWindCps);
+            LinkCollision_setMass(&mFanWindCps);
+        }
+    } else if (!gustHold) {
         LinkCollisionApi::ResetAtHit(&mFanWindCps);
     }
-    if (LinkCollisionApi::fanWindEffectDraw(this)) {
+    /* true60 (the one-emitter-per-event rule): sustained start on every update while the gust shows: on the frame's step */
+    if (LinkCollisionApi::fanWindEffectDraw(this) && lk_t60FrameStep()) {
         s8 rev = mReverb;
         mDoAud_seStart(LinkCollisionConstants::JA_SE_LK_FAN_WIND /* JA_SE_LK_FAN_WIND */,
                        &LinkCollisionCapsule(mFanWindCps).mEnd, 0, (s32)rev);
@@ -3955,9 +4337,14 @@ void daPy_lk_c::setCollision() {
         } else {
             sph->mSph.SetC(&current.pos);
         }
-        LinkCollision_setCollider(sph);
-        LinkCollision_setMass(sph);
-        mFanWindSphTimer = (s16)(mFanWindSphTimer - 1);
+        /* true60 (the one-sweep-per-frame attack rule scope): the gust sphere, once per 30 Hz frame at the frame-end position */
+        if (lkT60_atStep()) {
+            LinkCollision_setCollider(sph);
+            LinkCollision_setMass(sph);
+        }
+        /* true60 (the 30 Hz timer rule): the gust sphere's frames count on the frame's step */
+        if (lk_t60FrameStep())
+            mFanWindSphTimer = (s16)(mFanWindSphTimer - 1);
     } else {
         LinkCollisionApi::ResetAtHit(&mFanWindSph);
     }
@@ -3988,8 +4375,12 @@ void daPy_lk_c::setCollision() {
         u32 v2 = LinkCollisionWord(lv->z);
         lcps->mObjAt.mSPrm = f0 | 1; /* OnAtSetBit */
         LinkCollisionWord(lcps->mGObjAt.mVec.z, v2);
-        LinkCollision_setCollider(lcps);
-        LinkCollision_setMass(lcps);
+        /* true60 (the one-sweep-per-frame attack rule scope: every Link volume that hits something): the Mirror Shield's reflected beam,
+         * once per 30 Hz frame at the frame-end beam (its LIGHT_REFLECT flag is held over the frame, the mixed-pair hit-flag rule) */
+        if (lkT60_atStep()) {
+            LinkCollision_setCollider(lcps);
+            LinkCollision_setMass(lcps);
+        }
     } else {
         LinkCollisionApi::ResetAtHit(lcps);
         lcps->mObjAt.mSPrm = lcps->mObjAt.mSPrm & ~1u;
@@ -4009,15 +4400,51 @@ static inline s8 lk_playU8_s(u32 o) { return gabi::load<s8>(dComIfGp_ea() + o); 
 // HD: heavy-state and frame counters precede setGetDemo; forest water expires by
 // swapping the bottle and setting the event register. Warp/pitfall events shrink
 // Link's models, and the HD event-order state has no GameCube counterpart.
+/* true60 (Wind Waker press): Link's update clears the
+ * button statuses at its start on EVERY step, and checkNextAction (d_a_player_main_03) sets the R status (CROUCH 15 /
+ * DEFEND / ...) only while no equip animation runs (!checkEquipAnime()). The update that takes the item trigger starts
+ * the equip (pull-out) animation after that set, so A's frame keeps R 15 and its next frame shows 0; in B the frame's
+ * later step already runs with the equip animation and leaves 0, so the tick30 readers (dMeter, actors after Link) saw
+ * the R status drop a frame early (ps +0x5 15 / 0 at frame 32). Form: on a frame whose first step started an equip
+ * animation, the later steps keep the R status that first step's update left (A's frame-end value), unless the
+ * original's event / not-the-player clear applies on that step. NC WWHD_T60_RSTSEQUIP_NEGCTRL=1. dt 1: the original. */
+static struct { uint32_t stamp; u8 rStatus; bool valid; } s_lk04RStsEquip;
+static bool s_lk04RStsEquipAtStart;
+static inline bool lk04_rStsEquipNegctrl() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_RSTSEQUIP_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return false;
+#endif
+}
+
 /* 0240CDD0 */
 BOOL daPy_lk_c::execute() {
     u32 b = gabi::ea(this);
+    if (t60::dt() != 1.0f && t60::first_step()) { /* true60: equip animation at the frame's start */
+        s_lk04RStsEquipAtStart = checkEquipAnime() != FALSE;
+    }
+    lkT60Crawl_begin(this); /* true60 (d_a_player_crawl_t60.h): a crawl frame's later steps start from its start */
+    lkT60Maba::begin_first_step(); /* true60: the deferred-draw queue starts empty on the first step (replays) */
+    /* true60 (the 30 Hz visual-motion rule): deferred blink-timer draws noted without a first-step execute (tick30, steps >
+     * 1); the first-step execute's entries are made at their tick30 call / the body's end / the execute's end */
+    lkT60Maba::flush(b);
+    if (t60::dt() != 1.0f && !t60::first_step() && s_lkT60ProcHold.tag != lkT60_frameTag()) {
+        s_lkT60ProcHold.tag = lkT60_frameTag();
+        s_lkT60ProcHold.proc = mCurProc;
+        s_lkT60ProcHold.valid = wwhd_t60_latch_pending(lkT60_procEnterKey(gabi::ea(&mCurProc)), lkT60_frameTag()) != 0;
+    }
     {
-        s32 c = (s32)((u32)LinkUpdate(this).mFrameCounter - 1);
+        /* true60 (the 30 Hz timer rule): Link's 30 Hz frame counters count on the tick30 step only (this one, the
+         * morf frame, the blink timer and the sword combo window below) */
         s16 heavy = gabi::object_at<LinkUpdateHeavyState>(gabi::ea(this)).mHeavyStateCounter;
-        LinkUpdate(this).mFrameCounter = c;
-        if (c < 0) {
-            LinkUpdate(this).mFrameCounter = 0;
+        if (lk_t60FirstExec()) { /* the first-step AI-timer rule for Link: counts on the frame's first execute */
+            s32 c = (s32)((u32)LinkUpdate(this).mFrameCounter - 1);
+            LinkUpdate(this).mFrameCounter = c;
+            if (c < 0) {
+                LinkUpdate(this).mFrameCounter = 0;
+            }
         }
         bool clearCheck = true;
         if (heavy >= 5) {
@@ -4032,11 +4459,20 @@ BOOL daPy_lk_c::execute() {
             mNoResetFlg0 = mNoResetFlg0 & ~daPyFlg0_HEAVY_STATE;
         }
         gabi::object_at<LinkUpdateHeavyState>(gabi::ea(this)).mHeavyStateCounter = 0;
+        lkT60Bg::begin(mAcch.m_flags, mAcchCir[0].m_flags, mAcchCir[1].m_flags, mAcchCir[2].m_flags, lkT60_frameTag()); /* true60: window 1 */
         if (setGetDemo()) {
+            lkT60Bg::end(mAcch.m_flags, mAcchCir[0].m_flags, mAcchCir[1].m_flags, mAcchCir[2].m_flags); /* true60: window 1 ends on the early return too */
+            lkT60Maba::flush_end(b); /* true60: the frame's noted draws left (tick30, steps > 1) */
             return TRUE;
         }
+        lkT60Bg::end(mAcch.m_flags, mAcchCir[0].m_flags, mAcchCir[1].m_flags, mAcchCir[2].m_flags); /* true60: window 1 */
     }
-    if (LinkUpdateApi::checkBottle(&dComIfGs_info()->mSavedata.mPlayer.mPlayerItem, 0x59 /* dItemNo_FOREST_WATER_e */) &&
+    /* true60 (the shared-world-state rule): the forest water's expiry (bottle swap, event register 0x9EFF, the system sound) reads and
+     * writes save data, so it runs on the frame's tick30 step at Link's place in the actor line. On every step it fired
+     * on the first step that saw the timer at 0: one step early in the frame whenever the timer's writer runs after
+     * Link, ahead of save readers that sit earlier in the line. dt 1: unchanged. */
+    if (lk_t60FrameStep() &&
+        LinkUpdateApi::checkBottle(&dComIfGs_info()->mSavedata.mPlayer.mPlayerItem, 0x59 /* dItemNo_FOREST_WATER_e */) &&
         LinkUpdateApi::getForestWaterTimer(&dComIfGs_info()->mSavedata.mPlayer.mItemRecord) == 0) {
         LinkUpdateApi::setBottleItemIn(&dComIfGs_info()->mSavedata.mPlayer.mPlayerItem, 0x59, 0x56 /* dItemNo_WATER_BOTTLE_e */);
         LinkUpdateApi::setEventReg(&dComIfGs_info()->mSavedata.mEvent, 0x9EFF, 0);
@@ -4091,9 +4527,23 @@ BOOL daPy_lk_c::execute() {
         !(mNoResetFlg0 & (daPyFlg0_UNK20000000 | daPyFlg0_UNK80000000)) && LinkUpdateApi::ChkPolySafe(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mAcch.m_gnd)) &&
         LinkPoseApi::ChkMoveBG(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mAcch.m_gnd))) {
         u32 bgs = gabi::ea(dComIfG_Bgsp());
+        lkT60Carry::mark(current.pos, shape_angle.y); /* true60: picture only */
         LinkUpdateApi::MoveBgCrrPos(gabi::at<dBgS>(bgs), static_cast<cBgS_PolyInfo*>(&mAcch.m_gnd), (mAcch.m_flags >> 5) & 1, &current.pos, &current.angle, &shape_angle);
+        lkT60Carry::report(gabi::ea(this), current.pos, shape_angle.y);
         bgs = gabi::ea(dComIfG_Bgsp());
         LinkUpdateApi::MoveBgCrrPos(gabi::at<dBgS>(bgs), static_cast<cBgS_PolyInfo*>(&mAcch.m_gnd), (mAcch.m_flags >> 5) & 1, &old.pos, 0, 0);
+    }
+    /* true60: on a moving background or the ship, an unconverted carrier moves Link once per 30 Hz frame:
+     * from the next frame on he runs with it (tick30 step only, drawn interpolated like it). Asked on frames of N steps
+     * (also while he is held: the hold must last as long as the coupling); never at N = 1 (the 30 Hz game, dt-1 check).
+     * Only while the carrier itself is unconverted (2026-11-16): a converted ship or moving background steps with
+     * Link (rule 14, same step), no coupling to hold; a carrier whose actor is unknown counts as unconverted. */
+    if (t60::steps() > 1 && (((dComIfGp_getPlayerStatus0() & LinkPoseConstants::daPyStts0_SHIP_RIDE_e) &&
+                              lk_t60CarrierUnconverted(dComIfGp_getShipActor())) ||
+        (mAcch.m_ground_h != -1000000000.0f && LinkUpdateApi::ChkPolySafe(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mAcch.m_gnd)) &&
+         LinkPoseApi::ChkMoveBG(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mAcch.m_gnd)) &&
+         lk_t60CarrierUnconverted(LinkPoseApi::GetActorPointer(dComIfG_Bgsp(), (u32)mAcch.m_gnd.mBgIndex))))) {
+        t60_hold30_request(gabi::load<u32>(b + 4) /* base.mBsPcId */);
     }
     gabi::Local<cXyz> oldPos;
     fcpy_l(gabi::ea(oldPos.get()) + 8, gabi::ea(&old.pos.z));
@@ -4116,8 +4566,14 @@ BOOL daPy_lk_c::execute() {
         *reinterpret_cast<be<u8>*>(&mCutType) = 0; /* mCutType */
     }
     mResetFlg0 = 0;
-    LinkUpdateApi::calcByteTimer(&m_morf_frame); /* daPy_matAnm_c::decMorfFrame() */
-    LinkUpdateApi::calcByteTimer(&l_maba_timer); /* decMabaTimer() */
+    /* true60 (the first-step AI-timer rule, pmaba12 frame 42): the blink timer (0x101CEF19, read by setTextureAnime's
+     * first-step calls: the glance chance needs it 0) and the morf frame count down on Link's first execute of the
+     * frame, before his procedure, as in the original frame (on the tick30 step the first-step calls saw the value one
+     * frame late, and a value set on the first step counted down in its own frame) */
+    if (lk_t60FirstExec()) {
+        LinkUpdateApi::calcByteTimer(&m_morf_frame); /* daPy_matAnm_c::decMorfFrame() */
+        LinkUpdateApi::calcByteTimer(&l_maba_timer); /* decMabaTimer() */
+    }
     if (mCurProc == LinkUpdateConstants::daPyProc_BOTTLE_SWING_e /* daPyProc_BOTTLE_SWING_e */ && eventInfo.mCommand == dEvtCmd_INCATCH_e /* checkCommandCatch() */) {
         mDemo.mDemoType = 5; /* mDemo.setSpecialDemoType() */
     }
@@ -4159,6 +4615,9 @@ BOOL daPy_lk_c::execute() {
             animeUpdate();
         }
     }
+    /* true60 (d_a_player_bghit_t60.h): window 2 - the frame's later steps decide on the frame-end BG
+     * check's hits (setDemoData / endDemoMode / checkNextMode, setStickData, the procedure dispatch) */
+    lkT60Bg::begin(mAcch.m_flags, mAcchCir[0].m_flags, mAcchCir[1].m_flags, mAcchCir[2].m_flags, lkT60_frameTag());
     setDemoData();
     setStickData();
     if (mEquipItem == LinkUpdateConstants::dItemNo_GRAPPLING_HOOK_e /* dItemNo_GRAPPLING_HOOK_e */ && (mCurProc == LinkUpdateConstants::daPyProc_ROPE_SUBJECT_e || mCurProc == LinkUpdateConstants::daPyProc_ROPE_MOVE_e)) {
@@ -4185,10 +4644,16 @@ BOOL daPy_lk_c::execute() {
         LinkUpdate(this).mConfuseStatus = (u8)on;
     }
     if (mDemo.mDemoType != 5) { /* !checkSpecialDemoMode() */
-        if (!changeDemoProc() && !changeDeadProc() &&
+        /* true60 (s93 / (b'); d_a_player_bghit_t60.h
+         * procChangeHeld): changeDemoProc / changeAutoJumpProc decide on the frame's first step only; on the frame's
+         * later steps the two are not consulted (as if they found nothing to change), the next frame's first step
+         * consults them again, where the original's next update does */
+        const bool lkT60ChgHeld = lkT60Bg::procChangeHeld();
+        if (!(!lkT60ChgHeld && changeDemoProc()) && !changeDeadProc() &&
             mCurProc != LinkUpdateConstants::daPyProc_DEMO_LAVA_DAMAGE_e && mCurProc != LinkUpdateConstants::daPyProc_DEMO_FREEZE_DAMAGE_e) {
-            if (!changeAutoJumpProc()) {
-                changeSwimProc();
+            if (lkT60ChgHeld || !changeAutoJumpProc()) {
+                if (!lkT60Bg::swimInHeld()) /* true60: the water entry on the frame's first step */
+                    changeSwimProc();
             }
         }
         changeDamageProc();
@@ -4201,7 +4666,10 @@ BOOL daPy_lk_c::execute() {
             mCutComboCount = (u8)(mCutComboCount + 2);
         }
     }
-    {
+    /* true60 (the first-step AI-timer rule for Link): the combo window counts on the frame's first step, before the procedure, as in
+     * the 30 Hz update (a window set by a procedure later in the frame is first counted on the next frame's first step;
+     * on the tick30 step it lost a frame whenever the set came before the frame's last step) */
+    if (t60::first_step()) {
         s16 t = mCutComboTimer; /* mCutComboTimer */
         if (t > 0) {
             mCutComboTimer = (s16)(t - 1);
@@ -4214,9 +4682,14 @@ BOOL daPy_lk_c::execute() {
         checkAtHitEnemy(&mAtCps[2])) {
         mNoResetFlg0 = mNoResetFlg0 | daPyFlg0_UNK10000000;
     }
-    {
+    lkT60_procOpen(gabi::ea(&mCurProc)); /* true60 (rule 1, 2026-11-17): first step: inits from here on mark */
+    if (lk_t60FirstExec() || !(s_lkT60ProcHold.valid && s_lkT60ProcHold.tag == lkT60_frameTag() &&
+                               s_lkT60ProcHold.proc == (s32)mCurProc)) { /* held: entered on the first step */
         s16 idx = mCurProcFunc.i; /* (this->*mCurProcFunc)() */
         if (idx != 0) {
+            /* true60: a body of a procedure entered at an earlier step of this frame does not
+             * see the ground hit (it waits for the frame-end check) */
+            const bool lkT60EntryHid = lkT60Bg::entryHideBegin(mAcch.m_flags, gabi::ea(&mCurProc), lkT60_frameTag());
             u32 obj = b + (s32)mCurProcFunc.d;
             if (idx < 0) {
                 gabi::call_ptr(mCurProcFunc.f, obj);
@@ -4224,8 +4697,14 @@ BOOL daPy_lk_c::execute() {
                 u32 vt = gabi::load<u32>(obj + (s32)(*reinterpret_cast<be<s16>*>(reinterpret_cast<u8*>(&mCurProcFunc.f) + 2)));
                 gabi::call_ptr(gabi::load<u32>(vt + (u32)(s32)idx * 8 + 4), obj);
             }
+            lkT60Bg::entryHideEnd(mAcch.m_flags, lkT60EntryHid);
         }
     }
+    /* true60 (positional flush, d_a_player_maba_t60.h): the first step marks the body's end; the tick30 step makes the
+     * body's unmatched noted draws here (inits: where the procedure called them) */
+    lkT60Maba::body_end(b);
+    lkT60Crawl_afterBody(this);
+    lkT60Bg::end(mAcch.m_flags, mAcchCir[0].m_flags, mAcchCir[1].m_flags, mAcchCir[2].m_flags); /* true60: the real hits back, the part's own writes kept */
     if (mEquipItem == LinkItemConstants::daPyItem_BOKO_e && dComIfGp_getDoStatus() == 0) {
         dComIfGp_setDoStatus(0x2F);
     }
@@ -4238,7 +4717,12 @@ BOOL daPy_lk_c::execute() {
     sp14z = lk_fbits(current.pos.z);
     sp14x = lk_fbits(current.pos.x);
     sp14y = lk_fbits(current.pos.y);
-    posMove();
+    if (!lkT60Crawl_moveSkip()) { /* true60: a crawl frame moves once, on its tick30 step at dt 1 */
+        lkT60Crawl_ccTick30(this); /* true60: the frame's collision push (the first step's Move cleared it) */
+        f32 crawlDt = lkT60Crawl_moveOpen();
+        posMove();
+        lkT60Crawl_moveClose(crawlDt);
+    }
     mOldSpeed.copy(speed);
     u32 sp8z = lk_fbits(current.pos.z);
     u32 acf = mAcch.m_flags;
@@ -4407,6 +4891,7 @@ BOOL daPy_lk_c::execute() {
             eq->tevStr.mEnvrIdxOverride = ov; /* tevStr.mEnvrIdxOverride */
         }
     }
+    lkT60Crawl_show(this); /* true60: a crawl frame's earlier step shows Link moved on (picture only) */
     setWorldMatrix();
     setWaistAngle();
     if ((u8)LinkPose(this).m_old_fdata->mOldFrameFlg != 0) { /* m_old_fdata->getOldFrameFlg() */
@@ -4430,7 +4915,10 @@ BOOL daPy_lk_c::execute() {
     f32 g;
     if (LinkPoseApi::startCheckOld(dComIfGp_getPEvtManager(), "DEFAULT_WARP") ||
         LinkPoseApi::startCheckOld(dComIfGp_getPEvtManager(), "DEFAULT_PITFALL")) {
-        l_event_link_scale = (f32)((f64)l_event_link_scale * 0.95);
+        /* true60 (the per-step smoothing rule): the warp / pitfall shrink is 0.95 per 30 Hz frame: 0.95^dt per step (dt 1:
+         * the original double multiply) */
+        l_event_link_scale = t60::dt() == 1.0f ? (f32)((f64)l_event_link_scale * 0.95)
+                                               : (f32)((f64)l_event_link_scale * std::pow(0.95, (f64)t60::dt()));
         u32 play = dComIfGp_ea();
         fopAc_ac_c* actor = LinkUpdateApi::convEventPId(gabi::at<dEvt_control_c>(play + 0x51D0), gabi::load<u32>(play + 0x5294));
         if (actor != nullptr) {
@@ -4467,7 +4955,9 @@ BOOL daPy_lk_c::execute() {
     }
     setAnimeRatioHD();
     checkOriginalHatAnimation();
+    mDoExt_t60_oldFrameCalcBegin(LinkPose(this).m_old_fdata); /* true60: the blend's frame-start anchor (dt 1: no-op) */
     mpCLModel->calc();
+    mDoExt_t60_oldFrameCalcEnd(LinkPose(this).m_old_fdata);
     jointCB1();
     LinkUpdateApi::decOldFrameMorfCounter(LinkPose(this).m_old_fdata);
     PSMTXMultVec(lk_getAnmMtx(mpCLModel, 15), &l_execute_head_offset, &mHeadTopPos); /* mHeadTopPos */
@@ -4568,13 +5058,20 @@ BOOL daPy_lk_c::execute() {
     }
     setWaterDrop();
     {
+        /* true60 (the 30 Hz timer rule; pair): the burn / curse timer counts 30 Hz frames and its loop sound
+         * starts once per frame, so both run on the frame's step only (at N steps the burn lasted 1/N of its frames with
+         * the sound started on every step); the burning light follows the model on every step (the step's pose) */
+        const bool frameStep = lk_t60FrameStep();
         s16 t = l_damage_emitter_timer; /* daPy_dmEcallBack_c::getTimer() */
         if (t > 0) {
-            t = (s16)(t - 1);
             u16 type = l_damage_emitter_type;
-            l_damage_emitter_timer = t;
+            if (frameStep) {
+                t = (s16)(t - 1);
+                l_damage_emitter_timer = t;
+            }
             if (type == 0) { /* checkFlame() */
-                seStartOnlyReverb(0x2041 /* JA_SE_LK_BURNING */);
+                if (frameStep)
+                    seStartOnlyReverb(0x2041 /* JA_SE_LK_BURNING */);
                 u32 m = gabi::ea(lk_getAnmMtx(mpCLModel, 0));
                 reinterpret_cast<LIGHT_INFLUENCE*>(mLightInfluence)->mPos.x = gabi::load<f32>(m + 0xC); /* mLightInfluence.mPos */
                 reinterpret_cast<LIGHT_INFLUENCE*>(mLightInfluence)->mPos.y = gabi::load<f32>(m + 0x1C);
@@ -4582,10 +5079,11 @@ BOOL daPy_lk_c::execute() {
                 reinterpret_cast<LIGHT_INFLUENCE*>(mLightInfluence)->mPos.z = gabi::load<f32>(m + 0x2C);
                 t = l_damage_emitter_timer;
             } else if (type == 1) { /* checkCurse() */
-                seStartOnlyReverb(0x2058 /* JA_SE_LK_CURSE_BURNING */);
+                if (frameStep)
+                    seStartOnlyReverb(0x2058 /* JA_SE_LK_CURSE_BURNING */);
                 t = l_damage_emitter_timer;
             }
-            if (t == 0) {
+            if (t == 0) { /* (only after a frame step's decrement) */
                 endDamageEmitter();
             }
         }
@@ -4600,6 +5098,17 @@ BOOL daPy_lk_c::execute() {
         }
         if (mResetFlg0 & daPyRFlg0_UNK10000000) {
             dComIfGp_setAStatus(0);
+        }
+    }
+    if (t60::dt() != 1.0f) { /* true60 (s_lk04RStsEquip) */
+        const bool evClear = ((dComIfG_inf_c*)dComIfGp_get())->play.mEvtCtrl.mMode != 0 || gabi::ea(dComIfGp_getPlayer(0)) != b;
+        if (t60::first_step()) {
+            s_lk04RStsEquip.valid = !s_lk04RStsEquipAtStart && checkEquipAnime();
+            s_lk04RStsEquip.stamp = t60_step_counter();
+            s_lk04RStsEquip.rStatus = dComIfGp_getRStatus();
+        } else if (s_lk04RStsEquip.valid && !evClear && !lk04_rStsEquipNegctrl() &&
+                   t60_step_counter() - s_lk04RStsEquip.stamp < t60::steps()) {
+            dComIfGp_setRStatus(s_lk04RStsEquip.rStatus);
         }
     }
     mNoResetFlg1 = mNoResetFlg1 & ~(daPyFlg1_UNK4 | daPyFlg1_FORCE_VOMIT_JUMP | daPyFlg1_FORCE_VOMIT_JUMP_SHORT | daPyFlg1_UNK10000000);
@@ -4619,7 +5128,8 @@ BOOL daPy_lk_c::execute() {
     {
         u32 f1 = mNoResetFlg1;
         (*reinterpret_cast<be<u32>*>(&mFace)) = 0xAD; /* mFace = daPyFace_NONE */
-        if (f1 & daPyFlg1_CONFUSE) { /* checkConfuse() */
+        /* true60 (the one-emitter-per-event rule): sustained start on every update while confused: frame step only */
+        if ((f1 & daPyFlg1_CONFUSE) && lk_t60FrameStep()) { /* checkConfuse() */
             seStartMapInfo(0x107F /* JA_SE_LK_NOW_CURSE_PW */);
         }
     }
@@ -4627,6 +5137,8 @@ BOOL daPy_lk_c::execute() {
     l_debug_keep_pos.copy(current.pos);
     LinkUpdate_copyAngles(l_debug_shape_angle, shape_angle);
     LinkUpdate_copyAngles(l_debug_current_angle, current.angle);
+    lkT60Crawl_end(l_debug_keep_pos, l_debug_shape_angle, l_debug_current_angle);
+    lkT60Maba::flush_end(b); /* true60: the frame's noted draws left (tick30, steps > 1) */
     return TRUE;
 }
 

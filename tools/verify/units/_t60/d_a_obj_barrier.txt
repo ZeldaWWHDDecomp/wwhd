@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_barrier.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule + addendum, d/t60_objw.h): the Ganon's Tower barrier's _execute (btk / brk play, BG move, At / Tg collision, break check, effect timers).
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 02323B74
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 02322F14 02323000 0232302C 023234F0 023235B4 023236E8 0232384C 02323958 023239D4 02323A44 02323AB4
+t60cand 02322F14 02323000 0232302C 023234F0 023235B4 023236E8 0232384C 02323958 023239D4 02323A44 02323AB4
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200E240 020182E0 02018428 020184DC 020195B0 0201A478 0201ADE0 02322F14 02323000 0232302C 023234F0 023235B4 023236E8 0232384C 02323958 023239D4 02323A44 02323AB4 024F43DC 02515BBC 02515E50 02516094 025160DC 0251621C 025162A4 02516300 025200D4 02543F10 025440C8 025A847C 025B8B68 025B8B94 025D57E0 025D7A58 025E7CE0 025E8154 025E8508 025F05D0 025F1B48 026066C4 0273AA24 028E8DD0 028F4384

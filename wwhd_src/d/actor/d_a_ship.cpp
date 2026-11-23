@@ -6,7 +6,9 @@
  * (zeldaret/tww src/d/actor/d_a_ship.cpp) to the WWHD layout and verified against cking.rpx.
  */
 #include "d/actor/d_a_ship.h"
+#include "d/t60_draw.h"
 #include "port_hooks.h"
+#include "d/actor/d_a_ship_t60.h"
 
 const gc_tu_data gc_tu = {.safeString = 0x1003A1EC};
 static u32 ship_drawBuffer;
@@ -38,6 +40,61 @@ static u32 frontGuard;
 static cXyz front;
 static u32 ship_obstacleGuard;
 static cXyz ship_obstacleOffset;
+/* true60: per-site carries and latches of the ship's procedures on a general step length
+ * (d_a_ship_t60.h; host memory) */
+static Ship60Carry s_ship60Turn, s_ship60CannonX, s_ship60CannonY, s_ship60Rope, s_ship60WarpSpin, s_ship60ThrowSpin;
+static Ship60Once s_ship60CraneWork, s_ship60CannonMove, s_ship60Impact;
+static Ship60Carry s_ship60CtrlSpeed, s_ship60Ctrl, s_ship60WaveSpeedZ, s_ship60WaveZ, s_ship60WaveSpeedX, s_ship60WaveX,
+    s_ship60SwayWaveX, s_ship60SwayWaveZ, s_ship60SwayY, s_ship60SwayX, s_ship60SwayZ;
+static Ship60Carry s_ship60TornadoSpin, s_ship60WhirlSpin, s_ship60TactSpin;
+static Ship60Start s_ship60SwayStartY, s_ship60SwayStartX, s_ship60SwayStartZ;
+/* true60: procTurn's frame-start turn speed (the heading's max step a frame), daShip_c::procTurn */
+static Ship60Start s_ship60TurnSpeed;
+/* true60 (the process-order read rule): procSteerMove's jump test (daSFLG_JUMP_OK) on the frame-start forward
+ * speed. mFwdVel is written at execute's end (d_a_ship_exec.cpp), so a later step of the frame read the in-frame speed
+ * and set JUMP_OK a frame early (the flag keeps any step's set over the frame): gapgrid2 gpP / gpX ship.admp +0x644 frame
+ * 56, the sail-up frame. The value of the frame's first call (the first step's read = the previous frame's end; a
+ * procedure entered on a later step of the frame takes that step's read). dt 1: mFwdVel. */
+static Ship60Start s_ship60FwdVel;
+static inline f32 ship60_fwdVelStart(daShip_c* self) {
+    const f32 now = self->mFwdVel;
+    if (t60::dt() == 1.0f) {
+        return now;
+    }
+    s32 bits;
+    std::memcpy(&bits, &now, 4);
+    const s32 st = ship60_start(s_ship60FwdVel, self, ship_counter, bits);
+    f32 v;
+    std::memcpy(&v, &st, 4);
+    return v;
+}
+static Ship60Float s_ship60Float;
+/* true60 (the sailing's frame form; d_a_ship_t60.h ship60_speedPath): procSteerMove's / setSelfMove's speed
+ * block once a frame, setMoveAngle's frame-start speedF */
+static Ship60Speed s_ship60SteerSpeed, s_ship60SelfSpeed, s_ship60SteerTiller, s_ship60SelfTiller;
+/* the tiller's chase once a frame (frame form): whole on the first step at dt 1, held after, so setMoveAngle's
+ * turn is one per-frame amount (A: the tiller chase, then the turn from it); execute's rudder-sound test takes the step's
+ * change as the frame's on the step it ran whole (g_ship60TillerWholeStep, d_a_ship_exec.cpp) */
+template <class F> static inline void ship60_tillerChase(Ship60Speed& s, daShip_c* self, F chase) {
+    const Ship60SpeedPath p = ship60_speedPath(s, self, ship_counter);
+    if (p == Ship60SpeedPath::Hold) {
+        return;
+    }
+    Ship60Dt1<> d(p == Ship60SpeedPath::Whole);
+    chase();
+    if (p == Ship60SpeedPath::Whole) {
+        g_ship60TillerWholeStep = t60_step_counter();
+    }
+}
+static Ship60Start s_ship60TurnSpeedF;
+static Ship60Hold s_ship60DemoTurn;
+static Ship60Sway s_ship60Sway;
+static Ship60Sway s_ship60Talk; /* procTalk's talk-animation switch (the animation-driven decision rule, d_a_ship_t60.h ship60_anmEndWithin) */
+static Ship60Once s_ship60ZevThrow;
+static s32 s_ship60TurnAmount; /* setMoveAngle's per-frame turn on the step s_ship60Turn last ran (the jump's rest) */
+static Ship60Lean s_ship60Lean; /* setControllAngle's spring, frame-anchored (2026-11-17) */
+static Ship60Wave s_ship60Wave; /* the wave rocking, frame-anchored (2026-11-17) */
+static Ship60Decide s_ship60Sail; /* setSailAngle's wind-side decision (rule 2 2026-11-17) */
 
 
 
@@ -51,7 +108,7 @@ BOOL daShip_c::bodyJointCallBack(int jno) {
         // HD: the tiller is shrunk away while Link looks down from the boat (GameCube: draw()
 // skipped the whole body model)
         fopAc_ac_c* link = dComIfGp_getLinkPlayer();
-        if (link != nullptr && (ship_playerStatus0() & daPyStts0_SHIP_RIDE_e) &&
+        if (link != nullptr && (ship_playerStatus0_live() & daPyStts0_SHIP_RIDE_e) && /* true60: picture, live */
             reinterpret_cast<ShipPlayer*>(link)->mLookDownAngle <= -0x1000) {
             mDoMtx_stack_c::scaleM(0.01f, 0.01f, 0.01f);
         }
@@ -65,13 +122,19 @@ BOOL daShip_c::bodyJointCallBack(int jno) {
         J3DModel_setBaseTRMtx(mpCannonModel, mDoMtx_now());
         // HD: the cannon and crane models follow the mast animation's scale
         f32 scale = 1.0f;
-        if (mBodyAnmFileIdx == dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e) {
+        /* true60 (request form, d_a_ship_t60.h ship60_poseBodyIdx): the animation the pose shows (a request's old one
+         * on the frame's earlier steps, with its own frame); dt 1: mBodyAnmFileIdx */
+        const u16 poseIdx = t60::dt() == 1.0f ? (u16)mBodyAnmFileIdx
+            : ship60_poseBodyIdx(mpBodyAnm.get(), mBodyAnmFileIdx, ship_getRes(dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e),
+                                 dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e, ship_getRes(dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e),
+                                 dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e);
+        if (poseIdx == dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e) {
             scale = (mpBodyAnm->getFrame() / mpBodyAnm->getEndFrame()) * 2.5f;
             if (scale > 1.0f)
                 scale = 1.0f;
             else
                 scale = scale >= 0.0f ? scale : 0.0f;
-        } else if (mBodyAnmFileIdx == dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e) {
+        } else if (poseIdx == dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e) {
             scale = gabi::fmsubs(1.0f - mpBodyAnm->getFrame() / mpBodyAnm->getEndFrame(), 3.0f, 1.0f);
             if (scale > 1.0f)
                 scale = 1.0f;
@@ -298,7 +361,7 @@ BOOL daShip_c::draw() {
     // HD: the body is always drawn (the tiller is hidden in bodyJointCallBack)
     mDoExt_modelEntryDL(bodyModel);
 
-    if (!(ship_playerStatus0() & daPyStts0_SHIP_RIDE_e) ||
+    if (!(ship_playerStatus0_live() & daPyStts0_SHIP_RIDE_e) || /* true60: draw, live */
         !ship_isLinkPlayer0() ||
         !(ship_play()->mCameraAttentionStatus & 0x22) /* camera attention status: SUBJECT | 0x20 */) {
         offStateFlg(daSFLG_HEAD_NO_DRAW_e);
@@ -553,9 +616,33 @@ void daShip_c::setControllAngle(s16 angle) {
             sVar2 = -1;
         }
     }
-    mControllAngleSpeed += sVar2;
-    mControllAngle += mControllAngleSpeed;
+    if (t60::dt() != 1.0f) {
+        Ship60Lean& l = s_ship60Lean;
+        if (ship60_leanEnter(l, this, ship_counter, mControllAngle, mControllAngleSpeed)) {
+            /* true60 (2026-11-17): the original frame from the frame start toward this step's angle
+             * (d_a_ship_t60.h Ship60Lean), this step's share of it */
+            const s16 p1 = (s16)(angle - l.c0);
+            s16 p2 = (s16)gabi::ftoi((f32)p1 * 0.05f);
+            if (p2 == 0) {
+                p2 = p1 > 0 ? 1 : (p1 < 0 ? -1 : 0);
+            }
+            const s16 sp1 = (s16)(l.s0 + p2);
+            const s16 cF = (s16)(l.c0 + sp1), sF = ship60_waveDamp(sp1);
+            const double sh = ship60_leanShareOf(l);
+            mControllAngle = ship60_waveLerp(l.c0, cF, sh);
+            mControllAngleSpeed = ship60_waveLerp(l.s0, sF, sh);
+            l.lastC = mControllAngle;
+            l.lastS = mControllAngleSpeed;
+            return;
+        }
+    }
+    // true60 (the per-step smoothing rule and 6): the lean spring's per-frame adds, dt of them a step (carried); the speed's damping is
+    // cLib_addCalcAngleS (central)
+    mControllAngleSpeed += (s16)ship60_share(s_ship60CtrlSpeed, this, sVar2);
+    mControllAngle += (s16)ship60_share(s_ship60Ctrl, this, (s16)mControllAngleSpeed);
     cLib_addCalcAngleS(&mControllAngleSpeed, 0, 0x14, 0x1000, 4);
+    s_ship60Lean.lastC = mControllAngle;
+    s_ship60Lean.lastS = mControllAngleSpeed;
 }
 
 
@@ -623,6 +710,38 @@ void daShip_c::setWaveAngle(be<s16>* param1, be<s16>* param2) {
     s16 iVar2 = *param2 - mWaveAngleZ;
     s16 iVar3 = a1 - mWaveAngleX;
 
+    if (t60::dt() != 1.0f && ship60_waveAnchored(s_ship60Wave, this)) {
+        /* true60 (2026-11-17): the frame map from the frame start (d_a_ship_t60.h Ship60Wave): the sway-added
+         * angles (A's entry values) sprung once toward this step's slope, the speeds damped at dt 1; this step's share */
+        Ship60Wave& w = s_ship60Wave;
+        const s16 xS = (s16)(w.x0 + w.swayX), zS = (s16)(w.z0 + w.swayZ);
+        const s16 dz = (s16)(*param2 - zS), dx = (s16)(a1 - xS);
+        const s16 vz1 = (s16)gabi::ftoi(gabi::fmadds((f32)dz, 0.045f, (f32)w.vz0));
+        const s16 zF = (s16)(zS + vz1), vzF = ship60_waveDamp(vz1);
+        const s16 vx1 = (s16)gabi::ftoi(gabi::fmadds((f32)dx, 0.045f, (f32)w.vx0));
+        const s16 xF = (s16)(xS + vx1), vxF = ship60_waveDamp(vx1);
+        const double sh = ship60_waveShareOf(w);
+        mWaveAngleZ = ship60_waveLerp(w.z0, zF, sh);
+        mWaveAngleSpeedZ = ship60_waveLerp(w.vz0, vzF, sh);
+        mWaveAngleX = ship60_waveLerp(w.x0, xF, sh);
+        mWaveAngleSpeedX = ship60_waveLerp(w.vx0, vxF, sh);
+        ship60_waveMark(w, mWaveAngleX, mWaveAngleZ, mWaveAngleSpeedX, mWaveAngleSpeedZ);
+        return;
+    }
+    if (t60::dt() != 1.0f) {
+        /* true60 (the per-step smoothing rule and 6): the wave springs' per-frame adds (the speed's pull 0.045 x the angle's distance, the
+         * angle's speed), dt of them a step (carried); the speeds' damping is cLib_addCalcAngleS (central) */
+        s32 accZ = gabi::ftoi(gabi::fmadds((f32)iVar2, 0.045f, (f32)(s16)mWaveAngleSpeedZ)) - (s32)(s16)mWaveAngleSpeedZ;
+        mWaveAngleSpeedZ = (s16)((s32)(s16)mWaveAngleSpeedZ + ship60_share(s_ship60WaveSpeedZ, this, accZ));
+        mWaveAngleZ += (s16)ship60_share(s_ship60WaveZ, this, (s16)mWaveAngleSpeedZ);
+        cLib_addCalcAngleS(&mWaveAngleSpeedZ, 0, 0x14, 0x1000, 4);
+        s32 accX = gabi::ftoi(gabi::fmadds((f32)iVar3, 0.045f, (f32)(s16)mWaveAngleSpeedX)) - (s32)(s16)mWaveAngleSpeedX;
+        mWaveAngleSpeedX = (s16)((s32)(s16)mWaveAngleSpeedX + ship60_share(s_ship60WaveSpeedX, this, accX));
+        mWaveAngleX += (s16)ship60_share(s_ship60WaveX, this, (s16)mWaveAngleSpeedX);
+        cLib_addCalcAngleS(&mWaveAngleSpeedX, 0, 0x14, 0x1000, 4);
+        ship60_waveMark(s_ship60Wave, mWaveAngleX, mWaveAngleZ, mWaveAngleSpeedX, mWaveAngleSpeedZ);
+        return;
+    }
     mWaveAngleSpeedZ = (s16)gabi::ftoi(gabi::fmadds((f32)iVar2, 0.045f, (f32)(s16)mWaveAngleSpeedZ));
     mWaveAngleZ += mWaveAngleSpeedZ;
     cLib_addCalcAngleS(&mWaveAngleSpeedZ, 0, 0x14, 0x1000, 4);
@@ -653,7 +772,8 @@ f32 daShip_c::getWaterY() {
     } else {
         /* daPy_lk_c::checkBowMiniGame(): the current procedure (+0x430) */
         fopAc_ac_c* link = dComIfGp_getLinkPlayer();
-        if (link && reinterpret_cast<ShipPlayer*>(dComIfGp_getLinkPlayer())->mProcID == 0x44) {
+        /* true60 (the process-order read rule addendum): Link's frame-start procedure (f_pc_t60_frame_latch.h) */
+        if (link && t60_flatch_load<u32>(gabi::ea(dComIfGp_getLinkPlayer()) + offsetof(ShipPlayer, mProcID)) == 0x44) {
             waterY = 0.0f;
         } else {
             waterY = mWaterY;
@@ -664,9 +784,121 @@ f32 daShip_c::getWaterY() {
 
 
 
+/* true60 (the per-step smoothing rule, 6 and 8): setYPos's floating on a general step length (dt != 1 only; dt 1 runs the
+ * original below). The pull towards the water (0.1 x rate a frame) is a ratio (t60_ratio), the float speed's pull
+ * (0.05 a frame) and the bob (0.6 + 0.25 rate sin a frame) are per-frame adds (x dt), the float speed moves the ship
+ * by itself per frame (x dt); its damping is cLib_addCalc (central). The three sway phases advance by a random
+ * amount per frame: the frame's draws happen on the tick30 step, in the original order and RNG position (the per-step chance rule: the
+ * draw count per 30 Hz frame stays the original's), where each phase is set to its frame start plus the original
+ * frame's advance; the earlier steps advance by dt of the advance's mean (r at its mean). The wave angles' per-frame
+ * adds (30 / 35 + the sway) take dt of themselves a step (carried). */
+static void ship60_setYPosStep(daShip_c* self, f32 fVar2, f32 cy, f32 rate) {
+    const f32 dt = t60::dt();
+    const bool last = t60::tick30();
+    /* the float spring step-consistent (d_a_ship_t60.h ship60_float*) */
+    const Ship60FloatPath path = ship60_floatEnter(s_ship60Float, self, ship_counter, cy, self->mFloatSpeedY,
+                                                   g_ship60YExactStep == t60_step_counter()); /* true60 (frame form) */
+    {
+        s32 start = ship60_start(s_ship60SwayStartY, self, ship_counter, (s16)self->mSwayPhaseY);
+        if (last) {
+            f32 r = cM_rndF(1000.0f);
+            self->mSwayPhaseY = (s16)gabi::ftoi((f32)(s16)start + gabi::fmadds(rate, 500.0f, r + 1000.0f));
+        } else {
+            self->mSwayPhaseY = (s16)((s16)self->mSwayPhaseY + ship60_share(s_ship60SwayY, self, gabi::ftoi(gabi::fmadds(rate, 500.0f, 1500.0f))));
+        }
+    }
+    const f32 bob = gabi::fmadds(rate * 0.25f, cM_ssin(self->mSwayPhaseY), 0.6f);
+    if (path == Ship60FloatPath::FrameEnd) {
+        /* the original frame from the frame start (+ the frame's outside moves): its instructions, at dt 1 */
+        const f32 y0 = s_ship60Float.base;
+        self->mFloatSpeedY = s_ship60Float.v0;
+        self->current.pos.y = gabi::fmadds((self->mWaterY - y0) * 0.1f, rate, y0);
+        f32 d = gabi::fmadds(self->mWaterY - self->current.pos.y, 0.05f, self->mFloatSpeedY);
+        if (d > 20.0f) {
+            d = 20.0f;
+        } else if (d < -20.0f) {
+            d = -20.0f;
+        }
+        self->mFloatSpeedY = d;
+        self->current.pos.y += d;
+        self->current.pos.y += bob;
+        const f32 prevDt = t60_set_dt(1.0f);
+        cLib_addCalc(&self->mFloatSpeedY, 0.0f, 0.05f, 1.0f, 0.05f);
+        t60_set_dt(prevDt);
+    } else if (path == Ship60FloatPath::Share) {
+        /* an in-between step: the 30 Hz recurrence's discrete solution at the step's share of the frame */
+        f32 y, v;
+        ship60_floatShare(s_ship60Float.base, s_ship60Float.v0, self->mWaterY, rate, bob, ship60_floatShareOf(s_ship60Float), &y, &v);
+        self->current.pos.y = y;
+        self->mFloatSpeedY = v;
+    } else {
+        /* a partial frame (the spring began after the frame's first step): the per-step form */
+        self->current.pos.y = gabi::fmadds(fVar2, t60_ratio(0.1f * rate, dt), cy);
+        f32 d = gabi::fmadds((self->mWaterY - self->current.pos.y) * 0.05f, dt, self->mFloatSpeedY);
+        if (d > 20.0f) {
+            d = 20.0f;
+        } else if (d < -20.0f) {
+            d = -20.0f;
+        }
+        self->mFloatSpeedY = d;
+        self->current.pos.y += d * dt;
+        self->current.pos.y += bob * dt;
+        cLib_addCalc(&self->mFloatSpeedY, 0.0f, 0.05f, 1.0f, 0.05f);
+    }
+
+    f32 fVar4 = self->current.pos.y;
+    f32 fVar5 = self->mWaterY + 40.0f;
+    if (fVar4 > fVar5) {
+        self->current.pos.y = fVar5;
+    } else {
+        fVar5 = self->mWaterY - 60.0f;
+        if (fVar4 < fVar5) {
+            self->current.pos.y = fVar5;
+        }
+    }
+    s_ship60Float.lastExit = self->current.pos.y;
+
+    f32 k = gabi::fmadds(rate, 0.5f, 1.0f);
+    {
+        s32 startX = ship60_start(s_ship60SwayStartX, self, ship_counter, (s16)self->mSwayPhaseX);
+        s32 startZ = ship60_start(s_ship60SwayStartZ, self, ship_counter, (s16)self->mSwayPhaseZ);
+        if (last) {
+            f32 r2 = cM_rndF(800.0f);
+            self->mSwayPhaseX = (s16)gabi::ftoi(gabi::fmadds(r2 + 800.0f, k, (f32)(s16)startX));
+            f32 r3 = cM_rndF(600.0f);
+            self->mSwayPhaseZ = (s16)gabi::ftoi(gabi::fmadds(r3 + 600.0f, k, (f32)(s16)startZ));
+        } else {
+            self->mSwayPhaseX = (s16)((s16)self->mSwayPhaseX + ship60_share(s_ship60SwayX, self, gabi::ftoi(1200.0f * k)));
+            self->mSwayPhaseZ = (s16)((s16)self->mSwayPhaseZ + ship60_share(s_ship60SwayZ, self, gabi::ftoi(900.0f * k)));
+        }
+    }
+    Ship60Wave& w = s_ship60Wave;
+    if (ship60_waveEnter(w, self, ship_counter, self->mWaveAngleX, self->mWaveAngleZ, self->mWaveAngleSpeedX,
+                         self->mWaveAngleSpeedZ)) {
+        /* the frame's sway add from the frame start with the step's phases (tick30: the frame's random phases = A's) */
+        w.swayX = (s16)(gabi::ftoi((f32)w.x0 + gabi::fmadds(rate * 100.0f, cM_ssin(self->mSwayPhaseX), 30.0f)) - (s32)w.x0);
+        w.swayZ = (s16)(gabi::ftoi((f32)w.z0 + gabi::fmadds(rate * 115.0f, cM_ssin(self->mSwayPhaseZ), 35.0f)) - (s32)w.z0);
+        const double sh = ship60_waveShareOf(w);
+        self->mWaveAngleX = ship60_waveLerp(w.x0, (s16)(w.x0 + w.swayX), sh);
+        self->mWaveAngleZ = ship60_waveLerp(w.z0, (s16)(w.z0 + w.swayZ), sh);
+        ship60_waveMark(w, self->mWaveAngleX, self->mWaveAngleZ, self->mWaveAngleSpeedX, self->mWaveAngleSpeedZ);
+        return;
+    }
+    s32 addX = gabi::ftoi((f32)(s16)self->mWaveAngleX + gabi::fmadds(rate * 100.0f, cM_ssin(self->mSwayPhaseX), 30.0f)) - (s32)(s16)self->mWaveAngleX;
+    self->mWaveAngleX = (s16)((s32)(s16)self->mWaveAngleX + ship60_share(s_ship60SwayWaveX, self, addX));
+    s32 addZ = gabi::ftoi((f32)(s16)self->mWaveAngleZ + gabi::fmadds(rate * 115.0f, cM_ssin(self->mSwayPhaseZ), 35.0f)) - (s32)(s16)self->mWaveAngleZ;
+    self->mWaveAngleZ = (s16)((s32)(s16)self->mWaveAngleZ + ship60_share(s_ship60SwayWaveZ, self, addZ));
+    ship60_waveMark(w, self->mWaveAngleX, self->mWaveAngleZ, self->mWaveAngleSpeedX, self->mWaveAngleSpeedZ);
+}
+
 /* 024754D8 */
 void daShip_c::setYPos() {
-    mWaterY = getWaterY();
+    /* true60 (frame form): the water height once a frame, on the tick30 step at the frame-end place (A samples
+     * it after the frame's move); the earlier steps keep the previous frame's (and its mWaterFlatY). The first call of the
+     * ship (no water yet) samples. dt 1 / NEGCTRL: every call */
+    if (!ship60_frameForm() || t60::tick30() || !checkStateFlg(daSFLG_UNK10_e)) {
+        mWaterY = getWaterY();
+    }
     if (!checkStateFlg(daSFLG_UNK10_e)) {
         onStateFlg(daSFLG_UNK10_e);
         if (mCurMode != MODE_START_MODE_WARP_e && mCurMode != MODE_START_MODE_THROW_e && mDemoMode != 0xB /* DEMO_HWARP_DOWN_e */) {
@@ -704,6 +936,10 @@ void daShip_c::setYPos() {
             rate = 1.0f;
         }
 
+        if (t60::dt() != 1.0f) {
+            ship60_setYPosStep(this, fVar2, cy, rate);
+            return;
+        }
         current.pos.y = gabi::fmadds(fVar2 * 0.1f, rate, cy);
         f32 d = gabi::fmadds(mWaterY - current.pos.y, 0.05f, mFloatSpeedY);
         if (d > 20.0f) {
@@ -869,6 +1105,11 @@ void daShip_c::firstDecrementShipSpeed(f32 decrementSpeed) {
 /* 024752C4 */
 s16 daShip_c::getAimControllAngle(s16 referenceAngle) {
     s16 aimControlAngle = (s16)(shape_angle.y - referenceAngle) * 7;
+    if (t60::dt() != 1.0f) {
+        /* true60: the lean follows the turn per frame; a step turns dt of it (N = 1/dt steps a frame) */
+        const s32 n = (s32)(1.0f / t60::dt() + 0.5f);
+        aimControlAngle = (s16)((s32)(s16)(shape_angle.y - referenceAngle) * 7 * n);
+    }
     if (aimControlAngle > 0x600) {
         aimControlAngle = 0x600;
     } else if (aimControlAngle < -0x600) {
@@ -947,6 +1188,7 @@ BOOL daShip_c::procTalkReady_init() {
     }
     J3DAnmTransform* pAnimRes = ship_getRes(mHeadAnmFileIdx);
     mpHeadAnm->setAnm(pAnimRes, 0, 5.0f, 1.0f, 0.0f, -1.0f, nullptr);
+    ship60_markAnm(mpHeadAnm.get(), ship_counter); /* true60 (split-actor state (3)): first played next frame */
     seStart(ShipSound::JA_SE_SHIP_LOOK_BACK, &eyePos);
     mCurMode = MODE_TALK_e;
     return TRUE;
@@ -1074,7 +1316,8 @@ void daShip_c::setEffectData(f32 param_1, s16 param_2) {
                 dPa_control_set(dComIfGp_getParticle(), 5, 0x36, &current.pos, &shape_angle, nullptr, 0, (dPa_levelEcallBack*)mTrack,
                                 -1, nullptr, nullptr, nullptr);
             }
-            if (checkStateFlg(daSFLG_FLY_e | daSFLG_LAND_e)) {
+            /* true60 (the one-emitter-per-event rule): the impact (splash + sound) once per 30 Hz frame */
+            if (checkStateFlg(daSFLG_FLY_e | daSFLG_LAND_e) && ship60_once(s_ship60Impact, this, ship_counter)) {
                 gabi::Local<GXColor> amb;
                 gabi::Local<GXColor> diff;
                 dKy_get_seacolor(amb.get(), diff.get());
@@ -1191,7 +1434,7 @@ void daShip_c::incRopeCnt(int lengthChange, int minSegmentLimit) {
     if (lengthChange != 0) {
         if (minSegmentLimit == 20 && targetRopeCnt == 20) {
             seStart(ShipSound::JA_SE_LK_SHIP_CRANE_STOP, &mCranePos);
-        } else {
+        } else if (ship60_once(s_ship60CraneWork, this, ship_counter)) { /* true60 (the one-emitter-per-event rule): once per 30 Hz frame */
             seStart(ShipSound::JA_SE_LK_SHIP_CRANE_WORK, &mCranePos);
         }
     }
@@ -1255,10 +1498,22 @@ void daShip_c::setRopePos() {
         for (int i = mRopeCnt - 2; i >= 0; i--, cur -= 0xC, seg -= 0xC) {
             spF8->copy(*gabi::at<cXyz>(cur));
             f32 k = gabi::at<cXyz>(cur)->y - mWaterY >= 0.0f ? 0.9f : 0.6f;
+            if (t60::dt() != 1.0f) {
+                /* true60 (the per-step movement rule): the segment's velocity damping k^dt, gravity x dt, the move by the velocity x dt; the
+                 * length constraint stays, and the velocity's share of the step's displacement (0.05 of it, below)
+                 * already sums to the frame's */
+                const f32 dt = t60::dt();
+                PSVECScale(gabi::at<cXyz>(seg), gabi::at<cXyz>(seg), (f32)__builtin_pow((double)k, (double)dt));
+                gabi::at<cXyz>(seg)->y = gabi::at<cXyz>(seg)->y - (ship_ropeGravity + 3.0f) * dt;
+                gabi::Local<cXyz> mv;
+                PSVECScale(gabi::at<cXyz>(seg), mv.get(), dt);
+                PSVECAdd(gabi::at<cXyz>(cur), mv.get(), gabi::at<cXyz>(cur));
+            } else {
             PSVECScale(gabi::at<cXyz>(seg), gabi::at<cXyz>(seg), k);
             // HD: plus a debug register (REG18_F(9))
             gabi::at<cXyz>(seg)->y = gabi::at<cXyz>(seg)->y - (ship_ropeGravity + 3.0f);
             PSVECAdd(gabi::at<cXyz>(cur), gabi::at<cXyz>(seg), gabi::at<cXyz>(cur));
+            }
             cXyz_mi(gabi::at<cXyz>(cur), d.get(), gabi::at<cXyz>(cur + 0xC));
             spEC->copy(*d);
             f32 fVar17 = cXyz_abs(spEC.get());
@@ -1351,6 +1606,9 @@ void daShip_c::setRopePos() {
     s16 az = cM_atan2s(-bcx, std_sqrtf(gabi::fmadds(bcy, bcy, bcz * bcz))) + sVar12;
     mDoMtx_ZXYrotM(mDoMtx_now(), ax, ay, az);
     mDoMtx_XrotM(mDoMtx_now(), -0x4000);
+    /* true60 (request form, item k, 2026-11-21): unchanged. The original's set frame reads the requested index
+     * with the calc's table of the stored old pose (morf weight 0); under the form the index is the requested one too
+     * and the table the old animation's pose of this step's calc: the same pairing. */
     if (mBodyAnmFileIdx == dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e) {
         /* mpBodyAnm->getAnm()->getTransform(6, &info) (HD inline: a flag at +0x54, the table at +0x30) */
         u32 morf = gabi::ea(mpBodyAnm.get());
@@ -1440,11 +1698,14 @@ void daShip_c::setRopePos() {
         // HD: mRipple.end() (GameCube remove())
         dPa_rippleEcallBack_end((dPa_rippleEcallBack*)&mRipple);
     }
-    if (mCraneLiftUpTimer) {
+    if (mCraneLiftUpTimer && ship60_tick30()) { /* true60 (the 30 Hz timer rule): a 30 Hz count, after its setter: on tick30 */
         mCraneLiftUpTimer--;
     }
     if (mRopeDrip.getEmitter() == nullptr) {
         dPa_rippleEcallBack_end((dPa_rippleEcallBack*)&mRopeRipple);
+    }
+    if (!ship60_tick30()) { /* true60 (the per-step chance rule): the ripple's per-frame jitter (two draws), on the tick30 step */
+        return;
     }
     u32 rb = gabi::ea(mRopeLine.getPos(0));
     f32 r1 = cM_rndFX(20.0f);
@@ -1574,7 +1835,8 @@ void daShip_c::setHeadAnm() {
                 newFileIndex = dRes_INDEX_SHIP_BCK_FN_LOOK_L_e;
             }
         } else if ((mHeadAnmFileIdx == dRes_INDEX_SHIP_BCK_FN_LOOK_L_e || mHeadAnmFileIdx == dRes_INDEX_SHIP_BCK_FN_LOOK_R_e) &&
-                   std::fabs((f32)mpHeadAnm->getPlaySpeed()) < 0.01f && cM_rnd() < 0.4f &&
+                   std::fabs((f32)mpHeadAnm->getPlaySpeed()) < 0.01f && ship60_first() /* true60 (the per-step chance rule + first-step AI-timer): the frame's one draw, on its first step (the yawn set is latched: first played next frame, split-actor state (3)) */ &&
+                   cM_rnd() < 0.4f &&
                    (ship_counter & 0x1FF) == 0x1FF /* g_Counter.mTimer */ &&
                    (!dComIfGs_isEventBit(ShipEvent::UNK_3910) || dComIfGs_isEventBit(ShipEvent::ZELDA_AWAKENED)) && !checkStateFlg(daSFLG_UNK40000000_e)) {
             newFileIndex = dRes_INDEX_SHIP_BCK_AKIBI1_e;
@@ -1598,14 +1860,58 @@ void daShip_c::setHeadAnm() {
         mHeadAnmFileIdx = newFileIndex;
         J3DAnmTransform* res = ship_getRes(mHeadAnmFileIdx);
         mpHeadAnm->setAnm(res, 0, morph, speed, 0.0f, -1.0f, nullptr);
+        ship60_markAnm(mpHeadAnm.get(), ship_counter); /* true60 (split-actor state (3)): first played next frame */
     }
 }
 
 
 
+/* true60 (the first-step AI-timer rule, 2026-11-17 from talk4 frame 847): eyePos (0x37C) and attention_info.position (0x390) are the
+ * ship's published points for other processes (talktoCamera's start block, Link, the attention list). At 30 Hz a reader
+ * that runs before the ship in the frame sees the previous FRAME's value (a whole frame of motion behind the ship: talk4
+ * eyePos - pos A (-223,128)); at N steps it saw the previous STEP's value (B (-200,117), half a frame), and the camera
+ * yaw differed by 61 units (cam-tslack 9.8 at frame 847). Publish form: execute computes them on every step (its own
+ * use is unchanged); after an in-between step (not tick30) the frame-start values (the previous frame's end values, as
+ * at the frame's first step entry) are put back, so every reader sees the previous frame's value until the tick30 step
+ * publishes the frame-end value: A's order. Host memory; at dt = 1 not used. */
+struct Ship60Publish {
+    u32 stamp;
+    const void* owner;
+    bool valid;
+    Vec3f eye, atn; /* plain host values: a host cXyz would read / write guest memory at ea(host address) */
+    u32 old[5];     /* true60 (frame form): old (pos, angle, room) of the frame's first step, as words */
+};
+static Ship60Publish s_ship60Publish;
 /* 0247AE78 */
 static BOOL daShip_Execute(daShip_c* i_this) {
-    return i_this->execute();
+    if (t60::dt() == 1.0f) {
+        return i_this->execute();
+    }
+    Ship60Publish& p = s_ship60Publish;
+    if (t60::first_step() || !p.valid || p.owner != i_this || t60_step_counter() - p.stamp != 1) {
+        p.eye = i_this->eyePos.get();
+        p.atn = i_this->attention_info.position.get();
+        const be<u32>* o = reinterpret_cast<const be<u32>*>(&i_this->old);
+        for (int i = 0; i < 5; i++)
+            p.old[i] = o[i];
+    }
+    BOOL ret = i_this->execute();
+    /* true60 (frame form; the process-order read rule): old (pos, angle, room: fopAc_Execute's five-word copy) is the frame
+     * start after every step (A: the previous frame's end, copied once a frame before its execute); execute's own reads
+     * (the BG checks per step, the per-step ground-check rule) saw the step's */
+    if (ship60_frameForm()) {
+        be<u32>* o = reinterpret_cast<be<u32>*>(&i_this->old);
+        for (int i = 0; i < 5; i++)
+            o[i] = p.old[i];
+    }
+    if (!t60::tick30()) {
+        i_this->eyePos.set(p.eye.x, p.eye.y, p.eye.z);
+        i_this->attention_info.position.set(p.atn.x, p.atn.y, p.atn.z);
+    }
+    p.stamp = t60_step_counter();
+    p.owner = i_this;
+    p.valid = true;
+    return ret;
 }
 
 // HD: cannon sight and water-shadow additions to this translation unit.
@@ -1615,6 +1921,18 @@ static BOOL daShip_Execute(daShip_c* i_this) {
 /* 02471E94 */
 BOOL daShip_checkSirenInside() {
     if (ship_isStartStage(gabi::guest_addr("Siren")) && dComIfGp_getLinkPlayer()->current.roomNo >= 7) {
+        return TRUE;
+    }
+    return FALSE;
+}
+
+/* true60 (the process-order read rule addendum): execute's test reads Link's frame-start room (f_pc_t60_frame_latch.h); the draw keeps
+ * daShip_checkSirenInside (picture). N = 1: the same reads. */
+BOOL daShip_checkSirenInside_fs() {
+    if (t60::steps() == 1) /* N = 1: the original call (02471E94), the same calls as A */
+        return daShip_checkSirenInside();
+    if (ship_isStartStage(gabi::guest_addr("Siren")) &&
+        t60_flatch_load<s8>(gabi::ea(dComIfGp_getLinkPlayer()) + offsetof(fopAc_ac_c, current) + 0x12 /* roomNo */) >= 7) {
         return TRUE;
     }
     return FALSE;
@@ -1686,7 +2004,8 @@ void daShip_c::drawShadow() {
     s32 alpha = gabi::ftoi(255.0f - gabi::fmadds(spd, 10.0f, h));
     if (alpha < 0)
         alpha = 0;
-    cLib_chaseUC(&mShadowAlpha, (u8)alpha, 10);
+    if (t60_draw_frame_pass()) /* true60 (t60_draw.h): the shadow fades once per 30 Hz frame */
+        cLib_chaseUC(&mShadowAlpha, (u8)alpha, 10);
     if (mShadowAlpha != 0) {
         J3DModelData* modelData = J3DModel_getModelData(mpShadowModel);
         u32 mat = modelData->mMaterials;
@@ -1793,9 +2112,20 @@ void daShip_c::sightStep() {
 
 
 
+static Ship60Ctrl s_ship60ShadowBtk; /* true60: the shadow btk's frame-start control (ship60_ctrlKeep) */
 // HD: The water shadow's texture scrolls faster with speed and tilt
 /* 02477944 */
 void daShip_c::setShadowBtkRate() {
+    const bool t60Frame = ship60_frameForm();
+    if (t60Frame) {
+        if (!t60::tick30()) {
+            ship60_ctrlKeep(s_ship60ShadowBtk, this, ship_counter, &mShadowBtk.mFrameCtrl);
+            mDoExt_baseAnm_play(&mShadowBtk); /* the picture: the held rate at the step's dt */
+            return;
+        }
+        ship60_ctrlBack(s_ship60ShadowBtk, this, ship_counter, &mShadowBtk.mFrameCtrl);
+    }
+    Ship60Dt1<> t60Dt1(t60Frame); /* the tick30 step: the original chase + play at dt 1 */
     s16 ax = shape_angle.x, az = shape_angle.z;
     s32 tilt = (ax < 0 ? -ax : ax) + (az < 0 ? -az : az);
     f32 target = gabi::fmadds((f32)tilt, 0.002f, gabi::fmadds(speedF, 0.5f, 0.5f));
@@ -1942,6 +2272,7 @@ BOOL daShip_c::procTalkReady() {
 BOOL daShip_c::procTalk() {
     /* HD: one message manager instead of message processes */
     u32 mng = ship_msgMng();
+    ship60_swayStep(s_ship60Talk); /* true60: no held talk animation from an earlier frame */
     firstDecrementShipSpeed(0.0f);
     setMoveAngle(0);
     if (mCurrMsgBsPcId == fpcM_ERROR_PROCESS_ID_e) {
@@ -1961,12 +2292,31 @@ BOOL daShip_c::procTalk() {
         if ((ship_playerStatus0() & daPyStts0_SHIP_RIDE_e) && checkStateFlg(daSFLG_UNK400000_e)) {
             return procTurn_init();
         }
-        mpHeadAnm->setPlaySpeed(-1.0f);
+        ship60_reverseAnm(mpHeadAnm.get(), this, ship_counter); /* true60 (split-actor state (3)): setPlaySpeed(-1) at the frame-end phase, latched */
         dComIfGp_event_reset();
         changeDemoEndProc();
         return TRUE;
     }
-    if (mFrameCtrl.checkState(2)) {
+    /* true60 (the animation-driven decision rule): the frame's first step decides on the frame's plays, a new animation held to the frame's
+     * tick30 step (d_a_ship_t60.h ship60_anmEndWithin). dt 1: the original test on this frame's play. */
+    bool end, hold = false;
+    if (t60::dt() == 1.0f) {
+        end = mFrameCtrl.checkState(2);
+    } else {
+        switch (ship60_swayEnter(s_ship60Talk, this, ship_counter)) {
+        case Ship60SwayPath::Decide:
+            end = mFrameCtrl.checkState(2) || ship60_anmEndWithin(&mFrameCtrl, (int)t60::steps() - 1);
+            hold = true;
+            break;
+        case Ship60SwayPath::Hold:
+            end = false;
+            break;
+        default: /* Late: the per-step form */
+            end = mFrameCtrl.checkState(2);
+            break;
+        }
+    }
+    if (end) {
         u16 fileIndex;
         if (cM_rndF(2.0f) < 1.0f) {
             fileIndex = dRes_INDEX_SHIP_BCK_FN_TALK_A_e;
@@ -1974,10 +2324,21 @@ BOOL daShip_c::procTalk() {
             fileIndex = dRes_INDEX_SHIP_BCK_FN_TALK_B_e;
         }
         if (fileIndex != mAnmTransformFileIdx) {
-            mAnmTransformFileIdx = fileIndex;
-            mAnmTransform = ship_getRes(fileIndex);
-            J3DFrameCtrl_init(&mFrameCtrl, anm_getFrameMax(mAnmTransform));
+            if (hold && !t60::tick30()) {
+                s_ship60Talk.target = (s16)fileIndex;
+                s_ship60Talk.pending = true;
+            } else {
+                mAnmTransformFileIdx = fileIndex;
+                mAnmTransform = ship_getRes(fileIndex);
+                J3DFrameCtrl_init(&mFrameCtrl, anm_getFrameMax(mAnmTransform));
+            }
         }
+    }
+    s16 held;
+    if (t60::dt() != 1.0f && t60::tick30() && ship60_swayTake(s_ship60Talk, this, ship_counter, &held)) {
+        mAnmTransformFileIdx = (u16)held;
+        mAnmTransform = ship_getRes((u16)held);
+        J3DFrameCtrl_init(&mFrameCtrl, anm_getFrameMax(mAnmTransform));
     }
     return TRUE;
 }
@@ -1987,7 +2348,7 @@ BOOL daShip_c::procTalk() {
 /* 024814F8 */
 BOOL daShip_c::procTurn_init() {
     mCurrMsgBsPcId = fpcM_ERROR_PROCESS_ID_e;
-    mpHeadAnm->setPlaySpeed(-1.0f);
+    ship60_reverseAnm(mpHeadAnm.get(), this, ship_counter); /* true60 (split-actor state (3)): setPlaySpeed(-1) at the frame-end phase, latched */
     seStart(shipTail::JA_SE_SHIP_LOOK_FORWARD, &eyePos);
     setProc(shipTail::procTurn);
     mTurnAngleSpeed = 0;
@@ -2019,7 +2380,11 @@ BOOL daShip_c::procTurn_init() {
 void daShip_c::setMoveAngle(s16 moveAngle) {
     if (!mTornadoActor && !mWhirlActor) { /* !checkForceMove() */
         /* HD: the turn rate falls off up to speed 100 (GameCube 55) */
-        f32 turnRate = 4.0f - (std::fabs(PORT_SHIP(0x0247D4E8, this, (f32)speedF)) / 100.0f) * 3.0f;
+        /* true60 (frame form): the frame-start speedF (A turns before the frame's speed chase, which the form
+         * runs whole on the first step), so every step's share is of one per-frame turn. dt 1 / NEGCTRL: speedF */
+        const f32 turnSpeedF =
+            ship60_frameForm() ? ship60_startF(s_ship60TurnSpeedF, this, ship_counter, speedF) : (f32)speedF;
+        f32 turnRate = 4.0f - (std::fabs(PORT_SHIP(0x0247D4E8, this, turnSpeedF)) / 100.0f) * 3.0f;
         s16 initialAngle = shape_angle.y;
         if (turnRate > 3.6f) {
             turnRate = 3.6f;
@@ -2032,7 +2397,8 @@ void daShip_c::setMoveAngle(s16 moveAngle) {
             turnRate += ((3.6f - turnRate) * mLandTimer) / 15.0f;
         }
         s16 temp = (s16)gabi::ftoi(-(turnRate * (f32)(moveAngle >> 6)));
-        shape_angle.y += temp;
+        shape_angle.y += (s16)ship60_share(s_ship60Turn, this, temp); /* true60 (the per-step movement rule): the turn per frame, dt of it a step */
+        s_ship60TurnAmount = temp;
         setControllAngle(getAimControllAngle(initialAngle));
         current.angle.y = shape_angle.y;
     }
@@ -2044,7 +2410,7 @@ void daShip_c::setMoveAngle(s16 moveAngle) {
 void daShip_c::changeDemoEndProc() {
     offStateFlg(daSFLG_UNK8000_e);
     if (checkStateFlg(daSFLG_UNK80000_e)) {
-        mpHeadAnm->setPlaySpeed(-1.0f);
+        ship60_reverseAnm(mpHeadAnm.get(), this, ship_counter); /* true60 (split-actor state (3)): setPlaySpeed(-1) at the frame-end phase, latched */
         offStateFlg(daSFLG_UNK80000_e);
     }
     if (mDemoMode == shipTail::DEMO_OPEN_e || checkStateFlg(daSFLG_UNK4000000_e)) {
@@ -2100,6 +2466,16 @@ BOOL daShip_c::procTurn() {
         } else if (eyeStep < 15.0f) {
             eyeStep = 15.0f - eyeDistance >= 0.0f ? eyeDistance : 15.0f;
         }
+        if (t60::dt() != 1.0f) {
+            /* true60 (the per-step smoothing rule): half the distance a frame (a ratio), its 60 / 15 limits per frame (x dt) */
+            const f32 dt = t60::dt();
+            eyeStep = eyeDistance * t60_ratio(0.5f, dt);
+            if (eyeStep > 60.0f * dt) {
+                eyeStep = 60.0f * dt;
+            } else if (eyeStep < 15.0f * dt) {
+                eyeStep = 15.0f * dt - eyeDistance >= 0.0f ? eyeDistance : 15.0f * dt;
+            }
+        }
         gabi::Local<cXyz> eye2;
         camera_Eye(camera, eye2.get());
         gabi::Local<cXyz> nrm;
@@ -2117,7 +2493,14 @@ BOOL daShip_c::procTurn() {
     camera_Set(camera, setCenter.get(), setEye.get());
     if (!(eyeDistance > 1.0f)) {
         s16 previousAngle = shape_angle.y;
-        cLib_addCalcAngleS2(&shape_angle.y, mTurnTargetAngle, 8, mTurnAngleSpeed);
+        /* true60 (the per-step smoothing rule, pair frame 848): A turns the heading by the frame-START turn speed and then eases the
+         * speed up; at N steps the heading's max step is that frame-start mTurnAngleSpeed on every step of the frame (dt
+         * of it a step, c_lib pins the frame end), not the speed the frame's earlier steps already raised (that turned
+         * B half a frame early: 64 on the turn's first frame where A turns 0). dt 1: the original. */
+        const s16 turnSpeed = t60::dt() != 1.0f
+                                  ? (s16)ship60_start(s_ship60TurnSpeed, this, ship_counter, (s16)mTurnAngleSpeed)
+                                  : (s16)mTurnAngleSpeed;
+        cLib_addCalcAngleS2(&shape_angle.y, mTurnTargetAngle, 8, turnSpeed);
         cLib_addCalcAngleS2(&mTurnAngleSpeed, 0x800, 8, 0x80);
         current.angle.y = shape_angle.y;
         setControllAngle(getAimControllAngle(previousAngle));
@@ -2127,7 +2510,10 @@ BOOL daShip_c::procTurn() {
             cLib_addCalc(&speedF, 100.0f, 0.1f, 5.0f, 1.0f);
         }
         s16 diff2 = mTurnTargetAngle - shape_angle.y;
-        if ((diff2 < 0 ? -diff2 : diff2) < 0x100 && !checkOutRange()) {
+        /* true60 (the first-step AI-timer rule): the settle hold counts 30 Hz frames and its end decision follows the frame's
+         * turn: on the tick30 step (after the frame's whole turn, cLib_addCalcAngleS2 ending the frame on the
+         * original step), so the hold lasts mProcVar0 frames as at 30 Hz (on every step it counted N a frame) */
+        if (ship60_tick30() && (diff2 < 0 ? -diff2 : diff2) < 0x100 && !checkOutRange()) {
             if (mProcVar0 <= 0) {
                 camera_Start(camera);
                 camera_Reset(camera);
@@ -2154,7 +2540,19 @@ void daShip_c::setSailAngle() {
     } else {
         sVar1 = cM_atan2s(windVec->x, windVec->z) - shape_angle.y;
     }
-    if (sVar1 > 0x800) {
+    /* true60 (rule 2 2026-11-17, the animation-driven decision rule form): the 30 Hz frame decides the wind side once, on the heading
+     * the frame's setMoveAngle left (procSteerMove turns first) and before execute's later heading changes (the whirl /
+     * tornado chase, the forced turn). So the frame's first step decides on its heading plus the turn setMoveAngle still
+     * adds on the frame's other steps (= A's view); the branch holds over those steps. dt 1: every call decides. */
+    bool decide = true;
+    if (t60::dt() != 1.0f) {
+        decide = ship60_decide(s_ship60Sail, this, ship_counter);
+        if (decide && t60::first_step()) {
+            sVar1 = (s16)(sVar1 - ship60_shareRestPeek(s_ship60Turn, this, s_ship60TurnAmount, (int)t60::steps() - 1));
+        }
+    }
+    if (!decide) {
+    } else if (sVar1 > 0x800) {
         mTargetSailAngle = -0x1555;
     } else if (sVar1 < -0x800) {
         mTargetSailAngle = 0x1555;
@@ -2188,7 +2586,9 @@ BOOL daShip_c::setCrashData(s16 param1) {
     }
     BOOL droppedLink = FALSE;
     fopAc_ac_c* link = dComIfGp_getLinkPlayer();
-    if ((shipFirst::linkNoResetFlags(gabi::ea(link)) & 1) || shipFirst::linkDamageWait(gabi::ea(link)) != 0) {
+    /* true60 (the process-order read rule addendum): Link's frame-start no-reset flags and damage wait (f_pc_t60_frame_latch.h) */
+    if ((t60_flatch_load<u32>(gabi::ea(link) + offsetof(shipFirst::LinkState, mNoResetFlg0)) & 1) ||
+        t60_flatch_load<s16>(gabi::ea(link) + offsetof(shipFirst::LinkState, mDamageWaitTimer)) != 0) {
         /* HD: Link takes the collider's damage (probably while he cannot be thrown off) */
         u32 l = gabi::ea(dComIfGp_getLinkPlayer());
         shipFirstSetDamageRupee(l, (f32)-(s32)mStts.m_dmg);
@@ -2319,6 +2719,7 @@ BOOL daShip_c::checkNextMode(int i_curMode) {
 void daShip_c::setPartOffAnime() {
     J3DAnmTransform* pAnimRes = ship_getRes(dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e);
     mpBodyAnm->setAnm(pAnimRes, 0, 3.0f, 1.0f, 0.0f, -1.0f, nullptr);
+    ship60_markAnm(mpBodyAnm.get(), ship_counter); /* true60 (split-actor state (3)): first played next frame */
     if (mPart == PART_CRANE_e) {
         seStart(shipFirst::JA_SE_LK_SHIP_CRANE_IN, &mSailPos);
     } else if (mPart == PART_CANNON_e) {
@@ -2336,6 +2737,7 @@ void daShip_c::setPartOffAnime() {
 void daShip_c::setPartOnAnime(u8 i_part) {
     J3DAnmTransform* pAnimRes = ship_getRes(dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e);
     mpBodyAnm->setAnm(pAnimRes, 0, 3.0f, 1.0f, 0.0f, -1.0f, nullptr);
+    ship60_markAnm(mpBodyAnm.get(), ship_counter); /* true60 (split-actor state (3)): first played next frame */
     mBodyAnmFileIdx = dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e;
     mPart = i_part;
     if (mPart == PART_STEER_e) {
@@ -2354,7 +2756,9 @@ void daShip_c::setPartOnAnime(u8 i_part) {
 
 /* 0247BC44 */
 void daShip_c::setPartAnimeInit(u8 i_part) {
-    f32 remainingFrameRatio = 1.0f - mpBodyAnm->getFrame() / mpBodyAnm->getEndFrame();
+    /* true60 (split-actor state (3)): the old mast animation's phase after the frame's whole play (d_a_ship_t60.h
+     * ship60_frameEndFrame); dt 1: mpBodyAnm->getFrame() */
+    f32 remainingFrameRatio = 1.0f - ship60_frameEndFrame(mpBodyAnm.get(), this, ship_counter) / mpBodyAnm->getEndFrame();
     if (i_part == PART_WAIT_e) {
         if (mBodyAnmFileIdx == dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e) {
             setPartOffAnime();
@@ -2364,7 +2768,7 @@ void daShip_c::setPartAnimeInit(u8 i_part) {
         if (mBodyAnmFileIdx == dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e) {
             setPartOffAnime();
             mpBodyAnm->setFrame(remainingFrameRatio * mpBodyAnm->getEndFrame());
-        } else if (mpBodyAnm->getPlaySpeed() < 0.01f) {
+        } else if (ship60_endRate(mpBodyAnm.get(), this, ship_counter) < 0.01f /* true60 (animation-driven decision) */) {
             setPartOnAnime(i_part);
         }
     } else if (mBodyAnmFileIdx == dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e) {
@@ -2414,11 +2818,19 @@ void daShip_c::setSelfMove(int param_1) {
     } else {
         tillerAngle = 0;
     }
-    cLib_addCalcAngleS(&mTillerAngle, tillerAngle, 4, 700 /* l_HIO.tiller_speed */, 0x100);
+    ship60_tillerChase(s_ship60SelfTiller, this, [&] { /* true60 (frame form): once a frame */
+        cLib_addCalcAngleS(&mTillerAngle, tillerAngle, 4, 700 /* l_HIO.tiller_speed */, 0x100);
+    });
     setMoveAngle(mTillerAngle);
     if (checkStateFlg(daSFLG_FLY_e)) {
         return;
     }
+    /* true60 (frame form): the deceleration once a frame, whole on the first step at dt 1, held after */
+    const Ship60SpeedPath t60sp = ship60_speedPath(s_ship60SelfSpeed, this, ship_counter);
+    if (t60sp == Ship60SpeedPath::Hold) {
+        return;
+    }
+    Ship60Dt1<> t60dt(t60sp == Ship60SpeedPath::Whole);
     /* HD: "no control" became "the link player is not the current player" */
     if ((ship_playerStatus0() & 0x2000 /* daPyStts0_SUBJECT_e */) || dComIfGp_event_runCheck() != 0 ||
         !ship_isLinkPlayer0()) {
@@ -2481,7 +2893,7 @@ BOOL daShip_c::procWait_init() {
 BOOL daShip_c::procWait() {
     cLib_addCalc(&speedF, 0.0f, 0.1f, 1.0f, 0.05f);
     /* HD: frame 9 (GameCube 7) */
-    if (!(mpBodyAnm->getFrame() < 9.0f)) {
+    if (!(ship60_frameEndFrame(mpBodyAnm.get(), this, ship_counter) < 9.0f) /* true60 (animation-driven decision) */) {
         mPart = PART_WAIT_e;
         mSailScale = 1.0f;
     }
@@ -2555,7 +2967,7 @@ BOOL daShip_c::procGetOff_init() {
 /* 0247FE54 */
 BOOL daShip_c::procGetOff() {
     /* HD: frame 9 (GameCube 7) */
-    if (!(mpBodyAnm->getFrame() < 9.0f)) {
+    if (!(ship60_frameEndFrame(mpBodyAnm.get(), this, ship_counter) < 9.0f) /* true60 (animation-driven decision) */) {
         mPart = PART_WAIT_e;
         mSailScale = 1.0f;
     }
@@ -2615,7 +3027,7 @@ BOOL daShip_c::procPaddleMove() {
         return TRUE;
     }
     /* HD: frame 9 (GameCube 7) */
-    if (!(mpBodyAnm->getFrame() < 9.0f)) {
+    if (!(ship60_frameEndFrame(mpBodyAnm.get(), this, ship_counter) < 9.0f) /* true60 (animation-driven decision) */) {
         mPart = PART_WAIT_e;
         mSailScale = 1.0f;
     }
@@ -2650,13 +3062,15 @@ BOOL daShip_c::procSteerMove() {
     if (checkNextMode(MODE_STEER_MOVE_e)) {
         return TRUE;
     }
-    cLib_addCalcAngleS(&mTillerAngle, (s16)gabi::ftoi(-((8192.0f * mStickMVal) * cM_ssin(mStickMAng))), 4, 700, 0x100);
+    ship60_tillerChase(s_ship60SteerTiller, this, [&] { /* true60 (frame form): once a frame */
+        cLib_addCalcAngleS(&mTillerAngle, (s16)gabi::ftoi(-((8192.0f * mStickMVal) * cM_ssin(mStickMAng))), 4, 700, 0x100);
+    });
     if (!checkStateFlg(daSFLG_FLY_e)) {
         setMoveAngle(mTillerAngle);
     }
     setSailAngle();
     /* HD: frame 9 (GameCube 7) */
-    if (mBodyAnmFileIdx == dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e && !(mpBodyAnm->getFrame() < 9.0f) && mPart == PART_STEER_e) {
+    if (mBodyAnmFileIdx == dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e && !(ship60_frameEndFrame(mpBodyAnm.get(), this, ship_counter) < 9.0f) /* true60 (animation-driven decision) */ && mPart == PART_STEER_e) {
         onStateFlg(daSFLG_SAIL_ON_e);
     }
     if (!checkStateFlg(daSFLG_FLY_e)) {
@@ -2695,7 +3109,12 @@ BOOL daShip_c::procSteerMove() {
             f32 windStrength = *dKyw_get_wind_power();
             windPower = windStrength + windStrength;
         }
+        /* true60 (frame form): the frame-end heading (A's speed block follows the frame's whole turn): on the
+         * frame's first step the turn's rest of the frame is added (ship60_shareRestPeek, 0 at dt 1 / NEGCTRL / no turn) */
         s16 windAngle = cM_atan2s(windVec->x, windVec->z) - shape_angle.y;
+        if (ship60_frameForm() && t60::first_step()) {
+            windAngle = (s16)(windAngle - (s16)ship60_shareRestPeek(s_ship60Turn, this, s_ship60TurnAmount, t60::steps() - 1));
+        }
         int angleDiff = windAngle < 0 ? -windAngle : windAngle;
         f32 windFactor;
         if (angleDiff < 0x4000) {
@@ -2713,10 +3132,14 @@ BOOL daShip_c::procSteerMove() {
         windPower = PORT_SHIP(0x0247EB88, this, windPower);
 
         f32 stickRate = 20.0f;
+        /* true60 (frame form): the speed block (the set below and the chase) once a frame, whole on the
+         * first step at dt 1, held on the later steps (d_a_ship_t60.h ship60_speedPath) */
+        const Ship60SpeedPath t60sp = ship60_speedPath(s_ship60SteerSpeed, this, ship_counter);
         if (checkFrontObstacle()) {
             /* HD: an obstacle ahead caps the wind speed */
             windPower = 30.0f;
-        } else if (justRaised || mpBodyAnm->checkFrame(9.0f)) {
+        } else if (t60sp != Ship60SpeedPath::Hold && /* true60 (frame form): the set is in the frame's speed block */
+                   (justRaised || ship60_passEnd(mpBodyAnm.get(), this, ship_counter, 9.0f) /* true60 (animation-driven decision) */)) {
             /* HD: 1.2 times the wind speed, no cap (GameCube: twice, at most 80) */
             f32 targetSpeed = windPower * 1.2f;
             if (speedF < targetSpeed) {
@@ -2728,6 +3151,9 @@ BOOL daShip_c::procSteerMove() {
                 }
             }
         }
+        /* true60 (frame form): the chase, after the frame's set above as A (held on the later steps) */
+        if (t60sp != Ship60SpeedPath::Hold) {
+        Ship60Dt1<> t60dt(t60sp == Ship60SpeedPath::Whole);
         if (mTargetSpeed < speedF) {
             firstDecrementShipSpeed(mTargetSpeed);
         } else if (!checkStateFlg(daSFLG_SAIL_ON_e) || !(windPower > 0.0f)) {
@@ -2737,14 +3163,15 @@ BOOL daShip_c::procSteerMove() {
             /* HD: always towards the wind speed, step 2 */
             cLib_addCalc(&speedF, windPower, 0.1f, 2.0f, 0.1f);
         }
+        } /* true60 */
         if (shipTail::eventRun(dComIfGp_ea()) == 0 &&
             (windPower = PORT_SHIP(0x0247ED24, this, windPower), ship_isLinkPlayer0()) &&
-            mBodyAnmFileIdx == dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e && !(mpBodyAnm->getFrame() < 9.0f) &&
-            !checkStateFlg(daSFLG_FLY_e) && mFwdVel > 30.000002f) {
+            mBodyAnmFileIdx == dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e && !(ship60_frameEndFrame(mpBodyAnm.get(), this, ship_counter) < 9.0f) /* true60 (animation-driven decision) */ &&
+            !checkStateFlg(daSFLG_FLY_e) && ship60_fwdVelStart(this) > 30.000002f /* true60 (process-order read) */) {
             /* HD: jumps need wind speed 20 and forward speed 30 (GameCube 11 / 16.5) */
             if (!mTornadoActor && !mWhirlActor && !(windPower < stickRate)) {
                 onStateFlg(daSFLG_JUMP_OK_e);
-                if (CPad_R_LOCK_TRIGGER(0)) {
+                if (ship60_first() && CPad_R_LOCK_TRIGGER(0)) { /* true60 (the first-step input rule): the frame's press on its first step */
                     f32 vy = windPower;
                     onStateFlg(daSFLG_FLY_e | daSFLG_JUMP_e);
                     if (vy < 15.0f) {
@@ -2752,6 +3179,10 @@ BOOL daShip_c::procSteerMove() {
                     } else if (vy > 40.0f) {
                         vy = 40.0f;
                     }
+                    /* true60: the press is taken on the frame's first step; at 30 Hz the
+                     * frame turned by its whole amount before the jump froze the heading: the frame's other steps'
+                     * turn first (0 at dt 1, and when setMoveAngle did not run on this step) */
+                    shape_angle.y += (s16)ship60_shareRest(s_ship60Turn, this, s_ship60TurnAmount, t60::steps() - 1);
                     current.angle.y = shape_angle.y;
                     speed.y = vy;
                     mPitchOffsetSpeed = 0;
@@ -2764,7 +3195,7 @@ BOOL daShip_c::procSteerMove() {
         setControllAngle(0);
         mControllAngleSpeed = 0;
     }
-    if (mPart != PART_STEER_e && mpBodyAnm->getPlaySpeed() < 0.01f) {
+    if (mPart != PART_STEER_e && ship60_endRate(mpBodyAnm.get(), this, ship_counter) < 0.01f /* true60 (animation-driven decision) */) {
         setPartOnAnime(PART_STEER_e);
     }
     return TRUE;
@@ -2791,6 +3222,9 @@ BOOL daShip_c::procCannonReady() {
     cLib_addCalcAngleS(&mTillerAngle, 0, 2, 0x1000, 0x400);
     setMoveAngle(mTillerAngle);
     firstDecrementShipSpeed(0.0f);
+    /* true60: the per-step stop test here: the stopped branch's procCannon_init is a procedure change, which the
+     * original makes after the frame's play and whose body first runs next frame; the tick30 step (where the aligned
+     * mast stops, split-actor state (3)) gives that; the part-on set is latched either way */
     if (mpBodyAnm->getPlaySpeed() < 0.01f) {
         if (mPart != PART_CANNON_e) {
             setPartOnAnime(PART_CANNON_e);
@@ -2864,14 +3298,26 @@ BOOL daShip_c::procCannon() {
             if (ship_isCameraInverted()) {
                 v = -v;
             }
-            mCannonAngleX = (s16)gabi::ftoi(gabi::fmadds(384.0f * v, cM_scos(mStickMAng), (f32)(s16)mCannonAngleX));
-            mCannonAngleY += (s16)gabi::ftoi((384.0f * adjust) * cM_ssin(mStickMAng));
+            if (t60::dt() != 1.0f) {
+                /* true60 (the per-step movement rule): the aim moves by the stick per frame, dt of it a step (carried) */
+                s32 fullX = gabi::ftoi(gabi::fmadds(384.0f * v, cM_scos(mStickMAng), (f32)(s16)mCannonAngleX)) - (s32)(s16)mCannonAngleX;
+                mCannonAngleX = (s16)((s32)(s16)mCannonAngleX + ship60_share(s_ship60CannonX, this, fullX));
+                mCannonAngleY += (s16)ship60_share(s_ship60CannonY, this, gabi::ftoi((384.0f * adjust) * cM_ssin(mStickMAng)));
+            } else {
+                mCannonAngleX = (s16)gabi::ftoi(gabi::fmadds(384.0f * v, cM_scos(mStickMAng), (f32)(s16)mCannonAngleX));
+                mCannonAngleY += (s16)gabi::ftoi((384.0f * adjust) * cM_ssin(mStickMAng));
+            }
         } else {
             /* HD: with R held the stick still aims up and down */
             if (ship_isCameraInverted()) {
                 adjust = -adjust;
             }
-            mCannonAngleX = (s16)gabi::ftoi(gabi::fmadds(384.0f * adjust, cM_scos(mStickMAng), (f32)(s16)mCannonAngleX));
+            if (t60::dt() != 1.0f) {
+                s32 fullX = gabi::ftoi(gabi::fmadds(384.0f * adjust, cM_scos(mStickMAng), (f32)(s16)mCannonAngleX)) - (s32)(s16)mCannonAngleX;
+                mCannonAngleX = (s16)((s32)(s16)mCannonAngleX + ship60_share(s_ship60CannonX, this, fullX));
+            } else {
+                mCannonAngleX = (s16)gabi::ftoi(gabi::fmadds(384.0f * adjust, cM_scos(mStickMAng), (f32)(s16)mCannonAngleX));
+            }
         }
     }
     if (mCannonAngleX > 0x4000) {
@@ -2879,10 +3325,18 @@ BOOL daShip_c::procCannon() {
     } else if (mCannonAngleX < 0x1556) {
         mCannonAngleX = 0x1556;
     }
-    if (cLib_distanceAngleS(prev0396, mCannonAngleX) >= 0x80 || cLib_distanceAngleS(prev0394, mCannonAngleY) >= 0x80) {
+    // true60 (the one-emitter-per-event rule): the aim's move per frame against the threshold (the step's move / dt), the sound once a frame
+    if (t60::dt() != 1.0f) {
+        const f32 lim = (f32)0x80 * t60::dt();
+        if (((f32)cLib_distanceAngleS(prev0396, mCannonAngleX) >= lim || (f32)cLib_distanceAngleS(prev0394, mCannonAngleY) >= lim) &&
+            ship60_once(s_ship60CannonMove, this, ship_counter)) {
+            seStart(shipTail::JA_SE_LK_SHIP_CANNON_MOVE, &mCannonPos);
+        }
+    } else if (cLib_distanceAngleS(prev0396, mCannonAngleX) >= 0x80 || cLib_distanceAngleS(prev0394, mCannonAngleY) >= 0x80) {
         seStart(shipTail::JA_SE_LK_SHIP_CANNON_MOVE, &mCannonPos);
     }
-    if (mProcVar0 == 0 && dComIfGp_getDoStatus() == 0x3F /* HD */ &&
+    // true60 (the 30 Hz timer rule and first-step input): the fire press counts on the frame's first step, the 30-frame wait counts down there
+    if (mProcVar0 == 0 && dComIfGp_getDoStatus() == 0x3F /* HD */ && ship60_first() &&
         ((CPad_CHECK_TRIG_X(0) && dComIfGp_getSelectItem(0) == dItemNo_BOMB_BAG_e) ||
          (CPad_CHECK_TRIG_Y(0) && dComIfGp_getSelectItem(1) == dItemNo_BOMB_BAG_e) ||
          (CPad_CHECK_TRIG_Z(0) && dComIfGp_getSelectItem(2) == dItemNo_BOMB_BAG_e) ||
@@ -2892,7 +3346,7 @@ BOOL daShip_c::procCannon() {
             mDoAud_seStart_simple(shipTail::JA_SE_ITEM_TARGET_OUT);
             mProcVar0--;
         }
-    } else if (mProcVar0 > 0) {
+    } else if (mProcVar0 > 0 && ship60_first()) {
         mProcVar0--;
     }
     setSelfMove(CPad_R_LOCK_BUTTON(0) ? 1 : 0);
@@ -2922,11 +3376,11 @@ BOOL daShip_c::procCraneReady() {
     cLib_addCalcAngleS(&mTillerAngle, 0, 2, 0x1000, 0x400);
     setMoveAngle(mTillerAngle);
     firstDecrementShipSpeed(0.0f);
-    if (mpBodyAnm->getPlaySpeed() < 0.01f) {
+    if (ship60_endRate(mpBodyAnm.get(), this, ship_counter) < 0.01f /* true60 (animation-driven decision) */) {
         if (mPart != PART_CRANE_e) {
             setPartOnAnime(PART_CRANE_e);
         } else {
-            incRopeCnt(2, 0);
+            incRopeCnt(ship60_share(s_ship60Rope, this, 2), 0); /* true60: 2 segments a frame */
             if (mRopeCnt == 20) {
                 procCrane_init();
             }
@@ -2978,7 +3432,7 @@ BOOL daShip_c::procCrane() {
              (CPad_CHECK_HOLD_Z(0) && dComIfGp_getSelectItem(2) == dItemNo_GRAPPLING_HOOK_e) ||
              CPad_CHECK_HOLD_HD1(0) /* HD */)) {
             s16 previousRopeCount = mRopeCnt;
-            incRopeCnt(2, 0);
+            incRopeCnt(ship60_share(s_ship60Rope, this, 2), 0); /* true60: per frame */
             /* HD: the rope is at most 125 segments long (GameCube 250) */
             if (mRopeCnt == 125) {
                 craneTurn = 0;
@@ -3001,7 +3455,7 @@ BOOL daShip_c::procCrane() {
             }
         } else {
             /* HD: winds in twice as fast */
-            incRopeCnt(-4, 20);
+            incRopeCnt(ship60_share(s_ship60Rope, this, -4), 20); /* true60: per frame */
             if (mRopeCnt == 20) {
                 craneTurn = 0;
             } else if (mCraneBaseAngle > 0) {
@@ -3037,7 +3491,9 @@ BOOL daShip_c::procCrane() {
     }
     if (CPad_R_LOCK_BUTTON(0) && mRopeCnt == 20) {
         setSelfMove(1);
-        mCraneShockFlg = cM_rnd() < 0.5f;
+        if (ship60_tick30()) { /* true60 (the per-step chance rule): a per-frame draw, on the tick30 step */
+            mCraneShockFlg = cM_rnd() < 0.5f;
+        }
     } else {
         setSelfMove(0);
     }
@@ -3048,6 +3504,7 @@ BOOL daShip_c::procCrane() {
 
 /* 0247FBC4 */
 BOOL daShip_c::procCraneUp() {
+    ship60_swayStep(s_ship60Sway); /* true60: no held swing target from an earlier frame */
     s16 craneTurn;
     if (mCraneBaseAngle > 0) {
         craneTurn = 0x800;
@@ -3060,34 +3517,78 @@ BOOL daShip_c::procCraneUp() {
         onStateFlg(daSFLG_CRANE_UP_END_e);
         ship_StopQuake(-1);
     } else {
+        const s16 lean0 = mControllAngle, leanSpeed0 = mControllAngleSpeed;
         setControllAngle(mProcVar1);
-        if (cLib_distanceAngleS(mControllAngle, mProcVar1) < 0x400) {
+        /* true60 (q6bv; the first-step AI-timer rule / animation-driven decision): the swing decision once a frame, on its first step
+         * against the original's frame-end lean, the new target held to the frame's tick30 step (d_a_ship_t60.h
+         * ship60_sway*). dt 1: the original test on the lean just pulled. */
+        s16 lean = mControllAngle;
+        bool decide = true, hold = false;
+        if (t60::dt() != 1.0f) {
+            switch (ship60_swayEnter(s_ship60Sway, this, ship_counter)) {
+            case Ship60SwayPath::Decide: {
+                s16 pull = (s16)(mProcVar1 - lean0);
+                s16 add = (s16)gabi::ftoi((f32)pull * 0.05f);
+                if (add == 0) {
+                    add = pull > 0 ? 1 : (pull < 0 ? -1 : 0);
+                }
+                lean = (s16)(lean0 + (s16)(leanSpeed0 + add));
+                hold = true;
+                break;
+            }
+            case Ship60SwayPath::Hold:
+                decide = false;
+                break;
+            case Ship60SwayPath::Late:
+                decide = t60::tick30();
+                break;
+            }
+        }
+        if (decide && cLib_distanceAngleS(lean, mProcVar1) < 0x400) {
+            s16 next;
+            bool swing;
             if (mCraneBaseAngle > 0) {
-                if (mProcVar1 > 0x400) {
-                    mProcVar1 = (s16)gabi::ftoi(256.0f * cM_rnd());
-                } else {
-                    mProcVar1 = (s16)gabi::ftoi(gabi::fmadds(1024.0f, cM_rnd(), 2048.0f));
-                    seStart(0x381E, &current.pos);
-                }
+                swing = !(mProcVar1 > 0x400);
+                next = swing ? (s16)gabi::ftoi(gabi::fmadds(1024.0f, cM_rnd(), 2048.0f)) : (s16)gabi::ftoi(256.0f * cM_rnd());
             } else {
-                if (mProcVar1 < -0x400) {
-                    mProcVar1 = (s16)gabi::ftoi(-256.0f * cM_rnd());
-                } else {
-                    mProcVar1 = (s16)gabi::ftoi(gabi::fnmsubs(1024.0f, cM_rnd(), -2048.0f));
-                    seStart(0x381E, &current.pos);
-                }
+                swing = !(mProcVar1 < -0x400);
+                next = swing ? (s16)gabi::ftoi(gabi::fnmsubs(1024.0f, cM_rnd(), -2048.0f)) : (s16)gabi::ftoi(-256.0f * cM_rnd());
+            }
+            if (hold && !t60::tick30()) {
+                s_ship60Sway.target = next;
+                s_ship60Sway.pending = true;
+            } else {
+                mProcVar1 = next; /* before the sound start, as the original */
+            }
+            if (swing) {
+                seStart(0x381E, &current.pos);
             }
         }
     }
-    incRopeCnt(-1, 20);
+    if (t60::dt() != 1.0f && t60::tick30()) {
+        s16 held;
+        if (ship60_swayTake(s_ship60Sway, this, ship_counter, &held)) {
+            mProcVar1 = held;
+        }
+    }
+    incRopeCnt(ship60_share(s_ship60Rope, this, -1), 20); /* true60: per frame */
     if (mRopeCnt == 20) {
         if (shipTail::eventRun(dComIfGp_ea()) != 0) {
             /* daPy_getPlayerLinkActorClass()->getBaseAnimeFrameRate() (virtual +0x9C) */
             fopAc_ac_c* link = dComIfGp_getLinkPlayer();
-            if (shipTail::baseAnimationRate(link) < 0.01f) {
+            /* true60 (the process-order read rule addendum): Link's frame-start rate (mFrameCtrlUnder[0].mRate, the getter's value;
+             * f_pc_t60_frame_latch.h), else the original virtual call */
+            f32 linkRate;
+            if (!t60_flatch_try<f32>(gabi::ea(link) + 0x5898, &linkRate))
+                linkRate = shipTail::baseAnimationRate(link);
+            if (linkRate < 0.01f) {
                 dComIfGp_evmng_cutEnd(mEvtStaffId);
             }
         } else {
+            s16 held; /* true60: the frame's held swing target before the procedure leaves (the original set it first) */
+            if (t60::dt() != 1.0f && ship60_swayTake(s_ship60Sway, this, ship_counter, &held)) {
+                mProcVar1 = held;
+            }
             procCrane_init();
         }
     }
@@ -3109,6 +3610,10 @@ BOOL daShip_c::procToolDemo() {
             shape_angle.y = shipTail::demoRotationY(demoActor);
             current.angle.y = shape_angle.y;
             s16 angleDiff = shape_angle.y - prevShapeAngleY;
+            /* true60: the demo actor (unconverted) turns the ship once a frame, on one step; the frame's turn is held for
+             * the frame's steps (the tiller's target and the lean as at 30 Hz, where every frame sees it) */
+            const s16 frameTurn = (s16)ship60_hold(s_ship60DemoTurn, this, angleDiff);
+            angleDiff = frameTurn;
             if (angleDiff > 0) {
                 angleDiff = 0x2000;
             } else if (angleDiff < 0) {
@@ -3117,7 +3622,18 @@ BOOL daShip_c::procToolDemo() {
                 angleDiff = 0;
             }
             cLib_addCalcAngleS(&mTillerAngle, angleDiff, 4, 700, 0x100);
-            setControllAngle(getAimControllAngle(prevShapeAngleY));
+            if (t60::dt() != 1.0f) {
+                /* the lean of the frame's turn (getAimControllAngle's x 7, clamped), not N x one step's share of it */
+                s16 lean = (s16)((s32)frameTurn * 7);
+                if (lean > 0x600) {
+                    lean = 0x600;
+                } else if (lean < -0x600) {
+                    lean = -0x600;
+                }
+                setControllAngle(lean);
+            } else {
+                setControllAngle(getAimControllAngle(prevShapeAngleY));
+            }
         }
     } else {
         changeDemoEndProc();
@@ -3214,6 +3730,7 @@ BOOL daShip_c::procZevDemo() {
                 mpBodyAnm->setFrame(mpBodyAnm->getEndFrame() - 0.001f);
                 /* HD: no mpBodyAnm->getAnm()->setFrame() */
                 mpBodyAnm->play(nullptr, 0, 0);
+                /* true60 (split-actor state (3)): not latched: the set is played to its end at once (later plays stay there) */
             }
         }
         setControllAngle(0);
@@ -3286,6 +3803,11 @@ BOOL daShip_c::procZevDemo() {
             }
         } else {
             f32 v = targetDistance * 0.2f;
+            if (t60::dt() != 1.0f) {
+                /* true60 (the per-step smoothing rule and 6): the chase covers 0.2 of the distance a frame; a step of dt covers
+                 * 1 - 0.8^dt of it, so its speed is that / dt (the move adds speedF x dt) */
+                v = targetDistance * (t60_ratio(0.2f, t60::dt()) / t60::dt());
+            }
             speedF = v;
             /* HD: at most 100 without a "speed" (GameCube 55) */
             f32 radiusOrMaxSpeed = speedP ? shipTail::scalar(speedP) : 100.0f;
@@ -3314,6 +3836,7 @@ BOOL daShip_c::procZevDemo() {
         if (!checkStateFlg(daSFLG_UNK10000_e)) {
             J3DAnmTransform* res2 = ship_getRes(dRes_INDEX_SHIP_BCK_FN_LOSE1_e);
             mpHeadAnm->setAnm(res2, 0, 5.0f, 1.0f, 0.0f, -1.0f, nullptr);
+            ship60_markAnm(mpHeadAnm.get(), ship_counter); /* true60 (split-actor state (3)): first played next frame */
             mHeadAnmFileIdx = dRes_INDEX_SHIP_BCK_FN_LOSE1_e;
             onStateFlg(daSFLG_UNK10000_e);
         }
@@ -3345,17 +3868,24 @@ BOOL daShip_c::procZevDemo() {
         if (!checkStateFlg(daSFLG_UNK80000_e) && rate > 0.0f) {
             J3DAnmTransform* res3 = ship_getRes(fileIndex);
             mpHeadAnm->setAnm(res3, 0, 5.0f, rate, 0.0f, -1.0f, nullptr);
+            ship60_markAnm(mpHeadAnm.get(), ship_counter); /* true60 (split-actor state (3)): first played next frame */
             mHeadAnmFileIdx = fileIndex;
             onStateFlg(daSFLG_UNK80000_e);
         } else if (checkStateFlg(daSFLG_UNK80000_e) && rate < 0.0f) {
             offStateFlg(daSFLG_UNK80000_e);
-            mpHeadAnm->setPlaySpeed(-1.0f);
+            ship60_reverseAnm(mpHeadAnm.get(), this, ship_counter); /* true60 (split-actor state (3)): setPlaySpeed(-1) at the frame-end phase, latched */
         }
         setControllAngle(0);
         if (!(std::fabs(mpHeadAnm->getPlaySpeed()) > 0.1f)) {
             dComIfGp_evmng_cutEnd(mEvtStaffId);
         }
     } else if (mDemoMode == shipTail::DEMO_THROW_e) {
+        /* true60 (the per-step movement rule: launch speeds unchanged, once): the event manager (unconverted) moves on from this cut on its
+         * tick30 step, so the cut is seen on every step of the frame; the launch and the throw's spin happen once a
+         * frame (a second step would launch again and spin by 9000) */
+        if (!ship60_once(s_ship60ZevThrow, this, ship_counter)) {
+            return TRUE;
+        }
         speedF = 150.0f; /* l_HIO.throw_start_speedF */
         u32 gravP = ship_getSubst(mEvtStaffId, gabi::guest_addr("gravity"), 0);
         if (gravP) {
@@ -3374,8 +3904,15 @@ BOOL daShip_c::procZevDemo() {
         cLib_addCalcAngleS(&mPitchOffset, 0, 10, 0x1000, 0x200);
         cLib_addCalcAngleS(&mControllAngle, 0, 10, 0x1000, 0x200);
         onStateFlg(daSFLG_FLY_e);
+        f32 hwarpArc = 0.0f;
         if (speed.y < 15.0f) {
-            speed.y += 1.0f;
+            if (t60::dt() != 1.0f) {
+                /* true60 (the per-step movement rule): +1 a frame -> + dt a step; the rise below adds the semi-implicit arc (1 - dt)/2 x dt */
+                speed.y += t60::dt();
+                hwarpArc = (1.0f - t60::dt()) * 0.5f * t60::dt();
+            } else {
+                speed.y += 1.0f;
+            }
         }
         mTillerAngle = 0;
         mControllAngleSpeed = 0;
@@ -3384,7 +3921,11 @@ BOOL daShip_c::procZevDemo() {
         mPitchOffsetSpeed = 0;
         gravity = 0.0f;
         speedF = 0.0f;
-        current.pos.y += speed.y;
+        if (t60::dt() != 1.0f) {
+            current.pos.y += speed.y * t60::dt() + hwarpArc; /* true60 (the per-step movement rule): the rise per frame, dt of it a step */
+        } else {
+            current.pos.y += speed.y;
+        }
         dComIfGp_evmng_cutEnd(mEvtStaffId);
     } else if (mDemoMode == shipTail::DEMO_HWARP_DOWN_e) {
         if (mWaterY > current.pos.y && !(gravity < 0.0f)) {
@@ -3408,6 +3949,14 @@ BOOL daShip_c::procZevDemo() {
                 speed.y = 0.0f;
             } else {
                 f32 vy = speed.y - 1.0f;
+                if (t60::dt() != 1.0f) {
+                    /* true60 (the per-step movement rule): -1 a frame -> - dt a step, before the move (semi-implicit): the arc
+                     * -(1 - dt)/2 x dt on the position while it is not clamped */
+                    vy = speed.y - t60::dt();
+                    if (!(vy < -15.0f)) {
+                        current.pos.y -= (1.0f - t60::dt()) * 0.5f * t60::dt();
+                    }
+                }
                 if (vy < -15.0f) {
                     vy = -15.0f;
                 }
@@ -3417,7 +3966,7 @@ BOOL daShip_c::procZevDemo() {
     } else {
         return TRUE;
     }
-    if (mpBodyAnm->getPlaySpeed() < 0.01f) {
+    if (ship60_endRate(mpBodyAnm.get(), this, ship_counter) < 0.01f /* true60 (animation-driven decision) */) {
         if (mDemoPart != 4 && mDemoPart != 0 && mPart != mDemoPart) {
             setPartOnAnime(mDemoPart);
         }
@@ -3433,8 +3982,16 @@ BOOL daShip_c::procTornadoUp() {
     cLib_addCalc(&current.pos.x, tornado_getJointPos(tornado, mProcVar0, 0), 0.5f, 80.0f, 20.0f);
     cLib_addCalc(&current.pos.z, tornado_getJointPos(tornado, mProcVar0, 2), 0.5f, 80.0f, 20.0f);
     f32 vy = speed.y;
-    current.pos.y += vy;
-    vy = vy + 2.0f;
+    if (t60::dt() != 1.0f) {
+        /* true60 (the per-step movement rule): the rise moves by the speed before its +2 a frame: x dt, less the explicit form's arc
+         * 2 x (1 - dt) / 2 per frame (N steps end where the frame ends); the speed's +2 x dt */
+        const f32 dt = t60::dt();
+        current.pos.y += vy * dt - (1.0f - dt) * dt;
+        vy = vy + 2.0f * dt;
+    } else {
+        current.pos.y += vy;
+        vy = vy + 2.0f;
+    }
     if (vy > 50.0f) {
         vy = 50.0f;
     }
@@ -3442,7 +3999,7 @@ BOOL daShip_c::procTornadoUp() {
     if (tornado_getJointPos(tornado, mProcVar0, 1) < current.pos.y && mProcVar0 < 11) {
         mProcVar0++;
     }
-    shape_angle.y += 0x1C25;
+    shape_angle.y += (s16)ship60_share(s_ship60TornadoSpin, this, 0x1C25); /* true60: the spin per frame */
 
     u32 camera = ship_getCameraAddress(dComIfGp_getPlayerCameraID0());
     gabi::Local<cXyz> local_3c;
@@ -3468,16 +4025,35 @@ BOOL daShip_c::procTornadoUp() {
 
 /* 024827D4 */
 BOOL daShip_c::procWhirlDown() {
-    shape_angle.y = (s16)gabi::ftoi(gabi::fmadds(mForceMoveAngleSpeed / 6.2831855f, 65536.0f, (f32)(s16)shape_angle.y));
+    if (t60::dt() != 1.0f) { /* true60: the whirl's turn per frame, dt of it a step (carried) */
+        s32 full = gabi::ftoi(gabi::fmadds(mForceMoveAngleSpeed / 6.2831855f, 65536.0f, (f32)(s16)shape_angle.y)) - (s32)(s16)shape_angle.y;
+        shape_angle.y = (s16)((s32)(s16)shape_angle.y + ship60_share(s_ship60WhirlSpin, this, full));
+    } else {
+        shape_angle.y = (s16)gabi::ftoi(gabi::fmadds(mForceMoveAngleSpeed / 6.2831855f, 65536.0f, (f32)(s16)shape_angle.y));
+    }
     if (mWhirlActor) {
         speedF = 40.0f;
         if (cLib_addCalcPosXZ(&current.pos, &mWhirlActor->current.pos, 1.0f, 40.0f, 10.0f) < 10.0f) {
+            if (t60::dt() != 1.0f) {
+                /* true60 (the per-step movement rule): the sink's -0.5 a frame x dt, the move by the new speed x dt plus the semi-implicit
+                 * form's arc -0.5 x (1 - dt) / 2 per frame while the speed is not at its -10 limit */
+                const f32 dt = t60::dt();
+                f32 vy = speed.y - 0.5f * dt;
+                f32 arc = -0.5f * (1.0f - dt) * 0.5f * dt;
+                if (vy < -10.0f) {
+                    vy = -10.0f;
+                    arc = 0.0f;
+                }
+                speed.y = vy;
+                current.pos.y += vy * dt + arc;
+            } else {
             f32 vy = speed.y - 0.5f;
             if (vy < -10.0f) {
                 vy = -10.0f;
             }
             speed.y = vy;
             current.pos.y += vy;
+            }
             if (mProcVar0 == 0 && current.pos.y < mWaterY - 1000.0f) {
                 /* HD: the event flag is set only with the bomb bag */
                 if (dComIfGs_checkGetItem(dItemNo_BOMB_BAG_e)) {
@@ -3532,7 +4108,7 @@ BOOL daShip_c::procStartModeWarp_init() {
 BOOL daShip_c::procStartModeWarp() {
     fopAc_ac_c* tornado = fopAcM_SearchByID(mTactWarpID);
     u32 camera = ship_getCameraAddress(dComIfGp_getPlayerCameraID0());
-    shape_angle.y += mProcVar1;
+    shape_angle.y += (s16)ship60_share(s_ship60WarpSpin, this, (s16)mProcVar1); /* true60: the spin per frame */
     current.angle.y = shape_angle.y;
     gabi::Local<cXyz> local_30;
     if (tornado) {
@@ -3579,7 +4155,7 @@ BOOL daShip_c::procStartModeWarp() {
         }
     } else if (tornado == nullptr || shipTail::tornadoScale(gabi::ea(tornado)) < 0.8f /* getSmallScaleEnd() */) {
         if (tornado != nullptr) {
-            tornado->current.pos.y -= 12.0f;
+            tornado->current.pos.y -= t60::dt() != 1.0f ? 12.0f * t60::dt() : 12.0f; /* true60: per frame */
         }
         mWarpSplashBackAngle.y = shape_angle.y + 0x8000;
         cLib_chaseS(&mProcVar1, 0, 0x40);
@@ -3630,7 +4206,7 @@ BOOL daShip_c::procTactWarp_init() {
 
 /* 02482438 */
 BOOL daShip_c::procTactWarp() {
-    shape_angle.y += mProcVar1;
+    shape_angle.y += (s16)ship60_share(s_ship60TactSpin, this, (s16)mProcVar1); /* true60: the spin per frame */
     current.angle.y = shape_angle.y;
     fopAc_ac_c* tornado = fopAcM_SearchByID(mTactWarpID);
     if (tornado == nullptr || fpcM_IsCreating(mTactWarpID)) {
@@ -3644,12 +4220,25 @@ BOOL daShip_c::procTactWarp() {
         return FALSE;
     }
     if (cLib_chaseS(&mProcVar1, 0x1C25, 0x40) && shipTail::tornadoScale(gabi::ea(tornado)) > 0.8f /* getScaleEnd() */) {
+        if (t60::dt() != 1.0f) {
+            /* true60 (the per-step movement rule): +1 a frame x dt, the move by the new speed x dt plus the semi-implicit arc */
+            const f32 dt = t60::dt();
+            f32 vy = speed.y + 1.0f * dt;
+            f32 arc = (1.0f - dt) * 0.5f * dt;
+            if (vy > 50.0f) {
+                vy = 50.0f;
+                arc = 0.0f;
+            }
+            speed.y = vy;
+            current.pos.y += vy * dt + arc;
+        } else {
         f32 vy = speed.y + 1.0f;
         if (vy > 50.0f) {
             vy = 50.0f;
         }
         speed.y = vy;
         current.pos.y += vy;
+        }
         tornado->current.pos.y = current.pos.y - 700.0f;
         dPa_followEcallBack_end_l(&mWarpSplash);
         dPa_followEcallBack_end_l(&mWarpSplashBack);
@@ -3705,7 +4294,7 @@ BOOL daShip_c::procStartModeThrow_init() {
 /* 02482970 */
 BOOL daShip_c::procStartModeThrow() {
     u32 camera = ship_getCameraAddress(dComIfGp_getPlayerCameraID0());
-    shape_angle.y += mProcVar1;
+    shape_angle.y += (s16)ship60_share(s_ship60ThrowSpin, this, (s16)mProcVar1); /* true60: the spin per frame */
     gabi::Local<cXyz> pos;
     pos->set(current.pos.x, current.pos.y, current.pos.z);
     gabi::Local<cXyz> eye;
@@ -3733,7 +4322,7 @@ BOOL daShip_c::procStartModeThrow() {
                                   amb.get(), nullptr, nullptr);
             current.pos.y = mWaterY - 50.0f;
         }
-    } else if (cLib_chaseS(&mProcVar1, 0, 0x100)) {
+    } else if (cLib_chaseS(&mProcVar1, 0, 0x100) && ship60_tick30()) { /* true60 (the 30 Hz timer rule): a 30 Hz count */
         mProcVar0++;
         if (mProcVar0 == 45) {
             camera_Start(camera);
@@ -3897,6 +4486,7 @@ ext 0200EF78 f32 cLib_addCalcPosXZ(cXyz* p, const cXyz* t, f32 scale, f32 maxSte
  data ship_zeroPoint 101D03F4
  str 1003A34C "Siren" in 02471E54
  str 1003A34C "Siren" in 02471E94
+ str 1003A34C "Siren" in 02477A24
  str 1003A384 "m_fn_main_hashi" in 0247255C
  str 1003A394 "d_a_ship.cpp" in 0247255C
  str 1003A3A4 "srt != (0)" in 0247255C

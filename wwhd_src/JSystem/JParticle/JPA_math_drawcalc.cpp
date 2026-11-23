@@ -2,6 +2,7 @@
  * HD texture descriptors and particle caches retain their native load/store order. */
 #include "JSystem/JParticle/JPA_math_drawcalc.h"
 #include "JSystem/JParticle/JPAParticle.h"
+#include "JSystem/JParticle/JPA_draw_t60.h"
 #include <cstring>
 using namespace JPAMathDraw;
 static JPAMathSinCosTable l_sincosTable;
@@ -158,7 +159,8 @@ void JPADraw::calc() {
 /* 0282DCBC */
 void JPADraw::calcParticle(JPABaseParticle *ptcl) {
     JPADrawParams *params = reinterpret_cast<JPADrawParams *>(ptcl->mDrawParams);
-    params->mRotateAngle = u16(params->mRotateAngle) + s16(params->mRotateSpeed);
+    // true60 (JPA_draw_t60.h): the frame's integer turn split over the steps
+    params->mRotateAngle = u16(params->mRotateAngle) + s16(jpa_t60d::turn_step(s16(params->mRotateSpeed)));
     for (s32 i = 0; i < u8(calcPtclVisNum); ++i) {
         JPACalcVisitor *visitor = mpCalcPtclVis[i];
         gabi::call_ptr<void>(visitor->__vtbl->calc, visitor, &dc, ptcl);
@@ -167,7 +169,8 @@ void JPADraw::calcParticle(JPABaseParticle *ptcl) {
 /* 0282DD50 */
 void JPADraw::calcChild(JPABaseParticle *ptcl) {
     JPADrawParams *params = reinterpret_cast<JPADrawParams *>(ptcl->mDrawParams);
-    params->mRotateAngle = u16(params->mRotateAngle) + s16(params->mRotateSpeed);
+    // true60 (JPA_draw_t60.h): the frame's integer turn split over the steps
+    params->mRotateAngle = u16(params->mRotateAngle) + s16(jpa_t60d::turn_step(s16(params->mRotateSpeed)));
     for (s32 i = 0; i < u8(calcChldVisNum); ++i) {
         JPACalcVisitor *visitor = mpCalcChldVis[i];
         gabi::call_ptr<void>(visitor->__vtbl->calc, visitor, &dc, ptcl);

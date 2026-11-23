@@ -8,6 +8,7 @@
  * "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/d_camera_mode.h"
+#include "true60.h"
 
 namespace camera_mode {
 static CameraTypes types;
@@ -35,7 +36,14 @@ static bool lockon(dAttention_c* attention) {
     return cameraModeLockonTruth(attention) ||
            (reinterpret_cast<AttentionView*>(attention)->mFlags & 0x20000000);
 }
+/* per-step input (true 60 fps input): the GamePad's press word (0x18); the converted camera (every step) takes the presses of
+ * the step's own read (true60.h t60_in_step_word, like c_API_controller.cpp cpadTrig), so a press is consumed by exactly
+ * one step (the frame's union would act on every later step of the frame); dt 1: the word as before */
 static bool cameraModeOptionC() {
+    if (t60::dt() != 1.0f)
+        return (t60_in_step_word([] { return gabi::ea(padOption.get()) + 0x18; }, 0,
+                                 [] { return (u32)padOption->mFlags; }) &
+                0x40) != 0;
     return (padOption->mFlags & 0x40) != 0;
 }
 static void copyEntry(void* dst, void* src) {

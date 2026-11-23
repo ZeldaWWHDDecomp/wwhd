@@ -1,6 +1,9 @@
 /** Process management. */
 #include "f_pc/f_pc_manager.h"
 #include "port_hooks.h"
+#include "true60.h"
+#include "f_pc/f_pc_t60.h"
+#include "f_pc/f_pc_t60_picture.h"
 static HDRenderObject* l_renderObject;
 static layer_class rootlayer;
 static ManagerQueue queue;
@@ -30,7 +33,11 @@ BOOL fpcM_Delete(void* i_proc) {
 /* 025DF948 */
 void fpcM_Management(u32 callBack1, u32 callBack2) {
     MtxInit();
-    cAPIGph_Painter();
+    // true60: 025F2B08 (named cAPIGph_Painter here) is the GamePad rumble pattern update (m_Re_controller_pad:
+    // its bit position advances per call): once per 30 Hz frame, on the tick30 step
+    if (t60::tick30()) {
+        cAPIGph_Painter();
+    }
     // HD: no GameCube DVD-condition path. Restore the active window/camera before queues.
     // Keep every accessor call: the verified HD inlines fetch game info anew each time.
     if (fpcM_gameInfo()->mDlstWindowNum) {
@@ -44,19 +51,32 @@ void fpcM_Management(u32 callBack1, u32 callBack2) {
             fpcM_gameInfo()->mCurrentViewport = current;
         }
     }
-    fpcDt_Handler();
-    if (!fpcPi_Handler()) {
-        JUTAssertion::showAssert("f_pc_manager.cpp", 0x256, "0");
-    }
-    if (!fpcCt_Handler()) {
-        JUTAssertion::showAssert("f_pc_manager.cpp", 0x25A, "0");
+    // true60: process deletion, priority changes and creation once per 30 Hz frame, on the tick30 step (their
+    // request timers and draw-list ownership count 30 Hz frames; frame interpolation's in-between passes hold them too)
+    // (the first-step frame-level rule, f_pc_t60.h: with WWHD_T60_SCENE_FIRST on the frame's first step)
+    if (t60_frame_work_step()) {
+        u32 t60Tick = t60_frame_work_begin();
+        fpcDt_Handler();
+        if (!fpcPi_Handler()) {
+            JUTAssertion::showAssert("f_pc_manager.cpp", 0x256, "0");
+        }
+        if (!fpcCt_Handler()) {
+            JUTAssertion::showAssert("f_pc_manager.cpp", 0x25A, "0");
+        }
+        t60_frame_work_end(t60Tick);
     }
     if (callBack1) {
         fpcM_callManagement(callBack1);
     }
     fpcEx_Handler(gabi::guest_fn((const void*)fpcM_Execute));
     if (!PORT_CHEAPIB_SKIP_DRAW()) {  // (port: cheap in-between frames)
+        // true60 (WWHD_T60_PIC_RESET, f_pc_t60_picture.h): the whole forms' recorded shown values only for the draw
+        const bool t60Pic = t60pic_on();
+        if (t60Pic)
+            wwhd_t60_pic_pre();
         fpcDw_Handler(gabi::guest_fn((const void*)fpcM_DrawIterater), gabi::guest_fn((const void*)fpcM_Draw));
+        if (t60Pic)
+            wwhd_t60_pic_post();
     }
     if (callBack2) {
         fpcM_callManagement(callBack2);

@@ -2,6 +2,7 @@
  * HD: expanded actor/SDK layouts, material uniform color conversion, and explicit
  * compiler-generated routines. Guest reloads and write order preserve aliasing. */
 #include "d/actor/d_a_obj_volcano.h"
+#include "d/actor/d_a_obj_volcano_t60.h" /* true60 (t60conv): step helpers */
 using namespace daObjVolcano;
 /* 023B3B94 */
 static void color_to_float(FloatColor *output, u8 *input) {
@@ -229,7 +230,7 @@ static void eruption_sound(Act_c *actor) {
 static void order(Act_c *actor, s16 event) {
   HD::orderEvent(actor, event, 255, 65535, 0, 1);
 }
-static void finish_event(Act_c *actor, s32 state, s16 event) {
+static void finish_event(Act_c *actor, s32 state, s16 event) { if (!t60c::end()) return; /* true60 (the shared-world-state rule): frame-level logic on shared world state (switches / events / save data, shared RNG) on the tick30 step at the line place */
   u32 play = dComIfGp_ea();
   BOOL done = HD::endCheck(&HD::game(play)->mEventManager, event);
   if (done) {
@@ -241,10 +242,10 @@ static void finish_event(Act_c *actor, s32 state, s16 event) {
 }
 /* 023B4834 */
 void Act_c::daObjVolcano_fire_main() {
-  eruption_sound(this);
-  if (mCyl.ChkTgHit()) {
+  if (t60c::end()) eruption_sound(this); /* true60 (t60conv): a per-frame start, once per 30 Hz frame */
+  if (t60c::hit(mCyl.ChkTgHit(), 1, &mCyl)) {
     void *hit = mCyl.GetTgHitObj();
-    if (hit && cCcD_Obj_ChkAtType(hit, AT_TYPE_ICE_ARROW)) {
+    if (hit && cCcD_Obj_ChkAtType(hit, AT_TYPE_ICE_ARROW) && t60c::first()) { /* true60: the event order once per frame */
       order(this, (s16)mFreezeEvent);
       mState = FREEZE_DEMO_WAIT;
     }
@@ -253,7 +254,7 @@ void Act_c::daObjVolcano_fire_main() {
   HD::chaseF(&mOpacity, 1.0f, 0.01666666753590107f);
 }
 /* 023B4910 */
-void Act_c::daObjVolcano_freeze_demo_wait() {
+void Act_c::daObjVolcano_freeze_demo_wait() { if (!t60c::end()) return; /* true60 (the shared-world-state rule): frame-level logic on shared world state (switches / events / save data, shared RNG) on the tick30 step at the line place */
   if (eventInfo.checkCommandDemoAccrpt()) {
     s32 sw = parameter(this, PRM_SWSAVE_W, PRM_SWSAVE_S);
     dComIfGs_onSwitch(sw, home.roomNo);
@@ -267,24 +268,31 @@ void Act_c::daObjVolcano_freeze_demo_wait() {
 }
 /* 023B4A88 */
 void Act_c::daObjVolcano_freeze_demo_main() {
-  mTimer = u32((s32)mTimer) + 1;
+  /* true60: event time (the world runs at N = 1); the forms keep it exact at N > 1 too: the timer
+   * counts and its one-shots act on the frame's first step, the animations and the fade step on every step */
+  if (t60c::first())
+    mTimer = u32((s32)mTimer) + 1;
   HD::chaseF(&mOpacity, 0.0f, 0.01666666753590107f);
   s32 timer = mTimer;
   if (timer == 10) {
+    if (t60c::first()) {
     s32 reverb = dComIfGp_getReverb(current.roomNo);
     mDoAud_seStart(JA_SE_OBJ_VOLCANO_CHILL, &mFirePos, 0, reverb);
+    }
   } else if (timer == 150) {
+    if (t60c::first()) {
     s32 reverb = dComIfGp_getReverb(current.roomNo);
     mDoAud_seStart(JA_SE_OBJ_VOLCANO_ICE_BRK, &mFirePos, 0, reverb);
     HD::startSystemSound(JA_SE_READ_RIDDLE_1);
     mFireVisible = 0;
+    }
   } else if (timer <= 10)
     mDoExt_baseAnm_play(&mFireBtk);
   mDoExt_baseAnm_play(&mFireBrk);
   finish_event(this, FREEZE, (s16)mFreezeEvent);
 }
 /* 023B4BDC */
-void Act_c::daObjVolcano_freeze_main() {
+void Act_c::daObjVolcano_freeze_main() { if (!t60c::end()) return; /* true60 (the shared-world-state rule): frame-level logic on shared world state (switches / events / save data, shared RNG) on the tick30 step at the line place */
   s32 sw = parameter(this, PRM_SWSAVE_W, PRM_SWSAVE_S);
   if (!fopAcM_isSwitch(this, sw)) {
     order(this, (s16)mFireEvent);
@@ -294,7 +302,7 @@ void Act_c::daObjVolcano_freeze_main() {
   }
 }
 /* 023B4C70 */
-void Act_c::daObjVolcano_fire_demo_wait() {
+void Act_c::daObjVolcano_fire_demo_wait() { if (!t60c::end()) return; /* true60 (the shared-world-state rule): frame-level logic on shared world state (switches / events / save data, shared RNG) on the tick30 step at the line place */
   if (eventInfo.checkCommandDemoAccrpt()) {
     StartFire();
     mState = FIRE_DEMO_MAIN;
@@ -303,17 +311,22 @@ void Act_c::daObjVolcano_fire_demo_wait() {
 }
 /* 023B4CE0 */
 void Act_c::daObjVolcano_fire_demo_main() {
-  eruption_sound(this);
+  if (t60c::end()) eruption_sound(this); /* true60 (t60conv): a per-frame start, once per 30 Hz frame */
   f32 currentY = current.pos.y, fireY = mFirePos.y;
   s16 event = mFireEvent;
-  if (fireY < currentY + 2300.0f)
-    mFirePos.y = fireY + 100.0f;
+  if (!t60c::first()) /* true60: the fire rises 100 per frame up to its stop: whole on the first step, the line between on the later steps (t60c glide) */
+    t60c::glideStep(&mFirePos.y, 1);
+  else {
+    if (fireY < currentY + 2300.0f)
+      mFirePos.y = fireY + 100.0f;
+    t60c::glideBegin(&mFirePos.y, 1, fireY);
+  }
   finish_event(this, FIRE, event);
   mDoExt_baseAnm_play(&mFireBtk);
   HD::chaseF(&mOpacity, 1.0f, 0.01666666753590107f);
 }
 /* 023B4DD0 */
-void Act_c::daObjVolcano_fail_demo_wait() {
+void Act_c::daObjVolcano_fail_demo_wait() { if (!t60c::end()) return; /* true60 (the shared-world-state rule): frame-level logic on shared world state (switches / events / save data, shared RNG) on the tick30 step at the line place */
   s32 sw = parameter(this, PRM_SWSAVE_W, PRM_SWSAVE_S);
   if (!fopAcM_isSwitch(this, sw)) {
     StartFire();
@@ -322,10 +335,15 @@ void Act_c::daObjVolcano_fail_demo_wait() {
 }
 /* 023B4E38 */
 void Act_c::daObjVolcano_fail_demo_main() {
-  eruption_sound(this);
+  if (t60c::end()) eruption_sound(this); /* true60 (t60conv): a per-frame start, once per 30 Hz frame */
   f32 y = current.pos.y, fireY = mFirePos.y;
-  if (fireY < y + 2300.0f)
-    mFirePos.y = fireY + 100.0f;
+  if (!t60c::first()) /* true60: the fire rises 100 per frame up to its stop (t60c glide, as fire_demo_main) */
+    t60c::glideStep(&mFirePos.y, 1);
+  else {
+    if (fireY < y + 2300.0f)
+      mFirePos.y = fireY + 100.0f;
+    t60c::glideBegin(&mFirePos.y, 1, fireY);
+  }
   mDoExt_baseAnm_play(&mFireBtk);
   HD::chaseF(&mOpacity, 1.0f, 0.01666666753590107f);
 }
@@ -336,7 +354,7 @@ BOOL Act_c::Execute(gptr<Mtx34> *output) {
   mCyl.SetR(mRadius);
   u32 play = dComIfGp_ea();
   HD::setCollision(&HD::game(play)->mCollision, &mCyl);
-  switch ((u32)mState) {
+  switch ((u32)t60c::heldInt((s32)(u32)mState, 2, &mState)) { /* true60: the frame's mode on every step; a change made on the first step acts from the next frame */
   case FIRE:
     daObjVolcano_fire_main();
     break;

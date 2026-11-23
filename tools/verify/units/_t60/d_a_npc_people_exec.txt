@@ -1,0 +1,12 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_npc_people_exec.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule NPC form; d_a_npc_people_t60.h):
+# the villager's execute 022C305C. The tick30 step runs the original execute whole at dt 1 from the frame start (Link's
+# attention / talk / surprise reads, the event order, the mode procedures, the morf plays, the mover, the cylinder set);
+# the earlier steps change no state (a visual extrapolation by the previous frame's change, none here: no previous
+# frame): net effect = the one step's, byte exact. Negative control (T60C_NEGCTRL: the execute on every step at dt) must
+# fail.
+t60conv 022C305C
+# once-per-frame calls (tools/t60conv): as many calls over the N steps as in the one step (chkAttention, eventOrder,
+# playTexPatternAnm, playAnm, lookBack: the frame's attention / order / animation plays / head turn; the mover)
+t60calls 022C0084 022C2A04 022C2CC0 022C2D6C 022C2E50 025D6870

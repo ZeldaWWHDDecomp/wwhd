@@ -1,0 +1,8 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_ferris.txt
+# ---- true60 N-step spec (2026-11-20; the whole-frame form rule + addendum, d/t60_objw.h): Windfall ferris wheel: rotation state machine (switch, wind), ride event, gondola lean from riders, 6 dBgW Move, colliders.
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 0233EDE0
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200E240 0200F428 020182E0 02018428 020184DC 02018C8C 02018D40 020195B0 0201B47C 0233D6B8 0233E204 0233E22C 0233E254 0233E2A0 0233E668 0233E770 0233E9C4 0233F2D4 024F43DC 02515E50 025440C8 0257DAA8 025A847C 025B8B68 025B9F7C 025BA0C0 025D7A58 025E1988 025E1A04 025F1C28 025F1C5C 025F24E0 0274D458 028E8D88 028E8F64 028E90D4

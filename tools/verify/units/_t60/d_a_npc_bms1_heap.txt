@@ -1,0 +1,15 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_npc_bms1_heap.txt
+# ---- true60 N-step spec (2026-11-20; the whole-frame form rule NPC form;
+# d/t60_npc.h): the Bomb-Master Cannon shopkeeper (Bms1): daNpc_Bms1_c::_execute 0220A7AC in the whole form, logic only
+# (demo_move, orders, the actions and talk of d_a_npc_bms1_talk, the shop camera and items run inside it). The tick30 step
+# runs the original execute whole at dt 1 from the frame start; the earlier steps change no state (the picture between
+# steps comes from frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 0220A7AC
+# zero-page steering for the N-step spec runs (the original's page-0 fetch through a random member-pointer action): mAction a
+# plain member pointer (d 0, i -1) to one of the actions the talk unit's spec uses, kept by the mocked calls
+field 0220A7AC r3+0x960 u32 0x0000FFFF
+field 0220A7AC r3+0x964 u32 0x0220BDCC,0x0220BF90,0x0220C7CC
+stable 0x40000960 8
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 02091730 0213B3AC 02209438 0220A160 0220A230 0220A36C 0220A680 0220A6F0 024EEEB8 024EF130 024F08A8 025200D4 0259E08C 025BCCA4 025D6870 025E535C 025E55A0 025E742C 025F1C28 025F24E0 027F4D5C 028E90D4

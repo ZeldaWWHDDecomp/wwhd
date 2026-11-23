@@ -6,6 +6,7 @@
  * pointer arguments and full-register results retain the verified HD ABI.
  */
 #include "d/actor/d_a_obj_tapestry.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 static const f32 l_unitScale = 1.0f;
 static const f32 l_anglePeriod = 65536.0f;
 static const f32 l_zero = 0.0f;
@@ -2073,6 +2074,9 @@ void daObjTapestry_c::setup_action(s32 action) {
 
 /* 0239DA64 */
 BOOL daObjTapestry_c::_execute() {
+    t60w::Guard<daObjTapestry_c> t60g(this, t60objw::Logic<daObjTapestry_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return 1;
   tapestryApi_daObjTapestry_c_set_eye_pos(this);
   u32 bg = gabi::ea(reinterpret_cast<u8*>(mpBg.get()));
   if (bg && gabi::load<u32>(bg) < 0x100)
@@ -2081,6 +2085,7 @@ BOOL daObjTapestry_c::_execute() {
     actionCall(&mActionDescriptor, this);
   if (mAction != FINE)
     tapestryApi_tapestryPacketCalc((daObjTapestryPacket_c *)mpPacket, this);
+    t60g.model = true; /* true60: the frame reached its model step */
   return 1;
 }
 

@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_door12.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule + addendum, d/t60_objw.h): door12: execute check, action / demo procs.
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 02129830
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 02127E10 02127F48 02127FC0 02128150 0212819C 02128430 0212848C 0212854C 02128638 02128708 021287A0 021288E0 02128974 021289EC 02128AA4
+t60cand 02127E10 02127F48 02127FC0 02128150 0212819C 02128430 0212848C 0212854C 02128638 02128708 021287A0 021288E0 02128974 021289EC 02128AA4
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 020087EC 0200F5C8 02127E10 02127F48 02127FC0 02128150 0212819C 02128430 0212848C 0212854C 02128638 02128708 021287A0 021288E0 02128974 021289EC 02128AA4 024EEA6C 025200D4 0252A37C 0252A388 0252A3A0 0252A48C 0252A550 0252A684 0252A6D0 0252A798 0252AA14 0252AA20 0252AA2C 0252AA58 0252AC98 0252AD50 0252B4A4 0252B5B4 02543280 0254351C 025447C8 025449B0 025B8B68 025CB374 025F1C28 025F24E0 0273AA24 C000A848

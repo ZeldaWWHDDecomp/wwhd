@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_obj_gong.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using daObjGong::Act_c;
 const gc_tu_data gc_tu = { .safeString = 0x10029880, .headerStatics = {0x10469CAC, 0x101C99B4, 0x10469CB8} };
 const char Act_c::M_arcname[] = "Vdora";
@@ -85,8 +86,12 @@ bool Act_c::demo_move() {
 
 /* 0234C23C */
 bool Act_c::_execute() {
+    t60w::Guard<daObjGong::Act_c> t60g(this, t60objw::Logic<daObjGong::Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
     demo_move();
     mpMorf->play(nullptr, 0, 0);
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     return true;
 }

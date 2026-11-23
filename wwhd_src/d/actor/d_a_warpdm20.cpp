@@ -1,5 +1,6 @@
 /** Warp Demo 20: HD actor behavior. */
 #include "bindings.h"
+#include "d/actor/d_a_warpdm20_t60.h" /* true60: the whole form (the whole-frame form rule, d/t60_objw.h) */
 #include "d/actor/d_a_warpdm20.h"
 #include "gc_api/d/d_com_inf_game.h"
 #include "gc_api/f_op/f_op_actor.h"
@@ -166,6 +167,9 @@ s32 daWarpdm20_c::_create() {
 
 /* 024D58FC */
 BOOL daWarpdm20_c::_execute() {
+    t60w::Guard<daWarpdm20_c> t60g(this, t60objw::Logic<daWarpdm20_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     if (!u8(demoActorID)) {
         set_effect(0x83D8);

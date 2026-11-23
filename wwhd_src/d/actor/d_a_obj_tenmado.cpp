@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_obj_tenmado.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 const gc_tu_data gc_tu = {.safeString = 0x10030A18};
 static const char* M_arcname = "Tenmado";
@@ -114,6 +115,12 @@ void Act_c::init_mtx() {
 
 /* 023A0060 */
 BOOL Act_c::Execute(gptr<Mtx34>* mtx) {
+    t60w::Guard<Act_c> t60g(this, t60objw::Logic<Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) { /* true60: a step before the tick30 step: the picture only (frame interpolation); the background stays: the
+                      * wrapper gets the actor's own mBgMtx (M_tmp_mtx is a static shared by all instances) */
+        *mtx = &mBgMtx;
+        return TRUE;
+    }
     switch ((u32)(s32)mMode) {
     case MODE_WAIT_e:
         if (fopAcM_isSwitch(this, prm_get_swSave())) {
@@ -143,6 +150,7 @@ BOOL Act_c::Execute(gptr<Mtx34>* mtx) {
     }
     set_mtx();
     *mtx = &M_tmp_mtx;
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 

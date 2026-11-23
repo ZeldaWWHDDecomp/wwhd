@@ -2,6 +2,7 @@
 // HD: GameCube function bodies are stubbed. Preserve the verified chase, recoil and collision
 // order.
 #include "d/actor/d_a_obj_trap.h"
+#include "d/actor/d_a_obj_trap_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule addendum) */
 #include "gc_api/f_op/f_op_actor.h"
 #include "gc_api/tu.h"
 #include <cmath>
@@ -543,6 +544,10 @@ static void impactSound(daObjTrap_c* a, u32 sound) {
 }
 /* 023A7FC0 */
 BOOL daObjTrap_c::_execute() {
+    t60w::Guard<daObjTrap_c> t60g(this, objtrap_t60::ops()); /* true60: the whole frame on the tick30 step */
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
+    t60g.model = true;
     copy(&mSavedPosition, &current.pos);
     u32 mode = mMode;
     bool positionCommitted = false;
@@ -642,7 +647,8 @@ BOOL daObjTrap_c::_execute() {
 /* 023A85D4 */
 BOOL daObjTrap_c::_draw() {
     void* env = trapEnvironment();
-    trapSettingTev(env, 1, &current.pos, &tevStr);
+    if (objtrap_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+        trapSettingTev(env, 1, &current.pos, &tevStr);
     env = trapEnvironment();
     trapLightColor(env, mpModel.get(), &tevStr);
     J3DModel* model = mpModel;

@@ -9,6 +9,7 @@
  */
 #define SAFESTRING_VTBL 0x10023448 /* this TU's sead::SafeString vtable */
 #include "d/actor/d_a_npc_ym1_b.h"
+#include "d/t60_npc.h" /* true60: the NPC form (the whole-frame form rule); the draw latch once per logic step (rule 14) */
 using namespace ym1_b;
 void ym1InitTexPattern(daNpc_Ym1_c*, s8, u32);
 void ym1EndEvent(daNpc_Ym1_c*);
@@ -826,9 +827,11 @@ BOOL daNpc_Ym1_c::_draw() {
         initializeColor(&l_blueInitialized, &l_blue, &l_blueDefault);
         initializeColor(&l_yellowInitialized, &l_yellow, &l_yellowDefault);
     }
-    u8 v = mKariFlag;
-    mKariFlag = 0;
-    state(this)->mPrevKariFlag = v;
+    if (t60npc::drawStep()) { /* true60: the grass-cut latch on the logic step's draw only (rule 14, NPC form) */
+        u8 v = mKariFlag;
+        mKariFlag = 0;
+        state(this)->mPrevKariFlag = v;
+    }
     return TRUE;
 }
 

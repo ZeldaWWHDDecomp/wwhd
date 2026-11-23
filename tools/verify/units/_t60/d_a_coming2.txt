@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_coming2.txt
+# ---- true60 N-step spec (coming2, 2026-11-18; the whole-frame form rule addendum; d_a_coming2_t60.h): _execute
+# 021138E0 (and Mthd_Execute 02114814). The tick30 step runs the original _execute whole at dt 1; the earlier steps do
+# nothing: net effect = the one step's, byte exact. Negative control (T60C_NEGCTRL: _execute on every step) must fail.
+t60conv 021138E0 02114814
+# Mthd_Execute runs _execute (021138E0) as its candidate; the frame's chain runs its candidate code under _execute (chase_ship, renew_scope_info, coming_process_main and the
+# guest-table modes, barrel_main / barrel_execute, request_barrel_exitN), so the timers and spawns are compared
+real 021138E0 02113478 021134F8 02113680 021136D8 02113754 02113888 02113F5C 02113FD4 02114298 021144C4 02114630
+t60cand 021138E0 02113478 021134F8 02113680 021136D8 02113754 02113888 02113F5C 02113FD4 02114298 021144C4 02114630
+# t60once 02113478 021134F8 02113680 021136D8 02113754 02113888 02113F5C 02113FD4 02114298 021144C4 02114630: run only inside _execute's tick30 whole run (whole-frame form); never on their own N steps

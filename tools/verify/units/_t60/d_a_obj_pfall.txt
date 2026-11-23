@@ -1,0 +1,9 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_pfall.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule NPC form; d/t60_npc.h):
+# Tingle's jail rope (obj_pfall): the execute 023837E4 in the whole form, logic only (wrapper with it). The tick30 step runs the original execute whole
+# at dt 1 from the frame start; the earlier steps change no state (the picture between steps comes from frame interpolation): net
+# effect = the one step's, byte exact. Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 023837E4 023839B8
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200F378 0211D2F8 0238299C 023832AC 02383310 0238336C 02383378 02383404 02383510 02383590 02383748 02383794 025200D4 02520540 02542D88 02542EDC 02543280 025447C8 0254487C 02587A0C 025D6870 025E19CC 025E1A40 025E1AA4 025E535C 025E742C 025F1C28 025F1C5C 025F24E0 028E90D4

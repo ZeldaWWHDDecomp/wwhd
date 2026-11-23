@@ -1,0 +1,8 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_tag_photo.txt
+# ---- true60 N-step spec (2026-11-20; the whole-frame form rule + addendum, d/t60_objw.h): Lenzo photo tag: wait (Link distance, process-order read) / talk, event move, attention.
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 024B2374
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0201ADE0 024B1F20 024B1F30 024B1FD4 024B1FF0 024B2038 024B216C 024B219C 024B228C 024B248C 024B24A4 024B256C 02542D88 02542EDC 02543280 025440C8 025447C8 0254487C 0259F858 025D9F38 025F74D0 025F795C 025F7DB0 028E8DD0 028F4384

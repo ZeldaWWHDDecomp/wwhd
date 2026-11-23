@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_zouK.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule + addendum, d/t60_objw.h): zouK statue: texture scroll, roll crash with Link, joint anim, event BG switch, dBgW Move.
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 023BFA38
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 023BF0E4 023BF950 023BFA24
+t60cand 023BF0E4 023BF950 023BFA24
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 020087EC 023BF0E4 023BF950 023BFA24 024EEA6C 024F43DC 025200D4 025B7A2C 025E535C 025E742C 025F1B48 028E90D4

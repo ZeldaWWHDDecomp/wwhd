@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_eskban.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule + addendum, d/t60_objw.h): the Eskban block's Execute(matrixOut) 0233CD6C (colliders; Medli push-out; wait / bomb-catch / explode states, timers, switch; set_mtx); background actor: own mBgMtx on the earlier steps.
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 0233CD6C
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 0233C6E0 0233C970 0233CAA4 0233CB78 0233D69C
+t60cand 0233C6E0 0233C970 0233CAA4 0233CB78 0233D69C
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200FE78 0201ADE0 0201B47C 0233C6E0 0233C970 0233CAA4 0233CB78 0233D69C 025162A4 025163BC 02516464 02520540 02542D88 02543280 0254457C 025A3BDC 025A847C 025CB374 025CB408 025CB610 025D54C4 025D57E0 025D57E4 025D77DC 025E1988 025E19CC 025E1A40 025F1B48 026066C4 0274D458 028249B0 028E8D88 028E8E64 028E8F64 028E90D4

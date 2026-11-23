@@ -5,6 +5,7 @@
  * Guest stack sizes, register widths, float/word copies and call/reload order are retained.
  */
 #include "d/d_cloth_packet.h"
+#include "d/d_cloth_packet_t60.h" /* true60: the step-length helpers */
 static cloth::DestructorRecord lClothDestructor0;
 static cloth::DestructorRecord lClothDestructor1;
 static cloth::DestructorRecord lClothDestructor2;
@@ -507,10 +508,15 @@ void dCloth_packet_c::cloth_move() {
                     temp->mWords[0] = fx;
                     temp->mWords[1] = fy;
                     temp->mWords[2] = fz;
+                    const f32 stepDt = cloth60_dt();
+                    if (stepDt != 1.0f) {
+                        /* true60: the step's drag-consistent share of the frame's push */
+                        clothApi_scaleVector(temp.a, temp.a, cloth60_push(f32(mDrag)));
+                    }
                     clothApi_addVector(speeds + offset, temp.a, speeds + offset);
                     nx = u32(mFlyGridSize);
                     offset = (x + y * nx) * 12;
-                    f32 damping = f32(mDrag);
+                    f32 damping = cloth60_drag(f32(mDrag));
                     clothApi_scaleVector(speeds + offset, speeds + offset, damping);
                     nx = u32(mFlyGridSize);
                     offset = (x + y * nx) * 12;
@@ -522,7 +528,13 @@ void dCloth_packet_c::cloth_move() {
                         u32(gabi::at<cloth::Vector>(positions + offset)->mWords[2]);
                     nx = u32(mFlyGridSize);
                     offset = (x + y * nx) * 12;
+                    if (stepDt != 1.0f) {
+                        /* true60: the per-frame speed moves dt of itself a step */
+                        clothApi_scaleVector(speeds + offset, temp.a, stepDt);
+                        clothApi_addVector(destination + offset, temp.a, destination + offset);
+                    } else {
                     clothApi_addVector(destination + offset, speeds + offset, destination + offset);
+                    }
                     nx = u32(mFlyGridSize);
                     ++x;
                 } while (s32(x) < s32(nx));
@@ -730,8 +742,8 @@ void dCloth_packet_c::setNrm() {
     cloth::Vector* normals = gabi::at<cloth::Vector>(u32(mpNrmArr[current]));
     s32 secondAngle = s16(field_0xF0), secondStep = s16(field_0xF2);
     u32 positions = u32(mpPosArr[current]);
-    mWave = s16(angle + step);
-    field_0xF0 = s16(secondAngle + secondStep);
+    mWave = s16(angle + cloth60_share(step)); /* true60: the frame's phase step shared x dt */
+    field_0xF0 = s16(secondAngle + cloth60_share(secondStep));
     u32 y = 0;
     if (s32(ny) > 0) {
         u32 nx = u32(mFlyGridSize);

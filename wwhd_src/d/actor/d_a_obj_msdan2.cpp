@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_obj_msdan2.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 using daObjMsdan2::Act_c;
 
@@ -62,6 +63,9 @@ cPhs_State Act_c::Mthd_Create() {
 
 /* 0237B53C */
 BOOL Act_c::Mthd_Execute() {
+    t60w::Guard<Act_c> t60g(this, t60objw::Logic<Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     switch (mMode) {
     case MODE_WAIT_e:
         if (fopAcM_isSwitch(this, prm_get_swSave())) {

@@ -1,5 +1,6 @@
 // Sun and moon drawing, using GameCube names and verified HD buffers.
 #include "d/d_kankyo_rain_drawSibuki.h"
+#include "d/t60_draw.h"
 namespace RainDraw {
 /* 0256F1C4 */
 void dKyr_drawSun(u32 unusedMatrix, u32 input, u32 unusedColor, u32 unusedImages) {
@@ -84,7 +85,7 @@ void dKyr_drawSun(u32 unusedMatrix, u32 input, u32 unusedColor, u32 unusedImages
     game = sun_sdk::gameInfo<u32>();
     if (!(u32)(at<GameInfo>(game)->view)) {
         u8 timer = (u8)(at<SunPacket>(packet)->mOcclusionDelayHD);
-        if (timer < 5)
+        if (timer < 5 && t60_draw_frame_pass()) /* true60 (t60_draw.h): the delay counts 30 Hz frames */
             at<SunPacket>(packet)->mOcclusionDelayHD = timer + 2;
         at<SunPacket>(packet)->mHasVisiblePointHD = 1;
         return;

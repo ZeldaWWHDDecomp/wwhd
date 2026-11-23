@@ -1,5 +1,6 @@
 /* Earth Temple face statue. */
 #include "d/actor/d_a_obj_Vds.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using daObjVds::Act_c;
 const gc_tu_data gc_tu = {.safeString = 0x10032928};
 struct VdsGlowTexture {
@@ -375,6 +376,9 @@ void Act_c::process_main() {
 
 /* 023AFC4C */
 BOOL Act_c::_execute() {
+    t60w::Guard<Act_c> t60g(this, t60objw::Logic<Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     Vds_Event_exe(this);
     Vds_PlayLoopJointAnimation(this);
     f32 first = mStrength[0];
@@ -396,6 +400,7 @@ BOOL Act_c::_execute() {
     mBrk1.setFrame((f32)(second * (f32)(s32)((u32)frame - 1)));
     Vds_process_common(this);
     Vds_process_main(this);
+    t60g.model = true; /* true60: the frame reached its model step */
     Vds_set_mtx(this);
     dBgW* bg = mpBgW;
     if (bg)

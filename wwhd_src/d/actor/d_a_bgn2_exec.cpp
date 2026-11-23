@@ -9,6 +9,7 @@
  * they are inline helpers here, in the GameCube structure.
  */
 #include "d/actor/d_a_bgn2.h"
+#include "d/actor/d_a_bgn2_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule) */
 
 /* asi_eff_set (inlined)
  * HD: the six feet are mLegPos[i * 5 + 4] (GameCube i * 5 + 8, past the end of the array) */
@@ -620,6 +621,12 @@ static inline void sph_OffAtSetBit(dCcD_Sph* s) { s->mObjAt.mSPrm &= ~1u; }
 
 /* 0208B6A4 */
 BOOL daBgn2_Execute(bgn2_class* i_this) {
+    /* true60: the whole frame on the tick30 step (the whole-frame form rule; end at every return); daBgn2_Create's own
+     * call runs at dt 1 (bgn2_t60::createBegin / createEnd), where the Guard does nothing and the original runs */
+    t60w::Guard<bgn2_class> t60g(i_this, bgn2_t60::ops());
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
+    t60g.model = true;
     fopAc_ac_c* actor = i_this;
     f32 fVar2 = 0.0f;
     gabi::Local<cXyz> local_a0;

@@ -7,6 +7,7 @@
  * "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_bgn_exec.h"
+#include "d/actor/d_a_bgn_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule) */
 
 // HD: Link's virtual slots are guest addresses, not host member pointers.
 static void bgn_setPlayerPosAndAngle(u32 player, cXyz *pos, s16 angle) {
@@ -107,6 +108,12 @@ static inline void last_himo_control(bgn_class *i_this) {
 // REG18_S(6) + 450, Link looks up at frame 313 (GameCube 320); the cut scenes count mBlurRate down; two
 // debug reports.
 BOOL daBgn_Execute(bgn_class *i_this) {
+    /* true60: the whole frame on the tick30 step (the whole-frame form rule; end at every return); daBgn_Create's own
+     * call runs at dt 1 (bgn_t60::createBegin / createEnd), where the Guard does nothing and the original runs */
+    t60w::Guard<bgn_class> t60g(i_this, bgn_t60::ops());
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
+    t60g.model = true;
     fopAc_ac_c *actor = i_this;
     if (i_this->mParam == 0xFF)
         return TRUE;

@@ -152,6 +152,7 @@ static inline void tori_flag_execute_tail(daTori_Flag_c *i_this) {
     c = i_this->mpCloth;
     c->setWindPower(8.0f, 3.0f);
     i_this->mpCloth->setGlobalWind(&i_this->mWindvec);
+    /* true60: converted with its cloth (d_cloth_packet_t60.h); the wind follow is c_lib's dt form */
     i_this->mpCloth->cloth_move();
 }
 

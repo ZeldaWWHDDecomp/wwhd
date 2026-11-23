@@ -8,6 +8,8 @@
  * d_a_kb_exec.cpp, attack_move and esa_demo_move in d_a_kb_move.cpp.
  */
 #include "d/actor/d_a_kb.h"
+#include "d/t60_draw.h"
+#include "d/actor/d_a_kb_t60.h" /* true60: create's pose at dt 1, the draw's light state */
 
 static void followEcallBack_dt(void *p, s32 flags);
 static kb_class *kb_class_ct(kb_class *self);
@@ -352,7 +354,7 @@ void draw_SUB(kb_class *i_this) {
     cMtx_XrotM(calc_mtx(), i_this->mGroundAngle.x);
     cMtx_ZrotM(calc_mtx(), i_this->mGroundAngle.z);
     MtxScale(i_this->mScale.x, i_this->mScale.y, i_this->mScale.x, true);
-    if (i_this->mMode != 4) {
+    if (i_this->mMode != 4 && t60_draw_frame_pass()) { /* true60 (t60_draw.h): once per 30 Hz frame */
         cLib_addCalc2(&i_this->mDrawOffsetY, i_this->mDrawOffsetYTarget, 1.0f, 5.0f);
     }
     MtxTrans(0.0f, i_this->mDrawOffsetY, 0.0f, true);
@@ -401,7 +403,8 @@ static inline void tevstr_copy(dKy_tevstr_c *dst, dKy_tevstr_c *src) {
 /* 0218FC3C */
 static BOOL daKb_Draw(kb_class *i_this) {
     J3DModel *pModel = i_this->mpMorf->getModel();
-    settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &i_this->current.pos, &i_this->tevStr);
+    if (kb_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+        settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &i_this->current.pos, &i_this->tevStr);
     // HD: the eye texture animation is an mDoExt_btpAnm
     mDoExt_btpAnm_entry((mDoExt_btpAnm *)&i_this->mBtp, J3DModel_getModelData(pModel),
                         (s16)gabi::ftoi(i_this->mBtp.mFrameCtrl.mFrame));
@@ -856,7 +859,11 @@ static cPhs_State daKb_Create(fopAc_ac_c *i_actor) {
     i_this->mDrawOffsetY = 30.0f;
     i_this->mTimers[7] = 5;
     BG_check(i_this);
-    draw_SUB(i_this);
+    {
+        const f32 t60PrevDt = kb_t60::createBegin(); /* true60: create's first pose, the original at dt 1 */
+        draw_SUB(i_this);
+        kb_t60::createEnd(t60PrevDt);
+    }
     return status;
 }
 

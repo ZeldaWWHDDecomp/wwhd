@@ -7,6 +7,8 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_rd.h"
+#include "d/actor/d_a_rd_t60.h" /* true60: the step helpers */
+#include <unordered_map>
 #include "gc_api/tu.h"
 #include "gc_api/d/d_com_inf_game.h"
 #include "d/actor/d_a_player.h"
@@ -416,13 +418,16 @@ bool daRd_c::checkPlayerInCry() {
 void daRd_c::lookBack() {
     fopAc_ac_c* player = dComIfGp_getLinkPlayer();
     bool r29 = false;
-    if (cLib_calcTimer(&mLookPlayerTimer) != 0 && mMode != MODE_ATTACK && mMode != MODE_CRY && mMode != MODE_DEATH) {
+    /* true60 (the process-order read rule): run on the tick30 step with the mode / animation of A's place (d_a_rd_t60.h; each
+     * read where the original reads the field) */
+    if (cLib_calcTimer(&mLookPlayerTimer) != 0 && rd_t60_look_mode(this) != MODE_ATTACK && rd_t60_look_mode(this) != MODE_CRY &&
+        rd_t60_look_mode(this) != MODE_DEATH) {
         mJntCtrl.mbTrn = 0;          /* clrTrn */
         mJntCtrl.mbHeadLock = 0;     /* offHeadLock */
         mJntCtrl.mbBackBoneLock = 0; /* offBackBoneLock */
         mTargetPos.copy(*daPy_getHeadTopPos(player));
     } else {
-        switch ((u32)mMode) {
+        switch ((u32)rd_t60_look_mode(this)) {
         case MODE_WAIT:
         case MODE_DEATH:
         case MODE_ATTACK:
@@ -443,7 +448,7 @@ void daRd_c::lookBack() {
             break;
         }
 
-        switch ((u32)mAnmPrmIdx) {
+        switch ((u32)rd_t60_look_anm(this)) {
         case AnmPrm_SUWARIP:
         case AnmPrm_TATSU:
         case AnmPrm_SUWARU:
@@ -454,7 +459,7 @@ void daRd_c::lookBack() {
             break;
         }
 
-        switch ((u32)mMode) {
+        switch ((u32)rd_t60_look_mode(this)) {
         case MODE_CRY:
             if (checkInFan(current.pos, player, shape_angle.y, l_HIO().mCrySpreadAngle, 150.0f, 100.0f)) {
                 mJntCtrl.mbTrn = 0;
@@ -490,8 +495,14 @@ void daRd_c::lookBack() {
 
 /* 0245C770 */
 bool daRd_c::checkTgHit() {
+    /* true60 (the mixed-pair hit-flag rule): the hits are read on the frame's first step (with the mTgHitWait count, the
+     * collider status shift and the light detect); the later steps get that answer (d_a_rd_t60.h) */
+    const u32 t60Key = rd_t60_key(&mTgHitWait, 0);
+    if (rd_t60_hit_has(this)) {
+        return rd_t60_get(t60Key);
+    }
     if (mMode == MODE_DEATH || mMode == MODE_KANOKE || mMode == MODE_SW_WAIT) {
-        return false;
+        return rd_t60_put(t60Key, false);
     }
 
     dCcD_GObjInf* hitObj;
@@ -501,7 +512,7 @@ bool daRd_c::checkTgHit() {
         if ((u32)hitObj->mAtType == AT_TYPE_LIGHT) { /* GetAtType */
             rd_seStart(this, JA_SE_CM_PW_BECOME_SOLID, 0);
             modeProcInit(MODE_PARALYSIS);
-            return true;
+            return rd_t60_put(t60Key, true);
         }
     }
 
@@ -512,7 +523,7 @@ bool daRd_c::checkTgHit() {
         hitObj = static_cast<dCcD_GObjInf*>(mCyl.GetTgHitObj());
         mTgHitWait = (u8)l_HIO().mHitWaitTime;
         if (hitObj == nullptr) {
-            return false;
+            return rd_t60_put(t60Key, false);
         }
 
         switch ((u32)hitObj->mAtType) {
@@ -641,41 +652,47 @@ bool daRd_c::checkTgHit() {
             health = origHealth;
         }
 
-        return true;
+        return rd_t60_put(t60Key, true);
     }
 
     if (dComIfGp_getDetect_chk_light(&current.pos)) {
         rd_seStart(this, JA_SE_CM_PW_BECOME_SOLID, 0);
         modeProcInit(MODE_PARALYSIS);
-        return true;
+        return rd_t60_put(t60Key, true);
     }
 
-    return false;
+    return rd_t60_put(t60Key, false);
 }
 
 /* 0245BD98 */
 void daRd_c::setCollision() {
-    if (mMode == MODE_DEATH) {
-        mCyl.OffCoSPrmBit(0x12); /* VsEnemy | IsEnemy */
-        mCyl.OffTgSPrmBit(0x9);  /* Set | IsOther */
-    } else if (mMode == MODE_ATTACK || mMode == MODE_CRY || dComIfGp_evmng_startCheckOld("DEFAULT_RD_CRY" /* "DEFAULT_RD_CRY" */)) {
-        mCyl.OffCoSPrmBit(0x12);
-    } else {
-        mCyl.OnCoSPrmBit(0x12);
-    }
+    /* true60 (the one-sweep-per-frame attack rule): A sets the collider from the frame-START position (before its move) and registers
+     * it for the frame's collision Move: the shape / centre on the first step, the registration on the tick30 step */
+    if (rd_t60_first()) {
+        if (mMode == MODE_DEATH) {
+            mCyl.OffCoSPrmBit(0x12); /* VsEnemy | IsEnemy */
+            mCyl.OffTgSPrmBit(0x9);  /* Set | IsOther */
+        } else if (mMode == MODE_ATTACK || mMode == MODE_CRY || dComIfGp_evmng_startCheckOld("DEFAULT_RD_CRY" /* "DEFAULT_RD_CRY" */)) {
+            mCyl.OffCoSPrmBit(0x12);
+        } else {
+            mCyl.OnCoSPrmBit(0x12);
+        }
 
-    f32 r1 = REG_F(8, 1);
-    bool suwari = isAnm(AnmPrm_SUWARIP);
-    mCyl.SetR(r1 + 80.0f);
-    f32 r0 = REG_F(8, 0);
-    if (suwari) {
-        mCyl.SetH(r0 + 170.0f);
-    } else {
-        mCyl.SetH(r0 + 250.0f);
-    }
+        f32 r1 = REG_F(8, 1);
+        bool suwari = isAnm(AnmPrm_SUWARIP);
+        mCyl.SetR(r1 + 80.0f);
+        f32 r0 = REG_F(8, 0);
+        if (suwari) {
+            mCyl.SetH(r0 + 170.0f);
+        } else {
+            mCyl.SetH(r0 + 250.0f);
+        }
 
-    mCyl.SetC(&current.pos);
-    dComIfG_Ccsp_Set(&mCyl);
+        mCyl.SetC(&current.pos);
+    }
+    if (rd_t60_end()) {
+        dComIfG_Ccsp_Set(&mCyl);
+    }
 }
 
 /* 0245B818 */
@@ -691,6 +708,12 @@ void daRd_c::setIceCollision() {
 
 /* 0245B854 */
 void daRd_c::setAttention() {
+    /* true60 (the process-order read rule): eyePos / attention position on the frame's first step only, held after
+     * (d_a_rd_t60.h rd_t60_attn_held) */
+    if (rd_t60_attn_held()) {
+        rd_t60_attn_status(this);
+        return;
+    }
     gabi::Local<cXyz> attnPos;
     attnPos->x = 60.0f;
     attnPos->y = 0.0f;
@@ -745,17 +768,21 @@ void daRd_c::modeWait() {
 
     speedF = 0.0f;
     fopAc_ac_c* player = dComIfGp_getLinkPlayer();
-    BOOL isOto = fopAcM_otoCheck(this, (f32)mAreaRadius);
-    if (!isLinkControl()) {
-        if (rd_noticePlayer(this, player, isOto)) {
-            modeProcInit(MODE_MOVE);
-            return;
+    /* true60 (the first-step input rule addendum): the decisions that read Link, the arrival and the area test (the
+     * dispatch's frame-end position) on the tick30 step; the turn on every step (d_a_rd_t60.h) */
+    if (rd_t60_link()) {
+        BOOL isOto = fopAcM_otoCheck(this, (f32)mAreaRadius);
+        if (!isLinkControl()) {
+            if (rd_noticePlayer(this, player, isOto)) {
+                modeProcInit(MODE_MOVE);
+                return;
+            }
         }
     }
 
     if (checkInCircle(mSpawnPos, this, 100.0f, 1000.0f)) {
         cLib_addCalcAngleS2(&shape_angle.y, mSpawnAngle, 0x4, 0x200);
-        if (cLib_distanceAngleS(shape_angle.y, mSpawnAngle) <= 0x200) {
+        if (rd_t60_link() && cLib_distanceAngleS(shape_angle.y, mSpawnAngle) <= 0x200) {
             shape_angle.y = mSpawnAngle;
             if (mWhichIdleAnm == 1 && !isAnm(AnmPrm_SUWARIP)) {
                 setAnm(AnmPrm_SUWARU, false);
@@ -764,12 +791,12 @@ void daRd_c::modeWait() {
                 setAnm(AnmPrm_TACHIP1, false);
             }
         }
-    } else if (!checkInCircle(mSpawnPos, this, (f32)mAreaRadius, 1000.0f) ||
-               !checkInCircle(mSpawnPos, player, (f32)mAreaRadius, 100.0f)) {
+    } else if (rd_t60_link() && (!checkInCircle(mSpawnPos, this, (f32)mAreaRadius, 1000.0f) ||
+                                 !checkInCircle(mSpawnPos, player, (f32)mAreaRadius, 100.0f))) {
         modeProcInit(MODE_RETURN);
         return;
     }
-    if (!isLinkControl() && checkPlayerInAttack() && isAnm(AnmPrm_TACHIP1)) {
+    if (rd_t60_link() && !isLinkControl() && checkPlayerInAttack() && isAnm(AnmPrm_TACHIP1)) {
         modeProcInit(MODE_ATTACK);
     }
 }
@@ -785,7 +812,9 @@ void daRd_c::modeDeathInit() {
 
 /* 0245D87C */
 void daRd_c::modeDeath() {
-    if (!morf_isStop(mpMorf)) {
+    /* true60: the animation end on the frame-end play (tick30); the disappear count there (it waits for the
+     * end) and the delete with it (the first-step AI-timer rule addendum 2: after the tick30 step anyway) */
+    if (!rd_t60_link() || !morf_isStop(mpMorf)) {
         return;
     }
 
@@ -819,7 +848,8 @@ void daRd_c::modeDamage() {
         return;
     }
     fopAc_ac_c* player = dComIfGp_getLinkPlayer();
-    if (!morf_isStop(mpMorf)) {
+    /* true60: the animation end (frame-end play) and the Link test on the tick30 step */
+    if (!rd_t60_link() || !morf_isStop(mpMorf)) {
         return;
     }
 
@@ -841,17 +871,26 @@ void daRd_c::modeParalysisInit() {
 
 /* 0245D700 */
 void daRd_c::modeParalysis() {
-    if (isAnm(AnmPrm_BEAM_HIT) && morf_isStop(mpMorf)) {
-        setAnm(AnmPrm_BEAM, false);
+    /* true60: the animation ends on the tick30 step (frame-end play), the paralysis count on the first step
+     * (the first-step AI-timer rule) */
+    if (isAnm(AnmPrm_BEAM_HIT)) {
+        if (rd_t60_link() && morf_isStop(mpMorf)) {
+            setAnm(AnmPrm_BEAM, false);
+        }
     } else if (isAnm(AnmPrm_BEAM)) {
-        if (cLib_calcTimer(&mTimer1) == 0) {
+        if (rd_t60_first() && cLib_calcTimer(&mTimer1) == 0) {
             setAnm(AnmPrm_BEAM_END, false);
         }
-    } else if (isAnm(AnmPrm_BEAM_END) && morf_isStop(mpMorf)) {
+    } else if (isAnm(AnmPrm_BEAM_END) && rd_t60_link() && morf_isStop(mpMorf)) {
         modeProcInit(MODE_WAIT);
     }
 
-    checkTgHit();
+    /* true60 (the first-step input rule / mixed-pair hit-flag order, the Octorok): A reads the hits AFTER the frame-end
+     * animation decision (BEAM_END's end -> WAIT, then a light hit -> PARALYSIS again): the hit read of this mode on the
+     * tick30 step, after that decision (one read per frame, still the tick30 Move's hits) */
+    if (rd_t60_link()) {
+        checkTgHit();
+    }
 }
 
 /* 0245D940 */
@@ -864,13 +903,15 @@ void daRd_c::modeMoveInit() {
 /* 0245D9DC */
 void daRd_c::modeMove() {
     if (!checkTgHit() && !isAnm(AnmPrm_TATSU)) {
-        if (!isLinkControl() && checkPlayerInCry()) {
+        /* true60 (the first-step input rule addendum): the Link / area decisions and the animation choice (frame-end
+         * speed) on the tick30 step; the walk speed ease on every step */
+        if (rd_t60_link() && !isLinkControl() && checkPlayerInCry()) {
             modeProcInit(MODE_CRY);
             return;
         }
         fopAc_ac_c* player = dComIfGp_getLinkPlayer();
-        if (!checkInCircle(mSpawnPos, this, (f32)mAreaRadius, 1000.0f) ||
-            !checkInCircle(mSpawnPos, player, (f32)mAreaRadius, 100.0f)) {
+        if (rd_t60_link() && (!checkInCircle(mSpawnPos, this, (f32)mAreaRadius, 1000.0f) ||
+                              !checkInCircle(mSpawnPos, player, (f32)mAreaRadius, 100.0f))) {
             modeProcInit(MODE_RETURN);
             return;
         }
@@ -880,12 +921,14 @@ void daRd_c::modeMove() {
         } else {
             cLib_addCalc2(&speedF, 0.0f, 0.1f, REG_F(12, 0) + 0.1f);
         }
-        if (speedF < 0.1f) {
-            setAnm(AnmPrm_TACHIP1, false);
-        } else {
-            setAnm(AnmPrm_WALK, false);
+        if (rd_t60_link()) {
+            if (speedF < 0.1f) {
+                setAnm(AnmPrm_TACHIP1, false);
+            } else {
+                setAnm(AnmPrm_WALK, false);
+            }
         }
-        if (!isLinkControl() && checkPlayerInAttack()) {
+        if (rd_t60_link() && !isLinkControl() && checkPlayerInAttack()) {
             modeProcInit(MODE_ATTACK);
         }
     }
@@ -910,35 +953,45 @@ void daRd_c::modeCryInit() {
 
 /* 0245DD80 */
 void daRd_c::modeCry() {
-    setAnm(AnmPrm_WALK, false);
+    /* true60: the walk animation on the first step; the event-state decisions, the hit, the mash input and
+     * the cry count on the first step; the attack (Link) on the tick30 step; the walk ease on every step */
+    if (rd_t60_first()) { /* the mode's animation: set first each frame (A: before its decisions) */
+        setAnm(AnmPrm_WALK, false);
+    }
 
-    f32 stickPosX = CPad_GET_STICK_POS_X(0);
-    f32 stickPosY = CPad_GET_STICK_POS_Y(0);
+    f32 stickPosX = rd_t60_first() ? CPad_GET_STICK_POS_X(0) : 0.0f;
+    f32 stickPosY = rd_t60_first() ? CPad_GET_STICK_POS_Y(0) : 0.0f;
     if (eventInfo_checkCommandDemoAccrpt(this) || dComIfGp_evmng_startCheckOld("DEFAULT_RD_CRY" /* "DEFAULT_RD_CRY" */)) {
         if (isLinkControl()) {
-            dComIfGp_event_reset();
-            modeProcInit(MODE_RETURN);
+            if (rd_t60_first()) {
+                dComIfGp_event_reset();
+                modeProcInit(MODE_RETURN);
+            }
             return;
         }
         bool hit = checkTgHit();
         u32 play = dComIfGp_ea(); // HD: fetched once for both branches
         if (hit) {
-            event_reset_at(play);
+            if (rd_t60_first()) {
+                event_reset_at(play);
+            }
         } else {
             fopAcM_searchActorAngleY(this, player0_at(play)); /* s16 targetY (unused) */
             rd_walkToPlayer(this, fopAcM_searchPlayerDistanceXZ(this));
 
-            rd_breakFree(this, stickPosX, stickPosY);
+            if (rd_t60_first()) {
+                rd_breakFree(this, stickPosX, stickPosY);
+            }
 
-            if (cLib_calcTimer(&mTimer1) == 0 || mBreakFreeCounter < 0) {
+            if (rd_t60_first() && (cLib_calcTimer(&mTimer1) == 0 || mBreakFreeCounter < 0)) {
                 dComIfGp_event_reset();
                 modeProcInit(MODE_CRY_WAIT);
-            } else if (checkPlayerInAttack()) {
+            } else if (rd_t60_link() && checkPlayerInAttack()) {
                 dComIfGp_event_reset();
                 modeProcInit(MODE_ATTACK);
             }
         }
-    } else {
+    } else if (rd_t60_first()) {
         modeProcInit(MODE_CRY_WAIT);
     }
 }
@@ -954,8 +1007,12 @@ void daRd_c::modeCryWait() {
     if (checkTgHit()) {
         return;
     }
+    /* true60: the event-state decisions and the counts on the first step (the first-step AI-timer rule, first-step frame-level); the attack
+     * (Link) on the tick30 step after the frame's mTimer2 count */
     if (isLinkControl()) {
-        modeProcInit(MODE_RETURN);
+        if (rd_t60_first()) {
+            modeProcInit(MODE_RETURN);
+        }
         return;
     }
     if (dComIfGp_evmng_startCheckOld("DEFAULT_RD_CRY" /* "DEFAULT_RD_CRY" */)) {
@@ -966,9 +1023,9 @@ void daRd_c::modeCryWait() {
         mTimer1 = 60;
         mTimer2 = 45;
     } else if (isAnm(AnmPrm_WALK)) {
-        if (cLib_calcTimer(&mTimer1) == 0) {
+        if (rd_t60_first() && cLib_calcTimer(&mTimer1) == 0) {
             modeProcInit(MODE_MOVE);
-        } else if (cLib_calcTimer(&mTimer2) == 0 && checkPlayerInAttack()) {
+        } else if ((rd_t60_first() ? cLib_calcTimer(&mTimer2) == 0 : mTimer2 == 0) && rd_t60_link() && checkPlayerInAttack()) {
             modeProcInit(MODE_ATTACK);
         }
     }
@@ -986,18 +1043,26 @@ void daRd_c::modeAttackInit() {
 
 /* 0245E30C */
 void daRd_c::modeAttack() {
+    /* true60: the event-state decisions, the hit, the mash input, the grab count and the event order on the
+     * first step (the first-step AI-timer rule, first-step frame-level, first-step input, mixed-pair hit-flag); the Link decisions (distance, life) and the writes into Link (the
+     * damage with its count, the wall push: process-order read addendum (b), Link is earlier in the line) on the tick30 step; the facing
+     * and position chases on every step */
     if (dComIfGp_evmng_startCheckOld("DEFAULT_RD_CRY" /* "DEFAULT_RD_CRY" */)) {
-        dComIfGp_event_reset();
+        if (rd_t60_first()) {
+            dComIfGp_event_reset();
+        }
     }
     if ((dComIfGp_evmng_startCheckOld("DEFAULT_RD_CRY") || dComIfGp_evmng_startCheckOld("DEFAULT_RD_ATTACK" /* "DEFAULT_RD_ATTACK" */)) &&
         isLinkControl()) {
-        dComIfGp_event_reset();
-        modeProcInit(MODE_RETURN);
+        if (rd_t60_first()) {
+            dComIfGp_event_reset();
+            modeProcInit(MODE_RETURN);
+        }
         return;
     }
 
-    f32 stickPosX = CPad_GET_STICK_POS_X(0);
-    f32 stickPosY = CPad_GET_STICK_POS_Y(0);
+    f32 stickPosX = rd_t60_first() ? CPad_GET_STICK_POS_X(0) : 0.0f;
+    f32 stickPosY = rd_t60_first() ? CPad_GET_STICK_POS_Y(0) : 0.0f;
     if (eventInfo_checkCommandDemoAccrpt(this)) {
         fopAc_ac_c* player = dComIfGp_getLinkPlayer();
         if (isAnm(AnmPrm_ATACK)) {
@@ -1013,18 +1078,20 @@ void daRd_c::modeAttack() {
         bool hit = checkTgHit();
         u32 play = dComIfGp_ea(); // HD: fetched once for both branches
         if (hit) {
-            event_reset_at(play);
+            if (rd_t60_first()) {
+                event_reset_at(play);
+            }
             return;
         }
         f32 dist = fopAcM_searchActorDistanceXZ(this, player0_at(play));
         /* HD branches: written as the original tests them (not greater than) */
-        if (!(dist > REG_F(12, 5) + 50.0f) && !isAnm(AnmPrm_ATACK)) {
+        if (rd_t60_link() && !(dist > REG_F(12, 5) + 50.0f) && !isAnm(AnmPrm_ATACK)) {
             offIkari();
             setAnm(AnmPrm_WALK2ATACK, false);
         }
         if (!(dist > REG_F(12, 2) + 20.0f)) {
             cLib_addCalcPosXZ2(&current.pos, &player->current.pos, 0.3f, 1.0f);
-            if (cLib_calcTimer(&mTimer2) == 0) {
+            if (rd_t60_link() && cLib_calcTimer(&mTimer2) == 0) {
                 bool noDamage = daPy_checkNoDamageMode(dComIfGp_getLinkPlayer());
                 fopAc_ac_c* link = dComIfGp_getLinkPlayer();
                 if (!noDamage) {
@@ -1035,31 +1102,37 @@ void daRd_c::modeAttack() {
                 mTimer2 = 30;
             }
         } else if (mAcch.ChkWallHit()) {
-            daPy_changeOriginalDemo(player);
-            gabi::Local<cXyz> pos;
-            pos->copy(player->current.pos);
-            cLib_addCalcPosXZ2(pos, &current.pos, 0.3f, 10.0f);
-            daPy_setPlayerPosAndAngle(player, pos, player->shape_angle.y);
+            if (rd_t60_link()) {
+                daPy_changeOriginalDemo(player);
+                gabi::Local<cXyz> pos;
+                pos->copy(player->current.pos);
+                rd_t60_whole([&] { cLib_addCalcPosXZ2(pos, &current.pos, 0.3f, 10.0f); });
+                daPy_setPlayerPosAndAngle(player, pos, player->shape_angle.y);
+            }
         } else {
             cLib_addCalcPosXZ2(&current.pos, &player->current.pos, 0.3f, 10.0f);
         }
 
-        if (dComIfGs_getLife() == 0) {
+        if (rd_t60_link() && dComIfGs_getLife() == 0) {
             dComIfGp_event_reset();
             setAnm(AnmPrm_ATACK2WALK, false);
             modeProcInit(MODE_WAIT);
             return;
         }
 
-        rd_breakFree(this, stickPosX, stickPosY);
+        if (rd_t60_first()) {
+            rd_breakFree(this, stickPosX, stickPosY);
+        }
 
-        if (cLib_calcTimer(&mTimer1) == 0 || mBreakFreeCounter < 0) {
+        if (rd_t60_first() && (cLib_calcTimer(&mTimer1) == 0 || mBreakFreeCounter < 0)) {
             dComIfGp_event_reset();
             setAnm(AnmPrm_ATACK2WALK, false);
             modeProcInit(MODE_CRY_WAIT);
         }
     } else if (!checkTgHit()) {
-        fopAcM_orderOtherEvent2(this, "DEFAULT_RD_ATTACK" /* "DEFAULT_RD_ATTACK" */, 1, 0xFF6F); /* GameCube: 0x1CF */
+        if (rd_t60_first()) {
+            fopAcM_orderOtherEvent2(this, "DEFAULT_RD_ATTACK" /* "DEFAULT_RD_ATTACK" */, 1, 0xFF6F); /* GameCube: 0x1CF */
+        }
     }
 }
 
@@ -1073,12 +1146,16 @@ void daRd_c::modeReturn() {
         return;
     }
 
-    setAnm(AnmPrm_WALK, false);
+    /* true60: the walk animation on the first step; the arrival and the notice (Link) on the tick30 step; the turn and the
+     * speed ease on every step */
+    if (rd_t60_first()) { /* the mode's animation: set first each frame (A: before its decisions) */
+        setAnm(AnmPrm_WALK, false);
+    }
 
     if (checkInCircle(mSpawnPos, this, 100.0f, 1000.0f)) {
         speedF = 0.0f;
         cLib_addCalcAngleS2(&shape_angle.y, mSpawnAngle, 0xA, 0x200);
-        if (cLib_distanceAngleS(shape_angle.y, mSpawnAngle) <= 0x200) {
+        if (rd_t60_link() && cLib_distanceAngleS(shape_angle.y, mSpawnAngle) <= 0x200) {
             shape_angle.y = mSpawnAngle;
             modeProcInit(MODE_WAIT);
             return;
@@ -1092,11 +1169,13 @@ void daRd_c::modeReturn() {
     }
 
     fopAc_ac_c* player = dComIfGp_getLinkPlayer();
-    BOOL isOto = fopAcM_otoCheck(this, (f32)mAreaRadius);
-    if (!isLinkControl()) {
-        if (rd_noticePlayer(this, player, isOto)) {
-            modeProcInit(MODE_MOVE);
-            return;
+    if (rd_t60_link()) {
+        BOOL isOto = fopAcM_otoCheck(this, (f32)mAreaRadius);
+        if (!isLinkControl()) {
+            if (rd_noticePlayer(this, player, isOto)) {
+                modeProcInit(MODE_MOVE);
+                return;
+            }
         }
     }
 }
@@ -1111,29 +1190,37 @@ void daRd_c::modeSilentPray() {
         return;
     }
 
-    setAnm(AnmPrm_WALK, false);
+    /* true60: the walk animation on the first step; the stop animation, the corpse-gone and Link decisions on the tick30 step; the speed ease on
+     * every step */
+    if (rd_t60_first()) { /* the mode's animation: set first each frame (A: before its decisions) */
+        setAnm(AnmPrm_WALK, false);
+    }
 
     fopAc_ac_c* player = dComIfGp_getLinkPlayer();
     gabi::Local<gptr<fopAc_ac_c>> corpse;
     if (fopAcM_SearchByID_out(mCorpseID, corpse)) {
         mTargetPos.copy((*corpse)->current.pos);
         if (checkInCircle(mTargetPos, this, 200.0f, 1000.0f)) {
-            setAnm(AnmPrm_TACHIP1, false);
+            if (rd_t60_link()) {
+                setAnm(AnmPrm_TACHIP1, false);
+            }
             speedF = 0.0f;
         } else {
             cLib_addCalc2(&speedF, l_HIO().mReturnWalkSpeed, 0.1f, REG_F(12, 0) + 0.1f);
         }
-    } else if (!isLinkControl()) {
-        if (checkInCircle(mSpawnPos, player, (f32)mAreaRadius, 100.0f)) {
-            modeProcInit(MODE_MOVE);
+    } else if (rd_t60_link()) {
+        if (!isLinkControl()) {
+            if (checkInCircle(mSpawnPos, player, (f32)mAreaRadius, 100.0f)) {
+                modeProcInit(MODE_MOVE);
+            } else {
+                modeProcInit(MODE_WAIT);
+            }
         } else {
-            modeProcInit(MODE_WAIT);
+            modeProcInit(MODE_RETURN);
         }
-    } else {
-        modeProcInit(MODE_RETURN);
     }
 
-    if (!isLinkControl()) {
+    if (rd_t60_link() && !isLinkControl()) {
         if (checkPlayerInCry()) {
             modeProcInit(MODE_CRY);
         }
@@ -1150,7 +1237,8 @@ void daRd_c::modeSwWaitInit() {
 
 /* 0245EEA8 */
 void daRd_c::modeSwWait() {
-    if (dComIfGs_isSwitch(mSwNo, fopAcM_GetRoomNo(this))) {
+    /* true60: the switch decision on the first step */
+    if (rd_t60_first() && dComIfGs_isSwitch(mSwNo, fopAcM_GetRoomNo(this))) {
         modeProcInit(MODE_KANOKE);
     }
 }
@@ -1170,7 +1258,8 @@ void daRd_c::modeKanokeInit() {
 
 /* 0245EF98 */
 void daRd_c::modeKanoke() {
-    if (cLib_calcTimer(&mTimer1) == 0) {
+    /* true60 (the first-step AI-timer rule): the count on the first step */
+    if (rd_t60_first() && cLib_calcTimer(&mTimer1) == 0) {
         modeProcInit(MODE_RETURN);
     }
 }
@@ -1263,6 +1352,45 @@ void daRd_c::modeProc(daRd_c::Proc_e proc, int newMode) {
     }
 }
 
+/* true60 (the Moblin's request form, option (a); d_a_rd_t60.h): _execute plays its
+ * btk / brk / morf and calcs the morf BEFORE the dispatch (modeProc), so A's sets (setAnm, its setBrkAnm, setBtkAnm)
+ * always follow the frame's whole play of the old animations. Before the frame's tick30 step a set keeps only its index
+ * (mAnmPrmIdx / mBtkAnmPrmIdx: the frame's own reads, isAnm, see the new one at once, as in A's call) and leaves the
+ * animation objects as they are (a request: the old ones play to the frame end); on the tick30 step _execute runs the
+ * deferred part (setAnm's brk / bck sets with the frame's force, setBtkAnm's init) right after its play / calc, before
+ * the dispatch (rd_t60_anm_apply). Host state of this unit (the split-actor state rule), keyed by the ReDead. dt = 1: the original. */
+struct RdT60AnmReq {
+    u32 tag = 0;
+    bool bck = false, force = false, btk = false;
+};
+static std::unordered_map<u32, RdT60AnmReq> s_rdT60AnmReq;
+static RdT60AnmReq* rd_t60_req(const void* rd, bool make) {
+    auto it = s_rdT60AnmReq.find(gabi::ea(rd));
+    if (it != s_rdT60AnmReq.end() && it->second.tag == bk_t60_frame_tag())
+        return &it->second;
+    if (!make)
+        return nullptr;
+    RdT60AnmReq& r = s_rdT60AnmReq[gabi::ea(rd)];
+    r = RdT60AnmReq{};
+    r.tag = bk_t60_frame_tag();
+    return &r;
+}
+static inline bool rd_t60_defer() { return t60::dt() != 1.0f && !t60::tick30(); }
+/* the tick30 step after the play / calc: the frame's deferred sets */
+static void rd_t60_anm_apply(daRd_c* i) {
+    if (t60::dt() == 1.0f || !t60::tick30())
+        return;
+    RdT60AnmReq* r = rd_t60_req(i, false);
+    if (!r)
+        return;
+    const RdT60AnmReq q = *r;
+    s_rdT60AnmReq.erase(gabi::ea(i));
+    if (q.bck)
+        i->setAnm(daRd_c::AnmPrm_NULL, q.force);
+    if (q.btk)
+        i->setBtkAnm(5);
+}
+
 /* 0245AF80 */
 void daRd_c::setBrkAnm(s8 idx) {
 
@@ -1311,6 +1439,11 @@ void daRd_c::setBtkAnm(s8 idx) {
     }
 
     int r5 = btk_anm_prm_tbl[mBtkAnmPrmIdx].mBtkIdx;
+    /* true60: before the tick30 step only the index; the init follows on the tick30 step (rd_t60_anm_apply) */
+    if (rd_t60_defer() && mOldBtkAnmPrmIdx != mBtkAnmPrmIdx && r5 != -1) {
+        rd_t60_req(this, true)->btk = true;
+        return;
+    }
     if (mOldBtkAnmPrmIdx != mBtkAnmPrmIdx && r5 != -1) {
         J3DAnmTextureSRTKey* btk = (J3DAnmTextureSRTKey*)dComIfG_getObjectRes(m_arc_name, btk_anm_idx_tbl[r5], SAFESTRING_VTBL);
         if (btk == nullptr) {
@@ -1491,6 +1624,22 @@ void daRd_c::setAnm(s8 anmPrmIdx, bool force) {
     if (anmPrmIdx != AnmPrm_NULL) {
         mAnmPrmIdx = anmPrmIdx;
     }
+    /* true60: before the tick30 step only the index; the sets follow on the tick30 step (rd_t60_anm_apply) */
+    if (rd_t60_defer()) {
+        if (force || mOldAnmPrmIdx != mAnmPrmIdx) {
+            RdT60AnmReq* r = rd_t60_req(this, true);
+            r->bck = true;
+            r->force = r->force || force;
+        }
+        return;
+    }
+    if (t60::dt() != 1.0f) { /* the tick30 step: an earlier request's force joins this set */
+        if (RdT60AnmReq* r = rd_t60_req(this, false)) {
+            force = force || r->force;
+            r->bck = false;
+            r->force = false;
+        }
+    }
 
     if (mOldAnmPrmIdx != mAnmPrmIdx) {
         if (isAnm(AnmPrm_BEAM_HIT)) {
@@ -1509,40 +1658,58 @@ void daRd_c::setAnm(s8 anmPrmIdx, bool force) {
         *reinterpret_cast<be<u32>*>(&mBrkAnm.mFrameCtrl.mFrame) = *reinterpret_cast<be<u32>*>(&mpMorf->mFrameCtrl.mFrame);
     }
 
+    /* true60: a set (a new parameter or force; dLib_bcks_setAnm's condition) on an earlier step first plays
+     * next frame (the ReDead plays before its dispatch) */
+    const bool t60Set = force || mAnmPrmIdx != mOldAnmPrmIdx;
     dLib_bcks_setAnm(m_arc_name, mpMorf, &mBckIdx, &mAnmPrmIdx, &mOldAnmPrmIdx, gabi::ea(a_anm_bcks_tbl),
                      gabi::ea(a_anm_prm_tbl), force);
+    if (t60Set) {
+        rd_t60_mark_morf(this);
+    }
 }
 
 /* 0245BF50 */
 bool daRd_c::_execute() {
-    if (mMode == MODE_SW_WAIT) {
-        fopAcM_posMoveF(this, &mStts.m_cc_move);
+    /* true60: d_a_rd_t60.h. A held step (a mode changed in this frame's dispatch on an earlier step) skips the
+     * dispatch; an animation set on an earlier step waits for the next frame's play */
+    if (mMode == MODE_SW_WAIT || rd_t60_sw_path(this)) {
+        rd_t60_posMoveF(this);
         mAcch.CrrPos(dComIfG_Bgsp());
         setMtx();
         mpMorf->play(nullptr, 0, 0);
         mpMorf->calc();
-        modeProc(PROC_EXEC_e, MODE_NULL);
+        rd_t60_anm_apply(this); /* true60: the frame's deferred sets, after the play / calc (above setBrkAnm) */
+        const s32 t60Entry = mMode;
+        if (!rd_t60_held(this)) {
+            modeProc(PROC_EXEC_e, MODE_NULL);
+        }
+        rd_t60_note(this, t60Entry);
+        rd_t60_sw_note(this, t60Entry);
         return true;
     }
 
     fopAcM_setGbaName(this, dItemNo_MIRROR_SHIELD_e, 0x12, 0x30);
     setIceCollision();
-    if (mMode != MODE_SILENT_PRAY && mMode != MODE_DEATH && mMode != MODE_DAMAGE && mMode != MODE_ATTACK && mMode != MODE_CRY &&
-        mMode != MODE_CRY_WAIT) {
-        fopAc_ac_c* corpse = static_cast<fopAc_ac_c*>(fopAcM_Search(searchNeadDeadRd_CB, this));
-        if (corpse != nullptr) {
-            mCorpseID = fopAcM_GetID(corpse);
-            modeProcInit(MODE_SILENT_PRAY);
+    /* true60: the pre-dispatch decisions (the dead ReDead nearby, the attack event: first-step frame-level) and the facing copy
+     * (A moves the whole frame with the frame-start facing) on the first step */
+    if (rd_t60_first()) {
+        if (mMode != MODE_SILENT_PRAY && mMode != MODE_DEATH && mMode != MODE_DAMAGE && mMode != MODE_ATTACK && mMode != MODE_CRY &&
+            mMode != MODE_CRY_WAIT) {
+            fopAc_ac_c* corpse = static_cast<fopAc_ac_c*>(fopAcM_Search(searchNeadDeadRd_CB, this));
+            if (corpse != nullptr) {
+                mCorpseID = fopAcM_GetID(corpse);
+                modeProcInit(MODE_SILENT_PRAY);
+            }
         }
-    }
-    if (mMode != MODE_ATTACK && mMode != MODE_WAIT && mMode != MODE_DEATH && mMode != MODE_RETURN) {
-        if (dComIfGp_evmng_startCheckOld("DEFAULT_RD_ATTACK" /* "DEFAULT_RD_ATTACK" */)) {
-            modeProcInit(MODE_RETURN);
+        if (mMode != MODE_ATTACK && mMode != MODE_WAIT && mMode != MODE_DEATH && mMode != MODE_RETURN) {
+            if (dComIfGp_evmng_startCheckOld("DEFAULT_RD_ATTACK" /* "DEFAULT_RD_ATTACK" */)) {
+                modeProcInit(MODE_RETURN);
+            }
         }
+        current.angle.y = shape_angle.y;
+        current.angle.z = shape_angle.z;
+        current.angle.x = shape_angle.x;
     }
-    current.angle.y = shape_angle.y;
-    current.angle.z = shape_angle.z;
-    current.angle.x = shape_angle.x;
 
     if (mEnemyFire.mMode == 0) {
         mCyl.SetAtType(0);
@@ -1550,7 +1717,8 @@ bool daRd_c::_execute() {
     } else {
         mCyl.SetAtType(AT_TYPE_FIRE);
         if (mMode != MODE_DEATH && mMode != MODE_CRY && mMode != MODE_ATTACK) {
-            if (cLib_calcTimer(&mFireDeathTimer) == 0) {
+            /* true60 (the first-step AI-timer rule): the burn count on the first step */
+            if (rd_t60_first() && cLib_calcTimer(&mFireDeathTimer) == 0) {
                 modeProcInit(MODE_DEATH);
             }
         }
@@ -1565,11 +1733,20 @@ bool daRd_c::_execute() {
         return true;
     }
 
-    if (mHitReactTimer == 1) {
+    /* true60 (the first-step AI-timer rule): the hit reaction count on the first step, its answer held over the frame (a hit read later
+     * in the first step's dispatch reloads the count: A eased the whole frame on the answer before it) */
+    if (rd_t60_first() && mHitReactTimer == 1) {
         mLookPlayerTimer = 4 * 30;
     }
 
-    if (cLib_calcTimer(&mHitReactTimer) == 0) {
+    const u32 t60ReactKey = rd_t60_key(&mHitReactTimer, 0);
+    bool t60React;
+    if (rd_t60_first()) {
+        t60React = rd_t60_put(t60ReactKey, cLib_calcTimer(&mHitReactTimer) != 0);
+    } else {
+        t60React = rd_t60_has(t60ReactKey) ? rd_t60_get(t60ReactKey) : mHitReactTimer != 0;
+    }
+    if (!t60React) {
         cLib_addCalcAngleS2(&mHeadRotY, 0, 0xC, 0x100);
         cLib_addCalcAngleS2(&mD2E, 0, 0xC, 0x100);
     } else {
@@ -1582,8 +1759,14 @@ bool daRd_c::_execute() {
                       l_HIO().mNpc.mMaxHeadX, l_HIO().mNpc.mMaxHeadY, l_HIO().mNpc.mMinHeadX, l_HIO().mNpc.mMinHeadY,
                       l_HIO().mNpc.mMaxTurnStep);
 
-    if (mMode != MODE_PARALYSIS) {
-        lookBack();
+    /* true60: lookBack once per frame, whole (dt 1): the head joints and the body turn of dNpc_JntCtrl_c (not
+     * stepped, the NPC form), its look timer, before the move; on the tick30 step (the process-order read rule: it reads Link's head
+     * top), with the first step's mode / animation, facing and eye (d_a_rd_t60.h rd_t60_look_note / _run) */
+    if (rd_t60_first()) {
+        rd_t60_look_note(this, mMode != MODE_PARALYSIS);
+    }
+    if (rd_t60_link() && rd_t60_look_due(this, mMode != MODE_PARALYSIS)) {
+        rd_t60_look_run(this, [&] { lookBack(); });
     }
 
     if (isIkari()) {
@@ -1592,7 +1775,9 @@ bool daRd_c::_execute() {
         cLib_addCalc2(&mHeadOffsetX, 0.0f, 0.1f, l_HIO().mHeadOffsetStep);
     }
 
-    if (isAnm(AnmPrm_WALK)) {
+    /* true60: the walk play rate from the frame-start speed on the first step (A plays its whole frame at
+     * it; a WALK set in an earlier step's dispatch gets its rate with the next frame, as in A) */
+    if (rd_t60_first() && isAnm(AnmPrm_WALK)) {
         f32 temp = speedF * l_HIO().mWalkAnmSpeedRate;
         f32 m74 = l_HIO().mWalkAnmSpeedMin;
         /* temp < m74 ? m74 : temp, as fsel (temp - m74 >= 0 ? temp : m74) */
@@ -1604,18 +1789,38 @@ bool daRd_c::_execute() {
 
     setAttention();
     setCollision();
-    fopAcM_posMoveF(this, &mStts.m_cc_move);
+    rd_t60_posMoveF(this);
     mAcch.CrrPos(dComIfG_Bgsp());
     setMtx();
+    /* true60: a set before the tick30 step is a request: the old animations play to the frame end and the
+     * sets follow the tick30 step's play / calc (rd_t60_anm_apply, after the head-angle calc below) */
     mBtkAnm.play();
     mDoExt_baseAnm_play(&mBrkAnm);
     mpMorf->play(&current.pos, 0, 0);
     mpMorf->calc();
+    /* true60 (the process-order read rule): the tick30 dispatch reads A's head yaw (a calc at A's facing) */
+    rd_t60_head_angle(this, [&] {
+        setMtx();
+        mpMorf->calc();
+    });
+    rd_t60_anm_apply(this); /* true60: the frame's deferred sets, before the dispatch (above setBrkAnm) */
     enemy_fire(&mEnemyFire);
-    modeProc(PROC_EXEC_e, MODE_NULL);
-    setAnm(AnmPrm_NULL, false);
+    const s32 t60Entry = mMode;
+    if (!rd_t60_held(this)) {
+        modeProc(PROC_EXEC_e, MODE_NULL);
+    }
+    rd_t60_note(this, t60Entry);
+    /* true60: the animation chain (an ended animation's next one) on the frame-end play (tick30); the beam
+     * brk follows the morf's frame on every step (visual) */
+    if (rd_t60_end()) {
+        setAnm(AnmPrm_NULL, false);
+    } else if (mBckIdx == BckIdx_BEAM_HIT || mBckIdx == BckIdx_BEAM || mBckIdx == BckIdx_BEAM_END) {
+        *reinterpret_cast<be<u32>*>(&mBrkAnm.mFrameCtrl.mFrame) = *reinterpret_cast<be<u32>*>(&mpMorf->mFrameCtrl.mFrame);
+    }
     setBtkAnm(5);
-    settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &current.pos, &tevStr);
+    if (rd_t60_end()) { /* true60: the lighting once per frame (the frame-end position) */
+        settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &current.pos, &tevStr);
+    }
 
     return false;
 }

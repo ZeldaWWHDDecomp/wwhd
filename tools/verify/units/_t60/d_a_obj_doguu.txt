@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_doguu.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule + addendum, d/t60_objw.h): doguu (Goddess statues): light state, event / demo cuts, anims.
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 023368F0
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 0233516C 0233528C 02336194 02336294 0233631C 023363DC 02336408 02336824 023368B0
+t60cand 0233516C 0233528C 02336194 02336294 0233631C 023363DC 02336408 02336824 023368B0
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200E240 0200ED84 020182E0 020184DC 02019918 0233516C 0233528C 02336194 02336294 0233631C 023363DC 02336408 02336824 023368B0 025163BC 02516464 025200D4 0252012C 02520540 02526E70 02542D88 02542EDC 02543280 02543714 025440C8 025447C8 0254487C 0254DA50 02560444 025A11EC 025A847C 025B8B68 025B8B94 025CB4E0 025CB610 025D7874 025D7A58 025E1918 025E19CC 025E1A40 025E535C 025E742C 025F1C28 025F24E0 0273AA24 028E90D4 028E93CC

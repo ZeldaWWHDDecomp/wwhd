@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_npc_auction.txt
+# ---- true60 N-step spec (npc_auction, 2026-11-20; the whole-frame form rule NPC form;
+# d/t60_npc.h): the Windfall auction NPCs (Auc0..7 in Orichh, daNpcAuction_c): daNpc_AuctionExecute 021ED31C in the
+# whole form, logic only (isExecute against the auction manager's active-NPC mask, the order / talk, the member-pointer
+# action or eventMove, the texture pattern and morf play, the voice timer). The tick30 step runs the original execute
+# whole at dt 1 from the frame start; the earlier steps change no state (the picture between steps comes from
+# frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 021ED31C
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200F428 020198D8 02055B64 021EB870 021EBC7C 021EC0E8 021EC1A8 021EC200 021EC20C 021EC288 021EC360 021EC3AC 021EC400 021EC6F4 021EC724 021EC878 021EC93C 021ECB68 021ECD6C 021ECDF0 021ECE9C 021ECF4C 024F08A8 025200D4 02542D88 02542EDC 02543280 0254457C 025447C8 0254487C 0259D54C 0259D624 0259DED0 0259E08C 0259F858 025A11EC 025A15AC 025A847C 025B8B94 025D5218 025D76A8 025E1988 025E4A98 025E535C 025F1C28 025F1C5C 026067F4 0274D458 028249B0 028E90D4 028E9108 028E93CC

@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_shutter.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 const gc_tu_data gc_tu = {.safeString = 0x1003CA24};
 
@@ -133,6 +134,9 @@ void daShutter_c::set_mtx() {
 
 /* 02484D30 */
 bool daShutter_c::_execute() {
+    t60w::Guard<daShutter_c> t60g(this, t60objw::Logic<daShutter_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
     if (mFrameTimer >= 0) {
         mFrameTimer = (s8)(mFrameTimer - 1);
     }
@@ -142,6 +146,7 @@ bool daShutter_c::_execute() {
         mdBgW[i]->Move();
     }
     mbIsSwitch = (u8)fopAcM_isSwitch(this, mSwitchNo);
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 

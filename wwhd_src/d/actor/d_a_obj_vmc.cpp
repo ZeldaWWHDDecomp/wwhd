@@ -1,5 +1,6 @@
 // Soft soil and Makar tree.
 #include "d/actor/d_a_obj_vmc.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using daObjVmc::Act_c;
 const gc_tu_data gc_tu = {.safeString = 0x10032D48, .headerStatics = {0x1046C894, 0x101CDA48, 0x1046C8A0}};
 enum { STATE_BASE_MAIN, STATE_TREE_DEMO_WAIT, STATE_TREE_DEMO_MAIN, STATE_TREE_MAIN };
@@ -321,6 +322,9 @@ void Act_c::daObjVmc_tree_main() {
 }
 /* 023B2EF4 */
 bool Act_c::_execute() {
+    t60w::Guard<Act_c> t60g(this, t60objw::Logic<Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
     mCyl.SetC(&current.pos);
     s32 state = mState;
     if (state == STATE_BASE_MAIN) {
@@ -341,6 +345,7 @@ bool Act_c::_execute() {
         daObjVmc_tree_main();
         break;
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     fopAc_ac_c* player = dComIfGp_getLinkPlayer();
     gabi::Local<cXyz> dist;

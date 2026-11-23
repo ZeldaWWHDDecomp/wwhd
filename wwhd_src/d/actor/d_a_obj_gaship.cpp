@@ -1,5 +1,6 @@
 /* HD Gaship full actor reconstruction derived from zeldaret/tww. */
 #include "d/actor/d_a_obj_gaship.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 const gc_tu_data gc_tu = {.safeString = 0x100295B8};
 enum { dRes_INDEX_GASHIP_BDL_GASHIP_e = 3, fpcNm_MAJUU_FLAG_e = 0xAE };
 static f32 l_minAngle;
@@ -63,6 +64,10 @@ BOOL daObjGaship::Act_c::_draw() {
 }
 /* 0234A790 */
 BOOL daObjGaship::Act_c::_execute() {
+    t60w::Guard<daObjGaship::Act_c> t60g(this, t60objw::Logic<daObjGaship::Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     birth_flag();
     return TRUE;

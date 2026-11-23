@@ -8,12 +8,101 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_bk_exec.h"
+#include "d/actor/d_a_bk_t60.h"
+#include <unordered_map>
+
+/* true60 (the first-step AI-timer rule): the AI timers (mTimers, mSideStepTimer, mSideStepWait, mWeaponRunTimer,
+ * mWeaponViewWait, dr.mHitStunTimer) and the phase counter mFrameCounter count on the frame's FIRST step, before its
+ * decisions, as the original counts at the start of its frame; a timer an action sets on any step of the frame comes
+ * after that count and is first counted next frame, as in the original. */
 
 /* functions of d_a_bk.cpp (weak guest-call stubs so this part links alone) */
 __attribute__((weak)) void anm_init(bk_class* a, int b, f32 m, u8 l, f32 s, int f) {
     bkExec_anm_init(a, b, m, l, s, f);
 }
 __attribute__((weak)) void wait_set(bk_class* a) { bkExec_wait_set(a); }
+
+/* true60 (the process-order read rule; after pair): the words the model calc's joint
+ * callbacks write (nodeCallBack / nodeCallBack_P, d_a_bk.cpp: mHeadAngleY from the head joint, eyePos, dr.mJntPos) are
+ * read by the frame's decisions (daBk_player_view_check's cone around mHeadAngleY, the sight / line checks from eyePos,
+ * damage_reaction's joint ground checks). In the original each decision reads the previous frame's final calc; at N
+ * steps an earlier step's calc would already have moved them (B's tick30 notice read step 1's head, -24080 vs
+ * A's -22456, fight_run a frame late). The frame's first step keeps the values at its start (the previous tick30 calc);
+ * every later step of the frame puts them back before its decisions; the step's own calc then writes them again, so the
+ * picture and every reader after the calc see the step's values. One unit (this execute) owns the copy (the split-actor state rule);
+ * keyed by the Bokoblin, tagged with the frame. dt = 1: nothing. */
+struct BkT60CalcWords {
+    u32 tag;
+    s16 head;
+    f32 eye[3];
+    f32 attn[3];
+    f32 jnt[21][3];
+};
+static std::unordered_map<u32, BkT60CalcWords>& bk_t60_calc_map() {
+    static std::unordered_map<u32, BkT60CalcWords> m;
+    return m;
+}
+static void bk_t60_calc_keep(bk_class* i_this) {
+    if (t60::dt() == 1.0f || !t60::first_step())
+        return;
+    BkT60CalcWords& w = bk_t60_calc_map()[gabi::ea(i_this)];
+    w.tag = bk_t60_frame_tag();
+    w.head = i_this->mHeadAngleY;
+    w.eye[0] = i_this->eyePos.x;
+    w.eye[1] = i_this->eyePos.y;
+    w.eye[2] = i_this->eyePos.z;
+    w.attn[0] = i_this->attention_info.position.x;
+    w.attn[1] = i_this->attention_info.position.y;
+    w.attn[2] = i_this->attention_info.position.z;
+    for (int i = 0; i < 21; i++) {
+        w.jnt[i][0] = i_this->dr.mJntPos[i].x;
+        w.jnt[i][1] = i_this->dr.mJntPos[i].y;
+        w.jnt[i][2] = i_this->dr.mJntPos[i].z;
+    }
+}
+static void bk_t60_calc_restore(bk_class* i_this) {
+    if (t60::dt() == 1.0f || t60::first_step())
+        return;
+    auto it = bk_t60_calc_map().find(gabi::ea(i_this));
+    if (it == bk_t60_calc_map().end() || it->second.tag != bk_t60_frame_tag())
+        return;
+    const BkT60CalcWords& w = it->second;
+    i_this->mHeadAngleY = w.head;
+    i_this->eyePos.x = w.eye[0];
+    i_this->eyePos.y = w.eye[1];
+    i_this->eyePos.z = w.eye[2];
+    for (int i = 0; i < 21; i++) {
+        i_this->dr.mJntPos[i].x = w.jnt[i][0];
+        i_this->dr.mJntPos[i].y = w.jnt[i][1];
+        i_this->dr.mJntPos[i].z = w.jnt[i][2];
+    }
+}
+/* true60 (the process-order read rule across actors; pair / pr91c): the eyePos and attention position the calc
+ * writes (nodeCallBack: attention = eyePos) are read by other actors too: Link turns his head toward his attention actor's
+ * eyePos (d_a_player_main_04.cpp 248-252) and writes his own eyePos from that pose in his execute (0240CDD0), which the
+ * Bokoblin's look target then reads (dr_damage_anime look mode 1). Link runs before the Bokoblin, so in the original he
+ * reads the Bokoblin's previous-frame final calc; at N steps he read the value of the Bokoblin's step-0 calc (f31:
+ * 1.40 off A's, Link's eye 0.025 off from f31 with his position equal, the Bokoblin's head target 10 off at 33). On a step
+ * before the tick30 step the frame-start values are put back when the execute ends, so every reader outside the
+ * Bokoblin sees the previous frame's final calc until the tick30 calc writes the frame's final one. dt = 1: nothing. */
+static void bk_t60_calc_publish(bk_class* i_this) {
+    if (t60::dt() == 1.0f || t60::tick30())
+        return;
+    auto it = bk_t60_calc_map().find(gabi::ea(i_this));
+    if (it == bk_t60_calc_map().end() || it->second.tag != bk_t60_frame_tag())
+        return;
+    const BkT60CalcWords& w = it->second;
+    i_this->eyePos.x = w.eye[0];
+    i_this->eyePos.y = w.eye[1];
+    i_this->eyePos.z = w.eye[2];
+    i_this->attention_info.position.x = w.attn[0];
+    i_this->attention_info.position.y = w.attn[1];
+    i_this->attention_info.position.z = w.attn[2];
+}
+struct BkT60CalcPublish {
+    bk_class* bk;
+    ~BkT60CalcPublish() { bk_t60_calc_publish(bk); }
+};
 
 /* ---- inlined GameCube functions ---- */
 
@@ -24,16 +113,28 @@ static inline void yari_off_check(bk_class* i_this) {
         return;
     }
     fopAc_ac_c* boko = fopAcM_SearchByID(i_this->mWeaponId);
+    /* true60: the throw on the frame's tick30 step at the frame-end pose, its draws made here (d_a_bk_t60.h) */
+    if (BkT60Throw* slot = bk_t60_throw_hold(i_this)) {
+        if (!slot->drawn && boko != nullptr && i_this->mDropWeapon != 2) {
+            slot->drawn = true; /* the deciding step: A's draws, in this order */
+            slot->rot = (s16)gabi::ftoi(cM_rndFX(2000.0f));
+            slot->angle = (s16)gabi::ftoi(cM_rndFX(8000.0f));
+            slot->speedF = cM_rndF(10.0f) + 20.0f;
+            slot->speedY = cM_rndF(20.0f) + 20.0f;
+        }
+        return;
+    }
+    const BkT60Throw* kept = bk_t60_throw_kept(i_this);
     if (boko) {
         fopAc_ac_c* player = dComIfGp_getPlayer(0);
         fopAcM_cancelCarryNow(boko);
         if (i_this->mDropWeapon != 2) {
             bkExec_setRotAngleSpeed(boko,
-                                    (s16)gabi::ftoi(cM_rndFX(2000.0f))); /* setRotAngleSpeed */
+                                    kept ? kept->rot : (s16)gabi::ftoi(cM_rndFX(2000.0f))); /* setRotAngleSpeed */
             s16 angleY = actor->shape_angle.y + 0x8000;
-            angleY += (s16)gabi::ftoi(cM_rndFX(8000.0f));
-            f32 speedForward = cM_rndF(10.0f) + 20.0f;
-            f32 speedY = cM_rndF(20.0f) + 20.0f;
+            angleY += kept ? kept->angle : (s16)gabi::ftoi(cM_rndFX(8000.0f));
+            f32 speedForward = kept ? kept->speedF : cM_rndF(10.0f) + 20.0f;
+            f32 speedY = kept ? kept->speedY : cM_rndF(20.0f) + 20.0f;
             /* moveStateInit(speedForward, speedY, angleY) */
             boko->current.angle.y = angleY;
             boko->speed.y = speedY;
@@ -91,13 +192,33 @@ static inline void damage_check(bk_class* i_this) {
     u8 r27 = 0;
     bool r26 = false;
 
-    i_this->dr.mStts.Move();
+    /* true60: the attacker ids of the last hits shift once per 30 Hz frame, on its first step (the tick30
+     * collision Move pairs the Bokoblin with unconverted attackers and compares them with the previous frame's) */
+    if (bk_t60_first())
+        i_this->dr.mStts.Move();
     dComIfG_Ccsp_Set(&i_this->mDefenceSph);
-    i_this->mDefenceSph.SetC(&i_this->mDefenceSphPos);
-    i_this->mDefenceSphPos.y = -10000.0f;
-    i_this->mDefenceSph.SetR(-200.0f);
+    /* true60: the guard sphere's centre is the guard position the previous frame's dispatch left
+     * (defence / oshi set it after this point): taken on the frame's first step, where that is the value of the frame
+     * before (per step it would be the previous step's, a fraction of a frame ahead in the tick30 Move). Its reset before
+     * the dispatch sets it again: on a held step (the state entered on an earlier step of this frame, d_a_bk_t60.h) the
+     * dispatch does not run, so the frame keeps the guard its dispatch set, as the original frame's Move sees it. */
+    if (bk_t60_first())
+        i_this->mDefenceSph.SetC(&i_this->mDefenceSphPos);
+    if (!bk_t60_ai_held(i_this)) {
+        i_this->mDefenceSphPos.y = -10000.0f;
+        i_this->mDefenceSph.SetR(-200.0f);
+    }
 
-    if (i_this->mDefenceSph.ChkTgHit()) {
+    /* true60: one collision Move's hits read per 30 Hz frame (the original reads one Move per frame):
+     * the first step reads the tick30 Move (mixed pairs with unconverted attackers are checked there only). A converted
+     * attacker (Link converted) meets the Bokoblin on every step's Move, and each Move's result is cleared by the next:
+     * a later step reads its predecessor's Move (guard block and body, as the first step would: the block's sound,
+     * particle and push-back included) when no hit was read this frame (frame latch keyed by the guard sphere); once
+     * one was read, the frame's later steps read none (as cckP2_4's ChuChu) */
+    const bool t60Skip = !bk_t60_first() && bk_t60_pending(&i_this->mDefenceSph);
+    const bool t60Block = !t60Skip && i_this->mDefenceSph.ChkTgHit(); /* HD: one ChkTgHit per collider */
+    if (t60Block) {
+        bk_t60_mark_set(&i_this->mDefenceSph);
         void* hitObj = i_this->mDefenceSph.GetTgHitObj();
         def_se_set(actor, hitObj, 0x41);
         r26 = true;
@@ -130,7 +251,7 @@ static inline void damage_check(bk_class* i_this) {
     }
 
     /* HD: ChkTgHit is called once per collider */
-    if (i_this->mNoHitTimer == 0) {
+    if (i_this->mNoHitTimer == 0 && !t60Skip) {
         bool hit = false;
         if (i_this->mHeadSph.ChkTgHit()) {
             i_this->mOshiCount = 0;
@@ -148,6 +269,7 @@ static inline void damage_check(bk_class* i_this) {
             hit = true;
         }
         if (hit) {
+            bk_t60_mark_set(&i_this->mDefenceSph); /* true60: this frame's hit read (above) */
             at_power_check(atInfo);
             if (atInfo->mDamage < 4) {
                 if (r26 || (i_this->dr.mAction == 15 && i_this->mRecentHitTimer != 0)) {
@@ -159,11 +281,15 @@ static inline void damage_check(bk_class* i_this) {
             if (CcObj_AtType(atInfo->mpObj) & 0x180000) {
                 if (CcObj_AtType(atInfo->mpObj) & 0x80000) {
                     i_this->mEnemyIce.mFreezeDuration = REG0_S(3) + 300;
+                    /* true60: set after this execute's enemy_ice call: the freeze starts next frame */
+                    bk_t60_mark_set(&i_this->mEnemyIce.mFreezeDuration);
                     i_this->dr.mAction = 0;
                     i_this->dr.mMode = 0;
                     path_check(i_this, 0);
                 } else {
                     i_this->mEnemyIce.mLightShrinkTimer = 1;
+                    /* true60: set after this execute's enemy_ice call: its phase starts next frame */
+                    bk_t60_mark_set(&i_this->mEnemyIce.mLightShrinkTimer);
                 }
                 enemy_fire_remove(&i_this->mEnemyFire);
                 i_this->mSmokeTimer = 0;
@@ -217,7 +343,12 @@ static inline void damage_check(bk_class* i_this) {
                     generic = true;
                 } else {
                     atInfo->mDamage = 1;
-                    i_this->mParalyzeDelay = REG_S(13, 3) + 8;
+                    /* true60: Bk_move counts it later in this execute, on the frame's first step; set on
+                     * another step, it starts with this frame's count already taken (as the original's same-frame count) */
+                    s8 delay = (s8)(REG_S(13, 3) + 8);
+                    if (!bk_t60_first() && delay > 1)
+                        delay = (s8)(delay - 1);
+                    i_this->mParalyzeDelay = delay;
                     generic = true;
                 }
             } else {
@@ -695,6 +826,8 @@ static inline void demo_camera(bk_class* i_this) {
 /* 0209BD1C */
 BOOL daBk_Execute(bk_class* i_this) {
     dComIfGp_get(); /* daPy_py_c* player = dComIfGp_getPlayer(0): unused */
+    bk_t60_calc_keep(i_this); /* true60 (the process-order read rule): the previous calc's words at the frame start */
+    const BkT60CalcPublish t60Publish{i_this}; /* true60 (process-order read across actors): put back for outside readers at the end */
 
     /* HD: fell far below its home: set the switch and the actor flag, delete */
     if (i_this->mDeathSwitch != 0 && i_this->current.pos.y < i_this->home.pos.y - 5000.0f) {
@@ -727,8 +860,8 @@ BOOL daBk_Execute(bk_class* i_this) {
         return TRUE;
     }
 
-    /* HD: a timer that clears status bit 0x4000 when it runs out */
-    if (i_this->mSpawnTimer != 0) {
+    /* HD: a timer that clears status bit 0x4000 when it runs out (true60: counts on the tick30 step) */
+    if (i_this->mSpawnTimer != 0 && bk_t60_end()) {
         s8 t = (s8)(i_this->mSpawnTimer - 1);
         i_this->mSpawnTimer = t;
         if (t == 0) {
@@ -747,9 +880,17 @@ BOOL daBk_Execute(bk_class* i_this) {
         return TRUE;
     }
 
-    settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &i_this->current.pos, &i_this->tevStr);
+    /* true60 (rule 14, the first-step AI-timer rule): the lighting of the draw (it draws the light flicker from cM_rnd)
+     * once per frame, on the frame's first step: the original sets it before Bk_move from the previous frame's position,
+     * and its draw comes before the AI's draws of the frame (on the tick30 step a first-step decision's draw (wait_set)
+     * took the flicker's value: kbkR2_2 frame 87, 50 / 53) */
+    if (bk_t60_first())
+        settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &i_this->current.pos, &i_this->tevStr);
 
     if (i_this->mType == 8) {
+        /* true60: the spawner's timers and its spawn check once per 30 Hz frame, on the tick30 step */
+        if (!bk_t60_end())
+            return TRUE;
         for (int i = 0; i < 5; i++) {
             if (i_this->mTimers[i] != 0) {
                 i_this->mTimers[i] = i_this->mTimers[i] - 1;
@@ -759,29 +900,40 @@ BOOL daBk_Execute(bk_class* i_this) {
         return TRUE;
     }
 
+    /* true60: the AI state before this execute's changes (damage_check, Bk_move, damage_reaction): one
+     * state step per 30 Hz frame (bk_t60_ai_note below, d_a_bk_t60.h) */
+    const uint64_t t60AiState = bk_t60_ai_state(i_this);
     if (l_bkHIO().mDebugFrameStep == 0 || CPad_CHECK_TRIG_B(0) || CPad_CHECK_HOLD_Y(0)) {
-        i_this->mFrameCounter = i_this->mFrameCounter + 1;
-        for (int i = 0; i < 5; i++) {
-            if (i_this->mTimers[i] != 0) {
-                i_this->mTimers[i] = i_this->mTimers[i] - 1;
+        /* true60 (the 30 Hz timer rule, the first-step AI-timer rule): the per-frame counters count on the frame's first step: the hit
+         * gates (mNoHitTimer, mRecentHitTimer) and the At wait, before the collision results of the tick30 Move are read
+         * there, and the phase counter and the AI timers, before the decisions they time, so a timer-driven state change
+         * falls on the first step and the new state moves on every step of the frame, as the original counts, decides,
+         * then moves its whole frame. The blink and the lighting (both draw cM_rnd before Bk_move)
+         * run on the first step too, so the frame's draws keep the original order. */
+        if (bk_t60_first()) {
+            if (i_this->mNoHitTimer != 0)
+                i_this->mNoHitTimer = i_this->mNoHitTimer - 1;
+            if (i_this->mRecentHitTimer != 0)
+                i_this->mRecentHitTimer = i_this->mRecentHitTimer - 1;
+            if (i_this->mAtHitWait != 0)
+                i_this->mAtHitWait = i_this->mAtHitWait - 1;
+            i_this->mFrameCounter = i_this->mFrameCounter + 1;
+            for (int i = 0; i < 5; i++) {
+                if (i_this->mTimers[i] != 0) {
+                    i_this->mTimers[i] = i_this->mTimers[i] - 1;
+                }
             }
+            if (i_this->mSideStepTimer != 0)
+                i_this->mSideStepTimer = i_this->mSideStepTimer - 1;
+            if (i_this->mSideStepWait != 0)
+                i_this->mSideStepWait = i_this->mSideStepWait - 1;
+            if (i_this->mWeaponRunTimer != 0)
+                i_this->mWeaponRunTimer = i_this->mWeaponRunTimer - 1;
+            if (i_this->mWeaponViewWait != 0)
+                i_this->mWeaponViewWait = i_this->mWeaponViewWait - 1;
+            if (i_this->dr.mHitStunTimer != 0)
+                i_this->dr.mHitStunTimer = i_this->dr.mHitStunTimer - 1;
         }
-        if (i_this->mSideStepTimer != 0)
-            i_this->mSideStepTimer = i_this->mSideStepTimer - 1;
-        if (i_this->mSideStepWait != 0)
-            i_this->mSideStepWait = i_this->mSideStepWait - 1;
-        if (i_this->mWeaponRunTimer != 0)
-            i_this->mWeaponRunTimer = i_this->mWeaponRunTimer - 1;
-        if (i_this->mWeaponViewWait != 0)
-            i_this->mWeaponViewWait = i_this->mWeaponViewWait - 1;
-        if (i_this->dr.mHitStunTimer != 0)
-            i_this->dr.mHitStunTimer = i_this->dr.mHitStunTimer - 1;
-        if (i_this->mNoHitTimer != 0)
-            i_this->mNoHitTimer = i_this->mNoHitTimer - 1;
-        if (i_this->mRecentHitTimer != 0)
-            i_this->mRecentHitTimer = i_this->mRecentHitTimer - 1;
-        if (i_this->mAtHitWait != 0)
-            i_this->mAtHitWait = i_this->mAtHitWait - 1;
 
         if (i_this->mSwitchNo != 0xFF && i_this->mType == 6 &&
             dComIfGs_isSwitch(i_this->mSwitchNo, dComIfGp_roomControl_getStayNo())) {
@@ -865,18 +1017,39 @@ BOOL daBk_Execute(bk_class* i_this) {
         i_this->mBlurUseB = 0;
         i_this->mWeaponAtHome = 0;
 
-        bk_eye_tex_anm(i_this);
+        /* true60 (the first-step AI-timer rule): the blink counts and draws once per frame, on the first step, before
+         * the frame's decisions as in the original */
+        if (bk_t60_first())
+            bk_eye_tex_anm(i_this);
         i_this->dr.m438 = 0;
         i_this->mBtStartFrame = 100.0f; /* setBtAttackData(100, 100, 10000, 0) */
         i_this->mBtEndFrame = 100.0f;
         i_this->mBtMaxDis = 10000.0f;
         i_this->mBtAttackType = 0;
         i_this->mBtNowFrame = 0.0f;
+        /* true60 (the process-order read rule): the frame's decisions read the previous frame's final calc (bk_t60_calc_keep) */
+        bk_t60_calc_restore(i_this);
         damage_check(i_this);
+        /* true60: a state change by damage_check on an in-between step makes this step's Bk_move the
+         * frame's last dispatch call (d_a_bk_t60.h bk_t60_frame_work) */
+        bk_t60_note_before_move(i_this, t60AiState);
         Bk_move(i_this);
-        demo_camera(i_this);
-        ground_smoke_set(i_this);
-        if (i_this->mAnmStopTimer != 0) {
+        /* true60: a side-step wait the first step deferred and fight_run's tick30 tail did not draw (a held tick30 step, or
+         * another action by then): drawn here, after the frame's dispatch (d_a_bk_t60.h bk_t60_sswait_defer) */
+        if (bk_t60_sswait_due(i_this)) {
+            bk_t60_sswait_clear(i_this);
+            i_this->mSideStepWait = (s16)gabi::ftoi(cM_rndF(100.0f) + 30.0f);
+        }
+        /* true60: the demo camera is event work on the 30 Hz grid (the event-step rule; the event itself runs at N = 1) */
+        if (bk_t60_end())
+            demo_camera(i_this);
+        /* true60 (the 30 Hz timer rule and 11): the smoke counts and spawns on the tick30 step; a smoke start set after
+         * this point on an in-between step (the damage reaction below) starts next frame, as in the original */
+        if (bk_t60_end() && !bk_t60_pending(&i_this->mSmokeTimer))
+            ground_smoke_set(i_this);
+        /* true60 (the 30 Hz timer rule): set before this point (wepon_search), counted on the tick30 step; the play
+         * below tests the frame's counted value */
+        if (i_this->mAnmStopTimer != 0 && bk_t60_end()) {
             i_this->mAnmStopTimer = i_this->mAnmStopTimer - 1;
         }
         i_this->dr.mpEnemy = i_this;
@@ -891,6 +1064,7 @@ BOOL daBk_Execute(bk_class* i_this) {
     s32 r3 = damage_reaction(&i_this->dr);
     if (r3 != 0) {
         i_this->mSmokeTimer = 1;
+        bk_t60_mark_set(&i_this->mSmokeTimer); /* true60: after this frame's smoke count */
         i_this->mHitActorId = 0xFFFFFFFF;
         switch (r3) {
         case 1:
@@ -925,6 +1099,7 @@ BOOL daBk_Execute(bk_class* i_this) {
             i_this->mSpitTimer = 1;
             i_this->mEffectAngle.x = -0x4000;
             i_this->mSmokeTimer = l_bkHIO().mSmokeTimerBase + 16;
+            bk_t60_mark_set(&i_this->mSmokeTimer); /* true60: after this frame's smoke count */
             i_this->mSmokeType = 1;
             i_this->dr.mDownTimers[2] = l_bkHIO().mDownTime;
             break;
@@ -944,6 +1119,8 @@ BOOL daBk_Execute(bk_class* i_this) {
             break;
         }
     }
+    /* true60: a state entered on an in-between step waits for the next frame (Bk_move holds its dispatch) */
+    bk_t60_ai_note(i_this, t60AiState);
 
     J3DModel* model = i_this->mpMorf->getModel();
     {
@@ -951,8 +1128,11 @@ BOOL daBk_Execute(bk_class* i_this) {
         *bs = i_this->scale.get();
     }
     setBaseTRMtx_calc(model);
-    if (i_this->mAnmStopTimer == 0) {
-        i_this->mpMorf->play(&i_this->eyePos, 0, 0);
+    /* true60: the frame's counted value; an animation set on a middle step starts playing next frame (d_a_bk_t60.h
+     * bk_t60_mark_anm) */
+    if (bk_t60_counted(i_this->mAnmStopTimer) == 0 && !bk_t60_pending(&i_this->mpMorf)) {
+        /* true60: a set on this tick30 step plays the frame's whole play at dt 1, as the original (d_a_bk_t60.h) */
+        bk_t60_play(&i_this->mpMorf, &i_this->eyePos, 0, 0);
     }
     i_this->mpMorf->calc();
 
@@ -999,9 +1179,15 @@ BOOL daBk_Execute(bk_class* i_this) {
     sp58->z = i_this->dr.mAction == 18 ? REG_F(10, 4) : 35.0f;
     gabi::Local<cXyz> sp4C;
     MtxPosition(sp58, sp4C);
-    i_this->mCoCyl.SetC(sp4C);
-    dComIfG_Ccsp_Set(&i_this->mCoCyl);
-    dCcMassS_Set(&i_this->mCoCyl, 3);
+    /* true60 (the one-sweep-per-frame attack rule, after pair): the body's Co cylinder registers for the
+     * frame's tick30 collision Move only, at the frame-end position (A's contact frame). Set on every step, a contact
+     * with another converted actor (Link) was found one Move earlier at a half-step position (the jump attack's descent
+     * pushed Link a frame early: m_cc_move in B's frame-216 record, A's 217) */
+    if (bk_t60_end()) {
+        i_this->mCoCyl.SetC(sp4C);
+        dComIfG_Ccsp_Set(&i_this->mCoCyl);
+        dCcMassS_Set(&i_this->mCoCyl, 3);
+    }
 
     gabi::Local<cXyz> sp40;
     gabi::Local<cXyz> sp34;
@@ -1022,7 +1208,8 @@ BOOL daBk_Execute(bk_class* i_this) {
     i_this->mHeadSph.SetC(sp40);
     dComIfG_Ccsp_Set(&i_this->mHeadSph);
 
-    if (i_this->mSpitTimer != 0) {
+    /* true60 (the 30 Hz timer rule and 11): set before this point, counted with its particle on the tick30 step */
+    if (i_this->mSpitTimer != 0 && bk_t60_end()) {
         s16 t = i_this->mSpitTimer - 1;
         i_this->mSpitTimer = t;
         if (t == 0) {

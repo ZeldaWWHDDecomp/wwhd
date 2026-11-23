@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_dragonhead.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule + addendum, d/t60_objw.h): the dragon head's Execute 02337FA0 (sphere registration, the fire-arrow hit from the tick30 collision Move -> switch, the breath / melt sounds, the background release / register and the alpha fade).
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 02337FA0
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 02337950
+t60cand 02337950
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 020087EC 02337950 024EEA6C 025162A4 02516300 02520540 025E19CC 025E1A40 025F1C28

@@ -9,6 +9,7 @@
  * from the GameCube source.
  */
 #include "d/actor/d_a_wind_tag.h"
+#include "d/actor/d_a_wind_tag_t60.h" /* true60: step helpers */
 
 const gc_tu_data gc_tu = {
     .safeString = 0x10042ABC,
@@ -429,11 +430,15 @@ bool daWindTag::daWindTag_c::_execute() {
     }
 
     if (mSwNo != 0xFF && r29 != 0) {
-        if (mPrevSchActive != 0 && r27v == 0) {
+        /* true60 (the shared-world-state rule): the switch / schedule edges once per frame on the tick30 step (the
+         * switch writers run there, in A's line order), against the previous frame's values (stored on the tick30 step
+         * below); the per-step strength chase sees a latch set on the tick30 step from that step on (caveat: up to one
+         * picture step of the chase later than A's frame) */
+        if (mPrevSchActive != 0 && r27v == 0 && t60c::end()) {
             mSwitchLatch = 0;
         }
         u32 sw = (u32)fopAcM_isSwitch(this, mSwNo);
-        if ((u32)mPrevSwitch != sw && r24 != 0) {
+        if ((u32)mPrevSwitch != sw && r24 != 0 && t60c::end()) {
             mSwitchLatch = 1;
         }
     }
@@ -474,8 +479,10 @@ bool daWindTag::daWindTag_c::_execute() {
     mBtkAnm0.play();
     mBckAnm.play();
     mBtkAnm1.play();
+    if (t60c::end()) { /* true60: the frame's values for the next frame's edge test */
     mPrevSchActive = (u8)r27v;
     mPrevSwitch = (u8)fopAcM_isSwitch(this, mSwNo);
+    }
     MoveEmitter();
     mPointWind.set_pwind_move();
 
@@ -484,8 +491,14 @@ bool daWindTag::daWindTag_c::_execute() {
 
 /* 024E0104 */
 void daWindTag::daWindTag_c::path_move() {
-    if (mPathId != 0xFF && cLib_chasePos(&current.pos, &mTargetPos, speedF))
+    /* true60: the chase runs on every step (central dt); the step that reaches the point picks the next
+     * one and the frame's later steps hold there: the original's frame stops at the point too */
+    if (t60c::first())
+        t60c::unmark(1, &mCurPathPoint);
+    if (mPathId != 0xFF && !t60c::marked(1, &mCurPathPoint) && cLib_chasePos(&current.pos, &mTargetPos, speedF)) {
         set_next_pnt();
+        t60c::mark(1, &mCurPathPoint);
+    }
 }
 
 /* 024E0020 */

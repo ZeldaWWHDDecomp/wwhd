@@ -1,0 +1,21 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_mbdoor.txt
+# ---- true60 N-step spec (2026-11-18): the barred door (d_a_mbdoor_t60.h) through its execute
+# 021C0984: the action dispatch once per 30 Hz frame on the tick30 step (LockWait's unlock timer counts once, the order
+# is queued once); a demo actor's pose on every step. The six actions run their candidate code (the dispatch table
+# copied in: guard 1, entries in state order).
+t60conv 021C0984
+field 021C0984 101FDADC u32 1
+field 021C0984 101FDAE0 u32 0x021BFED8
+field 021C0984 101FDAE4 u32 0x021C001C
+field 021C0984 101FDAE8 u32 0x021C05DC
+field 021C0984 101FDAEC u32 0x021C0668
+field 021C0984 101FDAF0 u32 0x021C07FC
+field 021C0984 101FDAF4 u32 0x021C08B0
+field 021C0984 r3+0x3CA u8 0 5
+real 021BFED8 021C001C 021C05DC 021C0668 021C07FC 021C08B0
+t60cand 021BFED8 021C001C 021C05DC 021C0668 021C07FC 021C08B0
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200F428
+t60cand 0200F428

@@ -1,0 +1,8 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_kokiie.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule + addendum, d/t60_objw.h): kokiie (Forest Haven leaf platform): move, BG Move, rope ends, demo camera.
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 021A57A0
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200ED84 0200EDC8 0200F428 0200FAD8 0200FCD8 0200FCF0 0200FD38 0201A4DC 0201AD78 024F43DC 02514F2C 02514F38 02514FE8 0251510C 02515280 025200D4 02520540 02520C0C 025D7B24 025E1988 025E19CC 025E1A40 025F1884 025F1BF4 025F1C28 025F1C5C 027EC9E8 028E90D4

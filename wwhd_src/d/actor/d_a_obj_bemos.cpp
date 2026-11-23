@@ -1,5 +1,6 @@
 // Beamos, actual WWHD layouts and behavior.
 #include "d/actor/d_a_obj_bemos.h"
+#include "d/actor/d_a_obj_bemos_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule addendum) */
 using gabi::at;
 using gabi::call;
 using gabi::load;
@@ -1825,6 +1826,10 @@ s32 daBemos_c::_delete() {
 
 /* 02326020 */
 s32 daBemos_c::_execute() {
+    t60w::Guard<daBemos_c> t60g(this, bemos_t60::ops()); /* true60: the whole frame on the tick30 step */
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return 0;
+    t60g.model = true;
     auto* i_this = this;
     if (static_cast<u8>(i_this->mType) != 2 && BemosHD_dCcD_GObjInf_ChkTgHit(&i_this->mSph)) {
         BemosHD_daBemos_c_eye_break_init(this);
@@ -1854,7 +1859,8 @@ s32 daBemos_c::_execute() {
 s32 daBemos_c::_draw() {
     auto* i_this = this;
     u32 env = BemosHD_dKy_getEnvlight();
-    BemosHD_dScnKy_env_light_c_settingTevStruct(at<void>(env), 0, &i_this->current.pos, &i_this->tevStr);
+    if (bemos_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+        BemosHD_dScnKy_env_light_c_settingTevStruct(at<void>(env), 0, &i_this->current.pos, &i_this->tevStr);
     env = BemosHD_dKy_getEnvlight();
     BemosHD_dScnKy_env_light_setLightTevColorType(at<void>(env), at<void>(static_cast<u32>(i_this->mpBodyModel.v)),
                                                   &i_this->tevStr);

@@ -1,0 +1,8 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_swattack.txt
+# ---- true60 N-step spec (2026-11-20; the whole-frame form rule + addendum, d/t60_objw.h): attack switch: tg hit of the given attack type -> switch on; collider SetC + Ccsp_Set.
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 024A0CBC
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 020182E0 02018D40 025162A4 02516300

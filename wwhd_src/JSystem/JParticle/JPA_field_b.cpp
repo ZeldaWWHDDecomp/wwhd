@@ -1,6 +1,7 @@
 /** JPAField.cpp — vortex, convection, random, drag and spin fields.
  * GameCube names with verified WWHD arithmetic and guest frames. */
 #include "JSystem/JParticle/JPA_field_b.h"
+#include "JSystem/JParticle/JPA_field_t60.h"
 using namespace gabi;
 static const f32 l_one;
 static const f32 l_zero;
@@ -155,6 +156,14 @@ u32 JPAConvectionField::isItinRange(JPAFieldData *data, f32 distance) {
 /* 02823CDC */
 void JPARandomField::calc(JPAFieldData *data, JPABaseParticle *particle) {
     s32 age = ftoi((f32)particle->mCurFrame);
+    // true60 (JPA_field_t60.h): the kick falls on the step that crossed its whole frame
+    const bool full = jpa_t60f::full();
+    const f32 dt = t60::dt();
+    if (!full) {
+        if (!jpa_t60f::crosses_frame((f32)particle->mCurFrame, dt))
+            return;
+        age = (s32)__builtin_floorf((f32)particle->mCurFrame);
+    }
     if (age != 0) {
         u32 cycle = (u8)data->mCycle;
         if (!cycle || age % (s32)cycle != 0)
@@ -164,7 +173,17 @@ void JPARandomField::calc(JPAFieldData *data, JPABaseParticle *particle) {
     f32 one = l_one, half = l_half, mag = (f32)data->mMag;
     writeVec(&data->mVel,
              {((x - one) - half) * mag, ((y - one) - half) * mag, ((z - one) - half) * mag});
+    if (full) {
+        baseVel(this, data, particle);
+        return;
+    }
+    // the 30 Hz frame's kick on this step: added whole (calcVel at dt 1), a field-velocity kick as the frame's
+    // displacement (x 1/dt: the field velocity lasts one step here, one frame at 30 Hz)
+    if ((u8)data->mVelType == 2)
+        writeVec(&data->mVel, scale(readVec(&data->mVel), 1.0f / dt));
+    f32 previous = t60_set_dt(1.0f);
     baseVel(this, data, particle);
+    t60_set_dt(previous);
 }
 /* 02823E14 */
 void JPADragField::init(JPAFieldData *data, JPABaseParticle *particle) {
@@ -178,12 +197,13 @@ void JPADragField::init(JPAFieldData *data, JPABaseParticle *particle) {
 void JPADragField::calc(JPAFieldData *data, JPABaseParticle *particle) {
     if ((u32)particle->mStatus & 4) {
         f32 drag = (f32)particle->mDrag, fieldDrag = (f32)particle->mFieldDrag;
-        particle->mDrag = drag * fieldDrag;
+        // true60: the compounding drag over the step length
+        particle->mDrag = drag * jpa_t60f::damp(fieldDrag, t60::dt());
     } else {
         f32 affect = JPAField_calcFade(this, data, (f32)particle->mCurNormTime);
         f32 one = l_one, fieldDrag = (f32)particle->mFieldDrag;
         f32 factor = fnmsubs(affect, one - fieldDrag, one), drag = (f32)particle->mDrag;
-        particle->mDrag = drag * factor;
+        particle->mDrag = drag * jpa_t60f::damp(factor, t60::dt());
     }
 }
 /* 02823EF0 */

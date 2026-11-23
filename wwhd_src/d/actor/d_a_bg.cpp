@@ -8,6 +8,7 @@
  * The separately verified createHeap remains in d_a_bg_heap.cpp.
  */
 #include "d/actor/d_a_bg_readable.h"
+#include "d/actor/d_a_bg_t60.h" /* true60 (t60conv): step helpers */
 enum { ROOM_UNLOADING = 4, ROOM_ACTIVE = 0x10 };
 static BgText arcName;
 static BgText roomFormat;
@@ -175,8 +176,11 @@ static u8 cLib_calcTimer_u8(be<u8> *t) {
 
 /* 0207A0E0 */
 BOOL daBg_c::execute() {
-    if (mUnloadTimer != 0) {
-        if (cLib_calcTimer_u8(&mUnloadTimer) == 0)
+    /* true60: the unload count on the first step, the delete on the tick30 step (bu pairs:
+     * a first-step delete removed the room's bg half a frame early, before the frame's tick30 executes); the frame's
+     * later steps stay in this branch while the frame began in it (heldInt) instead of re-arming the timer */
+    if (t60c::heldInt(mUnloadTimer != 0, 5, this)) {
+        if ((t60c::first() ? cLib_calcTimer_u8(&mUnloadTimer) : mUnloadTimer) == 0 && t60c::end())
             fopAcM_delete(this);
         return TRUE;
     }

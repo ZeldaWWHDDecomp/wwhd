@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_npc_kamome.h"
+#include "d/actor/d_a_npc_kamome_t60.h" /* true60: the player form's step helpers */
 
 // HD: GHS emits this unit's own inline-constructed vtables and header statics.
 const gc_tu_data gc_tu = {
@@ -547,7 +548,10 @@ void daNpc_kam_c::playerAction(void* arg) {
     dComIfGp_setRStatusForce(dActStts_RETURN_e);    /* dComIfGp_setRStatusForce(dActStts_RETURN_e) */
     dComIfGp_setDoStatus(dActStts_FLY_e); /* dComIfGp_setDoStatus(dActStts_FLY_e) */
     dComIfGp_setAStatus(dActStts_HIDDEN_e); /* dComIfGp_setAStatus(dActStts_HIDDEN_e) */
+    if (kamT60::actBegin(this, &mCurrPlayerActionFunc)) { /* true60: the 30 Hz visual-motion rule (2) dispatch */
     kam_callAction<BOOL>(this, &mCurrPlayerActionFunc, arg);
+    kamT60::actEnd(this, &mCurrPlayerActionFunc);
+    }
 }
 
 /* 0225DF38 */
@@ -722,16 +726,17 @@ BOOL daNpc_kam_c::waitNpcAction(void*) {
 BOOL daNpc_kam_c::keyProc() {
 
     daNpc_kam_HIO1_c& hio = l_HIO.mHio1;
-    if (kam_calcTimer(&mFlapExhaustedTimer) == 0) {
+    /* true60: counts on the frame's first step (first-step AI-timer), the exhaustion branch held over the frame */
+    if (t60c::held(kamT60::timer(&mFlapExhaustedTimer) == 0, 0x7C, this)) {
         if (kam_padTriggerA(0) /* CPad_CHECK_TRIG_A(0) */) {
             mFlapTimer = hio.mFlapDuration;
         }
-        if (kam_calcTimer(&mFlapTimer) != 0) {
+        if (kamT60::timer(&mFlapTimer) != 0) {
             /* flapping */
             mTargetSpeedF = hio.mFlappingSpeedF;
             mTargetAngVelY = hio.mFlappingAngVelY;
             mTargetAngVelX = REG0_S(0) != 0 ? (s16)0x1555 : (s16)hio.mFlappingAngVelX;
-            if (kam_calcTimer(&mFlapEnergyTimer) == 0) {
+            if (kamT60::timer(&mFlapEnergyTimer) == 0) {
                 /* flapping for too long without rest: exhausted */
                 mFlapExhaustedTimer = hio.mFlapExhaustedDuration;
             }
@@ -741,9 +746,11 @@ BOOL daNpc_kam_c::keyProc() {
             mTargetAngVelY = hio.mGlidingAngVelY;
             mTargetAngVelX = REG0_S(0) != 0 ? (s16)0xAAA : (s16)hio.mGlidingAngVelX;
             /* build up energy to flap while gliding */
+            if (t60c::first()) { /* true60: a count */
             mFlapEnergyTimer = (s16)(mFlapEnergyTimer + 1);
             if (mFlapEnergyTimer > hio.mFlapEnergyDuration) {
                 mFlapEnergyTimer = hio.mFlapEnergyDuration;
+            }
             }
         }
     } else {
@@ -782,7 +789,9 @@ BOOL daNpc_kam_c::waitPlayerAction(void*) {
     }
 
     keyProc();
-    kam_calcTimer(&mLockAngleXTimer);
+    kamT60::timer(&mLockAngleXTimer); /* true60: a count (first-step AI-timer) */
+    if (kamT60::steerStep()) { /* true60: the steering once a frame on the tick30 step at dt 1 */
+    kamT60::Dt1<> t60dt;
     if (!dComIfGp_event_runCheck()  && areaOutCheck()) {
         mEventState = 2;
     }
@@ -815,12 +824,13 @@ BOOL daNpc_kam_c::waitPlayerAction(void*) {
         cLib_addCalcAngleS(&current.angle.x, mTargetAngleX, 8, 0x2000, 0x400);
         cLib_addCalcAngleS(&current.angle.z, *targetAngleZ, 8, 0x2000, 0x400);
     }
+    } /* true60 */
     setAttention(true);
 
     if (mAnmIdx != ANM_WAIT2) {
         if (mFlapTimer != 0) {
             setAnm(ANM_WAIT2);
-        } else if (kam_calcTimer(&mActionTimer) == 0) {
+        } else if (kamT60::timer(&mActionTimer) == 0) { /* true60: a count (first-step AI-timer) */
             mActionTimer = (s16)kam_getRndValue(90, 90);
             setAnm(ANM_SING);
         }
@@ -864,11 +874,11 @@ BOOL daNpc_kam_c::damagePlayerAction(void*) {
     } else if (mActionStatus == ACTION_ENDING) {
         offHyoiKamome();
     } else {
-        s16 y = (s16)(shape_angle.y + 0x2000);
+        s16 y = (s16)(shape_angle.y + t60c::share(0x2000)); /* true60: the frame's spin in step shares */
         current.angle.y = y;
         shape_angle.y = y;
         setAttention(true);
-        if (kam_calcTimer(&mActionTimer) == 0) {
+        if (kamT60::timer(&mActionTimer) == 0) { /* true60: a count (first-step AI-timer) */
             returnLink();
         }
     }
@@ -1152,6 +1162,8 @@ void daNpc_kam_c::setAnm(int anmIdx) {
     KamomeAnmTbl* tbl = &l_anmTbl[tblIdx]; /* anmTbl_c {s8 bck; s8 bas} */
     mPrevMorfFrame = 0.0f;
     mReachedAnimEnd = 0;
+    if (kamT60::anmRequest(this)) /* true60: set before tick30: a request, the morf set after the tick30 play */
+        return;
     f32 morf = REG0_S(0) == 0 ? prm->mMorf : 8.0f;
     kam_setAnimation(mpMorf.get(), prm->mLoopMode, morf, playSpeed,
                (s32)tbl->mBckFileIdx, (s32)tbl->mSoundFileIdx, "Kamome" );

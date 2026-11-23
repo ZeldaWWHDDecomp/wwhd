@@ -7,6 +7,7 @@
  * "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_tpota.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 const gc_tu_data gc_tu = { .headerStatics={0x1046EA2C, 0x101D2A84, 0x1046EA38} };
 static const u16 l_daTpota_idx_table[2] = {0x82AE, 0x82AF};
 
@@ -91,6 +92,9 @@ void daTpota_c::renew_splash() {
 
 /* 024C9FD0 */
 bool daTpota_c::_execute() {
+    t60w::Guard<daTpota_c> t60g(this, t60objw::Logic<daTpota_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
     if (mpEmitters[1] != nullptr) {
         TpotaParticleList* list = mpEmitters[1]->getParticleList();
         if (list != 0) {

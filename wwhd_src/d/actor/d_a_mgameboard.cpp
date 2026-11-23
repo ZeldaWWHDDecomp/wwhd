@@ -1,5 +1,6 @@
 /** Squid-Hunt board. Verified against the HD original. */
 #include "d/actor/d_a_mgameboard.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 #include "gc_api/gc_api.h"
 
 const gc_tu_data gc_tu = {.safeString = 0x10014C14};
@@ -429,6 +430,9 @@ void daMgBoard_c::EndInput() { mgBoard_endInput(l_pad.get()); }
 
 /* 021C54E0 */
 BOOL daMgBoard_c::_execute() {
+  t60w::Guard<daMgBoard_c> t60g(this, t60objw::Logic<daMgBoard_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+  if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+    return 1;
   dComIfGs_getEventRegHD(0xBEFF);
   if (mbForceEnd) {
     ResetGame();

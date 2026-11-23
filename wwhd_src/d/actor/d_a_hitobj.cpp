@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_hitobj.h"
+#include "d/actor/d_a_hitobj_t60.h" /* true60 (t60conv): step helpers */
 
 static dCcD_SrcSph cc_sph_src;
 
@@ -16,7 +17,7 @@ static BOOL daHitobj_Draw(hitobj_class* i_this) {
 }
 
 /* 02175150 */
-static BOOL daHitobj_Execute(hitobj_class* i_this) {
+static BOOL daHitobj_Execute(hitobj_class* i_this) { if (!t60c::end()) return TRUE; /* true60 (hand; t60conv had the first step): the whole frame on the tick30 step: the 3-frame count, and the AT sphere registered once per 30 Hz frame for the tick30 collision Move (the one-sweep-per-frame attack rule), the delete with it */
     if (i_this->mTimer != 0) {
         i_this->mTimer -= 1;
         i_this->mSph.SetC(&i_this->current.pos);

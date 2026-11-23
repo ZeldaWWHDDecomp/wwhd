@@ -7,6 +7,7 @@
  * written from the WWHD code (cking.rpx) with the GameCube names, and verified against it.
  */
 #include "d/actor/d_a_npc_kf1.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 enum : u32 { Kf1JudgeActorId = 0x025E1234 };
 static BOOL nodeCB_Head(J3DNode*, int);
@@ -1257,6 +1258,9 @@ void daNpc_Kf1_c::eventOrder() {
 
 /* 022642F4 */
 BOOL daNpc_Kf1_c::_execute() {
+    t60w::Guard<daNpc_Kf1_c> t60g(this, t60npc::Logic<daNpc_Kf1_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     if (!mbHomeSet) {
         mHomePos.copy(current.pos);
         mHomeAngle.x = current.angle.x;
@@ -1304,6 +1308,7 @@ BOOL daNpc_Kf1_c::_execute() {
     tevStr.mRoomNo = Kf1_roomId(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mObjAcch.m_gnd));
     tevStr.mEnvrIdxOverride =
         Kf1_polyColour(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mObjAcch.m_gnd));
+    t60g.model = true; /* true60: the frame reached its model step */
     setMtx(false);
     if (!mbDemo) {
         setCollision(90.0f, 200.0f);

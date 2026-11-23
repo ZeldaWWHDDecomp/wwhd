@@ -1,0 +1,18 @@
+# true60 N-step spec (not a gate unit): towerCamera's settled body with its chased rates moving (
+#). The radius / latitude / fovy rates chase their style's targets by 0.01 per 30 Hz frame
+# (e2R(0.01) per step: exact at the frame's end) and the radius limits theirs by the radius rate; the radius and fovy
+# then chase by the rate each step has (e2R(rate)): within the frame the steps use their own rates (speed-ramp position-gap class), so the
+# radius and fovy are not checked here (d_camera_e2body2.txt checks them with the rates at their targets).
+include _t60/d_camera_e2body2.txt
+include shared/c_angle_statics.txt
+arg! 0250B30C r4 66,67,128
+field 0250B30C r3+0x398 f32 200 400
+field 0250B30C r3+0x39C f32 600 900
+field 0250B30C r3+0x3DC f32 0 1
+field 0250B30C r3+0x3E0 f32 0 1
+field 0250B30C r3+0x3E8 f32 0 1
+field 0250B30C r3+0x3EC f32 0 1
+field 0250B30C r3+0x3F0 f32 0 1
+mockfield 02007324 r3+0x0 f32 100,500,1500
+t60tol 0250B30C r3+0x3C f32 skip
+t60tol 0250B30C r3+0x60 f32 skip

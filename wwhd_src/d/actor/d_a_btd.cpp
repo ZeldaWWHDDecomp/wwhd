@@ -4,6 +4,7 @@
  * HD: hahen_set includes the fragment-initialization helper.
  */
 #include "d/actor/d_a_btd.h"
+#include "d/actor/d_a_btd_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule), the draw's light state */
 #include "gabi.h"
 
 namespace {
@@ -2005,8 +2006,9 @@ BOOL daBtd_Draw(btd_class *i_this) {
     btdGuest_dSnap_RegistFig(0xC7, p, gabi::ea(&i_this->eyePos), angle, 1.0f, 1.0f, 1.0f);
     if ((u8)i_this->mDeadHeadOn) {
         u32 env = btdGuest_getEnvironmentLight();
-        btdGuest_dScnKy_env_light_c_settingTevStruct(env, 0, gabi::ea(&i_this->mDeadHeadPos.x),
-                                                     gabi::ea(&i_this->mTevstr));
+        if (btd_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+            btdGuest_dScnKy_env_light_c_settingTevStruct(env, 0, gabi::ea(&i_this->mDeadHeadPos.x),
+                                                         gabi::ea(&i_this->mTevstr));
         u32 model = (u32)btdMorph((u32)i_this->mpDeadHeadMorf.v)->mpModel.v;
         env = btdGuest_getEnvironmentLight();
         btdGuest_setLightTevColorType(env, model, gabi::ea(&i_this->mTevstr));
@@ -2026,8 +2028,9 @@ BOOL daBtd_Draw(btd_class *i_this) {
     u32 btk = gabi::ea(get_btk(i_this));
     u32 brk = gabi::ea(get_brk(i_this));
     u32 env = btdGuest_getEnvironmentLight();
-    btdGuest_dScnKy_env_light_c_settingTevStruct(env, 0, gabi::ea(&i_this->eyePos),
-                                                 gabi::ea(&i_this->mTevstr));
+    if (btd_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+        btdGuest_dScnKy_env_light_c_settingTevStruct(env, 0, gabi::ea(&i_this->eyePos),
+                                                     gabi::ea(&i_this->mTevstr));
     u32 model = (u32)btdMorph(morf)->mpModel.v;
     env = btdGuest_getEnvironmentLight();
     btdGuest_setLightTevColorType(env, model, gabi::ea(&i_this->mTevstr));
@@ -2842,6 +2845,10 @@ void btd_kankyo(btd_class *i_this) {
 
 /* 020F1494 */
 BOOL daBtd_Execute(btd_class *i_this) {
+    /* true60: the whole frame on the tick30 step (the whole-frame form rule; end at the return) */
+    t60w::Guard<btd_class> t60g(i_this, btd_t60::ops());
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     const u32 p = gabi::ea(i_this);
     u32 player = (u32)btdPlay()->mPlayerInfo[0].mpPlayer.v;
     u8 stage = gabi::load<u8>(gabi::ea(&btdPlay()->mCurStage.mName[0]));
@@ -2901,6 +2908,7 @@ BOOL daBtd_Execute(btd_class *i_this) {
     angle = (s16)i_this->current.angle.z;
     btdGuest_mDoMtx_ZrotM(stackMatrix, angle);
     btdExecModelMatrix(model, stackMatrix);
+    t60g.model = true;
     if (!(u8)l_HIO.mNoAnmPlay)
         btdMorph(morf)->play(&i_this->eyePos, 0, 0);
     btdMorph(morf)->calc();

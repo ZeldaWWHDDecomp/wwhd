@@ -10,7 +10,10 @@
  * Private boundary declarations retain HD register widths and virtual dispatch.
  */
 #include "d/actor/d_a_player_main_02.h"
+#include "d/actor/d_a_player_anm_t60.h"
 #include "port_hooks.h"
+#include "d/actor/d_a_player_t60.h"
+#include "d/actor/d_a_player_maba_t60.h"
 #include <cmath>
 
 const gc_tu_data gc_tu = { .safeString = 0x10034B24 };
@@ -534,8 +537,14 @@ int daPy_lk_c::changeSlideProc() {
     }
     s16 sVar4 = cM_atan2s((f32)player02::plane(pla)->mNormal.x, (f32)player02::plane(pla)->mNormal.z);
     if (m34C3 != 0 && !lk_checkPlayerStatus0(0x2000)) { // HD: not while daPyStts0_SUBJECT_e
-        cLib_addCalc_l(&mNormalSpeed, 0.0f, 0.4f, 5.0f, 1.0f);
-        mSlideStartTimer = (s16)(mSlideStartTimer - 1);
+        LKT60_CHASE_S(0, &mNormalSpeed, &mCurProc, cLib_addCalc_l(&mNormalSpeed, 0.0f, 0.4f, 5.0f, 1.0f)); /* true60: frame-exact */
+        /* true60 (the 30 Hz timer rule): the slide-entry delay counts 30 Hz frames (changeSlideProc runs on every
+         * update of Link's wait / move procs): on the frame's FIRST step only (the first-step AI-timer rule for Link: the count and
+         * the slide decision it drives where the 30 Hz update runs; count before the test, as in the original, so no
+         * hold); the speed (central cLib_addCalc, dt-aware) and the test below run on every step (one step: every
+         * update, the original) */
+        if (lkT60_countStep())
+            mSlideStartTimer = (s16)(mSlideStartTimer - 1);
         if (mNormalSpeed > 5.0f || mSlideStartTimer > 0) {
             return FALSE;
         }
@@ -662,7 +671,7 @@ void daPy_lk_c::setShipRidePos(int param_0) {
         setSingleMoveAnime(player02::ANM_SHIP_JUMP2, 1.0f, 3.0f, -1, 3.0f);
     }
     if (LK_underIdx() == player02::dRes_INDEX_LKANM_BCK_SHIP_JUMP2_e) {
-        if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+        if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
             if (gabi::at<player02::ship_c>(ship)->mFlags & 1) { /* ship->getFlyFlg() */
                 setSingleMoveAnime(player02::ANM_SHIP_JUMP1, 1.0f, 0.0f, -1, 20.0f);
             } else {
@@ -716,6 +725,7 @@ BOOL daPy_lk_c::procWait_init() {
     current.angle.y = shape_angle.y;
     mDirection = 4; /* DIR_NONE */
     m35A0 = 0.0f;
+    lkT60Maba::now(gabi::ea(this)); /* true60 (d_a_player_maba_t60.h now()): the frame's noted draws first */
     f32 dVar5 = cM_rndF(150.0f);
     mProcVar1 = (s16)gabi::ftoi(dVar5 + 300.0f);
     return TRUE;
@@ -838,7 +848,9 @@ int daPy_lk_c::getCutDirection() {
     }
     s16 angle;
     if (mpAttnActorLockOn.get() != nullptr) {
-        s16 toActor = fopAcM_searchActorAngleY(this, mpAttnActorLockOn);
+        s16 toActor;
+        if (!lkT60_fsTargetAngleY(&current.pos, mpAttnActorLockOn.get(), 1, &toActor)) /* true60: the process-order read rule */
+            toActor = fopAcM_searchActorAngleY(this, mpAttnActorLockOn);
         angle = (s16)(mMoveTargetAngleY - toActor);
     } else {
         angle = (s16)(mMoveTargetAngleY - m34DE);
@@ -1539,9 +1551,9 @@ void daPy_lk_c::setBlendAtnBackMoveAnime(f32 param_1) {
             setMoveAnime(f, 1.1f, 0.8f, 0, 0xE, 4, param_1);
         }
         if (!(mModeFlg & 1)) {
-            if (frameCtrl->checkPass(2.0f)) {
+            if (lkT60_pass(frameCtrl, 2.0f)) {
                 setResetFlg0(resetFlg0() | 0x400); /* onResetFlg0(daPyRFlg0_RIGHT_FOOT_ON_GROUND) */
-            } else if (frameCtrl->checkPass(12.0f)) {
+            } else if (lkT60_pass(frameCtrl, 12.0f)) {
                 setResetFlg0(resetFlg0() | 0x800); /* onResetFlg0(daPyRFlg0_LEFT_FOOT_ON_GROUND) */
             }
         }
@@ -1564,9 +1576,9 @@ void daPy_lk_c::setBlendAtnBackMoveAnime(f32 param_1) {
             }
             m3598 = 0.0f;
         }
-        if (frameCtrl->checkPass(5.0f) || frameCtrl->checkPass(15.0f)) {
+        if (lkT60_pass(frameCtrl, 5.0f) || lkT60_pass(frameCtrl, 15.0f)) {
             setResetFlg0(resetFlg0() | 0x400);
-        } else if (frameCtrl->checkPass(3.0f) || frameCtrl->checkPass(13.0f)) {
+        } else if (lkT60_pass(frameCtrl, 3.0f) || lkT60_pass(frameCtrl, 13.0f)) {
             setResetFlg0(resetFlg0() | 0x800);
         }
     }
@@ -1579,8 +1591,58 @@ void daPy_lk_c::setBlendAtnBackMoveAnime(f32 param_1) {
     setHandModel(player02::ANM_ATNDB);
 }
 
+/* true60: m3598's value at the start of the running 30 Hz frame, for setBlendAtnMoveAnime's walk branch.
+ * That branch writes m3598 = 1 - f28 x m3598 from the value the previous call left: a recurrence per call. At 30 Hz the
+ * value read is the previous frame's; at N steps the recurrence would run N times per frame (m3598 oscillates toward
+ * 1 / (1 + f28) N times as fast). On the 30 Hz grid instead: every step of a frame applies it to the frame start's
+ * value, so the frame's last step (tick30) writes the original's value with the frame end's f28. The frame start is
+ * taken on the frame's first step (step counter stamp) whatever branch runs then; a frame whose first step did
+ * not come here falls back to the current value. Host memory, this unit, Link only (one daPy_lk_c); N = 1: m3598. */
+static f32 s_lkAtn3598;
+static uint32_t s_lkAtn3598Stamp;
+static bool s_lkAtn3598Valid;
+static inline f32 lk_atn3598FrameStart(f32 current) {
+    if (t60::steps() <= 1) {
+        return current;
+    }
+    uint32_t now = t60_step_counter();
+    if (t60::first_step()) {
+        s_lkAtn3598 = current;
+        s_lkAtn3598Stamp = now;
+        s_lkAtn3598Valid = true;
+        return current;
+    }
+    if (s_lkAtn3598Valid && now - s_lkAtn3598Stamp < t60::steps()) {
+        return s_lkAtn3598;
+    }
+    return current;
+}
+
+/* true60: the forward / backward band of the parallel lock (cos(current.angle.y - shape_angle.y)
+ * outside +-0.99: run forward or back, max speed 17 / 15; inside: strafe left or right, 12) is decided on the 30 Hz
+ * grid. The angle offset it tests moves by a cLib_addCalcAngleS turn of at least 0x7D0 per frame, so at 30 Hz a strafe
+ * start leaves the band (|offset| < 1476) in its first frame; at N steps the first step's share of that turn lands inside
+ * it, the in-between step took FORWARD (17, setSpeedAndAngleNormal's cos(target - angle) on a 90 degree stick: almost
+ * no acceleration) and Link started the strafe ~0.65 frame late (pl1). A state the original only tests at frame ends:
+ * the band test runs on the tick30 step (the frame end, as the original), in-between steps keep the class the call starts
+ * with (forward / backward stay, a side or no direction takes the side branch's left / right choice). N = 1: every step is
+ * a tick30 step, the original test. */
+static inline bool lk_atnInBand(f32 c, u8 dir) {
+    if (t60::steps() > 1 && !t60::tick30()) {
+        return dir == player02::DIR_FORWARD || dir == player02::DIR_BACKWARD;
+    }
+    return !(c > -0.99f) || !(c < 0.99f);
+}
+static inline u8 lk_atnBandDir(f32 c, u8 dir) {
+    if (t60::steps() > 1 && !t60::tick30()) {
+        return dir;
+    }
+    return !(c > -0.99f) ? player02::DIR_BACKWARD : player02::DIR_FORWARD;
+}
+
 /* 023E81E4 */
 void daPy_lk_c::setBlendAtnMoveAnime(f32 f30) {
+    const f32 m3598FrameStart = lk_atn3598FrameStart(m3598); /* true60: see lk_atn3598FrameStart */
     s16 r3;
     if ((mAcch.m_flags & dBgS_Acch::GROUND_HIT) || !dBgS_ChkPolySafe_l(mAcchGndPoly)) {
         r3 = 0;
@@ -1600,8 +1662,8 @@ void daPy_lk_c::setBlendAtnMoveAnime(f32 f30) {
         }
     } else if (mStickDistance > 0.05f) {
         // HD: HIO folded (mAtnMoveB 0x30 = -0.99, 0x2C = 0.99); the NaN-safe forms of the original's branches
-        if (mpAttnActorLockOn.get() == nullptr && (!(fVar4 > -0.99f) || !(fVar4 < 0.99f))) {
-            mDirection = !(fVar4 > -0.99f) ? player02::DIR_BACKWARD : player02::DIR_FORWARD;
+        if (mpAttnActorLockOn.get() == nullptr && lk_atnInBand(fVar4, uVar1)) {
+            mDirection = lk_atnBandDir(fVar4, uVar1);
         } else {
             if (uVar1 == 1 || uVar1 == 0) {
                 mDirection = 3; /* DIR_RIGHT */
@@ -1662,7 +1724,8 @@ void daPy_lk_c::setBlendAtnMoveAnime(f32 f30) {
             dVar9 = 0xC; /* ANM_ATNDRS */
         }
         setMoveAnime(f28, f29, 1.8f * f29, dVar8, dVar9, 4, f30);
-        m3598 = gabi::fnmsubs(f28, m3598, 1.0f); /* 1.0f - f28 * m3598 */
+        /* 1.0f - f28 * m3598 (true60: the frame start's m3598 at N steps; N = 1 reads it here like the original) */
+        m3598 = gabi::fnmsubs(f28, t60::steps() <= 1 ? (f32)m3598 : m3598FrameStart, 1.0f);
     } else {
         dVar9 = mDirection == player02::DIR_LEFT ? player02::ANM_ATNDLS : player02::ANM_ATNDRS;
         gabi::Local<cXyz> xz; /* mSlipSpeed.abs2XZ() */
@@ -1683,17 +1746,17 @@ void daPy_lk_c::setBlendAtnMoveAnime(f32 f30) {
     }
     if (!(mModeFlg & 1)) {
         if (mDirection == player02::DIR_LEFT) {
-            if (frameCtrl->checkPass(2.0f)) {
+            if (lkT60_pass(frameCtrl, 2.0f)) {
                 setResetFlg0(resetFlg0() | 0x800); /* onResetFlg0(daPyRFlg0_LEFT_FOOT_ON_GROUND) */
-            } else if (frameCtrl->checkPass(10.0f)) {
+            } else if (lkT60_pass(frameCtrl, 10.0f)) {
                 setResetFlg0(resetFlg0() | 0x400); /* onResetFlg0(daPyRFlg0_RIGHT_FOOT_ON_GROUND) */
             } else {
                 resetFootEffect();
             }
         } else {
-            if (frameCtrl->checkPass(10.0f)) {
+            if (lkT60_pass(frameCtrl, 10.0f)) {
                 setResetFlg0(resetFlg0() | 0x800);
-            } else if (frameCtrl->checkPass(2.0f)) {
+            } else if (lkT60_pass(frameCtrl, 2.0f)) {
                 setResetFlg0(resetFlg0() | 0x400);
             } else {
                 resetFootEffect();
@@ -2412,13 +2475,19 @@ BOOL daPy_lk_c::checkNextActionHookshotReady() {
     player02::initializeScale(player02_cpp::eff_scale_guard, player02_cpp::eff_scale, 1.0f, 1.0f, 0.0f); /* eff_scale */
     player02::initializeScale(player02_cpp::eff_dscale_guard, player02_cpp::eff_dscale, 0.2f, 0.2f, 0.2f); /* eff_dscale */
     player02::initializeScale(player02_cpp::eff_pscale_guard, player02_cpp::eff_pscale, 0.4f, 0.4f, 0.4f); /* eff_pscale */
+    /* true60 (the 30 Hz visual-motion rule (2) / first-step AI-timer for Link): the shot taken on the frame's first step returns TRUE; the
+     * original's next call (the next frame) is the first to see the shot state: held over the frame's later steps
+     * (N-step spec: the frame's trigger requested the return (setReturn) on the frame's second step) */
+    if (lkT60_countHeld(LKT60_KEY_ITEM_READY, 3, 1)) {
+        return TRUE;
+    }
     u32 hookshot = gabi::ea(mActorKeepEquip.mActor.get());
     u32 state = (u32)gabi::at<fopAc_ac_c>(hookshot)->mParameters; /* daHookshot_c: 0 wait, 1 shot, 2 return, 3 pull (HD: +0xB0) */
     if (state == 0) { /* hookshot->checkWait() */
         BOOL shoot = FALSE;
         if (PORT_QUICK_USE(0x023EAE30, this, itemButton())) {
             int ready = getReadyItem();
-            if ((u32)mEquipItem == (u32)ready && m355C == 0) {
+            if ((u32)mEquipItem == (u32)ready && m355C == 0 && !lkT60_countHeld(LKT60_KEY_ITEM_READY, 2, 0)) {
                 m355E = 1;
             } else if (!PORT_QUICK_USE(0x023EAE78, this, itemButton()) && PORT_QUICK_USE(0x023EAE84, this, m355E) != 0) {
                 shoot = TRUE;
@@ -2429,6 +2498,9 @@ BOOL daPy_lk_c::checkNextActionHookshotReady() {
         if (shoot) {
             m355E = 0;
             player02::setActorParameters(gabi::at<fopAc_ac_c>(hookshot), 1); /* hookshot->setShot() */
+            if (lkT60_countStep()) {
+                lkT60_counted(LKT60_KEY_ITEM_READY, 3, 1);
+            }
             mNormalSpeed = 0.0f;
             player02_cpp::m_maba_flg = 0; /* daPy_matAnm_c::offMabaFlg() */
             player02_cpp::m_maba_timer = 1;
@@ -2460,8 +2532,10 @@ BOOL daPy_lk_c::checkNextActionHookshotReady() {
         procHookshotFly_init();
         return TRUE;
     }
+    /* true60 (the 30 Hz timer rule; the first-step AI-timer rule for Link): the ready wait (checkNextHookshotMode's 10) counts 30 Hz frames
+     * on the frame's first step; the 0 it reaches is held over the frame's later steps (the ready test above) */
     if (m355C > 0) {
-        m355C = (s16)(m355C - 1);
+        lkT60_countDown(LKT60_KEY_ITEM_READY, 2, m355C);
     }
     return cancelItemUpperReadyAnime();
 }
@@ -2472,7 +2546,11 @@ BOOL daPy_lk_c::checkNextActionBowReady() {
     if (upper == 0x36) { /* checkBowWaitAnime() */
         s16 shot = m355C;
         u32 arrow = gabi::ea(mActorKeepEquip.mActor.get());
-        if (shot != 0) {
+        if (lkT60_countHeld(LKT60_KEY_BOW, 0, 1)) {
+            /* true60 (the first-step AI-timer rule for Link): the release below was taken on this frame's first step (its
+             * input, the first-step input rule); the original's next update (the next frame) starts the shot anime: held over the
+             * frame's later steps (N-step spec: the shot anime half a frame early) */
+        } else if (shot != 0) {
             // HD: HIO folded
             setActAnimeUpper(player02::dRes_INDEX_LKANM_BCK_ARROWSHOOT_e, 2, 0.9f, 0.0f, 4, 0.0f);
             setPriTextureAnime(0x70, 0);
@@ -2491,6 +2569,9 @@ BOOL daPy_lk_c::checkNextActionBowReady() {
                 setResetFlg0(resetFlg0() | 0x20000000); /* onResetFlg0(daPyRFlg0_ARROW_SHOOT) */
             }
             m355C = 1;
+            if (lkT60_countStep()) {
+                lkT60_counted(LKT60_KEY_BOW, 0, 1);
+            }
         } else if (player02ChangeArrowMp()) {
             if (mEquipItem != player02first::dItemNo_BOW_e) {
                 dComIfGp_setRStatus(0x22); /* dActStts_SWAP_MODES_e */
@@ -2502,15 +2583,19 @@ BOOL daPy_lk_c::checkNextActionBowReady() {
             }
         }
     } else if (upper == 0xC) { /* checkBowReloadAnime() */
-        if (mFrameCtrlUpper[2].getRate() < 0.01f) {
+        if (lkT60_endRate(&mFrameCtrlUpper[2]) < 0.01f) {
             setActAnimeUpper(player02first::dRes_INDEX_LKANM_BCK_BOWWAIT_e, 2, 1.0f, 0.0f, -1, -1.0f);
             LK_swordAnim_changeBckOnly(getItemAnimeResource(player02first::dRes_INDEX_LKANM_BCK_BOWWAITA_e));
             m35EC = 0.0f;
             setPriTextureAnime(0x70, 0);
         }
     } else if (upper == 0xE) { /* checkBowShootAnime() */
-        if (mFrameCtrlUpper[2].getRate() < 0.01f) {
-            if (m355E == 0 && PORT_QUICK_USE(0x023EB434, this, bowButton()) && (mDemo.getDemoMode() == 0x44 || lk_equipIsReady()) &&
+        /* true60 (the first-step AI-timer rule for Link; glue-sound check, N-step spec 2 system sounds over 2 steps): the shot
+         * anime's end decision (the reload with its arrow and target-out sound, or the arrow type change) is the 30 Hz
+         * update's, taken on the frame's first step; an end reached on a later step is taken on the next frame's first
+         * step, as the original's next update */
+        if (lkT60_countStep() && lkT60_endRate(&mFrameCtrlUpper[2]) < 0.01f) {
+            if (m355E == 0 && !lkT60_countHeld(LKT60_KEY_BOW, 1, 0) && PORT_QUICK_USE(0x023EB434, this, bowButton()) && (mDemo.getDemoMode() == 0x44 || lk_equipIsReady()) &&
                 !(noResetFlg1() & 0x2000) /* !checkUseArrowEffect() */) {
                 setBowReloadAnime();
                 makeArrow();
@@ -2526,8 +2611,12 @@ BOOL daPy_lk_c::checkNextActionBowReady() {
                 }
             }
         }
+        /* true60 (the 30 Hz timer rule; the first-step AI-timer rule for Link): the bow's shot wait (setBowReadyAnime's 10) counts 30 Hz
+         * frames on the frame's first step, after the test above as in the original; the 0 it reaches there is held over
+         * the frame's later steps (the arrow is made on the next frame's first step). Tool pair: counted per
+         * step, the end frame 3.999 was held 6 frames instead of 11 and the arrow made 6 frames early. */
         if (m355E != 0) {
-            m355E = (s16)(m355E - 1);
+            lkT60_countDown(LKT60_KEY_BOW, 1, m355E);
         }
     }
     return cancelItemUpperReadyAnime();
@@ -2560,7 +2649,11 @@ BOOL daPy_lk_c::checkNextActionBoomerangReady() {
         }
     } else {
         if (PORT_QUICK_USE(0x023EB614, this, itemButton())) {
-            m355C = (s16)(m355C + 1);
+            /* true60 (the 30 Hz timer rule and 12): the 12-frame hold counts 30 Hz frames (on the frame's first step, with
+             * the release read) */
+            if (t60::dt() == 1.0f || t60::first_step()) {
+                m355C = (s16)(m355C + 1);
+            }
         }
         throwIt = mHD827C != 0;
     }
@@ -2753,6 +2846,12 @@ int daPy_lk_c::throwRope() {
 
 /* 023EC084 */
 BOOL daPy_lk_c::checkNextActionRopeReady() {
+    /* true60 (the 30 Hz visual-motion rule (2) / first-step AI-timer for Link): the throw taken on the frame's first step returns TRUE; the
+     * original's next call (the next frame) is the first to see the thrown rope (checkNextRopeMode): held over the
+     * frame's later steps (N-step spec: the frame's second step ran cancelItemUpperReadyAnime and returned FALSE) */
+    if (lkT60_countHeld(LKT60_KEY_ITEM_READY, 3, 1)) {
+        return TRUE;
+    }
     u32 rope = gabi::ea(mActorKeepEquip.mActor.get());
     u32 ropeState = player02::actorParameters(gabi::at<fopAc_ac_c>(rope)); /* fopAcM_GetParam(rope) */
     if (ropeState == 2) {
@@ -2760,7 +2859,7 @@ BOOL daPy_lk_c::checkNextActionRopeReady() {
     }
     if (ropeState == 0) {
         if ((u16)player02::heaps(m_anm_heap_upper)[2].mIdx == player02first::dRes_INDEX_LKANM_BCK_ROPETHROW_e) {
-            if (mFrameCtrlUpper[2].getRate() < 0.01f) {
+            if (lkT60_endRate(&mFrameCtrlUpper[2]) < 0.01f) {
                 return procRopeThrowCatch_init();
             }
             return TRUE;
@@ -2769,7 +2868,7 @@ BOOL daPy_lk_c::checkNextActionRopeReady() {
         }
         BOOL doThrow = FALSE;
         if (PORT_QUICK_USE(0x023EC12C, this, itemButton())) {
-            if (lk_equipIsReady() && m355C == 0) {
+            if (lk_equipIsReady() && m355C == 0 && !lkT60_countHeld(LKT60_KEY_ITEM_READY, 2, 0)) {
                 m355E = 1;
             } else if (!PORT_QUICK_USE(0x023EC178, this, itemButton()) && PORT_QUICK_USE(0x023EC184, this, m355E) != 0) {
                 doThrow = TRUE;
@@ -2780,6 +2879,9 @@ BOOL daPy_lk_c::checkNextActionRopeReady() {
         if (doThrow) {
             m355E = 0;
             if (throwRope()) {
+                if (lkT60_countStep()) {
+                    lkT60_counted(LKT60_KEY_ITEM_READY, 3, 1);
+                }
                 return TRUE;
             }
         }
@@ -2794,8 +2896,9 @@ BOOL daPy_lk_c::checkNextActionRopeReady() {
         checkNextRopeMode();
         return TRUE;
     }
+    /* true60 (the 30 Hz timer rule; the first-step AI-timer rule for Link): the ready wait (checkNextRopeMode's 10) as the hookshot's */
     if (m355C > 0) {
-        m355C = (s16)(m355C - 1);
+        lkT60_countDown(LKT60_KEY_ITEM_READY, 2, m355C);
     }
     return FALSE;
 }
@@ -3504,6 +3607,21 @@ int daPy_lk_c::setMoveAnime(f32 f27, f32 f28, f32 f25, int r27, int r28, int r29
     gabi::Local<be<u32>> sp14, sp18, sp10, sp1C; /* under/upper of the two animations */
     getUnderUpperAnime(r25, sp14.a, sp18.a, 0, 0x2400);
     getUnderUpperAnime(r24, sp10.a, sp1C.a, 1, 0x2400);
+    /* true60 (rule 1 2026-11-17, probe15 frame 31): a set that SWITCHES the move animation (another transform)
+     * on a step before the frame's tick30 step takes the running phase as the original does after the frame's whole
+     * play (the old frame control projected over the frame's remaining plays: lkT60_projectFrame) and is latched below
+     * (first played on the next frame's first step). Before: the phase after 1/N of the old play, then (N - 1)/N of the
+     * new one (the lock-on init's ATN wait 0.518 frame ahead). A re-set of the running animations (the walk / wait blend
+     * every update) is a continuation: unchanged. dt 1: not run. */
+    const bool lkSwitch = t60::dt() != 1.0f && (u32)*sp14 != r3;
+    if (lkSwitch && !(prev == 0 || prev == 9 || prev == 10) && !t60::tick30() &&
+        !lkT60_anmSetPending(gabi::ea(frameCtrl0))) {
+        int plays = lkT60_anmRemaining();
+        if (plays > 0) {
+            s32 fm = lk_anm_getFrameMax(r3);
+            f31 = lkT60_projectFrame(frameCtrl0, plays) / (f32)fm;
+        }
+    }
     f32 inv = 1.0f - f27;
     lk_anmRatio_clear(gabi::ea(this) + 0x57F8, inv); /* mAnmRatioUnder[UNDER_MOVE0_e].setRatio(1.0f - f27) */
     lk_anmRatio_clear(gabi::ea(this) + 0x5808, f27);  /* mAnmRatioUnder[UNDER_MOVE1_e].setRatio(f27) */
@@ -3554,6 +3672,19 @@ int daPy_lk_c::setMoveAnime(f32 f27, f32 f28, f32 f25, int r27, int r28, int r29
     } else {
         setSeAnime((u32)gabi::at<player02::anmRatioPack_c>(gabi::ea(mAnmRatioUnder))[1].mpAnmTransform, gabi::ea(&player02::heaps(m_anm_heap_under)[1]), gabi::ea(frameCtrl1));
     }
+    /* true60 (rule 1 2026-11-17, probe11 frame 31: the lock-on init's blend 0.518 frame ahead): a set that starts
+     * the move animations at phase 0 (no running move animation: m34C3 0 / 9 / 10) is a NEW animation, latched like
+     * setSingleMoveAnime's (d_a_player_t60.h lkT60_markAnmSet: a set on a step other than the frame's tick30 step first
+     * plays on the next frame's first step, as the original's next animeUpdate). A set that carries the running phase
+     * (the walk / wait blend re-set every update) stays a continuation (not latched; psword2d). dt 1: never. */
+    if (prev == 0 || prev == 9 || prev == 10 || lkSwitch) {
+        lkT60_markAnmSet(gabi::ea(frameCtrl0));
+        lkT60_markAnmSet(gabi::ea(frameCtrl1));
+        if (*sp18 != 0)
+            lkT60_markAnmSet(gabi::ea(&mFrameCtrlUpper[0]));
+        if (*sp1C != 0)
+            lkT60_markAnmSet(gabi::ea(&mFrameCtrlUpper[1]));
+    }
     m34C3 = (u8)r29;
     return TRUE;
 }
@@ -3565,6 +3696,45 @@ static inline f32 lk_abs2XZ(cXyz* v) {
     xz->y = 0.0f;
     fcpy_l(xz.a + 8, gabi::ea(&v->z));
     return PSVECSquareMag(xz);
+}
+
+/* true60: Link's facing at the start of the running 30 Hz frame, for the turn-in-place blend below.
+ * m34DE is the facing of the previous step (daPy_lk_c::execute); at 30 Hz that is the frame start. The original
+ * decides "turning in place" and the blend from the whole frame's turn: one frame of turning plays the turn blend (rate
+ * about 2x) for the whole frame. At N steps the integer turn lands on some of the frame's steps only, so a per-step
+ * test would play the blend for part of the frame (the wait animation's phase drifts, p7_move). The frame's facing is
+ * taken on its first step (m34DE then is the frame start) and kept for the frame's other steps (step counter stamp,
+ *); a frame whose first step did not come here falls back to m34DE. Host memory, this unit only, Link only (one
+ * daPy_lk_c); at N = 1 always m34DE (bit-exact). */
+static s16 s_lkFrameStartAngle;
+static uint32_t s_lkFrameStartStamp;
+static bool s_lkFrameStartValid;
+static inline s16 lk_frameStartAngle(s16 prevStepAngle, uint32_t m34DEEa) {
+    if (t60::steps() <= 1) {
+        return prevStepAngle;
+    }
+    uint32_t now = t60_step_counter();
+    if (t60::first_step()) {
+        lkT60_angleSetTaken(m34DEEa, 0); /* a set before this step: m34DE is its angle already */
+        s_lkFrameStartAngle = prevStepAngle;
+        s_lkFrameStartStamp = now;
+        s_lkFrameStartValid = true;
+        return prevStepAngle;
+    }
+    /* (d_a_player_t60.h lkT60_angleSet): an outside pos / angle set since the last call in this
+     * frame re-bases the frame start to the set angle (m34DE then) */
+    if (lkT60_angleSetTaken(m34DEEa, 0)) {
+        s_lkFrameStartAngle = prevStepAngle;
+        if (!s_lkFrameStartValid || now - s_lkFrameStartStamp >= t60::steps()) {
+            s_lkFrameStartStamp = now;
+            s_lkFrameStartValid = true;
+        }
+        return prevStepAngle;
+    }
+    if (s_lkFrameStartValid && now - s_lkFrameStartStamp < t60::steps()) {
+        return s_lkFrameStartAngle;
+    }
+    return prevStepAngle;
 }
 
 /* 023E14A0 */
@@ -3658,7 +3828,10 @@ void daPy_lk_c::setBlendMoveAnime(f32 param_1) {
         }
     }
     if (slip) {
-        seStartMapInfo(0x205A /* JA_SE_LK_SLIP_SUS */);
+        /* true60 (the one-emitter-per-event rule): the slip sound is a sustained start on every update (once per 30 Hz frame);
+         * Link updates on every step, so it starts on the frame's step only (one step: every update, the original) */
+        if (t60::steps() == 1 || t60::tick30())
+            seStartMapInfo(0x205A /* JA_SE_LK_SLIP_SUS */);
         u8 c = m34C3;
         if ((c != 9 && bVar3) || (c != 10 && !bVar3)) {
             if (bVar3) {
@@ -3704,8 +3877,10 @@ void daPy_lk_c::setBlendMoveAnime(f32 param_1) {
                     }
                     return;
                 }
-                if (shape_angle.y != m34DE && !lk_checkAttentionLock()) {
-                    s16 r3 = (s16)(shape_angle.y - m34DE);
+                /* true60: the turn so far in this 30 Hz frame (m34DE at N = 1; read again after the
+                 * call like the original) */
+                if (shape_angle.y != lk_frameStartAngle(m34DE, gabi::ea(&m34DE)) && !lk_checkAttentionLock()) {
+                    s16 r3 = (s16)(shape_angle.y - lk_frameStartAngle(m34DE, gabi::ea(&m34DE)));
                     r27 = r3 > 0 ? player02::ANM_ATNWLS : player02::ANM_ATNWRS;
                     s32 ar = r3 < 0 ? -r3 : r3;
                     f25_2 = gabi::fmadds((f32)ar, 0.001f, 0.5f);
@@ -3736,7 +3911,7 @@ void daPy_lk_c::setBlendMoveAnime(f32 param_1) {
                 setMoveAnime(f25_2, 1.1f, f29, r28, r27, 1, param_1);
             }
             if (r28 == 0x1C && (!dComIfGp_event_runCheck() || mDemo.getDemoType() != 3) &&
-                mFrameCtrlUnder[0].checkPass(15.0f)) {
+                lkT60_pass(&mFrameCtrlUnder[0], 15.0f)) {
                 if (dComIfGs_getLife() <= 2) { /* dComIfGs_getLife() */
                     LK_voiceStart(21);
                 } else {
@@ -3762,9 +3937,9 @@ void daPy_lk_c::setBlendMoveAnime(f32 param_1) {
         setResetFlg0(resetFlg0() | 0x10); /* onResetFlg0(daPyRFlg0_UNK10) */
     }
     if (!(mModeFlg & 1)) {
-        if (frameCtrl->checkPass(4.0f)) {
+        if (lkT60_pass(frameCtrl, 4.0f)) {
             setResetFlg0(resetFlg0() | 0x400); /* daPyRFlg0_RIGHT_FOOT_ON_GROUND */
-        } else if (frameCtrl->checkPass(20.0f)) {
+        } else if (lkT60_pass(frameCtrl, 20.0f)) {
             setResetFlg0(resetFlg0() | 0x800); /* daPyRFlg0_LEFT_FOOT_ON_GROUND */
         } else {
             resetFootEffect();

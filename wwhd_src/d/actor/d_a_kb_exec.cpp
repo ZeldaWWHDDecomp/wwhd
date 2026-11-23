@@ -8,6 +8,7 @@
  * (02190CE0, 10.9 KB); they are written as inline helpers with the GameCube names.
  */
 #include "d/actor/d_a_kb.h"
+#include "d/actor/d_a_kb_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule addendum, carryables) */
 
 /* calls to this unit's out-of-line functions (by address) */
 
@@ -694,6 +695,10 @@ static inline f32 clamp10(f32 v) {
 
 /* 02190CE0 */
 static BOOL daKb_Execute(kb_class *i_this) {
+    t60w::Guard<kb_class> t60g(i_this, kb_t60::ops()); /* true60: the whole frame on the tick30 step (end at every return) */
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
+    t60g.model = true;
     fopAc_ac_c *actor = i_this;
 
     // HD: the esa demo cool-down (mTimers[4]) does not run while an event runs (play+0x5292)

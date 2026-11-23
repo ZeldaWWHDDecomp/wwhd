@@ -1,0 +1,18 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_item.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule addendum, cross-actor reads;
+# d_a_item_t60.h): the field item's _daItem_execute 0217F5B0. The tick30 step runs the original execute whole at dt 1
+# from the frame start; the earlier steps change no state (a visual extrapolation by the previous frame's change, none
+# here: no previous frame): net effect = the one step's, byte exact. Negative control (T60C_NEGCTRL: the execute on
+# every step at dt) must fail.
+t60conv 0217F5B0
+# the item states and the spawn switch (0xFF: none) for the execute
+field 0217F5B0 r3+0x785 u8 0,1,2,3,4,5,6,7,8,9,0xA,0xB
+field 0217F5B0 r3+0x75C i32 0xFF,0xFF,0xFF,0
+# the frame's logic runs its candidate code under the execute (timeCount, the state bodies, set_mtx), so the timers,
+# moves and decisions are in the compared memory
+real 0217E608 0217E850 0217EA1C 0217EBAC 0217ECE0 0217EE08 0217EEAC 0217EF28 0217F134 0217F3F0
+t60cand 0217E608 0217E850 0217EA1C 0217EBAC 0217ECE0 0217EE08 0217EEAC 0217EF28 0217F134 0217F3F0
+# t60once 0217E608 0217E850 0217EA1C 0217EBAC 0217ECE0 0217EE08 0217EEAC 0217EF28 0217F134 0217F3F0: run only inside the execute's tick30 whole run (whole-frame form); never on their own N steps
+# effect calls (sound / particle starts): as many calls over the N steps as in the one step
+t60calls 025E1A40 025E1988 025A847C

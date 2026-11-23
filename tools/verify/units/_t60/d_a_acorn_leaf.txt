@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_acorn_leaf.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule + addendum, d/t60_objw.h): acorn leaf: acorn spawn / wait count, bck play, stuck check.
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 02047C00
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 020476D0 020477B0 02047B8C 02048038
+t60cand 020476D0 020477B0 02047B8C 02048038
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0201ADE0 020476D0 020477B0 02047B8C 02048038 025200D4 025D54C4 025D5B20 025E535C 025E742C 025F18EC 025F1B48 028E8DD0 028E8F64 028F4384

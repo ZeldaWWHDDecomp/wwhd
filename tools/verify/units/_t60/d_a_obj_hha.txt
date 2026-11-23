@@ -1,0 +1,16 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_hha.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule + addendum, d/t60_objw.h): the water gate's _execute 02355AE8 (switch -> event, state / water / part timers, gushes, colliders).
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 02355AE8
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 02354C60 02355A18
+t60cand 02354C60 02355A18
+# part_manager 02355464 stays mocked under the execute: its part callbacks (exe_normal / exe_move through the
+# mPartA ptmfs) reach random fixture memory in the original (page-0 fetches / loads), as in its own dt-1 check on the base
+# water_manager 02355774 stays mocked too (counted once a frame by t60calls): with its original code under the execute
+# the original fetches page 0 on single inputs (its splash removal through the splash callback's vtable; with the
+# emitters steered null still 1 of 2000 inputs, fetch 00000630) - the same "original only" trap as in its own dt-1 check
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 02008B4C 0200E240 020182E0 02353924 02353BFC 023545DC 02354B40 02354B54 02354C60 02355464 0235557C 023555AC 02355650 02355774 02355A18 024F15A4 024F22DC 025200D4 02520540 0254407C 025440C8 025BA0C0 025D7A58 025E1988 025E1A40 025E742C 025F1884 025F1B48 025F24E0 025F2518 0273AD10 027F4D5C 028E8D88 028E8E64 028E8F64 028E93CC

@@ -6,6 +6,7 @@
  * (tools/verify, d_a_kaji).
  */
 #include "d/actor/d_a_kaji.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 // HD: this TU's inline-constructor vtables and common header statics.
 const gc_tu_data gc_tu = {
@@ -93,6 +94,9 @@ static BOOL daKajiDelete(void* i_this) {
 
 /* inlined into daKajiExecute */
 bool daKaji_c::_execute() {
+    t60w::Guard<daKaji_c> t60g(this, t60objw::Logic<daKaji_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return FALSE;
     /* Copy the ship's transform (plus an offset) to the helm. */
     cXyz offset;
     offset.x = 0.0f;
@@ -115,6 +119,7 @@ bool daKaji_c::_execute() {
 
     set_mtx();
 
+    t60g.model = true; /* true60: the frame reached its model step */
     return FALSE;
 }
 

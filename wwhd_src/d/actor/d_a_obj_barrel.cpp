@@ -2,6 +2,7 @@
  * HD: SafeString calls, full-register returns, float copies and guest Local order
  * retain the original behavior. The draw path has no GameCube cutoff or shadow. */
 #include "d/actor/d_a_obj_barrel.h"
+#include "d/actor/d_a_obj_barrel_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule, carryables) */
 using daObjBarrel::Act_c;
 
 const gc_tu_data gc_tu = {
@@ -660,6 +661,9 @@ bool daObjBarrel::Act_c::damage_cc_proc() {
 }
 /* 0231D944 */
 bool daObjBarrel::Act_c::_execute() {
+    if (t60w::begin(this, barrel_t60::kOps)) /* true60: a step before the tick30 step: the picture only */
+        return true;
+    bool t60Model = false; /* true60: the frame reached its model step */
     this->cull_set_move();
     bool execute = this->mForceExec || (s32)this->mMode != MODE_WAIT ||
                    !this->mAcch.ChkGroundHit() || this->mAcch.ChkGroundLanding();
@@ -678,6 +682,7 @@ bool daObjBarrel::Act_c::_execute() {
                 this->mode_vib0_init();
             if (this->mode_proc_call()) {
                 broken = false;
+                t60Model = true;
                 this->set_mtx();
                 this->mStts.mRoomId = this->current.roomNo;
                 Barrel_Cyl_SetC(&this->mCyl.mCyl, &this->current.pos);
@@ -693,6 +698,7 @@ bool daObjBarrel::Act_c::_execute() {
             fopAcM_delete(this);
     }
     this->cull_set_draw();
+    t60w::end(this, barrel_t60::kOps, t60Model); /* true60: the frame's change kept for the next frame's picture */
     return true;
 }
 /* 0231E4F4 */

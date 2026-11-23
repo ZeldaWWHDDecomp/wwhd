@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_tag_ba1.h"
+#include "d/actor/d_a_tag_ba1_t60.h" /* true60: the shared-world-state rule whole-execute form */
 const gc_tu_data gc_tu = { .headerStatics={0x1046E238, 0x101D17FC, 0x1046E254} };
 static daTag_Ba1_HIO_c l_HIO;
 static daTag_Ba1_HIO_c::hio_prm_c a_prm_tbl;
@@ -120,6 +121,7 @@ static BOOL daTag_Ba1_Delete(daTag_Ba1_c* i_this) {
 
 /* 024A5C14 */
 static BOOL daTag_Ba1_Execute(daTag_Ba1_c* i_this) {
+    if (!t60c::end()) return TRUE; /* true60 (the shared-world-state rule): the Ba1 event tag's frame on the tick30 step at the line place */
     return i_this->_execute();
 }
 

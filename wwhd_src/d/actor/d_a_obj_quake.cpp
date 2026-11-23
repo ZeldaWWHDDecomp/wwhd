@@ -1,5 +1,6 @@
 /** Scheduled quake/sound actor. */
 #include "d/actor/d_a_obj_quake.h"
+#include "d/actor/d_a_obj_quake_t60.h" /* true60 (t60conv): step helpers */
 static daObjQuake_HIO_c l_HIO;
 static QuakeHeaderStatics l_headerStatics;
 static const f32 l_cycleLength = 6.0f;
@@ -77,7 +78,7 @@ u8 daObjQuake_c::getPrmSch() {
 }
 
 /* 02386D4C */
-BOOL daObjQuake_c::_execute() {
+BOOL daObjQuake_c::_execute() { if (!t60c::first()) return TRUE; /* true60 (t60conv): frame-level logic on the frame's first step (the first-step AI-timer rule / first-step frame-level) */
     mTimer = (f32)dKy_get_schbit_timer();
     u32 mask = QuakeFlag_BASE | QuakeFlag_CAMERA | QuakeFlag_SOUND | QuakeFlag_MOTOR;
     // HD: evaluate parameter power once, then share it between camera and motor.

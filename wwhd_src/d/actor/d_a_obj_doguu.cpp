@@ -1,6 +1,7 @@
 /* Goddess Statues (Triangle Islands), in the zeldaret/tww layout and names.
  * WWHD behavior verified against cking.rpx. */
 #include "d/actor/d_a_obj_doguu.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 const gc_tu_data gc_tu = {.safeString = 0x100272EC};
 
@@ -560,6 +561,9 @@ void daObjDoguu_c::setFinishMyEvent() {
 
 /* 023368F0 */
 BOOL daObjDoguu_c::_execute() {
+    t60w::Guard<daObjDoguu_c> t60g(this, t60objw::Logic<daObjDoguu_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     if (mLightState) {
         mPos.y = 0;
         mPos.x = 0;
@@ -724,6 +728,7 @@ BOOL daObjDoguu_c::_execute() {
         mDrawHeadBody = mShape != 0;
     }
     set_mtx();
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 

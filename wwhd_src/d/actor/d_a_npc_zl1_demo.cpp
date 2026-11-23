@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_npc_zl1_demo.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 using namespace Zl1Demo;
 
@@ -668,6 +669,9 @@ u8 daNpc_Zl1_c::demo() {
 }
 /* 02307D18 */
 BOOL daNpc_Zl1_c::_execute() {
+    t60w::Guard<daNpc_Zl1_c> t60g(this, t60npc::Logic<daNpc_Zl1_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     if (!mbRanExecute) {
         mInitialPos.copy(current.pos);
         mInitialAngle.x = current.angle.x;
@@ -721,6 +725,7 @@ BOOL daNpc_Zl1_c::_execute() {
     tevStr.mRoomNo = dBgS_GetRoomId(dComIfG_Bgsp(), daNpc_gndPoly(this));
     tevStr.mEnvrIdxOverride = dBgS_GetPolyColor(dComIfG_Bgsp(), daNpc_gndPoly(this));
     darkProc();
+    t60g.model = true; /* true60: the frame reached its model step */
     setMtx(false);
     if (!mInDemo && !mSwoonOnShip && !mJumpingOff) {
         setCollision(50.0f, 140.0f);

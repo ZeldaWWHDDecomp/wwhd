@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_disappear.h"
+#include "d/actor/d_a_disappear_t60.h" /* true60 (t60conv): step helpers */
 
 // HD: this translation unit's common-header statics.
 const gc_tu_data gc_tu = {
@@ -19,7 +20,7 @@ static BOOL daDisappear_Draw(disappear_class* i_this) {
 }
 
 /* 0212451C */
-static BOOL daDisappear_Execute(disappear_class* i_this) {
+static BOOL daDisappear_Execute(disappear_class* i_this) { if (!t60c::first()) return TRUE; /* true60 (t60conv): frame-level logic on the frame's first step (the first-step AI-timer rule / first-step frame-level) */
     if (i_this->mTimer != 0) {
         i_this->mTimer--;
 

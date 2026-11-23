@@ -11,6 +11,7 @@
 #include "gc_api/d/d_com_inf_game.h"
 #include "gc_api/f_op/f_op_actor.h"
 #include "gc_api/tu.h"
+#include "d/actor/d_a_ph_t60.h" /* true60 (t60conv): step helpers */
 
 const gc_tu_data gc_tu = {
     .safeString = 0x1003443C,
@@ -56,6 +57,8 @@ void dead_item(ph_class *i_this);
 void BG_check(ph_class *i_this);
 void UP_draw_SUB(ph_class *i_this);
 void DW_draw_SUB(ph_class *i_this);
+/* true60: set only around the execute's DW_draw_SUB call on a step before the tick30 step */
+static bool s_ph_t60_dw_no_tev = false;
 static BOOL daPH_IsDelete(ph_class *);
 static BOOL daPH_Delete(ph_class *i_this);
 static enemyfire *enemyfire_ct(enemyfire *self);
@@ -127,7 +130,12 @@ static inline void ph_ripple_end(ph_class *i_this) {
 }
 
 static inline int ph_leave_water(ph_class *i_this) {
-    if (i_this->mInWater != 0) {
+    /* true60 (hand): a leave after an earlier step's water entry this frame is the next frame's
+     * (d_a_ph_t60.h ph_t60_leave_held) */
+    /* and, like the entry (sea_water_check), only on the frame's first step: A's calls test the frame-start
+     * position; a later step's call left the water at the position after an earlier step's motion (N-step spec gen seeds
+     * 1007136 / 7003307: mInWater and mWaterFollowSpeed cleared on step 2 where A's frame stays in the water) */
+    if (i_this->mInWater != 0 && !ph_t60_leave_held(i_this) && t60c::first()) {
         ph_ripple_end(i_this);
         i_this->mWaterFollowSpeed = 0.0f;
         i_this->mInWater = 0;
@@ -260,40 +268,50 @@ static inline bool ph_fujyou_grow(ph_class *i_this) {
         i_this->mPropellerScale.y = t;
         i_this->mPropellerScale.z = t;
     }
-    if (!morf->isStop())
+    if (!en_t60_isStop(morf))
         return false;
     i_this->mRiseSpeed = 0.0f;
     i_this->mPropellerTargetSpeed = 0x1000;
     i_this->mPropellerAccel = 0;
     ph_zero_wobble(i_this);
-    i_this->mMode++;
+    if (t60c::first()) { i_this->mMode++; } /* true60 (t60conv): counted on the frame's first step */
     i_this->gravity = -3.0f;
     return true;
 }
 
 /* ph_fujyou_move rising step (propeller turning) */
 static inline void ph_fujyou_rise(ph_class *i_this, f32 target, f32 scale, f32 step) {
-    i_this->mPropellerAngle += (s16)gabi::ftoi(i_this->mRiseSpeed * 1000.0f);
+    /* true60 (hand): the rise speed eases once per 30 Hz frame (first step); the propeller turns by the
+     * step's share of the frame-start speed's turn (A adds before the ease; heldInt site 6), the roll phase by the share
+     * of the eased speed's; the roll eases once per frame on the tick30 step (the frame-end phase) */
+    const f32 rise0 = ph_t60_held_f(i_this->mRiseSpeed, 6, i_this);
+    i_this->mPropellerAngle += (s16)t60c::share((s16)gabi::ftoi(rise0 * 1000.0f));
     puropera_sound(i_this);
-    cLib_addCalc2(&i_this->mRiseSpeed, target, scale, step);
-    i_this->mRollWobblePhase += (s16)gabi::ftoi(i_this->mRiseSpeed * 200.0f);
-    cLib_addCalcAngleS2(&i_this->current.angle.z, (s16)gabi::ftoi(cM_ssin(i_this->mRollWobblePhase) * 4000.0f),
-                        1, 0x1000);
-    i_this->mFloatPhaseY += 2000;
-    i_this->mFloatPhaseX += 0x4B0;
+    if (t60c::first()) { const f32 t60Prev = t60_set_dt(1.0f); cLib_addCalc2(&i_this->mRiseSpeed, target, scale, step); t60_set_dt(t60Prev); } /* true60: whole (dt 1; dtgatelint class) */
+    ph_t60_add_note(i_this, 62, &i_this->mRollWobblePhase, (s16)t60c::share((s16)gabi::ftoi(i_this->mRiseSpeed * 200.0f))); /* true60 (hand): noted for ph_t60_state_rest */
+    if (t60c::end()) { /* true60: whole (dt 1; dtgatelint class) */
+        const f32 t60Prev = t60_set_dt(1.0f);
+        cLib_addCalcAngleS2(&i_this->current.angle.z, (s16)gabi::ftoi(cM_ssin(i_this->mRollWobblePhase) * 4000.0f),
+                            1, 0x1000);
+        t60_set_dt(t60Prev);
+    }
+    i_this->mFloatPhaseY += t60c::share(2000); /* true60 (t60conv): the step's share */
+    i_this->mFloatPhaseX += t60c::share(0x4B0); /* true60 (t60conv): the step's share */
     i_this->speed.y = i_this->mRiseSpeed;
-    i_this->mFloatPhaseZ += 0x4B0;
+    ph_t60_vy_set(i_this); /* true60: a per-step assignment (whole gravity in daPH_Execute) */
+    i_this->mFloatPhaseZ += t60c::share(0x4B0); /* true60 (t60conv): the step's share */
     i_this->shape_angle.z = i_this->current.angle.z;
     i_this->mFloatTarget.y = cM_ssin(i_this->mFloatPhaseY) * 10.0f;
     i_this->mFloatTarget.x = cM_scos(i_this->mFloatPhaseX) * 20.0f;
     i_this->mFloatTarget.z = cM_scos(i_this->mFloatPhaseZ) * 20.0f;
+    ph_t60_target_note(i_this, i_this->mFloatTarget.x, i_this->mFloatTarget.y, i_this->mFloatTarget.z, i_this->mFloatPhaseX, i_this->mFloatPhaseY, i_this->mFloatPhaseZ); /* true60 (hand): the formula's targets and phases (ph_t60_state_rest) */
 }
 
 static inline void ph_dead_se(ph_class *i_this) {
-    ph_mons_se(i_this, i_this->mType == PH_TYPE_PEAHAT ? 0x485E : 0x48EF);
+    ph_mons_se(i_this, i_this->mType == PH_TYPE_PEAHAT ? 0x485E : 0x48EF); /* true60 (hand): a state-entry / transition sound: the one-state-step hold in daPH_Execute runs it once (on the step the state changes), no end() gate */
 }
 
-static inline void ph_to_water(ph_class *i_this, int water) {
+static inline void ph_to_water(ph_class *i_this, int water) { if (!t60c::first()) return; /* true60 (t60conv): frame-level logic on the frame's first step (the first-step AI-timer rule / first-step frame-level) */
     i_this->mAction = PH_ACTION_WATER;
     i_this->mMode = water == 2 ? 0x3C : 0x46;
 }
@@ -417,7 +435,7 @@ void anm_init(ph_class *i_this, int bckFileIdx, float morf, unsigned char loopMo
 }
 
 /* 023C9E58 */
-void puropera_sound(ph_class *i_this) {
+void puropera_sound(ph_class *i_this) { if (!t60c::first()) return; /* true60 (t60conv): frame-level logic on the frame's first step (the first-step AI-timer rule / first-step frame-level) */
 
     if (i_this->mType == PH_TYPE_PEAHAT) {
         /* one sound per blade passing three angles */
@@ -466,9 +484,17 @@ void puropera_sound(ph_class *i_this) {
 /* 023CA054 */
 void puropera_kaiten(ph_class *i_this) {
 
-    i_this->mPropellerAngle = i_this->mPropellerAngle + i_this->mPropellerSpeed;
-    cLib_addCalcAngleS2(&i_this->mPropellerSpeed, i_this->mPropellerTargetSpeed, 1, i_this->mPropellerAccel);
-    cLib_addCalcAngleS2(&i_this->mPropellerAccel, 0x100, 1, 0x10);
+    /* true60 (the 30 Hz timer rule share; hand): the propeller turns by the step's share of the frame's speed (the
+     * frame's turn exact on the tick30 step); the speed / accel easing is per frame, on the tick30 step after the frame's
+     * adds (A's order: add, then ease), whole (dt 1: the smoothers scale their step by the step's dt; c6ca17n2 Peahat
+     * 47C5B4E8 ramped 0x80 a frame vs A's 0x100 from f181, its lift and AT one frame off from f184) */
+    i_this->mPropellerAngle = i_this->mPropellerAngle + t60c::share(i_this->mPropellerSpeed);
+    if (t60c::end()) {
+        const f32 prev = t60_set_dt(1.0f);
+        cLib_addCalcAngleS2(&i_this->mPropellerSpeed, i_this->mPropellerTargetSpeed, 1, i_this->mPropellerAccel);
+        cLib_addCalcAngleS2(&i_this->mPropellerAccel, 0x100, 1, 0x10);
+        t60_set_dt(prev);
+    }
     puropera_sound(i_this);
 }
 
@@ -476,19 +502,23 @@ void puropera_kaiten(ph_class *i_this) {
 void fuwafuwa_set(ph_class *i_this) {
 
     if (i_this->mType == PH_TYPE_PEAHAT) {
-        i_this->mFloatPhaseY += 700;
-        i_this->mFloatPhaseX += 200;
-        i_this->mFloatPhaseZ += 200;
+        i_this->mFloatPhaseY += t60c::share(700); /* true60 (t60conv): the step's share */
+        i_this->mFloatPhaseX += t60c::share(200); /* true60 (t60conv): the step's share */
+        i_this->mFloatPhaseZ += t60c::share(200); /* true60 (t60conv): the step's share */
         i_this->mFloatTarget.y = cM_ssin(i_this->mFloatPhaseY) * 30.0f;
         i_this->mFloatTarget.x = cM_scos(i_this->mFloatPhaseX) * 200.0f;
         i_this->mFloatTarget.z = cM_scos(i_this->mFloatPhaseZ) * 200.0f;
+        ph_t60_target_note(i_this, i_this->mFloatTarget.x, i_this->mFloatTarget.y, i_this->mFloatTarget.z, i_this->mFloatPhaseX, i_this->mFloatPhaseY, i_this->mFloatPhaseZ); /* true60 (hand): the formula's targets and phases (ph_t60_state_rest) */
     } else {
-        i_this->mFloatPhaseY += (s16)gabi::ftoi(REG_F(12, 0) + 350.0f);
-        i_this->mFloatPhaseX += (s16)gabi::ftoi(REG_F(12, 1) + 100.0f);
-        i_this->mFloatPhaseZ += (s16)gabi::ftoi(REG_F(12, 1) + 100.0f);
+        /* true60 (hand: a real 60 Hz bug, the bob ran per step): the Seahat's
+         * per-frame phase adds take the step's integer share, as the Peahat's */
+        i_this->mFloatPhaseY += (s16)t60c::share((s16)gabi::ftoi(REG_F(12, 0) + 350.0f));
+        i_this->mFloatPhaseX += (s16)t60c::share((s16)gabi::ftoi(REG_F(12, 1) + 100.0f));
+        i_this->mFloatPhaseZ += (s16)t60c::share((s16)gabi::ftoi(REG_F(12, 1) + 100.0f));
         i_this->mFloatTarget.y = cM_ssin(i_this->mFloatPhaseY) * (REG_F(12, 2) + 30.0f);
         i_this->mFloatTarget.x = cM_scos(i_this->mFloatPhaseX) * (REG_F(12, 3) + 1000.0f);
         i_this->mFloatTarget.z = cM_scos(i_this->mFloatPhaseZ) * (REG_F(12, 3) + 1000.0f);
+        ph_t60_target_note(i_this, i_this->mFloatTarget.x, i_this->mFloatTarget.y, i_this->mFloatTarget.z, i_this->mFloatPhaseX, i_this->mFloatPhaseY, i_this->mFloatPhaseZ); /* true60 (hand): the formula's targets and phases (ph_t60_state_rest) */
     }
 }
 
@@ -536,7 +566,7 @@ void fly_angle_set(ph_class *i_this, unsigned char mode) {
         cLib_addCalcAngleS2(&i_this->current.angle.x,
                             cM_atan2s(dy, std_sqrtf(gabi::fmadds(dx, dx, dz * dz))), 1, 0x200);
         cLib_addCalcAngleS2(&i_this->shape_angle.x, i_this->current.angle.x, 1, 0x200);
-        i_this->mRollWobblePhase += 3000;
+        ph_t60_add_note(i_this, 62, &i_this->mRollWobblePhase, (s16)t60c::share(3000)); /* true60 (t60conv): the step's share (noted: ph_t60_state_rest) */
         targetZ = (s16)gabi::ftoi(cM_ssin(i_this->mRollWobblePhase) * 7000.0f);
         wobble = false;
         break;
@@ -547,9 +577,9 @@ void fly_angle_set(ph_class *i_this, unsigned char mode) {
     }
     if (wobble) {
         if (i_this->mType == PH_TYPE_PEAHAT) {
-            i_this->mPitchWobblePhase += 800;
+            ph_t60_add_note(i_this, 63, &i_this->mPitchWobblePhase, (s16)t60c::share(800)); /* true60 (t60conv): the step's share (noted: ph_t60_state_rest) */
         } else {
-            i_this->mPitchWobblePhase += 900;
+            ph_t60_add_note(i_this, 63, &i_this->mPitchWobblePhase, (s16)t60c::share(900)); /* true60 (t60conv): the step's share (noted: ph_t60_state_rest) */
         }
         cLib_addCalcAngleS2(&i_this->shape_angle.x,
                             (s16)gabi::ftoi(cM_ssin(i_this->mPitchWobblePhase) * 4000.0f), 1, 0x200);
@@ -558,6 +588,86 @@ void fly_angle_set(ph_class *i_this, unsigned char mode) {
         cLib_addCalcAngleS2(&i_this->shape_angle.y, targetY, 1, stepY);
     }
     cLib_addCalcAngleS2(&i_this->shape_angle.z, targetZ, 1, 0x200);
+}
+
+/* true60 (hand, ph (a)): a state ending on an earlier step of the frame. The
+ * state hold skips the switch on the frame's later steps, but A's single call ran the whole frame in the old state: the
+ * later steps keep that state's per-frame adds (fly_angle_set's wobble phase, fuwafuwa_set's /
+ * ph_fujyou_rise's float phases) and recompute the float targets from them where a target still holds the state's own
+ * value (a target the frame's later code set, e.g. the water check's or a transition's 0, stays as in A). The once-per-
+ * frame eases (first / end) are not repeated. phStart: the frame-start state (action | mode << 8). Only on held
+ * steps (never at dt 1). */
+template <class PH, class TG>
+static inline void ph_t60_float_axis(ph_class *i_this, int axis, PH *phase, TG *target, s16 add, f32 amp) {
+    const s16 sh = (s16)t60c::share(add);
+    s32 bits;
+    s16 noted;
+    if (!ph_t60_target_noted(i_this, axis, &bits, &noted)) {
+        *phase = (s16)(*phase + sh);
+        return;
+    }
+    if (*phase == noted) /* the live phase still holds the formula's (not zeroed since) */
+        *phase = (s16)(*phase + sh);
+    s32 now;
+    const f32 t = *target;
+    __builtin_memcpy(&now, &t, 4);
+    noted = (s16)(noted + sh);
+    const bool kept = now == bits; /* else a later write of the frame (e.g. the water check's 0) stays */
+    if (kept)
+        *target = axis == 1 ? cM_ssin(noted) * amp : cM_scos(noted) * amp;
+    ph_t60_target_note_axis(i_this, axis, kept, kept ? (f32)*target : 0.0f, noted);
+}
+static inline void ph_t60_float_rest(ph_class *i_this, s16 addY, s16 addXZ, f32 ay, f32 axz) {
+    ph_t60_float_axis(i_this, 1, &i_this->mFloatPhaseY, &i_this->mFloatTarget.y, addY, ay);
+    ph_t60_float_axis(i_this, 0, &i_this->mFloatPhaseX, &i_this->mFloatTarget.x, addXZ, axz);
+    ph_t60_float_axis(i_this, 2, &i_this->mFloatPhaseZ, &i_this->mFloatTarget.z, addXZ, axz);
+}
+static void ph_t60_state_rest(ph_class *i_this, s32 phStart) {
+    const s32 action = phStart & 0xFF;
+    const s32 mode = phStart >> 8;
+    if (action == PH_ACTION_FLY) {
+        if (i_this->mType == PH_TYPE_PEAHAT) {
+            if (mode > 2) /* modes 3 / 4: fly_angle_set(2), no fuwafuwa_set: no phase add */
+                return;
+            ph_t60_add_kept(i_this, 63, &i_this->mPitchWobblePhase, (s16)t60c::share(800)); /* fly_angle_set(0 / 1): wobble */
+            ph_t60_float_rest(i_this, 700, 200, 30.0f, 200.0f);
+        } else {
+            if (REG_S(8, 3) != 0)
+                return;
+            if (mode > 1) /* fuwafuwa_set runs in modes 0 / 1 only */
+                return;
+            ph_t60_float_rest(i_this, (s16)gabi::ftoi(REG_F(12, 0) + 350.0f), (s16)gabi::ftoi(REG_F(12, 1) + 100.0f),
+                              REG_F(12, 2) + 30.0f, REG_F(12, 3) + 1000.0f);
+        }
+    } else if (action == PH_ACTION_BOUNCE && (mode == 0xA || mode == 0xB)) {
+        /* ph_hane_move (ended by its own test or by a hit in body_atari_check): the spin, fly_angle_set(4)'s roll phase */
+        ph_t60_add_kept(i_this, 64, &i_this->shape_angle.y, (s16)t60c::share(0x500));
+        ph_t60_add_kept(i_this, 62, &i_this->mRollWobblePhase, (s16)t60c::share(3000));
+    } else if (action == 3 && mode == 0x24) {
+        /* case 0x24: the propeller turn's share */
+        i_this->mPropellerAngle += (s16)t60c::share((s16)gabi::ftoi(i_this->mRiseSpeed * 1000.0f));
+    } else if (action == 3 && (mode == 0x20 || mode == 0x23)) {
+        /* ph_fujyou_rise: the propeller turn by the frame-start speed's share (heldInt site 6), the roll phase by the
+         * eased rise speed's share */
+        i_this->mPropellerAngle += (s16)t60c::share((s16)gabi::ftoi(ph_t60_held_f(i_this->mRiseSpeed, 6, i_this) * 1000.0f));
+        ph_t60_add_kept(i_this, 62, &i_this->mRollWobblePhase, (s16)t60c::share((s16)gabi::ftoi(i_this->mRiseSpeed * 200.0f)));
+        ph_t60_float_rest(i_this, 2000, 0x4B0, 10.0f, 20.0f);
+    } else if (action == 4 && (mode == 0x28 || mode == 0x29)) {
+        /* ph_damage_dead_move 0x28 / 0x29 (ended by its isStop answer or by the water entry): the spin by the frame's
+         * spin speed, the speed's once-per-frame ease on the tick30 step */
+        ph_t60_add_kept(i_this, 64, &i_this->shape_angle.y, (s16)t60c::share((s16)i_this->mDamageSpinSpeed));
+        if (t60c::end()) { /* true60: whole (dt 1; dtgatelint class) */
+            const f32 t60Prev = t60_set_dt(1.0f);
+            cLib_addCalcAngleS2(&i_this->mDamageSpinSpeed, 0, 1, 0x200);
+            t60_set_dt(t60Prev);
+        }
+    } else if (action == 4 && (mode == 0x2C || mode == 0x2E)) {
+        /* ph_damage_dead_move 0x2C / 0x2E (ended e.g. by the water entry in daPH_Execute): the spin; 0x2C also
+         * fly_angle_set(4)'s roll phase */
+        ph_t60_add_kept(i_this, 64, &i_this->shape_angle.y, (s16)t60c::share(0x500));
+        if (mode == 0x2C)
+            ph_t60_add_kept(i_this, 62, &i_this->mRollWobblePhase, (s16)t60c::share(3000));
+    }
 }
 
 /* 023CA5AC */
@@ -572,7 +682,7 @@ BOOL body_atari_check(ph_class *i_this) {
     atInfo.pParticlePos = 0;
 
     i_this->mStts.Move();
-    if (i_this->mHitCooldown != 0 || !i_this->mBodySph.ChkTgHit()) {
+    if (i_this->mHitCooldown != 0 || !t60c::hit(i_this->mBodySph.ChkTgHit(), 1, &i_this->mBodySph)) {
         return FALSE;
     }
     i_this->mDamageType = 0;
@@ -693,7 +803,7 @@ BOOL body_atari_check(ph_class *i_this) {
             u32 se = i_this->mType == PH_TYPE_PEAHAT ? 0x485E : 0x48EF;
             s8 roomNo = fopAcM_GetRoomNo(i_this);
             u32 pid = fopAcM_GetID(i_this);
-            phNative_mDoAud_monsSeStart(se, &i_this->eyePos, pid, 0, dComIfGp_getReverb(roomNo));
+            phNative_mDoAud_monsSeStart(se, &i_this->eyePos, pid, 0, dComIfGp_getReverb(roomNo)); /* true60 (hand): the hit body runs once per frame (the first step's held hit, then the cooldown): its effects with it */
         }
         i_this->mDamageType = 1;
         i_this->mMode = 0x2B;
@@ -720,11 +830,11 @@ BOOL body_atari_check(ph_class *i_this) {
                 s8 health = i_this->health;
                 i_this->health = 10;
                 ph_cc_at_check(i_this, &atInfo);
-                i_this->mStealHitCount = i_this->mStealHitCount + 1;
+                i_this->mStealHitCount = i_this->mStealHitCount + 1; /* true60 (hand): the hit body runs once per frame */
                 s8 n = (s8)i_this->mStealItemsLeft;
                 i_this->health = health;
                 if (n > 0)
-                    i_this->mStealItemsLeft = n - 1;
+                    { i_this->mStealItemsLeft = n - 1; } /* true60 (hand): the hit body runs once per frame */
             }
             dPa_control_set(dComIfGp_getParticle(), 0, 0x27B, &i_this->attention_info.position,
                             nullptr, nullptr, 0xFF, nullptr, -1, nullptr, nullptr, nullptr);
@@ -749,7 +859,7 @@ BOOL body_atari_check(ph_class *i_this) {
     {
         u8 r = i_this->mDamageType;
         if (r != 3 && r != 6 && r != 7 && i_this->health > 0) {
-            ph_hit_particle(0xD, &hitPos, pl, nullptr);
+            ph_hit_particle(0xD, &hitPos, pl, nullptr); /* true60 (hand): the hit body runs once per frame (the first step's held hit, then the cooldown): its effects with it */
             return TRUE;
         }
     }
@@ -769,14 +879,18 @@ BOOL body_atari_check(ph_class *i_this) {
         scale2.y = s;
         scale2.z = s;
     }
-    ph_hit_particle(0x10, &hitPos, pl, &scale1);
-    ph_hit_particle(0xF, &hitPos, pl, &scale2);
+    ph_hit_particle(0x10, &hitPos, pl, &scale1); /* true60 (hand): the hit body runs once per frame (the first step's held hit, then the cooldown): its effects with it */
+    ph_hit_particle(0xF, &hitPos, pl, &scale2); /* true60 (hand): the hit body runs once per frame (the first step's held hit, then the cooldown): its effects with it */
     return TRUE;
 }
 
 /* 023CAFB0 */
 BOOL hajiki_check(ph_class *i_this) {
 
+    /* true60 (hand): the bounce check reacts to the tick30 collision Move's hits (TG on the propeller
+     * cylinder, the AT shield / hit flags): a per-frame decision, once per 30 Hz frame on the first step (A reads them at
+     * the frame's start); its sounds, sparks and the bounce set with it */
+    if (!t60c::first()) return FALSE;
     fopAc_ac_c *player = dComIfGp_getPlayer(0);
     bool hit = false;
     if (i_this->mTgCyl.ChkTgHit()) {
@@ -811,8 +925,7 @@ BOOL hajiki_check(ph_class *i_this) {
         pos.x = i_this->mTgCyl.mGObjAt.mHitPos.x;
         pos.y = i_this->mTgCyl.mGObjAt.mHitPos.y;
         pos.z = i_this->mTgCyl.mGObjAt.mHitPos.z;
-        dPa_control_set(dComIfGp_getParticle(), 0, 0xC, &pos, nullptr, nullptr, 0xFF, nullptr, -1,
-                        nullptr, nullptr, nullptr);
+        dPa_control_set(dComIfGp_getParticle(), 0, 0xC, &pos, nullptr, nullptr, 0xFF, nullptr, -1, nullptr, nullptr, nullptr);
         fopAcM_seStart(i_this, 0x6817, 0);
         return ph_hajiki_set(i_this, player);
     }
@@ -828,6 +941,9 @@ BOOL ph_wall_hit_check(ph_class *i_this) {
     if (!i_this->mAcch.ChkWallHit()) {
         return FALSE;
     }
+    /* true60 (hand): the wall bounce turn is a per-event add (the BOUNCE entry holds the dispatch for
+     * the frame's later steps and FLY is left): whole, on the step that finds the wall (pair f327: B turned
+     * 0x2000, A 0x4000) */
     i_this->current.angle.y += 0x4000;
     i_this->mAction = PH_ACTION_BOUNCE;
     i_this->mAtCyl.OffAtSPrmBit(1);
@@ -867,6 +983,15 @@ BOOL ph_hani_check(ph_class *i_this, float range, float height, unsigned char us
 /* 0 out of the water, 1 in BG water, 2 in the sea */
 /* 023CB4C0 */
 int sea_water_check(ph_class *i_this, unsigned char mode) {
+    /* true60 (hand): the frame's water marks (21: the bob clear, 22: the water entry) start clear on
+     * the frame's first call (daPH_Execute calls this up to twice per step; the standalone N-step spec runs call it directly) */
+    const int phSwcOrd = ph_t60_swc_enter(i_this);
+    if (t60c::first() && phSwcOrd == 0) {
+        t60c::unmark(21, i_this);
+        t60c::unmark(22, i_this);
+        ph_t60_water_entry_clear(i_this);
+        ph_t60_speedf_zero_clear(i_this);
+    }
 
     phVectorWords(&i_this->mWaterSurfacePos)->x = (u32)phVectorWords(&i_this->current.pos)->x;
     i_this->mWaterSurfacePos.y = i_this->mHomePos.y;
@@ -889,7 +1014,7 @@ int sea_water_check(ph_class *i_this, unsigned char mode) {
         i_this->mWaterSurfacePos.y = waterY;
         f32 margin = i_this->mMode == 3 ? 300.0f : 100.0f;
         if (!(i_this->current.pos.y + i_this->mFloatOffset.y < waterY + margin)) {
-            return ph_leave_water(i_this);
+            return ph_t60_swc_ret(i_this, phSwcOrd, ph_leave_water(i_this));
         }
         if (mode == 0 || mode == 2) {
             s16 t = i_this->mBobPhase;
@@ -900,8 +1025,7 @@ int sea_water_check(ph_class *i_this, unsigned char mode) {
                 i_this->speed.x = 0.0f;
                 i_this->speed.z = 0.0f;
             }
-            i_this->mBobPhase = t + 1000;
-            f32 s = cM_ssin(i_this->mBobPhase);
+            f32 s = cM_ssin(ph_t60_bob(i_this, t)); /* true60: stored on the tick30 step, a view before (d_a_ph_t60.h) */
             cLib_addCalc2(&i_this->current.pos.y, waterY - (s + s + 2.0f), 1.0f, i_this->mWaterFollowSpeed);
             cLib_addCalc2(&i_this->mWaterFollowSpeed, 100.0f, 1.0f, 30.0f);
         }
@@ -909,7 +1033,7 @@ int sea_water_check(ph_class *i_this, unsigned char mode) {
         inSea = true;
     } else {
         if (!(i_this->mAcch.m_flags & dBgS_Acch::WATER_IN)) {
-            return ph_leave_water(i_this);
+            return ph_t60_swc_ret(i_this, phSwcOrd, ph_leave_water(i_this));
         }
         waterY = i_this->mAcch.m_wtr.GetHeight(); /* water height */
         i_this->mWaterSurfacePos.y = waterY;
@@ -925,9 +1049,9 @@ int sea_water_check(ph_class *i_this, unsigned char mode) {
                     i_this->speed.x = 0.0f;
                     i_this->speed.z = 0.0f;
                 }
-                i_this->mBobPhase = t + 1000;
+                const s16 bob = ph_t60_bob(i_this, t); /* true60: stored on the tick30 step, a view before */
                 f32 speed = i_this->mWaterFollowSpeed;
-                f32 s = cM_ssin(i_this->mBobPhase);
+                f32 s = cM_ssin(bob);
                 if (type == 0) {
                     cLib_addCalc2(&i_this->current.pos.y, waterY - (s + s + 2.0f), 1.0f, speed);
                 } else {
@@ -942,10 +1066,19 @@ int sea_water_check(ph_class *i_this, unsigned char mode) {
     {
         s16 m = i_this->mMode;
         if (m != 3 && m != 0x3D) {
+            ph_t60_speedf_zero_note(i_this, i_this->speedF); /* true60 (hand): the bounce-end test's value (d_a_ph_t60.h) */
             i_this->speedF = 0.0f;
         }
     }
-    if (state == 1 && i_this->mInWater == 0) {
+    /* true60 (hand): the water entry fires once per 30 Hz frame (mark 22): a later write of the frame's
+     * logic that clears mInWater again (case 0x3D) is first seen by the next frame's check, as in A.
+     * and only on the frame's first step: every call of A's frame runs before its motion (daPH_Execute moves
+     * after the action switch: fopAcM_posMove), so A checks the entry at the frame-start position; a later step's call
+     * checks the position after an earlier step's motion, which A never checks (N-step spec gen seed 1000549: the splash
+     * particle dPa_control_c::set 025A847C on step 2 where A's call emits none; the glue-sound check) */
+    const bool phEntryAt = t60c::first();
+    if (state == 1 && i_this->mInWater == 0 && !t60c::marked(22, i_this) && phEntryAt) {
+        t60c::mark(22, i_this);
         /* entering the water: ripples and a splash */
         cXyz scale;
         cXyz splashPos;
@@ -955,9 +1088,7 @@ int sea_water_check(ph_class *i_this, unsigned char mode) {
             scale.x = 1.0f;
             scale.z = 1.0f;
             ph_ripple_end(i_this);
-            dPa_control_set(dComIfGp_getParticle(), 5, 0x33, &i_this->mWaterSurfacePos, nullptr, &scale, 0xFF,
-                            (dPa_levelEcallBack *)&i_this->mParticleCallBack, -1, nullptr, nullptr,
-                            nullptr);
+            dPa_control_set(dComIfGp_getParticle(), 5, 0x33, &i_this->mWaterSurfacePos, nullptr, &scale, 0xFF, (dPa_levelEcallBack *)&i_this->mParticleCallBack, -1, nullptr, nullptr, nullptr); /* true60 (hand): the water entry is an edge (mInWater 0 -> 1, once): its effects go with it on the step that finds it */
         } else {
             scale.x = 4.0f;
             scale.z = 4.0f;
@@ -967,15 +1098,15 @@ int sea_water_check(ph_class *i_this, unsigned char mode) {
                 PSVECScale(&scale, &scale, phParticleScale(pa)->mSplashScale);
             }
             ph_ripple_end(i_this);
-            dPa_control_set(dComIfGp_getParticle(), 5, 0x33, &i_this->mWaterSurfacePos, nullptr, &scale, 0xFF,
-                            (dPa_levelEcallBack *)&i_this->mParticleCallBack, -1, nullptr, nullptr,
-                            nullptr);
+            dPa_control_set(dComIfGp_getParticle(), 5, 0x33, &i_this->mWaterSurfacePos, nullptr, &scale, 0xFF, (dPa_levelEcallBack *)&i_this->mParticleCallBack, -1, nullptr, nullptr, nullptr); /* true60 (hand): the water entry is an edge (mInWater 0 -> 1, once): its effects go with it on the step that finds it */
         }
         splashPos.z = i_this->mWaterSurfacePos.z;
         splashPos.y = i_this->mWaterSurfacePos.y;
         splashPos.x = i_this->mWaterSurfacePos.x;
         splashScale = 0.5f + i_this->mExtraScale;
         i_this->mBobPhase = 0;
+        ph_t60_bob_reset(i_this); /* true60: A's frame ends at the clear */
+        ph_t60_water_entry_note(i_this); /* true60 (hand): a later step's leave this frame waits */
         i_this->mInWater = 1;
         i_this->mParticleCallBack.mRate = 0.0f; /* ripple callback rate */
         dPa_control_c *pa = dComIfGp_getParticle();
@@ -984,12 +1115,12 @@ int sea_water_check(ph_class *i_this, unsigned char mode) {
         }
         fopKyM_createWpillar(&splashPos, splashScale, 0.5f, 0);
         if (i_this->mAction == PH_ACTION_SEPARATED) {
-            fopAcM_seStart(i_this, 0x69FB, 0);
+            fopAcM_seStart(i_this, 0x69FB, 0); /* true60 (hand): the water entry is an edge (mInWater 0 -> 1, once): its effects go with it on the step that finds it */
         } else if (i_this->mPropellerScale.x != 0.0f && i_this->mPropellerFlyDist == 0.0f) {
-            fopAcM_seStart(i_this, 0x69F9, 0);
+            fopAcM_seStart(i_this, 0x69F9, 0); /* true60 (hand): the water entry is an edge (mInWater 0 -> 1, once): its effects go with it on the step that finds it */
         }
     }
-    return inSea ? 2 : 1;
+    return ph_t60_swc_ret(i_this, phSwcOrd, inSea ? 2 : 1);
 }
 
 /* ph_fly_move (Peahat, mAction == 0) */
@@ -1002,7 +1133,8 @@ static inline int ph_fly_move(ph_class *i_this) {
         i_this->mBodySph.mTgType = 0x081DC060;
         i_this->mPropellerTargetSpeed = 0x1000;
         i_this->mPropellerAccel = 0;
-        i_this->mMode++;
+        if (t60c::first()) { i_this->mMode++; } /* true60 (t60conv): counted on the frame's first step */
+        t60c::mark(23, i_this); /* true60 (hand): an init falling through: post-init hold (d_a_ph_t60.h) */
         /* fallthrough */
     case 1:
         cLib_addCalcAngleS2(&i_this->current.angle.x, 0, 1, 0x200);
@@ -1011,7 +1143,7 @@ static inline int ph_fly_move(ph_class *i_this) {
         fly_angle_set(i_this, 0);
         fuwafuwa_set(i_this);
         if (i_this->mActionTimer == 0 && ph_hani_check(i_this, i_this->mNoticeRange, i_this->mNoticeHeight, 0)) {
-            i_this->mMode++;
+            if (t60c::first()) { i_this->mMode++; } /* true60 (t60conv): counted on the frame's first step */
             i_this->mHeightAbovePlayer = 150.0f;
         }
         break;
@@ -1023,14 +1155,14 @@ static inline int ph_fly_move(ph_class *i_this) {
             i_this->mPropellerTargetSpeed = 0x2000;
             i_this->mPropellerAccel = 0;
             i_this->mActionTimer = 20;
-            i_this->mMode++;
+            if (t60c::first()) { i_this->mMode++; } /* true60 (t60conv): counted on the frame's first step */
         }
         break;
     case 3:
         i_this->mTargetAngleY = fopAcM_searchPlayerAngleY(i_this);
         i_this->mFloatTarget.x = 0.0f;
         i_this->mFloatTarget.y = 0.0f;
-        i_this->mMode++;
+        if (t60c::first()) { i_this->mMode++; } /* true60 (t60conv): counted on the frame's first step */
         i_this->mFloatTarget.z = 0.0f;
         i_this->mHeightAbovePlayer = 80.0f;
         /* fallthrough */
@@ -1078,7 +1210,7 @@ static inline int ph_fly_sea_move(ph_class *i_this) {
         }
         i_this->mPropellerTargetSpeed = 0x1000;
         i_this->mPropellerAccel = 0;
-        i_this->mMode++;
+        if (t60c::first()) { i_this->mMode++; } /* true60 (t60conv): counted on the frame's first step */
         i_this->mHeightAbovePlayer = 150.0f;
         i_this->mBodySph.mTgType = 0x081DC060;
         ph_at_on(i_this);
@@ -1090,7 +1222,7 @@ static inline int ph_fly_sea_move(ph_class *i_this) {
             if (t == 0) {
                 check = true;
             } else if (t > 0) {
-                t--;
+                if (t60c::first()) { t--; } /* true60 (t60conv): counted on the frame's first step */
                 i_this->mAttackDelay = t;
                 check = t == 0;
             }
@@ -1098,7 +1230,7 @@ static inline int ph_fly_sea_move(ph_class *i_this) {
                 i_this->mPropellerTargetSpeed = 0x2000;
                 i_this->mHeightAbovePlayer = 150.0f;
                 i_this->mPropellerAccel = 0;
-                i_this->mMode++;
+                if (t60c::first()) { i_this->mMode++; } /* true60 (t60conv): counted on the frame's first step */
             }
         }
         cLib_addCalc0(&i_this->speedF, 1.0f, REG_F(12, 6) + 5.0f);
@@ -1113,7 +1245,7 @@ static inline int ph_fly_sea_move(ph_class *i_this) {
         i_this->mTargetAngleY = fopAcM_searchPlayerAngleY(i_this);
         i_this->shape_angle.z = 0;
         i_this->mFloatTarget.x = 0.0f;
-        i_this->mMode++;
+        if (t60c::first()) { i_this->mMode++; } /* true60 (t60conv): counted on the frame's first step */
         i_this->mHeightAbovePlayer = 80.0f;
         i_this->mFloatTarget.y = 0.0f;
         i_this->mFloatTarget.z = 0.0f;
@@ -1166,7 +1298,8 @@ static inline int ph_fly_sea_move(ph_class *i_this) {
         i_this->mPropellerTargetSpeed = 0x1000;
         i_this->mHeightAbovePlayer = 150.0f;
         i_this->mPropellerAccel = 0;
-        i_this->mMode++;
+        if (t60c::first()) { i_this->mMode++; } /* true60 (t60conv): counted on the frame's first step */
+        t60c::mark(23, i_this); /* true60 (hand): an init falling through: post-init hold (d_a_ph_t60.h) */
         /* fallthrough */
     case 5:
         cLib_addCalcAngleS2(&i_this->shape_angle.z, i_this->current.angle.z, 1, 0x200);
@@ -1177,7 +1310,7 @@ static inline int ph_fly_sea_move(ph_class *i_this) {
             attackCheck = (u32)(i_this->mMode - 4) < 3;
             break;
         }
-        i_this->mMode++;
+        if (t60c::first()) { i_this->mMode++; } /* true60 (t60conv): counted on the frame's first step */
         attackCheck = (u32)(i_this->mMode - 4) < 3;
         break;
     case 6: {
@@ -1204,7 +1337,8 @@ static inline int ph_fly_sea_move(ph_class *i_this) {
         i_this->speedF = 98.0f;
         i_this->mTargetAngleY =
             cM_atan2s(i_this->mHomePos.x - ship->current.pos.x, i_this->mHomePos.z - ship->current.pos.z);
-        i_this->mMode++;
+        if (t60c::first()) { i_this->mMode++; } /* true60 (t60conv): counted on the frame's first step */
+        t60c::mark(23, i_this); /* true60 (hand): an init falling through: post-init hold (d_a_ph_t60.h) */
         /* fallthrough */
     case 8:
         cLib_addCalcAngleS2(&i_this->shape_angle.z, i_this->current.angle.z, 1, 0x200);
@@ -1261,13 +1395,18 @@ static inline void ph_hane_move(ph_class *i_this) {
         i_this->m036E = 0;
         i_this->mActionTimer = 15;
         i_this->mRollWobblePhase = 0;
-        i_this->mMode++;
+        if (t60c::first()) { i_this->mMode++; } /* true60 (t60conv): counted on the frame's first step */
+        t60c::mark(23, i_this); /* true60 (hand): an init falling through: post-init hold (d_a_ph_t60.h) */
         /* fallthrough */
     case 0xB:
-        i_this->shape_angle.y += 0x500;
+        ph_t60_add_note(i_this, 64, &i_this->shape_angle.y, (s16)t60c::share(0x500)); /* true60 (t60conv): the step's share (noted: ph_t60_state_rest) */
         cLib_addCalc0(&i_this->speedF, 0.5f, 1.0f);
         fly_angle_set(i_this, 4);
-        if (i_this->mActionTimer == 0 && i_this->speedF < 0.1f) {
+        /* true60 (hand, first-step AI-timer): the test reads speedF as A's frame order has it
+         * (before the frame's sea_water_check zero on an earlier step; d_a_ph_t60.h ph_t60_speedf_test) */
+        if (i_this->mActionTimer == 0 && ph_t60_speedf_test(i_this, i_this->speedF) < 0.1f) {
+            /* true60 (hand): the frame's later steps complete the spin and roll phase adds
+             * (ph_t60_state_rest, as for an end by a hit) */
             i_this->mAction = PH_ACTION_FLY;
             if (i_this->mType == PH_TYPE_PEAHAT) {
                 i_this->mActionTimer = 0x3C;
@@ -1306,16 +1445,14 @@ static inline void ph_bunri_move(ph_class *i_this) {
         if (i_this->mType == PH_TYPE_PEAHAT) {
             i_this->mSeparatedTimer = 900;
             if (i_this != nullptr && gabi::ea(&i_this->eyePos) != 0) {
-                mDoAud_seStart(0x585A, &i_this->eyePos, 0,
-                               dComIfGp_getReverb(fopAcM_GetRoomNo(i_this)));
-                ph_mons_se(i_this, 0x485C);
+                mDoAud_seStart(0x585A, &i_this->eyePos, 0, dComIfGp_getReverb(fopAcM_GetRoomNo(i_this))); /* true60 (hand): a state-entry / transition sound: the one-state-step hold in daPH_Execute runs it once (on the step the state changes), no end() gate */
+                ph_mons_se(i_this, 0x485C); /* true60 (hand): a state-entry / transition sound: the one-state-step hold in daPH_Execute runs it once (on the step the state changes), no end() gate */
             }
         } else {
             i_this->mSeparatedTimer = 150;
             if (i_this != nullptr && gabi::ea(&i_this->eyePos) != 0) {
-                mDoAud_seStart(0x69FA, &i_this->eyePos, 0,
-                               dComIfGp_getReverb(fopAcM_GetRoomNo(i_this)));
-                ph_mons_se(i_this, 0x48F0);
+                mDoAud_seStart(0x69FA, &i_this->eyePos, 0, dComIfGp_getReverb(fopAcM_GetRoomNo(i_this))); /* true60 (hand): a state-entry / transition sound: the one-state-step hold in daPH_Execute runs it once (on the step the state changes), no end() gate */
+                ph_mons_se(i_this, 0x48F0); /* true60 (hand): a state-entry / transition sound: the one-state-step hold in daPH_Execute runs it once (on the step the state changes), no end() gate */
             }
         }
         i_this->speedF = 0.0f;
@@ -1325,7 +1462,7 @@ static inline void ph_bunri_move(ph_class *i_this) {
         i_this->mMode = mode;
         /* fallthrough */
     case 0x15:
-        if (!i_this->mpBodyMorf->isStop())
+        if (!en_t60_isStop(i_this->mpBodyMorf))
             break;
         copy_bits(&i_this->mHopCenterPos, &i_this->current.pos);
         i_this->speed.y = 10.0f;
@@ -1340,18 +1477,18 @@ static inline void ph_bunri_move(ph_class *i_this) {
         {
             u32 snd =
                 phNative_dBgS_GetMtrlSndId(dComIfG_Bgsp(), (cBgS_PolyInfo *)&i_this->mAcch.m_gnd);
-            ph_se(i_this, 0x5859, snd, true);
+            ph_se(i_this, 0x5859, snd, true); /* true60 (hand): a state-entry / transition sound: the one-state-step hold in daPH_Execute runs it once (on the step the state changes), no end() gate */
         }
         mode = i_this->mMode + 1;
         i_this->mMode = mode;
         break;
     case 0x17:
-        if (!i_this->mpBodyMorf->isStop())
+        if (!en_t60_isStop(i_this->mpBodyMorf))
             break;
-        i_this->mMode = mode + 1;
+        if (t60c::first()) { i_this->mMode = mode + 1; } /* true60 (t60conv): counted on the frame's first step */
         /* fallthrough */
     case 0x18:
-        if (i_this->mSeparatedTimer == 0) {
+        if (t60c::first() && (i_this->mSeparatedTimer == 0)) { /* true60 (t60conv): a decision on the first-step timer, on the first step */
             i_this->mAction = PH_ACTION_RISE;
             i_this->mMode = 0x1E;
             forceDecrement = true;
@@ -1404,7 +1541,7 @@ static inline void ph_bunri_move(ph_class *i_this) {
         {
             u32 snd =
                 phNative_dBgS_GetMtrlSndId(dComIfG_Bgsp(), (cBgS_PolyInfo *)&i_this->mAcch.m_gnd);
-            ph_se(i_this, 0x585B, snd, true);
+            ph_se(i_this, 0x585B, snd, true); /* true60 (hand): a state-entry / transition sound: the one-state-step hold in daPH_Execute runs it once (on the step the state changes), no end() gate */
         }
         i_this->speedF = 0.0f;
         i_this->mMode = 0x18;
@@ -1415,7 +1552,7 @@ static inline void ph_bunri_move(ph_class *i_this) {
     }
     if (forceDecrement || mode >= 0x18) {
         if (i_this->mSeparatedTimer > 0)
-            i_this->mSeparatedTimer--;
+            { if (t60c::first()) { i_this->mSeparatedTimer--; } } /* true60 (t60conv): counted on the frame's first step */
     }
     cLib_addCalcAngleS2(&i_this->current.angle.x, 0, 1, 0x500);
     cLib_addCalcAngleS2(&i_this->shape_angle.x, i_this->current.angle.x, 1, 0x500);
@@ -1451,14 +1588,17 @@ static inline void ph_fujyou_move(ph_class *i_this) {
         }
         anm_init(i_this, 0x1D, 5.0f, 0, 1.0f, -1, 0);
         anm_init(i_this, 0x16, 5.0f, 0, 1.0f, -1, 1);
-        i_this->mMode++;
+        if (t60c::first()) { i_this->mMode++; } /* true60 (t60conv): counted on the frame's first step */
+        t60c::mark(23, i_this); /* true60 (hand): an init falling through: post-init hold (d_a_ph_t60.h) */
         /* fallthrough */
     case 0x1F:
         ph_fujyou_grow(i_this);
         break;
     case 0x20:
         ph_fujyou_rise(i_this, 4.0f, 0.03f, 0.05f);
-        if (i_this->current.pos.y > i_this->mRiseTargetY) {
+        /* true60 (hand): the height tests of the rise on the frame's first step (A tests the frame-start position:
+         * its action runs before posMove; a later step tested the position after an earlier step's motion) */
+        if (t60c::first() && i_this->current.pos.y > i_this->mRiseTargetY) {
             ph_at_on(i_this);
             ph_zero_wobble(i_this);
             i_this->mBodySph.mTgType = 0x081DC060;
@@ -1473,23 +1613,25 @@ static inline void ph_fujyou_move(ph_class *i_this) {
         i_this->mBodySph.OffCoSPrmBit(1);
         anm_init(i_this, 0x1D, 5.0f, 0, 1.0f, -1, 0);
         anm_init(i_this, 0x16, 5.0f, 0, 1.0f, -1, 1);
-        i_this->mMode++;
+        if (t60c::first()) { i_this->mMode++; } /* true60 (t60conv): counted on the frame's first step */
+        t60c::mark(23, i_this); /* true60 (hand): an init falling through: post-init hold (d_a_ph_t60.h) */
         /* fallthrough */
     case 0x22:
         ph_fujyou_grow(i_this);
         break;
     case 0x23:
         ph_fujyou_rise(i_this, 6.0f, 0.3f, 0.5f);
-        if (std::fabs(i_this->current.pos.y - (i_this->mWaterSurfacePos.y + 500.0f)) < 10.0f) {
+        if (t60c::first() && std::fabs(i_this->current.pos.y - (i_this->mWaterSurfacePos.y + 500.0f)) < 10.0f) { /* true60 (hand): first step (see 0x20) */
             i_this->mAction = PH_ACTION_FLY;
             i_this->mMode = 4;
         }
         break;
     case 0x24:
-        i_this->mPropellerAngle += (s16)gabi::ftoi(i_this->mRiseSpeed * 1000.0f);
+        i_this->mPropellerAngle += (s16)t60c::share((s16)gabi::ftoi(i_this->mRiseSpeed * 1000.0f)); /* true60 (hand): the step's share */
         puropera_sound(i_this);
         i_this->speed.y = 70.0f;
-        if (i_this->current.pos.y > i_this->mWaterSurfacePos.y + 500.0f) {
+        ph_t60_vy_set(i_this); /* true60: a per-step assignment (whole gravity in daPH_Execute) */
+        if (t60c::first() && i_this->current.pos.y > i_this->mWaterSurfacePos.y + 500.0f) { /* true60 (hand): first step (see 0x20; N-step spec gen seed 7006284: step 2 left the rise, speed.y 70 -> 0) */
             i_this->mMode = 0;
             i_this->mAction = PH_ACTION_FLY;
         }
@@ -1573,7 +1715,8 @@ static inline bool ph_damage_dead_move(ph_class *i_this) {
             anm_init(i_this, 0x1E, 1.0f, 0, 1.0f, -1, 0);
         }
         anm_init(i_this, 0x14, 1.0f, 0, 1.0f, -1, 1);
-        i_this->mMode++;
+        if (t60c::first()) { i_this->mMode++; } /* true60 (t60conv): counted on the frame's first step */
+        t60c::mark(23, i_this); /* true60 (hand): an init falling through: post-init hold (d_a_ph_t60.h) */
         /* fallthrough */
     case 0x29:
         cLib_addCalc0(&i_this->speedF, 0.5f, 1.0f);
@@ -1583,9 +1726,13 @@ static inline bool ph_damage_dead_move(ph_class *i_this) {
             i_this->mPropellerScale.z = s;
             i_this->mPropellerScale.y = s;
         }
-        i_this->shape_angle.y += i_this->mDamageSpinSpeed;
-        cLib_addCalcAngleS2(&i_this->mDamageSpinSpeed, 0, 1, 0x200);
-        if (!i_this->mpBodyMorf->isStop())
+        /* true60 (hand): the step's integer share (exact over the frame; the entry frame's later steps run
+         * this state too: post-init hold); the spin speed eases once per frame after the frame's adds (tick30 step) */
+        /* true60 (hand): a frame that ends this state on an earlier step (the held isStop answer: SEPARATED below, or
+         * the water entry in daPH_Execute) completes the spin and the ease on its later steps (ph_t60_state_rest) */
+        ph_t60_add_note(i_this, 64, &i_this->shape_angle.y, (s16)t60c::share((s16)i_this->mDamageSpinSpeed)); /* noted: ph_t60_state_rest */
+        if (t60c::end()) { const f32 t60Prev = t60_set_dt(1.0f); cLib_addCalcAngleS2(&i_this->mDamageSpinSpeed, 0, 1, 0x200); t60_set_dt(t60Prev); } /* true60: whole (dt 1; dtgatelint) */
+        if (!en_t60_isStop(i_this->mpBodyMorf))
             break;
         if (i_this->health <= 0) {
             die = true;
@@ -1645,9 +1792,9 @@ static inline bool ph_damage_dead_move(ph_class *i_this) {
     }
     case 0x2C:
         cLib_addCalc0(&i_this->speedF, 0.5f, 0.5f);
-        i_this->shape_angle.y += 0x500;
+        ph_t60_add_note(i_this, 64, &i_this->shape_angle.y, (s16)t60c::share(0x500)); /* true60 (t60conv): the step's share (noted: ph_t60_state_rest) */
         fly_angle_set(i_this, 4);
-        if (i_this->mActionTimer == 0 || i_this->mpPropellerMorf->isStop()) {
+        if (i_this->mActionTimer == 0 || en_t60_isStop(i_this->mpPropellerMorf)) {
             die = true;
             break;
         }
@@ -1679,7 +1826,7 @@ static inline bool ph_damage_dead_move(ph_class *i_this) {
         break;
     case 0x2E:
         cLib_addCalc0(&i_this->speedF, 0.5f, 0.5f);
-        i_this->shape_angle.y += 0x500;
+        ph_t60_add_note(i_this, 64, &i_this->shape_angle.y, (s16)t60c::share(0x500)); /* true60 (t60conv): the step's share (noted: ph_t60_state_rest) */
         if (i_this->mActionTimer == 0) {
             die = true;
             break;
@@ -1704,7 +1851,8 @@ static inline bool ph_damage_dead_move(ph_class *i_this) {
         anm_init(i_this, 0x14, 1.0f, 0, 1.0f, -1, 1);
         i_this->mBgCheckOffsetY = 10.0f;
         ph_dead_se(i_this);
-        i_this->mMode++;
+        if (t60c::first()) { i_this->mMode++; } /* true60 (t60conv): counted on the frame's first step */
+        t60c::mark(23, i_this); /* true60 (hand): an init falling through: post-init hold (d_a_ph_t60.h) */
         /* fallthrough */
     case 0x30:
         cLib_addCalc2(&i_this->scale.y, 0.1f, 1.0f, 0.5f);
@@ -1717,7 +1865,7 @@ static inline bool ph_damage_dead_move(ph_class *i_this) {
         i_this->scale.y = 0.1f;
         i_this->scale.x = 1.7f;
         i_this->mActionTimer = 0x14;
-        i_this->mMode++;
+        if (t60c::first()) { i_this->mMode++; } /* true60 (t60conv): counted on the frame's first step */
         break;
     case 0x31:
         if (i_this->mActionTimer != 0)
@@ -1727,7 +1875,7 @@ static inline bool ph_damage_dead_move(ph_class *i_this) {
     default:
         break;
     }
-    if (die) {
+    if (die && t60c::first()) { /* true60 (hand): the death is a decision on first-step timers / isStop: the first step */
         dead_item(i_this);
     }
     i_this->current.angle.x = 0;
@@ -1742,7 +1890,15 @@ static inline bool ph_damage_dead_move(ph_class *i_this) {
 void ph_wind_move(ph_class *i_this) {
 
     fopAc_ac_c *player = dComIfGp_getPlayer(0);
+    /* true60 (hand): on the init frame's later steps (post-init hold, d_a_ph_t60.h) A's one water check
+     * of that frame ran BEFORE the 0x32 init set speedF: its speedF clear is the next frame's, so the init's speedF
+     * stays for the rest of the init frame */
+    const bool phPostInit =
+        ph_t60_post_init_is(i_this, (s32)((u32)(u8)i_this->mAction | ((u32)(u16)i_this->mMode << 8)));
+    const f32 phSpeedF = i_this->speedF;
     int water = sea_water_check(i_this, 1);
+    if (phPostInit)
+        i_this->speedF = phSpeedF;
     switch (i_this->mMode) {
     case 0x32: {
         ph_blade_se(i_this, true);
@@ -1768,29 +1924,36 @@ void ph_wind_move(ph_class *i_this) {
         i_this->mWindTurnSpeed = -0x1000;
         i_this->mSpinSpeed = -10000;
         i_this->mFloatTarget.z = 0.0f;
-        if (cM_rnd() < 0.5f) {
+        if (t60c::first() && cM_rnd() < 0.5f) {
             i_this->mSpinSpeed = 10000;
             i_this->mWindTurnSpeed = 0x1000;
         }
         anm_init(i_this, 0x1E, 1.0f, 0, 1.0f, -1, 0);
         anm_init(i_this, 0x19, 1.0f, 0, 1.0f, -1, 1);
-        i_this->mMode++;
+        if (t60c::first()) { i_this->mMode++; } /* true60 (t60conv): counted on the frame's first step */
+        t60c::mark(23, i_this); /* true60 (hand): an init falling through: post-init hold (d_a_ph_t60.h) */
     }
         /* fallthrough */
     case 0x33:
-        i_this->mRollWobblePhase += i_this->mSpinSpeed;
+        /* true60 (hand): per-frame adds take a step's integer share (the entry frame's later steps run
+         * this state too: post-init hold) */
+        i_this->mRollWobblePhase += (s16)t60c::share((s16)i_this->mSpinSpeed);
         cLib_addCalcAngleS2(&i_this->shape_angle.z,
                             (s16)gabi::ftoi(cM_ssin(i_this->mRollWobblePhase) * 20000.0f), 1, 0x500);
         cLib_addCalcAngleS2(&i_this->shape_angle.x,
                             (s16)gabi::ftoi(cM_ssin(i_this->mRollWobblePhase) * 20000.0f), 1, 0x500);
-        i_this->shape_angle.y += i_this->mWindTurnSpeed;
-        cLib_addCalc0(&i_this->speedF, 0.3f, 1.0f);
-        cLib_addCalc0(&i_this->speed.y, 0.3f, 1.0f);
+        i_this->shape_angle.y += (s16)t60c::share((s16)i_this->mWindTurnSpeed);
+        if (t60c::first()) { /* true60 (hand): the slow-down eases once per 30 Hz frame (first step; the entry frame's later steps run this state: post-init hold) */
+            const f32 t60Prev = t60_set_dt(1.0f); /* true60: whole (dt 1; dtgatelint class) */
+            cLib_addCalc0(&i_this->speedF, 0.3f, 1.0f);
+            cLib_addCalc0(&i_this->speed.y, 0.3f, 1.0f);
+            t60_set_dt(t60Prev);
+        }
         if (i_this->speedF > 0.2f)
             break;
         i_this->speedF = 0.0f;
         i_this->mSpinSpeed = 0;
-        i_this->mMode++;
+        if (t60c::first()) { i_this->mMode++; } /* true60 (t60conv): counted on the frame's first step */
         /* fallthrough */
     case 0x34:
         if (water) {
@@ -1799,8 +1962,10 @@ void ph_wind_move(ph_class *i_this) {
             return;
         }
         i_this->gravity = -0.3f;
-        i_this->shape_angle.y += i_this->mWindTurnSpeed;
-        cLib_addCalcAngleS2(&i_this->mWindTurnSpeed, 0, 1, 0x100);
+        /* true60 (hand): the step's integer share (exact over the frame), the turn speed eased once per frame after the
+         * frame's adds (tick30 step) */
+        i_this->shape_angle.y += (s16)t60c::share((s16)i_this->mWindTurnSpeed);
+        if (t60c::end()) { const f32 t60Prev = t60_set_dt(1.0f); cLib_addCalcAngleS2(&i_this->mWindTurnSpeed, 0, 1, 0x100); t60_set_dt(t60Prev); } /* true60: whole (dt 1; dtgatelint) */
         fly_angle_set(i_this, 0);
         if (!i_this->mAcch.ChkGroundHit())
             break;
@@ -1815,7 +1980,7 @@ void ph_wind_move(ph_class *i_this) {
         i_this->gravity = -3.0f;
         anm_init(i_this, 0x1F, 1.0f, 0, 1.0f, -1, 0);
         anm_init(i_this, 0x1A, 1.0f, 0, 1.0f, -1, 1);
-        i_this->mMode++;
+        if (t60c::first()) { i_this->mMode++; } /* true60 (t60conv): counted on the frame's first step */
         break;
     case 0x35:
         if (water) {
@@ -1825,8 +1990,8 @@ void ph_wind_move(ph_class *i_this) {
         }
         cLib_addCalcAngleS2(&i_this->shape_angle.z, i_this->current.angle.z, 1, 0x500);
         cLib_addCalcAngleS2(&i_this->shape_angle.x, i_this->current.angle.x, 1, 0x500);
-        i_this->shape_angle.y += i_this->mSpinSpeed;
-        if (!i_this->mpBodyMorf->isStop())
+        i_this->shape_angle.y += (s16)t60c::share((s16)i_this->mSpinSpeed); /* true60 (hand): the step's integer share (exact over the frame) */
+        if (!en_t60_isStop(i_this->mpBodyMorf))
             break;
         if (i_this->mPropellerScale.x == 0.0f) {
             i_this->speedF = 0.0f;
@@ -1836,7 +2001,7 @@ void ph_wind_move(ph_class *i_this) {
         }
         i_this->mWaitTimer = (s16)gabi::ftoi(cM_rndF(50.0f) + 50.0f);
         i_this->shape_angle.x = 0;
-        i_this->mMode++;
+        if (t60c::first()) { i_this->mMode++; } /* true60 (t60conv): counted on the frame's first step */
         i_this->shape_angle.z = 0;
         break;
     case 0x36: {
@@ -1848,7 +2013,7 @@ void ph_wind_move(ph_class *i_this) {
         cLib_addCalc0(&i_this->speedF, 0.3f, 1.0f);
         s16 t = i_this->mWaitTimer;
         if (i_this->speedF > 0.1f) {
-            i_this->shape_angle.y += i_this->mSpinSpeed;
+            i_this->shape_angle.y += (s16)t60c::share((s16)i_this->mSpinSpeed); /* true60 (hand): the step's integer share (exact over the frame) */
         }
         if (t != 0)
             break;
@@ -1874,7 +2039,7 @@ void ph_wind_move(ph_class *i_this) {
         return;
     if (i_this->mAcch.ChkGroundHit()) {
         i_this->mSpinSpeed = -1000;
-        if (cM_rnd() < 0.5f)
+        if (t60c::first() && cM_rnd() < 0.5f)
             i_this->mSpinSpeed = 1000;
         i_this->speedF = 20.0f;
         if (i_this->mPropellerAnmIdx != 0x1E) {
@@ -1910,7 +2075,8 @@ void ph_water_move(ph_class *i_this) {
             cM_atan2s(i_this->current.pos.x + i_this->mFloatOffset.x - player->current.pos.x,
                       i_this->current.pos.z + i_this->mFloatOffset.z - player->current.pos.z) +
             0x8000;
-        i_this->mMode++;
+        if (t60c::first()) { i_this->mMode++; } /* true60 (t60conv): counted on the frame's first step */
+        t60c::mark(23, i_this); /* true60 (hand): an init falling through: post-init hold (d_a_ph_t60.h) */
         /* fallthrough */
     case 0x3D: {
         if (i_this->mActionTimer == 0) {
@@ -1922,7 +2088,9 @@ void ph_water_move(ph_class *i_this) {
         u32 vol = ftou(i_this->speedF * 3.4f);
         if (vol > 100)
             vol = 100;
-        if (gabi::ea(&i_this->eyePos) != 0) {
+        /* true60 (the sound-gate rule): a per-frame start: once per 30 Hz frame, on the first step (A starts it before the frame's
+         * state checks below, which may leave the mode on that step; the volume is the first step's speed) */
+        if (t60c::first() && gabi::ea(&i_this->eyePos) != 0) {
             mDoAud_seStart(0x5128, &i_this->eyePos, vol,
                            dComIfGp_getReverb(fopAcM_GetRoomNo(i_this)));
         }
@@ -1943,7 +2111,8 @@ void ph_water_move(ph_class *i_this) {
     case 0x46:
         ph_water_start(i_this);
         ph_water_anm(i_this);
-        i_this->mMode++;
+        if (t60c::first()) { i_this->mMode++; } /* true60 (t60conv): counted on the frame's first step */
+        t60c::mark(23, i_this); /* true60 (hand): an init falling through: post-init hold (d_a_ph_t60.h) */
         /* fallthrough */
     case 0x47:
         if (i_this->mWaitTimer == 0) {
@@ -1994,7 +2163,7 @@ void UP_draw_SUB(ph_class *i_this) {
 }
 
 /* 023CBF44 */
-void DW_draw_SUB(ph_class *i_this) {
+void DW_draw_SUB(ph_class *i_this) { /* true60: s_ph_t60_dw_no_tev (the execute's call on a step before the tick30 step) skips the lighting */
 
     J3DModel *model = i_this->mpBodyMorf->getModel();
     PSMTXTrans(mDoMtx_stack_c::get(), i_this->current.pos.x + i_this->mFloatOffset.x,
@@ -2004,13 +2173,18 @@ void DW_draw_SUB(ph_class *i_this) {
     mDoMtx_ZrotM(mDoMtx_stack_c::get(), i_this->shape_angle.z);
     mDoMtx_stack_scaleM(i_this->scale.x, i_this->scale.y, i_this->scale.z);
     J3DModel_setBaseTRMtx(model, mDoMtx_stack_c::get());
-    settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &i_this->current.pos, &i_this->tevStr);
+    if (!s_ph_t60_dw_no_tev) settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &i_this->current.pos, &i_this->tevStr);
     i_this->mpBodyMorf->calc();
     phNative_enemy_fire(&i_this->mBodyEnemyFire);
 }
 
 /* 023CC070 */
 static BOOL daPH_Execute(ph_class *i_this) {
+    /* true60 (the whole-frame form rule addendum): the whole frame on the tick30 step
+     * (d_a_ph_t60.h; end at every return) */
+    t60w::Guard<ph_class> t60g(i_this, ph_t60w::ops());
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
 
     fopAc_ac_c *a_this = i_this;
     if (i_this->mType == PH_TYPE_PEAHAT) {
@@ -2020,6 +2194,7 @@ static BOOL daPH_Execute(ph_class *i_this) {
     }
 
     if (phNative_enemy_ice(&i_this->mEnemyIce)) {
+        t60g.model = true; /* true60: the matrix step */
         J3DModel_setBaseTRMtx(i_this->mpBodyMorf->getModel(), mDoMtx_stack_c::get());
         i_this->mpBodyMorf->calc();
         if (i_this->mPropellerScale.x != 0.0f && i_this->mPropellerFlyDist == 0.0f) {
@@ -2056,15 +2231,37 @@ static BOOL daPH_Execute(ph_class *i_this) {
     a_this->eyePos.z = i_this->mBodyTopPos.z;
     ey = ey - 30.0f;
     a_this->eyePos.y = ey;
-    a_this->eyePos.y = gabi::fnmsubs(50.0f, i_this->mExtraScale, ey);
+    /* true60 (hand): the eye reads the frame-start mExtraScale on every step (A's eye runs before the
+     * frame's debug override below; the override now acts on the first step: heldInt site 4 keeps the float bits) */
+    f32 phEyeScale = i_this->mExtraScale;
+    {
+        s32 b;
+        __builtin_memcpy(&b, &phEyeScale, 4);
+        b = t60c::heldInt(b, 4, i_this);
+        __builtin_memcpy(&phEyeScale, &b, 4);
+    }
+    a_this->eyePos.y = gabi::fnmsubs(50.0f, phEyeScale, ey);
 
-    for (int i = 0; i < 5; i++) {
-        be<s16> *t = &i_this->mTimers[i];
-        if (*t != 0)
-            *t = *t - 1;
+    ph_t60_frame_begin(i_this); /* true60 (hand): the frame's first step counter (ph_t60_rest) */
+    if (t60c::first()) { /* true60 (hand): the post-init mark and state start clear each frame */
+        t60c::unmark(23, i_this);
+        ph_t60_post_init_clear(i_this);
+        ph_t60_speedf_zero_clear(i_this);
+        ph_t60_vy_clear(i_this);
+        ph_t60_notes_clear(i_this);
+    }
+    if (t60c::first()) { /* true60 (first-step AI-timer; hand): the five timers count once per 30 Hz frame, on the first step */
+        for (int i = 0; i < 5; i++) {
+            be<s16> *t = &i_this->mTimers[i];
+            if (*t != 0)
+                *t = *t - 1;
+        }
     }
     /* debug overrides */
-    f32 r = REG_F(8, 0);
+    /* true60 (hand): A sets them at the top of the frame's logic (after the eye): on the first step, so the frame's
+     * logic (scale, mPropellerExtraScale) reads them on every step as A's frame does; the eye above keeps the frame-start
+     * scale (0 in the game: REG_F is a debug register) */
+    f32 r = t60c::first() ? (f32)REG_F(8, 0) : 0.0f;
     if (r != 0.0f) {
         f32 s = r + 8.0f;
         i_this->mExtraScale = s;
@@ -2072,12 +2269,22 @@ static BOOL daPH_Execute(ph_class *i_this) {
         a_this->scale.y = s + 1.0f;
         a_this->scale.z = s + 1.0f;
     }
-    r = REG_F(8, 1);
+    r = t60c::first() ? (f32)REG_F(8, 1) : 0.0f;
     if (r != 0.0f) {
         i_this->mPropellerExtraScale = r + 5.0f;
     }
 
+    /* true60 (the one-state-step hold, as ks / nz / bk; hand): an action / mode entered on an earlier
+     * step of this frame first runs on the next frame's first step (the original runs it next frame; an init case's
+     * first-step mMode++ and its fall-through stay in one step); the motion below still runs on every step */
+    const s32 phState = (s32)((u32)(u8)i_this->mAction | ((u32)(u16)i_this->mMode << 8));
+    /* true60 (hand): the state a first-step init fell through to runs on the frame's later steps too (post-init hold) */
+    const s32 phStart = t60c::heldInt(phState, 3, i_this);
+    const bool phHeld = phStart != phState && !ph_t60_post_init_is(i_this, phState);
+    if (phHeld) /* true60 (hand): the frame-start state's per-frame adds */
+        ph_t60_state_rest(i_this, phStart);
     int chk;
+    if (!phHeld)
     switch (i_this->mAction) {
     case PH_ACTION_FLY:
         if (i_this->mType == PH_TYPE_PEAHAT) {
@@ -2124,6 +2331,12 @@ static BOOL daPH_Execute(ph_class *i_this) {
         ph_water_move(i_this);
         break;
     }
+    if (t60c::first() && t60c::marked(23, i_this)) { /* true60 (hand): post-init hold (d_a_ph_t60.h) */
+        /* only the init's own next mode (same action, mode + 1): a further transition in the fallen-into body waits */
+        const s32 phNow = (s32)((u32)(u8)i_this->mAction | ((u32)(u16)i_this->mMode << 8));
+        if (phNow == phState + 0x100)
+            ph_t60_post_init_set(i_this, phNow);
+    }
 
     cMtx_YrotS(calc_mtx(), a_this->current.angle.y);
     cMtx_XrotM(calc_mtx(), a_this->current.angle.x);
@@ -2131,26 +2344,39 @@ static BOOL daPH_Execute(ph_class *i_this) {
     cXyz local;
     cXyz world;
     bool propFlying = false;
-    if (i_this->mPropellerFlyDist == 0.0f) {
+    /* true60 (hand): attached or flying is the frame's decision (the first step's answer, heldInt site
+     * 5): a flight that ends on an earlier step (FlyDist back to 0) copies the body position from the next frame, as A */
+    if (t60c::heldInt(i_this->mPropellerFlyDist == 0.0f ? 1 : 0, 5, i_this) != 0) {
         copy_bits(&i_this->mPropellerPos, &i_this->mBodyTopPos);
     } else if (i_this->mPropellerScale.x != 0.0f) {
         /* the propeller flies off */
         f32 height = 1000.0f;
         puropera_kaiten(i_this);
-        cLib_addCalc2(&i_this->mPropellerFlyDist, 10.0f, 0.5f, 1.0f);
+        /* true60 (hand): the fly distance eases once per 30 Hz frame, on the first step (A: ease, then move) */
+        if (t60c::first()) cLib_addCalc2(&i_this->mPropellerFlyDist, 10.0f, 0.5f, 1.0f);
         if (i_this->mType == PH_TYPE_SEAHAT) {
-            cLib_addCalc2(&i_this->mPropellerFlyDist, 30.0f, 1.0f, 5.0f);
+            if (t60c::first()) cLib_addCalc2(&i_this->mPropellerFlyDist, 30.0f, 1.0f, 5.0f);
             height = 2000.0f;
             i_this->mPropellerTargetSpeed = 0x2000;
         }
         local.x = 0.0f;
         local.y = 0.0f;
-        local.z = -i_this->mPropellerFlyDist;
+        /* true60 (the per-step movement rule): the knocked-off propeller flies mPropellerFlyDist per 30 Hz frame: x dt per step */
+        local.z = -(i_this->mPropellerFlyDist * t60::dt());
         MtxPosition(&local, &world);
         PSVECAdd(&i_this->mPropellerPos, &world, &i_this->mPropellerPos);
-        f32 y = i_this->mPropellerPos.y + i_this->mPropellerFlyDist;
+        f32 y = i_this->mPropellerPos.y + i_this->mPropellerFlyDist * t60::dt();
         i_this->mPropellerPos.y = y;
         if (y > a_this->current.pos.y + height) {
+            /* true60 (hand): the flight ends on this step: the propeller still flies the rest of the
+             * frame (A ends the frame's whole move first) */
+            const f32 phRest = ph_t60_rest(i_this);
+            if (phRest != 0.0f) {
+                local.z = -(i_this->mPropellerFlyDist * phRest);
+                MtxPosition(&local, &world);
+                PSVECAdd(&i_this->mPropellerPos, &world, &i_this->mPropellerPos);
+                i_this->mPropellerPos.y = i_this->mPropellerPos.y + i_this->mPropellerFlyDist * phRest;
+            }
             i_this->mPropellerScale.x = 0.0f;
             i_this->mPropellerScale.y = 0.0f;
             i_this->mPropellerScale.z = 0.0f;
@@ -2171,15 +2397,24 @@ static BOOL daPH_Execute(ph_class *i_this) {
 
     u8 st = i_this->mAction;
     f32 vy;
+    f32 phArc = 0.0f;
     if (st == 2 || st == 3 || st == 5 || st == 4) {
-        vy = a_this->speed.y + a_this->gravity;
+        /* true60 (the per-step movement rule): gravity x dt plus the exact-arc term (posMove's y step): N steps end where the frame ends */
+        const f32 vy0 = a_this->speed.y;
+        const bool phVyAssigned = ph_t60_vy_assigned(i_this); /* true60 (hand): speed.y set again on this step */
+        /* true60 (hand): assigned on an earlier step only: the frame's gravity is already in (d_a_ph_t60.h) */
+        const bool phVyEarlier = !phVyAssigned && ph_t60_vy_assigned_earlier(i_this);
+        vy = a_this->speed.y + (phVyAssigned ? (f32)a_this->gravity : phVyEarlier ? 0.0f : t60c::step(a_this->gravity));
         if (vy < -20.0f)
             vy = -20.0f;
+        phArc = (phVyAssigned || phVyEarlier) ? 0.0f : ph_t60_arc(vy - vy0);
     } else {
         vy = world.y;
     }
     a_this->speed.y = vy;
+    if (phArc != 0.0f) a_this->speed.y = gabi::fadds_ppc(vy, ph_t60_arc_speed(phArc));
     fopAcM_posMove(a_this, &i_this->mStts.m_cc_move);
+    if (phArc != 0.0f) a_this->speed.y = vy;
     if (i_this->mAction == PH_ACTION_BOUNCE && i_this->mInWater != 0) {
         f32 y = i_this->mWaterSurfacePos.y + 40.0f;
         if (a_this->current.pos.y < y)
@@ -2187,9 +2422,23 @@ static BOOL daPH_Execute(ph_class *i_this) {
     }
 
     if (i_this->mType == PH_TYPE_PEAHAT) {
-        cLib_addCalc2(&i_this->mFloatOffset.x, i_this->mFloatTarget.x, 0.3f, 3.0f);
-        cLib_addCalc2(&i_this->mFloatOffset.y, i_this->mFloatTarget.y, 0.3f, 3.0f);
-        cLib_addCalc2(&i_this->mFloatOffset.z, i_this->mFloatTarget.z, 0.3f, 3.0f);
+        /* true60 (hand): A eases the bob once a frame (0.3 towards the
+         * frame's target, at most 3). Per step, the proportional y ease ran towards the mid-frame targets (the phases are
+         * shared per step) and missed A's frame-end value by 0.1-0.3 every frame (v6kd97n2, all 4 Peahats from f181; the
+         * joints, the collider position, eyePos and the water position follow it). So the ease runs whole (dt 1) on the
+         * tick30 step from the frame-start offset towards the frame-end target (= A's); earlier steps keep the frame-start
+         * offset (every logic read between the tick30 steps sees A's values; the bob's picture moves once a frame). */
+        const bool phBobOn = t60c::on();
+        cXyz* off = &i_this->mFloatOffset;
+        const f32 bx = ph_t60_held_f(off->x, 1, off), by = ph_t60_held_f(off->y, 2, off), bz = ph_t60_held_f(off->z, 3, off);
+        if (!phBobOn || t60::tick30()) {
+            const f32 phBobDt = phBobOn ? t60_set_dt(1.0f) : 1.0f;
+            if (phBobOn) { off->x = bx; off->y = by; off->z = bz; }
+            cLib_addCalc2(&i_this->mFloatOffset.x, i_this->mFloatTarget.x, 0.3f, 3.0f);
+            cLib_addCalc2(&i_this->mFloatOffset.y, i_this->mFloatTarget.y, 0.3f, 3.0f);
+            cLib_addCalc2(&i_this->mFloatOffset.z, i_this->mFloatTarget.z, 0.3f, 3.0f);
+            if (phBobOn) t60_set_dt(phBobDt);
+        }
     } else {
         cLib_addCalc2(&i_this->mFloatOffset.x, i_this->mFloatTarget.x, 1.0f, 30.0f);
         cLib_addCalc2(&i_this->mFloatOffset.y, i_this->mFloatTarget.y, 1.0f, 30.0f);
@@ -2203,10 +2452,17 @@ static BOOL daPH_Execute(ph_class *i_this) {
     }
     i_this->mpBodyMorf->play(nullptr, 0, 0);
     i_this->mpPropellerMorf->play(nullptr, 0, 0);
+    /* true60: the lighting once per frame on the tick30 step (A's order: at the end of the
+     * execute); the matrices every step (a flag around the call: DW_draw_SUB keeps its original signature for the standalone checks) */
+    s_ph_t60_dw_no_tev = !t60c::end();
+    t60g.model = true; /* true60 (whole form): the matrix step */
     DW_draw_SUB(i_this);
+    s_ph_t60_dw_no_tev = false;
     UP_draw_SUB(i_this);
 
-    if (i_this->mAction != PH_ACTION_DAMAGE) {
+    /* true60 (the one-sweep-per-frame attack rule): the attack / damage / body colliders are listed for the frame's
+     * tick30 Move only, from the tick30 step's exact joint positions (they were listed on every step) */
+    if (i_this->mAction != PH_ACTION_DAMAGE && t60c::end()) {
         if (i_this->mType == PH_TYPE_PEAHAT) {
             i_this->mAtCyl.mCyl.SetC(&i_this->mPropellerCylPos);
             i_this->mAtCyl.mCyl.SetH(60.0f);

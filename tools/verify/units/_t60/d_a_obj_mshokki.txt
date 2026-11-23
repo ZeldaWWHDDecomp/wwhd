@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_mshokki.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule + addendum, d/t60_objw.h): the dish's _execute 0237D89C (posMove / CrrPos / tilt / landing break; hit from the tick30 collision Move -> break; launch cooldown counter; set_mtx / collider).
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 0237D89C
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 0237D17C 0237D574 0237D6DC 0237D7C8
+t60cand 0237D17C 0237D574 0237D6DC 0237D7C8
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 020195B0 0237D17C 0237D574 0237D6DC 0237D7C8 024EECAC 024F08A8 024F43DC 02515E50 0251621C 025162A4 02516300 02520540 025A847C 025D57E0 025D57E4 025D6870 025E19CC 025E1A40 025F1BF4 025F1C28 0274D458 028E8DD0

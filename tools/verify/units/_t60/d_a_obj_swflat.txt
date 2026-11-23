@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_swflat.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule + addendum, d/t60_objw.h): the floor switch's Execute(matrixOut) (contact via the Co hit, press / lock timers, switch on / off, event timer).
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 02391F58
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 02391AC4 02392864
+t60cand 02391AC4 02392864
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 020182E0 02018428 020184DC 02018C8C 02018D40 02391AC4 02392864 02515BBC 02516464 025D7B24 025E19CC 025F1B48 028E90D4 028E93CC

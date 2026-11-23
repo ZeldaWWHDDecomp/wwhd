@@ -1,0 +1,5 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_cafelmp.txt
+# ---- true60 N-step spec (2026-11-18): the cafe lamp's _execute 0232FCB8, a self-contained turn
+# (no other actor read): per-step form, t60c::share(0xDA) adds exactly 0xDA per 30 Hz frame; set_mtx on every step.
+t60conv 0232FCB8

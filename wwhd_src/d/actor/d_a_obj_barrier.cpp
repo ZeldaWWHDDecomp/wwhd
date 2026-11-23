@@ -3,6 +3,7 @@
 // Preserve the render-list changes, collision order and specialized BCK lifetime.
 #include "d/actor/d_a_obj_barrier.h"
 #include "gc_api/tu.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 const gc_tu_data gc_tu = {.safeString = 0x1002602C};
 void* barrierResource(void*, BarrierArchive*, s32);
 BarrierGameInfo* barrierGameInfo();
@@ -608,6 +609,9 @@ BOOL daObjBarrier_c::_delete() {
 }
 /* 02323B74 */
 BOOL daObjBarrier_c::_execute() {
+    t60w::Guard<daObjBarrier_c> t60g(this, t60objw::Logic<daObjBarrier_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return 1;
     mAnm.mBtk.play();
     this->brkAnmPlay();
     barrierMoveBg(mpBgW.get());
@@ -618,6 +622,7 @@ BOOL daObjBarrier_c::_execute() {
         this->registCollisionTable();
     if (!this->break_check())
         mEffect.execute();
+    t60g.model = true; /* true60: the frame reached its model step */
     return 1;
 }
 /* 02323D60 */

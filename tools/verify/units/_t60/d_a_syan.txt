@@ -1,0 +1,8 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_syan.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule + addendum, d/t60_objw.h): the chandelier's daSyan_Execute 024A45E0 (timers, morf calc, swing / sway springs and phases, state machine, set_mtx).
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 024A45E0
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200ED84 0200F428 020198D8 025200D4 025A847C 025E55A0 025F2550 0274D458 027F4D5C 028F4384

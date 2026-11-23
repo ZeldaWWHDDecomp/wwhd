@@ -7,7 +7,91 @@
  * "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/d_camera_subject.h"
+#include "d/d_camera_key_t60.h"
+#include "true60.h"
+#include <cstdlib>
+#include "d/d_camera_run_t60.h"
 using namespace subjectDetail;
+
+/* true60 (the per-step smoothing rule, 4, mode-start-once, 12): the subject (first-person aim) camera at N steps per 30 Hz frame.
+ * The aim's stick / gyro turn accumulates into the pitch share m388 once per call, so at N steps it takes the frame's
+ * rate x dt (the frame's input is read on its first step, the first-step input rule: every step sees the same stick); the per-frame
+ * eases (radius / angles / fovy p20, the lock-on 0.04 / extended-position 0.05 chase, the zoom's per-frame step) become
+ * per-step ratios 1 - (1 - r)^dt (sjR) or per-step amounts x dt; the entry transition's per-frame share
+ * t = 1 / (end - timer) becomes sjR(t), so the N steps of a frame compose to the frame's share (t = 1 on the last
+ * frame stays 1); the frame counter m3A8 and the settle at the transition's last frame count 30 Hz frames (on the step
+ * that ends the frame); the mode's start-up block (mCurModeTimer == 0) runs once per mode start (the mode-start-once rule).
+ * The yaw share m384 is the stick's position, but the player's call (setBodyAngleToCamera, every converted Link step)
+ * writes the result m3BA + yawMax x m384 back into shape_angle.y and the next call starts from it (m3BA = shape_angle.y):
+ * per call it is a turn of yawMax x m384, so a player call at N steps turns dt of it (phook1: the hookshot aim turned
+ * 2x at N 2, 3776 vs 1887 s16 for the same right-stick hold); the camera's own call (subjectCamera) reads the share as
+ * the view's offset from the facing (outU - m3BA) and keeps it whole.
+ * dt = 1: the original arithmetic. */
+static camera_key_t60::PerCam<bool> s_subjectCameraCall; /* true60: CalcSubjectAngle called from subjectCamera (host memory, this unit) */
+static inline f32 sjR(f32 r) { return t60::dt() == 1.0f ? r : t60_ratio(r, t60::dt()); }
+static inline bool sjFrameEnd() { return t60::dt() == 1.0f || t60::tick30(); }
+/* negative control of the steady pitch rebuild (WWHD_T60_AIMPITCH_NEGCTRL=1, game build): the per-step rebuild */
+static inline bool subjectPitchNegctrl() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool on = [] { const char* e = getenv("WWHD_T60_AIMPITCH_NEGCTRL"); return e && e[0] == '1'; }();
+    return on;
+#else
+    return false;
+#endif
+}
+/* the mode-start-once rule (as followModeStart in d_camera_follow.cpp): the first step that sees the timer at 0 after a frame end,
+ * a gap or a non-zero timer is a mode start; host memory, this unit, one camera */
+static camera_key_t60::PerCam<uint32_t> s_subjectZeroStamp;
+static camera_key_t60::PerCam<bool> s_subjectInFirstFrame;
+static inline bool subjectModeStart(u32 timer) {
+    if (t60::dt() == 1.0f)
+        return timer == 0;
+    if (timer != 0) {
+        s_subjectInFirstFrame() = false;
+        return false;
+    }
+    uint32_t now = t60_step_counter();
+    bool start = !(s_subjectInFirstFrame() && s_subjectZeroStamp() + 1 == now);
+    s_subjectInFirstFrame() = !t60::tick30();
+    s_subjectZeroStamp() = now;
+    return start;
+}
+
+/* true60 (the process-order read rule, 2026-11-21; pair): the player's call (Link's
+ * setBodyAngleToCamera on each converted step) reads the subject camera's gate state as of the frame start. In A Link runs
+ * before the camera in a frame, so the camera's first steady call (m37C = 1, subjectCamera's else branch) is seen by Link
+ * on the next frame; at N steps the camera's step-1 call set it before Link's later steps of the same frame (
+ * Link's sight mDraw f75 vs A's f76). The frame-start copy is Run's (d_camera_run_t60.h noteFrameStart: the camera
+ * object at the top of its frame's first Run, guest byte order); before the camera's first Run of a frame (Link's step 1
+ * runs first) the live state is the frame-start state. Read: mStyleSettle0 (+0x100), the work tag m378 (mWork +0, u32)
+ * and m37C (mWork +4, u8). The camera's own call (s_subjectCameraCall) and dt = 1: the live state, the original. The
+ * camera body's slot is looked up, not claimed (Link's call runs outside camera_execute; the dt-1 check / N-step spec harness: no
+ * slot -> live). */
+/* packed in one scalar (the decomp build lifts aggregate locals into guest memory): bits 0-31 tag, 32-39 m37C,
+ * 40-47 mStyleSettle0 */
+static inline uint64_t subjectGatePack(uint32_t tag, uint8_t ready, uint8_t settle) {
+    return (uint64_t)tag | (uint64_t)ready << 32 | (uint64_t)settle << 40;
+}
+static inline uint64_t subjectGate(dCamera_c* self, SubjectWork* work, bool cameraCall) {
+    const uint64_t g = subjectGatePack((u32)work->m378, (u8)work->m37C, (u8)self->mStyleSettle0);
+    if (t60::dt() == 1.0f || cameraCall)
+        return g;
+    const uint32_t ea = gabi::ea(self);
+    int slot = -1;
+    for (int i = 0; i < camera_key_t60::kCams; i++)
+        if (camera_key_t60::g_ea[i] == ea)
+            slot = i;
+    if (slot < 0)
+        return g;
+    const int saved = camera_key_t60::g_cur;
+    camera_key_t60::g_cur = slot;
+    const camera_run_t60::RunFrameStart& F = camera_run_t60::g_runFrameStart();
+    camera_key_t60::g_cur = saved;
+    if (!F.valid || t60_step_counter() - F.stamp >= (uint32_t)t60::steps())
+        return g; /* the camera has not run in this frame yet: live = frame start */
+    const uint8_t* o = F.obj;
+    return subjectGatePack((u32)o[0x37C] << 24 | (u32)o[0x37D] << 16 | (u32)o[0x37E] << 8 | o[0x37F], o[0x380], o[0x100]);
+}
 
 static u32 subjectGamepadAddress;
 static s16 subjectAngleZero;
@@ -20,6 +104,15 @@ static u32 subjectCameraGroupVtable;
 static u32 subjectPassVtable;
 static u32 subjectGroupVtable;
 static u32 subjectBasePolyVtable;
+/* per-step input (true 60 fps input): the GamePad's press word (0x18, SubjectGamepadHD mHold); the converted camera (every
+ * step) takes the presses of the step's own read (true60.h t60_in_step_word, like c_API_controller.cpp cpadTrig), so a
+ * press is consumed by exactly one step, the step it arrives on; dt 1: the word as before */
+static inline u32 subjectPadTrig() {
+    if (t60::dt() != 1.0f)
+        return t60_in_step_word([] { return subjectGamepadAddress + 0x18; }, 0,
+                                [] { return (u32)gabi::at<SubjectGamepadHD>(subjectGamepadAddress)->mHold.get(); });
+    return gabi::at<SubjectGamepadHD>(subjectGamepadAddress)->mHold.get();
+}
 // Style and camera indices retain the original 32-bit guest address arithmetic.
 static inline u16 subjectStyleFlags(s32 style) {
     return gabi::at<SubjectStyleHD>(gabi::ea(&subjectStyles.mStyle[0]) +
@@ -47,11 +140,12 @@ bool dCamera_c::CalcSubjectAngle(s16* outV, s16* outU) {
             0 &&
         dComIfGp_getMiniGameType() != 8)
         return false;
-    if (work->m378 != SUBJECT_WORK_TAG /* 'SUBJ' */)
+    const uint64_t gate = subjectGate(this, work, s_subjectCameraCall()); /* true60: the process-order read rule (above) */
+    if ((uint32_t)gate != SUBJECT_WORK_TAG /* 'SUBJ' */)
         return false;
-    if (mStyleSettle0 == 0)
+    if ((uint8_t)(gate >> 40) == 0) /* mStyleSettle0 */
         return false;
-    if (work->m37C == 0)
+    if ((uint8_t)(gate >> 32) == 0) /* m37C */
         res = false;
     s32 st = work->m380;
     f32 pitchMax = camParamVal(st, 19);
@@ -163,8 +257,9 @@ bool dCamera_c::CalcSubjectAngle(s16* outV, s16* outU) {
             (subjectStyleFlags(work->m380) & dCamPrmFlg_UNK010)) {
             k = gabi::fnmsubs(k * slow, work->m38C, k);
         }
-        m384 = -(yaw * k);
-        f32 m388 = gabi::fmadds(pitch, k, work->m388);
+        m384 = -(yaw * k); /* (the yaw share is the stick's position, not a rate: unchanged) */
+        /* true60: the pitch share moves by the stick's per-frame rate; a step of dt moves dt of it */
+        f32 m388 = gabi::fmadds(t60::dt() == 1.0f ? pitch : pitch * t60::dt(), k, work->m388);
         work->m384 = m384;
         work->m388 = m388;
         if (m384 > 1.0f) {
@@ -183,7 +278,9 @@ bool dCamera_c::CalcSubjectAngle(s16* outV, s16* outU) {
             m384 = work->m384;
         }
     }
-    subject_angleFromDegrees(a.get(), yawMax * m384);
+    /* true60: the player's call turns him by the share per call; at N steps dt of it (the camera's call: the whole offset) */
+    const f32 uShare = (t60::dt() == 1.0f || s_subjectCameraCall()) ? m384 : m384 * t60::dt();
+    subject_angleFromDegrees(a.get(), yawMax * uShare);
     subject_angleFromDegrees(b.get(), pitchMax * work->m388);
     subject_shortPlusAngle(c.get(), (s16)*a, &work->m3BA);
     *(be<s16>*)outU = (s16)*c;
@@ -299,7 +396,7 @@ bool dCamera_c::subjectCamera(s32 style) {
     }
     (void)dComIfGp_ea();
     u16 sflags;
-    if (mCurModeTimer == 0) {
+    if (subjectModeStart(mCurModeTimer)) {
         work->m37C = 0;
         work->m384 = 0.0f;
         work->m380 = style;
@@ -338,7 +435,7 @@ bool dCamera_c::subjectCamera(s32 style) {
 
     if (mStyleSettle0 == 0) {
         s32 end = (dComIfGp_getPlayerStatus0(mPadId) & daPyStts0_SUBJECT_e) ? 7 : 10;
-        f32 t = 1.0f / (f32)(s32)(end - (s32)mCurModeTimer);
+        f32 t = sjR(1.0f / (f32)(s32)(end - (s32)mCurModeTimer)); /* true60: the frame's share per step */
         gabi::Local<cXyz> target, d, s, x, e;
         gabi::Local<cSAngle_l> t20, t1e, t1c;
         subjectCentre(this, work, ofs, target, baseYaw);
@@ -385,7 +482,7 @@ bool dCamera_c::subjectCamera(s32 style) {
             copySubjectFloatBits(&work->m3A0, &mViewCache.mFovy);
             work->m39C = mViewCache.mFovy * 0.44444445f; /* HD (GameCube 2/3) */
         }
-        if ((u32)mCurModeTimer == (u32)(end - 1)) {
+        if ((u32)mCurModeTimer == (u32)(end - 1) && sjFrameEnd()) { /* true60: settles at the frame's end */
             mStyleSettle0 = 1;
             mStyleSettle1 = 1;
             mStyleSettle2 = 1;
@@ -415,7 +512,9 @@ bool dCamera_c::subjectCamera(s32 style) {
         gabi::Local<be<s16>> ov, ou;
         gabi::Local<cSAngle_l> t3a;
         work->m37C = 1;
+        s_subjectCameraCall() = true;
         CalcSubjectAngle((s16*)ov.get(), (s16*)ou.get());
+        s_subjectCameraCall() = false;
         *angV = subjectAngleShortValue(tmp, *ov);
         s16 u = *ou;
         if (swim)
@@ -436,7 +535,15 @@ bool dCamera_c::subjectCamera(s32 style) {
             subject_angleFromShort(tmp.get(), (s16)mpPlayerActor.get()->shape_angle.y.get());
         subject_angleSubtract(a, t3e, &work->m3BA);
         *angU = (s16)*t3e;
-        work->m388 = subject_angleDegree(angV) / p19;
+        /* true60 (hookshot aim pitch; 2026-11-22, routes 378): the steady
+         * camera rebuilds the pitch share from Link's s16 pitch (getBodyAngleX) once per 30 Hz frame in the original
+         * (its call follows Link's one share step, the s16 truncation once a frame: 509 a frame on a full stick). At N
+         * steps it ran on every step and truncated Link's half step each time (254 a step: B 1 s16 a frame short,
+         * -4572 vs -4581 after three bursts, the hookshot sight 0.7 lower: no lock-on, JA_SE_INDICATOR_1 0x820 A-only at
+         * 378). Form: the rebuild runs on the frame's last step only; the earlier steps keep the share as Link's call
+         * left it (the steps' adds then sum to A's one add before the frame's one truncation). dt 1: the original. */
+        if (sjFrameEnd() || subjectPitchNegctrl())
+            work->m388 = subject_angleDegree(angV) / p19;
         work->m384 = subject_angleDegree(angU) / p24;
     }
     gabi::Local<cXyz> v1, v2;
@@ -493,12 +600,12 @@ bool dCamera_c::subjectCamera(s32 style) {
         if (useTarget) {
             attentionPos(a, mpLockonTarget.get());
             a->y = a->y - 25.0f;
-            rate = 0.04f;
+            rate = sjR(0.04f);
         } else {
             copySubjectFloatBits(&a->x, &mExtendedPos.x);
             copySubjectFloatBits(&a->y, &mExtendedPos.y);
             copySubjectFloatBits(&a->z, &mExtendedPos.z);
-            rate = 0.05f;
+            rate = sjR(0.05f);
         }
         cXyz_mi(&mViewCache.mCenter, d, a);
         cSGlobe_Val(g, d);
@@ -525,17 +632,18 @@ bool dCamera_c::subjectCamera(s32 style) {
         subject_angleAdd(baseYaw, t12, angU);
         subject_globeVal(g.get(), p10, angV.get(), t12.get());
         f32 rr = mViewCache.mDirection.mRadius;
-        mViewCache.mDirection.mRadius = gabi::fmadds(g->mRadius - rr, p20, rr);
+        const f32 e20 = sjR(p20); /* true60: the per-frame ease per step */
+        mViewCache.mDirection.mRadius = gabi::fmadds(g->mRadius - rr, e20, rr);
         subject_angleSubtract(&g->mV, t2c, &mViewCache.mDirection.mV);
         /* the port's points (port_hooks.h): the ease factor of V (@02508380) and U (@025083C4) */
-        subject_angleMultiply(t2c, t2a, PORT_CAMERA_EASE(0x02508380, this, p20, t2c.get(), angV.get()));
+        subject_angleMultiply(t2c, t2a, PORT_CAMERA_EASE(0x02508380, this, e20, t2c.get(), angV.get()));
         subject_angleAdd(&mViewCache.mDirection.mV, t12, t2a);
         mViewCache.mDirection.mV = subjectAngleShortValue(tmp, *t12);
         subject_angleSubtract(&g->mU, t12, &mViewCache.mDirection.mU);
-        subject_angleMultiply(t12, t2a, PORT_CAMERA_EASE(0x025083C4, this, p20, t12.get(), angU.get()));
+        subject_angleMultiply(t12, t2a, PORT_CAMERA_EASE(0x025083C4, this, e20, t12.get(), angU.get()));
         subject_angleAdd(&mViewCache.mDirection.mU, t2c, t2a);
         mViewCache.mDirection.mU = subjectAngleShortValue(tmp, *t2c);
-        if (work->m3A8 < 10)
+        if (work->m3A8 < 10 && sjFrameEnd()) /* true60: counts 30 Hz frames */
             work->m3A8 = work->m3A8 + 1;
         work->m37C = 1;
     }
@@ -556,7 +664,7 @@ bool dCamera_c::subjectCamera(s32 style) {
             f32 b = subject_rationalBezierRatio(-y, cw);
             diff = 0.0f - b;
         }
-        f32 next = gabi::fmadds(diff * p26, 0.1f, work->m38C);
+        f32 next = gabi::fmadds(diff * p26, t60::dt() == 1.0f ? 0.1f : 0.1f * t60::dt(), work->m38C); /* true60: x dt */
         f32 z;
         if (swim)
             z = (1.0f - 0.0f >= 0.0f) ? 0.0f : 1.0f;
@@ -576,7 +684,7 @@ bool dCamera_c::subjectCamera(s32 style) {
         f32 fv = mViewCache.mFovy;
         if (swim)
             tf = setup.mSwimFovy.get();
-        mViewCache.mFovy = gabi::fmadds(tf - fv, p20, fv);
+        mViewCache.mFovy = gabi::fmadds(tf - fv, sjR(p20), fv);
         setComZoomScale(scale);
         if (dComIfGp_getPlayerStatus0(mPadId) & daPyStts0_TELESCOPE_LOOK_e)
             setComStat(dCamAttnStts_TELESCOPE_LOOK_e);
@@ -591,7 +699,7 @@ bool dCamera_c::subjectCamera(s32 style) {
         work->m37D = 1;
     } else {
         f32 fv = mViewCache.mFovy;
-        mViewCache.mFovy = gabi::fmadds(p25 - fv, p20, fv);
+        mViewCache.mFovy = gabi::fmadds(p25 - fv, sjR(p20), fv);
         work->m37D = 1;
     }
     if (dComIfGp_getPlayerStatus0(mPadId) & daPyStts0_SUBJECT_e) { /* SUBJECT */
@@ -599,8 +707,7 @@ bool dCamera_c::subjectCamera(s32 style) {
         if (st == 2) {
             if (!(mStickCPosYLast < -0.001f))
                 work->m3C4 = 0;
-        } else if (st == 0 && (gabi::at<SubjectGamepadHD>(subjectGamepadAddress)->mHold.get() &
-                               SUBJECT_CAMERA_BUTTON_HD)) { // HD: GamePad button
+        } else if (st == 0 && (subjectPadTrig() & SUBJECT_CAMERA_BUTTON_HD)) { // HD: GamePad button
             work->m3C4 = 2;
             setComStat(dCamAttnStts_00002000_e);
         } else if (mStickCPosYLast < -0.001f) {

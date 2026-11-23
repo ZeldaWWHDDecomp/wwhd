@@ -1,5 +1,6 @@
 // Gohdan per-frame head control, animation, transforms, and collision.
 #include "d/actor/d_a_bst_execute.h"
+#include "d/actor/d_a_bst_t60.h" /* true60 (*): the whole frame on the tick30 step (the whole-frame form rule addendum) */
 using namespace bst_execute_names;
 const gc_tu_data gc_tu = {.safeString = 0x1000B714};
 
@@ -611,7 +612,11 @@ static void bstExecuteTransformAndCollision(bst_class*, f32, f32, f32);
 
 /* 020E54A0 */
 static BOOL daBst_Execute(bst_class* actor) {
-
+    /* true60: the whole frame on the tick30 step (end at every return) */
+    t60w::Guard<bst_class> t60g(actor, bst_t60::ops());
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
+    t60g.model = true;
     bst_class* a = actor;
     dComIfG_inf_c* play = bstExecutePlay(BstExecute_play());
     f32 zero = static_cast<f32>(bstExecuteConstants().mZero);

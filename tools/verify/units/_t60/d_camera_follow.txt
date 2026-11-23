@@ -1,0 +1,122 @@
+# true60 N-step spec (not a gate unit): followCamera 025028B8, the view's yaw chase (
+# the crawl pair). Per 30 Hz frame the yaw chases from the eye's yaw read back by cM_atan2s
+# (a table with a truncated index) and the eye takes 0.75 of the chased point; the read-back error and the truncated
+# share stand as an additive remainder e of the chased point, which the eye takes 0.75 of per frame. At N steps the eye
+# takes fr(0.75) of each step's remainder (1.0 per frame at N 2), so followYawRemainder moves the eye by
+# (0.75 dt - fr(0.75)) of the step's remainder displacement: N steps take the frame's 0.75 of it (the 30 Hz timer rule).
+# The cSAngle / cSGlobe / cSPolar family, cM_atan2s and the float helpers run for real (the read-back's table is the
+# test). Steered: the normal follow path (settled, mode timer past the start), Link and the play object present, no
+# status bits, no event flags; the mocks answer the same on every step (Link and the world hold still), so the centre
+# and the yaw target hold still and the yaw chase is the only motion. Tolerance (the yaw, +0x42): the N steps read the
+# table at their own eye yaws, so each step's remainder is its own (|e| <= the table step 10 + the truncation 1): the
+# frame's 0.75 e against the steps' 0.75 x mean e differ by at most 0.75 x 11 = 8.25 units, abs 9 (both N). Without the
+# fix the steps take N fr(0.75) e (1.0 e at N 2, 1.27 e at N 4): the same input set fails beyond it (one-signed bias).
+include d_camera.txt
+include shared/c_angle_statics.txt
+t60conv 025028B8
+t60nocmp 025028B8
+real 0200658C 020066C0 02006644 020065FC 02006894 020068B0 02006838 02006814 0200693C 020068E0 020068CC 02006880
+real 0200685C 02006804 020069A0 02006908 020068F4 02006584 020065EC 02006638 020065DC 02006694 020067AC
+real 020072E0 02007324 020073AC 02007248 02007068 02007178 020071E0 02007100 02006A3C 02006720
+real 02006DE8 02006C8C 02006B68 02006E50 0200738C 02006C28 02006F30 020195B0 02019578
+real 028F43F8 028F4BE0 028F4384 028F423C 02007048 02006760 02006B0C 02006FE4 0200715C 020067EC 0200691C 0200692C 02007400 020074FC
+ret! 025200D4 0x54000000 0x54000000
+# styles 84 / 89 (params 0 / 1 / 5: centre offset z 1, x 0, height 0): with the offset work at them (m3AC 0, m3B0 1)
+# and Link facing 0 the centre's target is Link's attention point + (0, 0, 1) exactly (globe (1, 0x4000, 0))
+arg! 025028B8 r4 84,89
+# the camera at a fixed address so the postsetups below can name its fields
+arg! 025028B8 r3 0x5B000000
+field 025028B8 r3+0x100 u8 1
+field 025028B8 r3+0x108 u32 2,5,30,200
+field 025028B8 r3+0x510 u32 0
+field 025028B8 r3+0x124 i32 0
+field 025028B8 r3+0x13C i32 0
+field 025028B8 r3+0x364 u8 1
+field 025028B8 r3+0x8D4 u8 1
+field 025028B8 r3+0x224 u8 0
+# the stick (x, y, value: the yaw follow ratio m3B8 is written from them on every call)
+field 025028B8 r3+0x158 f32 -1 1
+field 025028B8 r3+0x15C f32 -1 1
+field 025028B8 r3+0x160 f32 0 1
+field 025028B8 r3+0x128 u32 0x5A200000
+field 025028B8 5A200008 i16 0xA9
+# Link: facing 0 (shape_angle.y +0x32A), attention point (+0x390) at (20, 100, -30); the view's centre xz on the target
+field 025028B8 5A20032A i16 0
+field 025028B8 5A200390 f32 20
+field 025028B8 5A200394 f32 100
+field 025028B8 5A200398 f32 -30
+field 025028B8 54005CD8 u32 0
+field 025028B8 54005CDC u32 0
+field 025028B8 54005824 u32 0
+# the work: the yaw follow ratio m3B8 (+0x3BC), charge counter m392 (+0x396) off
+field 025028B8 r3+0x3BC f32 0 0.3
+field 025028B8 r3+0x396 i16 0
+field 025028B8 r3+0x3B0 f32 0
+# the work's ratios in 0..1 and its latitude targets (deg) in range; no forward tilt
+field 025028B8 r3+0x398 f32 0 1
+field 025028B8 r3+0x3E0 f32 0 1
+field 025028B8 r3+0x3E4 f32 0 0.05
+field 025028B8 r3+0x3EC f32 0 1
+field 025028B8 r3+0x3F0 f32 0 1
+field 025028B8 r3+0x3F4 f32 0 1
+field 025028B8 r3+0x3A4 f32 -30 30
+field 025028B8 r3+0x3C0 f32 -30 30
+field 025028B8 r3+0x148 i16 0
+field 025028B8 r3+0x38C i32 0
+field 025028B8 r3+0x390 i32 0
+field 025028B8 r3+0x3B8 i32 0
+# the radius limits (m398 / m39C) wide: the radius is the eye's own distance (r3), no radius chase
+field 025028B8 r3+0x39C f32 50
+field 025028B8 r3+0x3A0 f32 5000
+# no flying companion / seagull (their mode-start tilt is another subject)
+field 025028B8 101BDC2D u8 0
+field 025028B8 101D5F3E u8 0
+field 025028B8 101D5F45 u8 0
+field 025028B8 r3+0x3B4 f32 1
+# the view
+field 025028B8 r3+0x3C f32 100 1000
+field 025028B8 r3+0x40 i16 -8000 8000
+# the yaw off +-0x4000 (a band of +-0x800 left out; the N-step spec note 2026-11-18)
+field 025028B8 r3+0x42 i16 -32491,-31130,-29769,-28408,-27047,-25686,-24325,-22964,-21603,-20242,-18881,-13437,-12076,-10715,-9354,-7993,-6632,-5271,-3910,-2549,-1188,173,1534,2895,4256,5617,6978,8339,9700,11061,12422,13783,19227,20588,21949,23310,24671,26032,27393,28754,30115,31476
+field 025028B8 r3+0x44 f32 20
+field 025028B8 r3+0x48 f32 100
+field 025028B8 r3+0x4C f32 -29
+field 025028B8 r3+0x50 f32 -1000 1000
+field 025028B8 r3+0x54 f32 -1000 1000
+field 025028B8 r3+0x58 f32 -1000 1000
+field 025028B8 r3+0x60 f32 30 90
+# the eye is the read-back of the stored direction, as in the game (the stored direction is the eye's read-back at the
+# end of the previous update; independent random eye / direction never occur and a step's read-back rewrites them):
+# eye = centre + Xyz(direction), then direction = Val(eye - centre) (scratch vector at 0x5C000000)
+postsetup 025028B8 020073AC r3=0x5B00003C r4=0x5C000000
+postsetup 025028B8 0201AD78 r3=0x5B000044 r4=0x5B000050 r5=0x5C000000
+postsetup 025028B8 0201ADE0 r3=0x5B000050 r4=0x5C000000 r5=0x5B000044
+postsetup 025028B8 020072E0 r3=0x5B00003C r4=0x5C000000
+t60tol 025028B8 r3+0x42 a16 abs 9
+# not checked here: the radius / latitude / centre / eye / fovy (their chases are converted and checked by the pairs; the
+# latitude's read-back carries the same table step and has its own keep correction) and the work (+0x380..+0x3FB)
+t60tol 025028B8 r3+0x3C f32 skip
+t60tol 025028B8 r3+0x40 a16 skip
+t60tol 025028B8 r3+0x44 f32x6 skip
+t60tol 025028B8 r3+0x5C a16 skip
+t60tol 025028B8 r3+0x60 f32 skip
+t60tol 025028B8 r3+0x380 u32x31 skip
+real 0201AD78 0201ADE0 0201AE48 0201AF1C 028E8D88
+real 028E8DAC 028E8DD0
+real 028E8E64 028F5E98
+# The centre's target for real: relationalPos and Link's direction / attention point ran as mocks
+# (tgt x / z garbage: centres at 1e8..1e25, eyes inf / nan: the degenerate half of the 137/200), the water surface at
+# the target's height and no line-check hit (followWallCheck put the centre on a random 'wall'). The yaw target is then
+# Inv(Link's facing), constant over the steps. N 2 / 4, s1 / s7, n 200: 200/200 each (max |d| 9 / 7 / 9 / 9; mean |d| over
+# the inputs with a turn 0.35 / 0.06); without the remainder fix: s1 196/200, mean |d| 1.30 / 1.73, |d| > 5 on 16 / 20
+# inputs (fix: 4 / 1).
+fret! 024FCEEC 100 100
+real 0250242C
+ret! 024FB4E8 0 0
+ret! 0250FDB8 0 0
+real 024F8F30 024F8F3C
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200ECD4 0200F5C8
+t60cand 0200ECD4 0200F5C8
+# known-fail clib-real: ? (sweep: N-step spec N2 differs with the eases converted; fails without them too)

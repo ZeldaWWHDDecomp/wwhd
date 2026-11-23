@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_npc_ho.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 // HD: GHS emits this translation unit's inline constructor/destructor vtables.
 const gc_tu_data gc_tu = {
@@ -831,6 +832,9 @@ BOOL daNpc_Ho_c::_draw() {
 /* 0223F2D0 */
 BOOL daNpc_Ho_c::_execute() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    t60w::Guard<daNpc_Ho_c> t60g(this, t60npc::Logic<daNpc_Ho_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     m_jnt.setParam(200, 0x9C4, -500, -0x9C4, 8000, 8000, -0x9C4, -8000, 0x3E8);
     playTexPatternAnm();
     mAnmEnded = (s8)mpMorf->play(&eyePos, mtrlSndId, mReverb);
@@ -871,6 +875,7 @@ BOOL daNpc_Ho_c::_execute() {
     }
     tevStr.mRoomNo = hoRoomId(dComIfG_Bgsp(), gnd);
     tevStr.mEnvrIdxOverride = hoPolyColor(dComIfG_Bgsp(), gnd);
+    t60g.model = true; /* true60: the frame reached its model step */
     J3DModel* pModel = mpMorf->getModel();
     mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
     mDoMtx_stack_c::YrotM(current.angle.y);

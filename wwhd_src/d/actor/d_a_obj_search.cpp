@@ -1,6 +1,8 @@
 /* Searchlights: GameCube method names, verified HD behavior. */
 #include "d/actor/d_a_obj_search.h"
+#include "d/t60_draw.h"
 #include <cmath>
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 const gc_tu_data gc_tu = {.safeString = 0x1002EE6C};
 
 static const f32 l_value_5 = 5.0f;
@@ -1375,6 +1377,9 @@ void daObj_Search::Act_c::smoke_set(f32 speed, s32 duration) {
 
 /* 0238A7A4 */
 s32 daObj_Search::Act_c::_execute() {
+    t60w::Guard<daObj_Search::Act_c> t60g(this, t60objw::Logic<daObj_Search::Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return 1;
     auto* a = this;
     if (!static_cast<s32>(SearchHD_cLib_calcTimer_i(&a->mSmokeTimer)))
         SearchHD_dPa_smokeEcallBack_end(&a->mSmokeCallback);
@@ -1469,6 +1474,7 @@ s32 daObj_Search::Act_c::_execute() {
     }
     a->modeProc(PROC_EXEC_e, 8);
     a->bg_check();
+    t60g.model = true; /* true60: the frame reached its model step */
     return 1;
 }
 
@@ -1714,7 +1720,9 @@ s32 daObj_Search::Act_c::_draw() {
     u8 culled = static_cast<u8>(
         SearchHD_fopAcM_checkCullingBox(gabi::at<void>(matrix), low, zero, low, high, height, high));
     matrix = address(a->mpBeamModel[0].get());
-    a->mSearchCull = culled;
+    const u8 searchCull = culled; /* true60 (t60_draw.h): bg_check (execute) reads the answer: the frame's draw writes it */
+    if (t60_draw_frame_pass())
+        a->mSearchCull = culled;
     if (matrix)
         matrix += 0xC8;
     f32 bHigh = l_value_600, bLow = l_value__600, near = l_value__100, far = l_value_9585_62;
@@ -1731,7 +1739,7 @@ s32 daObj_Search::Act_c::_draw() {
     a->mBeamCull[1] = culled;
     l_farClip = l_defaultFarClip;
     SearchHD_J3DUClipper_calcViewFrustum(gabi::at<void>(0x1048CFF0));
-    if (!static_cast<u8>(a->mSearchCull)) {
+    if (!(t60_draw_frame_pass() ? static_cast<u8>(a->mSearchCull) : searchCull)) { /* (in-between draws: this pass's answer) */
         if (static_cast<u8>(a->mType) == 1) {
             u32 env = address(SearchHD_dScnKy_env_light_c_setLightTevColorType());
             void* again = SearchHD_dScnKy_env_light_c_setLightTevColorType();

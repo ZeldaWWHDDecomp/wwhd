@@ -1,0 +1,28 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_player_main_04.txt
+# ---- (2026-11-16): setGrabItemPos 0240A41C. The carried item's fall lag mGrabItemBounceY
+# (r3+0x6A24) grows by 0.2 x -speed.y per 30 Hz frame while Link falls (x dt per step, the per-step movement rule; capped at 40), and
+# otherwise eases back to 0 through cLib_chaseF (step 5, central); in GRAB_UP the item's facing chases Link's through
+# cLib_chaseAngleS (0x1000, central). The central primitives run as the candidate (c_lib.cpp). Steering: a grabbed
+# actor at 0x61000000, no barrel carry (UNK400 off and checkGrabBarrelSearch 0: the barrel's offset ease is
+# cLib_addCalc with HD's overshoot carry m35D8, not part of this check), the fall speed -40..0, the lag -10..40.
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200F5C8 0200F8D0
+t60cand 0200F5C8 0200F8D0
+t60conv 0240A41C
+field 0240A41C r3+0x65A4 u32 0x61000000,0x61000000
+# not GRAB_UP (0x6F: the item keeps its highest y and the lag adds per update on top: d_a_player_main_04_grabup.txt)
+field 0240A41C r3+0x65F0 i32 0x72,0x73,0x17,0xC5,6
+field 0240A41C r3+0x3B8 u32 0,0
+ret! 023DCF08 0 0
+field 0240A41C r3+0x6A70 u32 0,2,2
+field 0240A41C r3+0x340 f32 -40 0
+field 0240A41C r3+0x6A24 f32 -10 40
+# the lag: a sum of dt-shares (float rounding) and a cap of 40 that the N steps and the one step reach alike; the chase
+# to 0 (cLib_chaseF, step 5): exact landing on 0, else the same step sum
+t60tol 0240A41C r3+0x6A24 f32 absrel 0.0001 0.00001
+# the item's y (current.pos.y +0x318) = hands + lag: the same tolerance
+t60tol 0240A41C 61000318 f32 absrel 0.0001 0.00001
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+real 0200ECD4 0200EF78 0200F378 0200F428 0200F564
+t60cand 0200ECD4 0200EF78 0200F378 0200F428 0200F564

@@ -1,6 +1,8 @@
 /** Actor utility helpers, tww names and layouts. HD entry widths and call
  * ordering are retained. */
 #include "d/d_lib.h"
+#include "true60.h"
+#include "d/d_lib_t60.h"
 // HD: entry points retain the verified word-address ABI and f64 floating arguments.
 // HD: STControl puts its vtable last; field names follow tww, with HD offsets in the header.
 // HD: secondary animation is the ninth integer argument, read from the guest stack.
@@ -116,6 +118,10 @@ static void dLib_animations(u32 arc, u32 model, u32 animation, u32 parameter,
  * STControl_checkUpTrigger and STControl_checkDownTrigger */
 static s32 STControl_repeat(STControl *control, u8 bit, be<s16> *timer,
                             be<s16> *current, be<s16> *delay) {
+  // true60 (the 30 Hz timer rule and 12): a trigger/repeat fires on the tick30 step only (once per 30 Hz frame; the stick
+  // it follows changes only there), so wait/repeat counts stay 30 Hz frames
+  if (!t60::tick30())
+    return 0;
   if (*timer != 0 || !(control->mDirectionTrig & bit))
     return 0;
   s16 remaining = *delay;
@@ -391,6 +397,10 @@ s32 dLib_pathInfo(u32 out, s32 point) {
 
 /* 0258873C */
 u32 STControl_checkTrigger(u32 p) {
+  // true60: the stick-to-direction update and the repeat timers once per 30 Hz frame, on the tick30 step (the
+  // game's pad changes only there); an in-between step reports the current directions and changes nothing
+  if (!t60::tick30())
+    return dLib_at<STControl>(p)->mDirectionTrig;
   u8 old = dLib_at<STControl>(p)->mDirectionTrig;
   u32 table = dLib_at<STControl>(p)->mpVtable.v;
   dLib_at<STControl>(p)->mPrevDirectionTrig = old;
@@ -611,9 +621,9 @@ void dLib_waveRot(u32 pos, u32 wave, f64 sway) {
   dLib_addCalcAngleS2(wave + 2, az, s32(10), s32(0x200));
   s16 angle_x = dLib_at<dLib_wave_c>(wave)->mAngX;
   f32 amplitude = l_waveAmplitude;
-  s32 phase_x = dLib_at<dLib_wave_c>(wave)->mAnimX + 400;
+  s32 phase_x, phase_z; /* true60: + 400 / + 430 a 30 Hz frame (d_lib_t60.h) */
+  dlib60_wavePhase(wave, dLib_at<dLib_wave_c>(wave)->mAnimX, dLib_at<dLib_wave_c>(wave)->mAnimZ, &phase_x, &phase_z);
   dLib_at<dLib_wave_c>(wave)->mAnimX = phase_x;
-  s32 phase_z = dLib_at<dLib_wave_c>(wave)->mAnimZ + 430;
   dLib_at<dLib_wave_c>(wave)->mAnimZ = phase_z;
   f32 sum = f32(sway + amplitude);
   sum = fadds_ppc(sum, l_waveTuning);

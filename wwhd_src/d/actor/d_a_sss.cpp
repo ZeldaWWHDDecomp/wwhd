@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_sss.h"
+#include "d/actor/d_a_sss_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule addendum) */
 
 // HD: this translation unit's copies of inline vtables and common-header statics.
 const gc_tu_data gc_tu = {
@@ -33,7 +34,8 @@ static SssSphereSource bm_sph_src = {0x0, 0x0, 0x0, 0x0,  0x0,  0x0,  0x5,  0x20
 /* 0248EC3C */
 static BOOL daSss_Draw(sss_class* i_this) {
     if (i_this->mType != 0) {
-        settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &i_this->eyePos, &i_this->tevStr);
+        if (sss_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+            settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &i_this->eyePos, &i_this->tevStr);
         /* hand_draw */
         J3DModel* model = i_this->mpMorf->getModel();
         dScnKy_env_light_c* env = dKy_getEnvlight();
@@ -619,6 +621,10 @@ static void hand_move(sss_class* i_this) {
 
 /* 0248EEEC */
 static BOOL daSss_Execute(sss_class* i_this) {
+    t60w::Guard<sss_class> t60g(i_this, sss_t60::ops()); /* true60: the whole frame on the tick30 step */
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
+    t60g.model = true;
     i_this->mFrameCounter = i_this->mFrameCounter + 1;
     for (int i = 0; i < 2; i++) {
         if (i_this->mTimers[i] != 0) {
@@ -720,7 +726,11 @@ static cPhs_State daSss_Create(fopAc_ac_c* i_actor) {
             if (!i_this->mSwitchNo) {
                 i_this->mHandPos.y = y + 230.0f;
             }
-            daSss_Execute(i_this);
+            {
+                const f32 t60PrevDt = sss_t60::createBegin(); /* true60: create's run of the execute, the original at dt 1 */
+                daSss_Execute(i_this);
+                sss_t60::createEnd(t60PrevDt);
+            }
         } else {
             state = cPhs_ERROR_e;
         }

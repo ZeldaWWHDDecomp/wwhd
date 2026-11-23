@@ -1,5 +1,6 @@
 /* WWHD Nintendo Gallery hatch. */
 #include "d/actor/d_a_obj_ohatch.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 const gc_tu_data gc_tu = {.safeString = 0x1002DF2C};
 enum {
     dRes_INDEX_OHATCH_BDL_OHATCH_e = 4,
@@ -126,12 +127,16 @@ void daObjOhatch_c::set_mtx() {
 }
 /* 0237F6BC */
 bool daObjOhatch_c::_execute() {
+    t60w::Guard<daObjOhatch_c> t60g(this, t60objw::Logic<daObjOhatch_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
     dBgW *bg = mClosedBg;
     if (bg && bg->ChkUsed())
         bg->Move();
     bg = mOpenBg;
     if (bg && bg->ChkUsed())
         bg->Move();
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     // GHS pointer-to-member descriptor supports both direct and virtual actions.
     ptmf_call(gabi::ea(&mAction), this);

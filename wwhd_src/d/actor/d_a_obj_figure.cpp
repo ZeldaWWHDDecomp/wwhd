@@ -1,5 +1,6 @@
 /* Nintendo Gallery figurines and pedestal. */
 #include "d/actor/d_a_obj_figure.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 #include <cmath>
 using gabi::call;
 const gc_tu_data gc_tu = {.safeString = 0x100282AC};
@@ -575,6 +576,9 @@ bool daObjFigure_c::_draw() {
 }
 /* 02340858 */
 bool daObjFigure_c::_execute() {
+    t60w::Guard<daObjFigure_c> t60g(this, t60npc::Logic<daObjFigure_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return true;
     if (!dComIfGp_event_runCheck()) {
         (this->*moveProc.mProc)();
     } else
@@ -595,6 +599,7 @@ bool daObjFigure_c::_execute() {
     attention_info.position.y = (f32)(y + 200.0f);
     if (animation)
         gabi::at<mDoExt_brkAnm>(animation)->play();
+    t60g.model = true; /* true60: the frame reached its model step */
     setMtx();
     return true;
 }

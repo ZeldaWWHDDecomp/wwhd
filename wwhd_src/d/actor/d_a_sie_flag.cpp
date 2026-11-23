@@ -182,6 +182,8 @@ bool daSie_Flag_c::_execute() {
     mpClothPacket->setParam(0.4f, -0.75f, 0.9f, 1.0f, 1.0f, 0x400, 0, 900, -800, 7.0f, 6.0f);
     mpClothPacket->setWindPower(13.0f, 8.0f);
     mpClothPacket->setGlobalWind(&mWindvec);
+    /* true60: converted with its cloth (d_cloth_packet_t60.h: the cloth on a general step length); the
+     * wind follow is c_lib's dt form, the roll crash and the hit sound read per-step state (no change) */
     mpClothPacket->cloth_move();
 
     return false;

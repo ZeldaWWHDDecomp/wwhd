@@ -7,6 +7,7 @@
  * decompilation (zeldaret/tww) and checked against WWHD.
  */
 #include "d/actor/d_a_dai_item.h"
+#include "d/actor/d_a_dai_item_t60.h" /* true60 (t60conv): step helpers */
 
 namespace {
 using Actor = daStandItem_c;
@@ -324,12 +325,15 @@ void daStandItem_c::set_mtx() {
 
 /* 02117A84 */
 BOOL daStandItem_c::_execute() {
-    mTimer = (s32)((u32)mTimer + 1u);
+    /* true60 (hand; replaces t60conv's whole-function gate, which missed the per-step animation play,
+     * ease and drop move reached through the guest-table actions and the ext wrappers): see d_a_dai_item_t60.h */
+    if (t60c::end()) { mTimer = (s32)((u32)mTimer + 1u); } /* true60: a frame counter no code reads: tick30 */
     execAction();
     itemProc();
     set_mtx();
     u32 cloth = gabi::ea(mpCloth.get());
-    if (cloth) {
+    if (cloth) { /* true60: every step: the cloth packet (d_cloth_packet.cpp) is on a general step
+                  * length (a converted owner calls it on every step at g_dt; the tick30-only call moved it half a frame a frame) */
         auto *packet = gabi::at<StandItemClothHD>(cloth);
         gabi::call_ptr((u32)packet->__vtbl->mMove, packet);
     }
@@ -388,15 +392,24 @@ BOOL daStandItem_c::actionFobj06() {
     zero->set(0.0f, 0.0f, 0.0f);
     s16 angle = standItemTargetAngle(zero.get(), wind.get());
     standItemDistanceAngle(angle, (s16)current.angle.y);
-    f32 spin = (f32)mSpinPower + __builtin_fabsf(strength);
-    if (spin > 4.0f)
-        spin = 4.0f;
-    mSpinPower = spin;
-    mSpinSpeed = (s16)gabi::ftoi(1536.0f * spin);
-    f32 maxStep = standItemWindPower() + 0.3f;
-    f32 minStep = standItemWindPower() + 0.1f;
-    standItemAddCalc(&mSpinPower, 0.0f, 0.08f, maxStep, minStep);
-    mSpinAngle = (s16)((u16)mSpinAngle + (u16)mSpinSpeed);
+    /* true60 (c_lib-real sweep): the spin power is the item's own state: the wind's push, the clamp at 4 and the
+     * slow-down (an ease with a minimum step: nonlinear) once a frame, whole (dt 1) on the tick30 step; per step they did
+     * not add up to A's frame (N-step spec with real cLib: actionFobj06 482/10000, mSpinPower 2.31 vs 3.15). The spin angle
+     * below still adds its per-frame speed in step shares */
+    if (t60c::end()) {
+        const bool whole = t60c::on();
+        const f32 prev = whole ? t60_set_dt(1.0f) : 1.0f;
+        f32 spin = (f32)mSpinPower + __builtin_fabsf(strength);
+        if (spin > 4.0f)
+            spin = 4.0f;
+        mSpinPower = spin;
+        mSpinSpeed = (s16)gabi::ftoi(1536.0f * spin);
+        f32 maxStep = standItemWindPower() + 0.3f;
+        f32 minStep = standItemWindPower() + 0.1f;
+        standItemAddCalc(&mSpinPower, 0.0f, 0.08f, maxStep, minStep);
+        if (whole) t60_set_dt(prev);
+    }
+    mSpinAngle = (s16)((u16)mSpinAngle + (u16)t60c::frameAdd(&mSpinAngle, 1, (s16)mSpinSpeed)); /* true60: the spin per frame, exact per 30 Hz frame */
     return 1;
 }
 
@@ -429,9 +442,10 @@ BOOL daStandItem_c::actionFobj09() {
             invalidateEmitter(mpHeadEmitter);
             invalidateEmitter(mpBaseEmitter, true);
             u32 emitter = gabi::ea(mpWaitEmitter.get());
-            if (!emitter)
-                mpWaitEmitter = gabi::at<StandItemEmitterHD>(createParticle(this, 0x82B3, true));
-            else
+            if (!emitter) {
+                if (t60c::end()) /* true60: an emitter created while its pointer is unset, on the tick30 step (30 Hz visual-motion) */
+                    mpWaitEmitter = gabi::at<StandItemEmitterHD>(createParticle(this, 0x82B3, true));
+            } else
                 setEmitterMatrix(emitter, &mHeadJointMtx);
         } else {
             invalidateEmitter(mpWaitEmitter);
@@ -441,10 +455,10 @@ BOOL daStandItem_c::actionFobj09() {
     } else {
         if (!mbBckDidPlayOld) {
             invalidateEmitter(mpWaitEmitter);
-            if (!gabi::ea(mpHeadEmitter.get()))
+            if (!gabi::ea(mpHeadEmitter.get()) && t60c::end()) /* true60: emitters created on the tick30 step (30 Hz visual-motion) */
                 mpHeadEmitter = gabi::at<StandItemEmitterHD>(createParticle(this, 0x82B4, true));
             u32 emitter = gabi::ea(mpBaseEmitter.get());
-            if (!emitter) {
+            if (!emitter && t60c::end()) {
                 emitter = createParticle(this, 0x82B5, false);
                 mpBaseEmitter = gabi::at<StandItemEmitterHD>(emitter);
             }
@@ -459,7 +473,7 @@ BOOL daStandItem_c::actionFobj09() {
         if (second)
             setEmitterMatrix(second, &mBaseJointMtx);
     }
-    mbBckDidPlayOld = (u8)mbBckDidPlay;
+    if (t60c::end()) { mbBckDidPlayOld = (u8)mbBckDidPlay; } /* true60: the edge latch stored on the tick30 step (strict RNG-pair) */
     return 1;
 }
 
@@ -484,10 +498,13 @@ void daStandItem_c::animTest() {
     s16 animMin = (s16)standItemTables()->m_anim_min_time[index / 2],
         stopMax = (s16)standItemTables()->m_stop_max_time[index / 2];
     s16 play = mBckPlayTimer;
-    mbBckDidPlay = 0;
-    if (play > 0) {
+    /* true60: the branch the frame began, held over its steps (animation-driven decision); the timers and their decisions on the first
+     * step (first-step AI-timer); the animation and the rate ease on every step (central); the stop test after the frame's last ease */
+    bool playing = t60c::held(play > 0, 2, this);
+    if (t60c::first()) { mbBckDidPlay = 0; }
+    if (playing) {
         u32 animation = gabi::ea(mpBckAnm.get());
-        mBckPlayTimer = (s16)(play - 1);
+        if (t60c::first()) { mBckPlayTimer = (s16)(play - 1); }
         if (animation) {
             standItemAnimationPlay(gabi::at<u8>(animation));
             mbBckDidPlay = 1;
@@ -497,16 +514,21 @@ void daStandItem_c::animTest() {
             mBckPlayTimer = 16;
             gabi::at<StandItemBckCtorHD>(animationNow)->mRate = 1.0f;
         }
-        if (mBckPlayTimer < 15 && stopMax != 0) {
+        /* true60 (whole-frame form, whole): the rate ease once per 30 Hz frame on the tick30 step at dt 1 (its minimum step does not
+         * compose over dt-scaled steps: 1.0 -> 0.9 in one step, 0.9028 over two); A plays with the previous frame's rate
+         * before the ease, so every step of the frame plays at that rate as well */
+        if (t60c::end() && mBckPlayTimer < 15 && stopMax != 0) {
+            const f32 prev = t60_set_dt(1.0f);
             standItemAddCalc(&mBckSpeed, 0.0f, 0.1f, 0.1f, 0.05f);
+            t60_set_dt(prev);
             f32 speed = mBckSpeed;
             mpBckAnm.get()->mRate = speed;
         }
-        if (mBckSpeed == 0.0f || mBckPlayTimer == 0) {
+        if (t60c::end() && (mBckSpeed == 0.0f || mBckPlayTimer == 0)) { /* true60: after the frame's last ease (tick30) */
             mpBckAnm.get()->mRate = 0.0f;
             mBckStopTimer = randomTimer(stopMin, stopMax);
         }
-    } else if (mBckStopTimer > 0) {
+    } else if (t60c::first() && mBckStopTimer > 0) { /* true60: the stop timer and its draw on the first step */
         s16 remaining = (s16)(mBckStopTimer - 1);
         if (animMax == 0) {
             mBckStopTimer = 1;
@@ -531,6 +553,18 @@ void daStandItem_c::animTestForOneTime() {
         animMax = (s16)standItemTables()->m_anim_max_time[index / 2];
     s16 stopMin = (s16)standItemTables()->m_stop_min_time[index / 2],
         stopMax = (s16)standItemTables()->m_stop_max_time[index / 2];
+    /* true60: the case the frame began in (the play timer running on: a stop restarts the animation), held (animation-driven decision) */
+    bool rerun = t60c::held(!(mBckStopTimer > 0) && mBckPlayTimer > 1, 3, this);
+    if (!t60c::first()) { /* true60: the frame's later steps: the animation plays on (central); timers and draws: first step */
+        BOOL stopped = standItemAnimationPlay(mpBckAnm.get());
+        if (stopped && rerun)
+            restartAnimation(this);
+        if (!stopped)
+            mbBckDidPlay = 1;
+        else if (stopMax == 0)
+            restartAnimation(this);
+        return;
+    }
     mbBckDidPlay = 0;
     BOOL stopped = standItemAnimationPlay(mpBckAnm.get());
     if (mBckStopTimer > 0) {

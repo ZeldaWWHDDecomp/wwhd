@@ -1,6 +1,7 @@
 /* Play scene part 8. */
 // HD: native scene, wind and resource systems extend the GameCube play scene.
 #include "d/d_s_play.h"
+#include "d/d_s_play_t60.h"
 #include "port_hooks.h"
 
 static inline void assure(u32 s) {
@@ -146,6 +147,15 @@ static BOOL dScnPly_Draw(dScnPly::dScnPly_ply_c *i_this) {
         dScnPlyAPI_drawSceneSystem(gabi::ea(&i_this->mSceneSystem), gabi::ea(view.get()),
                                    gabi::ea(l_j3dSystem.mProjectionMatrix), 0);
     }
+    /* true60 (note, rule 14; collision scheduling): this runs on every logic step. The collider lists hold
+     * what this step's executes registered (cCcS::Set; Move checks them and empties the lists), so converted processes'
+     * colliders meet each other on every step, and meet the unconverted ones on the tick30 step, where both sides
+     * are at the same logical time (an unconverted process registers on tick30 only). Each Move's results (hit
+     * info, Co push) are read by the next execute of each party exactly once: a converted process reads the tick30
+     * results on the next frame's first step, before that step's Move clears them. Mixed pairs are therefore
+     * sampled at 30 Hz, like the 30 Hz game (nothing is lost or doubled); they go per step as their second party
+     * is converted. Keeping unconverted colliders registered across the earlier steps would check unconverted
+     * pairs again (hit marks and sounds twice) or clear their results before their execute reads them. */
     dScnPlyAPI_moveCollision(gabi::ea(&dScnPly_gameInfo()->play.mCcS)); /* dComIfG_Ccsp()->Move() */
     dScnPlyAPI_clearBackgroundMoveFlags(
         gabi::ea(&dScnPly_gameInfo()->play)); /* dComIfG_Bgsp()->ClrMoveFlag() */
@@ -155,31 +165,78 @@ static BOOL dScnPly_Draw(dScnPly::dScnPly_ply_c *i_this) {
             0) /* !IsPeek, !resetToOpening, PLAY_SCENE, isEnableNextStage */
         change_stage(i_this);
     bool paused = dScnPlyAPI_checkMenu() || PORT_PLAY_W(0x025B00B0, dScnPlyAPI_checkPause());
+    /* true60 (world-block port step, d_s_play_t60.h): on the frame's earlier steps only the converted world systems
+     * run, each at its dt (the port lifts its hold there only while kT60WorldConverted is not 0); the tick30 step
+     * runs every system, the unconverted ones at dt 1. Mask 0: the original block. */
     if (!paused) {
-        dScnPlyAPI_runVibration(
-            gabi::ea(&dScnPly_gameInfo()->play.mVibration)); /* dVibration_c::Run */
-        dScnPlyAPI_calculateMagma(gabi::ea(&dScnPly_gameInfo()->play));
-        if (dScnPly_gameInfo()->play.mpGrassPacket != 0 ||
-            dScnPly_gameInfo()->play.mpTreePacket != 0 ||
-            dScnPly_gameInfo()->play.mpWoodPacket != 0 ||
-            dScnPly_gameInfo()->play.mpFlowerPacket != 0 || dScnPlyAPI_checkPoisonCollision())
+        if (t60_world_runs(kT60W_Vibration)) {
+            f32 prevDt = t60_set_dt(t60_world_dt(kT60W_Vibration));
+            dScnPlyAPI_runVibration(
+                gabi::ea(&dScnPly_gameInfo()->play.mVibration)); /* dVibration_c::Run */
+            t60_set_dt(prevDt);
+        }
+        if (t60_world_runs(kT60W_Magma)) {
+            f32 prevDt = t60_set_dt(t60_world_dt(kT60W_Magma));
+            dScnPlyAPI_calculateMagma(gabi::ea(&dScnPly_gameInfo()->play));
+            t60_set_dt(prevDt);
+        }
+        if (t60::tick30() && t60_world_runs(kT60W_MassUsers) &&
+            (dScnPly_gameInfo()->play.mpGrassPacket != 0 ||
+             dScnPly_gameInfo()->play.mpTreePacket != 0 ||
+             dScnPly_gameInfo()->play.mpWoodPacket != 0 ||
+             dScnPly_gameInfo()->play.mpFlowerPacket != 0 || dScnPlyAPI_checkPoisonCollision()))
             dScnPlyAPI_prepareMassCollision(gabi::ea(&reinterpret_cast<dScnPly_CollisionSystem*>(&dScnPly_gameInfo()->play.mCcS)->mMassManager)); /* dCcMassS_Mng::Prepare */
-        dScnPlyAPI_calculateGrass(gabi::ea(&dScnPly_gameInfo()->play));
-        dScnPlyAPI_calculateTree(gabi::ea(&dScnPly_gameInfo()->play));
-        dScnPlyAPI_calculateWood(gabi::ea(&dScnPly_gameInfo()->play));
-        dScnPlyAPI_calculateFlower(gabi::ea(&dScnPly_gameInfo()->play));
-        dScnPlyAPI_calculatePoisonCollision(); /* dKyr_poison_light_colision */
-        u32 play = dComIfGp_ea();
-        gabi::call_ptr(
-            gabi::at<dScnPly_Background>(play + offsetof(dComIfG_inf_c, play))->mVtable->move,
-            gabi::ea(&gabi::at<dScnPly_GameInfo>(play)->play)); /* dComIfG_Bgsp() virtual +0x24 */
-        dScnPlyAPI_executeSnapshot();
-        u32 pl = dScnPly_gameInfo()->play.mpPlayerPtr[0].v;
-        if (pl == 0 || !dScnPlyAPI_checkGameOverStart(pl)) /* daPy_lk_c::checkGameOverStart */
-            dScnPlyAPI_calculateParticles(dScnPly_gameInfo()->play.mParticle.v);
-        dScnPlyAPI_drawParticleDirect(dScnPly_gameInfo()->play.mParticle.v);
-        l_particleFrame.mValue = l_particleFrame.mValue + 1;
-    } else {
+        if (t60_world_runs(kT60W_Grass)) {
+            f32 prevDt = t60_set_dt(t60_world_dt(kT60W_Grass));
+            dScnPlyAPI_calculateGrass(gabi::ea(&dScnPly_gameInfo()->play));
+            t60_set_dt(prevDt);
+        }
+        if (t60_world_runs(kT60W_Tree)) {
+            f32 prevDt = t60_set_dt(t60_world_dt(kT60W_Tree));
+            dScnPlyAPI_calculateTree(gabi::ea(&dScnPly_gameInfo()->play));
+            t60_set_dt(prevDt);
+        }
+        if (t60_world_runs(kT60W_Wood)) {
+            f32 prevDt = t60_set_dt(t60_world_dt(kT60W_Wood));
+            dScnPlyAPI_calculateWood(gabi::ea(&dScnPly_gameInfo()->play));
+            t60_set_dt(prevDt);
+        }
+        if (t60_world_runs(kT60W_Flower)) {
+            f32 prevDt = t60_set_dt(t60_world_dt(kT60W_Flower));
+            dScnPlyAPI_calculateFlower(gabi::ea(&dScnPly_gameInfo()->play));
+            t60_set_dt(prevDt);
+        }
+        if (t60_world_runs(kT60W_Poison)) {
+            f32 prevDt = t60_set_dt(t60_world_dt(kT60W_Poison));
+            dScnPlyAPI_calculatePoisonCollision(); /* dKyr_poison_light_colision */
+            t60_set_dt(prevDt);
+        }
+        if (t60_world_runs(kT60W_BgMove)) {
+            f32 prevDt = t60_set_dt(t60_world_dt(kT60W_BgMove));
+            u32 play = dComIfGp_ea();
+            gabi::call_ptr(
+                gabi::at<dScnPly_Background>(play + offsetof(dComIfG_inf_c, play))->mVtable->move,
+                gabi::ea(&gabi::at<dScnPly_GameInfo>(play)->play)); /* dComIfG_Bgsp() virtual +0x24 */
+            t60_set_dt(prevDt);
+        }
+        if (t60_world_runs(kT60W_Snapshot)) {
+            f32 prevDt = t60_set_dt(t60_world_dt(kT60W_Snapshot));
+            dScnPlyAPI_executeSnapshot();
+            t60_set_dt(prevDt);
+        }
+        if (t60_world_runs(kT60W_Particles)) {
+            f32 prevDt = t60_set_dt(t60_world_dt(kT60W_Particles));
+            u32 pl = dScnPly_gameInfo()->play.mpPlayerPtr[0].v;
+            if (pl == 0 || !dScnPlyAPI_checkGameOverStart(pl)) /* daPy_lk_c::checkGameOverStart */
+                dScnPlyAPI_calculateParticles(dScnPly_gameInfo()->play.mParticle.v);
+            dScnPlyAPI_drawParticleDirect(dScnPly_gameInfo()->play.mParticle.v);
+            /* true60: l_particleFrame is g_Counter.mTimer 101FF560 (the plants' and the particles' 30 Hz
+             * clock): once per 30 Hz frame */
+            if (t60::tick30())
+                l_particleFrame.mValue = l_particleFrame.mValue + 1;
+            t60_set_dt(prevDt);
+        }
+    } else { /* (every pass, as before: the port skips it on held passes, game_hooks.cpp hook_025CB6D4) */
         dScnPlyAPI_pauseVibration(
             gabi::ea(&dScnPly_gameInfo()->play.mVibration)); /* dVibration_c::Pause */
     }
@@ -209,6 +266,13 @@ static BOOL dScnPly_Draw(dScnPly::dScnPly_ply_c *i_this) {
     }
     return TRUE;
 }
+#if defined(GABI_GAME_BUILD) && GABI_T60
+/* true60, game build only (no guest function): the world systems that step on every logic step (d_s_play_t60.h), asked
+ * by the port's world-block step (runtime/src) */
+extern "C" __attribute__((visibility("default"))) u32 wwhd_t60_world_converted(void) { return t60_world_converted(); }
+extern "C" __attribute__((visibility("default"))) u32 wwhd_t60_world_all(void) { return kT60W_All; }
+#endif
+
 /* WWHD glue
 str 1005319C "sea" in 025AF8A0
 str 100531A0 "sea_E" in 025AF8A0

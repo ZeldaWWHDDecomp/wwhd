@@ -8,6 +8,7 @@
  * Messages (next_msgStatus, getMsg, normal_talk, shop_talk, talk, setAnmFromMsgTag): d_a_npc_bs1_msg.cpp.
  */
 #include "d/actor/d_a_npc_bs1.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 static daNpc_Bs1_HIO_c l_HIO;
 static u32 l_msgId;
@@ -1026,6 +1027,9 @@ BOOL daNpc_Bs1_c::_draw() {
 /* 02213E18 */
 BOOL daNpc_Bs1_c::_execute() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    t60w::Guard<daNpc_Bs1_c> t60g(this, t60npc::Logic<daNpc_Bs1_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     daNpc_Bs1_childHIO_c* c = bs1_child(mType);
     mJntCtrl.setParam(c->mNpc.mMaxBackboneX, c->mNpc.mMaxBackboneY, c->mNpc.mMinBackboneX,
                       c->mNpc.mMinBackboneY, c->mNpc.mMaxHeadX, c->mNpc.mMaxHeadY, c->mNpc.mMinHeadX,
@@ -1048,6 +1052,7 @@ BOOL daNpc_Bs1_c::_execute() {
     u8 color = (u8)bs1_getPolyColor(dComIfG_Bgsp(), gabi::ea(&mAcch) + 0xE8);    /* dBgS::GetPolyColor */
     J3DModel* model = mpMorf->getModel();
     tevStr.mEnvrIdxOverride = color; /* tevStr.mEnvrIdxOverride */
+    t60g.model = true; /* true60: the frame reached its model step */
     mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
     mDoMtx_stack_c::YrotM(current.angle.y);
     J3DModel_setBaseTRMtx(model, mDoMtx_stack_c::get());

@@ -7,6 +7,7 @@
  * from the WWHD code (cking.rpx) and verified against it, keeping the GameCube names.
  */
 #include "d/actor/d_a_npc_zk1.h"
+#include "d/actor/d_a_npc_zk1_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule NPC form) */
 
 // HD: this TU owns each mapped object once.
 const gc_tu_data gc_tu = {.safeString = 0x10023964};
@@ -55,10 +56,12 @@ void daNpc_Zk1_c::_nodeCB_Head(J3DNode* i_node, J3DModel* i_model) {
     u32 jntNo = reinterpret_cast<J3DJoint*>(i_node)->getJntNo();
     Mtx34* stk = mDoMtx_stack_c::get();
     PSMTXCopy(i_model->getAnmMtx(jntNo), stk);
+    if (zk1_t60::drawStep()) { /* true60: logic stores on the tick30 step's draw only (rule 14) */
     mHeadPos.x = stk->m[0][3];
     mHeadPos.y = stk->m[1][3];
     mHeadPos.z = stk->m[2][3];
     PSMTXMultVec(stk, &a_eye_pos_off, &mEyePos);
+    }
     mDoMtx_XrotM(stk, m_jnt.mAngles[0][1]);
     mDoMtx_ZrotM(stk, -m_jnt.mAngles[0][0]);
     PSMTXCopy(stk, J3DSys::mCurrentMtx);
@@ -627,6 +630,9 @@ static inline void zk1_setAngle(daNpc_Zk1_c* i_this) {
 
 /* 02301110 */
 BOOL daNpc_Zk1_c::_execute() {
+    t60w::Guard<daNpc_Zk1_c> t60g(this, zk1_t60::kOps); /* true60: the whole frame on the tick30 step (end at every return) */
+    if (t60g.skip) /* a step before the tick30 step: the picture only */
+        return TRUE;
 
     if (mbRanExecute == 0) {
         mInitAngle.y = current.angle.y;
@@ -674,6 +680,7 @@ BOOL daNpc_Zk1_c::_execute() {
     if (mbInDemo == 0) {
         setCollision(80.0f, 220.0f);
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 

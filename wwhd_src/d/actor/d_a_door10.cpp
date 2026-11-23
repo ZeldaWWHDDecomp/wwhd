@@ -1,6 +1,7 @@
 /** Stone sliding doors, ported from zeldaret/tww and adapted to WWHD.
  * Derived game source: */
 #include "d/actor/d_a_door10.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 const gc_tu_data gc_tu = {
     .safeString = 0x1000DE68,
@@ -635,6 +636,9 @@ BOOL daDoor10_Draw(daDoor10_c* i_this) { return i_this->draw(); }
 
 /* 021277D0 */
 BOOL daDoor10_Execute(daDoor10_c* i_this) {
+    t60w::Guard<daDoor10_c> t60g(i_this, t60objw::Logic<daDoor10_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     if (!l_actionInitialized) {
         l_actionInitialized = 1;
         memcpy_g(&l_action, &l_actionInitial, sizeof(l_action));
@@ -658,6 +662,7 @@ BOOL daDoor10_Execute(daDoor10_c* i_this) {
         break;
     }
     i_this->mRoomNo2 = dComIfGp_roomControl_getStayNo();
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 

@@ -1,5 +1,6 @@
 // Local WWHD reconstruction using the CC0 TWW JPA1 template.
 #include "JSystem/JParticle/JPA_field_a.h"
+#include "JSystem/JParticle/JPA_field_t60.h"
 using namespace jpa_field_a;
 
 static JPAEmitterInfo* sFieldEmitterInfo;
@@ -38,6 +39,11 @@ void jpa_field_a::JPABaseField::calcVel(JPAFieldData* data, JPABaseParticle* par
     case JPA_BASE_VELOCITY: velocity = &particle->mBaseVel; break;
     case JPA_FIELD_VELOCITY: velocity = &particle->mFieldVel; break;
     default: return;
+    }
+    // true60 (JPA_field_t60.h): an acceleration / base-velocity change over the step length
+    if (!jpa_t60f::full()) {
+        f32 k = jpa_t60f::vel_scale(type);
+        x = mul(x, k); y = mul(y, k); z = mul(z, k);
     }
     f32 vx = velocity->x, vy = velocity->y;
     vx = add(vx, x);

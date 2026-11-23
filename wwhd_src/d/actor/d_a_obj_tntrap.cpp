@@ -5,6 +5,7 @@
  */
 #include "d/actor/d_a_obj_tntrap.h"
 #include "bindings.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using Trap = daObjTnTrap_c;
 TnTrapTriangle* TnTrapTriangle_construct(TnTrapTriangle*);
 static TnTrapMathStatics l_math;
@@ -524,6 +525,9 @@ void daObjTnTrap_c::setup_action(s32 action) {
 
 /* 023A2E90 */
 BOOL daObjTnTrap_c::_execute() {
+    t60w::Guard<daObjTnTrap_c> t60g(this, t60objw::Logic<daObjTnTrap_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return 1;
     dBgW* background = mpBgW;
     if (background && background->ChkUsed())
         background->Move();
@@ -538,6 +542,7 @@ BOOL daObjTnTrap_c::_execute() {
             }
         set_se();
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     return 1;
 }
 

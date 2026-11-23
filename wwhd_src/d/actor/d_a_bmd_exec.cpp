@@ -8,6 +8,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_bmd.h"
+#include "d/actor/d_a_bmd_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule) */
 #include <cmath>
 
 static const u16 eff_joint[] = {0x8, 0x9, 0x4};
@@ -447,6 +448,10 @@ static inline void mk_move(bmd_class* i_this) {
 
 /* 020AEBCC */
 static BOOL daBmd_Execute(bmd_class* i_this) {
+    /* true60: the whole frame on the tick30 step (the whole-frame form rule; end at the return) */
+    t60w::Guard<bmd_class> t60g(i_this, bmd_t60::ops());
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     fopAc_ac_c* actor = i_this;
     dComIfGp_get(); /* HD: an unused fetch */
     if (bmd_startStageName0() == 'X') {
@@ -478,6 +483,7 @@ static BOOL daBmd_Execute(bmd_class* i_this) {
     mDoMtx_XrotM(mDoMtx_stack_c::get(), actor->shape_angle.x);
     mDoMtx_ZrotM(mDoMtx_stack_c::get(), actor->shape_angle.z);
     setBaseTRMtx_now(i_this->mpBodyMorf->getModel());
+    t60g.model = true;
     PSMTXCopy(mDoMtx_stack_c::get(), calc_mtx());
     if ((0 < i_this->mPetalAngle) || (i_this->mBgOffTimer != 0)) {
         MtxScale(0.0f, 0.0f, 0.0f, true);

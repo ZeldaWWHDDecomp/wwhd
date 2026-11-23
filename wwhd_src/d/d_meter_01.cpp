@@ -5,6 +5,7 @@
  * HD differences preserve the verified call order, allocating constructors and expanded HUD state.
  */
 #include "d/d_meter_01.h"
+#include "d/d_meter_t60.h"
 #include <initializer_list>
 static MeterHIOFloats l_hioValues;
 static MeterHDState l_hdState;
@@ -2570,6 +2571,11 @@ static u8 l_menuPause;
 static MeterWeaponClockArray l_meterClock;
 
 // clang-format off
+#if defined(GABI_GAME_BUILD) && GABI_T60
+/* true60 (UI port step): the converted UI systems, for the port's draw-path holds (d_meter_t60.h) */
+extern "C" __attribute__((visibility("default"))) u32 wwhd_t60_ui_converted(void) { return kT60UiConverted; }
+#endif
+
 /* WWHD glue
 str 1005103C "Ojhous"
 str 10051044 "Orichh"

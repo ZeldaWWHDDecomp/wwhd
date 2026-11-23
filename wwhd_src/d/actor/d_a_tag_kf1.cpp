@@ -1,6 +1,7 @@
 /* Kf1 pottery compensation event tag. Private, numerically verified
  * reconstruction. */
 #include "d/actor/d_a_tag_kf1.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 // HD: GameCube bodies are placeholders; verified HD call and store order is
 // authoritative.
@@ -136,12 +137,15 @@ void daTag_Kf1_c::checkOrder() {
 u32 daTag_Kf1_c::chkAttention(const cXyz *position) {
     KfPlay *state = play();
     u32 player = state->mPlayer;
-    f32 distance2 = kfSquareDistance(position, &KfGuestMemory::actor(player)->current.pos);
+    /* true60 (the process-order read rule): Link as A reads him: his frame-start position while he is later in the line */
+    gabi::Local<cXyz> fsLink;
+    bool fs = t60objw::fsPos(player, fsLink.get());
+    f32 distance2 = kfSquareDistance(position, fs ? fsLink.get() : &KfGuestMemory::actor(player)->current.pos);
     f32 distance = kfSqrt(distance2);
     state = play();
     player = (u32)state->mPlayer;
     f32 horizontal = (f32)l_HIO.mAttentionDistance,
-        playerY = (f32)KfGuestMemory::actor(player)->current.pos.y, y = (f32)position->y;
+        playerY = fs ? (f32)fsLink->y : (f32)KfGuestMemory::actor(player)->current.pos.y, y = (f32)position->y; /* true60: process-order read */
     f32 dy = (f32)((f64)playerY - (f64)y);
     // PPC bge tests !LT, so unordered NaNs fail either attention comparison.
     return distance < horizontal && dy < (f32)l_HIO.mAttentionHeight;
@@ -387,6 +391,9 @@ u32 daTag_Kf1_c::_draw() {
 
 /* 024AC4F8 */
 u32 daTag_Kf1_c::_execute() {
+    t60w::Guard<daTag_Kf1_c> t60g(this, t60objw::Logic<daTag_Kf1_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return 1;
     checkOrder();
     KfPlay *state = play();
     if ((u8)state->mEventState && (u16)eventInfo.mCommand != dEvtCmd_INTALK_e)

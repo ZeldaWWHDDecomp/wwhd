@@ -4,6 +4,7 @@
  * Every address remains verified.
  */
 #include "d/actor/d_a_boko.h"
+#include "d/actor/d_a_boko_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule) */
 #include "sead/ElementAt.h"
 static dCcD_SrcCps l_cps_src;
 static dCcD_SrcSph l_sph_src;
@@ -265,7 +266,8 @@ BOOL daBoko_c::draw() {
       return 1;
   }
   auto* env = bokoEnvironment();
-  bokoSetupLighting(env, 0, &this->current.pos, &this->tevStr);
+  if (boko_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+    bokoSetupLighting(env, 0, &this->current.pos, &this->tevStr);
   env = bokoEnvironment();
   bokoModelLighting(env, this->mpModel.get(), &this->tevStr);
   if (this->mParameters == Type_PGANON_SWORD_e) {
@@ -1057,6 +1059,11 @@ BOOL daBoko_c::procCarry() {
 
 /* 020C183C */
 BOOL daBoko_c::execute() {
+  /* true60: the whole frame on the tick30 step (end at every return; d_a_boko_t60.h) */
+  t60w::Guard<daBoko_c> t60g(this, boko_t60::ops());
+  if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+    return 1;
+  t60g.model = true;
   s16 delay = s16(this->mSpawnDelay);
   if (delay) {
     this->mSpawnDelay = s16(delay - 1);

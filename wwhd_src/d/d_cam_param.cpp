@@ -1,5 +1,6 @@
 /** Camera style parameters and math, using zeldaret/tww names and the verified HD arithmetic. */
 #include "d/d_cam_param.h"
+#include "true60.h"
 
 static f32 l_stickUpper;
 static f32 l_stickLower;
@@ -596,11 +597,25 @@ BOOL dCamSetup_c::CheckLatitudeRange(s16* angle) {
     return TRUE;
 }
 
+/* true60 (the per-step chance rule): FanBank's random bank target is drawn once per 30 Hz frame. The follow camera chases it
+ * every step with a per-step ratio; a new draw on every step would average the noise down (and draw twice as often).
+ * In a converted context the draw happens on the tick30 step and the frame's earlier steps reuse the last one (the wind
+ * power and the base are read on every step). Host memory, one camera; dt 1: a draw on every call (the original). */
+static f32 s_camFanBankRandom;
+static bool s_camFanBankValid;
+
 /* 024F78F0 */
 f32 dCamSetup_c::FanBank() {
 
-    f32 width = (f32)this->mFanBankWidth, random = cM_rndFX(width), wind = dKyw_get_wind_pow(),
-        base = (f32)this->mFanBankBase;
+    f32 width = (f32)this->mFanBankWidth, random;
+    if (t60::dt() == 1.0f || t60::tick30() || !s_camFanBankValid) {
+        random = cM_rndFX(width);
+        s_camFanBankRandom = random;
+        s_camFanBankValid = true;
+    } else {
+        random = s_camFanBankRandom;
+    }
+    f32 wind = dKyw_get_wind_pow(), base = (f32)this->mFanBankBase;
     return gabi::fmadds(random, wind, base);
 }
 

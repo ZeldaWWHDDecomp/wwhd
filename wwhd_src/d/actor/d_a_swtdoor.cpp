@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_swtdoor.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 // HD: this translation unit's inline SafeString vtable.
 const gc_tu_data gc_tu = { .safeString = 0x1003EDE4 };
@@ -21,10 +22,14 @@ static BOOL daSwtdoor_Draw(swtdoor_class* i_this) {
 
 /* 024A3DB0 */
 static BOOL daSwtdoor_Execute(swtdoor_class* i_this) {
+    t60w::Guard<swtdoor_class> t60g(i_this, t60objw::Logic<swtdoor_class>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     g_env_light.settingTevStruct(TEV_TYPE_BG0, &i_this->current.pos, &i_this->tevStr);
     if (dComIfGs_isSwitch(i_this->mSwitchNo, fopAcM_GetRoomNo(i_this)) && i_this->home.pos.y > -300.0f)
         i_this->home.pos.y -= 10.0f;
 
+    t60g.model = true; /* true60: the frame reached its model step */
     MtxTrans(i_this->current.pos.x, i_this->current.pos.y + i_this->home.pos.y, i_this->current.pos.z, false);
     cMtx_YrotM(calc_mtx(), i_this->current.angle.y);
     cMtx_XrotM(calc_mtx(), i_this->current.angle.x);

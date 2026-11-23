@@ -6,6 +6,7 @@
  * (zeldaret/tww src/d/actor/d_a_boomerang.cpp) to the WWHD layout and verified against cking.rpx.
  */
 #include "d/actor/d_a_boomerang.h"
+#include "d/actor/d_a_boomerang_t60.h"
 #include "sead/ElementAt.h"
 using namespace gabi;
 
@@ -873,6 +874,9 @@ void daBoomerang_sightPacket_c::setSight(cXyz *position, s32 index) {
 
 /* 020CC2EC */
 void daBoomerang_sightPacket_c::play(s32 count) {
+    /* true60 (hand, the per-step chance rule): the lock-on sights' animation frames are visual counters: once per frame (tick30) */
+    if (!t60c::end())
+        return;
     for (s32 i = 0; i < count; ++i) {
         u8 frame = static_cast<u8>(static_cast<u8>(this->mFrameArr[i]) + 1);
         this->mFrameArr[i] = frame == 26 ? 0 : frame;
@@ -1142,9 +1146,27 @@ BOOL daBoomerang_c::procWait() {
     this->setKeepMatrix();
     s32 segments = static_cast<s32>(this->mBlur.numTrailSegments);
     u32 mode = static_cast<u32>(this->mParameters);
-    if (segments > 0)
+    /* true60 (hand, the per-step chance rule): the trail fade is visual, once per frame (tick30) */
+    if (segments > 0 && t60c::end())
         this->mBlur.numTrailSegments = segments - 5;
+    /* true60 (hand, rule 14 order): Link sets the throw on one of his steps; the boomerang
+     * throws on the frame's tick30 step from Link's frame-end pose (the original's execute after Link's frame) */
+    if (t60c::first()) {
+        bm60::drop(); /* true60: procWait has this frame's first step: no procMove latch this frame */
+        if (t60c::on()) /* true60: the frame-start old.pos for a throw on this frame's tick30 step */
+            bm60::latchWaitOld(this, this->old.pos.x, this->old.pos.y, this->old.pos.z);
+    }
+    if (mode == 1 && !t60c::end())
+        return 1;
     if (mode == 1) {
+        /* true60: the throw's procMove frame (collision capsule, BG line) starts from the frame
+         * start's old.pos, as the original's single execute (the per-step copy left the first step's position) */
+        f32 ox, oy, oz;
+        if (t60c::on() && bm60::waitOld(this, &ox, &oy, &oz)) {
+            this->old.pos.x = ox;
+            this->old.pos.y = oy;
+            this->old.pos.z = oz;
+        }
         f32 speed = static_cast<f32>(l_throwSpeed);
         this->speedF = speed;
         boomerang_resetAttackHit(at<void>(ea(&this->mCps)));
@@ -1266,7 +1288,9 @@ BOOL daBoomerang_c::procWait() {
                                  at<cXyz>(a + 0x26344));
     this->mCps.mGObjAt.mHitCallback = guest_fn((const void *)boomerangRockLineThunk);
     play = ea(dComIfGp_get());
-    boomerang_setCollision(at<void>(play + 0x26A4), at<void>(ea(&this->mCps)));
+    /* true60 (hand, the one-sweep-per-frame attack rule): the sight line (AT, lock-on hit callback) for the tick30 collision Move only */
+    if (t60c::end())
+        boomerang_setCollision(at<void>(play + 0x26A4), at<void>(ea(&this->mCps)));
     return 1;
 }
 
@@ -1275,6 +1299,32 @@ BOOL daBoomerang_c::procMove() {
     u32 a = ea(this), lock = a + 0x26244;
     if (!static_cast<u32>(l_offsetInitialized))
         l_offsetInitialized = 1;
+    /* true60 (hand, rule 14 order): the in-between steps are visual only; the tick30 step
+     * restores the frame start latched on the first step and runs the original frame (decisions + exact move) */
+    const bool full = t60c::end();
+    if (!full && t60c::first()) {
+        bm60::latchStart(this, this->current.pos.x, this->current.pos.y, this->current.pos.z);
+        bm60::latchOld(this, this->old.pos.x, this->old.pos.y, this->old.pos.z);
+    }
+    if (full && t60c::on()) {
+        f32 sx, sy, sz;
+        if (bm60::start(this, &sx, &sy, &sz)) {
+            this->current.pos.x = sx;
+            this->current.pos.y = sy;
+            this->current.pos.z = sz;
+            /* old.pos from its own frame-start latch (the game's per-step copy makes it the frame start,
+             * N-step spec with the procs compared: copied from current.pos it differed where the input's old.pos did) */
+            f32 ox, oy, oz;
+            if (bm60::startOld(this, &ox, &oy, &oz)) {
+                this->old.pos.x = ox;
+                this->old.pos.y = oy;
+                this->old.pos.z = oz;
+            }
+            bm60::consume();
+        }
+    }
+    if (!full && static_cast<u8>(this->mCatchAndDelete))
+        return 1;
     if (static_cast<u8>(this->mCatchAndDelete)) {
         boomerang_deleteActor(this);
         return 1;
@@ -1283,7 +1333,10 @@ BOOL daBoomerang_c::procMove() {
     if (!static_cast<u8>(at<boomerangGameInfo_c>(play)->play.mEvtCtrl.mMode)) {
         play = ea(dComIfGp_get());
         s16 oldSpin = static_cast<s16>(this->mModelRotY),
-            spin = static_cast<s16>(static_cast<s32>(oldSpin) - 0x1F00);
+            spin = static_cast<s16>(static_cast<s32>(oldSpin) - t60c::frameAdd(&this->mModelRotY, 1, 0x1F00));
+        /* true60: the step's share; the tick30 step takes what the frame's earlier steps did not (frameAdd;
+         * with share() a procMove first run on the tick30 step, procWait's throw falling through, spun only the
+         * tick30 share) */
         u32 player = static_cast<u32>(at<boomerangGameInfo_c>(play)->play.mpPlayerPtr[0].v);
         this->mModelRotY = spin;
         if (oldSpin >= 0 && spin < 0) {
@@ -1292,144 +1345,166 @@ BOOL daBoomerang_c::procMove() {
             boomerang_startSound_s32_cXyzPtr_s32_s32(0x2814, at<cXyz>(ea(&this->eyePos)), 0,
                                                      reverb);
         }
-        this->setAimPos();
-        Local<cXyz> difference, normalized;
-        boomerang_subtractVector(at<cXyz>(lock + 0x3C), difference.get(),
-                                 at<cXyz>(ea(&this->current.pos)));
-        f32 square = boomerang_squareMagnitude(difference.get());
-        f32 distance = boomerang_squareRoot(square);
-        cXyz *direction = difference.get();
-        if (distance > static_cast<f32>(l_normalizeThreshold)) {
-            boomerang_divideVector(difference.get(), normalized.get(), distance);
-            direction = normalized.get();
-        }
-        f32 dz = direction->z, dx = direction->x, dy = direction->y;
-        s32 desiredYaw = boomerang_atan2s(dx, dz);
-        s16 currentYaw = static_cast<s16>(this->current.angle.y);
-        s16 delta = static_cast<s16>(desiredYaw - currentYaw);
-        if (static_cast<u8>(this->mJustHit)) {
-            this->mJustHit = 0;
-            s16 yaw = static_cast<s16>(this->current.angle.y);
-            s16 remaining = static_cast<s16>(desiredYaw - yaw);
-            s32 adjusted = desiredYaw + (remaining > 0 ? -0x3000 : 0x3000);
-            delta = static_cast<s16>(desiredYaw - adjusted);
-            this->current.angle.y = static_cast<s16>(adjusted);
-        }
-        f32 speed = static_cast<f32>(this->speedF);
-        if (static_cast<u8>(this->mIsReturning)) {
-            if (distance < speed + speed) {
-                if (boomerang_returnBoomerang(at<void>(player))) {
-                    this->mParameters = 0;
-                    u8 returning = static_cast<u8>(this->mIsReturning);
-                    this->mThirdPerson = 0;
-                    this->mProcTarget = boomerangTU.procWait;
-                    this->mProcAdjust = 0;
-                    this->mCps.mGObjAt.mHitCallback = 0;
-                    this->mProcSelector = -1;
-                    (void)returning;
-                } else
-                    this->mCatchAndDelete = 1;
-            }
+        if (!full) {
+            /* true60 (hand, rule (a)): the in-between step glides along the frame-start heading (visual) */
+            u16 pitchBits = static_cast<u16>(this->current.angle.x),
+                yawBits = static_cast<u16>(this->current.angle.y);
+            u32 pitchTable = ea(&l_sinCosTable.mValues[pitchBits >> 3]),
+                yawTable = ea(&l_sinCosTable.mValues[yawBits >> 3]);
+            f32 step = t60c::step(static_cast<f32>(this->speedF));
+            f32 sinPitch = static_cast<f32>(at<be<f32>>(pitchTable)[0]),
+                cosPitch = static_cast<f32>(at<be<f32>>(pitchTable)[1]);
+            f32 sinYaw = static_cast<f32>(at<be<f32>>(yawTable)[0]),
+                cosYaw = static_cast<f32>(at<be<f32>>(yawTable)[1]);
+            this->current.pos.x = static_cast<f32>(this->current.pos.x) + step * cosPitch * sinYaw;
+            this->current.pos.y = static_cast<f32>(this->current.pos.y) - step * sinPitch;
+            this->current.pos.z = static_cast<f32>(this->current.pos.z) + step * cosPitch * cosYaw;
         } else {
-            bool advance = distance < speed;
-            if (!advance && boomerang_checkAttackHit(at<void>(lock + 0x84))) {
-                u32 hit = boomerang_getHitActor(at<void>(lock + 0xD4));
-                u8 index = static_cast<u8>(this->mCurLockIdx);
-                advance = hit == static_cast<u32>(this->mLockActors[index].v);
+            this->setAimPos();
+            Local<cXyz> difference, normalized;
+            boomerang_subtractVector(at<cXyz>(lock + 0x3C), difference.get(),
+                                     at<cXyz>(ea(&this->current.pos)));
+            f32 square = boomerang_squareMagnitude(difference.get());
+            f32 distance = boomerang_squareRoot(square);
+            cXyz *direction = difference.get();
+            if (distance > static_cast<f32>(l_normalizeThreshold)) {
+                boomerang_divideVector(difference.get(), normalized.get(), distance);
+                direction = normalized.get();
             }
-            if (advance) {
-                u8 index = static_cast<u8>(this->mCurLockIdx);
-                this->mJustHit = 1;
-                this->mLockActors[index].v = 0;
-                index = static_cast<u8>(this->mCurLockIdx);
-                this->mLockActorIDs[index] = fpcM_ERROR_PROCESS_ID_e;
-                index = static_cast<u8>(this->mCurLockIdx);
-                this->mCurLockIdx = static_cast<u8>(index + 1);
-                this->mFreeFlyOut = 0;
+            f32 dz = direction->z, dx = direction->x, dy = direction->y;
+            s32 desiredYaw = boomerang_atan2s(dx, dz);
+            s16 currentYaw = static_cast<s16>(this->current.angle.y);
+            s16 delta = static_cast<s16>(desiredYaw - currentYaw);
+            if (static_cast<u8>(this->mJustHit)) {
+                this->mJustHit = 0;
+                s16 yaw = static_cast<s16>(this->current.angle.y);
+                s16 remaining = static_cast<s16>(desiredYaw - yaw);
+                s32 adjusted = desiredYaw + (remaining > 0 ? -0x3000 : 0x3000);
+                delta = static_cast<s16>(desiredYaw - adjusted);
+                this->current.angle.y = static_cast<s16>(adjusted);
             }
-        }
-        if (!static_cast<u8>(this->mIsReturning)) {
-            bool turnBack = static_cast<u8>(this->mCancelFlg) != 0;
-            if (!turnBack) {
-                bool remaining =
-                    static_cast<u8>(this->mFreeFlyOut) ||
-                    static_cast<u8>(this->mLockCnt) > static_cast<u8>(this->mCurLockIdx);
-                turnBack = !remaining || (static_cast<u32>(this->mCps.mGObjAt.mRPrm) & 1);
+            f32 speed = static_cast<f32>(this->speedF);
+            if (static_cast<u8>(this->mIsReturning)) {
+                if (distance < speed + speed) {
+                    if (boomerang_returnBoomerang(at<void>(player))) {
+                        this->mParameters = 0;
+                        u8 returning = static_cast<u8>(this->mIsReturning);
+                        this->mThirdPerson = 0;
+                        this->mProcTarget = boomerangTU.procWait;
+                        this->mProcAdjust = 0;
+                        this->mCps.mGObjAt.mHitCallback = 0;
+                        this->mProcSelector = -1;
+                        (void)returning;
+                    } else
+                        this->mCatchAndDelete = 1;
+                }
+            } else {
+                bool advance = distance < speed;
+                if (!advance && boomerang_checkAttackHit(at<void>(lock + 0x84))) {
+                    u32 hit = boomerang_getHitActor(at<void>(lock + 0xD4));
+                    u8 index = static_cast<u8>(this->mCurLockIdx);
+                    advance = hit == static_cast<u32>(this->mLockActors[index].v);
+                }
+                if (advance) {
+                    u8 index = static_cast<u8>(this->mCurLockIdx);
+                    this->mJustHit = 1;
+                    this->mLockActors[index].v = 0;
+                    index = static_cast<u8>(this->mCurLockIdx);
+                    this->mLockActorIDs[index] = fpcM_ERROR_PROCESS_ID_e;
+                    index = static_cast<u8>(this->mCurLockIdx);
+                    this->mCurLockIdx = static_cast<u8>(index + 1);
+                    this->mFreeFlyOut = 0;
+                }
             }
-            if (turnBack) {
-                this->mJustHit = 1;
-                this->mIsReturning = 1;
-                this->resetLockActor();
-                this->mCancelFlg = 0;
-                this->mFreeFlyOut = 0;
+            if (!static_cast<u8>(this->mIsReturning)) {
+                bool turnBack = static_cast<u8>(this->mCancelFlg) != 0;
+                if (!turnBack) {
+                    bool remaining =
+                        static_cast<u8>(this->mFreeFlyOut) ||
+                        static_cast<u8>(this->mLockCnt) > static_cast<u8>(this->mCurLockIdx);
+                    turnBack = !remaining || (static_cast<u32>(this->mCps.mGObjAt.mRPrm) & 1);
+                }
+                if (turnBack) {
+                    this->mJustHit = 1;
+                    this->mIsReturning = 1;
+                    this->resetLockActor();
+                    this->mCancelFlg = 0;
+                    this->mFreeFlyOut = 0;
+                }
             }
-        }
-        f32 zero = static_cast<f32>(l_zero);
-        if (static_cast<u8>(this->mJustHit))
-            this->current.angle.y = static_cast<s16>(desiredYaw);
-        else {
-            s32 limit;
-            if (static_cast<u8>(this->mThirdPerson))
-                limit = 0x4000;
+            f32 zero = static_cast<f32>(l_zero);
+            if (static_cast<u8>(this->mJustHit))
+                this->current.angle.y = static_cast<s16>(desiredYaw);
             else {
-                f32 speedNow = static_cast<f32>(this->speedF);
-                f32 factor = static_cast<f32>(l_turnFactor) - (distance + distance) / speedNow;
-                if (factor < zero)
-                    factor = zero;
-                else if (factor > static_cast<f32>(l_turnThreshold))
-                    factor = fmadds(static_cast<f32>(l_turnAcceleration),
-                                    factor - static_cast<f32>(l_turnThreshold),
-                                    static_cast<f32>(l_turnFactor));
-                limit = static_cast<s16>(ftoi(
-                    fmadds(factor, static_cast<f32>(l_turnScale), static_cast<f32>(l_turnBase))));
+                s32 limit;
+                if (static_cast<u8>(this->mThirdPerson))
+                    limit = 0x4000;
+                else {
+                    f32 speedNow = static_cast<f32>(this->speedF);
+                    f32 factor = static_cast<f32>(l_turnFactor) - (distance + distance) / speedNow;
+                    if (factor < zero)
+                        factor = zero;
+                    else if (factor > static_cast<f32>(l_turnThreshold))
+                        factor = fmadds(static_cast<f32>(l_turnAcceleration),
+                                        factor - static_cast<f32>(l_turnThreshold),
+                                        static_cast<f32>(l_turnFactor));
+                    limit = static_cast<s16>(ftoi(
+                        fmadds(factor, static_cast<f32>(l_turnScale), static_cast<f32>(l_turnBase))));
+                }
+                s16 yaw = static_cast<s16>(this->current.angle.y);
+                if (delta > limit)
+                    delta = static_cast<s16>(limit);
+                else if (delta < -limit)
+                    delta = static_cast<s16>(-limit);
+                this->current.angle.y = static_cast<s16>(static_cast<s32>(yaw) + delta);
             }
-            s16 yaw = static_cast<s16>(this->current.angle.y);
-            if (delta > limit)
-                delta = static_cast<s16>(limit);
-            else if (delta < -limit)
-                delta = static_cast<s16>(-limit);
-            this->current.angle.y = static_cast<s16>(static_cast<s32>(yaw) + delta);
+            Local<cXyz> horizontal;
+            horizontal->y = zero;
+            horizontal->z = dz;
+            horizontal->x = dx;
+            square = boomerang_squareMagnitude(horizontal.get());
+            f32 horizontalLength = boomerang_squareRoot(square);
+            s16 pitch = boomerang_atan2s(-dy, horizontalLength);
+            u16 pitchBits = static_cast<u16>(pitch), yawBits = static_cast<u16>(this->current.angle.y);
+            u32 pitchTable = ea(&l_sinCosTable.mValues[pitchBits >> 3]),
+                yawTable = ea(&l_sinCosTable.mValues[yawBits >> 3]);
+            speed = static_cast<f32>(this->speedF);
+            this->current.angle.x = pitch;
+            f32 cosPitch = static_cast<f32>(at<be<f32>>(pitchTable)[1]),
+                x = static_cast<f32>(this->current.pos.x);
+            f32 horizontalSpeed = speed * cosPitch, sinYaw = static_cast<f32>(at<be<f32>>(yawTable)[0]);
+            f32 nextX = fmadds(horizontalSpeed, sinYaw, x);
+            f32 y = static_cast<f32>(this->current.pos.y);
+            this->current.pos.x = nextX;
+            f32 sinPitch = static_cast<f32>(at<be<f32>>(pitchTable)[0]),
+                nextY = -fmadds(speed, sinPitch, -y);
+            f32 z = static_cast<f32>(this->current.pos.z);
+            this->current.pos.y = nextY;
+            cosPitch = static_cast<f32>(at<be<f32>>(pitchTable)[1]);
+            f32 cosYaw = static_cast<f32>(at<be<f32>>(yawTable)[1]);
+            f32 nextZ = fmadds(speed * cosPitch, cosYaw, z);
+            this->shape_angle.y = static_cast<s16>(yawBits);
+            this->shape_angle.x = pitch;
+            this->current.pos.z = nextZ;
+            if (!static_cast<u8>(this->mIsReturning))
+                this->checkBgHit(at<cXyz>(ea(&this->old.pos)), at<cXyz>(ea(&this->current.pos)));
+            s16 rollChange = static_cast<s16>(-2 * static_cast<s32>(delta));
+            s16 roll;
+            if (rollChange > 0x100)
+                roll = 0x2000;
+            else if (rollChange < -0x100)
+                roll = -0x2000;
+            else
+                roll = static_cast<s16>(this->mModelRotZ);
+            this->mModelRotZ = roll;
+            /* true60 (N-step spec with the c_lib eases converted): the roll ease belongs to the tick30 step's
+             * original frame, so it runs at dt 1 there (at the step's dt the converted ease took half the frame's roll) */
+            const bool rollAtOne = full && t60c::on();
+            const float rollDt = rollAtOne ? t60_set_dt(1.0f) : 0.0f;
+            boomerang_addCalcAngleS(at<be<s16>>(a + 0x32C), roll, 0x10, 0x1000, 0x10);
+            if (rollAtOne)
+                t60_set_dt(rollDt);
         }
-        Local<cXyz> horizontal;
-        horizontal->y = zero;
-        horizontal->z = dz;
-        horizontal->x = dx;
-        square = boomerang_squareMagnitude(horizontal.get());
-        f32 horizontalLength = boomerang_squareRoot(square);
-        s16 pitch = boomerang_atan2s(-dy, horizontalLength);
-        u16 pitchBits = static_cast<u16>(pitch), yawBits = static_cast<u16>(this->current.angle.y);
-        u32 pitchTable = ea(&l_sinCosTable.mValues[pitchBits >> 3]),
-            yawTable = ea(&l_sinCosTable.mValues[yawBits >> 3]);
-        speed = static_cast<f32>(this->speedF);
-        this->current.angle.x = pitch;
-        f32 cosPitch = static_cast<f32>(at<be<f32>>(pitchTable)[1]),
-            x = static_cast<f32>(this->current.pos.x);
-        f32 horizontalSpeed = speed * cosPitch, sinYaw = static_cast<f32>(at<be<f32>>(yawTable)[0]);
-        f32 nextX = fmadds(horizontalSpeed, sinYaw, x);
-        f32 y = static_cast<f32>(this->current.pos.y);
-        this->current.pos.x = nextX;
-        f32 sinPitch = static_cast<f32>(at<be<f32>>(pitchTable)[0]),
-            nextY = -fmadds(speed, sinPitch, -y);
-        f32 z = static_cast<f32>(this->current.pos.z);
-        this->current.pos.y = nextY;
-        cosPitch = static_cast<f32>(at<be<f32>>(pitchTable)[1]);
-        f32 cosYaw = static_cast<f32>(at<be<f32>>(yawTable)[1]);
-        f32 nextZ = fmadds(speed * cosPitch, cosYaw, z);
-        this->shape_angle.y = static_cast<s16>(yawBits);
-        this->shape_angle.x = pitch;
-        this->current.pos.z = nextZ;
-        if (!static_cast<u8>(this->mIsReturning))
-            this->checkBgHit(at<cXyz>(ea(&this->old.pos)), at<cXyz>(ea(&this->current.pos)));
-        s16 rollChange = static_cast<s16>(-2 * static_cast<s32>(delta));
-        s16 roll;
-        if (rollChange > 0x100)
-            roll = 0x2000;
-        else if (rollChange < -0x100)
-            roll = -0x2000;
-        else
-            roll = static_cast<s16>(this->mModelRotZ);
-        this->mModelRotZ = roll;
-        boomerang_addCalcAngleS(at<be<s16>>(a + 0x32C), roll, 0x10, 0x1000, 0x10);
     }
     f32 x = static_cast<f32>(this->current.pos.x), y = static_cast<f32>(this->current.pos.y),
         z = static_cast<f32>(this->current.pos.z);
@@ -1453,17 +1528,24 @@ BOOL daBoomerang_c::procMove() {
     play = ea(dComIfGp_get());
     if (!static_cast<u8>(at<boomerangGameInfo_c>(play)->play.mEvtCtrl.mMode)) {
         spin = static_cast<s16>(this->mModelRotY);
-        at<daBoomerang_blur_c>(ea(at<void>(ea(&this->mBlur))))
-            ->copyBlur(at<void>(ea(&l_matrixStack)), spin);
-        play = ea(dComIfGp_get());
-        boomerang_setCollision(at<void>(play + 0x26A4), at<void>(lock + 0x84));
-        play = ea(dComIfGp_get());
-        boomerang_setMassCollision(at<void>(play + 0x4EF8), at<void>(lock + 0x84), 1);
+        if (t60c::end()) /* true60 (hand, the per-step chance rule): the trail keeps one segment per frame (tick30) */
+            at<daBoomerang_blur_c>(ea(at<void>(ea(&this->mBlur))))
+                ->copyBlur(at<void>(ea(&l_matrixStack)), spin);
+        /* true60 (hand, the one-sweep-per-frame attack rule; rule (a)): the boomerang's AT for the tick30 collision Move only */
+        if (full) {
+            play = ea(dComIfGp_get());
+            boomerang_setCollision(at<void>(play + 0x26A4), at<void>(lock + 0x84));
+            play = ea(dComIfGp_get());
+            boomerang_setMassCollision(at<void>(play + 0x4EF8), at<void>(lock + 0x84), 1);
+        }
     } else {
-        at<daBoomerang_blur_c>(ea(at<void>(ea(&this->mBlur))))
-            ->copyBlur(at<void>(ea(&l_matrixStack)), 0);
+        if (t60c::end())
+            at<daBoomerang_blur_c>(ea(at<void>(ea(&this->mBlur))))
+                ->copyBlur(at<void>(ea(&l_matrixStack)), 0);
         boomerang_resetAttackHit(at<void>(lock + 0x84));
     }
+    if (!full) /* true60 (rule (a)): the water test / splash on the tick30 step */
+        return 1;
     u8 water = static_cast<u8>(this->mInWater);
     this->mInWater = boomerang_setItemWaterEffect(this, water, 1);
     return 1;
@@ -1483,6 +1565,13 @@ BOOL daBoomerang_c::execute() {
     }
     u32 a = ea(this);
     s16 selector = static_cast<s16>(this->mProcSelector);
+    /* true60 (hand, 30 Hz visual-motion): one proc state step per 30 Hz frame: a proc change on a step holds the dispatch for the
+     * frame's remaining steps */
+    if (t60c::first())
+        t60c::unmark(1, this);
+    if (t60c::marked(1, this))
+        selector = 0;
+    const u32 procBefore = static_cast<u32>(this->mProcTarget);
     if (selector) {
         u32 receiver = a + static_cast<s16>(static_cast<s16>(this->mProcAdjust));
         u32 target;
@@ -1496,6 +1585,8 @@ BOOL daBoomerang_c::execute() {
                 at<boomerangVirtualMethod_c>(table)[static_cast<u32>(selector)].mFunction);
         }
         call_ptr<void>(target, at<void>(receiver));
+        if (static_cast<u32>(this->mProcTarget) != procBefore)
+            t60c::mark(1, this);
     }
     u32 y = static_cast<u32>(boomerangBits<u32>(this->current.pos.y)),
         z = static_cast<u32>(boomerangBits<u32>(this->current.pos.z));

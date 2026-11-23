@@ -3,6 +3,7 @@
  * Verified against the original by d_a_wall. Private game-derived source.
  */
 #include "d/actor/d_a_wall.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 const gc_tu_data gc_tu = {.safeString = 0x10041F64};
 static WallResourceTable m_heapsize;
@@ -151,6 +152,9 @@ void daWall_c::setMoveBGMtx() {
 
 /* 024D433C */
 s32 daWall_c::_execute() {
+    t60w::Guard<daWall_c> t60g(this, t60objw::Logic<daWall_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     (this->*mode_proc.entries[mState])();
     return TRUE;
 }

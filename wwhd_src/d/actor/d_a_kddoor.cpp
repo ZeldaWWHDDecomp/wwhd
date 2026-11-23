@@ -1,5 +1,6 @@
 // Forbidden Woods door and animated barriers. All verified HD behavior is retained.
 #include "d/actor/d_a_kddoor.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 u8 kddoorType(daKddoor_c*);
 u8 kddoorFrontSwitch(daKddoor_c*);
 u8 kddoorBackSwitch(daKddoor_c*);
@@ -1040,6 +1041,9 @@ static BOOL daKddoor_Draw(daKddoor_c* i_this) { return i_this->draw(); }
 
 /* 0219884C */
 static BOOL daKddoor_Execute(daKddoor_c* i_this) {
+    t60w::Guard<daKddoor_c> t60g(i_this, t60objw::Logic<daKddoor_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
 
     if (!sActionGuard) {
         sActionGuard = 1;
@@ -1065,6 +1069,7 @@ static BOOL daKddoor_Execute(daKddoor_c* i_this) {
     i_this->mRoomNo2 = sStayRoom;
     if (enabled)
         i_this->mStop.execute(i_this);
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 

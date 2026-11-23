@@ -1,5 +1,6 @@
 /** Leaf pile (Vochi). GameCube names and HD layout, verified against the original. */
 #include "d/actor/d_a_obj_leaves.h"
+#include "d/actor/d_a_obj_leaves_t60.h" /* true60 (t60conv): step helpers */
 using namespace leaves_attack;
 const gc_tu_data gc_tu = {.safeString = 0x1002BF54,
                           .headerStatics = {0x1046A470, 0x101CA90C, 0x1046A47C}};
@@ -255,6 +256,19 @@ bool daObjLeaves_c::_delete() {
 }
 /* 0236A7E8 */
 bool daObjLeaves_c::_execute() {
+    /* true60 (t60conv, the first-step AI-timer rule / first-step frame-level): frame-level logic on the frame's first step. The sphere is registered
+     * for the tick30 collision Move (the one-sweep-per-frame attack rule; collision audit), where the bomb's / Link's gust
+     * At meet it (a first-step-only registration never met them); not on the earlier steps, whose Moves would clear its
+     * hit flags and count its effect counter down once more per step. A frame whose wait_proc (first step: the status
+     * move and the hit clear, once a frame as A) found it unblown registers it on its tick30 step while mBlown is still
+     * clear (the Tg callback inside the Move sets it). dt 1: one step, the original. */
+    if (t60c::first())
+        t60c::unmark(1, this);
+    else {
+        if (t60c::end() && t60c::marked(1, this) && !mBlown)
+            leavesSetCollision(dComIfG_Ccsp(), &mSph);
+        return true;
+    }
     s32 fade = (s32)((u32)mFadeWait - 1);
     s32 retire = (s32)((u32)mRetireWait - 1);
     mFadeWait = fade > 0 ? fade : 0;
@@ -270,7 +284,10 @@ void daObjLeaves_c::wait_proc() {
     mStts.Move();
     mSph.ClrTgHit();
     if (!mBlown) {
-        leavesSetCollision(dComIfG_Ccsp(), &mSph);
+        if (t60c::end()) /* true60: registered for the tick30 Move only (one-sweep-per-frame attack); at N > 1 on the frame's tick30 step (_execute) */
+            leavesSetCollision(dComIfG_Ccsp(), &mSph);
+        else
+            t60c::mark(1, this);
         return;
     }
     s32 sw = PrmAbstract(this, PRM_SWSAVE_W, PRM_SWSAVE_S);

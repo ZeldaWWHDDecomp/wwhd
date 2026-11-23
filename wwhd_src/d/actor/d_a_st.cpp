@@ -1,6 +1,7 @@
 /* Stalfos. GameCube names and layout adapted to the verified WWHD implementation.
  * All 29 entry points retain their guest ABI and explicit outgoing linkage slots. */
 #include "d/actor/d_a_st.h"
+#include "d/actor/d_a_st_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule addendum) */
 namespace Stalfos {
 using namespace StalfosHD;
 
@@ -2452,6 +2453,10 @@ void eff_move(st_class *i_this) {
 
 /* 02493FB0 */
 s32 daSt_Execute(st_class *i_this) {
+    t60w::Guard<st_class> t60g(i_this, st_t60::ops()); /* true60: the whole frame on the tick30 step */
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return 1;
+    t60g.model = true;
     stGetGameInfoWithLinkage<u32>();
     if (i_this->mCountdownToDeath) {
         --i_this->mCountdownToDeath;
@@ -2692,7 +2697,11 @@ cPhs_State daSt_Create(st_class *i_this) {
     i_this->mEnemyIce.mDeathSwitch = i_this->mDeathSwitch;
     i_this->stealItemLeft = 3;
     i_this->mNoHitTimer = 15;
-    native_daSt_Execute(i_this);
+    {
+        const f32 t60PrevDt = st_t60::createBegin(); /* true60: create's run of the execute, the original at dt 1 */
+        native_daSt_Execute(i_this);
+        st_t60::createEnd(t60PrevDt);
+    }
     return phase;
 }
 

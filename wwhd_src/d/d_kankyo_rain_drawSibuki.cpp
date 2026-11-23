@@ -1,6 +1,18 @@
 // Weather drawing: GameCube names; verified HD rendering buffers.
 #include "d/d_kankyo_rain_drawSibuki.h"
+#include "d/t60_draw.h"
 namespace RainDraw {
+/* true60 (class, t60_draw.h): the spray quads' random sizes / offsets are drawn from the game's RNG in the
+ * DRAW (cM_rndF / cM_rndFX, 4 a quad, rainCount / 2 quads). At N > 1 the game draws after every step: the global RNG
+ * advanced N times a frame (octo8: B +4 draws a frame from the storm's first spray quad), shifting every later random
+ * pick of the logic. The frame's draw (t60_draw_frame_pass) draws them and keeps them; the other passes reuse the
+ * kept values (quad i, or quad i mod the kept count when the count grew), no RNG draw. The spray fade (mSibukiAlpha,
+ * cLib_addCalc in the draw) steps on the frame's draw only too: per pass it ran N times as fast and the first quad
+ * appeared a frame early with its 4 draws (octo11: B +4 at frame 273). At N = 1 every pass is the frame's draw: the
+ * original. Host memory. */
+static constexpr s32 kT60SibukiMax = 128;
+static f32 s_t60Sibuki[kT60SibukiMax][4];
+static s32 s_t60SibukiN;
 /* 02571B1C */
 void dKyr_drawSibuki() {
 
@@ -15,8 +27,9 @@ void dKyr_drawSibuki() {
     f32 zero = (f32)(*at<be<f32>>(Zero)), target = (f32)(*at<be<f32>>(SkyRange));
     if ((u8)(at<RainPacket>(packet)->mStatus) & 1)
         target = zero;
-    sdk::addCalc(gabi::ea(&at<RainPacket>(packet)->mSibukiAlpha), target, (f32)(*at<be<f32>>(Rate)),
-                 (f32)(*at<be<f32>>(VelocityLimit)), (f32)(*at<be<f32>>(SprayMinimumStep)));
+    if (t60_draw_frame_pass()) /* true60 (t60_draw.h): the spray fade, a per-frame smoothing step, once a frame */
+        sdk::addCalc(gabi::ea(&at<RainPacket>(packet)->mSibukiAlpha), target, (f32)(*at<be<f32>>(Rate)),
+                     (f32)(*at<be<f32>>(VelocityLimit)), (f32)(*at<be<f32>>(SprayMinimumStep)));
     gabi::Local<cXyz> eye, dir;
     sdk::dKy_set_eyevect_calc(camera, eye.get(), (f32)(*at<be<f32>>(SprayForward)),
                               (f32)(*at<be<f32>>(SprayHeight)));
@@ -59,10 +72,32 @@ void dKyr_drawSibuki() {
         positionRange = (f32)(*at<be<f32>>(SprayPositionRange)),
         positionScale = (f32)(*at<be<f32>>(SprayPositionScale));
     do {
-        f32 size = gabi::fmadds(sdk::randomF<f32>(randomSize), spread, randomSize);
-        f32 dx = gabi::fmuls_ppc(sdk::randomFX<f32>(positionRange), positionScale);
-        f32 dy = sdk::randomFX<f32>(yRandomRange);
-        f32 dz = sdk::randomFX<f32>(positionRange);
+        f32 r0, r1, r2, r3;
+        if (t60_draw_frame_pass()) {
+            r0 = sdk::randomF<f32>(randomSize);
+            r1 = sdk::randomFX<f32>(positionRange);
+            r2 = sdk::randomFX<f32>(yRandomRange);
+            r3 = sdk::randomFX<f32>(positionRange);
+            if (i < kT60SibukiMax) {
+                s_t60Sibuki[i][0] = r0;
+                s_t60Sibuki[i][1] = r1;
+                s_t60Sibuki[i][2] = r2;
+                s_t60Sibuki[i][3] = r3;
+                s_t60SibukiN = i + 1;
+            }
+        } else if (s_t60SibukiN > 0) {
+            const f32* k = s_t60Sibuki[i % s_t60SibukiN];
+            r0 = k[0];
+            r1 = k[1];
+            r2 = k[2];
+            r3 = k[3];
+        } else {
+            r0 = r1 = r2 = r3 = 0.0f; /* no frame's draw kept yet: the quad at the eye point */
+        }
+        f32 size = gabi::fmadds(r0, spread, randomSize);
+        f32 dx = gabi::fmuls_ppc(r1, positionScale);
+        f32 dy = r2;
+        f32 dz = r3;
         f32 x = gabi::fadds_ppc((f32)eye->x, dx), y = gabi::fadds_ppc((f32)eye->y, dy);
         f32 z = gabi::fmadds(dz, positionScale, (f32)eye->z);
         f32 left = gabi::fsubs_ppc(x, size), right = gabi::fadds_ppc(x, size);

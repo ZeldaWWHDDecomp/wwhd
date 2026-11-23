@@ -3,6 +3,7 @@
  */
 #include "d/d_meter_00.h"
 #include "sead/ElementAt.h"
+#include "d/d_meter_t60_project.h"
 using namespace gabi;
 using namespace meter00Item;
 using namespace meter00Status;
@@ -412,7 +413,10 @@ void dMeter_flyGaugeMove(dMeterPrefixHD *i_Meter, u32 active, s32 maximum,
       i_Meter->mMagicGauge2.mUserArea = counter + 1;
       dMeterGameInfoHD *state = meter00_getGameInfo();
       cXyz point;
-      meter00_project(&state->mpCb1Player->eyePos, &point);
+      {
+        T60_METER_EXACT_PROJECT_VIEW(); /* true60: the frame's camera view (d_meter_t60_project.h) */
+        meter00_project(&state->mpCb1Player->eyePos, &point);
+      }
       sHeartTimers.mProjectedEye.x = (f32)point.x;
       sHeartTimers.mProjectedEye.y = (f32)point.y;
       sHeartTimers.mProjectedEye.z = (f32)point.z;

@@ -1,5 +1,6 @@
 /* Message trigger tag, audited WWHD translation unit. */
 #include "d/actor/d_a_tag_msg.h"
+#include "d/actor/d_a_tag_msg_t60.h" /* true60: the shared-world-state rule whole-execute form */
 
 // HD: the message manager replaces tww's msg_class lookup and l_msg state.
 static TagMsgControllerPtr messageController;
@@ -207,6 +208,7 @@ static s32 daTag_Msg_actionWait(daTag_Msg_c* a_this) { return 1; }
 static s32 daTag_Msg_Draw(daTag_Msg_c* a_this) { return 1; }
 /* 024B1A0C */
 static s32 daTag_Msg_Execute(daTag_Msg_c* a_this) {
+    if (!t60c::end()) return TRUE; /* true60 (the shared-world-state rule): the message tag's frame on the tick30 step at the line place */
 
     // HD: set the guard before copying the initial function words into mutable storage.
     if (!actionGuard) {

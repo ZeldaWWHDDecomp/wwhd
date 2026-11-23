@@ -8,6 +8,7 @@
  * Every marked function retains its verified WWHD behavior; the final glue records TU data.
  */
 #include "d/actor/d_a_pirate_flag.h"
+#include "d/actor/d_a_pirate_flag_t60.h" /* true60: step-length helpers */
 #include "sead/ElementAt.h"
 #include <cmath>
 // Guest EA arithmetic: mBuffers + (channel * 2 + frame) * sizeof(PirateVertexBuffer) wraps at 32 bits as on the console (a
@@ -17,6 +18,10 @@ static inline PirateVertexBuffer& clothBuffer(PirateVertexBuffer (*buffers)[2], 
 }
 
 static daPirate_Flag_HIO_c l_HIO;
+/* true60 (d_a_pirate_flag_t60.h; host memory): the wobble draw held for a frame's steps, the wobble phase's
+ * carry (the sail's form) */
+static Sail60Rnd s_pirate60Rnd;
+static Sail60Add s_pirate60Wobble;
 using PirateShipPointer = gptr<PirateShipView>;
 static PirateShipPointer l_p_ship;
 static PirateFlagOffset flag_offset;
@@ -222,8 +227,8 @@ void call_material_apply(u32 material, u32 program) {
 
 /* 023D1804 */
 void daPirate_Flag_packet_c::setCorrectNrmAngle(s16 windAngle, f32 windStrength) {
-    f32 random = cM_rndF(200.0f);
-    s16 wave = s16(u32(s32(mNrmWobblePhase)) + u32(gabi::ftoi(random)) + 900u);
+    s32 random = sail60_wobbleRnd(s_pirate60Rnd, this); /* true60: drawn on the tick30 step, held between */
+    s16 wave = s16(u32(s32(mNrmWobblePhase)) + u32(sail60_wobbleAdd(s_pirate60Wobble, this, random + 900)));
     mNrmWobblePhase = wave;
     f32 sine = cM_ssin(wave);
     mNrmAngle = s16(gabi::ftoi(300.0f * sine));
@@ -510,7 +515,7 @@ void pirate_flag_move(void *actor) {
     local->probe.z = 0.0f;
     local->probe.x = 1.0f;
     pirateMtxPosition(&local->probe, &local->result);
-    s16 phase = s16(u32((s16)i_this->mWindPhase) + (u32)l_HIO.mWindPhaseStep);
+    s16 phase = s16(u32((s16)i_this->mWindPhase) + (u32)pirate60_share((s32)(u32)l_HIO.mWindPhaseStep)); /* true60: shared */
     i_this->mWindPhase = phase;
     f32 wave = cM_ssin(phase);
     f32 factor = gabi::fmadds(0.5f, wave, 0.5f);
@@ -554,6 +559,9 @@ void pirate_flag_move(void *actor) {
                 iterations = 60;
         }
     }
+    const f32 warm60 = pirate60_warm(iterations); /* true60: the demo warm-up frame on the 30 Hz grid */
+    if (warm60 < 0.0f)
+        return;
     for (s32 step = 0; step < iterations; ++step) {
         u32 previous = (u8)i_this->mPacket.mCurArr, current = previous ^ 1;
         u32 normals = gabi::ea(i_this->mPacket.mNrm[previous]);
@@ -617,9 +625,10 @@ void pirate_flag_move(void *actor) {
                     local->delta.z = (f32)l_zero.value.z;
                 } else
                     copy_vector(&local->delta, &local->spring);
+                pirate60_push(&local->delta, 0.875f); /* true60: the step's share of the frame's push */
                 pirateVectorAdd(ptr(velocity), &local->delta, ptr(velocity));
-                pirateVectorScale(ptr(velocity), ptr(velocity), 0.875f);
-                pirateVectorAdd(ptr(dest), ptr(velocity), ptr(dest));
+                pirateVectorScale(ptr(velocity), ptr(velocity), cloth60_drag(0.875f)); /* true60: 0.875^dt */
+                pirate60_move(ptr(dest), ptr(velocity)); /* true60: + velocity x dt */
             }
         u32 buffer = (u8)i_this->mPacket.mCurArr, normal = gabi::ea(i_this->mPacket.mNrm[buffer]);
         s16 facing = (s16)i_this->current.angle.y;
@@ -642,6 +651,7 @@ void pirate_flag_move(void *actor) {
     pirateDCStoreRangeNoSync(i_this->mPacket.mNrm[buffer], 0x12C);
     buffer = (u8)i_this->mPacket.mCurArr;
     pirateDCStoreRangeNoSync(i_this->mPacket.mBackNrm[buffer], 0x12C);
+    pirate60_warmEnd(warm60);
 }
 
 /* 023D2610 */

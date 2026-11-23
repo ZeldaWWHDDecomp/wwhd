@@ -1,0 +1,24 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+src wwhd_src/J3DAnimation.cpp
+# true60 N-step spec: J3DFrameCtrl::update on a general step length (frame += rate*dt, the animation crossing-check rule and 7). The dt-1 check rows
+# are J3DAnimation.txt's. Domain: rates -2..2 (the game's play rates), frames around a 0..30 range, modes NONE, RESET and
+# LOOP (the reverse modes: _t60/J3DAnimation_rev.txt), the frame inside [start, end). The fmod of the loop wrap
+# (028F4034) runs real. Not equivalent by design: a frame that starts OUTSIDE [start, end) in NONE/RESET/REVERSE and
+# re-enters within one 30 Hz frame stops (or bounces) at the boundary on the first sub-step, where the one step would
+# have landed inside: the original tests the boundary after the whole frame's advance. Animations start inside their
+# range (init/setFrame), so the domain excludes it. Start 0 (init's value): the HD/GameCube LOOP end wrap sets the
+# frame to the remainder itself, not loop + remainder, so with start > 0 it can land below start and the next update's
+# start wrap jumps by loop - start; at 30 Hz that happens on the following frame, at N steps inside the same frame.
+real 028F4034
+t60conv 027F2FC4
+field 027F2FC4 r3+0 f32 -2 2
+field 027F2FC4 r3+4 f32 5 19.9
+field 027F2FC4 r3+8 s16 0
+field 027F2FC4 r3+10 s16 20,22,25,28,30
+field 027F2FC4 r3+12 s16 0,2,5,8,10
+field 027F2FC4 r3+14 u8 0,1,2
+field 027F2FC4 r3+15 u8 0,1,2,3
+# (2026-11-21, pot pair): the frame is EXACT (was `t60tol r3+4 f32 absrel 0.0001 0.00001`, the
+# per-step sum's rounding): the steps show frameStart + rate x k x dt, the last one frameStart + rate (A's add).
+# Rate exact (0 after a stop in both); the stop/loop latch: OR over the N updates
+t60tol 027F2FC4 r3+15 u8 orsteps

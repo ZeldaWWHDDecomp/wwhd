@@ -1,5 +1,6 @@
 // Sea barrel course actor, with audited HD behaviour preserved.
 #include "d/actor/d_a_coming2.h"
+#include "d/actor/d_a_coming2_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule addendum) */
 using daComing2::Act_c;
 // HD: the glue table validator requires numeric initializers: five green, five blue, five yellow
 // rupees.
@@ -539,6 +540,8 @@ s32 daComing2::Act_c::_create() {
 
 /* 021138E0 */
 BOOL daComing2::Act_c::_execute() {
+    if (t60w::begin(this, coming2_t60::kOps)) /* true60: a step before the tick30 step: nothing (no picture) */
+        return 1;
     gabi::Local<be<u32>> id;
     *id = parentActorID;
     if (*id != fpcM_ERROR_PROCESS_ID_e) {
@@ -556,6 +559,7 @@ BOOL daComing2::Act_c::_execute() {
             barrel_main();
         }
     }
+    t60w::end(this, coming2_t60::kOps, false); /* true60: dt back */
     return 1;
 }
 

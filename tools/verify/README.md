@@ -65,6 +65,73 @@ Harness options:
 | `-noclobber` | mocked callees never modify memory |
 | `-strictnan` | compare NaN payloads bit for bit |
 
+## true60: step length (dt-1 check, N-step spec; 2026-11-14)
+
+Converted sources (branch `true60`, board the conversion rules) read the length of the logic step they run in from
+`include/gabi_t60.h`: `t60::dt()` (g_dt, 1/N Wii U frames), `t60::tick30()` (g_tick30, the step that ends a 30 Hz frame)
+and `t60::steps()` (N = 1, 2, 4 or 8). The dt = 1 path must be the original (rule 1.5.2).
+
+- **dt-1 check, every normal run.** The harness defines the step state (`wwhd_t60_dt`, `wwhd_t60_tick30`, `wwhd_t60_steps`) and
+  pins it to dt 1 / tick30 1 / N 1 at the start of every run, so the usual bit-exact check (10k inputs, seeds 1 and 7)
+  runs a converted function's dt code with dt = 1. The values are loaded at run time (not constants), so the code checked
+  is the code the true60 build runs. A run that changes the state fails with `t60 step state written ...`. Unconverted
+  units never read it: their rows are unchanged (d_a_mtoge, d_a_kamome at 10k seeds 1 and 7: identical rows).
+- **Build config `GABI_T60`** (gabi_t60.h): 1 (default) reads the state from those globals (harness; the port's true60
+  decomp build, whose runtime sets them per step); 0 makes dt / tick30 / N the constants 1 (a decomp build without the
+  true60 runtime; no symbols needed). `verify.py UNIT -t60fixed` builds the unit with `-DGABI_T60=0` (own objects in
+  `<unit dir>/t60fixed`); its rows must equal the default build's.
+- **N-step spec, `-t60steps N`** (N 2, 4 or 8). After an input's normal comparison passed, the candidate runs N times in a row at
+  dt = 1/N (tick30 on the last step, `first_step` on the first: the frame's input read, 2026-11-15) from the input's post-setup state, each step starting from the memory the previous
+  steps left (their net writes are installed after the setups), and once at dt = 1; both with clobbering off and the same
+  mock answers per step. The N-step net effect is compared with the one-step net effect: bytes exact, except fields with
+  a `t60tol` line; the return value exact (`t60ret FUNC|* skip` to waive). The first difference is the row's
+  (`t60 N=2: r3+0x3C0 f32 at r3+0x3C0: one step 12, 2 steps 13 (|d| 1 > 0.0001)`). Recorded inputs and inputs that
+  abort are not compared. Per function a stderr line `t60stat ADDR N=..: K inputs compared, ...; FIELD max |d| X` is the
+  evidence. Callees run as mocks unless listed `real`: list the helpers whose state the steps need (cLib_chaseF and the
+  like), so N steps see what they did.
+  Unit-file lines (only read by the harness):
+  - `t60tol FUNC|* rN+OFF|ADDR TYPE[xK] MODE`: TYPE `f32 f64 s8 u8 s16 u16 s32 u32 a16` (a16: s16 angle, difference mod
+    65536), xK = K consecutive elements; MODE `exact`, `skip`, `abs A`, `rel R`, `absrel A R`
+    (|d| <= A + R * max(|one step|, |N steps|); NaN equals NaN). Positions, speeds and angles get a tolerance; timers,
+    procedures and flags stay exact (no line).
+  - `t60tol FUNC|* rN+OFF TYPE[xK] clamp MAX MIN TARGET [A R]` (2026-11-14; board the one-dt-per-step rule.5.3a): a value
+    smoothed with a step clamp (cLib_addCalc family). MAX / MIN: the clamp limits per 30 Hz frame (`fN` entry FPR or a
+    number; MIN `0` = none); TARGET: `fN`, `rN+OFF` (K elements of TYPE in the initial memory) or a number. The xK
+    elements are one vector. If no step moved by its limit (|move| >= MAX*dt or <= MIN*dt, or landed on the target;
+    the one step and each of the N steps, from the per-step values), the results must agree to `A + R*max(|x|,|y|)`;
+    if one did, `max(MAX, MIN) * (1 - dt)` more is allowed and both results must lie between the start value and the
+    target. `t60stat` reports the two regimes separately (`(clamp)`, `(no clamp)`).
+  - `t60tol FUNC|* rN+OFF TYPE[xK] orsteps` (integer types; 2026-11-14): a per-update latch (J3DFrameCtrl mState:
+    the stop/loop flags the update that stops or loops sets and the next update clears, rule 1.5.5): the OR of the
+    values after each of the N steps must equal the one step's value.
+  - `t60cand ADDR...` (2026-11-14): a `real` callee whose source is a `src` of the unit runs its candidate (decomp)
+    code on the candidate side, top level and nested (the original side keeps the original). For converted callers
+    of converted central primitives (cLib_chaseF, J3DFrameCtrl::update): dt-1 check checks the pair at dt = 1, N-step spec sees
+    the primitives step with dt as the true60 build does. Without it a `real` callee is always the original.
+  - `t60conv FUNC...`: with -t60steps, only these functions get N-step spec (others keep their dt-1 check row); none listed: all.
+    Any number of addresses (until 2026-11-14 only the first 6 were read; the rest silently kept their dt-1 check row).
+  - `t60nocmp FUNC...` (test units only; 2026-11-14): with -t60steps, N-step spec runs even when the normal comparison
+    differs, and the row is the N-step spec verdict alone. A nested call to a marked function always runs the original (or a
+    mock), never the candidate, so a pair of converted functions that pass state to each other (fopAcM_calcSpeed's arc
+    record read by fopAcM_posMove) is checked through a test copy that calls them as plain helpers (t60_test.py).
+  - `t60ret FUNC|* exact|skip`.
+  N-step specs live in `units/_t60/NAME.txt` (2026-11-14): `include NAME.txt` (the unit's dt-1 check spec) plus the N-step spec lines
+  and steering. `units/_t60/` is left out of the gates (verify_all, readable_check) and of the decomp game build's unit
+  list (port tools/decomp_build/gen.py reads specfile.gated_specs): an N-step spec that links a second source (`t60cand`)
+  would otherwise join two game units and change the build's function list. Run: `verify.py _t60/NAME -t60steps N`.
+  Steer the inputs of an N-step spec run into the domain the function is converted for (`field` lines: e.g. speeds below a cap
+  that a full step would clamp at), and run N = 2 and N = 4 (four quarter steps against one, design rule 1.6).
+- Self-test `t60_test.py`: the unmodified d_a_mtoge passes with the pin and with -t60fixed; a hand-made conversion of
+  daMtoge_actionUp 021E01B8 (general dt, exact-arc term) passes dt-1 check and N-step spec at N 2 and 4; its broken variants fail
+  (general formula without the dt = 1 path, a write of the step state, unscaled acceleration, no arc term, the
+  unconverted function); `t60conv` and malformed lines.
+- Host be<> probe `t60_beprobe.py` (part of t60_test.py): every TU that includes a true60 header compiles under
+  gabi's static probe (`-DGABI_HOST_BE_PROBE=1 -fsyntax-only`, its verify flags); a guest-layout object (be<>, cXyz,
+  Mtx34, a struct with such fields) in host memory (a host local, static or std:: container element) is a finding,
+  since be<> reads and writes the guest word at ea(host address). Original constructors (guest placement) are
+  accepted; known findings are listed with their owner in PENDING. Keep true60 host state in plain host values
+  (f32, Vec3f, u32 words).
+
 ## Scratch on the RAM disk (recommended for every run, 2026-10-26)
 
 Mutation campaigns and verify runs write about 1 MB per compiled mutant (`mutantN.cpp/.o`, the linked `mutantN`)
@@ -956,6 +1023,7 @@ functions of one actor can be written by different people or agents at once.
 | `setupsnapshot` (unit file) | the `setup` lines (not pokes, not postsetups) of each tested function run once per process instead of once per input and side: their complete resulting state (every materialized byte with its current and initial value, write bits and float marks, the `alloc` cursors and `allocfail` call counts, the per-target mock counters, the access/call budgets used, trap count). The scratch stack window below the entry SP + 8, which holds the setups' own frames, is excluded from capture, install and both comparisons (2026-10-26, AGL#18: a callee spilling an uninitialised slot left per-input `stackfill`/generated bytes there and the snapshot was refused): each input materializes those bytes from its own generation, as the net effect also ignores them is captured and installed at the start of every input on both sides; pokes, postsetups, the post-setup baseline and the function run as before, so the results are identical. A setup operand `rN=*ADDR`/`rN=*(*ADDR+OFF)`/`fN=*ADDR` whose word a per-input absolute `field` (more than one value), `fieldstr` or `poke` line of the function can set refuses the snapshot outright (`setupsnapshot: refused (setup result depends on the input: setup ADDR operand rN=*ADDR reads a per-input ...)`). Otherwise the setups run twice before the inputs under two different input seeds; if the two states differ (a setup reads a generated field, register or random memory), or an `allocfail` pick can fail a call inside the setups, it prints `setupsnapshot: refused (setup result depends on the input: first difference at ADDR)` (stderr) and keeps per-input setups. The first input of a run and every 500th input (`-snapcheck N`) run the setups for real and compare them with the snapshot; a mismatch exits 2. The CPU-time budget is not charged for snapshot setups. `-trace SEED` prints `setupsnapshot: installed (N bytes)` (or `validated`). For original setup chains that cost seconds to minutes per run (AGL#3: the ShaderMgr archive parse). 2026-10-26; self-test `setupsnapshot_test.py` |
 | `include PATH` (unit file) | inserts the lines of tools/verify/units/PATH at that point (recursive; a cycle or missing file stops). verify.py, mutate.py and mkunit.py read the expanded spec (the harness gets build/verify/<unit>/spec.expanded.txt), so directive order is the textual order after expansion; `# verify:` header lines come from the including file only. For shared fixtures such as `shared/agl_world.txt`. 2026-10-26; self-test `include_test.py` |
 | `include shared/agl_world.txt` (shared fixture) | a complete original-produced agl world for any agl/sead spec: 16 MB root ExpHeap at 0x6A000000 (arena record 0x6E200000, 02755FE0; registry tree 027561B4; `nestedret 02756140 0x6A000000`; real alloc/aligned-alloc/free tree), static initialisers 0274D510 (colour presets), 02759B40 (SafeString), 02756E3C, 02757190 (default axes, `stable 104A0934 0x18`), 02757B48 (core table), 02759AD8 (endian); texture cache owner *101F8DD4 (0279F2EC + 0279F474 with GPU ranges 0x70000000/0x71000000, core pinned to 0); ShaderMgr 0x6B000000 over the user's agl_resource_cafe_dev.sarc at 0x6C000000 (`blob`), child heap holder *101F8C14 (027854AC/027855BC), sGraphicsAccessManager (027B7168), owner *101F8D6C (02786418/02786520), per-core table 027B9C1C; default texture *101F8DEC (027A76C8/027A78F8), resource provider *101F8DE4 (027A145C/027A5DF0), GraphicsDevice 0x5D300000 published at *101F8B18, singleton *101F8DDC (027A0A80); GX2 models (mockdisplaylist with BYTES 0x100 since 2026-10-29: a recording that issued GX2 commands ends with size 0x100, an empty one with 0; mockretfield, mocksurfacesize, mockfetchsize/init), mockset OSBlockSet/memset, mockmove, mocklookup 02786348. Reserved ranges (never steer them in an including spec): 0x6A000000–0x6AFFFFFF heap, 0x6B000000+0x1000, 0x6C000000–0x6D019E1D blob, 0x6E200000+0xC, 0x5D300000+0x160, 0x70000000–0x71FFFFFF, 0x7EFE7000+0x10000 setup stack, 0x101F8C24+0x100, 0x104A0934+0x18. The .bss words the setups produce (13 ranges in 104A01CC..104A2097, producers named in the file) are `stable` since 2026-10-27, so a mocked call in the tested function cannot clobber them (stores stay compared); the heap-tree OSMutex body 104A0338 (mocked OSLockMutex writes it) and the global-object list head 104DA130 stay clobberable on purpose, and the core id 028FDE28 is pinned to 0 only for nested calls (a tested function that calls it pins its own answer per spec). The including spec adds `src`, its tested function, its own objects (other ranges) and `setupsnapshot` (accepted, -watch 0:0x1000 clean, 2026-10-26). Its `real` lines are global: a tested function calling a listed original reaches the original, so a spec that needs one of them mocked must not include the world. To extend: add the new original producer as `setup * ADDR r..=` with EVERY argument register it reads given explicitly (an unset register is the tested function's generated input and breaks the snapshot), add its traced closure (`-trace SEED`, `nested call .. (real)`) to the `real` lines, rerun the probe `lib2_agl_world_probe` with `-watch 00000000:0x1000` (no line) and confirm `setupsnapshot: validated`. Known gaps: the GraphicsDevice vtable word (0x5D30000C) and *101F8B18 are pokes; GX2InitTextureRegs/GX2InitSampler descriptor words stay mock output. Scalar directives (`callbudget`, `accessbudget`) are last-wins: a line after the `include` overrides the world's value. 2026-10-26 |
+| `include shared/c_angle_statics.txt` (shared fixture) | the c_angle header statics for any spec that runs the cSAngle / cSGlobe / cSPolar family for real: `setup * 02007410` (cAngle_staticInit: pi 40490FDB at 101FF33C, -pi at 101FF338, the cSAngle constants at 101FF354..101FF35D), `real 02007410 0200658C 02006584`, `stable 101FF338 0x26`. The harness runs no static initialiser on its own, so without it cSAngle::Radian 02006760 / cDegree::Radian 02006AA4 read pi as a generated or zero word and every real sin / cos sees angle 0 (cSPolar::Xyz writes (0, R, 0); the camera N-step spec of 2026-11-18). verify.py prints `T-02 WARNING: ... pi (101FF33C) is never initialised` for a `-t60steps` spec that runs either reader without the setup. Self-test `t60_static_warning_test.py`. 2026-11-18 |
 | `include PATH for FUNC [FUNC ...]` (unit file; function-scoped include) | the same lines as `include PATH`, but every per-function directive whose function field is `*` (`setup`, `postsetup`, `field`, `fieldstr`, `fill`, `poke`, `cr`, `copy`, `blob`, `blobfile`, `arg`/`arg!`, `argf64`/`argf64!`) is written once per FUNC with that function instead of `*`, in the order given, where the `*` line stood; lines with an explicit function and the global directives (`stable`, `real`, the mock models, `nestedret`, budgets, `stackfill`, ...) are inserted once, unchanged; nested includes are scoped too (a `for` inside a scoped include, a missing or non-hex FUNC, or a FUNC named twice stops with `invalid include line`). Use it when only some tested functions of a spec may run the shared world's producers, e.g. `include shared/agl_world.txt for 0279345C 027931EC` (AGL#8) instead of hand-made scoped copies of the world, which drift from it (the AGL#8 copies lacked the stable ranges and the `mockdisplaylist ... 0x100`). The expanded spec shows the markers as `# >>> include PATH for FUNC ...`. 2026-10-29; self-test `worldscope_test.py` |
 | `accessbudget N` / `timebudget S` (unit file) | raise this unit's per-run guest memory-access budget (default 20M; 1M..1G) or CPU-time budget (default 30 s; 30..600) for original setups that legitimately need more (AGL#18: the original ShaderMgr archive setup 02786520). Exceeding them still aborts the input, and aborts never count. Use the smallest value that completes and post the measured count. 2026-10-26; self-test `budget_allocfail_test.py` |
 | `opbudget BYTES` (unit file; opt-in, once per spec) | raise the per-operation byte cap of the `mockset`, `mockzero` and `mockmove` (memmove) models together (default 20,000,000 bytes; BYTES decimal or 0x-hex, 1..1073741824; 0, a larger value, a malformed line or a second `opbudget` line exits 2). A larger fill or copy still aborts the input (`memset`/`mockzero`/`memmove exceeds guest operation budget`), and aborts never count; a large fill also needs `accessbudget` (one access per byte). Under `-v` every fill or copy over 1 MB through these models is listed on stderr: `opbudget: OP TARGET dst DST size SIZE lr LR side=orig\|cand depth=N seed=S` (LR = the return address the call passes; ` (over the budget)` when it aborts), so a start-up run lists them. Without `-v` nothing new is printed. 2026-11-01; self-test `opbudget_test.py` |

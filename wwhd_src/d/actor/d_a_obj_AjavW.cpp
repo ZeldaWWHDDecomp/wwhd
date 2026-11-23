@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_obj_AjavW.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 // HD: this translation unit's SafeString vtable.
 const gc_tu_data gc_tu = { .safeString = 0x100249EC };
@@ -86,9 +87,13 @@ bool daObjAjavW_c::_delete() {
 
 /* 0231628C */
 bool daObjAjavW_c::_execute() {
+    t60w::Guard<daObjAjavW_c> t60g(this, t60objw::Logic<daObjAjavW_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
     mBtkAnm.play();
     if (mpBgW != nullptr && mpBgW->ChkUsed())
         mpBgW->Move();
+    t60g.model = true; /* true60: the frame reached its model step (the btk frame) */
     return true;
 }
 

@@ -1,5 +1,6 @@
 // Medli/Makar event and warp trigger.
 #include "d/actor/d_a_tag_md_cb.h"
+#include "d/actor/d_a_tag_md_cb_t60.h" /* true60: the shared-world-state rule whole-execute form */
 #include "bindings.h"
 #include "gc_api/SSystem/c_lib.h"
 #include "gc_api/d/actor/d_a_player.h"
@@ -631,6 +632,7 @@ static BOOL daTag_MdCb_Draw(daTag_MdCb_c *actor) {
 }
 /* 024AF434 */
 static BOOL daTag_MdCb_Execute(daTag_MdCb_c *actor) {
+    if (!t60c::end()) return TRUE; /* true60 (the shared-world-state rule): the Medli / Makar tag's frame on the tick30 step at the line place */
     // HD: preserve the verified GHS prologue and stack placement.
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     actor->execute();

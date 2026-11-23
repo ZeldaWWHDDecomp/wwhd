@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_tag_etc.h"
+#include "d/actor/d_a_tag_etc_t60.h" /* true60: the shared-world-state rule whole-execute form */
 
 // HD: inline construction installs this actor's virtual table.
 daTag_Etc_c::daTag_Etc_c() {
@@ -213,6 +214,7 @@ static const u32 l_action_init[] = {0x024A5D88, 0x024A5D9C, 0x024A6244, 0x024A61
 
 /* 024A6304 */
 static BOOL daTag_Etc_Execute(daTag_Etc_c* i_this) {
+    if (!t60c::end()) return TRUE; /* true60 (the shared-world-state rule): the etc event tag's frame on the tick30 step at the line place */
     if (l_action_guard == 0) {
         l_action_guard = 1;
         memcpy_g(l_action, l_action_init, sizeof(l_action_init));

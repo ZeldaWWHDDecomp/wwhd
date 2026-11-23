@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_npc_bmsw.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 #include "gc_api/d/d_com_inf_game.h"
 
 // HD archive IDs correspond to the BmswResourceId names in the unit header.
@@ -1329,6 +1330,9 @@ BOOL daNpc_Bmsw_c::_draw() {
 
 /* 0220EE44 */
 BOOL daNpc_Bmsw_c::_execute() {
+    t60w::Guard<daNpc_Bmsw_c> t60g(this, t60npc::Logic<daNpc_Bmsw_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     dNpc_HIO_c& n = l_HIO.mNpc;
     m_jnt.setParam(n.mMaxBackboneX, n.mMaxBackboneY, n.mMinBackboneX, n.mMinBackboneY, n.mMaxHeadX,
                    n.mMaxHeadY, n.mMinHeadX, n.mMinHeadY, n.mMaxTurnStep);
@@ -1351,6 +1355,7 @@ BOOL daNpc_Bmsw_c::_execute() {
         Bmsw_getRoomId(dComIfG_Bgsp(), gnd); /* mRoomNo = GetRoomId */
     gabi::object_at<BmswTevWork>(gabi::ea(&tevStr)).mEnvrIdxOverride =
         Bmsw_getPolyColor(dComIfG_Bgsp(), gnd); /* mEnvrIdxOverride = GetPolyColor */
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     setCollision(60.0f, 150.0f);
     return TRUE;

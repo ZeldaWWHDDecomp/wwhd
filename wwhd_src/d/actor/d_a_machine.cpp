@@ -1,5 +1,6 @@
 // Wind Temple biting blade trap.
 #include "d/actor/d_a_machine.h"
+#include "d/actor/d_a_machine_t60.h" /* true60: the whole form (d/t60_objw.h) */
 const gc_tu_data gc_tu = {.safeString = 0x10014234,
                           .objAcch = {0x10014284, 0x100142A4, 0x10014294},
                           .objAcchDt = {0x10014294, 0x100142A4},
@@ -395,6 +396,9 @@ void daMachine_c::set_mtx() {
 }
 /* 021B8104 */
 bool daMachine_c::_execute() {
+    t60w::Guard<daMachine_c> t60g(this, t60objw::Logic<daMachine_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form addendum: the windmill's speed, Link's position) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
     set_speed();
     gabi::Local<cXyz> difference;
     cXyz_mi(&l_origin, difference.get(), &current.pos);
@@ -404,6 +408,7 @@ bool daMachine_c::_execute() {
     attack();
     set_body();
     set_at();
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     if (speedF != l_zero.mValue) {
         s32 reverb = dComIfGp_getReverb(current.roomNo);

@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_npc_kamome.h"
+#include "d/actor/d_a_npc_kamome_t60.h" /* true60: player per step / NPC whole form */
 
 using KamomeGroundCheck = dBgS_GndChk;
 // HD: daPy_npc_c::checkNowPosMove binding.
@@ -98,6 +99,9 @@ static inline void kam_keepOut(daNpc_kam_c* i_this) {
 // the water splash uses dPa_control_c::set directly; with REG0_S(0) == 0 current.angle follows
 // shape_angle (GameCube: the reverse); no checkOrder; the mass collision replaces the tg sphere
 BOOL daNpc_kam_c::execute() {
+    kamT60::Form<daNpc_kam_c> t60f(this); /* true60: the frame's form (player: per step; NPC: whole on tick30), from its first step */
+    if (t60f.skip()) /* true60: NPC form, a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
 
     l_demo_start_chk_cnt = 0;
 
@@ -112,10 +116,13 @@ BOOL daNpc_kam_c::execute() {
     }
 
     actor_status = actor_status & ~0x20u; /* fopAcM_OffStatus(this, fopAcStts_SHOWMAP_e) */
-    kam_calcTimerU8(&mDamageFogTimer);
+    if (t60c::first()) /* true60: a count, on the frame's first step (first-step AI-timer) */
+        kam_calcTimerU8(&mDamageFogTimer);
 
-    if (!isReturnLink() && mHidden == 0) {
+    if (!t60c::held(isReturnLink() != 0, 0x7D, this) && mHidden == 0) { /* true60: a return set on a step acts next frame */
         if (daPy_npc_checkNowPosMove(this, l_staff_name.get())) {
+            if (t60c::first()) { /* true60: the speed / turn-rate chases once a frame at dt 1, held (rule (a)) */
+            kamT60::Dt1<> t60dt;
             daNpc_kam_HIO1_c& hio = l_HIO.mHio1;
             f32 target = mTargetSpeedF;
             f32 spd = speedF;
@@ -140,7 +147,10 @@ BOOL daNpc_kam_c::execute() {
             s16 targetY = mTargetAngVelY;
             cLib_addCalcAngleS(&mAngVelY, targetY, hio.mAngVelStepScale, hio.mAngVelMaxStep, hio.mAngVelMinStep);
             cLib_addCalcAngleS(&mAngVelX, mTargetAngVelX, hio.mAngVelStepScale, hio.mAngVelMaxStep, hio.mAngVelMinStep);
+            } /* true60 */
 
+            if (t60c::first()) { /* true60: the frame's velocity (and the ground / water / floor checks with their pitch lock) once a
+                                  * frame from the frame-start place, held by the later steps (the flight's frame form) */
             f32 sp = speedF;
             f32 sinX = cM_ssin((u16)current.angle.x);
             f32 cosX = cM_scos((u16)current.angle.x);
@@ -165,7 +175,17 @@ BOOL daNpc_kam_c::execute() {
                     kam_keepOut(this);
                 }
             }
+            } /* true60 */
+            bool t60mv = kamT60::moveExact(this); /* true60: the frame's move exact */
+            if (t60mv) {
+                t60c::moveBegin(&current.pos.x, &current.pos.z, 0x80);
+                t60c::moveBegin(&current.pos.y, &current.pos.y, 0x81); /* (y on its own key: x0 / z0 both y) */
+            }
             fopAcM_posMove(this, &mStts.m_cc_move);
+            if (t60mv) {
+                t60c::moveEnd(&current.pos.x, &current.pos.z, &speed.x, &speed.z, 0x80);
+                t60c::moveEnd(&current.pos.y, &current.pos.y, &speed.y, &speed.y, 0x81);
+            }
         }
 
         if (!isNoBgCheck()) {
@@ -220,15 +240,19 @@ BOOL daNpc_kam_c::execute() {
 
         setLineBgCheck();
         if (daPy_npc_checkNowPosMove(this, l_staff_name.get())) {
+            if (kamT60::anmPending(this)) /* true60: a requested set pending: the old animation plays on (pose only) */
+                kamT60::playOld(this);
+            else
             animationPlay();
         }
     }
 
-    BOOL inEvent = eventProc();
+    kamT60::anmApply(this); /* true60: the tick30 step, after its play, before the dispatch: a pending request's morf set */
+    BOOL inEvent = kamT60::eventStep(this, t60f); /* true60: the event branch once a frame on the tick30 step (2026-11-21 (a)) */
     if (!inEvent) {
         if (dComIfGp_getPlayer(0) == this) {
             actor_status = (actor_status & ~0x3Fu) | 0x34; /* fopAcM_SetStatusMap(this, 0x14), SHOWMAP */
-            if (isReturnLink()) {
+            if (t60c::held(isReturnLink() != 0, 0x7E, this)) { /* true60: as above (the frame's first step's answer) */
                 mEventState = 0;
             } else {
                 playerAction(nullptr);
@@ -239,6 +263,8 @@ BOOL daNpc_kam_c::execute() {
         } else {
             npcAction(nullptr);
         }
+        if (kamT60::steerStep()) { /* true60: the steering once a frame on the tick30 step at dt 1 */
+        kamT60::Dt1<> t60dt;
         if (REG0_S(0) == 0) {
             cLib_addCalcAngleS2(&current.angle.x, shape_angle.x, 8, 0x400);
             cLib_addCalcAngleS2(&current.angle.z, shape_angle.z, 8, 0x400);
@@ -246,21 +272,26 @@ BOOL daNpc_kam_c::execute() {
             cLib_addCalcAngleS(&shape_angle.x, current.angle.x, 8, 0x2000, 0x400);
             cLib_addCalcAngleS(&shape_angle.z, current.angle.z, 8, 0x2000, 0x400);
         }
+        } /* true60 */
     }
 
-    eventOrder();
+    if (t60c::end()) /* true60: the event order once a frame, on the tick30 step */
+        eventOrder();
+    t60f.model(); /* true60: the frame reached its model step */
     setBaseMtx();
 
-    if (!inEvent && dComIfGp_getPlayer(0) == this) {
+    if (!inEvent && dComIfGp_getPlayer(0) == this && t60c::end()) { /* true60: registered on the tick30 step (one-sweep-per-frame attack) */
         setCollision();
     }
 
     kam_clearSphereCollision(&mAtSph); /* ClrCoHit */
     mAtSph.ClrTgHit();
     mCps.ClrAtHit();
+    if (t60c::end()) { /* true60: the tick30 Move's push, moved dt a step over the frame, cleared on the tick30 step */
     mStts.m_cc_move.z = 0.0f;
     mStts.m_cc_move.x = 0.0f;
     mStts.m_cc_move.y = 0.0f;
+    }
     return TRUE;
 }
 

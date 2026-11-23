@@ -13,6 +13,7 @@
  */
 #include "d/actor/d_a_oq.h"
 #include "gc_api/d/actor/d_a_player.h"
+#include "d/actor/d_a_oq_t60.h"
 
 /* calls to this unit's out-of-line functions (by address) */
 static inline void anm_init_(oq_class* i_this, int bck, f32 morf, u8 loop, f32 speed, int bas) {
@@ -50,7 +51,8 @@ static inline void oq_se_a(oq_class* i_this, u32 id, u32 param) {
 static inline void oq_mons_se_a(oq_class* i_this, u32 id) {
     if (i_this != nullptr) oq_mons_se(i_this, id);
 }
-static inline bool oq_isStop(oq_class* i_this) { return i_this->mpMorf->isStop() != 0; }
+/* true60 (the animation-driven decision rule): the frame-start answer, held over the frame (d_a_enemy_anm_t60.h) */
+static inline bool oq_isStop(oq_class* i_this) { return oq_t60_isStop(i_this); }
 static inline void oq_follow_mtx(oq_class* i_this) {
     JPABaseEmitter* e = i_this->mFollow.mpEmitter;
     if (e != nullptr) {
@@ -71,11 +73,20 @@ static inline bool action_dousa_state(oq_class* i_this) {
         i_this->mSplashDone = 1;
         i_this->mMode += 1;
         i_this->mSplashScale = REG_F(8, 19) + 2.75f;
+        oq_t60_ran(i_this); /* true60: mode 1's body runs in this call (fall-through): not held */
         /* fallthrough */
     case 1: {
         u8 t = i_this->mType;
         if (t == OQ_DELAYED) {
             near = true;
+        } else if (!oq_t60_link()) {
+            /* true60 (the first-step input rule addendum): the distance test reads Link: on the tick30 step; the
+             * frame's earlier steps test the surface timer alone (the child's; a timer decision falls on the first
+             * step, first-step AI-timer). The small / large Octorok's Link branch sets mTimer[4] to 300 before that test, so A
+             * never surfaces them by the timer: their earlier steps decide nothing */
+            if (t == OQ_SMALL || t == OQ_LARGE) {
+                return true;
+            }
         } else {
             if (t == OQ_SMALL) {
                 i_this->mSplashScale = 1.0f;
@@ -111,10 +122,12 @@ static inline bool action_dousa_state(oq_class* i_this) {
             i_this->mBodyCoCyl.OnTgSPrmBit(1);
             i_this->mBodyCoCyl.OnCoSPrmBit(1);
             anm_init_(i_this, dRes_INDEX_OQ_BCK_START_e, oq_morf(), 0, 1.0f, -1);
+            oq_t60_catch_up_play(i_this); /* true60: a tick30 decision's animation catches up (first-step AI-timer addendum) */
             oq_se(i_this, 0x58C9, 0);
             i_this->mMode += 1;
         }
-        if (i_this->mWaveFull != 0) {
+        /* true60: the spawner's wave flag (another process's write) is read with the frame's Link decisions */
+        if (oq_t60_link() && i_this->mWaveFull != 0) {
             fopAcM_delete(i_this);
             return true;
         }
@@ -144,7 +157,8 @@ static inline bool action_dousa_state(oq_class* i_this) {
         u8 t = i_this->mType;
         if (t == OQ_SMALL) {
             range = i_this->mProjectileType == 0 ? 2000.0f : 5000.0f;
-            if (i_this->mAcch.ChkWallHit()) {
+            /* true60: the wall check reads the previous step's ground check: on the first step (A: the previous frame's) */
+            if (oq_t60_first() && i_this->mAcch.ChkWallHit()) {
                 /* hit a wall while swimming: dies */
                 oq_se_a(i_this, 0x2828, 0);
                 oq_mons_se_a(i_this, 0x48CC);
@@ -159,6 +173,11 @@ static inline bool action_dousa_state(oq_class* i_this) {
         } else {
             JUT_ASSERT_fail(oqAssertText(OQ_SWIM_ASSERT_FILE), 0x40E, oqAssertText(OQ_SWIM_ASSERT_CONDITION));
             range = 5000.0f;
+        }
+        /* true60 (the first-step input rule addendum): the decisions below read Link: on the tick30 step (the delayed
+         * Octorok's timer attack too: in A's order it comes after the far / dive test, first-step AI-timer addendum rule (1)) */
+        if (!oq_t60_link()) {
+            return true;
         }
         if (i_this->mWaveFull != 0 || fopAcM_searchPlayerDistance(i_this) > range) {
             i_this->mMode = 0xA;
@@ -198,6 +217,7 @@ static inline bool action_dousa_state(oq_class* i_this) {
                 return true;
             }
             anm_init_(i_this, dRes_INDEX_OQ_BCK_IKAKU_e, oq_morf(), 2, 1.0f, -1);
+            oq_t60_catch_up_play(i_this); /* true60: a tick30 decision's animation catches up (first-step AI-timer addendum) */
             return true;
         }
         if (i_this->mTimer[0] != 0 || !(fopAcM_searchPlayerDistance(i_this) < range)) {
@@ -219,6 +239,7 @@ static inline bool action_dousa_state(oq_class* i_this) {
         oq_se(i_this, 0x58CA, 0);
         anm_init_(i_this, dRes_INDEX_OQ_BCK_MOGURU_e, oq_morf(), 0, 1.0f, -1);
         i_this->mMode += 1;
+        oq_t60_ran(i_this); /* true60: mode 0xB's body runs in this call (fall-through): not held */
         /* fallthrough */
     case 0xB:
         cLib_addCalc2(&i_this->mDrawOffsetY, -(REG_F(8, 6) + 600.0f), 1.0f, REG_F(8, 7) + 50.0f);
@@ -228,11 +249,13 @@ static inline bool action_dousa_state(oq_class* i_this) {
             i_this->scale.z = 0.0f;
             i_this->actor_status &= ~0x20u;
             if (i_this->mType == OQ_DELAYED || i_this->mType == OQ_CHILD) {
-                fopAcM_delete(i_this);
+                oq_t60_delete(i_this); /* true60: the request on the tick30 step */
             return true;
             }
             i_this->mMode = 0;
             i_this->mDrawOffsetY = 0.0f;
+        } else {
+            oq_t60_jr_ran(i_this, OQ_T60_DIVE); /* true60: the sink ease is motion: replayed on held steps */
         }
         return true;
     default:
@@ -241,24 +264,44 @@ static inline bool action_dousa_state(oq_class* i_this) {
     return true;
 }
 
-static inline void action_dousa(oq_class* i_this) {
-    if (!action_dousa_state(i_this)) return;
-    i_this->mTargetAngleY = fopAcM_searchPlayerAngleY(i_this);
+/* the tail of action_dousa (replayed on the frame's held steps, true60 OQ_T60_TAIL) */
+static inline void action_dousa_tail(oq_class* i_this) {
+    /* true60 (the first-step input rule addendum): the facing target reads Link: on the tick30 step; the steps turn
+     * toward the held target */
+    if (oq_t60_link()) {
+        i_this->mTargetAngleY = fopAcM_searchPlayerAngleY(i_this);
+    }
     if (i_this->mMode >= 3) {
         body_atari_check_(i_this);
     }
     sea_water_check_(i_this);
     search_y_check_(i_this, 0x500);
 }
+static inline void action_dousa(oq_class* i_this) {
+    if (!action_dousa_state(i_this)) return;
+    oq_t60_jr_ran(i_this, OQ_T60_TAIL);
+    action_dousa_tail(i_this);
+}
 
 /* mAction 0xB: attack (action_kougeki / action_tama_shoot) */
 /* inlined into daOQ_Execute */
 static inline void action_kougeki(oq_class* i_this) {
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
+    /* true60 (first-step input / mixed-pair hit-flag order): the rock Octorok's 0x14 init runs on this frame's tick30 step,
+     * before its hit handling in A's call: the hits are read after it (d_a_oq_t60.h oq_t60_defer_hits) */
+    if (i_this->mMode == 0x14 && i_this->mProjectileType == 0)
+        oq_t60_defer_hits(i_this);
     switch (i_this->mMode) {
     case 0x14:
+        /* true60 (the first-step input rule addendum): the rock Octorok's init decides on Link's height: on the tick30
+         * step (its turn and new animation catch up the frame's earlier steps, first-step AI-timer addendum); the bomb Octorok's init
+         * reads Link only for the splash (visual): on the first step, so its jump moves the whole frame (first-step AI-timer) */
+        if (i_this->mProjectileType == 0 ? !oq_t60_link() : !oq_t60_first()) {
+            break;
+        }
         oq_clearActionFlags(i_this);
-        search_y_check_(i_this, 0x1000);
+        oq_t60_whole([&] { search_y_check_(i_this, 0x1000); });
+        oq_t60_jr_ran(i_this, OQ_T60_TURN1000);
         i_this->mMode = 0x16;
         oq_se_a(i_this, 0x58CB, 0);
         if (i_this->mSplashDone != 0) {
@@ -277,6 +320,7 @@ static inline void action_kougeki(oq_class* i_this) {
                 break;
             }
             anm_init_(i_this, dRes_INDEX_OQ_BCK_AATTACK1_e, oq_morf(), 0, 1.0f, -1);
+            oq_t60_catch_up_play(i_this); /* true60: a tick30 decision's animation catches up (first-step AI-timer addendum) */
             i_this->gravity = 0.0f;
             i_this->mActionFlags[0] = 1;
             i_this->mMode = 0x15;
@@ -290,17 +334,22 @@ static inline void action_kougeki(oq_class* i_this) {
     case 0x15:
         search_y_check_(i_this, 0x1000);
         cLib_addCalc2(&i_this->current.pos.y, player->current.pos.y + 30.0f, 1.0f, 30.0f);
-        if (std::fabs(i_this->current.pos.y - (player->current.pos.y + 30.0f)) > 2.0f) {
+        /* true60 (the first-step input rule addendum): the arrival at Link's height: on the tick30 step */
+        if (!oq_t60_link() || std::fabs(i_this->current.pos.y - (player->current.pos.y + 30.0f)) > 2.0f) {
             break;
         }
         i_this->mMode += 1;
         /* fallthrough */
     case 0x16:
         anm_init_(i_this, dRes_INDEX_OQ_BCK_AATTACK2_FUKU_e, 0.0f, 0, 1.0f, -1);
+        if (i_this->mMode == 0x16) {
+            oq_t60_catch_up_play(i_this); /* true60: the 0x15 arrival (tick30) catches up (first-step AI-timer addendum) */
+        }
         i_this->mMode += 1;
         break;
     case 0x17:
-        if (!i_this->mpMorf->checkFrame(1.0f)) {
+        /* true60: a threshold on the play frame, at most once per 30 Hz frame */
+        if (!oq_t60_checkFrame(i_this, 1.0f, 0)) {
             break;
         }
         if (REG_S(8, 5) == 0) {
@@ -352,6 +401,7 @@ static inline void action_kougeki(oq_class* i_this) {
         }
         i_this->mSplashDone = 0;
         i_this->mMode += 1;
+        oq_t60_ran(i_this); /* true60: mode 0x19's body runs in this call (fall-through): not held */
         /* fallthrough */
     case 0x19:
         if (i_this->mAnmIdx == dRes_INDEX_OQ_BCK_AATTACK2_FUKU_e) {
@@ -361,6 +411,7 @@ static inline void action_kougeki(oq_class* i_this) {
             oq_anm_wait(i_this);
         }
         if (i_this->mActionFlags[0] != 0) {
+            oq_t60_jr_ran(i_this, OQ_T60_SEA);
             if (sea_water_check_(i_this)) {
                 if (i_this->mSplashDone == 0) {
                     break;
@@ -381,6 +432,7 @@ static inline void action_kougeki(oq_class* i_this) {
         }
         break;
     case 0x1A: {
+        oq_t60_jr_ran(i_this, OQ_T60_SEA);
         sea_water_check_(i_this);
         if (i_this->mActionFlags[0] != 0 && !oq_isStop(i_this)) {
             break;
@@ -409,10 +461,13 @@ static inline void action_kougeki(oq_class* i_this) {
         break;
     }
     }
+    oq_t60_jr_ran(i_this, OQ_T60_BODY);
     if (body_atari_check_(i_this)) {
         return;
     }
-    if (i_this->mMode >= 0x1A && i_this->mType == OQ_SMALL && fopAcM_searchPlayerDistance(i_this) < 400.0f) {
+    /* true60 (the first-step input rule addendum): the dive after the attack reads Link: on the tick30 step */
+    if (oq_t60_link() && i_this->mMode >= 0x1A && i_this->mType == OQ_SMALL &&
+        fopAcM_searchPlayerDistance(i_this) < 400.0f) {
         i_this->mAction = OQ_ACTION_DOUSA;
         i_this->mMode = 0xA;
     }
@@ -435,6 +490,7 @@ static inline void action_itai(oq_class* i_this) {
         i_this->mMode += 1;
         break;
     case 0x1F:
+        oq_t60_jr_ran(i_this, OQ_T60_SEA);
         sea_water_check_(i_this);
         if (!oq_isStop(i_this)) {
             break;
@@ -459,8 +515,9 @@ static inline void action_itai(oq_class* i_this) {
         i_this->mMode += 1;
         break;
     case 0x20:
+        oq_t60_jr_ran(i_this, OQ_T60_SPIN);
         oq_follow_mtx(i_this);
-        i_this->shape_angle.y += i_this->mSpin.y;
+        i_this->shape_angle.y += (s16)t60c::share(i_this->mSpin.y); /* true60: the frame's spin, its dt share */
         i_this->gravity = 0.5f;
         if (i_this->mTimer[0] == 0) {
             anm_init_(i_this, dRes_INDEX_OQ_BCK_DEAD3_e, 0.0f, 0, 1.0f, -1);
@@ -468,8 +525,9 @@ static inline void action_itai(oq_class* i_this) {
         }
         break;
     case 0x21:
+        oq_t60_jr_ran(i_this, OQ_T60_SPIN);
         oq_follow_mtx(i_this);
-        i_this->shape_angle.y += i_this->mSpin.y;
+        i_this->shape_angle.y += (s16)t60c::share(i_this->mSpin.y); /* true60: the frame's spin, its dt share */
         if (!oq_isStop(i_this)) {
             break;
         }
@@ -498,15 +556,18 @@ static inline void action_itai(oq_class* i_this) {
 static inline void tama_break(oq_class* i_this) {
     oq_se_a(i_this, 0x692C, 0);
     oq_particle(0xC, &i_this->current.pos);
-    fopAcM_delete(i_this);
+    oq_t60_delete(i_this); /* true60: the request on the tick30 step */
 }
 
 /* mAction 0x1E: the rock in flight (type 6) */
 /* inlined into daOQ_Execute */
-static inline void action_tama_shoot(oq_class* i_this) {
+static inline void action_tama_shoot(oq_class* i_this, bool t60Held) {
     dComIfGp_get();
     u8 m = i_this->mMode;
-    if (m == 0x28) {
+    if (t60Held || (m == 0x28 && !oq_t60_first())) {
+        /* true60: a state entered on an earlier step of this frame waits for the next frame (the flight
+         * below moves on); the rock's init (its spin draw, first-step AI-timer random addendum) runs on a frame's first step */
+    } else if (m == 0x28) {
         oq_clearActionFlags(i_this);
         s16 i = (s16)gabi::ftoi(cM_rndF(3.99f));
         csXyz* spin = &oqSpins[i]; /* the four spins from __sinit */
@@ -517,7 +578,8 @@ static inline void action_tama_shoot(oq_class* i_this) {
         i_this->mMode += 1;
     } else if (m == 0x29) {
         i_this->mTamaAtSph.OnAtSPrmBit(2);
-        if (i_this->mActionFlags[0] == 0) {
+        /* true60 (the mixed-pair hit-flag rule): the hits of the tick30 Move, read on the frame's first step */
+        if (oq_t60_first() && i_this->mActionFlags[0] == 0) {
             if (i_this->mTamaTgSph.mGObjAt.mRPrm & 1) {
                 /* bounced off the shield */
                 cXyz pos;
@@ -583,10 +645,22 @@ static inline void action_tama_shoot(oq_class* i_this) {
         i_this->scale.z = s;
         i_this->scale.y = s;
         if (s < 0.1f) {
-            fopAcM_delete(i_this);
+            oq_t60_delete(i_this); /* true60: the request on the tick30 step */
         }
     }
-    csXyz_add(&i_this->shape_angle, &i_this->mSpin);
+    if (t60::dt() == 1.0f) {
+        csXyz_add(&i_this->shape_angle, &i_this->mSpin);
+    } else {
+        /* true60: the frame's spin, the step's share (exact per 30 Hz frame) */
+        i_this->shape_angle.x += (s16)t60c::share(i_this->mSpin.x);
+        i_this->shape_angle.y += (s16)t60c::share(i_this->mSpin.y);
+        i_this->shape_angle.z += (s16)t60c::share(i_this->mSpin.z);
+    }
+    /* true60: the sea / wall contact tests the frame-start position (A's, after the previous frame's move
+     * and ground check): on the frame's first step */
+    if (!oq_t60_first()) {
+        return;
+    }
     if (daSea_ChkArea(i_this->current.pos.x, i_this->current.pos.z)) {
         f32 h = daSea_calcWave(i_this->current.pos.x, i_this->current.pos.z);
         if (i_this->current.pos.y < h + 40.0f) {
@@ -595,7 +669,7 @@ static inline void action_tama_shoot(oq_class* i_this) {
             pos.x = (f32)i_this->current.pos.x;
             pos.y = h;
             shibuki_set_(i_this, &pos, 0.4f);
-            fopAcM_delete(i_this);
+            oq_t60_delete(i_this); /* true60: the request on the tick30 step */
             return;
         }
     }
@@ -628,7 +702,32 @@ static inline void action_tama_shoot(oq_class* i_this) {
     }
     oq_se(i_this, 0x692C, 0);
     oq_particle(0xC, &i_this->current.pos);
-    fopAcM_delete(i_this);
+    oq_t60_delete(i_this); /* true60: the request on the tick30 step */
+}
+
+/* true60: a held step replays the motion blocks the frame's dispatch call ran (d_a_oq_t60.h), in A's call
+ * order, with the step's dt (A's one call ran them over the whole frame). dt = 1: never held. */
+static inline void oq_t60_replay(oq_class* i_this) {
+    const u32 b = oq_t60_jr_blocks(i_this);
+    if (b & OQ_T60_TURN1000) {
+        search_y_check_(i_this, 0x1000);
+    }
+    if (b & OQ_T60_TAIL) {
+        action_dousa_tail(i_this);
+    }
+    if (b & OQ_T60_SEA) {
+        sea_water_check_(i_this);
+    }
+    if (b & OQ_T60_SPIN) {
+        oq_follow_mtx(i_this);
+        i_this->shape_angle.y += (s16)t60c::share(i_this->mSpin.y);
+    }
+    if (b & OQ_T60_BODY) {
+        body_atari_check_(i_this);
+    }
+    if (b & OQ_T60_DIVE) {
+        cLib_addCalc2(&i_this->mDrawOffsetY, -(REG_F(8, 6) + 600.0f), 1.0f, REG_F(8, 7) + 50.0f);
+    }
 }
 
 /* 023C1380 */
@@ -644,13 +743,28 @@ static BOOL daOQ_Execute(oq_class* i_this) {
         enemy_fire_remove(&i_this->mEnemyFire);
         return TRUE;
     }
-    for (int i = 0; i < 6; i++) {
-        if (i_this->mTimer[i] != 0) {
-            i_this->mTimer[i]--;
+    /* true60 (the first-step AI-timer rule): the AI timers count on the frame's first step, before its dispatch */
+    if (oq_t60_first()) {
+        for (int i = 0; i < 6; i++) {
+            if (i_this->mTimer[i] != 0) {
+                i_this->mTimer[i]--;
+            }
         }
     }
 
-    switch (i_this->mAction) {
+    /* true60: one AI state step per 30 Hz frame: a state entered on an earlier step of this frame holds the
+     * dispatch; the held step replays the motion blocks the frame's dispatch call ran (d_a_oq_t60.h). The spawner
+     * decides on Link in every mode: its dispatch runs on the tick30 step. */
+    const u32 t60Entry = oq_t60_state(i_this);
+    const bool t60Held = oq_t60_held(i_this);
+    if (t60Held) {
+        if (i_this->mAction != OQ_ACTION_TAMA_SHOOT) {
+            oq_t60_replay(i_this);
+        }
+    } else {
+        oq_t60_jr_begin(i_this);
+    }
+    switch (t60Held ? (i_this->mAction == OQ_ACTION_TAMA_SHOOT ? (s32)OQ_ACTION_TAMA_SHOOT : 0xFF) : (s32)i_this->mAction) {
     case OQ_ACTION_DOUSA:
         action_dousa(i_this);
         break;
@@ -661,21 +775,28 @@ static BOOL daOQ_Execute(oq_class* i_this) {
         action_itai(i_this);
         break;
     case OQ_ACTION_TAMA_SHOOT:
-        action_tama_shoot(i_this);
+        action_tama_shoot(i_this, t60Held);
         break;
     case OQ_ACTION_WAKIDASI:
-        action_wakidasi_(i_this);
+        if (oq_t60_link()) {
+            action_wakidasi_(i_this);
+        }
         break;
     }
+    oq_t60_note(i_this, t60Entry);
 
     u8 t = i_this->mType;
     if (t == OQ_SPAWNER || t == OQ_PLACE || i_this->mDeleted != 0) {
         return TRUE;
     }
-    i_this->mpMorf->play(nullptr, 0, 0);
+    /* true60: an animation set on a middle step starts playing next frame (d_a_bk_t60.h bk_t60_mark_anm;
+     * the Octorok plays after its dispatch: the Bokoblin form, the split-actor state rule) */
+    if (!bk_t60_pending(&i_this->mpMorf)) {
+        i_this->mpMorf->play(nullptr, 0, 0);
+    }
     t = i_this->mType;
     if (t == OQ_SMALL) {
-        if (i_this->mAnmIdx == dRes_INDEX_OQ_BCK_NOM_WAIT_e && i_this->mAcch.ChkWaterIn() && i_this->mpMorf->checkFrame(18.0f)) {
+        if (i_this->mAnmIdx == dRes_INDEX_OQ_BCK_NOM_WAIT_e && i_this->mAcch.ChkWaterIn() && oq_t60_checkFrame(i_this, 18.0f, 1)) {
             /* the water rings while waiting */
             csXyz angle;
             angle.x = (s16)a_this->current.angle.x;
@@ -688,11 +809,14 @@ static BOOL daOQ_Execute(oq_class* i_this) {
     } else if (t == OQ_LARGE || t == OQ_DELAYED || t == OQ_CHILD) {
         /* the glow (brk frame) at night */
         if (dKy_daynight_check()) {
-            f32 f = i_this->mBrkFrame + 1.0f;
-            if (f > 89.0f) {
-                i_this->mBrkFrame = 0.0f;
-            } else {
-                i_this->mBrkFrame = f;
+            /* true60 (the animation-rate rule): +1 per frame (visual): on the tick30 step */
+            if (oq_t60_end()) {
+                f32 f = i_this->mBrkFrame + 1.0f;
+                if (f > 89.0f) {
+                    i_this->mBrkFrame = 0.0f;
+                } else {
+                    i_this->mBrkFrame = f;
+                }
             }
         } else {
             cLib_addCalc0(&i_this->mBrkFrame, 1.0f, 10.0f);
@@ -708,13 +832,37 @@ static BOOL daOQ_Execute(oq_class* i_this) {
     cXyz out;
     MtxPosition(&vel, &out);
     a_this->speed.x = (f32)out.x;
-    f32 sy = a_this->speed.y + a_this->gravity;
+    /* true60 (the per-step movement rule): v += g dt; the move below adds the exact-arc term of the change this step made */
+    const f32 t60Vy0 = a_this->speed.y;
+    f32 sy = t60::dt() == 1.0f ? a_this->speed.y + a_this->gravity
+                               : gabi::fadds_ppc(t60Vy0, gabi::fmuls_ppc((f32)a_this->gravity, t60::dt()));
     a_this->speed.z = (f32)out.z;
     if (sy < -100.0f) {
         sy = -100.0f;
     }
     a_this->speed.y = sy;
-    fopAcM_posMove(a_this, (i_this->mBodyCoCyl.mObjCo.mSPrm & 1) ? &i_this->mStts.m_cc_move : nullptr);
+    if (t60::dt() == 1.0f) {
+        fopAcM_posMove(a_this, (i_this->mBodyCoCyl.mObjCo.mSPrm & 1) ? &i_this->mStts.m_cc_move : nullptr);
+    } else {
+        gabi::Local<cXyz> t60Push; /* true60 (the first-step push rule): the frame's held push of the tick30 Move */
+        if (oq_t60_push_step(i_this, t60Push, (i_this->mBodyCoCyl.mObjCo.mSPrm & 1) != 0))
+            fopAcM_posMove(a_this, t60Push);
+        else
+            fopAcM_posMove(a_this, nullptr);
+        /* the exact-arc term of the change this step made (on the ground too: the frame-end ground check snaps both
+         * forms to the same height) */
+        f32 dv = gabi::fsubs_ppc((f32)a_this->speed.y, t60Vy0);
+        if (dv != 0.0f)
+            a_this->current.pos.y = gabi::fadds_ppc(
+                (f32)a_this->current.pos.y, gabi::fmuls_ppc(gabi::fmuls_ppc(dv, gabi::fsubs_ppc(1.0f, t60::dt())), 0.5f));
+        /* the bob's step: the move's y on the tick30 step only, the whole frame's (d_a_oq_t60.h oq_t60_bob_ran) */
+        if (oq_t60_bob_ran(i_this)) {
+            const f32 vy = a_this->speed.y;
+            a_this->current.pos.y = gabi::fadds_ppc(
+                (f32)a_this->current.pos.y, t60::tick30() ? gabi::fmuls_ppc(vy, gabi::fsubs_ppc(1.0f, t60::dt()))
+                                                          : -gabi::fmuls_ppc(vy, t60::dt()));
+        }
+    }
     BG_check_(i_this);
 
     t = i_this->mType;
@@ -739,7 +887,8 @@ static BOOL daOQ_Execute(oq_class* i_this) {
             a_this->eyePos.y = y + 250.0f;
             a_this->eyePos.x = x;
             f32 atR = REG_F(8, 13) + 175.0f;
-            if (dComIfGp_checkPlayerStatus0(0, OQ_SHIP_RIDE)) {
+            /* true60 (the first-step input rule addendum): the ship-near latch reads Link: on the tick30 step */
+            if (oq_t60_link() && dComIfGp_checkPlayerStatus0(0, OQ_SHIP_RIDE)) {
                 if (fopAcM_searchPlayerDistance(a_this) < REG_F(8, 14) + 250.0f) {
                     if (i_this->mActionFlags[5] == 0) {
                         i_this->mActionFlags[5] = 1;
@@ -756,14 +905,17 @@ static BOOL daOQ_Execute(oq_class* i_this) {
             i_this->mBodyAtCyl.SetC(&a_this->current.pos);
             i_this->mBodyAtCyl.SetH(600.0f);
             i_this->mBodyAtCyl.SetR(atR);
-            dComIfG_Ccsp_Set(&i_this->mBodyAtCyl);
+            if (oq_t60_cc_set()) /* true60 (the one-sweep-per-frame attack rule): registered for the tick30 Move only */
+                dComIfG_Ccsp_Set(&i_this->mBodyAtCyl);
             i_this->mBodyCoCyl.SetH(600.0f);
             i_this->mBodyCoCyl.SetR(coR);
-            dComIfG_Ccsp_Set(&i_this->mBodyCoCyl);
+            if (oq_t60_cc_set())
+                dComIfG_Ccsp_Set(&i_this->mBodyCoCyl);
         } else {
             i_this->mBodyCoCyl.SetH(170.0f);
             i_this->mBodyCoCyl.SetR(80.0f);
-            dComIfG_Ccsp_Set(&i_this->mBodyCoCyl);
+            if (oq_t60_cc_set()) /* true60 (the one-sweep-per-frame attack rule): registered for the tick30 Move only */
+                dComIfG_Ccsp_Set(&i_this->mBodyCoCyl);
         }
     } else if (t == OQ_ROCK) {
         f32 x = a_this->current.pos.x, y = a_this->current.pos.y, z = a_this->current.pos.z;
@@ -777,13 +929,16 @@ static BOOL daOQ_Execute(oq_class* i_this) {
         if (i_this->mProjectileType == 0) {
             i_this->mTamaAtSph.SetC(&a_this->current.pos);
             i_this->mTamaAtSph.SetR(i_this->mActionFlags[0] == 0 ? 15.0f : 40.0f);
-            dComIfG_Ccsp_Set(&i_this->mTamaAtSph);
+            if (oq_t60_cc_set()) /* true60 (the one-sweep-per-frame attack rule): registered for the tick30 Move only */
+                dComIfG_Ccsp_Set(&i_this->mTamaAtSph);
             i_this->mTamaTgSph.SetC(&a_this->current.pos);
             i_this->mTamaTgSph.SetR(60.0f);
-            dComIfG_Ccsp_Set(&i_this->mTamaTgSph);
+            if (oq_t60_cc_set())
+                dComIfG_Ccsp_Set(&i_this->mTamaTgSph);
         }
     }
     draw_SUB_(i_this);
+    oq_t60_delete_due(i_this); /* true60: a deletion decided on an earlier step of this frame (A: after its whole call) */
     return TRUE;
 }
 

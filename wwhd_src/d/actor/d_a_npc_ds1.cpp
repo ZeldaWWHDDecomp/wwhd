@@ -8,6 +8,7 @@
  * cuts and actions); d_a_npc_ds1_pending.cpp holds weak guest-call stubs.
  */
 #include "d/actor/d_a_npc_ds1.h"
+#include "d/actor/d_a_npc_ds1_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule NPC form) */
 
 static inline s32 J3DAnm_getFrameMax(J3DAnmTexPattern* p) {
     auto* animation = reinterpret_cast<Ds1Animation*>(p);
@@ -112,6 +113,7 @@ static BOOL nodeCallBack_Ds(J3DNode* node, int calcTiming) {
                 mDoMtx_YrotM(calc_mtx(), (s16)-i_this->mJntCtrl.mAngles[0][1]);
                 mDoMtx_ZrotM(calc_mtx(), (s16)-i_this->mJntCtrl.mAngles[0][0]);
                 MtxPosition(offs, pos);
+                if (ds1_t60::drawStep()) { /* true60: logic stores on the tick30 step's draw only (rule 14) */
                 i_this->mAttentionBasePos.z = pos->z;
                 i_this->mAttentionBasePos.y = pos->y;
                 i_this->mAttentionBasePos.x = pos->x;
@@ -124,6 +126,7 @@ static BOOL nodeCallBack_Ds(J3DNode* node, int calcTiming) {
                 i_this->eyePos.y = pos->y;
                 if (i_this->mAttnSetCount != 0xFF)
                     i_this->mAttnSetCount = i_this->mAttnSetCount + 1;
+                }
             } else if (jntNo == (u32)(s32)i_this->mJntNo[1]) {
                 mDoMtx_XrotM(calc_mtx(), i_this->mJntCtrl.mAngles[1][1]);
                 mDoMtx_ZrotM(calc_mtx(), i_this->mJntCtrl.mAngles[1][0]);
@@ -536,6 +539,8 @@ void daNpc_Ds1_c::setCollision() {
 
 /* 0222F1BC */
 BOOL daNpc_Ds1_c::_execute() {
+    if (t60w::begin(this, ds1_t60::kOps)) /* true60: a step before the tick30 step: the picture only */
+        return TRUE;
     bool inEvent = mAction.idx == -1 && mAction.delta == 0 && mAction.fn == ds1_tu.mEventAction;
     daNpc_Ds1_childHIO_c& hio = l_HIO.mChild[mType];
     if (!inEvent) {
@@ -585,6 +590,7 @@ BOOL daNpc_Ds1_c::_execute() {
         mBtkAnm.play();
     }
     cLib_addCalc0(&mLight.mPower, 0.25f, 20.0f);
+    t60w::end(this, ds1_t60::kOps, true); /* true60: the frame's change kept for the next frame's picture */
     return TRUE;
 }
 

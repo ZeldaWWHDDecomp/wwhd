@@ -7,7 +7,10 @@
  * The two readability ranges preserve all 56 native entries.
  */
 #include "d/actor/d_a_tn.h"
+#include "d/actor/d_a_tn_t60.h"
 #include <cmath>
+#include <cstdlib>
+#include <unordered_map>
 
 static TnSpinColors l_spinColors;
 static TnPower6 l_spinColorInitialized;
@@ -211,12 +214,34 @@ static s16 tn_randomPartRotation(f32 magnitude) {
     return static_cast<s16>(gabi::ftoi(cM_rndFX(magnitude)));
 }
 
+/* true60: a detached part's spin step at dt < 1: round(speed x dt) on the in-between steps, the rest of the
+ * frame's whole angle speed on the tick30 step (exact per frame while the spin speed holds) */
+static inline s16 tn_t60_spin(s16 angle, s16 speed) {
+    const s32 part = gabi::ftoi(static_cast<f32>(speed) * t60::dt() + (speed >= 0 ? 0.5f : -0.5f));
+    const s32 add = t60::tick30() ? speed - part * static_cast<s32>(t60::steps() - 1) : part;
+    return static_cast<s16>(angle + add);
+}
+
 static void tn_moveFlyingPart(tn_class* actor, tn_p* part, int index, tn_groundcheck* ground,
                               f32 zero, f32 horizontalBounce, f32 randomRotation) {
     part->mOldPos.x = part->mPos.x; part->mOldPos.y = part->mPos.y; part->mOldPos.z = part->mPos.z;
-    tn_VECAdd(&part->mPos, &part->mSpeed, &part->mPos);
-    part->mSpeed.y = static_cast<f32>(part->mSpeed.y) - 5.0f;
-    tn_abi::addAngles(&part->mAngle, &part->mAngleSpeed);
+    if (t60::dt() == 1.0f) {
+        tn_VECAdd(&part->mPos, &part->mSpeed, &part->mPos);
+        part->mSpeed.y = static_cast<f32>(part->mSpeed.y) - 5.0f;
+        tn_abi::addAngles(&part->mAngle, &part->mAngleSpeed);
+    } else {
+        /* true60 (the per-step movement rule / the speed-ramp position-gap rule): the flight moves every step with its dt share (pos += speed x dt,
+         * gravity 5 x dt); the spin adds round(speed x dt) on the in-between steps and the rest of the frame's spin on
+         * the tick30 step, so a frame's turn is the original's whole angle speed */
+        const f32 dt = t60::dt();
+        part->mPos.x = static_cast<f32>(part->mPos.x) + gabi::fmuls_ppc(static_cast<f32>(part->mSpeed.x), dt);
+        part->mPos.y = static_cast<f32>(part->mPos.y) + gabi::fmuls_ppc(static_cast<f32>(part->mSpeed.y), dt);
+        part->mPos.z = static_cast<f32>(part->mPos.z) + gabi::fmuls_ppc(static_cast<f32>(part->mSpeed.z), dt);
+        part->mSpeed.y = static_cast<f32>(part->mSpeed.y) - gabi::fmuls_ppc(5.0f, dt);
+        part->mAngle.x = tn_t60_spin(part->mAngle.x, part->mAngleSpeed.x);
+        part->mAngle.y = tn_t60_spin(part->mAngle.y, part->mAngleSpeed.y);
+        part->mAngle.z = tn_t60_spin(part->mAngle.z, part->mAngleSpeed.z);
+    }
     gabi::Local<cXyz> motion;
     tn_abi::subtractPosition(&part->mPos, motion.get(), &part->mOldPos);
     gabi::Local<cXyz> probeOffset;
@@ -438,11 +463,50 @@ static bool tn_processAirborneAttack(tn_class* actor, f32 zero) {
     return true;
 }
 
+/* true60 (first-step input addendum; d_a_tn_t60.h): the frame's sensing again on the tick30 step,
+ * Link's current (frame-end) state against the Darknut's frame-start position the first step's sensing used; the first
+ * step keeps which target it sensed (Link or the move target) and from where. Host memory, this unit only (split-actor state (1)). */
+struct TnT60Sense {
+    u32 frame;
+    f32 x, y, z;
+    bool player;
+};
+static std::unordered_map<u32, TnT60Sense> s_tnT60Sense;
+
+static inline void tn_t60_sense_keep(tn_class* actor, bool player) {
+    if (t60::dt() == 1.0f || !t60::first_step()) return;
+    TnT60Sense& e = s_tnT60Sense[gabi::ea(actor)];
+    e.frame = bk_t60_frame_tag();
+    e.x = actor->current.pos.x;
+    e.y = actor->current.pos.y;
+    e.z = actor->current.pos.z;
+    e.player = player;
+}
+
+/* the tick30 step: mPlayerDistance / mPlayerHeightDistance / mTargetAngle as A's frame computes them (nothing when the
+ * frame's first step took no sensing: A's frame took none) */
+static void tn_t60_sense_end(tn_class* actor, fopAc_ac_c* player) {
+    if (t60::dt() == 1.0f || !t60::tick30()) return;
+    auto it = s_tnT60Sense.find(gabi::ea(actor));
+    if (it == s_tnT60Sense.end() || it->second.frame != bk_t60_frame_tag()) return;
+    const TnT60Sense& e = it->second;
+    const cXyz* target = e.player ? gabi::at<cXyz>(gabi::ea(player) + 0x314u) : &actor->mMoveTargetPos;
+    const f32 dx = static_cast<f32>(target->x) - e.x;
+    const f32 dy = static_cast<f32>(target->y) - e.y;
+    const f32 dz = static_cast<f32>(target->z) - e.z;
+    actor->mPlayerDistance = static_cast<f32>(tn_sqrtf(gabi::fmadds(dx, dx, dz * dz)));
+    actor->mPlayerHeightDistance = static_cast<f32>(std::fabs(dy));
+    actor->mTargetAngle = static_cast<s16>(cM_atan2s(dx, dz));
+}
+
 static void tn_updateMovementTarget(tn_class* actor, fopAc_ac_c* player) {
     const s16 targetTimer = static_cast<s16>(actor->mMoveTargetTimer);
+    tn_t60_sense_keep(actor, targetTimer == 0);
     cXyz* target;
     if (targetTimer != 0) {
-        actor->mMoveTargetTimer = static_cast<u16>(static_cast<u16>(static_cast<u16>(targetTimer) - 1u));
+        /* true60 (the 30 Hz timer rule): counted on the frame's first step */
+        if (bk_t60_first())
+            actor->mMoveTargetTimer = static_cast<u16>(static_cast<u16>(static_cast<u16>(targetTimer) - 1u));
         target = &actor->mMoveTargetPos;
     } else {
         target = gabi::at<cXyz>(gabi::ea(player) + 0x314u);
@@ -454,15 +518,22 @@ static void tn_updateMovementTarget(tn_class* actor, fopAc_ac_c* player) {
     const f32 dy = delta->y;
     const f32 dz = delta->z;
     const f32 distance = tn_sqrtf(gabi::fmadds(dx, dx, dz * dz));
-    actor->mPlayerDistance = static_cast<f32>(distance);
-    actor->mPlayerHeightDistance = static_cast<f32>(std::fabs(dy));
-    const s16 heading = cM_atan2s(dx, dz);
-    actor->mTargetAngle = static_cast<s16>(heading);
+    /* true60 (the first-step AI-timer rule; the Bokoblin's form): the frame's sensing on its FIRST step
+     * (the original's call takes it before the frame's motion). dt = 1: every call (the original). */
+    if (bk_t60_first()) {
+        actor->mPlayerDistance = static_cast<f32>(distance);
+        actor->mPlayerHeightDistance = static_cast<f32>(std::fabs(dy));
+    }
+    const s16 heading = cM_atan2s(dx, dz); /* (after the two stores: the original's order) */
+    if (bk_t60_first())
+        actor->mTargetAngle = static_cast<s16>(heading);
+    tn_t60_sense_end(actor, player); /* true60: the tick30 step's sensing */
     const f32 radiusOffset = 80.0f;
     const f32 radiusTuning = REG0_F(3);
     tn_abi::cylinderSetRadius(reinterpret_cast<u8*>(&actor->mCoCyl.mCyl), radiusTuning + radiusOffset);
     const s8 cooldown = static_cast<s8>(actor->mMahiDelay);
-    if (cooldown != 0) {
+    /* true60 (the 30 Hz timer rule, the first-step AI-timer rule): the paralysis delay counts (and starts the paralysis) on the first step */
+    if (cooldown != 0 && bk_t60_first()) {
         const u8 next = static_cast<u8>(static_cast<u8>(cooldown) - 1u);
         actor->mMahiDelay = static_cast<u8>(next);
         if (next == 0) {
@@ -520,8 +591,9 @@ static bool tn_dispatchSeparateMovementAction(tn_class* actor, s16 action) {
 
 // The movement entry retains the zero/range constants and action value across
 // action calls; they must be passed here rather than reloaded prematurely.
-static void tn_finishMovement(tn_class* actor, s16 action, f32 zero, f32 rangeScale) {
-    if (actor->mBehaviorType == BEHAVIOR_GUARDS_AREA && action == ACTION_FIGHT_RUN) {
+static void tn_finishMovement(tn_class* actor, s16 action, f32 zero, f32 rangeScale, bool t60Held = false) {
+    /* true60: a held step (d_a_tn_t60.h) makes no decision; the motion still follows the speed */
+    if (!t60Held && actor->mBehaviorType == BEHAVIOR_GUARDS_AREA && action == ACTION_FIGHT_RUN) {
         gabi::Local<cXyz> homeDelta;
         tn_abi::subtractPosition(&actor->home.pos, homeDelta.get(), &actor->current.pos);
         const u8 range = actor->mRangeOrFrozenAnim;
@@ -586,6 +658,7 @@ static void tn_moveReturnHome(tn_class* actor, f32 zero, f32 one, f32 rangeScale
         actor->mDamageReaction.mMode = 1;
         anm_init(actor, pathDriven == 0 ? 0x3D : 0x39, static_cast<f32>(actor->mReturnAnmMorf), J3DFrameCtrl::EMode_LOOP, one, -1);
         yoroi_anm_init(actor, dRes_INDEX_TN_BCK_YKIHON1_e, static_cast<f32>(actor->mReturnAnmMorf), J3DFrameCtrl::EMode_NONE, one);
+        mo2_t60_ai_ran(actor); /* true60: mode 1's body runs in this call (fall-through): not held */
         [[fallthrough]];
     }
     case 1: {
@@ -605,7 +678,8 @@ static void tn_moveReturnHome(tn_class* actor, f32 zero, f32 one, f32 rangeScale
     }
     case 10: {
         s16 timer = static_cast<s16>(actor->mCountDownTimers[1]);
-        if (timer == 30) {
+        /* true60 (the first-step AI-timer rule): a timer `== v` one-shot, once per frame on the first step */
+        if (timer == 30 && bk_t60_first()) {
             anm_init(actor, dRes_INDEX_TN_BCK_AKIDUKU1_e, 3.0f, J3DFrameCtrl::EMode_NONE, one, -1);
             timer = static_cast<s16>(actor->mCountDownTimers[1]);
         }
@@ -637,6 +711,7 @@ static void tn_moveReturnHome(tn_class* actor, f32 zero, f32 one, f32 rangeScale
         mode = actor->mDamageReaction.mMode;
         actor->mCountDownTimers[1] = static_cast<s16>(50);
         actor->mDamageReaction.mMode = static_cast<s16>(static_cast<u16>(mode) + 1u);
+        mo2_t60_ai_ran(actor); /* true60: mode 51's body runs in this call (fall-through): not held */
         [[fallthrough]];
     case 51:
         actor->speedF = static_cast<f32>(zero);
@@ -673,7 +748,8 @@ static void tn_moveReturnHome(tn_class* actor, f32 zero, f32 one, f32 rangeScale
         const f32 minimum = 45.0f;
         actor->mCountDownTimers[1] = static_cast<s16>(static_cast<s16>(gabi::ftoi(random + minimum)));
     }
-    if (static_cast<s16>(actor->mCountDownTimers[2]) == 0 && actor->mDamageReaction.mMode != 20) {
+    /* true60 (first-step input addendum): the spotting decision reads Link: on the tick30 step (d_a_tn_t60.h) */
+    if (static_cast<s16>(actor->mCountDownTimers[2]) == 0 && actor->mDamageReaction.mMode != 20 && tn_t60_xdecide()) {
         const u8 range = actor->mRangeOrFrozenAnim;
         const f32 distance = static_cast<f32>(actor->mPlayerDistance);
         const f32 detectionRange = range == 0xFF ? 500.0f : static_cast<f32>(range) * rangeScale;
@@ -849,6 +925,7 @@ static void tn_movePatrol(tn_class* actor, f32 zero, f32 one, f32 blend, f32 acc
     case -10:
         actor->mCountDownTimers[1] = static_cast<s16>(60);
         actor->mDamageReaction.mMode = -9;
+        mo2_t60_ai_ran(actor); /* true60: mode -9's body runs in this call (fall-through): not held */
         [[fallthrough]];
     case -9: {
         const s16 timer = static_cast<s16>(actor->mCountDownTimers[1]);
@@ -863,6 +940,7 @@ static void tn_movePatrol(tn_class* actor, f32 zero, f32 one, f32 blend, f32 acc
         [[fallthrough]];
     case -1:
         tn_advancePatrolTarget(actor);
+        mo2_t60_ai_ran(actor); /* true60: mode 1's body runs in this call (fall-through): not held */
         [[fallthrough]];
     case 1:
         tn_patrolLocomotion(actor, one, acceleration);
@@ -904,7 +982,8 @@ static void tn_movePatrol(tn_class* actor, f32 zero, f32 one, f32 blend, f32 acc
     s32 pathDriven = actor->mHasWepon;
     const s8 encounter = static_cast<s8>(search_sp);
     const u32 reaction = contact + static_cast<u32>(static_cast<s32>(encounter));
-    if (pathDriven != 0 || actor->mWeponSearchGaveUp != 0) {
+    /* true60 (first-step input addendum): the notice decision reads Link (and the sound contact): tick30 step */
+    if ((pathDriven != 0 || actor->mWeponSearchGaveUp != 0) && tn_t60_xdecide()) {
         bool notice = reaction != 0;
         if (!notice) {
             const f32 distance = static_cast<f32>(actor->mPlayerDistance);
@@ -928,7 +1007,7 @@ static void tn_movePatrol(tn_class* actor, f32 zero, f32 one, f32 blend, f32 acc
         actor->mDamageReaction.mAction = ACTION_WEPON_SEARCH;
         actor->mDamageReaction.mMode = -1;
     }
-    if (daTn_checkNearbyBomb(actor) != 0) {
+    if (tn_t60_xdecide() && daTn_checkNearbyBomb(actor) != 0) { /* true60: reads the bombs and Link: tick30 step */
         actor->mDamageReaction.mAction = ACTION_B_NIGE;
         actor->mDamageReaction.mMode = 0;
     }
@@ -966,11 +1045,13 @@ static tn_combat_step tn_combatLocomotion(tn_class* actor, f32 steering, f32 zer
         fight_run_set(actor);
         actor->m1420 = static_cast<u32>(0);
         actor->mDamageReaction.mMode = 1;
+        mo2_t60_ai_ran(actor); /* true60: mode 1's body runs in this call (fall-through): not held */
         [[fallthrough]];
     case 1: {
         const bool armor = (static_cast<u8>(actor->mRemainingEquipmentPieces) & 1u) != 0;
         const f32 speed = armor ? static_cast<f32>(l_tnHIO.mPathWalkSpeed) * 1.5f : static_cast<f32>(l_tnHIO.mRunSpeed);
         cLib_addCalc2(&actor->speedF, speed, one, acceleration);
+        if (!tn_t60_xdecide()) break; /* true60: the range decision reads Link: tick30 step */
         const BOOL way = daTn_player_way_check(actor);
         const f32 distance = static_cast<f32>(actor->mPlayerDistance);
         if (way != 0) {
@@ -986,6 +1067,8 @@ static tn_combat_step tn_combatLocomotion(tn_class* actor, f32 steering, f32 zer
         break;
     }
     case 2: {
+        /* true60: this mode only decides (from Link's distance): its body on the tick30 step */
+        if (!tn_t60_xdecide()) break;
         const f32 steeringThreshold = 0.1f;
         const s32 pathDriven = actor->mHasWepon;
         s16 nextMode;
@@ -1049,6 +1132,7 @@ static void tn_beginCombatAttack(tn_class* actor) {
 
 // an attack has been selected and the rest of the combat action is skipped.
 static bool tn_combatRangeTransition(tn_class* actor, fopAc_ac_c* player) {
+    if (!tn_t60_xdecide()) return false; /* true60: reads Link: the tick30 step */
     const f32 closeRange = static_cast<f32>(l_tnHIO.mFightRange);
     const f32 lostTargetMargin = 75.0f;
     f32 distance = static_cast<f32>(actor->mPlayerDistance);
@@ -1093,6 +1177,7 @@ static bool tn_combatRangeTransition(tn_class* actor, fopAc_ac_c* player) {
 
 // Combat response to an incoming thrown object or the player's attack.
 static bool tn_combatDefensiveReaction(tn_class* actor, fopAc_ac_c* player, f32 one, f32 blend) {
+    if (!tn_t60_xdecide()) return false; /* true60: reads Link's cut / lock-on: tick30 step */
     const u32 base = gabi::ea(actor);
     if (static_cast<s16>(actor->mNoGuardTimer) != 0) return false;
     const u32 thrown = tn_abi::searchActors(gabi::guest_fn((const void*)&shot_s_sub), actor);
@@ -1114,6 +1199,8 @@ static bool tn_combatDefensiveReaction(tn_class* actor, fopAc_ac_c* player, f32 
         if (tn_abi::attentionActionTarget(gabi::at<u8>(playerAttention), 0) != base) return false;
     }
     const u32 frameCounter = static_cast<u32>(actor->mFrameCount);
+    /* true60: the guard decision (and its draw) of the phase frame; this function decides on the tick30 step
+     * only (it reads Link; was the first step, the first-step AI-timer rule) */
     if ((frameCounter & 3u) == 0) {
         const s8 pieces = actor->mRemainingEquipmentPieces;
         if ((static_cast<u8>(pieces) & 4u) != 0) {
@@ -1150,8 +1237,14 @@ static bool tn_combatDefensiveReaction(tn_class* actor, fopAc_ac_c* player, f32 
 }
 
 static void tn_combatObstacles(tn_class* actor) {
+    /* true60: the frame's last combat phase, after the range / guard decisions that run on the
+     * tick30 step: the line of sight to Link, the bomb check, the obstacle side and the obstacle timer (mCountDownTimers[4]
+     * = 50) once per frame there; a frame whose tick30 decision changes the action does not reach it, as in A (pair
+     * tnkB1_2 frames 191 / 266: timer[4] 49 / 50, set on the first step before the tick30 range decision) */
+    if (!tn_t60_xdecide()) return;
     const u32 target = gabi::ea(static_cast<fopAc_ac_c*>(actor->mDamageReaction.mpLookTarget));
-    if (daTn_player_bg_check(actor, gabi::at<cXyz>(target + 0x314u)) != 0) {
+    const bool t60Decide = true;
+    if (t60Decide && daTn_player_bg_check(actor, gabi::at<cXyz>(target + 0x314u)) != 0) {
         actor->mDamageReaction.mAction = ACTION_JYUNKAI;
         path_check(actor);
         wait_set(actor);
@@ -1162,7 +1255,7 @@ static void tn_combatObstacles(tn_class* actor) {
         actor->mDamageReaction.mAction = ACTION_WEPON_SEARCH;
         actor->mDamageReaction.mMode = -1;
     }
-    if (daTn_checkNearbyBomb(actor) != 0) {
+    if (t60Decide && daTn_checkNearbyBomb(actor) != 0) {
         actor->mDamageReaction.mAction = ACTION_B_NIGE;
         actor->mDamageReaction.mMode = 0;
     }
@@ -1175,6 +1268,72 @@ static void tn_combatObstacles(tn_class* actor) {
 }
 
 // locomotion, range, defensive-reaction and obstacle phases above.
+/* true60: the combat tail (range transition, defensive reaction, obstacle phase) decides
+ * on the tick30 step only. When an in-between step's call changes the state before the tail (fight-run mode 3 -> 2 on its
+ * timer) and reaches it, the frame's tick30 step is held (one state step per frame) and the tail would be lost: A's call
+ * runs it after the change (pair frame 152: timer[4] 50 in A, 49 in B). The in-between call notes the phase it
+ * reached (host memory keyed by the actor, frame tag); the held tick30 step runs the tail for it. dt = 1 and the tick30
+ * step: nothing noted. Host memory, this unit only (split-actor state (1)). */
+struct TnT60Tail {
+    u32 frame;
+    tn_combat_step phase;
+};
+static std::unordered_map<u32, TnT60Tail> s_tnT60Tail;
+static inline void tn_t60_tail_note(tn_class* actor, tn_combat_step phase) {
+    if (t60::dt() == 1.0f || t60::tick30()) return;
+    s_tnT60Tail[gabi::ea(actor)] = TnT60Tail{bk_t60_frame_tag(), phase};
+}
+/* the held tick30 step: the tail of the frame's call, when an in-between step reached it */
+static void tn_t60_tail_held(tn_class* actor, fopAc_ac_c* player, f32 one, f32 blend) {
+    if (t60::dt() == 1.0f || !t60::tick30()) return;
+    auto it = s_tnT60Tail.find(gabi::ea(actor));
+    if (it == s_tnT60Tail.end() || it->second.frame != bk_t60_frame_tag()) return;
+    const tn_combat_step phase = it->second.phase;
+    s_tnT60Tail.erase(it);
+    if (phase == tn_combat_step::checkRange) {
+        if (tn_combatRangeTransition(actor, player)) return;
+        if (tn_combatDefensiveReaction(actor, player, one, blend)) return;
+    }
+    tn_combatObstacles(actor);
+}
+
+/* true60 (heading; pair B f3656, the animation-driven decision rule): the held tick30 step
+ * completes the frame's combat turn, as the Bokoblin's fight_run (d_a_bk_t60.h bk_t60_turn_note / bk_t60_turn_due,
+ *). A's one tn_moveCombat call copies the sensed mTargetAngle to mTurnTargetY and turns current.angle.y toward
+ * it (scale 4, max step 0x800 in mode 1, 0x400 in the other non-zero modes, while mAnmLock is 0) BEFORE its mode switch,
+ * so the frame ends on the frame's sensing and one whole turn. At N steps a mode change on an earlier step (mode 3 -> 2,
+ * timer[1] at 0, B f3656) holds the tick30 step's dispatch (mo2_t60_ai_held): the first step turned its dt share (-512 ->
+ * -554 toward -823), the tick30 step sensed (tn_t60_sense_end, target -884) but did not turn: B -554 / A -598 (X -605), the
+ * heading B-vs-B +0x322 / +0x32A over its 256 tolerance from f418 (751@533 on FC). Form: the prelude notes on an earlier
+ * step which turn it made (key the mTurnTargetY address: 0x400; | 1: 0x800; ^ 0xB0000000: none); a held tick30 step sets
+ * mTurnTargetY from its sensing and, when a turn was made, turns once more (the integer ease ends on the frame's full
+ * step from the frame-start angle, c_lib t60PinFull: A's turn). dt = 1 / N = 1: nothing is noted (the original).
+ * Negative control WWHD_T60_TNTURN_NEGCTRL=1 (game build): no held turn (before). */
+static u32 tn_t60_turn_key(tn_class* actor, int kind) {
+    const u32 a = gabi::ea(&actor->mDamageReaction.mTurnTargetY);
+    return kind == 0 ? (a ^ 0xB0000000u) : kind == 0x800 ? (a | 1u) : a;
+}
+/* (addendum, pair B f4037, as the Bokoblin's f141 addendum) fight_run 0 -> 1 on the
+ * first step (mode 0's fall-through, mo2_t60_ai_ran: not held): A's call entered in mode 0 and did not turn that frame;
+ * B's tick30 call (mode 1) turned 0x800 at its dt share (10655 -> 11411, X / A 10655). The turn's condition (entry mode
+ * != 0, mAnmLock 0) and its max step are the frame's first call's answer: noted on the first step, taken on the later
+ * steps (tn_t60_turn_due, in tn_moveCombat and on a held tick30 step). */
+static void tn_t60_turn_note(tn_class* actor, int maxStep) {
+    if (t60::dt() == 1.0f || !t60::first_step() || t60::tick30()) return;
+    wwhd_t60_latch_set(tn_t60_turn_key(actor, maxStep), bk_t60_frame_tag());
+}
+/* on a later step of the frame: -1 the combat prelude did not run on the first step; 0 it ran without a turn; else the
+ * turn's max step (the first step and dt 1: -1, the live answer) */
+static int tn_t60_turn_due(tn_class* actor) {
+    static const bool negctrl = [] { const char* e = std::getenv("WWHD_T60_TNTURN_NEGCTRL"); return e && e[0] == '1'; }();
+    if (negctrl || t60::dt() == 1.0f || t60::first_step()) return -1;
+    const u32 tag = bk_t60_frame_tag();
+    if (wwhd_t60_latch_pending(tn_t60_turn_key(actor, 0x800), tag) != 0) return 0x800;
+    if (wwhd_t60_latch_pending(tn_t60_turn_key(actor, 0x400), tag) != 0) return 0x400;
+    if (wwhd_t60_latch_pending(tn_t60_turn_key(actor, 0), tag) != 0) return 0;
+    return -1;
+}
+
 static void tn_moveCombat(tn_class* actor, f32 zero, f32 one, f32 blend, f32 acceleration) {
     const u32 playerAddress = gabi::ea(static_cast<fopAc_ac_c*>(reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get())->play.mPlayerInfo[0].mpPlayer));
     fopAc_ac_c* player = gabi::at<fopAc_ac_c>(playerAddress);
@@ -1183,15 +1342,26 @@ static void tn_moveCombat(tn_class* actor, f32 zero, f32 one, f32 blend, f32 acc
     const s16 heading = static_cast<s16>(actor->mTargetAngle);
     actor->mDamageReaction.mLookMode = static_cast<u8>(1);
     actor->mDamageReaction.mTurnTargetY = static_cast<s16>(heading);
-    if (frozen == 0) {
+    /* true60: the turn as the frame's first call decided it (entry mode, mAnmLock: tn_t60_turn_due); noted for the later steps */
+    const int t60TurnHeld = tn_t60_turn_due(actor);
+    int t60Turn = 0; /* true60: which turn this call made (tn_t60_turn_note) */
+    if (t60TurnHeld >= 0) {
+        t60Turn = t60TurnHeld;
+        if (t60Turn != 0) cLib_addCalcAngleS2(&actor->current.angle.y, heading, 4, t60Turn);
+    } else if (frozen == 0) {
         const s16 mode = actor->mDamageReaction.mMode;
-        if (mode != 0) cLib_addCalcAngleS2(&actor->current.angle.y, heading, 4, mode == 1 ? 0x800 : 0x400);
+        if (mode != 0) {
+            t60Turn = mode == 1 ? 0x800 : 0x400;
+            cLib_addCalcAngleS2(&actor->current.angle.y, heading, 4, t60Turn);
+        }
     }
+    tn_t60_turn_note(actor, t60Turn);
     const tn_combat_step phase = tn_combatLocomotion(actor, steering, zero, one, blend, acceleration);
     if (phase == tn_combat_step::beginAttack) {
         tn_beginCombatAttack(actor);
         return;
     }
+    tn_t60_tail_note(actor, phase); /* true60: an in-between step reached the tick30 tail (Tn_move runs it when held) */
     if (phase == tn_combat_step::checkRange) {
         if (tn_combatRangeTransition(actor, player)) return;
         if (tn_combatDefensiveReaction(actor, player, one, blend)) return;
@@ -1236,6 +1406,51 @@ static void tn_chooseAttack(tn_class* actor, f32 one, f32 armorBlend) {
     actor->mDamageReaction.mMode = 1;
 }
 
+/* true60 (tnkF1_2 frame 202): the attack's turn toward the target runs while the body animation frame is
+ * below the limit. The original reads the frame once per 30 Hz frame, after the frame's whole play (the play is in
+ * executePrefix, before Tn_move), so it turns on frames whose END value is below the limit. At N steps each step reads
+ * its own partly played frame: the first step of the frame that reaches the limit (A 10 -> no turn) still saw 9.5 and
+ * turned (B -9024 vs A -9355). The gate takes the frame-end value the original frame reads: latched on the first step
+ * (the step's frame + rate x the frame's remaining steps); a later step keeps it while the same play continues (same
+ * rate, frame between the last read and the end), else (a new animation this frame) its own frame. dt = 1: the frame
+ * itself. Host memory keyed by the actor, frame tag (split-actor state (1)). */
+struct TnT60TurnFrame {
+    u32 frame;
+    f32 rate;
+    f32 last;
+    f32 end;
+};
+static std::unordered_map<u32, TnT60TurnFrame> s_tnT60TurnFrame;
+static f32 tn_t60_turn_frame(tn_class* actor, const mDoExt_McaMorf* morf) {
+    const f32 cur = static_cast<f32>(morf->mFrameCtrl.mFrame);
+    if (t60::dt() == 1.0f) return cur;
+    /* true60 (pair B f3923, tn_moveAttack mode 0 -> 1): a body animation set earlier in
+     * this 30 Hz frame is a request until the tick30 step (tn_t60_anm_request), so the first step's gate read the old
+     * animation's frame (past the limit: no turn) and only the tick30 step turned (+440; A +820: its setAnm puts the new
+     * animation at frame 0 before the gate, and the whole frame turns). The gate reads what A's call reads after the set:
+     * the new animation's start frame 0 on every step of the frame. Negative control WWHD_T60_TNATKTURN_NEGCTRL=1. */
+    static const bool t60AtkNeg = [] { const char* e = std::getenv("WWHD_T60_TNATKTURN_NEGCTRL"); return e && e[0] == '1'; }();
+    if (!t60AtkNeg && bk_t60_pending(&actor->mpBodyMorf)) return 0.0f;
+    const f32 rate = static_cast<f32>(morf->mFrameCtrl.mRate);
+    const u32 key = gabi::ea(actor), tag = bk_t60_frame_tag();
+    if (t60::first_step()) {
+        const f32 end = cur + gabi::fmuls_ppc(rate, 1.0f - t60::dt());
+        s_tnT60TurnFrame[key] = TnT60TurnFrame{tag, rate, cur, end};
+        if (t60::tick30()) s_tnT60TurnFrame.erase(key);
+        return end;
+    }
+    auto it = s_tnT60TurnFrame.find(key);
+    f32 out = cur;
+    if (it != s_tnT60TurnFrame.end()) {
+        TnT60TurnFrame& l = it->second;
+        const bool same = l.frame == tag && l.rate == rate &&
+                          (rate >= 0.0f ? (cur >= l.last && cur <= l.end) : (cur <= l.last && cur >= l.end));
+        if (same) { out = l.end; l.last = cur; }
+        if (!same || t60::tick30()) s_tnT60TurnFrame.erase(it);
+    }
+    return out;
+}
+
 static bool tn_attackAnimation(tn_class* actor, fopAc_ac_c* player, f32 zero,
                                f32 one, f32 blend, f32 acceleration) {
     const u32 base = gabi::ea(actor);
@@ -1256,7 +1471,7 @@ static bool tn_attackAnimation(tn_class* actor, fopAc_ac_c* player, f32 zero,
         if (!(frame < 4.0f || frame > 21.0f)) {
             actor->speedF = static_cast<f32>(REG0_F(16) + 50.0f);
             body = gabi::ea(static_cast<mDoExt_McaMorf*>(actor->mpBodyMorf));
-            if (gabi::ftoi(static_cast<f32>(gabi::at<mDoExt_McaMorf>(body)->mFrameCtrl.mFrame)) == 20 && base + 0x37Cu != 0)
+            if (tn_t60_frame_is(gabi::at<mDoExt_McaMorf>(body), 20) && base + 0x37Cu != 0) /* true60: the animation crossing-check rule */
                 tn_playBombReactionSound(actor, 0x4889);
             decay = false;
         }
@@ -1275,7 +1490,8 @@ static bool tn_attackAnimation(tn_class* actor, fopAc_ac_c* player, f32 zero,
             attackClass = 2;
             start = zero;
             end = 25.0f;
-            if (frame == 20 && base != 0 && base + 0x37Cu != 0) {
+            /* true60 (the animation crossing-check rule): animation-frame one-shots once per frame (d_a_tn_t60.h tn_t60_frame_is) */
+            if (tn_t60_frame_is(gabi::at<mDoExt_McaMorf>(body), 20) && base != 0 && base + 0x37Cu != 0) {
                 tn_playBombReactionSound(actor, 0x4887);
                 activeType = actor->mAttackType;
                 body = gabi::ea(static_cast<mDoExt_McaMorf*>(actor->mpBodyMorf));
@@ -1285,7 +1501,7 @@ static bool tn_attackAnimation(tn_class* actor, fopAc_ac_c* player, f32 zero,
             attackClass = 1;
             start = zero;
             end = 25.0f;
-            if (frame == static_cast<u32>(static_cast<s32>(REG0_S(2)) + 13)) {
+            if (tn_t60_frame_is(gabi::at<mDoExt_McaMorf>(body), static_cast<s32>(REG0_S(2)) + 13)) { /* true60: the animation crossing-check rule */
                 actor->mGroundSmokeType = static_cast<u8>(0);
                 const s32 timing = static_cast<s32>(REG0_S(3)) + static_cast<s16>(l_tnHIO.mGroundSmokeEnd) + 14;
                 actor->mGroundSmokeTimer = static_cast<u16>(timing);
@@ -1293,7 +1509,7 @@ static bool tn_attackAnimation(tn_class* actor, fopAc_ac_c* player, f32 zero,
                 actor->mSmokeAngle = static_cast<u16>(angle);
                 body = gabi::ea(static_cast<mDoExt_McaMorf*>(actor->mpBodyMorf));
             }
-            if (gabi::ftoi(static_cast<f32>(gabi::at<mDoExt_McaMorf>(body)->mFrameCtrl.mFrame)) == 20 && base != 0 && base + 0x37Cu != 0)
+            if (tn_t60_frame_is(gabi::at<mDoExt_McaMorf>(body), 20) && base != 0 && base + 0x37Cu != 0) /* true60: the animation crossing-check rule */
                 tn_playBombReactionSound(actor, 0x4887);
             activeType = actor->mAttackType;
             body = gabi::ea(static_cast<mDoExt_McaMorf*>(actor->mpBodyMorf));
@@ -1301,7 +1517,7 @@ static bool tn_attackAnimation(tn_class* actor, fopAc_ac_c* player, f32 zero,
         if (activeType == 0 || activeType == 4) {
             const bool armor = (static_cast<u8>(actor->mRemainingEquipmentPieces) & 1u) != 0;
             const s32 particleFrame = armor || activeType == 4 ? 21 : 19;
-            if (gabi::ftoi(static_cast<f32>(gabi::at<mDoExt_McaMorf>(body)->mFrameCtrl.mFrame)) == particleFrame) {
+            if (tn_t60_frame_is(gabi::at<mDoExt_McaMorf>(body), particleFrame)) { /* true60: the animation crossing-check rule */
                 const s8 room = actor->current.roomNo;
                 const u32 particle = gabi::ea(static_cast<dPa_control_c*>(reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get())->play.mParticle));
                 tn_abi::particleSet( gabi::at<void>(particle), 2, 0xA1B3,
@@ -1333,7 +1549,7 @@ static bool tn_attackAnimation(tn_class* actor, fopAc_ac_c* player, f32 zero,
         }
     }
     body = gabi::ea(static_cast<mDoExt_McaMorf*>(actor->mpBodyMorf));
-    if (static_cast<f32>(gabi::at<mDoExt_McaMorf>(body)->mFrameCtrl.mFrame) < blend) {
+    if (tn_t60_turn_frame(actor, gabi::at<mDoExt_McaMorf>(body)) < blend) { /* true60: the frame-end value (above) */
         const s16 heading = static_cast<s16>(actor->mTargetAngle);
         actor->mDamageReaction.mTurnTargetY = static_cast<s16>(heading);
         cLib_addCalcAngleS2(&actor->current.angle.y, heading, 4, 0x400);
@@ -1352,7 +1568,12 @@ static bool tn_attackCircle(tn_class* actor, fopAc_ac_c* player, f32 steering,
         if (base != 0 && base + 0x37Cu != 0) tn_playBombReactionSound(actor, 0x4888);
         mode = 12;
     }
-    if (mode == 12) {
+    /* true60: mode 12 only decides (from Link's distance; the next mode's first speed step with
+     * it): its body runs whole (dt 1) on the tick30 step, the earlier steps keep the frame's motion */
+    const bool t60Decide12 = mode == 12 && tn_t60_xdecide();
+    if (mode == 12 && !t60Decide12) {
+    } else if (mode == 12) {
+        const f32 t60Dt = t60_set_dt(1.0f);
         if (__builtin_fabsf(steering) > 0.1f) {
             anm_init(actor, dRes_INDEX_TN_BCK_AAT_KAITEN_LR1_e, acceleration, J3DFrameCtrl::EMode_LOOP, one, dRes_INDEX_TN_BAS_AAT_KAITEN_LR1_e);
             actor->mDamageReaction.mMode = steering > zero ? 15 : 16;
@@ -1373,6 +1594,7 @@ static bool tn_attackCircle(tn_class* actor, fopAc_ac_c* player, f32 steering,
         actor->mCountDownTimers[1] = static_cast<u16>(static_cast<u16>(gabi::ftoi(random + 20.0f)));
         cLib_addCalc2(&actor->speedF, static_cast<f32>(l_tnHIO.mFightStepSpeed), one,
                      20.0f);
+        t60_set_dt(t60Dt);
     } else if (mode == 13 || mode == 14) {
         const f32 speed = static_cast<f32>(l_tnHIO.mFightStepSpeed);
         cLib_addCalc2(&actor->speedF, mode == 14 ? -speed : speed, one,
@@ -1385,6 +1607,8 @@ static bool tn_attackCircle(tn_class* actor, fopAc_ac_c* player, f32 steering,
         actor->speedF = static_cast<f32>(zero);
     }
     if (static_cast<s16>(actor->mCountDownTimers[1]) == 0) actor->mDamageReaction.mMode = 12;
+    /* true60: Link's cut charge / stance decide on the tick30 step */
+    if (!tn_t60_xdecide()) return false;
     bool completed = tn_checkCutCharge(player) == 0;
     if (specialStance) {
         actor->mDamageReaction.mMode = 20;
@@ -1433,7 +1657,9 @@ static void tn_moveAttack(tn_class* actor, f32 zero, f32 one, f32 blend, f32 acc
     bool completed = false;
     switch (mode) {
     case -20:
-        if (tn_demoAnimationStopped(actor->mpBodyMorf, zero)) {
+        /* true60: the jump-back's end draws the next attack or ends the attack with Link's
+         * distance / view (tn_finishAttack): taken on the tick30 step (a stopped animation stays stopped) */
+        if (tn_demoAnimationStopped(actor->mpBodyMorf, zero) && tn_t60_xdecide()) {
             const f32 random = cM_rndF(one);
             if (random < 0.5f) {
                 if (actor->mHasWepon != 0) {
@@ -1459,6 +1685,7 @@ static void tn_moveAttack(tn_class* actor, f32 zero, f32 one, f32 blend, f32 acc
         break;
     case 0:
         tn_chooseAttack(actor, one, acceleration);
+        mo2_t60_ai_ran(actor); /* true60: mode 1's body runs in this call (fall-through): not held */
         [[fallthrough]];
     case 1:
         completed = tn_attackAnimation(actor, player, zero, one, blend, acceleration);
@@ -1472,13 +1699,14 @@ static void tn_moveAttack(tn_class* actor, f32 zero, f32 one, f32 blend, f32 acc
         anm_init(actor, dRes_INDEX_TN_BCK_AAT_KAITEN3_e, one, J3DFrameCtrl::EMode_LOOP, one, dRes_INDEX_TN_BAS_AAT_KAITEN3_e);
         yoroi_anm_init(actor, dRes_INDEX_TN_BCK_YAT_KAITEN3_e, one, J3DFrameCtrl::EMode_LOOP, one);
         actor->mCutTurnStep = static_cast<s16>(1);
+        mo2_t60_ai_ran(actor); /* true60: mode 21's body runs in this call (fall-through): not held */
         [[fallthrough]];
     case 21: {
         actor->speedF = static_cast<f32>(zero);
         const u8 stance = static_cast<u8>(gabi::at<TnPlayer>(playerBase)->mCutType);
         actor->mCutTurnTimer = static_cast<s16>(stance == 9 ? 7 : 3);
         wepon_hit_check(actor);
-        if (!specialStance) {
+        if (!specialStance && tn_t60_xdecide()) { /* true60: Link's stance: tick30 step */
             actor->mDamageReaction.mMode = 22;
             anm_init(actor, dRes_INDEX_TN_BCK_AAT_KAITEN4_e, one, J3DFrameCtrl::EMode_NONE, one, dRes_INDEX_TN_BAS_AAT_KAITEN4_e);
             yoroi_anm_init(actor, dRes_INDEX_TN_BCK_YAT_KAITEN4_e, one, J3DFrameCtrl::EMode_NONE, one);
@@ -1505,13 +1733,15 @@ static void tn_moveAttack(tn_class* actor, f32 zero, f32 one, f32 blend, f32 acc
         break;
     }
     actor->mCountDownTimers[4] = static_cast<s16>(50);
-    if (completed) tn_finishAttack(actor, one, blend);
+    /* true60: the attack's end reads Link's distance / view: the tick30 step */
+    if (completed && tn_t60_xdecide()) tn_finishAttack(actor, one, blend);
 }
 
 
 // Darknut execution phases retain the native guest call frame.
 #include <initializer_list>
 
+static void tn_placePart(tn_class* i_this, tn_p* part, int index, u32 joint); /* true60: part_move's tail */
 namespace tn_execute {
 enum class PrefixResult { Finished, Continue };
 struct PrefixState { u32 playerAddress; };
@@ -1530,6 +1760,57 @@ static u32 findActor(u32 id) {
     return id == 0xFFFFFFFFu ? 0
         : tn_abi::actorJudgeAddress(TN_ACTOR_ID_JUDGE, searchId.get());
 }
+/* true60 (the Moblin's request form, option (a); d_a_tn_t60.h): the Darknut plays its
+ * three morfs BEFORE the dispatch (the execute's prefix) and calcs them after it, so A's set (anm_init / tate_anm_init /
+ * yoroi_anm_init, in the dispatch or the damage reaction) always follows the frame's whole play of the old animation.
+ * A set before the frame's tick30 step is a request (keyed by the morf field, one per morf; its bk_t60_mark_set latch
+ * says one is pending): the old animation plays on the frame's remaining steps, the request is set on the tick30 step
+ * right after the prefix's plays (tn_t60_anm_apply), before the dispatch, at the original's place between play and calc.
+ * A set on the tick30 step is set at once and replaces an earlier request of that morf. dt = 1: the original code.
+ * Replaces the "first played next frame" hold (tn_t60_play_held). */
+struct TnT60AnmReq {
+    u32 tag = 0;
+    J3DAnmTransform* anm = nullptr;
+    void* sound = nullptr;
+    s32 mode = 0;
+    f32 morf = 0.0f, speed = 0.0f;
+};
+static std::unordered_map<u32, TnT60AnmReq> s_tnT60AnmReq;
+/* a set at dt < 1 before the tick30 step: kept as the morf's request (true: not set now) */
+static bool tn_t60_anm_request(gptr<mDoExt_McaMorf>* field, J3DAnmTransform* anm, s32 mode, f32 morf, f32 speed,
+                               void* sound) {
+    if (t60::dt() == 1.0f)
+        return false;
+    if (t60::tick30()) {
+        s_tnT60AnmReq.erase(gabi::ea(field)); /* the tick30 set supersedes an earlier request */
+        return false;
+    }
+    TnT60AnmReq& r = s_tnT60AnmReq[gabi::ea(field)];
+    r = TnT60AnmReq{bk_t60_frame_tag(), anm, sound, mode, morf, speed};
+    bk_t60_mark_set(field);
+    return true;
+}
+static void tn_t60_anm_apply_one(gptr<mDoExt_McaMorf>* field) {
+    if (!bk_t60_pending(field))
+        return;
+    auto it = s_tnT60AnmReq.find(gabi::ea(field));
+    if (it == s_tnT60AnmReq.end())
+        return;
+    const TnT60AnmReq r = it->second;
+    s_tnT60AnmReq.erase(it);
+    if (r.tag != bk_t60_frame_tag())
+        return;
+    mDoExt_McaMorf* model = *field;
+    model->setAnm(r.anm, r.mode, r.morf, r.speed, 0.0f, -1.0f, r.sound);
+}
+/* the tick30 step, after the frame's plays */
+static void tn_t60_anm_apply(tn_class* actor) {
+    if (t60::dt() == 1.0f || !t60::tick30())
+        return;
+    tn_t60_anm_apply_one(&actor->mpBodyMorf);
+    tn_t60_anm_apply_one(&actor->mpShieldMorf);
+    tn_t60_anm_apply_one(&actor->mpArmorMorf);
+}
 static void playBody(tn_class* actor) {
     tn_abi::morfPlay(actor->mpBodyMorf.get(), &actor->eyePos, 0, 0);
 }
@@ -1539,6 +1820,11 @@ static void playArmor(tn_class* actor) {
 static void playShield(tn_class* actor) {
     tn_abi::morfPlay(actor->mpShieldMorf.get(), nullptr, 0, 0);
 }
+/* true60 (the per-step movement rule, the first-step AI-timer rule): part_move runs on every step: its frame work (the counter m42, the part timer,
+ * the detach / release decisions it times, read from mPartDetachFlags) on the frame's first step, a state it enters there
+ * first flies next frame (as the original: the call that releases a part does not fly it); the flight with its dt share
+ * on every step; the placement (the attached armour's joint matrix and pose, the mantle's shoulders) on every step from
+ * that step's body pose */
 static void moveDetachedParts(tn_class* actor) {
     for (int index = 0; index < 3; ++index) {
         if (actor->mParts[index].mPartState >= 0)
@@ -1579,7 +1865,8 @@ PrefixResult executePrefix(tn_class* actor, PrefixState& state) {
 
     // Signed byte wrap is explicit;1670 has no accepted gameplay name yet.
     const s8 statusTimer = static_cast<s8>(actor->mStatusTimer);
-    if (statusTimer != 0) {
+    /* true60 (the 30 Hz timer rule): counted once per frame, on the first step */
+    if (statusTimer != 0 && bk_t60_first()) {
         const s8 next = static_cast<s8>(static_cast<u8>(statusTimer) - 1);
         actor->mStatusTimer = static_cast<s8>(next);
         if (next == 0) actor->actor_status = static_cast<u32>(actor->actor_status) & ~0x4000u;
@@ -1589,7 +1876,8 @@ PrefixResult executePrefix(tn_class* actor, PrefixState& state) {
     if (frozen != 0) {
         // Ice+6 is a signed light-shrink/state byte. Its meaning is provisional.
         if (static_cast<s8>(actor->mEnemyIce.mLightShrinkTimer) == 0) {
-            if (actor->mEnemyIce.mFreezeTimer == 23) {
+            /* true60: enemy_ice stores the freeze count on the tick30 step: its one-shots fire there */
+            if (actor->mEnemyIce.mFreezeTimer == 23 && bk_t60_end()) {
                 actor->mpBodyMorf->mFrameCtrl.mRate = one;
                 actor->mpShieldMorf->mFrameCtrl.mRate = one;
                 actor->mpArmorMorf->mFrameCtrl.mRate = one;
@@ -1601,13 +1889,14 @@ PrefixResult executePrefix(tn_class* actor, PrefixState& state) {
             }
             playBody(actor); playArmor(actor); playShield(actor);
         }
+        tn_t60_anm_apply(actor); /* true60: a request of this frame, after the frame's play */
         const u32 model = gabi::ea(static_cast<J3DModel*>(actor->mpBodyMorf->mpModel));
         copyBaseMatrix(0x1048D0CC, model + 0xC8);
         tn_abi::morfCalc(actor->mpBodyMorf.get());
         tn_abi::morfCalc(actor->mpShieldMorf.get());
         moveDetachedParts(actor);
-        actor->mPartDetachFlags = static_cast<u8>(0);
-        if (actor->mEnemyIce.mFreezeTimer == 1) {
+        if (bk_t60_first()) actor->mPartDetachFlags = static_cast<u8>(0); /* true60: consumed by the first step's part_move */
+        if (actor->mEnemyIce.mFreezeTimer == 1 && bk_t60_end()) {
             path_check(actor);
             wait_set(actor);
             tate_anm_init(actor, dRes_INDEX_TN_BCK_ATATE_ON1_e, 10.0f, J3DFrameCtrl::EMode_LOOP, one);
@@ -1616,11 +1905,15 @@ PrefixResult executePrefix(tn_class* actor, PrefixState& state) {
     }
 
     // HD runs this block unconditionally; no GC HIO/pad pause gate is inserted.
-    actor->mFrameCount = static_cast<u32>(static_cast<u32>(actor->mFrameCount) + 1);
-    for (auto& timer : actor->mCountDownTimers) decrementShort(&timer);
-    for (be<s16>* timer : {&actor->mWeponRunTimer, &actor->mWeponSearchWait, &actor->mArmorShakeTimer,
-                           &actor->mDamageReaction.mHitStunTimer, &actor->mNoDamageTimer, &actor->mNoGuardTimer})
-        decrementShort(timer);
+    /* true60 (the 30 Hz timer rule, the first-step AI-timer rule): the phase counter and the timers count on the frame's first step,
+     * before the hit reads they gate and the decisions they time (the Moblin form) */
+    if (bk_t60_first()) {
+        actor->mFrameCount = static_cast<u32>(static_cast<u32>(actor->mFrameCount) + 1);
+        for (auto& timer : actor->mCountDownTimers) decrementShort(&timer);
+        for (be<s16>* timer : {&actor->mWeponRunTimer, &actor->mWeponSearchWait, &actor->mArmorShakeTimer,
+                               &actor->mDamageReaction.mHitStunTimer, &actor->mNoDamageTimer, &actor->mNoGuardTimer})
+            decrementShort(timer);
+    }
     if (static_cast<s8>(actor->mWeponCarryPending) != 0) {
         const u32 weapon = findActor(actor->mBokoPcId);
         if (weapon != 0) {
@@ -1673,6 +1966,7 @@ PrefixResult executePrefix(tn_class* actor, PrefixState& state) {
         playBody(actor); playArmor(actor);
         if ((static_cast<u8>(actor->mRemainingEquipmentPieces) & 4) != 0) playShield(actor);
     }
+    tn_t60_anm_apply(actor); /* true60: a request of this frame, after the frame's play, before the dispatch */
     return PrefixResult::Continue;
 }
 
@@ -1685,6 +1979,12 @@ static void updateDemoCameraAndSmoke(tn_class* actor) {
     const u32 play = gabi::ea(dComIfGp_get());
     const u32 cameraOwner = tn_abi::dCam_getCamera(gabi::at<void>(play));
     const u32 camera = tn_abi::dCam_getBody(gabi::at<void>(cameraOwner));
+    /* true60 (the event-step rule): the death demo's event order and camera are event work on the 30 Hz grid: the tick30
+     * step (the Moblin's mo2_demo_camera form) */
+    if (bk_t60_end()) {
+    /* true60 (dtgatelint): the gated event work runs whole (dt 1): the fovy / centre eases (cLib_addCalc2)
+     * scale their step by the step's dt (the propeller class) */
+    const f32 t60PrevDt = t60_set_dt(1.0f);
     s8 demo = static_cast<s8>(actor->mDemoMode);
     bool setCamera = demo != 0;
     if (demo == 50) {
@@ -1743,7 +2043,11 @@ static void updateDemoCameraAndSmoke(tn_class* actor) {
         tn_abi::cameraSet(gabi::at<void>(camera), cameraCenter.get(), cameraEye.get(),
             0, static_cast<f32>(actor->mDemoCamFovy));
     }
-    if (static_cast<s16>(actor->mGroundSmokeTimer) != 0) {
+    t60_set_dt(t60PrevDt);
+    }
+    /* true60 (the 30 Hz timer rule and 11): the ground smoke counts and spawns on the tick30 step; a start set after this
+     * point on an in-between step (updateDamageAnimation) starts next frame, as in the original */
+    if (static_cast<s16>(actor->mGroundSmokeTimer) != 0 && bk_t60_end() && !bk_t60_pending(&actor->mGroundSmokeTimer)) {
         const s16 remaining = static_cast<s16>(static_cast<s16>(actor->mGroundSmokeTimer) - 1);
         actor->mGroundSmokeTimer = static_cast<s16>(remaining);
         if (remaining >= static_cast<s16>(l_tnHIO.mGroundSmokeEnd)) {
@@ -1773,7 +2077,8 @@ static void updateDemoCameraAndSmoke(tn_class* actor) {
             actor->mSmokeCount = static_cast<u8>(0);
         }
     }
-    decrementShort(&actor->mWeponTurnWait);
+    /* true60 (the 30 Hz timer rule): counted after the dispatch (its set): on the tick30 step */
+    if (bk_t60_end()) decrementShort(&actor->mWeponTurnWait);
     actor->mDamageReaction.mpEnemy = actor;
     actor->mDamageReaction.mEnemyType = static_cast<s16>(damagereaction::TYPE_DARKNUT);
 }
@@ -1830,7 +2135,9 @@ static void updateCollisionShapes(tn_class* actor, u32 initialPlayer) {
     }
     play = gabi::ea(dComIfGp_get());
     tn_abi::setCollision(gabi::at<void>(play + 0x26A4), reinterpret_cast<void*>(&actor->mHeadSph));
-    if (static_cast<s16>(actor->mTubaEffectTimer) != 0) {
+    /* true60 (the 30 Hz timer rule and 11): the effect delay counts (and fires its particle) on the tick30 step; a set after
+     * this point on an in-between step (updateDamageAnimation) counts from the next frame */
+    if (static_cast<s16>(actor->mTubaEffectTimer) != 0 && bk_t60_end() && !bk_t60_pending(&actor->mTubaEffectTimer)) {
         const s16 remaining = static_cast<s16>(static_cast<s16>(actor->mTubaEffectTimer) - 1);
         actor->mTubaEffectTimer = static_cast<s16>(remaining);
         if (remaining == 0) {
@@ -1977,7 +2284,7 @@ static void updateHeldWeapon(tn_class* actor) {
 static void finishNormalEffects(tn_class* actor) {
     const u32 a = gabi::ea(actor);
     moveDetachedParts(actor);
-    actor->mPartDetachFlags = static_cast<u8>(0);
+    if (bk_t60_first()) actor->mPartDetachFlags = static_cast<u8>(0); /* true60: consumed by the first step's part_move */
     if (static_cast<s16>(actor->mCutTurnStep) != 0) {
         gabi::Local<cXyz> tipOffset;
         gabi::Local<cXyz> worldTip;
@@ -2042,11 +2349,16 @@ static void finishNormalEffects(tn_class* actor) {
             gabi::at<TnCutTurnCallback>(callback)->mpPoints = &actor->mCutTurnPoints[0];
             gabi::at<TnCutTurnCallback>(callback)->mCount = 10;
         }
+        /* true60 (the 30 Hz timer rule): counted after the dispatch: on the tick30 step */
         if (static_cast<s16>(actor->mCutTurnTimer) == 0) actor->mCutTurnStep = static_cast<s16>(0);
-        else decrementShort(&actor->mCutTurnTimer);
+        else if (bk_t60_end()) decrementShort(&actor->mCutTurnTimer);
     }
-    const u32 environment = tn_abi::environmentLight();
-    tn_abi::settingTevStruct(gabi::at<void>(environment), 0, &actor->current.pos, &actor->tevStr);
+    /* true60 (rule 14, the first-step AI-timer rule): the lighting (it draws the light flicker from cM_rnd) once per frame, on
+     * the tick30 step: the original sets it last, after the frame's AI draws, from the frame's end position */
+    if (bk_t60_end()) {
+        const u32 environment = tn_abi::environmentLight();
+        tn_abi::settingTevStruct(gabi::at<void>(environment), 0, &actor->current.pos, &actor->tevStr);
+    }
 }
 
 static void updateDamageAnimation(tn_class* actor, u32 damagePower) {
@@ -2104,6 +2416,9 @@ static void updateDamageAnimation(tn_class* actor, u32 damagePower) {
             break;
         default: break;
         }
+        /* true60: set after their counts in this execute: counted from the next frame */
+        bk_t60_mark_set(&actor->mGroundSmokeTimer);
+        bk_t60_mark_set(&actor->mTubaEffectTimer);
     }
     const u32 bodyMorf = gabi::ea(static_cast<mDoExt_McaMorf*>(actor->mpBodyMorf));
     copyBaseMatrix(gabi::ea(calc_mtx()), gabi::ea(static_cast<J3DModel*>(gabi::at<mDoExt_McaMorf>(bodyMorf)->mpModel)) + 0xC8);
@@ -2138,12 +2453,19 @@ static DamageSetup prepareDamage(tn_class* actor, DamageInfo* info) {
     const u32 play = gabi::ea(dComIfGp_get());
     DamageSetup state{gabi::ea(static_cast<fopAc_ac_c*>(gabi::at<dComIfG_inf_c>(play)->play.mPlayerInfo[0].mpPlayer)), 0, false};
     info->hitPosition = 0; info->flags = 0; info->power = 0;
-    tn_abi::collisionStatusMove(&reinterpret_cast<dCcD_Stts*>(&actor->mDamageReaction.mStts)->__vtbl_gstts);
+    /* true60: the collider status's attacker ids shift once per frame, on the first step (the Moblin form) */
+    if (bk_t60_first())
+        tn_abi::collisionStatusMove(&reinterpret_cast<dCcD_Stts*>(&actor->mDamageReaction.mStts)->__vtbl_gstts);
     gabi::Local<cXyz> origin;
     gabi::Local<cXyz> hiddenCenter;
     gabi::Local<u8[16]> outgoingLinkage;
-    if (static_cast<s8>(actor->mDefenceSphOn) != 0) {
-        actor->mDefenceSphOn = static_cast<s8>(static_cast<s8>(static_cast<s8>(actor->mDefenceSphOn) - 1));
+    /* true60 (the 30 Hz timer rule): counted on the first step; the frame keeps the sphere its count saw (a count to 0 on
+     * the first step keeps it placed on the frame's remaining steps, up to the tick30 collision Move) */
+    if (static_cast<s8>(actor->mDefenceSphOn) != 0 || bk_t60_pending(&actor->mDefenceSphOn)) {
+        if (bk_t60_first() && static_cast<s8>(actor->mDefenceSphOn) != 0) {
+            actor->mDefenceSphOn = static_cast<s8>(static_cast<s8>(static_cast<s8>(actor->mDefenceSphOn) - 1));
+            if (static_cast<s8>(actor->mDefenceSphOn) == 0) bk_t60_mark_set(&actor->mDefenceSphOn);
+        }
         copyBodyJointToCalc(actor, 0x2D0);
         origin->x = origin->y = origin->z = 0.0f;
         MtxPosition(origin.get(), &actor->mDefenceSphPos);
@@ -2156,6 +2478,27 @@ static DamageSetup prepareDamage(tn_class* actor, DamageInfo* info) {
     }
     const u32 currentPlay = gabi::ea(dComIfGp_get());
     tn_abi::setCollision(gabi::at<void>(currentPlay + 0x26A4), reinterpret_cast<void*>(&actor->mDefenceSph));
+    /* true60: one collision Move's hits are read per 30 Hz frame (the original reads one Move per frame).
+     * The first step reads the tick30 Move (mixed pairs with unconverted attackers are checked there only). A converted
+     * attacker (Link converted) meets the Darknut on every step's Move, and each Move's result is cleared by the next:
+     * a later step reads its predecessor's Move (guard, then body, as the first step would) when it holds a hit and no
+     * hit was read this frame (frame latch keyed by the guard sphere; as cckP2_4's ChuChu;).
+     *dt = 1: no extra query (the original's call order). */
+    if (!bk_t60_first()) {
+        if (bk_t60_pending(&actor->mDefenceSph)) return state;
+        const bool t60Def = tn_abi::checkTargetHit(reinterpret_cast<void*>(&actor->mDefenceSph)) != 0;
+        const bool t60Body = static_cast<s16>(actor->mNoDamageTimer) == 0 &&
+                             (tn_abi::checkTargetHit(reinterpret_cast<void*>(&actor->mHeadSph)) != 0 ||
+                              tn_abi::checkTargetHit(reinterpret_cast<void*>(&actor->mTgCyl)) != 0);
+        if (!t60Def && !t60Body) return state;
+        bk_t60_mark_set(&actor->mDefenceSph);
+    } else if (t60::dt() != 1.0f) {
+        if (tn_abi::checkTargetHit(reinterpret_cast<void*>(&actor->mDefenceSph)) != 0 ||
+            (static_cast<s16>(actor->mNoDamageTimer) == 0 &&
+             (tn_abi::checkTargetHit(reinterpret_cast<void*>(&actor->mHeadSph)) != 0 ||
+              tn_abi::checkTargetHit(reinterpret_cast<void*>(&actor->mTgCyl)) != 0)))
+            bk_t60_mark_set(&actor->mDefenceSph);
+    }
     if (tn_abi::checkTargetHit(reinterpret_cast<void*>(&actor->mDefenceSph)) != 0) {
         const u32 hit = tn_abi::getTargetHitObject(reinterpret_cast<void*>(&actor->mDefenceSph));
         tn_abi::def_se_set(actor, gabi::at<void>(hit), 0x40);
@@ -2206,12 +2549,16 @@ static bool applyIceOrShatter(tn_class* actor, u32 hitObject, int hitPart) {
         actor->mDamageReaction.mAction = ACTION_JYUNKAI; actor->mDamageReaction.mMode = static_cast<s16>(-10);
         actor->health = static_cast<u8>(static_cast<u8>(static_cast<u8>(actor->health) + 4));
         actor->mEnemyIce.mFreezeDuration = static_cast<s16>(static_cast<s16>(REG0_S(4) + 60));
+        /* true60: set after this execute's enemy_ice call: the freeze starts next frame */
+        bk_t60_mark_set(&actor->mEnemyIce.mFreezeDuration);
         const f32 blend = 5.0f, speed = 0.0f;
         anm_init(actor, dRes_INDEX_TN_BCK_AHAKAI1_e, blend, J3DFrameCtrl::EMode_NONE, speed, -1);
         tate_anm_init(actor, dRes_INDEX_TN_BCK_AHAKAI1_e, blend, J3DFrameCtrl::EMode_NONE, speed);
         yoroi_anm_init(actor, dRes_INDEX_TN_BCK_YHAKAI1_e, blend, J3DFrameCtrl::EMode_NONE, speed);
     } else {
         actor->mEnemyIce.mLightShrinkTimer = static_cast<u8>(1);
+        /* true60: set after this execute's enemy_ice call: its phase starts next frame */
+        bk_t60_mark_set(&actor->mEnemyIce.mLightShrinkTimer);
         for (int i = 0; i < 3; ++i) {
             const u32 part = a + 0x3F8 + 0x4C*i;
             if (i <= 1 && static_cast<s8>(gabi::at<tn_p>(part)->mPartState) >= 0)
@@ -2409,6 +2756,9 @@ void anm_init(tn_class* i_this, int bckFileIdx, f32 morf, s32 loopMode, f32 spee
     if (soundFileIdx >= 0) {
         sound = dComIfG_getObjectRes("Tn", soundFileIdx, TN_SAFESTRING_VTABLE);
     }
+    /* true60: before the tick30 step a request, set after the tick30 step's play (tn_t60_anm_apply) */
+    if (tn_execute::tn_t60_anm_request(&i_this->mpBodyMorf, animation, loopMode, morf, speed, sound))
+        return;
     mDoExt_McaMorf* model = i_this->mpBodyMorf;
     model->setAnm(animation, loopMode, morf, speed, 0.0f, -1.0f, sound);
 }
@@ -2420,6 +2770,9 @@ void tate_anm_init(tn_class* i_this, int bckFileIdx, f32 morf, s32 loopMode, f32
         return;
     J3DAnmTransform* animation =
         static_cast<J3DAnmTransform*>(dComIfG_getObjectRes("Tn", bckFileIdx, TN_SAFESTRING_VTABLE));
+    /* true60: before the tick30 step a request, set after the tick30 step's play (tn_t60_anm_apply) */
+    if (tn_execute::tn_t60_anm_request(&i_this->mpShieldMorf, animation, loopMode, morf, speed, nullptr))
+        return;
     mDoExt_McaMorf* model = i_this->mpShieldMorf;
     model->setAnm(animation, loopMode, morf, speed, 0.0f, -1.0f, nullptr);
 }
@@ -2433,6 +2786,9 @@ void yoroi_anm_init(tn_class* i_this, int bckFileIdx, f32 morf, s32 loopMode, f3
         return;
     J3DAnmTransform* animation =
         static_cast<J3DAnmTransform*>(dComIfG_getObjectRes("Tn", bckFileIdx, TN_SAFESTRING_VTABLE));
+    /* true60: before the tick30 step a request, set after the tick30 step's play (tn_t60_anm_apply) */
+    if (tn_execute::tn_t60_anm_request(&i_this->mpArmorMorf, animation, loopMode, morf, speed, nullptr))
+        return;
     mDoExt_McaMorf* model = i_this->mpArmorMorf;
     model->setAnm(animation, loopMode, morf, speed, 0.0f, -1.0f, nullptr);
 }
@@ -3322,6 +3678,50 @@ void* shot_s_sub(fopAc_ac_c* i_this, void* context) {
     return i_this;
 }
 
+/* true60 (the one-sweep-per-frame attack rule: one sweep from the frame's start to its end positions; as the Bokoblin's
+ * bk_t60_at_frame_start): the weapon matrices (body anm matrices 5 and 23) the check reads come from the
+ * last model calc, the previous frame's in the original, the frame's earlier step's at N steps (mHeadPos
+ * moves on every step). The first step keeps them; the tick30 registration places the spheres from the kept ones. A
+ * first call on a later step (no first-step matrices this frame) keeps the current ones. dt = 1: nothing. */
+namespace {
+struct TnT60WeponMtx {
+    u32 frame; /* 30 Hz frame tag */
+    f32 m5[12], m23[12]; /* plain host values: a host Mtx34 would read / write guest memory at ea(host address) */
+};
+std::unordered_map<u32, TnT60WeponMtx> s_tnT60WeponMtx;
+}  // namespace
+static inline void tn_t60_wepon_mtx_keep(tn_class* i_this) {
+    Mtx34* matrices = gabi::at<Mtx34>(i_this->mpBodyMorf->getModel()->mpMtxBuffer->mpAnmMtx);
+    TnT60WeponMtx& e = s_tnT60WeponMtx[gabi::ea(i_this)];
+    e.frame = bk_t60_frame_tag();
+    for (int i = 0; i < 12; i++) {
+        e.m5[i] = matrices[5].m[i / 4][i % 4];
+        e.m23[i] = matrices[23].m[i / 4][i % 4];
+    }
+}
+/* the weapon matrix the tick30 step registers from (index 5 or 23); nullptr: the buffer's own */
+static inline const f32* tn_t60_wepon_mtx_kept(tn_class* i_this, int index) {
+    if (t60::dt() == 1.0f || !t60::tick30())
+        return nullptr;
+    auto it = s_tnT60WeponMtx.find(gabi::ea(i_this));
+    if (it == s_tnT60WeponMtx.end() || it->second.frame != bk_t60_frame_tag())
+        return nullptr;
+    return index == 5 ? it->second.m5 : it->second.m23;
+}
+
+/* PSMTXCopy of the weapon matrix into calc_mtx (true60: the frame's first-step matrix on the tick30 step) */
+static inline void tn_t60_wepon_copy(tn_class* i_this, Mtx34* matrices, int index) {
+    const f32* kept = tn_t60_wepon_mtx_kept(i_this, index);
+    if (kept == nullptr) {
+        PSMTXCopy(matrices + index, calc_mtx());
+        return;
+    }
+    gabi::Local<Mtx34> m;
+    for (int i = 0; i < 12; i++)
+        m.get()->m[i / 4][i % 4] = kept[i];
+    PSMTXCopy(m.get(), calc_mtx());
+}
+
 /* 024BBB3C */
 fopAc_ac_c* wepon_hit_check(tn_class* i_this) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
@@ -3334,7 +3734,21 @@ fopAc_ac_c* wepon_hit_check(tn_class* i_this) {
     const u32 oldZ = damageWord(i_this->mWeponSphMove.z);
     damageWord(i_this->mPrevWeponSphMove.y) = oldY;
     damageWord(i_this->mPrevWeponSphMove.z) = oldZ;
-    const f32 animationFrame = body->mFrameCtrl.mFrame;
+    /* true60: the weapon spheres are swept once per 30 Hz frame, as the original
+     * (one chord per frame between the frame's start and end positions, not one per step along the arc): registered on
+     * the tick30 step (the frame-end matrices; the chord from the last registration), their hit read on the next
+     * frame's first step, where the original frame reads the previous Move, with the window tested at that frame's end
+     * animation frame (the first step's frame plus the rest of the frame's play, rate x (1 - dt)). Other steps: nothing.
+     * dt = 1: the original. */
+    const bool t60Grid = t60::dt() != 1.0f;
+    if (t60Grid && !t60::first_step() && !t60::tick30())
+        return nullptr;
+    if (t60Grid && t60::first_step())
+        tn_t60_wepon_mtx_keep(i_this);
+    const bool t60Read = t60Grid && t60::first_step();
+    const f32 animationFrame = t60Read ? static_cast<f32>(body->mFrameCtrl.mFrame) +
+                                             static_cast<f32>(body->mFrameCtrl.mRate) * (1.0f - t60::dt())
+                                       : static_cast<f32>(body->mFrameCtrl.mFrame);
     const s32 attackType = i_this->mAttackType;
     const s32 frame = gabi::ftoi(animationFrame);
     int firstFrame = 0;
@@ -3371,6 +3785,16 @@ fopAc_ac_c* wepon_hit_check(tn_class* i_this) {
     }
     if (frame < firstFrame || frame > lastFrame || i_this->mAttackState < 0)
         return nullptr;
+    if (t60Read) {
+        if (i_this->mWeponAtStarted == 0 || (i_this->mWeponSph.ChkAtHit() == 0 && i_this->mWepon2Sph.ChkAtHit() == 0))
+            return nullptr;
+        dCcD_GObjInf* hit = i_this->mWeponSph.ChkAtHit() != 0 ? tn_GetAtHitObj(&i_this->mWeponSph)
+                                                              : tn_GetAtHitObj(&i_this->mWepon2Sph);
+        if (hit == nullptr)
+            return nullptr;
+        dCcD_Stts* status = hit->mStts;
+        return status == nullptr ? nullptr : static_cast<fopAc_ac_c*>(status->mp_actor);
+    }
     bool footAttack = false;
     if ((static_cast<u8>(i_this->mEquipmentType) & 1u) != 0) {
         const s32 matrixAttack = i_this->mAttackType;
@@ -3384,7 +3808,7 @@ fopAc_ac_c* wepon_hit_check(tn_class* i_this) {
         const u16 flags = static_cast<u16>(buffer->mFlags);
         Mtx34* matrices = gabi::at<Mtx34>(buffer->mpAnmMtx);
         buffer->mFlags = flags | 0x10u;
-        PSMTXCopy(matrices + (matrixAttack == 3 ? 5 : 23), calc_mtx());
+        tn_t60_wepon_copy(i_this, matrices, matrixAttack == 3 ? 5 : 23);
     } else {
         body = i_this->mpBodyMorf;
         const u8 power = static_cast<u8>(atp_0.m[attackType]);
@@ -3397,7 +3821,7 @@ fopAc_ac_c* wepon_hit_check(tn_class* i_this) {
         const u16 flags = static_cast<u16>(buffer->mFlags);
         Mtx34* matrices = gabi::at<Mtx34>(buffer->mpAnmMtx);
         buffer->mFlags = flags | 0x10u;
-        PSMTXCopy(matrices + (matrixAttack == 3 ? 5 : 23), calc_mtx());
+        tn_t60_wepon_copy(i_this, matrices, matrixAttack == 3 ? 5 : 23);
     }
     gabi::Local<cXyz> offset;
     offset->x = 0.0f;
@@ -3432,6 +3856,8 @@ fopAc_ac_c* wepon_hit_check(tn_class* i_this) {
     tn_SetCollision(&play->play.mCcS, &i_this->mWeponSph);
     play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
     tn_SetCollision(&play->play.mCcS, &i_this->mWepon2Sph);
+    if (t60Grid) /* true60: the tick30 step registers; the hit is read on the next frame's first step */
+        return nullptr;
     if (i_this->mWeponSph.ChkAtHit() == 0 && i_this->mWepon2Sph.ChkAtHit() == 0)
         return nullptr;
     dCcD_GObjInf* hit = i_this->mWeponSph.ChkAtHit() != 0 ? tn_GetAtHitObj(&i_this->mWeponSph)
@@ -3468,7 +3894,8 @@ void p_lost(tn_class* i_this) {
     // Truncating/saturating a frame to an integer and comparing it with 25
     // is equivalent to this comparison, including NaN and infinite frames.
     // This avoids an undefined host float-to-integer conversion.
-    if (static_cast<f32>(body->mFrameCtrl.mFrame) >= 26.0f) {
+    /* true60: the re-spotting reads Link: the tick30 step */
+    if (static_cast<f32>(body->mFrameCtrl.mFrame) >= 26.0f && tn_t60_xdecide()) {
         const s16 angleLimit = get_view_H(i_this);
         const u32 target = gabi::ea(static_cast<fopAc_ac_c*>(i_this->mDamageReaction.mpLookTarget));
         const s16 heading = static_cast<s16>(i_this->mTargetAngle);
@@ -3563,7 +3990,8 @@ void wepon_search(tn_class* i_this) {
         i_this->speedF = static_cast<f32>(zero);
         const s16 pickupFrame = static_cast<s16>(static_cast<s32>(REG0_S(7)) + 18);
         s16 timer = static_cast<s16>(i_this->mCountDownTimers[1]);
-        if (timer == pickupFrame) {
+        /* true60 (the first-step AI-timer rule): a timer `== v` one-shot, once per frame on the first step */
+        if (timer == pickupFrame && bk_t60_first()) {
             if (weapon != 0 && (static_cast<u32>(gabi::at<fopAc_ac_c>(weapon)->actor_status) & 0x2000u) == 0) {
                 i_this->mHasWepon = 2;
                 tn_abi::fopAcM_setCarryNow(gabi::at<fopAc_ac_c>(weapon), 0);
@@ -3616,6 +4044,7 @@ void b_nige(tn_class* i_this) {
         anm_init(i_this, dRes_INDEX_TN_BCK_AKIDUKU1_e, 3.0f, J3DFrameCtrl::EMode_NONE, one, -1);
         tn_playBombReactionSound(i_this, 0x4885);
         i_this->mCountDownTimers[1] = static_cast<s16>(10);
+        mo2_t60_ai_ran(i_this); /* true60: mode 1's body runs in this call (fall-through): not held */
         [[fallthrough]];
     case 1: {
         const s16 turnTarget = static_cast<s16>(static_cast<s32>(static_cast<s16>(i_this->mDamageReaction.mTurnTargetY)) + 0x8000);
@@ -3702,7 +4131,8 @@ void defence(tn_class* i_this) {
     const s16 timer = i_this->mCountDownTimers[1];
     i_this->mDefenceSphOn = static_cast<u8>(1);
     i_this->speedF = 0.0f;
-    if (timer == 0 && static_cast<u8>(gabi::at<TnPlayer>(player)->mCutType) == 0) {
+    /* true60: reads Link's cut: the tick30 step */
+    if (timer == 0 && tn_t60_xdecide() && static_cast<u8>(gabi::at<TnPlayer>(player)->mCutType) == 0) {
         i_this->mDamageReaction.mAction = ACTION_FIGHT_RUN;
         i_this->mCountDownTimers[1] = 0;
         i_this->mDamageReaction.mMode = 0;
@@ -3786,6 +4216,7 @@ void hukki(tn_class* i_this) {
     mDoExt_McaMorf* body = i_this->mpBodyMorf;
     if ((static_cast<u8>(body->mFrameCtrl.mState) & 1u) == 0 &&
         static_cast<f32>(body->mFrameCtrl.mRate) != zero) return;
+    if (!tn_t60_xdecide()) return; /* true60: the decision reads Link: the tick30 step */
     if (!(static_cast<f32>(gabi::at<TnPlayer>(player)->mGrabItemOffsetY) < zero) &&
         static_cast<f32>(i_this->mPlayerDistance) < static_cast<f32>(l_tnHIO.mFightRange)) {
         i_this->mDamageReaction.mMode = 14;
@@ -3892,9 +4323,13 @@ void yogan_fail(tn_class* i_this) {
         i_this->speed.y = upwardSpeed;
         if (pathDriven != 0) i_this->mWeponDropMode = static_cast<u32>(1);
     }
-    dComIfGp_particle_setSimple(0x8061, &i_this->current.pos);
-    dComIfGp_particle_setSimple(0x8058, &i_this->current.pos);
-    if ((static_cast<u32>(i_this->mFrameCount) & 3u) == 0) {
+    /* true60 (the one-emitter-per-event rule): the per-frame lava particles once per frame, on the tick30 step */
+    if (bk_t60_end()) {
+        dComIfGp_particle_setSimple(0x8061, &i_this->current.pos);
+        dComIfGp_particle_setSimple(0x8058, &i_this->current.pos);
+    }
+    /* true60 (the first-step AI-timer rule): the phase frame's draw, once per frame on the first step */
+    if ((static_cast<u32>(i_this->mFrameCount) & 3u) == 0 && bk_t60_first()) {
         const f32 randomAngle = cM_rndF(65536.0f);
         i_this->mEffectAngle.y = static_cast<s16>(static_cast<s16>(gabi::ftoi(randomAngle)));
         i_this->mEffectAngle.x = static_cast<s16>(-8192);
@@ -3925,9 +4360,11 @@ void d_mahi(tn_class* i_this) {
 
     const s16 timer = i_this->mCountDownTimers[0];
     if (static_cast<u32>(static_cast<s32>(timer) - 10) < 31u) {
-        if (timer == 40) tn_abi::enemy_piyo_set(i_this);
+        /* true60: the `== 40` one-shot once per frame on the first step (the first-step AI-timer rule) */
+        if (timer == 40 && bk_t60_first()) tn_abi::enemy_piyo_set(i_this);
         const u32 eyeAddress = gabi::ea(i_this) + 0x37Cu;
-        if (i_this != nullptr && eyeAddress != 0) {
+        /* true60 (the 30 Hz timer rule and 11): the per-frame sound, once per frame on the tick30 step */
+        if (i_this != nullptr && eyeAddress != 0 && bk_t60_end()) {
             const s8 room = i_this->current.roomNo;
             const s32 reverb = tn_getReverb(room);
             mDoAud_seStart(0x50BC, gabi::at<cXyz>(eyeAddress), 0, reverb);
@@ -4039,6 +4476,7 @@ void s_demo(tn_class* i_this) {
         i_this->mDamageReaction.mMode = 1;
         anm_init(i_this, dRes_INDEX_TN_BCK_ANIOU1_e, initialBlend, J3DFrameCtrl::EMode_LOOP, one, -1);
         yoroi_anm_init(i_this, dRes_INDEX_TN_BCK_YKIHON1_e, initialBlend, J3DFrameCtrl::EMode_NONE, one);
+        mo2_t60_ai_ran(i_this); /* true60: mode 1's body runs in this call (fall-through): not held */
         [[fallthrough]];
     }
     case 1: {
@@ -4055,10 +4493,11 @@ void s_demo(tn_class* i_this) {
         return;
     }
     case 2:
-        if (frame == 127) { tn_playBombReactionSound(i_this, 0x4885); body = i_this->mpBodyMorf; }
-        else if (frame == 172) { tn_abi::mDoAud_subBgmStart(0x80000019u); body = i_this->mpBodyMorf; }
-        else if (frame == 193) { tn_playBombReactionSound(i_this, 0x4888); body = i_this->mpBodyMorf; }
-        else if (frame == 231 || frame == 262) { tn_playBombReactionSound(i_this, 0x4889); body = i_this->mpBodyMorf; }
+        /* true60 (the animation crossing-check rule): the demo's animation-frame cues once per frame (tn_t60_frame_is) */
+        if (tn_t60_frame_is(i_this->mpBodyMorf, 127)) { tn_playBombReactionSound(i_this, 0x4885); body = i_this->mpBodyMorf; }
+        else if (tn_t60_frame_is(i_this->mpBodyMorf, 172)) { tn_abi::mDoAud_subBgmStart(0x80000019u); body = i_this->mpBodyMorf; }
+        else if (tn_t60_frame_is(i_this->mpBodyMorf, 193)) { tn_playBombReactionSound(i_this, 0x4888); body = i_this->mpBodyMorf; }
+        else if (tn_t60_frame_is(i_this->mpBodyMorf, 231) || tn_t60_frame_is(i_this->mpBodyMorf, 262)) { tn_playBombReactionSound(i_this, 0x4889); body = i_this->mpBodyMorf; }
         if (tn_demoAnimationStopped(body, zero)) {
             i_this->mDamageReaction.mAction = ACTION_FIGHT_RUN;
             i_this->mDamageReaction.mMode = 0;
@@ -4140,8 +4579,9 @@ void s_demo(tn_class* i_this) {
         tn_setDemoAnimationRates(i_this, body, one);
         body = i_this->mpBodyMorf;
         if (gabi::ftoi(static_cast<f32>(body->mFrameCtrl.mFrame)) == 43) s_check = static_cast<u8>(10);
-        if (frame == 63) tn_playBombReactionSound(i_this, 0x4888);
-        else if (frame == 115) tn_playBombReactionSound(i_this, 0x4889);
+        /* true60 (the animation crossing-check rule): the demo's sound cues once per frame (tn_t60_frame_is) */
+        if (tn_t60_frame_is(body, 63)) tn_playBombReactionSound(i_this, 0x4888);
+        else if (tn_t60_frame_is(body, 115)) tn_playBombReactionSound(i_this, 0x4889);
         const s32 shieldFrame = static_cast<s32>(REG0_S(7)) + 210;
         if (static_cast<u32>(frame) == static_cast<u32>(shieldFrame)) tate_anm_init(i_this, dRes_INDEX_TN_BCK_ATATE_ON1_e, 20.0f, J3DFrameCtrl::EMode_LOOP, one);
         if (tn_demoAnimationStopped(i_this->mpBodyMorf, zero)) {
@@ -4183,12 +4623,34 @@ void Tn_move(tn_class* i_this) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     const u32 playerBase = gabi::ea(static_cast<fopAc_ac_c*>(reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get())->play.mPlayerInfo[0].mpPlayer));
     fopAc_ac_c* player = gabi::at<fopAc_ac_c>(playerBase);
-    i_this->mSideStepAngle = static_cast<s16>(0);
-    i_this->mDamageReaction.mLookMode = static_cast<u8>(0);
+    /* true60: a state entered on an earlier step of this 30 Hz frame is first run next frame (one state step
+     * per frame, d_a_mo2_t60.h mo2_t60_ai_held): the remaining steps keep the outputs of the frame's dispatch (side-step
+     * angle, look mode, speed) and skip the decisions; the speed is still turned into the motion */
+    const bool t60Held = mo2_t60_ai_held(i_this);
+    if (!t60Held) {
+        i_this->mSideStepAngle = static_cast<s16>(0);
+        i_this->mDamageReaction.mLookMode = static_cast<u8>(0);
+    }
     cLib_addCalcAngleS2(&i_this->m1404, 0, 2, 0x800);
     const f32 zero = 0.0f;
+    if (t60Held && i_this->mDamageReaction.mMode <= -100) return;
     if (tn_processAirborneAttack(i_this, zero)) return;
     const f32 blend = 10.0f;
+    if (t60Held) {
+        tn_t60_sense_end(i_this, player); /* true60: the frame's sensing as A ends it */
+        /* true60: ... and the combat prelude's turn toward it, which A's call made before its mode switch
+         * (tn_t60_turn_due; pair B f3656) */
+        if (t60::tick30()) {
+            const int t60Turn = tn_t60_turn_due(i_this);
+            if (t60Turn >= 0) i_this->mDamageReaction.mTurnTargetY = static_cast<s16>(i_this->mTargetAngle);
+            if (t60Turn > 0) cLib_addCalcAngleS2(&i_this->current.angle.y, static_cast<s16>(i_this->mDamageReaction.mTurnTargetY), 4, t60Turn);
+        }
+        i_this->mWeponSph.mObjAt.mSPrm = static_cast<u32>(static_cast<u32>(i_this->mWeponSph.mObjAt.mSPrm) | 4u);
+        i_this->mCoCyl.mObjCo.mSPrm = static_cast<u32>(static_cast<u32>(i_this->mCoCyl.mObjCo.mSPrm) | 1u);
+        tn_t60_tail_held(i_this, player, 1.0f, blend); /* true60: the frame's combat tail, when an in-between call reached it */
+        tn_finishMovement(i_this, static_cast<s16>(i_this->mDamageReaction.mAction), zero, blend, true);
+        return;
+    }
     if (tn_prepareNormalMovement(i_this, player)) {
         const s16 action = i_this->mDamageReaction.mAction;
         const f32 one = 1.0f;
@@ -4243,81 +4705,15 @@ void yoroi_break(tn_class* i_this, cXyz* position, int variant) {
     tn_setBreakParticleColors(emitter, primary, environment);
 }
 
-/* 024BC3EC */
-void part_move(tn_class* i_this, int index) {
-    auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    const u32 base = gabi::ea(i_this);
-    const u32 play = gabi::ea(dComIfGp_get());
-    const u32 player = gabi::ea(static_cast<fopAc_ac_c*>(gabi::at<dComIfG_inf_c>(play)->play.mPlayerInfo[0].mpPlayer));
-    tn_p* part = gabi::at<tn_p>(base + 0x3F8u + static_cast<u32>(index) * 0x4Cu);
-    gabi::Local<tn_groundcheck> ground;
-    tn_constructGroundCheck(ground.get());
-    const f32 zero = 0.0f;
+/* the part's model matrix (attached: the body joint's, with the armour shake; detached: its flight pos / angle), the
+ * armour's pose and the mantle's shoulders: the tail of part_move. true60: run on every step (part_move
+ * runs per step), so the attached armour follows the body, which moves and plays per step. */
+static void tn_placePart(tn_class* i_this, tn_p* part, int index, u32 joint) {
     gabi::Local<cXyz> offset;
-    offset->x = zero;
-    offset->y = zero;
-    offset->z = zero;
-    part->m42 = static_cast<s16>(static_cast<s32>(part->m42) + 1);
-    const s8 timer = part->mTimer;
-    // HD: part index 3 also reads the adjacent guest table bytes.
-    const u32 joint = gabi::load<u32>(gabi::ea(&j_dt) + static_cast<u32>(index) * 4u);
-    if (timer != 0) part->mTimer = static_cast<s8>(static_cast<s32>(timer) - 1);
-    const s8 state = part->mPartState;
+    offset->x = 0.0f;
+    offset->y = 0.0f;
+    offset->z = 0.0f;
     const f32 launchSpeed = 15.0f;
-    const f32 randomRotation = 3000.0f;
-    const f32 horizontalBounce = 20.0f;
-    if (state == 0) {
-        tn_selectJointMatrix(i_this->mpBodyMorf, joint);
-        MtxPosition(offset.get(), &part->mPos);
-        const u8 detachFlags = static_cast<u8>(i_this->mPartDetachFlags);
-        if ((index == 0 && (detachFlags & 1u) != 0) ||
-            (index == 1 && (detachFlags & 2u) != 0) ||
-            (index == 2 && (detachFlags & 4u) != 0)) {
-            part->mPartState = 1;
-            if (index == 0) {
-                part->mTimer = 13;
-                tn_abi::cMtx_YrotS(calc_mtx(), static_cast<s16>(i_this->current.angle.y));
-                offset->x = zero;
-                offset->y = zero;
-                offset->z = REG0_F(7) + launchSpeed;
-                MtxPosition(offset.get(), &part->mSpeed);
-            } else part->mTimer = 0;
-        }
-    } else if (state == 1) {
-        tn_selectJointMatrix(i_this->mpBodyMorf, joint);
-        MtxPosition(offset.get(), &part->mPos);
-        if (part->mTimer == 0) {
-            tn_playBombReactionSound(i_this, 0x488C);
-            part->mPartState = 5;
-            part->mTimer = 30;
-            part->mbDetached = 1;
-            part->mAngle.y = static_cast<s16>(static_cast<s32>(i_this->current.angle.y) + REG0_S(5));
-            part->mAngle.z = 0x4000;
-            if (index == 0) {
-                const u32 status = static_cast<u32>(i_this->actor_status);
-                const u8 equipment = i_this->mRemainingEquipmentPieces;
-                const u8 count = i_this->mPartsAttached;
-                i_this->actor_status = static_cast<u32>(status | 0x200000u);
-                i_this->mRemainingEquipmentPieces = equipment & 0xFEu;
-                i_this->mPartsAttached = static_cast<u8>(count - 1u);
-            } else if (index == 1) {
-                i_this->mRemainingEquipmentPieces = static_cast<u8>(i_this->mRemainingEquipmentPieces) & 0xFDu;
-                tn_abi::cMtx_YrotS(calc_mtx(), static_cast<s16>(gabi::at<fopAc_ac_c>(player)->shape_angle.y));
-                offset->x = zero;
-                offset->y = horizontalBounce;
-                offset->z = -20.0f;
-                MtxPosition(offset.get(), &part->mSpeed);
-                part->mAngleSpeed.x = tn_randomPartRotation(randomRotation);
-                part->mAngleSpeed.y = tn_randomPartRotation(randomRotation);
-                i_this->mPartsAttached = static_cast<u8>(static_cast<u8>(i_this->mPartsAttached) - 1u);
-            } else {
-                if (index == 2) i_this->mRemainingEquipmentPieces = static_cast<u8>(i_this->mRemainingEquipmentPieces) & 0xFBu;
-                i_this->mPartsAttached = static_cast<u8>(static_cast<u8>(i_this->mPartsAttached) - 1u);
-            }
-        }
-    } else if (state == 5) {
-        tn_moveFlyingPart(i_this, part, index, ground.get(), zero, horizontalBounce, randomRotation);
-    }
     J3DModel* model = index == 0 ? i_this->mpArmorMorf->getModel() : static_cast<J3DModel*>(part->mpPartModel);
     const s8 transformMode = part->mbDetached;
     if (transformMode == 1) {
@@ -4382,15 +4778,150 @@ void part_move(tn_class* i_this, int index) {
         }
     }
     if (index < 3) part->mpPartBrkAnm->mFrameCtrl.mFrame = static_cast<f32>(static_cast<u8>(i_this->mArmorColorIndex));
+}
+
+/* 024BC3EC */
+void part_move(tn_class* i_this, int index) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    const u32 base = gabi::ea(i_this);
+    const u32 play = gabi::ea(dComIfGp_get());
+    const u32 player = gabi::ea(static_cast<fopAc_ac_c*>(gabi::at<dComIfG_inf_c>(play)->play.mPlayerInfo[0].mpPlayer));
+    tn_p* part = gabi::at<tn_p>(base + 0x3F8u + static_cast<u32>(index) * 0x4Cu);
+    gabi::Local<tn_groundcheck> ground;
+    tn_constructGroundCheck(ground.get());
+    const f32 zero = 0.0f;
+    gabi::Local<cXyz> offset;
+    offset->x = zero;
+    offset->y = zero;
+    offset->z = zero;
+    /* true60 (the first-step AI-timer rule): the counter, the timer and the decisions they time on the frame's first step */
+    const bool frameWork = bk_t60_first();
+    if (frameWork)
+        part->m42 = static_cast<s16>(static_cast<s32>(part->m42) + 1);
+    const s8 timer = part->mTimer;
+    // HD: part index 3 also reads the adjacent guest table bytes.
+    const u32 joint = gabi::load<u32>(gabi::ea(&j_dt) + static_cast<u32>(index) * 4u);
+    if (timer != 0 && frameWork) part->mTimer = static_cast<s8>(static_cast<s32>(timer) - 1);
+    const s8 state = part->mPartState;
+    const f32 launchSpeed = 15.0f;
+    const f32 randomRotation = 3000.0f;
+    const f32 horizontalBounce = 20.0f;
+    if (state == 0) {
+        tn_selectJointMatrix(i_this->mpBodyMorf, joint);
+        MtxPosition(offset.get(), &part->mPos);
+        const u8 detachFlags = static_cast<u8>(i_this->mPartDetachFlags);
+        if (frameWork && ((index == 0 && (detachFlags & 1u) != 0) ||
+            (index == 1 && (detachFlags & 2u) != 0) ||
+            (index == 2 && (detachFlags & 4u) != 0))) {
+            part->mPartState = 1;
+            bk_t60_mark_set(&part->mPartState); /* true60: entered on the first step: its work starts next frame */
+            if (index == 0) {
+                part->mTimer = 13;
+                tn_abi::cMtx_YrotS(calc_mtx(), static_cast<s16>(i_this->current.angle.y));
+                offset->x = zero;
+                offset->y = zero;
+                offset->z = REG0_F(7) + launchSpeed;
+                MtxPosition(offset.get(), &part->mSpeed);
+            } else part->mTimer = 0;
+        }
+    } else if (state == 1) {
+        tn_selectJointMatrix(i_this->mpBodyMorf, joint);
+        MtxPosition(offset.get(), &part->mPos);
+        if (part->mTimer == 0 && frameWork && !bk_t60_pending(&part->mPartState)) {
+            tn_playBombReactionSound(i_this, 0x488C);
+            part->mPartState = 5;
+            bk_t60_mark_set(&part->mPartState); /* true60: released on the first step: it first flies next frame */
+            part->mTimer = 30;
+            part->mbDetached = 1;
+            part->mAngle.y = static_cast<s16>(static_cast<s32>(i_this->current.angle.y) + REG0_S(5));
+            part->mAngle.z = 0x4000;
+            if (index == 0) {
+                const u32 status = static_cast<u32>(i_this->actor_status);
+                const u8 equipment = i_this->mRemainingEquipmentPieces;
+                const u8 count = i_this->mPartsAttached;
+                i_this->actor_status = static_cast<u32>(status | 0x200000u);
+                i_this->mRemainingEquipmentPieces = equipment & 0xFEu;
+                i_this->mPartsAttached = static_cast<u8>(count - 1u);
+            } else if (index == 1) {
+                i_this->mRemainingEquipmentPieces = static_cast<u8>(i_this->mRemainingEquipmentPieces) & 0xFDu;
+                tn_abi::cMtx_YrotS(calc_mtx(), static_cast<s16>(gabi::at<fopAc_ac_c>(player)->shape_angle.y));
+                offset->x = zero;
+                offset->y = horizontalBounce;
+                offset->z = -20.0f;
+                MtxPosition(offset.get(), &part->mSpeed);
+                part->mAngleSpeed.x = tn_randomPartRotation(randomRotation);
+                part->mAngleSpeed.y = tn_randomPartRotation(randomRotation);
+                i_this->mPartsAttached = static_cast<u8>(static_cast<u8>(i_this->mPartsAttached) - 1u);
+            } else {
+                if (index == 2) i_this->mRemainingEquipmentPieces = static_cast<u8>(i_this->mRemainingEquipmentPieces) & 0xFBu;
+                i_this->mPartsAttached = static_cast<u8>(static_cast<u8>(i_this->mPartsAttached) - 1u);
+            }
+        }
+    } else if (state == 5 && !bk_t60_pending(&part->mPartState)) {
+        tn_moveFlyingPart(i_this, part, index, ground.get(), zero, horizontalBounce, randomRotation);
+    }
+    tn_placePart(i_this, part, index, joint);
     tn_destroyGroundCheck(ground.get());
 }
+
+/* true60 (the one-sweep-per-frame attack rule with the): a Darknut volume
+ * that pushes (Co set: the body cylinder mCoCyl, vs all; any of its spheres with the Co set bit on) meets the frame's
+ * tick30 collision Move only. Collision registration is once per 30 Hz frame: the Co set bit of each such volume is
+ * cleared at the end of an in-between step's execute (after every registration and every change the execute makes to
+ * it) and set again at the next execute's start, before anything reads or changes it. Pair tnkB1_2 frame 129: the body
+ * cylinder met Link on the in-between Move (mCoCyl Co hit after B's first step, A's first at 130) and stopped him 2.0
+ * short. The At / Tg registrations are unchanged. dt = 1 and the tick30 step: nothing. Host memory, this unit only. */
+static std::unordered_map<u32, u8> s_tnT60CoMasked;
+static inline be<u32>* tn_t60_co_prm(tn_class* i, int k) {
+    switch (k) {
+    case 0: return &i->mCoCyl.mObjCo.mSPrm;
+    case 1: return &i->mHeadSph.mObjCo.mSPrm;
+    case 2: return &i->mDefenceSph.mObjCo.mSPrm;
+    case 3: return &i->mWeponSph.mObjCo.mSPrm;
+    default: return &i->mWepon2Sph.mObjCo.mSPrm;
+    }
+}
+static inline void tn_t60_co_restore(tn_class* i) {
+    auto it = s_tnT60CoMasked.find(gabi::ea(i));
+    if (it == s_tnT60CoMasked.end())
+        return;
+    const u8 masked = it->second;
+    s_tnT60CoMasked.erase(it);
+    for (int k = 0; k < 5; ++k)
+        if ((masked >> k) & 1) {
+            be<u32>& prm = *tn_t60_co_prm(i, k);
+            prm = static_cast<u32>(static_cast<u32>(prm) | 1u);
+        }
+}
+static inline void tn_t60_co_mask(tn_class* i) {
+    if (t60::dt() == 1.0f || t60::tick30())
+        return;
+    u8 masked = 0;
+    for (int k = 0; k < 5; ++k) {
+        be<u32>& prm = *tn_t60_co_prm(i, k);
+        if ((static_cast<u32>(prm) & 1u) == 0)
+            continue;
+        prm = static_cast<u32>(static_cast<u32>(prm) & ~1u);
+        masked |= static_cast<u8>(1u << k);
+    }
+    if (masked != 0)
+        s_tnT60CoMasked[gabi::ea(i)] = masked;
+}
+struct TnT60CoMaskAtEnd {
+    tn_class* i;
+    ~TnT60CoMaskAtEnd() { tn_t60_co_mask(i); }
+};
 
 // HD: execute retains its native guest frame and outgoing call-linkage area.
 /* 024BD170 */
 BOOL daTn_Execute(tn_class* i_this) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     using namespace tn_execute;
+    tn_t60_co_restore(i_this); /* true60: the Co set bits an in-between step masked (one-sweep-per-frame attack) */
+    TnT60CoMaskAtEnd t60CoMask{i_this}; /* true60: Co on the tick30 Move only (one-sweep-per-frame attack), at every exit */
     auto prefix = PrefixState{};
+    /* true60: the AI state before this execute's changes: one state step per 30 Hz frame (d_a_mo2_t60.h) */
+    const uint64_t t60AiState = mo2_t60_ai_state(i_this);
     if (executePrefix(i_this, prefix) == PrefixResult::Finished) return TRUE;
     gabi::Local<DamageInfo> info;
     gabi::Local<u8[16]> outgoingLinkage;
@@ -4405,7 +4936,9 @@ BOOL daTn_Execute(tn_class* i_this) {
             if (!bypassOrdinary) reaction = applyOrdinaryDamage(i_this, info.get(), damage);
         }
     }
-    if (!bypassOrdinary) updateKnockback(i_this, info.get(), reaction);
+    /* true60: the hit's knockback (and its cM_rnd draw) with the frame's hit read: the first step's, or a
+     * later step's that read its predecessor's Move (prepareDamage, one hit per frame) */
+    if (!bypassOrdinary && (bk_t60_first() || damage.hitPart != 0)) updateKnockback(i_this, info.get(), reaction);
     const u32 damagePower = bypassOrdinary ? 0 : info->power;
     Tn_move(i_this);
     updateDemoCameraAndSmoke(i_this);
@@ -4414,6 +4947,8 @@ BOOL daTn_Execute(tn_class* i_this) {
     updateGroundTilt(i_this);
     updateHeldWeapon(i_this);
     finishNormalEffects(i_this);
+    /* true60: a state entered on an in-between step waits for the next frame (Tn_move holds its dispatch) */
+    mo2_t60_ai_note(i_this, t60AiState);
     return TRUE;
 }
 

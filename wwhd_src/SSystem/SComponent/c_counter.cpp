@@ -10,6 +10,8 @@
 
 static counter_class g_Counter;
 
+/* true60: cCt_Counter runs once per 30 Hz frame (tick30 step, f_ap_game.cpp), so g_Counter stays a 30 Hz counter;
+ * converted code that needs a per-step count reads t60_step_counter (true60.h). */
 /* 0200E6EC */
 void cCt_Counter(int resetCounter1) {
     // HD: counter 0 is read before counter 1 is changed; arithmetic wraps as a PPC word.

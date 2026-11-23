@@ -11,6 +11,13 @@
 #include <bit>
 #include "d/d_camera_accessors.h"
 #include "port_hooks.h"
+#include "true60.h"
+/* true60 (bumpCheck; the per-step smoothing rule): the bumped eye mEye and the bumped direction mDirection are filter states
+ * that persist from frame to frame (the wall, back-wall and corner cushions, the bush and no-hit returns ease them
+ * toward the collision result), and mSightFitRadius eases toward the lock-on fit radius: each per-frame ratio r is
+ * 1 - (1 - r)^dt for a step (bgRatio; dt = 1 and r outside (0, 1) unchanged, bit-exact at N = 1). The camera runs in
+ * a converted context (Run, profile 0x1DC); an unconverted caller keeps dt = 1. */
+static inline f32 bgRatio(f32 r) { return t60::dt() == 1.0f ? r : t60_ratio(r, t60::dt()); }
 
 static dComIfG_camera_info_class* cameraInfo(s32 id) {
     return gabi::at<dComIfG_camera_info_class>(dComIfGp_ea() + PLAY_OFF(mCameraInfo) +
@@ -1256,11 +1263,11 @@ bool dCamera_c::bumpCheck(u32 flags) {
             f32 cur = mSightFitRadius;
             if (!(r < 3500.0f))
                 r = 3500.0f;
-            m = gabi::fmadds(r - cur, 0.33f, cur);
+            m = gabi::fmadds(r - cur, bgRatio(0.33f), cur); /* true60: per step */
             res = 0x40;
         } else {
             f32 cur = mSightFitRadius;
-            m = gabi::fnmsubs(cur, 0.08f, cur);
+            m = gabi::fnmsubs(cur, bgRatio(0.08f), cur); /* true60: per step */
         }
         u32 t108 = mCurModeTimer;
         mSightFitRadius = m;
@@ -1281,7 +1288,7 @@ bool dCamera_c::bumpCheck(u32 flags) {
         if ((s16)dir->mV < (s16)g->mV) {
             angleCopyDiscard(cameraArgument(a.get()), cameraArgument(&mDirection.mV));
             angleSubtract(cameraArgument(&g->mV), cameraArgument(t.get()), cameraArgument(a.get()));
-            angleMultiply(cameraArgument(t.get()), cameraArgument(u.get()), cameraArgument(0.05f));
+            angleMultiply(cameraArgument(t.get()), cameraArgument(u.get()), cameraArgument(bgRatio(0.05f))); /* true60 */
             angleAddAssign(cameraArgument(a.get()), cameraArgument(u.get()));
             CameraAngle* v = gabi::at<CameraAngle>(
                 angleConstructValue(cameraArgument(tmp.get()), cameraArgument((s16)*a)));
@@ -1366,7 +1373,7 @@ bool dCamera_c::bumpCheck(u32 flags) {
                     angleSubtract(cameraArgument(&globe->mV), cameraArgument(t1.get()),
                                   cameraArgument(&mDirection.mV));
                     angleMultiply(cameraArgument(t1.get()), cameraArgument(t2.get()),
-                                  cameraArgument(0.05f));
+                                  cameraArgument(bgRatio(0.05f))); /* true60: per step */
                     angleAdd(cameraArgument(&mDirection.mV), cameraArgument(t3.get()),
                              cameraArgument(t2.get()));
                     CameraAngle* v = gabi::at<CameraAngle>(
@@ -1375,7 +1382,7 @@ bool dCamera_c::bumpCheck(u32 flags) {
                     angleSubtract(cameraArgument(&globe->mU), cameraArgument(t3.get()),
                                   cameraArgument(&mDirection.mU));
                     angleMultiply(cameraArgument(t3.get()), cameraArgument(t2.get()),
-                                  cameraArgument(cushion));
+                                  cameraArgument(bgRatio(cushion))); /* true60: per step */
                     angleAdd(cameraArgument(&mDirection.mU), cameraArgument(t1.get()),
                              cameraArgument(t2.get()));
                     v = gabi::at<CameraAngle>(
@@ -1443,11 +1450,11 @@ bool dCamera_c::bumpCheck(u32 flags) {
                         w->copy(*o);
                         cXyz_mi(w, d, &mEye);
                         cXyz_ml(d, o,
-                                fieldRead<f32>(cameraSetup(this)->mWallCushion) /* WallCushion */);
+                                bgRatio(fieldRead<f32>(cameraSetup(this)->mWallCushion)) /* WallCushion (true60: per step) */);
                         PSVECAdd(&mEye, o, &mEye);
                     } else {
                         cXyz_mi(w, d, &mEye);
-                        cXyz_ml(d, h, fieldRead<f32>(cameraSetup(this)->mWallCushion));
+                        cXyz_ml(d, h, bgRatio(fieldRead<f32>(cameraSetup(this)->mWallCushion))); /* true60: per step */
                         PSVECAdd(&mEye, h, &mEye);
                     }
                     mEventFlags = mEventFlags | 0x4000;
@@ -1461,7 +1468,7 @@ bool dCamera_c::bumpCheck(u32 flags) {
                     cXyz_mi(w, d, &mEye);
                     cXyz_ml(
                         d, h,
-                        fieldRead<f32>(cameraSetup(this)->mWallBackCushion) /* WallBackCushion */);
+                        bgRatio(fieldRead<f32>(cameraSetup(this)->mWallBackCushion)) /* WallBackCushion (true60: per step) */);
                     PSVECAdd(&mEye, h, &mEye);
                 }
             } else {
@@ -1507,9 +1514,9 @@ bool dCamera_c::bumpCheck(u32 flags) {
         if (chkFlag(0x4000)) {
             gabi::Local<CameraAngle> t, u, v2, tv;
             gabi::Local<cXyz> x, e;
-            f32 k = (flags & CheckWallUp)
+            f32 k = bgRatio((flags & CheckWallUp)
                         ? fieldRead<f32>(cameraSetup(this)->mWallBackCushion) /* WallBackCushion */
-                        : 0.2f;
+                        : 0.2f); /* true60: per step */
             f32 rr = mDirection.mRadius;
             mDirection.mRadius = gabi::fmadds(mViewCache.mDirection.mRadius - rr, k, rr);
             angleSubtract(cameraArgument(&mViewCache.mDirection.mV), cameraArgument(t.get()),

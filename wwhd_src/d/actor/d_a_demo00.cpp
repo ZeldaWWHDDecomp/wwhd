@@ -2,6 +2,7 @@
  * The GameCube actor supplies the names and structure. HD uses SafeString resource
  * lookups, framebuffer textures, and an auxiliary animated model. Private source. */
 #include "d/actor/d_a_demo00.h"
+#include "d/actor/d_a_demo00_t60.h" /* true60: the whole form (the whole-frame form rule, d/t60_objw.h) */
 #include "bindings.h"
 #include "d/d_demo.h"
 #include "d/d_kankyo_demo.h"
@@ -917,6 +918,9 @@ void daDemo00_c::drawAuxiliary() {
 
 /* 02120CBC */
 s32 daDemo00_c::execute() {
+    t60w::Guard<daDemo00_c> t60g(this, t60objw::Logic<daDemo00_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return 1;
     u8 actorID = demoActorID;
     mGroundValid = 0;
     void* demoActor = nullptr;

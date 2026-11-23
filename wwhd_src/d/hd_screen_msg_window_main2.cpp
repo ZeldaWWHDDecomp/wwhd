@@ -13,6 +13,7 @@
  */
 
 #include "d/hd_screen_msg_window_main2.h"
+#include "d/d_meter_t60_project.h"
 static u32 sMain2PaneNamesRegistration;
 static u32 sMain2TextPaneNamesRegistration;
 static u32 sMain2ChoiceWindowNamesRegistration;
@@ -510,6 +511,8 @@ void hdScreenMsgWindowMain2_c::updateTail() {
     if (kind == 0) {
         u8* player = ((hdMsgMain2Play_l*)dComIfGp_get())->mpPlayer;
         bool up;
+        /* true60 message window: the speaker's projection reads the frame's exact camera (d_meter_t60_project.h) */
+        T60_METER_EXACT_PROJECT_VIEW();
         if (hdMain2_isSamePos(&mSpeakerPos, &cXyz::Zero)) {
             up = !(mpTextPanes[0]->mMatrix[7] < 0.0f);
         } else if (input->mSpeaker) {

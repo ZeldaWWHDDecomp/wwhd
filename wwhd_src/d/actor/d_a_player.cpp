@@ -3,6 +3,8 @@
  */
 #include "bindings.h"
 #include "d/actor/d_a_player_readable.h"
+#include "true60.h"
+#include "d/actor/d_a_player_t60.h"
 using PlayerBase = player_detail::daPy_py_c;
 using namespace player_detail;
 using GuestWord = be<u32>;
@@ -21,6 +23,8 @@ static GuestWord l_firstDestructor;
 static GuestWord l_secondDestructor;
 static GuestWord l_playerVtable;
 static GuestWord l_quakePattern;
+/* cLib_addCalc (0200ECD4) under a unit-local name (glue below), so an N-step spec can link c_lib.cpp's candidate */
+void player_addCalc(be<f32> *, f32, f32, f32, f32);
 
 /* 023D4528 */
 void player_detail::daPy_mtxFollowEcallBack_c::execute(Emitter *emitter) {
@@ -104,7 +108,11 @@ void player_detail::daPy_py_c::setDoButtonQuake() {
 void player_detail::daPy_py_c::stopDoButtonQuake(s32 release) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
     s32 timer = this->mQuakeTimer;
-    if (timer > 0) {
+    /* true60 (the 30 Hz timer rule): mQuakeTimer counts 30 Hz frames (60 = two seconds of the A-button hint's
+     * rumble); a converted caller (daPy_lk_c::execute, every step) counts it on the frame's FIRST step only (rule note
+     * first-step AI-timer for Link: count and decide where the 30 Hz update runs; the stop at 0 with it). The release test below runs on
+     * every step (the Z hint is the step's; it reads the value after the count, as in the original). dt 1: the original. */
+    if (timer > 0 && lkT60_countStep()) {
         timer = (s16)(timer - 1);
         this->mQuakeTimer = (s16)timer;
         if (timer == 0) {
@@ -185,12 +193,18 @@ void player_detail::daPy_py_c::objWindHitCheck(dCcD_Cyl *cylinder) {
                 PSVECScale(target.get(), target.get(), limit / speed);
         }
     }
-    cLib_addCalc(&this->mWindVelocity.x, (f32)target->x, 0.5f, maxStep, 0.5f);
-    cLib_addCalc(&this->mWindVelocity.z, (f32)target->z, 0.5f, maxStep, 0.5f);
+    player_addCalc(&this->mWindVelocity.x, (f32)target->x, 0.5f, maxStep, 0.5f);
+    player_addCalc(&this->mWindVelocity.z, (f32)target->z, 0.5f, maxStep, 0.5f);
     f32 vx = this->mWindVelocity.x;
     f32 x = this->current.pos.x;
     f32 z = this->current.pos.z;
     f32 vz = this->mWindVelocity.z;
+    /* true60 (the per-step movement rule): the wind velocity is per 30 Hz frame (its chase above is cLib_addCalc, scaled
+     * centrally for the step); a step moves dt of it. dt 1 (every unconverted caller): the original. */
+    if (t60::dt() != 1.0f) {
+        vx = gabi::fmuls_ppc(vx, t60::dt());
+        vz = gabi::fmuls_ppc(vz, t60::dt());
+    }
     this->current.pos.x = x + vx;
     this->current.pos.z = z + vz;
 }
@@ -407,7 +421,7 @@ ext 025A847C void* player_particle_set(void*, u32, u32, cXyz*, u32, cXyz*, u32, 
 ext 025CB4E0 void player_StartQuake(void*, void*, s32, s32, cXyz*)
 ext 025CB610 void player_StopQuake(void*, s32)
 ext 025D50BC void player_actor_destructor(fopAc_ac_c*, u32)
-ext 0200ECD4 void cLib_addCalc(be<f32>*, f32, f32, f32, f32)
+ext 0200ECD4 void player_addCalc(be<f32>*, f32, f32, f32, f32)
 ext 028ED6F8 void player_firstStaticConstructor(void*)
 ext 028EAB2C void player_secondStaticConstructor(void*)
 */

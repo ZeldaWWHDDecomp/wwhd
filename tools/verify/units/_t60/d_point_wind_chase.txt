@@ -1,0 +1,32 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_point_wind.txt
+# (domain 2 of 2: the chase; domain 1, the restart: _t60/d_point_wind.txt)
+# ---- (2026-11-18): dPointWind_c::set_pwind_move 025AB454 on every step (its
+# converted caller wind_tag 0x187 runs it per step). The point's chase toward the capsule end runs per step through the
+# central converted cLib_addCalc (candidate c_lib: dt share, the frame's full answer pinned on the tick30 step); the
+# restart at the start point (distance to the end below the radius) is taken on the tick30 step only, on the frame's
+# moved position. Checked: N steps against the one step, bytes exact (the chase lands on the one step's value on the
+# tick30 step, so the restart test reads the same distance). The distance (PSVECSquareDistance, the square root) runs
+# real, so the test reads the moved point.
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200ECD4 028E8DE8 028F4384
+t60cand 0200ECD4
+t60conv 025AB454
+# Domain 2 (this file): the chase without a restart. The capsule end at the origin, radius 10 (chase limits 18 / 9 a
+# frame), the point 60..100 from it on each axis (|p| >= 104: no restart inside a frame on either side). The chase
+# (the per-step smoothing rule, central cLib_addCalc): a step that moved by its limit allows max(18, 9) x (1 - dt) more, both results between
+# the start and the end (the one-dt-per-step rule.5.3a); otherwise f32 rounding only. The boundary frames (the frame-end point within
+# the radius on one side only, a rule-3 rounding / clamp share apart) are not checked here (LIMIT).
+# not the sea's stay 4 (that path sets the point without a chase: exact on both sides, covered in domain 1)
+field 025AB454 1047E6C8 i8 -1,0,3,5
+field 025AB454 5200000C f32 0 0
+field 025AB454 52000010 f32 0 0
+field 025AB454 52000014 f32 0 0
+field 025AB454 52000018 f32 10 10
+field 025AB454 51000004 f32 60 100
+field 025AB454 51000008 f32 -100 -60
+field 025AB454 5100000C f32 60 100
+# each axis is its own cLib_addCalc (its own clamp), so one line per axis (an xK vector line measures the vector's move)
+t60tol 025AB454 r3+0x4 f32 clamp 18 9 0 0.001 0.0001
+t60tol 025AB454 r3+0x8 f32 clamp 18 9 0 0.001 0.0001
+t60tol 025AB454 r3+0xC f32 clamp 18 9 0 0.001 0.0001

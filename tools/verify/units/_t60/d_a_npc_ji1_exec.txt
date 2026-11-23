@@ -1,0 +1,10 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_npc_ji1_exec.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule NPC form; d/t60_npc.h):
+# Orca (Ji1): daNpc_Ji1_c::_execute 0224B268 in the whole form, logic only (the actions of the battle / event / msg /
+# normal / speak / teach / teachsp files run inside it through mAction). The tick30 step runs the original execute whole
+# at dt 1 from the frame start; the earlier steps change no state (the picture between steps comes from frame interpolation): net
+# effect = the one step's, byte exact. Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 0224B268
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200F164 0200F428 020182E0 02018D40 020195B0 020198D8 0201A478 0201ADE0 0201AE48 02055B64 0207A9A0 0211D2F8 0224A2B8 0224A9F0 0224ABA4 0224AEF0 024EECAC 024EEEB8 024EF130 024F08A8 025200D4 02520540 0257DAA8 0257DB04 0259F67C 025D6870 025E535C 025E55A0 027F4D5C 028E8D88 028E8DD0 028E8DE8 028E9044 028E90D4 028F4384

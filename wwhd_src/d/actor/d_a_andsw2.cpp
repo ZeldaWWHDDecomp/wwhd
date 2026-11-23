@@ -3,6 +3,7 @@
  * GameCube names with HD behavior and layouts; verified against WWHD.
  */
 #include "d/actor/d_a_andsw2.h"
+#include "d/actor/d_a_andsw2_t60.h" /* true60: the shared-world-state rule whole-execute form */
 
 static Andsw2SaveData* l_saveInfo;
 static u32 l_actionGuard;
@@ -146,6 +147,7 @@ BOOL daAndsw2_actionWait(daAndsw2_c* i_this) {
 }
 /* 02051E54 */
 BOOL daAndsw2_c::execute() {
+    if (!t60c::end()) return TRUE; /* true60 (the shared-world-state rule): the switch tag's frame on the tick30 step at the line place */
     if (!l_actionGuard) {
         l_actionGuard = 1;
         Andsw2HD::copyActionTable(&l_action, l_actionInit);

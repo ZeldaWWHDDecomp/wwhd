@@ -1,0 +1,9 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_npc_bm1_b.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule NPC form; d/t60_npc.h):
+# the Rito (Bm1): the execute 02200D58 in the whole form, logic only (wrapper with it). The tick30 step runs the original execute whole
+# at dt 1 from the frame start; the earlier steps change no state (the picture between steps comes from frame interpolation): net
+# effect = the one step's, byte exact. Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 02200D58 02200F8C
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 02008974 02008DAC 02008E0C 0200E240 0200F378 0200F428 0200F5C8 0200F93C 0201ADE0 021FD41C 021FE2F8 021FE408 021FE4DC 021FE68C 021FE6CC 021FECF4 021FEEB0 021FFED0 021FFFFC 0220026C 02200420 0220057C 02200714 02200A40 02200AB4 02200AF8 02200CD0 025440C8 02586D5C 0259D54C 0259DED0 0259E08C 0259E778 0259E838 0259ED58 0259EDB8 0259F858 025A15AC 025A847C 025D57E0 025D57E4 025D6870 025D76A8 025D7A58 0274D458 028E8DD0 028E90D4 028F4384

@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_obj_tousekiki.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 const gc_tu_data gc_tu = { .safeString = 0x100315CC, .headerStatics = {0x1046C55C, 0x101CD4DC, 0x1046C568} };
 const char daObj_Tousekiki_c::M_arcname[] = "Touseki";
 static daObjPirateship_ActView* l_p_ship;
@@ -109,8 +110,12 @@ inline void daObj_Tousekiki_c::set_mtx() {
 }
 
 inline bool daObj_Tousekiki_c::_execute() {
+    t60w::Guard<daObj_Tousekiki_c> t60g(this, t60objw::Logic<daObj_Tousekiki_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return false;
     demo_move();
     set_mtx();
+    t60g.model = true; /* true60: the frame reached its model step */
     return false;
 }
 

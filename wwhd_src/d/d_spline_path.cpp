@@ -1,5 +1,6 @@
 /** Quadratic B-spline path, with tww member names. */
 #include "d/d_spline_path.h"
+#include "true60.h"
 
 static SplineHeaderStatics l_headerStatics;
 static const SplinePiPair l_piPair;
@@ -52,6 +53,11 @@ static d2DBSplinePath* d2DBSplinePath__ct(d2DBSplinePath* p) {
 
 /* 025C0C80 */
 bool d2DBSplinePath::Step() {
+    // true60 (the 30 Hz timer rule): the path's integer frame counts 30 Hz frames and advances on the tick30 step; an
+    // in-between step keeps the curve keys and weights (Calc gives the same point) and reports the current state. The
+    // event cameras that step it are held at 30 Hz until their units convert them (fallback).
+    if (!t60::tick30())
+        return mState == RUNNING || mState == LAST;
     s32 duration = mDuration, frame = mFrame, state;
     if (frame >= duration) {
         state = STOPPED;

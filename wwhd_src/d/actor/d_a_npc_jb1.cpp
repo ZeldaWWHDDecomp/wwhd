@@ -1,5 +1,6 @@
 // Jabun NPC: typed tww layout, with verified HD animation, lighting and action semantics.
 #include "d/actor/d_a_npc_jb1.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 BOOL daNpc_Jb1_IsDelete(daNpc_Jb1_c* actor);
 void daNpc_Jb1_HioDestroy(void* object, s32 flags);
 BOOL daNpc_Jb1_Delete(daNpc_Jb1_c* actor);
@@ -590,6 +591,9 @@ BOOL daNpc_Jb1_c::_draw() {
 /* 02248444 */
 BOOL daNpc_Jb1_c::_execute() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    t60w::Guard<daNpc_Jb1_c> t60g(this, t60npc::Logic<daNpc_Jb1_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return 1;
     if (mbRanExecute == 0) {
         u16 y = current.angle.y;
         u32 z = jb1::words(&current.pos)->z;
@@ -628,6 +632,7 @@ BOOL daNpc_Jb1_c::_execute() {
         }
     }
     eventOrder();
+    t60g.model = true; /* true60: the frame reached its model step */
     setMtx();
     return 1;
 }

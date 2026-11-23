@@ -3,6 +3,7 @@
 #include "bindings.h"
 #include "gc_api/d/d_com_inf_game.h"
 #include "gc_api/d/d_kankyo.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 static u32 daTbox_HIO_ct(u32 self);
 static void daTbox_HIO_dt(u32 self, u32 flags);
 static BOOL daTbox_IsDelete(daTbox_c* self);
@@ -912,6 +913,9 @@ BOOL daTbox_c::actionGenocide() {
 
 /* 024B54F8 */
 BOOL daTbox_c::execute() {
+    t60w::Guard<daTbox_c> t60g(this, t60objw::Logic<daTbox_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     s32 room = mRoomNo;
     if (room == -1 || checkRoomDisp(room) != 1)
         return TRUE;
@@ -953,6 +957,7 @@ BOOL daTbox_c::execute() {
         if (w)
             tboxView<dBgW>(w)->Move();
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 

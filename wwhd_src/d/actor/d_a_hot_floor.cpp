@@ -1,5 +1,6 @@
 /* Heat-floor particles following an aim matrix. Private WWHD reconstruction. */
 #include "d/actor/d_a_hot_floor.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 namespace dPa_name {
 enum { ID_AK_SN_HEATFLOOR00 = 0x8120, ID_AK_SN_HEATFLOOR01 = 0x814C };
 }
@@ -65,6 +66,9 @@ static BOOL daHot_FloorDelete(void* i_this) {
 // HD: daHot_FloorExecute (_execute inlined)
 static BOOL daHot_FloorExecute(void* i_this) {
     daHot_Floor_c* a = (daHot_Floor_c*)i_this;
+    t60w::Guard<daHot_Floor_c> t60g(a, t60objw::Logic<daHot_Floor_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return FALSE;
     if (a->mbSpawnParticle) {
         if (a->mEmitter2 == nullptr && !(fopAcM_GetParam(a) & 1))
             a->mEmitter2 = (hot_floor_emitter_c*)dComIfGp_particle_set(dPa_name::ID_AK_SN_HEATFLOOR01, &a->current.pos);
@@ -89,6 +93,7 @@ static BOOL daHot_FloorExecute(void* i_this) {
             fopAcM_delete(a);
     }
 
+    t60g.model = true; /* true60: the frame reached its model step */
     a->set_mtx();
     return FALSE;
 }

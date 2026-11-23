@@ -7,6 +7,7 @@
  */
 #include "d/actor/d_a_mtoge.h"
 #include "gc_api/f_op/f_op_actor_mng.h"
+#include "d/actor/d_a_mtoge_t60.h"
 
 const gc_tu_data gc_tu = {.safeString = 0x1001584C};
 static const char M_arcname[] = "Mtoge";
@@ -194,6 +195,8 @@ static BOOL daMtoge_Execute(daMtoge_c* i_this) {
         l_action_guard = 1;
         memcpy_g(&l_action, &l_action_source, sizeof(l_action));
     }
+    if (mtogeT60::execute(i_this)) /* true60: Up / Down frame-exact, Hind / Arrival on the tick30 step */
+        return TRUE;
     gabi::call_ptr<BOOL>((u32)l_action.entries[i_this->mAction], i_this);
     return TRUE;
 }

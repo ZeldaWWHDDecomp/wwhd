@@ -1,0 +1,53 @@
+# true60 dt-1 check steering for dCamera_c::Run 024FE3E8 (not a gate unit: units/_t60/ is left out of verify_all).
+# The gate unit d_camera.txt drives Run's original into a page-0 DSI on ~99 % of the inputs (10000-input runs: ~110 clean):
+# mCamParam (+0x8A8, the camera at 0x40000000) is unsteered there and clobbered by the mocked calls before Run reads it
+# (epochs, README "Clobbering"), so after the shakeCamera call it is often a small number and camStyleFlags
+# (*(+0x8A8) + 0x80) loads from page 0. Here it is a fixed pointer (as bumpCheck's line in d_camera.txt) that callees
+# never rewrite (stable; mCamParam is set once at the camera's construction). Used for the event engine's tick30 hold in Run (d_camera_run_t60.h,
+# crane).
+include d_camera.txt
+include shared/c_angle_statics.txt
+field 024FE3E8 r3+0x8A8 u32 0x5A600000
+stable 400008A8 4
+# the cSAngle / cSGlobe constructors return this (Run dereferences the returned angle: (s16)*hi of cSAngle(f32))
+retarg 0200658C r3
+retarg 020066C0 r3
+retarg 02006644 r3
+retarg 020065FC r3
+retarg 02007248 r3
+retarg 02007324 r3
+# (2026-11-20, rule on the YAW N-step spec): the whole-frame rerun (d_camera_follow_whole_t60.h, Run calls Run at dt 1
+# on the tick30 step) runs the candidate body with the mock stream restarted (harness `t60self`), not a mock: the
+# N-step compare covers the whole form (without it step 2 ended at the frame start: s78y 5659 -> 3537 was that)
+t60self 024FE3E8
+# Run is this spec's root (without a t60conv line the harness compared every function, the c_lib
+# eases themselves included: one ease at dt 1 against two at dt 1/2)
+t60conv 024FE3E8
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200ECD4 0200F5C8
+t60cand 0200ECD4 0200F5C8
+# known-fail clib-real: ? (sweep: N-step spec N2 differs with the eases converted; fails without them too)
+# the environment light (dKy_getEnvlight 02555D0C, mocked) at a fixed object: its HD zoom (+0x104C,
+# 0.7 .. 1.0) and zoom state (+0x10A4: 0 / 1 ease to 0.8 / 1.0, 2 = 0.7, 0xFF = 1.0) steered and stable (the mock's
+# answer pointed into page 1 and was clobbered). Outside the whole-frame forms (event / follow styles) Run eases the zoom
+# per step (cLib_addCalc 0.05, max 0.05, min 0.01 per 30 Hz frame: the per-step smoothing rule's ratio form, a picture value), so the frame's
+# end differs from the one ease by up to the clamp allowance max(MAX, MIN) x (1 - dt) = 0.0375 at N 4 (README t60tol
+# clamp; the target depends on the state, hence abs); mFovy (+0x38) = the view's fovy x the zoom: rel 0.0375 / 0.7.
+ret! 02555D0C 0x5F000000 0x5F000000
+field 024FE3E8 5F00104C f32 0.7 1.0
+field 024FE3E8 5F0010A4 u8 0,1,2,0xFF
+stable 5F00104C 4
+stable 5F0010A4 1
+t60tol 024FE3E8 5F00104C f32 abs 0.0375
+t60tol 024FE3E8 r3+0x38 f32 rel 0.054
+# the play object (dComIfGp_get 025200D4) always at its fixed address (`ret!`, as the other camera N-step specs): the gate
+# unit's `ret` leaves 1 input in 8 unsteered, drawn per call, so the steps and the one step OR-ed Run's flag into
+# different objects (seed 1000003: 12C153C0 / 36A019C0)
+ret! 025200D4 0x54000000 0x54000000
+# the cSAngle arithmetic run for real (pure: __mi 020068B0, __ml 0200693C, += 020068CC, Inv 02006804).
+# Mocked, each call took the next answer of its target's stream, so the frame's first step's extra chase of the forward
+# tilt (noteFwdFrame: __mi / __ml / +=, B only) moved B's later answers: the DMC reset test's diff (stick - mDMCSystem
+# angle through __mi) then differed (seed 1000039: B's step 1 reset the DMC and wrote mAngleY, A did not)
+# (with them real the forward tilt's per-step ratio chase showed, r3+0x148: tick30 one-chase form in Run)
+real 020068B0 0200693C 020068CC 02006804

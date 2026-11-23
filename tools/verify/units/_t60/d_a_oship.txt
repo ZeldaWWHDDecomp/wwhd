@@ -1,0 +1,9 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_oship.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule addendum, the Magtail's whole form; d_a_oship_t60.h):
+# enemy warship: daOship_c::_execute 023C68B8 in the whole form. The tick30 step runs the original _execute whole at dt 1
+# from the frame start; the earlier steps change no state (the picture between steps comes from frame interpolation): net effect =
+# the one step's, byte exact. Negative control (T60C_NEGCTRL: _execute on every step at dt) must fail.
+t60conv 023C68B8
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200E240 0200ED84 0200F428 0200F93C 0200F974 0200FAAC 020182E0 02018428 020184DC 0201ADE0 023C58DC 023C5A54 023C5D34 023C641C 023C64A0 023C65C0 025871F8 025872F4 025A847C 025A92C0 025A99B8 025D5218 025D6894 025D6958 025D6B70 025E55A0 025F19F8 025F1C28 027F4D5C 028E8DD0 028E8F64 028E90D4 028E93CC 028F4384

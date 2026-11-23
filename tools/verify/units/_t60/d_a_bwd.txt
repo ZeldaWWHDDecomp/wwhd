@@ -1,0 +1,208 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_bwd.txt
+# known-fail dt-1 check input class (tagsweep, 2026-11-21): bwd_execute 1984/2000, page-0 instruction fetch by the original only (target 0x47) on generated inputs with this spec's real callees (the base unit's dt-1 check passes); same with the fresh and the shared frame tag; not an N-step spec / conversion difference
+# ---- true60 N-step spec (*, 2026-11-19; the whole-frame form rule, as Gohma's btd; d_a_bwd_t60.h):
+# Molgera: the execute 020FA614 in the whole form. The tick30 step runs the original execute whole at dt 1 from the frame
+# start; the earlier steps change no state (the picture between steps comes from frame interpolation): net effect = the one step's,
+# byte exact. Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 020FA614
+# N-step spec steering (boss2, zero-page rule): with -nulltrap every input of 020FA614 faulted in page 0 at once (the
+# fopAcM_SearchByID(mAttId) result was a small non-null value: the stfs to +0x318; a null one faults at the unguarded read of
+# +0x318 after demo_camera): pinned to an actor at 0x5A600000
+ret! 025D5218 0x5A600000
+# the body segments (020FAC3C / 020FAD38): mpBodyModel[20] is tested, then reloaded after mocked calls: pinned to null or a
+# model at 0x5A000000, mpBodyMorf[20] (no null test) to a brk at 0x5A100000; both arrays stable
+field 020FA614 r3+0x3F0 u32 0,0x5A000000
+field 020FA614 r3+0x3F4 u32 0,0x5A000000
+field 020FA614 r3+0x3F8 u32 0,0x5A000000
+field 020FA614 r3+0x3FC u32 0,0x5A000000
+field 020FA614 r3+0x400 u32 0,0x5A000000
+field 020FA614 r3+0x404 u32 0,0x5A000000
+field 020FA614 r3+0x408 u32 0,0x5A000000
+field 020FA614 r3+0x40C u32 0,0x5A000000
+field 020FA614 r3+0x410 u32 0,0x5A000000
+field 020FA614 r3+0x414 u32 0,0x5A000000
+field 020FA614 r3+0x418 u32 0,0x5A000000
+field 020FA614 r3+0x41C u32 0,0x5A000000
+field 020FA614 r3+0x420 u32 0,0x5A000000
+field 020FA614 r3+0x424 u32 0,0x5A000000
+field 020FA614 r3+0x428 u32 0,0x5A000000
+field 020FA614 r3+0x42C u32 0,0x5A000000
+field 020FA614 r3+0x430 u32 0,0x5A000000
+field 020FA614 r3+0x434 u32 0,0x5A000000
+field 020FA614 r3+0x438 u32 0,0x5A000000
+field 020FA614 r3+0x43C u32 0,0x5A000000
+field 020FA614 r3+0x490 u32 0x5A100000
+field 020FA614 r3+0x494 u32 0x5A100000
+field 020FA614 r3+0x498 u32 0x5A100000
+field 020FA614 r3+0x49C u32 0x5A100000
+field 020FA614 r3+0x4A0 u32 0x5A100000
+field 020FA614 r3+0x4A4 u32 0x5A100000
+field 020FA614 r3+0x4A8 u32 0x5A100000
+field 020FA614 r3+0x4AC u32 0x5A100000
+field 020FA614 r3+0x4B0 u32 0x5A100000
+field 020FA614 r3+0x4B4 u32 0x5A100000
+field 020FA614 r3+0x4B8 u32 0x5A100000
+field 020FA614 r3+0x4BC u32 0x5A100000
+field 020FA614 r3+0x4C0 u32 0x5A100000
+field 020FA614 r3+0x4C4 u32 0x5A100000
+field 020FA614 r3+0x4C8 u32 0x5A100000
+field 020FA614 r3+0x4CC u32 0x5A100000
+field 020FA614 r3+0x4D0 u32 0x5A100000
+field 020FA614 r3+0x4D4 u32 0x5A100000
+field 020FA614 r3+0x4D8 u32 0x5A100000
+field 020FA614 r3+0x4DC u32 0x5A100000
+stable 400003F0 0x50
+stable 40000490 0x50
+# the tongue segments' models (mTongueSegments[32].mpModel, 0x1B80 + 0x14 k) at 0x5A200000; the other object pointers each at
+# its own 0x5A3xx000 block; all pointer words stable (mocked calls between the loads)
+field 020FA614 r3+0x1B80 u32 0x5A200000
+stable 40001B80 4
+field 020FA614 r3+0x1B94 u32 0x5A200000
+stable 40001B94 4
+field 020FA614 r3+0x1BA8 u32 0x5A200000
+stable 40001BA8 4
+field 020FA614 r3+0x1BBC u32 0x5A200000
+stable 40001BBC 4
+field 020FA614 r3+0x1BD0 u32 0x5A200000
+stable 40001BD0 4
+field 020FA614 r3+0x1BE4 u32 0x5A200000
+stable 40001BE4 4
+field 020FA614 r3+0x1BF8 u32 0x5A200000
+stable 40001BF8 4
+field 020FA614 r3+0x1C0C u32 0x5A200000
+stable 40001C0C 4
+field 020FA614 r3+0x1C20 u32 0x5A200000
+stable 40001C20 4
+field 020FA614 r3+0x1C34 u32 0x5A200000
+stable 40001C34 4
+field 020FA614 r3+0x1C48 u32 0x5A200000
+stable 40001C48 4
+field 020FA614 r3+0x1C5C u32 0x5A200000
+stable 40001C5C 4
+field 020FA614 r3+0x1C70 u32 0x5A200000
+stable 40001C70 4
+field 020FA614 r3+0x1C84 u32 0x5A200000
+stable 40001C84 4
+field 020FA614 r3+0x1C98 u32 0x5A200000
+stable 40001C98 4
+field 020FA614 r3+0x1CAC u32 0x5A200000
+stable 40001CAC 4
+field 020FA614 r3+0x1CC0 u32 0x5A200000
+stable 40001CC0 4
+field 020FA614 r3+0x1CD4 u32 0x5A200000
+stable 40001CD4 4
+field 020FA614 r3+0x1CE8 u32 0x5A200000
+stable 40001CE8 4
+field 020FA614 r3+0x1CFC u32 0x5A200000
+stable 40001CFC 4
+field 020FA614 r3+0x1D10 u32 0x5A200000
+stable 40001D10 4
+field 020FA614 r3+0x1D24 u32 0x5A200000
+stable 40001D24 4
+field 020FA614 r3+0x1D38 u32 0x5A200000
+stable 40001D38 4
+field 020FA614 r3+0x1D4C u32 0x5A200000
+stable 40001D4C 4
+field 020FA614 r3+0x1D60 u32 0x5A200000
+stable 40001D60 4
+field 020FA614 r3+0x1D74 u32 0x5A200000
+stable 40001D74 4
+field 020FA614 r3+0x1D88 u32 0x5A200000
+stable 40001D88 4
+field 020FA614 r3+0x1D9C u32 0x5A200000
+stable 40001D9C 4
+field 020FA614 r3+0x1DB0 u32 0x5A200000
+stable 40001DB0 4
+field 020FA614 r3+0x1DC4 u32 0x5A200000
+stable 40001DC4 4
+field 020FA614 r3+0x1DD8 u32 0x5A200000
+stable 40001DD8 4
+field 020FA614 r3+0x1DEC u32 0x5A200000
+stable 40001DEC 4
+field 020FA614 r3+0x3DC u32 0x5A300000
+stable 400003DC 4
+field 020FA614 r3+0x3E0 u32 0x5A301000
+stable 400003E0 4
+field 020FA614 r3+0x3E8 u32 0x5A302000
+stable 400003E8 4
+field 020FA614 r3+0x1A70 u32 0x5A303000
+stable 40001A70 4
+field 020FA614 r3+0x1A74 u32 0x5A304000
+stable 40001A74 4
+field 020FA614 r3+0x1A78 u32 0x5A305000
+stable 40001A78 4
+field 020FA614 r3+0x1A7C u32 0x5A306000
+stable 40001A7C 4
+field 020FA614 r3+0x1AE0 u32 0x5A307000
+stable 40001AE0 4
+field 020FA614 r3+0x1AE4 u32 0x5A308000
+stable 40001AE4 4
+field 020FA614 r3+0x1AEC u32 0x5A309000
+stable 40001AEC 4
+field 020FA614 r3+0x1B20 u32 0x5A30A000
+stable 40001B20 4
+field 020FA614 r3+0x3D9C u32 0x5A30B000
+stable 40003D9C 4
+field 020FA614 r3+0x3DA0 u32 0x5A30C000
+stable 40003DA0 4
+field 020FA614 r3+0x3DA4 u32 0x5A30D000
+stable 40003DA4 4
+field 020FA614 r3+0x3DA8 u32 0x5A30E000
+stable 40003DA8 4
+field 020FA614 r3+0x3DAC u32 0x5A30F000
+stable 40003DAC 4
+field 020FA614 r3+0x3DB0 u32 0x5A310000
+stable 40003DB0 4
+field 020FA614 r3+0x440 u32 0x5A400000
+field 020FA614 r3+0x444 u32 0x5A400000
+field 020FA614 r3+0x448 u32 0x5A400000
+field 020FA614 r3+0x44C u32 0x5A400000
+field 020FA614 r3+0x450 u32 0x5A400000
+field 020FA614 r3+0x454 u32 0x5A400000
+field 020FA614 r3+0x458 u32 0x5A400000
+field 020FA614 r3+0x45C u32 0x5A400000
+field 020FA614 r3+0x460 u32 0x5A400000
+field 020FA614 r3+0x464 u32 0x5A400000
+field 020FA614 r3+0x468 u32 0x5A400000
+field 020FA614 r3+0x46C u32 0x5A400000
+field 020FA614 r3+0x470 u32 0x5A400000
+field 020FA614 r3+0x474 u32 0x5A400000
+field 020FA614 r3+0x478 u32 0x5A400000
+field 020FA614 r3+0x47C u32 0x5A400000
+field 020FA614 r3+0x480 u32 0x5A400000
+field 020FA614 r3+0x484 u32 0x5A400000
+field 020FA614 r3+0x488 u32 0x5A400000
+field 020FA614 r3+0x48C u32 0x5A400000
+stable 40000440 0x50
+# the morfs' inline model reads (morf +0x90 = model, model +0x2C = joint block, block +0x10 = matrices at 0x5A500000)
+field 020FA614 5A300090 u32 0x5A300800
+field 020FA614 5A30082C u32 0x5A300900
+field 020FA614 5A300910 u32 0x5A500000
+stable 5A300090 4
+stable 5A30082C 4
+stable 5A300910 4
+field 020FA614 5A30B090 u32 0x5A30B800
+field 020FA614 5A30B82C u32 0x5A30B900
+field 020FA614 5A30B910 u32 0x5A500000
+stable 5A30B090 4
+stable 5A30B82C 4
+stable 5A30B910 4
+field 020FA614 5A30C090 u32 0x5A30C800
+field 020FA614 5A30C82C u32 0x5A30C900
+field 020FA614 5A30C910 u32 0x5A500000
+stable 5A30C090 4
+stable 5A30C82C 4
+stable 5A30C910 4
+# the player (play +0x5B2C, read once into a local, used without a null test) at 0x5A700000
+poke 020FA614 54005B2C u32 0x5A700000
+stable 54005B2C 4
+# the player's vtable (+0xB4) at 0x5A710000 with daPy_lk_c::setOutPower 024438D4 in slot +0xEC (the push at mPushPlayer)
+poke 020FA614 5A7000B4 u32 0x5A710000
+poke 020FA614 5A7100EC u32 0x024438D4
+stable 5A7000B4 4
+stable 5A7100EC 4
+# the tongue's hit object (dCcD_GObjInf::GetTgHitObj after a ChkTgHit, read without a null test) at 0x5A800000
+ret! 02516300 0x5A800000
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 02008974 02008DAC 02008E0C 0200E240 0200ED84 0200EDC8 0200F164 0200F428 0200FAD8 0200FC74 0200FCD8 0200FCF0 0200FD38 020182E0 020184DC 02018C8C 02018D40 020195B0 02019918 0201AD78 0201ADE0 020FF80C 02101F30 024435FC 024F43DC 024F8044 02514EE4 025162A4 02516300 02518CC8 025192A8 025200D4 02520540 0255FDA4 025A5AC8 025A5F88 025A847C 025D54C4 025D5834 025D58B4 025DE508 025E18EC 025E19CC 025E1A40 025E1AA4 025E535C 025E55A0 025E742C 025E789C 025E7CE0 025E8154 025E8508 025EBA58 025F1884 025F1BF4 025F1C28 025F1C5C 025F24E0 025F2518 026066C4 0274D458 027F2BC0 027F4D5C 028E8DD0 028E90D4 028F4384

@@ -1,0 +1,24 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_grass.txt
+# ---- true60 N-step spec (grass part, 2026-11-17): the grass on a general step length
+# (d_grass_t60.h). calc 0254C6C4: the wind slots at the step's time (the tick30 step: the original), the hit checks on
+# the tick30 step only (hitCheck is a mock here: called once, no writes); the earlier steps move the pushed blades'
+# slots at dt (hitCheck's no-hit recovery, no decisions); the tick30 step puts them back to the frame's start and runs
+# the original calc at dt 1: every slot ends the frame byte exact (no t60tol line).
+t60conv 0254C6C4
+# two blades (the unit's fixture: data 54000000 -> 55000000): culled or not, a wind slot or an own slot (8, 20)
+field 0254C6C4 0x54000001 u8 0,2
+field 0254C6C4 0x54000002 s8 -1,0,7,8,20
+field 0254C6C4 0x55000001 u8 0,2
+field 0254C6C4 0x55000002 s8 8,20
+# slot 8 and slot 20: state, heading (its wind slot in the top 3 bits), X angle
+field 0254C6C4 0x510190CC u8 0,1,2
+field 0254C6C4 0x510190CE s16 0,0x2000,0x4100,-0x8000,0x7FFF
+field 0254C6C4 0x510190D0 s16 -4000,-3000,0,50,99,4000
+field 0254C6C4 0x5101936C u8 1,2
+field 0254C6C4 0x5101936E s16 0,0x2010,0x6000
+field 0254C6C4 0x51019370 s16 -2000,0,1,2500
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200F378 0200F8D0
+t60cand 0200F378 0200F8D0

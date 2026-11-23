@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit): (2026-11-17, rule 1): setTextureAnime 023DD768's counted-deferred
+# per-call draws (dVar9 and the glance chance are noted on the first step and made by Link's tick30 execute flush, so the
+# N-step net effect leaves them out; the rest of the effect - the texture heaps, the frames, the blink bytes - must equal)
+# (2026-11-20): since s77e2 (kKeyV) the eye-move event of a converted first-step call is also held to the
+# tick30 flush; note_event leaves the timer byte 101CEF19 at 1 until the flush makes the scroll animation and its timer.
+# The harness never runs Link's execute flush, so such inputs end the N-step run with the placeholder ("byte 101CEF19 one
+# step 00, 2 steps 01"): N2 6787 -> 6621 of 10000 (seed 1) is that class only (-v n 300 seed 1, s77q2 vs s77e2: the only
+# new failures are 8 such seeds). The event itself is proven in game (rt77e
+# frames 121 / 208). Gate unchanged: count, not pass.
+include d_a_player_main_01.txt
+t60conv 023DD768

@@ -9,6 +9,7 @@
  * cking.rpx. The HD packet retains its cape simulation while using GX2 resources.
  */
 #include "d/actor/d_a_mant.h"
+#include "d/actor/d_a_mant_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 #include "gc_api/tu.h"
 // HD: Native adapters for the GX2 packet and exact full-register math results.
 f32 mantGroundCross(dBgS*, dBgS_GndChk*);
@@ -396,6 +397,9 @@ static inline void mant_ground_finish(dBgS_GndChk* ground) {
 
 /* 021BC3C4 */
 static BOOL daMant_Execute(mant_class* self) {
+    mant_t60::Guard<mant_class> t60g(self); /* true60: mant_t60::end on every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only */
+        return TRUE;
     u32 p = gabi::ea(self);
     dComIfG_inf_c* play = nullptr;
     if (!((f32)self->scale.y > 0.01f))
@@ -664,6 +668,7 @@ static BOOL daMant_Execute(mant_class* self) {
         }
     }
     mantDCStoreRange(gabi::ea(&self->mPacket.mPos[0]), 0x3CC);
+    t60g.model = true; /* true60: the frame reached its vertex step */
     bool deleting = false;
     s16 burn = (s16)self->mBurnTimer;
     if (burn) {

@@ -1,5 +1,6 @@
 // Great Fairy actor, ported with the verified HD behaviour.
 #include "d/actor/d_a_bigelf.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 const gc_tu_data gc_tu = {.safeString = 0x1000912C};
 static constexpr u32 l_actorVtable = 0x10009144;
@@ -1491,6 +1492,9 @@ BOOL daBigelf_c::_draw() {
 
 /* 020953C4 */
 BOOL daBigelf_c::_execute() {
+    t60w::Guard<daBigelf_c> t60g(this, t60npc::Logic<daBigelf_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return 1;
 
     bigelf_dNpc_JntCtrl_setParam(&this->mJntCtrl, 0, 0, 0, 0, 4000, 9000, -2000, -4000, 0x1000);
     u16 flags = this->mStateBits;
@@ -1521,6 +1525,7 @@ BOOL daBigelf_c::_execute() {
     s8 room = this->current.roomNo;
     this->shape_angle.y = yaw;
     this->tevStr.mRoomNo = room;
+    t60g.model = true; /* true60: the frame reached its model step */
     u32 model = gabi::ea(bigelf_view<mDoExt_McaMorf>(morf)->mpModel.get());
     bigelf_translateMatrix(&l_mtxStack, x, y, z);
     bigelf_rotateY(&l_mtxStack, (s32)(s16)this->current.angle.y);

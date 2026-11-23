@@ -1,0 +1,17 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_player_main_04.txt
+# ---- true60 N-step spec: daPy_lk_c::setNormalSpeedF on a general step length: the per-frame acceleration adds
+# dt of itself per step (mNormalSpeed, clamped at the stick's maximum speed). The deceleration path goes through
+# cLib_addCalc (central; a mock here: the same no-op answer on each step and on the one step). Inputs steered
+# to the acceleration path: acceleration 0.1..5, a normal speed below the maximum speed.
+t60conv 02416230
+arg 02416230 f1 0.1 5
+field 02416230 r3+0x6A14 f32 0 20
+field 02416230 r3+0x3C4 f32 10 30
+field 02416230 r3+0x6A08 f32 0 1
+field 02416230 r3+0x3CC f32 -1 1
+t60tol 02416230 r3+0x6A14 f32 absrel 0.0001 0.00001
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200ECD4 0200EF78 0200F378 0200F428 0200F564 0200F5C8 0200F8D0
+t60cand 0200ECD4 0200EF78 0200F378 0200F428 0200F564 0200F5C8 0200F8D0

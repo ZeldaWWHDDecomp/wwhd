@@ -1,6 +1,7 @@
 /* WWHD: SDK animation-buffer joint calculation; GameCube morph flow.
  * HD: callback order, guest scratch aliasing, word copies and PPC arithmetic are retained. */
 #include "m_Do/m_Do_ext_morf2_calc.h"
+#include "m_Do/m_Do_ext_morf_t60.h"
 using namespace mDoExtCalc;
 using namespace gabi;
 /* 025E5C2C */
@@ -86,6 +87,15 @@ void mDoExt_McaMorf_calcJoints(void *self, void *model) {
   Local<u8[96]> workspace;
   // HD: GHS scratch offsets include the caller linkage area.
   u32 frame = ea(workspace.get()) - 8;
+  /* true60: blend from the frame-start pose with the frame's cumulative ratio
+   * (m_Do_ext_morf_t60.h); dt = 1: nullptr, the original code */
+  MorfT60Snap *t60Snap = morf_t60_snap(
+      o, count, static_cast<u32>(view<Morf>(o)->mpQuat), static_cast<u32>(view<Morf>(o)->mpTransformInfo),
+      static_cast<f32>(view<Morf>(o)->mCurMorf), static_cast<f32>(view<Morf>(o)->mPrevMorf), one);
+  /* true60: the draw's calc blends with the frame's prev, as A's (m_Do_ext_morf_t60.h morf_t60_draw_snap) */
+  const MorfT60Snap *t60Draw = t60Snap ? nullptr : morf_t60_draw_snap(
+      o, count, static_cast<u32>(view<Morf>(o)->mpQuat), static_cast<u32>(view<Morf>(o)->mpTransformInfo),
+      static_cast<f32>(view<Morf>(o)->mCurMorf), static_cast<f32>(view<Morf>(o)->mPrevMorf), one);
   for (u32 i = 0; i < count; i++, record += 0x38) {
     u32 transforms = static_cast<u32>(view<Morf>(o)->mpTransformInfo),
         quats = static_cast<u32>(view<Morf>(o)->mpQuat),
@@ -153,7 +163,9 @@ void mDoExt_McaMorf_calcJoints(void *self, void *model) {
                     ->mExecute),
             view<void>(before), i & 0xFFFF, view<void>(temp));
       if (blend) {
-        f32 previous = static_cast<f32>(view<Morf>(o)->mPrevMorf),
+        if (t60Snap)
+          morf_t60_restore(t60Snap, i, quat, info);
+        f32 previous = t60Snap ? t60Snap->prev : t60Draw ? t60Draw->prev : static_cast<f32>(view<Morf>(o)->mPrevMorf),
             current = static_cast<f32>(view<Morf>(o)->mCurMorf),
             ratio = fsubs_ppc(current, previous) / fsubs_ppc(one, previous),
             oldRatio = fsubs_ppc(one, ratio);

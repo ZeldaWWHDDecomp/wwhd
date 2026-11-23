@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_floor.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 const gc_tu_data gc_tu = {
     .safeString = 0x1000F174,
@@ -19,6 +20,8 @@ inline u32 getSwitchNo(daFloor_c* ac) { return fopAcM_GetParam(ac) & 0xFF; }
 /* 0213FD18 */
 // HD: rideCallBack (unnamed by the matcher)
 static void rideCallBack(dBgW* bgw, fopAc_ac_c* ac, fopAc_ac_c* other) {
+    if (t60objw::cbSkip()) /* true60: a callback on each of the rider's steps: only the tick30 step's call counts */
+        return;
     daFloor_c* i_this = (daFloor_c*)ac;
     if (other != nullptr && fopAcM_GetName(other) == fpcNm_PLAYER_e && !((daPy_floor_view*)other)->checkEquipHeavyBoots()) {
         i_this->mPlayerStanding = 1;
@@ -83,6 +86,9 @@ void daFloor_c::set_mtx() {
 
 /* 0214000C */
 BOOL daFloor_c::Execute(Mtx34** mtx) {
+    t60w::Guard<daFloor_c> t60g(this, t60objw::Logic<daFloor_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     if (mBreakTimer != 0) {
         u8 t = mBreakTimer - 1;
         mBreakTimer = t;
@@ -96,9 +102,20 @@ BOOL daFloor_c::Execute(Mtx34** mtx) {
     fopAc_ac_c* pl = dComIfGp_getPlayer(0);
     // HD: one cached player pointer supplies both positions.
     cXyz difference;
-    difference = pl->current.pos - pl->old.pos;
+    /* true60 (the process-order read rule): Link's step as A's frame reads it. Later in the line (not executed on this step): his
+     * frame-start position minus his old.pos as A has it (the previous frame's start). Earlier in the line (executed on
+     * this step): his live position minus this frame's start position (A's old.pos then). Else (N = 1, no record) the
+     * live read */
+    gabi::Local<cXyz> fsCur, fsPrev;
+    if (t60objw::fsPos(gabi::ea(pl), fsCur.get()) && t60objw::fsOld(gabi::ea(pl), fsPrev.get()))
+        difference = *fsCur.get() - *fsPrev.get();
+    else if (t60objw::fsOldEarlier(gabi::ea(pl), fsPrev.get()))
+        difference = pl->current.pos - *fsPrev.get();
+    else
+        difference = pl->current.pos - pl->old.pos;
     if (difference.absXZ() != 0.0f)
         mPlayerStanding = 0;
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 

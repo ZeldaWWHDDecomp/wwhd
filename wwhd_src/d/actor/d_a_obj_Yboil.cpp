@@ -1,5 +1,6 @@
 /* Volcano boiling lava: private port of the actual HD translation unit. */
 #include "d/actor/d_a_obj_Yboil.h"
+#include "d/actor/d_a_obj_Yboil_t60.h" /* true60: step helpers */
 using namespace yboil_layout;
 const gc_tu_data gc_tu = {.safeString=0x10033924,.headerStatics={0x1046CA50,0x101CDF7C,0x1046CA5C}};
 static const char M_arcname[]="Yboil";
@@ -193,14 +194,19 @@ static u32 PrmAbstract(daObjYboil_c* self,u32 width,u32 shift) {
 BOOL daObjYboil_c::_execute() {
 
  for(u32 i=0;i<50;i++) {
-  if(this->mMdlTimer[i]==0) {
+  /* true60: each bubble keeps the branch its timer chose at the frame's start: a bubble that started
+   * the frame waiting counts once (first step) and plays nothing this frame; a playing bubble plays on every step until
+   * its animation ends and is reset, and does nothing on the frame's later steps */
+  const u32 frameTimer=(u32)t60c::heldInt((s32)(u32)this->mMdlTimer[i],1,&this->mMdlTimer[i]);
+  if(frameTimer==0) {
+   if(this->mMdlTimer[i]!=0) continue; /* (reset on an earlier step of this frame) */
    this->mBckAnm[i].play();this->mBtkAnm[i].play();this->mBrkAnm[i].play();
    if(this->mBckAnm[i].mFrameCtrl.checkState(J3DFrameCtrl::STATE_STOP_E) || this->mBckAnm[i].mFrameCtrl.mRate==0.0f) {
     this->mBckAnm[i].mFrameCtrl.mFrame=0;this->mBtkAnm[i].mFrameCtrl.mFrame=0;this->mBrkAnm[i].mFrameCtrl.mFrame=0;
     this->mBckAnm[i].mFrameCtrl.mRate=1;this->mBtkAnm[i].mFrameCtrl.mRate=1;this->mBrkAnm[i].mFrameCtrl.mRate=1;
     this->mMdlTimer[i]=(u32)gabi::ftoi(cM_rndF(3.9999001026153564f))+1;
    }
-  } else {
+  } else if (t60c::first()) {
    u32 sw=PrmAbstract(this,PRM_SWSAVE_W,PRM_SWSAVE_S);
    if (!dComIfGs_isSwitch(sw,this->home.roomNo)) {
     u32 timer=(u32)this->mMdlTimer[i]-1;

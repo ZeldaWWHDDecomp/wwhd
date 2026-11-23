@@ -9,6 +9,7 @@
  */
 #define SAFESTRING_VTBL 0x1001C250 // HD: this translation unit's sead::SafeString vtable.
 #include "d/actor/d_a_npc_kk1_b.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 static constexpr u32 kk1PlayerEventFlag = 0x08000000;
 
@@ -747,6 +748,9 @@ BOOL daNpc_Kk1_c::_draw() {
 
 /* 0226E99C */
 BOOL daNpc_Kk1_c::_execute() {
+    t60w::Guard<daNpc_Kk1_c> t60g(this, t60npc::Logic<daNpc_Kk1_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     Kk1EventState& state = kk1Event(this);
     if (state.mHomeInitialized == 0) {
         copyPositionWords(&state.mHomePos, &current.pos);
@@ -790,6 +794,7 @@ BOOL daNpc_Kk1_c::_execute() {
     void* gnd = static_cast<cBgS_PolyInfo*>(&mObjAcch.m_gnd);
     tevStr.mRoomNo = dBgS_GetRoomId(dComIfG_Bgsp(), gnd);
     tevStr.mEnvrIdxOverride = dBgS_GetPolyColor(dComIfG_Bgsp(), gnd);
+    t60g.model = true; /* true60: the frame reached its model step */
     setMtx(false);
     if (state.mInDemo == 0 && state.mHideBody == 0) {
         if ((s8)state.mAnmNum == 1) {

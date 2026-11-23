@@ -1,0 +1,65 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_sail.txt
+# ---- true60 N-step spec (2026-11-16): the pirate ship's sail (d_a_sail_t60.h) on a general step
+# length. Callees are mocks (cLib_addCalc, cLib_addCalcAngleS2, cM_ssin, MtxPosition, cM_atan2s: the same answer on
+# every step and on the one step), so the N steps see the per-frame amounts of the function itself.
+t60conv 0245FFC8 02460678
+# the RNG (cM_rndF): a varying answer (0..200, the game's range). setCorrectNrmAngle draws on the tick30 step only and
+# holds the draw for the frame's other steps (the per-step chance rule), so the earlier steps move at the previous input's draw (the
+# hold's in-game form: the previous frame's); the tick30 step takes the rest of the frame's amount at the new draw
+# (sail60_wobbleAdd, the first-step AI-timer rule), so mNrmWobblePhase / mNrmAngle end the frame exact whatever the held value. (Here
+# the input's dt-1 check run just before leaves this input's own draw in the hold, so the steps' held value equals the tick30
+# draw and the earlier carry form passed too (control run): the in-game case, a held value from the
+# previous frame, is exact by construction (the tick30 step adds the frame's amount less what the steps gave).)
+fret! 020198D8 0 200
+# setCorrectNrmAngle: mNrmWobblePhase += rnd + 900 a frame, dt shares with the tick30 step's rest (sail60_wobbleAdd;
+# the harness advances the step counter per step): the N steps add exactly the frame's amount; mNrmAngle is 300 sin(phase) +
+# mNrmCorrectAngle from the frame's end values (mNrmCorrectAngle: c_lib's integer cLib_addCalcAngleS2, its own N-step spec
+# in _t60/c_lib.txt, a mock here): exact, no t60tol line.
+# sail_move:
+# - the wind vector (dKyw_get_wind_vec 0257DAA8): a fixed vector, steered (unsteered, the original's first load is a
+#   page-0 DSI on most inputs: no N-step spec evidence)
+ret! 0257DAA8 0x5E000000
+field 02460678 5E000000 f32 -1 1
+field 02460678 5E000004 f32 -1 1
+field 02460678 5E000008 f32 -1 1
+stable 5E000000 0xC
+# - mWavePhase += ftoi(tmp x k) a frame: latched at the frame's first step, dt of tmp x k a step from there, the tick30
+#   step on the original form from the frame start (sail60_wavePhase): exact over a frame of constant amount (no
+#   t60tol line), so the flutter vertices (mPos, a pure function of the phase, the steps and mFurl) are exact too.
+# - the furl branch (furl / furled / unfurl / neither) and mFurlSpeed's per-frame change (0.015 start or -0.001 toward
+#   the furled 0.6, +0.0075 toward 0, else 0): once per frame on its first step from the frame-start state, held for the
+#   frame's other steps (sail60_furlFrame; 2026-11-20: the earlier x dt per step form ramped the speed
+#   inside the frame, so the furl's maxStep per step was off the frame's by (N - 1) / (2N) x the change, and re-decided
+#   the branch on a mid-frame mFurl): exact, no t60tol line. The furl's cLib_addCalc runs c_lib's dt form at the frame's
+#   speed on the earlier steps and the original ease from the frame-start mFurl on the tick30 step (sail60_furlFull),
+#   so mFurl, mFurlFactor, the wave phase and the vertices end every frame exact; checked with c_lib linked as
+#   t60cand (the eases' dt form; the c_lib-real check): sail_move 2000/2000 at seeds 1 and 7.
+#   mFurl's start values in the game's domain [0, 1] (the frame end clamps it there; d_a_sail.txt picks -0.1..1.1 for
+#   the clamp's dt-1 check paths, which would let a dt step of an out-of-range start cross the clamp mid-frame)
+field 02460678 r3+0x3284 f32 0 1
+# - the furl overrides (a demo actor's animation frame, l_HIO mFixFurl) write mFurl AFTER the furl-speed update, so on
+#   the N steps the later steps see the overridden mFurl where the one step saw the old one (trace seed 1000005: mFurl
+#   -0.1 -> furl speed 0, the override sets 8.7e-10 -> the second step takes the unfurl branch, +0.00375): a writer
+#   later in the frame read one step earlier (the steps' order, not a conversion term). mFurlSpeed's one reader is the
+#   cLib_addCalc on mFurl, which the override replaces while it holds; the override statements are the original's
+#   (dt-1 check). N-step spec pins both off (the later line wins over d_a_sail.txt's pick lists): no demo actor, mFixFurl 0.
+field 02460678 r3+0x2DC u8 0
+field 02460678 1046D790 u8 0
+# - mSailPacket.mCurArr (packet +0x2EBE = sail +0x327A, 0 / 1 in the game): unsteered, the vertex loop writes mPos[cur]
+#   past both arrays over mWavePhase and the furl fields (trace seed 1000540: st32 +0x3280 from the loop), which the
+#   next step then reads: a fixture artifact, steered to the game's domain
+field 02460678 r3+0x327A u8 0 1
+# - mFurlSpeed's reset: on the furl path a speed that is no longer > 0 restarts at 0.015. A frame whose decrement
+#   takes the speed from (0, 0.001] to <= 0 resets on the original's NEXT frame, on the N steps at the next STEP (trace
+#   seed 1000822: 0.00032 -> one step -0.00068, two steps -0.00018 then 0.015): the reset up to (1 - dt) of a frame
+#   earlier (a discrete event on the step grid, |d| up to 0.015 + 0.001 on that frame only, then the same sequence a
+#   step ahead). N-step spec keeps the start values off that one-frame crossing (picks <= 0 reset on the first step in both;
+#   >= 0.0011 never reach 0 within the frame).
+field 02460678 r3+0x3288 f32 -0.02,-0.0075,-0.001,0,0,0.0011,0.002,0.0075,0.01,0.015,0.02
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200ECD4 0200F428
+t60cand 0200ECD4 0200F428
+# - mFurlSpeed's reset (a speed no longer > 0 restarts at 0.015 on the furl path) is decided once per frame from the
+#   frame-start speed like the rest of the update (sail60_furlFrame): the full d_a_sail.txt range -0.02..0.02.

@@ -3,6 +3,7 @@
 #include "bindings.h"
 #include "d/d_item.h"
 #include "gc_api/d/d_com_inf_game.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 BOOL knobCheckArea(daKnob00_c*, f32, f32, f32);
 s32 knobDayNight();
 void knobCutEnd(dEvent_manager_c*, s32);
@@ -778,6 +779,9 @@ static BOOL daKnob00_Draw(daKnob00_c* a) { return a->draw(); }
 
 /* 021A5008 */
 BOOL daKnob00_c::execute() {
+    t60w::Guard<daKnob00_c> t60g(this, t60objw::Logic<daKnob00_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     if ((u8)mHidden && drawCheckShip()) {
         mHidden = 0;
         KnobGameInfo* p = knobGameInfo();
@@ -835,6 +839,7 @@ BOOL daKnob00_c::execute() {
         if (bg && (u32)bg->m_id < 0x100)
             bg->Move();
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 

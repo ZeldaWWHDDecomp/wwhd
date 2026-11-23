@@ -1,6 +1,7 @@
 /** Fan actor, verified against the original WWHD functions.
  * GameCube names and layout views; native call/store order retained. */
 #include "d/actor/d_a_fan.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 const gc_tu_data gc_tu = {.safeString = 0x1000E904};
 static FanArcTable m_arcname;
 static FanShortTable m_bdlidx;
@@ -203,6 +204,12 @@ void daFan_c::set_cps(f32 h) {
 
 /* 0213284C */
 BOOL daFan_c::Execute(Mtx34 **mtxP) {
+    t60w::Guard<daFan_c> t60g(this, t60objw::Logic<daFan_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) { /* true60: a step before the tick30 step: the picture only (frame interpolation); the background stays: the
+                      * wrapper gets the actor's own mBgMtx, as the frame's end hands it */
+        *reinterpret_cast<gptr<Mtx34> *>(mtxP) = &mBgMtx; // HD: the output matrix pointer occupies one guest word.
+        return TRUE;
+    }
     s16 speed = m_fan_speed.entries[u8(mType)];
     f32 len = (f32)(s16)mFanSpeed / (f32)speed;
 
@@ -248,6 +255,7 @@ BOOL daFan_c::Execute(Mtx34 **mtxP) {
     set_mtx();
     // HD: the output matrix pointer occupies one guest word.
     *reinterpret_cast<gptr<Mtx34> *>(mtxP) = &mBgMtx;
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 

@@ -1,0 +1,28 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_player_main_04.txt
+# ---- 2026-11-16:
+# setAuraEffect 0240B7F4: the Tingle shield timer mTinkleShieldTimer (r3+0x699E) counts on the frame's
+# step (the 30 Hz timer rule); the hand-stepped aura frames (the two brk frames, the six aura entries) step dt (the animation-rate rule).
+# setLightSaver 0240C32C: the parry glow's cooldown m355C (r3+0x69AC) counts on the frame's step (the 30 Hz timer rule).
+# Timers exact; the hand-stepped frames: dt shares of 1 (float rounding).
+t60conv 0240B7F4 0240C32C 0240AB88
+# setWaterRipple 0240AB88: the waterfall ripple + rumble timer mWaterfallRippleTimer counts on the frame's
+# step, its spawn too (the 30 Hz timer rule: exact); the swim bulge's stretch reads the head's movement since the last update / dt
+# (the per-step movement rule; the harness keeps Link still between the steps, so only the first step sees a movement: not compared
+# through this spec, the bulge model's scale is a draw value)
+# the bulge model (mpSuimenMunyaModel r3+0x5378) pinned at 0x6C000000; its stretch mBaseScale.z (+0xC4) not compared
+field 0240AB88 r3+0x5378 u32 0x6C000000,0x6C000000
+t60tol 0240AB88 6C0000C4 f32 skip
+# setLightSaver past its early return: the sword's brk / btk / models pinned (brk anm +0x4908, frame value +0x4918;
+# sword btk anm +0x48EC, frame value +0x4894; mpSwordModel1 +0x4978; mpEquipItemModel +0x4440), the cooldown 0..30
+field 0240C32C r3+0x4908 u32 0x6D000000,0x6D000000
+field 0240C32C r3+0x4918 u32 0x6D100000,0x6D100000
+field 0240C32C r3+0x48EC u32 0x6D200000,0x6D200000
+field 0240C32C r3+0x4894 u32 0x6D300000,0x6D300000
+field 0240C32C r3+0x4978 u32 0x6D400000,0x6D400000
+field 0240C32C r3+0x4440 u32 0x6D500000,0x6D500000
+field 0240C32C r3+0x69AC i16 0,1,2,5,0x1E
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200ECD4 0200EF78 0200F378 0200F428 0200F564 0200F5C8 0200F8D0
+t60cand 0200ECD4 0200EF78 0200F378 0200F428 0200F564 0200F5C8 0200F8D0

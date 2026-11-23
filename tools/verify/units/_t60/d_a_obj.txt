@@ -1,0 +1,12 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj.txt
+# ---- true60 N-step spec (2026-11-18): daObj::posMoveF_grade / posMoveF_stream, the exact frame
+# move (d_a_obj_t60.h). The frame's first step runs the original speed update whole (resistance, grade, gravity, speedF,
+# angle.y) and latches the frame-start position, the frame's speed and the push; the in-between steps hold the speed and
+# carry the position (start + (speed + push) x span); the tick30 step puts the frame-start position back and calls
+# fopAcM_posMove 025D6800 at dt 1 (a mock here, as in the one step): speed / speedF / angle.y / position exact.
+t60conv 023121C4 023123C0
+# posMoveF_stream 023123C0 is posMoveF_grade without a ground normal: its nested posMoveF_grade runs the candidate
+# (real + t60cand), so its N-step spec checks the same exact frame move (negative control fails there too)
+real 023121C4
+t60cand 023121C4

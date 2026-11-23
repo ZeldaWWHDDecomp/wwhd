@@ -1,6 +1,7 @@
 /** Sliding puzzle actor, restored to zeldaret/tww names and HD layouts.
  * Verified against the original WWHD unit. */
 #include "d/actor/d_a_obj_apzl.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 const gc_tu_data gc_tu = {.safeString = 0x10024AFC};
 static ApzlMessagePointer apzlMessage;
@@ -711,6 +712,9 @@ BOOL daObjApzl_c::_draw() {
 
 /* 02318640 */
 BOOL daObjApzl_c::_execute() {
+    t60w::Guard<daObjApzl_c> t60g(this, t60objw::Logic<daObjApzl_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     if (!(u8)mType) {
         switch ((u8)mState) {
         case STATE_IDLE: {
@@ -811,6 +815,7 @@ BOOL daObjApzl_c::_execute() {
         }
         check_arrow_draw();
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     return TRUE;
 }

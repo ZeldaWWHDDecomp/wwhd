@@ -1,5 +1,6 @@
 /** Salvage lights and crane rewards, WWHD. */
 #include "d/actor/d_a_salvage.h"
+#include "d/t60_draw.h"
 
 const gc_tu_data gc_tu = {.safeString = 0x100398DC, .headerStatics = {0x1046D7E4, 0x101CFEB0, 0}};
 static const char* m_arcname;
@@ -721,7 +722,8 @@ static void debug_print2() {
 /* 02466D30 */
 BOOL daSalvage_c::_draw() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    calcAlpha();
+    if (t60_draw_frame_pass()) /* true60 (t60_draw.h): the fades and the show delay (mShowDelay) step once per 30 Hz frame */
+        calcAlpha();
     int count = 0;
     for (s32 i = 0; i < 160; i++) {
         if (!registry()->checkRegist(i) || !registry()->checkUsed(i) || !isEffectKind(i) ||

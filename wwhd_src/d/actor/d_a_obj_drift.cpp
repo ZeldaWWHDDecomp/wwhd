@@ -1,6 +1,7 @@
 /* WWHD Drift. Ported from zeldaret/tww with audited HD layout/behavior.
  */
 #include "d/actor/d_a_obj_drift.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using daObjDrift::Act_c;
 static cXyz sFlowerOffset;
 static u32 sFlowerOffsetInitialized;
@@ -326,6 +327,8 @@ void destruct(Act_c* actor, s32 flags) {
 }
 /* 02338758 */
 void rideCB(dBgW* bg, Act_c* actor, fopAc_ac_c* rider) {
+    if (t60objw::cbSkip()) /* true60: a rider's sink / tilt counts once a frame, on the tick30 step */
+        return;
 
     if (!rider || (s16)rider->mProfName != cc_uty::fpcNm_PLAYER_e)
         return;
@@ -457,9 +460,14 @@ void daObjDrift::Act_c::set_current() {
 }
 /* 02338DFC */
 BOOL daObjDrift::Act_c::Execute(gptr<Mtx34>* matrix) {
-
+    t60w::Guard<Act_c> t60g(this, t60objw::Logic<Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) { /* true60: a step before the tick30 step: the picture only (frame interpolation), the background stays (mMtx) */
+        *matrix = &mMtx;
+        return TRUE;
+    }
     (this->*sModeProc.mModes[(u32)mMode])();
     set_current();
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     *matrix = &mMtx;
     set_flower_current();

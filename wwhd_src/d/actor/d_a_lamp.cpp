@@ -8,6 +8,7 @@
  */
 #define SAFESTRING_VTBL 0x10013CD4
 #include "d/actor/d_a_lamp.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 static dCcD_SrcSph sph_src;
 
@@ -23,6 +24,9 @@ static BOOL daLamp_Draw(lamp_class* i_this) {
 
 /* 021B15F8 */
 static BOOL daLamp_Execute(lamp_class* i_this) {
+    t60w::Guard<lamp_class> t60g(i_this, t60objw::Logic<lamp_class>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     i_this->mCycleCtr += 1;
     MtxTrans(i_this->current.pos.x, i_this->current.pos.y, i_this->current.pos.z, 0);
     mDoMtx_YrotM(calc_mtx(), i_this->current.angle.y);
@@ -44,6 +48,7 @@ static BOOL daLamp_Execute(lamp_class* i_this) {
     f32 adjDist = cM_scos(i_this->mCycleCtr * 0x2bc) * i_this->mLength;
     MtxRotZ(adjDist, 1);
     MtxScale(0.4f, 0.4f, 0.4f, 1);
+    t60g.model = true; /* true60: the frame reached its model step */
     J3DModel_setBaseTRMtx(i_this->mModel, calc_mtx());
     MtxTrans(10.0f, -140.0f, -15.0f, 1);
 

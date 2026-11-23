@@ -10,6 +10,7 @@
  * (demo_camera) and d_a_bmd_exec.cpp (daBmd_Execute with core_move, mk_move, eff_cont, ...).
  */
 #include "d/actor/d_a_bmd.h"
+#include "d/actor/d_a_bmd_t60.h" /* true60: the draw's light state on the tick30 draw, the ride callback once per frame */
 
 const gc_tu_data gc_tu = {
     .safeString = SAFESTRING_VTBL,
@@ -55,7 +56,8 @@ static BOOL daBmd_Draw(bmd_class* i_this) {
             mDoGph_getState()->mBlureFlag = 0;
         }
     }
-    settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &actor->current.pos, &actor->tevStr);
+    if (bmd_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+        settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &actor->current.pos, &actor->tevStr);
     J3DModel* model = i_this->mpBodyMorf->getModel();
     dScnKy_env_light_c* env = dKy_getEnvlight();
     setLightTevColorType(env, model, &actor->tevStr);
@@ -174,6 +176,9 @@ void mk_voice_set(bmd_class* i_this, u32 param_2) {
  * (mBgOffTimer = 20) */
 static void ride_call_back(dBgW* bgw, fopAc_ac_c* i_ac, fopAc_ac_c* i_pt) {
     bmd_class* i_this = (bmd_class*)i_ac;
+    if (bmd_t60::cbSkip()) /* true60: a rider counts once a frame, on the tick30 step */
+        return;
+    const f32 t60Prev = t60_set_dt(1.0f); /* true60: the counted call at dt 1, as plain calls (no scope object under the glue): A's once-a-frame eases (cLib) take the whole frame, not the rider's 1/N (kita cbBegin; half-ease audit, 2026-11-21) */
     if (i_this->mFlowerState == 3 && !dScnPly_isPause()) {
         cLib_addCalc2(&i_pt->current.pos.x, i_ac->current.pos.x, 1.0f, REG0_F(2) + 400.0f);
         cLib_addCalc2(&i_pt->current.pos.y, i_ac->current.pos.y, 1.0f, REG0_F(2) + 400.0f);
@@ -186,6 +191,7 @@ static void ride_call_back(dBgW* bgw, fopAc_ac_c* i_ac, fopAc_ac_c* i_pt) {
     if (i_this->mFlowerState == 0 && i_pt != nullptr && fpcM_GetName(i_pt) == 0xA8 /* fpcNm_PLAYER_e */) {
         i_this->mBgOffTimer = 20;
     }
+    t60_set_dt(t60Prev);
 }
 
 /* 020B1104 */

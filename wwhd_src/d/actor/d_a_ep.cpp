@@ -11,6 +11,7 @@
  * "sea" stage outside a few areas, the light-info block copied to two HD-only slots.
  */
 #include "d/actor/d_a_ep.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 const gc_tu_data gc_tu = {.safeString = SAFESTRING_VTBL};
 
@@ -486,6 +487,9 @@ static void ep_move(ep_class* i_this) {
 
 /* 0212DBFC */
 static BOOL daEp_Execute(ep_class* i_this) {
+    t60w::Guard<ep_class> t60g(i_this, t60objw::Logic<ep_class>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     fopAc_ac_c* a_this = i_this;
     i_this->mbNoEp = 0;
     i_this->mbShouldDrawModel = 0;
@@ -573,6 +577,7 @@ static BOOL daEp_Execute(ep_class* i_this) {
             }
         }
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 

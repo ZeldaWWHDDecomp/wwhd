@@ -3,6 +3,7 @@
  * Verified HD behavior; GameCube names follow zeldaret/tww.
  */
 #include "d/actor/d_a_bo.h"
+#include "d/actor/d_a_bo_t60.h" /* true60: the whole form */
 
 static BOOL nodeCallBack_UP(J3DNode *node, s32 stage);
 static BOOL daBO_Execute(bo_class *actor);
@@ -1894,6 +1895,12 @@ static void bo5_move(bo_class *actor) {
 
 /* 020BCEC8 */
 static BOOL daBO_Execute(bo_class *actor) {
+    /* true60: the whole frame on the tick30 step (end at every return); daBO_Create's own call runs at dt 1
+     * (bo_t60::createBegin / createEnd), where the Guard does nothing and the original runs */
+    t60w::Guard<bo_class> t60g(actor, bo_t60::ops());
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return 1;
+    t60g.model = true;
     if (actor->mType == 0 && boInvoke(boEnemyIce, &actor->mEnemyIce)) {
         if ((s8)actor->mEnemyIce.mLightShrinkTimer) {
             u32 morph = gabi::ea(actor->mpUpperMorph.get());
@@ -2145,7 +2152,11 @@ static s32 daBO_Create(bo_class *actor) {
         boMethod(&mDoExt_McaMorf::play, upper, nullptr, 0, 0);
         draw_SUB(actor);
     }
-    daBO_Execute(actor);
+    {
+        const f32 t60PrevDt = bo_t60::createBegin(); /* true60: create's run of the execute, the original at dt 1 */
+        daBO_Execute(actor);
+        bo_t60::createEnd(t60PrevDt);
+    }
     return phase;
 }
 

@@ -6,6 +6,7 @@
  * (tools/verify, d_a_obj_Vteng).
  */
 #include "d/actor/d_a_obj_Vteng.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 // HD: this TU's inline SafeString vtable and common header statics.
 const gc_tu_data gc_tu = {
@@ -109,10 +110,14 @@ bool daObjVteng_c::_delete() {
 
 /* 023B5C84 */
 bool daObjVteng_c::_execute() {
+    t60w::Guard<daObjVteng_c> t60g(this, t60objw::Logic<daObjVteng_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
     if (mpBgW && mpBgW->ChkUsed())
         mpBgW->Move();
     if (!jokai_demo())
         mpMorf->play(nullptr, 0, 0);
+    t60g.model = true; /* true60: the frame reached its model step (the morf frame) */
     return true;
 }
 

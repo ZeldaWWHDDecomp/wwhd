@@ -1,5 +1,6 @@
 /* Contrast environment tag and event door model. Private WWHD reconstruction. */
 #include "d/actor/d_a_kytag03.h"
+#include "d/actor/d_a_kytag03_t60.h" /* true60: the shared-world-state rule (the frame logic on the tick30 step) */
 const gc_tu_data gc_tu = { .safeString = 0x10013B04 };
 enum { dRes_INDEX_M_DOOR_BDL_MYAMIF_e = 3, dEvtFlag_STAFF_ALL_e = 2 };
 static s8 l_stayNo;
@@ -59,7 +60,8 @@ static inline void contrast_off(kytag03_class* i_this) {
 /* 021AFE8C */
 static BOOL daKytag03_Execute(kytag03_class* i_this) {
     fopAc_ac_c* actor = i_this;
-    if (dComIfGp_event_runCheck() == FALSE || !kytag03_chkEventFlag(dEvtFlag_STAFF_ALL_e)) {
+    if (!t60c::end()) { /* true60 (the shared-world-state rule): the switch / event / player reads and the contrast writes on the tick30 step; the model's animation on every step */
+    } else if (dComIfGp_event_runCheck() == FALSE || !kytag03_chkEventFlag(dEvtFlag_STAFF_ALL_e)) {
         if (actor->tevStr.mRoomNo == kytag03_getStayNo()) {
             i_this->mbRoomActive = true;
             if (i_this->mSwitchNo != 0xFF && dComIfGs_isSwitch(i_this->mSwitchNo, kytag03_getStayNo())) {

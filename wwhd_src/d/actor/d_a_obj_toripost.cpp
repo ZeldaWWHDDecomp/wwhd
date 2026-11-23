@@ -1,5 +1,6 @@
 /* Rito postbox, readable WWHD actor source. */
 #include "d/actor/d_a_obj_toripost.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 const gc_tu_data gc_tu = {
     .safeString = 0x10031248,
     .safeStringAssure = 0x023A5CC8,
@@ -401,6 +402,9 @@ void daObjTpost_c::eventOrder() {
 
 /* 023A4A60 */
 BOOL daObjTpost_c::_execute() {
+    t60w::Guard<daObjTpost_c> t60g(this, t60objw::Logic<daObjTpost_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return false;
 
     s32 readable = dComIfGs_isSymbol(1);
     if (readable)
@@ -427,6 +431,7 @@ BOOL daObjTpost_c::_execute() {
     mMorf->play(nullptr, 0, 0);
     mMorf->calc();
     setAnm(5, false);
+    t60g.model = true; /* true60: the frame reached its model step */
     return false;
 }
 

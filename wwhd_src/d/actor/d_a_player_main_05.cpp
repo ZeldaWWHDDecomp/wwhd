@@ -11,6 +11,12 @@
  * Functions use named native bindings and private HD views.
  */
 #include "d/actor/d_a_player_main_05.h"
+#include "d/actor/d_a_player_anm_t60.h"
+#include "true60.h"
+#include "d/actor/d_a_player_t60.h"
+#include "d/actor/d_a_player_swimrise_t60.h"
+#include "d/actor/d_a_player_crawl_t60.h"
+#include <cstdlib>
 
 namespace link05 {
 static u16 l_curseType;
@@ -29,6 +35,56 @@ namespace link05 {
 using Link05DemoMessagePointer = gptr<Link05DemoMessageManager>;
 static Link05DemoMessagePointer l_demoMessageManager;
 static f32 l_bootsEquipFrame;
+}
+
+/* true60: a step that advances once-per-30-Hz-frame work (every step at dt 1, the tick30 step in converted code) */
+static inline bool lk05FrameStep() { return t60::dt() == 1.0f || t60::tick30(); }
+/* true60 host state: procAutoJump's wall / body contact seen on a step of the current frame;
+ * dProcTalismanWait's step counter at the frame's first step */
+static bool s_lk05AutoJumpTouch;
+static uint32_t s_lk05AjSpeedFirst = 0xFFFFFFFFu; /* true60: procAutoJump's frame-first step (speed chase) */
+static u32 s_lk05FrameFirstStep;
+/* true60 (the 60 Hz counter rule): how far step k of the current 30 Hz frame lies before the frame's end, in frames
+ * (1 - (k + 1) x dt; 0 on the tick30 step): for visual phases read from the 30 Hz g_Counter */
+static inline f32 lk05CounterLag() {
+    if (t60::first_step()) {
+        s_lk05FrameFirstStep = t60_step_counter();
+    }
+    f32 k = (f32)(t60_step_counter() - s_lk05FrameFirstStep);
+    return 1.0f - (k + 1.0f) * (f32)t60::dt();
+}
+
+/* true60 (2026-11-22, route 191): procAutoJump's apex test (speed.y <
+ * -gravity: the fall animation ANM_JMPEDS, mProcVar6 = 2) reads speed.y, which the posMove gravity lowers per step by
+ * dt x gravity. A tests it once a frame with the frame-start speed.y; per step, B's later step read the half-step value
+ * and crossed the threshold half a frame early (B 191 step 2, A 192: anim 2.499 tslack). Form: the test decides on the
+ * frame's first step (frame-start speed.y = A's); the later steps keep the frame's animation. Negative control
+ * WWHD_T60_AJAPEX_NEGCTRL=1 (game build: the per-step test). dt 1: the original. */
+static inline bool lk05AjApexDecides() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_AJAPEX_NEGCTRL"); return e && e[0] == '1'; }();
+#else
+    const bool nc = false;
+#endif
+    return t60::dt() == 1.0f || nc || t60::first_step();
+}
+
+/* true60 (M2g, pot potP4 @263): the apex frame's root mode. A's apex frame sets
+ * ANM_JMPEDS and mRootMoveMode 2 after the per-frame mRootMoveMode = 1, so its one calc keeps the root translation in x /
+ * z (jointBeforeCB holds it only in mode 1): the hands, and the carried pot placed at them (setGrabItemPos), sit 1.968
+ * forward for that frame (potP4 263; Link's own position exact: posMove's mode 2 moves nothing). B took the apex on the
+ * first step (lk05AjApexDecides) and the frame's later steps set mode 1 again, so the frame-end calc held the root: the
+ * pot 1.968 back against A at 263 (only the first step's calc had it). Form: the later steps of the apex frame keep
+ * mode 2 (A's mode for the frame's calc) up to and including the tick30 step; the next frame's first step is mode 1 as
+ * in A. NC WWHD_T60_AJROOT_NEGCTRL=1 (game build: mode 1 on the later steps). dt 1: the original. */
+static bool s_lk05AjApexHold;
+static inline bool lk05AjRootNegctrl() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_AJROOT_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return false;
+#endif
 }
 
 /* 02419FEC */
@@ -177,7 +233,7 @@ BOOL daPy_lk_c::procSideStep() {
 /* 0241A718 */
 BOOL daPy_lk_c::procSideStepLand() {
     lk05ResetFootEffect(this);
-    if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         lk05CheckNextMode(this, 0);
     } else if (mFrameCtrlUnder[0].getFrame() > 1.5f) {
         lk05CheckNextMode(this, 1);
@@ -196,7 +252,7 @@ BOOL daPy_lk_c::procCrouchDefense() {
         }
     }
     // HD: HIO folded
-    lk05AddCalc(&mNormalSpeed, 0.0f, 0.6f, 2.5f, 1.8f);
+    LKT60_CHASE_S(0, &mNormalSpeed, &mCurProc, lk05AddCalc(&mNormalSpeed, 0.0f, 0.6f, 2.5f, 1.8f)); /* true60: frame-exact */
     u32 att = mpAttention;
     if (lk05CheckAttentionLock(att) || !(mItemButton & 0x40)) {
         mDirection = link05::DIR_RIGHT;
@@ -240,7 +296,9 @@ BOOL daPy_lk_c::procNockBackEnd_init() {
 /* 0241AB6C */
 BOOL daPy_lk_c::procCrouchDefenseSlip() {
     dComIfGp_setRStatus(link05::dActStts_DEFEND_e);
-    if (mProcVar0 > 0) {
+    /* true60 (the 30 Hz timer rule; the first-step AI-timer rule for Link): the slide's minimum length counts 30 Hz frames: on the
+     * frame's FIRST step (count before the end test, as in the original: no hold) */
+    if (mProcVar0 > 0 && lkT60_countStep()) {
         mProcVar0 = mProcVar0 - 1;
     }
     if (mEquipItem == link05::dItemNo_SKULL_HAMMER_e) {
@@ -248,7 +306,7 @@ BOOL daPy_lk_c::procCrouchDefenseSlip() {
     } else {
         lk05CopyFloatBits(&m35E8, &mFrameCtrlUnder[0].mFrame);
     }
-    f64 r = lk05AddCalc(&mNormalSpeed, 0.0f, m35A0, m35A4, m35A8);
+    f64 r = LKT60_CHASE(3, &mNormalSpeed, 0.0f, &mCurProc, lk05AddCalc(&mNormalSpeed, 0.0f, m35A0, m35A4, m35A8)); /* true60: frame-exact */
     if (!(r > 0.001f)) {
         if (mProcVar6 != 0) {
             return procNockBackEnd_init();
@@ -273,7 +331,7 @@ BOOL daPy_lk_c::procCrouch() {
         }
     }
     // HD: HIO folded
-    lk05AddCalc(&mNormalSpeed, 0.0f, 0.6f, 2.5f, 1.8f);
+    LKT60_CHASE_S(1, &mNormalSpeed, &mCurProc, lk05AddCalc(&mNormalSpeed, 0.0f, 0.6f, 2.5f, 1.8f)); /* true60: frame-exact */
     if (!(mItemButton & 0x40)) {
         lk05CheckNextMode(this, 0);
         return TRUE;
@@ -323,7 +381,7 @@ BOOL daPy_lk_c::procCrouch() {
 /* 0241AF64 */
 BOOL daPy_lk_c::procWaitTurn() {
     // HD: HIO folded
-    lk05AddCalc(&mNormalSpeed, 0.0f, 0.6f, 2.5f, 1.8f);
+    LKT60_CHASE_S(2, &mNormalSpeed, &mCurProc, lk05AddCalc(&mNormalSpeed, 0.0f, 0.6f, 2.5f, 1.8f)); /* true60: frame-exact */
     if (lk05ChangeSlideProc(this)) {
         return TRUE;
     }
@@ -357,7 +415,7 @@ BOOL daPy_lk_c::procMoveTurn() {
 /* 0241B0C0 */
 BOOL daPy_lk_c::procSlip() {
     // HD: HIO folded
-    f64 r = lk05AddCalc(&mNormalSpeed, 0.0f, 0.6f, 1.25f, 0.1875f);
+    f64 r = LKT60_CHASE(5, &mNormalSpeed, 0.0f, &mCurProc, lk05AddCalc(&mNormalSpeed, 0.0f, 0.6f, 1.25f, 0.1875f)); /* true60: frame-exact */
     if (!(r > 0.001f)) {
         if (mStickDistance > 0.05f) {
             s16 a = shape_angle.y;
@@ -463,13 +521,19 @@ BOOL daPy_lk_c::procSlideFront() {
     // HD: HIO folded
     f32 k = 3.0f  * gabi::fmadds(0.5f, 1.0f - ny, 1.0f);
     f32 c = cM_scos((s16)(cur - ang));
+    /* true60 (the per-step movement rule): the slope's push per update: x dt */
+    if (t60::dt() != 1.0f) {
+        k = k * (f32)t60::dt();
+    }
     f32 spd = gabi::fmadds(k, c, mNormalSpeed);
     f32 max = mMaxNormalSpeed;
     mNormalSpeed = spd;
     if (spd > max) {
         mNormalSpeed = max;
     }
-    seStartMapInfo(link05::JA_SE_LK_SLIP_SUS);
+    /* true60 (check item, the one-emitter-per-event rule): sustained start on every update of the slide: on the frame's step */
+    if (lk05FrameStep())
+        seStartMapInfo(link05::JA_SE_LK_SLIP_SUS);
     return TRUE;
 }
 
@@ -497,20 +561,26 @@ BOOL daPy_lk_c::procSlideBack() {
     // HD: HIO folded
     f32 k = 3.0f  * gabi::fmadds(0.5f, 1.0f - ny, 1.0f);
     f32 c = cM_scos((s16)(cur - ang));
+    /* true60 (the per-step movement rule): the slope's push per update: x dt */
+    if (t60::dt() != 1.0f) {
+        k = k * (f32)t60::dt();
+    }
     f32 spd = gabi::fmadds(k, c, mNormalSpeed);
     f32 max = mMaxNormalSpeed;
     mNormalSpeed = spd;
     if (spd > max) {
         mNormalSpeed = max;
     }
-    seStartMapInfo(link05::JA_SE_LK_SLIP_SUS);
+    /* true60 (check item, the one-emitter-per-event rule): sustained start on every update of the slide: on the frame's step */
+    if (lk05FrameStep())
+        seStartMapInfo(link05::JA_SE_LK_SLIP_SUS);
     return TRUE;
 }
 
 /* 0241B774 */
 BOOL daPy_lk_c::procSlideFrontLand() {
-    lk05AddCalc(&mNormalSpeed, 0.0f, 0.5f, 5.0f, 1.0f);
-    if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+    LKT60_CHASE_S(6, &mNormalSpeed, &mCurProc, lk05AddCalc(&mNormalSpeed, 0.0f, 0.5f, 5.0f, 1.0f)); /* true60: frame-exact */
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         current.angle.y = shape_angle.y;
         lk05CheckNextMode(this, 0);
     // HD: HIO folded
@@ -527,8 +597,8 @@ BOOL daPy_lk_c::procSlideFrontLand() {
 
 /* 0241B83C */
 BOOL daPy_lk_c::procSlideBackLand() {
-    lk05AddCalc(&mNormalSpeed, 0.0f, 0.5f, 5.0f, 1.0f);
-    if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+    LKT60_CHASE_S(7, &mNormalSpeed, &mCurProc, lk05AddCalc(&mNormalSpeed, 0.0f, 0.5f, 5.0f, 1.0f)); /* true60: frame-exact */
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         current.angle.y = shape_angle.y;
         lk05CheckNextMode(this, 0);
     // HD: HIO folded
@@ -589,9 +659,9 @@ BOOL daPy_lk_c::procFrontRoll() {
         lk05EndFlameDamageEmitter(this);
     }
     if (lk05GetSlidePolygon(this) != 0) {
-        lk05AddCalc(&mNormalSpeed, 0.0f, 0.5f, 2.5f, 0.1f);
+        LKT60_CHASE_S(8, &mNormalSpeed, &mCurProc, lk05AddCalc(&mNormalSpeed, 0.0f, 0.5f, 2.5f, 0.1f)); /* true60: frame-exact */
     }
-    if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         if (!(mStickDistance > 0.05f)) {
             // HD: HIO folded
             mNormalSpeed = mNormalSpeed - 5.0f;
@@ -623,7 +693,7 @@ BOOL daPy_lk_c::procFrontRoll() {
 /* 0241BC90 */
 BOOL daPy_lk_c::procFrontRollCrash() {
     if (!(mModeFlg & link05::ModeFlg_MIDAIR)) {
-        if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+        if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
             lk05CheckNextMode(this, 0);
         } else if (mFrameCtrlUnder[0].getFrame() > 20.0f) {
             lk05CheckNextMode(this, 1);
@@ -640,7 +710,7 @@ BOOL daPy_lk_c::procFrontRollCrash() {
 
 /* 0241BD70 */
 BOOL daPy_lk_c::procNockBackEnd() {
-    if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         lk05CheckNextMode(this, 0);
     } else if (mFrameCtrlUnder[0].getFrame() > 16.0f) {
         lk05CheckNextMode(this, 1);
@@ -665,13 +735,13 @@ BOOL daPy_lk_c::procSideRoll_init() {
 /* 0241BE78 */
 BOOL daPy_lk_c::procSideRoll() {
     J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
-    if (frameCtrl.getRate() < 0.01f) {
+    if (lkT60_endRate(&frameCtrl) < 0.01f) {
         current.angle.y = shape_angle.y;
         if (!(mStickDistance > 0.05f)) {
             mNormalSpeed = 0.0f;
         }
         lk05CheckNextMode(this, 0);
-    } else if (frameCtrl.checkPass(10.0f)) {
+    } else if (lkT60_pass(&frameCtrl, 10.0f)) {
         lk05EndFlameDamageEmitter(this);
     // HD: HIO folded
     } else if (frameCtrl.getFrame() > 19.0f ) {
@@ -715,7 +785,7 @@ BOOL daPy_lk_c::procBackJumpLand_init() {
 
 /* 0241C094 */
 BOOL daPy_lk_c::procBackJump() {
-    if (mAcch.ChkGroundHit() && mFrameCtrlUnder[0].getRate() < 0.01f) {
+    if (mAcch.ChkGroundHit() && lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         procBackJumpLand_init();
     } else {
         if (checkFanGlideProc(0)) {
@@ -733,7 +803,7 @@ BOOL daPy_lk_c::procBackJump() {
 /* 0241C140 */
 BOOL daPy_lk_c::procBackJumpLand() {
     lk05ResetFootEffect(this);
-    if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         if (dComIfGp_event_runCheck()) {
             dComIfGp_evmng_cutEnd(mStaffIdx);
         } else {
@@ -1170,6 +1240,25 @@ void daPy_lk_c::setFallVoice() {
 
 /* 0241D79C */
 BOOL daPy_lk_c::procAutoJump() {
+    /* true60 (pot route: in the auto jump the speed ramps 14.625 -> 17 by 0.4 a frame and B's position
+     * fell behind while it ramped: 0.89 at N 2, 1.35 at N 4 = (1 - 1/N) / 2 x dv a frame): A changes mNormalSpeed
+     * once at the frame's start and moves the whole frame at the new speed; per step each step moved at a part-ramped
+     * speed. Form: the speed chase once a frame on the first step at dt 1 (A's value), held for the frame's later steps
+     * (each moves its dt share at the frame's speed). A body first run on a later step: the per-step chase.
+     * LK05_AJSPEED_NEGCTRL = the per-step chase. dt 1: the original. */
+#if !defined(LK05_AJSPEED_NEGCTRL)
+    bool ajChase = true;
+    float ajDt0 = 1.0f;
+    if (t60::dt() != 1.0f) {
+        if (t60::first_step()) {
+            s_lk05AjSpeedFirst = t60_step_counter();
+            ajDt0 = t60_set_dt(1.0f);
+        } else if (s_lk05AjSpeedFirst != 0xFFFFFFFFu && t60_step_counter() - s_lk05AjSpeedFirst < (uint32_t)t60::steps()) {
+            ajChase = false;
+        }
+    }
+    if (ajChase) {
+#endif
     if (mProcVar0 == 0) {
         f32 stick = mStickDistance;
         if (stick > 0.05f) {
@@ -1185,6 +1274,11 @@ BOOL daPy_lk_c::procAutoJump() {
     } else {
         cLib_chaseF(&mNormalSpeed, 17.0f, 0.4f);
     }
+#if !defined(LK05_AJSPEED_NEGCTRL)
+    }
+    if (t60::dt() == 1.0f && ajDt0 != 1.0f)
+        t60_set_dt(ajDt0); /* the first step's whole-frame chase ends: its dt back */
+#endif
     checkNextActionItemFly();
     if (lk05CheckJumpFlower(this) || checkJumpRideShip()) {
         return TRUE;
@@ -1202,12 +1296,40 @@ BOOL daPy_lk_c::procAutoJump() {
         return TRUE;
     }
     mRootMoveMode = 1;
+    if (t60::dt() != 1.0f) { /* true60 (M2g): the apex frame's later steps keep A's mode 2 */
+        if (t60::first_step())
+            s_lk05AjApexHold = false;
+        else if (s_lk05AjApexHold && !lk05AjRootNegctrl())
+            mRootMoveMode = 2;
+        if (t60::tick30())
+            s_lk05AjApexHold = false;
+    }
     s16 pv0 = mProcVar0;
-    if (pv0 > 0) {
-        mProcVar0 = (s16)(pv0 - 1);
+    if (lkT60_countBranch(mCurProc, 0, pv0)) {
+        /* true60 (the 30 Hz timer rule; the first-step AI-timer rule for Link): the carried glide (Medli, 100 frames) counts 30 Hz
+         * frames on the frame's FIRST step, the glide branch held over the frame after the count's 0 (the release
+         * on the next frame's first step, as in the original's next update); its wall-contact budget counts on the
+         * frame's tick30 step: a wall hit (per step) or a body push (an unconverted party's: read on the frame's
+         * first step only) on any step of the frame counts that frame once */
+        if (pv0 > 0 && lkT60_countStep()) {
+            mProcVar0 = (s16)(pv0 - 1);
+            lkT60_counted(mCurProc, 0, mProcVar0);
+        }
         dComIfGp_setDoStatus(link05::dActStts_LET_GO_e);
-        if ((mAcch.m_flags & 0x10) || mCyl.ChkCoHit()) {
-            mProcVar1 = mProcVar1 - 1;
+        if (t60::dt() == 1.0f) {
+            if ((mAcch.m_flags & 0x10) || mCyl.ChkCoHit()) {
+                mProcVar1 = mProcVar1 - 1;
+            }
+        } else {
+            if (t60::first_step()) {
+                s_lk05AutoJumpTouch = false;
+            }
+            if ((mAcch.m_flags & 0x10) || mCyl.ChkCoHit()) {
+                s_lk05AutoJumpTouch = true;
+            }
+            if (t60::tick30() && s_lk05AutoJumpTouch) {
+                mProcVar1 = mProcVar1 - 1;
+            }
         }
         if ((mItemTrigger & 1)) {
             fopAc_ac_c* grab = mActorKeepGrab.mActor;
@@ -1227,7 +1349,8 @@ BOOL daPy_lk_c::procAutoJump() {
         }
         f32 sy = speed.y;
         if (sy > 0.0f) {
-            f32 n = sy - 0.5f;
+            /* true60 (the per-step movement rule): the rise's deceleration per update: x dt */
+            f32 n = sy - (t60::dt() == 1.0f ? 0.5f : 0.5f * (f32)t60::dt());
             if (n > 0.0f) {
                 speed.y = n;
             } else {
@@ -1237,7 +1360,7 @@ BOOL daPy_lk_c::procAutoJump() {
         setFallVoice();
         return TRUE;
     }
-    if (speed.y < -gravity && mProcVar6 != 2) {
+    if (speed.y < -gravity && mProcVar6 != 2 && lk05AjApexDecides() /* true60 */) {
         fopAc_ac_c* grab = mActorKeepGrab.mActor;
         if (grab != 0 && grab->mProcName.get() == link05::fpcNm_NPC_MD_e && dComIfGs_isEventBit(link05::UNK_1620)) {
             gravity = 0.0f;
@@ -1246,6 +1369,7 @@ BOOL daPy_lk_c::procAutoJump() {
         }
         lk05SetSingleMoveAnime(this, link05::ANM_JMPEDS, 0.0f, 0.0f, -1, 20.0f);
         mRootMoveMode = 2;
+        s_lk05AjApexHold = t60::dt() != 1.0f && !t60::tick30(); /* true60 (M2g): held over the frame's later steps */
         mProcVar6 = 2;
         mModeFlg = mModeFlg & ~(u32)link05::ModeFlg_00000400;
         lk05SetTextureAnime(this, 0x37, 0);
@@ -1260,7 +1384,7 @@ BOOL daPy_lk_c::procAutoJump() {
 /* 0241DB84 */
 BOOL daPy_lk_c::procLand() {
     lk05ResetFootEffect(this);
-    if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         if (mDemo.getDemoMode() == 0x40 /* daPy_demo_c::DEMO_SFALL_e */) {
             dComIfGp_evmng_cutEnd(mStaffIdx);
         } else {
@@ -1287,8 +1411,13 @@ BOOL daPy_lk_c::procLandDamage() {
         }
     } else if (rate < 0.01f) {
         s16 pv0 = mProcVar0;
-        if (pv0 > 0) {
-            mProcVar0 = (s16)(pv0 - 1);
+        if (lkT60_countBranch(mCurProc, 1, pv0)) {
+            /* true60 (the 30 Hz timer rule; the first-step AI-timer rule for Link): the lie-down wait counts 30 Hz frames on the
+             * frame's FIRST step, the wait branch held over the frame after the count's 0 */
+            if (pv0 > 0 && lkT60_countStep()) {
+                mProcVar0 = (s16)(pv0 - 1);
+                lkT60_counted(mCurProc, 1, mProcVar0);
+            }
         } else {
             f32 r = (mModeFlg & link05::ModeFlg_DAMAGE) ? 0.3f : 1.2f;
             lk05SetSingleMoveAnime(this, link05::ANM_LANDDAMAST, r, 1.0f, 9, 5.0f);
@@ -1305,7 +1434,7 @@ BOOL daPy_lk_c::procFall() {
         mProcVar6 = 1;
     }
     if (mProcVar3 != 0) {
-        lk05AddCalc(&mNormalSpeed, 0.0f, 0.2f, 1.0f, 0.1f);
+        LKT60_CHASE_S(9, &mNormalSpeed, &mCurProc, lk05AddCalc(&mNormalSpeed, 0.0f, 0.2f, 1.0f, 0.1f)); /* true60: frame-exact */
     }
     checkNextActionItemFly();
     if (lk05CheckJumpFlower(this) || (mProcVar7 != 0 && checkJumpRideShip())) {
@@ -1321,7 +1450,9 @@ BOOL daPy_lk_c::procFall() {
         s16 pv0 = mProcVar0;
         if (pv0 == 1) {
             s16 pv1 = mProcVar1;
-            if (pv1 > 0) {
+            /* true60 (the 30 Hz timer rule; the first-step AI-timer rule for Link): the wall-grab delay counts 30 Hz frames: on the
+             * frame's FIRST step (count before the grab test: no hold) */
+            if (pv1 > 0 && lkT60_countStep()) {
                 pv1 = (s16)(pv1 - 1);
                 mProcVar1 = pv1;
             }
@@ -1372,7 +1503,7 @@ BOOL daPy_lk_c::procSmallJump() {
 BOOL daPy_lk_c::procVerticalJump() {
     cLib_addCalcAngleS(&shape_angle.y, mProcVar2, 2, 0x1000, 0x400);
     current.angle.y = shape_angle.y;
-    if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         s16 a = mProcVar2;
         current.angle.y = a;
         shape_angle.y = a;
@@ -1391,10 +1522,15 @@ BOOL daPy_lk_c::procVerticalJump() {
 
 /* 0241E0D4 */
 BOOL daPy_lk_c::procGuardCrash() {
-    lk05AddCalc(&mNormalSpeed, 0.0f, 0.5f, 1.25f, 0.25f);
+    LKT60_CHASE_S(10, &mNormalSpeed, &mCurProc, lk05AddCalc(&mNormalSpeed, 0.0f, 0.5f, 1.25f, 0.25f)); /* true60: frame-exact */
     s16 pv0 = mProcVar0;
-    if (pv0 > 0) {
-        mProcVar0 = (s16)(pv0 - 1);
+    if (lkT60_countBranch(mCurProc, 2, pv0)) {
+        /* true60 (the 30 Hz timer rule; the first-step AI-timer rule for Link): the guard-break stun counts 30 Hz frames on the
+         * frame's FIRST step, the stun branch held over the frame after the count's 0 */
+        if (pv0 > 0 && lkT60_countStep()) {
+            mProcVar0 = (s16)(pv0 - 1);
+            lkT60_counted(mCurProc, 2, mProcVar0);
+        }
     } else {
         lk05CheckNextMode(this, 0);
     }
@@ -1435,8 +1571,8 @@ BOOL daPy_lk_c::procDamage() {
     mBodyAngle.z = bz;
     mBodyAngle.y = 0;
     // HD: HIO folded
-    f64 r = lk05AddCalc(&mNormalSpeed, 0.0f, 0.5f, 1.2f, 0.25f);
-    if (!(r > 0.001f) && mFrameCtrlUnder[0].getRate() < 0.01f) {
+    f64 r = LKT60_CHASE(11, &mNormalSpeed, 0.0f, &mCurProc, lk05AddCalc(&mNormalSpeed, 0.0f, 0.5f, 1.2f, 0.25f)); /* true60: frame-exact */
+    if (!(r > 0.001f) && lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         lk05CheckNextMode(this, 0);
     } else if (mNormalSpeed < 12.0f) {
         lk05ResetFootEffect(this);
@@ -1525,12 +1661,21 @@ BOOL daPy_lk_c::procLargeDamageWall_init(int param_1, int param_2, s16 param_3, 
 
 /* 0241E7D4 */
 BOOL daPy_lk_c::procLargeDamage() {
+    if (lkT60Ld_skip(this)) /* true60 (d_a_player_crawl_t60.h): in the air, the body once a frame on tick30 */
+        return TRUE;
+    lkT60Ld_open();
     s16 pv0 = mProcVar0;
     if (pv0 > 0) {
+        /* true60 (the 30 Hz timer rule; the first-step AI-timer rule for Link): the hit stop before the launch counts 30 Hz frames:
+         * on the frame's FIRST step (the launch on the step that ends it, as in the frame that ends it; the launched
+         * motion then runs on every step of that frame) */
+        if (!lkT60_countStep()) {
+            return lkT60Crawl_close(TRUE);
+        }
         pv0 = (s16)(pv0 - 1);
         mProcVar0 = pv0;
         if (pv0 != 0) {
-            return TRUE;
+            return lkT60Crawl_close(TRUE);
         }
         // HD: HIO folded
         mNormalSpeed = 25.0f;
@@ -1547,13 +1692,13 @@ BOOL daPy_lk_c::procLargeDamage() {
     pv3 = mProcVar3;
     if (!(pv3 & 1)) {
         mProcVar3 = (s16)(pv3 | 1);
-        return TRUE;
+        return lkT60Crawl_close(TRUE);
     }
     u32 acchFlags = mAcch.m_flags;
     if (acchFlags & 0x20 /* ChkGroundHit() */) {
         if (lk05ChangeSlideProc(this)) {
             mNormalSpeed = 0.0f;
-            return TRUE;
+            return lkT60Crawl_close(TRUE);
         }
         pv3 = mProcVar3;
         if (pv3 & 2) {
@@ -1566,7 +1711,7 @@ BOOL daPy_lk_c::procLargeDamage() {
         s32 anm = mProcVar6;
         s16 a4 = m34F4;
         lk05ProcLargeDamageUp_init(this, anm, (s32)((pv3 >> 3) & 1), (s32)a2, (s32)a4);
-        return TRUE;
+        return lkT60Crawl_close(TRUE);
     }
     if ((acchFlags & 0x10 /* ChkWallHit() */) && mNormalSpeed > m35A0) {
         for (int i = 0; i < 3; i++) {
@@ -1595,11 +1740,11 @@ BOOL daPy_lk_c::procLargeDamage() {
                 s16 a2 = m34F2;
                 s32 anm = mProcVar6;
                 s16 a4 = m34F4;
-                return procLargeDamageWall_init(anm, (p3 >> 3) & 1, a2, a4);
+                return lkT60Crawl_close(procLargeDamageWall_init(anm, (p3 >> 3) & 1, a2, a4));
             }
         }
     }
-    return TRUE;
+    return lkT60Crawl_close(TRUE);
 }
 
 /* 0241EA50 */
@@ -1609,8 +1754,13 @@ BOOL daPy_lk_c::procLargeDamageUp() {
     if (mProcVar0 > 0) {
         s16 pv0;
         if (!lk05EventStartCheckOld(dComIfGp_getPEvtManager(), "ICE_FAILED" /* "ICE_FAILED" */)) {
-            pv0 = (s16)(mProcVar0 - 1);
-            mProcVar0 = pv0;
+            /* true60 (the 30 Hz timer rule; the first-step AI-timer rule for Link): the lie-down wait counts 30 Hz frames: on the
+             * frame's FIRST step (count before the get-up test: no hold) */
+            pv0 = mProcVar0;
+            if (lkT60_countStep()) {
+                pv0 = (s16)(pv0 - 1);
+                mProcVar0 = pv0;
+            }
         } else {
             dComIfGp_evmng_cutEnd(mStaffIdx);
             pv0 = mProcVar0;
@@ -1618,13 +1768,13 @@ BOOL daPy_lk_c::procLargeDamageUp() {
         if (pv0 == 0 || (mProcVar6 == -4 && lk05PadStickValue(0) > 0.05f)) {
             mFrameCtrlUnder[0].setRate(0.5f);
         }
-    } else if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+    } else if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         if (dComIfGp_event_runCheck()) {
             dComIfGp_evmng_cutEnd(mStaffIdx);
         } else {
             lk05CheckNextMode(this, 0);
         }
-    } else if (mFrameCtrlUnder[0].getFrame() > m35A0) {
+    } else if (lkT60_endFrame(&mFrameCtrlUnder[0]) > m35A0 /* true60: frame end */) {
         lk05CheckNextMode(this, 1);
     }
     return TRUE;
@@ -1632,7 +1782,7 @@ BOOL daPy_lk_c::procLargeDamageUp() {
 
 /* 0241EBB4 */
 BOOL daPy_lk_c::procLargeDamageWall() {
-    if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         lk05ProcLargeDamage_init(this, (s32)mProcVar6, (s32)mProcVar0, (s32)m34F2, (s32)m34F4);
     }
     return TRUE;
@@ -1661,8 +1811,13 @@ BOOL daPy_lk_c::procLavaDamage() {
 BOOL daPy_lk_c::procElecDamage() {
     lk05SetShipRidePosUseItem(this);
     s16 pv0 = mProcVar0;
-    if (pv0 > 0) {
-        mProcVar0 = (s16)(pv0 - 1);
+    if (lkT60_countBranch(mCurProc, 3, pv0)) {
+        /* true60 (the 30 Hz timer rule; the first-step AI-timer rule for Link): the shock's length counts 30 Hz frames on the
+         * frame's FIRST step, the shock branch held over the frame after the count's 0 */
+        if (pv0 > 0 && lkT60_countStep()) {
+            mProcVar0 = (s16)(pv0 - 1);
+            lkT60_counted(mCurProc, 3, mProcVar0);
+        }
     } else {
         dComIfGp_event_reset();
         lk05EndDemoMode(this);
@@ -1685,7 +1840,9 @@ BOOL daPy_lk_c::procElecDamage() {
 /* 0241EDB8 */
 BOOL daPy_lk_c::procGuardSlip() {
     s16 pv0 = mProcVar0;
-    if (pv0 > 0) {
+    /* true60 (the 30 Hz timer rule; the first-step AI-timer rule for Link): the slide's minimum length counts 30 Hz frames: on the
+     * frame's FIRST step (count before the end test, as in the original: no hold) */
+    if (pv0 > 0 && lkT60_countStep()) {
         mProcVar0 = (s16)(pv0 - 1);
     }
     lk05SetShapeAngleToAtnActor(this);
@@ -1694,7 +1851,7 @@ BOOL daPy_lk_c::procGuardSlip() {
     } else {
         lk05CopyFloatBits(&m35E8, &mFrameCtrlUnder[0].mFrame);
     }
-    f64 r = lk05AddCalc(&mNormalSpeed, 0.0f, m35A0, m35A4, m35A8);
+    f64 r = LKT60_CHASE(4, &mNormalSpeed, 0.0f, &mCurProc, lk05AddCalc(&mNormalSpeed, 0.0f, m35A0, m35A4, m35A8)); /* true60: frame-exact */
     if (!(r > 0.001f)) {
         if (mProcVar6 != 0) {
             return procNockBackEnd_init();
@@ -1773,6 +1930,9 @@ BOOL daPy_lk_c::procIceSlipFall() {
 inline void lk05DemoTalismanPosition(daPy_lk_c *self) {
   PSMTXCopy(lk05DemoAnmMatrix(self->mpCLModel, 12), mDoMtx_stack_c::get());
   u16 angle = (u16)(link05::g_Counter.mTimer * 0x5E8);
+  if (t60::dt() != 1.0f) { /* true60 (the 60 Hz counter rule): the charm's bob at the step's phase (see the spin) */
+    angle = (u16)((s32)(link05::g_Counter.mTimer * 0x5E8) - (s32)(lk05CounterLag() * (f32)0x5E8));
+  }
   mDoMtx_stack_c::transM(7.0f, 0.0f, gabi::fmadds(3.0f, cM_ssin(angle), 15.0f));
   lk05CopyFloatBits(&lk05DemoFollow(self)->mPos.x,
                     &link05::l_matrixStack.m[0][3]);
@@ -1786,9 +1946,9 @@ inline void lk05DemoTalismanPosition(daPy_lk_c *self) {
 BOOL daPy_lk_c::procIceSlipFallUp() {
   m35E4 = (m35A0 - mFrameCtrlUnder[0].getFrame()) * m35A4;
   lk05ResetFootEffect(this);
-  if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+  if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
     lk05CheckNextMode(this, 0);
-  } else if (mFrameCtrlUnder[0].getFrame() > m35A0) {
+  } else if (lkT60_endFrame(&mFrameCtrlUnder[0]) > m35A0 /* true60: frame end */) {
     lk05CheckNextMode(this, 1);
   }
   return TRUE;
@@ -1796,7 +1956,7 @@ BOOL daPy_lk_c::procIceSlipFallUp() {
 
 /* 0241F2D4 */
 BOOL daPy_lk_c::procIceSlipAlmostFall() {
-  if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+  if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
     current.angle.y = shape_angle.y;
     lk05CheckNextMode(this, 0);
   } else if (mFrameCtrlUnder[0].getFrame() > 6.0f /* HD: HIO folded */) {
@@ -1854,7 +2014,7 @@ void daPy_lk_c::initGrabNextMode() {
 BOOL daPy_lk_c::procBootsEquip() {
   J3DFrameCtrl &frameCtrl = mFrameCtrlUnder[0];
   /* HD: the pass frame is a global (0x1047C04C) + 14 */
-  if (frameCtrl.checkPass(link05::l_bootsEquipFrame + 14.0f)) {
+  if (lkT60_pass(&frameCtrl, link05::l_bootsEquipFrame + 14.0f)) {
     u32 flg = mNoResetFlg0;
     if (flg & 0x2000000 /* daPyFlg0_EQUIP_HEAVY_BOOTS */) {
       mNoResetFlg0 = flg & ~0x2000000u;
@@ -1862,7 +2022,7 @@ BOOL daPy_lk_c::procBootsEquip() {
       mNoResetFlg0 = flg | 0x2000000;
     }
   }
-  if (frameCtrl.getRate() < 0.01f) {
+  if (lkT60_endRate(&frameCtrl) < 0.01f) {
     u16 anm = lk05DemoUpperHeap(this, 2)->mIdx;
     if (anm == 0x95 || anm == 0x96) {
       initGrabNextMode();
@@ -1878,7 +2038,7 @@ BOOL daPy_lk_c::procBootsEquip() {
     } else {
       lk05CheckNextMode(this, 1);
     }
-  } else if (frameCtrl.checkPass(15.0f) && (mNoResetFlg0 & 0x2000000)) {
+  } else if (lkT60_pass(&frameCtrl, 15.0f) && (mNoResetFlg0 & 0x2000000)) {
     gabi::Local<cXyz> v;
     v->x = 0.0f;
     v->y = 1.0f;
@@ -1901,7 +2061,7 @@ BOOL daPy_lk_c::procNotUse() {
       mProcVar2 = 1;
     }
   }
-  if (!(mFrameCtrlUnder[0].getRate() < 0.01f)) {
+  if (!(lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f)) {
     return TRUE;
   }
   fopAc_ac_c *item = lk05DemoGetItemPartner(this);
@@ -2051,7 +2211,7 @@ BOOL daPy_lk_c::dProcDamage() {
   /* cM_fsin(x) = cM_ssin(cM_rad2s(x)) */
   s16 a = lk05DemoRad2s(m35A0 * mFrameCtrlUnder[0].getFrame());
   mNormalSpeed = -2.0f * cM_ssin(a);
-  if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+  if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
     dComIfGp_evmng_cutEnd(mStaffIdx);
   }
   return TRUE;
@@ -2080,7 +2240,7 @@ BOOL daPy_lk_c::dProcHoldup_init() {
 
 /* 024213E4 */
 BOOL daPy_lk_c::dProcHoldup() {
-  if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+  if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
     dComIfGp_evmng_cutEnd(mStaffIdx);
   }
   return TRUE;
@@ -2133,7 +2293,7 @@ BOOL daPy_lk_c::dProcOpenTreasure_init() {
 
 /* 02421678 */
 BOOL daPy_lk_c::dProcOpenTreasure() {
-  if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+  if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
     dComIfGp_evmng_cutEnd(mStaffIdx);
   }
   return TRUE;
@@ -2249,7 +2409,8 @@ BOOL daPy_lk_c::dProcFreezeDamage() {
                            0xFFFF)) {
       lk05DemoFreezeInitSub(this, 1);
     }
-  } else {
+  } else if (lkT60_countStep()) { /* true60 (the 30 Hz timer rule; the first-step AI-timer rule for Link): the freeze countdown
+                                    * counts 30 Hz frames, with its end test, on the frame's FIRST step */
     s16 pv0 = (s16)(mProcVar0 - 1);
     mProcVar0 = pv0;
     if (pv0 == 0) {
@@ -2262,8 +2423,11 @@ BOOL daPy_lk_c::dProcFreezeDamage() {
 /* 02421FBC */
 BOOL daPy_lk_c::changeSwimUpProc() {
   f32 sy = speed.y;
+  const f32 lkT60_vStart = sy; /* true60 (surface test): speed.y before this step's push */
   if (sy < 9.5f) { /* HD: HIO folded */
-    sy = sy + 6.0f;
+    /* true60 (the per-step movement rule): the rise's push per update: x dt */
+    const f32 sy0 = sy;
+    sy = sy + (t60::dt() == 1.0f ? 6.0f : 6.0f * (f32)t60::dt());
     if (sy > 9.5f) {
       speed.y = 9.5f;
       if (mEquipItem != link05demo::daPyItem_NONE_e) {
@@ -2275,8 +2439,17 @@ BOOL daPy_lk_c::changeSwimUpProc() {
         lk05DeleteEquipItem(this, 1);
       }
     }
+    /* true60 (d_a_player_swimrise_t60.h): the push enters posMoveFromFootPos's exact-arc term */
+    lkT60_swimRiseRecord(sy0, (f32)speed.y, sy > 9.5f);
   }
-  if (mWaterY - current.pos.y < 55.1f && !(speed.y < 0.0f)) {
+  /* true60 (the process-order read rule; s85 bko84s3: SWIM_UP B f147 / A f148 with y exact through f146): the
+   * surface test is A's one test of the frame, before the frame's move: on the frame's first step from the frame-start
+   * pos.y and A's pushed speed.y (lkT60_swimSurfaceSpeed); the later steps do not test (step 2 tested the half-frame
+   * pos.y, 4.75 higher, and crossed the 55.1 depth a frame early). dt 1: the original test. */
+  if (t60::dt() == 1.0f ? (mWaterY - current.pos.y < 55.1f && !(speed.y < 0.0f))
+                        : (t60::first_step() && mWaterY - current.pos.y < 55.1f &&
+                           !(lkT60_swimSurfaceSpeed(lkT60_vStart) < 0.0f))) {
+    lkT60_swimRiseDrop(); /* true60: the surface sets pos.y / speed.y below: no push in this step's add */
     if (mCurProc == link05demo::daPyProc_DEMO_DEAD_e) {
       mNoResetFlg0 = mNoResetFlg0 | 0x100;
       lk05CopyFloatBits(&current.pos.y, &mWaterY);
@@ -2301,7 +2474,7 @@ BOOL daPy_lk_c::dProcLookAround_init() {
 
 /* 02422564 */
 BOOL daPy_lk_c::dProcLookAround() {
-  if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+  if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
     dComIfGp_evmng_cutEnd(mStaffIdx);
   }
   return TRUE;
@@ -2320,7 +2493,7 @@ BOOL daPy_lk_c::dProcSalute_init() {
 
 /* 02422664 */
 BOOL daPy_lk_c::dProcSalute() {
-  if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+  if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
     dComIfGp_evmng_cutEnd(mStaffIdx);
   }
   return TRUE;
@@ -2368,9 +2541,9 @@ BOOL daPy_lk_c::dProcTalismanPickup() {
   if (dComIfGp_checkPlayerStatus0(0, link05demo::daPyStts0_SHIP_RIDE_e)) {
     lk05SetShipRidePos(this, 1);
   }
-  if (frameCtrl.getRate() < 0.01f) {
+  if (lkT60_endRate(&frameCtrl) < 0.01f) {
     dComIfGp_evmng_cutEnd(mStaffIdx);
-  } else if (frameCtrl.checkPass(65.0f)) {
+  } else if (lkT60_pass(&frameCtrl, 65.0f)) {
     seStartOnlyReverb(link05demo::JA_SE_LK_ITEM_TAKEOUT);
   }
   return TRUE;
@@ -2413,7 +2586,16 @@ BOOL daPy_lk_c::dProcTalismanWait() {
   lk05DemoTalismanPosition(this);
   PSMTXTrans(mDoMtx_stack_c::get(), link05::l_matrixStack.m[0][3],
              link05::l_matrixStack.m[1][3], link05::l_matrixStack.m[2][3]);
-  mDoMtx_YrotM(mDoMtx_stack_c::get(), (s16)(link05::g_Counter.mTimer * 0x1FF));
+  if (t60::dt() == 1.0f) {
+    mDoMtx_YrotM(mDoMtx_stack_c::get(), (s16)(link05::g_Counter.mTimer * 0x1FF));
+  } else {
+    /* true60 (the 60 Hz counter rule): the charm's spin follows the 30 Hz counter g_Counter (constant over a
+     * frame's steps); step k of the frame shows the spin at (k + 1) x dt of the frame (the tick30 step = the
+     * original angle) */
+    f32 lag = lk05CounterLag();
+    mDoMtx_YrotM(mDoMtx_stack_c::get(),
+                 (s16)((s32)(link05::g_Counter.mTimer * 0x1FF) - (s32)(lag * (f32)0x1FF)));
+  }
   J3DModel_setBaseTRMtx(
       reinterpret_cast<Link05EquipmentHD *>(this)->mpEquipItemModel.get(),
       mDoMtx_stack_c::get());
@@ -2423,8 +2605,10 @@ BOOL daPy_lk_c::dProcTalismanWait() {
   lk05DemoEntryBck(
       lk05DemoSword(this), data,
       reinterpret_cast<Link05DemoSwordFrame *>(lk05DemoSword(this))->mFrame);
-  lk05SeStart(link05demo::JA_SE_OBJ_OMAMORI, &lk05DemoFollow(this)->mPos, 0,
-              (s32)(s8)mReverb);
+  /* true60 (the one-emitter-per-event rule): sustained start on every update: on the frame's step */
+  if (lk05FrameStep())
+    lk05SeStart(link05demo::JA_SE_OBJ_OMAMORI, &lk05DemoFollow(this)->mPos, 0,
+                (s32)(s8)mReverb);
   u32 flg = mModeFlg;
   if (demoParam0() != 0) {
     mModeFlg = flg | 0x80;
@@ -2462,7 +2646,7 @@ BOOL daPy_lk_c::dProcSurprised() {
   if (dComIfGp_checkPlayerStatus0(0, link05demo::daPyStts0_SHIP_RIDE_e)) {
     lk05SetShipRidePos(this, 1);
   }
-  if (mProcVar6 != 0 || mFrameCtrlUnder[0].getRate() < 0.01f) {
+  if (mProcVar6 != 0 || lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
     dComIfGp_evmng_cutEnd(mStaffIdx);
     if (mProcVar6 == 0) {
       u16 u2 = mTexScrollFrame;
@@ -2500,7 +2684,7 @@ BOOL daPy_lk_c::dProcTurnBack_init() {
 
 /* 02423124 */
 BOOL daPy_lk_c::dProcTurnBack() {
-  if (mProcVar6 != 0 || mFrameCtrlUnder[0].getRate() < 0.01f) {
+  if (mProcVar6 != 0 || lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
     dComIfGp_evmng_cutEnd(mStaffIdx);
   }
   return TRUE;
@@ -2519,7 +2703,7 @@ BOOL daPy_lk_c::dProcLookUp_init() {
 
 /* 02423230 */
 BOOL daPy_lk_c::dProcLookUp() {
-  if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+  if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
     dComIfGp_evmng_cutEnd(mStaffIdx);
   }
   return TRUE;
@@ -2678,7 +2862,10 @@ BOOL daPy_lk_c::dProcDoorOpen_init() {
 /* 024239D8 */
 BOOL daPy_lk_c::dProcDoorOpen() {
   s32 pv7 = mProcVar7;
-  if (pv7 != 0) {
+  /* true60 (the 30 Hz timer rule; the first-step AI-timer rule for Link): the HD door counter (3 frames from a mid-way init) counts 30 Hz
+   * frames: the count and the flag it drives on the frame's FIRST step (count before the decision: no hold; the later
+   * steps leave the flag as the first step set it) */
+  if (pv7 != 0 && lkT60_countStep()) {
     /* HD: a no-reset flag (0x08000000) held while the counter runs */
     pv7 = pv7 - 1;
     mProcVar7 = pv7;
@@ -2688,7 +2875,7 @@ BOOL daPy_lk_c::dProcDoorOpen() {
       mNoResetFlg0 = mNoResetFlg0 & ~0x8000000u;
     }
   }
-  if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+  if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
     mAcch.m_flags =
         mAcch.m_flags & ~0x4004u; /* ClrWallNone(), OffLineCheckNone() */
     dComIfGp_evmng_cutEnd(mStaffIdx);
@@ -2722,7 +2909,7 @@ BOOL daPy_lk_c::dProcNod_init() {
 BOOL daPy_lk_c::dProcNod() {
   setShapeAngleToTalkActor();
   current.angle.y = shape_angle.y;
-  if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+  if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
     dComIfGp_evmng_cutEnd(mStaffIdx);
   }
   return TRUE;
@@ -2890,7 +3077,7 @@ BOOL daPy_lk_c::dProcGetItem() {
     return TRUE;
   }
   s16 name = fpcM_GetName(item);
-  if (!(fc.getRate() < 0.01f)) {
+  if (!(lkT60_endRate(&fc) < 0.01f)) {
     if (name == 0xFF || fpcM_GetName(item) == 0x101) {
       lk05DemoHideItem(item);
     }
@@ -2967,7 +3154,7 @@ BOOL daPy_lk_c::dProcDead() {
   if (mModeFlg & 0x2000000 /* ModeFlg_02000000 */) {
     m35E4 = (frameCtrl.getFrame() - 120.0f) * 0.1f;
   }
-  if (frameCtrl.getRate() < 0.01f) {
+  if (lkT60_endRate(&frameCtrl) < 0.01f) {
     cLib_chaseF(&m35A0, 0.0f, 0.01f);
     /* HD: the game-over object is looked up by id (025DE50C); the back alpha
      * setter takes m35A0 */
@@ -3007,7 +3194,7 @@ BOOL daPy_lk_c::dProcDead() {
   }
   if (!(dComIfGp_checkPlayerStatus0(0, 0xFFFFFFFF) &
         0x110000 /* daPyStts0_SHIP_RIDE_e | daPyStts0_SWIM_e */)) {
-    if (frameCtrl.checkPass(129.0f)) {
+    if (lkT60_pass(&frameCtrl, 129.0f)) {
       lk05VoiceStart(this, 0x17);
       mFootEffectPosType = 6;
     } else if (!(frameCtrl.getFrame() < 129.0f)) {
@@ -3018,21 +3205,21 @@ BOOL daPy_lk_c::dProcDead() {
   if (!dComIfGp_checkPlayerStatus0(0, link05demo::daPyStts0_SWIM_e)) {
     return TRUE;
   }
-  if (frameCtrl.checkPass(9.0f) || frameCtrl.checkPass(15.0f)) {
+  if (lkT60_pass(&frameCtrl, 9.0f) || lkT60_pass(&frameCtrl, 15.0f)) {
     gabi::Local<csXyz> ang;
     lk05DemoConstructAngle(ang.get(), 0, (s32)shape_angle.y, 0);
     gabi::Local<GXColor> amb, dif;
     lk05DemoSeaColor(amb.get(), dif.get());
-    if (frameCtrl.checkPass(15.0f)) {
+    if (lkT60_pass(&frameCtrl, 15.0f)) {
       ang->y = (s16)(ang->y - 0x8000);
     }
     dPa_control_set(dComIfGp_getParticle(), 1,
                     0x314 /* ID_AK_JN_DROWNINGSPLASH00 */, &current.pos,
                     ang.get(), nullptr, 0xFF, nullptr, -1, amb.get(), nullptr,
                     nullptr);
-  } else if (frameCtrl.checkPass(50.0f)) {
+  } else if (lkT60_pass(&frameCtrl, 50.0f)) {
     mProcVar3 = 0;
-  } else if (frameCtrl.checkPass(110.0f)) {
+  } else if (lkT60_pass(&frameCtrl, 110.0f)) {
     mProcVar3 = 1;
   }
   return TRUE;

@@ -1,0 +1,9 @@
+# true60 N-step spec probe (the question on d_camera_e2manual's LIMITS (a)): the same spec with the cSAngle
+# constructors run for real, so cSGlobe::Val's stores of the yaw / latitude targets (+0x3B0 / +0x3B2) carry the computed
+# angles instead of one mocked answer per step.
+include _t60/d_camera_e2manual.txt
+# (probe 1, only the four constructors real: 513 / 2000 at N 2 s1, the rest failed at cSAngle::Sin's compared argument,
+# the view yaw the spec skips; so the whole cSAngle / cSGlobe family runs for real)
+real 0200658C 020066C0 02006644 020065FC 02006894 020068B0 02006838 02006814 0200693C 020068E0 020068CC 02006880
+real 0200685C 02006804 020069A0 02006908 020068F4 02006584 020065EC 02006638 020065DC 02006694 020067AC
+real 020072E0 02007324 020073AC 02007248 02007068 02007178 020071E0 02007100 02006A3C

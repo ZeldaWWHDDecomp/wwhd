@@ -1,6 +1,8 @@
 /* Forest trees. Verified WWHD implementation with GameCube actions and explicit HD rendering. */
 #include "d/actor/d_a_obj_ftree.h"
 #include "bindings.h"
+#include "d/actor/d_a_obj_ftree_t60.h" /* true60 (t60conv): step helpers */
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using daObjFtree::Act_c;
 using enum daObjFtree::Mode;
 
@@ -176,6 +178,8 @@ u32 daObjFtree::Act_c::XyEvent_set(s32 event) {
 
 /* 023477AC */
 void daObjFtree::Act_c::XyEvent_exe() {
+    if (!t60c::first()) /* true60: the item event's state machine on the frame's first step (first-step frame-level; a state set on it acts from the next frame) */
+        return;
     s16 state = static_cast<s16>(this->mXyEventState);
     if (state == 1) {
         if (static_cast<u16>(this->eventInfo.mCommand) != 1)
@@ -276,7 +280,7 @@ void daObjFtree::Act_c::set_first_stat() {
 }
 
 /* 023474F4 */
-void daObjFtree::Act_c::set_collision() {
+void daObjFtree::Act_c::set_collision() { if (!t60c::first()) return; /* true60 (t60conv): frame-level logic on the frame's first step (the first-step AI-timer rule / first-step frame-level) */
     if (u8(this->smallVisible) != 1 && u8(this->largeVisible) != 1)
         return;
     s32 hit = ftree_dCcD_GObjInf__ChkTgHit(static_cast<void*>(&this->mCyl));
@@ -358,6 +362,8 @@ void daObjFtree::Act_c::talk_ct() {
 void daObjFtree::Act_c::talk_main() {
     u32 messageObject = static_cast<u32>(ftree_messageObject());
     if (static_cast<s16>(this->mXyEventIdx) == -1 && static_cast<u16>(this->eventInfo.mCommand) == 1) {
+        if (!t60c::first()) /* true60: the talk's message steps once per frame (event time: N = 1 in the game; exact at N > 1 too) */
+            return;
         if (static_cast<u32>(this->messageId) == 0xFFFFFFFF) {
             u32 mode = static_cast<u32>(this->mMode);
             u32 message = static_cast<u32>(ftree_message(mode));
@@ -574,7 +580,7 @@ void daObjFtree::Act_c::get_ftree_info(daObjFtree::_ftree_seach_info_* info) {
     info->total = 8;
     for (u32 id = 0; id < 8; ++id)
         if (ftree_daObjFtree__is_broughtID_2(id))
-            info->brought = u32(info->brought) + 1;
+            { if (t60c::first()) { info->brought = u32(info->brought) + 1; } } /* true60 (t60conv): counted on the frame's first step */
 }
 
 /* 02346BA8 */
@@ -1342,9 +1348,20 @@ void daObjFtree::Act_c::set_mtx() {
 
 /* 02347CF0 */
 u32 daObjFtree::Act_c::_execute() {
+    /* true60 (the whole-frame form rule + addendum; fix-forward of the merged 0x83 mark): the whole 30 Hz
+     * frame on the tick30 step at dt 1 from the frame-start state (t60w::Guard, d/t60_objw.h). The tree's frame decides
+     * from the collision (the sword's Tg hit and Link's Co touch of the tick30 Move), Link and the event system, and its
+     * action table (process_main: idle counters / phases, cM_rndF draws, mode changes) ran on every step at N > 1 (pair
+     * ftn2b: largeElapsed 2 a frame, the idle ended early); its colliders were registered on the first step only (the
+     * collision audit). The earlier steps are picture steps (frame interpolation). The t60conv gates below hold at dt 1 (no-ops in
+     * the whole run). dt 1: the original. */
+    t60w::Guard<daObjFtree::Act_c> t60g(this, t60objw::Logic<daObjFtree::Act_c>::kOps);
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return 1;
     if (static_cast<u32>(this->mMode) == MODE_NONE)
         return 1;
     this->talk_main();
+    t60g.model = true; /* true60: the frame reaches its model step */
     this->set_mtx();
     this->process_main();
     this->set_collision();
@@ -1363,14 +1380,15 @@ u32 daObjFtree::Act_c::_execute() {
     this->XyEvent_exe();
     if (static_cast<s16>(this->heartPlaced) == 0)
         this->heartPlaced = s16(static_cast<s32>(this->place_heart_part()));
-    if (static_cast<s16>(this->heartLaunchTimer) == 1 && static_cast<s32>(this->launch_heart_part()))
+    if (static_cast<s16>(this->heartLaunchTimer) == 1 && t60c::first() && /* true60: the decision on the counted timer on the first step (first-step AI-timer) */
+        static_cast<s32>(this->launch_heart_part()))
         this->heartLaunchTimer = 0;
     s16 timer = static_cast<s16>(this->eventTimer);
     if (timer > 1)
-        this->eventTimer = timer - 1;
+        { if (t60c::first()) { this->eventTimer = timer - 1; } } /* true60 (t60conv): counted on the frame's first step */
     timer = static_cast<s16>(this->heartLaunchTimer);
     if (timer > 1)
-        this->heartLaunchTimer = timer - 1;
+        { if (t60c::first()) { this->heartLaunchTimer = timer - 1; } } /* true60 (t60conv): counted on the frame's first step */
     return 1;
 }
 

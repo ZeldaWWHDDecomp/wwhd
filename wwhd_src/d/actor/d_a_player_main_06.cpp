@@ -10,7 +10,12 @@
  * HD: both halves use autoglue registration so their shared source compiles as one unit.
  */
 #include "d/actor/d_a_player_main_06.h"
+#include "d/actor/d_a_player_anm_t60.h"
 #include "port_hooks.h"
+#include "true60.h"
+#include "d/actor/d_a_player_t60.h"
+#include "d/actor/d_a_player_crawl_t60.h"
+#include "d/actor/d_a_player_climb_t60.h"
 
 const gc_tu_data gc_tu = {.safeString = 0x10034B24};
 
@@ -42,6 +47,9 @@ static u32 l_textInputObject;
 static u8 l_textInputReady;
 static s16 l_textInputResult;
 
+/* true60: a step that advances once-per-30-Hz-frame work (every step at dt 1, the tick30 step in converted code) */
+static inline bool lk06FrameStep() { return t60::dt() == 1.0f || t60::tick30(); }
+
 /* 02423D10 */
 BOOL daPy_lk_c::dProcPresent() {
     setShapeAngleToTalkActor();
@@ -60,12 +68,12 @@ BOOL daPy_lk_c::dProcPresent() {
         current.angle.y = shape_angle.y;
         if (mProcVar7 != 0) {
             dComIfGp_evmng_cutEnd(mStaffIdx);
-        } else if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+        } else if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
             dComIfGp_evmng_cutEnd(mStaffIdx);
             mProcVar7 = 1;
             setSingleMoveAnime(player_demo::ANM_PRESENTATIONAWAIT, 1.0f, 0.0f, -1, 3.0f);
             mModeFlg = (mModeFlg | player_demo::ModeFlg_00000080 | player_demo::ModeFlg_00000100) & ~player_demo::ModeFlg_00000400;
-        } else if (mFrameCtrlUnder[0].checkPass(52.0f /* HD: m_HIO->mTurn.m.field_0xE - 10.0f folded */)) {
+        } else if (lkT60_pass(&mFrameCtrlUnder[0], 52.0f /* HD: m_HIO->mTurn.m.field_0xE - 10.0f folded */)) {
             if (checkBottleItem(dComIfGp_event_getPreItemNo())) {
                 if (mEquipItem == player_demo::daPyItem_NONE_e) {
                     setBottleModel((u32)dComIfGp_event_getPreItemNo());
@@ -102,7 +110,7 @@ BOOL daPy_lk_c::dProcWindChange() {
     if (dComIfGp_checkPlayerStatus0(0, player_demo::daPyStts0_SHIP_RIDE_e)) {
         setShipRidePos(0);
     }
-    if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         dComIfGp_evmng_cutEnd(mStaffIdx);
     }
     return TRUE;
@@ -207,7 +215,7 @@ BOOL daPy_lk_c::dProcSlightSurprised() {
     if (dComIfGp_checkPlayerStatus0(0, player_demo::daPyStts0_SHIP_RIDE_e)) {
         setShipRidePos(0);
     }
-    if (mProcVar6 != 0 || mFrameCtrlUnder[0].getRate() < 0.01f) {
+    if (mProcVar6 != 0 || lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         dComIfGp_evmng_cutEnd(mStaffIdx);
         if (mProcVar6 == 0) {
             mProcVar6 = 1;
@@ -245,6 +253,11 @@ BOOL daPy_lk_c::dProcSmile_init() {
 BOOL daPy_lk_c::dProcSmile() {
     if (dComIfGp_checkPlayerStatus0(0, player_demo::daPyStts0_SHIP_RIDE_e)) {
         setShipRidePos(1);
+    }
+    /* true60 (the 30 Hz timer rule / 7): the smile's hand-stepped texture frame (integer) and its end check count
+     * 30 Hz frames: on the frame's FIRST step (the first-step AI-timer rule for Link: the count with its end check) */
+    if (!lkT60_countStep()) {
+        return TRUE;
     }
     mTexAnmFrame = mTexAnmFrame + 1;
     if ((s32)(u16)mTexAnmFrame >= gabi::at<PlayerDemoAnimation>(mpAnmTexPatternData)->getFrameMax()) {
@@ -286,7 +299,7 @@ BOOL daPy_lk_c::dProcBossWarp() {
         setShipRidePos(1);
         mShipRideAngleZ = mShipRideAngleX = 0;
     }
-    if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         if (mProcVar6 == 0) {
             dComIfGp_evmng_cutEnd(mStaffIdx);
         } else {
@@ -332,7 +345,7 @@ BOOL daPy_lk_c::dProcLookTurn_init() {
 }
 /* 02424C3C */
 BOOL daPy_lk_c::dProcLookTurn() {
-    if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         setBlendMoveAnime(5.0f);
         shape_angle.y = (s16)(shape_angle.y - 0x8000);
         current.angle.y = shape_angle.y;
@@ -364,7 +377,7 @@ BOOL daPy_lk_c::dProcLetterOpen() {
     if (playerDemoOldFrame(m_old_fdata)->mOldFrameRate < 0.01f) {
         setLetterModel();
     }
-    if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         setLetterModel();
         dComIfGp_evmng_cutEnd(mStaffIdx);
     }
@@ -396,7 +409,8 @@ BOOL daPy_lk_c::dProcLetterRead() {
         u32 res = loadTextureScrollResource(0x181, 0);
         setTextureScrollResource(res, 0);
         mProcVar0 = 4;
-    } else if (mProcVar0 > 0) {
+    } else if (mProcVar0 > 0 && lkT60_countStep()) { /* true60 (the 30 Hz timer rule; first-step AI-timer for Link): the eye-scroll steps
+                                                       * count 30 Hz frames, with their switch, on the frame's first step */
         mProcVar0 = mProcVar0 - 1;
         if (mProcVar0 == 0) {
             if (*texScrollIdx == 0x181) {
@@ -496,7 +510,7 @@ BOOL daPy_lk_c::dProcGetDance() {
         }
     }
     fopAcM_getItemEventPartner(this);
-    if (mFrameCtrlUnder[0].getRate() < 0.01f && checkEndMessage((s32)mProcVar6)) {
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f && checkEndMessage((s32)mProcVar6)) {
         shape_angle.y = (s16)(shape_angle.y + 0x8000);
         m34DE = shape_angle.y;
         current.angle.y = shape_angle.y;
@@ -533,13 +547,13 @@ BOOL daPy_lk_c::dProcBottleOpenFairy_init() {
 BOOL daPy_lk_c::dProcBottleOpenFairy() {
     J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
     if (playerDemoView(this).mAnmHeapUnder[0].mIdx == 0x30 /* m_anm_heap_under[0].mIdx == BINOPENPRE */) {
-        if (frameCtrl.getRate() < 0.01f) {
+        if (lkT60_endRate(&frameCtrl) < 0.01f) {
             setSingleMoveAnime(player_demo::ANM_BINOPENB, 1.0f, 0.0f, 0x7C, 5.0f);
-        } else if (frameCtrl.checkPass(32.0f)) {
+        } else if (lkT60_pass(&frameCtrl, 32.0f)) {
             m355E = 0;
             mRightHandIdx = 8;
         }
-    } else if (frameCtrl.getRate() < 0.01f) {
+    } else if (lkT60_endRate(&frameCtrl) < 0.01f) {
         dComIfGp_evmng_cutEnd(mStaffIdx);
     } else if (playerDemoView(this).mpBottleContentsModel != nullptr) {
         if (!(frameCtrl.getFrame() < 0.0f)) { /* HD: HIO field_0x58 folded */
@@ -573,7 +587,8 @@ BOOL daPy_lk_c::dProcWarpShort_init() {
 }
 /* 0242583C */
 BOOL daPy_lk_c::dProcWarpShort() {
-    f32 v = gabi::fadds_ppc(speed.y, 0.1f);
+    /* true60 (the per-step movement rule): the warp's rise acceleration per update: x dt */
+    f32 v = t60::dt() == 1.0f ? gabi::fadds_ppc(speed.y, 0.1f) : (f32)speed.y + 0.1f * (f32)t60::dt();
     if (v > 1.35f) {
         v = 1.35f;
     }
@@ -603,7 +618,7 @@ BOOL daPy_lk_c::dProcOpenSalvageTreasure() {
     if (dComIfGp_checkPlayerStatus0(0, player_demo::daPyStts0_SHIP_RIDE_e)) {
         setShipRidePos(1);
     }
-    if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         dComIfGp_evmng_cutEnd(mStaffIdx);
     }
     return TRUE;
@@ -692,7 +707,7 @@ BOOL daPy_lk_c::dProcPowerUp() {
         mProcVar0 = 1;
         mDoAud_subBgmStart(player_demo::JA_BGM_ITEM_GET);
         playerDemoMessageBgmOn(); /* dComIfGp_setMesgBgmOn() */
-    } else if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+    } else if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         if (m3624 == 0) {
             m3624 = mProcVar6 + 0x65; /* MSG_NO_FOR_ITEM */
         }
@@ -767,9 +782,9 @@ BOOL daPy_lk_c::dProcLastCombo() {
     f32 frame = frameCtrl.getFrame();
     m35EC = frame;
     m35E8 = frame;
-    if (frameCtrl.getRate() < 0.01f) {
+    if (lkT60_endRate(&frameCtrl) < 0.01f) {
         dComIfGp_evmng_cutEnd(mStaffIdx);
-    } else if (frameCtrl.checkPass(27.0f)) {
+    } else if (lkT60_pass(&frameCtrl, 27.0f)) {
         resetFootEffect();
         seStartOnlyReverb(player_demo::JA_SE_LK_V_GN_LAST_ATTACK);
     }
@@ -810,7 +825,7 @@ BOOL daPy_lk_c::dProcIceSlip_init() {
 }
 /* 024263EC */
 BOOL daPy_lk_c::dProcIceSlip() {
-    if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         dComIfGp_evmng_cutEnd(mStaffIdx);
     }
     return TRUE;
@@ -854,6 +869,11 @@ BOOL daPy_lk_c::dProcHDLetterWrite() {
     setShipRidePosUseItem();
     J3DFrameCtrl& fc = mFrameCtrlUnder[0];
     s32 st = mProcVar6;
+    /* true60 (the first-step AI-timer rule for Link): st 1's hold count ends on the frame's FIRST step; the original starts st 2 (the
+     * text input) in the next update, so the frame's later steps stay in st 1 */
+    if (st == 2 && lkT60_countHeld(mCurProc, 4, 2)) {
+        st = 1;
+    }
     if (st == 0) {
         f32 fr = fc.getFrame();
         if (fr > 40.0f) {
@@ -876,13 +896,16 @@ BOOL daPy_lk_c::dProcHDLetterWrite() {
         }
         f32 end = (f32)(s32)(fc.mEnd - 1);
         f32 t = m35A0;
-        if (!(fc.getFrame() < end)) {
+        /* true60 (the 30 Hz timer rule; the first-step AI-timer rule for Link): the hold at the open letter counts 30 Hz frames: on
+         * the frame's FIRST step (count before the end test: no hold) */
+        if (!(fc.getFrame() < end) && lkT60_countStep()) {
             t = t + 1.0f;
             m35A0 = t;
         }
         if (t > 20.0f) {
             m35A0 = 0.0f;
             mProcVar6 = 2;
+            lkT60_counted(mCurProc, 4, 2);
         }
         return TRUE;
     }
@@ -892,7 +915,9 @@ BOOL daPy_lk_c::dProcHDLetterWrite() {
             playerDemoStartTextInput(l_textInputObject, -1); /* HD: starts the text input (unnamed) */
             t = m35A0;
         }
-        t = t + 1.0f;
+        /* true60 (the 30 Hz timer rule): the wait after the start counts frames: dt per step (the start above stays
+         * once, at t = 0; a frame-step gate would start it again on the frame's other steps) */
+        t = t60::dt() == 1.0f ? t + 1.0f : t + (f32)t60::dt();
         m35A0 = t;
         if (t < 2.1f) {
             return TRUE;
@@ -1126,7 +1151,7 @@ BOOL daPy_lk_c::procLadderUpStart() {
     } else {
         J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
         mRootMoveMode = 5;
-        if (frameCtrl.getRate() < 0.01f) {
+        if (lkT60_endRate(&frameCtrl) < 0.01f) {
             dComIfGp_setDoStatus(6 /* dActStts_LET_GO_e */);
             if (mProcVar2 == 0) {
                 setLadderFootSe();
@@ -1138,7 +1163,7 @@ BOOL daPy_lk_c::procLadderUpStart() {
             } else {
                 changeLadderMoveProc(1);
             }
-        } else if (frameCtrl.checkPass(9.0f)) {
+        } else if (lkT60_pass(&frameCtrl, 9.0f)) {
             setLadderFootSe();
         }
     }
@@ -1150,10 +1175,10 @@ BOOL daPy_lk_c::procLadderUpEnd() {
     if (setMoveBGLadderCorrect()) {
         return TRUE;
     }
-    if (frameCtrl.getRate() < 0.01f) {
+    if (lkT60_endRate(&frameCtrl) < 0.01f) {
         checkNextMode(0);
     } else {
-        if (frameCtrl.checkPass(9.0f) || frameCtrl.checkPass(19.0f)) {
+        if (lkT60_pass(&frameCtrl, 9.0f) || lkT60_pass(&frameCtrl, 19.0f)) {
             setLadderFootSe();
         }
         mRootMoveMode = 5;
@@ -1172,7 +1197,7 @@ BOOL daPy_lk_c::procLadderDownStart() {
     } else {
         J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
         mRootMoveMode = 5;
-        if (frameCtrl.getRate() < 0.01f) {
+        if (lkT60_endRate(&frameCtrl) < 0.01f) {
             dComIfGp_setDoStatus(6 /* dActStts_LET_GO_e */);
             if ((mItemTrigger & 1)) {
                 mRootMoveMode = 0;
@@ -1180,7 +1205,7 @@ BOOL daPy_lk_c::procLadderDownStart() {
             } else {
                 changeLadderMoveProc(1);
             }
-        } else if (frameCtrl.checkPass(26.0f) || frameCtrl.checkPass(36.0f) || frameCtrl.checkPass(43.0f)) {
+        } else if (lkT60_pass(&frameCtrl, 26.0f) || lkT60_pass(&frameCtrl, 36.0f) || lkT60_pass(&frameCtrl, 43.0f)) {
             setLadderFootSe();
         }
     }
@@ -1191,7 +1216,7 @@ BOOL daPy_lk_c::procLadderDownEnd() {
     if (setMoveBGLadderCorrect()) {
         return TRUE;
     }
-    if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         checkNextMode(0);
     } else {
         mRootMoveMode = 5;
@@ -1211,10 +1236,18 @@ BOOL daPy_lk_c::procLadderMove() {
         procFall_init(1, 6.0f);
     } else {
         f32 rate = mFrameCtrlUnder[0].getRate();
-        if (std::fabs(rate) < 0.01f) {
-            if (mProcVar0 > 0) {
-                mProcVar0 = mProcVar0 - 1;
-                setLadderFootSe();
+        /* true60 (the first-step AI-timer rule for Link, the lkT60_endRate form; pairs): the stop test sees the
+         * frame-end rate (A's update plays the frame's animation before this body): an animation ending on a later step
+         * starts the pause on the frame's first step, as in A, not a frame late */
+        if (std::fabs(lkT60_endRate(&mFrameCtrlUnder[0])) < 0.01f) {
+            if (lkT60_countBranch(mCurProc, 0, mProcVar0)) {
+                /* true60 (the 30 Hz timer rule / 11; the first-step AI-timer rule for Link): the rung's pause and its foot sound: on the
+                 * frame's FIRST step, the pause branch held over the frame after the count's 0 */
+                if (mProcVar0 > 0 && lkT60_countStep()) {
+                    mProcVar0 = mProcVar0 - 1;
+                    lkT60_counted(mCurProc, 0, mProcVar0);
+                    setLadderFootSe();
+                }
             } else {
                 changeLadderMoveProc(mProcVar6);
             }
@@ -1451,7 +1484,7 @@ BOOL daPy_lk_c::procHangUp_init(int param_0) {
 /* 0242888C */
 BOOL daPy_lk_c::procHangFallStart() {
     int iVar2;
-    if (mFrameCtrlUnder[0].getRate() < 0.01f || mFrameCtrlUnder[0].getFrame() > 10.0f /* HD: HIO folded */) {
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f || mFrameCtrlUnder[0].getFrame() > 10.0f /* HD: HIO folded */) {
         iVar2 = 1;
     } else {
         iVar2 = 0;
@@ -1510,7 +1543,7 @@ BOOL daPy_lk_c::procHangUp() {
         }
         return TRUE;
     }
-    if (mFrameCtrlUnder[0].getRate() < 0.01f || mFrameCtrlUnder[0].getFrame() > 13.0f /* HD: HIO folded */) {
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f || mFrameCtrlUnder[0].getFrame() > 13.0f /* HD: HIO folded */) {
         if (mProcVar6 == 0) {
             procHangClimb_init(0.0f);
         } else if (changeHangMoveProc(mProcVar6)) {
@@ -1553,7 +1586,7 @@ BOOL daPy_lk_c::procHangMove() {
     }
     J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
     frameCtrl.setRate(getHangMoveAnmSpeed());
-    if (frameCtrl.checkPass(0.0f)) {
+    if (lkT60_pass(&frameCtrl, 0.0f)) {
         f32 stick = mStickDistance;
         s16 keep = m34EC;
         if (stick > 0.05f && dir != 1 && changeHangMoveProc(dir)) {
@@ -1572,6 +1605,13 @@ BOOL daPy_lk_c::procHangMove() {
         f32 dVar12 = std_sqrtf(PSVECSquareMag(xz)); /* absXZ() */
         if (changeHangMoveProc(4)) {
             f32 spd = std::fabs(dVar12 - m35A0); /* HD: HIO field_0x30 (1.0) folded */
+            /* true60 (the per-step movement rule): the hands' spread changes by this step's share (the animation ran rate x dt):
+             * per frame it is that / dt, the unit mNormalSpeed keeps (posMove moves dt of it); the wall probe and the
+             * snap below take the step's own travel */
+            const f32 stepTravel = spd;
+            if (t60::dt() != 1.0f) {
+                spd = spd / (f32)t60::dt();
+            }
             mNormalSpeed = spd;
             f32 dVar13 = cM_ssin(current.angle.y);
             f32 fVar1 = cM_ssin(shape_angle.y);
@@ -1579,8 +1619,8 @@ BOOL daPy_lk_c::procHangMove() {
             f32 fVar2 = cM_scos(shape_angle.y);
             gabi::Local<cXyz> local_70; /* sp+0x14 */
             gabi::Local<cXyz> local_7c; /* sp+0x20 */
-            f32 x70 = gabi::fnmsubs(30.0f, fVar1, gabi::fmadds(spd, dVar13, current.pos.x));
-            f32 z70 = gabi::fnmsubs(30.0f, fVar2, gabi::fmadds(spd, dVar11, current.pos.z));
+            f32 x70 = gabi::fnmsubs(30.0f, fVar1, gabi::fmadds(stepTravel, dVar13, current.pos.x));
+            f32 z70 = gabi::fnmsubs(30.0f, fVar2, gabi::fmadds(stepTravel, dVar11, current.pos.z));
             f32 y70 = current.pos.y - 5.0f;
             local_70->x = x70;
             local_70->y = y70;
@@ -1619,7 +1659,7 @@ BOOL daPy_lk_c::procHangMove() {
                     }
                 } else {
                     f32 x = gabi::fnmsubs(1.5f, tri->mNormal.x, playerMoveLineCross(this).x);
-                    f32 spd2 = mNormalSpeed;
+                    f32 spd2 = t60::dt() == 1.0f ? (f32)mNormalSpeed : stepTravel;
                     current.pos.x = gabi::fnmsubs(spd2, dVar13, x);
                     f32 z = gabi::fnmsubs(1.5f, tri->mNormal.z, playerMoveLineCross(this).z);
                     m35A0 = dVar12;
@@ -1639,7 +1679,7 @@ BOOL daPy_lk_c::procHangMove() {
 
 /* 02429100 */
 BOOL daPy_lk_c::procHangClimb() {
-    if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         checkNextMode(0);
     } else if (mFrameCtrlUnder[0].getFrame() > 23.0f /* HD: HIO folded */) {
         checkNextMode(1);
@@ -1649,7 +1689,7 @@ BOOL daPy_lk_c::procHangClimb() {
 
 /* 02429160 */
 BOOL daPy_lk_c::procHangWallCatch() {
-    if (mFrameCtrlUnder[0].getRate() < 0.01f && !procHangClimb_init(2.0f /* HD: HIO folded */)) {
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f && !procHangClimb_init(2.0f /* HD: HIO folded */)) {
         return procFall_init(1, 6.0f);
     }
     return TRUE;
@@ -1943,7 +1983,7 @@ BOOL daPy_lk_c::procClimbUpStart() {
     } else {
         J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
         mRootMoveMode = 5;
-        if (frameCtrl.getRate() < 0.01f) {
+        if (lkT60_endRate(&frameCtrl) < 0.01f) {
             dComIfGp_setDoStatus(player_move::dActStts_LET_GO_e);
             if (mProcVar2 == 0) {
                 setLadderFootSe();
@@ -1955,7 +1995,7 @@ BOOL daPy_lk_c::procClimbUpStart() {
             } else {
                 changeClimbMoveProc(1);
             }
-        } else if (frameCtrl.checkPass(9.0f)) {
+        } else if (lkT60_pass(&frameCtrl, 9.0f)) {
             setLadderFootSe();
         }
     }
@@ -1969,7 +2009,7 @@ BOOL daPy_lk_c::procClimbDownStart() {
     }
     J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
     mRootMoveMode = 5;
-    if (frameCtrl.getRate() < 0.01f) {
+    if (lkT60_endRate(&frameCtrl) < 0.01f) {
         dComIfGp_setDoStatus(player_move::dActStts_LET_GO_e);
         if ((mItemTrigger & 1)) {
             mRootMoveMode = 0;
@@ -1977,7 +2017,7 @@ BOOL daPy_lk_c::procClimbDownStart() {
         } else {
             changeClimbMoveProc(1);
         }
-    } else if (frameCtrl.checkPass(26.0f) || frameCtrl.checkPass(36.0f) || frameCtrl.checkPass(43.0f)) {
+    } else if (lkT60_pass(&frameCtrl, 26.0f) || lkT60_pass(&frameCtrl, 36.0f) || lkT60_pass(&frameCtrl, 43.0f)) {
         setLadderFootSe();
     }
     return TRUE;
@@ -1995,10 +2035,18 @@ BOOL daPy_lk_c::procClimbMoveUpDown() {
         procFall_init(1, 6.0f);
     } else {
         f32 rate = mFrameCtrlUnder[0].getRate();
-        if (std::fabs(rate) < 0.01f) {
-            if (mProcVar0 != 0) {
-                mProcVar0 = 0;
-                setLadderFootSe();
+        /* true60 (the first-step AI-timer rule for Link, the lkT60_endRate form; pairs): the stop test sees the
+         * frame-end rate (A's update plays the frame's animation before this body): an animation ending on a later step
+         * starts the pause on the frame's first step, as in A, not a frame late */
+        if (std::fabs(lkT60_endRate(&mFrameCtrlUnder[0])) < 0.01f) {
+            if (mProcVar0 != 0 || lkT60_countHeld(mCurProc, 1, 0)) {
+                /* true60 (the 30 Hz timer rule / 11; the first-step AI-timer rule for Link): the hold's one-frame pause and its foot
+                 * sound: on the frame's FIRST step, the pause branch held over the frame after it */
+                if (mProcVar0 != 0 && lkT60_countStep()) {
+                    mProcVar0 = 0;
+                    lkT60_counted(mCurProc, 1, 0);
+                    setLadderFootSe();
+                }
             } else {
                 changeClimbMoveProc(mProcVar6);
             }
@@ -2026,10 +2074,18 @@ BOOL daPy_lk_c::procClimbMoveSide() {
         procFall_init(1, 6.0f);
     } else {
         f32 rate = mFrameCtrlUnder[0].getRate();
-        if (std::fabs(rate) < 0.01f) {
-            if (mProcVar0 != 0) {
-                mProcVar0 = 0;
-                setLadderFootSe();
+        /* true60 (the first-step AI-timer rule for Link, the lkT60_endRate form; pairs): the stop test sees the
+         * frame-end rate (A's update plays the frame's animation before this body): an animation ending on a later step
+         * starts the pause on the frame's first step, as in A, not a frame late */
+        if (std::fabs(lkT60_endRate(&mFrameCtrlUnder[0])) < 0.01f) {
+            if (mProcVar0 != 0 || lkT60_countHeld(mCurProc, 2, 0)) {
+                /* true60 (the 30 Hz timer rule / 11; the first-step AI-timer rule for Link): the hold's one-frame pause and its foot
+                 * sound: on the frame's FIRST step, the pause branch held over the frame after it */
+                if (mProcVar0 != 0 && lkT60_countStep()) {
+                    mProcVar0 = 0;
+                    lkT60_counted(mCurProc, 2, 0);
+                    setLadderFootSe();
+                }
             } else {
                 changeClimbMoveProc(mProcVar6);
             }
@@ -2046,12 +2102,14 @@ BOOL daPy_lk_c::procClimbMoveSide() {
             xz->y = 0.0f;
             xz->z = d->z;
             f32 dVar5 = std_sqrtf(PSVECSquareMag(xz)); /* absXZ() */
-            f32 fVar1 = std::fabs(dVar5 - m35A0) * 0.8f; /* HD: HIO folded */
+            /* true60: the frame's move is A's |d - m35A0| from the frame's
+             * first step (the hands of the previous frame's end), dt of it per step (d_a_player_climb_t60.h) */
+            f32 fVar1 = lkT60Climb_travel(dVar5, m35A0) * 0.8f; /* HD: HIO folded */
             f32 fVar2 = fVar1 * cM_ssin(mProcVar2);
             current.pos.y = gabi::fmadds(fVar1, cM_scos(mProcVar2), current.pos.y);
             current.pos.x = gabi::fmadds(fVar2, cM_scos(shape_angle.y), current.pos.x);
             f32 z = gabi::fnmsubs(fVar2, cM_ssin(shape_angle.y), current.pos.z);
-            m35A0 = dVar5;
+            m35A0 = lkT60Climb_spacing(dVar5);
             current.pos.z = z;
             checkBgClimbMove();
         }
@@ -2399,8 +2457,10 @@ BOOL daPy_lk_c::procWHideMove() {
         current.pos.z = gabi::fmadds(8.0f, cM_scos(a), current.pos.z);
     }
     /* 0.8f * m_HIO->mWall.m.field_0x50 folded to 6.8f */
-    current.pos.x = gabi::fnmsubs(6.8f, cM_ssin(shape_angle.y), current.pos.x);
-    current.pos.z = gabi::fnmsubs(6.8f, cM_scos(shape_angle.y), current.pos.z);
+    /* true60 (the per-step movement rule): the press against the wall per update: x dt */
+    const f32 press = t60::dt() == 1.0f ? 6.8f : 6.8f * (f32)t60::dt();
+    current.pos.x = gabi::fnmsubs(press, cM_ssin(shape_angle.y), current.pos.x);
+    current.pos.z = gabi::fnmsubs(press, cM_scos(shape_angle.y), current.pos.z);
     setBlendWHideMoveAnime(-1.0f);
     return TRUE;
 }
@@ -2734,6 +2794,11 @@ BOOL daPy_lk_c::procCrawlEnd_init(int param_1, s16 param_2, s16 param_3) {
 
 /* 0242C688 */
 BOOL daPy_lk_c::procCrawlStart() {
+    /* true60 (d_a_player_crawl_t60.h): the body on the frame's tick30 step at dt 1 (exact frame form) */
+    if (lkT60Crawl_skip()) {
+        return TRUE;
+    }
+    lkT60Crawl_open();
     setDoStatusCrawl();
     f32 r = gabi::fnmsubs(7.0f - mFrameCtrlUnder[0].getFrame(), m35A0, 1.0f); /* HD: HIO field_0x28 (7.0) folded */
     m35E4 = r;
@@ -2751,16 +2816,21 @@ BOOL daPy_lk_c::procCrawlStart() {
     if (!(mItemButton & 0x40) || mWaterY > current.pos.y + 15.0f /* checkCrawlWaterIn() */) {
         procCrawlEnd_init(0, shape_angle.x, shape_angle.z);
     } else if (mStickDistance > 0.05f &&
-               (mFrameCtrlUnder[0].getRate() < 0.01f || mFrameCtrlUnder[0].getFrame() > 7.0f)) {
+               (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f || mFrameCtrlUnder[0].getFrame() > 7.0f)) {
         playerMoveCrawlInitRegister(this, (s32)shape_angle.x, (s32)shape_angle.z);
     } else {
         mRootMoveMode = 1;
     }
-    return TRUE;
+    return lkT60Crawl_close(TRUE);
 }
 
 /* 0242C80C */
 BOOL daPy_lk_c::procCrawlMove() {
+    /* true60 (d_a_player_crawl_t60.h): the body on the frame's tick30 step at dt 1 (exact frame form) */
+    if (lkT60Crawl_skip()) {
+        return TRUE;
+    }
+    lkT60Crawl_open();
     J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
     gabi::Local<u32> angles;  /* sp+0x08: sp0A (+0), sp08 (+2) */
     gabi::Local<cXyz> spF4;   /* sp+0x0C */
@@ -2803,7 +2873,7 @@ BOOL daPy_lk_c::procCrawlMove() {
     }
     if (end || mWaterY > current.pos.y + 15.0f /* checkCrawlWaterIn() */) {
         procCrawlEnd_init(1, shape_angle.x, shape_angle.z);
-        return TRUE;
+        return lkT60Crawl_close(TRUE);
     }
     BOOL bVar4 = FALSE;
     f32 dVar11 = getCrawlMoveAnmSpeed();
@@ -2819,7 +2889,7 @@ BOOL daPy_lk_c::procCrawlMove() {
         bVar4 = TRUE;
         pass = true;
     }
-    if (pass || frameCtrl.checkPass(0.0f) || frameCtrl.checkPass(17.0f)) {
+    if (pass || lkT60_pass(&frameCtrl, 0.0f) || lkT60_pass(&frameCtrl, 17.0f)) {
         if (mStickDistance > 0.05f) {
             if (getDirectionFromShapeAngle() != 1) {
                 frameCtrl.setRate(dVar11);
@@ -2830,7 +2900,7 @@ BOOL daPy_lk_c::procCrawlMove() {
             }
             initSeAnime();
         } else if (!bVar4) {
-            f32 f = frameCtrl.checkPass(0.0f) ? 0.0f : 17.0f;
+            f32 f = lkT60_pass(&frameCtrl, 0.0f) ? 0.0f : 17.0f;
             frameCtrl.setRate(0.0f);
             frameCtrl.setFrame(f);
             playerMoveRatio(this, 0)->mpAnmTransform.get()->mFrame = f; /* mAnmRatioUnder[UNDER_MOVE0_e].getAnmTransform()->setFrame() */
@@ -2877,7 +2947,7 @@ BOOL daPy_lk_c::procCrawlMove() {
         }
     } else {
         if (iVar9 != 0 && iVar6 != 0 && iVar7 != 0 && iVar8 != 0 && changeCrawlAutoMoveProc(spF4)) {
-            return TRUE;
+            return lkT60Crawl_close(TRUE);
         }
         if (mStickDistance > 0.05f && frameCtrl.getRate() > 0.0f) {
             s16 r24 = shape_angle.y;
@@ -2935,27 +3005,41 @@ BOOL daPy_lk_c::procCrawlMove() {
         PSMTXMultVec(playerMoveBaseMatrix(mpCLModel), &l_crawl_front_offset, sp88);
         crawlBgCheck(sp88, sp124);
     }
-    return TRUE;
+    return lkT60Crawl_close(TRUE);
 }
 
 /* 0242D1A4 */
 BOOL daPy_lk_c::procCrawlAutoMove() {
+    /* true60 (d_a_player_crawl_t60.h): the body on the frame's tick30 step at dt 1 (exact frame form) */
+    if (lkT60Crawl_skip()) {
+        return TRUE;
+    }
+    lkT60Crawl_open();
     dComIfGp_setRStatus(player_move::dActStts_CROUCH_e);
     J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
     s16 var0 = mProcVar0;
     s16 sVar4 = shape_angle.y;
     s16 sVar5 = current.angle.y;
     setResetFlg0(resetFlg0() | player_move::daPyRFlg0_CRAWL_AUTO_MOVE);
-    if (var0 > 0) {
-        if (frameCtrl.checkPass(0.0f) || frameCtrl.checkPass(17.0f)) {
-            f32 f = frameCtrl.checkPass(0.0f) ? 0.0f : 17.0f;
+    /* true60 (the first-step AI-timer rule for Link): the stop's count (below) on the frame's FIRST step, its branch held over the
+     * frame after the count's 0 (the auto move starts on the next frame's first step, as in the original) */
+    if (lkT60_countBranch(mCurProc, 3, var0)) {
+        if (lkT60_pass(&frameCtrl, 0.0f) || lkT60_pass(&frameCtrl, 17.0f)) {
+            f32 f = lkT60_pass(&frameCtrl, 0.0f) ? 0.0f : 17.0f;
             frameCtrl.setRate(0.0f);
             frameCtrl.setFrame(f);
             playerMoveRatio(this, 0)->mpAnmTransform.get()->mFrame = f; /* mAnmRatioUnder[UNDER_MOVE0_e].getAnmTransform()->setFrame() */
             mNormalSpeed = 0.0f;
-        } else if (std::fabs(frameCtrl.getRate()) < 0.01f) {
+        } else if (std::fabs(lkT60_endRate(&frameCtrl)) < 0.01f) {
             mNormalSpeed = 0.0f;
-            mProcVar0 = mProcVar0 - 1;
+            /* true60 (the 30 Hz timer rule; the first-step AI-timer rule for Link): the stop before the auto move counts 30 Hz frames:
+             * on the frame's FIRST step */
+            /* (no `mProcVar0 > 0` guard: the original counts on the top-of-function snapshot var0 > 0; on the held
+             * later steps countStep is false) */
+            if (lkT60_countStep()) {
+                mProcVar0 = mProcVar0 - 1;
+                lkT60_counted(mCurProc, 3, mProcVar0);
+            }
         }
         setCrawlMoveDirectionArrow();
         setDoStatusCrawl();
@@ -3018,7 +3102,8 @@ BOOL daPy_lk_c::procCrawlAutoMove() {
         BOOL bVar1 = TRUE;
         s16 v3 = mProcVar3;
         f32 r = m35A0;
-        if (v3 > 0) {
+        if (v3 > 0 && lkT60_countStep()) { /* true60 (the 30 Hz timer rule; first-step AI-timer for Link): the auto move's time limit,
+                                            * 30 Hz frames, on the frame's first step (count before its test) */
             mProcVar3 = v3 - 1;
         }
         if (std::fabs(r) > 0.5f) {
@@ -3049,7 +3134,7 @@ BOOL daPy_lk_c::procCrawlAutoMove() {
             playerMoveCrawlInitRegister(this, (s32)shape_angle.x, (s32)shape_angle.z);
         }
     }
-    return TRUE;
+    return lkT60Crawl_close(TRUE);
 }
 
 /* 0242D7EC */
@@ -3119,11 +3204,22 @@ BOOL daPy_lk_c::procGrabMiss_init() {
 BOOL daPy_lk_c::dProcHDBottleThrow() {
     setShipRidePosUseItem();
     s32 st = mProcVar6;
+    /* true60 (the first-step AI-timer rule for Link): st 3's wait and st 4's frame count end on the frame's FIRST step; the original
+     * runs the next sub-state from the next update, so the frame's later steps stay in the old one */
+    if ((st == 4 || st == 5) && lkT60_countHeld(mCurProc, 5, st)) {
+        st = st - 1;
+    }
     if (st == 3) {
+        /* true60 (the 30 Hz timer rule; the first-step AI-timer rule for Link): the wait before the throw counts 30 Hz frames: on the
+         * frame's FIRST step (st 3 returns on its other steps as on every frame of the wait) */
+        if (!lkT60_countStep()) {
+            return TRUE;
+        }
         f32 t = m35A0 + 1.0f;
         if (t > 7.0f) {
             m35A0 = 0.0f;
             mProcVar6 = 4;
+            lkT60_counted(mCurProc, 5, 4);
         } else {
             m35A0 = t;
             st = mProcVar6;
@@ -3132,8 +3228,9 @@ BOOL daPy_lk_c::dProcHDBottleThrow() {
             }
         }
     } else if (st == 4) {
-        f32 a = m35A0 + 1.0f;
-        f32 b = m35A4 + 0.1f;
+        /* true60: the throw's frame count on the frame's step (the 30 Hz timer rule); the blend fade-in x dt (the animation-rate rule) */
+        f32 a = lkT60_countStep() ? m35A0 + 1.0f : (f32)m35A0; /* first-step AI-timer for Link: first step */
+        f32 b = t60::dt() == 1.0f ? m35A4 + 0.1f : m35A4 + 0.1f * (f32)t60::dt();
         m35A0 = a;
         m35A4 = b;
         f32 f0 = b > 1.0f ? 1.0f : playerDemoFloatSelect(b, b, 0.0f);
@@ -3141,8 +3238,10 @@ BOOL daPy_lk_c::dProcHDBottleThrow() {
              i++) { /* [?] an HD float array (count +0x5840, data +0x5844) */
             playerDemoView(this).mpBlendWeights[i] = f0;
         }
-        if (m35A0 > 17.0f && playerDemoOldFrame(m_old_fdata)->mOldFrameRate < 0.01f) {
+        /* true60: mProcVar6 == 4 is always true here at dt 1; false on the held later steps (st 5 already set) */
+        if (m35A0 > 17.0f && playerDemoOldFrame(m_old_fdata)->mOldFrameRate < 0.01f && mProcVar6 == 4) {
             mProcVar6 = 5;
+            lkT60_counted(mCurProc, 5, 5);
             setSingleMoveAnime(0x6A, 0.8f, 1.0f, 0xE, 0.0f);
             fopAcM_cancelCarryNow(playerDemoView(this).mHDThrowActor.get());
             playerDemoView(this).mHDThrowActor.get()->mThrowState = 1;

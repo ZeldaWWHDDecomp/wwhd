@@ -8,6 +8,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_npc_md_exec.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 using namespace MdExec;
 static RoomTable roomStatus;
 static NamePointer l_staff_name;
@@ -1139,6 +1140,9 @@ void daNpc_Md_c::checkPlayerRoom() {
 
 /* 02288B08 */
 BOOL daNpc_Md_c::execute() {
+    t60w::Guard<daNpc_Md_c> t60g(this, t60npc::Logic<daNpc_Md_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     clearStatus(daMdStts_UNK20000);
     mOldLightBodyHit = checkStatus(daMdStts_LIGHT_BODY_HIT) ? 1 : 0; /* setOldLightBodyHit() */
     actor_status &= ~fopAcStts_SHOWMAP_e;                                         /* fopAcM_OffStatus(SHOWMAP) */
@@ -1168,6 +1172,7 @@ BOOL daNpc_Md_c::execute() {
                 setNpcAction(fn, nullptr);
                 setAnm(0x30);
                 animationPlay();
+                t60g.model = true; /* true60: the frame reached its model step */
                 setBaseMtx();
             }
             mAttnSetCount = 0;
@@ -1345,6 +1350,7 @@ BOOL daNpc_Md_c::execute() {
         }
     }
     eventOrder();
+    t60g.model = true; /* true60: the frame reached its model step */
     setBaseMtx();
     u32 model = gabi::ea(MdExec::morf(mpMorf)->mpModel.get()); /* getModel() */
     emitterTrace(nativeEmitter(mEmitters[0]), md_getAnmMtx(model, m_neck_jnt_num), &current.angle);

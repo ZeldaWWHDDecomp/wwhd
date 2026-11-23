@@ -1,0 +1,8 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_auction.txt
+# ---- true60 N-step spec (2026-11-20; the whole-frame form rule + addendum, d/t60_objw.h): auction controller: event order / move, NPC wait, emitter fade.
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 0205AAC8
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 020063C0 02019918 02059030 02059380 020594AC 020594BC 02059544 020596F0 02059838 02059854 020598BC 02059A44 02059B40 02059B54 02059BD4 02059C44 02059C64 02059CA8 02059CD8 02059DB4 0205A010 0205A078 0205A104 0205A428 0205A67C 0205A724 0205AD44 0205CFD0 0205CFD4 024F8044 02514F2C 02514F38 02514F50 0253F124 02542D88 02542EDC 02543280 0254407C 025440C8 025447C8 0254487C 0255B9C8 0255BA9C 0255FDA4 0259F858 025A11EC 025B8B94 025C5864 025C5E54 025C60F4 025D57E0 025D5834 025D76A8 025D7970 025D7A58 025D7DEC 025DE50C 025E1988 025F1884 025F1BF4 0261BC20 0261BC50 0261BC68 0261BC80 02720118 0273AA24 028E8D88 028E8F64 028E93CC

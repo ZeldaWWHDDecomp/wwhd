@@ -1,5 +1,6 @@
 /* WWHD hammer switch; */
 #include "d/actor/d_a_obj_swhammer.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using namespace daObjSwhammer;
 enum SwhammerProfileHD { fpcNm_PLAYER_e = 168 };
 enum SwhammerCutHD {
@@ -397,6 +398,12 @@ void Act_c::set_damage() {
 }
 /* 023935E4 */
 s32 Act_c::Execute(Mtx34 **matrix) {
+    t60w::Guard<daObjSwhammer::Act_c> t60g(this, t60objw::Logic<daObjSwhammer::Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) { /* true60: a step before the tick30 step: the picture only (frame interpolation); the background stays: the
+                      * wrapper gets the actor's own mBgMtx (M_tmp_mtx is a static shared by the Swhammer switches) */
+        *reinterpret_cast<gptr<Mtx34> *>(matrix) = &mBgMtx;
+        return TRUE;
+    }
     set_damage();
     if ((s32)M_damage == Damage_Crush) {
         crush_start();
@@ -406,6 +413,7 @@ s32 Act_c::Execute(Mtx34 **matrix) {
     calc_top_pos();
     vib_proc();
     crush_proc();
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     *reinterpret_cast<gptr<Mtx34> *>(matrix) = (&M_tmp_mtx);
     mCylTg.SetC(&current.pos);

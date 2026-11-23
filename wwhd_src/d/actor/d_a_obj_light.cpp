@@ -3,6 +3,7 @@
 #include "d/actor/d_a_obj_light.h"
 #include "gc_api/d/d_com_inf_game.h"
 #include "gc_api/f_op/f_op_actor_mng.h"
+#include "d/actor/d_a_obj_light_t60.h" /* true60 (t60conv): step helpers */
 using namespace daObjLight;
 const gc_tu_data gc_tu = {.safeString = 0x1002C004, .headerStatics = {0x1046A48C, 0x101CA960, 0x1046A498}};
 static LightOffsets l_offsets;
@@ -64,8 +65,8 @@ void Act_c::init_collision() {
 void Act_c::set_collision() {
     if (dKy_daynight_check() != 1)
         return;
-    if (mCylinder.ChkTgHit()) {
-        if (mLit == 0) {
+    if (t60c::hit(mCylinder.ChkTgHit(), 1, &mCylinder)) {
+        if (mLit == 0 && t60c::end()) { /* true60: lit on the tick30 step: set_collision runs after renew_angle, so no earlier step of the frame sees the new timer */
             mLit = 1;
             mLightTimer = 1;
         }
@@ -156,6 +157,8 @@ bool Act_c::set_fire(s32 trigger) {
 void Act_c::exe_fire() {
     if (!mFireCallback.mpEmitter.get())
         return;
+    if (!t60c::first()) /* true60: the fire's flicker steps on the 30 Hz grid (the 30 Hz visual-motion rule): the whole update on the frame's first step */
+        return;
     f32 wave = cM_ssin((u16)mFirePhase);
     mFireRotation = (s16)((s16)mFireRotation + 720);
     f32 x = current.pos.x, y = current.pos.y + 24.0f, z = current.pos.z;
@@ -192,7 +195,7 @@ bool Act_c::set_event(s16 id) {
 }
 
 /* 0236BAE0 */
-void Act_c::exe_event() {
+void Act_c::exe_event() { if (!t60c::end()) return; /* true60 (the shared-world-state rule): frame-level logic on shared world state (switches / events / save data, shared RNG) on the tick30 step at the line place */
     if (mEventState == 1) {
         if (eventInfo.checkCommandDemoAccrpt())
             mEventState = 2;
@@ -260,25 +263,27 @@ void Act_c::set_mtx() {
 void Act_c::renew_angle() {
     if (now_event(mMainEventId)) {
         if (mLightTimer == 0) {
-            mAngle = (s16)((s16)mAngle + 64);
-            ObjLight_sound(LightSound_Rotate, &current.pos);
+            mAngle = (s16)((s16)mAngle + t60c::share(64)); /* true60 (t60conv): the step's share */
+            if (t60c::end()) /* true60: the rotate sound, a per-frame start: once per 30 Hz frame, the tick30 step */
+                ObjLight_sound(LightSound_Rotate, &current.pos);
         } else
             mAngle = 0;
     } else if (dKy_daynight_check() == 1) {
         if (dComIfGs_isEventBit(LightEvent_Lit)) {
-            s16 angle = (s16)((s16)mAngle + 64);
+            s16 angle = (s16)((s16)mAngle + t60c::share(64)); /* true60 (t60conv): the step's share */
             mAngle = angle;
             if (!ObjLight_setLightAngle(angle))
                 mAngle = ObjLight_getLightAngle();
         } else
-            mAngle = (s16)((s16)mAngle + 128);
-        ObjLight_sound(LightSound_Rotate, &current.pos);
+            mAngle = (s16)((s16)mAngle + t60c::share(128)); /* true60 (t60conv): the step's share */
+        if (t60c::end()) /* true60 (wfP1: 0x303B twice per frame at night): the rotate sound once per 30 Hz frame, the tick30 step */
+            ObjLight_sound(LightSound_Rotate, &current.pos);
     } else
         mAngle = 0x4000;
 }
 
 /* 0236BE84 */
-void Act_c::control_light() {
+void Act_c::control_light() { if (!t60c::end()) return; /* true60: the light's timer, event bits and event order on the frame's tick30 step: _execute calls it last, so the frame's renew_angle steps all see the previous frame's state, as the original */
     s16 timer = mLightTimer;
     if ((u32)(s32)timer < 1)
         return;

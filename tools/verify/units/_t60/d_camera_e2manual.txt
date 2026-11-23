@@ -1,0 +1,92 @@
+# true60 N-step spec (not a gate unit): manualCamera 0250FDC8 after its style start.
+# Per 30 Hz frame the C stick chases the smoothed turn linearly (cLib_chaseF 0.25 / 0.1 / 0.18), adds its range steps to
+# the centre height / radius / latitude / fovy (limited_range_addition 024F7DF4: clamped, the blocked follow rate at a
+# limit), turns the yaw by ax x yawStep and the view chases the targets with fixed ratios; at N steps the linear parts
+# are x dt and the ratios toward fixed targets 1 - (1 - r)^dt (e2R); the stick's range test is the frame's (the value
+# plus the frame's add still to come); the s16 yaw / latitude targets carry their truncated remainder inside the frame.
+# This spec steers the stick (x, y over the whole range: the adds and the blocked limits run) with the start block off
+# (timer >= 1). Checked: the smoothed turn, the work's centre height, lock-on blend, target radius / latitude / yaw and
+# centre-follow ratios, the view fovy. Flags, counts and the event flags exact (no line).
+# Tolerances: floats absrel (float rounding). The yaw target: while the smoothed turn ramps (its linear chase not yet
+# at its target) each step turns by its own chased value, a ramp the steps integrate (the speed-ramp position-gap rule class): the N steps
+# turn by 0.92 x yawStep x c x (1 - dt) / 2 degrees less (c the chase step, at most 0.18; yawStep at most 8, the manual
+# styles' param 24): 0.33 deg = 60 units at N 2, 0.50 deg = 90 units at N 4, + 1 unit truncation: abs 92 (both N).
+# The latitude target: abs 1 (the carry leaves the frame end within one truncation). Not checked: the view radius and
+# angles (the view chases targets the stick moves inside the frame: the speed-ramp position-gap moving-target lag; the angles are cSAngle
+# mocks), the centre, eye, bank and the work's centre target / lock-on offset (cXyz / cSAngle helpers are mocks, see
+# d_camera.txt); they are checked with a still stick in d_camera_e2manualfix.txt where the targets are fixed.
+include d_camera.txt
+include shared/c_angle_statics.txt
+t60conv 0250FDC8
+# the running helpers whose state the steps need: limited_range_addition, cLib_chaseF, cSAngle::Degree, cSGlobe::Val(f32, s16, s16);
+# cLib_chaseF is converted centrally (its step x dt) and runs as the candidate's code (t60cand), as in the game
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 024F7DF4
+real 0200F5C8
+t60cand 0200F5C8
+real 02006720
+real 02006FE4
+# the play object on every call (status words below)
+ret! 025200D4 0x54000000 0x54000000
+# the save options (cameraEngineGetOptions 027200D0, a mock: a random small pointer gave the original a page-0 DSI on
+# ~75 % of the inputs): a block at 0x5F000000, the camera-x option (+6) off / on
+ret! 027200D0 0x5F000000 0x5F000000
+field 0250FDC8 5F000006 u8 0,1
+# the manual styles (style table 0x1004487C, engine 10)
+arg! 0250FDC8 r4 47,48,49,50,57,58,59,60,61,68,115,116,117,118,125,131,132,135,139,140,141,142,143
+field 0250FDC8 r3+0x11C u32 1,2,5,30,200
+field 0250FDC8 r3+0x124 i32 0
+field 0250FDC8 r3+0x12C u32 0,0,0x59000000
+field 0250FDC8 r3+0x510 u32 0,0x1000,0x1000
+field 0250FDC8 r3+0x154 f32 -1 1
+field 0250FDC8 r3+0x170 f32 -1 1
+field 0250FDC8 r3+0x174 f32 -1,-0.9,-0.75,0.75,0.9,1,-0.5,0.3
+field 0250FDC8 r3+0x224 u8 1
+field 0250FDC8 r3+0x8D4 u8 0,1
+field 0250FDC8 r3+0x8D8 u8 0,0,0,1
+field 0250FDC8 r3+0x8D9 u8 0
+field 0250FDC8 54005CD8 u32 0,0,0x8000000,0x2000000,0x800000
+field 0250FDC8 54005CDC u32 0,0,0x40,0x20000,0x40000,0x10000
+# the work (mWork 0x37C): lock-on blend, centre height, charging at start, target globe, centre-follow ratios
+field 0250FDC8 r3+0x398 f32 0 1
+field 0250FDC8 r3+0x39C f32 -60 320
+field 0250FDC8 r3+0x3A4 u8 0,1
+field 0250FDC8 r3+0x3AC f32 100 2100
+field 0250FDC8 r3+0x3B0 i16 -16000 16000
+field 0250FDC8 r3+0x3B2 i16 -32768 32767
+field 0250FDC8 r3+0x3B4 f32 0 1
+field 0250FDC8 r3+0x3B8 f32 0 1
+# the view
+field 0250FDC8 r3+0x3C f32 100 2000
+field 0250FDC8 r3+0x40 i16 -12288 12288
+field 0250FDC8 r3+0x42 i16 -32768 32767
+field 0250FDC8 r3+0x44 f32 -1000 1000
+field 0250FDC8 r3+0x48 f32 -1000 1000
+field 0250FDC8 r3+0x4C f32 -1000 1000
+field 0250FDC8 r3+0x50 f32 -1000 1000
+field 0250FDC8 r3+0x54 f32 -1000 1000
+field 0250FDC8 r3+0x58 f32 -1000 1000
+field 0250FDC8 r3+0x60 f32 30 90
+t60tol 0250FDC8 r3+0x154 f32 absrel 0.00001 0.00001
+t60tol 0250FDC8 r3+0x398 f32 absrel 0.00001 0.00001
+t60tol 0250FDC8 r3+0x39C f32 absrel 0.001 0.0001
+t60tol 0250FDC8 r3+0x380 f32x6 skip
+t60tol 0250FDC8 r3+0x3AC f32 absrel 0.001 0.0001
+t60tol 0250FDC8 r3+0x3B0 a16 abs 1
+t60tol 0250FDC8 r3+0x3B2 a16 abs 92
+t60tol 0250FDC8 r3+0x3B4 f32x2 absrel 0.0001 0.0001
+t60tol 0250FDC8 r3+0x3C f32 skip
+t60tol 0250FDC8 r3+0x40 a16x2 skip
+t60tol 0250FDC8 r3+0x44 f32x6 skip
+t60tol 0250FDC8 r3+0x5C a16 skip
+t60tol 0250FDC8 r3+0x60 f32 absrel 0.0001 0.0001
+# constructors return this (see d_camera.txt's N-step spec: else page-0 DSI in the original)
+retarg 0200658C r3
+retarg 020066C0 r3
+retarg 02006644 r3
+retarg 020065FC r3
+retarg 02007248 r3
+retarg 02007324 r3
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+real 0200ECD4
+t60cand 0200ECD4

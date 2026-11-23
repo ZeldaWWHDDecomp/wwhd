@@ -8,6 +8,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_bdk_exe.h"
+#include "d/actor/d_a_bdk_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule) */
 
 using gabi::fadds_ppc;
 using gabi::fmuls_ppc;
@@ -580,7 +581,10 @@ static inline void kamen_break_move(bdk_class *i_this) {
 
 /* 02066A38 */
 static BOOL daBdk_Execute(bdk_class *i_this) {
-
+    /* true60: the whole frame on the tick30 step (the whole-frame form rule; end at the return) */
+    t60w::Guard<bdk_class> t60g(i_this, bdk_t60::ops());
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     fopAc_ac_c *actor = i_this;
     auto player = (BdkExePlayer *)dComIfGp_getPlayer(0);
     BdkExe_copyVector(&i_this->mTakeoffSmokePos, &actor->current.pos);
@@ -641,6 +645,7 @@ static BOOL daBdk_Execute(bdk_class *i_this) {
     mDoMtx_XrotM(mDoMtx_stack_c::get(), actor->shape_angle.x);
     mDoMtx_ZrotM(mDoMtx_stack_c::get(), actor->shape_angle.z);
     bdk_setBaseTRMtx(model, mDoMtx_stack_c::get());
+    t60g.model = true;
     i_this->mpMorf->calc(); /* mDoExt_McaMorf::calc */
 
     col_set(i_this);

@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_npc_mn.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 static MnExecuteInit l_execute_init[5] = {
     {
@@ -64,6 +65,9 @@ static inline bool mn_turnTo(daNpcMn_c* i_this, cXyz* pos) {
 
 /* 0229E41C */
 bool daNpcMn_c::_execute() {
+    t60w::Guard<daNpcMn_c> t60g(this, t60npc::Logic<daNpcMn_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return false;
     chkAttention();
     checkOrder();
     if (!dComIfGp_event_runCheck()  ||
@@ -104,6 +108,7 @@ bool daNpcMn_c::_execute() {
     eyePos.x = x;
     eyePos.y = y + dat->mEyePosOfsY;
     lookBack();
+    t60g.model = true; /* true60: the frame reached its model step */
     setMtx();
     return false;
 }

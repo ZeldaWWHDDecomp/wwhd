@@ -7,6 +7,7 @@
  * against cking.rpx.
  */
 #include "d/actor/d_a_coming3.h"
+#include "d/actor/d_a_coming3_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule / shared-world-state) */
 using daComing3::Act_c;
 
 // HD: GHS eight-byte member descriptors differ from host member pointers.
@@ -192,7 +193,10 @@ void daComing3::Act_c::coming_game_main() {
     Coming3BarrelHD *b = *barrel;
     s32 state = mGameState;
     if (b) {
-        current.pos.copy(b->current.pos);
+        /* true60 (the process-order read rule, s44 pair): the barrel (obj_barrel2, whole form: its earlier steps show it moving on
+         * through current.pos) is read as A reads it: its frame-start position when it is later in the line */
+        if (!t60objw::fsPos(gabi::ea(b), &current.pos))
+            current.pos.copy(b->current.pos);
         shape_angle.x = b->shape_angle.x;
         shape_angle.y = b->shape_angle.y;
         shape_angle.z = b->shape_angle.z;
@@ -383,7 +387,7 @@ bool daComing3::Act_c::collision_main() {
     coming3CollisionSet(dComIfG_Ccsp(), cyl);
     f32 y = center->y, x = center->x;
     eyePos.x = x;
-    y += 50.f;
+    y += 50.f; /* true60: an offset on a fresh local, not a rate (step(50) put eyePos 25 low at N 2) */
     eyePos.z = center->z;
     eyePos.y = y;
     return false;
@@ -450,7 +454,11 @@ bool daComing3::Act_c::_delete() {
 
 /* 02114F5C */
 bool daComing3::Act_c::_execute() {
+    t60w::Guard<daComing3::Act_c> t60g(this, t60objw::Logic<daComing3::Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form / shared-world-state) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
     coming_process_main();
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     return true;
 }

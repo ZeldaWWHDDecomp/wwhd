@@ -6,6 +6,7 @@
  * (zeldaret/tww src/d/actor/d_a_atdoor.cpp) to the WWHD layout and verified against cking.rpx.
  */
 #include "d/actor/d_a_atdoor.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 const gc_tu_data gc_tu = {.safeString = 0x10007674};
 static const char* M_arcname = "Atdoor";
@@ -193,11 +194,15 @@ static const u32 l_action_init[] = {
 
 /* 0205834C */
 static BOOL daAtdoor_Execute(daAtdoor_c* i_this) {
+    t60w::Guard<daAtdoor_c> t60g(i_this, t60objw::Logic<daAtdoor_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     if (l_action_guard == 0) {
         l_action_guard = 1;
         memcpy_g(l_action, l_action_init, sizeof(l_action_init));
     }
     gabi::call_ptr<bool>(l_action[i_this->mAction], i_this);
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 

@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_jump.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule + addendum, d/t60_objw.h): the jump pad's Execute(matrixOut) 023666C8 (push flags, mode proc (wait / lower / jump spring), fast-ride impulse, vib pos, set_mtx); its rideCB counts on the tick30 step only (t60objw::cbSkip); background actor: own mBgMtx on the earlier steps.
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 023666C8
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 023660A4 023662C8 0236642C 02366668 023666B0 0236685C 0236687C 02366998 023669AC 023669C0 023669E0 02366AD4 02366AF4 02366B64 02366B7C 02366B94
+t60cand 023660A4 023662C8 0236642C 02366668 023666B0 0236685C 0236687C 02366998 023669AC 023669C0 023669E0 02366AD4 02366AF4 02366B64 02366B7C 02366B94
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 023660A4 023662C8 0236642C 02366668 023666B0 0236685C 0236687C 02366998 023669AC 023669C0 023669E0 02366AD4 02366AF4 02366B64 02366B7C 02366B94 025200D4 02520540 025E1A40 025F1B48 025F24E0 025F2518 028E90D4 028E93CC

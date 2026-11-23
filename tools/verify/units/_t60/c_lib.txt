@@ -1,0 +1,81 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 0201AE48 r3=12 r4=out12
+callee 0201B12C r3=12 r4=out12
+callee 028E8DD0 r3=12
+callee 028E8DE8 r3=12 r4=12
+callee 028E8E64 r3=12 r4=out12
+callee 028E8DAC r3=12 r4=12 r5=out12
+callee 028E93CC r3=out48
+callee 028E945C r3=out48
+callee 028E98C0 r3=out48
+callee 028E9108 r3=48 r4=48 r5=out48
+callee 028E90D4 r3=48 r4=out48
+callee 028E8F64 r3=48 r4=12 r5=out12
+# true60 N-step spec: the dt-converted smoothing and chase primitives of c_lib, with inputs in the domain the game
+# uses them in (ratios in (0, 1), positive step limits, values and targets within 1000 units). The dt-1 check rows of
+# these functions are c_lib.txt's.
+real 0201ADE0 0201AE48 0201B12C 028E8DD0 028E8DE8 028E8E64 028E8DAC 028E8EF0 028F4384 028F605C 028F60F8
+t60conv 0200ECD4 0200ED84 0200EDC8 0200EE00 0200EF78 0200F164 0200F268 0200F5C8 0200F62C 0200F764 0200F378 0200F428 0200F474 0200F4FC 0200F564 0200F8D0
+field * r3+0 f32 -1000 1000
+field * r3+4 f32 -1000 1000
+field * r3+8 f32 -1000 1000
+field * r4+0 f32 -1000 1000
+field * r4+4 f32 -1000 1000
+field * r4+8 f32 -1000 1000
+arg! 0200ECD4 f1 -1000 1000
+arg! 0200ECD4 f2 0.01 0.99
+arg! 0200ECD4 f3 0.1 200
+arg! 0200ECD4 f4 0 1
+arg! 0200ED84 f1 -1000 1000
+arg! 0200ED84 f2 0.01 0.99
+arg! 0200ED84 f3 0.1 200
+arg! 0200EDC8 f1 0.01 0.99
+arg! 0200EDC8 f2 0.1 200
+arg! 0200EE00 f1 0.01 0.99
+arg! 0200EE00 f2 0.1 200
+arg! 0200EE00 f3 0 1
+arg! 0200EF78 f1 0.01 0.99
+arg! 0200EF78 f2 0.1 200
+arg! 0200EF78 f3 0 1
+arg! 0200F164 f1 0.01 0.99
+arg! 0200F164 f2 0.1 200
+arg! 0200F268 f1 0.01 0.99
+arg! 0200F268 f2 0.1 200
+arg! 0200F5C8 f1 -1000 1000
+arg! 0200F5C8 f2 0.01 100
+arg! 0200F62C f1 0.01 100
+arg! 0200F764 f1 0.01 100
+t60tol 0200ECD4 r3+0 f32 clamp f3 f4 f1 0.001 0.00001
+t60tol 0200ED84 r3+0 f32 clamp f3 0 f1 0.001 0.00001
+t60tol 0200EDC8 r3+0 f32 clamp f2 0 0 0.001 0.00001
+t60tol 0200F5C8 r3+0 f32 absrel 0.01 0.01
+t60tol 0200EE00 r3+0 f32x3 clamp f2 f3 r4+0 0.001 0.00001
+t60tol 0200EF78 r3+0 f32x3 clamp f2 f3 r4+0 0.001 0.00001
+t60tol 0200F164 r3+0 f32x3 clamp f2 0 r4+0 0.001 0.00001
+t60tol 0200F268 r3+0 f32x3 clamp f2 0 r4+0 0.001 0.00001
+t60tol 0200F62C r3+0 f32x3 absrel 0.01 0.01
+t60tol 0200F764 r3+0 f32x3 absrel 0.01 0.01
+t60ret 0200ECD4 skip
+t60ret 0200EE00 skip
+t60ret 0200EF78 skip
+# integer variants (remainder carry): the value and the return value byte exact (no t60tol line);
+# targets, divisors and steps in the game's ranges, 1 input in 8 unsteered (arg, not arg!)
+arg 0200F378 r4 -32768 32767
+arg 0200F378 r5 1 32
+arg 0200F378 r6 0 16384
+arg 0200F378 r7 0 2048
+arg 0200F428 r4 -32768 32767
+arg 0200F428 r5 1 32
+arg 0200F428 r6 0 16384
+arg 0200F474 r4 -2000000 2000000
+arg 0200F474 r5 1 32
+arg 0200F474 r6 0 1000000
+arg 0200F474 r7 0 50000
+arg 0200F4FC r4 0 255
+arg 0200F4FC r5 0 64
+arg 0200F564 r4 -32768 32767
+arg 0200F564 r5 0 4096
+arg 0200F8D0 r4 -32768 32767
+arg 0200F8D0 r5 0 4096

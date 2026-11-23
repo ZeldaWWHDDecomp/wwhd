@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_acorn_leaf.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 const gc_tu_data gc_tu = {
     .safeString = 0x10006CB4,
@@ -171,6 +172,9 @@ static inline f32 absXZ_diff(cXyz* a, cXyz* b) {
 
 /* 02047C00 */
 bool daAleaf_c::_execute() {
+    t60w::Guard<daAleaf_c> t60g(this, t60objw::Logic<daAleaf_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
     fopAc_ac_c* actor = fopAcM_SearchByID(mAcornId);
 
@@ -239,6 +243,7 @@ bool daAleaf_c::_execute() {
     mGrabIdOld = Aleaf_getGrabActorID(player);
     mPlayerDistOld = var_f31;
 
+    t60g.model = true; /* true60: the frame reached its model step */
     return true;
 }
 

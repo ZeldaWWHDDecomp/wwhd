@@ -8,6 +8,7 @@
  */
 #include "d/actor/d_a_lwood.h"
 #include "gc_api/f_op/f_op_actor_mng.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 const gc_tu_data gc_tu = {.safeString = 0x1001418C};
 enum { LWOOD_VTBL = 0x100141A4 };
@@ -175,7 +176,11 @@ bool daLwood_c::_delete() {
 
 /* inlined into daLwood_Execute */
 bool daLwood_c::_execute() {
+    t60w::Guard<daLwood_c> t60g(this, t60objw::Logic<daLwood_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     mTimer = mTimer + 1;
+    t60g.model = true; /* true60: the frame reached its model step (the sway joint callback reads mTimer) */
     return TRUE;
 }
 

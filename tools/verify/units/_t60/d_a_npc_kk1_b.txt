@@ -1,0 +1,10 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_npc_kk1_b.txt
+# ---- true60 N-step spec (2026-11-20; the whole-frame form rule NPC form; d/t60_npc.h):
+# Mila (poor, Windfall; Kk1): daNpc_Kk1_c::_execute 0226E99C in the whole form, logic only (order / action / event order
+# and the kk1_a / kk1_c helpers run inside it). The tick30 step runs the original execute whole at dt 1 from the frame
+# start; the earlier steps change no state (the picture between steps comes from frame interpolation). Negative control
+# (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 0226E99C
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200E240 0200F378 0200F5C8 0200F93C 0201ADE0 02055B64 0207A9A0 0211D2F8 021E1E78 022270A0 0226B5B4 0226B984 0226BB5C 0226BDCC 0226C570 0226C730 0226C7A0 0226C7DC 0226C8D8 0226CA94 0226CB44 0226CBE8 0226CC80 0226CD04 0226CD94 0226CDF0 0226CE6C 0226D0A4 0226D0E8 0226D1F0 0226D2B8 0226D34C 0226D454 0226D60C 0226D664 0226D6CC 0226D77C 0226D83C 0226DB64 0226DBB0 0226DBD4 0226DC70 0226DD7C 0226DDD8 0226DE88 0226DEF0 0226E21C 0226E498 0226E560 0226E604 0226E92C 024EEEB8 024EF130 024F08A8 0253F124 02542EDC 02543280 02543714 025440C8 025447C8 0259D54C 0259E08C 0259E2D4 0259E838 0259EC94 0259ED58 0259EDB8 0259EE4C 0259EE7C 0259F858 025A15AC 025D57E0 025D57E4 025D6870 025D76A8 025D7A58 025E4A54 025F1C28 0273AA24 0273AD10 028E8DD0 028E8F64 028F4384

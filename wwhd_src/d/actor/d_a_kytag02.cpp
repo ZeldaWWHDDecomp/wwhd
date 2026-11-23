@@ -2,6 +2,7 @@
  * Based on tww d/actor/d_a_kytag02.cpp.
  */
 #include "d/actor/d_a_kytag02.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 #include "gc_api/f_op/f_op_actor_mng.h"
 #include "gc_api/JSystem/JUTAssert.h"
 using Path = kytag02_path::dPath;
@@ -14,6 +15,9 @@ static BOOL daKytag02_Draw(kytag02_class*) {
 
 /* 021AF984 */
 static BOOL daKytag02_Execute(kytag02_class* actor) {
+    t60w::Guard<kytag02_class> t60g(actor, t60objw::Logic<kytag02_class>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     auto* play = reinterpret_cast<kytag02_play_view*>(dComIfGp_get());
     Path* initial = actor->mpPath;
     fopAc_ac_c* player = play->mPlayer;

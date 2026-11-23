@@ -1,6 +1,7 @@
 /* WWHD Dragonhead. Ported from zeldaret/tww with audited HD behavior.
  */
 #include "d/actor/d_a_obj_dragonhead.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using namespace daObjDragonhead;
 using daObjDragonhead::Act_c;
 const gc_tu_data gc_tu = {.safeString = 0x10027684};
@@ -159,6 +160,9 @@ BOOL Draw(Act_c* actor) {
 }
 /* 02337FA0 */
 BOOL Execute(Act_c* actor) {
+  t60w::Guard<Act_c> t60g(actor, t60objw::Logic<Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+  if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+    return TRUE;
   dComIfG_Ccsp_Set(&actor->mSph);
   if (!actor->mSwitchOn) {
     s32 reverb=dComIfGp_getReverb(actor->current.roomNo);
@@ -193,6 +197,7 @@ BOOL Execute(Act_c* actor) {
     u8 alpha=actor->mAlpha;
     if (alpha < 255) actor->mAlpha=alpha <= 253 ? alpha+2 : 255;
   }
+  t60g.model = true; /* true60: the frame reached its model step */
   actor->set_mtx();
   return TRUE;
 }

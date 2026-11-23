@@ -1,0 +1,8 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_ff.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule + addendum, d/t60_objw.h): ff (fire fly): mode timers, random wander, ground check, collider; draw brk once a frame (drawStep).
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 02133070
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 02008974 02008DAC 02008E0C 0200ED84 0200EDC8 0200F428 0200FCD8 020182E0 02018D40 020195B0 020198D8 02019918 0201AD78 025162A4 025F1884 025F1BF4 028E8D88 028F4384

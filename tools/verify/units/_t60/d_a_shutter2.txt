@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_shutter2.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule + addendum, d/t60_objw.h): shutter2 (BG Execute(mtx)): demo / event, switch, enemy search.
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 02485674
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 02485034 024852CC 02485430
+t60cand 02485034 024852CC 02485430
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200ECD4 02485034 024852CC 02485430 02542D88 02542EDC 02543280 0254407C 025440C8 025D7A58 025D98E8 025F1C28 028E90D4

@@ -1,6 +1,7 @@
 /* WWHD light-sensitive breakable statue. */
 #include "d/actor/d_a_obj_mkie.h"
 #include "sead/ElementAt.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using daObjMkie::Act_c;
 static MkieGuestText M_arcname;
 static MkieGuestText assertText1;
@@ -223,6 +224,12 @@ void daObjMkie::Act_c::mode_proc_call() {
 }
 /* 02370960 */
 BOOL daObjMkie::Act_c::Execute(be<u32> *outMtx) {
+    t60w::Guard<daObjMkie::Act_c> t60g(this, t60objw::Logic<daObjMkie::Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) { /* true60: a step before the tick30 step: the picture only (frame interpolation); the background stays: the
+                      * wrapper gets the actor's own mBgMtx (M_tmp_mtx is a static shared by the Mkie statues) */
+        *outMtx = gabi::ea(&mBgMtx);
+        return TRUE;
+    }
     // HD: attention X begins with a word copy, before any floating loads.
     *reinterpret_cast<be<u32> *>(&attention_info.position.x) =
         (u32) * reinterpret_cast<be<u32> *>(&current.pos.x);
@@ -238,6 +245,7 @@ BOOL daObjMkie::Act_c::Execute(be<u32> *outMtx) {
     if (mStatueDelete)
         fopAcM_delete(this);
     mCcInit = 0;
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     *outMtx = gabi::ea(&M_tmp_mtx);
     return TRUE;

@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_himo2.h"
+#include "d/t60_draw.h"
 
 const gc_tu_data gc_tu = {
     .safeString = HIMO2_SAFESTRING_VTBL,
@@ -473,7 +474,7 @@ static inline void himo2_control(himo2_class* i_this, himo2_s* param_2) {
 }
 
 /* himo2_control2 (inline): from the player towards the hook, with the sway */
-static inline void himo2_control2(himo2_class* i_this, himo2_s* param_2) {
+static inline void himo2_control2(himo2_class* i_this, himo2_s* param_2, f32 share) {
     gabi::Local<cXyz> local_a8;
     gabi::Local<cXyz> local_b4;
     param_2 += 98;
@@ -496,10 +497,18 @@ static inline void himo2_control2(himo2_class* i_this, himo2_s* param_2) {
         if ((u32)dc < 4) { /* mState >= 0 && mState <= 3 */
             if (dc != 0)
                 f1 = (i_this->mSwayAmp * (f32)(s32)(99 - iVar4)) * 0.01f;
-            s32 a1 = (s32)i_this->mFrameCounter * (l_himo2Regs.mChild[18].mShortRegs[5] + 700) +
+            s32 a1, a2;
+            if (share == 0.0f) {
+                a1 = (s32)i_this->mFrameCounter * (l_himo2Regs.mChild[18].mShortRegs[5] + 700) +
                      iVar4 * (l_himo2Regs.mChild[18].mShortRegs[6] + 2000);
-            s32 a2 = (s32)i_this->mFrameCounter * (l_himo2Regs.mChild[18].mShortRegs[7] + 500) +
+                a2 = (s32)i_this->mFrameCounter * (l_himo2Regs.mChild[18].mShortRegs[7] + 500) +
                      iVar4 * (l_himo2Regs.mChild[18].mShortRegs[8] + 2000);
+            } else { /* true60: the sway's phase at the step (d_a_himo2.h) */
+                a1 = himo2_phaseMul(i_this->mFrameCounter, l_himo2Regs.mChild[18].mShortRegs[5] + 700, share) +
+                     iVar4 * (l_himo2Regs.mChild[18].mShortRegs[6] + 2000);
+                a2 = himo2_phaseMul(i_this->mFrameCounter, l_himo2Regs.mChild[18].mShortRegs[7] + 500, share) +
+                     iVar4 * (l_himo2Regs.mChild[18].mShortRegs[8] + 2000);
+            }
             sinT = cM_ssin(a1) * f1;
             cosT = cM_scos(a2) * f1;
         }
@@ -520,6 +529,9 @@ static inline void himo2_control2(himo2_class* i_this, himo2_s* param_2) {
     }
 }
 
+/* true60: the frame's first step's stamp for the sway phase (d_a_himo2.h) */
+static Himo2StepStamp s_himo2ExecStep;
+
 /* 0216E194 */
 static BOOL daHimo2_Execute(himo2_class* i_this) {
     daPy_py_c* player = (daPy_py_c*)dComIfGp_getPlayer(0);
@@ -527,7 +539,9 @@ static BOOL daHimo2_Execute(himo2_class* i_this) {
         himo2_btd = (himo2_btd_c*)fpcM_Search(0x0216DE2C /* b_a_sub */, i_this);
     if (himo2_dr == 0)
         himo2_dr = (himo2_dr_c*)fpcM_Search(0x0216DDDC /* dr_a_sub */, i_this);
-    i_this->mFrameCounter = i_this->mFrameCounter + 1;
+    const f32 share = himo2_stepShare(s_himo2ExecStep); /* true60: (d_a_himo2.h) */
+    if (himo2_perFrame()) /* true60: a 30 Hz frame count (the 30 Hz timer rule, 13) */
+        i_this->mFrameCounter = i_this->mFrameCounter + 1;
     rope_scale = l_himo2HIO.mRopeScaleLockOn;
     gabi::Local<cXyz> local_c8;
     local_c8->y = 0.0f;
@@ -578,7 +592,7 @@ static BOOL daHimo2_Execute(himo2_class* i_this) {
     phVar3 = &i_this->mSegments[0];
     himo2_control(i_this, phVar3);
     i_this->mSegments[99].mPos = i_this->current.pos;
-    himo2_control2(i_this, phVar3);
+    himo2_control2(i_this, phVar3, share);
     if (i_this->mState == HIMO2_LAUNCH_FREE || i_this->mState == HIMO2_LAUNCH_TARGET) {
         i_this->mSph.SetR(20.0f);
     } else {
@@ -793,6 +807,16 @@ static inline void himo_hang_draw(himo2_class* i_this) {
     }
 }
 
+/* true60 (rule 14): a converted rope executes and draws on every step, so its draw-side state (the coil
+ * sway chases, the hand line sag) advances by the step's dt: 1/N when the rate gate runs it every step (converted, not
+ * held at 30 Hz for this frame), else 1 (the 30 Hz game, a 30 Hz fallback frame, the verification harness). */
+static inline f32 himo2_drawDt(himo2_class* i_this) {
+    if (t60::steps() == 1)
+        return 1.0f;
+    const bool converted = t60_converted((s16)i_this->mProfName) && !t60_held(i_this->mBsPcId);
+    return converted ? t60_step_dt() : 1.0f;
+}
+
 // daHimo2_Draw (inlines spin_draw, himo2_disp, himo2_draw, himo_hang_draw)
 /* 0216CA5C */
 static BOOL daHimo2_Draw(himo2_class* i_this) {
@@ -843,6 +867,9 @@ static BOOL daHimo2_Draw(himo2_class* i_this) {
     himo2_hd_line_packet(i_this, 1, 1, &i_this->mRopeLine);
 
     daPy_py_c* player = (daPy_py_c*)dComIfGp_getPlayer(0);
+    /* true60: the chases below (central dt-scaled c_lib primitives) at the draw's step length; restored at the end */
+    const f32 drawDt = himo2_drawDt(i_this);
+    const f32 prevDt = t60_set_dt(drawDt);
     mDoMtx_YrotS(calc_mtx(), (s16)-player->shape_angle.y);
     gabi::Local<cXyz> sp44;
     gabi::Local<cXyz> sp38;
@@ -851,6 +878,11 @@ static BOOL daHimo2_Draw(himo2_class* i_this) {
         *tmp.get() = i_this->mHandPos[1] - i_this->mOldCoilHandPos; /* cXyz::operator- */
         *sp44.get() = *tmp.get();
     }
+    if (drawDt != 1.0f) { /* true60: the hand's move since the last draw is a step's: per 30 Hz frame / dt */
+        sp44->x = sp44->x / drawDt;
+        sp44->y = sp44->y / drawDt;
+        sp44->z = sp44->z / drawDt;
+    }
     MtxPosition(sp44, sp38);
     sp38->z = sp38->z * ((f32)l_himo2Regs.mChild[0].mFloatRegs[5] + 500.0f);
     if (sp38->z > 16384.0f) {
@@ -858,22 +890,27 @@ static BOOL daHimo2_Draw(himo2_class* i_this) {
     } else if (sp38->z < -16384.0f) {
         sp38->z = -16384.0f;
     }
-    cLib_addCalcAngleS2(&i_this->mCoilAngleX, (s16)gabi::ftoi(sp38->z), 2,
-                        (s16)((s16)l_himo2Regs.mChild[0].mShortRegs[2] + 0x800));
+    /* true60 (t60_draw.h): the coil's smoothing steps once per 30 Hz frame, from the hand's motion over the frame */
+    const bool framePass = t60_draw_frame_pass();
+    if (framePass)
+        cLib_addCalcAngleS2(&i_this->mCoilAngleX, (s16)gabi::ftoi(sp38->z), 2,
+                            (s16)((s16)l_himo2Regs.mChild[0].mShortRegs[2] + 0x800));
     sp38->x = sp38->x * ((f32)l_himo2Regs.mChild[0].mFloatRegs[6] + -200.0f);
     f32 f1 = (f32)l_himo2Regs.mChild[0].mFloatRegs[7] + 4000.0f;
     if (sp38->x > f1)
         sp38->x = f1;
     if (sp38->x < -f1)
         sp38->x = -f1;
-    cLib_addCalcAngleS2(&i_this->mCoilAngleZ, (s16)gabi::ftoi(sp38->x), 2,
-                        (s16)((s16)l_himo2Regs.mChild[0].mShortRegs[2] + 0x800));
-    if (sp38->y < (f32)l_himo2Regs.mChild[0].mFloatRegs[8] + -20.0f) {
-        cLib_addCalcAngleS2(&i_this->mCoilFlipAngleZ, -0x8000, 2, 0x1000);
-    } else {
-        cLib_addCalcAngleS2(&i_this->mCoilFlipAngleZ, 0, 2, 0x1000);
+    if (framePass) {
+        cLib_addCalcAngleS2(&i_this->mCoilAngleZ, (s16)gabi::ftoi(sp38->x), 2,
+                            (s16)((s16)l_himo2Regs.mChild[0].mShortRegs[2] + 0x800));
+        if (sp38->y < (f32)l_himo2Regs.mChild[0].mFloatRegs[8] + -20.0f) {
+            cLib_addCalcAngleS2(&i_this->mCoilFlipAngleZ, -0x8000, 2, 0x1000);
+        } else {
+            cLib_addCalcAngleS2(&i_this->mCoilFlipAngleZ, 0, 2, 0x1000);
+        }
+        i_this->mOldCoilHandPos = i_this->mHandPos[1];
     }
-    i_this->mOldCoilHandPos = i_this->mHandPos[1];
     f32 f29 = gabi::fmadds(i_this->mHandDist, (f32)l_himo2Regs.mChild[0].mFloatRegs[9] + 3.0f,
                            (f32)l_himo2Regs.mChild[0].mFloatRegs[10]) -
               120.0f;
@@ -882,7 +919,8 @@ static BOOL daHimo2_Draw(himo2_class* i_this) {
     for (int i = 0; i < 5; i++) {
         f32 lim = (f32)(4 - i) * 300.0f;
         cXyz* r16 = lineMat_getPos(&i_this->mCoilLine, i);
-        if (f29 > lim) {
+        if (!framePass) {
+        } else if (f29 > lim) {
             cLib_addCalc0(&i_this->mCoilRadiusRate[i], 1.0f,
                           (f32)l_himo2Regs.mChild[0].mFloatRegs[11] + 0.2f);
         } else {
@@ -916,7 +954,8 @@ static BOOL daHimo2_Draw(himo2_class* i_this) {
         f1_2 = (f32)l_himo2Regs.mChild[0].mFloatRegs[14] + 15.0f;
     else
         f1_2 = 0.0f;
-    cLib_addCalc2(&i_this->mHandLineSag, f1_2, 1.0f, step + 4.0f);
+    if (framePass)
+        cLib_addCalc2(&i_this->mHandLineSag, f1_2, 1.0f, step + 4.0f);
     gabi::Local<cXyz> sp2C;
     *sp2C.get() = i_this->mHandPos[0] - i_this->mHandPos[1]; /* cXyz::operator- */
     Mtx34* cm = calc_mtx();
@@ -945,6 +984,7 @@ static BOOL daHimo2_Draw(himo2_class* i_this) {
     lineMat_update(&i_this->mHandLine, 16, rope_scale, &i_this->tevStr);
     himo2_sortLineMaterial(&i_this->mHandLine);
     himo2_hd_line_packet(i_this, 0, 3, &i_this->mHandLine);
+    t60_set_dt(prevDt);
     dComIfGd_setList();
     return TRUE;
 }

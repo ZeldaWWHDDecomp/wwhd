@@ -1,0 +1,9 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_mgameboard.txt
+# ---- true60 N-step spec (2026-11-20; the whole-frame form rule + addendum, d/t60_objw.h): the Sploosh
+# Kaboom board (GBoard): daMgBoard_c::_execute 021C54E0 (the game state, the cursor input, the shots, the end timer).
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state. Negative
+# control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 021C54E0
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 02007898 0207A9A0 021C44E4 021C4DFC 021C4E00 021C4E14 021C4F34 021C546C 021C54D4 025200D4 025B8BB0 025BB358 025BB470 025CB374 025D5218 025E1988 025E1A04 025E1B24 025F1C28 025F1C5C 02618760 02618774 02624134

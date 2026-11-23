@@ -1,0 +1,56 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_rd.txt
+# ---- true60 N-step spec (2026-11-19; d_a_rd_t60.h): the ReDead's execute 0245BF50 and its modes run on
+# every step. Timers / hit reads / event-state decisions / the mash input on the first step (first-step AI-timer, mixed-pair hit-flag, first-step frame-level, first-step input), Link
+# / animation-end / arrival decisions, lookBack (process-order read) and the writes into Link on the tick30 step (first-step input addendum, animation-driven decision Link
+# form, process-order read addendum), one mode step per frame (a mode changed on an earlier step holds the dispatch), an animation set on an
+# earlier step plays from the next frame, the collider set on the first step and registered on the tick30 step (one-sweep-per-frame attack),
+# the tick30 push held over the frame (first-step push). Negative control: -DRD_T60_NEGCTRL -DT60C_NEGCTRL must fail.
+# the modes are compared under the execute (modeProc and the modes real with their candidates): the hold (one mode
+# step per frame) lives in the execute; a mode function run alone N times would re-run a mode it left on step 1
+t60conv 0245BF50 0245C770 0245BD98 0245B050 0245AC14 0245AF80
+# callees with changed code, real with the candidate: checkTgHit (first-step read, held answer), setCollision, setAnm /
+# setBtkAnm / setBrkAnm (the set latch), the smoothers
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0245C770 0245BD98 0245B050 0245AC14 0245AF80 0200ED84 0200F428
+t60cand 0245C770 0245BD98 0245B050 0245AC14 0245AF80 0200ED84 0200F428
+# the modes run from the execute's dispatch (modeProc 0245ADB0): real with their candidates
+real 0245ADB0 0245D134 0245D87C 0245D5C0 0245D700 0245D9DC 0245DD80 0245E158 0245E30C 0245E964 0245EC74 0245EEA8 0245EF98
+t60cand 0245D134 0245D87C 0245D5C0 0245D700 0245D9DC 0245DD80 0245E158 0245E30C 0245E964 0245EC74 0245EEA8 0245EF98
+# fopAcM_posMoveF (025D6870) stays a mock: the f_op_actor_mng sources define their own gc_tu (duplicate symbol with
+# d_a_rd.cpp's); the held push (rd_t60_push_step, the oq form) is checked in the pairs
+# effect / sound starts, event orders and creations: as many calls over the N steps as in the one step
+t60calls 025E1AA4 025D77DC
+# float rounding of the split motion: current.pos, speed, speedF, eye / attention, the head offset ease, the target
+t60tol * r3+0x314 f32x3 absrel 0.0001 0.0001
+t60tol * r3+0x33C f32x3 absrel 0.0001 0.0001
+t60tol * r3+0x370 f32 absrel 0.1 0.0001
+# steering: speedF in the game's range (walk / return speeds; garbage gave the eases huge steps)
+field * r3+0x370 f32 0 20
+t60tol * r3+0x37C f32x3 absrel 0.0001 0.0001
+t60tol * r3+0x390 f32x3 absrel 0.0001 0.0001
+# mHeadOffsetX (0xF10): visual only (the head node offset, _nodeHeadControl); its cLib_addCalc2 has the HIO step
+# mHeadOffsetStep as its max step, garbage in the harness (the clamped-smoothing rule clamp class: one step clamps, the steps do not,
+# NaN steps): not compared (rdA: the only N-step spec differences, 2 / 2 / 3 / 3 inputs at s1 N2 / N4, s7 N2 / N4)
+t60tol * r3+0xF10 f32 skip
+# the integer angle chases (cLib_addCalcAngleS2 split into steps): the facing, the head angles. the first-step input rule addendum
+# class: a mode change from a Link decision on the tick30 step (the notice, the area test, the cry / attack fan) while
+# the earlier steps already ran the mode's turn / speed ease (A's one call decides first and skips them): the facing
+# up to (1 - dt) of the frame's largest turn (0x200: N 4 0x180), speedF up to its largest ease step (0.1)
+t60tol * r3+0x32A a16 abs 384
+t60tol * r3+0xEF6 a16 abs 16
+t60tol * r3+0xF06 a16 abs 16
+t60tol * r3+0xEB4 a16 abs 16
+# the Link reads, the fan / circle tests, the event state, the control state: fixed answers over the N steps
+ret! 0245D088 0 1
+ret! 025445B8 0 1
+ret! 0245D0C8 0 1
+ret! 0245D970 0 1
+ret! 02588230 0 1
+ret! 025880B4 0 1
+fret! 025D6958 10 60
+# the play object at its fixed address on every call (an unsteered answer moved the event flags between the steps)
+ret! 025200D4 0x54000000 0x54000000
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+real 0200F268
+t60cand 0200F268

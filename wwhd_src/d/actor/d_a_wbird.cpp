@@ -6,6 +6,7 @@
  * (zeldaret/tww src/d/actor/d_a_wbird.cpp) to the WWHD layout and verified against cking.rpx.
  */
 #include "d/actor/d_a_wbird.h"
+#include "d/actor/d_a_wbird_t60.h" /* true60: the whole form (the whole-frame form rule, d/t60_objw.h) */
 const gc_tu_data gc_tu = {.headerStatics = {0x1046EBC8, 0x101D332C, 0x1046EBD4}};
 
 // HD: this actor has a separate deleting destructor in its vtable.
@@ -237,6 +238,9 @@ void daWbird_c::actionSelect() {
 
 /* 024DE958 */
 static BOOL daWbird_Execute(daWbird_c *i_this) {
+    t60w::Guard<daWbird_c> t60g(i_this, t60objw::Logic<daWbird_c>::kOps); /* true60: the whole frame on the tick30 step at dt 1 (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     switch (i_this->mAction) {
     case ACTION_SELECT:
         i_this->actionSelect();
@@ -250,6 +254,7 @@ static BOOL daWbird_Execute(daWbird_c *i_this) {
     default:
         break; /* actionWait */
     }
+    t60g.model = true; /* true60 (whole-frame form): the frame reaches its matrix step */
     i_this->calcMtx();
     return TRUE;
 }

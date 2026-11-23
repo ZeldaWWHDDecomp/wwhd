@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_bk_main.h"
+#include "d/actor/d_a_bk_t60.h"
 
 static bkMainSphereSource head_sph_src = {
     0x0, 0x0, 0,       {0, 0, 0}, 0x0, 0xff1dfeff,         0x3,  0x0,
@@ -65,6 +66,8 @@ void anm_init(bk_class* i_this, int bckFileIdx, f32 morf, u8 loopMode, f32 speed
             (J3DAnmTransform*)dComIfG_getObjectRes("Bk", bckFileIdx, SAFESTRING_VTBL);
         i_this->mpMorf->setAnm(anm, loopMode, morf, speed, 0.0f, -1.0f, nullptr);
     }
+    /* true60: an animation set on a middle step is first played next frame (d_a_bk_t60.h bk_t60_mark_anm) */
+    bk_t60_mark_anm(&i_this->mpMorf);
 }
 
 /* 02098EEC */
@@ -130,6 +133,8 @@ void smoke_set_s(bk_class* i_this, f32 rate) {
     dBgS_LinChk_dt(linChk);
 }
 
+/* true60: a per-frame spawner with its counter: daBk_Execute calls it on the tick30 step only
+ * (d_a_bk_exec.cpp; a start set after the call on an in-between step waits for the next frame) */
 /* 020A070C */
 void ground_smoke_set(bk_class* i_this) {
     if (i_this->mSmokeTimer == 0) {

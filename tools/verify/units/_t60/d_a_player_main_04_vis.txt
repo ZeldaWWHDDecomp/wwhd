@@ -1,0 +1,17 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_player_main_04.txt
+# ---- (2026-11-16):
+# setHatAngle 024022D0: the hat spring (and its JA_SE_LK_HAT_SWING sustained start) runs on the frame's step only
+# (the per-step smoothing rule, 4, 11): N steps leave exactly what one step leaves (the earlier steps return at once).
+# setItemModel 02403C24: the hammer's post-hit wobble timer mHammerSwingTimer (r3+0x69EC) stored on the frame's step
+# (the 30 Hz timer rule); the hookshot's hand-stepped bck frame m35EC (r3+0x6A44) and the Wind Waker's glow brk frame +-dt per step
+# (the animation-rate rule); the glint btks (04#1) on the frame's step. All exact: dt shares of 1 are exact in float for these values.
+# (NC note, 2026-11-21): setItemModel's root is not discriminating (NC q88o: base code 2000/2000): the s88
+# change of this unit was setHatAngle only (frame step at dt 1); setItemModel's code is the same in base and head, so its
+# row is a no-regression check, not evidence for the s88 form (setHatAngle's NC: 1736/2000).
+t60conv 024022D0 02403C24
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200ECD4 0200EF78 0200F378 0200F428 0200F564 0200F5C8 0200F8D0
+t60cand 0200ECD4 0200EF78 0200F378 0200F428 0200F564 0200F5C8 0200F8D0
+# known-fail clib-real: (sweep: N-step spec N2 differs with the eases converted; new with them)

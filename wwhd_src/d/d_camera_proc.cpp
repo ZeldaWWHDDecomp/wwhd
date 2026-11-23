@@ -13,6 +13,11 @@
  */
 #include "d/d_camera_proc.h"
 #include "port_hooks.h"
+#include "true60.h"
+#include "d/d_camera_proc_t60.h"
+#include "d/d_camera_key_t60.h"
+#include "d/d_camera_follow_whole_t60.h" /* the follow-whole frame's shown camera on its earlier steps (declaration only here) */
+#include "d/t60_draw.h"
 #include <bit>
 
 using namespace CameraProcessHD;
@@ -279,6 +284,7 @@ void dCamera_c::CalcTrimSize() {
 /* HD: fixed 16:9 aspect; auto focus is switched on every frame  */
 static BOOL camera_execute(camera_class* i_this) {
     dCamera_c* body = gabi::at<dCamera_c>(gabi::ea(&reinterpret_cast<Process*>(i_this)->mCamera));
+    camera_key_t60::enter(gabi::ea(body)); /* true60: this camera's host state (d_camera_key_t60.h) */
     /* preparation() */
     s32 camId = fopCamM_GetParam(i_this);
     s32 winId = fieldRead<s8>(cameraInfo(camId)->mDlstWindowIdx);
@@ -308,7 +314,10 @@ static BOOL camera_execute(camera_class* i_this) {
     }
     body->CalcTrimSize();
     cameraStore(cameraArgument(i_this)); /* store */
+    if (t60::steps() > 1) /* true60 (d_camera_follow_whole_t60.h): a follow-whole frame's earlier steps show their share */
+        t60_cam_follow_picture(gabi::ea(i_this));
     view_setup(i_this);
+    camera_key_t60::leave(); /* true60 (d_camera_key_t60.h) */
     return TRUE;
 }
 
@@ -483,6 +492,7 @@ static void dCamera_dt(dCamera_c* i_this, s32 flags) {
 /* HD: clears the play object's draw view and detaches the render layers  */
 static BOOL camera_delete(camera_class* i_this) {
     s32 camId = fopCamM_GetParam(i_this);
+    camera_key_t60::release(gabi::ea(&reinterpret_cast<Process*>(i_this)->mCamera)); /* true60 (d_camera_key_t60.h) */
     cameraDestroy(cameraArgument(gabi::ea(&reinterpret_cast<Process*>(i_this)->mCamera)),
                   cameraArgument(2)); /* body->~dCamera_c() */
     cameraInfo(camId)->mpCamera = 0;  /* dComIfGp_setCamera(camId, NULL) */
@@ -537,8 +547,12 @@ bool dCamera_c::NotRun() {
     mEventFlags = mEventFlags & ~0x90149C21u;
     checkGroundInfo();
     clrComStat(0x80);
-    if (playEventCameraPlaying()->get() != 0 /* dComIfGp_evmng_cameraPlay() */ ||
-        chkFlag(0x20000000)) {
+    /* true60 (the 30 Hz timer rule, 9 and 14): the event camera (eventCamera and its engines, a 30 Hz engine until its
+     * own conversion) runs in the event manager's step, the tick30 step, with its frame/type/style/mode timers; on the
+     * frame's other steps of a converted camera the event view holds. dt 1: every call, the original. */
+    if ((t60::dt() == 1.0f || t60::tick30()) &&
+        (playEventCameraPlaying()->get() != 0 /* dComIfGp_evmng_cameraPlay() */ ||
+        chkFlag(0x20000000))) {
         s32 ev = mCamTypeEvent;
         if (mCurType != ev) {
             pushPos();
@@ -1306,7 +1320,7 @@ static BOOL camera_draw(camera_class* i_this) {
             fieldWrite<u8>(hdProjection(body)->mDirty, 1);
             fieldWrite<u32>(hdProjection(body)->mOffsetY,
                             fieldRead<u32>(sInitialProjectionOffset.mTarget));
-        } else {
+        } else if (t60_draw_frame_pass()) { /* true60 (t60_draw.h): the zoom eases back once per 30 Hz frame */
             cameraAddCalc(cameraArgument(zoom.get()), 1.0f, 0.2f, 0.3f, 0.1f); /* cLib_addCalc */
         }
         fieldWrite<u32>(hdZoom(body)->mScale, fieldRead<u32>(*zoom));
@@ -1323,9 +1337,11 @@ static BOOL camera_draw(camera_class* i_this) {
     cameraInverseView(cameraArgument(gabi::ea(&cameraView(i_this)->mViewMtx)),
                       cameraArgument(gabi::ea(
                           &cameraView(i_this)->mInvViewMtx))); /* PSMTXInverse(view, invView) */
-    audioCameraInfo(cameraArgument(gabi::ea(&cameraView(i_this)->mLookat.mEye.x)),
-                    cameraArgument(gabi::ea(&sJ3DView)),
-                    cameraArgument(camId2)); /* mDoAud_getCameraInfo */
+    const bool audioPass = camera_t60_audio_pass(); /* true60: the frame's camera to the audio, tick30 draw only (d_camera_proc_t60.h) */
+    if (audioPass)
+        audioCameraInfo(cameraArgument(gabi::ea(&cameraView(i_this)->mLookat.mEye.x)),
+                        cameraArgument(gabi::ea(&sJ3DView)),
+                        cameraArgument(camId2)); /* mDoAud_getCameraInfo */
 
     gabi::Local<dBgS_GndChk> gnd;
     u32 g = gabi::ea(gnd.get());
@@ -1335,21 +1351,23 @@ static BOOL camera_draw(camera_class* i_this) {
     if (groundY != -1000000000.0f) {
         u32 snd = cameraMaterialSound(cameraArgument(dComIfGp_ea() + PLAY_BGS),
                                       cameraArgument(g + 0x14)); /* GetMtrlSndId */
-        audioCameraMapInfo(cameraArgument(snd));                 /* mDoAud_getCameraMapInfo */
+        if (audioPass)
+            audioCameraMapInfo(cameraArgument(snd));             /* mDoAud_getCameraMapInfo */
         u32 grp = cameraGroupSound(cameraArgument(dComIfGp_ea() + PLAY_BGS),
                                    cameraArgument(g + 0x14)); /* GetGrpSoundId */
-        audioCameraGroupInfo(cameraArgument(grp & 0xFF));     /* mDoAud_setCameraGroupInfo */
+        if (audioPass)
+            audioCameraGroupInfo(cameraArgument(grp & 0xFF)); /* mDoAud_setCameraGroupInfo */
         u32 iface = sAudioInterface.get();
         gabi::Local<cXyz> polyPos;
         vectorWords(polyPos.get())->mWord[0] = fieldRead<u32>(cameraView(i_this)->mLookat.mEye.x);
         polyPos->y = groundY;
         vectorWords(polyPos.get())->mWord[2] = fieldRead<u32>(cameraView(i_this)->mLookat.mEye.z);
-        if (iface != 0)
+        if (iface != 0 && audioPass)
             audioCameraPolygonPos(cameraArgument(iface),
                                   cameraArgument(polyPos.get())); /* setCameraPolygonPos */
     } else {
         u32 iface = sAudioInterface.get();
-        if (iface != 0)
+        if (iface != 0 && audioPass)
             audioCameraPolygonPos(cameraArgument(iface), cameraArgument(0));
     }
     PSMTXCopy(gabi::at<Mtx34>(gabi::ea(&cameraView(i_this)->mViewMtx)),

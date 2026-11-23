@@ -2,6 +2,8 @@
  * WWHD source, verified against the native unit.
  * HD: heap selection depends on the stage and actor profile; culling also tests the second view. */
 #include "f_op/f_op_actor_mng.h"
+#include "true60.h"
+#include "f_op/f_op_actor_mng_t60_cull.h" /* true60: an execute's culling check reads the frame-end view */
 
 
 
@@ -166,8 +168,39 @@ static BOOL fopAcM_addAngleY(u32 i_this, u32 target, u32 step) {
     return actMngGuest_cLib_chaseAngleS(i_this + 0x322, target, step) != 0;
 }
 
+// true60 (the per-step movement rule): exact arc. fopAcM_calcSpeed adds gravity*dt to speed.y and remembers the change dv it made;
+// the same actor's next fopAcM_posMove in the same step moves by speed*dt plus dv*(1-dt)/2 on y, so N steps of
+// (v += g*dt; p += v*dt + dv*(1-dt)/2) end where one step (v += g; p += v) ends. A posMove without its own calcSpeed in
+// that step (speed set inline by the actor) gets no arc term: the actor's own unit converts that gravity. The record is
+// host memory: actor, step (t60_step_counter), the speed.y it left (a later write invalidates it) and dv.
+namespace {
+struct T60ArcRecord {
+    u32 actor, step;
+    f32 vy, dv;
+    bool valid;
+};
+T60ArcRecord t60Arc;
+}  // namespace
+
 /* 025D67A8 */
 static void fopAcM_calcSpeed(u32 i_this) {
+    if (t60::dt() != 1.0f) {
+        fopAc_ac_c* actorView = actorMngActor(i_this);
+        f32 dt = t60::dt();
+        u32 t = gabi::ea(&sincosTable) + ((u32)((u16)actorView->current.angle.y >> 3) << 3);
+        f32 speedF = (f32)actorView->speedF;
+        f32 vy0 = (f32)actorView->speed.y;
+        f32 vy = gabi::fadds_ppc(vy0, gabi::fmuls_ppc((f32)actorView->gravity, dt));
+        f32 maxFall = (f32)actorView->maxFallSpeed;
+        f32 vx = gabi::fmuls_ppc(speedF, (f32)(actorMngView<ActorManagerSinCos>(t)->sin));
+        f32 vz = gabi::fmuls_ppc(speedF, (f32)(actorMngView<ActorManagerSinCos>(t)->cos));
+        if (vy < maxFall) vy = maxFall;
+        actorView->speed.y = vy;
+        actorView->speed.z = vz;
+        actorView->speed.x = vx;
+        t60Arc = T60ArcRecord{i_this, t60_step_counter(), vy, gabi::fsubs_ppc(vy, vy0), true};
+        return;
+    }
     fopAc_ac_c* actorView = actorMngActor(i_this);
     u32 t = gabi::ea(&sincosTable) + ((u32)((u16)actorView->current.angle.y >> 3) << 3);
     f32 speedF = (f32)actorView->speedF;
@@ -183,6 +216,32 @@ static void fopAcM_calcSpeed(u32 i_this) {
 
 /* 025D6800 */
 static void fopAcM_posMoveRegister(u32 i_this, u32 i_movePos) {
+    if (t60::dt() != 1.0f) {
+        fopAc_ac_c* actorView = actorMngActor(i_this);
+        f32 dt = t60::dt();
+        f32 sy = (f32)actorView->speed.y, sx = (f32)actorView->speed.x, sz = (f32)actorView->speed.z;
+        f32 arc = 0.0f;
+        if (t60Arc.valid && t60Arc.actor == i_this && t60Arc.step == t60_step_counter() &&
+            !memcmp(&t60Arc.vy, &sy, sizeof sy)) { /* this step's own calcSpeed, speed.y untouched since */
+            arc = gabi::fmuls_ppc(gabi::fmuls_ppc(t60Arc.dv, gabi::fsubs_ppc(1.0f, dt)), 0.5f);
+            t60Arc.valid = false;
+        }
+        f32 py = (f32)actorView->current.pos.y, px = (f32)actorView->current.pos.x,
+            pz = (f32)actorView->current.pos.z;
+        actorView->current.pos.y = gabi::fadds_ppc(gabi::fadds_ppc(py, gabi::fmuls_ppc(sy, dt)), arc);
+        actorView->current.pos.x = gabi::fadds_ppc(px, gabi::fmuls_ppc(sx, dt));
+        actorView->current.pos.z = gabi::fadds_ppc(pz, gabi::fmuls_ppc(sz, dt));
+        if (i_movePos != 0) { /* a per-frame displacement (carrier, push): x dt */
+            u32 p = i_this + 0x314;
+            actorMngView<cXyz>(p)->x = gabi::fadds_ppc((f32)actorMngView<cXyz>(p)->x,
+                                                       gabi::fmuls_ppc((f32)actorMngView<cXyz>(i_movePos)->x, dt));
+            actorMngView<cXyz>(p)->y = gabi::fadds_ppc((f32)actorMngView<cXyz>(p)->y,
+                                                       gabi::fmuls_ppc((f32)actorMngView<cXyz>(i_movePos)->y, dt));
+            actorMngView<cXyz>(p)->z = gabi::fadds_ppc((f32)actorMngView<cXyz>(p)->z,
+                                                       gabi::fmuls_ppc((f32)actorMngView<cXyz>(i_movePos)->z, dt));
+        }
+        return;
+    }
     fopAc_ac_c* actorView = actorMngActor(i_this);
     f32 sy = (f32)actorView->speed.y, sx = (f32)actorView->speed.x;
     f32 py = (f32)actorView->current.pos.y, px = (f32)actorView->current.pos.x,
@@ -400,8 +459,8 @@ static BOOL cull_sphere(u32 i_this, u32 pMtx, u32 mtx, f32 cullFar, f32 sizeFar,
     return pmf_call(obj, 0x7E4, gabi::ea(sph.get())) == 0;
 }
 
-/* 025D6CE8 */
-static BOOL fopAcM_cullingCheck(u32 i_this) {
+/* the original fopAcM_cullingCheck (025D6CE8 below: the true60 view swap around it) */
+static BOOL fopAcM_cullingCheck_view(u32 i_this) {
     fopAc_ac_c* actorView = actorMngActor(i_this);
     u32 mtx = (u32)actorView->cullMtx;
     gabi::Local<ActorManagerMatrix> tmp;
@@ -429,6 +488,16 @@ static BOOL fopAcM_cullingCheck(u32 i_this) {
         return cull_sphere(i_this, pMtx, mtx, cullFar, sizeFar, i_this + 0x34C, i_this + 0x358);
     u32 sph = gabi::ea(&l_cullSizeSphere.entries[(s32)cull - fopAc_CULLSPHERE_0_e]);
     return cull_sphere(i_this, pMtx, mtx, cullFar, sizeFar, sph, sph + 0xC);
+}
+
+/* 025D6CE8 */
+static BOOL fopAcM_cullingCheck(u32 i_this) {
+    /* true60 (f_op_actor_mng_t60_cull.h, the first-step AI-timer rule extended): inside an execute the check reads the frame-end view */
+    const bool t60Swapped = t60_cull_swap_in();
+    const BOOL r = fopAcM_cullingCheck_view(i_this);
+    if (t60Swapped)
+        t60_cull_swap_out();
+    return r;
 }
 
 /* ---- event orders ---- */

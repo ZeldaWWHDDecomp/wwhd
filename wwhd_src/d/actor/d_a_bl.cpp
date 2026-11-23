@@ -1,6 +1,7 @@
 /* Bubble enemy. Verified HD implementation.
  * HD: the GameCube body is not reconstructed; state names describe the audited HD layout. */
 #include "d/actor/d_a_bl.h"
+#include "d/actor/d_a_bl_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule addendum) */
 
 const gc_tu_data gc_tu = {
     .safeString = 0x100098AC,
@@ -1806,6 +1807,10 @@ void action_normal_skull(bl_class* a) {
 }
 /* 020AB020 */
 BOOL daBL_Execute(bl_class* a) {
+    t60w::Guard<bl_class> t60g(a, bl_t60::ops()); /* true60: the whole frame on the tick30 step (end at every return) */
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
+    t60g.model = true;
     if (a->timers[2] == 1)
         bl_dPa_followEcallBack_end(reinterpret_cast<u8*>(&a->fireCallback));
     s16 immunity = a->timers[5];
@@ -2144,7 +2149,11 @@ s32 daBL_Create(bl_class* actor) {
         reinterpret_cast<be<u8>&>(actor->stolenItemCount) = 1;
         actor->stealItemLeft = 1;
     }
-    draw_SUB(actor);
+    {
+        const f32 t60PrevDt = bl_t60::createBegin(); /* true60: create's first pose, the original at dt 1 */
+        draw_SUB(actor);
+        bl_t60::createEnd(t60PrevDt);
+    }
     return phase;
 }
 

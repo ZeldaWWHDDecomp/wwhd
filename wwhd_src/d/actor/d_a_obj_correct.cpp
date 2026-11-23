@@ -3,6 +3,7 @@
 #include "bindings.h"
 #include "d/actor/d_a_obj_try.h"
 #include "d/actor/d_a_player.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using daObjCorrect::Act_c;
 // HD: actor members follow the expanded 0x3AC actor base.
 static CorrectAttributes L_attr;
@@ -80,6 +81,9 @@ s32 daObjCorrect::Act_c::_create() {
 }
 /* 02332F6C */
 u8 daObjCorrect::Act_c::_execute() {
+  t60w::Guard<Act_c> t60g(this, t60objw::Logic<Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+  if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+    return 1;
   (this->*mode_proc.mEntries[u32(s32(mMode))])();
   (this->*demo_proc.mEntries[u32(s32(mDemo))])();
   return 1;

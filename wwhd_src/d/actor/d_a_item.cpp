@@ -8,6 +8,7 @@
  */
 #include "SSystem/SComponent/c_m3d_g_pla.h"
 #include "d/actor/d_a_item.h"
+#include "d/actor/d_a_item_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule addendum) */
 #include "f_op/f_op_camera.h"
 #include "gc_api/gc_api.h"
 
@@ -503,6 +504,9 @@ cPhs_State daItem_c::_daItem_create() {
 
 /* 0217F5B0 */
 BOOL daItem_c::_daItem_execute() {
+    t60w::Guard<daItem_c> t60g(this, item_t60::kOps); /* true60: t60w::end on every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only */
+        return TRUE;
 
     if (mSpawnSwitchNo != 0xFF && !fopAcM_isSwitch(this, mSpawnSwitchNo)) {
         return TRUE;
@@ -552,6 +556,7 @@ BOOL daItem_c::_daItem_execute() {
 
     animPlay(1.0f, 1.0f, 1.0f, 1.0f, 1.0f);
     set_mtx();
+    t60g.model = true; /* true60: the frame reached its model step */
 
     return TRUE;
 }

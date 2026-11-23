@@ -7,6 +7,7 @@
  * written from the WWHD code (cking.rpx) with the GameCube names, and verified against it.
  */
 #include "d/actor/d_a_npc_gk1.h"
+#include "d/actor/d_a_npc_gk1_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule NPC form) */
 
 // HD: per-translation-unit constructor/destructor metadata.
 const gc_tu_data gc_tu = {
@@ -74,10 +75,12 @@ void daNpc_Gk1_c::_nodeCB_Head(J3DNode* i_node, J3DModel* i_model) {
     u32 jnt_no = reinterpret_cast<J3DJoint*>(i_node)->getJntNo();
     Mtx34* stk = mDoMtx_stack_c::get();
     PSMTXCopy(i_model->getAnmMtx(jnt_no), stk);
+    if (gk1_t60::drawStep()) { /* true60: logic stores on the tick30 step's draw only (rule 14) */
     mHeadPos.x = stk->m[0][3];
     mHeadPos.y = stk->m[1][3];
     mHeadPos.z = stk->m[2][3];
     PSMTXMultVec(stk, &a_eye_pos_off, &mEyePos);
+    }
     PSMTXCopy(stk, J3DSys::mCurrentMtx);
     mtx_copy(i_model->getAnmMtx(jnt_no), stk);
 }
@@ -862,6 +865,9 @@ BOOL daNpc_Gk1_c::_draw() {
 /* 0223722C */
 BOOL daNpc_Gk1_c::_execute() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    t60w::Guard<daNpc_Gk1_c> t60g(this, gk1_t60::kOps); /* true60: the whole frame on the tick30 step (end at every return) */
+    if (t60g.skip) /* a step before the tick30 step: the picture only */
+        return TRUE;
     if (!mbHomeSet) {
         mHomePos.copy(current.pos);
         mHomeAngle.x = current.angle.x;
@@ -906,6 +912,7 @@ BOOL daNpc_Gk1_c::_execute() {
     if (!mbDemo) {
         setCollision(90.0f, 200.0f);
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 

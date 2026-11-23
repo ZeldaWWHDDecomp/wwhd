@@ -8,6 +8,7 @@
  * register terms (REGn_F/REGn_S) of the GameCube source except REG14_F(4) in damage.
  */
 #include "d/actor/d_a_bmdfoot.h"
+#include "d/actor/d_a_bmdfoot_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule), the draw's light state */
 
 enum {
     dRes_INDEX_BMDFOOT_BCK_ASI_ATTACK1_e = 5,
@@ -119,14 +120,16 @@ static BOOL daBmdfoot_Draw(bmdfoot_class* i_this) {
     fopAc_ac_c* actor = i_this;
     if (i_this->mDrawOn != 0) {
         J3DModel* model = i_this->mpBodyVineMorf->getModel();
-        settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &actor->current.pos, &actor->tevStr);
+        if (bmdfoot_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+            settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &actor->current.pos, &actor->tevStr);
         setLightTevColorType(dKy_getEnvlight(), model, &actor->tevStr);
         mDoExt_btkAnm* btk = i_this->btk;
         btk->entry(model->getModelData(), btk->getFrame());
         i_this->mpBodyVineMorf->entryDL();
         if (i_this->mUgMode >= 10) {
             model = i_this->mpFloorVineMorf->getModel();
-            settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &i_this->mUgPos, &i_this->mTevstr);
+            if (bmdfoot_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+                settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &i_this->mUgPos, &i_this->mTevstr);
             setLightTevColorType(dKy_getEnvlight(), model, &i_this->mTevstr);
             i_this->mpFloorVineMorf->entryDL();
         }
@@ -665,6 +668,10 @@ static void* s_a_d_sub(void* search, void* param_2) {
 
 /* 020B5DC4 */
 static BOOL daBmdfoot_Execute(bmdfoot_class* i_this) {
+    /* true60: the whole frame on the tick30 step (the whole-frame form rule; end at the return) */
+    t60w::Guard<bmdfoot_class> t60g(i_this, bmdfoot_t60::ops());
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
 
     fopAc_ac_c* actor = i_this;
     dComIfGp_get(); /* HD: an unused accessor call */
@@ -687,6 +694,7 @@ static BOOL daBmdfoot_Execute(bmdfoot_class* i_this) {
     cMtx_XrotM(calc_mtx(), actor->current.angle.x);
     cMtx_ZrotM(calc_mtx(), (s16)(actor->current.angle.z + i_this->mAimAngle * 2));
     J3DModel* model = i_this->mpBodyVineMorf->getModel();
+    t60g.model = true;
     model->setBaseTRMtx(calc_mtx());
     i_this->mpBodyVineMorf->play(nullptr, 0, 0);
     i_this->mpBodyVineMorf->calc();

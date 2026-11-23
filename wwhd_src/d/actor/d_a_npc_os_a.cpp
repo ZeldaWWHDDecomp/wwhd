@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_npc_os_a.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 static OsSmokeLightingHD m_smoke_tevstr;
 static OsWaterScaleStaticsHD l_waterScales;
@@ -377,6 +378,9 @@ BOOL daNpc_Os_c::draw() {
 
 /* 022AC1DC */
 BOOL daNpc_Os_c::execute() {
+    t60w::Guard<daNpc_Os_c> t60g(this, t60npc::Logic<daNpc_Os_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     /* static JGeometry::TVec3<f32> splash_scale(0.6f, ...), ripple_scale(1.0f, ...) */
     if ((u32)l_waterScales.mSplashGuard == 0) {
         l_waterScales.mSplashGuard = 1;
@@ -664,6 +668,7 @@ BOOL daNpc_Os_c::execute() {
     }
 
     eventOrder();
+    t60g.model = true; /* true60: the frame reached its model step */
     setBaseMtx();
     if (mBeamCallBack0.mpBaseEmitter != nullptr || mBeamCallBack1.mpBaseEmitter != nullptr) {
         s32 reverb = dComIfGp_getReverb(current.roomNo);

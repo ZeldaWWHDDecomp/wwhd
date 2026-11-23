@@ -1,0 +1,68 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_oq.txt
+# ---- true60 N-step spec (2026-11-18; d_a_oq_t60.h): the Octorok's execute 023C1380 runs on every
+# step (its actions are inlined into it). Timers / animation-end decisions / hit reads on the first step (first-step AI-timer, animation-driven decision,
+# mixed-pair hit-flag), Link-reading decisions on the tick30 step (first-step input addendum), one AI state step per frame with the dispatch's motion
+# blocks replayed on held steps, every collider for the tick30 Move only (one-sweep-per-frame attack), the tick30 push held over the frame
+# (first-step push), v += g dt with the exact-arc term (the per-step movement rule). Negative control: -DOQ_T60_NEGCTRL -DT60C_NEGCTRL (every helper in
+# the per-step form) must fail.
+t60conv 023C1380 023C0520 023C064C 023C1080 023C1324 023C024C
+# callees with changed code, real with the candidate: the animation set (latch), the body check (first-step reads,
+# radius ease), the bob (phase share), the facing chase, the matrices (lighting once per frame), and the smoothers
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 023C0520 023C064C 023C1080 023C1324 023C024C 0200ED84 0200EDC8 0200F428
+t60cand 023C0520 023C064C 023C1080 023C1324 023C024C 0200ED84 0200EDC8 0200F428
+# body_atari_check reads the hits on the first step (mixed-pair hit-flag) and returns FALSE on the later steps (radius ease only): its
+# return on the last step is not the one step's; the caller's use of it is compared under the execute
+t60ret 023C064C skip
+# effect / sound starts and creations: as many calls over the N steps as in the one step
+t60calls 025A847C 023C0FDC 025D5928 025D5A20
+# float rounding of the split motion (pos += v x dt; the arc term; the eases): current.pos, speed, scale, eye /
+# attention, the draw offset (0x43C), the collision radius (0x428)
+t60tol * r3+0x314 f32x3 absrel 0.0001 0.0001
+t60tol * r3+0x33C f32x3 absrel 0.0001 0.0001
+t60tol * r3+0x330 f32x3 absrel 0.0001 0.0001
+t60tol * r3+0x37C f32x3 absrel 0.0001 0.0001
+t60tol * r3+0x390 f32x3 absrel 0.0001 0.0001
+t60tol * r3+0x43C f32 absrel 0.0001 0.0001
+t60tol * r3+0x428 f32 absrel 0.0001 0.0001
+# fopAcM_posMove (025D6800, true60 form: pos += v x dt; the push x dt) runs real with its candidate: the Octorok's
+# own exact-arc term (v += g dt inline, d_a_oq_exec.cpp) corrects the real move (a mocked move left only the term)
+src wwhd_src/f_op/f_op_actor_mng.cpp wwhd_src/f_op/f_op_actor_mng_2.cpp wwhd_src/f_op/f_op_actor_mng_3.cpp
+real 025D6800
+t60cand 025D6800
+# steering: speed.y and gravity (0x374; the game's -3 / 0 / 0.5) inside the domain the inline arc is exact in (no -100 fall clamp inside a frame: the clamp's frame
+# lands up to g / 4 lower at N 2, as fopAcM_calcSpeed's own clamp;'s steering)
+field 023C1380 r3+0x340 f32 -50 50
+field 023C1380 r3+0x374 f32 -5 0
+# the first-step input rule addendum: a mode change from a Link decision (the dive when Link is far, the attack) applies on the tick30
+# step and the earlier steps keep the frame's motion (A's one call decides first and skips the tail's turn): current /
+# shape angle y up to (1 - dt) of the frame's largest turn (0x1000: N 4 0xC00)
+t60tol * r3+0x322 a16 abs 3072
+t60tol * r3+0x32A a16 abs 3072
+# the RNG: fixed answers, the draw count over the N steps must equal the one step's
+fretf64! 020198D8 0.375
+fretf64! 02019918 0.625
+t60calls 020198D8 02019918
+# the Link distance / angle: fixed answers (a per-step mock answer by call index differs from the one step's)
+fret! 025D68EC 1500 1500
+ret! 025D6894 0x1A50
+ret! 025200D4 0x54000000 0x54000000
+field 023C1380 54005B2C u32 0x10702000 0x10702000
+# the matrix helpers run real (a mock's output buffer is per call index)
+real 0200FCD8 025F1884 025F1BF4
+# csXyz::operator+= (the dt = 1 spin csXyz_add): real, so the one step adds the spin as the N steps' inline shares do
+real 0201A554
+t60tol * 101FF5F0 u8x48 skip
+field * 1018C7B0 u32 0x101FF5F0 0x101FF5F0
+# the debug registers REG8_F / REG12_F the Octorok reads are 0.0 in the game
+field * 1047BA90 u32 0 0
+# steering: the cM_ssin table (0x104A44F8, 8192 x (sin, cos) f32; built at run time, not in the image) one value 0x3F3F3F3F
+# (0.747): a generated table gave the bob's phase share another random (NaN, huge) sine on each step. The phase itself
+# (mBobPhase) is compared exactly
+fill * 104A44F8 0x10000 0x3F
+stable 104A44F8 0x10000
+# steering: the Octorok object (r3 = 0x40000000, oq_class 0x1194 bytes) is not clobbered by mocked callees (enemy_ice,
+# the particle / sound calls): a clobber regenerates the actor's unwritten words at the call's epoch, and the N steps
+# reach those calls at other epochs than the one step (pos.x read 4 on the first step, NaN on the second: N-step spec artifact)
+stable 40000000 0x1194

@@ -8,6 +8,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_fm_a.h"
+#include "d/actor/d_a_fm_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule addendum) */
 
 /* inlined into daFm_c::grabPlayer */
 static inline f32 fm_abs_copy(cXyz* vector) {
@@ -543,6 +544,10 @@ void daFm_c::grabTsubo() {
 
 /* 02143418 */
 bool daFm_c::_execute() {
+    t60w::Guard<daFm_c> t60g(this, fm_t60::ops()); /* true60: the whole frame on the tick30 step (end at every return) */
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
+    t60g.model = true;
     fm_holeExecute(this);
     fopAcM_SearchByID_out(mProcId, &mpActorTarget);
     fopAc_ac_c* bomb = mpActorTarget;

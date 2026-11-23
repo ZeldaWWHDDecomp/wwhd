@@ -8,6 +8,7 @@
  * in d_a_am_exec.cpp.
  */
 #include "d/actor/d_a_am.h"
+#include "d/actor/d_a_am_t60.h" /* true60: create's first pose at dt 1 */
 
 // HD: one set of compiler data for both sources of this translation unit.
 const gc_tu_data gc_tu = {
@@ -493,7 +494,11 @@ static cPhs_State daAM_Create(fopAc_ac_c* i_this) {
         a_this->mSpawnPos.copy(a_this->current.pos);
         a_this->mSpawnRotY = a_this->current.angle.y;
 
-        draw_SUB(a_this);
+        {
+            const f32 t60PrevDt = am_t60::createBegin(); /* true60: create's first pose, the original at dt 1 */
+            draw_SUB(a_this);
+            am_t60::createEnd(t60PrevDt);
+        }
     }
 
     return phase_state;

@@ -2,6 +2,7 @@
  * Verified against the original WWHD unit. */
 #include "d/d_snap.h"
 #include "port_hooks.h"
+#include "d/t60_draw.h"
 
 static u32 l_snapAddress;
 static u32 l_snapInitialized;
@@ -657,7 +658,9 @@ void dSnap_packet::Execute() {
 /* 025BE99C */
 u32 dSnap_packet::Regist(u32 obj) {
 
-    if (!ChkCapture() || ChkReleaseShutter())
+    /* true60 (t60_draw.h): the subjects register from the actors' draws (dScnPly_Draw's draw queue) while a
+     * capture is pending: once per 30 Hz frame, on the frame's draw, like the capture they are judged with */
+    if (!ChkCapture() || ChkReleaseShutter() || !t60_draw_frame_pass())
         return 0;
     u32 play = snap_api::getPlay();
     s32 count = (s32)mRegistNum;
@@ -1408,7 +1411,10 @@ void dSnap_RegistFigGuest(u32 type, u32 actor, u32 pos, s16 angle, f32 rScale, f
 /* 025BED8C */
 void dSnap_DebugDraw() {
 
-    if (gabi::at<dSnap_packet>((u32)l_snapAddress)->ChkCapture()) {
+    /* true60 (t60_draw.h): the capture (the packet's draw 025BFDC0: the finder picture copied to the photo
+     * textures, the subjects drawn, mFlag 1 -> 2) is entered on the 30 Hz frame's draw only: an earlier step's draw
+     * captured before the frame end (the in-between picture; mFlag 0 -> 2 a frame early in the dumps) */
+    if (gabi::at<dSnap_packet>((u32)l_snapAddress)->ChkCapture() && t60_draw_frame_pass()) {
         u32 p = snap_api::getPlay();
         dSnapHD_GameDrawLists *pView = gabi::at<dSnapHD_GameDrawLists>(p);
 

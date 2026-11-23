@@ -1,0 +1,9 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_npc_de1.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule NPC form; d/t60_npc.h):
+# the Great Deku Tree (De1): the execute 0222C218 in the whole form, logic only (wrapper with it). The tick30 step runs the original execute whole
+# at dt 1 from the frame start; the earlier steps change no state (the picture between steps comes from frame interpolation): net
+# effect = the one step's, byte exact. Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 0222C218 0222C368
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 02055B64 021B4090 0222AD00 0222AE24 0222AEB4 0222AF38 0222AF6C 0222B008 0222B0CC 0222B638 0222B6E8 0222B878 0222B950 0222B990 0222BA40 0222BAC8 0222BBA8 0222BBC4 0222BC18 0222BC2C 0222BEB0 0222BF7C 0222C06C 0222C1AC 024EEEB8 024EF130 024F08A8 024F43DC 024F5B08 025200D4 0252012C 02520540 02526E70 02527028 0253F124 02542D88 02542EDC 02543280 0254457C 025445B8 025447C8 0254487C 0259D24C 0259F858 025A847C 025D54C4 025D6870 025D76A8 025D77DC 025E18EC 025E19CC 025E1A40 025E535C 025E55A0 025E742C 025EDE0C 025F1C28 025F2518 0273AA24 027F4D5C 028E8F64 028E90D4

@@ -8,6 +8,8 @@
  * daCC_Execute: d_a_cc_exec.cpp; action_noboru, action_up_check, body_atari_check: d_a_cc_act.cpp.
  */
 #include "d/actor/d_a_cc.h"
+#include "d/actor/d_a_cc_t60.h"
+#include "d/t60_objw.h" /* true60: t60objw::fsPos (the process-order read rule) */
 
 #include "gc_api/tu.h"
 #include "gc_api/d/d_com_inf_game.h"
@@ -141,8 +143,10 @@ static BOOL nodeCallBack(J3DNode *node, int calcTiming) {
 static void draw_SUB(cc_class *i_this) {
     if (i_this->mBehaviorType == CC_BEHAVIOR_DEKU_TREE && i_this->mDekuState != 3) {
         i_this->mpMorf->calc();
-        settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &i_this->actor.current.pos,
-                         &i_this->actor.tevStr);
+        /* true60 (rule 14): the lighting (it draws the light flicker from cM_rnd) once per frame, tick30 */
+        if (bk_t60_end())
+            settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &i_this->actor.current.pos,
+                             &i_this->actor.tevStr);
         Cc_enemyFire(&i_this->mEnemyFire);
         return;
     }
@@ -173,7 +177,7 @@ static void draw_SUB(cc_class *i_this) {
         sx = 1.1f;
         sy = 1.0f;
         sz = 0.9f;
-        i_this->mWobbleAngle += 1000;
+        i_this->mWobbleAngle += cc_t60_step_s16(1000); /* true60: the step's share of the per-frame step (visual) */
     } else {
         sx = sy = sz = i_this->mScale;
         i_this->mWobbleAngle = 0;
@@ -194,7 +198,9 @@ static void draw_SUB(cc_class *i_this) {
         J3DModel_setBaseTRMtx(model, now);
     }
 
-    settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &i_this->actor.current.pos, &i_this->actor.tevStr);
+    /* true60 (rule 14): the lighting (it draws the light flicker from cM_rnd) once per frame, tick30 */
+    if (bk_t60_end())
+        settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &i_this->actor.current.pos, &i_this->actor.tevStr);
 }
 
 /* 0210BFEC */
@@ -366,6 +372,8 @@ static void anm_init(cc_class *i_this, int transformResIdx, float morf, unsigned
             (J3DAnmTransform *)dComIfG_getObjectRes("Cc", transformResIdx, gc_tu.safeString);
         i_this->mpMorf->setAnm(anm, loopMode, morf, speed, 0.0f, -1.0f, nullptr);
     }
+    /* true60: an animation set on a middle step is first played next frame (d_a_bk_t60.h bk_t60_mark_anm) */
+    bk_t60_mark_anm(&i_this->mpMorf);
 }
 
 /* 0210C6F4 */
@@ -409,7 +417,9 @@ static void naraku_check(cc_class *i_this) {
     void *gnd = static_cast<cBgS_PolyInfo *>(&i_this->mAcch.m_gnd); /* m_gnd (its cBgS_PolyInfo) */
     if (i_this->mAcch.GetGroundH() != -1000000000.0f && Cc_checkPolySafe(dComIfG_Bgsp(), gnd) &&
         Cc_getGroundCode(dComIfG_Bgsp(), gnd) == 4) {
-        i_this->mAbyssFrames += 1;
+        /* true60 (the 30 Hz timer rule): a frame count (deletes after 50 frames): on the tick30 step */
+        if (bk_t60_end())
+            i_this->mAbyssFrames += 1;
         if (a_this->current.pos.y < -500.0f || i_this->mAbyssFrames > 0x32) {
             a_this->speedF = 0.0f;
             a_this->speed.x = 0.0f;
@@ -557,6 +567,12 @@ static void black_light_check(cc_class *i_this) {
 /* 0210DA18 */
 static BOOL search_angle_set(cc_class *i_this) {
     if (i_this->mBehaviorType != CC_BEHAVIOR_FIXED) {
+        /* true60 (cck6s2_4): the chase heading is aimed once per 30 Hz frame, on its first
+         * step, from the frame-start positions the original's one call reads; aimed on every step from the ChuChu's
+         * in-between positions it turned 2..5 units off at N 4 and the jump attack landed elsewhere (Link knocked back
+         * at another angle). The steps after the first keep the frame's heading. dt = 1: every call. */
+        if (!bk_t60_first())
+            return FALSE;
         if (fopAcM_searchPlayerDistance(&i_this->actor) > 40.0f) {
             s16 a = fopAcM_searchPlayerAngleY(&i_this->actor);
             i_this->actor.current.angle.y = a + i_this->mChaseAngleOffset;
@@ -568,7 +584,7 @@ static BOOL search_angle_set(cc_class *i_this) {
         f32 d2 = gabi::fmadds(fVar7, fVar7, fVar1 * fVar1);
         if (std_sqrtf(d2) > i_this->mHomeRange) {
             i_this->actor.current.angle.y = cM_atan2s(fVar7, fVar1);
-        } else if (std_sqrtf(d2) < 100.0f && cM_rnd() < 0.1f &&
+        } else if (std_sqrtf(d2) < 100.0f && bk_t60_end() && cM_rnd() < 0.1f && /* true60 (the per-step chance rule): drawn on tick30 */
                    (s16)cLib_distanceAngleS(i_this->actor.shape_angle.y, i_this->actor.current.angle.y) <
                        0x100) {
             f32 y = (f32)i_this->actor.current.angle.y;
@@ -582,11 +598,17 @@ static BOOL search_angle_set(cc_class *i_this) {
 static void *tsubo_search(void *arg1, void *arg2) {
     fopAc_ac_c *actor1 = (fopAc_ac_c *)arg1;
     cc_class *i_this = (cc_class *)arg2;
-    if (fopAc_IsActor(actor1) && actor1 != nullptr && fpcM_GetName(actor1) == fpcNm_TSUBO_e &&
-        actor1->current.pos.x == i_this->actor.current.pos.x &&
-        std::fabs((f32)(actor1->current.pos.y - i_this->actor.current.pos.y)) < 10.0f &&
-        actor1->current.pos.z == i_this->actor.current.pos.z) {
-        i_this->mPotId = fopAcM_GetID(actor1);
+    if (fopAc_IsActor(actor1) && actor1 != nullptr && fpcM_GetName(actor1) == fpcNm_TSUBO_e) {
+        /* true60 (the process-order read rule addendum, t60conv picreads): the pot (tsubo, a picture-extrapolating whole form: its
+         * earlier steps show it moving on through current.pos) as A reads it: its frame-start position when it is later
+         * in the line */
+        gabi::Local<cXyz> fsPot;
+        const cXyz* pot = t60objw::fsPos(gabi::ea(actor1), fsPot.get()) ? fsPot.get() : &actor1->current.pos;
+        if (pot->x == i_this->actor.current.pos.x &&
+            std::fabs((f32)(pot->y - i_this->actor.current.pos.y)) < 10.0f &&
+            pot->z == i_this->actor.current.pos.z) {
+            i_this->mPotId = fopAcM_GetID(actor1);
+        }
     }
     return nullptr;
 }
@@ -1050,7 +1072,10 @@ static void action_tubo_search(cc_class *i_this) {
         }
 
         if (pfVar2 != nullptr) {
-            a_this->current.pos.copy(pfVar2->current.pos);
+            /* true60 (the process-order read rule addendum, t60conv picreads): the pot's position as A reads it (frame start when the
+             * pot, a picture-extrapolating whole form, is later in the line) */
+            if (!t60objw::fsPos(gabi::ea(pfVar2), &a_this->current.pos))
+                a_this->current.pos.copy(pfVar2->current.pos);
             if (i_this->mNoticeRange == 0.0f) {
                 return;
             }

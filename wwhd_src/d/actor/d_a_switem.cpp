@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_switem.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 const gc_tu_data gc_tu = { .headerStatics={0x1046E180, 0x101D1458, 0x1046E18C} };
 static dCcD_SrcCyl l_cyl_src;
 
@@ -37,6 +38,9 @@ cPhs_State daSwItem_c::_create() {
 
 /* 024A27B4 */
 bool daSwItem_c::_execute() {
+    t60w::Guard<daSwItem_c> t60g(this, t60objw::Logic<daSwItem_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
     bool triggered = false;
     if (mCyl.ChkTgHit()) {
         dCcD_GObjInf* obj = (dCcD_GObjInf*)mCyl.GetTgHitObj();
@@ -99,6 +103,7 @@ bool daSwItem_c::_execute() {
 
     mCyl.SetC(&current.pos);
     dComIfG_Ccsp_Set(&mCyl);
+    t60g.model = true; /* true60: the frame reached its model step */
     return true;
 }
 

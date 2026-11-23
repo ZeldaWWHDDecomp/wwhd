@@ -1,0 +1,132 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_ship.txt
+# ---- true60 N-step spec (2026-11-21): setControllAngle 024751E0 alone, the lean spring
+# in its frame-anchored form (Ship60Lean: the frame-end lean projected from the frame start, in-between steps
+# on the line) with its damping cLib_addCalcAngleS 0200F378 REAL: lean r3+0x654 and lean speed r3+0x656 exact. Moved out
+# of _t60/d_a_ship.txt, whose mocked cLib_addCalcAngleS (the same answer on every step) cannot reproduce the frame
+# anchor (its rows failed r3+0x656 |d| 46 > 32: the 'known review item'), and whose setWaveAngle needs the mock (its
+# exact proof is the setYPos -> setWaveAngle sequence, tools/wave_t02.py). Was tools/lean_t02.py's temporary unit.
+# Results: setControllAngle 2000/2000 N2 / N4 x s1 / s7 (the other
+# rows: original-only page-0 rows as in _t60/d_a_ship); negative control (the frame anchor off: the per-step form below
+# it on every step, temporary edit, reverted) 0/2000, byte r3+0x655 (leanu_nc.log).
+# The rest of _t60/d_a_ship.txt's lines (mocks, steering, fields) follow unchanged:
+real 0200F378
+t60conv 024751E0
+t60tol 024751E0 r3+0x654 a16 exact
+t60tol 024751E0 r3+0x656 s16 exact
+# ---- true60 N-step spec (2026-11-16): the ship's turn and springs on a general step length.
+# Callees are mocks (cLib_addCalcAngleS, setControllAngle, getAimControllAngle, getWaterY, the RNG: the same answer on
+# every step and on the one step), so the steps see the per-frame amounts of the function itself.
+# getAimControllAngle 024752C4 (the lean's aim from the turn, x n = 1/dt substeps a step: d_a_ship.cpp's true60 form) runs
+# as the candidate's code under its callers (candidate lint: it ran as the original before). Its one consumer under
+# the N-step spec roots is setMoveAngle's setControllAngle(aim), a mock here, so this spec cannot see it (negative control with
+# the x n removed: identical rows, 2026-11-20). Measured with setControllAngle real + t60cand as well
+# (variant, setMoveAngle 0247D4B0 N 2 s1 n2000, the setControllAngle steering / tolerances): the lean r3+0x654 max |d| 1
+# (negative control 39), the lean speed r3+0x656 max |d| 65 (negative control 101) - the lean speed's known review
+# item of setControllAngle's own row (frame-anchored lean, tools/lean_t02.py), not getAimControllAngle's.
+real 024752C4
+t60cand 024752C4
+# setMoveAngle: shape_angle.y += turn per frame (turnRate from speedF and mLandTimer, x moveAngle >> 6): dt of it a step,
+# the fraction carried (the step counter advances per step): the N steps add exactly the frame's turn. No forced move
+# (mTornadoActor / mWhirlActor 0).
+arg! 0247D4B0 r4 -8192,-4096,-1000,-64,0,64,1000,4096,8192
+field 0247D4B0 r3+0x370 f32 -120 120
+field 0247D4B0 r3+0x670 i16 0 40
+field 0247D4B0 r3+0x704 u32 0
+field 0247D4B0 r3+0x70C u32 0
+t60tol 0247D4B0 r3+0x32A a16 exact
+t60tol 0247D4B0 r3+0x322 a16 exact
+# setControllAngle: the lean spring. speed += max(1, |0.05 x (angle - lean)|) signed a frame, lean += speed a frame, each
+# dt of itself a step (carried); the speed's damping (cLib_addCalcAngleS) is a mock here. Semi-implicit Euler at dt
+# against one full step: the speed differs by the pull's change over the frame (0.05 x the lean's move, <= 0.05 x
+# (|speed| + |pull|)) / 2 + 1 (carry), the lean by (1 - dt)/2 x |pull| + the speed's difference / 2 + 1: steered to
+# |angle - lean| <= 0x2000 (pull <= 410), |speed| <= 0x400. Measured form (trace of seed 1000018 before the steering:
+# pull 1064, |d| 266 = (1 - dt)/2 x pull exactly): lean <= (1 - dt)/2 x (410 + 0.05 x (1024 + 410)) + 2 = 183 at N 4
+# -> abs 190; speed <= 0.05 x 1434 x (1 - dt)/2 + 1 -> abs 32.
+arg! 024751E0 r4 -4096,-2048,-512,0,512,2048,4096
+field 024751E0 r3+0x654 i16 -0x1000 0x1000
+field 024751E0 r3+0x656 i16 -0x400 0x400
+# setWaveAngle: the two wave springs (pull 0.045 x the slope angle's distance, the angle's speed, each dt of itself a
+# step; the slope angles are the mocked cM_atan2s answers, steered to real slopes |a| <= 0x1000: an unsteered mock
+# gives targets across the s16 wrap, where the pull flips sign between steps). Same bound as the lean spring with
+# 0.045: (1 - dt)/2 x (369 + 0.045 x 1393) + 2 = 164 at N 4 -> angles abs 170, speeds abs 32.
+ret! 020195B0 -4096,-1024,0,1024,4096
+field 024759CC r3+0x658 i16 -0x1000 0x1000
+field 024759CC r3+0x65A i16 -0x1000 0x1000
+field 024759CC r3+0x65C i16 -0x400 0x400
+field 024759CC r3+0x65E i16 -0x400 0x400
+t60tol 024759CC r3+0x65C s16 abs 32
+t60tol 024759CC r3+0x65E s16 abs 32
+t60tol 024759CC r3+0x658 a16 abs 170
+t60tol 024759CC r3+0x65A a16 abs 170
+# setYPos on the water (not flying, mode 0/1): the float. The sway phases end the frame on the original's advance from
+# the frame start with the frame's draws (on the last step): exact. pos.y: the pull to the water (ratio) and the float
+# speed's move are semi-implicit at dt (tolerance: the speed's change over the frame x (1 - dt)/2 + the pull's change),
+# the bob 0.6 + 0.25 rate sin(phase) per frame x dt with the phase moving inside the frame (<= 0.25 x 2): pos.y abs 3;
+# mFloatSpeedY: 0.05 x the pull's change over the frame (<= 0.05 x 60) + clamp: abs 3. The wave angles' sway adds
+# 30 + 100 rate sin(phase X) / 35 + 115 rate sin(phase Z) a frame with the phase moving inside it: <= 2 x 115 + 1: abs 232.
+# Steering: the ship inside its band around the water (the band clamp [water - 60, water + 40] at the frame end is a
+# clamp regime, the clamped-smoothing rule: far outside it the per-step clamp differs by up to the float speed; not a floating
+# state): water (getWaterY) -5..5, pos.y -40..30, float speed -5..5 (its per-frame pull 0.05 x the gap). A model of the
+# float (python, 200k samples in this domain) gives max |d| pos.y 0.64 / 0.97, speed 0.10 / 0.15 at N 2 / 4.
+# the sin table (cM_ssin / cM_scos: sSinCosTable 104A44F8, .bss, filled by the game at boot): the game's own table is
+# built at test time by the game's own initializer (__sinit_JMATrigonometric_cpp 027ED4AC with JMATrigSin / Cos / Atan /
+# Asin and the array constructor, all `real`) as a setup of setYPos, once per process (setupsnapshot): local test
+# state, nothing committed (the table is .bss, not in the image, so it is computed, not copied).
+# The initializer makes ~26k guest calls (8192 x sin + cos + the pair constructor): callbudget 100000.
+real 027ED4AC
+real 028F38F8
+real 028F3C78
+real 028F3CA0
+real 028F3EC0
+real 028EFFD0
+real 028F026C
+real 027ED6A8
+real 028EFE58
+real 028F37F0
+real 028F5034
+real 028F60F8
+real 028F51D0
+real 028F52F0
+real 028F555C
+real 028F5444
+real 028F605C
+# the initializer links its static register (101F9808) into the static list (head 104DA130): both 0, so the setup's
+# result is the same for every input (setupsnapshot)
+fill 024754D8 101F9808 4 0
+fill 024754D8 104DA130 4 0
+setup 024754D8 027ED4AC
+setupsnapshot
+callbudget 1000000
+fret! 024753BC -5 5
+fret! 020198D8 0 1000
+field 024754D8 r3+0x635 u8 0,1
+field 024754D8 r3+0x644 u32 0x10
+field 024754D8 r3+0x6B4 f32 -5 5
+# speedF steered to the game's range (rate = |speedF| / 100 clamped to 1; a NaN speed has no frame meaning)
+field 024754D8 r3+0x370 f32 -120 120
+field 024754D8 r3+0x318 f32 -40 30
+# the float spring is step-consistent: the frame's tick30 step runs the original
+# frame from the frame start (d_a_ship_t60.h ship60_float*), so pos.y and mFloatSpeedY end the frame exactly on the
+# original's (the water mock returns one value per input, as the sea at the frame end does)
+t60tol 024754D8 r3+0x318 f32 exact
+t60tol 024754D8 r3+0x6B4 f32 exact
+# wave angles (checked with the game's sin table): the sway adds 30 + 100 x rate x
+# sin(phase X) / 35 + 115 x rate x sin(phase Z) a frame, split per step by ship60_share (exact over a frame) with the
+# steps' mid-frame phases: the bound of the float comment above (<= 2 x 115 + 1: abs 232), measured in t60stat.
+t60tol 024754D8 r3+0x658 a16 abs 232
+t60tol 024754D8 r3+0x65A a16 abs 232
+# ---- the first-step AI-timer rule (2026-11-16): procTurn 02481874's settle hold (mProcVar0, 10 at procTurn_init)
+# counts on the tick30 step only, with its end decision (changeDemoEndProc) after the frame's whole turn; the turn
+# itself is c_lib's integer cLib_addCalcAngleS2 and ship60_share (mocked / exact per frame here). Checked fields:
+# mProcVar0 and the proc; the eye chase (t60_ratio, 60 / 15 limits x dt) is a per-step smoothing: not exact
+# ---- the first-step AI-timer rule (random draws that decide a state change): setHeadAnm
+# 02475DA8's yawn (AKIBI) start draws cM_rnd once per frame on the frame's FIRST step (was the tick30 step: the yawn
+# started on the last step and played dt of its first frame, (1 - dt) frame behind A for its length); the new state
+# then plays on every step. Checked: the head animation index (+0x69C) ends the frame as one call leaves it.
+# Harness limit: the N-step spec overlay carries only the function's own stores into the later steps, not a mock's (the
+# yawn's setAnm 025E4A98 sets the play speed 1 that the next call reads): on the inputs that start the yawn (cM_rnd
+# < 0.4, mTimer & 0x1FF = 0x1FF, the look animation stopped) the later step reads the old speed 0 and ends it (one step
+# 05, N steps 07; 7-10 of 10000). In the game the frame's later steps see the started yawn (speed 1) and keep it. The
+# first step ends exactly as the one call (05, traced: verify/akibi14d_*.log). Every other input: exact.
+t60tol 02475DA8 r3+0x69C u16 exact

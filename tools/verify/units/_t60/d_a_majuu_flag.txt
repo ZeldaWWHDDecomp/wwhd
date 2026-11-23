@@ -1,0 +1,32 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_majuu_flag.txt
+# ---- true60 N-step spec (majuu_flag, 2026-11-16): the Forsaken Fortress flags
+# (d_a_majuu_flag_t60.h) on a general step length. Callees are mocks.
+# No function in the N-step spec list. majuu_flag_move 021B92DC (the only converted site) is the d_cloth_packet case: its
+# integrator runs on the vector mocks' outputs (PSVEC add / scale, the spring normalisation), so the N steps' positions
+# cannot equal the one step's (the first difference is the position array
+# at r3+0x16F0, as expected; ~31 % of the inputs end equal where the mocks give zero forces). Its dt = 1 path is dt-1 check
+# (-nulltrap s1 + s7 n10000), the cloth is checked statistically in the paired runs (the cloth-simulation rule), and its wave phase
+# (mWave += 0x400 a frame) is cloth60_share, exact per frame by construction (_t60/d_cloth_packet.txt's setNrm proof).
+# t60conv 021B92DC
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200F428
+t60cand 0200F428
+# majuu_flag_move 021B92DC (the only converted site) is the d_cloth_packet case: its integrator runs on the vector
+# mocks' outputs (PSVEC add / scale, the spring normalisation), so the N steps' positions cannot equal the one step's
+# (the first difference is the position array at r3+0x16F0, as expected).
+# Its dt = 1 path is dt-1 check (-nulltrap s1 + s7 n10000) and the cloth is checked statistically in the paired runs (rule
+# the cloth-simulation rule). Until 2026-11-21 this spec had NO t60conv line, and the harness then compares EVERY function at N steps
+# (harness.cpp g_t60_conv: "none listed: all"): the unconverted packet / matrix helpers failed (the c_lib-real sweep's
+# "pre-existing" FAIL). Now: N-step spec list = majuu_flag_move, the
+# integrator's arrays skipped, everything else exact - the wave phase mWave +0x1DF4 (cloth60_share, exact per frame)
+# and the rest of the actor. mpPosArr 2 x 21 (0x16F0) and mSpeed (0x1CD8): the integrator (cloth-simulation); mCurArr +0x1DDA:
+# the position double buffer's index flips on every call (N flips a frame at N steps, the draw reads the latest
+# buffer either way: picture only). Results: 2000/2000 N2 s1 / N4 s7, and with c_lib.cpp
+# src + real + t60cand 0200F428 (the sweep's form) N2 s1 / s7, N4 s1; negative control (majuu60_share returns the
+# per-frame add on every step, temporary edit, reverted) 995/2000, byte r3+0x1DF5.
+t60conv 021B92DC
+t60tol 021B92DC r3+0x16F0 f32x126 skip
+t60tol 021B92DC r3+0x1CD8 f32x63 skip
+t60tol 021B92DC r3+0x1DDA u8 skip

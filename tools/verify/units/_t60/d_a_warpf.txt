@@ -1,0 +1,8 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_warpf.txt
+# ---- true60 N-step spec (2026-11-22; the whole-frame form rule + addendum, d/t60_objw.h): the boss blue warp (Warpf)'s execute
+# 024D7B0C. The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 024D7B0C
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 020198D8 0201ADE0 0211D2F8 024D602C 024D6804 024D688C 024D6940 024D7544 024D7628 024D770C 024D78D0 024D79F4 024D7A54 024D7B6C 024D7BCC 024D7C98 024D7CE4 024D7D2C 024D7D38 024D7E58 024D7E64 024D7F5C 024D7F68 024D8130 024D8138 024D813C 024F1350 024F8000 024F8008 02520540 02520C0C 02542D88 02542EDC 02543280 02543714 0254407C 025440C8 025447C8 0254DA50 025D57E0 025D57E4 025D7A58 025E19CC 025E1A40 025E742C 028E8DD0 028E90D4 028F4384

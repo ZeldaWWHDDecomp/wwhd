@@ -8,6 +8,8 @@
  * "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_bgn_draw.h"
+#include "d/t60_draw.h"
+#include "d/actor/d_a_bgn_t60.h" /* true60: the draw's light states */
 
 // Private bindings for HD renderer operations.
 /* mDoGph_gInf_c blur (HD): rate byte 0x101F4826, flag byte 0x101F4825; 025F064C onBlure */
@@ -66,7 +68,8 @@ static inline void bgn_fog_flash(u32 tev, be<s16> *c, be<f32> *z, s16 timer, s16
     s16 b = (s16)(g + cc / 2);
     if (b > 0xFF)
         b = 0xFF;
-    if (timer > thr) {
+    if (!t60_draw_frame_pass()) { /* true60 (t60_draw.h): the flash fades once per 30 Hz frame */
+    } else if (timer > thr) {
         cLib_addCalcAngleS2(c, 0x118, 1, 0x1E);
         cLib_addCalc2(z, -50000.0f, 1.0f, 5000.0f);
     } else {
@@ -113,8 +116,9 @@ static bool bgn_name_is(SafeString *a, SafeString *b, const char *lit, bool firs
 // HD: only the opaque sky list is switched; the material's blend/z/colour state is
 // set through the HD J3D API and the colours are pushed into the material's uniform block.
 static inline void water0_disp(bgn_class *i_this) {
-    settingTevStruct(dKy_getEnvlight(), 2 /* TEV_TYPE_BG1 */,
-                     gabi::at<cXyz>(0x10461CB8) /* w_pos */, (dKy_tevstr_c *)&i_this->mWaterTevStr);
+    if (bgn_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+        settingTevStruct(dKy_getEnvlight(), 2 /* TEV_TYPE_BG1 */,
+                         gabi::at<cXyz>(0x10461CB8) /* w_pos */, (dKy_tevstr_c *)&i_this->mWaterTevStr);
     MtxTrans(0.0f, REG0_F(11), 0.0f, false);
     J3DModel_setBaseTRMtx(i_this->mpWater0Model, calc_mtx());
     setLightTevColorType(dKy_getEnvlight(), i_this->mpWater0Model,
@@ -249,8 +253,9 @@ BOOL daBgn_Draw(bgn_class *i_this) {
     water0_disp(i_this);
     if (l_HIO().mRoomReflectionOn != 0) {
         /* room_disp (inline) */
-        settingTevStruct(dKy_getEnvlight(), 2, gabi::at<cXyz>(0x10461CB8),
-                         (dKy_tevstr_c *)&i_this->mRoomTevStr);
+        if (bgn_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+            settingTevStruct(dKy_getEnvlight(), 2, gabi::at<cXyz>(0x10461CB8),
+                             (dKy_tevstr_c *)&i_this->mRoomTevStr);
         MtxTrans(0.0f, REG0_F(12), 0.0f, false);
         f32 x = gabi::fmadds(REG0_F(13), 0.01f, 1.0f);
         MtxScale(x, x, x, true);
@@ -309,8 +314,9 @@ BOOL daBgn_Draw(bgn_class *i_this) {
         player->mPacketCount = 0;
     }
     if (i_this->mParam != 0xFF) {
-        settingTevStruct(dKy_getEnvlight(), 0 /* TEV_TYPE_ACTOR */, &actor->current.pos,
-                         bgn_tev(gabi::ea(actor) + 0x110));
+        if (bgn_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+            settingTevStruct(dKy_getEnvlight(), 0 /* TEV_TYPE_ACTOR */, &actor->current.pos,
+                             bgn_tev(gabi::ea(actor) + 0x110));
         bgn2_g() = gabi::ea(fpcM_Search(BGN_DRAW_bgn2_s_sub, i_this));
         u32 b3 = gabi::ea(fpcM_Search(BGN_DRAW_bgn3_s_sub, i_this));
         bgn3_g() = b3;
@@ -318,10 +324,12 @@ BOOL daBgn_Draw(bgn_class *i_this) {
         if (phase == 0) {
             /* daBgn_DrawS (inline) */
             u32 tev = gabi::ea(actor) + 0x110;
-            bgn_fog_dim(tev, i_this->mFogFade, &i_this->mFogFade);
             s16 timer = i_this->mArrowHitFlashTimer;
-            if (timer != 0)
-                bgn_fog_flash(tev, &i_this->mFogColorAdd, &i_this->mFogStartAdd, timer, 40, 7, 1250.0f);
+            if (bgn_t60::drawStep()) { /* true60: the light state's fog on the tick30 step's draw only (rule 14) */
+                bgn_fog_dim(tev, i_this->mFogFade, &i_this->mFogFade);
+                if (timer != 0)
+                    bgn_fog_flash(tev, &i_this->mFogColorAdd, &i_this->mFogStartAdd, timer, 40, 7, 1250.0f);
+            }
             setLightTevColorType(dKy_getEnvlight(), i_this->mpChestModel, bgn_tev(tev));
             mDoExt_modelUpdateDL(i_this->mpChestModel, 0);
             dSnap_RegistFig(0xCD /* DSNAP_TYPE_BGN */, actor, 1.0f, 1.0f, 1.0f);
@@ -360,12 +368,14 @@ BOOL daBgn_Draw(bgn_class *i_this) {
             if (b2 != 0) {
                 /* daBgn2_Draw (inline; bgn2_class HD offsets) */
                 u32 tev = b2 + 0x110;
-                settingTevStruct(dKy_getEnvlight(), 0, gabi::at<cXyz>(b2 + 0x314), bgn_tev(tev));
                 f32 dim = (body->mFogFade);                 /* mFogFade */
                 s16 timer = (body->mArrowHitFlashTimer); /* mArrowHitFlashTimer */
-                bgn_fog_dim(tev, dim, &body->mFogFade);
-                if (timer != 0)
-                    bgn_fog_flash(tev, &body->mFogColorAdd, &body->mFogStartAdd, timer, 20, 0xE, 2500.0f);
+                if (bgn_t60::drawStep()) { /* true60: bgn2's light state on the tick30 step's draw only (rule 14) */
+                    settingTevStruct(dKy_getEnvlight(), 0, gabi::at<cXyz>(b2 + 0x314), bgn_tev(tev));
+                    bgn_fog_dim(tev, dim, &body->mFogFade);
+                    if (timer != 0)
+                        bgn_fog_flash(tev, &body->mFogColorAdd, &body->mFogStartAdd, timer, 20, 0xE, 2500.0f);
+                }
                 u32 head = (body->mpHeadMorf.v); /* mpHeadMorf */
                 setLightTevColorType(
                     dKy_getEnvlight(),
@@ -424,12 +434,14 @@ BOOL daBgn_Draw(bgn_class *i_this) {
             if (b3 != 0) {
                 /* daBgn3_Draw (inline; bgn3_class HD offsets) */
                 u32 tev = b3 + 0x110;
-                settingTevStruct(dKy_getEnvlight(), 0, gabi::at<cXyz>(b3 + 0x314), bgn_tev(tev));
                 be<f32> *dimp = &body->mFogFade; /* mFogFade */
-                bgn_fog_dim(tev, *dimp, dimp);
-                s16 timer = (body->mArrowHitFlashTimer);
-                if (timer != 0)
-                    bgn_fog_flash(tev, &body->mFogColorAdd, &body->mFogStartAdd, timer, 40, 7, 1250.0f);
+                if (bgn_t60::drawStep()) { /* true60: bgn3's light state on the tick30 step's draw only (rule 14) */
+                    settingTevStruct(dKy_getEnvlight(), 0, gabi::at<cXyz>(b3 + 0x314), bgn_tev(tev));
+                    bgn_fog_dim(tev, *dimp, dimp);
+                    s16 timer = (body->mArrowHitFlashTimer);
+                    if (timer != 0)
+                        bgn_fog_flash(tev, &body->mFogColorAdd, &body->mFogStartAdd, timer, 40, 7, 1250.0f);
+                }
                 u32 model = (body->mpDekuModel.v); /* mpDekuModel */
                 setLightTevColorType(dKy_getEnvlight(), gabi::at<J3DModel>(model), bgn_tev(tev));
                 mDoExt_modelUpdateDL(gabi::at<J3DModel>(model), 0);
@@ -449,12 +461,14 @@ BOOL daBgn_Draw(bgn_class *i_this) {
                 u32 part = b3 + 0x1BE8; /* mParts[9], 0x19D8 each */
                 for (s32 i = 0; i < 9; i++, part += 0x19D8) {
                     auto *hairPart = bgn_draw::view<bgn_draw::part_s3>(part);
-                    settingTevStruct(dKy_getEnvlight(), 0, &hairPart->mPart3Pos, bgn_tev(part + 0xB4));
-                    s16 ptimer = (hairPart->mPart3ArrowHitFlashTimer);
-                    bgn_fog_dim(part + 0xB4, *dimp, dimp);
-                    if (ptimer != 0)
-                        bgn_fog_flash(part + 0xB4, &hairPart->mPart3FogColorAdd, &hairPart->mPart3FogStartAdd, ptimer, 40,
-                                      7, 1250.0f);
+                    if (bgn_t60::drawStep()) { /* true60: the part's light state on the tick30 step's draw only (rule 14) */
+                        settingTevStruct(dKy_getEnvlight(), 0, &hairPart->mPart3Pos, bgn_tev(part + 0xB4));
+                        s16 ptimer = (hairPart->mPart3ArrowHitFlashTimer);
+                        bgn_fog_dim(part + 0xB4, *dimp, dimp);
+                        if (ptimer != 0)
+                            bgn_fog_flash(part + 0xB4, &hairPart->mPart3FogColorAdd, &hairPart->mPart3FogStartAdd,
+                                          ptimer, 40, 7, 1250.0f);
+                    }
                     if ((hairPart->mpPart3Model.v) != 0) {
                         setLightTevColorType(dKy_getEnvlight(),
                                              gabi::at<J3DModel>((hairPart->mpPart3Model.v)),

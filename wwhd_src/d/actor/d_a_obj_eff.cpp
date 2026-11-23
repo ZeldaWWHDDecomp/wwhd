@@ -1,5 +1,6 @@
 /* Transient object smoke effects. */
 #include "d/actor/d_a_obj_eff.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using daObjEff::Act_c;
 using daObjEff::BarrelSmokeCB;
 using daObjEff::LandSmokeCB;
@@ -247,6 +248,9 @@ void Act_c::die() {
 }
 /* 0233AA24 */
 s32 Act_c::_execute() {
+    t60w::Guard<daObjEff::Act_c> t60g(this, t60objw::Logic<daObjEff::Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     Eff_die(this);
     return TRUE;
 }

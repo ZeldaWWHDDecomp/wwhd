@@ -1,0 +1,9 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_mesg_routing.txt
+# ---- (2026-11-18): the message requests (fopMsgM_messageSet / scopeMessageSet / tactMessageSet /
+# messageSetDemo) called by a converted caller on every step of a frame with the same arguments (d_mesg_routing_t60.h):
+# the later steps' repeats answer the frame's result and write nothing, so the N steps' net effect (memory, and the
+# calls to the selector, the renderers and the status setter) equals the one step. The frame tag (g_Counter.mCounter0)
+# is the input's own, as in the game.
+t60conv 025F7DB0 025F7E68 025F8088 025F8154
+t60calls 025F7980 026B8FD0 026B3F18 025F74D0

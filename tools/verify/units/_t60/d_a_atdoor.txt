@@ -1,0 +1,15 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_atdoor.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule + addendum, d/t60_objw.h): atdoor: action procs.
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 0205834C
+# N-step spec steering: the action table l_action (0x101FDA24) holds the five action procs (the game image's
+# l_action_init 0x1018FFB0) and its guard is set, so the dispatch reaches them (a random guard / table: 487 of 500 NC
+# inputs aborted on a page-0 fetch)
+field 0205834C 0x101FDA20 u32 1 1
+copy 0205834C 101FDA24 1018FFB0 0x14
+# whole-form calls (hand line): the action procs run through call_ptr(l_action[mAction]) from a table
+# copied out of l_action_init (not followed by the tool): actionCloseWait / Close / OpenWait / Open and their callees
+# calcMtx, dBgW::Move, dSv_info_c::isSwitch, JAIZelBasic::seStart, as many over the N steps as in the one step
+t60calls C000A848 02058144 020581D0 02058230 0205828C 02057F50 024F43DC 025BA0C0 0201EBA0

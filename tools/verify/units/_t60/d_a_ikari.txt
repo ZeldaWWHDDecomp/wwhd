@@ -1,0 +1,9 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_ikari.txt
+# ---- true60 N-step spec (ikari, 2026-11-16): the anchor's swing (d_a_ikari_t60.h) on a general step
+# length. Callees are mocks (dKyw_get_wind_vec / dKyw_get_wind_power / cM_atan2s / cM_ssin / setMtx's matrix calls: the
+# same answer on every step and on the one step). mTimer counts on the tick30 step only; the earlier steps add the
+# frame's progress (host slot keyed by the actor, the harness advances the step counter per step) as a fractional
+# phase; the tick30 step computes the original angle from the counted mTimer: mTimer and current.angle.x end the frame
+# exact (no t60tol line).
+t60conv 0217DAF8

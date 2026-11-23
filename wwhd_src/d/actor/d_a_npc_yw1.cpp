@@ -8,6 +8,7 @@
  * physics (setHairAngle) is in d_a_npc_yw1_hair.cpp.
  */
 #include "d/actor/d_a_npc_yw1.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 enum Yw1State : s8 {
     Yw1Wait = 1,
@@ -1280,6 +1281,9 @@ BOOL daNpc_Yw1_c::_draw() {
 
 /* 022FDADC */
 BOOL daNpc_Yw1_c::_execute() {
+    t60w::Guard<daNpc_Yw1_c> t60g(this, t60npc::Logic<daNpc_Yw1_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     if (mbInit == 0) {
         mHomeAngle.y = current.angle.y;
         *Yw1_view<be<u32>>(gabi::ea(&mHomePos.y)) = *Yw1_view<be<u32>>(gabi::ea(&current.pos.y));
@@ -1327,6 +1331,7 @@ BOOL daNpc_Yw1_c::_execute() {
     tevStr.mRoomNo = (s8)dBgS_GetRoomId(dComIfG_Bgsp(), gnd_poly(mObjAcch)); /* tevStr.mRoomNo */
     tevStr.mEnvrIdxOverride =
         (u8)dBgS_GetPolyColor(dComIfG_Bgsp(), gnd_poly(mObjAcch)); /* tevStr.mEnvrIdxOverride */
+    t60g.model = true; /* true60: the frame reached its model step */
     setMtx(0);
     setCollision(30.0f, 150.0f);
     return TRUE;

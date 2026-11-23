@@ -59,10 +59,15 @@ FP = ["-ffp-contract=off", "-fno-fast-math", "-ffp-exception-behavior=maytrap", 
 # reported on stderr (`guardstrict: ...`); rows are unchanged. Its objects and executable live in <unit dir>/guardstrict,
 # so the normal build is untouched.
 GUARD_STRICT = False
+# -t60fixed (true60 T-01, 2026-11-14): the unit built in gabi_t60.h's fixed 30 Hz config (-DGABI_T60=0: dt / tick30 / N
+# are the constants 1, as in a decomp build without the true60 runtime) instead of the default config (the step state
+# read at run time from the harness's pinned globals). Rows must be the same. Objects and executable in <unit dir>/t60fixed.
+T60_FIXED = False
 
 
 def build_flags():
-    return [("-DGABI_GUEST_GUARD=2" if GUARD_STRICT and f == "-DGABI_GUEST_GUARD=1" else f) for f in FP]
+    return [("-DGABI_GUEST_GUARD=2" if GUARD_STRICT and f == "-DGABI_GUEST_GUARD=1" else f) for f in FP] + \
+        (["-DGABI_T60=0"] if T60_FIXED else [])
 
 
 def sh(cmd):
@@ -284,6 +289,8 @@ def build(unit, srcopt="O2", only=None, jobs=1, split=None):
     inc = ["-Iruntime/include", "-Itools/verify/include", "-Itools/verify/src", "-Iwwhd_src/include", "-Ibuild/gen", "-Ibuild/verify/include"]
     fp = build_flags()
     odir = os.path.join(out, "guardstrict") if GUARD_STRICT else out  # objects and executable (-guardstrict: own directory)
+    if T60_FIXED:
+        odir = os.path.join(odir, "t60fixed")
     os.makedirs(odir, exist_ok=True)
     # objects built with other compile flags are stale: the cache below only compares source times
     stamp, flags = os.path.join(odir, "fpflags.stamp"), " ".join(fp)
@@ -351,7 +358,7 @@ def glue(src, out):
         return src
     import autoglue
     try:
-        res = autoglue.transform(text, src)
+        res = autoglue.transform(text, src, weak_ext=True)  # weak ext glue (harness only)
     except autoglue.GlueError as e:
         sys.exit("autoglue: %s" % e)
     path = os.path.join(out, "glue", os.path.basename(src))
@@ -935,6 +942,7 @@ def cache_plan(exe, spec, unit, args, k, resume=None):
         f = line.split()
         if len(f) == 2:
             funcs.append((int(f[0], 16), int(f[1], 16)))
+    cand_vm = dict(funcs)  # every candidate's entry thunk, also outside -only (the spec's `t60cand` callees, vcache.py)
     sel = vcache.only_set(args)
     funcs = [f for f in funcs if not sel or f[0] in sel]
     runlist = vcache.runlist_sel(args)  # -runlist: only its functions run, only its inputs; part of each key
@@ -944,9 +952,9 @@ def cache_plan(exe, spec, unit, args, k, resume=None):
         return None
     lines = specfile.expanded_lines(os.path.join(HERE, "units", unit + ".txt"))
     if resume:
-        sess = vcache.ResumeStore(unit, lines, args, k, BUILD_INFO, cdir, exe)
+        sess = vcache.ResumeStore(unit, lines, args, k, BUILD_INFO, cdir, exe, cand_vm)
     else:
-        sess = vcache.Session(unit, lines, args, k, BUILD_INFO, cdir)
+        sess = vcache.Session(unit, lines, args, k, BUILD_INFO, cdir, cand_vm)
     keys, hits = {}, {}
     for addr, vm in funcs:
         keys[addr] = sess.func_key(addr, vm, runlist.get(addr) if runlist is not None else None)
@@ -1071,6 +1079,87 @@ class RunProgress:
 PROG = None
 
 
+def t60_spec_sets(path):
+    """the `t60conv` and `t60cand` addresses of a T-02 spec (includes expanded)"""
+    conv, cand = set(), set()
+    for line in specfile.expanded_lines(path):
+        c = line.strip()
+        if c.startswith("# t60once "):  # `# t60once ADDR...: why`: run once per call by design (an init), no N steps
+            conv.update(x.upper().rstrip(":") for x in c[len("# t60once "):].split(":")[0].split())
+            continue
+        f = line.split("#")[0].split()
+        if f and f[0] in ("t60conv", "t60cand"):
+            (conv if f[0] == "t60conv" else cand).update(x.upper() for x in f[1:])
+    return conv, cand
+
+
+def t60_uncompared_warning(unit):
+    """T-02: a `t60cand` function runs changed (candidate) code
+    under its callers, but only the functions on the `t60conv` line get the N-step compare; one that is on no spec's
+    `t60conv` line is never compared (hookshot / boomerang procs: their "T-02 ok" covered nothing). Warn for each such
+    function; one compared in another _t60 spec (a central primitive, c_lib / J3DAnimation) is named as covered there;
+    a comment line `# t60once ADDR...: reason` acknowledges a function that runs once per call by design (an init)."""
+    path = os.path.join(specfile.UNITS, unit + ".txt")
+    if not os.path.exists(path):
+        return
+    try:
+        conv, cand = t60_spec_sets(path)
+    except SystemExit:
+        return
+    missing = sorted(cand - conv)
+    if not missing:
+        return
+    elsewhere = {}
+    tdir = os.path.join(specfile.UNITS, "_t60")
+    for fn in sorted(os.listdir(tdir)) if os.path.isdir(tdir) else []:
+        other = os.path.join(tdir, fn)
+        if not fn.endswith(".txt") or os.path.abspath(other) == os.path.abspath(path):
+            continue
+        try:
+            oc, _ = t60_spec_sets(other)
+        except SystemExit:
+            continue
+        for a in missing:
+            if a in oc:
+                elsewhere.setdefault(a, fn[:-4])
+    for a in missing:
+        if a in elsewhere:
+            print("verify: T-02 note: t60cand %s is compared in _t60/%s, not here" % (a, elsewhere[a]), file=sys.stderr)
+        else:
+            print("verify: T-02 WARNING: t60cand %s runs changed code but is on no spec's t60conv line: its N steps are "
+                  "never compared (add it to this spec's t60conv line)" % a, file=sys.stderr)
+
+
+# the c_angle readers of the pi word that only the static initialiser cAngle_staticInit 02007410 fills
+C_ANGLE_PI_READERS = {"02006760": "cSAngle::Radian", "02006AA4": "cDegree::Radian"}
+
+
+def t60_static_warning(unit):
+    """T-02 (2026-11-18, the camera T-02 sin / cos limit): the harness runs no static initialiser on its
+    own. A spec that runs cSAngle::Radian / cDegree::Radian for real without `setup * 02007410` (include
+    shared/c_angle_statics.txt) reads pi as a generated / zero word: sin / cos of every angle then degenerate to 0 / 1
+    and the N-step verdicts on angle math are no evidence. Warn."""
+    path = os.path.join(specfile.UNITS, unit + ".txt")
+    if not os.path.exists(path):
+        return
+    real, setups = set(), set()
+    try:
+        for line in specfile.expanded_lines(path):
+            f = line.split("#")[0].split()
+            if f and f[0] == "real":
+                real.update(x.upper() for x in f[1:])
+            elif len(f) >= 3 and f[0] == "setup" and f[1] == "*":
+                setups.add(f[2].upper())
+    except SystemExit:
+        return
+    if "02007410" in setups:
+        return
+    for a in sorted(real & set(C_ANGLE_PI_READERS)):
+        print("verify: T-02 WARNING: %s %s runs for real but pi (101FF33C) is never initialised: add "
+              "`include shared/c_angle_statics.txt` (else every real sin / cos sees angle 0)" % (a, C_ANGLE_PI_READERS[a]),
+              file=sys.stderr)
+
+
 def main():
     global PROG
     check_scratch_env('verify')  # a set scratch variable naming a missing/unwritable folder stops here, nothing written
@@ -1137,6 +1226,10 @@ def main():
         GUARD_STRICT = True
         use_cache = False  # a cached row would not repeat the run's guardstrict lines
         live_all = True
+    global T60_FIXED
+    if "-t60fixed" in args:  # gabi_t60.h's fixed 30 Hz build config (GABI_T60=0, see T60_FIXED)
+        args.remove("-t60fixed")
+        T60_FIXED = True
     if "-refcache-write" in args:  # reference-side records (nulltrap_compare --refcache-out): every function must run
         use_cache = False
         live_all = True
@@ -1154,6 +1247,9 @@ def main():
     split = unit_split(unit, args)  # -unitsplit N (removed from the harness options)
     exe = build(unit, srcopt, only, buildj, split)
     spec = specfile.spec_path(unit, ROOT, unit_dir(unit))
+    if "-t60steps" in args:
+        t60_uncompared_warning(unit)
+        t60_static_warning(unit)
     rec = unit_rec(unit)
     if rec and "-rec" not in args:
         args += ["-rec", rec]

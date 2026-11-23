@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_obj_pbka.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 // HD: GHS emits a SafeString vtable and header statics for each translation unit.
 const gc_tu_data gc_tu = {
@@ -75,10 +76,14 @@ bool daObjPbka_c::_draw() {
 
 /* 02382830 */
 bool daObjPbka_c::_execute() {
+    t60w::Guard<daObjPbka_c> t60g(this, t60objw::Logic<daObjPbka_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     current.angle.y += 0x500;
     shape_angle.y = current.angle.y;
     mDoAud_seStart(JA_SE_OBJ_BOMB_SHOP_FAN, &current.pos, 0, dComIfGp_getReverb(fopAcM_GetRoomNo(this)));
     set_mtx();
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 

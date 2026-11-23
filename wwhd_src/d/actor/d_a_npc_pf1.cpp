@@ -7,6 +7,7 @@
  * written from the WWHD code (cking.rpx) with the GameCube names, and verified against it.
  */
 #include "d/actor/d_a_npc_pf1.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 static BOOL nodeCB_Head(J3DNode*, int);
 static BOOL nodeCB_BackBone(J3DNode*, int);
@@ -1145,6 +1146,9 @@ BOOL daNpc_Pf1_c::_draw() {
 
 /* 022CA0A4 */
 BOOL daNpc_Pf1_c::_execute() {
+    t60w::Guard<daNpc_Pf1_c> t60g(this, t60npc::Logic<daNpc_Pf1_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
 
     if (!mbHomeSet) {
         mHomePos.copy(current.pos);
@@ -1196,6 +1200,7 @@ BOOL daNpc_Pf1_c::_execute() {
     tevStr.mRoomNo = Pf1_roomId(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mObjAcch.m_gnd));
     tevStr.mEnvrIdxOverride =
         Pf1_polyColour(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mObjAcch.m_gnd));
+    t60g.model = true; /* true60: the frame reached its model step */
     setMtx(false);
     if (!mbDemo) {
         setCollision(100.0f, 200.0f);

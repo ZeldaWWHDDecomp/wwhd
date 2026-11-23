@@ -8,6 +8,7 @@
  * every function here is written from the WWHD code (cking.rpx) and verified against it.
  */
 #include "d/actor/d_a_sitem.h"
+#include "d/actor/d_a_sitem_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 const gc_tu_data gc_tu = {.safeString = 0x1003CD4C};
 
@@ -666,8 +667,13 @@ static inline BOOL hit_check(sitem_class* i, CcAtInfo_sitem* at) {
     return TRUE;
 }
 
+static inline void sitem_t60_picture(sitem_class* i) { hand_mtx_set(i); } /* true60: the hand model's base matrix */
+
 /* 024867D0 */
 static BOOL daSitem_Execute(sitem_class* i_this) {
+    sitem_t60::Guard<sitem_class> t60g(i_this, sitem_t60_picture); /* true60: sitem_t60::end on the way out */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only */
+        return TRUE;
 
     i_this->mCount = i_this->mCount + 1;
     for (int k = 0; k < 2; k++) {

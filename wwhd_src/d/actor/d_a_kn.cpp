@@ -10,6 +10,7 @@
  * (GHS branches on the negated comparison): `!(x > 1.0f)` for the source's `x <= 1.0f`.
  */
 #include "d/actor/d_a_kn.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 // HD: constructor/destructor vtables and common-header statics are per translation unit.
 const gc_tu_data gc_tu = {
@@ -293,6 +294,9 @@ static void BG_check(kn_class* i_this) {
 /* 021A23B8 */
 static BOOL daKN_Execute(kn_class* i_this) {
     gabi::AutoFrame frame{gabi::current_function()};
+    t60w::Guard<kn_class> t60g(i_this, t60npc::Logic<kn_class>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     fopAc_ac_c* a_this = i_this;
     for (s32 i = 0; i < 4; i++) {
         if (i_this->mTimers[i] != 0) {
@@ -328,6 +332,7 @@ static BOOL daKN_Execute(kn_class* i_this) {
         }
     }
     i_this->mpMorf->play(nullptr, 0, 0);
+    t60g.model = true; /* true60: the frame reached its model step */
     J3DModel* pJVar3 = i_this->mpMorf->getModel();
     mDoMtx_stack_c::transS(a_this->current.pos.x, a_this->current.pos.y, a_this->current.pos.z);
     mDoMtx_XrotM(mDoMtx_stack_c::get(), i_this->mGroundAngle.x);

@@ -6,6 +6,7 @@ using daObjSwlight::Act_c;
 #include "gc_api/JSystem/JUTAssert.h"
 #include "gc_api/m_Do/m_Do_mtx.h"
 #include "gc_api/d/d_kankyo.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 const gc_tu_data gc_tu = {.safeString = 0x1002FE18};
 const char Act_c::M_arcname[] = "Mmirror";
 static dCcD_SrcTri M_tri_src;
@@ -370,10 +371,14 @@ void Act_c::mode_active_sun() {
 }
 /* 02395CA4 */
 bool Act_c::_execute() {
+    t60w::Guard<Act_c> t60g(this, t60objw::Logic<Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
     (this->*mode_proc[(u32)mMode])();
     mBtkAnm.play();
     mBckAnm.play();
     set_mtx();
+    t60g.model = true; /* true60: the frame reached its model step */
     return true;
 }
 /* 02395D54 */

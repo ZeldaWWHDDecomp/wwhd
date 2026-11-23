@@ -3,6 +3,7 @@
 #include "gc_api/d/d_com_inf_game.h"
 #include "gc_api/d/d_bg_s.h"
 #include "gc_api/f_op/f_op_actor_mng.h"
+#include "d/actor/d_a_race_item_t60.h" /* true60 (t60conv): step helpers */
 const gc_tu_data gc_tu = {.objAcch = {0x10038D9C, 0x10038DBC, 0x10038DAC},
                           .headerStatics = {0x1046D634, 0x101CF2F8, 0x1046D640}};
 static RaceItemFieldResources l_fieldItemRes;
@@ -96,7 +97,7 @@ BOOL daRaceItem_c::CreateInit() {
 
 /* 0245910C */
 void daRaceItem_c::checkGet() {
-    if (mType == RaceItem_Normal && mCyl.ChkCoHit())
+    if (mType == RaceItem_Normal && t60c::hit(mCyl.ChkCoHit(), 1, &mCyl))
         normalItemGet();
 }
 
@@ -108,16 +109,20 @@ static BOOL daRaceItem_Draw(daRaceItem_c* p) {
 /* 02459230 */
 BOOL daRaceItem_c::execute() {
     dComIfGp_ea(); // HD accessor retained even though its result is unused.
-    m_timer = u32(m_timer) + 1;
+    if (t60c::end()) { m_timer = u32(m_timer) + 1; } /* true60 (t60conv): counted on the tick30 step */
     animPlay(1.0f, 1.0f, 1.0f, 1.0f, 1.0f);
     f32 y = current.pos.y, z = current.pos.z, x = current.pos.x;
     u32 item = m_itemNo;
-    eyePos.y = y;
-    eyePos.z = z;
-    eyePos.x = x;
     f32 h = f32(dItemDataView::getH(item));
     u32 state = mState;
-    eyePos.y = gabi::fmadds(h * f32(scale.x), 0.5f, y);
+    if (t60c::first()) /* true60: the frame's water-sound mark starts clear */
+        t60c::unmark(3, this);
+    if (t60c::first()) { /* true60: the eye from the frame-start position, as the original (the 30 Hz visual-motion rule: a frame value) */
+        eyePos.y = y;
+        eyePos.z = z;
+        eyePos.x = x;
+        eyePos.y = gabi::fmadds(h * f32(scale.x), 0.5f, y);
+    }
     switch (state) {
     case RaceItem_Wait: {
         checkGet();
@@ -159,7 +164,7 @@ BOOL daRaceItem_c::execute() {
         [[fallthrough]];
     }
     case RaceItem_Get: {
-        mGetTimer = u32(mGetTimer) - 1;
+        if (t60c::first()) { mGetTimer = u32(mGetTimer) - 1; } /* true60 (t60conv): counted on the frame's first step */
         auto* player = static_cast<daPy_py_c*>(dComIfGp_getLinkPlayer());
         f32 hz = (f32)player->mHeadTopPos.z, hx = (f32)player->mHeadTopPos.x;
         f32 hy = (f32)player->mHeadTopPos.y + 15.0f;
@@ -179,10 +184,15 @@ BOOL daRaceItem_c::execute() {
         checkGet();
         fopAcM_posMoveF(this, &mStts.m_cc_move);
         mAcch.CrrPos(dComIfG_Bgsp());
-        if (!(mFlags & RaceItem_BoomerangCarry) && !(actor_status & fopAcStts_HOOK_CARRY_e)) {
+        /* true60: the frame's carry state (held from the first step): a carry the boomerang search ends on a step
+         * frees the water / sea checks from the next frame, as the original */
+        if (!t60c::held((mFlags & RaceItem_BoomerangCarry) != 0, 4, this) && !(actor_status & fopAcStts_HOOK_CARRY_e)) {
             if (mAcch.m_flags & dBgS_Acch::WATER_IN) {
                 s32 reverb = dComIfGp_getReverb(s32(current.roomNo));
-                mDoAud_seStart(JA_SE_OBJ_FALL_WATER_S, &eyePos, 0, reverb);
+                if (!t60c::marked(3, this)) { /* true60: a one-shot before the delete: once, on the step that lands in water */
+                    t60c::mark(3, this);
+                    mDoAud_seStart(JA_SE_OBJ_FALL_WATER_S, &eyePos, 0, reverb);
+                }
                 fopAcM_delete(this);
             }
             f32 px = current.pos.x, pz = current.pos.z;
@@ -205,7 +215,7 @@ BOOL daRaceItem_c::execute() {
         break;
     }
     }
-    if (mCyl.ChkTgHit() && mType == RaceItem_Normal) {
+    if (t60c::hit(mCyl.ChkTgHit(), 2, &mCyl) && mType == RaceItem_Normal) {
         void* obj = mCyl.GetTgHitObj();
         if (obj) {
             u32 type = static_cast<dCcD_GObjInf*>(obj)->mAtType;

@@ -1,0 +1,9 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_npc_jb1.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule NPC form; d/t60_npc.h):
+# Jabun (Jb1): the execute 02248444 in the whole form, logic only (wrapper with it). The tick30 step runs the original execute whole
+# at dt 1 from the frame start; the earlier steps change no state (the picture between steps comes from frame interpolation): net
+# effect = the one step's, byte exact. Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 02248444 022485C0
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 02247A58 02247AC4 02247B7C 02248128 02248168 02248240 02248280 022482E0 022482E8 022483BC 0224840C 024EEEB8 024EF130 024F08A8 025200D4 02526E70 02527028 02542D88 02542EDC 02543280 025447C8 0254487C 0259F858 025D6870 025D76A8 025E535C 025E55A0 025F1C28 025F24E0 025F2518 0273AA24 027F4D5C 028E8F64 028E90D4 028E93CC

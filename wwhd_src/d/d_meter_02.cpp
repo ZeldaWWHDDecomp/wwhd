@@ -1,5 +1,6 @@
 // HUD trailing range: GameCube names and pane fields with verified HD behavior.
 #include "d/d_meter_02.h"
+#include "d/d_meter_t60_project.h"
 using namespace meter_detail;
 using namespace gabi;
 using GuestWord = be<u32>;
@@ -883,8 +884,11 @@ void dMeter_enemyMove(sub_meter_class *meter) {
                 u32 actor =
                     meterLockonTarget(gabi::ea(&meterGame(dComIfGp_ea())->play.mAttention), 0);
                 Local<cXyz> position;
-                meterCopyPosition(gabi::ea(&meterActor(actor)->attention_info.position),
-                                  position.a);
+                {
+                    T60_METER_EXACT_PROJECT_VIEW(); /* true60: the frame's exact camera (d_meter_t60_project.h) */
+                    meterCopyPosition(gabi::ea(&meterActor(actor)->attention_info.position),
+                                      position.a); /* mDoLib_projectScreen 025F0EA4 */
+                }
                 f32 ratio =
                     (f32)(s8)meterActor(actor)->health / (f32)(s8)meterActor(actor)->max_health;
                 if (ratio < zero)

@@ -9,6 +9,7 @@
 #include "d/actor/d_a_mflft.h"
 #include "gc_api/m_Do/m_Do_mtx.h"
 #include "gc_api/JSystem/JUTAssert.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 const gc_tu_data gc_tu = {.safeString = SAFESTRING_VTBL};
 using MflftWind = gptr<cXyz>;
@@ -96,6 +97,9 @@ void mflft_class::setLiftUp(cXyz *arg1) {
 
 /* 021C2064 */
 static void ride_call_back(dBgW *bg, fopAc_ac_c *arg1, fopAc_ac_c *arg2) {
+    if (t60objw::cbSkip()) /* true60: a callback on each of the rider's steps: only the tick30 step's call counts */
+        return;
+    const f32 t60Prev = t60_set_dt(1.0f); /* true60: the counted call at dt 1, as plain calls (no scope object under the glue): A's once-a-frame eases (cLib) take the whole frame, not the rider's 1/N (kita cbBegin; half-ease audit, 2026-11-21) */
 
     mflft_class *i_this = (mflft_class *)arg1;
 
@@ -107,7 +111,12 @@ static void ride_call_back(dBgW *bg, fopAc_ac_c *arg1, fopAc_ac_c *arg2) {
     cXyz_mi(&arg2->current.pos, tmp.get(), &i_this->current.pos);
     sp38->copy(*tmp);
     MtxPosition(sp38.get(), sp2C.get());
-    cXyz_mi(&arg2->old.pos, tmp.get(), &i_this->current.pos);
+    /* true60 (the process-order read rule): the rider's old.pos as A reads it. The callback runs inside the rider's execute; a converted
+     * rider (it has executed on this step) gets its frame-start position (A's old = current at the frame's start), not
+     * its last step's start. Else (unconverted, N = 1) the live old.pos */
+    gabi::Local<cXyz> t60Old;
+    cXyz* t60OldP = t60objw::fsOldEarlier(gabi::ea(arg2), t60Old.get()) ? t60Old.get() : &arg2->old.pos;
+    cXyz_mi(t60OldP, tmp.get(), &i_this->current.pos);
     sp38->copy(*tmp);
     MtxPosition(sp38.get(), sp20.get());
     f32 k = REG0_F(0) + 10.0f;
@@ -133,6 +142,7 @@ static void ride_call_back(dBgW *bg, fopAc_ac_c *arg1, fopAc_ac_c *arg2) {
     if ((fVar3 > 10.0f) && (i_this->mSwayZ < fVar3)) {
         cLib_addCalc2(&i_this->mSwayZ, fVar3, 1.0f, REG0_F(7) + 1.2f);
     }
+    t60_set_dt(t60Prev);
 }
 
 /* 021C2304 */
@@ -523,6 +533,9 @@ static inline void eff_cont(mflft_class *i_this) {
 
 /* 021C2748 */
 static BOOL daMflft_Execute(mflft_class *i_this) {
+    t60w::Guard<mflft_class> t60g(i_this, t60objw::Logic<mflft_class>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
 
     dComIfGp_get(); /* HD: an unused accessor call */
     if (i_this->mLiftUpTimer != 0) {
@@ -579,6 +592,7 @@ static BOOL daMflft_Execute(mflft_class *i_this) {
     PSMTXCopy(calc_mtx(), &i_this->mBgMtx);
     dBgW_Move(i_this->pm_bgw);
     himo_move(i_this);
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 

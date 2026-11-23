@@ -11,8 +11,27 @@
  * HD folds the GameCube HIO values (m_HIO->...) into constants; they are written as literals.
  */
 #include "d/actor/d_a_player_main_03.h"
+#include "d/actor/d_a_player_anm_t60.h"
 #include "sead/ElementAt.h"
 #include "port_hooks.h"
+#include "true60.h"
+#include "d/actor/d_a_player_t60.h"
+#include "d/actor/d_a_player_maba_t60.h"
+#include "d/actor/d_a_player_camyaw_t60.h"
+#include "d/actor/d_a_player_stepsoffset_t60.h"
+#include "d/actor/d_a_player_footbg_t60.h"
+#include "d/actor/d_a_player_posadd_t60.h"
+#include "d/actor/d_a_player_swimrise_t60.h"
+#include <cstdlib>
+/* true60: the swim stroke's animation frame for the stroke speed (posMove, SWIM_MOVE) */
+static inline f32 lkT60_swimChaseFrame(J3DFrameCtrl* fc) {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_SWIMCHASE_NEGCTRL"); return e && e[0] == '1'; }();
+    if (nc)
+        return fc->mFrame;
+#endif
+    return lkT60_endFrame(fc);
+}
 
 static LinkDemoEntry mDemoProcInitFuncTable[] = {
     {0, 0, 0x00000000},  {0, 0, 0x00000000},  {0, 0, 0x00000000},  {0, 0, 0x00000000},
@@ -1133,7 +1152,10 @@ BOOL daPy_lk_c::procAtnActorWait_init() {
     commonProcInit(8);
     s32 angle;
     fopAc_ac_c* lock = mpAttnActorLockOn;
-    if (lock != nullptr) {
+    s16 fsAngle;
+    if (lock != nullptr && lkT60_fsTargetAngleY(&current.pos, lock, 1, &fsAngle)) { /* true60: the process-order read rule */
+        angle = fsAngle;
+    } else if (lock != nullptr) {
         angle = LinkActionApi::searchActorAngleY(this, gabi::ea(lock));
     } else {
         angle = 0;
@@ -1515,6 +1537,7 @@ BOOL daPy_lk_c::procShipPaddle_init() {
     }
     setShipRidePos(1);
     dComIfGp_setPlayerStatus0(0, 0x10000);
+    lkT60Maba::now(gabi::ea(this)); /* true60 (d_a_player_maba_t60.h now()): the frame's noted draws first */
     mProcVar0 = (s16)gabi::ftoi(cM_rndF(150.0f) + 300.0f);
     return TRUE;
 }
@@ -2992,7 +3015,7 @@ void daPy_lk_c::setSwimTimerStartStop() {
             f32 rate = getSwimTimerRate();
             if (rate > 0.5f) {
                 target = -30.0f * lk_cosOfRad((1.0f - rate) * 3.1415927f);
-                if (mFrameCtrlUnder[0].checkPass(0.0f) &&
+                if (lkT60_pass(&mFrameCtrlUnder[0], 0.0f) &&
                     mCurProc != LinkMotionConstants::daPyProc_SWIM_UP_e) {
                     if (mProcVar6 != 0 && !(mNoResetFlg0 & LinkMotionConstants::daPyFlg0_UNK4000)) {
                         LinkActionVoiceStart(this, 0x22);
@@ -3483,8 +3506,14 @@ BOOL daPy_lk_c::procCrouchDefenseSlip_init() {
         m35A8 = 3.0f;
         m35A0 = 0.5f;
         m35AC = 12.5f;
-        f64 r = LinkMotionApi::randomWide();
-        mProcVar6 = r < (f64)0.2f;
+        if (lkT60Maba::defer()) {
+            /* true60 (d_a_player_maba_t60.h kKeyK): the stun chance in A's order after the noted dVar9, tick30 step */
+            mProcVar6 = 0;
+            lkT60Maba::note_as(lkT60Maba::kKeyK);
+        } else {
+            f64 r = LinkMotionApi::randomWide();
+            mProcVar6 = r < (f64)0.2f;
+        }
     } else {
         setSingleMoveAnime(0x17, 0.85f, 0.0f, 0xB, 2.0f);
         f64 len = lk_absXZ(v);
@@ -3534,8 +3563,14 @@ BOOL daPy_lk_c::procGuardSlip_init() {
         m35A0 = 0.5f;
         m35A4 = 4.9f;
         m35A8 = 3.0f;
-        f64 r = LinkMotionApi::randomWide();
-        mProcVar6 = r < (f64)0.2f;
+        if (lkT60Maba::defer()) {
+            /* true60 (d_a_player_maba_t60.h kKeyK): the stun chance in A's order after the noted dVar9, tick30 step */
+            mProcVar6 = 0;
+            lkT60Maba::note_as(lkT60Maba::kKeyK);
+        } else {
+            f64 r = LinkMotionApi::randomWide();
+            mProcVar6 = r < (f64)0.2f;
+        }
     } else {
         setSingleMoveAnime(anm, 0.85f, 0.0f, 0xB, 2.0f);
         f64 len = lk_absXZ(v);
@@ -3579,7 +3614,10 @@ BOOL daPy_lk_c::procPolyDamage_init() {
 /* 023FA578 */
 BOOL daPy_lk_c::changeDamageProc() {
 
-    if (!(mModeFlg & LinkMotionConstants::ModeFlg_DAMAGE) && mDamageWaitTimer > 0) {
+    /* true60 (the 30 Hz timer rule; the first-step AI-timer rule for Link): the damage recovery wait (30 frames, read by the Gohma /
+     * Armos / Phantom Ganon actors) counts 30 Hz frames: the count and its end (the upper animation reset) on the
+     * frame's FIRST step; execute calls this before the procedure on every step (count before the decision: no hold) */
+    if (!(mModeFlg & LinkMotionConstants::ModeFlg_DAMAGE) && mDamageWaitTimer > 0 && lkT60_countStep()) {
         s16 t = (s16)(mDamageWaitTimer - 1);
         mDamageWaitTimer = t;
         if (t == 0) {
@@ -3847,7 +3885,7 @@ void daPy_lk_c::throwBoomerang() {
 }
 
 /* the item-equip pass frames of the upper animation (rest/take/take-both/single item) */
-#define LK_checkPass(fc, f) LinkMotionApi::checkPass(fc, (f32)(f))
+#define LK_checkPass(fc, f) lkT60_pass(fc, (f32)(f)) /* true60 the animation-driven decision rule (d_a_player_anm_t60.h) */
 
 /* 023FB230 */
 void daPy_lk_c::checkItemAction() {
@@ -3877,7 +3915,7 @@ void daPy_lk_c::checkItemAction() {
     }
     J3DFrameCtrl *fc = &mFrameCtrlUpper[2];
     if (up == 0x33) {
-        if (fc->mRate < 0.01f || (mStickDistance > 0.05f && fc->mFrame > 11.0f)) {
+        if (lkT60_endRate(fc) < 0.01f || (mStickDistance > 0.05f && fc->mFrame > 11.0f)) {
             resetActAnimeUpper(2, 2.4f);
             if (dComIfGp_checkPlayerStatus0(0, 0x10000)) {
                 procShipPaddle_init();
@@ -3886,7 +3924,7 @@ void daPy_lk_c::checkItemAction() {
         return;
     }
     if (up == 0x34) {
-        if (fc->mRate < 0.01f || (mStickDistance > 0.05f && fc->mFrame > 10.0f)) {
+        if (lkT60_endRate(fc) < 0.01f || (mStickDistance > 0.05f && fc->mFrame > 10.0f)) {
             resetActAnimeUpper(2, 2.4f);
         } else if (LK_checkPass(fc, 7.0f)) {
             PORT_QUICK_USE_AT(0x023FB49C, this); /* the port's quick use (port_hooks.h) */
@@ -3895,7 +3933,7 @@ void daPy_lk_c::checkItemAction() {
         return;
     }
     if (up == 0xE2) {
-        if (fc->mRate < 0.01f) {
+        if (lkT60_endRate(fc) < 0.01f) {
             mFrameCtrlUpper[1].mRate = 0.0f;
             mFrameCtrlUpper[0].mRate = 1.25f;
             mFrameCtrlUnder[0].mRate = 0.0f;
@@ -3931,7 +3969,7 @@ void daPy_lk_c::checkItemAction() {
             seStartOnlyReverb(LinkMotionConstants::JA_SE_LK_SW_PUTIN_S);
         }
     }
-    if (std::fabs((f32)fc->mRate) < 0.01f) {
+    if (std::fabs(lkT60_endRate(fc)) < 0.01f) {
         resetActAnimeUpper(2, 2.4f);
         return;
     }
@@ -4073,6 +4111,11 @@ static inline s32 anm_getFrameMax(u32 anm) {
 
 /* 023FBCEC */
 void daPy_lk_c::playTextureAnime() {
+    /* true60 (the animation-rate rule and 8): the texture (blink, face) frames are stepped by hand (1 per call) and the
+     * blink starts by a per-frame chance: once per 30 Hz frame, on the tick30 step, in a converted context */
+    if (t60::dt() != 1.0f && !t60::tick30()) {
+        return;
+    }
     u16 textureAnime = (u16)linkMotionAnimeHeap(m_tex_anm_heap).mDemoIdx;
     if (textureAnime != 0xFFFF) {
         if (mCurProc == LinkMotionConstants::daPyProc_DEMO_TOOL_e) {
@@ -4304,12 +4347,25 @@ void daPy_lk_c::setBeltConveyerPower() {
         f64 b = LinkActionApi::squareMagnitude(xz2.get());
         f32 d = (f32)(b - a);
         f32 step = d >= 0.0f ? 1.0f : 3.0f; /* fsel */
-        LinkMotionApi::addCalcPosXZ(&mBeltConveyerSpeed, vec.get(), 0.5f, step, 0.5f);
+        LKT60_CHASE_S(0, &mBeltConveyerSpeed, &mCurProc, LinkMotionApi::addCalcPosXZ(&mBeltConveyerSpeed, vec.get(), 0.5f, step, 0.5f)); /* true60: frame-exact */
     } else {
         linkCopyPositionWords(gabi::ea(&mBeltConveyerSpeed), gabi::at<cXyz>(zero));
     }
 }
 
+/* true60 (the mixed-pair hit-flag rule): the wind cylinder's TG hit from a wind source (fans, gusts: an unconverted
+ * party, a mixed pair) is set by the tick30 collision Move only, read on the next frame's first step and cleared by
+ * that step's Move. Read per step, the push chased toward the wind on the first step and back toward 0 on the others
+ * (about half the fans' push at N 2). The first step's hit (its vector and hit position) holds over the frame's other
+ * steps; a later step's own hit still counts; a frame whose first step did not read it uses the step's own hit.
+ * dt 1: the hit itself. */
+static bool s_lk03WindHeld;
+static uint32_t s_lk03WindFrame;
+/* host floats (2026-11-19 beprobe: host cXyz statics accessed the guest word at ea(host address));
+ * the held hit is put into guest locals for the wind code below (cXyz_mi takes a guest pointer) */
+struct Lk03WindXyz { f32 x, y, z; };
+static Lk03WindXyz s_lk03WindVec;
+static Lk03WindXyz s_lk03WindPos;
 /* 023FC7F0 */
 void daPy_lk_c::setWindAtPower() {
 
@@ -4322,13 +4378,43 @@ void daPy_lk_c::setWindAtPower() {
     gabi::Local<cXyz> vec;
     f32 step;
     bool zeroPath = true;
-    if (LinkMotionApi::chkTgHit(reinterpret_cast<dCcD_GObjInf *>(wind)) &&
+    bool windHit = LinkMotionApi::chkTgHit(reinterpret_cast<dCcD_GObjInf *>(wind));
+    cXyz* windVec = gabi::at<cXyz>(gabi::ea(&mWindCyl.mGObjTg.mRVec));
+    cXyz* windPos = gabi::at<cXyz>(me + 0x7858); /* GetTgHitPosP() */
+    gabi::Local<cXyz> heldVec; /* true60: the frame's held hit in guest memory (the wind code takes guest pointers) */
+    gabi::Local<cXyz> heldPos;
+    if (t60::dt() != 1.0f) {
+        const uint32_t now = t60_step_counter();
+        if (t60::first_step()) {
+            s_lk03WindFrame = now;
+            s_lk03WindHeld = windHit;
+            if (windHit) {
+                s_lk03WindVec.x = windVec->x;
+                s_lk03WindVec.y = windVec->y;
+                s_lk03WindVec.z = windVec->z;
+                s_lk03WindPos.x = windPos->x;
+                s_lk03WindPos.y = windPos->y;
+                s_lk03WindPos.z = windPos->z;
+            }
+        } else if (!windHit && s_lk03WindHeld && now - s_lk03WindFrame < t60::steps()) {
+            windHit = true;
+            heldVec->x = s_lk03WindVec.x;
+            heldVec->y = s_lk03WindVec.y;
+            heldVec->z = s_lk03WindVec.z;
+            heldPos->x = s_lk03WindPos.x;
+            heldPos->y = s_lk03WindPos.y;
+            heldPos->z = s_lk03WindPos.z;
+            windVec = heldVec.get();
+            windPos = heldPos.get();
+        }
+    }
+    if (windHit &&
         !(mDamageWaitTimer != 0 && m34BA != 0) && !dComIfGp_event_runCheck() && LK_demoType == 0 &&
         mCurProc != LinkMotionConstants::daPyProc_FAN_GLIDE_e) {
         zeroPath = false;
-        vec->y = (f32)mWindCyl.mGObjTg.mRVec.y; /* *mWindCyl.GetTgRVecP() */
-        f32 z = (f32)mWindCyl.mGObjTg.mRVec.z;
-        f32 x = (f32)mWindCyl.mGObjTg.mRVec.x;
+        vec->y = (f32)windVec->y; /* *mWindCyl.GetTgRVecP() (true60: the frame's hit) */
+        f32 z = (f32)windVec->z;
+        f32 x = (f32)windVec->x;
         vec->x = x;
         vec->z = z;
         gabi::Local<cXyz> xz;
@@ -4347,7 +4433,7 @@ void daPy_lk_c::setWindAtPower() {
         if (len < 1.0) {
             gabi::Local<cXyz> d;
             gabi::Local<cXyz> d2;
-            cXyz_mi(&current.pos, d, gabi::at<cXyz>(me + 0x7858) /* GetTgHitPosP() */);
+            cXyz_mi(&current.pos, d, windPos /* GetTgHitPosP() (true60: the frame's hit) */);
             cXyz_ml(d, d2, lim);
             f32 y2 = d2->y;
             f32 z2 = d2->z;
@@ -4375,7 +4461,10 @@ void daPy_lk_c::setWindAtPower() {
         mWindAnmSpeed.x = 0.0f;
         mWindAnmSpeed.z = 0.0f;
     } else {
-        LinkMotionApi::addCalcPosXZ(&mWindAnmSpeed, vec.get(), 0.5f, step, 0.5f);
+        /* true60 (c_lib run converted): the animation's wind push is chased once a frame like mWindSpeed below
+         * (setBlendMoveAnime's and setNeckAngle's thresholds read it: decisions); per step the ratio form ended the
+         * frame off the original's one chase (N-step spec posMoveFromFootPos r3+0x7345) */
+        LKT60_CHASE_S(2, &mWindAnmSpeed, &mCurProc, LinkMotionApi::addCalcPosXZ(&mWindAnmSpeed, vec.get(), 0.5f, step, 0.5f)); /* true60: frame-exact */
     }
     if (checkHeavyStateOn() || dComIfGp_event_runCheck() || LK_demoType != 0) {
         // HD: the wind push is cleared only when the heavy state still holds
@@ -4384,7 +4473,7 @@ void daPy_lk_c::setWindAtPower() {
             mWindSpeed.x = 0.0f;
         }
     } else {
-        LinkMotionApi::addCalcPosXZ(&mWindSpeed, vec.get(), 0.5f, step, 0.5f);
+        LKT60_CHASE_S(1, &mWindSpeed, &mCurProc, LinkMotionApi::addCalcPosXZ(&mWindSpeed, vec.get(), 0.5f, step, 0.5f)); /* true60: frame-exact */
     }
 }
 
@@ -4392,6 +4481,116 @@ void daPy_lk_c::setWindAtPower() {
  * rounded once to single) */
 static inline f32 lk_fmaddsD(f64 a, f64 c, f64 b) {
     return (f32)(a * c + b);
+}
+
+/* true60: the foot travel posMoveFromFootPos measures is the move of the base foot's toe between the
+ * joint matrices of the last two model calcs (daPy_lk_c::execute calcs the model after posMove). At 30 Hz frame f sees
+ * the chord T(f-1) - T(f-2): the pose change over the previous frame, a frame late. At N steps the raw difference is
+ * the pose change over the previous step (1/N frame late, so the foot-driven speed ran (1 - 1/N) frame ahead), and a
+ * sum of per-step chord lengths is longer than the frame's chord on a curved foot path (turning, blend weights changing
+ * per step, base-foot switch: p16_move B's toe travel 1.6x A's at the move start).
+ * So the line keeps the toe positions (xz, both feet) the steps saw, with step counter stamps. With Q_0 the
+ * pose the previous frame's first step saw (the original's T(f-2)) and Q_N the one this frame's first step sees (its
+ * T(f-1)), every step of the frame travels the whole chord |Q_N - Q_0| (per frame; x dt per step) of the base foot
+ * chosen on the frame's first step (from the pose Q_N: the original's choice): both ends are known on the first step,
+ * so each step's speed is the original frame's and the frame's N steps add up to its chord (the whole-frame form rule;
+ * the earlier per-step growth |Q_i - Q_0| - |Q_(i-1) - Q_0| summed to the
+ * chord too, but its steps took the previous frame's uneven half-step pose changes, ym81 MOVE entry speedF 0.6083 /
+ * 0.3060 vs A 0.4572). The heel enters only the base-foot choice, taken from Q_N, so it needs no delay.
+ * When an entry is missing (foot-data reset, mOldFrameFlg 0, or a step that did not come here) the step takes its raw
+ * travel. Host memory, this unit only, Link only; N = 1 never comes here (bit-exact). */
+static const int kLkToeRing = 16; /* spans Q_0 .. now: 2N - 1 steps, N <= 8 */
+static f64 s_lkToeX[kLkToeRing][2];
+static f64 s_lkToeZ[kLkToeRing][2];
+static uint32_t s_lkToeStamp[kLkToeRing];
+static bool s_lkToeValid[kLkToeRing];
+static uint32_t s_lkFrameStart;   /* step counter of this frame's first step */
+static u32 s_lkFrameFoot;         /* base foot chosen on it */
+static bool s_lkFrameStartValid;
+
+static inline void lk_footTravelReset() {
+    for (int i = 0; i < kLkToeRing; i++) {
+        s_lkToeValid[i] = false;
+    }
+    s_lkFrameStartValid = false;
+}
+
+static inline bool lk_toeAt(uint32_t stamp, u32 foot, f64 &x, f64 &z) {
+    int w = (int)(stamp % kLkToeRing);
+    if (!s_lkToeValid[w] || s_lkToeStamp[w] != stamp) {
+        return false;
+    }
+    x = s_lkToeX[w][foot];
+    z = s_lkToeZ[w][foot];
+    return true;
+}
+
+/* records this step's toes; true with the delayed frame's chord Q_N - Q_0 of the frame's base foot in dx / dz (f32:
+ * the difference of two f32 positions, exact in f64, rounded once as the original's cXyz subtraction), false when an
+ * entry is missing (the step takes its raw travel) */
+static inline bool lk_footTravelChord(f64 x0, f64 z0, f64 x1, f64 z1, u32 idx, f32 &dx, f32 &dz) {
+    const uint32_t now = t60_step_counter();
+    const int slot = (int)(now % kLkToeRing);
+    s_lkToeX[slot][0] = x0;
+    s_lkToeZ[slot][0] = z0;
+    s_lkToeX[slot][1] = x1;
+    s_lkToeZ[slot][1] = z1;
+    s_lkToeStamp[slot] = now;
+    s_lkToeValid[slot] = true;
+    if (t60::first_step()) {
+        s_lkFrameStart = now;
+        s_lkFrameFoot = idx;
+        s_lkFrameStartValid = true;
+    }
+    const uint32_t n = t60::steps();
+    if (!s_lkFrameStartValid || n < 2 || 2 * n - 1 > (uint32_t)kLkToeRing || now - s_lkFrameStart >= n) {
+        return false;
+    }
+    const u32 foot = s_lkFrameFoot;
+    f64 ax, az, bx, bz;
+    if (!lk_toeAt(s_lkFrameStart - n, foot, ax, az) || !lk_toeAt(s_lkFrameStart, foot, bx, bz)) {
+        return false;
+    }
+    dx = (f32)(bx - ax);
+    dz = (f32)(bz - az);
+    return true;
+}
+
+/* the frame's stick-steady decision (taken on its first step, see posMoveFromFootPos) and the mean of its steps'
+ * travels (per-frame rates; the frame's chord); a frame whose first step did not come here: this step's own values */
+static bool s_lkSteady;
+static uint32_t s_lkSteadyStamp;
+static bool s_lkSteadyValid;
+static f64 s_lkTravelSum;
+static uint32_t s_lkTravelCount;
+static uint32_t s_lkTravelStamp;
+static bool s_lkTravelValid;
+
+static inline bool lk_stickSteadyFrame(bool steadyNow) {
+    const uint32_t now = t60_step_counter();
+    if (t60::first_step()) {
+        s_lkSteady = steadyNow;
+        s_lkSteadyStamp = now;
+        s_lkSteadyValid = true;
+        return steadyNow;
+    }
+    if (s_lkSteadyValid && now - s_lkSteadyStamp < t60::steps()) {
+        return s_lkSteady;
+    }
+    return steadyNow;
+}
+
+static inline f64 lk_footFrameMean(f64 travel) {
+    const uint32_t now = t60_step_counter();
+    if (t60::first_step() || !s_lkTravelValid || now - s_lkTravelStamp >= t60::steps()) {
+        s_lkTravelSum = 0.0;
+        s_lkTravelCount = 0;
+        s_lkTravelStamp = now;
+        s_lkTravelValid = true;
+    }
+    s_lkTravelSum += travel;
+    s_lkTravelCount++;
+    return s_lkTravelSum / (f64)s_lkTravelCount;
 }
 
 /* 023FCB9C */
@@ -4417,6 +4616,9 @@ void daPy_lk_c::posMoveFromFootPos() {
         reinterpret_cast<LinkMotionFootData *>(mFootData)[0].mHeelPos.y = (f32)(0.0f);
         reinterpret_cast<LinkMotionFootData *>(mFootData)[0].mHeelPos.z = (f32)(-6.52f);
         mBaseFootIdx = 2;
+        if (t60::dt() != 1.0f) {
+            lk_footTravelReset(); /* true60: travels before the reset are not this pose's */
+        }
         return;
     }
     const u32 stk = gabi::ea(mDoMtx_stack_c::get());     /* mDoMtx_stack_c::now */
@@ -4465,7 +4667,39 @@ void daPy_lk_c::posMoveFromFootPos() {
     xz->y = 0.0f;
     f64 step = LinkActionApi::sqrtWide(LinkActionApi::squareMagnitude(xz.get()));
     f32 r = m3598;
-    if (r < 1.0f && std::fabs((f32)(mOldStickDistance - mStickDistance)) < 0.2f) {
+    /* true60: the foot's travel over this step is dt of a frame's (the animation advanced rate x dt):
+     * per frame it is travel / dt, the unit speedF and mFootMoveDist keep. mFootMoveDist is the original's per-frame
+     * filter memory (0.3 new + 0.7 old while the stick is steady): it stays on the 30 Hz grid. Each step smooths its own
+     * travel against the memory of the frame start (linear: the frame's steps average to the original frame's value),
+     * and the tick30 step writes the memory once, from the frame's mean travel (= the frame's chord) with the tick30
+     * step's decision (the original's: m3598 at the frame end). A per-step memory let an unsmoothed in-between step
+     * (m3598 still 1 there while mNormalSpeed crosses the run blend threshold mid-frame) feed a spike into the filter
+     * (p17_move: speedF 10.4 / 9.8 / 9.5 .. vs 6.2 / 7.4 / 5.9 for 5 frames after the move start, 8 units ahead).
+     * The stick-steady test is the frame's (the input is read on the frame's first step, the first-step input rule: the frame's
+     * stick change is seen there; latched for the frame's other steps). */
+    const f32 dt = t60::dt();
+    f32 fmdOut = 0.0f;
+    if (dt != 1.0f) {
+        /* the delayed frame's whole chord: a frame late, each step at the original frame's speed (same sqrt path) */
+        f32 cdx, cdz;
+        if (lk_footTravelChord(toe[0]->x, toe[0]->z, toe[1]->x, toe[1]->z, idx, cdx, cdz)) {
+            xz->x = cdx;
+            xz->z = cdz;
+            xz->y = 0.0f;
+            step = LinkActionApi::sqrtWide(LinkActionApi::squareMagnitude(xz.get()));
+        } else {
+            step = step / (f64)dt;
+        }
+        const bool smooth = r < 1.0f && lk_stickSteadyFrame(std::fabs((f32)(mOldStickDistance - mStickDistance)) < 0.2f);
+        const f64 mean = lk_footFrameMean(step);
+        fmdOut = mFootMoveDist; /* in-between steps keep the frame start's memory */
+        if (t60::tick30()) {
+            fmdOut = (f32)(smooth ? lk_fmaddsD(mean, 0.3f, mFootMoveDist * 0.7f) : mean);
+        }
+        if (smooth) {
+            step = lk_fmaddsD(step, 0.3f, mFootMoveDist * 0.7f);
+        }
+    } else if (r < 1.0f && std::fabs((f32)(mOldStickDistance - mStickDistance)) < 0.2f) {
         step = lk_fmaddsD(step, 0.3f, mFootMoveDist * 0.7f);
     }
     f32 ns = mNormalSpeed;
@@ -4493,7 +4727,15 @@ void daPy_lk_c::posMoveFromFootPos() {
         s32 proc = mCurProc;
         speedF = v;
         if (proc == LinkMotionConstants::daPyProc_SWIM_MOVE_e) {
-            f32 fr = mFrameCtrlUnder[0].mFrame / (f32)mFrameCtrlUnder[0].mEnd;
+            /* true60 (2026-11-22, route 276: x 3.54): the stroke speed is a
+             * function of the swim animation's frame, which A reads once a frame at the frame end (animeUpdate plays
+             * before the dispatch) and moves the whole frame with; per step each step moved its dt share at its own
+             * part-played frame (speed.x equal at the frame ends, the position off by the in-between speeds' sum).
+             * Form (rule (a), as the land speed chase): every step of a frame takes the frame-end frame
+             * (lkT60_endFrame: the remaining plays projected; per step without a first-step record or while a new
+             * animation waits), so each step moves dt of A's frame speed. NC WWHD_T60_SWIMCHASE_NEGCTRL=1 (game build:
+             * the per-step frame). dt 1: the original read. */
+            f32 fr = lkT60_swimChaseFrame(&mFrameCtrlUnder[0]) / (f32)mFrameCtrlUnder[0].mEnd;
             f32 c = lk_cosOfRad(fr * 3.1415927f);
             f32 sp = speedF;
             f64 rate = LinkMotionApi::swimTimerRateWide(this);
@@ -4534,11 +4776,14 @@ void daPy_lk_c::posMoveFromFootPos() {
         LinkMotionApi::addCalc(&mSlipSpeed.z, 0.0f, 0.03f, 100.0f, 0.5f);
         gabi::Local<cXyz> t1;
         gabi::Local<cXyz> t2;
+        /* true60: on ice the new speed takes 0.75 of its change per frame (0.25 stays behind, into mSlipSpeed):
+         * per step 1 - 0.25^dt of it */
+        const f32 keep = dt != 1.0f ? (f32)__builtin_pow(0.25, (double)dt) : 0.25f;
         cXyz_mi(&mOldSpeed, t1, &speed);
-        cXyz_ml(t1, t2, 0.75f);
+        cXyz_ml(t1, t2, dt != 1.0f ? 1.0f - keep : 0.75f);
         LinkMotionApi::addVector(&mSlipSpeed, t2.get(), &mSlipSpeed);
         cXyz_mi(&mOldSpeed, t2, &speed);
-        cXyz_ml(t2, t1, 0.25f);
+        cXyz_ml(t2, t1, keep);
         LinkMotionApi::addVector(&speed, t1.get(), &speed);
         mSlipSpeed.y = 0.0f;
     } else {
@@ -4548,18 +4793,28 @@ void daPy_lk_c::posMoveFromFootPos() {
     }
     setBeltConveyerPower();
     setWindAtPower();
+    {
+        /* true60 (follow-up, d_a_player_swimrise_t60.h): a held body's push on the water entry's frame */
+        f32 lkT60Vy;
+        const bool lkT60Held = t60::dt() != 1.0f && !t60::first_step() && gravity == 0.0f &&
+                               wwhd_t60_latch_pending(lkT60_procEnterKey(gabi::ea(&mCurProc)), lkT60_frameTag()) != 0;
+        if (lkT60_swimRiseHeldPush(speed.y, lkT60Held, &lkT60Vy)) {
+            speed.y = lkT60Vy;
+        }
+    }
     f32 oldY = speed.y;
     f32 sy;
+    /* true60: gravity per step x dt (the fall-speed limit stays a speed) */
     if (checkHeavyStateOn()) {
         f32 lim = maxFallSpeed * 1.5f;
-        sy = gabi::fmadds(gravity, 2.25f, speed.y);
+        sy = dt != 1.0f ? (f32)(speed.y + gravity * 2.25f * dt) : gabi::fmadds(gravity, 2.25f, speed.y);
         speed.y = sy;
         if (sy < lim) {
             sy = lim;
             speed.y = sy;
         }
     } else {
-        sy = speed.y + gravity;
+        sy = dt != 1.0f ? (f32)(speed.y + gravity * dt) : speed.y + gravity;
         f32 lim = maxFallSpeed;
         speed.y = sy;
         if (sy < lim) {
@@ -4570,14 +4825,38 @@ void daPy_lk_c::posMoveFromFootPos() {
     if (!(sy > 0.0f) && oldY > 0.0f) {
         mFallStartY = current.pos.y;
     }
-    LinkMotionApi::addVector(&current.pos, PORT_LINK_MOVE(&speed) /* the port's movement mods (port_hooks.h) */, &current.pos);
+    if (dt != 1.0f) {
+        /* true60 (the per-step movement rule): pos += speed x dt plus the exact-arc term dv (1 - dt) / 2 of this step's speed.y change, so
+         * the frame's N steps land where the 30 Hz frame's semi-implicit step does (jump heights and lengths) */
+        cXyz* mv = PORT_LINK_MOVE(&speed); /* the port's movement mods (port_hooks.h) */
+        /* true60 (d_a_player_posadd_t60.h): the steps' adds rounded once per frame (compensated) */
+        const f32 p[3] = {current.pos.x, current.pos.y, current.pos.z};
+        /* true60 (d_a_player_swimrise_t60.h): the swim rise's push of this step (changeSwimUpProc, run
+         * by the procedure before this add) is part of the step's speed.y change dv, as A's one add carries it */
+        f32 dvy = sy - oldY;
+        const f32 rise = lkT60_swimRiseTake();
+        if (rise != 0.0f) {
+            dvy = dvy + rise;
+        }
+        const double v[3] = {(double)(f32)(mv->x * dt),
+                             lkT60_swimRiseAdd((double)(f32)(mv->y * dt + dvy * (1.0f - dt) * 0.5f), mv == &speed),
+                             (double)(f32)(mv->z * dt)};
+        f32 q[3];
+        lkT60_posAdd(p, v, q);
+        current.pos.x = q[0];
+        current.pos.y = q[1];
+        current.pos.z = q[2];
+    } else {
+        lkT60_posAddReset(); /* true60: the residual never crosses a dt-1 add */
+        LinkMotionApi::addVector(&current.pos, PORT_LINK_MOVE(&speed) /* the port's movement mods (port_hooks.h) */, &current.pos);
+    }
     for (int i = 0; i < 2; i++) {
         LinkMotionFootData &footData =
             reinterpret_cast<LinkMotionFootData *>(mFootData)[i]; /* mFootData[i] */
         linkCopyPositionWords(gabi::ea(&footData.mToePos), toe[i]);
         linkCopyPositionWords(gabi::ea(&footData.mHeelPos), heel[i]);
     }
-    mFootMoveDist = (f32)step;
+    mFootMoveDist = dt != 1.0f ? fmdOut : (f32)step;
 }
 
 /* 023FD438 */
@@ -4713,6 +4992,28 @@ BOOL daPy_lk_c::startRestartRoom(u32 mode, int eventInfoIdx, f32 damage, int poi
     return TRUE;
 }
 
+/* true60: the frame's collision push, held from the tick30 Move (the value
+ * m_cc_move carries into the frame's first step, or into the first step that sees one after a frame without it) and
+ * handed out as dt of it on each step; cleared on the frame's last step. Host memory, this unit, one Link; only at
+ * dt < 1 (dt = 1: the original consumes m_cc_move as it is). */
+static f32 s_lkCcHold[3];
+template <class V>
+static inline void lk_ccMoveStep(V* cc, f32 dt) {
+    const bool fresh = (f32)cc->x != 0.0f || (f32)cc->y != 0.0f || (f32)cc->z != 0.0f;
+    const bool held = s_lkCcHold[0] != 0.0f || s_lkCcHold[1] != 0.0f || s_lkCcHold[2] != 0.0f;
+    if (t60::first_step() || (fresh && !held)) {
+        s_lkCcHold[0] = cc->x;
+        s_lkCcHold[1] = cc->y;
+        s_lkCcHold[2] = cc->z;
+    }
+    cc->x = s_lkCcHold[0] * dt;
+    cc->y = s_lkCcHold[1] * dt;
+    cc->z = s_lkCcHold[2] * dt;
+    if (t60::tick30()) {
+        s_lkCcHold[0] = s_lkCcHold[1] = s_lkCcHold[2] = 0.0f;
+    }
+}
+
 /* 023FDA70 */
 void daPy_lk_c::posMove() {
 
@@ -4789,8 +5090,32 @@ void daPy_lk_c::posMove() {
     mPrevRootTrans.z = tz;
     mPrevRootTrans.x = tx;
     posMoveFromFootPos();
+    /* true60: Link's own per-frame speeds below (whirlpool pull, ice slip, belt conveyor, wind) move
+     * him dt of a frame per step. The out power another actor hands him (mOutPower, set by that actor's execute,
+     * cleared here) is consumed once, as it is produced. The collision push (m_cc_move) is the result of the tick30
+     * collision Move (dCcS, unconverted: once per 30 Hz frame): consumed whole on the next frame's first step it moved
+     * Link back by the frame's push on that step and forward again on the next (pgrab2 frames 120-123: ~2.4 units per
+     * step against the pot, a 60 Hz jitter, rule 14). It is held from that Move and spread
+     * over the frame's steps, dt of it per step (lk_ccMoveStep); the frame's total, and so its end position, stays. */
+    const f32 dt = t60::dt();
     if (!checkNoCollisionCorret()) {
-        LinkMotionApi::addVector(&current.pos, &mStts.m_cc_move, &current.pos);
+        bool ccDone = false;
+        if (dt != 1.0f) {
+            lk_ccMoveStep(&mStts.m_cc_move, dt);
+            /* true60 (co push, d_a_player_posadd_t60.h): the push enters the frame's exact shadow; the
+             * tick30 step rounds as A's two adds (own move, then push) */
+            const f32 p[3] = {current.pos.x, current.pos.y, current.pos.z};
+            const f32 c[3] = {mStts.m_cc_move.x, mStts.m_cc_move.y, mStts.m_cc_move.z};
+            f32 q[3];
+            if (lkT60_posAddCc(p, c, q)) {
+                current.pos.x = q[0];
+                current.pos.y = q[1];
+                current.pos.z = q[2];
+                ccDone = true;
+            }
+        }
+        if (!ccDone)
+            LinkMotionApi::addVector(&current.pos, &mStts.m_cc_move, &current.pos);
         if (!dComIfGp_event_runCheck() && LK_demoType == 0) {
             if (!(noResetFlg1() & LinkMotionConstants::daPyFlg1_UNK10000000) ||
                 !checkHeavyStateOn()) {
@@ -4810,8 +5135,11 @@ void daPy_lk_c::posMove() {
                 gabi::Local<cXyz> d;
                 cXyz_mi(&current.pos, d, &gabi::at<fopAc_ac_c>(whirl)->current.pos);
                 u16 a = (u16)(cM_atan2s(d->x, d->z) + 0x5000);
-                cLib_chaseF(&mWhirlPullSpeed, 40.0f, 5.0f);
-                f32 k = mWhirlPullSpeed;
+                /* true60 (c_lib run converted; rule (a)): the whirlpool's pull speed drives the position:
+                 * chased once a frame on the first step (held over the frame), every step moves dt of the frame's end
+                 * speed (N-step spec posMove seed 1000237: per step the steps moved with the in-frame speeds) */
+                LKT60_CHASE_S(3, &mWhirlPullSpeed, &mCurProc, cLib_chaseF(&mWhirlPullSpeed, 40.0f, 5.0f)); /* true60: frame-exact */
+                f32 k = dt != 1.0f ? mWhirlPullSpeed * dt : (f32)mWhirlPullSpeed;
                 current.pos.x = gabi::fmadds(k, cM_ssin(a), current.pos.x);
                 gabi::Local<cXyz> xz;
                 xz->y = 0.0f;
@@ -4830,15 +5158,21 @@ void daPy_lk_c::posMove() {
                                            gabi::ea(static_cast<cBgS_PolyInfo *>(&mAcch.m_gnd)))) {
                 u16 g = (u16)LinkMotionApi::getGroundAngle(
                     this, gabi::ea(static_cast<cBgS_PolyInfo *>(&mAcch.m_gnd)), 0);
-                current.pos.z = gabi::fmadds(mSlipSpeed.z, cM_scos(g), current.pos.z);
+                current.pos.z = gabi::fmadds(dt != 1.0f ? mSlipSpeed.z * dt : (f32)mSlipSpeed.z, cM_scos(g), current.pos.z);
                 g = (u16)LinkMotionApi::getGroundAngle(
                     this, gabi::ea(static_cast<cBgS_PolyInfo *>(&mAcch.m_gnd)), 0x4000);
-                current.pos.x = gabi::fmadds(mSlipSpeed.x, cM_scos(g), current.pos.x);
+                current.pos.x = gabi::fmadds(dt != 1.0f ? mSlipSpeed.x * dt : (f32)mSlipSpeed.x, cM_scos(g), current.pos.x);
             }
-            LinkMotionApi::addVector(&current.pos, &mBeltConveyerSpeed, &current.pos);
+            if (dt != 1.0f) {
+                current.pos.x = current.pos.x + mBeltConveyerSpeed.x * dt;
+                current.pos.y = current.pos.y + mBeltConveyerSpeed.y * dt;
+                current.pos.z = current.pos.z + mBeltConveyerSpeed.z * dt;
+            } else {
+                LinkMotionApi::addVector(&current.pos, &mBeltConveyerSpeed, &current.pos);
+            }
             if (mCurProc != LinkMotionConstants::daPyProc_FAN_GLIDE_e) {
-                current.pos.x = current.pos.x + mWindSpeed.x;
-                current.pos.z = current.pos.z + mWindSpeed.z;
+                current.pos.x = current.pos.x + (dt != 1.0f ? mWindSpeed.x * dt : (f32)mWindSpeed.x);
+                current.pos.z = current.pos.z + (dt != 1.0f ? mWindSpeed.z * dt : (f32)mWindSpeed.z);
             }
         }
     } else if (!dComIfGp_event_runCheck() && LK_demoType == 0 &&
@@ -4927,11 +5261,17 @@ void daPy_lk_c::autoGroundHit() {
     u32 was = flg & LinkMotionConstants::daPyFlg0_UNK80000000;
     flg = flg & ~0x80000000u;
     mNoResetFlg0 = flg;
-    if (mTinkleHoverTimer == 0) {
+    /* true60 (the first-step AI-timer rule for Link): the boots' flag goes off on the update AFTER the count reached 0: the first
+     * step's count held over the frame's later steps */
+    if (mTinkleHoverTimer == 0 && !lkT60_countHeld(LKT60_KEY_HOVER, 0, 0)) {
         mNoResetFlg0 = flg & ~0x1000u; /* offNoResetFlg0(daPyFlg0_HOVER_BOOTS) */
     }
-    if (!dComIfGp_event_runCheck() && LK_demoType == 0 && mTinkleHoverTimer > 0) {
+    /* true60 (the 30 Hz timer rule; the first-step AI-timer rule for Link): the hover-boots timer counts 30 Hz frames: down on the
+     * frame's FIRST step only (the hover test below reads the counted value on every step, as the original reads it
+     * after the count; dt 1: every call, the original) */
+    if (!dComIfGp_event_runCheck() && LK_demoType == 0 && mTinkleHoverTimer > 0 && lkT60_countStep()) {
         mTinkleHoverTimer = (s16)(mTinkleHoverTimer - 1);
+        lkT60_counted(LKT60_KEY_HOVER, 0, mTinkleHoverTimer);
     }
     if (mModeFlg & 0x10452822 /* checkPlayerFly() */) {
         return;
@@ -5297,6 +5637,18 @@ void daPy_lk_c::setShapeAngleOnGround() {
 /* 023FF47C */
 void daPy_lk_c::setStepsOffset() {
 
+    /* true60 (d_a_player_stepsoffset_t60.h): the offset and the move from the frame's start values */
+    gabi::Local<cXyz> oldPos;
+    cXyz *movedFrom = &old.pos; /* dt 1: the original's old.pos itself */
+    if (t60::dt() != 1.0f) {
+        f32 m = m35C4, ox = old.pos.x, oy = old.pos.y, oz = old.pos.z;
+        lkT60_stepsOffsetBegin(m, ox, oy, oz);
+        m35C4 = m;
+        oldPos->x = ox;
+        oldPos->y = oy;
+        oldPos->z = oz;
+        movedFrom = oldPos.get();
+    }
     LinkMotionApi::addCalc(&m35C4, 0.0f, 0.5f, 25.0f, 5.0f);
     u16 a = (u16)mGroundAngle;
     f32 t = cM_ssin(a) / cM_scos(a);
@@ -5321,7 +5673,7 @@ void daPy_lk_c::setStepsOffset() {
         m35C4 = gabi::fnmsubs(diff, 0.7f, m35C4);
     } else if (!flg) {
         gabi::Local<cXyz> d;
-        cXyz_mi(&old.pos, d, &current.pos);
+        cXyz_mi(movedFrom, d, &current.pos);
         gabi::Local<cXyz> xz;
         f32 dy = d->y;
         xz->x = d->x;
@@ -5548,6 +5900,11 @@ int daPy_lk_c::setLegAngle(f32 height, int foot, s16 *outUpper, s16 *outLower) {
 
 /* 0240005C */
 void daPy_lk_c::footBgCheck() {
+    /* true60 (d_a_player_footbg_t60.h): the frame's foot records and eased values on later steps */
+    const u32 t60FootRecs = gabi::ea(&mFootData[0]);
+    const bool t60FootConv = t60::dt() != 1.0f; /* (the form sets dt 1 for the call:) */
+    if (t60FootConv)
+        lkT60_footBgBegin(t60FootRecs, gabi::ea(&mFootBgOffsetY));
 
     const u32 stk = gabi::ea(mDoMtx_stack_c::get()); /* mDoMtx_stack_c::now */
     u32 model = gabi::ea(mpCLModel.get());
@@ -5706,6 +6063,8 @@ void daPy_lk_c::footBgCheck() {
         }
         cLib_addCalcAngleS(&footData.field_0x004, (s16)g, 2, 0x1800, 0x10);
     }
+    if (t60FootConv)
+        lkT60_footBgEnd(t60FootRecs);
 }
 
 /* 02400990 */
@@ -5721,14 +6080,23 @@ void daPy_lk_c::setMoveSlantAngle() {
     if (mCurProc == LinkMotionConstants::daPyProc_MOVE_e && k > 0.95f) {
         f32 t = (k - 0.95f) / 0.050000012f;
         s16 d = (s16)(m34DE - shape_angle.y);
-        cLib_addCalcAngleS(&mMoveSlantAngle, (s16)gabi::ftoi(((f32)d * 1.6f) * t), 4, 0xC8, 0x64);
+        /* true60: d is the turn since the previous step, read as a per-frame rate (the lean target
+         * 1.6 x the frame's turn): d / dt at N steps, clamped to the s16 range; dt = 1 unchanged */
+        f32 lean = (f32)d * 1.6f;
+        if (t60::dt() != 1.0f) {
+            f32 rate = (f32)d / t60::dt();
+            rate = rate > 32767.0f ? 32767.0f : rate < -32768.0f ? -32768.0f : rate;
+            lean = (f32)(s16)rate * 1.6f;
+        }
+        cLib_addCalcAngleS(&mMoveSlantAngle, (s16)gabi::ftoi(lean * t), 4, 0xC8, 0x64);
         v = (s16)(mMoveSlantAngle >> 1);
         mBodyAngle.z = v;
         shape_angle.z = v;
         return;
     }
     s16 cur = mMoveSlantAngle;
-    s16 step = (s16)gabi::ftoi((f32)cur * 0.35f);
+    /* true60 (the per-step smoothing rule): the lean decays by 0.35 of itself per frame: 1 - 0.65^dt per step (dt = 1: 0.35) */
+    s16 step = (s16)gabi::ftoi((f32)cur * (t60::dt() == 1.0f ? 0.35f : t60_ratio(0.35f, t60::dt())));
     if (step == 0) {
         mMoveSlantAngle = 0;
         shape_angle.z = 0;
@@ -5818,10 +6186,18 @@ void daPy_lk_c::setDemoData() {
     u32 prm0_p = 0;
     u32 prm1_p = 0;
     if (!dComIfGp_event_runCheck()) {
-        if (mDemo.mDemoType != 0)
+        /* true60 (the first-step AI-timer rule for Link, pair): the demo's end on "no event running" is decided where
+         * the 30 Hz update reads it, once per frame, on the frame's FIRST step. The event state is frame-level (rule note
+         * first-step frame-level); a later step of the frame sees another answer only where Link's own first-step work ordered an event that
+         * the event manager starts with the next frame: procTactWait_init(-1) (the Wind Waker from the item button) orders
+         * the compulsory tact event and sets the special demo type, and step 2 ended that demo before the event ran (B back
+         * in WAIT within the frame; A's next update, at the next frame, sees the event running). dt 1: unchanged. */
+        if (mDemo.mDemoType != 0 && (t60::dt() == 1.0f || t60::first_step()))
             endDemoMode();
-        if (mForestWaterUseTimer > 0) {
-            mForestWaterUseTimer = (s16)(mForestWaterUseTimer - 1);
+        if (lkT60_countBranch(LKT60_KEY_FOREST_WATER, 1, mForestWaterUseTimer)) {
+            /* true60 (the 30 Hz timer rule; the first-step AI-timer rule for Link): a 30 Hz frame count, down on the frame's first
+             * step, the count branch held over the frame */
+            lkT60_countDown(LKT60_KEY_FOREST_WATER, 1, mForestWaterUseTimer);
         } else {
             mNoResetFlg1 = mNoResetFlg1 & ~0x20000u; /* FOREST_WATER_USE */
         }
@@ -5980,8 +6356,13 @@ void daPy_lk_c::setDemoData() {
     if (type == 4 /* TYPE_START */) {
         if (mDemo.mDemoMode == 0xE /* DEMO_KEEP */) {
             s16 timer = mDemo.mTimer;
-            if (timer != 0) {
-                mDemo.mTimer = (s16)(timer - 1);
+            if (timer != 0 || lkT60_countHeld(LKT60_KEY_DEMO_KEEP, 2, 0)) {
+                /* true60 (the 30 Hz timer rule; the first-step AI-timer rule for Link): the DEMO_KEEP wait counts 30 Hz frames on the
+                 * frame's first step, the wait branch held over the frame; the leave-the-spot check runs on every step */
+                if (timer != 0 && lkT60_countStep()) {
+                    mDemo.mTimer = (s16)(timer - 1);
+                    lkT60_counted(LKT60_KEY_DEMO_KEEP, 2, (s16)(timer - 1));
+                }
                 cXyz d;
                 cXyz_mi(&current.pos, &d, &home.pos);
                 cXyz xz;
@@ -6003,12 +6384,20 @@ void daPy_lk_c::setDemoData() {
         mDemo.mParam0 = prm0_p != 0 ? (s32)*gabi::at<be<s32>>(prm0_p) : 0;
         mDemo.mParam1 = prm1_p != 0 ? (s32)*gabi::at<be<s32>>(prm1_p) : 0;
         if (demo_mode == 4 /* DEMO_INIT_WAIT */ || demo_mode == 0x2C /* DEMO_POS_INIT */) {
-            mNormalSpeed = 0.0f;
-            mStts.m_cc_move.z = 0.0f; /* mStts.ClrCcMove() */
-            mStts.m_cc_move.y = 0.0f;
-            mStts.m_cc_move.x = 0.0f;
-            speedF = 0.0f;
-            LinkActionSetPlayerPosAndAngle(this, pos_p, angle);
+            /* true60 (the first-step AI-timer rule for Link): the
+             * placement (the speed clears, setPlayerPosAndAngle at the demo / event position, the ship's start position
+             * from it) runs on the frame's first step only. The original places once per 30 Hz update and the frame's
+             * move (the fall at the Hyroom arrival, no ground under the point) runs from there; placed on every step,
+             * the frame end showed one step's move from the point (jk92: B y -3101.6 against A -3105). dt 1: unchanged. */
+            const bool lkT60Place = t60::dt() == 1.0f || t60::first_step();
+            if (lkT60Place) {
+                mNormalSpeed = 0.0f;
+                mStts.m_cc_move.z = 0.0f; /* mStts.ClrCcMove() */
+                mStts.m_cc_move.y = 0.0f;
+                mStts.m_cc_move.x = 0.0f;
+                speedF = 0.0f;
+                LinkActionSetPlayerPosAndAngle(this, pos_p, angle);
+            }
             mDemo.mDemoMoveAngle = angle; /* mDemo.setMoveAngle */
             if (demo_mode == 4 && mDemo.mParam0 != 0) {
                 deleteEquipItem(0);
@@ -6035,7 +6424,7 @@ void daPy_lk_c::setDemoData() {
                     }
                 }
             }
-            if (dComIfGp_checkPlayerStatus0(0, 0x10000)) {
+            if (lkT60Place && dComIfGp_checkPlayerStatus0(0, 0x10000)) {
                 u32 ship = gabi::ea(dComIfGp_getShipActor());
                 if (ship != 0)
                     LinkActionApi::shipInitStartPos(ship, &current.pos, (s32)(s16)shape_angle.y);
@@ -6064,7 +6453,11 @@ void daPy_lk_c::setDemoData() {
             xz.y = 0.0f;
             f64 sq = LinkActionApi::squareMagnitude(&xz);
             bool stop = false;
-            if (sq < (f64)100.0f) {
+            /* true60 (the first-step AI-timer rule for Link; d_a_player_t60.h lkT60_demoWalkDecides): the arrival
+             * and slow-down tests decide on the frame's first step only, from the frame-start position */
+            const bool lkT60WalkDec = lkT60_demoWalkDecides();
+            if (!lkT60WalkDec) {
+            } else if (sq < (f64)100.0f) {
                 stop = true;
             } else if (sq < (f64)2500.0f && fabsf((f32)mNormalSpeed) < 0.001f) {
                 stop = true;
@@ -6072,7 +6465,7 @@ void daPy_lk_c::setDemoData() {
             if (stop) {
                 demo_mode = 1;
                 mNormalSpeed = 0.0f;
-            } else if ((demo_mode == 2 && sq < (f64)400.0f) || sq < (f64)2500.0f) {
+            } else if (lkT60WalkDec && ((demo_mode == 2 && sq < (f64)400.0f) || sq < (f64)2500.0f)) {
                 mDemo.mStick = 0.0f; /* mDemo.setStick(0.0f) */
             }
             mDemo.mDemoMoveAngle = (s16)LinkActionApi::atan2sWide(x, z);
@@ -6104,7 +6497,14 @@ void daPy_lk_c::setDemoData() {
 }
 
 /* HD: the sead controller (GamePad) object at *0x101F5088: +0x18 trigger bits, +0x124 hold bits */
-static inline u32 lk_hdPadTrig() { return gabi::load<u32>(gabi::load<u32>(0x101F5088) + 0x18); }
+/* (true60, the input rule / per-step input: like the CPad triggers, c_API_controller.cpp cpadTrig, converted code takes the HD
+ * controller's presses of the step's own read, true60.h t60_in_step_word) */
+static inline u32 lk_hdPadTrig() {
+    if (t60::dt() != 1.0f)
+        return t60_in_step_word([] { return gabi::load<u32>(0x101F5088) + 0x18; }, 0,
+                                [] { return gabi::load<u32>(gabi::load<u32>(0x101F5088) + 0x18); });
+    return gabi::load<u32>(gabi::load<u32>(0x101F5088) + 0x18);
+}
 static inline u32 lk_hdPadHold() { return gabi::load<u32>(gabi::load<u32>(0x101F5088) + 0x124); }
 /* inline dSv_player_item_c::getItem(slot) over the save's item/bag tables (save + 0x20 base) */
 static inline u8 lk_saveGetItem(u32 base, u32 idx) {
@@ -6138,8 +6538,9 @@ static inline void lk_setSelectItemHD(u32 selOff, u32 playOff) {
         gabi::store<u8>(s + selOff, 0xFF);
 }
 static inline s16 lk_camControledAngleY(s32 idx) {
-    return gabi::call<s16>(0x024F8018 /* dCam_getControledAngleY */,
-                           gabi::load<u32>(dComIfGp_ea() + idx * 0x34 + 0x5AF8));
+    /* true60 (the process-order read rule, d_a_player_camyaw_t60.h): the camera's frame-start yaw on the frame's later steps */
+    return lkT60_camYawFrameStart(gabi::call<s16>(0x024F8018 /* dCam_getControledAngleY */,
+                                                  gabi::load<u32>(dComIfGp_ea() + idx * 0x34 + 0x5AF8)));
 }
 
 /* 023F32E4 */
@@ -6289,7 +6690,8 @@ void daPy_lk_c::setStickData() {
         if (CPad_CHECK_HOLD_B(0) && ((bVar2 & 2) || checkShipRideUseItem(0) == 1)) {
             mItemButton = mItemButton | 2;
         }
-        if (mTinkleHoverTimer == 0) {
+        /* true60 (the first-step AI-timer rule for Link): the hover count (autoGroundHit, after this read in the update) is held */
+        if (mTinkleHoverTimer == 0 && !lkT60_countHeld(LKT60_KEY_HOVER, 0, 0)) {
             if (CPad_CHECK_HOLD_X(0) && (bVar2 & 4))
                 mItemButton = mItemButton | 4;
             if (CPad_CHECK_HOLD_Y(0) && (bVar2 & 8))
@@ -6331,6 +6733,10 @@ void daPy_lk_c::setStickData() {
     } else if ((u32)(abs_v - 0x6D5) < 0x641E) {
         mStickSpinAngle = cnt + angle_diff;
         mStickSpinTimer = 4;
+    } else if (t60::dt() != 1.0f && !t60::first_step()) {
+        /* true60 (the 30 Hz timer rule and first-step input): the stick is read on the frame's first step, so the spin window
+         * (4 frames) is evaluated there once per frame: set, counted down or cleared; the frame's later steps see no
+         * stick change and keep it */
     } else if (mStickSpinTimer > 0) {
         mStickSpinTimer = (s16)(mStickSpinTimer - 1);
     } else {

@@ -1,0 +1,9 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_npc_tc.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule NPC form; d/t60_npc.h):
+# Tingle and his brothers (Tc): the execute 022EA140 in the whole form, logic only (wrapper with it). The tick30 step runs the original execute whole
+# at dt 1 from the frame start; the earlier steps change no state (the picture between steps comes from frame interpolation): net
+# effect = the one step's, byte exact. Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 022EA140 022EA460
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200E240 0200F428 020198D8 0201ADE0 02055B64 022E7890 022E7CAC 022E7CE4 022E7E70 022E8714 022E8E64 022E8FEC 022E90B0 022E9D60 022EA0B4 024EECAC 024EEEB8 024EF130 024F08A8 025200D4 02520540 02587A0C 0259E08C 025A15AC 025A5AC8 025A5F88 025A847C 025D5218 025D6870 025D76A8 025D77DC 025E19CC 025E1A40 025E1AA4 025E535C 025E55A0 025E742C 025E789C 025F1B48 025F1C28 026066C4 0273AA24 027F4D5C 028E8F64 028E90D4

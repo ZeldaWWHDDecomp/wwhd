@@ -9,6 +9,7 @@
  * symbols; field names are descriptive guesses (GameCube offsets unknown).
  */
 #include "d/actor/d_a_klft.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 static const char* l_arcName = "Klft";
 static constexpr u32 l_aabVtable = 0x10012FE4;
@@ -31,6 +32,9 @@ enum { PROC_PLAYER = 0xA8 };
 
 /* 0219F608 */
 static void ride_call_back(dBgW* bgw, fopAc_ac_c* i_actor, fopAc_ac_c* rider) {
+    if (t60objw::cbSkip()) /* true60: a callback on each of the rider's steps: only the tick30 step's call counts */
+        return;
+    const f32 t60Prev = t60_set_dt(1.0f); /* true60: the counted call at dt 1, as plain calls (no scope object under the glue): A's once-a-frame eases (cLib) take the whole frame, not the rider's 1/N (kita cbBegin; half-ease audit, 2026-11-21) */
     klft_class* i_this = (klft_class*)i_actor;
     gabi::Local<cXyz> tmp;
     gabi::Local<cXyz> arg;
@@ -41,7 +45,12 @@ static void ride_call_back(dBgW* bgw, fopAc_ac_c* i_actor, fopAc_ac_c* rider) {
     cXyz_mi(&rider->current.pos, tmp.get(), &i_this->mCenter);
     arg->copy(*tmp.get());
     MtxPosition(arg.get(), now.get());
-    cXyz_mi(&rider->old.pos, tmp.get(), &i_this->mCenter);
+    /* true60 (the process-order read rule): the rider's old.pos as A reads it. The callback runs inside the rider's execute; a converted
+     * rider (it has executed on this step) gets its frame-start position (A's old = current at the frame's start), not
+     * its last step's start. Else (unconverted, N = 1) the live old.pos */
+    gabi::Local<cXyz> t60Old;
+    cXyz* t60OldP = t60objw::fsOldEarlier(gabi::ea(rider), t60Old.get()) ? t60Old.get() : &rider->old.pos;
+    cXyz_mi(t60OldP, tmp.get(), &i_this->mCenter);
     arg->copy(*tmp.get());
     MtxPosition(arg.get(), old.get());
 
@@ -77,6 +86,7 @@ static void ride_call_back(dBgW* bgw, fopAc_ac_c* i_actor, fopAc_ac_c* rider) {
             i_this->mSwayTarget.z = dz;
         }
     }
+    t60_set_dt(t60Prev);
 }
 
 // HD: joint 1 of the lift model (the wheel) turns with mWheelRot
@@ -139,6 +149,9 @@ static BOOL daKlft_Draw(klft_class* i_this) {
 // HD: klft_move and himo_move inlined
 /* 0219FBFC */
 static BOOL daKlft_Execute(klft_class* i_this) {
+    t60w::Guard<klft_class> t60g(i_this, t60objw::Logic<klft_class>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     dComIfGp_get();
     if (i_this->mHitTimer != 0) {
         i_this->mHitTimer = (s16)(i_this->mHitTimer - 1);
@@ -400,6 +413,7 @@ static BOOL daKlft_Execute(klft_class* i_this) {
         Mtx34* src = calc_mtx();
         morf->mpModel->setBaseTRMtx(src);
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 

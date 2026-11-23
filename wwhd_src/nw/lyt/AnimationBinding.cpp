@@ -3,6 +3,7 @@
 #include "nw/lyt/AnimationBinding.h"
 #include "nw/lyt/ResourceHelpers.h"
 #include "nw/lyt/ResourceProvider.h"
+#include "nw/lyt/LYT_t60.h"
 using namespace nw::lyt;
 static u8 sTransformMethods;
 static u8 sBoundMethods;
@@ -24,6 +25,7 @@ TransformAnimation* TransformAnimation::create(TransformAnimation* animation) {
 
 /* 028713A4 */
 void TransformAnimation::destroy(u32 flags) {
+    if (this) t60lyt_forget(this); /* true60: drop it from the picture record (LYT_t60.h) */
     if (this && (flags & 1)) gabi::tail_ptr<void>(gabi::guest_fn((const void*)animationDelete), this);
 }
 
@@ -46,6 +48,7 @@ BoundAnimation* BoundAnimation::create(BoundAnimation* animation) {
 void BoundAnimation::destroy(u32 flags) {
     auto frame = gabi::AutoFrame(gabi::current_function());
     if (!this) return;
+    t60lyt_forget(this); /* true60: drop it from the picture record (LYT_t60.h) */
     void* storage = bindings;
     methods = reinterpret_cast<AnimationTransformMethods*>(&sBoundMethods);
     if (storage) layoutReleaseAnimationStorage(storage);

@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_toripost.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule + addendum, d/t60_objw.h): toripost (mail post): letter count, order / attention / collider, mode proc, cut proc, event order, hit se / effect, anim.
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 023A4A60
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 023A3DD0 023A40E0 023A44A8 023A4548 023A45F4 023A463C 023A46E4 023A4700 023A4798 023A47F4 023A486C 023A4A04 023A4C68 023A4C88 023A4CD8 023A4D90 023A4D9C 023A4E34 023A4E8C 023A5070 023A50C0 023A50CC 023A5BF8
+t60cand 023A3DD0 023A40E0 023A44A8 023A4548 023A45F4 023A463C 023A46E4 023A4700 023A4798 023A47F4 023A486C 023A4A04 023A4C68 023A4C88 023A4CD8 023A4D90 023A4D9C 023A4E34 023A4E8C 023A5070 023A50C0 023A50CC 023A5BF8
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200E240 0211D2F8 023129C4 02312C8C 023A3DD0 023A40E0 023A44A8 023A4548 023A45F4 023A463C 023A46E4 023A4700 023A4798 023A47F4 023A486C 023A4A04 023A4C68 023A4C88 023A4CD8 023A4D90 023A4D9C 023A4E34 023A4E8C 023A5070 023A50C0 023A50CC 023A5BF8 024F43DC 02515E50 025162A4 025200D4 02542D88 02542EDC 02543280 0254457C 025447C8 0254487C 02544950 02544980 02586DC8 02586E04 02587A0C 025A11EC 025A15AC 025A847C 025B7D90 025D6958 025D69FC 025D76A8 025D77DC 025D7DEC 025E1988 025E535C 025E55A0 025E742C 027F4D5C

@@ -7,6 +7,7 @@
  * written from the WWHD code (cking.rpx) with the GameCube names, and verified against it.
  */
 #include "d/actor/d_a_npc_gp1.h"
+#include "d/actor/d_a_npc_gp1_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule NPC form) */
 
 // HD: mapped objects are owned once by this translation unit.
 const gc_tu_data gc_tu = {.safeString = 0x1001A170};
@@ -104,7 +105,8 @@ void daNpc_Gp1_c::nodeGp1Control(J3DNode* i_node, J3DModel* i_model) {
     if (jnt_no == (u32)(s32)m_hed_jnt_num) {
         mDoMtx_YrotM(stk, -m_jnt.mAngles[0][1]);
         mDoMtx_ZrotM(stk, -m_jnt.mAngles[0][0]);
-        PSMTXMultVec(stk, &a_eye_pos_off, &mEyePos);
+        if (gp1_t60::drawStep()) /* true60: logic store on the tick30 step's draw only (rule 14) */
+            PSMTXMultVec(stk, &a_eye_pos_off, &mEyePos);
     }
     if (jnt_no == (u32)(s32)m_bbone_jnt_num) {
         mDoMtx_XrotM(stk, m_jnt.mAngles[1][1]);
@@ -1217,6 +1219,9 @@ BOOL daNpc_Gp1_c::_draw() {
 
 /* 0223A3A0 */
 BOOL daNpc_Gp1_c::_execute() {
+    t60w::Guard<daNpc_Gp1_c> t60g(this, gp1_t60::kOps); /* true60: the whole frame on the tick30 step (end at every return) */
+    if (t60g.skip) /* a step before the tick30 step: the picture only */
+        return TRUE;
     if (!mbHomeSet) {
         mHomeAngle.y = current.angle.y;
         mHomePos.copy(current.pos);
@@ -1261,6 +1266,7 @@ BOOL daNpc_Gp1_c::_execute() {
     if (!mbDemo) {
         setCollision(70.0f, 230.0f);
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 

@@ -9,6 +9,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_agbsw0.h"
+#include "d/actor/d_a_agbsw0_t60.h" /* true60 (t60conv): step helpers */
 
 // HD: this translation unit's copies of compiler-generated data.
 const gc_tu_data gc_tu = {
@@ -21,9 +22,19 @@ static daAgbsw0_c::CylinderSource l_cyl_src;
 // HD: execute is out of line, and only ExeSubT remains. Any bomb-type Tg hit sets the switch;
 // the GBA link and bomb actor state checks are gone. Deletion always waits for a running event.
 BOOL daAgbsw0_c::execute() {
+    /* true60 (t60conv + hand, the first-step AI-timer rule / first-step frame-level / one-sweep-per-frame attack, collision audit): the switch-on
+     * branch (the timer, the delete) is frame logic, on the frame's first step. The cylinder is registered for the
+     * tick30 collision Move (one-sweep-per-frame attack), where the bomb's At meets it (a first-step-only registration never met it); not on
+     * the earlier steps, whose Moves would clear its hit and count its effect counter down once more per step. The hit
+     * is read on every step; its reaction (the switch, the timer) once a frame, on the step that reads it; that frame
+     * registers nothing after it, as A. dt 1: one step, the original. */
+    if (t60c::first())
+        t60c::unmark(1, this);
     u8 sw0 = getSw0();
 
     if (sw0 != 0xFF && fopAcM_isSwitch(this, sw0)) {
+        if (!t60c::first())
+            return true;
         if (mTimer == 0) {
             if (dComIfGp_event_runCheck()) {
                 return true;
@@ -35,10 +46,13 @@ BOOL daAgbsw0_c::execute() {
         return true;
     }
 
+    if (t60c::marked(1, this))
+        return true; /* true60: the hit was taken on an earlier step of this frame */
     if (mCyl.ChkTgHit()) {
         dComIfGs_onSwitch(sw0, home.roomNo); /* fopAcM_onSwitch */
         mTimer = 30;
-    } else {
+        t60c::mark(1, this);
+    } else if (t60c::end()) { /* true60: registered for the tick30 Move only (one-sweep-per-frame attack) */
         dComIfG_Ccsp_Set(&mCyl);
     }
     return true;

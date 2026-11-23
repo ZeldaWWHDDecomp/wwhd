@@ -2,6 +2,7 @@
 #include "d/actor/d_a_obj_ashut.h"
 #include "JSystem/J3DGraph.h"
 #include <cmath>
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using daObjAshut::Act_c;
 // HD: tww provides names and method layout; its method bodies are nonmatching.
 static Mtx34 sMatrixStack;
@@ -133,11 +134,18 @@ s32 daObjAshut::Act_c::Create() {
 
 /* 02318ED0 */
 s32 daObjAshut::Act_c::Execute(be<u32>* output) {
+    t60w::Guard<daObjAshut::Act_c> t60g(this, t60objw::Logic<daObjAshut::Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) { /* true60: a step before the tick30 step: the picture only (frame interpolation); the background stays: the
+                      * wrapper gets the actor's own mBgMtx (sBackgroundMatrix is a static shared by the Ashut shutters) */
+        *output = gabi::ea(&mBgMtx);
+        return TRUE;
+    }
     (this->*sModeActions.mEntries[u32(mode)])();
     f32 height=this->height,y=current.pos.y,z=current.pos.z,x=current.pos.x;
     eyePos.z=z;
     eyePos.x=x;
     eyePos.y=gabi::fadds_ppc(y,height);
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     *output=gabi::ea(&sBackgroundMatrix);
     return 1;

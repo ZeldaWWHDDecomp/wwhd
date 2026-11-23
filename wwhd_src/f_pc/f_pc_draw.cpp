@@ -1,5 +1,6 @@
 /** Process drawing. */
 #include "f_pc/f_pc_draw.h"
+#include "f_pc/f_pc_t60_exec_proc.h"
 
 static s32 g_fpcLf_type;
 static DrawHeaderStatics l_headerStatics;
@@ -19,6 +20,7 @@ BOOL fpcDw_Execute(base_process_class* i_proc) {
     layer_class* layer = i_proc->mLyTg.mpLayer;
     u32 draw_func = methods->mpDrawFunc.get();
     fpcLy_SetCurrentLayer(layer);
+    T60_EXEC_PROC(i_proc);  // (true60 test aid: draws in the draw method keyed by the drawing process)
     BOOL ret = gabi::call_ptr<s32>(draw_func, i_proc);
     fpcLy_SetCurrentLayer(curLay);
     return ret;

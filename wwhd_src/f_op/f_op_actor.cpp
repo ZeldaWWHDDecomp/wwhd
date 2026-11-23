@@ -3,6 +3,10 @@
 // HD: keep the pre-existing generic binding separate from this unit's typed definition.
 #define fopAc_IsActor fopAc_IsActorBindingHD
 #include "f_op/f_op_actor_readable.h"
+#include "true60.h"
+#include "d/d_s_play_t60.h"
+#include "f_op/f_op_actor_t60.h"
+#include "f_pc/f_pc_t60.h"
 #undef fopAc_IsActor
 
 using ActorType = be<s32>;
@@ -42,14 +46,16 @@ s32 fopAc_Draw(fopAc_ac_c* actor) {
         }
         u32 status;
         if (draw) {
-            actor->actor_condition &= ~u32(fopAcCnd_NODRAW_e);
+            if (fopAc_t60_cull_answer_pass()) /* true60: the frame's culling answer, tick30 draw only (f_op_actor_t60.h) */
+                actor->actor_condition &= ~u32(fopAcCnd_NODRAW_e);
             ret = fpcLf_DrawMethod(gabi::at<leafdraw_method_class>(actor->sub_method), actor);
             status = actor->actor_status & ~u32(fopAcStts_NODRAW_e);
             actor->actor_status = status;
         } else {
             u32 condition = actor->actor_condition;
             status = actor->actor_status & ~u32(fopAcStts_NODRAW_e);
-            actor->actor_condition = condition | fopAcCnd_NODRAW_e;
+            if (fopAc_t60_cull_answer_pass()) /* true60: as above */
+                actor->actor_condition = condition | fopAcCnd_NODRAW_e;
             actor->actor_status = status;
         }
         if (mStayNo >= 0 && (status & fopAcStts_SHOWMAP_e))
@@ -89,6 +95,12 @@ static void checkPosition(fopAc_ac_c* actor, s32 line, s32 rangeLine) {
             "actor->current.pos.z && actor->current.pos.z < 1.0e32f");
 }
 
+// true60 (follow-up, d_s_play_t60.h): on an in-between step the pause check answers what this frame's
+// calcPauseTimer (the play scene, tick30 step) will leave: a pending hit stop pauses the whole frame, a timer that runs
+// out there (1 -> 0) leaves the whole frame running. The native overlays' part is asked with that timer. dt = 1 and the
+// tick30 step: the original check.
+static inline BOOL fopAc_t60_isPause() { return t60_frame_isPause([] { return dScnPly_ply_c::isPause(); }); }
+
 /* 025D475C */
 BOOL fopAc_Execute(fopAc_ac_c* actor) {
     BOOL ret = TRUE;
@@ -96,10 +108,13 @@ BOOL fopAc_Execute(fopAc_ac_c* actor) {
     if (!(actor->actor_status & fopAcStts_NOPAUSE_e)) {
         if (dMenu_flag())
             return ret;
-        if (dScnPly_ply_c::isPause())
+        if (fopAc_t60_isPause())
             return ret;
     }
-    actor->eventInfo.mCondition = 0;
+    // true60: the event condition the event system set for this 30 Hz frame is consumed once, on the tick30
+    // step (a converted actor's earlier steps keep it; the event-step rule, LESSONS 10)
+    if (t60::tick30())
+        actor->eventInfo.mCondition = 0;
     s32 moveApproval = dComIfGp_event_moveApproval(actor);
     bool exec;
     if (moveApproval == dEvtMove_FORCE_e)

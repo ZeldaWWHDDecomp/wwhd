@@ -2,6 +2,7 @@
  * GameCube methods and asserted HD layouts; original call/store order is verified unchanged. */
 #include "bindings.h"
 #include "d/actor/d_a_obj_tide.h"
+#include "d/actor/d_a_obj_tide_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule) */
 using Tide = daObjTide::Act_c;
 static const u32 dBgS_MoveBGProc_Trans = 0x024EE76C;
 dComIfG_inf_c* tideGetGameInfo();
@@ -686,8 +687,15 @@ void daObjTide::Act_c::se_pos_up() {
 // HD: deleting the actor after the mode and matrix updates is part of Execute.
 /* 023A0F08 */
 BOOL daObjTide::Act_c::Execute(be<u32>* matrixOut) {
+    t60w::Guard<daObjTide::Act_c> t60g(this, t60objw::Logic<daObjTide::Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) { /* true60: a step before the tick30 step: the picture only (frame interpolation); the background stays: the
+                      * wrapper gets the actor's own mBgMtx (tideTemporaryMatrix is a static shared by all tides) */
+        *matrixOut = gabi::ea(&mBgMtx);
+        return 1;
+    }
     (this->*tideModeProc[u32(mMode)].run)();
     eyePos.y = current.pos.y;
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     *matrixOut = gabi::ea(&tideTemporaryMatrix);
     if (mDeleteReq)

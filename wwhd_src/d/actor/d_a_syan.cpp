@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_syan.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 const gc_tu_data gc_tu = {.safeString = 0x1003EE54};
 static f32 b_pos_x[6] = {870.0f, 420.0f, -420.0f, -880.0f, -400.0f, 440.0f};
 static f32 b_pos_y[6] = {-560.0f, -760.0f, -630.0f, -710.0f, -670.0f, -690.0f};
@@ -76,6 +77,9 @@ static inline void syan_set_mtx(syan_class* i_this) {
 
 /* 024A45E0 */
 static BOOL daSyan_Execute(syan_class* i_this) {
+    t60w::Guard<syan_class> t60g(i_this, t60objw::Logic<syan_class>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     dComIfGp_get(); /* HD: an unused accessor call */
     for (s32 i = 0; i < 2; i++)
         if (i_this->timer[i] != 0)
@@ -114,6 +118,7 @@ static BOOL daSyan_Execute(syan_class* i_this) {
     }
     }
 
+    t60g.model = true; /* true60: the frame reached its model step */
     syan_set_mtx(i_this);
 
     for (s32 i = 0; i < syan_class::kEmtrNum; i++) {

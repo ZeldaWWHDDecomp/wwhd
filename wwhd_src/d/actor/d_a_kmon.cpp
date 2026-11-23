@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_kmon.h"
+#include "d/t60_npc.h" /* true60 (kmon): the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 // HD: GHS per-unit constructor/destructor vtables and common header objects.
 const gc_tu_data gc_tu = {
     .safeString = 0x100130F4,
@@ -158,11 +159,15 @@ static BOOL daKmonDelete(void *i_this) {
 }
 
 BOOL daKmon_c::_execute() {
+    t60w::Guard<daKmon_c> t60g(this, t60npc::Logic<daKmon_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return FALSE;
     checkTalk();
     fopAcM_posMoveF(this, nullptr);
     mAcch.CrrPos(dComIfG_Bgsp());
     mBckAnm.play();
     mBtkAnm.play();
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     return FALSE;
 }

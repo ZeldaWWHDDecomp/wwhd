@@ -8,13 +8,15 @@
  */
 #define SAFESTRING_VTBL 0x10024570
 #include "d/actor/d_a_nzg.h"
+#include "d/actor/d_a_nzg_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule addendum) */
 
 static dCcD_SrcCyl body_cyl_src;
 
 /* 023111D8 */
 static BOOL daNZG_Draw(nzg_class* i_this) {
     J3DModel* model = i_this->mpModel;
-    g_env_light.settingTevStruct(TEV_TYPE_ACTOR, &i_this->current.pos, &i_this->tevStr);
+    if (nzg_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+        g_env_light.settingTevStruct(TEV_TYPE_ACTOR, &i_this->current.pos, &i_this->tevStr);
     g_env_light.setLightTevColorType(model, &i_this->tevStr);
     mDoExt_modelUpdateDL(model);
     return TRUE;
@@ -100,6 +102,10 @@ static inline void nzg_01_move(nzg_class* i_this) {
 
 /* 02311240 */
 static BOOL daNZG_Execute(nzg_class* i_this) {
+    t60w::Guard<nzg_class> t60g(i_this, nzg_t60::ops()); /* true60: the whole frame on the tick30 step */
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
+    t60g.model = true;
     i_this->mNoSpawnRange = 400.0f;
     for (s32 j = 0; j < 4; j++) {
         if (i_this->mTimers[j] != 0) {

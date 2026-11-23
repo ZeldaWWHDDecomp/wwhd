@@ -1,0 +1,19 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_timer.txt
+# ---- (2026-11-18): dTimer_createTimer / dTimer_createStockTimer called by a converted caller on
+# every step of a frame with the same arguments (d_timer_t60.h): the later steps' repeats answer the frame's result and
+# create nothing, so the N steps' net effect (memory and the timer process creations) equals the one step.
+t60conv 025C60F4 025C61E4
+t60calls 025DB468
+# The controls are status transitions called by actors (no change): a repeat on a later step finds the new status and
+# writes nothing (the net memory of N steps equals the one step). Their answer is the step's own (TRUE on the step that
+# made the transition, FALSE after it): the return is not compared.
+t60conv 025C5794 025C57D4 025C583C 025C5864 025C58A8 025C58D8 025C5E90 025C6250
+t60ret 025C5794 skip
+t60ret 025C57D4 skip
+t60ret 025C583C skip
+t60ret 025C5864 skip
+t60ret 025C58A8 skip
+t60ret 025C58D8 skip
+t60ret 025C5E90 skip
+t60ret 025C6250 skip

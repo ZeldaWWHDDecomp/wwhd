@@ -1,5 +1,6 @@
 /* WWHD Dragon Roost water platform. */
 #include "d/actor/d_a_obj_gryw00.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 const gc_tu_data gc_tu  =  {.safeString  =  0x10029940};
 static const char* l_arcname  =  "Gryw00";
 enum { dRes_INDEX_GRYW00_BDL_GRYW00_e=9, dRes_INDEX_GRYW00_BTK_GRYW00_e=12,
@@ -162,6 +163,12 @@ void daObjGryw00_c::set_se() {
 }
 /* 0234CC24 */
 BOOL daObjGryw00_c::Execute(gptr<Mtx34>* outMtx) {
+    t60w::Guard<daObjGryw00_c> t60g(this, t60objw::Logic<daObjGryw00_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) { /* true60: a step before the tick30 step: the picture only (frame interpolation); the background stays: the
+                      * wrapper gets the actor's own water matrix mMtx, as on the tick30 step */
+        *outMtx = &mMtx;
+        return TRUE;
+    }
     f32 wave = mWaveAmplitude+mWaveAmplitudeIncrement;
     f32 water = mWaterLv, limit = mWaveMaxAmplitude, step = mWaterLvIncrement;
     mWaveAmplitude = wave;
@@ -178,6 +185,7 @@ BOOL daObjGryw00_c::Execute(gptr<Mtx34>* outMtx) {
     f32 drawY = get_draw_water_lv(this);
     f32 homeZ = home.pos.z;
     mDoMtx_stack_c::transS(homeX, drawY, homeZ);
+    t60g.model = true; /* true60: the frame reached its model step */
     mtx_copy(&mpModel->mBaseTransformMtx, mDoMtx_stack_c::get());
     f32 waterY = home.pos.y+mWaterLv;
     homeZ = home.pos.z;

@@ -1,6 +1,7 @@
 /** Bomb flower (VbakH), using GameCube names and verified HD layouts.
  * Native call/load/store order and guest stack objects are retained. */
 #include "d/actor/d_a_bflower.h"
+#include "d/actor/d_a_bflower_t60.h" /* true60 (t60conv): step helpers */
 
 static BFlowerSavePointer l_bflowerSave;
 static BFlowerResourcePointer l_bflowerResourceControl;
@@ -254,11 +255,13 @@ bool daBFlower_c::_draw() {
 bool daBFlower_c::_execute() {
     auto p = bflowerPlay();
     auto player = p->play.getPlayer(0);
-    (this->*action_tbl.actions[u8(mState)])();
+    (this->*action_tbl.actions[u8(t60c::heldInt(u8(mState), 3, &mState))])(); /* true60: the frame's state on every step; a change acts from the next frame */
     animPlay();
     set_mtx();
     setCollision();
-    mPrevPlayerDist = distanceXZ(player, this);
+    f32 playerDist = distanceXZ(player, this);
+    if (t60c::end()) /* true60: the frame-end distance; the "Link walks past" test (change > 2 per frame) compares a whole frame */
+        mPrevPlayerDist = playerDist;
     mPrevGrabActorID = grabId(player);
     return true;
 }
@@ -267,9 +270,18 @@ BOOL daBFlower_c::actLive() {
     auto p = bflowerPlay();
     auto player = p->play.getPlayer(0);
     f32 distance = distanceXZ(player, this);
-    BFlower_addCalc(&mBombScale.x, 1.0f, 0.05f, 0.1f, 0.05f);
-    BFlower_addCalc(&mBombScale.y, 1.0f, 0.05f, 0.1f, 0.05f);
-    f32 growing = BFlower_addCalc(&mBombScale.z, 1.0f, 0.05f, 0.1f, 0.05f);
+    if (t60c::first())
+        t60c::unmark(2, this); /* true60: the regrow-reset mark (site 2) is the frame's */
+    /* true60 (rule (b)): the frame's whole-step growth answer (the original's one ease from the frame start),
+     * taken on the first step on a copy at dt 1 and held: a regrow reset on the first step leaves the frame at scale 0
+     * with the original's `growing` (the later steps do not grow; the growth starts next frame, as A) */
+    f32 frameGrowing = bflowerT60::frameGrowing(&mBombScale.z);
+    f32 growing = frameGrowing;
+    if (!t60c::marked(2, this)) {
+        BFlower_addCalc(&mBombScale.x, 1.0f, 0.05f, 0.1f, 0.05f);
+        BFlower_addCalc(&mBombScale.y, 1.0f, 0.05f, 0.1f, 0.05f);
+        growing = BFlower_addCalc(&mBombScale.z, 1.0f, 0.05f, 0.1f, 0.05f);
+    }
     if (mBombGrowing && growing == 0.0f)
         init_bck_anm(dRes_INDEX_VBAKH_BCK_VBAKH_e);
     if (distance < 50.0f) {
@@ -302,11 +314,18 @@ BOOL daBFlower_c::actLive() {
         u32 flags = u32(attention_info.flags);
         mBombReady = 0;
         attention_info.flags = flags & ~u32(fopAc_Attn_ACTION_CARRY_e);
-    } else {
+    } else if (mHasBomb || t60c::first()) {
+        /* true60 (N-step spec with actLive compared): the regrow (bomb taken: mHasBomb 0, set by the first step's
+         * hit) starts on the NEXT frame's first step, as in the original (the hit comes after this block); its sound
+         * goes with the event, once (it was gated to the tick30 step, which never saw !mHasBomb after a first-step
+         * regrow: lost) */
         if (!mHasBomb) {
             mBombScale.z = 0.0f;
             mBombScale.x = 0.0f;
             mBombScale.y = 0.0f;
+            t60c::mark(2, this); /* true60: no growth on the frame's later steps */
+            if (t60c::on())
+                growing = frameGrowing; /* true60: the rest of this frame sees the original's answer (ease before the reset) */
             sound(this, 0x6A0F);
         }
         u8 ready = mBombReady;
@@ -316,7 +335,7 @@ BOOL daBFlower_c::actLive() {
             ready ? flags | fopAc_Attn_ACTION_CARRY_e : flags & ~u32(fopAc_Attn_ACTION_CARRY_e);
     }
     if (mHasBomb && growing == 0.0f) {
-        if (mSph.ChkTgHit()) {
+        if (t60c::first() && mSph.ChkTgHit()) { /* true60: the hit (tick30 collision) answered once per frame: one bomb */
             auto hit = reinterpret_cast<dCcD_GObjInf *>(mSph.GetTgHitObj());
             if (hit) {
                 u32 type = u32(hit->mAtType);
@@ -358,20 +377,21 @@ BOOL daBFlower_c::actDead() {
     f32 distance = distanceXZ(player, this);
     s32 timer = mAnimTimer;
     if (timer > 0) {
-        timer = (s32)((u32)timer - 1);
+        if (t60c::first()) { timer = (s32)((u32)timer - 1); } /* true60 (t60conv): counted on the frame's first step */
         mAnimTimer = timer;
     }
     if (distance < 50.0f && std::fabs((f32)mPrevPlayerDist - distance) > 2.0f) {
         init_bck_anm(dRes_INDEX_VBAKH_BCK_VBAHX_e);
         timer = mAnimTimer;
     }
-    if (!timer) {
+    if (t60c::first() && (!timer)) { /* true60 (t60conv): a decision on the first-step timer, on the first step */
         f32 r = cM_rndF(100.0f);
         mAnimTimer = gabi::ftoi(r + 100.0f);
         init_bck_anm(dRes_INDEX_VBAKH_BCK_VBAHX_e);
     }
-    mBrk1.mFrameCtrl.mRate = 0.0f;
-    if (mCyl.ChkTgHit()) {
+    if (!t60c::on() || u8(mState) != STATE_LIVE_E) /* true60: not after the revive of an earlier step of this frame */
+        mBrk1.mFrameCtrl.mRate = 0.0f;
+    if (t60c::first() && mCyl.ChkTgHit()) { /* true60: the revive hit answered once per frame */
         auto hit = reinterpret_cast<dCcD_GObjInf *>(mCyl.GetTgHitObj());
         if (hit && (u32(hit->mAtType) & 0x100)) {
             sound(this, 0x69EA);

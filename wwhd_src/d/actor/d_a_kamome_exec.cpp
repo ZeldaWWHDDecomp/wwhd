@@ -9,6 +9,7 @@
  * which differs from C for NaN. Those are written as !(a > b) etc.
  */
 #include "d/actor/d_a_kamome.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 /* ---- functions of d_a_kamome.cpp (guest calls, same signatures) ---- */
 static void anm_init(kamome_class* i_this, int a, float m, unsigned char l, float s, int snd) {
@@ -744,6 +745,9 @@ static inline void kamome_imouto2_move(kamome_class* i_this) {
 
 /* 021861D4 */
 static BOOL daKamome_Execute(kamome_class* i_this) {
+    t60w::Guard<kamome_class> t60g(i_this, t60npc::Logic<kamome_class>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
 
     dComIfGp_get(); // HD: unused player lookup
     // HD: based on the USA version (mbNoDraw reset here)
@@ -804,6 +808,7 @@ static BOOL daKamome_Execute(kamome_class* i_this) {
         }
     }
 
+    t60g.model = true; /* true60: the frame reached its model step */
     daKamome_setMtx(i_this);
 
     i_this->actor.eyePos.copy(i_this->actor.current.pos);

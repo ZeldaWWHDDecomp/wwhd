@@ -4,6 +4,7 @@
  * Field offsets are the GameCube ones + 0x11C (see d_a_bpw.h); comments name the GameCube
  * fields. "HD:" marks where WWHD's code differs from the GameCube source. */
 #include "d/actor/d_a_bpw.h"
+#include "d/actor/d_a_bpw_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule), the draw's light state */
 #include "gc_api/tu.h"
 using namespace gabi;
 
@@ -1326,8 +1327,9 @@ void draw_SUB(bpw_class *i_this) {
     if (type != 3)
         BpwHD_mDoExt_McaMorf_calc(u32(at<bpw_class>(a)->mpMorf));
     u32 env = BpwHD_dKy_getEnvlight();
-    BpwHD_dScnKy_env_light_c_settingTevStruct(env, 0, ea(&at<bpw_class>(a)->actor.current.pos),
-                                              ea(&at<bpw_class>(a)->actor.tevStr));
+    if (bpw_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+        BpwHD_dScnKy_env_light_c_settingTevStruct(env, 0, ea(&at<bpw_class>(a)->actor.current.pos),
+                                                  ea(&at<bpw_class>(a)->actor.tevStr));
 }
 
 /* 020D1158 */
@@ -1352,8 +1354,9 @@ void kantera_draw_SUB(bpw_class *i_this) {
         at<BpwModelHD>(model)->mBaseTransformMtx[i] = m[i];
     BpwHD_mDoExt_McaMorf_calc(u32(at<bpw_class>(a)->mpMorf));
     u32 env = BpwHD_dKy_getEnvlight();
-    BpwHD_dScnKy_env_light_c_settingTevStruct(env, 0, ea(&at<bpw_class>(a)->actor.current.pos),
-                                              ea(&at<bpw_class>(a)->actor.tevStr));
+    if (bpw_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+        BpwHD_dScnKy_env_light_c_settingTevStruct(env, 0, ea(&at<bpw_class>(a)->actor.current.pos),
+                                                  ea(&at<bpw_class>(a)->actor.tevStr));
 }
 
 /* : inlines body_draw, kantera_draw, damage_ball_draw, torituki_draw.
@@ -1370,7 +1373,8 @@ BOOL daBPW_Draw(bpw_class *i_this) {
         BpwHD_mDoGph_gInf_c_onBlure();
     } // setBlureRate, onBlure
     else if (blur == 1) {
-        at<bpw_class>(a)->mBlureRate = 0;
+        if (bpw_t60::drawStep()) /* true60: the logic store on the tick30 step's draw only (rule 14) */
+            at<bpw_class>(a)->mBlureRate = 0;
         l_blur.mEnabled = 0;
     } // offBlure
     if (u8(at<bpw_class>(a)->mType) != ACTOR_TYPE_DAMAGE_BALL) {
@@ -3778,6 +3782,10 @@ void body_execute(bpw_class *i_this) {
  * remove(); SearchByID skips invalid ids. */
 /* 020D3464 */
 BOOL daBPW_Execute(bpw_class *i_this) {
+    /* true60: the whole frame on the tick30 step (the whole-frame form rule; end at the return) */
+    t60w::Guard<bpw_class> t60g(i_this, bpw_t60::ops());
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     u32 a = ea(i_this);
     if (u8(*at<be<u8>>(ea(&at<dComIfG_inf_c>(BpwHD_getGameInfo())->play.mCurStage.mName[0]))) ==
         0x58)
@@ -4474,6 +4482,7 @@ BOOL daBPW_Execute(bpw_class *i_this) {
         break;
     }
     kankyou_hendou(i_this);
+    t60g.model = true;
     return TRUE;
 }
 

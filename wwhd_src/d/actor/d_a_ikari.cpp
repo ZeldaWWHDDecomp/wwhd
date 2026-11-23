@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_ikari.h"
+#include "d/actor/d_a_ikari_t60.h" /* true60: step-length helpers */
 
 const gc_tu_data gc_tu = {
     .safeString = 0x10011C7C,
@@ -70,7 +71,8 @@ void daIkari_c::getArg() {
 
 /* 0217DAF8 */
 bool daIkari_c::_execute() {
-    mTimer = mTimer + 1;
+    if (ikari60_count()) /* true60: the per-frame phase counter on the tick30 step */
+        mTimer = mTimer + 1;
 
     cXyz* windVec = dKyw_get_wind_vec();
     s16 windAngle = cM_atan2s(windVec->x, windVec->z);
@@ -81,7 +83,7 @@ bool daIkari_c::_execute() {
     f32 rotX = *windPow * 10000.0f * l_HIO.mWindPowerScale;
 
     // HD: keep the fused single-precision operation and saturating conversion.
-    current.angle.x = (s16)ftoi(fmadds(cM_ssin(mTimer * (REG0_S(5) + 500)), rotX, rotX));
+    current.angle.x = (s16)ftoi(fmadds(cM_ssin(ikari60_phase(this, mTimer, REG0_S(5) + 500)) /* true60: + the frame progress */, rotX, rotX));
 
     setMtx();
 

@@ -2,6 +2,7 @@
  * The two Oship specs verify every marked function against the original HD executable.
  */
 #include "d/actor/d_a_oship.h"
+#include "d/actor/d_a_oship_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule addendum) */
 static OshipDebugRegisters l_debugRegisters;
 static OshipHeaderStatics l_headerStatics;
 static OshipHeaderRecords l_headerRecords;
@@ -923,6 +924,11 @@ void daOship_c::modeProc(s32 kind, s32 mode) {
 
 /* 023C68B8 */
 s32 daOship_c::_execute() {
+    /* true60: the whole frame on the tick30 step (end at every return) */
+    t60w::Guard<daOship_c> t60g(this, oship_t60::ops());
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return 0;
+    t60g.model = true;
     // HD: attention distance is written to the battle slot rather than the GC carry slot.
     this->attention_info.flags = 4;
     f32 particleScale = l_smokeScale;
@@ -1074,8 +1080,9 @@ s32 daOship_c::_execute() {
 /* 023C6D3C */
 s32 daOship_c::_draw() {
     u32 light = gabi::ea(dKy_getEnvlight());
-    OshipSettingTevStruct(OshipGuest<dScnKy_env_light_c>(light), 0, &this->current.pos,
-                          &this->tevStr);
+    if (oship_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+        OshipSettingTevStruct(OshipGuest<dScnKy_env_light_c>(light), 0, &this->current.pos,
+                              &this->tevStr);
     light = gabi::ea(dKy_getEnvlight());
     OshipSetLightTevColorType(OshipGuest<dScnKy_env_light_c>(light),
                               OshipGuest<J3DModel>(this->mpModel.v), &this->tevStr);

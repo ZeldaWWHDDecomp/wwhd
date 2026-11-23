@@ -1,5 +1,6 @@
 /* Enemy life ball. */
 #include "d/actor/d_a_ib.h"
+#include "d/actor/d_a_ib_t60.h" /* true60 (t60conv): step helpers */
 const gc_tu_data gc_tu = {.safeString = 0x100118C4};
 struct CylinderSource {
     be<u32> words[17];
@@ -273,8 +274,16 @@ void daIball_c::set_mtx() {
 void daIball_c::setPointLight() {
     f32 frame = mBrkAnm[0].getFrame();
     s32 color = selectColor(frame);
-    f32 random = cM_rndF(0.2f);
-    addCalc(&mLightFlickerMult, random + 1, 0.5f, 0.02f);
+    /* true60 (c_lib-real sweep): the flicker's draw and its ease once a frame, whole (dt 1) on the tick30 step (A
+     * eases once towards the frame's drawn target; the earlier steps' ease towards the draw's mean did not add up to A's,
+     * N-step spec with real cLib: setPointLight 275/2000); the earlier steps light with the frame-start factor */
+    if (t60c::end()) {
+        const bool whole = t60c::on();
+        const f32 prev = whole ? t60_set_dt(1.0f) : 1.0f;
+        f32 random = cM_rndF(0.2f);
+        addCalc(&mLightFlickerMult, random + 1, 0.5f, 0.02f);
+        if (whole) t60_set_dt(prev);
+    }
     mLight.mPos.copy(current.pos);
     mLight.mColorR = light_color.values[color][0];
     mLight.mColorG = light_color.values[color][1];
@@ -424,6 +433,10 @@ void daIball_c::animControl() {
     mBrkAnm[0].mFrameCtrl.mRate = m_data.mPlaySpeeds[(u32)index];
     playAnimation(&mBrkAnm[0]);
     bool looped = mBrkAnm[0].mFrameCtrl.checkState(J3DFrameCtrl::STATE_LOOP_E);
+    if (t60c::first()) /* true60: the frame's loop state, gathered over its steps */
+        t60c::unmark(1, this);
+    if (looped)
+        t60c::mark(1, this);
     mBrkAnm[1].mFrameCtrl.mRate = 1;
     playAnimation(&mBrkAnm[1]);
     mBtkAnm.mFrameCtrl.mRate = 1;
@@ -433,7 +446,9 @@ void daIball_c::animControl() {
         f32 frame = mBrkAnm[0].getFrame();
         f32 previous = frame - (f32)mBrkAnm[0].mFrameCtrl.mRate;
         // HD: retain unordered comparisons for the original NaN behavior.
-        if (looped || (!(frame < 45) && previous < 45) || (!(frame < 90) && previous < 90))
+        /* true60: tested on the tick30 step with the frame-end window, a loop on any step of the frame counted */
+        if (t60c::end() && (looped || t60c::marked(1, this) || (!(frame < 45) && previous < 45) ||
+                            (!(frame < 90) && previous < 90)))
             sound(this, 0x580E);
     }
 }
@@ -529,7 +544,7 @@ BOOL daIball_c::createItem() {
 }
 /* 0217C3C0 */
 void daIball_c::damage() {
-    if (!mCyl.ChkTgHit())
+    if (!t60c::hit(mCyl.ChkTgHit(), 1, &mCyl))
         return;
     auto *hit = static_cast<dCcD_GObjInf *>(mCyl.GetTgHitObj());
     // HD: preserve the verified aggregate attack mask.
@@ -538,7 +553,7 @@ void daIball_c::damage() {
 }
 /* 0217C444 */
 BOOL daIball_c::_daIball_execute() {
-    s32 timer = (s32)((u32)(s32)mTimer + 1);
+    s32 timer = t60c::first() ? s32((s32)((u32)(s32)mTimer + 1)) : s32(mTimer); /* true60 (t60conv): the count on the frame's first step */
     f32 eyeY = (f32)current.pos.y + 45;
     u32 x = word(current.pos.x), z = word(current.pos.z);
     word(eyePos.x) = x;
@@ -547,7 +562,7 @@ BOOL daIball_c::_daIball_execute() {
     word(eyePos.z) = z;
     setPointLight();
     if (!mbPlayedSe) {
-        sound(this, 0x5802);
+        sound(this, 0x5802); /* true60: a one-shot start (mbPlayedSe), on the step that first sees it */
         mbPlayedSe = 1;
     }
     checkGeoGuest(this);

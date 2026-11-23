@@ -1,6 +1,7 @@
 /* Tower of the Gods exterior; actual HD TU023A6490..023A6AF7.
  * Includes trailing destructor and SafeString virtual noop. */
 #include "d/actor/d_a_obj_tower.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 enum { dRes_INDEX_X_TOWER_BDL_X_TOWER_e = 4, dRes_INDEX_X_TOWER_DZB_X_TOWER_e = 7 };
 const gc_tu_data gc_tu = {.safeString = 0x10031644};
 static u32 l_demoManager;
@@ -81,6 +82,9 @@ BOOL daObjTower_c::_draw() {
 }
 /* 023A6938 */
 BOOL daObjTower_c::_execute() {
+    t60w::Guard<daObjTower_c> t60g(this, t60objw::Logic<daObjTower_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return 1;
     u8 id = demoActorID;
     // HD: the inline demo lookup rejects IDs above 0x20 and asserts on a missing manager.
     if (id && id <= 0x20) {
@@ -96,6 +100,7 @@ BOOL daObjTower_c::_execute() {
             current.pos.z = actor->mTrans.z;
         }
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     return 1;
 }

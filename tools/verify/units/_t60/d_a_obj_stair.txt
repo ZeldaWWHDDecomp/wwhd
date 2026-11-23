@@ -1,0 +1,8 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_stair.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule + addendum, d/t60_objw.h): the breakable stair's _execute (hit -> break timer / rotation speed, shake; MoveBGExecute -> Execute: quaternion, matrix, dBgW Move).
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 02390AC4
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200ED84 0201B080 0201B12C 024F1E9C 02515BBC 025162A4 02520540 025A847C 025D4604 025D57E0 025D57E4 025E19CC 025E1A40 0274D458 028E8DD0 028E8F44 028E90D4 028F4384

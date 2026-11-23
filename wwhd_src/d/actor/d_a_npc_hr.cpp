@@ -8,6 +8,7 @@
  * The event (demo*), tornado and state functions are in d_a_npc_hr_demo.cpp.
  */
 #include "d/actor/d_a_npc_hr.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 static s32 l_bck_ix_tbl[13] = {
     dRes_INDEX_HR_BCK_H_WAIT01_e, dRes_INDEX_HR_BCK_R_WAIT01_e, dRes_INDEX_HR_BCK_R_WAIT02_e,
@@ -1010,6 +1011,9 @@ BOOL daNpc_Hr_c::_draw() {
 /* tail call */
 /* 02242DF8 */
 BOOL daNpc_Hr_c::_execute() {
+    t60w::Guard<daNpc_Hr_c> t60g(this, t60npc::Logic<daNpc_Hr_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     m_jnt.setParam(0, 0x1C70, 0, -0x1C70, 0x1FFE, 9000, -0x1FFE, -9000, 0x1000);
     playTexPatternAnm();
     mAnmEnded = (s8)mpHrMorf->play(&eyePos, 0, 0);
@@ -1051,6 +1055,7 @@ BOOL daNpc_Hr_c::_execute() {
     }
     clrFlag(HR_FLAG_00000020);
     tevStr.mRoomNo = current.roomNo;
+    t60g.model = true; /* true60: the frame reached its model step */
     J3DModel* hrModel = mpHrMorf->getModel();
     J3DModel_setBaseScale(hrModel, &scale);
     mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);

@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_npc_photo.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 /* 022CCD4C */
 void daNpcPhoto_c::chkAttention() {
@@ -235,6 +236,9 @@ void daNpcPhoto_c::lookBack() {
 }
 /* 022CF17C */
 bool daNpcPhoto_c::_execute() {
+    t60w::Guard<daNpcPhoto_c> t60g(this, t60npc::Logic<daNpcPhoto_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return false;
     NpcDatStruct& dat = l_npc_dat;
     m_jnt.setParam(dat.mMaxBackboneX, dat.mMaxBackboneY, dat.mMinBackboneX, dat.mMinBackboneY, dat.mMaxHeadX, dat.mMaxHeadY,
                    dat.mMinHeadX, dat.mMinHeadY, dat.mMaxTurnStep);
@@ -288,6 +292,7 @@ bool daNpcPhoto_c::_execute() {
     eyePos.copy(mEyePos);
     attention_info.position.copy(*temp); /* attention_info.position */
     lookBack();
+    t60g.model = true; /* true60: the frame reached its model step */
     setMtx();
     return false;
 }

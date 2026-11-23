@@ -2,6 +2,7 @@
  * HD: guest word copies, fused arithmetic, and callback ordering retain the verified behavior.
  */
 #include "d/actor/d_a_obj_balancelift.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 static daBalancelift_HIO_c l_HIO;
 static BalanceDebugTuning sDebugTuning;
 static BalanceRotationBlend sRotationBlend;
@@ -44,6 +45,8 @@ s32 daObjBlift_ride_actor_check(fopAc_ac_c* actor) {
 }
 /* 0231AF88 */
 void ride_call_back(void* bg, daBalancelift_c* lift, fopAc_ac_c* rider) {
+    if (t60objw::cbSkip()) /* true60: a rider's weight counts once a frame, on the tick30 step */
+        return;
 
     s32 added = daObjBlift_ride_actor_check(rider);
     gabi::Local<cXyz> riderPos, delta;
@@ -390,9 +393,13 @@ BOOL daBalanceliftDelete(daBalancelift_c* lift) {
 
 /* 0231BCE4 */
 BOOL daBalanceliftExecute(daBalancelift_c* lift) {
+    t60w::Guard<daBalancelift_c> t60g(lift, t60objw::Logic<daBalancelift_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return 0;
 
     lift->calc_weight();
     lift->calc_quat();
+    t60g.model = true; /* true60: the frame reached its model step */
     lift->set_mtx();
     balanceMoveBackground(lift->mBackground.get());
     balanceMoveStatus(&lift->mCollisionStatus.__vtbl_gstts);

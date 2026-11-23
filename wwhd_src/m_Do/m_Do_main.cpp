@@ -1,5 +1,6 @@
 /** Main initialization and retained HD frame entry. Private decomp source. */
 #include "bindings.h"
+#include "true60.h"
 #include "m_Do/m_Do_main.h"
 
 static mDoMain_StartupRecord sStartupRecord;
@@ -53,15 +54,27 @@ void main01() {
 
 /* 025F172C */
 // HD: the GameCube main loop is a single-frame entry called by GameTask.
+// true60: the single logic-step entry. The frame counter, the heap check, the GamePad read gate and the audio
+// frame (mDoAud_Execute) count 30 Hz frames: the GamePad read on the frame's first step (2026-11-15), the rest on the
+// tick30 step (frame interpolation's in-between passes call fapGm_Execute alone, the same split); fapGm_Execute runs on
+// every step.
 static void frame() {
-    u32 count = frameCount + 1;
-    u8 period = fillcheck_check_frame;
-    frameCount = count;
-    if (period != 0 && count % period == 0) {
-        mDoMch_HeapCheckAll();
+    if (t60::tick30()) {
+        u32 count = frameCount + 1;
+        u8 period = fillcheck_check_frame;
+        frameCount = count;
+        if (period != 0 && count % period == 0) {
+            mDoMch_HeapCheckAll();
+        }
     }
-    mReCPd_disabledRead();
-    mDoAud_Execute();
+    // (the GamePad read on the frame's first step: every step of the frame sees its input; one
+    // read per 30 Hz frame; at N = 1 the original order)
+    if (t60::first_step()) {
+        mReCPd_disabledRead();
+    }
+    if (t60::tick30()) {
+        mDoAud_Execute();
+    }
     fapGm_Execute();
 }
 

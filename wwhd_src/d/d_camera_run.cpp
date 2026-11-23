@@ -9,6 +9,10 @@
  */
 #include "d/d_camera_run.h"
 #include "port_hooks.h"
+#include "true60.h"
+#include "d/d_camera_run_t60.h"
+#define WWHD_T60_CAM_WHOLE_IMPL /* the follow camera's whole frame on the tick30 step (one definition of its hook) */
+#include "d/d_camera_follow_whole_t60.h"
 
 namespace camera_run {
 static DemoPointer demoObject;
@@ -25,6 +29,10 @@ static RunName autoForcusName;
 static RunName moveBgCheckName;
 static EventActions ActionNames;
 static BackgroundMasks backgroundMasks;
+/* true60 (the per-step smoothing rule and 4): a per-frame smoothing ratio for this step (1 - (1 - r)^dt; dt = 1 the
+ * ratio itself, bit-exact) and the 30 Hz frame counters' step (tick30 only, or every call at dt = 1) */
+static inline f32 runRatio(f32 r) { return t60::dt() == 1.0f ? r : t60_ratio(r, t60::dt()); }
+static inline bool runFrameEnd() { return t60::dt() == 1.0f || t60::tick30(); }
 static f32 envZoom() {
     return cameraRunEnv()->mHDZoom;
 }
@@ -61,13 +69,39 @@ using namespace camera_run;
 // also updated in minigame 8; mHoldType is a byte
 u32 dCamera_c::Run() {
     u32 res = 0;                     /* the engine's r3, returned unmasked */
+    if (t60::dt() != 1.0f) /* true60: the rollback form's frame-start state (d_camera_run_t60.h; no call at dt 1) */
+        camera_run_t60::noteFrameStart(this, dComIfGp_ea() + mCameraID * 0x34 + 0x5B00);
+    /* true60: an event-engine style runs Run whole on the tick30 step at dt 1, the
+     * earlier steps hold the camera (d_camera_run_t60.h eventWholeEntry) */
+    const int evWhole = camera_run_t60::eventWholeEntry(camStyleAlg(mCurStyle) == dCamAlg_EVENT_CAMERA_e);
+    if (evWhole == 1)
+        return camera_run_t60::heldEventEngineRes();
+    /* true60 ((A), d_camera_follow_whole_t60.h): a frame that started in a follow style: the earlier
+     * steps for the picture, the tick30 step runs the whole frame once at dt 1 from the frame-start state */
+    if (t60::dt() != 1.0f)
+        camera_follow_whole_t60::noteFrame(gabi::ea(this), dComIfGp_ea() + mCameraID * 0x34 + 0x5B00, camStyleAlg(mCurStyle));
+    /* (the dt test first: at dt 1 no argument is evaluated, so no dComIfGp_get guest call: the original's call order) */
+    if (evWhole == 0 && t60::dt() != 1.0f &&
+        camera_follow_whole_t60::wholeOnTick30(this, dComIfGp_ea() + mCameraID * 0x34 + 0x5B00)) {
+        const float dt0 = t60_set_dt(1.0f);
+        const u32 r = Run();
+        t60_set_dt(dt0);
+        return r;
+    }
+    /* the tick30 step of a whole-form frame: this Run at dt 1 (the previous dt back at the end; at dt 1 neither the
+     * tick30 mode-change rollback nor the switch-in hold below returns early) */
+    const float wholePrevDt = evWhole == 2 ? t60_set_dt(1.0f) : 0.0f;
+    const bool holdReleased = camera_run_t60::holdReleaseStep(gabi::ea(&mEventFlags)); /* true60: the release frame stays held */
     cameraRunFocusOff(&mForcusLine); /* mForcusLine.Off() */
     mEventFlags = mEventFlags & ~0x10149C01u;
     checkSpecialArea();
     checkGroundInfo();
     s32 ship = mShipRockType;
-    if (ship != 0 && !chkFlag(0x200000) && !cameraRunIsPlaying() && !chkFlag(0x20000000)) {
+    if (ship != 0 && !chkFlag(0x200000) && !holdReleased && !cameraRunIsPlaying() && !chkFlag(0x20000000) &&
+        camera_run_t60::shipRockStep()) { /* true60 (d_camera_run_t60.h): the rock once per 30 Hz frame */
+        const float rockDt0 = camera_run_t60::shipRockDtBegin(); /* true60: the frame's whole rock at dt 1 */
         f32 ofs = cameraRunShipOffsetY(&mShipRockAngle, &mShipRockSpeed, 130.0f); /* daObjPirateship::getShipOffsetY */
+        camera_run_t60::shipRockDtEnd(rockDt0);
         f32 y = ofs * mShipOffsetScale;
         f32 dy = y - mShipOffsetY;
         if (mShipRockType == 1 && mShipOffsetYDelta < 0.0f && dy > 0.0f)
@@ -100,7 +134,8 @@ u32 dCamera_c::Run() {
     if (!forceLock) {
         mLockOnActorId = fpcM_ERROR_PROCESS_ID_e;
     } else {
-        mForceLockTimer = mForceLockTimer + 1;
+        if (runFrameEnd()) /* true60: counts 30 Hz frames */
+            mForceLockTimer = mForceLockTimer + 1;
     }
     s32 next = nextType(curType);
     mNextType = next;
@@ -139,10 +174,26 @@ u32 dCamera_c::Run() {
             mCurStyle = (s32)camTypeStyle(mCurType, mCurMode);
             cameraRunParamChange(mCamParam, mCurStyle); /* mCamParam.Change(mCurStyle) */
             if (camStyleAlg(mCurStyle) == dCamAlg_SUBJECT_CAMERA_e /* SUBJECT */) {
+                camera_run_t60::noteSubjectStart(padObject.v.get()); /* true60: its pad writes for the rollback */
                 cameraRunSubjectStart(padObject);
                 mSmoothedCStickX = 0.0f;
             }
         }
+    }
+    if (camera_run_t60::modeChangedOnTick30(mCurMode, mCurStyle)) {
+        /* true60 (bm1 118): the mode / style changed on the tick30 step: the frame-start
+         * camera state back and the whole frame once in the new mode at dt 1 (d_camera_run_t60.h) */
+        camera_run_t60::restoreFrameStart(this, dComIfGp_ea() + mCameraID * 0x34 + 0x5B00);
+        const float dt0 = t60_set_dt(1.0f);
+        const u32 r = Run();
+        t60_set_dt(dt0);
+        return r;
+    }
+    if (camera_run_t60::eventWholeSwitchIn(camStyleAlg(mCurStyle) == dCamAlg_EVENT_CAMERA_e)) {
+        /* true60 (whole form): an earlier step entered an event-engine style: the frame-start state back, the
+         * tick30 step runs the whole frame at dt 1 */
+        camera_run_t60::restoreFrameStart(this, dComIfGp_ea() + mCameraID * 0x34 + 0x5B00);
+        return camera_run_t60::heldEventEngineRes();
     }
     u32 flags = mEventFlags & ~0x20u;
     s32 m = mCurMode;
@@ -166,9 +217,34 @@ u32 dCamera_c::Run() {
         cSAngle_l d;
         cSAngle_l s;
         forwardCheckAngle(&a);                                          /* forwardCheckAngle() */
+        if (t60::dt() != 1.0f && t60::first_step()) { /* true60: the original frame's chase (d_camera_run_t60.h) */
+            cSAngle_l fx;
+            cSAngle_l fd0;
+            cSAngle_l fs0;
+            fx = (s16)mForwardTiltOffset;
+            cameraRunAngleSubtract(&a, &fd0, &fx);
+            cameraRunAngleScale(&fd0, &fs0, cameraRunSetup(this)->mFwdCushion);
+            cameraRunAngleAddAssign(&fx, &fs0);
+            camera_run_t60::noteFwdFrame((s16)fx);
+            camera_run_t60::noteFwdStart((s16)mForwardTiltOffset);
+        }
+        s16 fwdStart;
+        if (camera_run_t60::fwdStartTick30(&fwdStart)) {
+            /* true60 (on the Run N-step spec with the cSAngle ops real: seed 1000039 r3+0x148 one
+             * step 88xx, two steps A4xx): the frame ends on the original's one chase, from the frame-start tilt toward
+             * this (tick30) step's forwardCheckAngle (the frame-end world A's one Run reads) by the unconverted
+             * FwdCushion; the earlier steps' per-step chase is the picture (as the c_lib eases' tick30 pin) */
+            cSAngle_l fx;
+            fx = fwdStart;
+            cameraRunAngleSubtract(&a, &d, &fx);
+            cameraRunAngleScale(&d, &s, cameraRunSetup(this)->mFwdCushion);
+            cameraRunAngleAddAssign(&fx, &s);
+            mForwardTiltOffset = (s16)fx;
+        } else {
         cameraRunAngleSubtract(&a, &d, &mForwardTiltOffset);                          /* - mForwardTiltOffset */
-        cameraRunAngleScale(&d, &s, cameraRunSetup(this)->mFwdCushion); /* * FwdCushion */
+        cameraRunAngleScale(&d, &s, runRatio(cameraRunSetup(this)->mFwdCushion)); /* * FwdCushion (true60: per step) */
         cameraRunAngleAddAssign(&mForwardTiltOffset, &s);                             /* mForwardTiltOffset += */
+        }
     } else {
         mForwardTiltOffset = (s16)zeroAngle(); /* cSAngle::_0 */
     }
@@ -176,12 +252,15 @@ u32 dCamera_c::Run() {
     mTrimTypeForce = -1;
     mBumpCheckFlags = 9;
 
-    if (chkFlag(0x200000) && camStyleAlg(mCurStyle) != dCamAlg_EVENT_CAMERA_e /* EVENT */) {
+    if (holdReleased) {
+        *reinterpret_cast<GuestByte*>(&mHoldType) = 0; /* true60: the hold path's store, the release frame's later steps */
+    } else if (chkFlag(0x200000) && camStyleAlg(mCurStyle) != dCamAlg_EVENT_CAMERA_e /* EVENT */) {
         s32 pad = mPadId;
         if (cameraRunStickValue(pad) > 0.001f || cameraRunSubstickValue(pad) > 0.001f ||
             cameraRunTrigger(pad) != 0 || mMonitor.field_0x0C.x > 10.0f || mPlayerOnFloor == 0 || mOnMoveBg != 0) {
             *reinterpret_cast<GuestByte*>(&mHoldType) = 0; /* mHoldType */
             mEventFlags = mEventFlags & ~0x200000u;
+            camera_run_t60::noteHoldRelease(gabi::ea(&mEventFlags));
         } else {
             *reinterpret_cast<GuestByte*>(&mHoldType) = 0;
         }
@@ -196,12 +275,24 @@ u32 dCamera_c::Run() {
                 dCamAlg_EVENT_CAMERA_e) {
             res = cameraRunDemoCamera(this, 0); /* demoCamera(0) */
         } else {
-            res = callEngine(this, camStyleAlg(mCurStyle), mCurStyle);
-            mFrameCounter = mFrameCounter + 1;
-            mCurStyleTimer = mCurStyleTimer + 1;
-            mCurTypeTimer = mCurTypeTimer + 1;
-            mTicks = mTicks + 1;
-            mCurModeTimer = mCurModeTimer + 1;
+            /* true60 (crane and 2026-11-18: the event cameras' whole form): an
+             * event-engine style runs on the tick30 step only, with dt 1 (d_camera_run_t60.h) */
+            u32 alg = camStyleAlg(mCurStyle);
+            if (camera_run_t60::eventEngineRuns(alg, dCamAlg_EVENT_CAMERA_e)) {
+                float dt0 = camera_run_t60::beginEventEngine(alg, dCamAlg_EVENT_CAMERA_e);
+                res = camera_run_t60::endEventEngine(alg, dCamAlg_EVENT_CAMERA_e, dt0, callEngine(this, alg, mCurStyle));
+            } else {
+                res = camera_run_t60::heldEventEngineRes();
+            }
+            /* true60 (the 30 Hz timer rule, the mode-start-once rule): the camera's frame and mode timers count 30 Hz frames: their thresholds stay
+             * 30 Hz counts; the engines' `timer == 0` start-up blocks run once per mode start (their own edge) */
+            if (runFrameEnd()) {
+                mFrameCounter = mFrameCounter + 1;
+                mCurStyleTimer = mCurStyleTimer + 1;
+                mCurTypeTimer = mCurTypeTimer + 1;
+                mTicks = mTicks + 1;
+                mCurModeTimer = mCurModeTimer + 1;
+            }
         }
         if (!res)
             *reinterpret_cast<GuestByte*>(&mHoldType) = 0;
@@ -209,7 +300,7 @@ u32 dCamera_c::Run() {
 
     if (!chkFlag(0x400)) {
         cSAngle_l t;
-        cameraRunAngleScale(&mViewCache.mBank, &t, 0.05f);   /* mBank * 0.05 */
+        cameraRunAngleScale(&mViewCache.mBank, &t, runRatio(0.05f)); /* mBank * 0.05 (true60: per step) */
         cameraRunAngleSubtractAssign(&mViewCache.mBank, &t); /* mBank -= */
     }
     cameraRunShake(this); /* shakeCamera() */
@@ -247,6 +338,8 @@ u32 dCamera_c::Run() {
 
     // HD: environment-light zoom factor
     EnvLightView* el = cameraRunEnv();
+    if (t60::dt() != 1.0f && t60::first_step()) /* true60: the zoom's frame-start value for the whole-frame rerun */
+        camera_run_t60::noteZoom(gabi::ea(&el->mHDZoom));
     if ((u8)el->mHDZoomState == 2) {
         el = cameraRunEnv();
         el->mHDZoom = 0.7f;
@@ -330,15 +423,17 @@ u32 dCamera_c::Run() {
         }
     }
 
-    u32 cur = (u32)mSeRequest;
-    for (u32 i = 0; i < 3; i++) {
-        u32 bit = 1u << i;
-        if ((cur & bit) && !((u32)mSeRequestLast & bit)) {
-            cameraRunSoundStart(mSeIds[i]); /* mDoAud_seStart(mSeIds[i]) */
-            cur = (u32)mSeRequest;
+    if (camera_run_t60::seFrameEdges(&mSeRequest)) { /* true60 (d_camera_run_t60.h): the frame's requests, edges once */
+        u32 cur = (u32)mSeRequest;
+        for (u32 i = 0; i < 3; i++) {
+            u32 bit = 1u << i;
+            if ((cur & bit) && !((u32)mSeRequestLast & bit)) {
+                cameraRunSoundStart(mSeIds[i]); /* mDoAud_seStart(mSeIds[i]) */
+                cur = (u32)mSeRequest;
+            }
         }
+        mSeRequestLast = cur;
     }
-    mSeRequestLast = cur;
     mSeRequest = 0;
 
     if (mStyleSettle0 != 0 && mStyleSettle1 != 0 && mStyleSettle2 != 0) {
@@ -358,6 +453,8 @@ u32 dCamera_c::Run() {
         if (f & 0x10000000)
             setComStat(dCamAttnStts_00000020_e);
     }
+    if (evWhole == 2)
+        t60_set_dt(wholePrevDt);
     return res;
 }
 

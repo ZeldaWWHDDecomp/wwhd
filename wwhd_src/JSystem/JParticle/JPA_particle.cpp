@@ -1,5 +1,6 @@
 // Particle motion and emitter lifecycle; verified against the WWHD routines.
 #include "JSystem/JParticle/JPA_particle.h"
+#include "JSystem/JParticle/JPA_particle_t60.h"
 #include <climits>
 #include <cstring>
 
@@ -19,7 +20,15 @@ static void calcParticles(JPABaseEmitter* emitter, bool children) {
         auto* p = link->mpObject.get();
         auto* next = link->mpNext.get();
         u8 delay = p->mDeletionDelay;
-        if (delay) {
+        if (delay && !jpa_t60p::frame_count()) {
+            // true60: the deletion delay counts 30 Hz frames; earlier steps leave the particle as it is.
+            // One deleted on an earlier step of this frame (delay 3, deleteParticle) keeps aging over the
+            // frame's remaining steps: its frame-end age is the 30 Hz frame's.
+            if (delay == 3)
+                p->mCurFrame = gabi::fadds_ppc(p->mCurFrame, t60::dt());
+        } else if (delay) {
+            if (delay == 3 && !jpa_t60p::full())  // (deleted on an earlier step of this frame: its tick30 age)
+                p->mCurFrame = gabi::fadds_ppc(p->mCurFrame, t60::dt());
             p->mDeletionDelay = --delay;
             if (!delay)
                 emitter->releaseParticle(p, list);
@@ -29,10 +38,11 @@ static void calcParticles(JPABaseEmitter* emitter, bool children) {
             if (status & JPAPtclStts_UNK_80)
                 p->mStatus = status | JPAPtclStts_Delete;
             else {
-                if (!children || gabi::ftoi(p->mCurFrame) != 0)
+                // true60: a child's first frame (age <= 0 on the steps) skips the velocity update
+                if (!children || (jpa_t60p::full() ? gabi::ftoi(p->mCurFrame) != 0 : (f32)p->mCurFrame > 0.0f))
                     p->calcVelocity();
                 auto* cb = p->mpCallBack2.get();
-                if (cb)
+                if (cb && jpa_t60p::frame_count()) // (true60: the game's particle callbacks on the tick30 step)
                     gabi::call_ptr<void>(cb->mpVtable->execute.get(), cb, emitter, p);
                 if (!((u32)p->mStatus & JPAPtclStts_Delete)) {
                     if (children)
@@ -270,8 +280,10 @@ void JPABaseParticle::initChild(JPABaseParticle* parent) {
 
 /* 028266C0 */
 void JPABaseParticle::incFrame() {
-    f32 age = gabi::fadds_ppc(mCurFrame, 1.0f);
-    if (age < 0.0f)
+    // true60 (JPA_particle_t60.h): the age advances by the step length; a negative age clamps on the frame's
+    // tick30 step (the frame-end age is the 30 Hz frame's)
+    f32 age = gabi::fadds_ppc(mCurFrame, t60::dt());
+    if (age < 0.0f && jpa_t60p::frame_count())
         age = 0.0f;
     f32 lifetime = mLifeTime;
     mStatus = (u32)mStatus & ~JPAPtclStts_FirstFrame;
@@ -281,7 +293,7 @@ void JPABaseParticle::incFrame() {
         mCurNormTime = 1.0f;
         mStatus = (u32)mStatus | JPAPtclStts_Delete;
     } else
-        mCurNormTime = age / lifetime;
+        mCurNormTime = age < 0.0f ? 0.0f : age / lifetime;
 }
 
 /* 02826720 */
@@ -292,11 +304,13 @@ void JPABaseParticle::calcVelocity() {
     if ((u32)mStatus & JPAPtclStts_UNK_20)
         for (u32 i = 0; i < 3; ++i)
             mOffsetPosition[i] = emtrInfo.mEmitterGlobalCenter[i];
+    // true60: the acceleration over the step length
+    const f32 dt = t60::dt();
     for (u32 i = 0; i < 3; ++i)
-        mBaseVel[i] = gabi::fadds_ppc(mBaseVel[i], mAccel[i]);
+        mBaseVel[i] = gabi::fadds_ppc(mBaseVel[i], jpa_t60p::full() ? (f32)mAccel[i] : gabi::fmuls_ppc(mAccel[i], dt));
     if (!((u32)mStatus & JPAPtclStts_UNK_40))
         JPAFieldManager_calc(&emtrInfo.mpCurEmitter->mFieldManager, this);
-    f32 air = mAirResist, scale = gabi::fmuls_ppc(mMoment, mDrag);
+    f32 air = jpa_t60p::full() ? (f32)mAirResist : jpa_t60p::damp(mAirResist, dt), scale = gabi::fmuls_ppc(mMoment, mDrag);
     for (u32 i = 0; i < 3; ++i) {
         f32 base = gabi::fmuls_ppc(mBaseVel[i], air), field = gabi::fadds_ppc(mFieldVel[i], mFieldAccel[i]);
         mBaseVel[i] = base;
@@ -307,8 +321,17 @@ void JPABaseParticle::calcVelocity() {
 
 /* 0282685C */
 void JPABaseParticle::calcPosition() {
+    // true60: the move over the step length plus the base acceleration's exact-arc term
+    const f32 dt = t60::dt();
+    const bool full = jpa_t60p::full();
+    f32 arc = 0.0f;
+    if (!full)
+        arc = gabi::fmuls_ppc(gabi::fmuls_ppc(jpa_t60p::damp(mAirResist, dt), gabi::fmuls_ppc(mMoment, mDrag)),
+                              0.5f * dt * (1.0f - dt));
     for (u32 i = 0; i < 3; ++i) {
-        f32 local = gabi::fadds_ppc(mLocalPosition[i], mVelocity[i]);
+        f32 local = full ? gabi::fadds_ppc(mLocalPosition[i], mVelocity[i])
+                         : gabi::fadds_ppc(mLocalPosition[i], gabi::fadds_ppc(gabi::fmuls_ppc(mVelocity[i], dt),
+                                                                             gabi::fmuls_ppc(mAccel[i], arc)));
         mLocalPosition[i] = local;
         mGlobalPosition[i] = gabi::fmadds(local, emtrInfo.mPublicScale[i], mOffsetPosition[i]);
     }
@@ -327,6 +350,9 @@ bool JPABaseParticle::checkCreateChild() {
     auto stepTarget = sweep->mpVtable->getStep.get();
     s32 age = gabi::ftoi(mCurFrame);
     u32 step = gabi::call_ptr<u32>(stepTarget, sweep) + 1;
+    // true60: on the steps a whole frame's spawn falls on the step that crossed it
+    if (!jpa_t60p::full() && !jpa_t60p::crosses_frame(mCurFrame, t60::dt()))
+        return false;
     return (u32)age - (u32)divide(age, (s32)step) * step == 0;
 }
 
@@ -374,8 +400,11 @@ void JPABaseEmitter::deleteParticle(JPABaseParticle* p) {
         return;
     u8 delay = p->mDeletionDelay;
     p->mHidden = 1;
+    // true60 (JPA_particle_t60.h): the two-frame wait counts 30 Hz frames from the frame's end; a particle
+    // deleted on an earlier step of a frame starts at 3, which the frame's tick30 step takes to the 30 Hz frame's 2
+    // (with 2 it was released one 30 Hz frame early: one particle fewer at frame ends)
     if (!delay)
-        p->mDeletionDelay = 2;
+        p->mDeletionDelay = jpa_t60p::countdown_start(2);
 }
 
 /* 0281DE68 */

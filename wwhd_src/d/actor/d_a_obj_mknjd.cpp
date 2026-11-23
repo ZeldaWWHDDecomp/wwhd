@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_obj_mknjd.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 const gc_tu_data gc_tu = {.safeString = 0x1002C97C,
                           .safeStringAssure = 0x02374A68,
@@ -723,6 +724,12 @@ void Act_c::privateCut() {
 
 /* 02373EA8 */
 BOOL Act_c::Execute(Mtx34 **i_mtx) {
+    t60w::Guard<Act_c> t60g(this, t60objw::Logic<Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) { /* true60: a step before the tick30 step: the picture only (frame interpolation); the background stays: the
+                      * wrapper gets the actor's own mBgMtx (M_tmp_mtx is a static shared by all instances) */
+        *Mknjd_view<be<u32>>(gabi::ea(i_mtx)) = gabi::ea(&mBgMtx);
+        return TRUE;
+    }
     fopAc_ac_c *player = dComIfGp_getPlayer(0);
     fopAc_ac_c *partner = dComIfGp_getCb1Player();
 
@@ -900,6 +907,7 @@ BOOL Act_c::Execute(Mtx34 **i_mtx) {
         manage_friend_draw(1);
         mFriendDrawTimer = 0;
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 

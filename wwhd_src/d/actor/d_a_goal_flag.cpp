@@ -1,6 +1,7 @@
 /** Finish-line flag, cloth simulation and boat-race controller (WWHD).
  * See wwhd_src/README.md. */
 #include "d/actor/d_a_goal_flag.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 // HD: this TU owns its HIO. Shared matrix state is referenced without duplicating storage.
 static daGFlag_HIO_c l_HIO;
@@ -538,8 +539,11 @@ s32 daGoal_Flag_c::goal_check() {
     gabi::Local<cXyz> playerOffset, line, normalized, rawLine, horizontal, normal;
     u32 play = goalFlag_playObject();
     void* player = goalFlag_gameInfo(play)->play.mPlayerInfo[0].mpPlayer.get();
-    goalFlag_vectorSubtract(&static_cast<fopAc_ac_c*>(player)->current.pos, playerOffset.get(),
-                            &mGoalFlagPolePos[0]);
+    /* true60 (the process-order read rule): Link as A reads him: his frame-start position while he is later in the line */
+    gabi::Local<cXyz> fsLink;
+    cXyz* link = t60objw::fsPos(gabi::ea(player), fsLink.get()) ? fsLink.get()
+                                                              : &static_cast<fopAc_ac_c*>(player)->current.pos;
+    goalFlag_vectorSubtract(link, playerOffset.get(), &mGoalFlagPolePos[0]);
     goalFlag_vectorSubtract(&mGoalFlagPolePos[1], line.get(), &mGoalFlagPolePos[0]);
     line->y = 0.0f;
     goalFlag_vectorNormalizeZP(line.get(), normalized.get());
@@ -1038,6 +1042,9 @@ BOOL daGoal_Flag_c::RaceEnd() {
 
 /* 0215F748 */
 BOOL daGoal_Flag_c::_execute() {
+    t60w::Guard<daGoal_Flag_c> t60g(this, t60objw::Logic<daGoal_Flag_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     if (mActionDispatch)
         (this->*mCurrProc)();
     this->flag_move();

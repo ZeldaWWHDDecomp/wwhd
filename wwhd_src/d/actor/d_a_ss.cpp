@@ -8,6 +8,7 @@
  * against it.
  */
 #include "d/actor/d_a_ss.h"
+#include "d/actor/d_a_ss_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule addendum) */
 
 const gc_tu_data gc_tu = {.safeString = 0x1003D124};
 
@@ -127,7 +128,8 @@ static BOOL nodeCallBack(J3DNode* node, int calcTiming) {
 /* 0248AC00 */
 static BOOL daSs_Draw(ss_class* i_this) {
 
-    settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &i_this->eyePos, &i_this->tevStr);
+    if (ss_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+        settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &i_this->eyePos, &i_this->tevStr);
     if (i_this->mMode < SS_DEAD) {
         J3DModel* model = i_this->mpMorf->getModel();
         setLightTevColorType(dKy_getEnvlight(), model, &i_this->tevStr);
@@ -833,7 +835,10 @@ static inline void core_move(ss_class* i_this) {
 
 /* 0248ADE8 */
 static BOOL daSs_Execute(ss_class* i_this) {
-
+    t60w::Guard<ss_class> t60g(i_this, ss_t60::ops()); /* true60: the whole frame on the tick30 step */
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
+    t60g.model = true;
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
     l_color->r = (u8)REGS(8, 3);
     l_color->g = (u8)(REGS(8, 4) + 0xB4);

@@ -1,6 +1,7 @@
 /** Object - Hyrule Castle's Link statue.
  * GameCube names and layout, verified against WWHD function by function. */
 #include "d/actor/d_a_obj_YLzou.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using namespace ylzou;
 
 const gc_tu_data gc_tu = {.safeString = 0x10033AE4};
@@ -629,7 +630,11 @@ void daObjYLzou_c::setup_action(s32 idx) {
 
 /* 023BE5F8 */
 bool daObjYLzou_c::_execute() {
+    t60w::Guard<daObjYLzou_c> t60g(this, t60objw::Logic<daObjYLzou_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
     fopAcM_posMoveF(this, nullptr);
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     dBgW *bg = mpBgW;
     if (bg && bg->ChkUsed())

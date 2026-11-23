@@ -1,0 +1,9 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_daiocta.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule addendum, the Magtail's whole form; d_a_daiocta_t60.h):
+# Big Octo: daDaiocta_c::_execute 0211AE68 in the whole form. The tick30 step runs the original _execute whole at dt 1
+# from the frame start; the earlier steps change no state (the picture between steps comes from frame interpolation): net effect =
+# the one step's, byte exact. Negative control (T60C_NEGCTRL: _execute on every step at dt) must fail.
+t60conv 0211AE68
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200FAAC 02018808 02018C8C 02018D40 020198D8 0211889C 021193F8 02119630 0211970C 0211980C 02119F84 0211A104 0211A128 0211A1E8 0211A4BC 0211A9A0 0211AB80 0211B530 0211B548 0211D2F8 024EEEB8 024F08A8 024F8430 025200D4 025602F0 025877F8 025CB374 025D54C4 025D6894 025D6958 025E535C 025E55A0 025E742C 025E8154 025F1B48 025F20B0 025F232C 026066C4 0273AA24 028E90D4 028E93CC

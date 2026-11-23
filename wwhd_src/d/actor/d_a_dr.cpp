@@ -1,6 +1,7 @@
 /** NPC - Valoo (Overworld) / Dragon.
  * Ported from tww to the WWHD layout; verified against cking.rpx. */
 #include "d/actor/d_a_dr.h"
+#include "d/actor/d_a_dr_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule addendum) */
 const gc_tu_data gc_tu = {
     .safeString = 0x1000E054,
     .headerStatics = {0x10463BF0, 0x101B4724, 0x10463C24},
@@ -44,7 +45,8 @@ static daDr_HIO_c *daDr_HIO_c_ct(daDr_HIO_c *i_this) {
 /* 02129D28 */
 static BOOL daDr_Draw(dr_class *i_this) {
     J3DModel *model = i_this->mpMorf->getModel();
-    g_env_light.settingTevStruct(TEV_TYPE_ACTOR, &i_this->current.pos, &i_this->tevStr);
+    if (dr_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+        g_env_light.settingTevStruct(TEV_TYPE_ACTOR, &i_this->current.pos, &i_this->tevStr);
     g_env_light.setLightTevColorType(model, &i_this->tevStr);
     i_this->mpMorf->entryDL();
     dSnap_RegistFig(DSNAP_TYPE_DR, i_this, &i_this->eyePos, i_this->shape_angle.y, 1.0f, 1.0f, 1.0f);
@@ -200,6 +202,11 @@ static void daDr_setMtx(dr_class *i_this) {
 
 /* 0212A00C */
 static BOOL daDr_Execute(dr_class *i_this) {
+    /* true60: the whole frame on the tick30 step (end at every return) */
+    t60w::Guard<dr_class> t60g(i_this, dr_t60::ops());
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
+    t60g.model = true;
     for (int i = 0; i < 3; i++) {
         if (i_this->mCountDownTimers[i] != 0) {
             i_this->mCountDownTimers[i] = (s16)(i_this->mCountDownTimers[i] - 1);

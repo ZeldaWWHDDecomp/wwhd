@@ -1,5 +1,6 @@
 // Icy clouds around Ice Ring Isle. GC actor logic adapted to the WWHD layout.
 #include "d/actor/d_a_obj_iceisland.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 static IceResourceManager l_resourceManager;
 static IceLightRecord l_lightDefaults;
@@ -278,6 +279,9 @@ static f32 toLinear(u32 channel) {
 }
 /* 0235F8F0 */
 BOOL daObjIceisland_c::_execute() {
+    t60w::Guard<daObjIceisland_c> t60g(this, t60objw::Logic<daObjIceisland_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     switch ((u32)mState) {
     case Frozen:
         daObjIceisland_freeze_main();
@@ -306,6 +310,7 @@ BOOL daObjIceisland_c::_execute() {
     }
     mDoExt_baseAnm_play(&mBtkAnm1);
     mDoExt_baseAnm_play(&mBtkAnm2);
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     BOOL active = isSwitch(this);
     s8 room = current.roomNo;

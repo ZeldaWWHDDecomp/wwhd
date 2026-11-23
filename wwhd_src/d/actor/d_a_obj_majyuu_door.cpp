@@ -1,5 +1,6 @@
 // Forsaken Fortress wooden barricade.
 #include "d/actor/d_a_obj_majyuu_door.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 const gc_tu_data gc_tu = {
     .safeString = 0x1002C364,
@@ -297,12 +298,16 @@ void daObj_MjDoor_c::modeDelete() {
 
 /* 0236F750 */
 BOOL daObj_MjDoor_c::_execute() {
+    t60w::Guard<daObj_MjDoor_c> t60g(this, t60objw::Logic<daObj_MjDoor_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return FALSE;
     if (!l_modeData.mInitialized) {
         l_modeData.mInitialized = 1;
         memcpy_g(&l_modeData.mTable, &l_modeSource, sizeof(l_modeSource));
     }
     (this->*l_modeData.mTable.mProc[static_cast<u32>(mMode)])();
     fopAcM_posMoveF(this, nullptr);
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     return FALSE;
 }

@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_obj_Ygush00.h"
+#include "d/actor/d_a_obj_Ygush00_t60.h" /* true60 (t60conv): step helpers */
 
 const gc_tu_data gc_tu = {.safeString=0x10033A2C};
 static const char* l_arcname = "Ygush00";
@@ -132,13 +133,13 @@ bool daObjYgush00_c::_execute() {
             daObjGryw00_c* gryw = mpGryw00;
             /* GameCube: if (lv <= current.pos.y) se; HD branches on lv > y (NaN plays the sound) */
             if (!(gryw->get_draw_water_lv(gryw) > current.pos.y)) {
-                fopAcM_seStartCurrent_l(this, JA_SE_OBJ_SPRING, 0);
+                if (t60c::end()) fopAcM_seStartCurrent_l(this, JA_SE_OBJ_SPRING, 0); /* true60 (t60conv): a per-frame start, once per 30 Hz frame */
             }
         } else {
-            mpGryw00 = (daObjGryw00_c*)fopAcM_SearchByName_l(fpcNm_Obj_Gryw00_e);
+            if (t60c::end()) { mpGryw00 = (daObjGryw00_c*)fopAcM_SearchByName_l(fpcNm_Obj_Gryw00_e); } /* true60 (t60conv): a cached lookup stored on the tick30 step (read from the next frame, as the original) */
         }
     } else {
-        fopAcM_seStartCurrent_l(this, JA_SE_OBJ_SPRING, 0);
+        if (t60c::end()) fopAcM_seStartCurrent_l(this, JA_SE_OBJ_SPRING, 0); /* true60 (t60conv): a per-frame start, once per 30 Hz frame */
     }
     return true;
 }

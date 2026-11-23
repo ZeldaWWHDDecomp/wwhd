@@ -4,6 +4,7 @@
 
 #include "d/d_kankyo_4.h"
 #include "gc_api/d/d_com_inf_game.h"
+#include "true60.h"
 
 namespace d_kankyo_cpp {
 void dKy_plight_priority_set(u32 light);
@@ -645,6 +646,17 @@ BOOL dKy_Draw() {
 
 BOOL dKy_Execute() {
 
+    /* true60: converted (an execute on every step at dt = 1/N), the KANKYO process runs its 30 Hz
+     * body on the tick30 step at dt 1 (the gather copies and resets of exeKankyo hold values unconverted actors write
+     * on tick30; weather decisions and RNG once per frame), and only the wind chase (dKyw_wind_set, read by the
+     * converted ship on every step) on every step at the step's dt (cLib_addCalc's dt form: N chases = one frame's).
+     * Unconverted (dt 1, tick30 only) and at N = 1 the original path. */
+    const f32 t60StepDt = t60::dt();
+    if (t60StepDt != 1.0f && !t60::tick30()) {
+        dKyw_wind_set();
+        return TRUE;
+    }
+    const f32 t60PreviousDt = t60_set_dt(1.0f);
     auto *env0 = frameEnv();
     bool checkColorPatternMode = false, checkColorPatternBlend = false;
     if (stageNameEquals("sea")) {
@@ -881,7 +893,9 @@ BOOL dKy_Execute() {
         }
     }
     frameEnv()->exeKankyo();
+    t60_set_dt(t60StepDt);
     dKyw_wind_set();
+    t60_set_dt(1.0f);
     auto *th = &frameEnv()->mThunderEff;
     f32 target = f32(frameOne.value);
     if (u8(frameEnv()->mColpatWeather) != 0) {
@@ -899,6 +913,7 @@ BOOL dKy_Execute() {
     f32 step = f32(frameSmallStep.value);
     auto *e = frameEnv();
     frameAddCalc(&e->skyBrightness(), target, step, step, f32(frameMinimumStep.value));
+    t60_set_dt(t60PreviousDt);
     return TRUE;
 }
 

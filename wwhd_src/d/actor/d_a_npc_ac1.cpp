@@ -7,6 +7,7 @@
  * GameCube symbols), verified against cking.rpx.
  */
 #include "d/actor/d_a_npc_ac1.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 // HD: per-TU resource-key vtable and data owners.
 const gc_tu_data gc_tu = {.safeString = 0x10015B3C};
@@ -877,7 +878,9 @@ BOOL daNpc_Ac1_c::_draw() {
 
 /* 021E3F90 */
 BOOL daNpc_Ac1_c::_execute() {
-
+    t60w::Guard<daNpc_Ac1_c> t60g(this, t60npc::Logic<daNpc_Ac1_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     if (!mbRanExecute) {
         mInitialPos.copy(current.pos);
         mInitialAngle.z = current.angle.z;
@@ -917,6 +920,7 @@ BOOL daNpc_Ac1_c::_execute() {
         }
     }
     eventOrder();
+    t60g.model = true; /* true60: the frame reached its model step */
     setMtx(false);
     if (!mInDemo) {
         setCollision(50.0f, 140.0f);

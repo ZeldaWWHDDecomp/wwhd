@@ -1,6 +1,7 @@
 /** Crumbling stair. GameCube-style source verified against the HD original. */
 #include "d/actor/d_a_obj_stair.h"
 #include "gc_api/gc_api.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 const gc_tu_data gc_tu = {
     .safeString = 0x1002F6BC,
@@ -225,6 +226,10 @@ bool daObj_Stair_c::_delete() {
 
 /* 02390AC4 */
 bool daObj_Stair_c::_execute() {
+  t60w::Guard<daObj_Stair_c> t60g(this, t60objw::Logic<daObj_Stair_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+  if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation); MoveBGExecute (its Execute: rotation,
+                  * matrix, dBgW Move) runs on the tick30 step */
+    return TRUE;
   if (mBreaking == 1) {
     if (mBreakTimer == l_HIO.mBreakDelay) {
       cXyz temp;
@@ -352,6 +357,7 @@ bool daObj_Stair_c::_execute() {
     f32 sinResult = cM_ssin((((temp5 - m18) + 10) & 0x3) << 14);
     mShakeY = 1.5f * sinResult;
   }
+  t60g.model = true; /* true60: the frame reached its model step (MoveBGExecute -> Execute) */
   return MoveBGExecute() != 0;
 }
 

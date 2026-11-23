@@ -8,6 +8,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_kanban.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 enum { AT_TYPE_SWORD = 0x2, AT_TYPE_SKULL_HAMMER = 0x10000 };
 enum { CUT_TYPE_HAMMER_SIDESWING = 0x11 };
@@ -419,6 +420,9 @@ static inline void tact_return(kanban_class* i_this, s16 mode, s16 proc) {
 
 /* 0218B234 */
 static BOOL daKanban_Execute(kanban_class* i_this) {
+    t60w::Guard<kanban_class> t60g(i_this, t60npc::Logic<kanban_class>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
 
     for (s32 i = 0; i < 5; i++) {
@@ -529,6 +533,7 @@ static BOOL daKanban_Execute(kanban_class* i_this) {
         i_this->actor.current.pos.y = i_this->actor.current.pos.y - i_this->mPivotY;
         i_this->actor.old.pos.y = i_this->actor.old.pos.y - i_this->mPivotY;
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 

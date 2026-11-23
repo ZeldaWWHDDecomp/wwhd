@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_kmon.txt
+# ---- true60 N-step spec (kmon, 2026-11-20; the whole-frame form rule NPC form;
+# d/t60_npc.h): Kmon, the bell in Orca's house (a child actor Orca creates; its talk "Ji1_KmonTalk" puts Orca into his
+# eventAction): daKmonExecute 021A1D74 (daKmon_c::_execute inlined) in the whole form, logic only (checkTalk with its
+# write into Orca, the gravity move, the ground check, the bck / btk play). The tick30 step runs the original execute
+# whole at dt 1 from the frame start, the same step as Orca's own whole form; the earlier steps change no state (the
+# picture between steps comes from frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 021A1D74
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0201ADE0 021A174C 021A1A9C 024F08A8 025200D4 0253F124 025D6870 025E535C 025E742C 025F1B48 025F24E0 028E8DD0 028F4384

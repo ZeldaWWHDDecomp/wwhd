@@ -1,5 +1,6 @@
 /** Bomb flower bomb: tww structure with verified WWHD behavior. */
 #include "d/actor/d_a_bomb2.h"
+#include "d/actor/d_a_bomb2_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule, carryables) */
 // HD: per-translation-unit inline constructor and destructor vtables.
 const gc_tu_data gc_tu = {
   .safeString = 0x1000A9FC,
@@ -781,14 +782,15 @@ void daBomb2::Act_c::eff_fuse_move() {
     l_fuseOffset.mOffset.y = 60;
   }
   u32 s = gabi::ea(this);
-  for (int i = 0; i < 3; i++) {
+  const bool pic = bomb2_t60::picMtx(); /* true60: a picture set_mtx moves the emitter only */
+  for (int i = 0; !pic && i < 3; i++) {
     u32 old = (u32)reinterpret_cast<Bomb2VectorWords*>(&mFuseOldPos)->mWords[i],
         cur = (u32)reinterpret_cast<Bomb2VectorWords*>(&mFusePos)->mWords[i];
     reinterpret_cast<Bomb2VectorWords*>(&mFuseOldOldPos)->mWords[i] = old;
     reinterpret_cast<Bomb2VectorWords*>(&mFuseOldPos)->mWords[i] = cur;
   }
   bomb2_PSMTXMultVec(gabi::ea(&l_currentMtx), gabi::ea(&l_fuseOffset.mOffset), &mFusePos);
-  if (mFuseLit)
+  if (mFuseLit && !pic)
     se_ignition();
 }
 
@@ -1300,10 +1302,13 @@ void daBomb2::Act_c::tensor_proc_call() {
 
 /* 020C9E78 */
 bool daBomb2::Act_c::_execute() {
+  if (t60w::begin(this, bomb2_t60::kOps)) /* true60: a step before the tick30 step: the picture only */
+    return true;
   set_wind_vec();
   mode_proc_call();
   if (mDeleteReq) {
     bomb2_fopAcM_delete(this);
+    t60w::end(this, bomb2_t60::kOps, false); /* true60: dt back (deleted: no picture) */
     return true;
   }
   tensor_proc_call();
@@ -1318,6 +1323,7 @@ bool daBomb2::Act_c::_execute() {
   attention_info.position.z = z;
   set_mtx();
   cc_set();
+  t60w::end(this, bomb2_t60::kOps, true); /* true60: the frame's change kept for the next frame's picture */
   return true;
 }
 

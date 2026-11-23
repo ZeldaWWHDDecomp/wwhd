@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_pirateship.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule + addendum, d/t60_objw.h): the pirate ship's _execute 02385B70 (executeShip: ground check, demo move, the path move with the sway, the appear / pirate events, part searches, set_mtx, sound_proc, the wave, the background Move that carries the riders).
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 02385B70
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 02384974 02384690 02384A78 02384C2C
+t60cand 02384974 02384690 02384A78 02384C2C
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 02008974 0200F428 023844DC 02384570 02384690 02384974 02384A48 02384A78 02384C2C 024EEA6C 025200D4 02527028 025602F0 02587D24 025A847C 025A9E38 025D5218 025D5B20 025D5D88 025E19CC 025E1A40 025E535C 025E742C 025F1B48 025F1C28 0274D458 028245AC 028E8F64 028E90D4 028E93CC

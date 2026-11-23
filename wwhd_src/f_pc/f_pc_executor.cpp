@@ -1,5 +1,21 @@
 /** Process execution queues. */
 #include "f_pc/f_pc_executor.h"
+#include "true60.h"
+#include "f_pc/f_pc_t60_exec_proc.h"
+#include "d/d_com_inf_game.h"
+#include "f_pc/f_pc_t60.h"
+#define WWHD_T60_FRAME_START_IMPL /* the process-order read rule: the one definition of the frame-start table */
+#include "f_pc/f_pc_t60_frame_start.h"
+#define WWHD_T60_PICTURE_IMPL /* the one definition of the picture table (WWHD_T60_PIC_RESET) */
+#include "f_pc/f_pc_t60_picture.h"
+#define WWHD_T60_CULL_IMPL /* the first-step AI-timer rule extended: the one definition of the frame-end view copy */
+#include "f_op/f_op_actor_mng_t60_cull.h"
+#define WWHD_T60_FRAME_LATCH_IMPL /* the process-order read rule addendum: the one definition of the frame-start latch */
+#include "f_pc/f_pc_t60_frame_latch.h"
+#include "d/d_camera_follow_whole_t60.h" /* the follow camera's tick30 frame-start restore (declaration only here) */
+#define WWHD_T60_PY_IMPL /* the process-order read rule addendum 2: the one definition of the Link reset-flag frame-OR */
+#include "d/t60_py.h" /* true60 (the process-order read rule addendum): Link status frame latch */
+#include "f_pc/f_pc_t60_pystat.h" /* true60 (the process-order read rule): the player status words' frame start for readers before Link */
 static s32 g_fpcNd_type;
 static ExecutorHeaderStatics l_headerStatics;
 static const ExecutorPiPair l_piPair;
@@ -26,13 +42,98 @@ BOOL fpcEx_IsExist(u32 i_id) {
     return fpcEx_SearchByID(i_id) != NULL;
 }
 
+/* T60_EXEC_LOGIC: f_pc/f_pc_t60_exec_proc.h (true60 test aid, the strict RNG-pair rule) */
+
 /* 025DE58C */
 BOOL fpcEx_Execute(base_process_class* i_proc) {
     if (i_proc->mInitState != 2 || fpcPause_IsEnable(i_proc, 1) == 1) {
         return FALSE;
     }
-    return fpcBs_Execute(i_proc);
+    T60_EXEC_LOGIC(i_proc);
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    if (wwhd_t60_pic_window()) /* debug check (WWHD_T60_PIC_RESET): no execute inside the draw window */
+        wwhd_t60_pic_warn((int)i_proc->mProfName);
+#endif
+    if (t60::steps() == 1) {
+        return fpcBs_Execute(i_proc);
+    }
+    t60_pystat_line(t60::steps()); /* true60 (f_pc_t60_pystat.h): the step's line starts with the frame-start status words */
+    t60_cam_tick30_start(); /* true60 (d_camera_follow_whole_t60.h): the tick30 step's first execute puts the follow camera's frame start back */
+    t60_flatch_exec(i_proc->mProfName); /* true60 (f_pc_t60_frame_latch.h): the reader's first-step turn copies the words */
+    // true60: the per-process rate gate. A converted process (true60.h kT60Converted) executes on every step with
+    // g_dt = 1/N; any other process only on the tick30 step, with g_dt = 1 (drawn interpolated in between).
+    // (the first-step frame-level rule, f_pc_t60.h: with WWHD_T60_SCENE_FIRST the play scene runs on the frame's first step, dt 1)
+    if (t60_frame_work_proc(i_proc->mProfName)) {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+        wwhd_t60_ran = t60::first_step() ? 1.0f : 0.0f;
+#endif
+        if (!t60::first_step())
+            return FALSE;
+        u32 t60Tick = t60_frame_work_begin();
+        f32 previousDt = t60_set_dt(1.0f);
+        t60_cull_exec(true); /* true60 (f_op_actor_mng_t60_cull.h): an execute; the frame's first copies the view */
+        BOOL ret = fpcBs_Execute(i_proc);
+        t60_cull_exec(false);
+        t60_set_dt(previousDt);
+        t60_frame_work_end(t60Tick);
+        return ret;
+    }
+    // (a converted process coupled to an unconverted carrier this frame runs as an unconverted one: t60_held)
+    bool converted = t60_converted(i_proc->mProfName) && !t60_held(i_proc->mBsPcId);
+    // (rule 14, carrier-bg pair: the camera follows Link; while Link is held on an unconverted carrier the
+    // converted camera chased a target that moves on the tick30 step only and lagged it (eye 2-10 units). The camera
+    // (0x1DC) is held with Link: both run on the tick30 step at dt 1 then, as at 30 Hz.)
+    if (converted && (s16)i_proc->mProfName == 0x1DC) {
+        const u32 player = gabi::load<u32>(dComIfGp_ea() + PLAY_OFF(mpPlayerPtr[0]));
+        if (player != 0 && t60_held(gabi::load<u32>(player + 4) /* base.mBsPcId */)) {
+            converted = false;
+        }
+    }
+    // (rule 14, 2026-11-17: the hookshot (0xA9) is coupled to Link: his procHookshotFly adds its pull
+    // vector on each of his steps and he sets its mode; it runs on every step only while Link does, else as at 30 Hz)
+    if (converted && (s16)i_proc->mProfName == 0xA9) {
+        const u32 player = gabi::load<u32>(dComIfGp_ea() + PLAY_OFF(mpPlayerPtr[0]));
+        if (player == 0 || !t60_converted(gabi::load<s16>(player + 0x0E) /* base.mProfName */) ||
+            t60_held(gabi::load<u32>(player + 4) /* base.mBsPcId */)) {
+            converted = false;
+        }
+    }
+    f32 dt = converted ? t60_step_dt() : 1.0f;
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    // (the process-order read rule, f_pc_t60_frame_start.h: a converted actor's frame-start eye / position for readers before it)
+    wwhd_t60_fs_exec(gabi::ea(i_proc), converted,
+                     converted && t60::first_step() && gabi::call<BOOL>(0x025D4604 /* fopAc_IsActor */, i_proc) != 0);
+    wwhd_t60_ran = !converted && !t60::tick30() ? 0.0f : dt;
+#endif
+    if (!converted && !t60::tick30()) {
+        return FALSE;
+    }
+    f32 previousDt = t60_set_dt(dt);
+    t60_cull_exec(true); /* true60 (f_op_actor_mng_t60_cull.h): an execute; the frame's first copies the view */
+    /* true60 (the process-order read rule addendum 2, d/t60_py.h): a tick30-only actor reads Link's reset flags as his whole frame */
+    const bool t60PySwap = !converted && (s16)i_proc->mProfName != 0xA8;
+    if (t60PySwap)
+        t60py_swap_begin();
+    if ((s16)i_proc->mProfName == 0xA8)
+        t60_pystat_link(); /* true60 (f_pc_t60_pystat.h): Link's execute sees his live status words */
+    BOOL ret = fpcBs_Execute(i_proc);
+    if (t60PySwap)
+        t60py_swap_end();
+    t60_cull_exec(false);
+    if ((s16)i_proc->mProfName == 0xA8) /* true60 (the process-order read rule addendum, d/t60_py.h): Link's one-step status bits */
+        t60py::note(gabi::ea(i_proc));
+    t60_set_dt(previousDt);
+    return ret;
 }
+
+#if defined(GABI_GAME_BUILD) && GABI_T60
+/* true60, game build only (no guest function): whether a process with this profile name is converted (the rate gate's
+ * table, true60.h kT60Converted, plus the test override). The port's draw alignment asks it for the process whose draw
+ * runs (runtime/src/: converted processes are drawn at the interpolated world's phase). */
+extern "C" __attribute__((visibility("default"))) int wwhd_t60_proc_converted(int profName) {
+    return t60_converted(profName) ? 1 : 0;
+}
+#endif
 
 /* 025DE5F4 */
 s32 fpcEx_ToLineQ(base_process_class* i_proc) {

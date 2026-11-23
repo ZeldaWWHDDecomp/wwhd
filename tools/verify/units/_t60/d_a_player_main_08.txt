@@ -1,0 +1,73 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_player_main_08.txt
+# ---- (2026-11-16): the procedures' 30 Hz waits count on the frame's step (the 30 Hz timer rule, exact after
+# N steps); inputs steered to the waiting branch (mFrameCtrlUnder[0] stopped: rate 0) and mProcVar0 (r3+0x6916) in the
+# count. procFoodSet (special demo, type 5), procCutEA / EB / ExB / Turn / JumpCutLand (extra frames), procCutRollEnd
+# (60-frame dizzy wait), procCutTurnMove (the 47-frame charge, its == 0 status edge).
+t60conv 0243F670 0244061C 024408B0 02440E5C 02441750 02442DC0 02442134 02442470 02441DC0 02441104
+field 0243F670 r3+0x420 u16 5
+field 0243F670 r3+0x5898 f32 0 0.001
+field 0243F670 r3+0x589C f32 0 0.001
+field 0243F670 r3+0x6916 i16 1 12
+field 0244061C r3+0x5898 f32 0 0.001
+field 0244061C r3+0x589C f32 0 0.001
+field 0244061C r3+0x6916 i16 1 12
+field 024408B0 r3+0x5898 f32 0 0.001
+field 024408B0 r3+0x589C f32 0 0.001
+field 024408B0 r3+0x6916 i16 1 12
+field 02440E5C r3+0x5898 f32 0 0.001
+field 02440E5C r3+0x589C f32 0 0.001
+field 02440E5C r3+0x6916 i16 1 12
+# (NC note, 2026-11-21): procCutTurn's root is not discriminating (NC q88o: code with this spec
+# 2000/2000 N2 s1). The s88 change there (site 8, the spin cylinder radius cLib_chaseF toward m35A4 by 18 held once a
+# frame) is a LINEAR chase: two per-step chases of 9 land where the one chase of 18 lands (same clamp at the target)
+# except for float rounding, which the fixture's radii (small values, exact sums) never show; procCutRoll's site 9 shows
+# it on 5 of 2000 (NC 1995). The row stays as a no-regression check of procCutTurn; site 8's evidence is procCutRoll's.
+field 02441750 r3+0x5898 f32 0 0.001
+field 02441750 r3+0x589C f32 0 0.001
+field 02441750 r3+0x6916 i16 1 12
+field 02442DC0 r3+0x5898 f32 0 0.001
+field 02442DC0 r3+0x589C f32 0 0.001
+field 02442DC0 r3+0x6916 i16 1 12
+field 02442DC0 r3+0x69C0 i32 0
+field 02442134 r3+0x6916 i16 1 60
+field 02442470 r3+0x6916 i16 1 47
+# procCutRoll's spin (anim ended, mProcVar0 1..90, no stick: the step's own turn 0): m34EC (r3+0x6934) loses 0x36B0 a
+# frame, exact over N steps with the carry (0x36B0 / 2 and / 4 are whole); mNormalSpeed 30. The run-out branch
+# (mProcVar0 0: m34EC by (0x34B0 x rate + 512) a frame with rate = mNormalSpeed / 30 decaying within the frame through
+# the central addCalc) has no exact form at N steps: no spec, covered by the pair.
+field 02441DC0 r3+0x5898 f32 0 0.001
+field 02441DC0 r3+0x589C f32 0 0.001
+field 02441DC0 r3+0x6916 i16 1 90
+field 02441DC0 r3+0x6A08 f32 0 0.05
+# procCutExMJ landing (anim ended): the one-frame wait mProcVar2 (r3+0x691A) 0 / 1 on the frame's step; the flip roll
+# m34EC 0x1800 a frame (mProcVar3 r3+0x691C 0x71: m34EC -0x6000..0 stays in the subtract branch over the frame; exact)
+field 02441104 r3+0x5898 f32 0 0.001
+field 02441104 r3+0x589C f32 0 0.001
+field 02441104 r3+0x691A i16 0 1
+field 02441104 r3+0x691C i16 113
+field 02441104 r3+0x6934 i16 -24576 0
+# (after the first N-step spec) procCutRoll: no event running (play + 0x5292 the event control mode 0: else
+# mProcVar0 is forced to 0 / 5 and the run-out branch runs)
+field 02441DC0 54005292 u8 0
+# the field above only holds while dComIfGp's play pointer (025200D4) is the declared 0x54000000; the
+# plain `ret` lets 1 input in 8 take a generated pointer, whose event byte is mostly non-zero: mProcVar0 forced to 0 and
+# the run-out branch runs (with the generated mNormalSpeed, up to 3.6e37: the integer conversion saturates), and when it
+# ends inside the frame (procCutRollEnd_init) the harness calls procCutRoll again (shape_angle += m34EC twice). That
+# was procCutRoll's 1.4-1.7 % in (trace gen seed 1000009 / 1000150: the play byte read at 308CC5C2).
+ret! 025200D4 0x54000000 0x54000000
+# procCutTurnMove: sword held (mItemButton r3+0x690E bit 2), the charge walk's speed mNormalSpeed (r3+0x6A14) through
+# setNormalSpeedF (central: max 2 / min 0.25 a frame, clamp tolerance of the clamped-smoothing rule)
+field 02442470 r3+0x690E u8 2
+field 02442470 r3+0x6A14 f32 0 10
+t60tol 02442470 r3+0x6A14 f32 clamp 2 0.25 0 0.0001 0.00001
+# procCutExMJ: no sword trigger (mItemTrigger r3+0x690D): a trigger is one step's (the first-step input rule, the frame's first step);
+# the harness would hold it over all N steps (m34C5 = 30 on step 1 turns the next step's hold flag off)
+field 02441104 r3+0x690D u8 0
+# glue-sound check: seStartSwordCut counted
+t60calls 024072F4
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200ECD4 0200F378 0200F5C8
+t60cand 0200ECD4 0200F378 0200F5C8
+# known-fail clib-real: (sweep: N-step spec N2 differs with the eases converted; new with them)

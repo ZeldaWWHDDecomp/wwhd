@@ -1,6 +1,7 @@
 /** Eight model/collision test-object variants. */
 #include "d/actor/d_a_obj_mtest.h"
 #include "bindings.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using Test = daObjMtest::Act_c;
 const gc_tu_data gc_tu = {.safeString = 0x1002DC60};
 static const char* M_arcname[] = {"Mtest", "Mtest", "Mtest", "Mtest", "Mtest", "Mtest", "Owater", "Astop"};
@@ -157,6 +158,11 @@ BOOL daObjMtest::Act_c::Create() {
 }
 /* 0237E4D8 */
 BOOL daObjMtest::Act_c::Execute(be<u32> *matrixOut) {
+    t60w::Guard<Act_c> t60g(this, t60objw::Logic<Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) { /* true60: a step before the tick30 step: the picture only, the background stays (mMtx) */
+        *matrixOut = gabi::ea(&mMtx);
+        return 1;
+    }
     s32 appear = Mtest_checkAppearNative(this);
     if (mCyl.ChkTgHit())
         fopAcM_delete(this);
@@ -169,6 +175,7 @@ BOOL daObjMtest::Act_c::Execute(be<u32> *matrixOut) {
         }
     } else if (mbAppear)
         Mtest_releaseBackground(dComIfG_Bgsp(), mpBgW.get());
+    t60g.model = true; /* true60: the frame reached its model step */
     *matrixOut = gabi::ea(&mMtx);
     mbAppear = (u8)appear;
     return 1;

@@ -1,0 +1,10 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_npc_kg2.txt
+# ---- true60 N-step spec (2026-11-20; the whole-frame form rule NPC form; d/t60_npc.h):
+# Salvatore at the cannon minigame (Kg2): daNpc_Kg2_c::_execute 02269690 in the whole form, logic only (morf play / calc,
+# order, processMove, event order, subAnm run inside it). The tick30 step runs the original execute whole at dt 1 from the
+# frame start; the earlier steps change no state (the picture between steps comes from frame interpolation). Negative control
+# (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 02269690
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200E240 020198D8 02055B64 02267E04 02268294 02268430 02268A10 02268C20 02268DA0 02268E88 02268F38 02268FAC 02269068 02269128 02269158 022692EC 022693A8 02269410 024EEEB8 024EF130 024F08A8 02520540 02542D88 02542EDC 02543280 025447C8 0254487C 0259D454 0259E08C 0259F858 025A11EC 025A15AC 025B8BB0 025D6870 025D76A8 025D7A58 025D7DEC 025E1A40 025E535C 025E55A0 025E789C 025F19F8 025F1C28 025F24E0 026066C4 0273AA24 027F2BF8 028E90D4 028E93CC

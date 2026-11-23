@@ -1,5 +1,6 @@
 // Molgera execute sequence.
 #include "d/actor/d_a_bwd_execute.h"
+#include "d/actor/d_a_bwd_t60.h" /* true60 (*): the whole frame on the tick30 step (the whole-frame form rule) */
 
 static Mtx34 executeMatrix;
 typedef gptr<Mtx34> ExecuteMatrixPointer;
@@ -373,6 +374,10 @@ static void bwd_kankyo(bwd_class* i_this) {
 /* 020FA614 */
 static BOOL bwd_execute(bwd_class* i_this) {
     gabi::AutoFrame frame{gabi::current_function()};
+    /* true60: the whole frame on the tick30 step (the whole-frame form rule; end at the return) */
+    t60w::Guard<bwd_class> t60g(i_this, bwd_t60::ops());
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     int i;
     int j;
     fopAc_ac_c* actor = i_this;
@@ -443,6 +448,7 @@ static BOOL bwd_execute(bwd_class* i_this) {
     if (i_this->mSandCrossWait != 0) {
         i_this->mSandCrossWait--;
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     if (l_HIO.mNoMove == 0) {
         bwdExecMove(i_this);
         i_this->mpHeadMorf->play(&actor->eyePos, 0, 0);

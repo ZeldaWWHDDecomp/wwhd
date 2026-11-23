@@ -8,6 +8,7 @@
  * against it.
  */
 #include "d/actor/d_a_nz.h"
+#include "d/actor/d_a_nz_t60.h" /* true60 (t60conv): step helpers */
 
 const gc_tu_data gc_tu = { .safeString = 0x100242E4, .safeStringAssure = 0x023111D4 };
 
@@ -269,14 +270,14 @@ static inline void nz_crawl(nz_class* i_this) {
         center->copy(*t);
     }
     i_this->mProbeCenter.copy(*center);
-    int cnt = abs16(i_this->current.angle.x) < 0x1000 ? 6 : 4;
+    int cnt = t60c::heldInt(abs16(i_this->current.angle.x) < 0x1000 ? 6 : 4, 9, i_this); /* true60 (hand): the probe count from the frame-start angle (A probes once per frame, before the edge turn); held over the frame (heldInt site 9) */
     u32 mask = 0;
     for (int k = 0; k < 6; k++) {
         i_this->mProbeHit[k].copy(i_this->current.pos);
         f32 z = probe_z[k];
         v->x = probe_x[k];
         v->y = probe_y[k];
-        if (i_this->mMode == NZ_MODE_WAIT) v->z = z * 0.1f;
+        if (i_this->mMode == NZ_MODE_WAIT) v->z = z * 0.1f; /* true60: probe geometry, every step (not a decision) */
         else v->z = z;
         MtxPosition(v, &i_this->mProbeEnd[k]);
         PSVECAdd(&i_this->mProbeEnd[k], &i_this->current.pos, &i_this->mProbeEnd[k]);
@@ -318,8 +319,9 @@ static inline void nz_crawl(nz_class* i_this) {
             i_this->current.angle.x = 0x8000 - i_this->current.angle.x;
         }
     } else if (!(mask & 1)) {
-        i_this->current.angle.x = i_this->current.angle.x + 0x1000;
+        i_this->current.angle.x = i_this->current.angle.x + t60c::share(0x1000); /* true60 (t60conv): the step's share */
     }
+    nz_t60_turn_note(i_this, (mask & 3) != 3 && !(mask & 1)); /* true60 (hand): the frame's edge turn, for the first-step body check */
     if ((mask & 0xC) == 0xC) {
         /* side probes: roll */
         gabi::Local<cXyz> t;
@@ -336,7 +338,7 @@ static inline void nz_crawl(nz_class* i_this) {
     enum { TURN, DROP, JUMP, FLEE, CHECK_FACING, CHECK_FACING_NO_WEIGHT } next = TURN;
     switch (i_this->mMode) {
     case NZ_MODE_WAIT_INIT: {
-        i_this->mMode = i_this->mMode + 1;
+        if (t60c::first()) { i_this->mMode = i_this->mMode + 1; } /* true60 (t60conv): counted on the frame's first step */
         nz_anm_init(i_this, NZ_BCK_WAIT, 5.0f, 2, 1.0f, 0x12);
         i_this->mHeadRotYTarget = 0;
         i_this->mHeadRotY = 0;
@@ -358,7 +360,7 @@ static inline void nz_crawl(nz_class* i_this) {
     }
         [[fallthrough]];
     case NZ_MODE_WAIT:
-        cLib_addCalc0(&i_this->speedF, 1.0f, 10.0f);
+        nz_t60_ease0F(i_this, 1.0f, 10.0f);
         cLib_addCalcAngleS2(&i_this->mHeadRotY, i_this->mHeadRotYTarget, 1, 0x2000);
         if (i_this->mSearchResult == 0 && tm[2] == 0) {
             int r;
@@ -369,7 +371,7 @@ static inline void nz_crawl(nz_class* i_this) {
                     t = i_this->mLookCount;
                     i_this->mHeadRotYTarget = 0x3E80;
                 }
-                i_this->mLookCount = t - 1;
+                if (t60c::first()) { i_this->mLookCount = t - 1; } /* true60 (t60conv): counted on the frame's first step */
                 tm[2] = 0x1E;
                 r = callSearchCheck(i_this);
             } else {
@@ -407,14 +409,13 @@ static inline void nz_crawl(nz_class* i_this) {
         i_this->mHeadRotYTarget = 0;
         i_this->mHeadRotY = 0;
         i_this->mSearchCounter = 0;
-        i_this->mMode = i_this->mMode + 1;
+        if (t60c::first()) { i_this->mMode = i_this->mMode + 1; } /* true60 (t60conv): counted on the frame's first step */
         i_this->speed.y = 0.0f;
         i_this->speedF = 20.0f;
         tm[0] = (s16)gabi::ftoi(cM_rndF(30.0f) + 30.0f);
         /* fallthrough */
     case NZ_MODE_RUN: {
-        if (i_this->mSearchResult == 0 && abs16(i_this->current.angle.x) > 0x7F80 &&
-            !(player->current.pos.y + 400.0f >= i_this->current.pos.y)) {
+        if (t60c::first() && (i_this->mSearchResult == 0 && abs16(i_this->current.angle.x) > 0x7F80 && !(player->current.pos.y + 400.0f >= i_this->current.pos.y))) { /* true60 (t60conv): a decision on the first-step timer, on the first step */
             s16 c = i_this->mSearchCounter + 1;
             i_this->mSearchCounter = c;
             if ((c & 0x1F) == 0) {
@@ -469,10 +470,10 @@ static inline void nz_crawl(nz_class* i_this) {
         nz_anm_init(i_this, NZ_BCK_WAIT, 5.0f, 2, 1.0f, 0x12);
         i_this->mHeadRotYTarget = 0;
         i_this->mHeadRotY = 0;
-        i_this->mMode = i_this->mMode + 1;
+        if (t60c::first()) { i_this->mMode = i_this->mMode + 1; } /* true60 (t60conv): counted on the frame's first step */
         /* fallthrough */
     case NZ_MODE_WATCH:
-        cLib_addCalc0(&i_this->speedF, 1.0f, 5.0f);
+        nz_t60_ease0F(i_this, 1.0f, 5.0f);
         i_this->mMoveAngle = fopAcM_searchPlayerAngleY(i_this);
         if (tm[0] == 0) next = FLEE;
         break;
@@ -484,12 +485,12 @@ static inline void nz_crawl(nz_class* i_this) {
         i_this->speedF = 20.0f;
         tm[1] = 0x1E;
         i_this->mSearchResult = 0;
-        i_this->mMode = i_this->mMode + 1;
+        if (t60c::first()) { i_this->mMode = i_this->mMode + 1; } /* true60 (t60conv): counted on the frame's first step */
         i_this->mSearchCounter = 0;
         break;
     }
     case NZ_MODE_FLEE: {
-        if (abs16(i_this->current.angle.x) > 0x7F80 && !(player->current.pos.y + 400.0f >= i_this->current.pos.y)) {
+        if (t60c::first() && (abs16(i_this->current.angle.x) > 0x7F80 && !(player->current.pos.y + 400.0f >= i_this->current.pos.y))) { /* true60 (hand, as NZ_MODE_RUN): the search counter counts 30 Hz frames, a decision on the first step */
             s16 c = i_this->mSearchCounter + 1;
             i_this->mSearchCounter = c;
             if ((c & 0x1F) == 0) {
@@ -517,18 +518,18 @@ static inline void nz_crawl(nz_class* i_this) {
     }
     }
 
-    if (next == CHECK_FACING || next == CHECK_FACING_NO_WEIGHT) {
+    if (t60c::first() && (next == CHECK_FACING || next == CHECK_FACING_NO_WEIGHT)) { /* true60 (t60conv): a decision on the first-step timer, on the first step */
         /* does the player face it: flee (6), or jump at the player (mode 1) */
         s16 a = fopAcM_searchActorAngleY(player, i_this);
         s16 d = (s16)cLib_distanceAngleS(player->shape_angle.y, a);
-        if (next == CHECK_FACING) i_this->mStts.m_weight = 100;
+        if (t60c::first() && (next == CHECK_FACING)) i_this->mStts.m_weight = 100; /* true60 (t60conv): a decision on the first-step timer, on the first step */
         next = d < 0x2A71 ? FLEE : JUMP;
     }
     if (next == JUMP) {
         i_this->current.angle.z = 0;
         i_this->mAction = NZ_ACTION_JUMP;
         i_this->mMode = NZ_MODE_JUMP_INIT;
-    } else if (next == FLEE) {
+    } else if (t60c::first() && (next == FLEE)) { /* true60 (t60conv): a decision on the first-step timer, on the first step */
         i_this->mMode = NZ_MODE_FLEE_INIT;
     }
     if (next == DROP) {
@@ -565,8 +566,32 @@ static inline void nz_crawl(nz_class* i_this) {
     nz_LinChk_dt(linChk);
 }
 
+/* true60 (the shared-world-state rule + the shared-RNG rule, 2026-11-20): the steal is split. The decision stays on the
+ * frame's first step (nz_steal: the jump's landing decision, a first-step frame decision on the frame-start acch flags,
+ * follows it in the same frame, so a tick30 decision missed the frame where the jump also ends); its effects (the rupee
+ * reads and the rupee count change, the shared-RNG draws, the item creation) are recorded and applied on the tick30 step
+ * at the Rat's line place (nz_steal_tick30, the end of nz_execute_step). The draws feed no step-1 decision (mbStole is
+ * set by the decision). dt 1: the original order (effects, then mbStole). */
+enum { NZ_T60_STEAL_SITE = 0x570 };
+static inline void nz_steal_effects(nz_class* i_this);
 /* inlined into daNZ_Execute */
 static inline void nz_steal(nz_class* i_this) {
+    if (!t60c::first()) return;
+    if (t60c::on()) {
+        t60c::mark(NZ_T60_STEAL_SITE, i_this);
+        i_this->mbStole = 1;
+        return;
+    }
+    nz_steal_effects(i_this);
+    i_this->mbStole = 1;
+}
+static inline void nz_steal_tick30(nz_class* i_this) {
+    if (t60c::end() && t60c::marked(NZ_T60_STEAL_SITE, i_this)) {
+        t60c::unmark(NZ_T60_STEAL_SITE, i_this);
+        nz_steal_effects(i_this);
+    }
+}
+static inline void nz_steal_effects(nz_class* i_this) {
     u32 play = dComIfGp_ea();
     u32 rupees = dComIfGs_getRupee();
     fopAc_ac_c* player = gabi::at<dComIfG_inf_c>(play)->play.getPlayer(0);
@@ -606,7 +631,6 @@ static inline void nz_steal(nz_class* i_this) {
     }
     play = dComIfGp_ea();
     gabi::at<dComIfG_inf_c>(play)->play.mItemRupeeCount = gabi::at<dComIfG_inf_c>(play)->play.mItemRupeeCount - total;
-    i_this->mbStole = 1;
 }
 
 /* inlined into daNZ_Execute */
@@ -617,7 +641,7 @@ static inline void nz_jump_end(nz_class* i_this) {
     i_this->mStts.m_weight = 100;
     i_this->scale.z = 1.0f;
     i_this->mSmokeTimer = 0;
-    nz_mons_se_start(i_this, 0x481B);
+    nz_mons_se_start(i_this, 0x481B); /* true60: nz_steal runs once per frame (first step) */
     i_this->shape_angle.x = 0;
     i_this->gravity = -5.0f;
     i_this->mMode = NZ_MODE_DAMAGE_LAND_INIT;
@@ -631,11 +655,12 @@ static inline void nz_jump(nz_class* i_this) {
         nz_jump_end(i_this);
         return;
     }
+    bool nzBounceEntry = false; /* true60 (hand): this step ran the landing / BOUNCE_INIT case */
     switch (st) {
     case NZ_MODE_JUMP_INIT:
         nz_anm_init(i_this, NZ_BCK_JUMP, 5.0f, 0, 1.0f, 7);
         if (i_this != nullptr) nz_mons_se_start(i_this, 0x481A);
-        i_this->mMode = i_this->mMode + 1;
+        if (t60c::first()) { i_this->mMode = i_this->mMode + 1; } /* true60 (t60conv): counted on the frame's first step */
         i_this->speed.y = 35.0f;
         i_this->current.angle.x = 0;
         i_this->current.angle.z = 0;
@@ -649,16 +674,18 @@ static inline void nz_jump(nz_class* i_this) {
         return;
     case NZ_MODE_JUMP: {
         i_this->shape_angle.y = (s16)i_this->current.angle.y;
-        i_this->shape_angle.x = i_this->shape_angle.x + i_this->mSpinSpeed;
+        i_this->shape_angle.x = i_this->shape_angle.x + t60c::share(i_this->mSpinSpeed); /* true60 (the animation-rate rule): the jump spin per 30 Hz frame, a share per step */
         i_this->shape_angle.z = (s16)i_this->current.angle.z;
-        if (i_this->mbStole == 0 && i_this->mCyl.ChkAtHit() && !(i_this->mCyl.mGObjAt.mRPrm & 1)) {
+        if (i_this->mbStole == 0 && t60c::hit(i_this->mCyl.ChkAtHit(), 1, &i_this->mCyl) && !(i_this->mCyl.mGObjAt.mRPrm & 1)) {
             fopAc_ac_c* ac = dCcD_GetAc(&i_this->mCyl.mGObjAt);
             if (ac != nullptr && ac == player) nz_steal(i_this);
         }
-        u32 flags = i_this->mAcch.m_flags;
+        /* true60 (first-step AI-timer, t60once): the landing / wall stop is a frame decision on the frame-start acch flags (the last
+         * tick30 BG check's, A's): a later step does not land on an earlier step's ground hit (site 45) */
+        u32 flags = nz_t60_jump_flags(i_this->mAcch.m_flags, i_this);
         if (flags & dBgS_Acch::WALL_HIT) {
             i_this->speedF = 0.0f;
-            flags = i_this->mAcch.m_flags;
+            flags = nz_t60_jump_flags(i_this->mAcch.m_flags, i_this);
         }
         if (!(flags & dBgS_Acch::GROUND_HIT)) {
             nz_jump_end(i_this);
@@ -666,7 +693,7 @@ static inline void nz_jump(nz_class* i_this) {
         }
         shape_from_angle(i_this);
         i_this->mCyl.mObjAt.mSPrm &= ~1u;
-        i_this->mMode = i_this->mMode + 1;
+        if (t60c::first()) { i_this->mMode = i_this->mMode + 1; } /* true60 (t60conv): counted on the frame's first step */
     }
         /* fallthrough */
     case NZ_MODE_BOUNCE_INIT: {
@@ -675,14 +702,22 @@ static inline void nz_jump(nz_class* i_this) {
         i_this->speedF = sp;
         i_this->speed.y = 20.0f;
         nz_anm_init(i_this, NZ_BCK_LAND, 0.0f, 0, 1.0f, -1);
-        i_this->mMode = i_this->mMode + 1;
+        if (t60c::first()) { i_this->mMode = i_this->mMode + 1; } /* true60 (t60conv): counted on the frame's first step */
+        nzBounceEntry = true;
     }
         /* fallthrough */
-    case NZ_MODE_BOUNCE:
+    case NZ_MODE_BOUNCE: {
         shape_from_angle(i_this);
         if (i_this->mAcch.m_flags & dBgS_Acch::WALL_HIT) i_this->speedF = 0.0f;
-        cLib_addCalc0(&i_this->speedF, 1.0f, 5.0f);
-        if (i_this->mpMorf->isStop()) {
+        /* true60 (hand, as the RUN_INIT / FLEE_INIT entry): in the landing frame A
+         * runs BOUNCE_INIT and the BOUNCE ease once (20 -> 15) and moves the whole frame at 15. The entry step (the
+         * frame's first; the mode change holds the later steps) eases at dt 1 (pair f248: B eased one share,
+         * 17.5, and slid 13.6 further) */
+        const bool nzWholeEase = nzBounceEntry && t60c::on();
+        const f32 nzEaseDt = nzWholeEase ? t60_set_dt(1.0f) : 1.0f;
+        nz_t60_ease0F(i_this, 1.0f, 5.0f);
+        if (nzWholeEase) t60_set_dt(nzEaseDt);
+        if (en_t60_isStop(i_this->mpMorf)) {
             i_this->speed.y = 0.0f;
             nz_timers(i_this)[0] = (s16)gabi::ftoi(cM_rndF(60.0f) + 60.0f);
             i_this->current.angle.x = 0;
@@ -692,6 +727,7 @@ static inline void nz_jump(nz_class* i_this) {
         }
         nz_jump_end(i_this);
         return;
+    }
     default:
         nz_jump_end(i_this);
         return;
@@ -703,7 +739,7 @@ static inline void nz_drop(nz_class* i_this) {
     u8 st = i_this->mMode;
     switch (st) {
     case NZ_MODE_DROP_INIT: {
-        i_this->mMode = st + 1;
+        if (t60c::first()) { i_this->mMode = st + 1; } /* true60 (t60conv): counted on the frame's first step */
         s16 a = i_this->current.angle.y - 0x8000;
         i_this->current.angle.y = a;
         i_this->mMoveAngle = a;
@@ -716,7 +752,9 @@ static inline void nz_drop(nz_class* i_this) {
         /* fallthrough */
     case NZ_MODE_DROP:
         i_this->shape_angle.y = (s16)i_this->current.angle.y;
-        i_this->shape_angle.x = i_this->shape_angle.x + 0x2500;
+        /* true60 (the animation-rate rule): the drop spin per 30 Hz frame, a share per step; the entry step (DROP_INIT falls through, the
+         * frame's later steps are held) turns the whole frame's amount */
+        i_this->shape_angle.x = i_this->shape_angle.x + (st == NZ_MODE_DROP_INIT ? 0x2500 : t60c::share(0x2500));
         i_this->shape_angle.z = (s16)i_this->current.angle.z;
         if (callFallLineCheck(i_this) || (i_this->mAcch.m_flags & dBgS_Acch::GROUND_HIT)) {
             nz_anm_init(i_this, NZ_BCK_LAND, 0.0f, 0, 1.0f, -1);
@@ -726,11 +764,11 @@ static inline void nz_drop(nz_class* i_this) {
             i_this->shape_angle.z = 0;
             i_this->current.angle.z = 0;
             i_this->speed.y = 0.0f;
-            i_this->mMode = i_this->mMode + 1;
+            if (t60c::first()) { i_this->mMode = i_this->mMode + 1; } /* true60 (t60conv): counted on the frame's first step */
         }
         break;
     case NZ_MODE_LAND:
-        if (i_this->mpMorf->isStop()) {
+        if (en_t60_isStop(i_this->mpMorf)) {
             dPa_smokeEcallBack_end((dPa_smokeEcallBack*)&i_this->mSmokeCb);
             nz_timers(i_this)[0] = (s16)gabi::ftoi(cM_rndF(60.0f) + 60.0f);
             i_this->mAction = NZ_ACTION_CRAWL;
@@ -761,7 +799,10 @@ static inline void nz_carry(nz_class* i_this) {
     gabi::Local<dBgS_LinChk_l> linChk;
     nz_LinChk_ct(linChk);
     be<s16>* tm = nz_timers(i_this);
-    if (i_this->mType == 0 && fopAcM_SearchByID(i_this->mItemId) == nullptr) {
+    /* true60 (first-step AI-timer): the carried-item check is the frame's opening decision (A: at the top of the frame's execute), once
+     * per 30 Hz frame on the first step; an item id this frame's mode code cleared (CARRY_START / RUN: item gone) flees
+     * from the next frame's first step, as in A, not from the frame's next step */
+    if (i_this->mType == 0 && t60c::first() && fopAcM_SearchByID(i_this->mItemId) == nullptr) {
         i_this->mAction = NZ_ACTION_CRAWL;
         i_this->mMode = NZ_MODE_FLEE_INIT;
         i_this->mItemId = 0xFFFFFFFF;
@@ -794,12 +835,12 @@ static inline void nz_carry(nz_class* i_this) {
     }
     case NZ_MODE_PICKUP_INIT:
         nz_anm_init(i_this, NZ_BCK_PICKUP, 5.0f, 0, 1.0f, 0xF);
-        i_this->mMode = i_this->mMode + 1;
+        if (t60c::first()) { i_this->mMode = i_this->mMode + 1; } /* true60 (t60conv): counted on the frame's first step */
         break;
     case NZ_MODE_PICKUP:
-        if (!i_this->mpMorf->isStop()) break;
+        if (!en_t60_isStop(i_this->mpMorf)) break;
         nz_anm_init(i_this, NZ_BCK_CARRY_RUN, 0.0f, 2, 1.0f, 0x11);
-        i_this->mMode = i_this->mMode + 1;
+        if (t60c::first()) { i_this->mMode = i_this->mMode + 1; } /* true60 (t60conv): counted on the frame's first step */
         break;
     case NZ_MODE_CARRY_START: {
         fopAc_ac_c* item = fopAcM_SearchByID(i_this->mItemId);
@@ -818,7 +859,7 @@ static inline void nz_carry(nz_class* i_this) {
         tm[1] = 0;
         tm[0] = (s16)gabi::ftoi(r + 200.0f);
         i_this->speedF = 20.0f;
-        i_this->mMode = i_this->mMode + 1;
+        if (t60c::first()) { i_this->mMode = i_this->mMode + 1; } /* true60 (t60conv): counted on the frame's first step */
     }
         /* fallthrough */
     case NZ_MODE_CARRY_RUN: {
@@ -836,7 +877,7 @@ static inline void nz_carry(nz_class* i_this) {
                 }
             }
         }
-        if (i_this->mCyl.ChkCoHit()) {
+        if (t60c::hit(i_this->mCyl.ChkCoHit(), 2, &i_this->mCyl)) {
             fopAc_ac_c* ac = dCcD_GetAc(&i_this->mCyl.mGObjCo);
             fopAc_ac_c* h = nullptr;
             if (hole_valid(i_this->mHoleId)) h = judge_id(i_this->mHoleId);
@@ -908,6 +949,7 @@ static inline void nz_carry(nz_class* i_this) {
         }
         cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mMoveAngle, 1, 0x2000);
         if (tm[0] != 0) break;
+        if (!t60c::first()) break; /* true60 (hand, first-step AI-timer): the throw decision (a probe ahead) once per 30 Hz frame, on the first step from the frame-start position, as A probes it once */
         s16 ay = i_this->current.angle.y;
         i_this->mMoveAngle = ay;
         cMtx_YrotS(calc_mtx(), ay);
@@ -927,7 +969,7 @@ static inline void nz_carry(nz_class* i_this) {
     }
     case NZ_MODE_HOLE_ENTER: {
         /* into the hole */
-        cLib_addCalc0(&i_this->speedF, 1.0f, 10.0f);
+        nz_t60_ease0F(i_this, 1.0f, 10.0f);
         cLib_addCalc0(&i_this->scale.x, 1.0f, 0.4f);
         f32 s = i_this->scale.x;
         i_this->scale.y = s;
@@ -943,7 +985,7 @@ static inline void nz_carry(nz_class* i_this) {
                     s16 c = hole->mSpawnCount;
                     if (c > 0) hole->mSpawnCount = c - 1;
                 } else {
-                    hole->mReturnedCount = hole->mReturnedCount + 1;
+                    if (t60c::first()) { hole->mReturnedCount = hole->mReturnedCount + 1; } /* true60 (t60conv): counted on the frame's first step */
                 }
                 hole->mReturnTimer = 0x14;
             }
@@ -957,7 +999,7 @@ static inline void nz_carry(nz_class* i_this) {
     }
     case NZ_MODE_THROW_INIT:
         nz_anm_init(i_this, NZ_BCK_THROW, 5.0f, 0, 1.0f, 0xD);
-        i_this->mMode = i_this->mMode + 1;
+        if (t60c::first()) { i_this->mMode = i_this->mMode + 1; } /* true60 (t60conv): counted on the frame's first step */
         break;
     case NZ_MODE_THROW: {
         /* drops the item */
@@ -968,23 +1010,23 @@ static inline void nz_carry(nz_class* i_this) {
             callSmokeSet(i_this);
         }
         if (!(i_this->mpMorf->getFrame() < 10.0f)) {
-            cLib_addCalc0(&i_this->speedF, 1.0f, 2.0f);
+            nz_t60_ease0F(i_this, 1.0f, 2.0f);
             i_this->mSmokePos.copy(i_this->current.pos);
         }
-        if (!i_this->mpMorf->isStop()) break;
+        if (!en_t60_isStop(i_this->mpMorf)) break;
         dPa_smokeEcallBack_end((dPa_smokeEcallBack*)&i_this->mSmokeCb);
         tm[2] = 0x1E;
-        i_this->mMode = i_this->mMode + 1;
+        if (t60c::first()) { i_this->mMode = i_this->mMode + 1; } /* true60 (t60conv): counted on the frame's first step */
         break;
     }
     case NZ_MODE_THROW_WAIT:
-        cLib_addCalc0(&i_this->speedF, 1.0f, 2.0f);
+        nz_t60_ease0F(i_this, 1.0f, 2.0f);
         if (tm[2] != 0) break;
         nz_anm_init(i_this, NZ_BCK_RECOVER, 0.0f, 0, 1.0f, 0xE);
-        i_this->mMode = i_this->mMode + 1;
+        if (t60c::first()) { i_this->mMode = i_this->mMode + 1; } /* true60 (t60conv): counted on the frame's first step */
         break;
     case NZ_MODE_RECOVER_INIT: {
-        if (!i_this->mpMorf->isStop()) break;
+        if (!en_t60_isStop(i_this->mpMorf)) break;
         fopAc_ac_c* item = fopAcM_SearchByID(i_this->mItemId);
         u8 type = i_this->mType;
         if (item != nullptr) {
@@ -1007,7 +1049,7 @@ static inline void nz_carry(nz_class* i_this) {
         if ((s16)cLib_distanceAngleS(i_this->mMoveAngle, i_this->current.angle.y) < 0x1000) i_this->mMode = NZ_MODE_THROW_INIT;
         break;
     case NZ_MODE_RETREAT: {
-        cLib_addCalc0(&i_this->speedF, 1.0f, 2.0f);
+        nz_t60_ease0F(i_this, 1.0f, 2.0f);
         if (!i_this->mpMorf->checkFrame(17.0f)) break;
         i_this->speedF = 0.0f;
         i_this->mbCarrying = 0;
@@ -1524,17 +1566,22 @@ static int search_check(nz_class* i_this) {
 
 /* 0230FD20 */
 static void BG_check(nz_class* i_this) {
-    f32 ofs = i_this->mBgOffsetY;
+    f32 ofs = nz_t60_bg_ofs(i_this->mBgOffsetY, i_this); /* true60 (first-step push): the frame-start offset, A's (site 44) */
     i_this->current.pos.y = i_this->current.pos.y - ofs;
     i_this->old.pos.y = i_this->old.pos.y - ofs;
     i_this->mAcch.CrrPos(dComIfG_Bgsp());
-    ofs = i_this->mBgOffsetY;
+    ofs = nz_t60_bg_ofs(i_this->mBgOffsetY, i_this); /* true60 (first-step push): the frame-start offset, A's (site 44) */
     i_this->current.pos.y = i_this->current.pos.y + ofs;
     i_this->old.pos.y = i_this->old.pos.y + ofs;
 }
 
 /* 0230BA9C */
 static int body_atari_check(nz_class* i_this) {
+    /* true60 (nz option b): the body hit check runs once per 30 Hz frame on the first step (the
+     * TG hit of the previous tick30 collision Move, as A reads it at the frame's start; Link's spin-attack state once
+     * per frame, first-step AI-timer), where the frame-start state's dispatch reaches the same call sites as A's frame (jump_end, the
+     * bomb carry); a damage state it sets first runs next frame (state hold), as in A. Later steps: no hit */
+    if (!t60c::first()) return 0;
     bool spin = true;
     if (i_this->mCyl.ChkTgHit()) {
         void* hitObj = i_this->mCyl.GetTgHitObj();
@@ -1579,7 +1626,8 @@ static int body_atari_check(nz_class* i_this) {
         }
     }
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
-    if (i_this->current.angle.x == 0 && i_this->current.angle.z == 0 && (NzHD::playerInfo(player)->mStateFlags & 0x20000)) {
+    /* true60 (hand): A tests the angle after the frame's whole crawl edge turn; the first step has its share only */
+    if (nz_t60_check_angle_x(i_this, i_this->current.angle.x) == 0 && i_this->current.angle.z == 0 && (NzHD::playerInfo(player)->mStateFlags & 0x20000)) {
         f32 dz = NzHD::playerInfo(player)->mAttackCenter.z - i_this->current.pos.z;
         f32 dx = NzHD::playerInfo(player)->mAttackCenter.x - i_this->current.pos.x;
         if (std_sqrtf(gabi::fmadds(dx, dx, dz * dz)) < 1000.0f) {
@@ -1926,7 +1974,7 @@ static void nz6_move(nz_class* i_this) {
                 nz_anm_init(i_this, NZ_BCK_RUN, 1.0f, 2, 1.0f, 0x10);
                 i_this->shape_angle.x = 0;
             } else {
-                i_this->shape_angle.x = i_this->shape_angle.x + 0x2500;
+                i_this->shape_angle.x = i_this->shape_angle.x + t60c::share(0x2500); /* true60 (the animation-rate rule): the drop spin per 30 Hz frame, a share per step */
             }
         }
         if (i_this->mTurnTimer != 0) skip = true;
@@ -1957,15 +2005,21 @@ static void nz6_move(nz_class* i_this) {
     nz_LinChk_dt(linChk);
 }
 
-/* 0230BEF4 */
-static BOOL daNZ_Execute(nz_class* i_this) {
-    i_this->mTailPos[0].copy(i_this->mTailEnd[0]);
-    callTailControl(i_this);
+/* the execute's step (daNZ_Execute below picks the form) */
+static inline BOOL nz_execute_step(nz_class* i_this) {
+    /* true60 (nz option b): the tail chain (tail_control, picture only: mTailPos feeds the line
+     * draw) runs once per 30 Hz frame on the first step, from the joint ends the frame start has (A's order: the top of
+     * the execute); the crawl / jump / drop / carry states run per step around it */
+    if (t60c::first()) {
+        t60c::unmark(NZ_T60_STEAL_SITE, i_this); /* true60: the steal record of this frame starts clear */
+        i_this->mTailPos[0].copy(i_this->mTailEnd[0]);
+        callTailControl(i_this);
+    }
     if (enemy_ice(&i_this->mEnemyIce)) {
         J3DModel_setBaseTRMtx(i_this->mpMorf->getModel(), mDoMtx_stack_c::get());
         i_this->mpMorf->calc();
         enemy_fire_remove(&i_this->mEnemyFire);
-        settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &i_this->current.pos, &i_this->tevStr);
+        if (t60c::end()) settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &i_this->current.pos, &i_this->tevStr); /* true60: the lighting once per frame, the tick30 step (A's order) */
         f32 y = i_this->current.pos.y + 10.0f;
         f32 z = i_this->current.pos.z;
         f32 x = i_this->current.pos.x;
@@ -1979,14 +2033,39 @@ static BOOL daNZ_Execute(nz_class* i_this) {
         return TRUE;
     }
     be<s16>* tm = nz_timers(i_this);
-    for (int i = 0; i < 5; i++) {
-        if (tm[i] != 0) tm[i] = tm[i] - 1;
+    if (t60c::first()) { /* true60 (first-step AI-timer): the five timers count once per 30 Hz frame, on the first step */
+        for (int i = 0; i < 5; i++) {
+            if (tm[i] != 0) tm[i] = tm[i] - 1;
+        }
     }
     i_this->mAttnOffsetY = 70.0f;
     if (i_this->mType == 0) i_this->mBodyOffsetTarget = -50.0f;
 
+    /* true60 (the one-state-step hold, as ks / bk): an action / mode entered on an earlier step of this frame first runs
+     * on the next frame's first step; the motion below still runs on every step */
+    const s32 nzState = (s32)((u32)(u8)i_this->mAction | ((u32)(u8)i_this->mMode << 8));
+    const s32 nzFrameState = t60c::heldInt(nzState, 3, i_this);
+    if (nzFrameState != nzState) {
+        /* true60: a held step keeps the frame's case's constant sets (the one step's case is the frame-start action) */
+        const u8 a0 = (u8)(nzFrameState & 0xFF);
+        if (a0 == NZ_ACTION_CARRY && i_this->mType == 0) i_this->mBodyOffsetTarget = 0.0f;
+        else if (a0 == NZ_ACTION_DAMAGE) i_this->mAttnOffsetY = 10.0f;
+        else if (a0 == NZ_ACTION_BOMB) i_this->mAttnOffsetY = 90.0f;
+    } else
     switch (i_this->mAction) {
-    case NZ_ACTION_CRAWL: nz_crawl(i_this); break;
+    case NZ_ACTION_CRAWL:
+        /* true60 (hand, crawl frame form): A runs the whole crawl (probes, surface follow, surface angle /
+         * roll, edge turn, state case, TURN) before the frame's move, then moves the whole speedF at the frame-end angle.
+         * So the crawl runs whole (dt 1) on the frame's first step and the later steps only move (the motion below, per
+         * step, from the frame-end speedF / angle) (pairs f184 / f185: re-probes, the turn and
+         * the follow per step moved the Rat off A's track and Link's hit by 2-19 frames) */
+        if (t60c::first()) {
+            const bool nzCrawlOn = t60c::on();
+            const f32 nzCrawlDt = nzCrawlOn ? t60_set_dt(1.0f) : 1.0f;
+            nz_crawl(i_this);
+            if (nzCrawlOn) t60_set_dt(nzCrawlDt);
+        }
+        break;
     case NZ_ACTION_JUMP: nz_jump(i_this); break;
     case NZ_ACTION_DROP: nz_drop(i_this); break;
     case NZ_ACTION_CARRY:
@@ -2014,10 +2093,20 @@ static BOOL daNZ_Execute(nz_class* i_this) {
             i_this->scale.z = s;
         }
     }
+    /* true60 (hand): the motion's state reads below take the frame's motion state, the one A moves
+     * with: the value the first step read at the same place (heldInt sites 6-8, nz_t60_mot). A change made after it
+     * (the water check after the move, a held step's state) moves from the next frame on, as in A, where it is found
+     * after the frame's move. Read in the original's places (dt-1 check: memory may change at every call) */
     cMtx_YrotS(calc_mtx(), i_this->current.angle.y);
     cMtx_XrotM(calc_mtx(), i_this->current.angle.x);
+    f32 nzArc = 0.0f;
+    gabi::Local<cXyz> nzRampV; /* true60: the speedF ramp term as a speed for posMove's step (0 at dt 1) */
+    nzRampV->x = 0.0f;
+    nzRampV->y = 0.0f;
+    nzRampV->z = 0.0f;
+    bool nzRamp = false;
     {
-        u8 m = i_this->mAction;
+        u8 m = (u8)nz_t60_mot(i_this->mAction, 6, i_this); /* true60: the frame's motion state */
         gabi::Local<cXyz> fwd;
         fwd->x = 0.0f;
         fwd->y = 0.0f;
@@ -2026,22 +2115,52 @@ static BOOL daNZ_Execute(nz_class* i_this) {
             gabi::Local<cXyz> s;
             MtxPosition(fwd, s);
             i_this->speed.x = (f32)s->x;
-            f32 vy = i_this->speed.y + -5.0f;
+            const f32 vy0 = i_this->speed.y;
+            f32 vy = i_this->speed.y + t60c::step(-5.0f); /* true60 (the per-step movement rule): gravity x dt */
             i_this->speed.z = (f32)s->z;
             i_this->gravity = -5.0f;
             if (vy < -30.0f) i_this->speed.y = -30.0f;
             else i_this->speed.y = vy;
+            nzArc = nz_t60_arc(i_this->speed.y - vy0); /* true60: the exact-arc term, on posMove's step */
         } else {
             MtxPosition(fwd, &i_this->speed);
         }
+        /* true60 (the exact arc for speedF): this step's per-step speedF ease dv moves
+         * dv x (1 - dt) / 2 more along the forward direction (the y part only on the crawl's 3D path m 0 / 6..) */
+        const f32 nzRampArc = nz_t60_ramp_take(i_this);
+        if (nzRampArc != 0.0f) {
+            gabi::Local<cXyz> rf;
+            rf->x = 0.0f;
+            rf->y = 0.0f;
+            rf->z = nz_t60_arc_speed(nzRampArc);
+            MtxPosition(rf, nzRampV);
+            if ((u32)(m - 1) <= 4) nzRampV->y = 0.0f;
+            nzRamp = true;
+        }
     }
     if (i_this->mHitPos.y - 1000.0f > i_this->current.pos.y) fopAcM_delete(i_this);
+    /* true60: the exact-arc term rides on posMove's y step (speed.y + arc / dt for the move only, put back): none at dt 1 */
+    const f32 nzVy = i_this->speed.y;
+    const f32 nzVx = i_this->speed.x, nzVz = i_this->speed.z;
+    if (nzArc != 0.0f) i_this->speed.y = gabi::fadds_ppc(nzVy, nz_t60_arc_speed(nzArc));
+    if (nzRamp) { /* true60: the speedF ramp term rides on posMove's step too (put back after) */
+        i_this->speed.x = gabi::fadds_ppc(nzVx, nzRampV->x);
+        i_this->speed.y = gabi::fadds_ppc((f32)i_this->speed.y, nzRampV->y);
+        i_this->speed.z = gabi::fadds_ppc(nzVz, nzRampV->z);
+    }
+    nz_t60_cc_frame(i_this, &i_this->mStts.m_cc_move); /* true60 (first-step push): the frame's Co push, dt of it per step */
     fopAcM_posMove(i_this, &i_this->mStts.m_cc_move);
+    if (nzArc != 0.0f || nzRamp) i_this->speed.y = nzVy;
+    if (nzRamp) {
+        i_this->speed.x = nzVx;
+        i_this->speed.z = nzVz;
+    }
 
     bool bg = false;
     f32 wallR = 60.0f;
-    u8 m8 = i_this->mAction;
-    u8 s9 = i_this->mMode;
+    const s32 nzMs = nz_t60_mot((s32)((u32)(u8)i_this->mAction | ((u32)(u8)i_this->mMode << 8)), 7, i_this); /* true60: the frame's motion state */
+    u8 m8 = (u8)(nzMs & 0xFF);
+    u8 s9 = (u8)((nzMs >> 8) & 0xFF);
     if (m8 != 0 && m8 != 3) bg = true;
     if (s9 == 0x22 || s9 == 0x4E) {
         wallR = 30.0f;
@@ -2053,7 +2172,8 @@ static BOOL daNZ_Execute(nz_class* i_this) {
     if (bg) {
         i_this->mAcchCir.SetWall(wallR, wallR);
         callBackgroundCheck(i_this);
-        if ((i_this->mAction == NZ_ACTION_JUMP || i_this->mAction == NZ_ACTION_DAMAGE) && i_this->mType == 0) {
+        const u8 nzMa = (u8)nz_t60_mot(i_this->mAction, 8, i_this); /* true60: the frame's motion state */
+        if ((nzMa == NZ_ACTION_JUMP || nzMa == NZ_ACTION_DAMAGE) && i_this->mType == 0) {
             f32 target = REG_F(8, 12) + 30.0f;
             i_this->mAcch.m_flags |= dBgS_Acch::LINE_CHECK;
             cLib_addCalc2(&i_this->mBgOffsetY, target, 1.0f, 4.5f);
@@ -2065,10 +2185,14 @@ static BOOL daNZ_Execute(nz_class* i_this) {
         cLib_addCalc2(&i_this->mBgOffsetY, 0.0f, 1.0f, 4.5f);
     }
     bool stuck = false;
-    if (i_this->mAction == NZ_ACTION_CRAWL && i_this->mMode == NZ_MODE_RUN) {
+    nz_t60_frame_start(i_this, &i_this->old.pos); /* true60: the frame-start position (first step, host table) */
+    /* true60 (first-step AI-timer): the stuck count is a per-frame decision on the frame's displacement: on the tick30 step, from the
+     * frame-start position (old.pos is the step's start) */
+    if (t60c::end() && (i_this->mAction == NZ_ACTION_CRAWL && i_this->mMode == NZ_MODE_RUN)) {
         if (abs16(i_this->current.angle.x) > 0x1000) {
             gabi::Local<cXyz> d;
-            cXyz_mi(&i_this->old.pos, d, &i_this->current.pos);
+            if (!nz_t60_frame_delta(i_this, &i_this->current.pos, d)) /* true60: from the frame-start position (host) */
+                cXyz_mi(&i_this->old.pos, d, &i_this->current.pos);
             if (std_sqrtf(PSVECSquareMag(d)) < 1.0f) {
                 u8 c = i_this->mStuckCounter + 1;
                 i_this->mStuckCounter = c;
@@ -2134,7 +2258,7 @@ static BOOL daNZ_Execute(nz_class* i_this) {
     mDoMtx_ZrotM(mDoMtx_stack_c::get(), i_this->shape_angle.z);
     mDoMtx_stack_transM(0.0f, -i_this->mBgOffsetY, 0.0f);
     J3DModel_setBaseTRMtx(model, mDoMtx_stack_c::get());
-    settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &i_this->current.pos, &i_this->tevStr);
+    if (t60c::end()) settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &i_this->current.pos, &i_this->tevStr); /* true60: the lighting (light flicker draw) once per frame after the dispatch: the tick30 step (A's order) */
     i_this->mpMorf->calc();
     enemy_fire(&i_this->mEnemyFire);
 
@@ -2158,7 +2282,23 @@ static BOOL daNZ_Execute(nz_class* i_this) {
             item->current.pos.z = gabi::fnmsubs(dz, 0.5f, i_this->mHandPos1.z) + ofs->z;
         }
     }
+    nz_steal_tick30(i_this); /* true60 (shared-world-state): the steal's effects at the Rat's line place on the tick30 step */
     return TRUE;
+}
+
+/* 0230BEF4 */
+static BOOL daNZ_Execute(nz_class* i_this) {
+    /* true60 (nz option b): a frame that starts in the damage or bomb state (callDamageMove /
+     * callBombMove, unconverted) runs whole on the tick30 step at dt 1 (t60w form: the earlier steps are picture steps);
+     * every other frame runs per step */
+    if (nz_t60_whole_frame(i_this)) {
+        t60w::Guard<nz_class> g(i_this, t60objw::Logic<nz_class>::kOps);
+        if (g.skip)
+            return TRUE;
+        g.model = true;
+        return nz_execute_step(i_this);
+    }
+    return nz_execute_step(i_this);
 }
 
 /* 0230EDC8 */

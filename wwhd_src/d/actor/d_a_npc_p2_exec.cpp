@@ -6,6 +6,7 @@
  * are "Nonmatching" stubs), verified against cking.rpx.
  */
 #include "d/actor/d_a_npc_p2_exec.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 // HD: animation data and morph values are refreshed in place; the harness checks these initializers.
 static s8 l_anm_tbl[3][24] = {
@@ -255,6 +256,9 @@ void daNpc_P2_c::lookBack() {
 
 /* 022BB228 */
 BOOL daNpc_P2_c::_execute() {
+    t60w::Guard<daNpc_P2_c> t60g(this, t60npc::Logic<daNpc_P2_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     dNpc_HIO_p2* n = &p2_child(mType)->mNpc;
     m_jnt.setParam(n->mMaxBackboneX, n->mMaxBackboneY, n->mMinBackboneX, n->mMinBackboneY, n->mMaxHeadX, n->mMaxHeadY,
                    n->mMinHeadX, n->mMinHeadY, n->mMaxTurnStep);
@@ -307,6 +311,7 @@ BOOL daNpc_P2_c::_execute() {
     mObjAcch.CrrPos(dComIfG_Bgsp());
     tevStr.mRoomNo = P2_getRoomId(dComIfG_Bgsp(), &mObjAcch.m_gnd);
     tevStr.mEnvrIdxOverride = P2_getPolyColor(dComIfG_Bgsp(), &mObjAcch.m_gnd);
+    t60g.model = true; /* true60: the frame reached its model step */
     setMtx();
     mpMorf->calc();
     if (mbRopeHang) {

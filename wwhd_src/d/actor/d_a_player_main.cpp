@@ -8,6 +8,7 @@
  * The address ranges #01..#08 add their functions in d_a_player_main_NN.cpp files.
  */
 #include "d/actor/d_a_player_main_readable.h"
+#include "d/actor/d_a_player_anm_t60.h"
 
 static PlayerAnmData mAnmDataTable[] = {
     {294, 284, 0, 0, 0},
@@ -402,7 +403,7 @@ u32 daPy_lk_c::seStartSwordCut(u32 id) {
 
 /* 0241E428 */
 BOOL daPy_lk_c::procPolyDamage() {
-    if (mFrameCtrlUnder[UNDER_MOVE0_e].getRate() < 0.01f) { /* UNDER_MOVE0_e */
+    if (lkT60_endRate(&mFrameCtrlUnder[UNDER_MOVE0_e]) < 0.01f) { /* UNDER_MOVE0_e */
         Player_checkNextMode(this, 0);
     }
     return TRUE;

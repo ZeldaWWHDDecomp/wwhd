@@ -7,9 +7,14 @@
  * verified against cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/d_camera_lockon.h"
+#include "d/d_camera_key_t60.h"
 #include "gc_api/d/d_com_inf_game.h"
+#include "true60.h"
+#include "d/d_camera_engine_t60.h"
 
 using namespace lockonDetail;
+/* the speed-ramp position-gap rule (2): the lock-on yaw chase's target yaw record (host memory, one camera) */
+static camera_key_t60::PerCam<CamChaseAngle> s_lockonYawTarget;
 
 // HD: shared status accessors retain 32-bit guest-address wrap for unchecked pad IDs.
 
@@ -19,6 +24,56 @@ static inline void copyFloatBits(void* dst, const void* src) {
 }
 static s16 lockonAngleZero;
 static s16 lockonAngle180;
+
+/* true60 (the per-step smoothing rule, 4 and the mode-start-once rule): the lock-on camera at N steps per 30 Hz frame. Each per-frame
+ * smoothing ratio r becomes 1 - (1 - r)^dt for the step (lkRatio; r >= 1 and dt = 1 stay as they are: bit-exact at
+ * N = 1), the hidden-player radius decay 0.75 becomes 0.75^dt (lkDecay); the work's frame counters (m388 hidden
+ * frames, m380 charge frames) count 30 Hz frames: they step on tick30 only (lkFrameEnd). The direction here is set
+ * from the view direction directly (eye = centre + direction, no nested eye chase as in followCamera), so plain
+ * per-step ratios compose to the frame's. */
+static inline f32 lkRatio(f32 r) { return t60::dt() == 1.0f ? r : t60_ratio(r, t60::dt()); }
+static inline f32 lkDecay(f32 d) { return t60::dt() == 1.0f ? d : (f32)__builtin_pow((double)d, (double)t60::dt()); }
+static inline bool lkFrameEnd() { return t60::dt() == 1.0f || t60::tick30(); }
+/* the mode-start-once rule: the start-up block (`mCurModeTimer == 0`; the timer counts 30 Hz frames in dCamera_c::Run) runs once
+ * per mode start, on the first step that sees the timer at 0, not on every step of the mode's first frame (as
+ * followModeStart, d_camera_follow.cpp). The engine's own reset (attention flags 8 / 0x20: timer = 0 after the
+ * start-up block) is no start in the original (Run counts the frame before the next call sees the timer): the steps
+ * left in that frame are not starts either (lkSelfReset). Host memory, this unit, one camera; dt = 1: timer == 0. */
+static camera_key_t60::PerCam<uint32_t> s_lockonZeroStamp;
+static camera_key_t60::PerCam<bool> s_lockonInFirstFrame;
+static inline bool lockonModeStart(u32 timer) {
+    if (t60::dt() == 1.0f)
+        return timer == 0;
+    if (timer != 0) {
+        s_lockonInFirstFrame() = false;
+        return false;
+    }
+    uint32_t now = t60_step_counter();
+    bool start = !(s_lockonInFirstFrame() && s_lockonZeroStamp() + 1 == now);
+    s_lockonInFirstFrame() = !t60::tick30();
+    s_lockonZeroStamp() = now;
+    return start;
+}
+/* true60 (the first-step input rule hold form at the target's step; N4): the centre's
+ * target globe m3A8 (U / V / R toward the lock-on target's direction and the radius it sets) chases a goal made from
+ * the target's attention point. A target that runs at 30 Hz (not converted, or held at 30 Hz this frame) moves on the
+ * tick30 step only, before the camera's step there: on the frame's earlier steps the goal is last frame's, and the
+ * per-step chase spent N - 1 of its N steps on it (the radius, ratio 0.2 a frame, fell 2 behind at a hit reaction's
+ * attention jump and 6 behind while the knocked-back Bokoblin flew off; the original chases the frame's new goal for
+ * the whole frame). Such a target's globe is held on the earlier steps and chased once on the tick30 step with the
+ * frame's ratios; the centre still follows Link on every step (m390). A converted target moves on every step and keeps
+ * the per-step form. dt = 1: never stale. */
+static inline bool lkTargetStale(fopAc_ac_c* tg) {
+    if (t60::dt() == 1.0f || tg == nullptr)
+        return false;
+    return !t60_converted((s16)tg->mProcName.get()) || t60_held(tg->mBsPcId.get());
+}
+static inline void lkSelfReset() {
+    if (t60::dt() == 1.0f)
+        return;
+    s_lockonInFirstFrame() = !t60::tick30();
+    s_lockonZeroStamp() = t60_step_counter();
+}
 
 // HD: the side flip negates the angle difference, and hidden-player sway uses the target's
 // longitude and latitude. The boomerang distance is computed but unused. DefaultRadius's
@@ -38,7 +93,7 @@ bool dCamera_c::lockonCamera(s32 style) {
     f32 v3 = camParamVal(style, 3);
     f32 v4 = camParamVal(style, 4);
     u32 attn = gabi::ea(dComIfGp_getAttention()); /* dComIfGp_getAttention() */
-    if (mCurModeTimer == 0) {
+    if (lockonModeStart(mCurModeTimer)) {
         gabi::Local<cXyz> a, d;
         mStyleSettle0 = 1;
         mStyleSettle1 = 1;
@@ -90,6 +145,7 @@ bool dCamera_c::lockonCamera(s32 style) {
         mEventFlags = mEventFlags & ~0x100u;
         mCurStyleTimer = 0;
         mCurModeTimer = 0;
+        lkSelfReset();
     }
 
     gabi::Local<cSGlobe_l> targetDirection;
@@ -176,10 +232,12 @@ bool dCamera_c::lockonCamera(s32 style) {
         work->m388 = 59; /* 60, minus this frame */
         playerHidden = true;
     } else if (work->m388 != 0) {
-        s32 n = work->m388 - 1;
-        work->m388 = n;
-        if (n == 0 && !(mStickMainValueLast > 0.1f))
-            work->m388 = 1;
+        if (lkFrameEnd()) { /* true60: counts 30 Hz frames */
+            s32 n = work->m388 - 1;
+            work->m388 = n;
+            if (n == 0 && !(mStickMainValueLast > 0.1f))
+                work->m388 = 1;
+        }
         playerHidden = true;
     }
     f32 cRatio = 1.0f - __builtin_fabsf(mStickCPosYLast);
@@ -194,12 +252,12 @@ bool dCamera_c::lockonCamera(s32 style) {
         work->m3B8 = gabi::fmadds(b - b, setup.mCusCus.get(), b);
     } else if (mPlayerOnFloor == 0) {
         f32 b = work->m3B8;
-        work->m3B8 = gabi::fmadds(setup.mJumpCushion.get() - b, setup.mCusCus.get(),
+        work->m3B8 = gabi::fmadds(setup.mJumpCushion.get() - b, lkRatio(setup.mCusCus.get()),
                                   b); /* Cushion4Jump, CusCus */
     } else {
         f32 b = work->m3B8;
         work->m3B8 =
-            gabi::fmadds(setup.mBaseCushion.get() - b, setup.mCusCus.get(), b); /* Cushion4Base */
+            gabi::fmadds(setup.mBaseCushion.get() - b, lkRatio(setup.mCusCus.get()), b); /* Cushion4Base */
     }
     copyFloatBits(&work->m390.x, &playerAttention->x);
     copyFloatBits(&work->m390.z, &playerAttention->z);
@@ -208,7 +266,7 @@ bool dCamera_c::lockonCamera(s32 style) {
         if (playerHidden)
             h = h + 25.0f;
         f32 y = work->m390.y;
-        work->m390.y = gabi::fmadds((playerAttention->y + h) - y, work->m3B8, y);
+        work->m390.y = gabi::fmadds((playerAttention->y + h) - y, lkRatio(work->m3B8), y);
     }
     f32 R230 = targetDirection->mRadius;
     f64 d21 = (f64)R230 * 0.05;
@@ -229,32 +287,37 @@ bool dCamera_c::lockonCamera(s32 style) {
     {
         gabi::Local<cSAngle_l> a260, t36, t34, a264, a268, t48, t46, t44;
         cSAngle_ct(a260, &targetDirection->mU);
+        /* true60 (lkTargetStale): a 30 Hz target's globe: held on the earlier steps, the frame's chase on tick30 */
+        const bool stale = lkTargetStale(mpLockonTarget.get());
+        const bool frameChase = stale && t60::tick30();
+        auto gR = [&](f32 r) { return frameChase ? r : lkRatio(r); };
         f32 b4 = work->m3B4;
-        f32 nb4 = gabi::fmadds(v3 - b4, setup.mCusCus.get(), b4);
+        f32 nb4 = gabi::fmadds(v3 - b4, lkRatio(setup.mCusCus.get()), b4);
         f32 b0 = work->m3B0;
         work->m3B4 = nb4;
-        work->m3B0 = gabi::fmadds(v4 - b0, setup.mCusCus.get(), b0);
+        work->m3B0 = gabi::fmadds(v4 - b0, lkRatio(setup.mCusCus.get()), b0);
         lockon_angleSubtract(a260, t36, &work->m3A8.mU);
-        lockon_angleMultiply(t36, t34, work->m3B4);
+        lockon_angleMultiply(t36, t34, gR(work->m3B4));
         lockon_angleAdd(&work->m3A8.mU, a264, t34);
         cSAngle_ct(a268);
         f32 R0 = work->m3A8.mRadius;
         f32 newR;
         if (playerHidden) {
-            newR = R0 * 0.75f;
+            newR = R0 * (frameChase ? 0.75f : lkDecay(0.75f));
             lockon_angleSubtract(&targetDirection->mV, t48, &work->m3A8.mV);
-            lockon_angleMultiply(t48, t46, 0.05f);
+            lockon_angleMultiply(t48, t46, gR(0.05f));
             lockon_angleAdd(&work->m3A8.mV, t44, t46);
             lockon_angleVal(a268.get(), t44.get()); /* Val(const cSAngle&) */
         } else {
             f32 s = (f32)(d20 + d21);
-            newR = gabi::fmadds(gabi::fmsubs(s, work->m384, R0), work->m3B0, R0);
+            newR = gabi::fmadds(gabi::fmsubs(s, work->m384, R0), gR(work->m3B0), R0);
             lockon_angleSubtract(&targetDirection->mV, t48, &work->m3A8.mV);
-            lockon_angleMultiply(t48, t46, work->m3B4);
+            lockon_angleMultiply(t48, t46, gR(work->m3B4));
             lockon_angleAdd(&work->m3A8.mV, t44, t46);
             lockon_angleVal(a268.get(), t44.get());
         }
-        lockon_globeVal(&work->m3A8, newR, a268.get(), a264.get()); /* Val(f32, V, U) */
+        if (!stale || frameChase)
+            lockon_globeVal(&work->m3A8, newR, a268.get(), a264.get()); /* Val(f32, V, U) */
         gabi::Local<cXyz> x, c;
         lockon_globeXyz(&work->m3A8, x.get());
         cXyz_pl(&work->m390, c, x);
@@ -290,7 +353,7 @@ bool dCamera_c::lockonCamera(s32 style) {
         s16 inv = cSAngle_Inv(&targetDirection->mU);
         lockon_shortPlusAngle(t54.get(), inv, a278.get()); /* s16 + cSAngle */
         lockon_angleSubtract(t54, t52, viewLongitude);
-        lockon_angleMultiply(t52, t50, 0.05f);
+        lockon_angleMultiply(t52, t50, lkRatio(0.05f));
         lockon_angleAddAssign(viewLongitude, t50);
     } else {
         f32 k;
@@ -338,7 +401,17 @@ bool dCamera_c::lockonCamera(s32 style) {
         lockon_shortMinusAngle(t1c.get(), inv, &mViewCache.mDirection.mU);
         *longitudeError = (s16)*t1c;
         lockon_angleDegree(longitudeError.get()); /* Degree (unused) */
-        lockon_angleMultiply(longitudeError, t1c, k);
+        {
+            /* true60, the speed-ramp position-gap rule (2) (boomerang pair frame 115): the yaw chase of a
+             * moving lock-on target (the thrown boomerang) feeds the yaw the follow camera keeps after the release, so
+             * it takes the exact moving-target form: the target yaw moved ahead by camChaseLead(k) x the step's own
+             * move of it. No target, k outside (0, 1) or dt = 1: the original (lead 0). */
+            const s16 dT = camChaseAngleMove(s_lockonYawTarget(), inv);
+            const f32 lead = mpLockonTarget.get() != nullptr ? camChaseLead(k) : 0.0f;
+            if (lead != 0.0f && dT != 0)
+                *longitudeError = (s16)(u16)((u16)(s16)*longitudeError + (u16)(s16)(lead * (f32)dT));
+        }
+        lockon_angleMultiply(longitudeError, t1c, lkRatio(k));
         lockon_angleAddAssign(viewLongitude, t1c);
     }
 
@@ -350,10 +423,11 @@ bool dCamera_c::lockonCamera(s32 style) {
             f32 fr = (f32)n / (f32)chargeTimer;
             lockon_angleSubtract(chargeLat, t5a, viewLatitude);
             f32 b = lockon_rationalBezierRatio(fr, chargeBRatio);
-            lockon_angleMultiply(t5a, t58, b);
+            lockon_angleMultiply(t5a, t58, lkRatio(b));
             lockon_angleAddAssign(viewLatitude, t58);
             mEventFlags = mEventFlags | 0x4000000;
-            work->m380 = work->m380 + 1;
+            if (lkFrameEnd()) /* true60: counts 30 Hz frames */
+                work->m380 = work->m380 + 1;
         } else {
             *viewLatitude = (s16)*chargeLat;
         }
@@ -364,7 +438,7 @@ bool dCamera_c::lockonCamera(s32 style) {
         lockon_angleMultiply(&targetDirection->mV, t1e, 0.7f);
         *t30 = (s16)*t1e;
         lockon_angleAdd(t30, t5c, viewLatitude);
-        lockon_angleMultiply(t5c, t1e, 0.1f);
+        lockon_angleMultiply(t5c, t1e, lkRatio(0.1f));
         lockon_angleSubtractAssign(viewLatitude, t1e);
         radius280 = true;
     } else {
@@ -373,14 +447,19 @@ bool dCamera_c::lockonCamera(s32 style) {
             gabi::Local<cSAngle_l> t60, t5e;
             s16 lat = lockon_LockonLatitude(gabi::ea(mCamParam), ratio); /* LockonLatitude */
             lockon_shortMinusAngle(t60.get(), lat, viewLatitude.get());
-            lockon_angleMultiply(t60, t5e, 0.05f);
+            lockon_angleMultiply(t60, t5e, lkRatio(0.05f));
             lockon_angleAddAssign(viewLatitude, t5e);
         } else if (mPlayerOnFloor == 0 && !(dComIfGp_getPlayerStatus0(mPadId) & daPyStts0_UNK400_e)) {
             gabi::Local<cSAngle_l> t66, t64, t62;
             lockon_angleSubtract(&viewEyeDirection->mV, t66, viewLatitude);
-            lockon_angleMultiply(t66, t64, cRatio);
-            f32 c = lockon_angleCos(&mViewCache.mDirection.mV);
-            lockon_angleMultiply(t64, t62, __builtin_fabsf(c));
+            if (t60::dt() == 1.0f) {
+                lockon_angleMultiply(t66, t64, cRatio);
+                f32 c = lockon_angleCos(&mViewCache.mDirection.mV);
+                lockon_angleMultiply(t64, t62, __builtin_fabsf(c));
+            } else { /* true60: the frame's ratio cRatio x |cos| as one per-step ratio */
+                f32 c = lockon_angleCos(&mViewCache.mDirection.mV);
+                lockon_angleMultiply(t66, t62, lkRatio(cRatio * __builtin_fabsf(c)));
+            }
             lockon_angleAddAssign(viewLatitude, t62);
         } else {
             fopAc_ac_c* pl = mpPlayerActor.get();
@@ -401,13 +480,13 @@ bool dCamera_c::lockonCamera(s32 style) {
             }
             if (eq && mIsGanonKMap != 0) {
                 gabi::Local<cSAngle_l> t68;
-                lockon_angleMultiply(viewLatitude, t68, setup.m028.get());
+                lockon_angleMultiply(viewLatitude, t68, lkRatio(setup.m028.get()));
                 lockon_angleSubtractAssign(viewLatitude, t68);
             } else {
                 gabi::Local<cSAngle_l> t6c, t6a;
                 s16 lat = lockon_LockonLatitude(gabi::ea(mCamParam), ratio);
                 lockon_shortMinusAngle(t6c.get(), lat, viewLatitude.get());
-                lockon_angleMultiply(t6c, t6a, setup.m028.get());
+                lockon_angleMultiply(t6c, t6a, lkRatio(setup.m028.get()));
                 lockon_angleAddAssign(viewLatitude, t6a);
             }
             if (mpLockonTarget.get() != nullptr &&
@@ -441,12 +520,12 @@ bool dCamera_c::lockonCamera(s32 style) {
     }
     f32 newR;
     if (radius280) {
-        newR = gabi::fmadds(280.0f - R, 0.05f, R);
+        newR = gabi::fmadds(280.0f - R, lkRatio(0.05f), R);
     } else {
         gabi::Local<be<f32>> r70;
         copyFloatBits(r70.get(), &viewEyeDirection->mRadius);
         if (!lockon_DefaultRadius(gabi::ea(mCamParam), r70.get())) { /* DefaultRadius */
-            newR = gabi::fmadds(*r70 - R, 0.05f, R);
+            newR = gabi::fmadds(*r70 - R, lkRatio(0.05f), R);
         } else {
             newR = *r70;
         }
@@ -460,7 +539,7 @@ bool dCamera_c::lockonCamera(s32 style) {
     f32 cur = mViewCache.mFovy;
     f32 m028 = setup.m028.get();
     mEventFlags = mEventFlags | 0x2000;
-    mViewCache.mFovy = gabi::fmadds(fv - cur, m028, cur);
+    mViewCache.mFovy = gabi::fmadds(fv - cur, lkRatio(m028), cur);
     return true;
 }
 

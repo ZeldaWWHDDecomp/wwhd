@@ -1,6 +1,7 @@
 /** Bomb-breakable boulder blocking Medli's path. WWHD behaviour verified against the original;
  * GameCube names and structure from zeldaret/tww. */
 #include "d/actor/d_a_obj_eskban.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 const gc_tu_data gc_tu = {
     .safeString = 0x10027EF0,
@@ -225,6 +226,12 @@ void Act_c::daObjEskban_effect_set() {
 
 /* 0233CD6C */
 BOOL Act_c::Execute(Mtx34** pMtx) {
+    t60w::Guard<daObjEskban::Act_c> t60g(this, t60objw::Logic<daObjEskban::Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) { /* true60: a step before the tick30 step: the picture only (frame interpolation); the background stays: the
+                      * wrapper gets the actor's own mBgMtx (M_tmp_mtx is a static shared by the Eskban blocks) */
+        *reinterpret_cast<be<u32>*>(pMtx) = gabi::ea(&mBgMtx);
+        return TRUE;
+    }
     dComIfG_Ccsp_Set(&mCheckCyl);
     dComIfG_Ccsp_Set(&mCameraCyl);
     dComIfG_Ccsp_Set(&mCheckSph);
@@ -334,6 +341,7 @@ BOOL Act_c::Execute(Mtx34** pMtx) {
         }
         break;
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     // HD: the output is a four-byte guest pointer, even in the host harness.
     *reinterpret_cast<be<u32>*>(pMtx) = gabi::ea(&M_tmp_mtx);

@@ -10,6 +10,7 @@
 #include <cmath>
 
 #include "d/actor/d_a_kita.h"
+#include "d/actor/d_a_kita_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 // HD: GHS emits these inline-class vtables once per translation unit.
 const gc_tu_data gc_tu = {
@@ -52,6 +53,9 @@ static u32 utiwa_sph_src[16] = {
 
 /* 0219DBFC */
 static void ride_call_back(dBgW* bgw, fopAc_ac_c* i_ac, fopAc_ac_c* i_pt) {
+    if (kita_t60::cbSkip()) /* true60: a callback on each of the rider's steps: only the tick30 step's call counts */
+        return;
+    const f32 t60Prev = kita_t60::cbBegin(); /* true60: that call at dt 1 (A's once-a-frame chase steps; kitP1_2) */
     kita_class* pActor = static_cast<kita_class*>(i_ac);
 
     if (!pActor->mMode || (pActor->mOnWater != 0)) {
@@ -60,7 +64,8 @@ static void ride_call_back(dBgW* bgw, fopAc_ac_c* i_ac, fopAc_ac_c* i_pt) {
         cXyz_mi(&i_pt->current.pos, tmp, &pActor->current.pos);
         delta_pos->copy(*tmp);
         MtxPosition(delta_pos, local_44);
-        cXyz_mi(&i_pt->old.pos, tmp, &pActor->current.pos);
+        gabi::Local<cXyz> t60Old; /* true60 (process-order read): the rider's old.pos as A reads it (kita_t60::riderOld) */
+        cXyz_mi(kita_t60::riderOld(i_pt, t60Old.get()), tmp, &pActor->current.pos);
         delta_pos->copy(*tmp);
         MtxPosition(delta_pos, local_50);
         if (i_pt != nullptr && fpcM_GetName(i_pt) == fpcNm_PLAYER_e) {
@@ -92,11 +97,13 @@ static void ride_call_back(dBgW* bgw, fopAc_ac_c* i_ac, fopAc_ac_c* i_pt) {
         }
         cLib_addCalc2(&pActor->mPosRel.y, REG0_F(2) + -100.0f, 0.1f, REG0_F(3) + 10.0f);
     }
+    kita_t60::cbEnd(t60Prev);
 }
 
 /* 0219DEF8 */
 static BOOL daKita_Draw(kita_class* i_this) {
-    settingTevStruct(dKy_getEnvlight(), TEV_TYPE_BG0, &i_this->current.pos, &i_this->tevStr);
+    if (kita_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+        settingTevStruct(dKy_getEnvlight(), TEV_TYPE_BG0, &i_this->current.pos, &i_this->tevStr);
     setLightTevColorType(dKy_getEnvlight(), i_this->mModel, &i_this->tevStr);
     dComIfGd_setListBG();
     mDoExt_modelUpdateDL(i_this->mModel);
@@ -315,6 +322,10 @@ static inline void kita_move_fall(kita_class* i_this, fopAc_ac_c* player_actor) 
 
 /* 0219DF90 */
 static BOOL daKita_Execute(kita_class* i_this) {
+    /* true60: the whole frame on the tick30 step (end at every return; d_a_kita_t60.h) */
+    t60w::Guard<kita_class> t60g(i_this, kita_t60::ops());
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     fopAc_ac_c* actor = i_this;
     dComIfGp_get(); /* HD: result unused */
 
@@ -345,6 +356,7 @@ static BOOL daKita_Execute(kita_class* i_this) {
     cMtx_XrotM(calc_mtx(), actor->shape_angle.x);
     cMtx_ZrotM(calc_mtx(), actor->shape_angle.z);
     J3DModel_setBaseTRMtx(i_this->mModel, calc_mtx());
+    t60g.model = true; /* true60: the frame reached its model step */
 
     gabi::Local<cXyz> local48;
     for (int i = 0; i < 4; i++) {
@@ -536,8 +548,10 @@ static cPhs_State daKita_Create(fopAc_ac_c* a_this) {
         i_this->mSph.Set(reinterpret_cast<dCcD_SrcSph*>(utiwa_sph_src));
         i_this->mSph.SetStts(&i_this->mStts);
 
+        const f32 t60Prev = kita_t60::cbBegin(); /* true60: create's runs of the execute, the original at dt 1 */
         for (int i = 0; i < 2; i++)
             daKita_Execute(i_this);
+        kita_t60::cbEnd(t60Prev);
     }
 
     return ret;

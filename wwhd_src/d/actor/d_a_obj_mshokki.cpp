@@ -1,5 +1,6 @@
 /* Forsaken Fortress dishes, derived from the WWHD disassembly. */
 #include "d/actor/d_a_obj_mshokki.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 enum { AT_TYPE_WIND = 0x200000 };
 static MshIntTable bdl_idx;
 static MshIntTable se_flag;
@@ -186,6 +187,9 @@ bool daObjMshokki_c::checkCollision() {
 }
 /* 0237D89C */
 bool daObjMshokki_c::_execute() {
+    t60w::Guard<daObjMshokki_c> t60g(this, t60objw::Logic<daObjMshokki_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
     fopAcM_posMoveF(this, &mStts.m_cc_move);
     auto *p = mshPlay();
     mAcch.CrrPos(&p->mBgS);
@@ -211,6 +215,7 @@ bool daObjMshokki_c::_execute() {
             mGroundTouched = 1;
         mStts.Move();
         if (!checkCollision()) {
+            t60g.model = true; /* true60: the frame reached its model step */
             set_mtx();
             mshMoveCTg(&mCyl, &current.pos);
             mStts.mRoomId = (u8)(s8)current.roomNo;

@@ -1,0 +1,10 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_player_main_01.txt
+# ---- (2026-11-16: new animations play order as in the original): animeUpdate 023DD054 (the frame
+# controls' play; the latch skip needs a set made earlier in the same frame, which a single-function N-step spec does not make:
+# this checks the play itself at N 2 / 4 = the 30 Hz play) and setFrameCtrl 023DE788 (the frame control's fields exact;
+# the latch mark is host state); setActAnimeUpper 023DE7E8 / setSingleMoveAnime 023E0A04 (they mark the latch)
+t60conv 023DD054 023DE788 023DE7E8 023E0A04
+# (candidate lint): in-unit callees with true60 code run as candidates
+real 023E0660
+t60cand 023E0660

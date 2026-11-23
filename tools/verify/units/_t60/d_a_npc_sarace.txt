@@ -1,0 +1,8 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_npc_sarace.txt
+# ---- true60 N-step spec (2026-11-20; the whole-frame form rule NPC form, d/t60_npc.h): Loot the sailor (Boating Course NPC): actions, event cuts, mover, BG, collision (whole-frame form NPC form, d/t60_npc.h).
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 022DCA94
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200E240 020198D8 02055B64 0207A9A0 0211D2F8 022DC154 022DC7E8 022DC8AC 022DCA3C 024EEEB8 024EF130 024F08A8 025200D4 0259E08C 0259F858 025A15AC 025D6870 025D76A8 025D77DC 025E535C 025E55A0 025E742C 025F1C28 027F4D5C

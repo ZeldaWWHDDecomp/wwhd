@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_shutter2.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 const gc_tu_data gc_tu = {
     .safeString = 0x1003CB3C,
@@ -87,7 +88,14 @@ void daShutter2_c::set_mtx() {
 
 /* 02485674 */
 BOOL daShutter2_c::Execute(Mtx34** pMtx) {
+    t60w::Guard<daShutter2_c> t60g(this, t60objw::Logic<daShutter2_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) { /* true60: a step before the tick30 step: the picture only (frame interpolation); the background stays: the
+                      * wrapper gets the actor's own mMtx, as on the tick30 step */
+        *reinterpret_cast<gptr<Mtx34>*>(pMtx) = &mMtx; // HD: guest pointer representation.
+        return TRUE;
+    }
     demo();
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     mbIsSwitch = fopAcM_isSwitch(this, mSwitchNo);
     mbIsNearEnemy = fopAcM_myRoomSearchEnemy(fopAcM_GetRoomNo(this)) == nullptr;

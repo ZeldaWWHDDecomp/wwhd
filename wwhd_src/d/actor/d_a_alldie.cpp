@@ -8,6 +8,7 @@
  */
 #include "d/actor/d_a_alldie.h"
 #include "gc_api/f_op/f_op_actor_mng.h"
+#include "d/actor/d_a_alldie_t60.h" /* true60 (t60conv): step helpers */
 
 /* 02048460 */
 u8 daAlldie_c::getSwbit() {
@@ -38,6 +39,7 @@ BOOL daAlldie_c::actionTimer() {
 
 /* 02048500 */
 BOOL daAlldie_c::execute() {
+    if (!t60c::end()) return TRUE; /* true60 (the shared-world-state rule): the frame's logic on shared world state (switches / events / other actors) on the tick30 step at the line place */
     switch (mAction) {
     case ACT_CHECK:
         actionCheck();

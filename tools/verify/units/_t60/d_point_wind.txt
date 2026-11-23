@@ -1,0 +1,27 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_point_wind.txt
+# ---- (2026-11-18): dPointWind_c::set_pwind_move 025AB454 on every step (its
+# converted caller wind_tag 0x187 runs it per step). The point's chase toward the capsule end runs per step through the
+# central converted cLib_addCalc (candidate c_lib: dt share, the frame's full answer pinned on the tick30 step); the
+# restart at the start point (distance to the end below the radius) is taken on the tick30 step only, on the frame's
+# moved position. Checked: N steps against the one step, bytes exact (the chase lands on the one step's value on the
+# tick30 step, so the restart test reads the same distance). The distance (PSVECSquareDistance, the square root) runs
+# real, so the test reads the moved point.
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200ECD4 028E8DE8 028F4384
+t60cand 0200ECD4
+t60conv 025AB454
+# Domain 1 (this file): the restart. The capsule end at the origin, radius 10 (chase limits 18 / 9 a frame), the point
+# within 5 of the end on each axis (|p| <= 8.7 < 18: the restart is due whatever the steps move) and the capsule start
+# far off (500..900 on each axis): the result is the capsule start on both sides, bytes exact (no t60tol line). An
+# earlier-step restart (the per-step test) leaves the later steps' chase from the start: a difference.
+field 025AB454 52000000 f32 500 900
+field 025AB454 52000004 f32 500 900
+field 025AB454 52000008 f32 500 900
+field 025AB454 5200000C f32 0 0
+field 025AB454 52000010 f32 0 0
+field 025AB454 52000014 f32 0 0
+field 025AB454 52000018 f32 10 10
+field 025AB454 51000004 f32 -5 5
+field 025AB454 51000008 f32 -5 5
+field 025AB454 5100000C f32 -5 5

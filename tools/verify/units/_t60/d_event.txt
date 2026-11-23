@@ -1,0 +1,7 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_event.txt
+# ---- (2026-11-18): dEvt_control_c::order 0253EC0C called by a converted caller on every step of a
+# frame with the same request (d_event_order_t60.h): the later steps' repeats answer 1 and write nothing, so the N
+# steps' net effect on the queue (entries, links, count) equals the one step. The step counter advances per step and
+# the frame tag (g_Counter.mCounter0) is the input's own, as in the game.
+t60conv 0253EC0C

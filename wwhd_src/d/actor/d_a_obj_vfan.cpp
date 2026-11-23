@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_obj_vfan.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 const gc_tu_data gc_tu = {
     .safeString = 0x10032A60,
@@ -121,6 +122,12 @@ void Act_c::ParticleSet() {
 
 /* 023B0CB8 */
 BOOL Act_c::Execute(Mtx34** mtx) {
+    t60w::Guard<Act_c> t60g(this, t60objw::Logic<Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) { /* true60: a step before the tick30 step: the picture only (frame interpolation); the background stays: the
+                      * wrapper gets the actor's own mBgMtx (M_tmp_mtx is a static shared by all Vfans) */
+        *reinterpret_cast<gptr<Mtx34>*>(mtx) = &mBgMtx;
+        return TRUE;
+    }
     switch ((u32)mState) {
     case 0:
         dComIfG_Ccsp_Set(&mCyl);
@@ -163,6 +170,7 @@ BOOL Act_c::Execute(Mtx34** mtx) {
         break;
     }
 
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     *reinterpret_cast<gptr<Mtx34>*>(mtx) = &M_tmp_mtx; // HD: guest pointer representation.
     return TRUE;

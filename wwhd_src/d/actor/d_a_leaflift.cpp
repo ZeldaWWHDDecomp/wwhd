@@ -1,5 +1,6 @@
 /* Forest Haven lilypad lift. */
 #include "d/actor/d_a_leaflift.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 // HD: keep the linkage area clear for the nonleaf guest callees used by this actor.
 template <class T> struct ProtectedLocal {
     struct Frame {
@@ -309,6 +310,9 @@ void daLlift_c::emitterCtrl() {
 }
 /* 021B3D04 */
 s32 daLlift_c::_execute() {
+    t60w::Guard<daLlift_c> t60g(this, t60objw::Logic<daLlift_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return 1;
     f32 distance = fopAcM_searchActorDistanceXZ(this, dComIfGp_getPlayer(0));
     s16 life = s16(s16(mActorLifetimeFrameCount) + 1);
     u8 timer = mStartDelay, ridden = mbPlayerRiding;
@@ -330,6 +334,7 @@ s32 daLlift_c::_execute() {
     colorEmitter(&mEmitter4, color.get());
     colorEmitter(&mEmitter1, color.get());
     MoveDownLift();
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     setMoveBGMtx();
     J3DModel* model = mpModel;
@@ -390,6 +395,9 @@ s32 daLlift_c::checkEndDownLift() {
 }
 /* 021B3028 */
 static void rideCallBack(dBgW* bg, daLlift_c* a, fopAc_ac_c* other) {
+    if (t60objw::cbSkip()) /* true60: a rider's tilt counts once a frame, on the tick30 step */
+        return;
+    const f32 t60Prev = t60_set_dt(1.0f); /* true60: the counted call at dt 1, as plain calls (no scope object under the glue): A's once-a-frame eases (cLib) take the whole frame, not the rider's 1/N (kita cbBegin; half-ease audit, 2026-11-21) */
 
     ProtectedLocal<cXyz> offset, cross;
     *offset = other->current.pos - a->current.pos;
@@ -418,7 +426,7 @@ static void rideCallBack(dBgW* bg, daLlift_c* a, fopAc_ac_c* other) {
         // HD: round the square root to f32 at this callsite.
         f32 length = sqrtf_guest(sq);
         if (!normalizeRS(offset.get()))
-            return;
+            { t60_set_dt(t60Prev); return; }
         s16 target = s16(gabi::ftoi(-(length * factor)));
         cLib_addCalcAngleS2(&a->mTiltAngle, target, 8, 0x200);
         f32 tilt = cM_ssin(a->mTiltAngle);
@@ -428,6 +436,7 @@ static void rideCallBack(dBgW* bg, daLlift_c* a, fopAc_ac_c* other) {
         a->mTargetRotation.w = cM_scos(a->mTiltAngle);
     }
     a->mbRiseWobble = 0;
+    t60_set_dt(t60Prev);
 }
 /* 021B3380 */
 static s32 nodeCallBack(J3DNode* node, s32 timing) {

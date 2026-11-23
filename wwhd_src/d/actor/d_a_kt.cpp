@@ -1,5 +1,6 @@
 /** Unused small bird. Tww names and structured motion, preserving verified HD behavior. */
 #include "d/actor/d_a_kt.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 const gc_tu_data gc_tu = {
     .safeString = 0x100137DC,
     .gndChk = {0x10013804, 0x10013814, 0x10013834, 0x10013824},
@@ -44,6 +45,9 @@ static inline void kt_reset(kt_class* i_this) {
 
 /* 021AB148 */
 static BOOL daKt_Execute(kt_class* i_this) {
+    t60w::Guard<kt_class> t60g(i_this, t60npc::Logic<kt_class>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     i_this->mWingTimer = i_this->mWingTimer + REG0_S(0) + 0x5e76;
     for (s32 i = 0; i < 3; i++)
         if (i_this->mTimer[i] != 0)
@@ -315,6 +319,7 @@ static BOOL daKt_Execute(kt_class* i_this) {
     } else {
         i_this->mWingScale = 100.0f;
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 

@@ -1,0 +1,6 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_dmgroom.txt
+# ---- true60 N-step spec (2026-11-18): the damaged-room object's execute daObjDmgroom_Execute
+# 02334A38 sets its brk frame from the demo actor (the event's frame: events run at N 1) and set_mtx from the unchanged
+# position, on every step unchanged: no site to convert. N-step spec shows the N steps leave the same memory as the one step.
+t60conv 02334A38

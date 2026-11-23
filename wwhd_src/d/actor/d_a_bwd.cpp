@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_bwd.h"
+#include "d/actor/d_a_bwd_t60.h" /* true60 (*): the draw's logic-side stores on the tick30 step (rule 14) */
 #include "gc_api/d/d_com_inf_game.h"
 
 void bwdEnableBlur();
@@ -132,13 +133,15 @@ static BOOL daBwd_Draw(bwd_class* i_this) {
             mDoGph_setBlureRate((u8)i_this->mBlurRate);
             mDoGph_onBlure();
         } else {
-            i_this->mBlurRate = 0;
+            if (bwd_t60::drawStep()) /* true60: the logic store on the tick30 step's draw only (rule 14) */
+                i_this->mBlurRate = 0;
             mDoGph_offBlure();
         }
     }
 
     J3DModel* model = i_this->mpHeadMorf->getModel();
-    settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &actor->current.pos, &actor->tevStr);
+    if (bwd_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+        settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &actor->current.pos, &actor->tevStr);
     setLightTevColorType(dKy_getEnvlight(), model, &actor->tevStr);
     mDoExt_brkAnm* brk = i_this->mpHeadBrkAnm;
     mDoExt_brkAnm_entry(brk, J3DModel_getModelData(model), brk->getFrame());
@@ -170,7 +173,8 @@ static BOOL daBwd_Draw(bwd_class* i_this) {
         local_18->x = 0.0f;
         local_18->z = 0.0f;
         local_18->y = 0.0f;
-        settingTevStruct(dKy_getEnvlight(), TEV_TYPE_BG0, local_18.get(), &i_this->mPlatformTevStr);
+        if (bwd_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+            settingTevStruct(dKy_getEnvlight(), TEV_TYPE_BG0, local_18.get(), &i_this->mPlatformTevStr);
         if (i_this->mPlatformHidden == 0) {
             dComIfGd_setListBG();
             dScnKy_env_light_c* env = dKy_getEnvlight();

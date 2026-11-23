@@ -1,0 +1,3 @@
+# true60 (tools/t60conv 2026-11-17): no N-step spec for this unit: no function of its execute path runs at N > 1
+# (event-only or per-event functions; see the tool report). Do not run it with -t60steps.
+include d_a_kytag06.txt

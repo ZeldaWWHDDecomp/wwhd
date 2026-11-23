@@ -1,5 +1,6 @@
 /* Ring-shaped fire wall. */
 #include "d/actor/d_a_obj_firewall.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 const gc_tu_data gc_tu = {.safeString = 0x10028A4C};
 // HD: typed views for fields absent from the shared emitter and shape API.
 struct FirewallEmitter {
@@ -465,6 +466,9 @@ void daObjFirewall_c::setPointLight() {
 }
 /* 023420EC */
 BOOL daObjFirewall_c::_execute() {
+    t60w::Guard<daObjFirewall_c> t60g(this, t60objw::Logic<daObjFirewall_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     dBgW *bg = mpBgW;
     if (bg && bg->ChkUsed())
         bg->Move();

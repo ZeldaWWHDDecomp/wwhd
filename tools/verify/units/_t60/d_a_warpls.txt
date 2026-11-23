@@ -1,0 +1,8 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_warpls.txt
+# ---- true60 N-step spec (2026-11-22; the whole-frame form rule + addendum, d/t60_objw.h): the warp light (Ywarp00 / Ysdls00)'s execute
+# 024DCBC8. The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 024DCBC8
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0201ADE0 024DBDB0 024DC5C4 024DC660 024DC730 024DC880 024DC9D4 024DCB70 02520540 02543714 0254407C 025440C8 02587EFC 025BA0C0 025D7A58 025E1A40 025E742C 028E8DD0 028F4384

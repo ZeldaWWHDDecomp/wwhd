@@ -4,6 +4,7 @@
 #include "gc_api/gc_api.h"
 #include "d/actor/d_a_bwdg.h"
 #include "d/actor/d_a_bwd.h"
+#include "d/actor/d_a_bwdg_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule), the draw's light state */
 
 const gc_tu_data gc_tu = {.safeString = 0x1000C114, .headerStatics = {0x10462C08, 0x101B3820, 0}};
 
@@ -160,7 +161,8 @@ void daBwdg_packet_c::draw(void* ctx) {
 
 /* 02103F14 */
 static BOOL daBwdg_Draw(bwdg_class* i_this) {
-    settingTevStruct(dKy_getEnvlight(), TEV_TYPE_BG0_FULL, &i_this->current.pos, &i_this->tevStr);
+    if (bwdg_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+        settingTevStruct(dKy_getEnvlight(), TEV_TYPE_BG0_FULL, &i_this->current.pos, &i_this->tevStr);
     MtxTrans(0.0f, 10.0f, 0.0f, 0);
     PSMTXCopy(calc_mtx(), &i_this->mBwdgPacket.mMtx);
     i_this->mBwdgPacket.mpTevStr = &i_this->tevStr;
@@ -251,6 +253,11 @@ static void* boss_a_d_sub(void* param_1, void* param_2) {
 
 /* 021043EC */
 static BOOL daBwdg_Execute(bwdg_class* i_this) {
+    /* true60: the whole frame on the tick30 step (the whole-frame form rule; end at the return; no model of its own: the
+     * sand is a packet drawn from the background's vertices) */
+    t60w::Guard<bwdg_class> t60g(i_this, bwdg_t60::ops());
+    if (t60g.skip) /* a step before the tick30 step: no logic */
+        return TRUE;
     cXyz* posVtx = i_this->getPos();
     if (boss == nullptr) {
         void* b = bwdgSearchActors(boss_a_d_sub, i_this);

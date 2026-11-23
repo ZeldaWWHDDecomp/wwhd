@@ -2,6 +2,8 @@
  * WWHD functions are verified against the original.
  */
 #include "d/actor/d_a_obj_ajav.h"
+#include "d/t60_draw.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 const gc_tu_data gc_tu = {.safeString = 0x100247C0,
                           .headerStatics = {0x10468F20, 0x101C7A64, 0x10468F2C}};
 
@@ -366,6 +368,8 @@ void daObjAjav::Part_c::draw_flashing(daObjAjav::Act_c* i_actor) {
 /* 02313E0C */
 void daObjAjav::Part_c::draw_flashing_normal(daObjAjav::Act_c* i_actor) {
     draw_flashing(i_actor);
+    if (!t60_draw_frame_pass()) /* true60 (t60_draw.h): the flash counts 30 Hz frames (mTimer is also the fall timer) */
+        return;
     u16 timer = (u16)((u16)mTimer + 1), trigger = mTimerTrigger;
     mTimer = timer;
     if (timer == trigger)
@@ -665,6 +669,9 @@ void daObjAjav::Act_c::set_hamon(f32 i_scale) {
 
 /* 023151CC */
 BOOL daObjAjav::Act_c::_execute() {
+    t60w::Guard<daObjAjav::Act_c> t60g(this, t60objw::Logic<daObjAjav::Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     // HD: write the initialization flag before filling the static positions.
     if (!(u32)l_flawPosInitialized) {
         l_flawPosInitialized = 1;
@@ -835,6 +842,7 @@ BOOL daObjAjav::Act_c::_execute() {
             ajavCollisionSet(space, &mHintCyls[i]);
         }
     }
+    t60g.model = true; /* true60: the frame reached its model step (the parts' exe procs set their matrices) */
     for (u32 i = 0; i < PART_COUNT; ++i) {
         daObjAjav::Part_c* part = partAt(this, i);
         (part->*part->mExeProc)(this);

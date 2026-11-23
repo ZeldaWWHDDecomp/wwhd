@@ -8,6 +8,7 @@
  */
 #include "d/actor/d_a_saku.h"
 #include <cmath>
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 static const SakuTUData saku_tu = {
     .mCylinderBaseVtable = 0x100015A8,
@@ -752,6 +753,9 @@ s32 daSaku_Draw(daSaku_c* actor) {
 
 /* 02465310 */
 s32 daSaku_Execute(daSaku_c* actor) {
+    t60w::Guard<daSaku_c> t60g(actor, t60objw::Logic<daSaku_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return 1;
     for (s32 half = 0; half < 2; ++half) {
         s32 timer = actor->mParticleTimers[half];
         if (timer != 0 && timer < SAKU_MAX_PARTICLE_TIMER) actor->mParticleTimers[half] = s32(u32(timer) + 1);
@@ -768,6 +772,7 @@ s32 daSaku_Execute(daSaku_c* actor) {
         }
     }
     for (s32 half = 0; half < 2; ++half) actor->changeCollision(half);
+    t60g.model = true; /* true60: the frame reached its model step */
     actor->setMtx();
     actor->checkCol();
     return 1;

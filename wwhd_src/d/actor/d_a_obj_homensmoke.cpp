@@ -1,5 +1,6 @@
 /** Destroyed Wind Temple wall smoke/rubble. Local only. */
 #include "d/actor/d_a_obj_homensmoke.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 namespace daObjHomensmoke {
 static CullBoxes culling_dat;
 static RateTable rate_table;
@@ -61,6 +62,9 @@ bool Act_c::_delete() {
 
 /* 0235A004 */
 bool Act_c::_execute() {
+    t60w::Guard<Act_c> t60g(this, t60objw::Logic<Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
     if (!mbInitialized) {
         // HD: preserve first-use guard and component store ordering.
         if (!norse_guardL) {
@@ -114,6 +118,7 @@ bool Act_c::_execute() {
     } else if (mSmokeCb.mFlag & 1) { /* mSmokeCb.isEnd() */
         fopAcM_delete(this);
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     return true;
 }
 

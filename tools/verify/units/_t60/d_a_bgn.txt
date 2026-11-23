@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_bgn.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule, the Magtail's / Helmaroc's form;
+# d_a_bgn_t60.h): Puppet Ganon (phase 1 and the fight's controller): daBgn_Execute 0207E7B4 in the whole form (move /
+# action, the parts and strings, the cut scenes and the keese once per frame). The tick30 step runs the original
+# execute whole at dt 1 from the frame start; the earlier steps change no state (the picture between steps comes from
+# frame interpolation): net effect = the one step's, byte exact. Negative control (T60C_NEGCTRL: the execute on every step at dt)
+# must fail.
+t60conv 0207E7B4
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200ED84 0200EDC8 0200F428 0200FCD8 020195B0 020198D8 02019918 0207D008 0208857C 02514F2C 02514F38 02514FE8 02515280 025200D4 0252012C 02520540 02555D0C 025626A4 0259169C 025CB374 025D5834 025D58B4 025D7B24 025DE508 025E18EC 025E19CC 025E1A40 025E1A7C 025F1884 025F18EC 025F1C28 027EC9E8 028F4384

@@ -12,6 +12,7 @@
  * named yet: their methods use named bindings and explicit private layouts.
  */
 #include "d/actor/d_a_sail.h"
+#include "d/actor/d_a_sail_t60.h" /* true60: the step-length helpers */
 
 namespace sail_tu {
 inline constexpr u32 safeStringVtable = 0x100393F4u;
@@ -31,6 +32,12 @@ inline constexpr u32 projectionData = 0x104B470Cu;
 #include "assets/l_pos__d_a_sail.h"
 #include "assets/l_texCoord__d_a_sail.h"
 #include "assets/l_sail_idx__d_a_sail.h"
+/* true60 (d_a_sail_t60.h; host memory): the wobble draw held for a frame's steps, the wobble and wave
+ * phases' carried fractions */
+static Sail60Rnd s_sail60Rnd;
+static Sail60Add s_sail60Wobble;
+static Sail60FCarry s_sail60Wave;
+static Sail60Furl s_sail60Furl; /* true60: sail_move's furl branch / speed, once per frame */
 static u32 l_vertexAttributes[3] = {0, 12, 24};
 
 /* daObjPirateship::Act_c members read here */
@@ -332,8 +339,8 @@ static BOOL daSail_Draw(sail_class* i_this) {
 
 /* 0245FFC8 */
 void daSail_packet_c::setCorrectNrmAngle(s16 param_0, f32 param_1) {
-    s32 rnd = gabi::ftoi(cM_rndF(200.0f));
-    mNrmWobblePhase = (s16)(mNrmWobblePhase + (rnd + 900));
+    s32 rnd = sail60_wobbleRnd(s_sail60Rnd, this);
+    mNrmWobblePhase = (s16)(mNrmWobblePhase + sail60_wobbleAdd(s_sail60Wobble, this, rnd + 900));
 
     mNrmAngle = (s16)gabi::ftoi(300.0f * cM_ssin(mNrmWobblePhase));
 
@@ -466,21 +473,28 @@ void daSail_packet_c::setNrmVtx(cXyz* param_0, int param_1, int param_2) {
 /* 02460678 */
 static void sail_move(sail_class* i_this) {
     cXyz* windVec = sail_dKyw_get_wind_vec();
-    if (l_HIO().mUnfurl == 0) {
-        if (i_this->mFurl < 0.6f) {
+    /* true60: the branch (1 furl, 2 furled, 3 unfurl, 4 neither) and the speed update once per frame (sail60_furlFrame) */
+    s32 furlBranch = l_HIO().mUnfurl == 0 ? (i_this->mFurl < 0.6f ? 1 : 2)
+                                          : (l_HIO().mUnfurl == 1 && i_this->mFurl > 0.0f ? 3 : 4);
+    const bool furlSpeedStep = sail60_furlFrame(s_sail60Furl, i_this, &furlBranch, i_this->mFurl);
+    if (furlBranch == 1) {
+        if (furlSpeedStep) {
             if (!(i_this->mFurlSpeed > 0.0f)) {
                 i_this->mFurlSpeed = 0.015f;
             } else {
                 i_this->mFurlSpeed = i_this->mFurlSpeed - 0.001f;
             }
-            cLib_addCalc(&i_this->mFurl, 0.6f, 0.1f, i_this->mFurlSpeed, 0.01f);
-        } else {
-            i_this->mFurlSpeed = 0.0f;
         }
-    } else if (l_HIO().mUnfurl == 1 && i_this->mFurl > 0.0f) {
-        i_this->mFurlSpeed = i_this->mFurlSpeed + 0.0075f;
+        const f32 furl60 = sail60_furlFull(s_sail60Furl, &i_this->mFurl); /* true60: the tick30 step: the original frame */
+        cLib_addCalc(&i_this->mFurl, 0.6f, 0.1f, i_this->mFurlSpeed, 0.01f);
+        sail60_furlFullEnd(furl60);
+    } else if (furlBranch == 3) {
+        if (furlSpeedStep)
+            i_this->mFurlSpeed = i_this->mFurlSpeed + 0.0075f;
+        const f32 furl60 = sail60_furlFull(s_sail60Furl, &i_this->mFurl); /* true60: the tick30 step: the original frame */
         cLib_addCalc(&i_this->mFurl, 0.0f, 0.3f, i_this->mFurlSpeed, 0.01f);
-    } else {
+        sail60_furlFullEnd(furl60);
+    } else if (furlSpeedStep) {
         i_this->mFurlSpeed = 0.0f;
     }
 
@@ -590,8 +604,7 @@ static void sail_move(sail_class* i_this) {
             }
         }
 
-        i_this->mWavePhase =
-            gabi::ftoi(gabi::fmadds((f32)tmp, gabi::fmadds(0.85f, f25, 0.15f), (f32)(s32)i_this->mWavePhase));
+        i_this->mWavePhase = sail60_wavePhase(s_sail60Wave, i_this, tmp, gabi::fmadds(0.85f, f25, 0.15f), (s32)i_this->mWavePhase);
         i_this->mWaveColStep = (s16)gabi::ftoi(7500.0f * gabi::fmadds(1.5f, f0, 1.0f));
         i_this->mWaveRowStep = (s16)gabi::ftoi(7200.0f * gabi::fmadds(0.95f, f25, 0.05f));
 

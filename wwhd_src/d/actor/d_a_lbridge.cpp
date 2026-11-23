@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_lbridge.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 const gc_tu_data gc_tu = {.safeString = 0x10013D9C};
 static LbridgeText m_arcname;
 static LbridgeText sourceName;
@@ -151,6 +152,9 @@ void daLbridge_c::setMoveBGMtx() {
 
 /* 021B2E90 */
 bool daLbridge_c::_execute() {
+    t60w::Guard<daLbridge_c> t60g(this, t60objw::Logic<daLbridge_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     bool isSw = fopAcM_isSwitch(this, mSwitchNo) != 0;
 
     sw_check();
@@ -161,6 +165,7 @@ bool daLbridge_c::_execute() {
     set_mtx();
 
     mIsSw = isSw;
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 

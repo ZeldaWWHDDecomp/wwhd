@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_fallrock.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 // HD: GHS per-unit constructor and destructor vtables.
 const gc_tu_data gc_tu = {
     .safeString = 0x1000E6BC,
@@ -111,6 +112,9 @@ void daFallRock_c::setParticle(int param_1, cXyz *pos) {
 // HD: daFallRock_c::execute() inlined
 /* 02131520 */
 static BOOL daFallRock_Execute(daFallRock_c *i_this) {
+    t60w::Guard<daFallRock_c> t60g(i_this, t60objw::Logic<daFallRock_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     BOOL deleted = FALSE;
     i_this->field_0x614 = i_this->field_0x614 + 1;
 
@@ -166,6 +170,7 @@ static BOOL daFallRock_Execute(daFallRock_c *i_this) {
     i_this->mCyl.SetC(&i_this->current.pos);
     dComIfG_Ccsp_Set(&i_this->mCyl);
 
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 

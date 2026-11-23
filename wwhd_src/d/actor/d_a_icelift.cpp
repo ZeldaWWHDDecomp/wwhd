@@ -2,6 +2,7 @@
  * Verified WWHD behavior with GameCube class/method names. */
 #include "d/actor/d_a_icelift.h"
 #include "bindings.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 // HD: original ROM tables and singleton slots are mapped without invented initializers.
 static u32 l_arcName[2] = {};
 static u32 l_bmdIdx[2] = {};
@@ -49,6 +50,8 @@ static void quatCopy(IliftQuat *d, const IliftQuat *source) {
 
 /* 0217C874 */
 void rideCallBack(void *bg, daIlift_c *a, fopAc_ac_c *rider) {
+    if (t60objw::cbSkip()) /* true60: a rider's tilt counts once a frame, on the tick30 step */
+        return;
     gabi::Local<cXyz> offset;
     ilift_call::vectorSubtract(&rider->current.pos, offset.get(), &a->current.pos);
     a->mRiderOffset.copy(*offset);
@@ -328,7 +331,10 @@ void daIlift_c::lift_wave() {
         return;
     if (u8(mRiderPrevious)) {
         gabi::Local<cXyz> delta, horizontal;
-        ilift_call::vectorSubtract(&mPreviousPlayerPosition, delta.get(), vec(player + 0x314));
+        /* true60 (the process-order read rule): Link as A reads him: his frame-start position while he is later in the line */
+        gabi::Local<cXyz> fsLink;
+        cXyz* link = t60objw::fsPos(player, fsLink.get()) ? fsLink.get() : vec(player + 0x314);
+        ilift_call::vectorSubtract(&mPreviousPlayerPosition, delta.get(), link);
         horizontal->x = delta->x;
         horizontal->y = 0.0f;
         horizontal->z = delta->z;
@@ -368,6 +374,9 @@ void daIlift_c::lift_wave() {
 /* 0217D4E0 */
 // HD: preserve register-width BOOL results for the actor profile wrappers.
 BOOL daIlift_c::_execute() {
+    t60w::Guard<daIlift_c> t60g(this, t60objw::Logic<daIlift_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     u32 play = ilift_call::getPlay();
     u32 count = mFrameCount;
     u32 player = gabi::ea(gabi::at<dComIfG_inf_c>(play)->play.mPlayerInfo[0].mpPlayer.get());
@@ -387,9 +396,13 @@ BOOL daIlift_c::_execute() {
         ilift_call::changeAttributeCode(u32(mpBgW), 0x40, on ? 0xF : 0x15);
         ilift_call::changeAttributeCode(u32(mpBgW), 0x41, on ? 0 : 9);
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     ilift_call::moveBgW(u32(mpBgW));
-    mPreviousPlayerPosition.copy(*vec(player + 0x314));
+    /* true60 (the process-order read rule): Link's position as A reads it (his frame-start position while he is later in the line;
+     * A's frame f reads his frame f - 1 end, the tick30 step would read him after his first step) */
+    gabi::Local<cXyz> fsLink;
+    mPreviousPlayerPosition.copy(*(t60objw::fsPos(player, fsLink.get()) ? fsLink.get() : vec(player + 0x314)));
     return TRUE;
 }
 /* 0217D608 */

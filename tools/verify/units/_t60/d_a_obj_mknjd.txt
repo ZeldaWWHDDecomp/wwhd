@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_mknjd.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule + addendum, d/t60_objw.h): mknjd (BG Execute(mtx), the earlier steps hand the actor's own mBgMtx): event / cut proc, friend draw, set_mtx.
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 02373EA8
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 02372C44 023730B4 023731D8 023732D8 02373360 023734B4 02373A30 02374AE0
+t60cand 02372C44 023730B4 023731D8 023732D8 02373360 023734B4 02373A30 02374AE0
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 020087EC 020195B0 0201ADE0 02372C44 023730B4 023731D8 023732D8 02373360 023734B4 02373A30 02374AE0 02520540 0253F124 02542D88 02542EDC 02543280 02543714 0254407C 025440C8 025447C8 0254487C 0254DA50 02555D0C 025A847C 025D5218 025D57E0 025D57E4 025D7874 025DA874 025DA884 025DF2B8 025E18EC 025E1904 025E1988 025E19CC 025E1A40 025E1E88 025F1B48 025F1C28 025F24E0 025F74D0 025F795C 025F7DB0 028E8DD0 028E90D4 028F4384

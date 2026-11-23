@@ -8,6 +8,7 @@
  * code.
  */
 #include "d/actor/d_a_npc_hi1.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 // HD: each mapped object belongs to this translation unit.
 const gc_tu_data gc_tu = {.safeString = 0x1001A3CC};
@@ -806,6 +807,9 @@ BOOL daNpc_Hi1_c::_draw() {
 
 /* 0223D6EC */
 BOOL daNpc_Hi1_c::_execute() {
+    t60w::Guard<daNpc_Hi1_c> t60g(this, t60npc::Logic<daNpc_Hi1_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     if (mbRanExecute == 0) {
         mInitialAngle.y = current.angle.y;
         mInitialAngle.z = current.angle.z;
@@ -847,6 +851,7 @@ BOOL daNpc_Hi1_c::_execute() {
     tevStr.mRoomNo = Hi1_roomId(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mObjAcch.m_gnd));
     tevStr.mEnvrIdxOverride =
         Hi1_polyColour(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mObjAcch.m_gnd));
+    t60g.model = true; /* true60: the frame reached its model step */
     setMtx(0);
     if (mInDemo == 0) {
         setCollision(110.0f, 260.0f);

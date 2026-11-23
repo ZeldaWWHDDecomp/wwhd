@@ -7,6 +7,7 @@
  * daBgn2_Execute (with move() and its action functions inlined) is in d_a_bgn2_exec.cpp.
  */
 #include "d/actor/d_a_bgn2.h"
+#include "d/actor/d_a_bgn2_t60.h" /* true60: create's execute run at dt 1 */
 
 const gc_tu_data gc_tu = {.safeString = BGN2_SAFESTRING_VTBL};
 
@@ -348,7 +349,11 @@ static cPhs_State daBgn2_Create(fopAc_ac_c* a_this) {
                           &a_this->speed);
         i_this->mAcchCir.SetWall(50.0f, 50.0f);
         tevstr_assign(gabi::ea(&bg_tevstr), gabi::ea(&a_this->tevStr));
-        daBgn2_Execute(i_this);
+        {
+            const f32 t60PrevDt = bgn2_t60::createBegin(); /* true60: create's run of the execute, the original at dt 1 */
+            daBgn2_Execute(i_this);
+            bgn2_t60::createEnd(t60PrevDt);
+        }
     }
     return res;
 }

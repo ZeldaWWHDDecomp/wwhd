@@ -1,5 +1,6 @@
 // WWHD controller input state. All behavior and layouts reconstructed from the binary.
 #include "sead/InputState.h"
+#include "true60.h"
 
 void* allocateInputObject(u32 size);
 u32 inputAtan(f32);
@@ -288,6 +289,24 @@ u32 sead::InputState::stickDirections(u32 previous, const InputPair* stick, u32 
     return buttonBit(firstBit + 3) | buttonBit(firstBit + 1);
 }
 
+/* true60 (per-step input, true 60 fps input, the input rule): a later step's read of the controllers (true60.h t60_in_later): the
+ * buttons, sticks and pointer are this step's; the press / release words add this step's edges to the frame's (their
+ * union since the frame's first read: code on the tick30 step only sees every edge of the frame once), the repeat word
+ * keeps the frame's first-read pulses, the repeat counts count 30 Hz frames (on the frame's first read only) and the
+ * pointer's on / off edges (bits 2 / 4) add up like the press words. Every read records its own edges for converted code
+ * (t60_in_edges). */
+static void t60_updateLater(sead::InputState* state, u32 previous, u32 buttons, u32 previousPointer) {
+    const u32 press = buttons & ~previous;
+    const u32 release = previous & ~buttons;
+    state->mRelease = (u32)state->mRelease | press;
+    state->mTrigger = (u32)state->mTrigger | release;
+    u32 pointer = state->mPointerState;
+    if (previousPointer == 0 && (pointer & 1) != 0) pointer |= 2;
+    if (previousPointer != 0 && (pointer & 1) == 0) pointer |= 4;
+    state->mPointerState = pointer;
+    t60_in_edges(gabi::ea(state), press, release, 0);
+}
+
 /* 0273C390 */
 void sead::InputState::update(u32 previous, u32 previousPointer) {
     s32 first = mStickBit;
@@ -306,6 +325,14 @@ void sead::InputState::update(u32 previous, u32 previousPointer) {
     u32 mask = directionMask();
     u32 buttons = ((u32)mButtons & ~mask) | directions;
     mButtons = buttons;
+    if (t60_in_later()) {  // (true60 per-step input: a later step's read, the frame form)
+        t60_updateLater(this, previous, buttons, previousPointer);
+        f32 laterX = reinterpret_cast<be<f32>&>(mPointerFloat.mX);
+        f32 laterY = reinterpret_cast<be<f32>&>(mPointerFloat.mY);
+        mPointer.mX = gabi::ftoi(laterX);
+        mPointer.mY = gabi::ftoi(laterY);
+        return;
+    }
     mTrigger = previous & ~buttons;
     s32 count = mButtonCount;
     mRelease = buttons & ~previous;
@@ -341,6 +368,8 @@ void sead::InputState::update(u32 previous, u32 previousPointer) {
     s32 iy = gabi::ftoi(y);
     mPointer.mX = ix;
     mPointer.mY = iy;
+    // (true60 per-step input: the frame's first read's own edges, for converted code; host memory only)
+    t60_in_edges(gabi::ea(this), mRelease, mTrigger, mRepeat);
 }
 
 /* WWHD glue

@@ -9,6 +9,7 @@
  * written in the form the code tests (NaN behaviour).
  */
 #include "d/actor/d_a_bwds.h"
+#include "d/actor/d_a_bwds_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule) */
 
 /* fopAcM_seStart inlined: HD tests &eyePos only */
 static inline void se_start(fopAc_ac_c* a, u32 id, u32 param = 0) {
@@ -573,6 +574,10 @@ static inline void move(bwds_class* i_this) {
 
 /* 0210602C */
 static BOOL daBwds_Execute(bwds_class* i_this) {
+    /* true60: the whole frame on the tick30 step (the whole-frame form rule; end at the return) */
+    t60w::Guard<bwds_class> t60g(i_this, bwds_t60::ops());
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     fopAc_ac_c* actor = i_this;
     dComIfGp_get(); /* HD: an unused player lookup */
 
@@ -637,6 +642,7 @@ static BOOL daBwds_Execute(bwds_class* i_this) {
     mDoMtx_ZrotM(mDoMtx_stack_c::get(), actor->shape_angle.z);
     mDoMtx_stack_c::scaleM(l_HIO.mBodyScale, l_HIO.mBodyScale, l_HIO.mBodyScale);
 
+    t60g.model = true; /* true60: the frame reached its model step */
     J3DModel_setBaseTRMtx(pJVar8, mDoMtx_stack_c::get());
     i_this->mpMorf->calc();
     PSMTXCopy(bw_getAnmMtx(pJVar8, 2 /* KOBOSS_HEAD_JNT_HEAD_e */), calc_mtx());

@@ -1,5 +1,6 @@
 /* WWHD traveling merchant hats. */
 #include "d/actor/d_a_obj_hat.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 const gc_tu_data gc_tu = {
     .safeString = 0x10029EAC, .objAcch = {0x10029ED4, 0x10029EF4, 0x10029EE4}, .objAcchDt = {0x10029EE4, 0x10029EF4}};
@@ -110,6 +111,9 @@ BOOL daObjHat_c::_draw() {
 
 /* 02350A4C */
 BOOL daObjHat_c::_execute() {
+    t60w::Guard<daObjHat_c> t60g(this, t60objw::Logic<daObjHat_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     // HD has one movement mState, so its PTMF entry is fixed.
     (this->*moveProc[0].proc)();
     f32 horizontal = speedF;
@@ -137,6 +141,7 @@ BOOL daObjHat_c::_execute() {
         wind->x = mCyl.mGObjTg.mRVec.x;
         setSpeed(wind);
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     setMtx();
     return TRUE;
 }

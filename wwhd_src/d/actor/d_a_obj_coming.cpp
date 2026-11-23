@@ -1,6 +1,7 @@
 /* Floating barrels around the ship, in the GameCube decompilation's layout.
  * WWHD addresses and guest-call boundaries are verified against the original. */
 #include "d/actor/d_a_obj_coming.h"
+#include "d/actor/d_a_obj_coming_t60.h" /* true60 (t60conv): step helpers */
 using namespace daObjComing;
 enum ComingProcessHD { fpcNm_SHIP_e = 0xA5, fpcNm_PLAYER_e = 0xA8, fpcNm_Obj_Barrel2_e = 0x1C9 };
 
@@ -563,7 +564,7 @@ void Act_c::mode_barrel2_leave(Ctrl_c* ctrl) {
 }
 
 /* 02331C94 */
-s32 Act_c::_execute() {
+s32 Act_c::_execute() { if (!t60c::first()) return 1; /* true60 (t60conv): frame-level logic on the frame's first step (the first-step AI-timer rule / first-step frame-level) */
     u32 makeNum = Coming_PrmAbstract(this, PRM_MAKENUM_W, PRM_MAKENUM_S);
     if (makeNum >= 4) {
         Coming_assert("d_a_obj_coming.cpp", 0x497, "(prm >= 0) && (prm < L_ctrl_max)");

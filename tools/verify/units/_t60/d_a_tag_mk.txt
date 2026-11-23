@@ -1,0 +1,12 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_tag_mk.txt
+# ---- true60 N-step spec (2026-11-20; the whole-frame form rule + addendum, d/t60_objw.h): Killer Bees tag: hunt / arrival / villa / warp actions (Link frame-start position, process-order read).
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+# checkArea (called by the execute): reads Link through t60objw::fsPos (the process-order read rule's frame-start position): runs as the converted
+# candidate (lint close-out 2026-11-20)
+real 024B0668
+t60cand 024B0668
+t60conv 024B0D90
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0201ADE0 0201B31C 024B001C 024B0078 024B0114 024B0160 024B01C4 024B02D0 024B031C 024B0380 024B03D8 024B0414 024B0538 024B05E4 024B065C 024B0668 024B07E8 024B0864 024B08BC 024B08E8 024B0A20 024B0ACC 024B0B54 024B0BBC 024B0BC8 024B0BD4 025200D4 0253F124 02542D88 02542EDC 02543280 02543714 02543F10 025440C8 025447C8 02544950 02556D14 025D54C4 025D57E0 025D57E4 025D6958 025D7A58 025D8E6C 025E1918 025E1928 025E1960 025F74D0 025F795C 025F7DB0 0273AA24 028E8DD0

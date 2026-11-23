@@ -1,0 +1,10 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_machine.txt
+# ---- true60 N-step spec (2026-11-22; the whole-frame form rule addendum whole form, d/t60_objw.h; d_a_machine_t60.h): the biting
+# blade machine's _execute 021B8104 in the whole form (set_speed reads the windmill, attack reads Link). The tick30 step
+# runs the original execute whole at dt 1 from the frame start; the earlier steps change no state (the picture between
+# steps comes from frame interpolation): net effect = the one step's, byte exact. Negative control (T60C_NEGCTRL: the execute on
+# every step at dt) must fail.
+t60conv 021B8104
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200E240 0200ECD4 0200F62C 020168D4 020181B0 020182E0 020184DC 02018C8C 02018D40 020195B0 0201ADE0 021B751C 021B7AE4 021B7B18 021B7C24 021B7D14 021B7D8C 021B7E48 021B7F84 021B8080 025200D4 02520540 025D5218 025E19CC 025E1A40 025E535C 025E742C 025F1B48 025F1C28 028E8DD0 028E8F64 028F4384

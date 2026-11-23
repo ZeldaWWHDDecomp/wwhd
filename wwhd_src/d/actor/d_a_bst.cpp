@@ -2,6 +2,7 @@
 // HD: expanded lighting/collision layouts and compiler-generated code are
 // retained.
 #include "d/actor/d_a_bst_base.h"
+#include "d/actor/d_a_bst_t60.h" /* true60 (*): the draw's light states on the tick30 draw (rule 14) */
 
 using namespace bst_move_names;
 using namespace bst_base_names;
@@ -507,7 +508,8 @@ static BOOL daBst_Draw(bst_class *i_this) {
     u32 morph = (u32)(bstBaseActor(address)->mpMorf.v);
     u32 model = (u32)(bstBasePointerWord(bstMoveMorf(morph)->mpModel));
     void *env = BstBase_dKy_getEnvlight();
-    BstBase_tevSetup(env, 0, &bstBaseActor(address)->current.pos, &bstBaseActor(address)->tevStr);
+    if (bst_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+        BstBase_tevSetup(env, 0, &bstBaseActor(address)->current.pos, &bstBaseActor(address)->tevStr);
     env = BstBase_dKy_getEnvlight();
     BstBase_tevApply(env, bstMoveModel(model), &bstBaseActor(address)->tevStr);
     u32 animator = (u32)(bstBaseActor(address)->mpTexMtxAnimator.v);
@@ -534,7 +536,8 @@ static BOOL daBst_Draw(bst_class *i_this) {
     data = (u32)(bstBasePointerWord(bstMoveModel(model)->mModelData));
     BstBase_brkEntry(bstMoveFrame(animator), bstBaseAddress<J3DModelData>(data), frame);
     env = BstBase_dKy_getEnvlight();
-    BstBase_tevSetup(env, 0, &bstBaseActor(address)->home.pos, &bstBaseActor(address)->mEnvLight);
+    if (bst_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+        BstBase_tevSetup(env, 0, &bstBaseActor(address)->home.pos, &bstBaseActor(address)->mEnvLight);
     env = BstBase_dKy_getEnvlight();
     BstBase_tevApply(env, bstMoveModel(model), &bstBaseActor(address)->mEnvLight);
     BstBase_updateModel(bstMoveModel(model), 0);
@@ -543,7 +546,7 @@ static BOOL daBst_Draw(bst_class *i_this) {
         if (blur > 1) {
             bstBaseBlur().mRate = (u8)blur;
             BstBase_blurOn();
-        } else if (blur == 1) {
+        } else if (blur == 1 && bst_t60::drawStep()) { /* true60: the blur's end on the tick30 draw (rule 14) */
             bstBaseActor(address)->mBlurRate = 0;
             bstBaseBlur().mEnabled = 0;
         }
@@ -560,7 +563,8 @@ static BOOL daBst_Draw(bst_class *i_this) {
             bstBaseGlobals().center_pos.y = zero;
         }
         env = BstBase_dKy_getEnvlight();
-        BstBase_tevSetup(env, 1, &bstBaseGlobals().center_pos, &bstBaseActor(address)->mBgTevStr);
+        if (bst_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+            BstBase_tevSetup(env, 1, &bstBaseGlobals().center_pos, &bstBaseActor(address)->mBgTevStr);
         env = BstBase_dKy_getEnvlight();
         model = (u32)(bstBaseActor(address)->mpHbyokoModel.v);
         BstBase_tevApply(env, bstMoveModel(model), &bstBaseActor(address)->mBgTevStr);

@@ -1,5 +1,7 @@
 /** Forest Firefly actor. Verified HD behavior; private derived source. */
 #include "d/actor/d_a_nh.h"
+#include "d/t60_draw.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 #include "bindings.h"
 #include "gc_api/d/d_com_inf_game.h"
 #include "gc_api/f_op/f_op_actor.h"
@@ -430,6 +432,9 @@ BOOL daNh_c::returnAction(void *context) {
 /* 021E11A4 */
 BOOL daNh_c::execute() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    t60w::Guard<daNh_c> t60g(this, t60npc::Logic<daNh_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     daNh_playBrkAnm(this);
     const f32 fallSpeed = maxFallSpeed;
     const f32 verticalSpeed = speed.y;
@@ -464,6 +469,7 @@ BOOL daNh_c::execute() {
         searchPlayer();
         action(nullptr);
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     setBaseMtx();
     eyePos.copy(current.pos);
     attention_info.position.copy(current.pos);
@@ -500,7 +506,8 @@ BOOL daNh_c::draw() {
     nhEntryBrk(&mBrkAnm, data, frame);
     mDoExt_modelUpdateDL(mpModel.get(), 0);
     *nhTevRegAnimator(data) = 0;
-    cLib_chaseF(&mLightBlend, 100.0f, 10.0f);
+    if (t60_draw_frame_pass()) /* true60 (t60_draw.h): the light fades in once per 30 Hz frame */
+        cLib_chaseF(&mLightBlend, 100.0f, 10.0f);
     return TRUE;
 }
 

@@ -1,0 +1,8 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_kui.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule + addendum, d/t60_objw.h): post / bell: dragon tail follow, bell swing, dBgW Move.
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 021ACB0C
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200A030 0200ED84 0200F428 0200FAD8 0200FC74 0200FCD8 0200FCF0 0200FD38 020195B0 0201AD78 0201ADE0 024F06B4 024F1AFC 024F43DC 02514F2C 02514F38 02514F50 02514F88 0251510C 025151BC 02515280 02516518 0251677C 025A847C 025BC620 025D7B24 025DE508 025E1988 025F1884 025F1BF4 025F1C28 025F1C5C 0274D458 027EC9E8 028E90D4 028E9108 028E945C

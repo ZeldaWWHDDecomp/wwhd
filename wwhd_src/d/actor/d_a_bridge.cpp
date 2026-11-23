@@ -8,6 +8,7 @@
  * daBridge_Draw is in d_a_bridge_draw.cpp, daBridge_Execute in d_a_bridge_exec.cpp.
  */
 #include "d/actor/d_a_bridge.h"
+#include "d/t60_objw.h" /* true60: ride_call_back counts the bridge state once a frame (rule) */
 
 gptr<cXyz> &wind_vec = *gabi::at<gptr<cXyz>>(0x10462944);
 gptr<be<f32>> &wp = *gabi::at<gptr<be<f32>>>(0x10462948);
@@ -20,6 +21,16 @@ static bridge_class *bridge_class_ctor(bridge_class *);
 /* 020DF908 */
 static void ride_call_back(dBgW *bgw, fopAc_ac_c *i_ac, fopAc_ac_c *i_pt) {
     bridge_class *i_this = (bridge_class *)i_ac;
+    /* true60: the rider writes (plain assignments: speed.y, the Bokoblin's hang
+     * fields) run on each of the rider's calls; the bridge's own state (sag, ride timers, wave / swing power) only on the
+     * tick30 step's call (t60objw::cbSkip). An earlier step's call by any rider but a Bokoblin only sets speed.y */
+    const bool t60cb = t60objw::cbSkip();
+    if (t60cb && bridge_getActorName(i_pt) != BridgeHD::fpcNm_BK_e) {
+        i_pt->speed.y = -5.0f;
+        if (bridge_getActorName(i_pt) == BridgeHD::fpcNm_MO2_e)
+            i_pt->speed.y = -20.0f;
+        return;
+    }
 
     gabi::Local<cXyz> pos;
     cXyz_mi(&i_this->mBr[0].mPosition, pos, &i_pt->current.pos);
@@ -43,7 +54,13 @@ static void ride_call_back(dBgW *bgw, fopAc_ac_c *i_ac, fopAc_ac_c *i_pt) {
     MtxPosition(posDiff, sp4C);
 
     gabi::Local<cXyz> sp40;
-    cXyz_mi(&i_pt->old.pos, tmp, &pBr->mPosition);
+    /* true60 (the process-order read rule, 2026-11-20): the rider's old.pos as A reads it. The callback runs inside the rider's
+     * execute; a converted rider (it has executed on this step, e.g. the Bokoblin's per-step move) gets its frame-start
+     * position (A's old = current at the frame's start), not its last step's start, so the wave / swing power from the
+     * rider's move is A's. Else (unconverted, N = 1) the live old.pos */
+    gabi::Local<cXyz> t60Old;
+    cXyz *t60OldP = t60objw::fsOldEarlier(gabi::ea(i_pt), t60Old.get()) ? t60Old.get() : &i_pt->old.pos;
+    cXyz_mi(t60OldP, tmp, &pBr->mPosition);
     posDiff->copy(*tmp);
     MtxPosition(posDiff, sp40);
 
@@ -75,7 +92,8 @@ static void ride_call_back(dBgW *bgw, fopAc_ac_c *i_ac, fopAc_ac_c *i_pt) {
         u32 bk = gabi::ea(i_pt);
         fVar7 = 100.0f;
         i_pt->speed.y = -20.0f;
-        pBr->mRideSag = -25.0f;
+        if (!t60cb) /* true60: bridge state only on the tick30 step's call; the hang fields below are rider writes */
+            pBr->mRideSag = -25.0f;
         gabi::at<BridgeHD::BokoReaction>(bk)->mHangBridgeId = fopAcM_GetID(i_ac);      /* dr.mHangBridgeId */
         gabi::at<BridgeHD::BokoReaction>(bk)->mBridgeRideTimer = 8;                       /* dr.mBridgeRideTimer */
         gabi::at<BridgeHD::BokoReaction>(bk)->mHangAngle.x = (u16)pBr->mRotation.x; /* dr.mHangAngle = pBr->mRotation */
@@ -93,6 +111,8 @@ static void ride_call_back(dBgW *bgw, fopAc_ac_c *i_ac, fopAc_ac_c *i_pt) {
             gabi::at<BridgeHD::BokoReaction>(bk)->mBridgeRideRoll = 0x2000;
         }
         gabi::at<BridgeHD::BokoReaction>(bk)->mpBridge = pBr; /* bk mpBridge */
+        if (t60cb) /* true60: an earlier step's call: the rider writes only */
+            return;
         mRideSag = pBr->mRideSag;
     } else {
         fVar7 = 50.0f;

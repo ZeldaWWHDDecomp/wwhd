@@ -1,0 +1,6 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_bscurtain.txt
+# ---- true60 N-step spec (2026-11-19): a curtain that stays put. Its execute daObj_Bscurtain_c::_execute
+# 02328CF4 (set_mtx from the unchanged position) runs on every step unchanged: no site to convert. N-step spec shows the N steps
+# leave the same memory as the one step (step-invariant).
+t60conv 02328CF4

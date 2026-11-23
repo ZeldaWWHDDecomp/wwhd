@@ -7,6 +7,7 @@
  * the recompiled C), keeping the GameCube names and member order.
  */
 #include "d/actor/d_a_npc_kg2.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 #include <cmath>
 
 static s32 l_btpIndices[5] = {9, 11, 13, 12, 14};
@@ -640,6 +641,9 @@ void daNpc_Kg2_c::subAnm() {
 
 /* 02269690 */
 BOOL daNpc_Kg2_c::_execute() {
+    t60w::Guard<daNpc_Kg2_c> t60g(this, t60npc::Logic<daNpc_Kg2_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     auto* a = this;
     s16 prm[9];
     for (int i = 0; i < 9; ++i)
@@ -661,6 +665,7 @@ BOOL daNpc_Kg2_c::_execute() {
     a->tevStr.mEnvrIdxOverride =
         Kg2Core_polyColor(&kg2Play(play())->play.mBgS,
                           static_cast<cBgS_PolyInfo*>(&a->mObjAcch.m_gnd)); /* dBgS::GetPolyColor */
+    t60g.model = true; /* true60: the frame reached its model step */
     a->set_mtx();
     a->setCollision(60.0f, 150.0f);
     return TRUE;

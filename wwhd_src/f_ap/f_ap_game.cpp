@@ -1,5 +1,7 @@
 /** Game application framework. */
 #include "f_ap/f_ap_game.h"
+#include "true60.h"
+#include "JSystem/JStudio/JST_timeline_t60.h"
 
 static fapGm_HIO_c g_HIO;
 static u8 developmentMode;
@@ -61,15 +63,30 @@ static fapGm_HIO_c* fapGm_HIO_c__ct(fapGm_HIO_c* i_this) {
 
 /* 025D42C4 */
 void fapGm_After() {
+    // true60: the scene, overlap (fade/wipe) and camera managers once per 30 Hz frame, on the tick30 step
+    if (!t60::tick30()) {
+        return;
+    }
     fopScnM_Management();
     fopOvlpM_Management();
     fopCamM_Management();
 }
 
+/* true60: this unit's own host count of the steps since the frame's first (1..N), for the timeline pass */
+static u32 t60StepIndex = 0;
+
 /* 025D42EC */
 void fapGm_Execute() {
+    // true60 (JST_timeline_t60.h): the cutscene timeline's evaluate-only pass at the start of steps 2..N
+    t60StepIndex = t60::first_step() ? 1u : t60StepIndex + 1u;
+    jst_t60::step_begin(t60StepIndex);
     fpcM_Management(0, fapGm_After);
-    cCt_Counter(0);
+    // true60 (the 60 Hz counter rule): the step counter for converted code, once per logic step (true60.h)
+    t60_step_counter_advance();
+    // true60 (the 60 Hz counter rule): g_Counter counts 30 Hz frames (its phase masks are 30 Hz decisions everywhere)
+    if (t60::tick30()) {
+        cCt_Counter(0);
+    }
 }
 
 /* 025D4320 */

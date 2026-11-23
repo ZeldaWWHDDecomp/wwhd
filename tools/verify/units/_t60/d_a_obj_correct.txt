@@ -1,0 +1,12 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_correct.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule + addendum, d/t60_objw.h): the statue-puzzle checker's _execute 02332F6C (the on / off modes from the Try statues' places, the demo request / run procs).
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 02332F6C
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 0233378C 02333820 02333968 02333B20 02333B34 023330AC
+t60cand 0233378C 02333820 02333968 02333B20 02333B34 023330AC
+# the modes run through the member-pointer tables (mode_proc / demo_proc), which t60conv's whole-form call scan does not
+# follow: their calls by hand (the statue search, the switch set / clear, the event order), once per 30 Hz frame
+t60calls 025D5218 025B9E38 025B9F7C 025D7A58

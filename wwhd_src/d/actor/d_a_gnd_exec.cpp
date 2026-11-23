@@ -7,6 +7,7 @@
  * stubs: written from the WWHD code (cking.rpx) and verified against it.
  */
 #include "d/actor/d_a_gnd_exec.h"
+#include "d/actor/d_a_gnd_t60.h" /* true60: the whole form (the whole-frame form rule, d/t60_objw.h) */
 
 // HD: data owned by the Ganondorf translation unit; mapped without host copies.
 const gc_tu_data gc_tu = {.safeString = 0x1000FFFC};
@@ -670,6 +671,9 @@ static inline void demo_camera(gnd_class* i_this) {
 // HD: preserve the independently pooled archive-name copy used by the inlined camera.
 /* 02154EE0 */
 BOOL daGnd_Execute(gnd_class* i_this) {
+    t60w::Guard<gnd_class> t60g(i_this, t60objw::Logic<gnd_class>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     fopAc_ac_c* player0 = dComIfGp_getPlayer(0);
     if (execFields(i_this)->mBgmParam == 0)
         execFields(i_this)->mAction = 0x14;

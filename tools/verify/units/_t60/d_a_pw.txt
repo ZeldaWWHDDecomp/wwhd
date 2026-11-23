@@ -1,0 +1,9 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_pw.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule addendum, the Magtail / Floormaster whole form;
+# d_a_pw_t60.h): Poe: daPW_Execute 0244B3E4 in the whole form. The tick30 step runs the original execute whole at dt 1
+# from the frame start; the earlier steps change no state (the picture between steps comes from frame interpolation): net effect =
+# the one step's, byte exact. Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 0244B3E4
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200E240 0200ED84 0200EDC8 0200F428 0200FCD8 020182E0 02018428 020184DC 02018C8C 02018D40 02019510 020195B0 020198D8 02019918 020402C8 02041CAC 02449DA8 0244A37C 0244A4A8 0244A5A8 0244A768 0244A7F0 0244A9E4 0244AA98 0244ACBC 0244AE40 0244B058 0244B1B8 0244B308 0244B3AC 0244E960 0244F28C 0244F730 0244F960 0244FE24 024500C0 024EECAC 02515BBC 025160DC 0251621C 025200D4 02520540 0252A038 02563F64 025A5AC8 025A847C 025BA5D4 025D54C4 025D57E0 025D5834 025D6800 025D6894 025D68EC 025D99E8 025DA088 025E1A40 025E1AA4 025E535C 025E55A0 025E742C 025E8154 025F1884 025F1BF4 026066C4 027F2BF8 028249B0 028F4384

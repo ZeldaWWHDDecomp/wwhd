@@ -1,4 +1,5 @@
 #include "SSystem/SComponent/c_API_controller.h"
+#include "true60.h"
 using gabi::fmadds;
 using gabi::fmuls_ppc;
 using gabi::fnmsubs;
@@ -19,6 +20,17 @@ static f32 l_negativePi;
 static f32 l_pi;
 static cAPIController::HeaderStatics l_headerStatics;
 static cAPIController::StaticRecords l_records;
+/* true60 (the input rule; Link; per-step input true 60 fps input): the controller reads the GamePad on every step; its trigger word
+ * holds the frame's presses (their union since the frame's first read: unconverted code, on the tick30 step only, sees
+ * each press once). A converted process executing on every step takes the presses of the step's own read instead
+ * (true60.h t60_in_step_word), so every press is consumed by exactly one step, the step it arrives on. Unconverted code
+ * (dt 1) reads it as before. */
+static inline u32 cpadTrig(cAPIController::PadPointer& pad) {
+  if (t60::dt() != 1.0f)
+    return t60_in_step_word([&] { return gabi::ea(pad.mpPad.get()) + 0x18; }, 0,
+                            [&] { return (u32)pad.mpPad->mButtonTrig; });
+  return pad.mpPad->mButtonTrig;
+}
 /* 020075C0 */
 u32 cAPICPad_ANY_BUTTON(s32 port) {
   if (port)
@@ -92,83 +104,83 @@ u32 CPad_CHECK_HOLD_Y(s32 port) {
 u32 CPad_CHECK_TRIG_UP(s32 port) {
   if (port)
     return 0;
-  u32 buttons = l_pad.mpPad->mButtonTrig;
+  u32 buttons = cpadTrig(l_pad);
   return (buttons & cAPIController::BUTTON_UP) != 0;
 }
 /* 02007790 */
 u32 CPad_CHECK_TRIG_DOWN(s32 port) {
   if (port)
     return 0;
-  u32 buttons = l_pad.mpPad->mButtonTrig;
+  u32 buttons = cpadTrig(l_pad);
   return (buttons & cAPIController::BUTTON_DOWN) != 0;
 }
 /* 020077BC */
 u32 CPad_CHECK_TRIG_LEFT(s32 port) {
   if (port)
     return 0;
-  u32 buttons = l_pad.mpPad->mButtonTrig;
+  u32 buttons = cpadTrig(l_pad);
   return (buttons & cAPIController::BUTTON_LEFT) != 0;
 }
 /* 020077E8 */
 u32 CPad_CHECK_TRIG_RIGHT(s32 port) {
   if (port)
     return 0;
-  u32 buttons = l_pad.mpPad->mButtonTrig;
+  u32 buttons = cpadTrig(l_pad);
   return (buttons & cAPIController::BUTTON_RIGHT) != 0;
 }
 /* 02007814 */
 u32 CPad_CHECK_TRIG_Z(s32 port) {
   if (port)
     return 0;
-  u32 buttons = l_pad.mpPad->mButtonTrig;
+  u32 buttons = cpadTrig(l_pad);
   return (buttons & cAPIController::BUTTON_Z) != 0;
 }
 /* 02007840 */
 u32 CPad_CHECK_TRIG_R(s32 port) {
   if (port)
     return 0;
-  u32 buttons = l_pad.mpPad->mButtonTrig;
+  u32 buttons = cpadTrig(l_pad);
   return (buttons & cAPIController::BUTTON_R) != 0;
 }
 /* 0200786C */
 u32 CPad_CHECK_TRIG_L(s32 port) {
   if (port)
     return 0;
-  u32 buttons = l_pad.mpPad->mButtonTrig;
+  u32 buttons = cpadTrig(l_pad);
   return (buttons & cAPIController::BUTTON_L) != 0;
 }
 /* 02007898 */
 u32 CPad_CHECK_TRIG_B(s32 port) {
   if (port)
     return 0;
-  return l_pad.mpPad->mButtonTrig & cAPIController::BUTTON_B;
+  return cpadTrig(l_pad) & cAPIController::BUTTON_B;
 }
 /* 020078BC */
 u32 CPad_CHECK_TRIG_A(s32 port) {
   if (port)
     return 0;
-  u32 buttons = l_pad.mpPad->mButtonTrig;
+  u32 buttons = cpadTrig(l_pad);
   return (buttons & cAPIController::BUTTON_A) != 0;
 }
 /* 020078E8 */
 u32 CPad_CHECK_TRIG_X(s32 port) {
   if (port)
     return 0;
-  u32 buttons = l_pad.mpPad->mButtonTrig;
+  u32 buttons = cpadTrig(l_pad);
   return (buttons & cAPIController::BUTTON_X) != 0;
 }
 /* 02007914 */
 u32 CPad_CHECK_TRIG_Y(s32 port) {
   if (port)
     return 0;
-  u32 buttons = l_pad.mpPad->mButtonTrig;
+  u32 buttons = cpadTrig(l_pad);
   return (buttons & cAPIController::BUTTON_Y) != 0;
 }
 /* 02007940 */
 u32 CPad_CHECK_TRIG_START(s32 port) {
   if (port)
     return 0;
-  u32 buttons = l_pad.mpPad->mButtonTrig;
+  u32 buttons = cpadTrig(l_pad);
   return (buttons & cAPIController::BUTTON_START) != 0;
 }
 /* 0200796C */

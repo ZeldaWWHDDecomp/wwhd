@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_npc_so.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 #include "d/d_jnt_hit.h"
 #include "gc_api/gc_api.h"
 
@@ -785,6 +786,9 @@ static inline cXyz *so_rippleScale() {
 
 /* 022DF6EC */
 bool daNpc_So_c::_execute() {
+    t60w::Guard<daNpc_So_c> t60g(this, t60npc::Logic<daNpc_So_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return true;
     f32 sx = scale.x;
     f32 lo = gabi::fmuls_ppc(-100.0f, sx);
     f32 hi = gabi::fmuls_ppc(100.0f, sx);
@@ -818,6 +822,7 @@ bool daNpc_So_c::_execute() {
     lookBack();
     checkOrder();
     modeProc(PROC_RUN_e, 0x10);
+    t60g.model = true; /* true60: the frame reached its model step (the mode procs play the morfs and set the matrices) */
     eventOrder();
 
     s16 target = 0;

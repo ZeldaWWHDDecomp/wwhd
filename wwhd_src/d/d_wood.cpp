@@ -1,5 +1,6 @@
 // Wood and bush animation, collision and HD GX2 rendering.
 #include "d/d_wood.h"
+#include "d/d_wood_t60.h"
 #include "port_native_draw.h"
 #include "port_hooks.h"
 #include "bindings.h"
@@ -950,8 +951,135 @@ void dWood::Packet_c::calc_cc() {
     // HD: the second pass has no collision body.
 }
 
+// true60 (d_wood_t60.h): an earlier step of a playing slot at dt (no countdown, no mode change: the tick30
+// step's), then the slot's matrix as the mode builds it
+static void wood60_play_between(dWood::Packet_c *packet, u32 idx, f32 progress) {
+    dWood::Anm_c *a = &packet->mAnm[idx];
+    const u32 mode = (u32)a->mMode;
+    if (mode != Anm_c::Mode_Cut && mode != Anm_c::Mode_PushInto && mode != Anm_c::Mode_PushBack &&
+        mode != Anm_c::Mode_Norm && mode != Anm_c::Mode_ToNorm)
+        return;
+    const s16 countdown = (s16)a->mCountdown;
+    if ((mode == Anm_c::Mode_PushInto || mode == Anm_c::Mode_PushBack) && (s16)(countdown - 1) <= 0)
+        return; // the frame ends in a mode change (the tick30 step's): the slot holds
+    const u32 anm = gabi::ea(a);
+    Wood60Slot &s = wood60_enter(idx, anm);
+    const f64 dt = (f64)t60::dt();
+    if (mode == Anm_c::Mode_Cut) {
+        // the fall (the per-step movement rule: v += g dt, p += v dt + g dt (1 - dt) / 2 above the terminal speed), the tilt, the fade
+        f64 v = s.velY + (f64)woodCutYAccel * dt, arc = (f64)woodCutYAccel * dt * (1.0 - dt) * 0.5;
+        if (v < (f64)woodCutMinVelY) {
+            v = (f64)woodCutMinVelY;
+            arc = 0.0;
+        }
+        s.velY = v;
+        s.posY += v * dt + arc;
+        s.posZ += (f64)woodCutZVel * dt;
+        s.phX[0] -= 200.0 * dt;
+        a->mVelY = (f32)s.velY;
+        a->mPosOffsetY = (f32)s.posY;
+        a->mPosOffsetZ = (f32)s.posZ;
+        a->mPhaseX[0] = (u16)wood60_s16(s.phX[0], wood60_start16(s, 0x7C));
+        cMtx_YrotS(gabi::ea(mDoMtx_stack_c::get()), (s32)(s16)a->mForceDir);
+        wood_stack_transM(woodZero, (f32)a->mPosOffsetY, (f32)a->mPosOffsetZ);
+        cMtx_XrotM(gabi::ea(mDoMtx_stack_c::get()), (s32)(s16)a->mPhaseX[0]);
+        cMtx_YrotM(gabi::ea(mDoMtx_stack_c::get()), (s32)(s16) - (s16)a->mForceDir);
+        PSMTXCopy(gabi::ea(mDoMtx_stack_c::get()), gabi::ea(a));
+        if (countdown < 20) {
+            s.alpha -= 14.0 * dt;
+            if (s.alpha < 0.0)
+                s.alpha = 0.0;
+            const s32 start = (s32)(s.start[0x88 >> 2] >> 8) & 0xFF;
+            a->mAlphaScale = (u8)(start + (s32)std::trunc(s.alpha - (f64)start));
+        }
+        wood60_leave(s, anm);
+        return;
+    }
+    u32 level = 0;
+    const dWood::Anm_c *from = nullptr;
+    if (mode == Anm_c::Mode_ToNorm) {
+        const s32 index = (s16)a->mNormAnimIdx;
+        if ((u32)index >= 72) {
+            wood60_leave(s, anm);
+            return;
+        }
+        from = &packet->mAnm[(u32)index];
+        const f32 strength = (f32)from->mWindPow;
+        level = strength < woodWindMedium ? 0 : (strength < woodWindStrong ? 1 : 2);
+        s.dir = wood60_chaseAngle(s.dir, (s32)(s16)from->mForceDir, 3000.0 * dt);
+        a->mForceDir = wood60_s16(s.dir, wood60_start16(s, 0x66));
+    } else if (mode == Anm_c::Mode_Norm) {
+        const f32 strength = (f32)a->mWindPow;
+        level = strength < woodWindMedium ? 0 : (strength < woodWindStrong ? 1 : 2);
+    }
+    // push back: the amplitude targets at the step's time (the frame's countdown less its progress)
+    const f32 t = gabi::fmuls_ppc((f32)((f64)countdown - (f64)progress), woodPushBackTimeScale);
+    f32 y = woodZero, x = y;
+    for (u32 i = 0; i < 2; ++i) {
+        const u32 kind = mode == Anm_c::Mode_PushInto || mode == Anm_c::Mode_PushBack ? (u32)SWAY_PUSH : level;
+        const dWood::AttrSway_c *attr = &L_attr_kSways[kind][i];
+        const s16 vy = (s16)attr->phaseVelY, vx = (s16)attr->phaseVelX, ay = (s16)attr->ampY, ax = (s16)attr->ampX;
+        switch (mode) {
+        case Anm_c::Mode_PushInto:
+            s.phY[i] += (f64)vy * dt;
+            s.phX[i] = wood60_chaseAngle(s.phX[i], 0, (f64)vx * dt);
+            s.ampY[i] = wood60_chase(s.ampY[i], (f64)(s16)(ay / 4), 20.0 * dt);
+            s.ampX[i] = wood60_addCalcAngle(s.ampX[i], (s32)ax, 8, 20, 5, dt);
+            break;
+        case Anm_c::Mode_PushBack:
+            s.phY[i] += (f64)vy * dt;
+            s.phX[i] += (f64)vx * dt;
+            s.ampY[i] = wood60_chase(s.ampY[i], (f64)(s16)gabi::ftoi(gabi::fmuls_ppc((f32)ay, t)), 20.0 * dt);
+            s.ampX[i] = wood60_chase(s.ampX[i], (f64)(s16)gabi::ftoi(gabi::fmuls_ppc((f32)ax, t)), 20.0 * dt);
+            break;
+        case Anm_c::Mode_Norm:
+            s.phY[i] += (f64)vy * dt;
+            s.phX[i] += (f64)vx * dt;
+            s.ampY[i] = wood60_chase(s.ampY[i], (f64)ay, 2.0 * dt);
+            s.ampX[i] = wood60_chase(s.ampX[i], (f64)ax, 2.0 * dt);
+            break;
+        default: // Mode_ToNorm: toward the wind slot it returns to (as the original reads it: played before this one)
+            s.phY[i] = wood60_chase(s.phY[i], (f64)(s16)from->mPhaseY[i], (f64)(s16)(vy + 3000) * dt);
+            s.phX[i] = wood60_chase(s.phX[i], (f64)(s16)from->mPhaseX[i], (f64)(s16)(vx + 3000) * dt);
+            s.ampY[i] = wood60_chase(s.ampY[i], (f64)(s16)from->mAmpY[i], 15.0 * dt);
+            s.ampX[i] = wood60_chase(s.ampX[i], (f64)(s16)from->mAmpX[i], 15.0 * dt);
+            break;
+        }
+        a->mPhaseY[i] = (u16)wood60_s16(s.phY[i], wood60_start16(s, 0x78 + i * 2));
+        a->mPhaseX[i] = (u16)wood60_s16(s.phX[i], wood60_start16(s, 0x7C + i * 2));
+        a->mAmpY[i] = (u16)wood60_s16(s.ampY[i], wood60_start16(s, 0x80 + i * 2));
+        a->mAmpX[i] = (u16)wood60_s16(s.ampX[i], wood60_start16(s, 0x84 + i * 2));
+        const f32 bias = (f32)attr->phaseBiasX;
+        y = gabi::fmadds(cosine((u16)a->mPhaseY[i]), (f32)(s16)a->mAmpY[i], y);
+        x = gabi::fmadds(add(cosine((u16)a->mPhaseX[i]), bias), (f32)(s16)a->mAmpX[i], x);
+    }
+    applySway(a, y, x);
+    wood60_leave(s, anm);
+}
+
 /* 025D0994 */
 void dWood::Packet_c::calc() {
+    // true60 (d_wood_t60.h): the earlier steps move the playing slots at dt (no hit checks, no decisions:
+    // the one-sweep-per-frame attack rule); the tick30 step puts them back to the frame's start and runs the original frame at dt 1
+    f32 t60PreviousDt = 1.0f;
+    bool t60Pinned = false;
+    if (t60::dt() != 1.0f) {
+        if (!t60::tick30()) {
+            const f32 progress = wood60_progress();
+            const cXyz *wind = gabi::at<cXyz>(woodGetWindVector());
+            const f32 power = woodGetWindPower();
+            const s32 heading = woodAtan2(wind->x, wind->z);
+            for (u32 i = 0; i < AnmID_Norm_Max; ++i)
+                mAnm[i].mode_norm_set_wind(power, (s16)heading);
+            for (u32 i = 0; i < 72; ++i)
+                wood60_play_between(this, i, progress);
+            return;
+        }
+        wood60_progress();
+        wood60_restore_all(gabi::ea(&mAnm[0]));
+        t60PreviousDt = t60_set_dt(1.0f);
+        t60Pinned = true;
+    }
     calc_cc();
     const cXyz *vector = gabi::at<cXyz>(woodGetWindVector());
     const f32 strength = woodGetWindPower();
@@ -962,6 +1090,8 @@ void dWood::Packet_c::calc() {
         animation.play(this);
     for (Unit_c &unit : mUnit)
         unit.proc(this);
+    if (t60Pinned)
+        t60_set_dt(t60PreviousDt);
 }
 
 /* 025D0A6C */

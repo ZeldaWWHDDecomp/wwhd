@@ -1,6 +1,7 @@
 // WWHD manager construction, platform setup and frame dispatch from local instructions.
 #include "sead/ControllerManager.h"
 #include "sead/ElementAt.h"
+#include "true60.h"
 
 static u32 sManagerTaskTable;
 static u32 sManagerBaseTable;
@@ -130,6 +131,13 @@ void sead::ControllerManager::initialize() {
 
 /* 0273CBD0 */
 void sead::ControllerManager::calc() {
+    // true60 (per-step input, true 60 fps input; before: one read per 30 Hz frame on its first step):
+    // the GamePad is read at the start of every pass that runs a logic step (true60.h t60_input_step; every pass at
+    // N = 1); a later step's read is in the frame form (sead/InputState.cpp); the controllers keep their state on the
+    // other passes
+    const bool read = t60_input_step();
+    t60_in_begin(read, read && !t60_input_pass());
+    if (!read) return;
     u32 offset = mDevices.mMemberOffset;
     be<u8>* sentinel = reinterpret_cast<be<u8>*>(&mDevices) - offset;
     be<u8>* object = reinterpret_cast<be<u8>*>(mDevices.mNext.get()) - offset;

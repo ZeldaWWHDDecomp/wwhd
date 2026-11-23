@@ -1,0 +1,48 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_himo2.txt
+# ---- (2026-11-16): NO N-step spec VERDICT for new_himo2_move / daHimo2_Execute. Steering trials
+# s15_t02_try1..6 (N 2, seed 1, 2000 inputs; the steering below): 55-60 % of the inputs abort on a step
+# (unsteerable pointees: the player's hand matrices, the attention / camera objects), and nearly every compared
+# difference is a state change inside the frame: the N-step run takes the change on an earlier step and runs the new
+# state on the later steps (case 9 reaching the hand sets mHideTimer 20, the tick30 step then counts it: 19 vs 20; the
+# arrival hooks the target at once), which a one-step run cannot show; the flight geometry goes through mocked matrix
+# helpers (mDoMtx_YrotS / XrotM / MtxPosition answer each step alike). What N-step spec could check (the five timers exact
+# over a frame without a state change) is a one-line property of the code (decrement inside `if (perFrame)`).
+# Evidence instead: dt-1 check s1 / s7 (= the base rows), N=1 cliff, and the rope pair (prope8, Link + camera + himo2 at N 2).
+# The steering is kept for a later attempt:
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200ED84 0200EDC8 0200F164 0200F428
+t60cand 0200ED84 0200EDC8 0200F164 0200F428
+t60conv 0216F7FC 0216E194
+field 0216F7FC r3+0x2B09 i8 0
+field 0216F7FC r3+0x3F8 i32 0,2,3,5,8,9
+field 0216F7FC r3+0x424 i16 12,13,30,31
+field 0216F7FC r3+0x3BC i16 0,1,5
+field 0216F7FC r3+0x3BE i16 2,3
+field 0216F7FC r3+0x3BA i16 0,1,20
+field 0216F7FC r3+0x3B8 i16 0,1,30
+# positions within the rope's range (generated floats are anything)
+field 0216F7FC r3+0x314 f32 -1000 1000
+field 0216F7FC r3+0x318 f32 -1000 1000
+field 0216F7FC r3+0x31C f32 -1000 1000
+field 0216F7FC r3+0x408 f32 -1000 1000
+field 0216F7FC r3+0x40C f32 -1000 1000
+field 0216F7FC r3+0x410 f32 -1000 1000
+field 0216F7FC r3+0x2B54 f32 -3000 3000
+field 0216F7FC r3+0x2B58 f32 -3000 3000
+field 0216F7FC r3+0x2B5C f32 -3000 3000
+field 0216F7FC r3+0x370 f32 -50 50
+field 0216F7FC r3+0x2B30 f32 0 1
+field 0216F7FC r3+0x400 f32 -10 0
+field 0216F7FC r3+0x2684 f32 0 50
+# the player (getPlayer(0) and the Link pointer) at a fixed address, no ROPE_FORCE_END (mResetFlg0 +0x3C0): no state
+# change inside the frame (a change on an earlier step runs the new state on the later steps: not comparable)
+field 0216F7FC 54005AF8 u32 0x5F000000
+field 0216F7FC 54005B34 u32 0x5F000000
+field 0216F7FC 5F0003C0 u32 0
+field 0216F7FC r3+0xB0 u32 0
+# the debug registers (l_himo2Regs at 1047B5F8, 0xC64 bytes) at their game value 0
+fill 0216F7FC 0x1047B5F8 0xC64 0
+# no hook target (the arrival test hooks it at once: a state change), no background hit
+field 0216F7FC r3+0x267C u32 0
+ret 0216DE7C 0

@@ -1,6 +1,7 @@
 /** Earth Temple coffin, derived from HD disassembly; */
 #include "d/actor/d_a_obj_kanoke.h"
 #include "bindings.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 static KanokeActions l_modeProc;
 static KanokeMathStatics l_math;
@@ -210,6 +211,9 @@ BOOL daObjKanokeDelete(daObjKanoke_c* a) {
 }
 /* 02367FFC */
 BOOL daObjKanoke_c::_execute() {
+    t60w::Guard<daObjKanoke_c> t60g(this, t60objw::Logic<daObjKanoke_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     gabi::Local<cXyz> start, end;
     start->x = 0;
     start->y = 0;
@@ -227,6 +231,7 @@ BOOL daObjKanoke_c::_execute() {
     mBodyCps.mCps.mRadius = 140;
     cCcS_Set(dComIfG_Ccsp(), &mBodyCps);
     l_modeProc.entries[(u8)mState].invoke(this);
+    t60g.model = true; /* true60: the frame reached its model step */
     setMtx();
     dBgW* bg = mpBodyBgW;
     if (bg->m_id < 256)

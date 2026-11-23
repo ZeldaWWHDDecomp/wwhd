@@ -1,5 +1,6 @@
 // HD: the verified temporary linkage and expanded collision layout are retained.
 #include "d/actor/d_a_windmill.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 static u32 m_arcname[2] = {};
 static s16 m_bmdidx[2] = {};
@@ -402,10 +403,14 @@ void daWindMill_c::set_co() {
 }
 /* 024E1C84 */
 BOOL daWindMill_c::_execute() {
+    t60w::Guard<daWindMill_c> t60g(this, t60objw::Logic<daWindMill_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     auto *a = this;
     a->hane_move();
     a->set_at();
     a->set_co();
+    t60g.model = true; /* true60: the frame reached its model step */
     a->set_mtx();
     if ((u8)a->mType == daWindMill_c::LARGE)
         windCall_calcModel<void>((J3DModel *)a->mpModel);

@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_obj_ojtree.h"
+#include "d/actor/d_a_obj_ojtree_t60.h" /* true60 (t60conv): step helpers */
 
 const gc_tu_data gc_tu = {.safeString = 0x1002DFD0};
 static const char* M_arcname = "Ojtree";
@@ -83,7 +84,7 @@ void Act_c::init_mtx() {
 }
 
 /* 02380054 */
-BOOL Act_c::Execute(gptr<Mtx34>* pMtx) {
+BOOL Act_c::Execute(gptr<Mtx34>* pMtx) { if (!t60c::first()) return TRUE; /* true60 (t60conv): frame-level logic on the frame's first step (the first-step AI-timer rule / first-step frame-level) */
     if (mLockTimer != 0) {
         u8 t = (u8)(mLockTimer - 1);
         mLockTimer = t;

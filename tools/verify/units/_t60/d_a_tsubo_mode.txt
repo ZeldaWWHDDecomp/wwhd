@@ -1,0 +1,15 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_tsubo_mode.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule carryables; d_a_tsubo_mode_t60.h): the pot's
+# _execute 024CE71C. The tick30 step runs the original _execute whole at dt 1 from the frame start; the earlier steps
+# change no state (a visual extrapolation by the previous frame's change, none here: no previous frame): net effect = the
+# one step's, byte exact. Negative control (T60C_NEGCTRL: _execute on every step at dt) must fail.
+t60conv 024CE71C
+# mode_proc_call (the modes, crr / bound / moments / tensors / wind decay) runs its candidate code under _execute
+real 024CE454
+t60cand 024CE454
+# t60once 024CE454: runs only inside _execute's tick30 whole run (whole-frame form); never on its own N steps
+# effect calls (sound / particle starts, actor creation; tools/t60conv): as many calls over the N steps as in the one step
+t60calls 025A847C 025D5834 025E19CC 025E1A40
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 02006584 0200658C 02006638 02006694 02006760 020068CC 0200691C 0200692C 020069A0 02008E0C 0200ECD4 0200EDC8 0200F5C8 02019510 02019788 020198D8 02019918 0201ADE0 0201AE48 023120B4 023121C4 023123C0 02312968 024CA5F0 024CAA54 024CAB30 024CAC44 024CADD8 024CAE78 024CAF20 024CB088 024CBD48 024CC798 024CC7EC 024CCB44 024CD1E8 024CD3CC 024CD4C8 024CD7AC 024CD95C 024CDAB4 024CDF3C 024CE204 024CE33C 024CE3D0 024CE454 024CEAFC 024CEB50 024CED64 024CEF30 024CF094 024CF2BC 024CF320 024CF4E0 024CF5AC 024CF6C8 024CF77C 024CF844 024CFA48 024CFAB8 024CFB20 024CFD3C 024CFE88 024CFE8C 024CFE90 024CFE94 024CFE98 024CFE9C 024CFEA0 024CFEA4 024CFEA8 024CFEAC 024CFEB0 024CFEB4 024CFEB8 024CFEBC 024CFEC0 024CFEC4 024CFEC8 024CFF40 024CFF44 024CFF48 024D0070 024D0074 024D0184 024D0294 024EEEB8 02515F14 025165A4 02516C14 025200D4 02520540 025D5418 025D57E0 025D57E4 025D6870 025D6CE8 025F1884 025F1BF4 025F1C5C 0274D458 028E8D88 028E8DD0 028E8E64 028E9044 028F4384

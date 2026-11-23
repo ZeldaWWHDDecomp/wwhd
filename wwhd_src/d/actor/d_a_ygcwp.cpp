@@ -3,6 +3,7 @@
  * Verified against WWHD by d_a_ygcwp and d_a_ygcwp_oct04. Private game-derived source.
  */
 #include "d/actor/d_a_ygcwp.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 const gc_tu_data gc_tu = {.safeString = 0x10042F54};
 const char daYgcwp_c::M_arcname[] = "Ygcwp";
@@ -124,6 +125,9 @@ void daYgcwp_c::set_timer() {
 
 /* 024EA1DC */
 BOOL daYgcwp_c::_execute() {
+    t60w::Guard<daYgcwp_c> t60g(this, t60objw::Logic<daYgcwp_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     YgcwpPlayer* player = (YgcwpPlayer*)dComIfGp_getPlayer(0);
     s32 staff = dComIfGp_evmng_getMyStaffId(M_arcname);
     mStaffId = staff;
@@ -170,6 +174,7 @@ BOOL daYgcwp_c::_execute() {
     }
     for (u32 i = 0; i < 2; i++)
         mBrkAnm[i].play();
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 

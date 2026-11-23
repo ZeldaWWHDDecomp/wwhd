@@ -1,0 +1,6 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include JPA_math_drawcalc.txt
+# true60 N-step spec: JPADraw::calcParticle 0282DCBC / calcChild 0282DD50 on a general step length (JPA_draw_t60.h):
+# the u16 angle (particle +0x8C + 0x34 = +0xC0) turned by the s16 speed (+0xC2) split over the steps, byte exact at the
+# frame end. The visitors are mocked calls here (their own rows are the calcvis units').
+t60conv 0282DCBC 0282DD50

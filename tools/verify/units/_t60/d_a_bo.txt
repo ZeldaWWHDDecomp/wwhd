@@ -1,0 +1,9 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_bo.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule; d_a_bo_t60.h):
+# Boko Baba: daBO_Execute 020BCEC8 in the whole form. The tick30 step runs the original execute whole at dt 1 from the
+# frame start; the earlier steps change no state (the picture between steps comes from frame interpolation): net effect = the one
+# step's, byte exact. Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 020BCEC8
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 020BB0E8 020BB8D0 020BBC58 020BBE4C 020BC15C 020BCDA8 020BCDE0 020C0220 020C0244 020C0248 020C0624 020C0A94 028E90D4

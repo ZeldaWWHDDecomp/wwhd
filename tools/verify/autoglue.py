@@ -844,7 +844,7 @@ def _spec_siblings(srcpath):
                         for line in open(os.path.join(dp, f), errors="replace"):
                             w = line.split("#")[0].split()
                             if w and w[0] == "src":
-                                srcs |= {x if x.startswith("wwhd_src/") else "wwhd_src/" + x for x in w[1:]}
+                                srcs |= {x if x.startswith(("wwhd_src/", "build/")) else "wwhd_src/" + x for x in w[1:]}  # (build/: generated copies, e.g. t60conv wnc_)
                         found.append(srcs)
             _SPEC_SRCS = found
     rel = os.path.relpath(os.path.join(ROOT, srcpath), ROOT) if not srcpath.startswith("wwhd_src/") else srcpath
@@ -878,7 +878,21 @@ def exported_names(srctext, srcpath):
     return names
 
 
-def transform(text, path="<src>"):
+def static_declared(qname, text, path):
+    """whether the source or one of its headers declares `qname` static (internal linkage); member functions
+    (qualified names) are never static at namespace scope here"""
+    if "::" in qname:
+        return False
+    rx = re.compile(r"\bstatic\b[^;{}()]*\b%s\s*\(" % re.escape(qname))
+    if rx.search(mask(text) if False else text):
+        return True
+    return any(rx.search(t) for _, t in include_closure(text, path))
+
+
+def transform(text, path="<src>", weak_ext=False):
+    """weak_ext (verify harness only): the `ext` glue definitions are weak, so a unit whose T-02 spec links the
+    other unit's source (c_lib.cpp for the c_lib eases) uses that definition instead of failing with duplicate
+    symbols; the game build (tools/decomp_build/gen.py) calls without it: its output is unchanged"""
     if "/* WWHD glue" in text:
         import assets  # model data generated from the game (tools/verify/assets.py), included in place
         try:
@@ -998,6 +1012,24 @@ def transform(text, path="<src>"):
     def in_body(pos):
         return any(a < pos < b for a, b in bodies)
 
+    def in_local_aggregate(pos):
+        """pos is inside a struct / class / union definition (a member declaration, not a local): the innermost
+        unclosed brace before pos opens an aggregate"""
+        depth = 0
+        k = pos - 1
+        while k >= 0:
+            ch = code[k]
+            if ch == "}":
+                depth += 1
+            elif ch == "{":
+                if depth == 0:
+                    head = code[max(0, k - 200):k]
+                    head = head[max(head.rfind(";"), head.rfind("{"), head.rfind("}")) + 1:]
+                    return re.search(r"\b(struct|class|union)\b[^()]*$", head) is not None
+                depth -= 1
+            k -= 1
+        return False
+
     pos = 0
     li = 0
     skip_until = -1
@@ -1083,9 +1115,66 @@ def transform(text, path="<src>"):
             raise GlueError("%s:%d: function-local static `%s` needs a `data` glue line" % (path, line_of(text, start), sm.group(4)))
         if not in_body(start):
             continue
+        # locals with several declarators (`T a, b(1), c = e;`) or arrays (`T a[2];`), 2026-11-19 (d_a_msw.cpp:22:
+        # `cXyz a, b;` stayed two host objects at host addresses, read as guest memory): each plain declarator becomes
+        # a gabi::LocalOf as the single form below (class types on the guest stack, others on the host), pointers /
+        # references stay host declarations, and an array stays a host array guarded by a static_assert that fails
+        # the build for a class element type (a guest-layout array has no local form here)
+        dm = re.match(r"^(\s*)(const\s+)?((?:\w+::)*[A-Za-z_]\w*)\s+([A-Za-z_*&].*);\s*$", mln)
+        if dm and dm.group(3) not in SCALARS and dm.group(3) not in KEYWORDS and not in_local_aggregate(start):
+            dindent, dconst, dtyp = dm.group(1), dm.group(2) or "", dm.group(3)
+            d0 = dm.start(4)
+            dsemi = mln.rindex(";")
+            parts, cur, depth, k0 = [], d0, 0, d0
+            for k in range(d0, dsemi):
+                ch = mln[k]
+                if ch in "([{":
+                    depth += 1
+                elif ch in ")]}":
+                    depth -= 1
+                elif ch == "," and depth == 0:
+                    parts.append((k0, k))
+                    k0 = k + 1
+            parts.append((k0, dsemi))
+            decls = []
+            for a, b in parts:
+                mtxt = mln[a:b]
+                pm = re.match(r"^\s*([A-Za-z_]\w*)\s*((?:\[[^\]]*\]\s*)*)(\(.*\)|=.*)?\s*$", mtxt)
+                if re.match(r"^\s*[*&]", mtxt):
+                    decls.append(("host", ln[a:b].strip(), None))
+                elif pm is None or pm.group(1) in KEYWORDS:
+                    decls = None
+                    break
+                elif pm.group(2).strip():
+                    decls.append(("array", ln[a:b].strip(), None))
+                else:
+                    init = pm.group(3)
+                    if init is None:
+                        args = ""
+                    elif init.startswith("("):
+                        args = ln[a + mtxt.index("(") + 1:a + mtxt.rindex(")")]
+                    else:
+                        args = ln[a + mtxt.index("=") + 1:b].strip()
+                    decls.append(("guest", pm.group(1), args))
+            if decls is not None and (len(decls) > 1 or decls[0][0] == "array"):
+                pieces = []
+                for kind, nm, args in decls:
+                    if kind == "host":
+                        pieces.append("%s%s %s;" % (dconst, dtyp, nm))
+                    elif kind == "array":
+                        pieces.append("static_assert(!std::is_class_v<%s>, \"autoglue: local array of a guest-layout "
+                                      "class type (%s:%d) has no guest form\"); %s%s %s;" % (
+                                          dtyp, os.path.basename(path), line_of(text, start), dconst, dtyp, nm))
+                    else:
+                        ctor = "(%s)" % args if args.strip() else ""
+                        pieces.append("gabi::LocalOf<%s> %s__s%s; [[maybe_unused]] %s& %s = %s__s.ref();" % (
+                            dtyp, nm, ctor, dtyp, nm, nm))
+                set_line(li - 1, dindent + " ".join(pieces) + ln[dsemi + 1:])
+                continue
         # class-typed local: `T x;`, `T x(args);`, `T x = e;`
         lm = re.match(r"^(\s*)(?:const\s+)?((?:\w+::)*[A-Za-z_]\w*)\s+([A-Za-z_]\w*)\s*(\(.*\)|=.*)?;\s*$", mln)
-        if lm and lm.group(2) not in SCALARS and lm.group(2) not in KEYWORDS and lm.group(3) not in KEYWORDS:
+        if lm and lm.group(2) not in SCALARS and lm.group(2) not in KEYWORDS and lm.group(3) not in KEYWORDS \
+                and not in_local_aggregate(start):
             indent, typ, name, init = lm.group(1), lm.group(2), lm.group(3), lm.group(4)
             org = ln[len(indent):]
             semi = mln.rindex(";")
@@ -1183,8 +1272,11 @@ def transform(text, path="<src>"):
         member = owner is not None and qname.split("::")[-1] not in static_members(owner, text, path) \
             and owner not in namespace_names(text, path)
         args = (["this"] if member else []) + names
-        reg.append("%s %s(%s)%s { return gabi::call<%s>(0x%08X%s); } /* other unit (ext) */" % (
-            ret, qname, ", ".join(ps), " const" if hm.group(4) else "", ret, addr, "".join(", " + a for a in args)))
+        # weak (harness only) only with external linkage: a name the TU or its headers declare `static` (internal
+        # linkage, e.g. d_a_obj_YLzou's `static dBgW *ylzouNewBgW(...)`) keeps a plain definition (weak is an error there)
+        weak = weak_ext and not static_declared(qname, text, path)
+        reg.append("%s%s %s(%s)%s { return gabi::call<%s>(0x%08X%s); } /* other unit (ext) */" % (
+            "__attribute__((weak)) " if weak else "", ret, qname, ", ".join(ps), " const" if hm.group(4) else "", ret, addr, "".join(", " + a for a in args)))
         if callback:
             if member:
                 raise GlueError("ext %08X %s: `callback` needs a free or static function" % (addr, sig))

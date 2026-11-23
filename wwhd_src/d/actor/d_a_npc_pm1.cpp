@@ -7,6 +7,7 @@
  * follows the GameCube KM1 names and the verified PM1 behavior. HD differences are marked below.
  */
 #include "d/actor/d_a_npc_pm1.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 // HD: translation-unit copies of the resource-key and compiler-generated vtables.
 const gc_tu_data gc_tu = {
@@ -622,6 +623,9 @@ BOOL daNpc_Pm1_c::_draw() {
 
 /* 022D1F70 */
 BOOL daNpc_Pm1_c::_execute() {
+    t60w::Guard<daNpc_Pm1_c> t60g(this, t60npc::Logic<daNpc_Pm1_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     if (mbHomeSet == 0) {
         mHomePos.copy(current.pos);
         mHomeAngle.x = current.angle.x;
@@ -647,6 +651,7 @@ BOOL daNpc_Pm1_c::_execute() {
     if (mbDemo == 0) {
         fopAcM_posMoveF(this, &mStts.m_cc_move); /* &mStts.m_cc_move */
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     setMtx();
     setCollision(50.0f, 130.0f);
     return true;

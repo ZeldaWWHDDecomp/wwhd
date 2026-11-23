@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_mmusic.h"
+#include "d/actor/d_a_mmusic_t60.h" /* true60 (t60conv): step helpers */
 
 namespace dSv_event_flag_c {
 enum { UNK_2910 = 0x2910, UNK_2E02 = 0x2E02, UNK_1610 = 0x1610 };
@@ -92,7 +93,7 @@ void Act_c::init_se() {
 
 // HD:
 /* 021C6008 */
-void Act_c::manage_se(int cull) {
+void Act_c::manage_se(int cull) { if (!t60c::first()) return; /* true60 (t60conv): frame-level logic on the frame's first step (the first-step AI-timer rule / first-step frame-level) */
     if (!mDoAud_checkCbPracticePlay()) {
         s16 t = mTimer;
         if (t > 0) {
@@ -118,7 +119,7 @@ void Act_c::manage_se(int cull) {
 // HD:
 /* 021C612C */
 bool Act_c::_execute() {
-    if (mpEmitter == nullptr) {
+    if (mpEmitter == nullptr) { if (t60c::end()) { /* true60 (t60conv): init branch (sets mpEmitter) once per frame, on the tick30 step */
         if (mMusicPlaying == 1) {
             set_mtx();
             /* GameCube: an unused cXyz scale(1, 1, 1) */
@@ -132,15 +133,15 @@ bool Act_c::_execute() {
         } else {
             mMusicPlaying = Macore_is_playing();
         }
-    } else {
+    } } else {
         int cull = fopAcM_cullingCheck(this);
         if (cull == 1) {
-            if (mEmitting == 1) {
+            if (t60c::first() && (mEmitting == 1)) { /* true60 (t60conv): an emitter switched on / off once per frame, on the first step */
                 mpEmitter->stopCreateParticle();
                 mEmitting = 0;
             }
         } else {
-            if (mEmitting == 0) {
+            if (t60c::first() && (mEmitting == 0)) { /* true60 (t60conv): an emitter switched on / off once per frame, on the first step */
                 mpEmitter->playCreateParticle();
                 mEmitting = 1;
             }

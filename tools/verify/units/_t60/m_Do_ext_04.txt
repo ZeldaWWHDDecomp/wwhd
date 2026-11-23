@@ -1,0 +1,29 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include m_Do_ext_04.txt
+# ---- true60 N-step spec: mDoExt_McaMorf::play has no change of its own; the morf chase (cLib_chaseF 0200F5C8) and the
+# frame update (J3DFrameCtrl::update 027F2FC4) are converted centrally. Their decomp sources are linked
+# and run as the candidate's code (`t60cand`), so N plays at dt = 1/N are compared with one play. The anime-sound call
+# (0201BF08) gets the undivided play rate (pitch/volume modulation; its key window follows the frame) and is mocked.
+# Frame-control domain as _t60/J3DAnimation.txt (frame inside [start, end), start 0, modes NONE/RESET/LOOP).
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+src wwhd_src/J3DAnimation.cpp
+real 0200F5C8 027F2FC4 028F4034
+t60cand 0200F5C8 027F2FC4
+t60conv 025E535C
+field 025E535C r3+0x98 f32 -2 2
+field 025E535C r3+0x9C f32 5 19.9
+field 025E535C r3+0xA0 s16 0
+field 025E535C r3+0xA2 s16 20,22,25,28,30
+field 025E535C r3+0xA4 s16 0,2,5,8,10
+field 025E535C r3+0xA6 u8 0,1,2
+field 025E535C r3+0xA7 u8 0,1,2,3
+field 025E535C r3+0xB0 f32 0 1.2
+field 025E535C r3+0xB8 f32 0 0.5
+field 025E535C r3+0xBC u32 0
+# frame and morf to float rounding; rate and the latch exact; mPrevMorf (0xB4) is the step's blend source (the value
+# before this step's chase), a per-step quantity
+# the frame control's frame is EXACT now (was `t60tol 025E535C r3+0x9C f32 absrel 0.0001 0.00001`): J3DFrameCtrl::update's frame-start form
+# (frameStart + rate x k x dt, the last step A's add; J3DAnimation.cpp, 2026-11-21). q89p N2/N4/N8 s1/s7 2000.
+t60tol 025E535C r3+0xB0 f32 absrel 0.00001 0.00001
+t60tol 025E535C r3+0xB4 f32 skip
+t60tol 025E535C r3+0xA7 u8 orsteps

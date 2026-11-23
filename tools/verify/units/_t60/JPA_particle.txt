@@ -1,0 +1,164 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include JPA_particle.txt
+# true60 N-step spec: particle motion on a general step length (JPA_particle_t60.h), compared over the emitter's
+# particle walk calcParticle 0281FBD8 / calcChild 0281FD14 (incFrame, calcVelocity, calcPosition and checkCreateChild run
+# for real inside it on the list particle at 0x38000000; the field manager is mocked) and incFrame alone. calcVelocity
+# and calcPosition are a pair (the position reads the velocity the update left): no standalone N-step spec row (dt-1 check rows).
+# Domain: whole ages from -1 (a new particle) at the frame start, lifetimes 10 / 20, air resistance 0.9..1, moment and
+# drag near 1, small accelerations and velocities (the particle data's), no deletion delay inside the frame.
+# the walk's particle steps run as the converted candidate (real + t60cand: nested calls otherwise run the original)
+real 028266C0 02826720 0282685C 028268C8
+t60cand 028266C0 02826720 0282685C 028268C8
+t60conv 028266C0 0281FBD8 0281FD14
+field 028266C0 r3+0x78 f32 -1,0,1,2,10
+field 028266C0 r3+0x7c f32 10,20
+field 0281FBD8 0x38000078 f32 -1,0,1,2,5
+field 0281FBD8 0x3800007C f32 10,20
+field 0281FBD8 0x38000070 f32 0.9 1
+field 0281FBD8 0x38000074 f32 0.8 1.2
+field 0281FBD8 0x38000088 f32 0.8 1.2
+field 0281FBD8 0x3800004C f32 -2 2
+field 0281FBD8 0x38000050 f32 -2 2
+field 0281FBD8 0x38000054 f32 -2 2
+field 0281FBD8 0x38000040 f32 -20 20
+field 0281FBD8 0x38000044 f32 -20 20
+field 0281FBD8 0x38000048 f32 -20 20
+field 0281FBD8 0x38000058 f32 -5 5
+field 0281FBD8 0x3800005C f32 -5 5
+field 0281FBD8 0x38000060 f32 -5 5
+field 0281FBD8 0x38000064 f32 -2 2
+field 0281FBD8 0x38000068 f32 -2 2
+field 0281FBD8 0x3800006C f32 -2 2
+field 0281FBD8 0x3800001C f32 -1000 1000
+field 0281FBD8 0x38000020 f32 -1000 1000
+field 0281FBD8 0x38000024 f32 -1000 1000
+field 0281FBD8 0x38000010 f32 -1000 1000
+field 0281FBD8 0x38000014 f32 -1000 1000
+field 0281FBD8 0x38000018 f32 -1000 1000
+field 0281FBD8 0x38000034 f32 -20 20
+field 0281FBD8 0x38000038 f32 -20 20
+field 0281FBD8 0x3800003C f32 -20 20
+field 0281FBD8 0x38000028 f32 -1000 1000
+field 0281FBD8 0x3800002C f32 -1000 1000
+field 0281FBD8 0x38000030 f32 -1000 1000
+field 0281FBD8 0x3800010C u8 0
+field 0281FBD8 0x38000278 f32 -1,0,1,2,5
+field 0281FBD8 0x3800027C f32 10,20
+field 0281FBD8 0x38000270 f32 0.9 1
+field 0281FBD8 0x38000274 f32 0.8 1.2
+field 0281FBD8 0x38000288 f32 0.8 1.2
+field 0281FBD8 0x3800024C f32 -2 2
+field 0281FBD8 0x38000250 f32 -2 2
+field 0281FBD8 0x38000254 f32 -2 2
+field 0281FBD8 0x38000240 f32 -20 20
+field 0281FBD8 0x38000244 f32 -20 20
+field 0281FBD8 0x38000248 f32 -20 20
+field 0281FBD8 0x38000258 f32 -5 5
+field 0281FBD8 0x3800025C f32 -5 5
+field 0281FBD8 0x38000260 f32 -5 5
+field 0281FBD8 0x38000264 f32 -2 2
+field 0281FBD8 0x38000268 f32 -2 2
+field 0281FBD8 0x3800026C f32 -2 2
+field 0281FBD8 0x3800021C f32 -1000 1000
+field 0281FBD8 0x38000220 f32 -1000 1000
+field 0281FBD8 0x38000224 f32 -1000 1000
+field 0281FBD8 0x38000210 f32 -1000 1000
+field 0281FBD8 0x38000214 f32 -1000 1000
+field 0281FBD8 0x38000218 f32 -1000 1000
+field 0281FBD8 0x38000234 f32 -20 20
+field 0281FBD8 0x38000238 f32 -20 20
+field 0281FBD8 0x3800023C f32 -20 20
+field 0281FBD8 0x38000228 f32 -1000 1000
+field 0281FBD8 0x3800022C f32 -1000 1000
+field 0281FBD8 0x38000230 f32 -1000 1000
+field 0281FBD8 0x3800030C u8 0
+field 0281FD14 0x38000078 f32 -1,0,1,2,5
+field 0281FD14 0x3800007C f32 10,20
+field 0281FD14 0x38000070 f32 0.9 1
+field 0281FD14 0x38000074 f32 0.8 1.2
+field 0281FD14 0x38000088 f32 0.8 1.2
+field 0281FD14 0x3800004C f32 -2 2
+field 0281FD14 0x38000050 f32 -2 2
+field 0281FD14 0x38000054 f32 -2 2
+field 0281FD14 0x38000040 f32 -20 20
+field 0281FD14 0x38000044 f32 -20 20
+field 0281FD14 0x38000048 f32 -20 20
+field 0281FD14 0x38000058 f32 -5 5
+field 0281FD14 0x3800005C f32 -5 5
+field 0281FD14 0x38000060 f32 -5 5
+field 0281FD14 0x38000064 f32 -2 2
+field 0281FD14 0x38000068 f32 -2 2
+field 0281FD14 0x3800006C f32 -2 2
+field 0281FD14 0x3800001C f32 -1000 1000
+field 0281FD14 0x38000020 f32 -1000 1000
+field 0281FD14 0x38000024 f32 -1000 1000
+field 0281FD14 0x38000010 f32 -1000 1000
+field 0281FD14 0x38000014 f32 -1000 1000
+field 0281FD14 0x38000018 f32 -1000 1000
+field 0281FD14 0x38000034 f32 -20 20
+field 0281FD14 0x38000038 f32 -20 20
+field 0281FD14 0x3800003C f32 -20 20
+field 0281FD14 0x38000028 f32 -1000 1000
+field 0281FD14 0x3800002C f32 -1000 1000
+field 0281FD14 0x38000030 f32 -1000 1000
+field 0281FD14 0x3800010C u8 0
+field 0281FD14 0x38000278 f32 -1,0,1,2,5
+field 0281FD14 0x3800027C f32 10,20
+field 0281FD14 0x38000270 f32 0.9 1
+field 0281FD14 0x38000274 f32 0.8 1.2
+field 0281FD14 0x38000288 f32 0.8 1.2
+field 0281FD14 0x3800024C f32 -2 2
+field 0281FD14 0x38000250 f32 -2 2
+field 0281FD14 0x38000254 f32 -2 2
+field 0281FD14 0x38000240 f32 -20 20
+field 0281FD14 0x38000244 f32 -20 20
+field 0281FD14 0x38000248 f32 -20 20
+field 0281FD14 0x38000258 f32 -5 5
+field 0281FD14 0x3800025C f32 -5 5
+field 0281FD14 0x38000260 f32 -5 5
+field 0281FD14 0x38000264 f32 -2 2
+field 0281FD14 0x38000268 f32 -2 2
+field 0281FD14 0x3800026C f32 -2 2
+field 0281FD14 0x3800021C f32 -1000 1000
+field 0281FD14 0x38000220 f32 -1000 1000
+field 0281FD14 0x38000224 f32 -1000 1000
+field 0281FD14 0x38000210 f32 -1000 1000
+field 0281FD14 0x38000214 f32 -1000 1000
+field 0281FD14 0x38000218 f32 -1000 1000
+field 0281FD14 0x38000234 f32 -20 20
+field 0281FD14 0x38000238 f32 -20 20
+field 0281FD14 0x3800023C f32 -20 20
+field 0281FD14 0x38000228 f32 -1000 1000
+field 0281FD14 0x3800022C f32 -1000 1000
+field 0281FD14 0x38000230 f32 -1000 1000
+field 0281FD14 0x3800030C u8 0
+field 0281FBD8 0x104B581C f32 0.5 2
+field 0281FBD8 0x104B5820 f32 0.5 2
+field 0281FBD8 0x104B5824 f32 0.5 2
+field 0281FD14 0x104B581C f32 0.5 2
+field 0281FD14 0x104B5820 f32 0.5 2
+field 0281FD14 0x104B5824 f32 0.5 2
+# Tolerances (the per-step movement rule: air resistance as air^dt is a continuous decay inside the frame, a legitimate 60 Hz difference;
+# the base acceleration's exact-arc term is exact without air). Derived for the domain (|accel| <= 2, |base| <= 20,
+# air >= 0.9, moment x drag <= 1.44, public scale <= 2) at N <= 4:
+#   base velocity +0x40: |accel| x |air - mean of air^(k/N)| <= 2 x 0.1 x 3/8 = 0.075 -> 0.08
+#   velocity +0x34: (base bound) x 1.44 -> 0.12
+#   local position +0x1C: |base| x 1.44 x (air - mean_k air^(k/N)) (the frame's decay sampled at the steps: 20 x 1.44 x
+#     0.0367 = 1.056 at N 4) + the acceleration's share (2 x 1.44 x ~0.04 = 0.12) <= 1.18 -> 1.25
+#   global position +0x28 = local x public scale + offset: 1.25 x 2 -> 2.6 (+ rounding at 1e-5 relative)
+t60tol 0281FBD8 38000034 f32x3 abs 0.12
+t60tol 0281FBD8 38000040 f32x3 abs 0.08
+t60tol 0281FBD8 3800001C f32x3 abs 1.25
+t60tol 0281FBD8 38000028 f32x3 absrel 2.6 0.00001
+t60tol 0281FBD8 38000234 f32x3 abs 0.12
+t60tol 0281FBD8 38000240 f32x3 abs 0.08
+t60tol 0281FBD8 3800021C f32x3 abs 1.25
+t60tol 0281FBD8 38000228 f32x3 absrel 2.6 0.00001
+t60tol 0281FD14 38000034 f32x3 abs 0.12
+t60tol 0281FD14 38000040 f32x3 abs 0.08
+t60tol 0281FD14 3800001C f32x3 abs 1.25
+t60tol 0281FD14 38000028 f32x3 absrel 2.6 0.00001
+t60tol 0281FD14 38000234 f32x3 abs 0.12
+t60tol 0281FD14 38000240 f32x3 abs 0.08
+t60tol 0281FD14 3800021C f32x3 abs 1.25
+t60tol 0281FD14 38000228 f32x3 absrel 2.6 0.00001

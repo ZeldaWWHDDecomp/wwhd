@@ -1,6 +1,7 @@
 /* Collision attack utilities, GameCube names and fields with HD arithmetic.
  * Verified against WWHD. */
 #include "d/d_cc_uty.h"
+#include "d/d_s_play_t60.h"
 
 static const f32 l_speedThreshold = 50.0f;
 static const f32 l_particleScale = 2.0f;
@@ -288,8 +289,12 @@ fopAc_ac_c* cc_at_check(fopAc_ac_c* target, CcAtInfo* at) {
             pause = (s8)(l_hitPauseAdjustment + 1);
         }
     }
-    if (updatePause && at->mResultingAttackType == cc_uty::RESULT_SWORD)
+    if (updatePause && at->mResultingAttackType == cc_uty::RESULT_SWORD) {
         l_pauseTimer = (u8)pause;
+        /* true60 (follow-up, d_s_play_t60.h): read by a converted actor on an in-between step, the hit stop
+         * starts next frame, as the original's read after the play scene's calcPauseTimer */
+        t60_next_pause_mark_set();
+    }
     if (at->mDamage != 0)
         mDoAud_bgmHitSound(at->mHitSoundId);
     return at->mpActor;

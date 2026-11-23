@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_kytag07.h"
+#include "d/actor/d_a_kytag07_t60.h" /* true60 (t60conv): step helpers */
 static u32 l_demoFrame;
 static u32 l_saveInfo;
 
@@ -23,7 +24,7 @@ static BOOL daKytag07_Execute(kytag07_class* i_this) {
         f32 time = save->mTime;
         u16 date = save->mDate;
         if (time >= 60.0f && time < 315.0f)
-            time += 0.4f;
+            time += t60c::step(0.4f);
         save->mTime = time;          /* dComIfGs_setTime */
         kytag07_save(l_saveInfo)->mDate = date; /* dComIfGs_setDate */
     } else {
@@ -36,11 +37,11 @@ static BOOL daKytag07_Execute(kytag07_class* i_this) {
                 if (l_demoFrame == 4719)
                     dKy_change_colpat(1);
                 if (envLight->mRainCount < 250)
-                    envLight->mRainCount = envLight->mRainCount + 1;
+                    if (t60c::first()) { envLight->mRainCount = envLight->mRainCount + 1; } /* true60 (t60conv): counted on the frame's first step */
                 if (kytag07_env()->mMoyaCount < 30) { /* HD: 30 (GameCube 100) */
                     kytag07_env()->mMoyaMode = 0;
                     kytag07_env_c* e = kytag07_env();
-                    e->mMoyaCount = e->mMoyaCount + 1;
+                    if (t60c::first()) { e->mMoyaCount = e->mMoyaCount + 1; } /* true60 (t60conv): counted on the frame's first step */
                 }
                 if (kytag07_env()->mThunderEff.mMode == 0)
                     kytag07_env()->mThunderEff.mMode = 2;

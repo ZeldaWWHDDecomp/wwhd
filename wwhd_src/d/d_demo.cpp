@@ -10,6 +10,7 @@
 #include "d/d_demo.h"
 #include "d/actor/d_a_player.h"
 #include "gc_api/d/d_com_inf_game.h"
+#include "JSystem/JStudio/JST_timeline_t60.h"
 
 static const f32 l_degreesToShort = 182.04444885253906;
 static const f32 l_shortToDegrees = 0.0054931640625;
@@ -1185,6 +1186,8 @@ u32 dDemo_update() {
         l_demo.mFrame = frame + 1;
         if (control->mSuspend <= 0)
             l_demo.mFrameNoMsg = l_demo.mFrameNoMsg + 1;
+        // true60 (JST_timeline_t60.h): step 1 of an N-step frame sees the timeline at age - 1 + 1/N
+        jst_t60::after_forward();
     }
     return 1;
 }

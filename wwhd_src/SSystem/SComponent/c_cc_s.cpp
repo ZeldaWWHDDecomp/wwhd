@@ -1,5 +1,6 @@
 /* Collision-object registration, dispatch and correction. Verified HD behavior. */
 #include "SSystem/SComponent/c_cc_s.h"
+#include "SSystem/SComponent/c_cc_s_t60.h"
 using gabi::call_ptr;
 static const f32 zero = 0.0f;
 static const f32 rangeMin = -100000000000000000000000000000000.0f;
@@ -605,10 +606,12 @@ void cCcSState::CalcArea() {
 }
 /* 0200E558 */
 void cCcSState::Move() {
+    ccsT60_saveArea(&mDivideArea); /* true60: an earlier step keeps the tick30 Move's area for readers */
     CalcArea();
     ChkAtTg();
     ChkCo();
     call_ptr<void>(__vtbl->MoveAfterCheck, this);
+    ccsT60_restoreArea(this, getShapeAttr);
     mObjAtCount = 0;
     mObjCount = 0;
     mObjTgCount = 0;

@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_ekskz.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule + addendum, d/t60_objw.h): the skull-pot stand's Execute(matrixOut) 0233BEC8 (bck/btk/brk play; hit from the tick30 collision Move -> switch, smoke; delete at the brk end; set_mtx); background actor: own mBgMtx on the earlier steps.
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 0233BEC8
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 0233BB30 0233C3B8
+t60cand 0233BB30 0233C3B8
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0233BB30 0233C3B8 025162A4 025200D4 025A5F88 025A847C 025D57E0 025D57E4 025E535C 025E742C 025F1B48 028E90D4

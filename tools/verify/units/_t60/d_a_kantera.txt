@@ -1,0 +1,10 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_kantera.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule addendum, cross-actor reads;
+# d_a_kantera_t60.h): the lantern's daKantera_Execute 0218D3F8 (kantera_move, ga_move and the model step inlined).
+# The tick30 step runs the original execute whole at dt 1 from the frame start; the earlier steps change no state (a
+# visual extrapolation by the previous frame's change, none here: no previous frame): net effect = the one step's, byte
+# exact. Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 0218D3F8
+# effect calls (sound / particle starts, the env sound): as many calls over the N steps as in the one step
+t60calls 025E1A40 025A847C 0255F458

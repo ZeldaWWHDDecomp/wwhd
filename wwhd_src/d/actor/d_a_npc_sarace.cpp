@@ -8,6 +8,7 @@
  * against it.
  */
 #include "d/actor/d_a_npc_sarace.h"
+#include "d/t60_npc.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule NPC form) */
 #include "sead/ElementAt.h"
 
 // HD: GHS emits a SafeString vtable in each translation unit.
@@ -605,6 +606,10 @@ BOOL daNpc_Sarace_c::_draw() {
 
 /* 022DCA94 */
 BOOL daNpc_Sarace_c::_execute() {
+    t60w::Guard<daNpc_Sarace_c> t60g(this, t60npc::Logic<daNpc_Sarace_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form NPC form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
+    t60g.model = true; /* true60: the frame reaches its model step (the morfs play at the head) */
     u32 p = gabi::ea(this);
     s16 hio[9];
     hio[0] = l_HIO.mNpc.mMaxHeadX;

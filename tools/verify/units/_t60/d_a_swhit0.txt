@@ -1,0 +1,8 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_swhit0.txt
+# ---- true60 N-step spec (2026-11-22; the whole-frame form rule + addendum, d/t60_objw.h): the hit switch (SW_HIT0)'s execute
+# 024A1E20. The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 024A1E20
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0207A9A0 024A1800 024A180C 024A1878 024A1884 024A188C 024A19B4 024A1A48 024A1B2C 024A1BD0 024A1C48 024A1C60 024A1D2C 024A1D34 025162A4 025200D4 02542D88 02542EDC 02543280 025440C8 025447C8 025D7A58 025E535C 025E742C

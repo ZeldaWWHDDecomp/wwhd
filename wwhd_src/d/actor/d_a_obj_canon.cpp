@@ -2,6 +2,7 @@
  * Original memory order, fused arithmetic and native register widths are verified unchanged. */
 #include "bindings.h"
 #include "d/actor/d_a_obj_canon.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using Actor = daObj_Canon_c;
 static J3DModel* canonCurrentModel;
 static Mtx34 canonCurrentMatrix;
@@ -378,7 +379,10 @@ void daObj_Canon_c::modeWait() {
         mShipShotCount = s32(u32(s32(mShipShotCount)) + 1);
     if (canonCalcTimer(&mModeTimer))
         return;
-    if (!canonCheckInside(&mPathRun, &player->current.pos)) {
+    /* true60 (the process-order read rule): Link as A reads him: his frame-start position while he is later in the line */
+    gabi::Local<cXyz> fsLink;
+    bool fs = t60objw::fsPos(gabi::ea(player), fsLink.get());
+    if (!canonCheckInside(&mPathRun, fs ? fsLink.get() : &player->current.pos)) {
         mTargetPitch = 0;
         mTargetYaw = 0;
         mModeTimer = canonHIO.mWaitTime;
@@ -398,7 +402,7 @@ void daObj_Canon_c::modeWait() {
             gabi::ftoi(gabi::fmadds(distance - threshold, canonHIO.mLeadFarRate, f32(prediction))));
     play = canonGetGameInfo();
     player = play->play.mPlayerInfo[0].mpPlayer;
-    mTargetPos.copy(*&player->current.pos);
+    mTargetPos.copy(*(fs ? fsLink.get() : &player->current.pos)); /* true60: process-order read, as above */
     if (!canonCheckInside(&mPathRun, &mTargetPos))
         return;
     play = canonGetGameInfo();
@@ -411,7 +415,8 @@ void daObj_Canon_c::modeWait() {
             gabi::fmadds(f32(s32(u32(6) - u32(s32(mShipShotCount)))), 200.f, f32(prediction))));
     play = canonGetGameInfo();
     player = play->play.mPlayerInfo[0].mpPlayer;
-    s16 angle = canonSearchPlayerAngle(this, player);
+    /* true60: process-order read: the angle to Link's frame-start position (searchPlayerAngleY = targetAngleY(pos, Link's pos)) */
+    s16 angle = fs ? canonTargetYaw(&current.pos, fsLink.get()) : canonSearchPlayerAngle(this, player);
     f32 x = mTargetPos.x;
     mTargetPos.x = gabi::fnmsubs(f32(prediction), cM_ssin(angle), x);
     f32 z = mTargetPos.z;
@@ -504,6 +509,9 @@ void daObj_Canon_c::modeProc(s32 proc, s32 mode) {
 
 /* 02330760 */
 s32 daObj_Canon_c::_execute() {
+    t60w::Guard<daObj_Canon_c> t60g(this, t60objw::Logic<daObj_Canon_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return 0;
     canonAddCalcAngle(&mRecoil, s16(0), s16(10), s16(10));
     s16 pitch = mTargetPitch;
     canonAddCalcAngle(&mPitch, pitch, s16(6), s16(0x300));
@@ -531,6 +539,7 @@ s32 daObj_Canon_c::_execute() {
     canonTransformPosition(matrix, attention.get(), &mAttentionPos);
     if (mSmokeCallBack.mpEmitter.v && canonCalcTimer(&mSmokeTimer) == 0)
         canonEndFollow(&mSmokeCallBack);
+    t60g.model = true; /* true60: the frame reached its model step */
     setMtx();
     return 0;
 }

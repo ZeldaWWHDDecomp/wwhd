@@ -1,5 +1,6 @@
 /* HD event-message pane selection and position-part controls, under development. */
 #include "d/hd_msg_window_states.h"
+#include "d/d_meter_t60_project.h"
 #include "d/hd_parts_key_icon.h"
 #include "d/hd_keyboard_screen.h"
 #include "d/hd_parts_text_pane.h"
@@ -673,6 +674,8 @@ void hdMsgEventPosition_c::selectPositionAnimation() {
     f32 selected = sEventPositionBaseFrame.mValue;
     bool upper = mode == 1;
     if (mode == 0) {
+        /* true60 message window: the projections read the frame's exact camera (d_meter_t60_project.h) */
+        T60_METER_EXACT_PROJECT_VIEW();
         auto* game = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
         auto* player = game->play.mPlayerInfo[0].mpPlayer.get();
         if (hdMsgEvent_samePosition(&mWorldPosition, &sEventPositionOrigin)) {

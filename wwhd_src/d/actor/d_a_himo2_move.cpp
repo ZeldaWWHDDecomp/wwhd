@@ -10,6 +10,7 @@
  * HD keeps the debug registers (REG0_F/REG0_S/REG8_F) of this TU; they are read through
  * the typed register-bank layout shared by the two source files.
  */
+#include <cstdlib>
 #include "d/actor/d_a_himo2.h"
 #include "port_hooks.h"
 
@@ -109,6 +110,13 @@ static inline void mv_posMove(himo2_class* i_this) {
     sp130->y = 0.0f;
     sp130->z = i_this->speedF;
     MtxPosition(sp130, &i_this->speed);
+    if (t60::dt() != 1.0f) { /* true60 (the per-step movement rule): the per-frame speed for the step's dt (launch speeds unchanged) */
+        const f32 dt = t60::dt();
+        i_this->current.pos.x = i_this->current.pos.x + i_this->speed.x * dt;
+        i_this->current.pos.y = i_this->current.pos.y + i_this->speed.y * dt;
+        i_this->current.pos.z = i_this->current.pos.z + i_this->speed.z * dt;
+        return;
+    }
     PSVECAdd(&i_this->current.pos, &i_this->speed, &i_this->current.pos); /* PSVECAdd */
 }
 /* |pos - sp100| (cXyz::operator- then abs of the copy) */
@@ -128,6 +136,82 @@ static inline fopAc_ac_c* mv_searchByID(u32 id) {
     return fopAcIt_Judge(0x025E1234, pid.get());
 }
 
+/* true60 (the per-step smoothing rule and 12): an integer per-frame add (the demo camera's stick turn) at a step of dt: each
+ * step adds dt of the per-frame amount, the fraction carried to the next step while the site runs on consecutive steps
+ * (step counter); dt 1: the amount itself (the original). Same form as Link's lk07_share. */
+struct Himo2Carry {
+    f32 acc;
+    uint32_t stamp;
+    bool valid;
+};
+static inline s32 himo2_share(Himo2Carry& c, s32 perFrame) {
+    const f32 dt = t60::dt();
+    if (dt == 1.0f)
+        return perFrame;
+    const uint32_t now = t60_step_counter();
+    if (!c.valid || now - c.stamp != 1)
+        c.acc = 0.0f;
+    c.stamp = now;
+    c.valid = true;
+    c.acc += (f32)perFrame * dt;
+    const s32 add = (s32)c.acc; /* toward zero; the rest carries */
+    c.acc -= (f32)add;
+    return add;
+}
+static Himo2Carry s_himo2CamTurn;
+/* the frame's first step's stamp for the angle phases (d_a_himo2.h) */
+static Himo2StepStamp s_himo2MoveStep;
+/* true60 (pair): the hook's catch on a target (case 2 -> HIMO2_HOOKED) is the frame's decision.
+ * A tests it once a frame on the hook's place at the frame start (the distance f22 is taken before the frame's move) and
+ * with the frame's decremented timer; at N steps a later step tested the half-moved place and caught a frame early
+ * (himo2 mState 10 at B 114 / A 115, Link's ROPE_SWING 174 / 175, the swing's pos 36.8 @181). Form: the test runs
+ * on the frame's first step only (its pre-move place = A's frame start), the timer read as the tick30 step will have
+ * decremented it (A decrements before the test); a catch there holds the rope's state switch for the frame's later
+ * steps (A's catch frame breaks out without a move); a later step never catches. dt 1: the original test.
+ * HIMO2_CATCH_NEGCTRL: the per-step test (the converted form before). */
+static uint32_t s_himo2CatchStep = 0xFFFFFFFFu;
+static inline bool himo2_catchHeld() {
+#if defined(HIMO2_CATCH_NEGCTRL)
+    return false;
+#else
+    return t60::dt() != 1.0f && !t60::first_step() && s_himo2CatchStep != 0xFFFFFFFFu &&
+           t60_step_counter() - s_himo2CatchStep < (uint32_t)t60::steps();
+#endif
+}
+/* true60 (camera 12 @116; 2026-11-22, rope.sh pair): the wrap
+ * demo's eye (HIMO2_DEMO_COIL: the target + the rotated offset x mCamEyeDist) is set before the call eases mCamEyeDist
+ * (cLib_addCalc2 at the step's dt). A sets it once a frame from the frame-start distance (frame 116: 3, eye -30 / 155 /
+ * -360, then 2.8); at N steps the later step set it from the half-eased distance (2.9: B -29 / 163.5 / -348 at the frame
+ * end, the demo's first frame; from 117 the demo runs in the 30 Hz fallback). Form: the eye is computed on the frame's
+ * first step (or the call that falls through from an accepted HIMO2_DEMO_REQUEST, the frame's first COIL call) and
+ * kept on the later steps; the distance still eases per step (its frame end = A's). NC WWHD_T60_HIMO2EYE_NEGCTRL=1.
+ * dt 1: the original. */
+static inline bool himo2_coilEyeNow(s8 demoAtEntry) {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_HIMO2EYE_NEGCTRL"); return e && e[0] == '1'; }();
+#else
+    const bool nc = false;
+#endif
+    return t60::dt() == 1.0f || nc || t60::first_step() || demoAtEntry == HIMO2_DEMO_REQUEST;
+}
+/* the catch test: dt 1 the original; at N steps the frame's first step only */
+static inline bool himo2_catchTest(f32 dist, f32 range, s16 timer) {
+#if defined(HIMO2_CATCH_NEGCTRL)
+    return dist < range || timer <= 10;
+#else
+    if (t60::dt() == 1.0f)
+        return dist < range || timer <= 10;
+    if (!t60::first_step())
+        return false;
+    const s32 frameTimer = timer != 0 ? timer - 1 : 0; /* the tick30 step's decrement, before A's test */
+    if (dist < range || frameTimer <= 10) {
+        s_himo2CatchStep = t60_step_counter();
+        return true;
+    }
+    return false;
+#endif
+}
+
 /* cases 5/8/9: pull the hook back to the hand */
 static inline bool mv_pull_back(himo2_class* i_this, cXyz* sp100) {
     f32 step = (l_himo2Regs.mChild[18].mFloatRegs[13] + 400.0f) * i_this->mReturnSpeedRate;
@@ -138,11 +222,15 @@ static inline bool mv_pull_back(himo2_class* i_this, cXyz* sp100) {
 }
 
 /* the rope wound in the spin (cases 0 and 1) */
-static inline void mv_spin(himo2_class* i_this, fopAc_ac_c* player, cXyz* sp100) {
+static inline void mv_spin(himo2_class* i_this, fopAc_ac_c* player, cXyz* sp100, f32 share) {
     mDoMtx_YrotS(calc_mtx(), player->shape_angle.y);
     mDoMtx_ZrotM(calc_mtx(), (s16)(l_himo2Regs.mChild[0].mShortRegs[2] + -12000));
-    mDoMtx_YrotM(calc_mtx(),
-                 (s16)((s32)i_this->mFrameCounter * (l_himo2Regs.mChild[0].mShortRegs[3] + 0x2000)));
+    if (share != 0.0f) /* true60: the spin's phase at the step (d_a_himo2.h) */
+        mDoMtx_YrotM(calc_mtx(),
+                     (s16)himo2_phaseMul(i_this->mFrameCounter, l_himo2Regs.mChild[0].mShortRegs[3] + 0x2000, share));
+    else
+        mDoMtx_YrotM(calc_mtx(),
+                     (s16)((s32)i_this->mFrameCounter * (l_himo2Regs.mChild[0].mShortRegs[3] + 0x2000)));
     gabi::Local<cXyz> sp130;
     sp130->x = 0.0f;
     sp130->y = 0.0f;
@@ -169,6 +257,11 @@ static void new_himo2_move(himo2_class* i_this) {
     f32 dx = i_this->current.pos.x - sx;
     f32 dz = i_this->current.pos.z - sz;
     i_this->mHandDist = std_sqrtf(gabi::fmadds(dz, dz, gabi::fmadds(dx, dx, dy * dy)));
+    /* true60: perFrame = the step that ends a 30 Hz frame (always at dt 1): the five timers count 30 Hz
+     * frames (the 30 Hz timer rule), per-call sounds start once a frame, the `== N` timer gates fire on the step that reached N */
+    const bool perFrame = himo2_perFrame();
+    const f32 share = himo2_stepShare(s_himo2MoveStep);
+    if (perFrame) {
     if (i_this->mStateTimer != 0)
         i_this->mStateTimer = i_this->mStateTimer - 1;
     if (i_this->mHitWait != 0)
@@ -179,6 +272,7 @@ static void new_himo2_move(himo2_class* i_this) {
         i_this->mHideTimer = i_this->mHideTimer - 1;
     if (i_this->mCancelWait != 0)
         i_this->mCancelWait = i_this->mCancelWait - 1;
+    }
 
     u32 att = dComIfGp_ea() + 0x5804; /* dComIfGp_getAttention() */
     bool lockon = true;
@@ -226,13 +320,14 @@ static void new_himo2_move(himo2_class* i_this) {
     }
 
     const u32 ropeState = i_this->mState;
-    switch (ropeState) {
+    /* true60: the catch frame's later steps hold the rope's state (see himo2_catchTest) */
+    switch (himo2_catchHeld() ? 0xFFFFFFFFu : ropeState) {
     case HIMO2_WAIT: {
         i_this->speedF = 0.0f;
         if (!r30 && gabi::call_ptr<u32>(himo2_playerVtable(player)->checkRopeReadyAnime, player) !=
                         0) { /* checkRopeReadyAnime */
-            mv_spin(i_this, player, sp100);
-            if ((i_this->mFrameCounter & 7) == 0)
+            mv_spin(i_this, player, sp100, share);
+            if (perFrame && (i_this->mFrameCounter & 7) == 0) /* true60: 30 Hz count, once a frame */
                 mv_seStart(i_this, JA_SE_LK_ROPE_COIL_1);
         } else {
             i_this->mRootSegment = 0x61 - gabi::ftoi(i_this->mHandDist *
@@ -241,7 +336,7 @@ static void new_himo2_move(himo2_class* i_this) {
             cLib_addCalc2(&i_this->current.pos.y, sp100->y, 1.0f, 200.0f * i_this->mReturnSpeedRate);
             cLib_addCalc2(&i_this->current.pos.z, sp100->z, 1.0f, 200.0f * i_this->mReturnSpeedRate);
             cLib_addCalc2(&i_this->mReturnSpeedRate, 1.0f, 1.0f, 0.005f);
-            if (mv_dist(i_this, sp100) > 5.0f)
+            if (mv_dist(i_this, sp100) > 5.0f && perFrame) /* true60: the per-frame sound once a frame */
                 mv_seStartP(player, JA_SE_LK_ROPE_UNWIND);
         }
         if (i_this->mParameters == 1) {
@@ -289,10 +384,13 @@ static void new_himo2_move(himo2_class* i_this) {
         break;
     }
     case 1: {
-        mv_spin(i_this, player, sp100);
-        if ((i_this->mFrameCounter & 7) == 0)
+        mv_spin(i_this, player, sp100, share);
+        if (perFrame && (i_this->mFrameCounter & 7) == 0) /* true60: 30 Hz count, once a frame */
             mv_seStart(i_this, JA_SE_LK_ROPE_SWING_ROUND);
-        s16 r4 = (s16)((s32)i_this->mFrameCounter * (l_himo2Regs.mChild[0].mShortRegs[3] + 0x2000));
+        /* true60: the launch window on the spin's step phase (d_a_himo2.h; = the 30 Hz value on tick30 steps) */
+        s16 r4 = share != 0.0f
+                     ? (s16)himo2_phaseMul(i_this->mFrameCounter, l_himo2Regs.mChild[0].mShortRegs[3] + 0x2000, share)
+                     : (s16)((s32)i_this->mFrameCounter * (l_himo2Regs.mChild[0].mShortRegs[3] + 0x2000));
         s16 r8 = l_himo2Regs.mChild[0].mShortRegs[7];
         s16 lo = (s16)(r8 + -20000);
         if (r4 >= lo && r4 < (s16)(r8 + -0x2E20))
@@ -367,7 +465,7 @@ static void new_himo2_move(himo2_class* i_this) {
         mv_pl_pos_add(i_this);
         if (i_this->mpTarget != nullptr) {
             /* HD: also when mStateTimer <= 10 (GameCube: mStateTimer == 0) */
-            if (f22 < i_this->speedF * 10.0f || i_this->mStateTimer <= 10) {
+            if (himo2_catchTest(f22, i_this->speedF * 10.0f, i_this->mStateTimer)) { /* true60: the frame's test */
                 i_this->mState = HIMO2_HOOKED;
                 i_this->mDemoState = HIMO2_DEMO_REQUEST;
                 i_this->mWrapDrawMode = 1;
@@ -459,7 +557,10 @@ static void new_himo2_move(himo2_class* i_this) {
         if (r4_r27 == nullptr) {
             i_this->mState = HIMO2_PULL_BACK;
         } else {
-            mDoMtx_YrotS(calc_mtx(), (s16)(i_this->mFrameCounter << 13));
+            if (share != 0.0f) /* true60: the wrap's phase at the step (d_a_himo2.h) */
+                mDoMtx_YrotS(calc_mtx(), (s16)himo2_phaseMul(i_this->mFrameCounter, 0x2000, share));
+            else
+                mDoMtx_YrotS(calc_mtx(), (s16)(i_this->mFrameCounter << 13));
             gabi::Local<cXyz> sp130;
             sp130->y = 0.0f;
             sp130->z = i_this->mWrapRadius;
@@ -491,7 +592,8 @@ static void new_himo2_move(himo2_class* i_this) {
     case 5: {
         /* HD: no mRootSegment = REG0_S(0); the pull uses cLib_addCalcPos2 */
         if (mv_pull_back(i_this, sp100)) {
-            mv_seStartP(player, JA_SE_LK_ROPE_UNWIND);
+            if (perFrame) /* true60: the per-frame sound once a frame */
+                mv_seStartP(player, JA_SE_LK_ROPE_UNWIND);
         } else {
             i_this->mParameters = 0;
             mv_seStart(i_this, JA_SE_LK_ROPE_UNCOIL);
@@ -506,7 +608,8 @@ static void new_himo2_move(himo2_class* i_this) {
         /* fallthrough */
     case 9: {
         if (mv_pull_back(i_this, sp100)) {
-            mv_seStartP(player, JA_SE_LK_ROPE_UNWIND);
+            if (perFrame) /* true60: the per-frame sound once a frame */
+                mv_seStartP(player, JA_SE_LK_ROPE_UNWIND);
         } else {
             i_this->mParameters = 0;
             i_this->current.pos = *sp100.get();
@@ -607,7 +710,9 @@ static void new_himo2_move(himo2_class* i_this) {
         cLib_addCalc2(&i_this->mWrapOffsetZ, -144.0f, 1.0f, f27 + 10.0f);
         if (i_this->mWrapOffsetZ > -145.0f) {
             s32 bc = i_this->mWrapCount;
-            if (bc < 400) {
+            /* true60: the wrap count / speed and the hook's 9000 toggle are per-frame counts (the 30 Hz timer rule: on the tick30
+             * step; the demo normally runs in the 30 Hz fallback, an event) */
+            if (bc < 400 && perFrame) {
                 f32 f1 = gabi::fnmsubs(i_this->mpTarget->scale.y - 1.0f, 17.0f, 20.0f);
                 f32 c4 = i_this->mWrapSpeed;
                 if (f1 < 0.5f)
@@ -637,7 +742,7 @@ static void new_himo2_move(himo2_class* i_this) {
                 f3 = (f3 - 0.14f) + (f32)l_himo2Regs.mChild[8].mFloatRegs[7]; /* REG8_F(7) */
             s16 r4 = (s16)gabi::ftoi(gabi::fnmsubs(2000.0f, f3 - 1.0f, 4000.0f));
             cLib_addCalcAngleS2(&i_this->mWrapAngleStep, r4, 1, (s16)(r4 / 8));
-            if (i_this->mWrapCount > 49) {
+            if (i_this->mWrapCount > 49 && perFrame) {
                 s16 ca = i_this->mHookAngleX;
                 if (ca < 9000) {
                     i_this->mHookAngleX = 9000;
@@ -655,23 +760,25 @@ static void new_himo2_move(himo2_class* i_this) {
         cLib_addCalc2(&i_this->mCamCenter.x, i_this->mpTarget->current.pos.x, 0.3f, 100.0f);
         cLib_addCalc2(&i_this->mCamCenter.y, i_this->mpTarget->current.pos.y, 0.3f, 100.0f);
         cLib_addCalc2(&i_this->mCamCenter.z, i_this->mpTarget->current.pos.z, 0.3f, 100.0f);
-        i_this->mCamEye = i_this->mpTarget->current.pos;
-        mDoMtx_YrotS(calc_mtx(), i_this->mCamAngleY);
-        gabi::Local<cXyz> sp130;
-        f32 z4c = l_himo2Regs.mChild[18].mFloatRegs[9] + 120.0f;
-        f32 x44 = l_himo2Regs.mChild[18].mFloatRegs[7] + 10.0f;
-        sp130->y = l_himo2Regs.mChild[18].mFloatRegs[8] + -85.0f;
-        sp130->x = x44 * i_this->mCamEyeSignX;
-        sp130->z = z4c * i_this->mCamEyeSignZ;
-        gabi::Local<cXyz> sp124;
-        MtxPosition(sp130, sp124);
-        f32 fc = i_this->mCamEyeDist;
-        f32 nx = gabi::fmadds(sp124->x, fc, i_this->mCamEye.x);
-        f32 ny = gabi::fmadds(sp124->y, fc, i_this->mCamEye.y);
-        f32 nz = gabi::fmadds(sp124->z, fc, i_this->mCamEye.z);
-        i_this->mCamEye.x = nx;
-        i_this->mCamEye.y = ny;
-        i_this->mCamEye.z = nz;
+        if (himo2_coilEyeNow(d9)) { /* true60 (eye): the demo eye from the frame-start state */
+            i_this->mCamEye = i_this->mpTarget->current.pos;
+            mDoMtx_YrotS(calc_mtx(), i_this->mCamAngleY);
+            gabi::Local<cXyz> sp130;
+            f32 z4c = l_himo2Regs.mChild[18].mFloatRegs[9] + 120.0f;
+            f32 x44 = l_himo2Regs.mChild[18].mFloatRegs[7] + 10.0f;
+            sp130->y = l_himo2Regs.mChild[18].mFloatRegs[8] + -85.0f;
+            sp130->x = x44 * i_this->mCamEyeSignX;
+            sp130->z = z4c * i_this->mCamEyeSignZ;
+            gabi::Local<cXyz> sp124;
+            MtxPosition(sp130, sp124);
+            f32 fc = i_this->mCamEyeDist;
+            f32 nx = gabi::fmadds(sp124->x, fc, i_this->mCamEye.x);
+            f32 ny = gabi::fmadds(sp124->y, fc, i_this->mCamEye.y);
+            f32 nz = gabi::fmadds(sp124->z, fc, i_this->mCamEye.z);
+            i_this->mCamEye.x = nx;
+            i_this->mCamEye.y = ny;
+            i_this->mCamEye.z = nz;
+        }
         if ((fopAcM_GetParam(i_this->mpTarget) & 0xF0) != 0)
             cLib_addCalc2(&i_this->mCamEyeDist, l_himo2Regs.mChild[0].mFloatRegs[6] + 1.8f,
                           l_himo2Regs.mChild[0].mFloatRegs[4] + 0.2f,
@@ -701,7 +808,7 @@ static void new_himo2_move(himo2_class* i_this) {
         if (i_this->mDemoTimer <= 30) {
             if (i_this->mDemoTimer < 30)
                 btd_setBlur(0xB4);
-            if (i_this->mDemoTimer == 30)
+            if (i_this->mDemoTimer == 30 && perFrame) /* true60: once, on the step that reached it */
                 mv_seStartCurrent(himo2_dr, JA_SE_CM_BTD_ROPE_SET);
         }
         if (gabi::load<u8>(gabi::ea(dComIfGp_getStartStageName())) !=
@@ -735,7 +842,8 @@ static void new_himo2_move(himo2_class* i_this) {
         /* fallthrough */
     case HIMO2_DEMO_DROP_ROCK: {
         mv_colset(1.0f);
-        if ((u32)(s32)i_this->mDemoTimer == (u32)(s32)(s16)(l_himo2Regs.mChild[0].mShortRegs[2] + 0x39))
+        if ((u32)(s32)i_this->mDemoTimer == (u32)(s32)(s16)(l_himo2Regs.mChild[0].mShortRegs[2] + 0x39) &&
+            perFrame) /* true60: once, on the step that reached it */
             mv_seStart0(JA_SE_CV_DRG_SET_ROPE);
         bool big = false;
         if (i_this->mDemoTimer <= 1) {
@@ -881,9 +989,9 @@ static void new_himo2_move(himo2_class* i_this) {
         /* fallthrough */
     case HIMO2_DEMO_BOSS_FALL: {
         himo2_dr->mTailState = 3; /* dr->mTailState */
-        if (i_this->mDemoTimer == 200)
+        if (i_this->mDemoTimer == 200 && perFrame) /* true60: once, on the step that reached it */
             mv_seStart0(JA_SE_CV_DRG_ROCKFALL_2);
-        if (i_this->mDemoTimer == 170)
+        if (i_this->mDemoTimer == 170 && perFrame)
             mv_seStartCurrent(himo2_dr, JA_SE_CM_BTD_BEF_ROCK_FALL);
         himo2_dr_c* dr = himo2_dr;
         f32 f1 = i_this->mDemoTimer > 150 ? 2000.0f : 100.0f;
@@ -895,7 +1003,8 @@ static void new_himo2_move(himo2_class* i_this) {
                       100.0f);
         cLib_addCalc2(&i_this->mCamEye.y, 0.0f, 0.5f, 100.0f);
         if ((u32)(s32)i_this->mDemoTimer ==
-            (u32)(s32)(s16)(l_himo2Regs.mChild[0].mShortRegs[4] + 0x6E)) {
+                (u32)(s32)(s16)(l_himo2Regs.mChild[0].mShortRegs[4] + 0x6E) &&
+            perFrame) { /* true60: once, on the step that reached it */
             i_this->mCamShake = l_himo2Regs.mChild[0].mFloatRegs[11] + 50.0f;
             btd_setBlur(0xB4);
         }
@@ -981,6 +1090,7 @@ static void new_himo2_move(himo2_class* i_this) {
         /* label_1d50 */
         f32 f2 = mv_subStickX();
         s32 add = gabi::ftoi(f2 * (l_himo2Regs.mChild[0].mFloatRegs[6] + 1000.0f));
+        add = himo2_share(s_himo2CamTurn, add); /* true60: the stick's per-frame turn, dt of it per step */
         i_this->mCamAngleYTarget = (s16)(i_this->mCamAngleYTarget + add);
         cLib_addCalcAngleS2(&i_this->mCamAngleY, i_this->mCamAngleYTarget, 4, 0x1000);
         if (!(f26 > -0.1f)) {
@@ -1023,9 +1133,16 @@ static void new_himo2_move(himo2_class* i_this) {
     if (i_this->mDemoState > HIMO2_DEMO_INACTIVE) {
         u32 d8 = i_this->mFrameCounter;
         f32 mCamShake = i_this->mCamShake;
-        f32 f27_3 = cM_ssin((s32)(d8 * 0x3300)) * mCamShake;
-        f32 f1 = cM_scos((s32)(d8 * 0x3000)) * mCamShake;
-        f32 c3 = cM_scos((s32)(d8 * 0x1C00));
+        f32 f27_3, f1, c3;
+        if (share != 0.0f) { /* true60: the shake's phase at the step (d_a_himo2.h) */
+            f27_3 = cM_ssin(himo2_phaseMul(d8, 0x3300, share)) * mCamShake;
+            f1 = cM_scos(himo2_phaseMul(d8, 0x3000, share)) * mCamShake;
+            c3 = cM_scos(himo2_phaseMul(d8, 0x1C00, share));
+        } else {
+            f27_3 = cM_ssin((s32)(d8 * 0x3300)) * mCamShake;
+            f1 = cM_scos((s32)(d8 * 0x3000)) * mCamShake;
+            c3 = cM_scos((s32)(d8 * 0x1C00));
+        }
         gabi::Local<cXyz> spB8;
         gabi::Local<cXyz> spC4;
         f32 dcx = i_this->mCamEye.x;

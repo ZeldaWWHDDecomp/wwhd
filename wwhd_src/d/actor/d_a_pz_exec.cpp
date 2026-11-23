@@ -3,6 +3,7 @@
  * only stubs for d_a_pz), verified against cking.rpx.
  */
 #include "d/actor/d_a_pz.h"
+#include "d/actor/d_a_pz_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule NPC form) */
 
 static PzRegistrationHD l_materialRegistration;
 static PzRendererHD l_pzRenderer;
@@ -262,6 +263,10 @@ void daPz_c::setEyeBtp(int i_idx) {
 
 /* 02454B7C */
 BOOL daPz_c::_execute() {
+    t60w::Guard<daPz_c> t60g(this, pz_t60::ops()); /* true60: the whole frame on the tick30 step */
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
+    t60g.model = true;
 
     if (l_HIO.mbDebugWarpToPlayer != 0) {
         /* HIO: warp in front of Link */

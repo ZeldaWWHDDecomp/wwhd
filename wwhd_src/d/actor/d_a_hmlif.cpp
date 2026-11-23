@@ -2,6 +2,7 @@
  * HD resource, collision, matrix and call-order semantics are retained. */
 #include "bindings.h"
 #include "d/actor/d_a_hmlif.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using gabi::at;
 static const char* hmlifArcNames[3] = {"Hmlif", "Hyuf1", "Hyuf2"};
 static s16 hmlifBmdIndices[3] = {5, 6, 5};
@@ -350,11 +351,18 @@ void daHmlif_c::set_mtx() {
 }
 /* 02176194 */
 s32 daHmlif_c::Execute(be<u32>* output) {
+    t60w::Guard<daHmlif_c> t60g(this, t60objw::Logic<daHmlif_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) { /* true60: a step before the tick30 step: the picture only (frame interpolation); the background stays: the
+                      * wrapper gets the actor's own mBgMtx, as on the tick30 step */
+        *output = gabi::ea(&mBgMtx);
+        return 1;
+    }
     move();
     set_se();
     anim_play();
     check_col();
     *output = gabi::ea(&mBgMtx);
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     return 1;
 }

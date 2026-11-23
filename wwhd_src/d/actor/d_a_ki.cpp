@@ -7,6 +7,9 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_ki.h"
+#define KI_T60_UNIT 1
+#include "d/actor/d_a_ki_t60.h" /* true60 */
+#include <unordered_map>
 
 const gc_tu_data gc_tu = {.safeString = KI_SAFESTRING_VTABLE, .safeStringAssure = 0x0219DBF8};
 static kiHIO_c l_kiHIO;
@@ -84,7 +87,8 @@ static void* ki_a_d_sub(void* ac1, void*) {
     if (fopAc_IsActor(ac1) && ac1 != nullptr && fpcM_GetName(ac1) == fpcNm_KI_e) {
         ki_class* ki = (ki_class*)ac1;
         ki_all_count += 1;
-        if (ki->mAction == ki_class::ACT_ATTACK_MOVE_INDEX_e && ki->mBehaviorType < 10) {
+        /* true60 (the process-order read rule): a Keese later in the process line counts with its frame-start state */
+        if (ki_t60_fs_fighting(ki)) {
             ki_fight_count += 1;
         }
     }
@@ -98,8 +102,20 @@ static u32 ki_check(ki_class* i_this) {
     return (u32)gabi::ea(fpcM_Search(gabi::guest_fn((const void*)&ki_a_d_sub), &i_this->actor));
 }
 
-/* 02199388 */
-static void anm_init(ki_class* i_this, int anmResIdx, float morf, unsigned char loopMode, float playSpeed, int soundResIdx) {
+/* true60 (the Moblin's request form; d_a_ki_t60.h): an animation set before the frame's tick30 step is a
+ * request, set on the tick30 step after the frame's play (wwhd_t60_ki_anm_apply, called by daKi_Execute). Host state of
+ * this unit only (the split-actor state rule), keyed by the Keese's guest address. */
+struct KiT60AnmReq {
+    u32 tag = 0;
+    s32 bck = 0, bas = -1;
+    f32 morf = 0.0f, speed = 0.0f;
+    u8 mode = 0;
+};
+static std::unordered_map<u32, KiT60AnmReq>& ki_t60_anm_reqs() {
+    static std::unordered_map<u32, KiT60AnmReq> s_reqs;
+    return s_reqs;
+}
+static void ki_anm_set(ki_class* i_this, int anmResIdx, float morf, unsigned char loopMode, float playSpeed, int soundResIdx) {
     if (soundResIdx >= 0) {
         J3DAnmTransform* anm = (J3DAnmTransform*)dComIfG_getObjectRes("Ki", anmResIdx, SAFESTRING_VTBL);
         void* bas = dComIfG_getObjectRes("Ki", soundResIdx, SAFESTRING_VTBL);
@@ -108,6 +124,45 @@ static void anm_init(ki_class* i_this, int anmResIdx, float morf, unsigned char 
         J3DAnmTransform* anm = (J3DAnmTransform*)dComIfG_getObjectRes("Ki", anmResIdx, SAFESTRING_VTBL);
         i_this->mpMorf->setAnm(anm, loopMode, morf, playSpeed, 0.0f, -1.0f, nullptr);
     }
+}
+/* daKi_Execute, the tick30 step after its play, when the &mpMorf latch is pending (d_a_ki_t60.h) */
+extern "C" __attribute__((visibility("default"))) void wwhd_t60_ki_anm_apply(void* ki) {
+    ki_class* i_this = static_cast<ki_class*>(ki);
+    auto& reqs = ki_t60_anm_reqs();
+    auto it = reqs.find(gabi::ea(i_this));
+    if (it == reqs.end())
+        return;
+    const KiT60AnmReq r = it->second;
+    reqs.erase(it);
+    if (r.tag != bk_t60_frame_tag())
+        return;
+    /* the set by the original anm_init, entered at its guest address: its "Ki" literal is glued `in 02199388` (the running
+     * function picks the guest copy; called directly from here the running function is daKi_Execute, which has none:
+     * glue_fatal, as the Moblin's in pairs). This is the tick30 step: anm_init takes the set path */
+    gabi::call<void>(0x02199388 /* anm_init */, i_this, r.bck, r.morf, r.mode, r.speed, r.bas);
+}
+
+/* 02199388 */
+static void anm_init(ki_class* i_this, int anmResIdx, float morf, unsigned char loopMode, float playSpeed, int soundResIdx) {
+#ifndef T60C_NEGCTRL
+    /* true60: set before the frame's tick30 step: a request (above); the old animation plays to the frame end,
+     * as the original's set after the frame's play */
+    if (t60c::on() && !t60::tick30()) {
+        KiT60AnmReq& r = ki_t60_anm_reqs()[gabi::ea(i_this)];
+        r = KiT60AnmReq{};
+        r.tag = bk_t60_frame_tag();
+        r.bck = anmResIdx;
+        r.bas = soundResIdx;
+        r.morf = morf;
+        r.speed = playSpeed;
+        r.mode = loopMode;
+        ki_t60_mark_anm(i_this);
+        return;
+    }
+    if (t60c::on())
+        ki_t60_anm_reqs().erase(gabi::ea(i_this)); /* the tick30 set supersedes an earlier request */
+#endif
+    ki_anm_set(i_this, anmResIdx, morf, loopMode, playSpeed, soundResIdx);
 }
 
 /* 021994B0 */
@@ -222,9 +277,10 @@ static void ki_pos_move(ki_class* i_this, s8 arg1) {
     cMtx_YrotS(calc_mtx(), i_this->actor.current.angle.y);
     cMtx_XrotM(calc_mtx(), i_this->actor.current.angle.x);
     MtxPosition(&sp0C, &i_this->actor.speed);
-    i_this->actor.current.pos.x += i_this->actor.speed.x;
-    i_this->actor.current.pos.y += i_this->actor.speed.y;
-    i_this->actor.current.pos.z += i_this->actor.speed.z;
+    /* true60 (the per-step movement rule): the step's share of the frame's speed */
+    i_this->actor.current.pos.x += t60c::step(i_this->actor.speed.x);
+    i_this->actor.current.pos.y += t60c::step(i_this->actor.speed.y);
+    i_this->actor.current.pos.z += t60c::step(i_this->actor.speed.z);
 }
 
 /* 0219CE90 */

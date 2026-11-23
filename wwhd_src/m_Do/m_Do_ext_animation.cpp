@@ -1,5 +1,7 @@
 /** HD animation helpers, using tww old-frame and blend-table names. Private source. */
 #include "m_Do/m_Do_ext_animation.h"
+#include "true60.h"
+#include <cmath>
 // HD: blend tables include packed animation buffers and dynamic member dispatch.
 // HD: constructors retain their null-this allocation and verified return-word ABI.
 static mDoExtAnimation::Address l_modelFile;
@@ -65,9 +67,73 @@ u32 mDoExt_animationAlignedAlloc(u32 size, u32 align) {
   return mDoExt_animationAllocAligned(size, align);
 }
 
+/* true60 (pairs, hookshot aim: Link's mHookshotRootPos). Only Link (daPy_lk_c's
+ * m_old_fdata) uses mDoExt_MtxCalcOldFrame. Link's execute calcs the model (the blend: this step's animation pose and
+ * the previous pose, weighted mOldFrameRate) BEFORE its decOldFrameMorfCounter: the original frame's calc uses the rate
+ * the previous frame's dec (or this frame's init, whose own dec takes one frame at once: (d - 1) / d) left. HD's aim
+ * procedures re-init the morph in EVERY update (setBlendSubjectMoveAnimeHD -> setBlendMoveAnime(2.4)): the previous
+ * pose weighted 1.4 / 2.4 = 0.583 per frame.'s per-step form (a step takes dt, the re-init ran on every step with
+ * its own take dt) weighted it 1.9 / 2.4 = 0.79 per step = 0.63 per frame (the left hand 3.7 units behind A while
+ * aiming, never closing); an init counting a whole frame on the first step weighted the frame's later steps with the
+ * step's own dec (0.9 / 1.4) on top: 0.375 per frame (27 units ahead at the aim start).
+ * Form (the first-step input rule): the counter (frames: Link's logic reads it, mRootMoveMode) and the remaining weights count
+ * whole frames as in A: the init's own dec one frame (on any step), Link's dec once per frame on the tick30 step (one
+ * frame); the calc weight is split over the frame's steps: every step's calc uses rho^(1/N), rho = A's rate for the
+ * frame (remain / previous remain), so the N calcs compose to A's one calc exactly for a still pose. The same init
+ * (object, duration, joints) repeated on a later step of the frame is held (the original's update inits once per
+ * frame). dt 1: the original code. Host memory only. */
+static struct {
+  uint32_t stamp, ea, start, end;
+  f32 duration;
+  bool valid;
+} s_oldMorfInit;
+
+/* the frame's rate (as the original's dec computes it from the remaining weights) split over the frame's N steps */
+static void oldMorfStepRate(mDoExtAnimation::mDoExt_MtxCalcOldFrame *self) {
+  f32 one = l_one, zero = l_zero, old = self->mOldFrameMorfRemainOld, value = self->mOldFrameMorfRemain;
+  f32 rho = zero;
+  if (old > zero) {
+    f32 ratio = gabi::fsubs_ppc(old, value) / old;
+    rho = gabi::fsubs_ppc(one, ratio);
+  }
+  if (!(self->mOldFrameMorfCounter > zero) && !(value > zero))
+    rho = zero; /* (the original's end: rate 0) */
+  self->mOldFrameRate = rho > zero ? (f32)std::pow((double)rho, 1.0 / (double)t60::steps()) : zero;
+}
+
+/* the original decOldFrameMorfCounter: one frame off the counter */
+static void oldMorfDecFrame(mDoExtAnimation::mDoExt_MtxCalcOldFrame *self) {
+  f32 count = self->mOldFrameMorfCounter;
+  if (!(count > 0))
+    return;
+  f32 one = l_one, zero = l_zero, next = gabi::fsubs_ppc(count, one);
+  if (!(next > zero)) {
+    self->mOldFrameMorfStep = zero;
+    next = zero;
+    self->mOldFrameRate = zero;
+  }
+  self->mOldFrameMorfCounter = next;
+  f32 inv = self->mOldFrameMorfStep, old = self->mOldFrameMorfRemain, value = gabi::fmuls_ppc(next, inv);
+  self->mOldFrameMorfRemain = value;
+  self->mOldFrameMorfRemainOld = old;
+  if (old > zero) {
+    f32 ratio = gabi::fsubs_ppc(old, value) / old;
+    self->mOldFrameRate = gabi::fsubs_ppc(one, ratio);
+  } else
+    self->mOldFrameRate = zero;
+}
+
 /* 025E3EC8 */
 void mDoExtAnimation::mDoExt_MtxCalcOldFrame::decOldFrameMorfCounter() {
 
+  if (t60::dt() != 1.0f) { /* true60: see s_oldMorfInit (the frame's dec on its tick30 step, the rate split per step;
+                            * supersedes's per-step take of dt) */
+    if (t60::tick30())
+      oldMorfDecFrame(this);
+    if (mOldFrameMorfCounter > l_zero || mOldFrameRate > l_zero)
+      oldMorfStepRate(this);
+    return;
+  }
   f32 count = mOldFrameMorfCounter;
   if (!(count > 0))
     return;
@@ -93,6 +159,19 @@ void mDoExtAnimation::mDoExt_MtxCalcOldFrame::initOldFrameMorf(f32 duration, u32
                                                  u32 end) {
 
   f32 zero = l_zero;
+  if (t60::dt() != 1.0f && duration > zero) { /* true60: see s_oldMorfInit */
+    const uint32_t now = t60_step_counter(), me = gabi::ea(this);
+    if (!t60::first_step() && s_oldMorfInit.valid && now - s_oldMorfInit.stamp < t60::steps() &&
+        s_oldMorfInit.ea == me && s_oldMorfInit.duration == duration && s_oldMorfInit.start == start &&
+        s_oldMorfInit.end == end)
+      return; /* the frame's init repeated on a later step: held */
+    s_oldMorfInit.stamp = now;
+    s_oldMorfInit.ea = me;
+    s_oldMorfInit.start = start;
+    s_oldMorfInit.end = end;
+    s_oldMorfInit.duration = duration;
+    s_oldMorfInit.valid = true;
+  }
   if (duration > zero) {
     f32 one = l_one, inv = one / duration;
     mOldFrameMorfRemain = one;
@@ -100,7 +179,13 @@ void mDoExtAnimation::mDoExt_MtxCalcOldFrame::initOldFrameMorf(f32 duration, u32
     mOldFrameRate = one;
     mOldFrameMorfCounter = duration;
     mOldFrameMorfStep = inv;
-    mDoExt_MtxCalcOldFrame_decOldFrameMorfCounterCall(this);
+    if (t60::dt() != 1.0f) { /* true60: the init's own dec takes one frame on any step, its rate split (s_oldMorfInit) */
+      const f32 saved = t60_set_dt(1.0f);
+      mDoExt_MtxCalcOldFrame_decOldFrameMorfCounterCall(this);
+      t60_set_dt(saved);
+      oldMorfStepRate(this);
+    } else
+      mDoExt_MtxCalcOldFrame_decOldFrameMorfCounterCall(this);
     mOldFrameEndJoint = end;
     mOldFrameStartJoint = start;
   } else {

@@ -7,11 +7,14 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_npc_roten.h"
+#include "d/actor/d_a_npc_roten_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule NPC form) */
 
 // HD: the action tables use GHS eight-byte member pointers.
 
 /* 022D5580 */
 bool daNpcRoten_c::_execute() {
+    if (t60w::begin(this, roten_t60::kOps)) /* true60: a step before the tick30 step: the picture only */
+        return false;
     chkAttention();
     checkOrder();
     if (!roten_dComIfGp_event_runCheck() ||
@@ -43,6 +46,7 @@ bool daNpcRoten_c::_execute() {
     lookBack();
     setCollisionB();
     setMtx();
+    t60w::end(this, roten_t60::kOps, true); /* true60: the frame's change kept for the next frame's picture */
     return false;
 }
 /* 022D58F4 */

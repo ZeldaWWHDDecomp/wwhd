@@ -5,6 +5,7 @@
 #include "d/actor/d_a_obj_pirateship.h"
 #include "bindings.h"
 #include "gc_api/d/d_com_inf_game.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using Ship = daObjPirateship::Act_c;
 static daObjPirateShipHIO_c l_HIO;
 static PirateshipMathStatics l_math;
@@ -532,6 +533,10 @@ BOOL daObjPirateship::Act_c::demo_move() {
 
 /* 02385B70 */
 BOOL daObjPirateship::Act_c::_execute() {
+    t60w::Guard<Ship> t60g(this, t60objw::Logic<Ship>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation); the background stays */
+        return TRUE;
+    t60g.model = true; /* true60: the frame reaches its model step (set_mtx in executeShip) */
     return executeShip(this);
 }
 

@@ -4,6 +4,92 @@
  * HD differences and compiler-generated copies retain the original call and store order.
  */
 #include "d/actor/d_a_player_main_08.h"
+#include "d/actor/d_a_player_anm_t60.h"
+#include "d/actor/d_a_player_t60.h"
+#include "true60.h"
+
+/* true60 (the 30 Hz timer rule, the first-step AI-timer rule order: count and decide on the frame's FIRST
+ * step, move on every step): the 30 Hz game counts a procedure's frames in its one update per frame, which the N-step
+ * run maps to the frame's first step (the input read, the first-step input rule). True there and always at dt 1: the procedures' 30 Hz
+ * frame counts (mProcVar0 waits) and sustained per-update sound starts run here only. A body that first runs after a
+ * procedure init later in the frame (an init on the first step from the input, or on an animation end) does not count
+ * in that frame: the original runs no body of that procedure in that frame (procCutRoll's wind-up / spin
+ * sounds and its 90-frame count one frame early when they ran on the init frame's tick30 step). */
+static inline bool lk08_perFrame() { return t60::dt() == 1.0f || t60::first_step(); }
+/* ... and the decision the first step's count was taken under holds over the frame's later steps: a count that reaches
+ * its end value on the first step switches the branch on the NEXT frame's first step, as the 30 Hz game's next update
+ * does (else the frame's second step would take the end branch (N - 1) / N frame early). Latch of the step, procedure,
+ * site and the value the count left; host memory, Link only; never consulted at dt 1. */
+struct Lk08CountLatch {
+    uint32_t stamp;
+    s32 proc;
+    s32 site;
+    s32 value;
+    bool valid;
+};
+static Lk08CountLatch s_lk08Count;
+static inline void lk08_counted(const daPy_lk_c* self, s32 site, s32 value) {
+    if (t60::dt() == 1.0f) {
+        return;
+    }
+    s_lk08Count.stamp = t60_step_counter();
+    s_lk08Count.proc = self->mCurProc;
+    s_lk08Count.site = site;
+    s_lk08Count.value = value;
+    s_lk08Count.valid = true;
+}
+static inline bool lk08_countHeld(const daPy_lk_c* self, s32 site, s32 value) {
+    return t60::dt() != 1.0f && !t60::first_step() && s_lk08Count.valid &&
+           t60_step_counter() - s_lk08Count.stamp < t60::steps() && s_lk08Count.proc == (s32)self->mCurProc &&
+           s_lk08Count.site == site && s_lk08Count.value == value;
+}
+/* the common form `if (var > 0) { count } else { end }`: count on the first step, the count branch held */
+static inline bool lk08_countBranch(const daPy_lk_c* self, s32 site, s32 var) {
+    return var > 0 || lk08_countHeld(self, site, var);
+}
+static inline void lk08_countDown(const daPy_lk_c* self, s32 site, be<s16>& var) {
+    if (lk08_perFrame()) {
+        var = var - 1;
+        lk08_counted(self, site, var);
+    }
+}
+
+/* true60 (the per-step smoothing rule and 6; the form of's lk07_share): a per-frame amount added to an integer
+ * angle at a step of dt: each step adds dt of it, the fraction carried to the next step (exact for dt = 1/N while the
+ * amount stays). The carry belongs to one site and lives while the site runs on consecutive steps (step counter); a
+ * gap starts it afresh. Host memory, Link only; dt 1: never called (the sites keep the original expression). */
+struct Lk08Carry {
+    f32 acc;
+    uint32_t stamp;
+    bool valid;
+};
+static inline s32 lk08_shareF(Lk08Carry& c, f32 perStep) {
+    const uint32_t now = t60_step_counter();
+    if (!c.valid || now - c.stamp != 1) {
+        c.acc = 0.0f;
+    }
+    c.stamp = now;
+    c.valid = true;
+    c.acc += perStep;
+    const s32 add = (s32)c.acc; /* toward zero; the rest carries */
+    c.acc -= (f32)add;
+    return add;
+}
+static inline s32 lk08_share(Lk08Carry& c, s32 perFrame) {
+    if (t60::dt() == 1.0f) {
+        return perFrame;
+    }
+    return lk08_shareF(c, (f32)perFrame * (f32)t60::dt());
+}
+/* procCutExMJ's flip roll (m34EC +- 0x1800 a frame), procCutRoll's spin (m34EC - 0x36B0 a frame) and its run-out
+ * (m34EC - (0x34B0 x rate + 512) a frame) */
+static Lk08Carry s_lk08MjRoll, s_lk08RollSpin, s_lk08RollOut;
+/* true60 (the one-emitter-per-event rule): procCutTurn's trail flash (the three dPa_cutTurnEcallBack_c alphas 0x80 for one 30 Hz
+ * frame after the 18.5 pass, cleared on the next update) lasts one frame of steps: the age in frames since it was set */
+static f32 s_lk08TurnFlashAge;
+/* true60: procCutTurnMove's direction change of this 30 Hz frame (target speed 0 for the frame) */
+static bool s_lk08DirHold;
+static uint32_t s_lk08DirHoldStamp;
 
 // HD: Link's split files share the original translation unit's metadata.
 const gc_tu_data gc_tu = {
@@ -113,7 +199,7 @@ BOOL daPy_lk_c::procWeaponFrontSwingReady() {
     if (mActorKeepEquip.mActor == nullptr) {
         return Link08_checkNextMode(this, 0);
     }
-    if (mFrameCtrlUnder[Link08::UNDER_MOVE0_e].getRate() < 0.01f) {
+    if (lkT60_endRate(&mFrameCtrlUnder[Link08::UNDER_MOVE0_e]) < 0.01f) {
         return Link08_procWeaponFrontSwing_init(this);
     }
     if (mpAttnActorLockOn != nullptr) {
@@ -145,7 +231,7 @@ BOOL daPy_lk_c::procWeaponFrontSwing() {
     if (mActorKeepEquip.mActor == nullptr) {
         return Link08_checkNextMode(this, 0);
     }
-    if (mFrameCtrlUnder[Link08::UNDER_MOVE0_e].getRate() < 0.01f) {
+    if (lkT60_endRate(&mFrameCtrlUnder[Link08::UNDER_MOVE0_e]) < 0.01f) {
         return procWeaponFrontSwingEnd_init();
     }
     if (Link08_changeCutReverseProc(this, Link08::ANM_CUTREL)) {
@@ -171,7 +257,7 @@ BOOL daPy_lk_c::procWeaponFrontSwingEnd() {
     } else {
         mNoResetFlg0 = mNoResetFlg0 & ~4u;
     }
-    if (mFrameCtrlUnder[Link08::UNDER_MOVE0_e].getRate() < 0.01f ||
+    if (lkT60_endRate(&mFrameCtrlUnder[Link08::UNDER_MOVE0_e]) < 0.01f ||
         mActorKeepEquip.mActor == nullptr) {
         return Link08_checkNextMode(this, 0);
     }
@@ -185,13 +271,13 @@ BOOL daPy_lk_c::procWeaponFrontSwingEnd() {
 BOOL daPy_lk_c::procWeaponThrow() {
 
     J3DFrameCtrl* frameCtrl = &mFrameCtrlUnder[Link08::UNDER_MOVE0_e];
-    if (frameCtrl->getRate() < 0.01f || mActorKeepEquip.mActor == nullptr) {
+    if (lkT60_endRate(frameCtrl) < 0.01f || mActorKeepEquip.mActor == nullptr) {
         return Link08_checkNextMode(this, 0);
     }
     if (frameCtrl->getFrame() > 100.0f) {
         return Link08_checkNextMode(this, 1);
     }
-    if (frameCtrl->checkPass(10.0f)) {
+    if (lkT60_pass(frameCtrl, 10.0f)) {
         fopAc_ac_c* lockOn = mpAttnActorLockOn;
         fopAc_ac_c* boko = mActorKeepEquip.mActor;
         s16 angle = (s16)0xF400;
@@ -225,7 +311,7 @@ BOOL daPy_lk_c::procFoodThrow() {
 
     J3DFrameCtrl* frameCtrl = &mFrameCtrlUnder[Link08::UNDER_MOVE0_e];
     Link08_setShipRidePosUseItem(this);
-    if (frameCtrl->getRate() < 0.01f) {
+    if (lkT60_endRate(frameCtrl) < 0.01f) {
         if (mDemo.mDemoType != 5 /* !checkSpecialDemoMode() */) {
             link08CutEnd(this);
         } else {
@@ -233,7 +319,7 @@ BOOL daPy_lk_c::procFoodThrow() {
             dCam_EndEventCamera_l(this);
             Link08_endDemoMode(this);
         }
-    } else if (frameCtrl->checkPass(8.0f)) {
+    } else if (lkT60_pass(frameCtrl, 8.0f)) {
         seStartOnlyReverb(Link08::JA_SE_LK_ESA_THROW);
         fopAc_ac_c* esa = Link08_fastCreate(Link08::fpcNm_ESA_e, 0xFFFF000Cu, &mLeftHandPos,
                                             (s32)current.roomNo, &shape_angle, nullptr, -1, 0, 0);
@@ -260,14 +346,14 @@ BOOL daPy_lk_c::procFoodSet() {
 
     J3DFrameCtrl* frameCtrl = &mFrameCtrlUnder[Link08::UNDER_MOVE0_e];
     Link08_setShipRidePosUseItem(this);
-    if (frameCtrl->getRate() > 0.0f && frameCtrl->checkPass(9.0f)) {
+    if (frameCtrl->getRate() > 0.0f && lkT60_pass(frameCtrl, 9.0f)) {
         seStartOnlyReverb(Link08::JA_SE_LK_HYOI_SET);
     }
-    if (std::fabs(frameCtrl->getRate()) < 0.01f) {
+    if (std::fabs(lkT60_endRate(frameCtrl)) < 0.01f) {
         if (mDemo.mDemoType != 5) {
             link08CutEnd(this);
-        } else if (mProcVar0 > 0) {
-            mProcVar0 = mProcVar0 - 1;
+        } else if (lk08_countBranch(this, 1, mProcVar0)) {
+            lk08_countDown(this, 1, mProcVar0); /* true60 (the 30 Hz timer rule): the hold counts 30 Hz frames */
         } else if (mProcVar0 < 0) {
             dComIfGp_event_reset();
             Link08_deleteEquipItem(this, 0);
@@ -308,9 +394,9 @@ static inline void lk_anmSetFrame(be<f32>& storedFrame, gptr<be<f32>>& mirroredF
 static inline bool lk_checkParry(daPy_lk_c* self) {
     return (self->mItemTrigger & 1) && dComIfGp_getDoStatus() == 0x1A;
 }
-/* frameCtrl.checkPass(passFrame): the speed kick fabs(speedF) * 0.2 + add (HD: HIO folded) */
+/* frameCtrl.checkPass(passFrame) (true60: lkT60_pass, the animation-driven decision rule): the speed kick fabs(speedF) * 0.2 + add (HD: HIO folded) */
 static inline void lk_cutKick(daPy_lk_c* self, J3DFrameCtrl* frameCtrl, f32 passFrame, f32 add) {
-    if (frameCtrl->checkPass(passFrame)) {
+    if (lkT60_pass(frameCtrl, passFrame)) {
         self->mNormalSpeed = gabi::fmadds(std::fabs((f32)self->speedF), 0.2f, add);
     }
 }
@@ -331,7 +417,7 @@ static inline BOOL lk_procCutCommon(daPy_lk_c* self, J3DFrameCtrl* frameCtrl, u8
                                     u8 nextCut, f32 endFrame, f32 passFrame, f32 kickAdd,
                                     f32 atStart, f32 atEnd, f32 calcMax, u16 reverseAnm) {
     self->mCutComboTimer = 2;
-    if (frameCtrl->getRate() < 0.01f) {
+    if (lkT60_endRate(frameCtrl) < 0.01f) {
         self->mNormalSpeed = 0.0f;
         self->mDirection = direction;
         Link08_checkNextMode(self, 0);
@@ -368,7 +454,7 @@ static inline BOOL lk_procCutCommon(daPy_lk_c* self, J3DFrameCtrl* frameCtrl, u8
     self->current.angle.y = self->shape_angle.y;
     lk_cutKick(self, frameCtrl, passFrame, kickAdd);
     lk_cutAt(self, frameCtrl, atStart, atEnd);
-    cLib_addCalc(&self->mNormalSpeed, 0.0f, 0.7f, calcMax, 0.5f);
+    LKT60_CHASE_S(0, &self->mNormalSpeed, &self->mCurProc, cLib_addCalc(&self->mNormalSpeed, 0.0f, 0.7f, calcMax, 0.5f)); /* true60: frame-exact */
     return TRUE;
 }
 /* swordButton() && m34C5 == 0: on/offNoResetFlg0(daPyFlg0_UNK4) */
@@ -421,9 +507,10 @@ BOOL daPy_lk_c::procCutL() {
 /* procCutEA/EB: the end of the rate countdown (mProcVar0 extra frames) */
 static inline BOOL lk_procCutE(daPy_lk_c* self, J3DFrameCtrl* frameCtrl, u8 dir, u32 reverseAnm,
                                bool lockOnOnly, f32 kickAdd, f32 calcMax) {
-    if (frameCtrl->getRate() < 0.01f) {
-        if (self->mProcVar0 > 0) {
-            self->mProcVar0 = self->mProcVar0 - 1;
+    if (lkT60_endRate(frameCtrl) < 0.01f) {
+        if (lk08_countBranch(self, 2, self->mProcVar0)) {
+            /* true60 (the 30 Hz timer rule): the extra frames count 30 Hz frames */
+            lk08_countDown(self, 2, self->mProcVar0);
         } else {
             self->mNormalSpeed = 0.0f;
             self->mDirection = dir;
@@ -445,7 +532,7 @@ static inline BOOL lk_procCutE(daPy_lk_c* self, J3DFrameCtrl* frameCtrl, u8 dir,
     lk_cutKick(self, frameCtrl, 6.0f, kickAdd);
     lk_cutAt(self, frameCtrl, 5.0f, 11.0f);
     self->mRootMoveMode = 1;
-    cLib_addCalc(&self->mNormalSpeed, 0.0f, 0.7f, calcMax, 0.5f);
+    LKT60_CHASE_S(1, &self->mNormalSpeed, &self->mCurProc, cLib_addCalc(&self->mNormalSpeed, 0.0f, 0.7f, calcMax, 0.5f)); /* true60: frame-exact */
     return TRUE;
 }
 
@@ -471,7 +558,7 @@ BOOL daPy_lk_c::procCutEB() {
 static inline BOOL lk_procCutExA(daPy_lk_c* self, J3DFrameCtrl* frameCtrl, s16 mCutComboTimer, f32 endFrame,
                                  f32 passFrame, u8 nextCut, f32 atStart, f32 atEnd) {
     self->mCutComboTimer = mCutComboTimer;
-    if (frameCtrl->getRate() < 0.01f) {
+    if (lkT60_endRate(frameCtrl) < 0.01f) {
         self->mNormalSpeed = 0.0f;
         Link08_checkNextMode(self, 0);
         return TRUE;
@@ -483,7 +570,7 @@ static inline BOOL lk_procCutExA(daPy_lk_c* self, J3DFrameCtrl* frameCtrl, s16 m
             return TRUE;
         }
         self->mNormalSpeed = speed;
-    } else if (frameCtrl->checkPass(passFrame)) {
+    } else if (lkT60_pass(frameCtrl, passFrame)) {
         self->mModeFlg = self->mModeFlg | 0x80; /* onModeFlg(ModeFlg_00000080) */
     }
     if (Link08_changeCutReverseProc(self, Link08::ANM_CUTREL)) {
@@ -502,7 +589,7 @@ static inline BOOL lk_procCutExA(daPy_lk_c* self, J3DFrameCtrl* frameCtrl, s16 m
     }
     lk_cutAt(self, frameCtrl, atStart, atEnd);
     self->mRootMoveMode = 1;
-    cLib_addCalc(&self->mNormalSpeed, 0.0f, 0.7f, 4.0f, 0.5f);
+    LKT60_CHASE_S(2, &self->mNormalSpeed, &self->mCurProc, cLib_addCalc(&self->mNormalSpeed, 0.0f, 0.7f, 4.0f, 0.5f)); /* true60: frame-exact */
     return TRUE;
 }
 
@@ -521,15 +608,16 @@ BOOL daPy_lk_c::procCutExB() {
     J3DFrameCtrl* frameCtrl = &mFrameCtrlUnder[Link08::UNDER_MOVE0_e];
     m35EC = frameCtrl->getFrame();
     link08CutHoldFlag(this);
-    if (frameCtrl->getRate() < 0.01f) {
-        if (mProcVar0 > 0) {
-            mProcVar0 = mProcVar0 - 1;
+    if (lkT60_endRate(frameCtrl) < 0.01f) {
+        if (lk08_countBranch(this, 3, mProcVar0)) {
+            /* true60 (the 30 Hz timer rule): the extra frames count 30 Hz frames */
+            lk08_countDown(this, 3, mProcVar0);
         } else {
             mNormalSpeed = 0.0f;
             Link08_checkNextMode(this, 0);
             return TRUE;
         }
-    } else if (frameCtrl->checkPass(14.0f)) {
+    } else if (lkT60_pass(frameCtrl, 14.0f)) {
         mModeFlg = mModeFlg | 0x80;
     }
     if (Link08_changeCutReverseProc(this, Link08::ANM_CUTREL)) {
@@ -545,7 +633,7 @@ BOOL daPy_lk_c::procCutExB() {
     }
     lk_cutAt(this, frameCtrl, 14.0f, 20.0f);
     mRootMoveMode = 1;
-    cLib_addCalc(&mNormalSpeed, 0.0f, 0.7f, 4.0f, 0.5f);
+    LKT60_CHASE_S(3, &mNormalSpeed, &mCurProc, cLib_addCalc(&mNormalSpeed, 0.0f, 0.7f, 4.0f, 0.5f)); /* true60: frame-exact */
     return TRUE;
 }
 
@@ -557,9 +645,15 @@ BOOL daPy_lk_c::procCutExMJ() {
     if (mCutComboCount != 0) {
         mCutComboTimer = 2;
     }
-    if (mFrameCtrlUnder[Link08::UNDER_MOVE0_e].getRate() < 0.01f) {
-        if (mProcVar2 == 0) {
-            mProcVar2 = 1;
+    if (lkT60_endRate(&mFrameCtrlUnder[Link08::UNDER_MOVE0_e]) < 0.01f) {
+        /* true60 (the 30 Hz timer rule): the one-frame wait before the landing pose: 0 -> 1 on the first step of the
+         * frame after the animation ended (the 30 Hz game's next update), held over that frame's steps, 1 -> 2 on the
+         * next frame's first step (state 1 lives from one update to the next, as at 30 Hz) */
+        if (mProcVar2 == 0 || lk08_countHeld(this, 6, mProcVar2)) {
+            if (lk08_perFrame()) {
+                mProcVar2 = 1;
+                lk08_counted(this, 6, 1);
+            }
         } else if (mProcVar2 == 1) {
             Link08_setSingleMoveAnime(this, Link08::ANM_JMPEDS, 0.0f, 0.0f, -1, 30.0f);
             mModeFlg = mModeFlg & ~0x400u; /* offModeFlg(ModeFlg_00000400) */
@@ -567,14 +661,15 @@ BOOL daPy_lk_c::procCutExMJ() {
             resetSeAnime();
             mProcVar2 = 2;
         }
+        /* true60 (the per-step smoothing rule / 6): the flip roll, 0x1800 a frame, with the carry */
         if (mProcVar3 == 0x71) {
             if (!(m34EC > 0) || m34EC > 0x4000) {
-                m34EC = m34EC - 0x1800;
+                m34EC = m34EC - lk08_share(s_lk08MjRoll, 0x1800);
             } else {
                 cLib_addCalcAngleS(&m34EC, 1, 2, 0x1800, 0x800);
             }
         } else if (!(m34EC < 0) || m34EC < -0x4000) {
-            m34EC = m34EC + 0x1800;
+            m34EC = m34EC + lk08_share(s_lk08MjRoll, 0x1800);
         } else {
             cLib_addCalcAngleS(&m34EC, -1, 2, 0x1800, 0x800);
         }
@@ -601,12 +696,15 @@ BOOL daPy_lk_c::procCutExMJ() {
         !(mFrameCtrlUnder[Link08::UNDER_MOVE0_e].getFrame() < m35A0)) { /* NaN: in the window */
         if (!(mNoResetFlg0 & 0x40)) {
             setResetFlg0(resetFlg0() | 1);
-            seStartSwordCut(0x2800);
+            /* true60 (sound form; glue-sound check: 2 starts over 2 steps): the cut window's per-frame
+             * start, once per frame on the tick30 step */
+            if (t60::dt() == 1.0f || t60::tick30())
+                seStartSwordCut(0x2800);
         }
         setResetFlg0(resetFlg0() | 2);
     }
     if (current.pos.y < mProcStartPos.y - 200.0f) {
-        cLib_chaseF(&mNormalSpeed, 0.0f, 0.08000000566244125f); // HD: 0.1f * HIO (0.8f) folded,
+        LKT60_CHASE_S(7, &mNormalSpeed, &mCurProc, cLib_chaseF(&mNormalSpeed, 0.0f, 0.08000000566244125f)); // HD: 0.1f * HIO (0.8f) folded, /* true60: frame-exact */
     }
     return TRUE;
 }
@@ -630,9 +728,10 @@ BOOL daPy_lk_c::procCutTurn() {
     } else {
         mNoResetFlg0 = mNoResetFlg0 & ~4u;
     }
-    if (frameCtrl->getRate() < 0.01f) {
-        if (mProcVar0 > 0) {
-            mProcVar0 = mProcVar0 - 1;
+    if (lkT60_endRate(frameCtrl) < 0.01f) {
+        if (lk08_countBranch(this, 4, mProcVar0)) {
+            /* true60 (the 30 Hz timer rule): the extra frames count 30 Hz frames */
+            lk08_countDown(this, 4, mProcVar0);
         } else {
             mDirection = 3; /* DIR_RIGHT */
             Link08_checkNextMode(this, 0);
@@ -664,14 +763,18 @@ BOOL daPy_lk_c::procCutTurn() {
             seStartSwordCut(Link08::JA_SE_LK_KAITENGIRI);
         }
         setResetFlg0(resetFlg0() | 2);
-        cLib_chaseF(&mAtCyl.mCyl.mRadius, m35A4, 18.0f);
+        LKT60_CHASE_S(8, &mAtCyl.mCyl.mRadius, &mCurProc, cLib_chaseF(&mAtCyl.mCyl.mRadius, m35A4, 18.0f)); /* true60: the spin cylinder's radius once a frame, whole on the first step (one-sweep-per-frame attack: one volume per frame) */
     }
     /* mCutTurnEcallBack0/mCutTurnEcallBack1/mCutTurnEcallBack2 (dPa_cutTurnEcallBack_c) alpha at +4 */
-    if (frameCtrl->checkPass(18.5f)) {
+    /* true60 (the one-emitter-per-event rule): the flash is cleared one 30 Hz frame after it was set (the particle calc runs on
+     * every step: at dt 1/N it would last one step); dt 1: the next update, as the original */
+    if (lkT60_pass(frameCtrl, 18.5f)) {
         link08CutTurnCallback(mCutTurnEcallBack1).mAlpha = 0x80;
         link08CutTurnCallback(mCutTurnEcallBack2).mAlpha = 0x80;
         link08CutTurnCallback(mCutTurnEcallBack0).mAlpha = 0x80;
-    } else if (link08CutTurnCallback(mCutTurnEcallBack0).mAlpha == 0x80) {
+        s_lk08TurnFlashAge = 0.0f;
+    } else if (link08CutTurnCallback(mCutTurnEcallBack0).mAlpha == 0x80 &&
+               (t60::dt() == 1.0f || (s_lk08TurnFlashAge += t60::dt()) >= 0.999f)) {
         link08CutTurnCallback(mCutTurnEcallBack0).mAlpha = 0;
         link08CutTurnCallback(mCutTurnEcallBack1).mAlpha = 0;
         link08CutTurnCallback(mCutTurnEcallBack2).mAlpha = 0;
@@ -757,7 +860,7 @@ BOOL daPy_lk_c::procCutRollEnd_init() {
 /* 02441DC0 */
 BOOL daPy_lk_c::procCutRoll() {
 
-    if (mFrameCtrlUnder[Link08::UNDER_MOVE0_e].getRate() < 0.01f) {
+    if (lkT60_endRate(&mFrameCtrlUnder[Link08::UNDER_MOVE0_e]) < 0.01f) {
         s16 oldAngle = current.angle.y;
         if (mAcch.ChkWallHit() && mDemo.mDemoMode != 0x2B /* daPy_demo_c::DEMO_CUT_ROLL_e */) {
             f32 dist = gabi::fadds_ppc(mAcchCir[0].m_wall_r, 25.0f);
@@ -787,24 +890,39 @@ BOOL daPy_lk_c::procCutRoll() {
             shape_angle.y = current.angle.y;
         }
         s16 turn = (s16)(current.angle.y - oldAngle);
+        bool eventSet = false; /* true60: an event's forced count is never held over */
         if (dComIfGp_event_runCheck()) {
+            eventSet = true;
             if (mDemo.mDemoMode != 0x2B) {
                 mProcVar0 = 0;
             } else {
                 mProcVar0 = 5;
             }
         }
-        if (mProcVar0 > 0) {
-            mProcVar0 = mProcVar0 - 1;
+        /* true60: the spin's 90 frames and its sustained voice count / start once a 30 Hz frame, on its
+         * first step (the 30 Hz timer rule / 11, the check item; the spin branch held over the frame); the spin 0x36B0 a
+         * frame with the carry, the stick turn (this step's own turn) whole (the per-step smoothing rule / 6) */
+        const bool frameStep = lk08_perFrame();
+        if (mProcVar0 > 0 || (!eventSet && lk08_countHeld(this, 7, mProcVar0))) {
+            if (frameStep) {
+                mProcVar0 = mProcVar0 - 1;
+                lk08_counted(this, 7, mProcVar0);
+            }
             mNormalSpeed = 30.0f;
-            m34EC = m34EC - (0x36B0 + turn);
+            if (t60::dt() == 1.0f) {
+                m34EC = m34EC - (0x36B0 + turn);
+            } else {
+                m34EC = m34EC - (lk08_share(s_lk08RollSpin, 0x36B0) + turn);
+            }
             if (!(mNoResetFlg0 & 0x40)) {
                 setResetFlg0(resetFlg0() | 1);
             }
             setResetFlg0(resetFlg0() | 2);
-            cLib_chaseF(&mAtCyl.mCyl.mRadius, m35A4, 18.0f);
-            seStartMapInfo(Link08::JA_SE_LK_V_KAITEN_S);
-        } else if (Link08_addCalcDouble(&mNormalSpeed, 0.0f, 0.1f, 2.5f, 1.0f) < 0.5f) {
+            LKT60_CHASE_S(9, &mAtCyl.mCyl.mRadius, &mCurProc, cLib_chaseF(&mAtCyl.mCyl.mRadius, m35A4, 18.0f)); /* true60: the spin cylinder's radius once a frame, whole on the first step (one-sweep-per-frame attack: one volume per frame) */
+            if (frameStep) {
+                seStartMapInfo(Link08::JA_SE_LK_V_KAITEN_S);
+            }
+        } else if (LKT60_CHASE(6, &mNormalSpeed, 0.0f, &mCurProc, Link08_addCalcDouble(&mNormalSpeed, 0.0f, 0.1f, 2.5f, 1.0f)) < 0.5f) { /* true60: frame-exact */
             shape_angle.y = shape_angle.y + m34EC;
             current.angle.y = shape_angle.y;
             if (dComIfGp_event_runCheck() && mDemo.mDemoMode != 0x2B) {
@@ -814,9 +932,16 @@ BOOL daPy_lk_c::procCutRoll() {
             }
         } else {
             f32 rate = mNormalSpeed / 30.0f;
-            m34EC = (s16)gabi::ftoi((f32)m34EC - gabi::fmadds((f32)(0x34B0 + turn), rate, 512.0f));
+            if (t60::dt() == 1.0f) {
+                m34EC = (s16)gabi::ftoi((f32)m34EC - gabi::fmadds((f32)(0x34B0 + turn), rate, 512.0f));
+            } else {
+                /* true60 (the per-step smoothing rule / 6): the run-out spin (0x34B0 x rate + 512) a frame with the carry, the
+                 * step's own turn x rate whole */
+                f32 step = gabi::fmadds((f32)0x34B0, rate, 512.0f) * (f32)t60::dt() + (f32)turn * rate;
+                m34EC = (s16)(m34EC - lk08_shareF(s_lk08RollOut, step));
+            }
         }
-    } else {
+    } else if (lk08_perFrame()) { /* true60 (the one-emitter-per-event rule): the sustained wind-up sound, once a frame */
         seStartMapInfo(0x1059);
     }
     return TRUE;
@@ -825,9 +950,14 @@ BOOL daPy_lk_c::procCutRoll() {
 /* 02442134 */
 BOOL daPy_lk_c::procCutRollEnd() {
 
-    seStartOnlyReverb(Link08::JA_SE_CM_MD_PIYO);
-    if (mProcVar0 > 0) {
-        mProcVar0 = mProcVar0 - 1;
+    /* true60 (the 30 Hz timer rule / 11): the dizzy sound (sustained start on every update) and the 60-frame wait once a
+     * 30 Hz frame, on its first step (the wait branch held over the frame) */
+    const bool frameStep = lk08_perFrame();
+    if (frameStep) {
+        seStartOnlyReverb(Link08::JA_SE_CM_MD_PIYO);
+    }
+    if (lk08_countBranch(this, 8, mProcVar0)) {
+        lk08_countDown(this, 8, mProcVar0);
     } else {
         Link08_checkNextMode(this, 0);
     }
@@ -873,7 +1003,7 @@ BOOL daPy_lk_c::procCutTurnCharge() {
 
     if (!(mItemButton & 2) || lk_checkCurse()) {
         Link08_checkNextMode(this, 0);
-    } else if (mFrameCtrlUnder[Link08::UNDER_MOVE0_e].getRate() < 0.01f) {
+    } else if (lkT60_endRate(&mFrameCtrlUnder[Link08::UNDER_MOVE0_e]) < 0.01f) {
         procCutTurnMove_init();
     }
     return TRUE;
@@ -884,13 +1014,20 @@ BOOL daPy_lk_c::procCutTurnMove() {
 
     Link08_setShapeAngleToAtnActor(this);
     mAtnShapeAngleY = shape_angle.y;
-    if (0 < mProcVar0) {
+    if (t60::first_step() || t60_step_counter() - s_lk08DirHoldStamp != 1) {
+        s_lk08DirHold = false; /* a new frame, or the procedure did not run on the step before */
+    }
+    s_lk08DirHoldStamp = t60_step_counter();
+    /* true60 (the 30 Hz timer rule / 11): the 47-frame charge and its sustained charge sound once a 30 Hz frame, on its
+     * first step (the count before the release check, as in the original's update) */
+    const bool frameStep = lk08_perFrame();
+    if (0 < mProcVar0 && frameStep) {
         mProcVar0 = mProcVar0 - 1;
         if (mProcVar0 == 0) {
             dComIfGp_setPlayerStatus1(0, Link08::daPyStts1_UNK20000_e);
         }
     }
-    if (mProcVar0 != -1) {
+    if (mProcVar0 != -1 && frameStep) {
         Link08_startSystemSound(Link08::JA_SE_LK_SWORD_CHARGE);
     }
     if (Link08_changeSlideProc(this)) {
@@ -918,10 +1055,14 @@ BOOL daPy_lk_c::procCutTurnMove() {
             } else if (mDirection != direction) {
                 mNormalSpeed = gabi::fmuls_ppc(mNormalSpeed, 0.5f);
             }
-            if (mDirection == direction) {
+            /* true60 (the per-step smoothing rule / first-step input form): a direction change costs the 30 Hz game one frame of target 0;
+             * the frame's later steps keep that target (s_lk08DirHold, cleared on the frame's first step; dt 1: every
+             * update, the original) */
+            if (mDirection == direction && !s_lk08DirHold) {
                 speed = gabi::fmuls_ppc(3.5f, mStickDistance); // HD: HIO folded
-            } else {
+            } else if (mDirection != direction) {
                 mDirection = direction;
+                s_lk08DirHold = t60::dt() != 1.0f;
             }
             if (anm != 0xFFFF) {
                 Link08_setSingleMoveAnime(this, anm, 0.0f, 0.0f, -1, 3.0f);
@@ -969,13 +1110,13 @@ BOOL daPy_lk_c::procCutTurnMove() {
 /* 02442878 */
 BOOL daPy_lk_c::procCutReverse() {
 
-    cLib_addCalc(&mNormalSpeed, 0.0f, 0.5f, 1.125f, 0.3f); // HD: HIO folded
+    LKT60_CHASE_S(4, &mNormalSpeed, &mCurProc, cLib_addCalc(&mNormalSpeed, 0.0f, 0.5f, 1.125f, 0.3f)); // HD: HIO folded /* true60: frame-exact */
     if ((mItemButton & 2) && mEquipItem == Link08::daPyItem_SWORD_e) {
         mNoResetFlg0 = mNoResetFlg0 | 4;
     } else {
         mNoResetFlg0 = mNoResetFlg0 & ~4u;
     }
-    if (mFrameCtrlUnder[Link08::UNDER_MOVE0_e].getRate() < 0.01f) {
+    if (lkT60_endRate(&mFrameCtrlUnder[Link08::UNDER_MOVE0_e]) < 0.01f) {
         current.angle.y = shape_angle.y;
         Link08_checkNextMode(this, 0);
     } else if (mFrameCtrlUnder[Link08::UNDER_MOVE0_e].getFrame() > 11.0f) {
@@ -1056,7 +1197,7 @@ BOOL daPy_lk_c::procJumpCut() {
         current.angle.y = current.angle.y + 0x8000;
         mNormalSpeed = 27.0f;
     } else if (current.angle.y != shape_angle.y) {
-        cLib_addCalc(&mNormalSpeed, 5.0f, 0.2f, 1.0f, 0.1f);
+        LKT60_CHASE_S(5, &mNormalSpeed, &mCurProc, cLib_addCalc(&mNormalSpeed, 5.0f, 0.2f, 1.0f, 0.1f)); /* true60: frame-exact */
     }
     if (mFrameCtrlUnder[Link08::UNDER_MOVE0_e].getFrame() >= 13.0f &&
         mFrameCtrlUnder[Link08::UNDER_MOVE0_e].getFrame() < 15.0f) {
@@ -1079,9 +1220,10 @@ BOOL daPy_lk_c::procJumpCutLand() {
     if (mProcVar6 != 0 && Link08_changeCutReverseProc(this, Link08::ANM_CUTRER)) {
         return TRUE;
     }
-    if (mFrameCtrlUnder[Link08::UNDER_MOVE0_e].getRate() < 0.01f) {
-        if (mProcVar0 > 0) {
-            mProcVar0 = mProcVar0 - 1;
+    if (lkT60_endRate(&mFrameCtrlUnder[Link08::UNDER_MOVE0_e]) < 0.01f) {
+        if (lk08_countBranch(this, 5, mProcVar0)) {
+            /* true60 (the 30 Hz timer rule): the extra frames count 30 Hz frames */
+            lk08_countDown(this, 5, mProcVar0);
             Link08_checkNextMode(this, 1);
         } else {
             Link08_checkNextMode(this, 0);
@@ -1453,6 +1595,7 @@ void daPy_lk_c::setPlayerPosAndAngle(cXyz* pos, s16 angle) {
     shape_angle.y = angle;
     current.angle.y = angle;
     m34DE = angle;
+    lkT60_angleSet(gabi::ea(&m34DE)); /* true60: the turn tests' frame start re-based (d_a_player_t60.h) */
     lk_setDebugKeep(this);
 }
 
@@ -1471,6 +1614,7 @@ void daPy_lk_c::setPlayerPosAndAngle(cXyz* pos, csXyz* angle) {
         shape_angle.z = angle->z;
         current.angle.y = shape_angle.y;
         m34DE = shape_angle.y;
+        lkT60_angleSet(gabi::ea(&m34DE)); /* true60: the turn tests' frame start re-based (d_a_player_t60.h) */
     }
     lk_setDebugKeep(this);
 }
@@ -1488,6 +1632,7 @@ void daPy_lk_c::setPlayerPosAndAngle(Mtx34* mtx) {
         Link08_matrixToRotation(mtx, &shape_angle);
         current.angle.y = shape_angle.y;
         m34DE = shape_angle.y;
+        lkT60_angleSet(gabi::ea(&m34DE)); /* true60: the turn tests' frame start re-based (d_a_player_t60.h) */
         lk_setDebugKeep(this);
     }
 }

@@ -1,0 +1,9 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_dk.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule NPC form; d/t60_npc.h):
+# Valoo (Dk): the execute 02124F00 in the whole form, logic only (wrapper with it). The tick30 step runs the original execute whole
+# at dt 1 from the frame start; the earlier steps change no state (the picture between steps comes from frame interpolation): net
+# effect = the one step's, byte exact. Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 02124F00
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200FCD8 020195B0 0201ADE0 02125E24 024F08A8 025200D4 02526E70 02527028 025445B8 025D57E0 025D57E4 025D9F38 025E535C 025E55A0 025E742C 025F1884 025F1BF4 025F1C28 025F1C5C 025F232C 0273AA24 027F4D5C 028E8F64 028E90D4 028F4384

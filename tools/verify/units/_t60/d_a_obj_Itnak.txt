@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_Itnak.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule + addendum, d/t60_objw.h): Itnak: switch draw flag, three colliders, Link roll crash.
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 02365A90
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 0236524C 02365728 023657FC 023658C4
+t60cand 0236524C 02365728 023657FC 023658C4
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 020182E0 02018428 020184DC 02018C8C 02018D40 023129C4 02312E54 02349DFC 0236524C 02365728 023657FC 023658C4 025162A4 0255F458 025D69FC 025F1B48 027F4D5C 028E8F64 028E90D4

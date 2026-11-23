@@ -1,0 +1,9 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_trap.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule addendum, the Magtail / Floormaster whole form;
+# d_a_obj_trap_t60.h): daObjTrap_c::_execute 023A7FC0 in the whole form. The tick30 step runs the original execute whole at dt 1 from the frame start;
+# the earlier steps change no state (the picture between steps comes from frame interpolation): net effect = the one step's, byte
+# exact. Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 023A7FC0
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 02008438 02008860 02008FEC 0200E240 0200ECD4 0200EF78 0200F764 020182E0 0201AD78 0201ADE0 0201AE48 0201AF98 0201AFD8 0201B47C 02312D6C 023A6C48 023A6D3C 023A6E24 023A71FC 023A752C 023A760C 023A7AD8 023A7B20 023A7C24 023A7D5C 023A7DE0 023A7EA4 023A7F74 024F1AFC 024F43DC 025200D4 02520540 025D4604 025E1A40 025E742C 025F1884 025F1B48 025F23EC 025F2468 025F24E0 0273AD10 027F4D5C 028E8D88 028E8DAC 028E8DD0 028E8E64 028E8F44 028E8F64 028E9044 028E93CC 028F026C 028F4384

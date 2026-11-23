@@ -8,6 +8,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_bridge.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 /* functions of d_a_bridge.cpp, called by address */
 
@@ -583,6 +584,9 @@ static inline void side_rope_segment(bridge_class *i_this, br_s *pBr, int line, 
 
 /* 020E11E8 */
 BOOL daBridge_Execute(bridge_class *i_this) {
+    t60w::Guard<bridge_class> t60g(i_this, t60objw::Logic<bridge_class>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     /* HD: no distance culling (GameCube: mbStopDraw); nothing happens during an event while the
      * rumble timer runs */
     if (dComIfGp_event_runCheck() && i_this->mRideTimer != 0) {
@@ -831,6 +835,7 @@ BOOL daBridge_Execute(bridge_class *i_this) {
 
     dBgW_Move(i_this->mpBgW);
     settingTevStruct(dKy_getEnvlight(), TEV_TYPE_BG0, &i_this->current.pos, &i_this->tevStr);
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 

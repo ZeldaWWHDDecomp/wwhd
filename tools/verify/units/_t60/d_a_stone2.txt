@@ -1,0 +1,18 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_stone2.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule addendum, cross-actor reads; d_a_stone2_t60.h):
+# the rock's Execute 0249F6CC. The tick30 step runs the original Execute whole at dt 1 from the frame start (the mover,
+# the carry / drop decisions with Link's current state, hits, the cylinder registration, effects and demo orders once);
+# the earlier steps change no state but the matrix step (set_mtx + the background matrix, as the original) and a visual
+# extrapolation by the previous frame's change (none here: no previous frame): net effect = the one step's, byte exact.
+# Negative control (T60C_NEGCTRL: the Execute on every step at dt) must fail.
+t60conv 0249F6CC
+# effect calls (sound / particle starts, actor creation): as many calls over the N steps as in the one step
+t60calls 025D8120 025E19CC 025E1A40
+# the Execute's logic runs its candidate code (mode_proc_call and the modes wait / drop / fine, damage_cc_proc; damaged
+# stays a mock: its item drop dispatches through a non-code pointer, an abort mid-step under -nulltrap),
+# so the mode timers, the mover and the decisions are in the compared memory (with mocks only the negative control
+# could not fail)
+real 0249F3D0 0249FA28 0249FE90 0249FFE0 0249F0BC
+t60cand 0249F3D0 0249FA28 0249FE90 0249FFE0 0249F0BC
+# t60once 0249F3D0 0249FA28 0249FE90 0249FFE0 0249F0BC: run only inside Execute's tick30 whole run (whole-frame form); never on their own N steps

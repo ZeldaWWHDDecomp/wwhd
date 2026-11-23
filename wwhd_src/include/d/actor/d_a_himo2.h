@@ -355,3 +355,35 @@ void himo2_destroyLineCheck(dBgS_LinChk*, s32);
 void himo2_constructPacket(himo2_modelPacket_c*);
 void himo2_destroyPacket(himo2_modelPacket_c*, s32);
 void himo2_destroySphere(dCcD_Sph*, s32);
+
+/* ---- true60: the rope on a general step length (dt = 1/N) ----
+ * mFrameCounter counts 30 Hz frames: daHimo2_Execute adds 1 on the tick30 step only (the 30 Hz timer rule, 13), so its `& 7` sound
+ * gates keep their 30 Hz period. The angle phases taken from it (the spin, the case-4 wrap, the sway, the demo camera
+ * shake: counter x k) advance per step: step j of a frame (dt = 1/N) uses c_prev + (j + 1) dt, which is the counter
+ * itself on the tick30 step (after its + 1), so N = 1 and every tick30 step are the original expression. */
+#include "true60.h"
+
+static inline bool himo2_perFrame() { return t60::dt() == 1.0f || t60::tick30(); }
+
+/* the step's share of the running 30 Hz frame, (j + 1) dt for step j; 0 at dt 1 and on the tick30 step (the counter
+ * itself is the phase there). The frame's first step stamps the step counter (one per logic step, advanced after
+ * the step's executes); each unit keeps its own stamp (host memory: one rope actor; a unit-local static is fine, it is
+ * not shared between units). Called once at the top of each step's execute / move, so the first step always stamps. */
+struct Himo2StepStamp {
+    uint32_t first;
+    bool valid;
+};
+static inline f32 himo2_stepShare(Himo2StepStamp& s) {
+    if (himo2_perFrame())
+        return 0.0f;
+    const uint32_t now = t60_step_counter();
+    if (t60::first_step() || !s.valid || now - s.first >= t60::steps()) {
+        s.first = now; /* (a gap: an actor created or held mid-frame counts from here) */
+        s.valid = true;
+    }
+    return (f32)(now - s.first + 1) * t60::dt();
+}
+/* counter x k at the step's phase (share from himo2_stepShare, not 0) */
+static inline s32 himo2_phaseMul(u32 counter, s32 k, f32 share) {
+    return (s32)(counter * (u32)k) + (s32)(share * (f32)k);
+}

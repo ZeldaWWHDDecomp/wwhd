@@ -1,0 +1,10 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_gy_ctrl.txt
+# ---- true60 N-step spec (2026-11-22; the whole-frame form rule addendum whole form, d/t60_objw.h; d_a_gy_ctrl_t60.h): the Gyorg
+# controller's _execute 0216C13C in the whole form (Link / ship position and status, its Gyorgs). The tick30 step runs
+# the original execute whole at dt 1 from the frame start; the earlier steps change no state: net effect = the one
+# step's, byte exact. Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+# getWaterY (0216BDB8) stays under its callers (it raises its caller's fresh local by 1000 per call).
+t60conv 0216C13C
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 02008860 0200A030 0200ED84 0201A478 0211D2F8 0216B924 0216BBBC 0216BDB8 0216BDD4 0216BF50 0216BFE0 0216C1E0 0216C26C 0216C27C 0216C4A8 0216C634 0216C6E8 0216C780 0216C794 0216C9D0 0216C9D4 024F06B4 024F17D4 024F1AFC 024F8044 02514EE4 02514F50 02514F88 02516518 0251677C 025BA0C0 025D5218 025D54C4 025D57E0 025D57E4 025D5A20 025F1C28 025F24E0 028E8DD0 028E90D4 028F4384

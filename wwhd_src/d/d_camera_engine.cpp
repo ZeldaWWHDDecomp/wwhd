@@ -8,7 +8,24 @@
  * "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/d_camera_engine.h"
+#include "d/d_camera_key_t60.h"
+#include "d/d_camera_engine_t60.h"
 
+/* true60 (the per-step smoothing rule / 4, the mode-start-once rule; helpers d_camera_engine_t60.h): the engines run on every
+ * logical step of the camera. Per-frame ratios (the 0.2 / 0.25 / 0.5 / 0.8 chases, the style's speed and the
+ * centre's per-axis mul vector) become 1 - (1 - r)^dt per step; the weighted transitions' blend k = (T - f) / W_f
+ * likewise, their weight bookkeeping (W -= r) and the settle test on the frame end; the start-up blocks
+ * (mCurStyleTimer / mCurModeTimer == 0) run once per start (CamStepEdge, one per engine). dt == 1: the original. */
+static camera_key_t60::PerCam<CamStepEdge> s_nonOwnerEdge, s_fixedFrameEdge, s_fixedPosEdge, s_crawlEdge, s_hookEdge;
+static camera_key_t60::PerCam<CamChaseTarget> s_hookCentreTarget; /* the speed-ramp position-gap rule (2): hookshotCamera centre chase target (d_camera_engine_t60.h) */
+/* the per-axis chase vector of a frame as a per-step one (dt == 1: untouched) */
+static inline void camStepMul(cXyz* m) {
+    if (t60::dt() == 1.0f)
+        return;
+    m->x = camStepRatio(m->x);
+    m->y = camStepRatio(m->y);
+    m->z = camStepRatio(m->z);
+}
 /* stack dBgS_CamLinChk (same as d_camera_bg.cpp camLinChk_ct / dt) */
 namespace camera_engine {
 constexpr f32 kOffsets[4][3] = {{180.0f, 40.0f, -120.0f},
@@ -65,7 +82,7 @@ bool dCamera_c::nonOwnerCamera(s32 style) {
     f32 dist = camParamVal(style, 10);
     ofs.z = camParamVal(style, 0);
     f32 vScale = camParamVal(style, 18);
-    if (first == 0) {
+    if (first == 0 && camEdgeFirst(s_nonOwnerEdge(), 0)) { /* true60 (mode-start-once): once per start */
         cSAngle_l dir;
         relationalPos(&c, canon, &ofs);
         mViewCache.mCenter.copy(c);
@@ -83,6 +100,8 @@ bool dCamera_c::nonOwnerCamera(s32 style) {
         mViewCache.mFovy = fovy;
         return true;
     }
+    if (first == 0 && camEdgeStartHold()) /* true60: the start frame's later steps hold (camEdgeStartHold) */
+        return true;
     cSGlobe_l g;
     cSAngle_l t;
     cSAngle_l a;
@@ -108,8 +127,9 @@ bool dCamera_c::nonOwnerCamera(s32 style) {
     cameraEngineGlobeXyz(&g, &x);
     cXyz_pl(&c, &p, &x);
     cXyz_mi(&p, &d, &mViewCache.mCenter);
-    cXyz_ml(&d, &s, 0.2f);
+    cXyz_ml(&d, &s, camStepRatio(0.2f));
     PSVECAdd(&mViewCache.mCenter, &s, &mViewCache.mCenter);
+    speed = camStepRatio(speed); /* true60: the style's chase ratio per step */
     cameraEngineAngleFloatCtor(&a, vAng); /* cSAngle(f32) */
     cSAngle_ct(&b);
     cameraEngineAngleShortCtor(&cc, (s16)0);
@@ -152,7 +172,7 @@ bool dCamera_c::fixedFrameCamera(s32 style) {
     f32 fovy = camParamVal(style, 25);
     if (mCurArrowIdx == 0xFF)
         return false;
-    if (mCurStyleTimer == 0) {
+    if (mCurStyleTimer == 0 && camEdgeFirst(s_fixedFrameEdge(), 0)) { /* true60 (mode-start-once): once per start */
         cXyz t;
         cXyz x;
         cXyz att;
@@ -220,8 +240,9 @@ bool dCamera_c::fixedFrameCamera(s32 style) {
         f32 r = (f32)((s32)p->m38C - (s32)mCurStyleTimer);
         f32 sum = p->m390;
         p->m394 = r;
-        f32 k = r / sum;
-        p->m390 = sum - r;
+        f32 k = camStepRatio(r / sum); /* true60: the frame's blend per step */
+        if (camFrameEnd())
+            p->m390 = sum - r;
         cXyz_mi(&p->m39C, &d, &mViewCache.mCenter);
         cXyz_ml(&d, &s, k);
         PSVECAdd(&mViewCache.mCenter, &s, &mViewCache.mCenter);
@@ -245,7 +266,7 @@ bool dCamera_c::fixedFrameCamera(s32 style) {
         }
         f32 fv = mViewCache.mFovy;
         mViewCache.mFovy = gabi::fmadds(p->m398 - fv, k, fv);
-        if ((u32)mCurStyleTimer >= (u32)((s32)p->m38C - 1)) {
+        if (camFrameEnd() && (u32)mCurStyleTimer >= (u32)((s32)p->m38C - 1)) {
             mStyleSettle2 = 1;
             mStyleSettle1 = 1;
             mStyleSettle0 = 1;
@@ -304,7 +325,8 @@ bool dCamera_c::fixedPositionCamera(s32 style) {
     f32 v24 = camParamVal(style, 24), v4 = camParamVal(style, 4), v5 = camParamVal(style, 5),
         fovy = camParamVal(style, 25);
     f32 v23 = camParamVal(style, 23), v3 = camParamVal(style, 3);
-    if (first == 0)
+    bool posStart = first == 0 && camEdgeFirst(s_fixedPosEdge(), 0); /* true60 (mode-start-once): once per start */
+    if (posStart)
         p->m390.copy(zeroVector()); /* cXyz::Zero */
     p->m39C = 0;
     cXyz pos;
@@ -334,7 +356,7 @@ bool dCamera_c::fixedPositionCamera(s32 style) {
     ofs.y = v5;
     ofs.x = v1;
     ofs.z = v0;
-    if (mCurStyleTimer == 0) {
+    if (mCurStyleTimer == 0 && camEdgeFirst(s_fixedPosEdge(), 0)) {
         if (p->m39C == 0) {
             cXyz_mi(&pos, &d, &mEye);
             f32 l = std_sqrtf(PSVECSquareMag(&d));
@@ -369,12 +391,16 @@ bool dCamera_c::fixedPositionCamera(s32 style) {
             f32 sum = p->m37C;
             p->m380 = r;
             k = r / sum;
-            p->m37C = sum - r;
+            if (camFrameEnd())
+                p->m37C = sum - r;
         } else {
             f32 sum = p->m37C;
             k = 1.0f / sum;
-            p->m37C = sum - 1.0f;
+            if (camFrameEnd())
+                p->m37C = sum - 1.0f;
         }
+        k = camStepRatio(k); /* true60: the frame's blend per step */
+        camStepMul(&mul);
         cXyz_mi(&target, &d, &p->m384);
         cXyz_ml(&d, &s, k);
         PSVECAdd(&p->m384, &s, &p->m384);
@@ -384,7 +410,7 @@ bool dCamera_c::fixedPositionCamera(s32 style) {
         cXyz_mi(&pos, &d, &mViewCache.mCenter);
         cameraEngineGlobeFromVector(&g, &d);
         fixedPosApproach(this, &g, k, fovy, v11, v10);
-        if ((u32)mCurStyleTimer >= (u32)((s32)p->m378 - 1)) {
+        if (camFrameEnd() && (u32)mCurStyleTimer >= (u32)((s32)p->m378 - 1)) {
             mStyleSettle2 = 1;
             mStyleSettle1 = 1;
             mStyleSettle0 = 1;
@@ -392,11 +418,12 @@ bool dCamera_c::fixedPositionCamera(s32 style) {
         return true;
     }
     cXyz_mi(&target, &d, &mViewCache.mCenter);
+    camStepMul(&mul);
     cameraEngineVectorMultiply(&d, &s, &mul);
     PSVECAdd(&mViewCache.mCenter, &s, &mViewCache.mCenter);
     cXyz_mi(&pos, &d, &mViewCache.mCenter);
     cameraEngineGlobeFromVector(&g, &d);
-    fixedPosApproach(this, &g, v23, fovy, v11, v10);
+    fixedPosApproach(this, &g, camStepRatio(v23), fovy, v11, v10);
     return true;
 }
 
@@ -445,7 +472,7 @@ bool dCamera_c::crawlCamera(s32 style) {
     directionOf(&dir, mpPlayerActor.get());
     cameraEngineAngleSubtract(&dir, &rel, &mViewCache.mDirection.mU); /* local_118 */
     u16 flags;
-    if (mCurModeTimer == 0) {
+    if (mCurModeTimer == 0 && camEdgeFirst(s_crawlEdge(), 0)) { /* true60 (mode-start-once): once per start */
         p->m378 = CRAWL_WORK; /* 'CRWL' */
         flags = cameraStyle->mFlags;
         p->m37C = 10;
@@ -511,7 +538,7 @@ bool dCamera_c::crawlCamera(s32 style) {
     }
     if (!arrowEye && mStyleSettle0 == 0) {
         f32 r = (f32)((s32)p->m37C - (s32)mCurModeTimer);
-        f32 k = r / p->m380;
+        f32 k = camStepRatio(r / p->m380); /* true60: the frame's blend per step */
         p->m384 = r;
         relationalPos(&c, mpPlayerActor.get(), &ofs);
         cXyz_mi(&c, &d, &mViewCache.mCenter);
@@ -541,12 +568,14 @@ bool dCamera_c::crawlCamera(s32 style) {
         f32 fv = mViewCache.mFovy;
         mViewCache.mEye.copy(e);
         mViewCache.mFovy = gabi::fmadds(fovy - fv, k, fv);
-        if ((u32)mCurModeTimer >= (u32)((s32)p->m37C - 1)) {
-            mStyleSettle2 = 1;
-            mStyleSettle1 = 1;
-            mStyleSettle0 = 1;
+        if (camFrameEnd()) { /* true60: 30 Hz frame bookkeeping */
+            if ((u32)mCurModeTimer >= (u32)((s32)p->m37C - 1)) {
+                mStyleSettle2 = 1;
+                mStyleSettle1 = 1;
+                mStyleSettle0 = 1;
+            }
+            p->m380 = p->m380 - p->m384;
         }
-        p->m380 = p->m380 - p->m384;
         return true;
     }
     if (!arrowEye) {
@@ -556,6 +585,7 @@ bool dCamera_c::crawlCamera(s32 style) {
     }
     relationalPos(&c, mpPlayerActor.get(), &ofs);
     cXyz_mi(&c, &d, &mViewCache.mCenter);
+    camStepMul(&mul);
     cameraEngineVectorMultiply(&d, &s, &mul); /* * cXyz */
     PSVECAdd(&mViewCache.mCenter, &s, &mViewCache.mCenter);
     if (p->m399 == 1 && !cameraEngineLineBlocked(this, &mViewCache.mCenter, &p->m38C, 0x7F)) {
@@ -566,7 +596,7 @@ bool dCamera_c::crawlCamera(s32 style) {
             setDMCAngle();
         f32 fv = mViewCache.mFovy;
         m1AE = 0;
-        mViewCache.mFovy = gabi::fmadds(fovy - fv, 0.5f, fv);
+        mViewCache.mFovy = gabi::fmadds(fovy - fv, camStepRatio(0.5f), fv);
         return true;
     }
     cSAngle_ct(&sp78);
@@ -582,9 +612,9 @@ bool dCamera_c::crawlCamera(s32 style) {
     f32 rad;
     if (p->m398 == 0) {
         f32 vr = mViewCache.mDirection.mRadius;
-        rad = gabi::fmadds(v10 - vr, 0.25f, vr);
+        rad = gabi::fmadds(v10 - vr, camStepRatio(0.25f), vr);
         cameraEngineAngleSubtract(&sp70, &w, &mViewCache.mDirection.mU);
-        cameraEngineAngleScale(&w, &t, 0.25f);
+        cameraEngineAngleScale(&w, &t, camStepRatio(0.25f));
         cameraEngineAngleAdd(&mViewCache.mDirection.mU, &uNew, &t);
         s16 nu = uNew;
         s16 sx = mpPlayerActor->shape_angle.x;
@@ -594,9 +624,9 @@ bool dCamera_c::crawlCamera(s32 style) {
         positionOf(&pp, mpPlayerActor.get());
         f32 vr = mViewCache.mDirection.mRadius;
         mViewCache.mCenter.y = pp.y + 30.0f;
-        rad = gabi::fmadds(2.0f - vr, 0.8f, vr);
+        rad = gabi::fmadds(2.0f - vr, camStepRatio(0.8f), vr);
         cameraEngineAngleSubtract(&sp70, &w, &mViewCache.mDirection.mU);
-        cameraEngineAngleScale(&w, &t, 0.8f);
+        cameraEngineAngleScale(&w, &t, camStepRatio(0.8f));
         cameraEngineAngleAdd(&mViewCache.mDirection.mU, &uNew, &t);
         u32 f = mEventFlags;
         s16 nu = uNew;
@@ -605,7 +635,7 @@ bool dCamera_c::crawlCamera(s32 style) {
         mEventFlags = f | 0x800;
         cameraEngineShortSubtractAngle(&t, sx, &mViewCache.mDirection.mV);
     }
-    cameraEngineAngleScale(&t, &u, 0.25f);
+    cameraEngineAngleScale(&t, &u, camStepRatio(0.25f));
     cameraEngineAngleAdd(&mViewCache.mDirection.mV, &vNew, &u);
     sp74 = (s16)vNew;
     cameraEngineGlobeValAngles(&mViewCache.mDirection, rad, &sp74, &sp78);
@@ -613,7 +643,7 @@ bool dCamera_c::crawlCamera(s32 style) {
     cXyz_pl(&mViewCache.mCenter, &e, &x);
     mViewCache.mEye.copy(e);
     f32 fv = mViewCache.mFovy;
-    mViewCache.mFovy = gabi::fmadds(fovy - fv, 0.5f, fv);
+    mViewCache.mFovy = gabi::fmadds(fovy - fv, camStepRatio(0.5f), fv);
     return true;
 }
 
@@ -648,7 +678,7 @@ bool dCamera_c::hookshotCamera(s32 style) {
     ofs.x = camParamVal(style, 1);
     ofs.y = camParamVal(style, 5);
     ofs.z = camParamVal(style, 0);
-    if (mCurStyleTimer == 0) {
+    if (mCurStyleTimer == 0 && camEdgeFirst(s_hookEdge(), 0)) { /* true60 (mode-start-once): once per start */
         work->m378 = HOOKSHOT_WORK; /* 'HOOK' */
         work->m380.copy(mViewCache.mCenter);
         fopAc_ac_c* player = mpPlayerActor.get();
@@ -707,17 +737,36 @@ bool dCamera_c::hookshotCamera(s32 style) {
         mStyleSettle2 = 1;
         return true;
     }
+    if (mCurStyleTimer == 0 && camEdgeStartHold()) /* true60: the start frame's later steps hold (camEdgeStartHold) */
+        return true;
+    if (mCurStyleTimer == 1 && t60::dt() != 1.0f) {
+        /* true60 (the speed-ramp position-gap rule (2) with the animation-driven decision / whole-frame form addendum cross-actor form; upull uy4:
+         * B's step 0 of the update's first frame ran before Link's pull, which is decided on the tick30 step, moved the
+         * centre 8.3 back and set a +9.4 eye radius that followCamera keeps): the update's first frame reads Link's
+         * frame move, so it runs whole on the tick30 step at dt 1 from the frame-start view (Link's frame-end state, as
+         * A reads it); the frame's earlier steps hold the view. The chase target's step record continues from there. */
+        if (!t60::tick30())
+            return true;
+        const float dt0 = t60_set_dt(1.0f);
+        const bool res = hookshotCamera(style);
+        t60_set_dt(dt0);
+        relationalPos(&c, mpPlayerActor.get(), &ofs);
+        cXyz dm;
+        camChaseTargetMove(s_hookCentreTarget(), c, &dm);
+        return res;
+    }
     f32 k;
     if (work->m398 != 0 && (u32)mCurStyleTimer > 8) {
         eye.copy(work->m38C);
         k = 1.0f;
     } else {
         eye.copy(mEye);
-        k = speed;
+        k = camStepRatio(speed); /* true60: per step (k = 1 stays 1) */
     }
     mul.y = v4;
     mul.x = v3;
     mul.z = v3;
+    camStepMul(&mul);
     relationalPos(&c, mpPlayerActor.get(), &ofs);
     if (mFollowMoveBg != 0) {
         cameraEngineMoveBgPosition(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mBG.mCameraGround.mGndChk), 1,
@@ -726,9 +775,34 @@ bool dCamera_c::hookshotCamera(s32 style) {
                                    &work->m38C, 0, 0);
     }
     cXyz_mi(&c, &d, &mViewCache.mCenter);
+    if (t60::dt() != 1.0f) {
+        /* true60, the speed-ramp position-gap rule (2) (camChaseLead): the centre's chase of Link feeds followCamera's transition length
+         * (m37C, an ftoi) at the hook's end, so its lag behind a moving Link (the pull, 61 / frame) is A's: the
+         * target moved ahead by lead x the step's own move of it, per axis with the frame's ratio (v3, v4, v3) */
+        cXyz dm;
+        camChaseTargetMove(s_hookCentreTarget(), c, &dm);
+        d.x += camChaseLead(v3) * dm.x;
+        d.y += camChaseLead(v4) * dm.y;
+        d.z += camChaseLead(v3) * dm.z;
+    }
     cameraEngineVectorMultiply(&d, &s, &mul);
     PSVECAdd(&mViewCache.mCenter, &s, &mViewCache.mCenter);
     cXyz_mi(&eye, &d, &mViewCache.mCenter);
+    if (k > 0.0f && k < 1.0f && t60::dt() != 1.0f) {
+        /* true60 (upull pair: B's radius grew 31 / frame against A's 46.5 = 2 / 3 while
+         * Link was pulled, then followCamera holds the radius it is handed: a 65-unit eye gap for good): the target
+         * here is the camera's own last eye (mEye), so the target's offset from the view's direction is the centre's
+         * move of this update (s) plus the eye's own gap. Per frame the direction moves k = speed (0.75) of both: the
+         * eye keeps (1 - k) of the frame's centre move. The step's ratio camStepRatio(speed) composes for the gap (a
+         * fixed point) but on the centre's move it keeps 1 - k_s of each step's part (k_s = 0.5 at N 2: the eye
+         * followed the pull 2 / 3 as far). The centre's move is an additive per-update amount: the target is moved
+         * by a further (speed / k_s - 1) x s against it, so the step's k_s x (speed / k_s) = speed of the step's move
+         * and N steps keep (1 - speed) of the frame's, the gap still at k_s. dt = 1: not run (k_s = speed). */
+        const f32 kf = speed / k - 1.0f;
+        d.x = d.x - kf * s.x;
+        d.y = d.y - kf * s.y;
+        d.z = d.z - kf * s.z;
+    }
     cSGlobe_l g;
     cameraEngineGlobeFromVector(&g, &d);
     fixedPosApproach(this, &g, k, fovy, minR, maxR);

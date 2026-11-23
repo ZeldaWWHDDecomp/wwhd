@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_swhammer.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule + addendum, d/t60_objw.h): the hammer switch's Execute(matrixOut) (damage -> crush, mode proc, top pos, vibration, colliders).
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 023935E4
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 02392D80 02392E94 02392F08 02393178 023932A0 023932AC 02393488 023934E4 02393540 02393824 02393858 023938B4 023939AC 02393A58 02393A70 02393AF0 02393CB4
+t60cand 02392D80 02392E94 02392F08 02393178 023932A0 023932AC 02393488 023934E4 02393540 02393824 02393858 023938B4 023939AC 02393A58 02393A70 02393AF0 02393CB4
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 020182E0 02018428 02018D40 020195B0 023129C4 02312E54 02392D80 02392E94 02392F08 02393178 023932A0 023932AC 02393488 023934E4 02393540 02393824 02393858 023938B4 023939AC 02393A58 02393A70 02393AF0 02393CB4 024F43DC 02515BBC 02515E50 0251621C 025162A4 02516300 025A847C 025B9E38 025B9F7C 025F1B48

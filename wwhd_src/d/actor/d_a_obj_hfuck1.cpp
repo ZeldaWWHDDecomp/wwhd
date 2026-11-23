@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_obj_hfuck1.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 const gc_tu_data gc_tu = {
     .safeString = 0x1002A274,
@@ -109,6 +110,9 @@ bool daObjHfuck1_c::_delete() {
 
 /* 023536E0 */
 bool daObjHfuck1_c::_execute() {
+    t60w::Guard<daObjHfuck1_c> t60g(this, t60objw::Logic<daObjHfuck1_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
     mpBgW->Move();
     mStts.Move();
     if (mpHookshotActor != nullptr) {

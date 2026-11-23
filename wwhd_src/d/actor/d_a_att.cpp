@@ -7,6 +7,7 @@
  * against cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_att.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 enum { JA_SE_LK_W_WEP_HIT = 0x2833, JA_SE_CM_BGN_D_STRING_PLINK = 0x5970 };
 static bgn_att_view_c* boss;
@@ -47,6 +48,9 @@ static void* boss_s_sub(void* search, void* param) {
 
 /* 020587B4 */
 static BOOL daAtt_Execute(att_class* i_this) {
+    t60w::Guard<att_class> t60g(i_this, t60objw::Logic<att_class>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     if (i_this->mStringNo == 101) {
         i_this->eyePos.copy(i_this->current.pos);
         i_this->attention_info.position.copy(i_this->current.pos);
@@ -122,6 +126,7 @@ static BOOL daAtt_Execute(att_class* i_this) {
 
     dComIfG_Ccsp_Set(&i_this->mCyl);
     dComIfG_Ccsp_Set(&i_this->mSph);
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 

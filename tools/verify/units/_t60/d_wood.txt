@@ -1,0 +1,28 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_wood.txt
+# ---- true60 N-step spec (d_wood part, 2026-11-17): the bushes on a general step length
+# (d_wood_t60.h). calc 025D0994: the earlier steps move the playing slots at dt (no calc_cc, no proc, no countdown, no
+# mode change); the tick30 step puts them back to the frame's start and runs the original calc at dt 1: every slot
+# ends the frame byte exact (no t60tol line).
+t60conv 025D0994
+# slots 0 (a wind slot), 8, 9, 10 (push / cut slots): mode, countdown, the return slot
+field 025D0994 r3+0x1C938 u32 4
+field 025D0994 r3+0x1C940 f32 0,0.2,0.4,0.7
+field 025D0994 r3+0x1CD98 u32 0,1,2,3,4,5,6
+field 025D0994 r3+0x1CD9C s16 0,1,2,5,19,20,35
+field 025D0994 r3+0x1CDC0 s16 0,3,7,72
+field 025D0994 r3+0x1CE24 u32 0,1,2,5,6
+field 025D0994 r3+0x1CE28 s16 0,1,2,19,20,30
+field 025D0994 r3+0x1CE4C s16 0,7
+field 025D0994 r3+0x1CEB0 u32 0,1,2,5
+field 025D0994 r3+0x1CEB4 s16 1,2,3,21
+field 025D0994 r3+0x1CED8 s16 1
+# the wind vector (dKyw_get_wind_vec 0257DAA8): a fixed vector (unsteered, the original's first load is a page-0 DSI)
+ret! 0257DAA8 0x5E000000
+field 025D0994 5E000000 f32 -1 1
+field 025D0994 5E000008 f32 -1 1
+stable 5E000000 0xC
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200F378 0200F564 0200F8D0
+t60cand 0200F378 0200F564 0200F8D0

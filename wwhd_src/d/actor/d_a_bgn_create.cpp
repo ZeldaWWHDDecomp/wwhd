@@ -7,6 +7,7 @@
  * "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_bgn_create.h"
+#include "d/actor/d_a_bgn_t60.h" /* true60: create's execute run at dt 1 */
 
 BOOL daBgn_Execute(bgn_class* i_this);
 
@@ -128,7 +129,11 @@ cPhs_State daBgn_Create(fopAc_ac_c* a_this) {
             bgn_tevstr_assign(&bgTevStr, tev);
             bgn_tevstr_assign(reinterpret_cast<BgnCreateTev*>(&i_this->mWaterTevStr), tev);
             bgn_tevstr_assign(reinterpret_cast<BgnCreateTev*>(&i_this->mRoomTevStr), tev);
-            daBgn_Execute(i_this);
+            {
+                const f32 t60PrevDt = bgn_t60::createBegin(); /* true60: create's run of the execute, the original at dt 1 */
+                daBgn_Execute(i_this);
+                bgn_t60::createEnd(t60PrevDt);
+            }
         }
     }
     return res;

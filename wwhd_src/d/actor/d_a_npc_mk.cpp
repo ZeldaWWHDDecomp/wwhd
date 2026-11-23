@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_npc_mk.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 const gc_tu_data gc_tu = {
     .safeString = 0x1001E1E8,
@@ -1518,6 +1519,9 @@ BOOL daNpc_Mk_c::_draw() {
 
 /* 02296A9C */
 BOOL daNpc_Mk_c::_execute() {
+    t60w::Guard<daNpc_Mk_c> t60g(this, t60npc::Logic<daNpc_Mk_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     m_jnt.setParam(0, 7000, 0, -7000, 8000, 9000, -2000, -9000, 1000);
     playTexPatternAnm();
     // HD: the walk and run animations play at a rate following the speed (at least 1.0)
@@ -1568,6 +1572,7 @@ BOOL daNpc_Mk_c::_execute() {
     } else {
         setFlag(0x40);
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     J3DModel* pModel = mpMorf->getModel();
     mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
     mDoMtx_stack_c::YrotM(shape_angle.y);

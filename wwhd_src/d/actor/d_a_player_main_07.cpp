@@ -10,10 +10,146 @@
  * Private HD views preserve the layout used by this address range.
  */
 #include "d/actor/d_a_player_main_07.h"
+#include "d/actor/d_a_player_anm_t60.h"
 #include "sead/ElementAt.h"
 #include "gc_api/tu.h"
 #include "gc_api/d/d_com_inf_game.h"
 #include "port_hooks.h"
+#include "d/actor/d_a_player_t60.h"
+#include "d/actor/d_a_player_maba_t60.h"
+#include "true60.h"
+#include <cstdlib>
+#include "d/actor/d_a_player_carry_t60.h"
+
+/* true60: true on the step that ends a 30 Hz frame in a converted context, and always at dt 1: the
+ * procedures' 30 Hz frame counts (mProcVar0 waits) count down here only (the 30 Hz timer rule) */
+static inline bool lk07_perFrame() { return t60::dt() == 1.0f || t60::tick30(); }
+/* true60 (2026-11-22, routes 379-385): the hookshot / rope sight's lock state (the
+ * lock flag, its 26-frame indicator count, the lock-on sound JA_SE_INDICATOR_1) is decided once per 30 Hz update in the
+ * original. Per step, B's first step (= A's frame: sight and lock exact) locked on and its later step, aiming from the
+ * in-between pose, missed the hookable spot and cleared the lock: the lock-on sound again on every next first step
+ * (0x820 x 8 B-only at 379-386). Form: the lock writes run on the frame's first step only (the count with them: once a
+ * frame); the later steps keep the lock and set only the sight's drawn position. Negative control
+ * WWHD_T60_SIGHTLOCK_NEGCTRL=1 (game build: the per-step lock, the count on the tick30 step). dt 1: the original. */
+static inline bool lk07_sightNegctrl() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool on = [] { const char* e = getenv("WWHD_T60_SIGHTLOCK_NEGCTRL"); return e && e[0] == '1'; }();
+    return on;
+#else
+    return false;
+#endif
+}
+static inline bool lk07_sightDecides() { return t60::dt() == 1.0f || lk07_sightNegctrl() || t60::first_step(); }
+static inline bool lk07_sightCounts() { return lk07_sightNegctrl() ? lk07_perFrame() : true; }
+/* true60 (2026-11-22, route Cave06 SWtactB, Wind's Requiem): procTactPlay ends on
+ * the message's state (checkEndMessage / the message status closed). The message (30 Hz world, its frame work on the
+ * frame's first step at N, the first-step frame-level rule) closed within the frame; A's Link, executing before it in that frame, saw it on
+ * the next frame, B's later step saw it the same frame: TACT_PLAY -> WAIT and the conduct status (status1 bit 0, read by
+ * the crest's mPlayerStatus) a frame early (B 471 step 2, A 472). Form: the message end tests decide on the frame's first
+ * step (the frame-start message state = A's read); the later steps wait. NC WWHD_T60_TACTMSG_NEGCTRL=1. dt 1: the original. */
+static inline bool lk07_tactMsgDecides() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_TACTMSG_NEGCTRL"); return e && e[0] == '1'; }();
+#else
+    const bool nc = false;
+#endif
+    return t60::dt() == 1.0f || nc || t60::first_step();
+}
+
+/* true60 (2026-11-22, route Cave06 SWtactB, Wind's Requiem): the conducting
+ * ambient sound (JAIZelInst::ambientPlay, 0x2066) of procTactWait / procTactPlay plays once a frame at the START of A's
+ * update, before the procedure's tests. The tick30 step lost it on every frame whose decision falls on
+ * the first step (the first-step AI-timer rule): procTactWait -> TACT_PLAY (363) and procTactPlay -> WAIT (472)
+ * left the procedure on step 1, A's ambient of that frame never played in B; and A's TAKT_MATCHED (471, after the
+ * ambient) came on B's step 1 before the frame's ambient (its wrapper-1 record, r4, the ambient's leftover in A). Form:
+ * the ambient plays on the frame's first step (A's place in the frame: the frame-start procedure, before its tests and
+ * starts). NC WWHD_T60_TACTAMB_NEGCTRL=1 (the tick30 step). dt 1: the original. */
+static inline bool lk07_tactAmbientStep() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_TACTAMB_NEGCTRL"); return e && e[0] == '1'; }();
+#else
+    const bool nc = false;
+#endif
+    return nc ? lk07_perFrame() : (t60::dt() == 1.0f || t60::first_step());
+}
+
+/* true60 (the per-step smoothing rule and 6): an integer per-frame add (s16 angles and turn speeds on the rope) at a step of
+ * dt: each step adds dt of the original per-frame amount, the fraction carried to the next step (exact for dt = 1/N:
+ * a frame whose amount stays the same adds exactly that amount over its N steps). The carry belongs to one site and
+ * lives while the site runs on consecutive steps (step counter); a gap starts it afresh. Host memory, Link
+ * only; dt 1: the amount itself (the original). */
+struct Lk07Carry {
+    f32 acc;
+    uint32_t stamp;
+    bool valid;
+};
+static inline s32 lk07_share(Lk07Carry& c, s32 perFrame) {
+    const f32 dt = t60::dt();
+    if (dt == 1.0f) {
+        return perFrame;
+    }
+    const uint32_t now = t60_step_counter();
+    if (!c.valid || now - c.stamp != 1) {
+        c.acc = 0.0f;
+    }
+    c.stamp = now;
+    c.valid = true;
+    c.acc += (f32)perFrame * dt;
+    const s32 add = (s32)c.acc; /* toward zero; the rest carries */
+    c.acc -= (f32)add;
+    return add;
+}
+static Lk07Carry s_lk07HangRamp, s_lk07HangTurn, s_lk07SwingPump, s_lk07SwingRamp, s_lk07SwingTurn;
+/* true60: procFanGlide's turn (mProcVar2 per frame) and procBtRollCut's landing spin (0x1800 per frame) */
+static Lk07Carry s_lk07FanTurn, s_lk07BtSpin;
+/* true60: the ship-aim body turn (setShipAttnetionBodyAngle: ramp + turn per frame), procVomitWait's
+ * turn (the same form) and procVomitJump's flip spin (shape_angle.x + 0x55F0 per frame) */
+static Lk07Carry s_lk07ShipAtnRamp, s_lk07ShipAtnTurn, s_lk07VomitRamp, s_lk07VomitTurn, s_lk07VomitSpin;
+/* true60 (the 60 Hz counter rule; the form of's lk05CounterLag): how far step k of the current 30 Hz frame
+ * lies before the frame's end, in frames (1 - (k + 1) x dt; 0 on the tick30 step), for visual phases read from the
+ * 30 Hz frame counter (procTactWait's arm swing) */
+static u32 s_lk07FrameFirstStep;
+static inline f32 lk07CounterLag() {
+    if (t60::first_step()) {
+        s_lk07FrameFirstStep = t60_step_counter();
+    }
+    f32 k = (f32)(t60_step_counter() - s_lk07FrameFirstStep);
+    return 1.0f - (k + 1.0f) * (f32)t60::dt();
+}
+
+/* true60: HD's aim boost (the rope / boomerang / bow / hookshot subject procs scale mNormalSpeed by 1.2
+ * after setSpeedAndAngleAtn*, once per call). The 30 Hz game relies on the next frame's speed update pulling the
+ * boosted value back (from 14.4 the deceleration's minimum step 4 snaps it to the 12 cap, x 1.2 = 14.4 again). At a step
+ * of dt the deceleration's steps are dt long (min 4 dt), so a per-step boost compounds (prope2: 14.4 -> 1e32, the
+ * d_bg_s_acch position assert). Converted, the boost is the step's speed multiplier: the next step of the same proc
+ * starts from the unboosted value (restored exactly while nothing else changed it), so the speed state chases as at 30 Hz
+ * and every step moves at 1.2 x it (steady 14.4 as at 30 Hz). dt 1: the original (no restore). Host memory, Link only. */
+struct Lk07Boost {
+    f32 pre, post;
+    uint32_t stamp;
+    bool valid;
+};
+static Lk07Boost s_lk07Boost;
+static inline void lk07_boostUnapply(daPy_lk_c* t) {
+    if (t60::dt() == 1.0f) {
+        s_lk07Boost.valid = false;
+        return;
+    }
+    if (s_lk07Boost.valid && t60_step_counter() - s_lk07Boost.stamp == 1 && (f32)t->mNormalSpeed == s_lk07Boost.post) {
+        t->mNormalSpeed = s_lk07Boost.pre;
+    }
+    s_lk07Boost.valid = false;
+}
+static inline void lk07_boostApply(daPy_lk_c* t) {
+    const f32 pre = t->mNormalSpeed;
+    t->mNormalSpeed = (f32)((f64)pre * 1.2);
+    if (t60::dt() != 1.0f) {
+        s_lk07Boost.pre = pre;
+        s_lk07Boost.post = t->mNormalSpeed;
+        s_lk07Boost.stamp = t60_step_counter();
+        s_lk07Boost.valid = true;
+    }
+}
 
 // HD: GHS emits a SafeString vtable for this translation unit.
 const gc_tu_data gc_tu = {.safeString = 0x10034B24};
@@ -38,6 +174,15 @@ static Link07::RopeOffsets l_rope_offsets;
 
 static Link07::SalvageRegistry l_salvage_registry;
 static Link07::PadPointer l_pad;
+/* true60 (the input rule / per-step input): the HD pad's trigger word holds the frame's presses (c_API_controller.cpp
+ * cpadTrig); a converted context takes the presses of the step's own read (true60.h t60_in_step_word), so a press is
+ * consumed by exactly one step */
+static inline u32 Link07_padTrigger() {
+    if (t60::dt() != 1.0f)
+        return t60_in_step_word([] { return gabi::ea(l_pad.mpPad.get()) + 0x18; }, 0,
+                                [] { return (u32)l_pad.mpPad->mTrigger; });
+    return l_pad.mpPad->mTrigger;
+}
 static Link07::ShipButtons l_ship_buttons = {{0x41, 0x42}, {0, 0}, {0x110000, 0x220000, 0x880000, 0x440000}};
 static cXyz l_ship_ledge = {57.0f, 35.0f, -35.0f};
 static cXyz l_ship_redge = {-57.0f, 35.0f, -35.0f};
@@ -111,11 +256,11 @@ BOOL daPy_lk_c::procGrabReady() {
         return checkNextMode(0);
     }
     if (mProcVar6 == 2) {
-        if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+        if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
             procGrabUp_init();
         }
     } else if (mProcVar6 == 1) {
-        if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+        if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
             if (grab != nullptr) {
                 if (fpcM_GetName(grab) == Link07::fpcNm_BOKO_e) {
                     u32 id = mActorKeepGrab.mID;
@@ -163,7 +308,7 @@ BOOL daPy_lk_c::procGrabUp() {
     if (grab == nullptr) {
         return checkNextMode(0);
     }
-    if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         setResetFlg0(resetFlg0() | daPy_py_c::daPyRFlg0_GRAB_UP_END);
         if (grab->actor_status & (fopAcStts_UNK8000000_e | fopAcStts_UNK10000_e)) {
             procGrabRebound_init();
@@ -198,9 +343,14 @@ BOOL daPy_lk_c::procGrabMiss() {
         checkNextMode(0);
     }
     if (mProcVar6 == 0) {
-        if (mFrameCtrlUnder[0].getRate() < 0.01f) {
-            if (mProcVar0 > 0) {
-                mProcVar0 = mProcVar0 - 1;
+        if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
+            if (lkT60_countBranch(mCurProc, 0, mProcVar0)) {
+                /* true60 (the 30 Hz timer rule; the first-step AI-timer rule for Link): a 30 Hz frame count on the frame's FIRST step, the wait
+                 * branch held over the frame after the count's 0 */
+                if (mProcVar0 > 0 && lkT60_countStep()) {
+                    mProcVar0 = mProcVar0 - 1;
+                    lkT60_counted(mCurProc, 0, mProcVar0);
+                }
             } else {
                 setSingleMoveAnime(Link07::ANM_GRABP, -0.8f, 0.0f, 4, 4.0f);
                 // HD: HIO folded
@@ -221,17 +371,17 @@ BOOL daPy_lk_c::procGrabMiss() {
 BOOL daPy_lk_c::procGrabThrow() {
     J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
     fopAc_ac_c* grab = mActorKeepGrab.mActor;
-    cLib_addCalc_l(&mNormalSpeed, 0.0f, 0.6f, 2.5f, 1.8f);
+    LKT60_CHASE_S(0, &mNormalSpeed, &mCurProc, cLib_addCalc_l(&mNormalSpeed, 0.0f, 0.6f, 2.5f, 1.8f)); /* true60: frame-exact */
     // HD: HIO folded
 
     if (mProcVar7 == 0) {
-        if (frameCtrl.getRate() < 0.01f) {
+        if (lkT60_endRate(&frameCtrl) < 0.01f) {
             setSingleMoveAnime(Link07::ANM_GRABTHROW, 0.8f, 1.0f, 0xE, 0.0f);
             mProcVar7 = 1;
         }
         return TRUE;
     }
-    if (frameCtrl.checkPass(2.0f) && grab != nullptr) {
+    if (lkT60_pass(&frameCtrl, 2.0f) && grab != nullptr) {
         grab->current.angle.y = shape_angle.y;
         grab->speed.y = 34.0f;
         grab->speedF = 19.0f;
@@ -250,7 +400,7 @@ BOOL daPy_lk_c::procGrabThrow() {
         }
         freeGrabItem();
     }
-    if (frameCtrl.getRate() < 0.01f) {
+    if (lkT60_endRate(&frameCtrl) < 0.01f) {
         if (mProcVar6 != 0) {
             mProcVar6 = 0;
             setAnimeEquipSword(0);
@@ -338,6 +488,44 @@ BOOL daPy_lk_c::procGrabPut() {
     return TRUE;
 }
 
+/* true60: Link's facing at the start of the running 30 Hz frame, for procGrabWait's turn-in-place test
+ * (as setBlendMoveAnime's lk_frameStartAngle, d_a_player_main_02.cpp). m34DE is the facing of the previous
+ * step; at 30 Hz that is the frame start. The original decides "turning in place" (the turn blend and its rate
+ * m35A0 = turn x 0.005) from the whole frame's turn; at N steps the integer turn lands on some steps only, so a per-step
+ * test would play the blend for part of the frame and at a step's share of the rate. Taken on the frame's first step
+ * and kept for its other steps (step counter stamp); a frame whose first step did not come here falls back to
+ * m34DE. Host memory, this unit, Link only; N = 1: m34DE (bit-exact). */
+static s16 s_lk07FrameStartAngle;
+static uint32_t s_lk07FrameStartStamp;
+static bool s_lk07FrameStartValid;
+static inline s16 lk07_frameStartAngle(s16 prevStepAngle, uint32_t m34DEEa) {
+    if (t60::steps() <= 1) {
+        return prevStepAngle;
+    }
+    uint32_t now = t60_step_counter();
+    if (t60::first_step()) {
+        lkT60_angleSetTaken(m34DEEa, 1); /* a set before this step: m34DE is its angle already */
+        s_lk07FrameStartAngle = prevStepAngle;
+        s_lk07FrameStartStamp = now;
+        s_lk07FrameStartValid = true;
+        return prevStepAngle;
+    }
+    /* (d_a_player_t60.h lkT60_angleSet): an outside pos / angle set since the last call in this
+     * frame re-bases the frame start to the set angle (m34DE then) */
+    if (lkT60_angleSetTaken(m34DEEa, 1)) {
+        s_lk07FrameStartAngle = prevStepAngle;
+        if (!s_lk07FrameStartValid || now - s_lk07FrameStartStamp >= t60::steps()) {
+            s_lk07FrameStartStamp = now;
+            s_lk07FrameStartValid = true;
+        }
+        return prevStepAngle;
+    }
+    if (s_lk07FrameStartValid && now - s_lk07FrameStartStamp < t60::steps()) {
+        return s_lk07FrameStartAngle;
+    }
+    return prevStepAngle;
+}
+
 /* 0242E604 */
 BOOL daPy_lk_c::procGrabWait() {
     if (mActorKeepGrab.mActor == nullptr) {
@@ -367,13 +555,14 @@ BOOL daPy_lk_c::procGrabWait() {
         if (LK_checkGrabAnime()) {
             lk_setUpperRatio(m_pbCalc[1], 1.0f);
         }
-    } else if (shape_angle.y != m34DE && !LK_checkAttentionLock()) {
+    } else if (shape_angle.y != lk07_frameStartAngle(m34DE, gabi::ea(&m34DE)) && !LK_checkAttentionLock()) {
+        /* true60: the turn so far in this 30 Hz frame (m34DE at N = 1) */
         f32 morf = (noResetFlg1() & 0x800000) ? -1.0f : 2.4f;
         // HD: HIO folded
 
         setBlendMoveAnime(morf);
         lk_setUpperRatio(m_pbCalc[1], 1.0f);
-        s16 d = (s16)(shape_angle.y - m34DE);
+        s16 d = (s16)(shape_angle.y - lk07_frameStartAngle(m34DE, gabi::ea(&m34DE)));
         setNoResetFlg1(noResetFlg1() | 0x800000);
         m35A0 = (f32)d * 0.005f;
     } else if (noResetFlg1() & 0x800000) {
@@ -431,7 +620,7 @@ BOOL daPy_lk_c::procGrabRebound() {
         resetActAnimeUpper(Link07::UPPER_MOVE2_e, -1.0f);
         return checkNextMode(0);
     }
-    if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         initGrabNextMode();
     } else if (mFrameCtrlUnder[0].getFrame() > 6.0f && (grab->actor_status & fopAcStts_UNK10000_e)) {
         initGrabNextMode();
@@ -561,13 +750,13 @@ BOOL daPy_lk_c::procSwimUp() {
     J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
     setSpeedAndAngleSwim();
     if (!changeSwimOutProc()) {
-        if (frameCtrl.getRate() < 0.01f) {
+        if (lkT60_endRate(&frameCtrl) < 0.01f) {
             procSwimWait_init(0);
         } else if (frameCtrl.getFrame() > 19.0f) {
             if (mStickDistance > 0.05f) {
                 procSwimMove_init(0);
             }
-        } else if (frameCtrl.checkPass(4.0f)) {
+        } else if (lkT60_pass(&frameCtrl, 4.0f)) {
             LK_voiceStart(0x1A);
             seStartOnlyReverb(Link07::JA_SE_LK_WALK_IN_WATER);
             seStartOnlyReverb(Link07::JA_SE_LK_SWIM);
@@ -584,9 +773,13 @@ BOOL daPy_lk_c::procSwimUp() {
 /* 0242F590 */
 BOOL daPy_lk_c::procSwimWait() {
     setSpeedAndAngleSwim();
-    f32 r = cM_rndF(0.3f);
-    s16 step = (s16)gabi::ftoi(gabi::fmuls_ppc(2330.0f, gabi::fadds_ppc(r, 0.85f)));
-    mProcVar2 = (s16)(mProcVar2 + step);
+    /* true60 (the per-step chance rule and the 30 Hz visual-motion rule): the bob's phase step draws once a frame and the bob (m35C4, the
+     * model's height offset: visual) stays on the 30 Hz grid: phase and draw on the frame's step, the offset held */
+    if (lk07_perFrame()) {
+        f32 r = cM_rndF(0.3f);
+        s16 step = (s16)gabi::ftoi(gabi::fmuls_ppc(2330.0f, gabi::fadds_ppc(r, 0.85f)));
+        mProcVar2 = (s16)(mProcVar2 + step);
+    }
     m35C4 = gabi::fmadds(5.0f, cM_ssin(mProcVar2), 1.0f);
     if (changeSwimOutProc()) {
         return TRUE;
@@ -689,8 +882,8 @@ BOOL daPy_lk_c::procSwimMove() {
     }
     if (!(mStickDistance > 0.05f)) {
         procSwimWait_init(1);
-    } else if ((mDirection == 0 && frameCtrl.checkPass(20.0f)) ||
-               (mDirection != 0 && frameCtrl.checkPass(0.0f))) {
+    } else if ((mDirection == 0 && lkT60_pass(&frameCtrl, 20.0f)) ||
+               (mDirection != 0 && lkT60_pass(&frameCtrl, 0.0f))) {
         seStartOnlyReverb(Link07::JA_SE_LK_SWIM);
     }
     setSwimTimerStartStop();
@@ -811,7 +1004,9 @@ BOOL daPy_lk_c::procBtJump() {
             return changeLandProc(2.0f);
         }
         if (mProcVar6 == 1) {
-            mProcVar0 = mProcVar0 + 1;
+            if (lkT60_countStep()) { /* true60 (the 30 Hz timer rule; first-step AI-timer for Link): the rise's frame count, first step */
+                mProcVar0 = mProcVar0 + 1;
+            }
             if (speed.y < -gravity) {
                 return procBtJumpCut_init(&m370C);
             }
@@ -843,7 +1038,7 @@ BOOL daPy_lk_c::procBtJumpCut() {
         return changeLandProc(2.0f);
     }
     if (mProcVar6 == 0) {
-        if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+        if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
             mNormalSpeed = 12.5f;
             gravity = -3.75f;
             mProcVar6 = 1;
@@ -862,7 +1057,7 @@ BOOL daPy_lk_c::procBtJumpCut() {
 
 /* 0242FFD8 */
 BOOL daPy_lk_c::procBtSlide() {
-    f32 r = cLib_addCalc_l(&mNormalSpeed, 0.0f, 0.5f, 6.25f, 2.5f);
+    f32 r = (f32)LKT60_CHASE(1, &mNormalSpeed, 0.0f, &mCurProc, cLib_addCalc_l(&mNormalSpeed, 0.0f, 0.5f, 6.25f, 2.5f)); /* true60: frame-exact */
     // HD: HIO folded
 
     if (!(r > 0.001f)) {
@@ -931,13 +1126,15 @@ BOOL daPy_lk_c::procBtRoll() {
     current.pos.x = gabi::fmadds(r, cM_ssin(mProcVar3), center->x);
     current.pos.z = gabi::fmadds(r, cM_scos(mProcVar3), center->z);
     shape_angle.y = (s16)(mProcVar3 + 0x8000);
-    if (std::abs((s32)d) < 0x1E) {
+    /* true60 (the per-step movement rule): the roll's turn this step is dt of a frame's: the foot effect ends when the
+     * frame rate (d / dt) drops below the chase's minimum step */
+    if (t60::dt() == 1.0f ? std::abs((s32)d) < 0x1E : (f32)std::abs((s32)d) < 30.0f * (f32)t60::dt()) {
         resetFootEffect();
     }
     J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
-    if (frameCtrl.getRate() < 0.01f) {
+    if (lkT60_endRate(&frameCtrl) < 0.01f) {
         procBtRollCut_init(center);
-    } else if (frameCtrl.checkPass(10.0f)) {
+    } else if (lkT60_pass(&frameCtrl, 10.0f)) {
         endFlameDamageEmitter();
     }
     return TRUE;
@@ -949,8 +1146,11 @@ BOOL daPy_lk_c::procBtRollCut() {
     s16 target = cLib_targetAngleY(&current.pos, &m370C);
     cLib_addCalcAngleS(&shape_angle.y, target, 5, 0x5E8, 0x13C);
     current.angle.y = (s16)(shape_angle.y + mProcVar6 * 0x4000);
-    if (mFrameCtrlUnder[0].getRate() < 0.01f) {
-        if (mProcVar2 == 0) {
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
+        /* true60 (the 30 Hz timer rule): the two one-frame phases after the cut (the blade's AT one frame longer, then
+         * the fall pose) advance on the frame's step, so the AT flag is up on the frame's tick30 step */
+        if (!lk07_perFrame()) {
+        } else if (mProcVar2 == 0) {
             mProcVar2 = 1;
             setResetFlg0(resetFlg0() | 2);
         } else if (mProcVar2 == 1) {
@@ -965,7 +1165,7 @@ BOOL daPy_lk_c::procBtRollCut() {
             if ((dir > 0 && m34EC < 0) || (dir < 0 && m34EC > 0)) {
                 cLib_addCalcAngleS(&m34EC, (s16)-dir, 4, 0x1800, 0x200);
             } else {
-                m34EC = (s16)(m34EC + dir * 0x1800);
+                m34EC = (s16)(m34EC + lk07_share(s_lk07BtSpin, dir * 0x1800)); /* true60 (the per-step smoothing rule): per frame */
             }
         }
         if (LK_mAcchChkGroundHit()) {
@@ -1041,7 +1241,7 @@ BOOL daPy_lk_c::procBtVerticalJumpCut() {
     lk_cutf_setFrame(gabi::ea(this), frame);
     if (LK_mAcchChkGroundHit()) {
         procBtVerticalJumpLand_init();
-    } else if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+    } else if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         if (!(mNoResetFlg0 & daPy_py_c::daPyFlg0_CUT_AT_FLG)) {
             LK_voiceStart(1);
             setResetFlg0(resetFlg0() | 1);
@@ -1055,7 +1255,7 @@ BOOL daPy_lk_c::procBtVerticalJumpCut() {
 
 /* 02430C00 */
 BOOL daPy_lk_c::procBtVerticalJumpLand() {
-    if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         procBackJump_init();
         mNormalSpeed = 5.5f;
         speed.y = 25.0f;
@@ -1111,7 +1311,8 @@ void daPy_lk_c::setShipAttnetionBodyAngle() {
             if (dir == Link07::DIR_LEFT) {
                 s16 lim = (s16)gabi::ftoi(512.0f * stick);
                 if (lim > mProcVar5) {
-                    s16 v = (s16)(mProcVar5 + gabi::ftoi(64.0f * stick));
+                    /* true60 (the per-step smoothing rule): the ramp, 64 x stick per frame */
+                    s16 v = (s16)(mProcVar5 + lk07_share(s_lk07ShipAtnRamp, gabi::ftoi(64.0f * stick)));
                     if (v > lim) {
                         v = lim;
                     }
@@ -1123,7 +1324,7 @@ void daPy_lk_c::setShipAttnetionBodyAngle() {
             } else if (dir == Link07::DIR_RIGHT) {
                 s16 lim = (s16)gabi::ftoi(-512.0f * stick);
                 if (lim < mProcVar5) {
-                    s16 v = (s16)(mProcVar5 - gabi::ftoi(64.0f * stick));
+                    s16 v = (s16)(mProcVar5 - lk07_share(s_lk07ShipAtnRamp, gabi::ftoi(64.0f * stick)));
                     if (v < lim) {
                         v = lim;
                     }
@@ -1135,7 +1336,8 @@ void daPy_lk_c::setShipAttnetionBodyAngle() {
             }
         }
         cLib_addCalcAngleS(&mProcVar5, target, 3, 0x40, 0x10);
-        shape_angle.y = (s16)(shape_angle.y + mProcVar5);
+        /* true60 (the per-step smoothing rule / 6): the turn mProcVar5 per frame */
+        shape_angle.y = (s16)(shape_angle.y + lk07_share(s_lk07ShipAtnTurn, mProcVar5));
     }
     current.angle.y = shape_angle.y;
 }
@@ -1173,10 +1375,10 @@ BOOL daPy_lk_c::checkShipPutAwayTrigger() {
     if (mItemTrigger & 2) {
         return TRUE;
     }
-    if (dComIfGp_checkPlayerStatus1_l(4) && (l_pad.mpPad->mTrigger & 0x40000)) {
+    if (dComIfGp_checkPlayerStatus1_l(4) && (Link07_padTrigger() & 0x40000)) {
         return TRUE;
     }
-    if (dComIfGp_checkPlayerStatus1_l(2) && (l_pad.mpPad->mTrigger & 0x80000)) {
+    if (dComIfGp_checkPlayerStatus1_l(2) && (Link07_padTrigger() & 0x80000)) {
         return TRUE;
     }
     return FALSE;
@@ -1488,7 +1690,7 @@ BOOL daPy_lk_c::procShipReady() {
         } else {
             PSMTXMultVec(mtx, &l_ship_redge, &current.pos);
         }
-        if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+        if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
             mProcVar6 = 1;
             mNormalSpeed = 6.0f;
             setSingleMoveAnime(Link07::ANM_WALK, 0.8f, 0.0f, -1, 5.0f);
@@ -1512,7 +1714,7 @@ BOOL daPy_lk_c::procShipReady() {
 
 /* 024322EC */
 BOOL daPy_lk_c::procShipJumpRide() {
-    if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         procShipPaddle_init();
     } else {
         setShipRidePos(0);
@@ -1561,23 +1763,29 @@ BOOL daPy_lk_c::procShipPaddle() {
     s16 timer = mProcVar0;
     if (timer == -1 || timer == -2) {
         if (timer == -2) {
-            if (mFrameCtrlUnder[0].checkPass(168.0f)) {
+            if (lkT60_pass(&mFrameCtrlUnder[0], 168.0f)) {
                 LK_voiceStart(48);
-            } else if (mFrameCtrlUnder[0].checkPass(105.0f)) {
+            } else if (lkT60_pass(&mFrameCtrlUnder[0], 105.0f)) {
                 LK_voiceStart(47);
             }
         }
         if (mStickDistance > 0.05f || dComIfGp_event_runCheck_l() ||
             dComIfGp_getDoStatus_l() != 0x1D /* GET_OUT_SHIP */ || Link07::ship(ship)->mTornadoActor != 0 ||
-            Link07::ship(ship)->mWhirlActor != 0 || mFrameCtrlUnder[0].getRate() < 0.01f) {
+            Link07::ship(ship)->mWhirlActor != 0 || lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
             initShipBaseAnime();
             mProcVar0 = (s16)gabi::ftoi(cM_rndF(150.0f) + 300.0f);
         }
     } else if (!dComIfGp_event_runCheck_l() && dComIfGp_getDoStatus_l() == 0x1D &&
                !(mStickDistance > 0.05f) && Link07::ship(ship)->mTornadoActor == 0 &&
                Link07::ship(ship)->mWhirlActor == 0 && !checkShipNotNormalMode()) {
+        /* true60 (the 30 Hz timer rule / 8; the first-step AI-timer rule for Link): the idle countdown and the draw that decides the
+         * idle animation on the frame's FIRST step (count before its test: no hold) */
+        if (!lkT60_countStep()) {
+            return TRUE;
+        }
         mProcVar0 = (s16)(mProcVar0 - 1);
         if (mProcVar0 == 0) {
+            lkT60Maba::now(gabi::ea(this)); /* true60 (d_a_player_maba_t60.h now()): the frame's noted draws first */
             f32 r = cM_rnd();
             if (r < 0.3333f) {
                 mProcVar0 = -1;
@@ -1590,7 +1798,7 @@ BOOL daPy_lk_c::procShipPaddle() {
                 setSingleMoveAnime(Link07::ANM_FREED, 1.0f, 0.0f, -1, 5.0f);
             }
         }
-    } else {
+    } else if (lk07_perFrame()) { /* true60 (the per-step chance rule): the per-frame redraw on the frame's step */
         mProcVar0 = (s16)gabi::ftoi(cM_rndF(150.0f) + 300.0f);
     }
     return TRUE;
@@ -1791,7 +1999,8 @@ void daPy_lk_c::setHookshotSight() {
         if (!Link07_checkAttackHit(
                 gabi::ea(gabi::at<Link07::HookshotSight>(hs)->mSightHit))) { /* !hookshot->getSightHit() */
             lk_sight_setPos(sp, gabi::ea(endP.get()));
-            gabi::at<Link07::SightPacket>(sp)->mLockFlag = 0; /* offLockFlg() */
+            if (lk07_sightDecides()) /* true60: the lock on the frame's first step */
+                gabi::at<Link07::SightPacket>(sp)->mLockFlag = 0; /* offLockFlg() */
             return;
         }
         objSight = TRUE;
@@ -1826,8 +2035,13 @@ void daPy_lk_c::setHookshotSight() {
                    dComIfG_Bgsp(),
                    gabi::ea(&gabi::at<Link07::LinkLineHit>(gabi::ea(mRopeLinChk))->mPolyInfo)) != 0;
     }
-    if (hook) {
+    if (!lk07_sightDecides()) {
+        /* true60: a later step keeps the frame's lock */
+    } else if (hook) {
         if (gabi::at<Link07::SightPacket>(sp)->mLockFlag != 0) {        /* getLockFlg() */
+            /* true60: the lock's frame count (the indicator sound every 26 frames) counts 30 Hz frames
+             * (the 30 Hz timer rule; per step it repeated every 13 frames at N 2: prope8 frame 106) */
+            if (lk07_sightCounts()) {
             u8 f = (u8)(gabi::at<Link07::SightPacket>(sp)->mFrame + 1); /* incFrame() */
             if (f == 0x1A) {
                 gabi::at<Link07::SightPacket>(sp)->mFrame = 0;
@@ -1837,6 +2051,7 @@ void daPy_lk_c::setHookshotSight() {
                 if (f == 0) {
                     Link07_seStartSystem(Link07::JA_SE_INDICATOR_1);
                 }
+            }
             }
         } else {
             gabi::at<Link07::SightPacket>(sp)->mFrame = 0;
@@ -2109,7 +2324,7 @@ BOOL daPy_lk_c::procShipRestart() {
     if (dComIfGp_getShipActor_l() == 0) {
         return checkNextMode(0);
     }
-    if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         procShipPaddle_init();
     }
     setShipRidePos(1);
@@ -2319,6 +2534,10 @@ enum : u32 {
 /* mSightPacket lock update when the target is hookable (getLockFlg/incFrame/checkSEFrame/onLockFlg) */
 static inline void lk_sight_lock(u32 sp) {
     if (gabi::at<Link07::SightPacket>(sp)->mLockFlag != 0) {
+        /* true60: the lock's frame count (the indicator sound every 26 frames) counts 30 Hz frames
+         * (the 30 Hz timer rule; per step it repeated every 13 frames at N 2: prope8 frame 106) */
+        if (!lk07_sightCounts())
+            return;
         u8 f = (u8)(gabi::at<Link07::SightPacket>(sp)->mFrame + 1);
         if (f == 0x1A) {
             gabi::at<Link07::SightPacket>(sp)->mFrame = 0;
@@ -2379,6 +2598,7 @@ int daPy_lk_c::specialRopeHangUp() {
 
 /* 024350A0 */
 BOOL daPy_lk_c::procRopeSubject() {
+    lk07_boostUnapply(this); /* true60: the last step's aim boost off (lk07_boostApply) */
     if (!checkItemModeActorPointer()) {
         return TRUE;
     }
@@ -2409,13 +2629,65 @@ BOOL daPy_lk_c::procRopeSubject() {
         lk_sight_setPos(sp, gabi::ea(sight.get()));
         if (Link07_setRopeTargetPos(rope, sight.get(), &m3600, &m3604)) {
             gabi::at<Link07::SightPacket>(sp)->mDrawFlag = 1;
-            lk_sight_lock(sp);
-        } else {
+            if (lk07_sightDecides()) /* true60 */
+                lk_sight_lock(sp);
+        } else if (lk07_sightDecides()) {
             gabi::at<Link07::SightPacket>(sp)->mLockFlag = 0; /* offLockFlg() */
         }
     }
-    mNormalSpeed = (f32)((f64)(f32)mNormalSpeed * 1.2); /* HD */
+    lk07_boostApply(this); /* HD: mNormalSpeed *= 1.2 (true60: lk07_boostApply) */
     setBlendSubjectMoveAnimeHD();
+    return TRUE;
+}
+
+/* true60 (the 30 Hz timer rule and 6): procRopeReady at a step of dt. The 30 Hz frame pulls Link towards the rope's
+ * point m370C by the pull speed m35A0 (chased to 50 by 5 a frame: v += a, p += v, a semi-implicit step) and starts the
+ * swing once the frame-start distance is at most twice the speed (len <= 2 m35A0: the next frame's pull would pass the
+ * point). The swing's rope length (procRopeSwing_init: the distance left) and with it the swing's period and lowest
+ * point follow from where that decision falls, so the decision stays on the frame grid (prope6: a per-step pull at the
+ * frame's rate and a per-step decision gave a 11.4 shorter rope, a 2.5 % faster swing, a 97.9 gap at frame 300):
+ * each step chases m35A0 by 5 dt (cLib_chaseF scales its step) and pulls by its share m35A0 dt + dv (1 - dt) / 2 (the exact-arc term: the N steps
+ * pull the frame's m35A0 in total, along the same line, the point fixed within the frame: the rope actor runs on tick30),
+ * the move and the swing decision take the frame-start distance and the frame-end speed (the 30 Hz frame's values), the
+ * swing starts on the frame's tick30 step. Host memory, Link only. */
+struct Lk07RopeReady {
+    f64 len0; /* the frame-start distance */
+    f32 mEnd; /* the frame-end pull speed */
+    uint32_t stamp;
+    bool valid, frameEnd;
+};
+static Lk07RopeReady s_lk07RopeReady;
+static inline BOOL lk07_ropeReadyStep(daPy_lk_c* t, cXyz* d, f64 len) {
+    const f32 dt = t60::dt();
+    Lk07RopeReady& r = s_lk07RopeReady;
+    const uint32_t now = t60_step_counter();
+    if (!r.valid || now - r.stamp != 1 || r.frameEnd) { /* the frame's first step in this proc */
+        r.len0 = len;
+        f32 m0 = t->m35A0;
+        r.mEnd = m0 < 50.0f ? (m0 + 5.0f > 50.0f ? 50.0f : m0 + 5.0f) : (m0 - 5.0f < 50.0f ? 50.0f : m0 - 5.0f);
+    }
+    r.stamp = now;
+    r.valid = true;
+    r.frameEnd = t60::tick30();
+    const f32 before = t->m35A0;
+    cLib_chaseF(&t->m35A0, 50.0f, 5.0f); /* the step is dt x 5 centrally (cLib_chaseF) */
+    if (r.frameEnd) {
+        t->m35A0 = r.mEnd; /* the frame's chase (5 dt per step sums to 5: rounding only) */
+    }
+    const f32 m = t->m35A0;
+    t->shape_angle.x = (s16)gabi::ftoi((f32)t->mProcVar2 * m * 0.025f);
+    if (r.len0 > (f64)r.mEnd) {
+        f32 share = m * dt + (m - before) * (1.0f - dt) * 0.5f;
+        if (len > (f64)share) {
+            gabi::Local<cXyz> step;
+            cXyz_ml(d, step, (f32)((f64)share / len));
+            PSVECAdd(&t->current.pos, step, &t->current.pos);
+        }
+    }
+    if (r.frameEnd && !(r.len0 > (f64)(r.mEnd + r.mEnd))) {
+        r.valid = false;
+        t->procRopeSwing_init(t->mActorKeepEquip.mActor.get(), (s16)t->shape_angle.x);
+    }
     return TRUE;
 }
 
@@ -2433,6 +2705,9 @@ BOOL daPy_lk_c::procRopeReady() {
     cXyz_mi(&m370C, d0, &current.pos);
     lk_xyz_copy(d, d0);
     f64 len = Link07_sqrtUnrounded(PSVECSquareMag(d));
+    if (t60::dt() != 1.0f) {
+        return lk07_ropeReadyStep(this, d, len);
+    }
     cLib_chaseF(&m35A0, 50.0f, 5.0f);
     shape_angle.x = (s16)gabi::ftoi((f32)mProcVar2 * m35A0 * 0.025f);
     if (len > (f64)(f32)m35A0) {
@@ -2566,7 +2841,8 @@ BOOL daPy_lk_c::procRopeSwingStart_init() {
 /* 02436AB4 */
 BOOL daPy_lk_c::procRopeHangWait() {
     dComIfGp_setRStatus_l(Link07::dActStts_STOP_e);
-    if (mProcVar0 > 0) {
+    if (mProcVar0 > 0 && lkT60_countStep()) { /* true60: a 30 Hz frame count, on the frame's first step (first-step AI-timer for Link;
+                                                * count before its test: no hold) */
         mProcVar0 = mProcVar0 - 1;
     }
     if (checkHangRopeActorNull()) {
@@ -2597,7 +2873,8 @@ BOOL daPy_lk_c::procRopeHangWait() {
             if (dir == Link07::DIR_LEFT) {
                 s16 lim = (s16)gabi::ftoi(512.0f * stick);
                 if (lim > mProcVar2) {
-                    s16 v = (s16)(mProcVar2 + gabi::ftoi(64.0f * stick));
+                    /* true60: the ramp of the hang turn speed, 64 x stick per frame */
+                    s16 v = (s16)(mProcVar2 + lk07_share(s_lk07HangRamp, gabi::ftoi(64.0f * stick)));
                     if (v > lim) {
                         v = lim;
                     }
@@ -2609,7 +2886,7 @@ BOOL daPy_lk_c::procRopeHangWait() {
             } else {
                 s16 lim = (s16)gabi::ftoi(-512.0f * stick);
                 if (lim < mProcVar2) {
-                    s16 v = (s16)(mProcVar2 - gabi::ftoi(64.0f * stick));
+                    s16 v = (s16)(mProcVar2 - lk07_share(s_lk07HangRamp, gabi::ftoi(64.0f * stick)));
                     if (v < lim) {
                         v = lim;
                     }
@@ -2636,7 +2913,7 @@ BOOL daPy_lk_c::procRopeHangWait() {
         roof = Link07_ropeRoofUnrounded(this, (s32)(s16)(shape_angle.y - 0x2000));
     }
     if ((f32)(roof + -55.0f) > current.pos.y) {
-        s16 a = (s16)(shape_angle.y + mProcVar2);
+        s16 a = (s16)(shape_angle.y + lk07_share(s_lk07HangTurn, mProcVar2)); /* true60: the turn mProcVar2 per frame */
         shape_angle.y = a;
         current.angle.y = a;
     }
@@ -2659,7 +2936,7 @@ BOOL daPy_lk_c::procRopeUp() {
     lk_xyz_copy(&mRopePos, &mActorKeepRope.mActor->current.pos);
     current.pos.x = mRopePos.x;
     current.pos.z = mRopePos.z;
-    if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         s32 dir = getDirectionFromAngle(mStickAngle);
         if (!(mStickDistance > 0.05f)) {
             procRopeHangWait_init(0);
@@ -2805,10 +3082,15 @@ BOOL daPy_lk_c::procRopeThrowCatch() {
     } else {
         status = status | 0x40000;
     }
-    if (mFrameCtrlUnder[0].getRate() < 0.01f) {
-        mProcVar0 = (s16)(mProcVar0 - 1);
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
+        /* true60: the wait counts 30 Hz frames and its end (== 0 right after the count) is tested on the counting step;
+         * the rope's own state is checked on every step */
+        const bool perFrame = lkT60_countStep(); /* first-step AI-timer for Link: the count and its end test on the first step */
+        if (perFrame) {
+            mProcVar0 = (s16)(mProcVar0 - 1);
+        }
         u32 rope = gabi::ea(mActorKeepEquip.mActor.get());
-        if (gabi::at<Link07::Rope2>(rope)->m02DC == 0 /* rope->m02DC */ || mProcVar0 == 0) {
+        if (gabi::at<Link07::Rope2>(rope)->m02DC == 0 /* rope->m02DC */ || (perFrame && mProcVar0 == 0)) {
             checkNextRopeMode();
         }
     }
@@ -2823,7 +3105,7 @@ BOOL daPy_lk_c::procRopeUpHang() {
     lk_xyz_copy(&mRopePos, &mActorKeepRope.mActor->current.pos);
     current.pos.x = mRopePos.x;
     current.pos.z = mRopePos.z;
-    if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         lk_xyz_copy(&m3724, &mRopePos);
         m352C = (s16)(shape_angle.y + 0x8000);
         procHangStart_init();
@@ -2834,12 +3116,13 @@ BOOL daPy_lk_c::procRopeUpHang() {
 /* ---- boomerang, bow, hookshot subjects ---- */
 /* HD: the aim procs speed Link up while aiming (mNormalSpeed *= 1.2, then the unnamed 02416FA8) */
 static inline void lk_aimSpeedBoost(daPy_lk_c* t) {
-    t->mNormalSpeed = (f32)((f64)(f32)t->mNormalSpeed * 1.2);
+    lk07_boostApply(t); /* true60: see lk07_boostApply */
     t->setBlendSubjectMoveAnimeHD();
 }
 
 /* 024376D8 */
 BOOL daPy_lk_c::procBoomerangSubject() {
+    lk07_boostUnapply(this); /* true60: the last step's aim boost off (lk07_boostApply) */
     if (!checkItemModeActorPointer()) {
         return TRUE;
     }
@@ -2905,7 +3188,7 @@ BOOL daPy_lk_c::procBoomerangCatch() {
     } else {
         setSpeedAndAngleNormal(0xBB8); /* HD: HIO folded */
     }
-    if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         resetActAnimeUpper(Link07::UPPER_MOVE2_e, -1.0f);
     }
     checkNextMode(0);
@@ -2914,6 +3197,7 @@ BOOL daPy_lk_c::procBoomerangCatch() {
 
 /* 024379C0 */
 BOOL daPy_lk_c::procBowSubject() {
+    lk07_boostUnapply(this); /* true60: the last step's aim boost off (lk07_boostApply) */
     dComIfGp_setDoStatus_l(Link07::dActStts_RETURN_e);
     if (lk_attentionLock(mpAttention)) {
         setSpeedAndAngleAtn();
@@ -2958,6 +3242,7 @@ BOOL daPy_lk_c::procBowMove() {
 
 /* 02437C0C */
 BOOL daPy_lk_c::procHookshotSubject() {
+    lk07_boostUnapply(this); /* true60: the last step's aim boost off (lk07_boostApply) */
     if (!checkItemModeActorPointer()) {
         return TRUE;
     }
@@ -3252,7 +3537,7 @@ BOOL daPy_lk_c::procFanSwing() {
     if (changeCutReverseProc(Link07::ANM_CUTREL)) {
         return TRUE;
     }
-    if (frameCtrl.checkPass(4.0f) && mProcVar0 != 0) {
+    if (lkT60_pass(&frameCtrl, 4.0f) && mProcVar0 != 0) {
         u32 cb = gabi::ea(this) + 0x6808; /* mFanSwingCb */
         u32 em = gabi::ea(gabi::at<Link07::FanSwingCallback>(cb)->mpEmitter.get());
         if (em != 0) { /* mFanSwingCb.deleteCallBack() */
@@ -3270,7 +3555,7 @@ BOOL daPy_lk_c::procFanSwing() {
                         gabi::at<dPa_levelEcallBack>(cb), -1, nullptr, nullptr, nullptr);
     }
     if (frameCtrl.getFrame() < 22.0f) {
-        cLib_addCalc_l(&mNormalSpeed, 0.0f, 0.6f, 2.5f, 1.8f); /* HD: HIO folded */
+        LKT60_CHASE_S(2, &mNormalSpeed, &mCurProc, cLib_addCalc_l(&mNormalSpeed, 0.0f, 0.6f, 2.5f, 1.8f)); /* HD: HIO folded; true60: frame-exact */
     } else if (mProcVar6 == 0) {
         if (mProcVar0 != 0) {
             if (!checkHeavyStateOn() &&
@@ -3367,11 +3652,11 @@ BOOL daPy_lk_c::procFanSwing() {
         }
         Link07::voiceStart(this, 1);
         mProcVar6 = 1;
-    } else if (cLib_addCalc_l(&mNormalSpeed, 0.0f, 0.5f, 1.5f, 0.3f) < 0.5f) {
+    } else if (LKT60_CHASE(3, &mNormalSpeed, 0.0f, &mCurProc, cLib_addCalc_l(&mNormalSpeed, 0.0f, 0.5f, 1.5f, 0.3f)) < 0.5f) { /* true60: frame-exact */
         resetFootEffect();
     }
     m35EC = frameCtrl.getFrame();
-    if (frameCtrl.getRate() < 0.01f) {
+    if (lkT60_endRate(&frameCtrl) < 0.01f) {
         mNormalSpeed = 0.0f;
         checkNextMode(0);
     }
@@ -3425,7 +3710,7 @@ BOOL daPy_lk_c::checkNpcStatus() {
 /* 02439D24 */
 /* HD-only (unnamed): the tact cancel trigger: the B trigger or the HD pad button 0x10000 */
 BOOL daPy_lk_c::checkTactCancelTrigger() {
-    if ((mItemTrigger & 2) || (l_pad.mpPad->mTrigger & 0x10000)) {
+    if ((mItemTrigger & 2) || (Link07_padTrigger() & 0x10000)) {
         return TRUE;
     }
     return FALSE;
@@ -3575,9 +3860,11 @@ BOOL daPy_lk_c::procTactPlay() {
             }
         }
     }
-    Link07_tactAmbientPlay();
+    if (lk07_tactAmbientStep()) { /* true60 (the one-emitter-per-event rule): the tact ambient sound once a frame, on its first step */
+        Link07_tactAmbientPlay();
+    }
     if (m3624 != 0) {
-        if (checkEndMessage((u32)m3624)) {
+        if (lk07_tactMsgDecides() /* true60 */ && checkEndMessage((u32)m3624)) {
             resetActAnimeUpper(Link07::UPPER_MOVE2_e, -1.0f);
             dComIfGp_event_reset();
             lk_endEventCamera(this);
@@ -3587,7 +3874,7 @@ BOOL daPy_lk_c::procTactPlay() {
         }
         return TRUE;
     }
-    if (mProcVar5 > 0) {
+    if (mProcVar5 > 0 && lk07_perFrame()) { /* true60 (the 30 Hz timer rule): the melody delay counts 30 Hz frames */
         mProcVar5 = (s16)(mProcVar5 - 1);
         if (mProcVar5 == 0) {
             Link07_tactMelodyPlay((s32)mProcVar6);
@@ -3601,7 +3888,7 @@ BOOL daPy_lk_c::procTactPlay() {
         }
         u32 msgMgr = gabi::ea(l_messageManager.mpManager.get());
         u32 st = Link07_messageStatus(msgMgr);
-        if (st == 0 || st == 0x12 /* fopMsgStts_BOX_CLOSED_e */) {
+        if (lk07_tactMsgDecides() /* true60 */ && (st == 0 || st == 0x12 /* fopMsgStts_BOX_CLOSED_e */)) {
             fopAc_ac_c* partner = nullptr;
             Link07::gameInfo()->play.mMetronome = 0;
             if (st == 0x12) {
@@ -3633,7 +3920,7 @@ BOOL daPy_lk_c::procTactPlay() {
                 return procTactPlayEnd_init((s32)mProcVar6);
             }
         }
-    } else if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+    } else if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         Link07_seStartSystem(Link07::JA_SE_TAKT_MATCHED);
         l_messageManager.mpManager->mMessageSend = 1; /* fopMsgM_messageSendOn() */
         mProcVar0 = 1;
@@ -3781,12 +4068,22 @@ BOOL daPy_lk_c::procTactPlayOriginal_init() {
 
 /* 0243B74C */
 BOOL daPy_lk_c::procTactPlayOriginal() {
-    Link07_seStartSystem(Link07::JA_SE_LK_WTAKT_USING);
+    /* true60 (the 30 Hz timer rule / 11): the sustained baton sound, the 15-frame hold and the tact play call once a
+     * frame: on the frame's step */
+    const bool frameStep = lk07_perFrame();
+    if (frameStep) {
+        Link07_seStartSystem(Link07::JA_SE_LK_WTAKT_USING);
+    }
     if (gabi::at<Link07::OldFrameData>(m_old_fdata)->mOldFrameRate < 0.01f) { /* m_old_fdata->getOldFrameRate() */
-        if (mProcVar3 > 0) {
-            mProcVar3 = (s16)(mProcVar3 - 1);
-            if (mProcVar3 == 0) {
-                mProcVar0 = (s16)(mProcVar0 + 1);
+        /* true60 (the first-step AI-timer rule for Link): the 15-frame hold counts on the frame's FIRST step, its branch held over the
+         * frame after the count's 0 (the next stick word on the next frame's first step) */
+        if (lkT60_countBranch(mCurProc, 1, mProcVar3)) {
+            if (mProcVar3 > 0 && lkT60_countStep()) {
+                mProcVar3 = (s16)(mProcVar3 - 1);
+                lkT60_counted(mCurProc, 1, mProcVar3);
+                if (mProcVar3 == 0) {
+                    mProcVar0 = (s16)(mProcVar0 + 1);
+                }
             }
         } else if (mProcVar0 == 5) {
             dComIfGp_evmng_cutEnd(mStaffIdx);
@@ -3815,7 +4112,7 @@ BOOL daPy_lk_c::procTactPlayOriginal() {
             Link07_tactPlayArmSwing((s32)mProcVar6, (s32)mProcVar7);
         }
     }
-    if (mProcVar3 != 0 && mProcVar5 != 0) {
+    if (mProcVar3 != 0 && mProcVar5 != 0 && frameStep) {
         Link07_tactPlay();
     }
     mProcVar5 = 1;
@@ -3865,7 +4162,8 @@ BOOL daPy_lk_c::procVomitWait() {
         if (dir == Link07::DIR_LEFT) {
             s16 lim = (s16)gabi::ftoi(512.0f * stick);
             if (lim > mProcVar2) {
-                s16 v = (s16)(mProcVar2 + gabi::ftoi(64.0f * stick));
+                /* true60 (the per-step smoothing rule): the ramp, 64 x stick per frame */
+                s16 v = (s16)(mProcVar2 + lk07_share(s_lk07VomitRamp, gabi::ftoi(64.0f * stick)));
                 if (v > lim) {
                     v = lim;
                 }
@@ -3877,7 +4175,7 @@ BOOL daPy_lk_c::procVomitWait() {
         } else if (dir == Link07::DIR_RIGHT) {
             s16 lim = (s16)gabi::ftoi(-512.0f * stick);
             if (lim < mProcVar2) {
-                s16 v = (s16)(mProcVar2 - gabi::ftoi(64.0f * stick));
+                s16 v = (s16)(mProcVar2 - lk07_share(s_lk07VomitRamp, gabi::ftoi(64.0f * stick)));
                 if (v < lim) {
                     v = lim;
                 }
@@ -3889,7 +4187,7 @@ BOOL daPy_lk_c::procVomitWait() {
         }
     }
     cLib_addCalcAngleS(&mProcVar2, target, 3, 0x40, 0x10);
-    s16 a = (s16)(shape_angle.y + mProcVar2);
+    s16 a = (s16)(shape_angle.y + lk07_share(s_lk07VomitTurn, mProcVar2)); /* true60 (the per-step smoothing rule / 6): the turn per frame */
     shape_angle.y = a;
     current.angle.y = a;
     return TRUE;
@@ -3897,8 +4195,18 @@ BOOL daPy_lk_c::procVomitWait() {
 
 /* 0243BC78 */
 BOOL daPy_lk_c::procVomitJump() {
-    if (mProcVar1 != 0) {
+    /* true60 (the 30 Hz timer rule): the launch delay mProcVar1 and the cc-move clear count mProcVar0 count 30 Hz
+     * frames (on the frame's step); the flip spin is 0x55F0 per frame (the per-step smoothing rule, with the carry) */
+    const bool frameStep = lk07_perFrame();
+    /* true60 (the first-step AI-timer rule for Link): the launch delay counts on the frame's FIRST step (the launch there), its
+     * branch held over the frame (the flight from the next frame, as in the original) */
+    if (mProcVar1 != 0 || lkT60_countHeld(mCurProc, 2, 0)) {
+        if (mProcVar1 == 0 || !lkT60_countStep()) {
+            lk_stts_clrCcMove(gabi::ea(this));
+            return TRUE;
+        }
         mProcVar1 = (s16)(mProcVar1 - 1);
+        lkT60_counted(mCurProc, 2, mProcVar1);
         if (mProcVar1 == 0) {
             Link07::voiceStart(this, 0);
             speed.y = 46.0f;
@@ -3907,9 +4215,12 @@ BOOL daPy_lk_c::procVomitJump() {
         lk_stts_clrCcMove(gabi::ea(this));
         return TRUE;
     }
-    if (mProcVar0 != 0) {
+    if (mProcVar0 != 0 || lkT60_countHeld(mCurProc, 3, 0)) {
         lk_stts_clrCcMove(gabi::ea(this));
-        mProcVar0 = (s16)(mProcVar0 - 1);
+        if (mProcVar0 != 0 && lkT60_countStep()) { /* first-step AI-timer for Link: first step, the clear held over the frame */
+            mProcVar0 = (s16)(mProcVar0 - 1);
+            lkT60_counted(mCurProc, 3, mProcVar0);
+        }
     }
     if (!checkJumpFlower()) {
         if (mAcch.ChkGroundHit()) {
@@ -3917,12 +4228,13 @@ BOOL daPy_lk_c::procVomitJump() {
             return TRUE;
         }
         s16 sx = shape_angle.x;
-        shape_angle.x = (s16)(sx + 0x55F0);
-        if (sx < 0 && shape_angle.x > 0) {
+        shape_angle.x = (s16)(sx + lk07_share(s_lk07VomitSpin, 0x55F0));
+        /* true60: a step can land on 0 exactly: at dt != 1 the crossing counts it (dt 1: the original test) */
+        if (sx < 0 && (shape_angle.x > 0 || (t60::dt() != 1.0f && shape_angle.x == 0))) {
             seStartOnlyReverb(Link07::JA_SE_LK_JUMP_FLOWER_OUT);
         }
         if (mProcVar6 == 1) {
-            cLib_addCalc_l(&mNormalSpeed, 12.725f, 0.5f, 2.0f, 0.1f); /* HD: HIO folded */
+            LKT60_CHASE_S(4, &mNormalSpeed, &mCurProc, cLib_addCalc_l(&mNormalSpeed, 12.725f, 0.5f, 2.0f, 0.1f)); /* HD: HIO folded; true60: frame-exact */
             return TRUE;
         }
         if (!checkFanGlideProc(1)) {
@@ -3936,7 +4248,7 @@ BOOL daPy_lk_c::procVomitJump() {
                     dirScale = -1.0f;
                 }
             }
-            cLib_addCalc_l(&mNormalSpeed, gabi::fmuls_ppc(gabi::fmuls_ppc(12.725f, stick), dirScale), 0.5f, 2.0f, 0.1f);
+            LKT60_CHASE_S(5, &mNormalSpeed, &mCurProc, cLib_addCalc_l(&mNormalSpeed, gabi::fmuls_ppc(gabi::fmuls_ppc(12.725f, stick), dirScale), 0.5f, 2.0f, 0.1f)); /* true60: frame-exact */
         }
     }
     return TRUE;
@@ -3946,14 +4258,19 @@ BOOL daPy_lk_c::procVomitJump() {
 BOOL daPy_lk_c::procVomitLand() {
     resetFootEffect();
     if (mProcVar6 != 0) {
-        if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+        if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
             checkNextMode(0);
         } else if (mFrameCtrlUnder[0].getFrame() > 8.0f) { /* HD: HIO folded */
             checkNextMode(1);
         }
-    } else if (mFrameCtrlUnder[0].getRate() < 0.01f) {
-        if (mProcVar0 > 0) {
-            mProcVar0 = (s16)(mProcVar0 - 1);
+    } else if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
+        if (lkT60_countBranch(mCurProc, 4, mProcVar0)) {
+            /* true60 (the 30 Hz timer rule; first-step AI-timer for Link): the lie-down wait counts 30 Hz frames on the frame's FIRST
+             * step, the wait branch held over the frame after the count's 0 */
+            if (mProcVar0 > 0 && lkT60_countStep()) {
+                mProcVar0 = (s16)(mProcVar0 - 1);
+                lkT60_counted(mCurProc, 4, mProcVar0);
+            }
         } else {
             setSingleMoveAnime(Link07::ANM_LANDDAMAST, 0.5f, 1.0f, 9, 8.0f);
             mProcVar6 = 1;
@@ -4112,7 +4429,7 @@ void daPy_lk_c::setHammerQuake(cBgS_PolyInfo* poly, const cXyz* pos, int mtrl) {
 BOOL daPy_lk_c::procHammerSideSwing() {
     J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
     m35EC = frameCtrl.getFrame();
-    if (frameCtrl.getRate() < 0.01f) {
+    if (lkT60_endRate(&frameCtrl) < 0.01f) {
         mNormalSpeed = 0.0f;
         mDirection = Link07::DIR_RIGHT;
         checkNextMode(0);
@@ -4179,7 +4496,7 @@ BOOL daPy_lk_c::procHammerFrontSwing_init() {
 /* 0243C954 */
 BOOL daPy_lk_c::procHammerFrontSwingReady() {
     m35EC = mFrameCtrlUnder[0].getFrame();
-    if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         return procHammerFrontSwing_init();
     }
     if (mpAttnActorLockOn != nullptr) {
@@ -4213,10 +4530,16 @@ BOOL daPy_lk_c::procHammerFrontSwing() {
     f32 frame = frameCtrl.getFrame();
     m35EC = frame;
     if (rate < 0.01f) {
-        if (mProcVar0 == 0) {
+        /* true60 (first-step AI-timer for Link): the 10-frame hold after the hit counts 30 Hz frames on the frame's FIRST step; the
+         * end test (before the count, as in the original) sees a 0 reached on this frame's first step from the next
+         * frame on */
+        if (mProcVar0 == 0 && !lkT60_countHeld(mCurProc, 5, 0)) {
             return procHammerFrontSwingEnd_init();
         }
-        mProcVar0 = (s16)(mProcVar0 - 1);
+        if (lkT60_countStep()) {
+            mProcVar0 = (s16)(mProcVar0 - 1);
+            lkT60_counted(mCurProc, 5, mProcVar0);
+        }
         return TRUE;
     }
     if (frame > rate && changeCutReverseProc(Link07::ANM_CUTREL)) {
@@ -4261,6 +4584,11 @@ BOOL daPy_lk_c::procHammerFrontSwing() {
                 }
             }
             f32 r = frameCtrl.getRate();
+            /* true60 (the animation-rate rule, hand-stepped frame): the hit frame is backed up from the last update's advance (r) and the
+             * sword blur's segments (tenths of it); at N steps an update advances r x dt (the blur is per step) */
+            if (t60::dt() != 1.0f) {
+                r = r * t60::dt();
+            }
             f32 f5 = gabi::fnmsubs((f32)i * r, 0.1f, frameCtrl.getFrame() - r);
             if (i != 0 && i < gabi::at<Link07::SwordBlur>(mpSwBlur)->mSegmentNum) {
                 u32 b = mpSwBlur;
@@ -4295,7 +4623,7 @@ BOOL daPy_lk_c::procHammerFrontSwing() {
 
 /* 0243CE98 */
 BOOL daPy_lk_c::procHammerFrontSwingEnd() {
-    if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         return checkNextMode(0);
     }
     if (mFrameCtrlUnder[0].getFrame() > 10.0f) { /* HD: HIO folded */
@@ -4322,6 +4650,7 @@ BOOL daPy_lk_c::setPushPullKeepData(int label) {
         return FALSE;
     }
     if (label != 0) {
+        lkT60Carry::mark(current.pos, shape_angle.y); /* true60: picture only */
         if (gabi::at<fopAc_ac_c>(pp)->shape_angle.y != mProcVar2) {
             gabi::Local<cXyz> d; /* sp+0x08 */
             cXyz_mi(&current.pos, d, &m370C);
@@ -4334,6 +4663,7 @@ BOOL daPy_lk_c::setPushPullKeepData(int label) {
         }
         current.pos.x = current.pos.x + (gabi::at<fopAc_ac_c>(pp)->current.pos.x - m370C.x);
         current.pos.z = current.pos.z + (gabi::at<fopAc_ac_c>(pp)->current.pos.z - m370C.z);
+        lkT60Carry::report(gabi::ea(this), current.pos, shape_angle.y);
     }
     lk_xyz_copy(&m370C, gabi::at<cXyz>(pp + 0x314));
     mProcVar2 = gabi::at<fopAc_ac_c>(pp)->shape_angle.y;
@@ -4517,7 +4847,7 @@ BOOL daPy_lk_c::procBottleDrink() {
     u16 idx = Link07::underHeap(this, 0).mIdx; /* m_anm_heap_under[UNDER_MOVE0_e].mIdx */
     u32 save = 0;
     if (idx == Link07::dRes_INDEX_LKANM_BCK_BINDRINKPRE_e) {
-        if (frameCtrl.getRate() < 0.01f) {
+        if (lkT60_endRate(&frameCtrl) < 0.01f) {
             setSingleMoveAnime(Link07::ANM_BINDRINKING, 0.9f, 0.0f, -1, 0.0f); /* HD: HIO folded */
             u16 item = mEquipItem; /* kept across the call when no face is set (GHS) */
             if (changeBottleDrinkFace((u32)item)) {
@@ -4539,7 +4869,7 @@ BOOL daPy_lk_c::procBottleDrink() {
                 }
             }
             resetCurse();
-        } else if (frameCtrl.checkPass(65.0f)) {
+        } else if (lkT60_pass(&frameCtrl, 65.0f)) {
             Link07::voiceStart(this, 39);
         }
     } else if (idx == Link07::dRes_INDEX_LKANM_BCK_BINDRINKING_e) {
@@ -4574,14 +4904,14 @@ BOOL daPy_lk_c::procBottleDrink() {
                 Link07_makeMtxPosFollowEmitterColor(&mProcEffectEcallBack2, Link07::ID_IT_JN_LK_GEPPU00, mtx, &current.pos,
                                                     &shape_angle, color, 0);
             }
-        } else if (frameCtrl.checkPass(10.0f)) {
+        } else if (lkT60_pass(&frameCtrl, 10.0f)) {
             Link07::voiceStart(this, 39);
         }
-    } else if (frameCtrl.getRate() < 0.01f) {
+    } else if (lkT60_endRate(&frameCtrl) < 0.01f) {
         dComIfGp_event_reset();
         lk_endEventCamera(this);
         endDemoMode();
-    } else if (frameCtrl.checkPass(8.0f)) {
+    } else if (lkT60_pass(&frameCtrl, 8.0f)) {
         Link07::voiceStart(this, 40);
     }
     (void)save;
@@ -4646,7 +4976,7 @@ BOOL daPy_lk_c::procBottleSwing() {
             }
         }
     }
-    if (frameCtrl.getRate() < 0.01f || mProcVar2 != 0) {
+    if (lkT60_endRate(&frameCtrl) < 0.01f || mProcVar2 != 0) {
         if (mProcVar7 != 0) {
             if (mProcVar2 == 0) {
                 mModeFlg = (mModeFlg & ~0x400u) | 0x100;
@@ -4664,7 +4994,7 @@ BOOL daPy_lk_c::procBottleSwing() {
         } else {
             checkNextMode(0);
         }
-    } else if (frameCtrl.getFrame() > m35A0) {
+    } else if (lkT60_endFrame(&frameCtrl) > m35A0 /* true60: frame end */) {
         if (mProcVar6 == 0 && !dComIfGp_checkPlayerStatus0_l(0x10000)) {
             checkNextMode(1);
         }
@@ -4676,7 +5006,7 @@ BOOL daPy_lk_c::procBottleSwing() {
 BOOL daPy_lk_c::procBottleGet() {
     J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
     setShipRidePosUseItem();
-    if (frameCtrl.getRate() < 0.01f && checkEndMessage((u32)mEquipItem + 0x65 /* MSG_NO_FOR_ITEM */)) {
+    if (lkT60_endRate(&frameCtrl) < 0.01f && checkEndMessage((u32)mEquipItem + 0x65 /* MSG_NO_FOR_ITEM */)) {
         dComIfGp_event_reset();
         lk_endEventCamera(this);
         deleteEquipItem(0);
@@ -4684,7 +5014,7 @@ BOOL daPy_lk_c::procBottleGet() {
     } else if (!(frameCtrl.getFrame() < 9.0f)) {
         m355E = 1;
     }
-    if (frameCtrl.checkPass(39.0f)) {
+    if (lkT60_pass(&frameCtrl, 39.0f)) {
         Link07_seStartSystem(Link07::JA_SE_ME_ITEM_GET_S);
         gabi::at<Link07::MessagePlayState>(dComIfGp_ea())->mMesgBgm = 2; /* dComIfGp_setMesgBgmOn2() */
     }
@@ -4701,13 +5031,18 @@ BOOL daPy_lk_c::procWeaponNormalSwing() {
     } else {
         mNoResetFlg0 = mNoResetFlg0 & ~4u;
     }
-    if (mActorKeepEquip.mActor == nullptr || frameCtrl.getRate() < 0.01f) {
+    if (mActorKeepEquip.mActor == nullptr || lkT60_endRate(&frameCtrl) < 0.01f) {
         if (mActorKeepEquip.mActor == nullptr) {
             mProcVar0 = 0;
             mNoResetFlg0 = mNoResetFlg0 & ~4u;
         }
-        if (mProcVar0 > 0) {
-            mProcVar0 = (s16)(mProcVar0 - 1);
+        if (lkT60_countBranch(mCurProc, 6, mProcVar0)) {
+            /* true60 (the 30 Hz timer rule; first-step AI-timer for Link): the end wait counts 30 Hz frames on the frame's FIRST step,
+             * the wait branch held over the frame after the count's 0 */
+            if (mProcVar0 > 0 && lkT60_countStep()) {
+                mProcVar0 = (s16)(mProcVar0 - 1);
+                lkT60_counted(mCurProc, 6, mProcVar0);
+            }
         } else {
             mNormalSpeed = 0.0f;
             mDirection = Link07::DIR_RIGHT;
@@ -4738,10 +5073,10 @@ BOOL daPy_lk_c::procWeaponNormalSwing() {
         cLib_addCalcAngleS(&shape_angle.y, mProcVar2, 0x1E, 0x3CDF, 0x1F40); /* HD: HIO folded */
         current.angle.y = shape_angle.y;
     }
-    if (frameCtrl.checkPass(8.0f)) {
+    if (lkT60_pass(&frameCtrl, 8.0f)) {
         mNormalSpeed = gabi::fmadds(std::fabs((f32)speedF), 0.4f, 11.0f);
     }
-    if (frameCtrl.checkPass(6.0f)) {
+    if (lkT60_pass(&frameCtrl, 6.0f)) {
         frameCtrl.setRate(0.9f);
     }
     f32 f = frameCtrl.getFrame();
@@ -4752,7 +5087,7 @@ BOOL daPy_lk_c::procWeaponNormalSwing() {
         }
         setResetFlg0(resetFlg0() | 2);
     }
-    cLib_addCalc_l(&mNormalSpeed, 0.0f, 0.8f, 2.6f, 0.5f);
+    LKT60_CHASE_S(6, &mNormalSpeed, &mCurProc, cLib_addCalc_l(&mNormalSpeed, 0.0f, 0.8f, 2.6f, 0.5f)); /* true60: frame-exact */
     return TRUE;
 }
 
@@ -4764,7 +5099,7 @@ BOOL daPy_lk_c::procWeaponSideSwing() {
     } else {
         mNoResetFlg0 = mNoResetFlg0 & ~4u;
     }
-    if (frameCtrl.getRate() < 0.01f || mActorKeepEquip.mActor == nullptr) {
+    if (lkT60_endRate(&frameCtrl) < 0.01f || mActorKeepEquip.mActor == nullptr) {
         mNormalSpeed = 0.0f;
         mDirection = Link07::DIR_RIGHT;
         checkNextMode(0);
@@ -4846,13 +5181,13 @@ BOOL daPy_lk_c::procBottleOpen() {
     setShipRidePosUseItem();
     u32 self = gabi::ea(this);
     if (Link07::underHeap(this, 0).mIdx == Link07::dRes_INDEX_LKANM_BCK_BINOPENPRE_e) {
-        if (frameCtrl.getRate() < 0.01f) {
+        if (lkT60_endRate(&frameCtrl) < 0.01f) {
             if (mEquipItem == Link07::dItemNo_FAIRY_BOTTLE_e) {
                 setSingleMoveAnime(Link07::ANM_BINOPENB, 1.0f, 0.0f, 0x7C, 5.0f); /* HD: HIO folded */
             } else {
                 setSingleMoveAnime(Link07::ANM_BINOPENA, 1.0f, 0.0f, 0x45, 5.0f);
             }
-        } else if (frameCtrl.checkPass(32.0f)) {
+        } else if (lkT60_pass(&frameCtrl, 32.0f)) {
             m355E = 0;
             mRightHandIdx = 8; /* HANDS_JNT_CL_RHANDC_e */
         }
@@ -4947,7 +5282,7 @@ BOOL daPy_lk_c::procBottleOpen() {
             lk_xyz_copy(gabi::at<cXyz>(self + 0x7B98), vec); /* mAtCps[0].SetAtVec() */
             mProcVar3 = 1;
         }
-        if (frameCtrl.getRate() < 0.01f) {
+        if (lkT60_endRate(&frameCtrl) < 0.01f) {
             Link07_clearActorKeep(&mActorKeepRope);
             if (mDemo.mDemoType == 5 /* checkSpecialDemoMode() */) {
                 lk_endEventCamera(this);
@@ -4959,7 +5294,7 @@ BOOL daPy_lk_c::procBottleOpen() {
         } else if (mProcVar4 == 0) {
             u16 item = mEquipItem;
             BOOL water = (item == Link07::dItemNo_WATER_BOTTLE_e || item == Link07::dItemNo_FOREST_WATER_e);
-            if (water && frameCtrl.checkPass(9.0f)) {
+            if (water && lkT60_pass(&frameCtrl, 9.0f)) {
                 seStartOnlyReverb(Link07::JA_SE_LK_SPRINKLE_WATER);
                 u32 mtx = lk_getAnmMtx(gabi::ea(mpCLModel.get()), Link07::CL_JNT_CL_LHANDA_e);
                 Link07_makeMtxFollowEmitterColor(&mProcEffectEcallBack0, Link07::ID_AK_JN_SPILLWATER00, mtx, &current.pos, self + 0x1A8,
@@ -5026,7 +5361,8 @@ BOOL daPy_lk_c::procBottleOpen() {
             Link07_endMtxFollow(&mProcEffectEcallBack0);
         }
     }
-    if (mProcVar0 > 0) {
+    /* true60 (the 30 Hz timer rule / 8): the wet marks repeat every 3 frames (two draws each): on the frame's step */
+    if (mProcVar0 > 0 && lk07_perFrame()) {
         mProcVar0 = (s16)(mProcVar0 - 1);
         if (mProcVar0 == 0) {
             gabi::Local<cXyz> mark; /* sp+0x30 */
@@ -5053,6 +5389,50 @@ enum : u32 {
 
 static inline u32 ppc_divwu_l(u32 a, u32 b) { return b ? a / b : 0; }
 
+/* true60 (UI succ12 2026-11-22; Command Melody -> Medli, route with WWHD_T60_EVENTS60=1):
+ * Link's update clears the button statuses (Do / R / B: play.mAStatus) at its start on EVERY step (d_a_player_main_04
+ * execute), and procTactWait sets the B status RETURN (7, read by the HUD meter's conduct test, dMeter statusCheck) in its
+ * body. When the judge's match starts the match wait (mProcVar1 = 30 / 15) on the frame's first step, the frame's later
+ * steps take the held count branch (site 7, first-step AI-timer) and return before that set: the tick30 meter (dMeter_Execute, once a
+ * frame from the draw) then saw B status 0x35 instead of A's 7 and hid the B button (hud +0x3E bit 2) a frame early
+ * (uiFQ2: A sets mProcVar1 30 in frame 3713, its meter clears the bit in 3714; B in 3713 = its own match frame).
+ * Form: the frame's later steps whose held return skips the body keep the B status the first step's update left (A's
+ * frame-end value); a frame whose first step counted (the next frames) is unchanged (A's update returns there too).
+ * NC WWHD_T60_TACTWAITSTS_NEGCTRL=1. dt 1: the original. */
+struct Lk07TactWaitStatus {
+    uint32_t stamp;
+    u8 value;
+    bool valid;
+};
+static Lk07TactWaitStatus s_lk07TactWaitStatus;
+static inline bool lk07_tactWaitStsNegctrl() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_TACTWAITSTS_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
+#else
+    return false;
+#endif
+}
+/* the match wait was set on this step: the B status the update has left so far (nothing later in it changes it) */
+static inline void lk07_tactWaitSet() {
+    if (t60::dt() == 1.0f) {
+        return;
+    }
+    s_lk07TactWaitStatus.stamp = t60_step_counter();
+    s_lk07TactWaitStatus.value = dComIfGp_getBStatus_l();
+    s_lk07TactWaitStatus.valid = true;
+}
+/* a later step of the frame that set the match wait: back to that update's B status */
+static inline void lk07_tactWaitHeldStatus() {
+    if (t60::dt() == 1.0f || lk07_tactWaitStsNegctrl()) {
+        return;
+    }
+    const Lk07TactWaitStatus& l = s_lk07TactWaitStatus;
+    if (l.valid && t60_step_counter() - l.stamp < t60::steps()) {
+        dComIfGp_setBStatus_l(l.value);
+    }
+}
+
 /* 0243A094 */
 BOOL daPy_lk_c::procTactWait() {
     u32 self = gabi::ea(this);
@@ -5060,16 +5440,30 @@ BOOL daPy_lk_c::procTactWait() {
         offBodyEffect();
     }
     setShipRidePosUseItem();
-    Link07_tactAmbientPlay();
+    /* true60 (the 30 Hz timer rule / 11; the first-step AI-timer rule for Link): the baton's frame counts (match wait
+     * mProcVar1, count-up, timeout m35AC, input holds m35A4 / m35A8, beat counter m35A0, judge delay mProcVar0) count
+     * 30 Hz frames on the frame's FIRST step, with the input they are judged against (first-step input): the count, the beat test
+     * (m35A0 against the audio's beat length), the judge and the decisions they drive fall in the same update as at 30 Hz.
+     * A count that ends on the first step holds its branch over the frame's later steps (the match wait's end: site 7;
+     * the input holds' release: sites 8 / 9, applied by the next frame's first step as by the original's next update).
+     * The ambient play (a sound, no logic) once a frame on the frame's first step, before the tests. */
+    if (lk07_tactAmbientStep()) {
+        Link07_tactAmbientPlay();
+    }
     s32 p6 = mProcVar6;
     if (p6 == -4) {
         dComIfGp_evmng_cutEnd(mStaffIdx);
         return TRUE;
     }
     s16 p1 = mProcVar1;
-    if (p1 > 0) {
+    if (lkT60_countBranch(mCurProc, 7, p1)) {
+        if (!lkT60_countStep()) {
+            lk07_tactWaitHeldStatus(); /* true60 */
+            return TRUE;
+        }
         p1 = (s16)(p1 - 1);
         mProcVar1 = p1;
+        lkT60_counted(mCurProc, 7, p1);
         if (mProcVar6 == -5) {
             f32 t = m35A0 + 1.0f;
             p1 = mProcVar1;
@@ -5089,14 +5483,14 @@ BOOL daPy_lk_c::procTactWait() {
         }
         return TRUE;
     }
-    if (p1 < -1) { /* HD: a short count-up before the wait reacts */
+    if (p1 < -1 && lkT60_countStep()) { /* HD: a short count-up before the wait reacts */
         p1 = (s16)(p1 + 1);
         mProcVar1 = p1;
         p6 = mProcVar6;
     }
     if ((u32)p6 == 1 || ((u32)p6 >= 5 && (u32)p6 <= 7)) {
         f32 t = m35AC;
-        if (!(t < 0.0f)) {
+        if (!(t < 0.0f) && lkT60_countStep()) {
             m35AC = t - 1.0f;
             p6 = mProcVar6;
         }
@@ -5119,7 +5513,11 @@ BOOL daPy_lk_c::procTactWait() {
         if (p1 != 0 && mProcVar1 != 0) {
             resetActAnimeUpper(Link07::UPPER_MOVE2_e, -1.0f);
             resetActAnimeUpper(Link07::UPPER_MOVE1_e, -1.0f);
-            Link07_seStartSystem(Link07::JA_SE_TAKT_USE_CANCEL);
+            /* true60 (sound form; glue-sound check N-step spec: 2 starts over 2 steps): the cancel holds until the
+             * event manager ends the procedure (the next frame), so each update of the frame repeats it: the cancel
+             * sound once per frame, on the tick30 step */
+            if (lk07_perFrame())
+                Link07_seStartSystem(Link07::JA_SE_TAKT_USE_CANCEL);
         }
         Link07::gameInfo()->play.mMetronome = 0; /* dComIfGp_setMetronomeOff() */
         if (cancel && mProcVar6 == 5) {
@@ -5151,12 +5549,13 @@ BOOL daPy_lk_c::procTactWait() {
         left = mProcVar3;
         count = tactOn != 0;
     }
-    if (count) { /* HD: GameCube counts every frame */
+    if (count && lkT60_countStep()) { /* HD: GameCube counts every frame */
         m35A0 = m35A0 + 1.0f;
     }
     if ((u32)right != (u32)(s32)mProcVar2) {
         f32 w = m35A4;
-        if (!(w > 0.0f) || right != 0) {
+        const bool releaseHeld = right == 0 && lkT60_countHeld(mCurProc, 8, (s32)w); /* true60: first-step AI-timer hold */
+        if ((!(w > 0.0f) && !releaseHeld) || right != 0) {
             setActAnimeUpper((u32)getTactPlayRightArmAnm(right), Link07::UPPER_MOVE1_e, 0.08f, 0.0f, -1, 4.0f);
             if (right == 0 || right == 2 || right == 4) {
                 mFrameCtrlUpper[1].setRate(0.8f);
@@ -5177,8 +5576,9 @@ BOOL daPy_lk_c::procTactWait() {
             if (mProcVar2 != 0) {
                 m35A4 = 2.0f;
             }
-        } else {
+        } else if (lkT60_countStep()) {
             m35A4 = w - 1.0f;
+            lkT60_counted(mCurProc, 8, (s32)m35A4);
         }
     } else if (mProcVar2 != 0) {
         m35A4 = 2.0f;
@@ -5188,7 +5588,8 @@ BOOL daPy_lk_c::procTactWait() {
     f32 cnt;
     if ((u32)left != (u32)(s32)mProcVar3) {
         f32 w = m35A8;
-        if (!(w > 0.0f) || left != 0) {
+        const bool releaseHeld = left == 0 && lkT60_countHeld(mCurProc, 9, (s32)w); /* true60: first-step AI-timer hold */
+        if ((!(w > 0.0f) && !releaseHeld) || left != 0) {
             setActAnimeUpper((u32)getTactPlayLeftArmAnm(left), Link07::UPPER_MOVE2_e, 1.0f, 0.0f, -1,
                              4.0f); /* HD: HIO folded */
             mProcVar3 = (s16)left;
@@ -5207,7 +5608,10 @@ BOOL daPy_lk_c::procTactWait() {
             }
         } else {
             cnt = m35A0;
-            m35A8 = w - 1.0f;
+            if (lkT60_countStep()) {
+                m35A8 = w - 1.0f;
+                lkT60_counted(mCurProc, 9, (s32)m35A8);
+            }
             beat = Link07_tactGetBeatFramesUnrounded();
             beatSet = TRUE;
         }
@@ -5220,7 +5624,10 @@ BOOL daPy_lk_c::procTactWait() {
     }
     s16 p0;
     bool beatCounted = false;
-    if (!((f64)cnt < beat)) {
+    /* true60 (first-step AI-timer for Link): the beat test once a frame, on the counting step; the baton's flash (the brk frame) it
+     * sets holds over the frame's later steps as over the original's frame */
+    const bool beatStep = lkT60_countStep();
+    if (beatStep && !((f64)cnt < beat)) {
         Link07_tactMetronomePlay((s32)mProcVar5, (s32)mProcVar3);
         /* mpEquipItemBrk->setFrame(getFrameMax() - 0.001f) (HD brkAnm at +0x48F8, its end frame at +0xA) */
         anm_setFrame_hd(gabi::ea(&Link07::models(this).mEquipItemBrk),
@@ -5235,14 +5642,14 @@ BOOL daPy_lk_c::procTactWait() {
             m3624 = m24 - 1;
             beatCounted = true;
         }
-    } else {
+    } else if (beatStep) {
         anm_setFrame_hd(self + 0x48F8, 0.0f, 0x10, 0x20); /* mpEquipItemBrk->setFrame(0.0f) */
     }
     if (!beatCounted) {
         p0 = mProcVar0;
     }
     if (p0 >= 0) {
-        if (p0 > 0) {
+        if (p0 > 0 && lkT60_countStep()) {
             p0 = (s16)(p0 - 1);
             mProcVar0 = p0;
         }
@@ -5268,6 +5675,7 @@ BOOL daPy_lk_c::procTactWait() {
             }
             if (match) {
                 mProcVar1 = 0x1E;
+                lk07_tactWaitSet(); /* true60 */
                 Link07_seStartSystem(Link07::JA_SE_WTAKT_MATCH_SIGNAL);
                 m35A0 = 0.0f;
             } else {
@@ -5277,6 +5685,7 @@ BOOL daPy_lk_c::procTactWait() {
                     mProcVar4 = m4;
                     if (m4 == 6) {
                         mProcVar1 = 0xF;
+                        lk07_tactWaitSet(); /* true60 */
                     }
                 } else if (mProcVar6 == -2) {
                     s16 m4 = (s16)(mProcVar4 + 1);
@@ -5284,6 +5693,7 @@ BOOL daPy_lk_c::procTactWait() {
                     if (m4 == 5) {
                         m35A0 = 0.0f;
                         mProcVar1 = 0x1E;
+                        lk07_tactWaitSet(); /* true60 */
                     }
                 }
             }
@@ -5303,6 +5713,12 @@ BOOL daPy_lk_c::procTactWait() {
     }
     u32 frm = l_frameCounter;
     f32 phase = (f32)(frm - ppc_divwu_l(frm, period) * period);
+    if (t60::dt() != 1.0f) { /* true60 (the 60 Hz counter rule): the arm swing at the step's phase of the 30 Hz counter */
+        phase = phase - lk07CounterLag();
+        if (phase < 0.0f) {
+            phase = phase + (f32)period;
+        }
+    }
     f32 r = (f32)((f64)phase / (f64)(f32)(Link07_tactGetBeatFramesUnrounded() * 2.0));
     mFrameCtrlUnder[0].setFrame(r * (f32)mFrameCtrlUnder[0].getEnd());
     mFrameCtrlUpper[1].setFrame(r * (f32)mFrameCtrlUpper[1].getEnd());
@@ -5317,14 +5733,53 @@ BOOL daPy_lk_c::procTactWait() {
 /* clamp a GHS s16 accumulator to +-lim */
 static inline s16 lk_clampS(s32 v, s32 lim) { return (s16)(v > lim ? lim : (v < -lim ? -lim : v)); }
 
+/* true60 (the mixed-pair hit-flag rule): the wind cylinder's TG hit from a wind source (fans, gusts, tornadoes: an
+ * unconverted party, a mixed pair) is set by the tick30 collision Move only and read on the next frame's first step;
+ * that step's Move clears it. The 30 Hz game sees the hit (and its push vector) for the whole frame, so the first
+ * step's hit and vector hold over the frame's other steps (a later step's own hit still counts). A frame whose first
+ * step did not come here (the glide started on a later step) uses the step's own hit. dt 1: the hit itself. */
+static bool s_lk07WindHeld;
+static uint32_t s_lk07WindFrame;
+/* host floats (2026-11-19 beprobe: a host cXyz static accessed the guest word at ea(host address)) */
+struct Lk07WindXyz { f32 x, y, z; };
+static Lk07WindXyz s_lk07WindVec;
+static inline bool lk07_windTgHit(dCcD_Cyl* cyl, cXyz* vec) {
+    const bool hit = cyl->ChkTgHit();
+    if (hit) {
+        lk_xyz_copy(vec, &cyl->mGObjTg.mRVec);
+    }
+    if (t60::dt() == 1.0f) {
+        return hit;
+    }
+    const uint32_t now = t60_step_counter();
+    if (t60::first_step()) {
+        s_lk07WindFrame = now;
+        s_lk07WindHeld = hit;
+        if (hit) {
+            s_lk07WindVec.x = vec->x;
+            s_lk07WindVec.y = vec->y;
+            s_lk07WindVec.z = vec->z;
+        }
+        return hit;
+    }
+    if (!hit && s_lk07WindHeld && now - s_lk07WindFrame < t60::steps()) {
+        vec->x = s_lk07WindVec.x;
+        vec->y = s_lk07WindVec.y;
+        vec->z = s_lk07WindVec.z;
+        return true;
+    }
+    return hit;
+}
+
 /* 02438E78 */
 BOOL daPy_lk_c::procFanGlide() {
     u32 self = gabi::ea(this);
     J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
-    if (mProcVar1 != 0) {
+    if (mProcVar1 != 0 && lkT60_countStep()) { /* true60 (the 30 Hz timer rule; first-step AI-timer for Link): the cancel lock counts
+                                                 * 30 Hz frames on the frame's first step (before its test: no hold) */
         mProcVar1 = (s16)(mProcVar1 - 1);
     }
-    if (frameCtrl.checkPass(4.0f)) {
+    if (lkT60_pass(&frameCtrl, 4.0f)) {
         dPa_control_c* pa = dComIfGp_getParticle();
         u32 em = gabi::ea(dPa_control_set(pa, 1, Link07::ID_AK_JN_LEAFPARACHUTE00, &current.pos, nullptr, nullptr, 0xFF,
                                           nullptr, -1, nullptr, nullptr, nullptr));
@@ -5333,7 +5788,7 @@ BOOL daPy_lk_c::procFanGlide() {
             Link07_setParticleMatrix(gabi::at<Mtx34>(mtx), em + 0x1F0, em + 0x22C); /* setGlobalRTMatrix() */
         }
     }
-    if (frameCtrl.getRate() < 0.01f && mProcVar6 == 0 &&
+    if (lkT60_endRate(&frameCtrl) < 0.01f && mProcVar6 == 0 &&
         gabi::ea(mProcEffectEcallBack0.mpEmitter.get()) == 0 /* mProcEffectEcallBack0.getEmitter() */) {
         u32 mtx = lk_getAnmMtx(gabi::ea(mpCLModel.get()), 0xF);
         Link07_makeMtxFollowEmitter(&mProcEffectEcallBack0, Link07::ID_AK_JN_LEAFPARACHUTE01, mtx, &current.pos, nullptr);
@@ -5350,7 +5805,9 @@ BOOL daPy_lk_c::procFanGlide() {
     if (checkJumpFlower() || checkJumpRideShip()) {
         return TRUE;
     }
-    if (gabi::ea(gabi::at<daPy_mtxFollowEcallBack_c>(gabi::ea(mRippleEcallBack))->mpEmitter.get()) != 0 /* mRippleEcallBack.getEmitter() */) {
+    /* true60 (check item, the 30 Hz timer rule): the water-skim sound repeats on a 6-frame countdown: on the frame's step */
+    if (gabi::ea(gabi::at<daPy_mtxFollowEcallBack_c>(gabi::ea(mRippleEcallBack))->mpEmitter.get()) != 0 /* mRippleEcallBack.getEmitter() */ &&
+        lk07_perFrame()) {
         if (mProcVar5 == 0) {
             seStartOnlyReverb(Link07::JA_SE_LK_FAN_CHUTE_WATER);
             mProcVar5 = 6;
@@ -5372,7 +5829,8 @@ BOOL daPy_lk_c::procFanGlide() {
         mProcVar0 = 1;
         return TRUE;
     }
-    if (!dComIfGp_event_runCheck_l()) {
+    /* true60 (the 30 Hz timer rule): the magic drain (one point per 40 frames) counts 30 Hz frames: on the frame's step */
+    if (!dComIfGp_event_runCheck_l() && lkT60_countStep()) { /* first-step AI-timer for Link: the drain on the frame's first step */
         s32 m7 = mProcVar7 - 1;
         mProcVar7 = m7;
         if (m7 == 0 && dComIfGs_getMagic() != 0 /* dComIfGs_getMagic() >= 1 */) {
@@ -5408,7 +5866,7 @@ BOOL daPy_lk_c::procFanGlide() {
         gravity = -0.5f;
         maxFallSpeed = -2.0f;
     }
-    if (checkSetItemTrigger(Link07::dItemNo_DEKU_LEAF_e, 1) && frameCtrl.getRate() < 0.01f && mProcVar6 == 0) {
+    if (checkSetItemTrigger(Link07::dItemNo_DEKU_LEAF_e, 1) && lkT60_endRate(&frameCtrl) < 0.01f && mProcVar6 == 0) {
         setSingleMoveAnime(Link07::ANM_USEFANB, 0.5f, 1.0f, 0xD, 0.0f);
         u32 res = getItemAnimeResource(Link07::dRes_INDEX_LKANM_BCK_FANBA_e);
         Link07_setParachuteAnimation(gabi::ea(Link07::models(this).mpParachuteFanMorf.get()), res, 0, 0.0f, 0.5f, 1.0f,
@@ -5437,13 +5895,13 @@ BOOL daPy_lk_c::procFanGlide() {
     s32 diff = (s16)(mMoveTargetAngleY - shape_angle.y);
     {
         f32 stick = mStickDistance;
-        cLib_addCalc_l(&mNormalSpeed, (12.0f * stick) * cM_scos(diff), 0.5f, gabi::fmadds(0.4f, stick, 0.1f),
-                       0.01f); /* HD: HIO folded */
+        LKT60_CHASE_S(7, &mNormalSpeed, &mCurProc,
+                      cLib_addCalc_l(&mNormalSpeed, (12.0f * stick) * cM_scos(diff), 0.5f, gabi::fmadds(0.4f, stick, 0.1f),
+                                     0.01f)); /* HD: HIO folded; true60: frame-exact */
         cLib_addCalcAngleS(&mProcVar2, (s16)gabi::ftoi((512.0f * mStickDistance) * cM_ssin(diff)), 5, 0x40, 8);
     }
     f32 step;
-    if (mWindCyl.ChkTgHit()) {
-        lk_xyz_copy(v, &mWindCyl.mGObjTg.mRVec); /* *mWindCyl.GetTgRVecP() */
+    if (lk07_windTgHit(&mWindCyl, v)) { /* *mWindCyl.GetTgRVecP (true60: the frame's hit, the mixed-pair hit-flag rule) */
         f64 len = Link07_sqrtUnrounded(PSVECSquareMag(v));
         if (len > 50.0) {
             PSVECScale(v, v, (f32)(50.0 / len));
@@ -5478,11 +5936,22 @@ BOOL daPy_lk_c::procFanGlide() {
                                          12.999f, 13.0f, 0);
         }
     }
-    cLib_addCalc_l(&mWindSpeed.x, v->x, 0.5f, step, 1.0f);
-    cLib_addCalc_l(&mWindSpeed.y, v->y, 0.5f, step, 1.0f);
-    cLib_addCalc_l(&mWindSpeed.z, v->z, 0.5f, step, 1.0f);
-    PSVECAdd(&current.pos, &mWindSpeed, &current.pos);
-    s16 a = (s16)(shape_angle.y + mProcVar2);
+    /* true60 (rule (a)): the glide's wind speed chased once per frame (first step, dt 1) and held: the steps
+     * below add dt of the frame-end speed (the original adds the frame-end speed once) */
+    LKT60_CHASE_S(8, &mWindSpeed.x, &mCurProc, cLib_addCalc_l(&mWindSpeed.x, v->x, 0.5f, step, 1.0f));
+    LKT60_CHASE_S(9, &mWindSpeed.y, &mCurProc, cLib_addCalc_l(&mWindSpeed.y, v->y, 0.5f, step, 1.0f));
+    LKT60_CHASE_S(10, &mWindSpeed.z, &mCurProc, cLib_addCalc_l(&mWindSpeed.z, v->z, 0.5f, step, 1.0f));
+    /* true60 (the per-step movement rule / 3): the wind's move (posMove leaves it to the glide) and the turn mProcVar2 per
+     * frame: dt of them per step (the turn with the integer carry) */
+    if (t60::dt() == 1.0f) {
+        PSVECAdd(&current.pos, &mWindSpeed, &current.pos);
+    } else {
+        const f32 dt = t60::dt();
+        current.pos.x = current.pos.x + mWindSpeed.x * dt;
+        current.pos.y = current.pos.y + mWindSpeed.y * dt;
+        current.pos.z = current.pos.z + mWindSpeed.z * dt;
+    }
+    s16 a = (s16)(shape_angle.y + lk07_share(s_lk07FanTurn, mProcVar2));
     shape_angle.y = a;
     current.angle.y = a;
     f32 s = cM_ssin(a), c = cM_scos(a);
@@ -5501,6 +5970,14 @@ BOOL daPy_lk_c::procFanGlide() {
     } else if (f3 < -1.0f) {
         f3 = -1.0f;
     }
+    /* true60 (the 30 Hz visual-motion rule): the glide's body lean and waist sway (two integer chases with a momentum
+     * of the last update's move, mProcVar3 / mProcVar4) and the leaf's flutter (three RNG draws a frame, the per-step chance rule) are
+     * visual only: they run on the frame's step as one 30 Hz update (its chases at dt 1) and hold over the frame's other
+     * steps (joint angles relative to the body). dt 1: every update (the original). */
+    if (!lk07_perFrame()) {
+        return TRUE;
+    }
+    const f32 lk07PrevDt = t60_set_dt(1.0f);
     s16 targetX = (s16)gabi::ftoi(gabi::fmadds(mNormalSpeed, 0.02f, f3) * 6144.0f);
     s16 targetZ = (s16)gabi::ftoi(gabi::fmadds(f4, 6144.0f, (f32)(-(mProcVar2 * 8))));
     s16 prev = m34F2;
@@ -5544,6 +6021,7 @@ BOOL daPy_lk_c::procFanGlide() {
     f32 lo = gabi::fmadds(2000.0f, pw, 6000.0f);
     f32 add = (f32)((f64)hi * r3 + (f64)lo);
     m355C = (s16)gabi::ftoi((f32)((f64)(f32)m355C + (f64)add));
+    t60_set_dt(lk07PrevDt);
     return TRUE;
 }
 
@@ -5768,6 +6246,28 @@ BOOL daPy_lk_c::procRopeSwing() {
         addX = gabi::fadds_ppc(fx, 1.0f);
     }
     f32 scale = m35A4;
+    /* true60 (the per-step movement rule): the swing phases advance addX / addZ per frame: dt of it per step.
+     * (pair, link pos 2.387 @227, a phase lag of ~0.1 frame at the swing's bottom): the rate
+     * (1 -+ 0.45 sin of the phase) is A's once a frame, taken on the frame's first step from the frame-start phase and
+     * held for the frame's later steps (each adds dt of it), so the frame's phase add is A's; a later step evaluating
+     * the half-moved phase integrated the nonlinear rate differently. LK07_SWINGRATE_NEGCTRL: the per-step rate. */
+    if (t60::dt() != 1.0f) {
+#if !defined(LK07_SWINGRATE_NEGCTRL)
+        static struct { f32 x, z; uint32_t stamp; bool valid; } s_rate;
+        const uint32_t now = t60_step_counter();
+        if (t60::first_step()) {
+            s_rate.x = addX;
+            s_rate.z = addZ;
+            s_rate.stamp = now;
+            s_rate.valid = true;
+        } else if (s_rate.valid && now - s_rate.stamp < (uint32_t)t60::steps()) {
+            addX = s_rate.x;
+            addZ = s_rate.z;
+        }
+#endif
+        addX = addX * t60::dt();
+        addZ = addZ * t60::dt();
+    }
     m35A8 = gabi::fadds_ppc(m35A8, addX);
     f32 x = gabi::fmuls_ppc(m35A8, scale);
     m35AC = gabi::fadds_ppc(m35AC, addZ);
@@ -5785,7 +6285,7 @@ BOOL daPy_lk_c::procRopeSwing() {
         m35AC = swingZ / m35A4;
     }
     u32 mode = mModeFlg;
-    if ((mode & 0x400) && mFrameCtrlUnder[0].getRate() < 0.01f) {
+    if ((mode & 0x400) && lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         mModeFlg = (mode & ~0x400u) | 0x100;
         setTextureAnime(8, 0);
     }
@@ -5823,7 +6323,20 @@ BOOL daPy_lk_c::procRopeSwing() {
                 s32 dir = getDirectionFromAngle(mStickAngle);
                 if (dir == 0 || dir == 1) {
                     f32 c = std::fabs(cM_fcos_l(absX));
-                    mProcVar2 = (s16)gabi::ftoi(gabi::fmadds((f32)(s32)addStep, c, (f32)(s32)mProcVar2));
+                    /* true60: the pump, addStep x |cos| per frame (ftoi of the sum: the per-frame amount is the truncated
+                     * add; at dt 1 the original expression) */
+                    if (t60::dt() == 1.0f) {
+                        mProcVar2 = (s16)gabi::ftoi(gabi::fmadds((f32)(s32)addStep, c, (f32)(s32)mProcVar2));
+#if !defined(LK07_SWINGRATE_NEGCTRL)
+                    } else if (true) {
+                        /* the pump once a frame on the tick30 step (its phase = A's frame-end phase), A's expression */
+                        if (t60::tick30())
+                            mProcVar2 = (s16)gabi::ftoi(gabi::fmadds((f32)(s32)addStep, c, (f32)(s32)mProcVar2));
+#endif
+                    } else {
+                        s32 full = gabi::ftoi(gabi::fmadds((f32)(s32)addStep, c, (f32)(s32)mProcVar2)) - (s32)mProcVar2;
+                        mProcVar2 = (s16)((s32)mProcVar2 + lk07_share(s_lk07SwingPump, full));
+                    }
                 }
                 BOOL turning = FALSE;
                 s16 target = 0;
@@ -5832,7 +6345,7 @@ BOOL daPy_lk_c::procRopeSwing() {
                     s16 lim = (s16)gabi::ftoi(170.0f * stick);
                     s16 cur = gabi::at<Link07::PlayerRopeTurnWork>(gabi::ea(this))->mRopeTurnSpeed;
                     if (lim > cur) {
-                        s16 v = (s16)(cur + gabi::ftoi(32.0f * stick));
+                        s16 v = (s16)(cur + lk07_share(s_lk07SwingRamp, gabi::ftoi(32.0f * stick))); /* true60: per frame */
                         if (v > lim) {
                             v = lim;
                         }
@@ -5847,7 +6360,7 @@ BOOL daPy_lk_c::procRopeSwing() {
                     s16 lim = (s16)gabi::ftoi(-170.0f * stick);
                     s16 cur = gabi::at<Link07::PlayerRopeTurnWork>(gabi::ea(this))->mRopeTurnSpeed;
                     if (lim < cur) {
-                        s16 v = (s16)(cur - gabi::ftoi(32.0f * stick));
+                        s16 v = (s16)(cur - lk07_share(s_lk07SwingRamp, gabi::ftoi(32.0f * stick))); /* true60: per frame */
                         if (v < lim) {
                             v = lim;
                         }
@@ -5871,8 +6384,9 @@ BOOL daPy_lk_c::procRopeSwing() {
                         roof = Link07_ropeRoofUnrounded(this, (s32)(s16)(sy - 0x2000));
                     }
                     if ((f32)(roof + -55.0) > current.pos.y) {
-                        s16 y =
-                            (s16)(shape_angle.y + gabi::at<Link07::PlayerRopeTurnWork>(gabi::ea(this))->mRopeTurnSpeed);
+                        s16 y = (s16)(shape_angle.y +
+                                      lk07_share(s_lk07SwingTurn, gabi::at<Link07::PlayerRopeTurnWork>(gabi::ea(this))
+                                                                      ->mRopeTurnSpeed)); /* true60: the turn per frame */
                         shape_angle.y = y;
                         current.angle.y = y;
                     }
@@ -5956,7 +6470,7 @@ BOOL daPy_lk_c::procRopeSwing() {
     } else if (mProcVar2 == 0 && mProcVar3 == 0) {
         procRopeHangWait_init(0);
     } else if (ratio > 0.6f) {
-        if (cM_fcos_l(*sp10) > 0.77f) {
+        if (cM_fcos_l(*sp10) > 0.77f && lk07_perFrame()) { /* true60: the swing sound's per-frame start, once a frame */
             mDoAud_seStart(Link07::JA_SE_LK_ROPE_SWING_F, &mRopePos, 0, mReverb);
         }
     }

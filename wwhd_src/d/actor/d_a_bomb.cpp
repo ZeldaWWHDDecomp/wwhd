@@ -1,5 +1,6 @@
 /** Bomb actor, ported from zeldaret/tww d_a_bomb3.inc and adapted to WWHD. */
 #include "d/actor/d_a_bomb.h"
+#include "d/actor/d_a_bomb_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule, carryables) */
 
 // HD: GHS emits separate inline-constructor vtables in this translation unit.
 const gc_tu_data gc_tu = {
@@ -1023,6 +1024,9 @@ void daBomb_c::waitState_bomtyu() {
 
 /* 020C4D84 */
 BOOL daBomb_c::execute() {
+  if (t60w::begin(this, bomb_t60::kOps)) /* true60: a step before the tick30 step: the picture only */
+    return TRUE;
+  bool t60model = false; /* true60: the frame reached its model step (host flag) */
   if (!(u32)l_fuseOffset.mGuard) {
     l_fuseOffset.mOffset.z = 5;
     l_fuseOffset.mOffset.y = 60;
@@ -1056,6 +1060,7 @@ BOOL daBomb_c::execute() {
     attention_info.position.y = y;
     if (!chk_attrState(this, daBomb_c::ATTR_STATE_20)) {
       set_mtx();
+      t60model = true; /* true60 */
       u32 oldFuse[3], oldSecond[3];
       for (u32 i = 0; i < 3; i++) {
         oldFuse[i] = (u32)reinterpret_cast<BombVectorWords*>(&mFusePos)->words[i];
@@ -1089,6 +1094,7 @@ BOOL daBomb_c::execute() {
   }
   if (mExplodeCcSet)
     mExplodeFrame = (u32)mExplodeFrame + 1;
+  t60w::end(this, bomb_t60::kOps, t60model); /* true60: the frame's change kept for the next frame's picture */
   return TRUE;
 }
 

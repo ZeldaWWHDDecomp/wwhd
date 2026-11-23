@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_andsw0.h"
+#include "d/actor/d_a_andsw0_t60.h" /* true60 (t60conv): step helpers */
 
 const gc_tu_data gc_tu = {.headerStatics = {0x10461418, 0x1018FCC4, 0x10461424}};
 
@@ -251,6 +252,7 @@ static void event_start_check(andsw0_class* i_this) {
 
 /* 020511E4 */
 static BOOL daAndsw0_Execute(andsw0_class* i_this) {
+    if (!t60c::end()) return TRUE; /* true60 (the shared-world-state rule): the frame's logic on shared world state (switches / events / other actors) on the tick30 step at the line place */
     event_start_check(i_this);
     u8 numToCheck = i_this->mNumSwitchesToCheck;
     if (numToCheck == 0xFF)

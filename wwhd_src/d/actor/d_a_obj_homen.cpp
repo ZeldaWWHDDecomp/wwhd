@@ -1,6 +1,7 @@
 /** d_a_obj_homen.cpp - Wind Temple stone Hookshot target.
  * GameCube naming/layout, with audited HD call, float-payload and guest-temporary ordering. */
 #include "d/actor/d_a_obj_homen.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using namespace daObjHomen;
 
 static const HomenTUData homen_tu = {
@@ -741,6 +742,9 @@ void Act_c::adjust_hookshot() {
 
 /* 02358C54 */
 BOOL Act_c::_execute() {
+  t60w::Guard<daObjHomen::Act_c> t60g(this, t60objw::Logic<daObjHomen::Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+  if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+    return 1;
   this->adjust_hookshot();
   this->exe_event();
   this->manage_item_timer();
@@ -763,6 +767,7 @@ BOOL Act_c::_execute() {
     this->shape_angle.x = angle;
   Homen_calcSpeed(this);
   Homen_posMove(this, 0);
+  t60g.model = true; /* true60: the frame reached its model step */
   this->set_mtx();
   return 1;
 }

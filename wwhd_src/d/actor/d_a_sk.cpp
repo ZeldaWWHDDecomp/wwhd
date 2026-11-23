@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_sk.h"
+#include "d/actor/d_a_sk_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule addendum) */
 const gc_tu_data gc_tu = {.safeString = 0x1003CE74};
 enum { dRes_INDEX_SK_BDL_TURU_00_e = 3 };
 enum { TEV_TYPE_BG0_PLIGHT = 0x5B };
@@ -65,7 +66,8 @@ static BOOL nodeCallBack(J3DNode* node, int calcTiming) {
 /* 02488668 */
 static BOOL daSk_Draw(sk_class* i_this) {
     J3DModel* model = i_this->mpMorf->getModel();
-    settingTevStruct(dKy_getEnvlight(), TEV_TYPE_BG0_PLIGHT, &i_this->current.pos, &i_this->tevStr);
+    if (sk_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+        settingTevStruct(dKy_getEnvlight(), TEV_TYPE_BG0_PLIGHT, &i_this->current.pos, &i_this->tevStr);
     setLightTevColorType(dKy_getEnvlight(), model, &i_this->tevStr);
     i_this->mpMorf->entryDL();
     return TRUE;
@@ -142,6 +144,10 @@ static inline void body_atari_check(sk_class* i_this) {
 
 /* 024886D0 */
 static BOOL daSk_Execute(sk_class* i_this) {
+    t60w::Guard<sk_class> t60g(i_this, sk_t60::ops()); /* true60: the whole frame on the tick30 step */
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
+    t60g.model = true;
     dousa_move(i_this);
 
     mDoExt_McaMorf* morf = i_this->mpMorf;
@@ -243,7 +249,11 @@ static cPhs_State daSk_Create(fopAc_ac_c* a_this) {
         }
         i_this->mStts.Init(0x32, 0, a_this);
         i_this->mHitTimer = 8;
-        daSk_Execute(i_this);
+        {
+            const f32 t60PrevDt = sk_t60::createBegin(); /* true60: create's run of the execute, the original at dt 1 */
+            daSk_Execute(i_this);
+            sk_t60::createEnd(t60PrevDt);
+        }
     }
     return PVar2;
 }

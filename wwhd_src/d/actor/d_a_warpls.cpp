@@ -1,5 +1,6 @@
 /* Warp light shafts: audited WWHD translation unit. */
 #include "d/actor/d_a_warpls.h"
+#include "d/actor/d_a_warpls_t60.h" /* true60: the whole form (the whole-frame form rule, d/t60_objw.h) */
 
 enum daWarpls_WarpType_e { Type_Tower, Type_Dungeon };
 enum daWarpls_EvtType_e { EvtType_TowerUp, EvtType_TowerDown, EvtType_Dungeon };
@@ -419,6 +420,9 @@ bool daWarpls_c::setStatus() {
 }
 /* 024DCBC8 */
 bool daWarpls_c::_execute() {
+    t60w::Guard<daWarpls_c> t60g(this, t60objw::Logic<daWarpls_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
     u8 sw = Warpls_switchOn(this);
     s32 timer = mStartupDelayTimer;
     if (timer > 0)

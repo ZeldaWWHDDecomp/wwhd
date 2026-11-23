@@ -1,0 +1,13 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_msw.txt
+# ---- true60 N-step spec (2026-11-18): the swinging platform (d_a_msw_t60.h). daMsw_Execute
+# 021D6880: msw_move whole on the first step, position / shape_angle glided and landed on the tick30 step; the chains'
+# timers, hit check, sound / particle and the cylinder registration once on the tick30 step. ride_call_back 021D6270:
+# once per frame on the rider's tick30 step: frame-end rider position, frame-start old position (latched on its first
+# step): msw_move on the tick30 step (a preview on the first step, its state put back).
+t60conv 021D6880 021D6270
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200ED84 0200EDC8 0200F428
+t60cand 0200ED84 0200EDC8 0200F428
+# (the known-fail line dropped on the rebase onto t60int/di: ride_call_back makes N-step spec N2 pass with the eases converted)

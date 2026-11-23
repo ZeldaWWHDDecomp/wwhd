@@ -7,6 +7,7 @@
  * function here is written from the WWHD code and verified against cking.rpx.
  */
 #include "d/actor/d_a_obj_Itnak.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 // HD: discard the unrelated legacy tsubo macro so the GameCube Itnak name is available.
 #undef M_cyl_src
 
@@ -158,9 +159,13 @@ void Act_c::set_collision() {
 
 /* 02365A90 */
 bool Act_c::_execute() {
+    t60w::Guard<Act_c> t60g(this, t60objw::Logic<Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
     set_mtx();
     manage_draw_flag();
     set_collision();
+    t60g.model = true; /* true60: the frame reached its model step */
     return true;
 }
 

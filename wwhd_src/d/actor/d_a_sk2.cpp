@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_sk2.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 // HD: constructor/destructor vtables and header statics belong to this translation unit.
 const gc_tu_data gc_tu = {
@@ -131,8 +132,12 @@ void dousa_move(sk2_class* i_this) {
 
 /* 024895C8 */
 static BOOL daSk2_Execute(sk2_class* i_this) {
+    t60w::Guard<sk2_class> t60g(i_this, t60objw::Logic<sk2_class>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     dousa_move(i_this);
 
+    t60g.model = true; /* true60: the frame reached its model step */
     J3DModel* model = i_this->mpMorf->getModel();
     J3DModel_setBaseScale(model, &i_this->scale);
     mDoMtx_stack_c::transS(i_this->current.pos.x, i_this->current.pos.y, i_this->current.pos.z);

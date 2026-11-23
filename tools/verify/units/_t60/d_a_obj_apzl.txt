@@ -1,0 +1,8 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_apzl.txt
+# ---- true60 N-step spec (2026-11-20; the whole-frame form rule + addendum, d/t60_objw.h): sliding puzzle: talk, game event, piece moves, clear / exit, scoreboard.
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 02318640
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 020076BC 020076E0 020198D8 02019918 0218084C 02316DA0 02316DB8 02317014 0231704C 02317B4C 02317BA0 02317CB0 02317DE4 0231839C 023183CC 02318598 025200D4 02542D88 02542EDC 02543280 025440C8 025447C8 0258873C 025CB374 025D5218 025D7874 025D8AB0 025E1988 025E1B24 025F1C28 025F1C5C 025F24E0 025F74D0 025F795C 025F7DB0 028E93CC

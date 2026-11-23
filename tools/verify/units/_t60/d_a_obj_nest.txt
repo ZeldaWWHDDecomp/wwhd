@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_nest.txt
+# ---- true60 N-step spec (2026-11-20; the whole-frame form rule + addendum, d/t60_objw.h): Kargaroc nest (BG Execute(mtx)): vibration decay (x0.92, phase +0x4650) each frame; rideCB (vib_set from the rider's speedF) once a frame via cbSkip.
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 0237EE58 0237EBD0
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 0237ED14 0237EB74
+t60cand 0237ED14 0237EB74
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0237EA6C 0237ED14 025F1B48 028E8DD0 028E8E64 028E90D4 028F4384

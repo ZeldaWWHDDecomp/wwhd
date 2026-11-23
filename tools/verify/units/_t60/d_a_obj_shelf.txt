@@ -1,0 +1,16 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_shelf.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule + addendum, d/t60_objw.h): the shelf's Execute 0238E118 (the modes behind mode_proc: wait / vib / rot / fell with their hit and event decisions, set_mtx).
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 0238E118
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 0238E300 0238E3C8 0238E51C 0238E6AC 0238E264 0238DF94 0238E088 0238E2A8 0238E2CC 0238E394 0238E4DC 0238E510
+t60cand 0238E300 0238E3C8 0238E51C 0238E6AC 0238E264 0238DF94 0238E088 0238E2A8 0238E2CC 0238E394 0238E4DC 0238E510
+# hold_event's Granny search (fopAcM_SearchByName 025D5578, out pointer r4=out4): the harness places the out object at
+# another address in the N-step run than in the one step (seed 1000083: the same 61 bytes changed, 01 written at a
+# different address), so the write into the found NPC cannot be compared by address. N-step spec runs with the search finding
+# nothing; hold_event is the original code (dt-1 check) and runs inside the tick30 whole run only.
+ret! 025D5578 0
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0238DF94 025F1B48 028E90D4

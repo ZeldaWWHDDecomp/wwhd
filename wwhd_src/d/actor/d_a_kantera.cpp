@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_kantera.h"
+#include "d/actor/d_a_kantera_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule addendum) */
 
 const gc_tu_data gc_tu = {.safeString = 0x10012644};
 
@@ -213,6 +214,9 @@ static inline void fall_move(kantera_class* i_this) {
 
 /* 0218D3F8 */
 static BOOL daKantera_Execute(kantera_class* i_this) {
+    t60w::Guard<kantera_class> t60g(i_this, kantera_t60::kOps); /* true60: t60w::end on every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only */
+        return TRUE;
     dComIfGp_get(); /* HD: leftover accessor call (result unused) */
     if (i_this->mSwitchNo != 0) {
         if (!dComIfGs_isSwitch(i_this->mSwitchNo - 1, fopAcM_GetRoomNo(i_this))) {
@@ -431,6 +435,7 @@ static BOOL daKantera_Execute(kantera_class* i_this) {
     /* ---- model update ---- */
     if (i_this->mState >= 10)
         return TRUE;
+    t60g.model = true; /* true60: the frame reaches its model step */
     MtxTrans(i_this->current.pos.x, i_this->current.pos.y, i_this->current.pos.z, 0);
     cMtx_YrotM(calc_mtx(), i_this->current.angle.y);
     cMtx_XrotM(calc_mtx(), i_this->current.angle.x);

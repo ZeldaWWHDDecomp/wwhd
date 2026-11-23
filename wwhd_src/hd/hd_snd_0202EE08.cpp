@@ -1,6 +1,7 @@
 /** HD sound player, channel faders and stream handles. No GameCube counterpart. */
 #include "bindings.h"
 #include "hd/hd_snd_0202EE08.h"
+#include "hd/hd_snd_t60.h"
 static char sBgmPlayerName0;
 static char sBgmPlayerName1;
 static char sDrcTvPlayerName;
@@ -280,6 +281,7 @@ static void updateBgmVolume1(hdSoundPlayer* i_this) {
 }
 /* 0202FA3C */
 static void updateSoundPlayer(hdSoundPlayer* i_this) {
+    if (!t60_audio_player_runs()) return;  /* true60: once per 30 Hz frame (hd_snd_t60.h) */
     updatePlayerVolumes(i_this);
     updateBgmVolume0(i_this);
     updateBgmVolume1(i_this);

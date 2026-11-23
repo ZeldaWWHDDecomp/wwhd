@@ -1,0 +1,8 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_tag_kf1.txt
+# ---- true60 N-step spec (2026-11-20; the whole-frame form rule + addendum, d/t60_objw.h): Kf1 pot-game tag: order / event procs / action (Link frame-start position, process-order read).
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 024AC4F8
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 024ABF4C 024ABFB4 024ABFBC 024AC05C 024AC0CC 024AC114 024AC19C 024AC1D4 024AC218 024AC248 024AC24C 024AC3E4 024AC498 025200D4 0252012C 02542D88 02542EDC 02543280 0254457C 025445B8 025447C8 0254487C 0259F858 025A11EC 025D5218 025D76A8 025D77DC

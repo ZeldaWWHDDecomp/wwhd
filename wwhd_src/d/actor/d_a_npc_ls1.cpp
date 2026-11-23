@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_npc_ls1.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 const gc_tu_data gc_tu = {.safeString = 0x1001D0CC, .objAcchDt = {0x1001D0E4, 0x1001D0F4}, .headerStatics = {0x10467964, 0x101C021C, 0x10467970}};
 
@@ -1889,6 +1890,9 @@ u8 daNpc_Ls1_c::demo() {
 
 /* 02281074 */
 BOOL daNpc_Ls1_c::_execute() {
+    t60w::Guard<daNpc_Ls1_c> t60g(this, t60npc::Logic<daNpc_Ls1_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     if (!mbRanExecute) {
         mInitialAngle.y = current.angle.y;
         mInitialPos.copy(current.pos);
@@ -1934,6 +1938,7 @@ BOOL daNpc_Ls1_c::_execute() {
     }
     tevStr.mRoomNo = ls1Guest_dBgS_GetRoomId(dComIfG_Bgsp(), daNpc_gndPoly(this));
     tevStr.mEnvrIdxOverride = ls1Guest_dBgS_GetPolyColor(dComIfG_Bgsp(), daNpc_gndPoly(this));
+    t60g.model = true; /* true60: the frame reached its model step */
     setMtx(false);
     if (!mInDemo) {
         setCollision(40.0f, 100.0f);

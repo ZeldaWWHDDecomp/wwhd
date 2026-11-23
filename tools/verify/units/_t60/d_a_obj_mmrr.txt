@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_mmrr.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule + addendum, d/t60_objw.h): the mirror's _execute 02375644 (light chase / reflect, btk, colliders, set_mtx, cull, effects, sounds).
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 02375644
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 02374D2C 02374E98 02374FC0 02375264 02375504 023755D4 0237563C
+t60cand 02374D2C 02374E98 02374FC0 02375264 02375504 023755D4 0237563C
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 02008860 02008B4C 02008FEC 0200F5C8 020181FC 0201924C 0201B47C 02374AFC 02374D2C 02374E98 02374FC0 02375264 02375504 023755D4 0237563C 024F1AFC 025162A4 025200D4 02520540 0252A038 025D674C 025E19CC 025E1A40 025E535C 025E742C 025F1B48 025F1BF4 025F24E0 028E8DAC 028E8DE8 028E8F44 028E8F64 028F4384

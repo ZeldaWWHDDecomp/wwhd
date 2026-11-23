@@ -1,0 +1,7 @@
+# true60 N-step spec (not a gate unit): tornadoCamera's event transition (entry mode 2, T 8) at timers 1..7 (settle at 7)
+#; everything else as d_camera_e2body2.txt
+include _t60/d_camera_e2body2.txt
+include shared/c_angle_statics.txt
+field 025121E8 r3+0x100 u8 0
+field 025121E8 r3+0x11C u32 1,2,5,6,7
+field 025121E8 r3+0x38C i32 2

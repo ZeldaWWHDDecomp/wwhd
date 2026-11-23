@@ -1,5 +1,6 @@
 /* WWHD four sliding gate panels. */
 #include "d/actor/d_a_obj_hami4.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 enum { dRes_INDEX_HAMI4_BDL_HAMI4_e = 4, dRes_INDEX_HAMI4_DZB_HAMI4_e = 7 };
 static f32 l_openingSine;
 static f32 l_openingCosine;
@@ -168,6 +169,9 @@ void daObjHami4_c::daObjHami4_open_demo() {
 }
 /* 02350274 */
 static BOOL Execute(daObjHami4_c *p) {
+    t60w::Guard<daObjHami4_c> t60g(p, t60objw::Logic<daObjHami4_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     u32 mState = p->mState;
     if (mState == daObjHami4_c::CLOSE_STOP)
         p->daObjHami4_close_stop();
@@ -175,6 +179,7 @@ static BOOL Execute(daObjHami4_c *p) {
         p->daObjHami4_open_demo_wait();
     else if (mState == daObjHami4_c::OPEN_DEMO)
         p->daObjHami4_open_demo();
+    t60g.model = true; /* true60: the frame reached its model step */
     p->set_mtx();
     return TRUE;
 }

@@ -7,6 +7,7 @@
  * GameCube names are kept where the function map matched them.
  */
 #include "d/actor/d_a_gnd_main.h"
+#include "d/t60_draw.h"
 
 static gndInitRecord l_tevInit;
 static gndMainFlag l_hioInitialized;
@@ -232,7 +233,8 @@ BOOL daGnd_Draw(gnd_class* i_this) {
         s16 b = (s16)(i_this->tevStr.mFogColor.g + add / 2);
         if (b > 0xFF)
             b = 0xFF;
-        if (flash > (s16)(REG_S(8, 5) + 20)) {
+        if (!t60_draw_frame_pass()) { /* true60 (t60_draw.h): the flash fades once per 30 Hz frame */
+        } else if (flash > (s16)(REG_S(8, 5) + 20)) {
             cLib_addCalcAngleS2(&mainFields(i_this)->mFlashColor, 0x118, 1, 0x1E);
             cLib_addCalc2(&mainFields(i_this)->mFlashFog, -50000.0f, 1.0f, 5000.0f);
         } else {

@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_npc_tc.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 enum : u32 { TcHelpAction = 0x022ED17C, TcWaitAction = 0x022ECF4C };
 const gc_tu_data gc_tu = {.safeString = 0x100226F4};
@@ -1362,6 +1363,9 @@ void daNpc_Tc_c::setTower() {
 
 /* 022EA140 */
 BOOL daNpc_Tc_c::_execute() {
+    t60w::Guard<daNpc_Tc_c> t60g(this, t60npc::Logic<daNpc_Tc_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     if (mType == TYPE_WHITE || mType == TYPE_RED || mType == TYPE_NORMAL2) {
         setTower();
     }
@@ -1429,6 +1433,7 @@ BOOL daNpc_Tc_c::_execute() {
     tevStr.mEnvrIdxOverride = Tc_polyColour(
         dComIfG_Bgsp(),
         static_cast<cBgS_PolyInfo*>(&mObjAcch.m_gnd)); /* mEnvrIdxOverride = GetPolyColor */
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     if (mType == TYPE_NORMAL) {
         if (mStatus == STATUS_DEMO_RESCUE) {

@@ -1,0 +1,14 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_npc_btsw.txt
+# ---- true60 N-step spec (2026-11-20; the whole-frame form rule NPC form; d/t60_npc.h):
+# Baito, the Dragon Roost postman (Btsw): daNpc_Btsw_c::_execute 02219618 in the whole form, logic only (the sorting game's action, mail and camera helpers run
+# inside it). The tick30 step runs the original execute whole at dt 1 from the frame start; the earlier steps change no
+# state (the picture between steps comes from frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 02219618
+# zero-page steering for the N-step spec runs (the original's page-0 fetch through a random member-pointer action):
+# mCurrActionFunc a plain member pointer (d 0, i -1) to one of the actions the base spec uses, kept by the mocked calls
+field 02219618 r3+0xD5C u32 0x0000FFFF
+field 02219618 r3+0xD60 u32 0x0221BE68,0x0221B03C,0x0221AF2C,0x0221B3A8
+stable 0x40000D5C 8
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 020198D8 02055B64 02217D98 02218958 0221914C 02219210 0221949C 022195A4 024EEEB8 024EF130 024F08A8 025885C4 0259E08C 025A15AC 025D6870 025D76A8 025D77DC 025D7A58 025E535C 025E55A0 025F19F8 025F1B48 025F1C28 025F24E0 028E90D4 028E93CC

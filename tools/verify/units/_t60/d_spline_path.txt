@@ -1,0 +1,5 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_spline_path.txt
+# ---- true60 N-step spec: d2DBSplinePath::Step advances its integer frame on the tick30 step only; N calls (in-between
+# steps change nothing) must equal one call byte for byte, return value included
+t60conv 025C0C80

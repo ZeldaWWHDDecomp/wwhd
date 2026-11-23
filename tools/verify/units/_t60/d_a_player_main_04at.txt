@@ -1,0 +1,40 @@
+# true60 N-step spec (not a gate unit): setCollision 024076CC's attack volumes, one sweep per 30 Hz frame
+# (dt = 1/N the one-sweep-per-frame attack rule; d_a_player_at_t60.h). The AT on (daPyRFlg0_UNK2, with or without the
+# start UNK1), sword / cut-turn / cut-roll procedures: at N steps the capsules and the spin cylinder are set and
+# registered once, on the frame's tick30 step, from the frame's start positions. The collision space's Set (cCcS::Set
+# 0200E240) runs for real into the pinned play state (dComIfGp 0x54000000, mCcS +0x26A4): the AT list (count at
+# +0x2800) is free, the TG / CO / all lists are full (so the body / wind / light cylinders, registered on every step
+# by design, write nothing there) and every other collider's AT set bit is off, so the AT list holds exactly the
+# attack volumes registered in the frame: N steps must leave what one update leaves (the per-step form leaves N
+# times the entries: negative control). Other per-step work of setCollision is steered off (fan wind, light
+# reflection, the gust sphere).
+include d_a_player_main_04.txt
+t60conv 024076CC
+real 0200E240
+# the play state pinned on every call (the dt-1 check spec lets the answer vary)
+ret! 025200D4 0x54000000
+# AT on: UNK2, or UNK1 | UNK2 (the start); no light reflection
+field 024076CC r3+0x3C0 u32 2,3
+# the procedures: sword cuts and the spin (CUT_TURN / CUT_ROLL among them), from the dt-1 check list without BOTTLE_OPEN
+field 024076CC r3+0x65F0 s32 0x5B,0x1E,0x22,0x5E,0x5D,0x78,0x6D,0xD,0x97,0x55,0x56,0x42,0x63,0x92,0x53,0x4E,0x5C,0x4C,0xA4,0x93,0
+# the collision space: AT list free (0..2 entries), TG / CO / all lists full
+field 024076CC 54004EA4 s32 0,1,2
+field 024076CC 54004EA8 s32 0x300
+field 024076CC 54004EAC s32 0x100
+field 024076CC 54004EB0 s32 0x500
+field 024076CC 540026A4 u32 0
+# the other colliders' AT set bit off: mCyl, mWindCyl, mLightCyl, mFanWindCps, mFanWindSph, mFanLightCps
+field 024076CC r3+0x765C u32 0
+field 024076CC r3+0x778C u32 0
+field 024076CC r3+0x79EC u32 0
+field 024076CC r3+0x7EC4 u32 0
+field 024076CC r3+0x7FFC u32 0
+field 024076CC r3+0x8128 u32 0
+# no fan wind, no gust sphere, no wind effect draw
+field 024076CC r3+0x6984 s16 0
+field 024076CC r3+0x698A s16 0
+ret! 023D93DC 0
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200ECD4 0200EF78 0200F378 0200F428 0200F564 0200F5C8 0200F8D0
+t60cand 0200ECD4 0200EF78 0200F378 0200F428 0200F564 0200F5C8 0200F8D0

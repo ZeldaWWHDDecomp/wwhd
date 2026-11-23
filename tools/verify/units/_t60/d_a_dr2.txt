@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_dr2.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule, as Gohma's btd; d_a_dr2_t60.h):
+# Valoo's tail, the lava pit and the ceiling rock: daDr2_Execute 0212B3D0 in the whole form (the counters, the tail and
+# rock shake, the rock drop, the floor break and the background Move once per frame). The tick30 step runs the original
+# execute whole at dt 1 from the frame start; the earlier steps change no state (the picture between steps comes from
+# frame interpolation): net effect = the one step's, byte exact. Negative control (T60C_NEGCTRL: the execute on every step at dt)
+# must fail.
+t60conv 0212B3D0
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200ED84 0200EDC8 0200F428 0200FAD8 0200FCD8 02019510 020195B0 02019918 0201ADE0 024F43DC 025200D4 02520540 02520A84 02555D0C 025626A4 02562F5C 025A5AC8 025A847C 025CB374 025D54C4 025DE508 025E19CC 025E1A40 025E4A98 025E535C 025E55A0 025E742C 025F1884 025F1BF4 025F1C28 025F1C5C 026066C4 0273AA24 027DF40C 027F4D5C 028E8D88 028E90D4 028E9108 028E945C 028F4384

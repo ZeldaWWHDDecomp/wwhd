@@ -1,6 +1,7 @@
 /** Yellow floor switch. WWHD port; */
 #include "d/actor/d_a_obj_swpush.h"
 #include "gc_api/f_op/f_op_actor.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using namespace daObjSwpush;
 void swpushOrderPotentialEvent(void*, s32, s32, s32);
 s32 swpushReleaseBackground(void*, void*);
@@ -607,6 +608,9 @@ static s32 Draw_wrapper(Act_c* a) {
 }
 /* 02398014 */
 s32 daObjSwpush::Act_c::Mthd_Execute() {
+    t60w::Guard<daObjSwpush::Act_c> t60g(this, t60objw::Logic<daObjSwpush::Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return 1;
     (this->*swpushDemoProc[u32(mDemoMode)].run)();
     set_push_flag();
     (this->*swpushModeProc[u32(mMode)].run)();
@@ -637,6 +641,7 @@ s32 daObjSwpush::Act_c::Mthd_Execute() {
     eyePos.z = z;
     eyePos.y = y;
     set_btp_frame();
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 /* 02398F7C */
@@ -817,6 +822,8 @@ static BOOL jnodeCB(void* node, s32 timing) {
 }
 /* 0239705C */
 static void rideCB(void* bg, Act_c* a, fopAc_ac_c* rider) {
+    if (t60objw::cbSkip()) /* true60: a callback on each of the rider's steps: only the tick30 step's call counts */
+        return;
     if (!((u32)rider->actor_status & fopAcStts_FREEZE_e))
         return;
     if (!swpushNoPushGuard) {

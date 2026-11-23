@@ -3,6 +3,7 @@
  * Every marked function retains its verified behavior.
  */
 #include "d/actor/d_a_obj_magmarock.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using MagmarockWord = be<u32>;
 using MagmarockFloat = be<f32>;
 using MagmarockByte = be<u8>;
@@ -314,6 +315,9 @@ void daObjMagmarock::Act_c::vanish_proc() {
 
 /* 0236D314 */
 static void daObjMagmarock_ride_call_back(u8 *bg, daObjMagmarock_c *self, u8 *rider) {
+    if (t60objw::cbSkip()) /* true60: a callback on each of the rider's steps: only the tick30 step's call counts */
+        return;
+    const f32 t60Prev = t60_set_dt(1.0f); /* true60: the counted call at dt 1, as plain calls (no scope object under the glue): A's once-a-frame eases (cLib) take the whole frame, not the rider's 1/N (kita cbBegin; half-ease audit, 2026-11-21) */
     u32 a = gabi::ea(self);
     gabi::Local<be<u32>[3]> delta, axis, cross;
     magmaVectorDifference(&reinterpret_cast<fopAc_ac_c *>(rider)->current.pos, delta.get(),
@@ -341,6 +345,7 @@ static void daObjMagmarock_ride_call_back(u8 *bg, daObjMagmarock_c *self, u8 *ri
                 (f32)gabi::at<be<f32>>(gabi::ea(delta.get()))[i] * s;
         gabi::at<daObjMagmarock_c>(a)->mRiderQuat[3] = (f32)((f32)table->mCos);
     }
+    t60_set_dt(t60Prev);
 }
 
 /* 0236D20C */
@@ -714,6 +719,9 @@ static BOOL daObjMagmarock_Delete(daObjMagmarock_c *self) {
 
 /* 0236EAB0 */
 BOOL daObjMagmarock::Act_c::_execute() {
+    t60w::Guard<daObjMagmarock::Act_c> t60g(this, t60objw::Logic<daObjMagmarock::Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return 0;
     u32 a = gabi::ea(this);
     this->calc_ground_quat();
     f32 y, home, limit;
@@ -799,6 +807,7 @@ BOOL daObjMagmarock::Act_c::_execute() {
             (u32)((u32)gabi::at<MagmarockBackground>(bg)->mFlags | 4);
         magmaBgMove(ptr(gabi::ea((void *)mpBackground)));
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     return 0;
 }
 

@@ -1,0 +1,13 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include JPA_emitter_calc.txt
+# true60 N-step spec: JPABaseEmitter's ages, the rate-step timer and the HD countdowns on a general step length
+# (JPA_emitter_t60.h). Domain: whole ages and timers at the frame start (as every 30 Hz frame leaves them; a step-length
+# change N 2 -> 4 is the excluded case; a frame starts with the rate-step timer below its limit: 0 here), small enough that +dt is exact (< 2^20), start frames and rate steps as the
+# particle data use them. The emission (count, RNG draws, created particles) must equal the one step's exactly.
+t60conv 0281FE40 028200C4 0282014C 0281F878
+field 028200C4 r3+0x198 f32 0,1,2,3,10,100
+field 028200C4 r3+0x62 s16 0,1,2,3,10,200
+field 0282014C r3+0x194 f32 0,1,2,9,10,11,100
+field 0281FE40 r3+0x194 f32 0,1,2,9,10,11,100
+field 0281F878 r3+0x250 f32 0
+field 0281F878 r3+0x27 u8 0,1,2,3

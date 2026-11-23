@@ -1,0 +1,8 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_goal_flag.txt
+# ---- true60 N-step spec (2026-11-20; the whole-frame form rule + addendum, d/t60_objw.h): boat-race goal flag: race start / timer / goal crossing (Link frame-start position, process-order read) / race end, cloth and rope.
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 0215F748
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200FCD8 0200FCF0 0200FD38 0201AD78 0201ADE0 0201AE48 0201B080 0201B084 0201B12C 0201B1E4 0215D26C 0215E154 0215E520 0215E964 0215EA00 0215F4D0 0257DAA8 025A847C 025F1884 025F1BF4 025F1C28 0273AA24 0273AD10 0274D458 028E8D88 028E8DAC 028E8DD0 028E8E64 028E8F44 028E90D4 028F4384 C00088B8

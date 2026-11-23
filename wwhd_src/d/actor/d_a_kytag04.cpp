@@ -8,6 +8,7 @@
  */
 #include "d/actor/d_a_kytag04.h"
 #include "gc_api/f_op/f_op_actor_mng.h"
+#include "d/actor/d_a_kytag04_t60.h" /* true60 (t60conv): step helpers */
 
 // HD: room control's current room is shared data, rather than actor-local state.
 static s8 mStayNo;
@@ -19,7 +20,7 @@ static BOOL daKytag04_Draw(kytag04_class*) {
 }
 
 /* 021B046C */
-static BOOL daKytag04_Execute(kytag04_class* i_this) {
+static BOOL daKytag04_Execute(kytag04_class* i_this) { if (!t60c::end()) return TRUE; /* true60: the frame-level logic on the tick30 step (A's place: after the switch writers earlier in the line) */
     if (i_this->mSwitchNo != 0xff && dComIfGs_isSwitch(i_this->mSwitchNo, dComIfGp_roomControl_getStayNo())) {
         if (i_this->mState == 0) {
             if (i_this->mTimer >= i_this->mTimerThreshold) {

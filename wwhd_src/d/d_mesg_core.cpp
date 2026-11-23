@@ -2,6 +2,7 @@
  * GameCube message work lives in d_mesg.cpp.
  */
 #include "d/d_mesg_core.h"
+#include "d/d_mesg_core_t60.h"
 
 using CorePtr = gptr<dMesg_core_c>;
 static CorePtr messageManager;
@@ -104,6 +105,8 @@ void dMesg_core_c::advanceTimers() {
 
 /* 025F77B0 */
 void dMesg_core_c::update() {
+    if (t60mc_not_frame_end())
+        return; /* the 30 Hz frame's end only (d_mesg_core_t60.h) */
     u32 count = mFrameCount + 1;
     mFrameCount = count % 10000;
     if (dMesg_core_getPlay()->mFrameFlag)

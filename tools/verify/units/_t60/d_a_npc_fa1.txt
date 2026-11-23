@@ -1,0 +1,18 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_npc_fa1.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule addendum, cross-actor reads;
+# d_a_npc_fa1_t60.h): the fairy's _execute 02233A0C. The tick30 step runs the original _execute whole at dt 1 from the
+# frame start; the earlier steps change no state (a visual extrapolation by the previous frame's change, none here: no
+# previous frame): net effect = the one step's, byte exact. Negative control (T60C_NEGCTRL: _execute on every step at
+# dt) must fail.
+t60conv 02233A0C
+# the sub modes (normal: straight / turn / area / area out; bottle: up1 / down / up2) for the execute too
+field 02233A0C r3+0x8AE u8 0,1,2,3
+# the frame's logic runs its candidate code under _execute (the frame timer, the modes behind moveProc: normal / get
+# player / escape / hover / bottle appear / baba / big fairy, setMtx, the point light), so the timers, moves and
+# decisions are in the compared memory
+real 0223556C 02234078 02234204 0223434C 0223447C 022344EC 022347E4 02234894 02234A60 02234CA0 02234D1C 02233378 02233494
+t60cand 0223556C 02234078 02234204 0223434C 0223447C 022344EC 022347E4 02234894 02234A60 02234CA0 02234D1C 02233378 02233494
+# t60once 0223556C 02234078 02234204 0223434C 0223447C 022344EC 022347E4 02234894 02234A60 02234CA0 02234D1C 02233378 02233494: run only inside _execute's tick30 whole run (whole-frame form); never on their own N steps
+# effect calls (sound / particle starts): as many calls over the N steps as in the one step
+t60calls 025E1A40 025A847C

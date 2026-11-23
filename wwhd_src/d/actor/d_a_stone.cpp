@@ -1,5 +1,6 @@
 /* Carryable stone: verified WWHD modes, water/lava correction, effects and HD resource paths. */
 #include "d/actor/d_a_stone.h"
+#include "d/actor/d_a_stone_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule addendum) */
 using daStone::Act_c;
 namespace stone_tu {
 inline constexpr u32 groundPolygonDestructorVtable = 0x1003D7F8;
@@ -1528,6 +1529,9 @@ void daStone::Act_c::cam_lockoff() {
 
 /* 0249D2BC */
 s32 daStone::Act_c::_execute() {
+    if (t60w::begin(this, stone_t60::kOps)) /* true60: a step before the tick30 step: the picture only */
+        return 1;
+    bool t60Model = false; /* true60: the frame reached its model step */
 
     this->cull_set_move();
     bool skip = false;
@@ -1548,6 +1552,7 @@ s32 daStone::Act_c::_execute() {
                 this->mMassDelay = static_cast<u8>(u8(delay - 1));
             if (this->mode_proc_call()) {
                 remove = false;
+                t60Model = true;
                 this->set_mtx();
                 this->mStts.mRoomId = static_cast<u8>(static_cast<u8>(this->current.roomNo));
                 stone_dCcD_Cyl__MoveCAtTg(static_cast<void*>(&this->mCyl),
@@ -1588,6 +1593,7 @@ s32 daStone::Act_c::_execute() {
             stone_fopAcM_delete(this);
     }
     this->cull_set_draw();
+    t60w::end(this, stone_t60::kOps, t60Model); /* true60: the frame's change kept for the next frame's picture */
     return 1;
 }
 

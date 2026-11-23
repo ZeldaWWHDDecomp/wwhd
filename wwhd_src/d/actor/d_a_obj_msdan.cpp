@@ -6,6 +6,7 @@
  * GameCube methods are placeholders; interface names follow its header.
  */
 #include "d/actor/d_a_obj_msdan.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 // HD: this TU's common header statics.
 const gc_tu_data gc_tu = {
@@ -90,6 +91,9 @@ cPhs_State Act_c::Mthd_Create() {
 
 /* 0237B0C8 */
 BOOL Act_c::Mthd_Execute() {
+    t60w::Guard<Act_c> t60g(this, t60objw::Logic<Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     switch ((u32)mMode) {
     case MODE_WAIT_e:
         if (fopAcM_isSwitch(this, prm_get_swSave())) {

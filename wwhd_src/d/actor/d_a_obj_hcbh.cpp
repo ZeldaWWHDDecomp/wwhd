@@ -1,6 +1,7 @@
 // Tower of the Gods pillar.
 #include "d/actor/d_a_obj_hcbh.h"
 #include <cmath>
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 const gc_tu_data gc_tu = {
     .safeString = 0x1002A0C8,
     .objAcch = {0x1002A0F0, 0x1002A110, 0x1002A100},
@@ -471,6 +472,10 @@ void daObjHcbh_c::fall_act_proc() {
 
 /* 023525EC */
 s32 daObjHcbh_c::_execute() {
+    t60w::Guard<daObjHcbh_c> t60g(this, t60objw::Logic<daObjHcbh_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     mStts.Move();
     mAcch.CrrPos(dComIfG_Bgsp());

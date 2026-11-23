@@ -1,8 +1,254 @@
 /* WWHD damage reactions.
  * Complete fourteen-entry HD inventory 020402C8..0204698C. */
 #include "c/c_damagereaction.h"
+#include "true60.h"
+#include "c/c_damagereaction_carrier_t60.h" /* rider rule: hold on a 30 Hz carrier */
+#include <unordered_map>
 using gabi::load;
 using gabi::store;
+
+/* true60: these functions run inside the calling enemy's execute, so they take its step length: dt = 1 (an
+ * unconverted enemy, on the tick30 step; and the original game) runs the original code, a converted enemy calls them on
+ * every step with dt = 1/N (dt = 1/N). Per-frame counters count on the tick30 step (the 30 Hz timer rule) and their
+ * one-shot effects (particles, sounds, deletion) fire on the step that moved the counter (the one-emitter-per-event rule); per-frame rates and
+ * displacements scale by dt with the exact-arc term for gravity and the linear pushback (the per-step movement rule); per-frame damping
+ * d -> d^dt (the per-step smoothing rule); the smoothing calls (cLib_addCalc*) are the central converted primitives. */
+
+/* the step length n of the running context as a step count (1/dt; 1 for an unconverted caller even when N > 1) */
+static inline s32 t60dr_n() { return (s32)(1.0f / t60::dt() + 0.5f); }
+
+/* the step's share of an integer per-frame rate v (an angle step): trunc(v dt) on in-between steps, the frame's rest
+ * v - (n - 1) trunc(v dt) on its last (tick30) step, so the n steps of a frame add exactly v (dt = 1: v) */
+static inline s32 t60dr_rate(s32 v) {
+    if (t60::dt() == 1.0f)
+        return v;
+    s32 part = (s32)((f32)v * t60::dt());
+    return t60::tick30() ? v - (t60dr_n() - 1) * part : part;
+}
+
+/* A counter that starts a phase when an event sets it after the phase's own code in the call (the light-shrink death on a
+ * light-arrow hit, the joint ground checks after a landing, the burning after the fire's start): the original sets it in
+ * frame f and runs the phase from f + 1 on. Set on an in-between step, the frame's later steps would run the phase (and
+ * its tick30 step count it) a frame early. Such a set is remembered (host memory, keyed by the counter's guest address,
+ * with the 30 Hz frame tag g_Counter.mCounter0 as's integer smoothing uses) and the phase waits for the next frame
+ * (t60dr_pending). dt = 1 (and a set on the tick30 step) records nothing. */
+/* (t60dr_mark_set / t60dr_pending: c_damagereaction.h, on the port-owned latch; enemies that set such a counter after
+ * their damage_reaction / enemy_ice / enemy_fire call mark it too) */
+static inline u32 t60dr_frame() { return t60dr_frame_tag(); }
+
+/* the first-step push rule: the collision push m_cc_move (GetCCMoveP) comes from the tick30 collision Move
+ * (dCcS, once per 30 Hz frame while the colliders it pairs with are unconverted). Taken whole on the frame's first step
+ * it jitters (back by the push on one step, forward on the next). As Link's posMove: held from the value
+ * the frame's first step sees (or the first step that sees one after a frame without it), dt of it per step, cleared on
+ * the frame's last step; the frame's total stays. Host memory keyed by the push's guest address (one entry per enemy
+ * collider status). Only at dt < 1. */
+namespace {
+struct T60drPush {
+    u32 frame; /* the 30 Hz frame tag it was held in (an entry left by a call that missed its tick30 step is stale) */
+    f32 held[3];
+};
+std::unordered_map<u32, T60drPush> t60drPushes; /* keyed by the push's guest address; no capacity limit */
+/* enemy_ice's resting check (only at dt < 1): the 30 Hz frame tag of the ice block's last ground hit, keyed by the ice
+ * block's guest address. A block resting on the ground meets it only on every other step (a step that ends exactly on
+ * the ground is no hit), so "resting" is a hit in this frame or the previous one, not only the last step's flag. */
+std::unordered_map<u32, u32> t60drIceGround;
+}  // namespace
+/* the speed-ramp position-gap rule (3) (kbkL2_2): an enemy's position feeds its decisions and hit
+ * volumes, so its own speed term (speed.xz / 4 per frame) ends the frame where A's does: the earlier steps move with
+ * their own speed (x dt, the picture), the tick30 step moves the rest of the frame's displacement at the tick30 speed
+ * (A's frame speed: speed / 4 minus what the earlier steps moved). A ramp (a stop, a start) therefore no longer drifts
+ * by the sub-step speed difference (kbkL2_2 55-58: +1.25 per frame, the stop 5.0 units off, the Bk's turn target and
+ * swing rotated). Constant speed: no change. A frame without a first-step move: the step's own. Host memory keyed by
+ * the reaction's guest address; only at dt < 1. */
+namespace {
+struct T60drSpeedMove {
+    u32 frame; /* 30 Hz frame tag of the earlier steps' sum */
+    f32 x, z;  /* the speed term the frame's earlier steps moved */
+};
+std::unordered_map<u32, T60drSpeedMove> t60drSpeedMoves;
+}  // namespace
+/* the step's speed term in x / z (dt = 1: speed / 4, the original) */
+static void t60dr_speed_step(damagereaction* dr, f32 quarter, f32* sx, f32* sz) {
+    f32 fx = gabi::fmuls_ppc((f32)dr->mpEnemy->speed.x, quarter), fz = gabi::fmuls_ppc((f32)dr->mpEnemy->speed.z, quarter);
+    if (t60::dt() == 1.0f) {
+        *sx = fx, *sz = fz;
+        return;
+    }
+    const u32 a = gabi::ea(dr), frame = t60dr_frame();
+    if (t60::first_step()) {
+        T60drSpeedMove& e = t60drSpeedMoves[a];
+        e.frame = frame;
+        e.x = fx, e.z = fz;
+    } else if (t60::tick30()) {
+        auto it = t60drSpeedMoves.find(a);
+        if (it != t60drSpeedMoves.end() && it->second.frame == frame) {
+            const f32 full = 0.25f;
+            fx = gabi::fsubs_ppc(gabi::fmuls_ppc((f32)dr->mpEnemy->speed.x, full), it->second.x);
+            fz = gabi::fsubs_ppc(gabi::fmuls_ppc((f32)dr->mpEnemy->speed.z, full), it->second.z);
+            t60drSpeedMoves.erase(it);
+        }
+    } else {
+        auto it = t60drSpeedMoves.find(a);
+        if (it != t60drSpeedMoves.end() && it->second.frame == frame) {
+            it->second.x = gabi::fadds_ppc(it->second.x, fx);
+            it->second.z = gabi::fadds_ppc(it->second.z, fz);
+        }
+    }
+    *sx = fx, *sz = fz;
+}
+/* true60 (look chain; pair f233): the fall term y += speed.y / 4 reads the frame-start
+ * speed.y in the original (the gravity -12 of the frame comes after it, the ground check's reset at the frame end). Per
+ * step the later steps read the speed the earlier steps' gravity had lowered; the old exact-arc term put that back, but
+ * only on a step whose previous ground check said "in the air", so a frame that left the ground on its first step
+ * (f233: walking down off an edge, A -0.25, B -0.125 then -0.5 with the arc) fell 0.375 too far, and every later
+ * frame alternated ground and air a step off A (pos.y, eyePos, the head target, Link's look from f233-235). Now every
+ * step moves the frame's start speed x dt (the frame total is A's v / 4 whatever the ground checks between the steps
+ * said); a speed set by the enemy between the steps (a launch) is the new start (the tick30 step then ends the frame on
+ * that speed's whole term, as t60dr_speed_step's x / z). Host memory keyed by the reaction's guest address; dt < 1 only. */
+namespace {
+struct T60drFall {
+    u32 frame; /* 30 Hz frame tag */
+    f32 start; /* the speed.y the frame's term moves with */
+    f32 sum;   /* the y term the frame's earlier steps moved */
+    f32 left;  /* speed.y as the last step's reaction left it (a change after it is the enemy's own set) */
+};
+std::unordered_map<u32, T60drFall> t60drFalls;
+}  // namespace
+/* the step's fall term (dt = 1: not called; the original's fmadds) */
+static f32 t60dr_fall_step(damagereaction* dr, f32 quarter) {
+    const f32 v = dr->mpEnemy->speed.y;
+    const u32 a = gabi::ea(dr), frame = t60dr_frame();
+    if (t60::first_step()) {
+        T60drFall& e = t60drFalls[a];
+        e.frame = frame, e.start = v, e.left = v;
+        e.sum = gabi::fmuls_ppc(v, quarter);
+        return e.sum;
+    }
+    auto it = t60drFalls.find(a);
+    if (it == t60drFalls.end() || it->second.frame != frame)
+        return gabi::fmuls_ppc(v, quarter); /* no first-step move this frame: the step's own */
+    T60drFall& e = it->second;
+    if (v != e.left)
+        e.start = v;
+    if (t60::tick30()) {
+        f32 fy = gabi::fsubs_ppc(gabi::fmuls_ppc(e.start, 0.25f), e.sum);
+        t60drFalls.erase(it);
+        return fy;
+    }
+    f32 fy = gabi::fmuls_ppc(e.start, quarter);
+    e.sum = gabi::fadds_ppc(e.sum, fy);
+    return fy;
+}
+/* the end of dr_damage_set: the speed.y it leaves (dt < 1, an earlier step of a frame with a fall term) */
+static void t60dr_fall_left(damagereaction* dr) {
+    if (t60::dt() == 1.0f || t60::tick30())
+        return;
+    auto it = t60drFalls.find(gabi::ea(dr));
+    if (it != t60drFalls.end() && it->second.frame == t60dr_frame())
+        it->second.left = dr->mpEnemy->speed.y;
+}
+/* true60 (look chain; pair f54): the flinch bend (mFlinchBend, set to 4000 by a hit in
+ * dr_damage_set) bends the neck / head targets (mJntTargetAngle[12] / [13], the Darknut's / Moblin's joints) in
+ * dr_damage_anime, which then eases it toward 0 (cLib_addCalc0, 200 a frame). The original builds the frame's targets
+ * from the bend as the frame found it, then eases it once. Per step the tick30 step built them from a bend the earlier
+ * steps had already eased (f54: 3900 for A's 4000: neck z -15596 / -15996, joint 12's angle 200 short, eyePos
+ * 1.5 and mHeadAngleY 264 off, Link's look at the eye from f55). Every step builds the terms from the frame's bend (the
+ * bend the frame's first ease found; a bend set (a hit) after the earlier steps' eases starts over). The earlier steps
+ * ease it per step (the picture); the tick30 step ends it on the original's one ease of the frame's bend. Host memory
+ * keyed by the reaction's guest address; only at dt < 1. */
+namespace {
+struct T60drBend {
+    u32 frame; /* 30 Hz frame tag of the earlier steps' ease */
+    f32 after; /* the bend the last step's ease left */
+    f32 start; /* the bend the frame's first ease found (the frame's bend) */
+};
+std::unordered_map<u32, T60drBend> t60drBends;
+}  // namespace
+/* true60 (look chain; pair f159): mSlopeTilt (the body's ground tilt) is eased by
+ * the enemy's execute AFTER its damage_reaction call (daBk_Execute's ground check, daMo2_Execute's, the Darknut's
+ * updateGroundTilt after updateDamageAnimation), so the original's damage_reaction reads the tilt the previous frame
+ * left: dr_damage_anime's joint-12 slope target (mJnt12SlopeY / Z) and dr_matrix_set's body tilt. Per step the tick30
+ * step read the tilt the first step's execute had already eased (f159: 702 for A's 194: joint 12 target -174 / 15
+ * for A's -48 / 4, mHeadAngleY 1467 / 1437). Every step reads the frame-start tilt (noted on the first step; host memory
+ * keyed by the reaction's guest address); dt = 1: the word, read where the original reads it. */
+namespace {
+struct T60drSlope {
+    u32 frame;
+    s16 x, z;
+};
+std::unordered_map<u32, T60drSlope> t60drSlopes;
+}  // namespace
+static void t60dr_slope_read(damagereaction* dr, s16* x, s16* z) {
+    *x = dr->mSlopeTilt.x;
+    *z = dr->mSlopeTilt.z;
+    const u32 a = gabi::ea(dr), frame = t60dr_frame();
+    if (t60::first_step()) {
+        T60drSlope& e = t60drSlopes[a];
+        if (e.frame != frame) { /* the frame's first read (dr_matrix_set and dr_damage_anime read the same word) */
+            e.frame = frame;
+            e.x = *x;
+            e.z = *z;
+        }
+    }
+    auto it = t60drSlopes.find(a);
+    if (it != t60drSlopes.end() && it->second.frame == frame) {
+        *x = it->second.x;
+        *z = it->second.z;
+    }
+}
+
+/* the bend the flinch terms read on this step (dt = 1: the bend) */
+static f32 t60dr_bend_read(damagereaction* dr) {
+    f32 b = (f32)dr->mFlinchBend;
+    if (t60::dt() == 1.0f)
+        return b;
+    auto it = t60drBends.find(gabi::ea(dr));
+    if (t60::first_step() || it == t60drBends.end() || it->second.frame != t60dr_frame() || it->second.after != b)
+        return b;
+    return it->second.start;
+}
+/* after the step's ease: remember the frame's bend for the frame's later steps (the tick30 step ends the frame) */
+static void t60dr_bend_eased(damagereaction* dr, f32 before) {
+    if (t60::dt() == 1.0f)
+        return;
+    const u32 a = gabi::ea(dr), frame = t60dr_frame();
+    if (t60::tick30()) {
+        t60drBends.erase(a);
+        return;
+    }
+    f32 after = (f32)dr->mFlinchBend;
+    auto it = t60drBends.find(a);
+    bool cont = !t60::first_step() && it != t60drBends.end() && it->second.frame == frame && it->second.after == before;
+    T60drBend& e = t60drBends[a];
+    if (!cont)
+        e.start = before;
+    e.frame = frame;
+    e.after = after;
+}
+static void t60dr_push_step(const cXyz* cc, f32 out[3]) {
+    u32 a = gabi::ea(cc), frame = t60dr_frame();
+    f32 dt = t60::dt();
+    auto it = t60drPushes.find(a);
+    bool known = it != t60drPushes.end() && it->second.frame == frame;
+    T60drPush* e = it != t60drPushes.end() ? &it->second : &t60drPushes[a];
+    f32 x = cc->x, y = cc->y, z = cc->z;
+    bool fresh = x != 0.0f || y != 0.0f || z != 0.0f;
+    bool held = known && (e->held[0] != 0.0f || e->held[1] != 0.0f || e->held[2] != 0.0f);
+    if (!known || t60::first_step() || (fresh && !held)) {
+        e->frame = frame;
+        e->held[0] = x, e->held[1] = y, e->held[2] = z;
+    }
+    for (int i = 0; i < 3; i++)
+        out[i] = gabi::fmuls_ppc(e->held[i], dt);
+    if (t60::tick30())
+        t60drPushes.erase(a);
+}
+
+/* the exact-arc term of an explicit per-frame step (p += k v, then v += dv): -k dv (1 - dt) / 2 per step, so the n steps
+ * of a frame (p += k v dt; v += dv each) end where the original frame ends (0 at dt = 1: not called there) */
+static inline f32 t60dr_arc(f32 k, f32 dv) {
+    return gabi::fmuls_ppc(gabi::fmuls_ppc(k, dv), gabi::fmuls_ppc(gabi::fsubs_ppc(1.0f, t60::dt()), -0.5f));
+}
 
 static DamageHeaderStatics l_reactionHeaderStatics;
 static DamageHeaderStatics l_drawHeaderStatics;
@@ -84,7 +330,12 @@ static bool ice_bg_check(u32 ice, f32 savedY, f32 zero) {
                 shatter = true;
         }
     } else if (flags & 0x20) {
-        ei->mSpeedF = static_cast<f32>(static_cast<f32>(ei->mSpeedF) * 0.5f);
+        /* true60 (the per-step smoothing rule): the ground friction halves the slide speed per frame: 0.5^dt per step */
+        if (t60::dt() != 1.0f)
+            ei->mSpeedF = static_cast<f32>(gabi::fmuls_ppc(static_cast<f32>(ei->mSpeedF),
+                                                           (f32)__builtin_pow(0.5, (double)t60::dt())));
+        else
+            ei->mSpeedF = static_cast<f32>(static_cast<f32>(ei->mSpeedF) * 0.5f);
         if (static_cast<s8>(ac->health) <= 0 || savedY < REG0_F(14) + -40.0f)
             shatter = true;
         f32 choose = savedY - -20.0f;
@@ -189,18 +440,25 @@ static u32 enemy_ice(u32 ice) {
         fopAcM_delete(ac);
         dComIfGs_onActor(static_cast<u16>(ac->setID), static_cast<s8>(ac->home.roomNo));
     };
+    /* true60: the light-shrink and freeze timers and the move delay count 30 Hz frames on the tick30 step
+     * (the 30 Hz timer rule); the particles, sounds and the deletion they trigger fire on that counting step only (the one-emitter-per-event rule) */
+    bool frame = t60::tick30();
     s8 light = static_cast<s8>(ei->mLightShrinkTimer);
-    if (light) {
+    /* a light-shrink set on an in-between step starts with the next frame, as in the original */
+    if (light && !t60dr_pending(&ei->mLightShrinkTimer)) {
         ice_pos_scale(ice, actor, pos, sc);
-        ei->mLightShrinkTimer = static_cast<s8>((s8)(light + 1));
+        if (frame)
+            ei->mLightShrinkTimer = static_cast<s8>((s8)(light + 1));
         if (light == 1) {
-            ice_particle(0x272, pos, 0, sc);
+            if (frame)
+                ice_particle(0x272, pos, 0, sc);
             ac->tevStr.mFogColor.b = static_cast<u16>(255);
             ac->tevStr.mFogColor.g = static_cast<u16>(255);
             ac->tevStr.mFogColor.r = static_cast<u16>(255);
             ac->tevStr.mFogStartZ = static_cast<f32>(zero);
             ac->tevStr.mFogEndZ = static_cast<f32>(2000.0f);
-            soundIce(0x5904);
+            if (frame)
+                soundIce(0x5904);
             damageWord(ac->attention_info.flags) =
                 static_cast<u32>(static_cast<u32>(damageWord(ac->attention_info.flags)) & ~4u);
             return 1;
@@ -217,18 +475,20 @@ static u32 enemy_ice(u32 ice) {
         cMtx_ZrotM(damageView<Mtx34>(0x1048D0CC), static_cast<s16>(ac->shape_angle.z));
         mDoMtx_stack_c::scaleM(static_cast<f32>(ac->scale.x), static_cast<f32>(ac->scale.y),
                                static_cast<f32>(ac->scale.z));
-        s8 current = static_cast<s8>(ei->mLightShrinkTimer), threshold = (s8)(REG_S(14, 1) + 70);
+        /* the frame's counted value: stored on the tick30 step, light + 1 on the steps before it (as the original frame) */
+        s8 current = frame ? static_cast<s8>(ei->mLightShrinkTimer) : (s8)(light + 1),
+           threshold = (s8)(REG_S(14, 1) + 70);
         if (current < threshold) {
             f32 step = REG_F(14, 0) + 0.01f;
             cLib_addCalc0(&ei->mScaleXZ, small, step);
             cLib_addCalc0(&ei->mScaleY, small, REG_F(14, 0) + 0.01f);
             return 1;
         }
-        if (current == threshold)
+        if (current == threshold && frame)
             soundIce(0x5905);
         cLib_addCalc2(&ei->mScaleY, REG_F(14, 1) + gravity, small, REG_F(14, 2) + one);
         cLib_addCalc0(&ei->mScaleXZ, REG_F(14, 3) + small, REG_F(14, 4) + 0.05f);
-        if (static_cast<s8>(ei->mLightShrinkTimer) > (s8)(REG_S(14, 2) + 90)) {
+        if (static_cast<s8>(ei->mLightShrinkTimer) > (s8)(REG_S(14, 2) + 90) && frame) {
             freeActor();
             if (!(actor && static_cast<u16>(ac->mProcName) == 210))
                 item();
@@ -263,7 +523,9 @@ static u32 enemy_ice(u32 ice) {
         cLib_addCalc0(&ei->mBodyLiftY, one, 3.0f);
         return 0;
     case 1:
-        if (static_cast<s16>(ei->mFreezeDuration) == 0)
+        /* true60: a freeze an enemy set after its enemy_ice call on an in-between step (t60dr_mark_set)
+         * starts with the next frame, as the original's set in frame f freezes from f + 1 on */
+        if (static_cast<s16>(ei->mFreezeDuration) == 0 || t60dr_pending(&ei->mFreezeDuration))
             return 0;
         ei->mFreezeTimer = static_cast<s16>(static_cast<s16>(ei->mFreezeDuration));
         ei->mFreezeDuration = static_cast<s16>(0);
@@ -370,22 +632,65 @@ static u32 enemy_ice(u32 ice) {
             MtxPosition(damageView<cXyz>(dir), damageView<cXyz>(off));
             ei->mSpeed.x = static_cast<f32>(static_cast<f32>(offset.x));
             ei->mSpeed.z = static_cast<f32>(static_cast<f32>(offset.z));
+            f32 dt = t60::dt();
             if (static_cast<s8>(ei->mFreezeType) == 2)
                 ei->mSpeed.y = static_cast<f32>(zero);
-            else {
+            else if (dt != 1.0f) {
+                /* true60 (the per-step movement rule): the explicit fall (p += v, then v.y -= 5) per step: p += v dt,
+                 * v.y -= 5 dt, plus the exact-arc term of the gravity this step applied. Not while the ice block
+                 * rests on the ground (v <= 0 and a ground hit on the last step or anywhere in this or the previous
+                 * 30 Hz frame): the ground stops that fall on every step, there is no arc to carry, and the term lifted
+                 * the resting block 0.625 off the ground on every third step at N = 2 (pair, frames 150-159), as
+                 * in dr_damage_set's fall before. A step that ends exactly on the ground is no hit, so the
+                 * last step's flag alone still left 0.16 on each tick30 step at N = 4 (pair). A bounce (v > 0)
+                 * keeps the term. */
+                bool resting = false;
+                if (static_cast<f32>(ei->mSpeed.y) <= zero) {
+                    auto g = t60drIceGround.find(ice);
+                    resting = ei->mBgAcch.ChkGroundHit() ||
+                              (g != t60drIceGround.end() && t60dr_frame() - g->second <= 1u);
+                }
+                auto* p = damageView<cXyz>(actor + 0x314);
+                p->x = gabi::fadds_ppc((f32)p->x, gabi::fmuls_ppc((f32)ei->mSpeed.x, dt));
+                p->y = gabi::fadds_ppc((f32)p->y, gabi::fmuls_ppc((f32)ei->mSpeed.y, dt));
+                p->z = gabi::fadds_ppc((f32)p->z, gabi::fmuls_ppc((f32)ei->mSpeed.z, dt));
+                f32 dv = -gabi::fmuls_ppc(gravity, dt);
+                ei->mSpeed.y = static_cast<f32>(gabi::fadds_ppc(static_cast<f32>(ei->mSpeed.y), dv));
+                if (!resting)
+                    p->y = gabi::fadds_ppc((f32)p->y, t60dr_arc(1.0f, dv));
+            } else {
                 PSVECAdd(damageView<cXyz>(actor + 0x314), damageView<cXyz>(ice + 0x18),
                          damageView<cXyz>(actor + 0x314));
                 ei->mSpeed.y = static_cast<f32>(static_cast<f32>(ei->mSpeed.y) - gravity);
             }
-            ac->shape_angle.y = static_cast<s16>(
-                (s16)(static_cast<s16>(ac->shape_angle.y) + static_cast<s16>(ei->mAngularVelY)));
+            /* true60 (the per-step movement rule): the spin is a per-frame angle step: the step's share */
+            ac->shape_angle.y = static_cast<s16>((s16)(static_cast<s16>(ac->shape_angle.y) +
+                                                       t60dr_rate(static_cast<s16>(ei->mAngularVelY))));
             if (ice_bg_check(ice, static_cast<f32>(ei->mSpeed.y), zero))
                 ei->mFreezeTimer = static_cast<s16>(-1);
-        } else
+            /* true60: the resting check's frame of the last ground hit (dt < 1 only) */
+            if (dt != 1.0f) {
+                if (ei->mBgAcch.ChkGroundHit())
+                    t60drIceGround[ice] = t60dr_frame();
+                else if (auto g = t60drIceGround.find(ice);
+                         g != t60drIceGround.end() && t60dr_frame() - g->second > 1u)
+                    t60drIceGround.erase(g);
+            }
+        } else if (frame)
             ei->mMoveDelayTimer = static_cast<s16>((s16)(delay - 1));
-        if (ice + 0x30)
-            PSVECAdd(damageView<cXyz>(actor + 0x314), damageView<cXyz>(ice + 0x30),
-                     damageView<cXyz>(actor + 0x314));
+        if (ice + 0x30) {
+            /* true60 (the first-step push rule): the tick30 collision push spread over the frame's steps */
+            if (t60::dt() != 1.0f) {
+                auto* p = damageView<cXyz>(actor + 0x314);
+                f32 push[3];
+                t60dr_push_step(damageView<cXyz>(ice + 0x30), push);
+                p->x = gabi::fadds_ppc((f32)p->x, push[0]);
+                p->y = gabi::fadds_ppc((f32)p->y, push[1]);
+                p->z = gabi::fadds_ppc((f32)p->z, push[2]);
+            } else
+                PSVECAdd(damageView<cXyz>(actor + 0x314), damageView<cXyz>(ice + 0x30),
+                         damageView<cXyz>(actor + 0x314));
+        }
         u32 flags = static_cast<u32>(damageWord(ei->mCyl.mObjAt.mSPrm));
         damageWord(ei->mCyl.mObjAt.mSPrm) = static_cast<u32>(
             std::fabs(static_cast<f32>(ei->mSpeedF)) > gravity ? flags | 1 : flags & ~1u);
@@ -396,6 +701,7 @@ static u32 enemy_ice(u32 ice) {
             u32 hit = gabi::ea(ei->mCyl.GetTgHitObj()), type = load<u32>(hit + 0x10);
             if (type & 0x100000) {
                 ei->mLightShrinkTimer = static_cast<u8>(1);
+                t60dr_mark_set(&ei->mLightShrinkTimer); /* true60: its phase starts with the next frame */
                 ei->mFreezeTimer = static_cast<s16>(1);
             } else if (type & 0x200)
                 ei->mFreezeTimer = static_cast<s16>(1);
@@ -407,11 +713,14 @@ static u32 enemy_ice(u32 ice) {
     }
     f32 shiverX = zero, shiverZ = zero;
     s16 timer = static_cast<s16>(ei->mFreezeTimer);
-    bool shattered = false, expire = false;
+    bool shattered = false, expire = false, counted = false;
     if (timer > 0) {
-        timer--;
-        ei->mFreezeTimer = static_cast<s16>(timer);
-        expire = timer == 0;
+        timer--; /* the frame's counted value; stored (and its expiry) on the tick30 step */
+        if (frame) {
+            ei->mFreezeTimer = static_cast<s16>(timer);
+            expire = timer == 0;
+            counted = true;
+        }
     } else if (timer < 0) {
         ice_pos_scale(ice, actor, pos, sc);
         ice_particle(0x273, pos, 0, sc);
@@ -461,7 +770,7 @@ static u32 enemy_ice(u32 ice) {
         shiverX = (f32)((timer & 1) * 2 - 1);
         shiverZ = (f32)(((timer + 1) & 1) * 2 - 1);
     }
-    if (timer == 20) {
+    if (timer == 20 && counted) { /* the melt warning on the step whose count reached 20 */
         ice_pos_scale(ice, actor, pos, sc);
         ice_particle(0x277, pos, 0, sc);
         soundIce(0x5903);
@@ -518,12 +827,14 @@ static void enemy_fire(u32 fire) {
             ef->mFlameTimers[i] = static_cast<s16>(timer);
             ef->mFlameScaleY = static_cast<f32>(startY);
         }
+        t60dr_mark_set(&ef->mFireTimer); /* true60: its phase starts with the next frame */
         ef->mStts.Init(250, 255, ac);
         ef->mSph.Set(damageView<dCcD_SrcSph>(0x1018F5B0));
         damageWord(ef->mSph.mStts) = static_cast<u32>(fire + 0xA0);
         return;
     }
-    if (mode != 1)
+    /* true60: a fire started on an in-between step burns from the next frame, as in the original */
+    if (mode != 1 || t60dr_pending(&ef->mFireTimer))
         return;
     f32 power = 150.0f * static_cast<f32>(ef->mFlameScaleY);
     damageWord(ef->mLight.mPos.x) =
@@ -545,6 +856,15 @@ static void enemy_fire(u32 fire) {
     f32 factor = REG0_F(4) + -0.02f;
     f32 vx = static_cast<f32>(velocity.x), vy = static_cast<f32>(velocity.y),
         vz = static_cast<f32>(velocity.z);
+    /* true60: the actor's move since the last call is a step's: as a per-frame velocity / dt. The fire's
+     * per-frame work (timers, hit-sphere step, sounds) runs on the tick30 step. */
+    bool frame = t60::tick30();
+    if (t60::dt() != 1.0f) {
+        f32 perFrame = (f32)t60dr_n();
+        vx = gabi::fmuls_ppc(vx, perFrame);
+        vy = gabi::fmuls_ppc(vy, perFrame);
+        vz = gabi::fmuls_ppc(vz, perFrame);
+    }
     f32 one = 1.0f, minus = -1.0f;
     f32 dx = vx * factor, dz = vz * factor;
     if (dx > one)
@@ -582,7 +902,8 @@ static void enemy_fire(u32 fire) {
             slot = 0;
             continue;
         }
-        ef->mFlameTimers[i] = static_cast<s16>((s16)(timer - 1));
+        if (frame) /* true60 (the 30 Hz timer rule): a 30 Hz frame count */
+            ef->mFlameTimers[i] = static_cast<s16>((s16)(timer - 1));
         u32 model = damageWord(ef->mpMcaMorf);
         auto* morf = damageView<mDoExt_McaMorf>(model);
         J3DMtxBuffer_hd* joints = morf->mpModel->mpMtxBuffer;
@@ -621,10 +942,15 @@ static void enemy_fire(u32 fire) {
         }
         active++;
     }
-    u8 next = (u8)(static_cast<u8>(ef->mHitboxFlameIdx) + 1);
-    ef->mHitboxFlameIdx = static_cast<u8>(next < active ? next : 0);
+    /* true60: the hit sphere steps to the next flame once per 30 Hz frame (the 30 Hz collision pass sees
+     * every flame in turn), the per-frame sounds start once per frame (the one-emitter-per-event rule) and the fire timer counts on the tick30
+     * step (the 30 Hz timer rule); all on the tick30 step, always at dt = 1 */
+    if (frame) {
+        u8 next = (u8)(static_cast<u8>(ef->mHitboxFlameIdx) + 1);
+        ef->mHitboxFlameIdx = static_cast<u8>(next < active ? next : 0);
+    }
     u32 soundPos = actor + 0x37C;
-    if (soundPos) {
+    if (soundPos && frame) {
         s32 reverb = dComIfGp_getReverb(static_cast<s8>(ac->current.roomNo));
         mDoAud_seStart(0x6103, damageView<cXyz>(soundPos), 0, reverb);
     }
@@ -636,12 +962,12 @@ static void enemy_fire(u32 fire) {
         u32 play = dComIfGp_ea();
         damageSetCollision(damageView<cCcS>(play + 0x26A4), damageView<dCcD_GObjInf>(fire + 0xDC));
         timer = static_cast<s16>(ef->mFireTimer);
-    } else if (soundPos) {
+    } else if (soundPos && frame) {
         s32 reverb = dComIfGp_getReverb(static_cast<s8>(ac->current.roomNo));
         mDoAud_seStart(0x5101, damageView<cXyz>(soundPos), 0, reverb);
         timer = static_cast<s16>(ef->mFireTimer);
     }
-    if (timer != 0)
+    if (timer != 0 && frame)
         ef->mFireTimer = static_cast<s16>((s16)(timer - 1));
 }
 
@@ -736,19 +1062,24 @@ static s32 wall_angle_get(u32 actor, s32 angle) {
 static void dr_body_bg_check(damagereaction* dr, u32 scratch) {
 
     f32 lift = dr->mKnockedDown == 1 ? 12.5f : 0.0f;
-    if (dr->mBodyBgCheckDelay == 0) {
+    /* true60: a delay the enemy set after its call on an in-between step (t60dr_mark_set) starts next frame */
+    if (dr->mBodyBgCheckDelay == 0 || t60dr_pending(&dr->mBodyBgCheckDelay)) {
         dr->mpEnemy->current.pos.y -= dr->mPivot.y + lift;
         dr->mpEnemy->old.pos.y -= dr->mPivot.y + lift;
         dr->mpEnemy->speed.y *= 0.25f;
         dr->mAcch.CrrPos(dComIfG_Bgsp());
+        t60drCarrier::check(dr); /* true60: on a 30 Hz carrier, run at 30 Hz (rider rule) */
         dr->mpEnemy->speed.y *= 4.0f;
         dr->mpEnemy->current.pos.y += dr->mPivot.y + lift;
         dr->mpEnemy->old.pos.y += dr->mPivot.y + lift;
         dr->mPrevGroundPos.copy(dr->mpEnemy->old.pos);
         dr->mPrevGroundPos.y = dr->mSpawnY;
         dr->mSpawnY = dr->mAcch.GetGroundH();
-    } else
-        dr->mBodyBgCheckDelay--;
+    } else {
+        t60drCarrier::check(dr, false); /* true60: the rider rule's coupling outlasts a skipped check */
+        if (t60::tick30()) /* true60 (the 30 Hz timer rule): a 30 Hz frame count */
+            dr->mBodyBgCheckDelay--;
+    }
     if (dr->mAction != 21 && dr->mAction != 22) {
         DamageGround* chk = gabi::at<DamageGround>(scratch);
         chk->Init(true);
@@ -804,10 +1135,14 @@ static s32 dr_joint_bg_check(damagereaction* dr, u32 scratch, u32 auxiliary) {
     DamageGround& gndChk = *gabi::at<DamageGround>(auxiliary);
     gndChk.Init(false);
 
-    if (dr->mJntBgCheckTimer != 0) {
-        dr->mJntBgCheckTimer--;
-        if (dr->mJntBgCheckTimer == 0 && dr->mFaceDown == 1) {
-            result = 2;
+    /* true60: checks begun by a landing on an in-between step start with the next frame, as in the original */
+    if (dr->mJntBgCheckTimer != 0 && !t60dr_pending(&dr->mJntBgCheckTimer)) {
+        /* true60 (the 30 Hz timer rule): a 30 Hz frame count; its end (the face-down reaction 2) on the counting step */
+        if (t60::tick30()) {
+            dr->mJntBgCheckTimer--;
+            if (dr->mJntBgCheckTimer == 0 && dr->mFaceDown == 1) {
+                result = 2;
+            }
         }
 
         for (int i = 0; i < 0xE; i++) {
@@ -1302,11 +1637,33 @@ static s32 dr_damage_set(u32 address) {
             temp2.y = 0.0f;
             temp2.z = dr->mPushback;
             MtxPosition(&temp2, &temp3);
-            f32 forwardX = gabi::fmadds((f32)dr->mpEnemy->speed.x, 0.25f, (f32)temp3.x);
+            /* true60 (the per-step movement rule): the quarter speed and the pushback are per-frame displacements: x dt */
+            f32 dt = t60::dt();
+            f32 quarter = 0.25f;
+            if (dt != 1.0f) {
+                quarter = gabi::fmuls_ppc(quarter, dt);
+                temp3.x = gabi::fmuls_ppc((f32)temp3.x, dt);
+                temp3.z = gabi::fmuls_ppc((f32)temp3.z, dt);
+            }
+            /* true60 (the speed-ramp position-gap rule (3)): the speed term's frame total is A's (t60dr_speed_step); dt = 1: the original */
+            f32 forwardX, forwardZ;
+            if (dt != 1.0f) {
+                f32 sx, sz;
+                t60dr_speed_step(dr, quarter, &sx, &sz);
+                forwardX = gabi::fadds_ppc(sx, (f32)temp3.x);
+                forwardZ = gabi::fadds_ppc(sz, (f32)temp3.z);
+            } else {
+                forwardX = gabi::fmadds((f32)dr->mpEnemy->speed.x, quarter, (f32)temp3.x);
+                forwardZ = gabi::fmadds((f32)dr->mpEnemy->speed.z, quarter, (f32)temp3.z);
+            }
             dr->mpEnemy->current.pos.x = gabi::fadds_ppc((f32)dr->mpEnemy->current.pos.x, forwardX);
-            dr->mpEnemy->current.pos.y =
-                gabi::fmadds((f32)dr->mpEnemy->speed.y, 0.25f, (f32)dr->mpEnemy->current.pos.y);
-            f32 forwardZ = gabi::fmadds((f32)dr->mpEnemy->speed.z, 0.25f, (f32)temp3.z);
+            /* true60 (f233): the frame's start speed (t60dr_fall_step); dt = 1: the original */
+            if (dt != 1.0f)
+                dr->mpEnemy->current.pos.y =
+                    gabi::fadds_ppc((f32)dr->mpEnemy->current.pos.y, t60dr_fall_step(dr, quarter));
+            else
+                dr->mpEnemy->current.pos.y =
+                    gabi::fmadds((f32)dr->mpEnemy->speed.y, quarter, (f32)dr->mpEnemy->current.pos.y);
             dr->mpEnemy->current.pos.z = gabi::fadds_ppc((f32)dr->mpEnemy->current.pos.z, forwardZ);
 
             // HD: disabled modes skip collision displacement; only X and Z are applied.
@@ -1317,21 +1674,50 @@ static s32 dr_damage_set(u32 address) {
                     // offset; both adds are fadds position + offset (frA = position for NaN propagation).
                     f32 moveX = (f32)pStts->GetCCMoveP()->x;
                     f32 positionX = (f32)dr->mpEnemy->current.pos.x;
+                    /* true60 (the first-step push rule): the tick30 collision push spread over the frame's steps */
+                    f32 push[3];
+                    if (dt != 1.0f) {
+                        t60dr_push_step(pStts->GetCCMoveP(), push);
+                        moveX = push[0];
+                    }
                     dr->mpEnemy->current.pos.x = gabi::fadds_ppc(positionX, moveX);
                     f32 positionZ = (f32)dr->mpEnemy->current.pos.z;
                     f32 moveZ = (f32)pStts->GetCCMoveP()->z;
+                    if (dt != 1.0f)
+                        moveZ = push[2];
                     dr->mpEnemy->current.pos.z = gabi::fadds_ppc(positionZ, moveZ);
                 }
             }
 
             if (dr->mInvincibleTimer == 0) {
-                dr->mpEnemy->speed.y -= 12.0f;
+                if (dt != 1.0f)
+                    dr->mpEnemy->speed.y -= gabi::fmuls_ppc(12.0f, dt);
+                else
+                    dr->mpEnemy->speed.y -= 12.0f;
                 if (dr->mpEnemy->speed.y < -200.0f) {
                     dr->mpEnemy->speed.y = -200.0f;
                 }
+                /* true60 (the per-step movement rule): the explicit fall (y += v / 4, then v -= 12) moves the frame's
+                 * start speed on every step (t60dr_fall_step above): the frame ends where A's ends, in the air and on the
+                 * ground alike, without the old exact-arc term (it lifted a grounded enemy, and its "on the ground" skip
+                 * misplaced the frame that left the ground on its first step: f233). */
             }
 
+            f32 push0 = dr->mPushback;
             cLib_addCalc0(&dr->mPushback, 1.0f, 10.0f);
+            /* true60 (the per-step movement rule): the pushback falls by 10 per frame after it moved the enemy (explicit): the same
+             * exact-arc term along the hit direction (the matrix still holds that rotation) */
+            if (dt != 1.0f) {
+                f32 dp = gabi::fsubs_ppc((f32)dr->mPushback, push0);
+                if (dp != 0.0f) {
+                    temp2.x = 0.0f;
+                    temp2.y = 0.0f;
+                    temp2.z = t60dr_arc(1.0f, dp);
+                    MtxPosition(&temp2, &temp3);
+                    dr->mpEnemy->current.pos.x = gabi::fadds_ppc((f32)dr->mpEnemy->current.pos.x, (f32)temp3.x);
+                    dr->mpEnemy->current.pos.z = gabi::fadds_ppc((f32)dr->mpEnemy->current.pos.z, (f32)temp3.z);
+                }
+            }
         } else if (dr->mDownTimers[0] == 1 && dr->mFallPitchTarget == 0) {
             dr->mFallPitchTarget = -0x4000;
             dr->mJnt3AddZTarget = cM_rndF(20000.0f);
@@ -1344,7 +1730,8 @@ static s32 dr_damage_set(u32 address) {
         if (dr_joint_bg_check(dr, scratch, auxiliary) == 2) {
             react = 2;
         }
-    } else {
+    } else if (t60::tick30()) {
+        /* true60: "skip one frame of movement" holds to the end of the 30 Hz frame it was set in */
         dr->mSkipMoveOnce = 0;
     }
 
@@ -1449,6 +1836,7 @@ static s32 dr_damage_set(u32 address) {
             dr->mBounceCount += 1;
             dr->mLaunched = 0;
             dr->mJntBgCheckTimer = REG0_S(3) + 1;
+            t60dr_mark_set(&dr->mJntBgCheckTimer); /* true60: its phase starts with the next frame */
 
             s16 temp5 = dr->mKnockbackAngleY;
             s16 temp6 = dr->mpEnemy->current.angle.y - temp5;
@@ -1500,6 +1888,7 @@ static s32 dr_damage_set(u32 address) {
         } else {
             if (dr->mKnockbackSpeed != 0) {
                 dr->mJntBgCheckTimer = 1;
+                t60dr_mark_set(&dr->mJntBgCheckTimer); /* true60: its phase starts with the next frame */
             }
 
             dr->mKnockbackSpeed = 0.0f;
@@ -1532,12 +1921,14 @@ static s32 dr_damage_set(u32 address) {
     }
 
     if (dr->mSpinLeft != 0) {
+        /* true60 (the per-step movement rule): the spin turns 0x1000 per frame: the step's share (exact for N = 1, 2, 4, 8) */
+        s32 spin = t60dr_rate(0x1000);
         if (dr->mSpinLeft > 0) {
-            dr->mSpinLeft += -0x1000;
-            dr->mSpinAngleY += -0x1000;
+            dr->mSpinLeft += -spin;
+            dr->mSpinAngleY += -spin;
         } else {
-            dr->mSpinLeft += 0x1000;
-            dr->mSpinAngleY += 0x1000;
+            dr->mSpinLeft += spin;
+            dr->mSpinAngleY += spin;
         }
     }
 
@@ -1549,6 +1940,7 @@ static s32 dr_damage_set(u32 address) {
         cLib_addCalc0(&dr->mShakeAmplitude, 1.0f, gabi::fmadds(REG0_F(5), 10.0f, 300.0f));
     }
 
+    t60dr_fall_left(dr); /* true60: the speed.y this step leaves (t60dr_fall_step) */
     return react;
 }
 
@@ -1562,6 +1954,9 @@ static void dr_damage_anime(damagereaction* dr) {
     }
 
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
+    /* true60: a paralysis the enemy set after its call on an in-between step (t60dr_mark_set) starts with the
+     * next frame (dt = 1: the timer itself) */
+    auto paralysed = [dr]() { return dr->mParalysisTimer != 0 && !t60dr_pending(&dr->mParalysisTimer); };
 
     s16 maxSpeed;
     if (dr->mLaunched != 0 || test_sw != 0) {
@@ -1661,11 +2056,12 @@ static void dr_damage_anime(damagereaction* dr) {
     cXyz vectorTemp2;
     cXyz& cxyz_temp = *(&vectorTemp);
     cXyz& cxyz_temp2 = *(&vectorTemp2);
-    if (dr->mFlinchBend > 200.0f) {
+    /* true60: the frame's bend (t60dr_bend_read; dt = 1: mFlinchBend, read where the original reads it) */
+    if (t60dr_bend_read(dr) > 200.0f) {
         s16 angle = cM_atan2s(-dr->mHitVec.x, -dr->mHitVec.z);
         cxyz_temp.x = 0.0f;
         cxyz_temp.y = 0.0f;
-        cxyz_temp.z = dr->mFlinchBend;
+        cxyz_temp.z = t60dr_bend_read(dr);
         mDoMtx_YrotS(calc_mtx(), angle - dr->mpEnemy->current.angle.y);
         MtxPosition(&cxyz_temp, &cxyz_temp2);
 
@@ -1691,19 +2087,23 @@ static void dr_damage_anime(damagereaction* dr) {
         }
 
         maxSpeed = 0x3000;
-    } else if (dr->mLookMode != 0 || dr->mParalysisTimer != 0) {
+    } else if (dr->mLookMode != 0 || paralysed()) {
         f32 f31 = 0.5f;
         maxSpeed = 0x800;
 
         s16 temp;
         s16 temp2;
-        if (dr->mLookMode == 1 || dr->mLookMode == 5 || dr->mParalysisTimer != 0) {
-            if (dr->mLookMode == 1 || dr->mParalysisTimer != 0) {
-                if (dr->mParalysisTimer != 0) {
-                    dr->mParalysisTimer--;
+        if (dr->mLookMode == 1 || dr->mLookMode == 5 || paralysed()) {
+            if (dr->mLookMode == 1 || paralysed()) {
+                if (paralysed()) {
+                    /* true60 (the 30 Hz timer rule): a 30 Hz frame count, checked before it counts: stored on the tick30
+                     * step; every step shakes with the frame's counted value */
+                    s16 paralysis = (s16)(dr->mParalysisTimer - 1);
+                    if (t60::tick30())
+                        dr->mParalysisTimer = paralysis;
                     maxSpeed = 0x2000;
                     temp2 = (s16)gabi::ftoi((REG0_F(6) + 1000.0f) *
-                                            cM_ssin(dr->mParalysisTimer * (REG0_S(5) + 16000)));
+                                            cM_ssin(paralysis * (REG0_S(5) + 16000)));
                     temp = 0;
                 } else {
                     cxyz_temp.x = dr->mpLookTarget->eyePos.x - dr->mpEnemy->current.pos.x;
@@ -1781,9 +2181,17 @@ static void dr_damage_anime(damagereaction* dr) {
     }
 
     if (dr->mAction != 5 && dr->mKnockedDown != 1) {
-        cxyz_temp.x = dr->mSlopeTilt.z;
-        cxyz_temp.y = 0.0f;
-        cxyz_temp.z = dr->mSlopeTilt.x;
+        if (t60::dt() == 1.0f) {
+            cxyz_temp.x = dr->mSlopeTilt.z;
+            cxyz_temp.y = 0.0f;
+            cxyz_temp.z = dr->mSlopeTilt.x;
+        } else { /* true60: the frame-start tilt (t60dr_slope_read) */
+            s16 t60SlopeX, t60SlopeZ;
+            t60dr_slope_read(dr, &t60SlopeX, &t60SlopeZ);
+            cxyz_temp.x = t60SlopeZ;
+            cxyz_temp.y = 0.0f;
+            cxyz_temp.z = t60SlopeX;
+        }
         mDoMtx_YrotS(calc_mtx(), dr->mpEnemy->current.angle.y);
         MtxPosition(&cxyz_temp, &cxyz_temp2);
         cLib_addCalcAngleS2(&dr->mJnt12SlopeY, (s16)gabi::ftoi((f32)cxyz_temp2.x), 4, 0x100);
@@ -1796,7 +2204,21 @@ static void dr_damage_anime(damagereaction* dr) {
     dr->mJntTargetAngle[0xC].y -= (f32)dr->mJnt12SlopeY;
     dr->mJntTargetAngle[0xC].z -= (f32)dr->mJnt12SlopeZ;
 
-    cLib_addCalc0(&dr->mFlinchBend, 0.5f, 200.0f);
+    {
+        const f32 bendBefore = t60::dt() == 1.0f ? 0.0f : (f32)dr->mFlinchBend; /* true60 (dt = 1: not read) */
+        if (t60::dt() != 1.0f && t60::tick30() && !t60::first_step()) {
+            /* true60 (pair f72): the frame's last step ends the bend where the original's one ease of the frame's
+             * bend ends it (the per-step eases cross the 200 cap differently: 400 -> 300 -> 212.13 for A's 200, and the
+             * next frame's > 200 test then bent the head); the earlier steps' eases stay the picture */
+            dr->mFlinchBend = t60dr_bend_read(dr);
+            const f32 previousDt = t60_set_dt(1.0f);
+            cLib_addCalc0(&dr->mFlinchBend, 0.5f, 200.0f);
+            t60_set_dt(previousDt);
+        } else {
+            cLib_addCalc0(&dr->mFlinchBend, 0.5f, 200.0f);
+        }
+        t60dr_bend_eased(dr, bendBefore); /* true60: for the frame's later steps */
+    }
 
     if (dr->mKnockbackSpeed == 0.0f && dr->mKnockedDown == 1) {
         if (dr->mFaceDown == 0) {
@@ -1964,8 +2386,15 @@ static void dr_damage_anime(damagereaction* dr) {
 static void dr_matrix_set(damagereaction* dr) {
     MtxTrans(dr->mpEnemy->current.pos.x + dr->mBodyOffset.x, dr->mpEnemy->current.pos.y + dr->mBodyOffset.y,
              dr->mpEnemy->current.pos.z + dr->mBodyOffset.z, 0);
-    mDoMtx_XrotM(calc_mtx(), dr->mSlopeTilt.x);
-    mDoMtx_ZrotM(calc_mtx(), dr->mSlopeTilt.z);
+    if (t60::dt() == 1.0f) {
+        mDoMtx_XrotM(calc_mtx(), dr->mSlopeTilt.x);
+        mDoMtx_ZrotM(calc_mtx(), dr->mSlopeTilt.z);
+    } else { /* true60: the frame-start tilt (t60dr_slope_read) */
+        s16 t60SlopeX, t60SlopeZ;
+        t60dr_slope_read(dr, &t60SlopeX, &t60SlopeZ);
+        mDoMtx_XrotM(calc_mtx(), t60SlopeX);
+        mDoMtx_ZrotM(calc_mtx(), t60SlopeZ);
+    }
     MtxTrans(-dr->mPivot.x, -dr->mPivot.y, -dr->mPivot.z, 1);
     mDoMtx_YrotM(calc_mtx(), dr->mKnockbackAngleY);
     mDoMtx_XrotM(calc_mtx(), dr->mFallPitch);
@@ -1988,24 +2417,33 @@ static void dr_matrix_set(damagereaction* dr) {
 static s32 damage_reaction(u32 address) {
 
     damagereaction* dr = gabi::at<damagereaction>(address);
-    dr->mTimer++;
+    /* true60 (the 30 Hz timer rule): the counters here count 30 Hz frames (both flags always true at dt = 1). The frame
+     * counter (shake phase) and the down timers are counted before this call uses them: on the frame's first step, so
+     * every step of the frame sees the value the original frame sees (a timer set on any step of frame f first counts on
+     * f + 1, as there). The invincibility, wall-smoke and bridge-ride timers are checked before they count: on the tick30
+     * step, so their checks, too, see one value per frame. */
+    /* an unconverted caller (dt = 1) runs once per frame, on its tick30 step: that one step is the frame's first too */
+    bool first = t60::dt() == 1.0f || t60::first_step(), count = t60::tick30();
+    if (first)
+        dr->mTimer++;
     for (u32 i = 0; i < 3; i++)
-        if (dr->mDownTimers[i] != 0)
+        if (dr->mDownTimers[i] != 0 && first)
             dr->mDownTimers[i]--;
     s32 result = 0;
     if (dr->mInvincibleTimer != 0) {
-        dr->mInvincibleTimer--;
+        if (count)
+            dr->mInvincibleTimer--;
         dr->mSpawnY = dr->mpEnemy->current.pos.y;
     } else
         result = dr_damage_set(address);
     dr_damage_anime(dr);
     dr_matrix_set(dr);
-    if (dr->mWallSmokeTimer != 0) {
+    if (dr->mWallSmokeTimer != 0 && count) {
         dr->mWallSmokeTimer--;
         if (dr->mWallSmokeTimer == 0)
             dr->mParticleCallBack.end();
     }
-    if (dr->mBridgeRideTimer != 0)
+    if (dr->mBridgeRideTimer != 0 && count)
         dr->mBridgeRideTimer--;
     return result;
 }

@@ -1,0 +1,16 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include JPA_field_b.txt
+# true60 N-step spec: JPADragField::calc 02823E8C on a general step length (the compounding drag +0x88 x factor^dt,
+# JPA_field_t60.h). JPARandomField::calc 02823CDC is a crossing of the particle age, which advances outside it (incFrame,
+# JPA-07): N repeated calls at one age are no frame of it, so it has its dt-1 check rows here (dt 1 = the original) and its
+# step form is checked with the particle walk once runs it (trajectory tests).
+t60conv 02823E8C
+field 02823E8C r5+0x88 f32 0.5,0.75,0.9,1
+field 02823E8C r5+0x84 f32 0.5,0.8,0.95,1
+field 02823E8C r5+0x80 f32 0,0.5,1
+# float rounding of the compounding factor (pow over N steps vs one product)
+t60tol 02823E8C r5+0x88 f32 absrel 0.00001 0.0001
+# the fade (calcFadeAffect, mocked) in its range [0, 1]
+fret 02822AC0 0.0,0.25,0.5,1.0
+# the constants as the binary holds them (l_one 10171078 = 1.0)
+field 02823E8C 10171078 f32 1.0

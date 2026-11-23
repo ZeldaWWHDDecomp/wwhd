@@ -1,0 +1,10 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include f_op_actor_mng.txt
+# ---- true60 N-step spec (the first-step AI-timer rule extended): fopAcM_cullingCheck 025D6CE8 with
+# the execute-time view swap (f_op/f_op_actor_mng_t60_cull.h). The swap is game-build only (the harness has no draw
+# and no execute gate), so the N steps leave the same memory as the one step: step-invariant, the original.
+t60conv 025D6CE8
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200F378 0200F8D0
+t60cand 0200F378 0200F8D0

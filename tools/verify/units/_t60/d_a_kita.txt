@@ -1,0 +1,10 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_kita.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule + addendum, d_a_kita_t60.h): the Forbidden Woods
+# hanging flower platform: daKita_Execute 0219DF90 in the whole form (ropes, ride timer, tilt / sway sines, fall, water
+# drift, BG Move); ride_call_back 0219DBFC once a frame via cbSkip, the rider's old.pos as A reads it (process-order read).
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 0219DF90 0219DBFC
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 02008974 02008DAC 02008E0C 0200ED84 0200EDC8 0200F428 0200FAD8 0200FCD8 0200FCF0 0200FD38 020182E0 02018D40 02019918 0201A4DC 0201AD78 024F08A8 024F43DC 025162A4 025200D4 025A847C 025CB374 025F1884 025F1BF4 025F1C28 025F1C5C 0274D458 028E8D88 028E90D4

@@ -2,6 +2,7 @@
  * HD: four item buttons, trailing event-info vtable and retained register-width semantics.
  * Verified against the private WWHD reference. */
 #include "d/d_event_readable.h"
+#include "d/d_event_order_t60.h"
 
 // HD: bindings retain the verified argument registers where the shared API differs.
 /* dEvent_manager_c (play + 0x52C4) */
@@ -94,6 +95,8 @@ s32 EventControl::order(u32 eventType, u32 priority, u32 flag, u32 hindFlag, u32
     s32 cnt = static_cast<s8>(mOrderCount);
     if (cnt >= 8)
         return 0;
+    if (T60EVO_REPEAT(i_this, cnt, eventType, priority, flag, hindFlag, ac1, ac2, eventIdx, info))
+        return 1; /* the frame's request, queued on an earlier step (d_event_order_t60.h) */
     u32 o = i_this + cnt * 0x18;
     EventOrder* entry = gabi::at<EventOrder>(o);
     entry->mEventType = static_cast<u16>((u16)eventType);
@@ -129,6 +132,7 @@ s32 EventControl::order(u32 eventType, u32 priority, u32 flag, u32 hindFlag, u32
             gabi::at<EventOrder>(q)->mNextOrderIdx = static_cast<u8>(static_cast<u8>(mOrderCount));
         }
     }
+    T60EVO_QUEUED(static_cast<s8>(mOrderCount));
     mOrderCount = static_cast<u8>((u8)(static_cast<u8>(mOrderCount) + 1));
     return 1;
 }

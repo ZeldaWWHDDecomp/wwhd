@@ -9,6 +9,7 @@
  * HD: L_attr is in .data (0x101CAFFC) and its triangle vertices are written by __sinit.
  */
 #include "d/actor/d_a_obj_mmrr.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 namespace daObjMmrr {
 
@@ -318,6 +319,9 @@ void Act_c::eff_remove() {
 
 /* 02375644 */
 bool Act_c::_execute() {
+    t60w::Guard<daObjMmrr::Act_c> t60g(this, t60objw::Logic<daObjMmrr::Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
     /* attention_info.position = (pos.x, pos.y + 260, pos.z); eyePos = attention_info.position */
     auto& posWords = positionWords(current.pos);
     u32 x = posWords.x;
@@ -346,6 +350,7 @@ bool Act_c::_execute() {
     if (mPosChanged || mReflecting) {
         set_cc_trans_pos();
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     set_cull();
     if (mReflecting) {

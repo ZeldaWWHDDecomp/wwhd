@@ -1,0 +1,46 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_ship.txt
+# ---- true60 N-step spec (2026-11-20): the lean's aim x n form. setMoveAngle
+# 0247D4B0 with its lean call chain as the candidate's code: getAimControllAngle 024752C4 (the aim from the frame-start
+# heading, x 7, x n = 1/dt substeps a step: d_a_ship.cpp's true60 form) and setControllAngle 024751E0 (the lean spring,
+# dt of itself a step) both real + t60cand, so the lean r3+0x654 the N steps end on is compared with the one step's.
+# _t60/d_a_ship.txt mocks setControllAngle (its own row there), so only this unit sees the aim. Measured (N 2 s1 n2000):
+# lean max |d| 1 (N 2) / 2 (N 4) at s1 and s7, negative control (the x n removed) 39 (fails 1022/2000). abs 2: the lean
+# spring's carry rounding at N 4 (the aim itself is exact per frame).
+t60conv 0247D4B0
+real 024752C4 024751E0
+t60cand 024752C4 024751E0
+arg! 0247D4B0 r4 -8192,-4096,-1000,-64,0,64,1000,4096,8192
+field 0247D4B0 r3+0x370 f32 -120 120
+field 0247D4B0 r3+0x670 i16 0 40
+field 0247D4B0 r3+0x704 u32 0
+field 0247D4B0 r3+0x70C u32 0
+t60tol 0247D4B0 r3+0x32A a16 exact
+t60tol 0247D4B0 r3+0x322 a16 exact
+# the lean spring's domain as in _t60/d_a_ship.txt's setControllAngle lines
+field 0247D4B0 r3+0x654 i16 -0x1000 0x1000
+field 0247D4B0 r3+0x656 i16 -0x400 0x400
+t60tol 0247D4B0 r3+0x654 a16 abs 2
+# KNOWN REVIEW ITEM (not this form's): the lean speed r3+0x656 (max |d| 65 here, negative control 101) is setControllAngle's
+# own speed difference (frame-anchored lean, tools/lean_t02.py; _t60/d_a_ship.txt row 024751E0 |d| 46 > 32): left out here
+t60tol 0247D4B0 r3+0x656 s16 skip
+ret! 020195B0 -4096,-1024,0,1024,4096
+real 027ED4AC
+real 028F38F8
+real 028F3C78
+real 028F3CA0
+real 028F3EC0
+real 028EFFD0
+real 028F026C
+real 027ED6A8
+real 028EFE58
+real 028F37F0
+real 028F5034
+real 028F60F8
+real 028F51D0
+real 028F52F0
+real 028F555C
+real 028F5444
+real 028F605C
+fret! 024753BC -5 5
+fret! 020198D8 0 1000

@@ -8,6 +8,7 @@
 #include "d/actor/d_a_obj_swflat.h"
 #include "bindings.h"
 #include "gc_api/f_op/f_op_actor_mng.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using daObjSwflat::Act_c;
 static u32 PrmAbstract(Act_c*, s32, s32);
 static daObjSwflat_HIO_c l_HIO;
@@ -305,6 +306,12 @@ void daObjSwflat::Act_c::init_mtx() {
 
 /* 02391F58 */
 BOOL daObjSwflat::Act_c::Execute(Mtx34** output) {
+    t60w::Guard<daObjSwflat::Act_c> t60g(this, t60objw::Logic<daObjSwflat::Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) { /* true60: a step before the tick30 step: the picture only (frame interpolation); the background stays: the
+                      * wrapper gets the actor's own mtx, as on the tick30 step */
+        *reinterpret_cast<gptr<Mtx34>*>(output) = &mtx;
+        return TRUE;
+    }
     BOOL statue = FALSE, contact = FALSE, spawned = FALSE;
     mCyl.mCyl.SetC(&current.pos);
     if (l_HIO.mbDebug) {
@@ -431,6 +438,7 @@ BOOL daObjSwflat::Act_c::Execute(Mtx34** output) {
         s16 lockTimer = mLockTimer;
         if (lockTimer != 0) {
             mLockTimer = lockTimer - 1;
+            t60g.model = true; /* true60: the frame reached its model step */
             set_mtx();
             // HD: the output slot holds a four-byte guest pointer.
             *reinterpret_cast<gptr<Mtx34>*>(output) = &mtx;
@@ -459,6 +467,7 @@ BOOL daObjSwflat::Act_c::Execute(Mtx34** output) {
         if ((s32)frame < (s32)end + 5)
             setFrame(this, (s16)(frame + 1));
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     *reinterpret_cast<gptr<Mtx34>*>(output) = &mtx;
     mWasPressed = mPressed;

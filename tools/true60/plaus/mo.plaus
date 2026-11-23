@@ -1,0 +1,20 @@
+# compare60 --plaus-spec (the strict RNG-pair rule + addendum): the Moblin (mo2_class, profile 0x00BC), dump
+# WWHD_ACTOR_DUMP=mo.admp:021C9B1C:343C (daMo2_Execute; the body starts at the actor); words as tools mocmp.py
+dump mo.admp
+profile 00BC
+state 8C2 s16     # mDamageReaction.mAction (0 jyunkai, 4 fight_run, 5 fight, 6 nage, 7 oshi, 10 defence, ...)
+state 8C0 s16     # mDamageReaction.mMode
+health 3A1 s8     # health
+timer 848 s16     # mCountDownTimers[0..4]
+timer 84A s16
+timer 84C s16
+timer 84E s16
+timer 850 s16
+timer 858 s16     # noHit
+timer 85A s16     # noGuard
+value 314 f32     # current.pos
+value 318 f32
+value 31C f32
+value 370 f32     # speedF
+value 2470 f32    # attackFrame
+attack 5 7        # ACTION_FIGHT (spear thrusts / swings) and ACTION_OSHI (the push)

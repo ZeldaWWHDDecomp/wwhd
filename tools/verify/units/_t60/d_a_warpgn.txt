@@ -1,0 +1,8 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_warpgn.txt
+# ---- true60 N-step spec (2026-11-22; the whole-frame form rule + addendum, d/t60_objw.h): the Ganon warp (Warpgn)'s execute
+# 024D9E00. The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 024D9E00
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0201ADE0 024D8D6C 024D9520 024D9760 024D9880 024D999C 024D9AE0 024D9CA4 024D9D3C 025200D4 02520540 02526E70 02542D88 02542EDC 02543280 0254407C 025440C8 025447C8 02587EFC 025B8B68 025B8B94 025BA0C0 025D7A58 025E1A40 025E742C 0273AA24 028E8DD0 028E93CC 028F4384

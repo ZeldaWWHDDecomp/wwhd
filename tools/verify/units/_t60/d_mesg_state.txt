@@ -1,0 +1,10 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_mesg_state.txt
+# ---- (2026-11-18, review, no code change): the telescope scope edges fopMsgM_getScopeMode /
+# fopMsgM_releaseScopeMode, called by actors (d_a_npc_ls1) on every step at N, are status transitions: the step that
+# makes the edge (SCOPE_ACTIVE -> WAIT, WAIT -> ACTIVE) answers 1, a repeat on a later step finds the new status and
+# writes nothing (the BOX_CLOSING path writes the same value again). The N steps' net memory equals the one step; the
+# answer is the step's own (the edge is seen once, on the step that made it): the return is not compared.
+t60conv 025F8B5C 025F8BEC
+t60ret 025F8B5C skip
+t60ret 025F8BEC skip

@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_bb.h"
+#include "d/actor/d_a_bb_t60.h" /* true60: create's execute run at dt 1 */
 
 static bbHIO_c l_bbHIO;
 static s32 esa_check_count;
@@ -870,7 +871,11 @@ static cPhs_State daBb_Create(fopAc_ac_c* a_this) {
         }
 
         a_this->stealItemLeft = 3;
-        daBb_Execute(i_this);
+        {
+            const f32 t60PrevDt = bb_t60::createBegin(); /* true60: create's run of the execute, the original at dt 1 */
+            daBb_Execute(i_this);
+            bb_t60::createEnd(t60PrevDt);
+        }
     }
     return ret;
 }

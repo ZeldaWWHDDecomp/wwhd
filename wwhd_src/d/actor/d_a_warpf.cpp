@@ -8,6 +8,7 @@
  * "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_warpf.h"
+#include "d/actor/d_a_warpf_t60.h" /* true60: the whole form (the whole-frame form rule, d/t60_objw.h) */
 static const u32 m_arcname[16] = {
     0x00000000,
     0x00000000,
@@ -501,6 +502,9 @@ cPhs_State daWarpf_c::_create() {
 
 /* 024D7B0C */
 bool daWarpf_c::_execute() {
+    t60w::Guard<daWarpf_c> t60g(this, t60objw::Logic<daWarpf_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
     mFrameCount = mFrameCount + 1;
     checkOrder();
     demo_proc();
@@ -729,7 +733,9 @@ BOOL daWarpf_c::actEndWait(int staffIdx) {
 /* 024D7544 */
 BOOL daWarpf_c::check_warp_event() {
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
-    f32 distance = absXZ_diff(&player->current.pos, &current.pos);
+    gabi::Local<cXyz> playerPos;
+    warpf60::playerPos(player, playerPos.get()); /* true60: Link's frame-start position (process-order read, d_a_warpf_t60.h) */
+    f32 distance = absXZ_diff(playerPos.get(), &current.pos);
 
     if (daPy_checkPlayerFly(player)) {
         return FALSE;
@@ -768,7 +774,9 @@ void daWarpf_c::set_effect() {
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
     f32 effectRange = 2000.0f;
     s32 effectInterval = 20;
-    f32 distance = absXZ_diff(&player->current.pos, &current.pos);
+    gabi::Local<cXyz> playerPos;
+    warpf60::playerPos(player, playerPos.get()); /* true60: Link's frame-start position (process-order read, d_a_warpf_t60.h) */
+    f32 distance = absXZ_diff(playerPos.get(), &current.pos);
 
     if (distance < effectRange && distance > get_distance()) {
         f32 tmp = distance - get_distance();

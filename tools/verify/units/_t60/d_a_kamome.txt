@@ -1,0 +1,12 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_kamome.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule NPC form; d/t60_npc.h):
+# per-row review (the whole-frame form rule: self-contained NPCs may take a per-step form): the seagull is NOT self-contained (it reads
+# Link: take-off distance, imouto / heisou player distance and angle) and draws 57 RNG values in its moves -> NPC form.
+# daKamome_Execute 021861D4 in the whole form, logic only: the tick30 step runs the original execute whole at dt 1 from the
+# frame start (global timer, the switch wait, the six timers, the path / imouto / heisou / auto move, the morf play, the
+# joint turns, the matrix step); the earlier steps change no state (the picture between steps comes from frame interpolation): net
+# effect = the one step's, byte exact. Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail (the
+# global timer +1 per run).
+t60conv 021861D4
+real 021860B0

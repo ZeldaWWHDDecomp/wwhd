@@ -9,6 +9,7 @@
  * all eleven into the model's matrix block when the last joint is reached.
  */
 #include "d/actor/d_a_tornado.h"
+#include "d/actor/d_a_tornado_t60.h" /* true60 (t60conv): step helpers */
 
 const gc_tu_data gc_tu = {
     .safeString = 0x10040924,
@@ -111,13 +112,13 @@ BOOL daTornado_c::execute() {
     }
 
     mBck.play();
-    f32 f = mBtkFrame + 1.0f;
+    f32 f = mBtkFrame + t60c::step(1.0f);
     mBtkFrame = f;
     if (!(f < (f32)btkAnm()->getFrameMax())) {
         f32 max = (f32)btkAnm()->getFrameMax();
         mBtkFrame = mBtkFrame - max;
     }
-    f = mBtkUnderFrame + 1.0f;
+    f = mBtkUnderFrame + t60c::step(1.0f);
     mBtkUnderFrame = f;
     if (!(f < (f32)btkUnderAnm()->getFrameMax())) {
         f32 max = (f32)btkUnderAnm()->getFrameMax();
@@ -125,9 +126,9 @@ BOOL daTornado_c::execute() {
     }
 
     // HD: update the movement radius between the two angle stores.
-    mAngle2 = (s16)(mAngle2 + 250);
+    mAngle2 = (s16)(mAngle2 + t60c::share(250)); /* true60 (t60conv): the step's share */
     m32c = 10000.0f;
-    mAngle1 = (s16)(mAngle1 + 500);
+    mAngle1 = (s16)(mAngle1 + t60c::share(500)); /* true60 (t60conv): the step's share */
     u32 param = fopAcM_GetParam(this);
     f32 fVar8;
     if (param == 1) {
@@ -142,7 +143,9 @@ BOOL daTornado_c::execute() {
         } else {
             fVar8 = 1.0f;
         }
-    } else if (param == 0 && dComIfGp_getShipActor() != 0 && tornadoShip()->mTornadoActor != 0) {
+    } else if (param == 0 && t60c::heldInt(dComIfGp_getShipActor() != 0 && tornadoShip()->mTornadoActor != 0, 4, this)) {
+        /* true60: the ship's tornado link as the frame began; this execute clears it later in the step
+         * (offTornadoFlg), which the original's next frame sees, not the rest of this frame */
         fVar8 = 0.25f;
     } else {
         fVar8 = 1.0f;
@@ -176,7 +179,11 @@ BOOL daTornado_c::execute() {
             }
         }
         if (!dComIfGp_event_runCheck()) {
+            /* true60 (rule): the frame's move as one add on the tick30 step (x ~ -100000: N step
+             * adds lost one f32 step per frame); the earlier steps carry the share so far */
+            t60c::moveBegin(&current.pos.x, &current.pos.z, 1);
             fopAcM_posMoveF(this, nullptr);
+            t60c::moveEnd(&current.pos.x, &current.pos.z, &speed.x, &speed.z, 1);
             gabi::Local<cXyz> diff;
             cXyz_mi(&current.pos, diff, &home.pos);
             f32 dx = diff->x;
@@ -195,21 +202,22 @@ BOOL daTornado_c::execute() {
             }
         }
         if (mPtclTimer != 0) {
-            mPtclTimer = (s16)(mPtclTimer - 1);
-        } else {
+            if (t60c::first()) { mPtclTimer = (s16)(mPtclTimer - 1); } /* true60 (t60conv): counted on the frame's first step */
+        } else if (t60c::first()) { /* true60: the else of the first-step count, on the first step too (first-step AI-timer) */
             mPtclTimer = 10;
             dComIfGp_particle_set(dPa_name_ID_AK_SN_TORNADOWIND00, &current.pos, nullptr,
                                   &scales.wind);
         }
         /* fopAcM_seStartCurrent (HD: no NULL checks here) */
         s32 reverb = dComIfGp_getReverb(fopAcM_GetRoomNo(this));
-        mDoAud_seStart(JA_SE_OBJ_TORNADE_SUS, &current.pos, 100, reverb);
+        if (t60c::end()) /* true60: the sustained tornado sound, a per-frame start: once per 30 Hz frame (11 / sound-gate) */
+            mDoAud_seStart(JA_SE_OBJ_TORNADE_SUS, &current.pos, 100, reverb);
         if (dComIfGs_isEventBit(0x2710)) {
             mPtclCb.end();
             TornadoShipView* ship = tornadoShip();
             if (ship != 0)
                 ship->offTornadoFlg();
-            f32 b = mBrkFrame + 0.3f;
+            f32 b = mBrkFrame + t60c::step(0.3f);
             mBrkFrame = b;
             if (!(b < (f32)brkAnm()->getFrameMax()))
                 fopAcM_delete(this);

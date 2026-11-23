@@ -1,6 +1,7 @@
 // Flower interactions and pooled animations. HD replaces display lists with GX2 geometry.
 // Register widths, guest layouts, stack objects and call order follow the verified source.
 #include "d/d_flower.h"
+#include "d/d_grass_t60.h"
 #include "port_native_draw.h"
 #include "port_hooks.h"
 using namespace gabi;
@@ -386,6 +387,25 @@ void dFlower_data_c::WorkAt(fopAc_ac_c* actor, u32 mask, s32 room, flower::HitIn
     }
 }
 
+// true60 (d_grass_t60.h): hitCheck runs on the tick30 step only; there it is the original frame from the restored start,
+// so its chases take the full 30 Hz step (dt 1 around the call only; dt 1: the plain call)
+static s32 flower60_addCalcAngleS(void* value, s32 target, s32 scale, s32 maxStep, s32 minStep) {
+    if (t60::dt() == 1.0f)
+        return flowerCLib_addCalcAngleS(value, target, scale, maxStep, minStep);
+    const f32 previousDt = t60_set_dt(1.0f);
+    const s32 ret = flowerCLib_addCalcAngleS(value, target, scale, maxStep, minStep);
+    t60_set_dt(previousDt);
+    return ret;
+}
+static s32 flower60_chaseAngleS(void* value, s32 target, s32 step) {
+    if (t60::dt() == 1.0f)
+        return flowerCLib_chaseAngleS(value, target, step);
+    const f32 previousDt = t60_set_dt(1.0f);
+    const s32 ret = flowerCLib_chaseAngleS(value, target, step);
+    t60_set_dt(previousDt);
+    return ret;
+}
+
 /* 025457C4 */
 void dFlower_data_c::hitCheck(fopAc_ac_c* player, s32 room) {
     Local<flower::HitInf> hit;
@@ -417,10 +437,10 @@ void dFlower_data_c::hitCheck(fopAc_ac_c* player, s32 room) {
         s32 bend = s16(at<dFlower_anm_c>(packet + offsetof(dFlower_packet_c, mAnm) +
                                          windIndex * sizeof(dFlower_anm_c))
                            ->mBend);
-        if (flowerCLib_addCalcAngleS(&at<dFlower_anm_c>(animation)->mBend, bend, s32(0x10),
+        if (flower60_addCalcAngleS(&at<dFlower_anm_c>(animation)->mBend, bend, s32(0x10),
                                      s32(0xFA0), s32(0x64)))
             return;
-        if (!flowerCLib_chaseAngleS(&at<dFlower_anm_c>(animation)->mAngleY, target, s32(0x320)))
+        if (!flower60_chaseAngleS(&at<dFlower_anm_c>(animation)->mAngleY, target, s32(0x320)))
             return;
         play = ea(dComIfGp_get());
         index = (s8)mAnmIdx;
@@ -688,12 +708,50 @@ void* dFlower_data_c__ct(void* self) {
 /* 02544AB8 */
 void dFlower_packet_c::draw() {}
 
+// true60 (d_grass_t60.h): an earlier step of a hit flower's slot (hitCheck's no-hit branch at dt: the bend
+// back to its wind slot's, then the heading; no state change, no return to the wind slot)
+static void flower60_recover_between(u32 packet, dFlower_data_c* data) {
+    const s32 index = (s8)data->mAnmIdx;
+    if (index < 8)
+        return;
+    const u32 animation = packet + 0x35BC + u32(index) * 56;
+    const u32 angle = u16(at<dFlower_anm_c>(animation)->mAngleY);
+    const s32 target = s16(angle & 0xE000);
+    const s32 bend = s16(at<dFlower_anm_c>(packet + 0x35BC + (angle >> 13) * 56)->mBend);
+    Grass60Slot& s = grass60_enter(u32(index), animation);
+    const f64 dt = (f64)t60::dt();
+    // cLib_addCalcAngleS(bend, wind slot's bend, 0x10, 0xFA0, 0x64) at dt
+    const f64 d = grass60_angleDiff(s.rx, bend);
+    if (d != 0.0) {
+        f64 mv = d * (1.0 - std::pow(1.0 - 1.0 / 16.0, dt));
+        const f64 mx = 4000.0 * dt, mn = 100.0 * dt;
+        if (mv > mx) mv = mx;
+        if (mv < -mx) mv = -mx;
+        if (mv > -mn && mv < mn) mv = d > 0 ? (mn < d ? mn : d) : (-mn > d ? -mn : d);
+        s.rx += mv;
+    }
+    if (std::fabs(grass60_angleDiff(s.rx, bend)) < 0.5) {
+        // there: the heading chases the wind slot's (cLib_chaseAngleS 0x320 at dt)
+        const f64 e = grass60_angleDiff(s.ry, target), step = 800.0 * dt;
+        s.ry += std::fabs(e) <= step ? e : (e > 0 ? step : -step);
+    }
+    at<dFlower_anm_c>(animation)->mBend = grass60_s16(s.rx, (s32)(s16)(u16)(s.start[1] >> 16));
+    at<dFlower_anm_c>(animation)->mAngleY = grass60_s16(s.ry, (s32)(s16)(u16)(s.start[0] & 0xFFFFu));
+    grass60_leave(s, animation);
+}
+
 /* 02548370 */
 void dFlower_packet_c::calc() {
+    // true60 (d_grass_t60.h): the earlier steps sway the wind slots at the step's time and move the hit
+    // flowers' slots at dt (no sword set-up, no hit checks: the one-sweep-per-frame attack rule); the tick30 step puts the slots back to the
+    // frame's start and runs the original frame at dt 1
+    const f32 t60p = grass60_progress();
+    if (t60::dt() != 1.0f && t60::tick30())
+        grass60_restore_all(ea(mAnm), 72);
     f32 scale = swayScale;
     for (u32 i = 0; i < 8; ++i) {
-        u32 timer = swayCounter + i * 0xFA;
-        u16 angle = u16(ftoi(fmuls_ppc(f32(timer), scale)));
+        f32 timer = grass60_wind_time(swayCounter, i, t60p);
+        u16 angle = u16(ftoi(fmuls_ppc(timer, scale)));
         f32 cosine = f32(flowerCosineTable.mValues[u32(angle) >> 3][0]);
         mAnm[i].mBend = u16(ftoi(fmadds(scale, cosine, scale)));
     }
@@ -701,6 +759,12 @@ void dFlower_packet_c::calc() {
     auto* head = at<dFlower_room_c>(ea(mRoom) + u32(room) * sizeof(dFlower_room_c))->mpHead.get();
     if (!head)
         return;
+    if (grass60_between()) {
+        for (; head; head = head->mpNext.get())
+            if (!(head->mFlags & dFlower_data_c::FLAG_CULLED))
+                flower60_recover_between(ea(this), head);
+        return;
+    }
     u32 play = ea(dComIfGp_get());
     u32 player = u32(at<dComIfG_inf_c>(play)->play.mPlayerInfo[0].mpPlayer.v);
     mPlayerCutFlag = (u32(at<flower::SwordView>(player)->mCutFlags) & 0x40) != 0;

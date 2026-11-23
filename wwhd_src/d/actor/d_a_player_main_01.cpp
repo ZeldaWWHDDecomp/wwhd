@@ -10,6 +10,10 @@
  */
 #include "d/actor/d_a_player_main_01.h"
 #include "port_hooks.h"
+#include "true60.h"
+#include "d/actor/d_a_player_t60.h"
+#include "d/actor/d_a_player_maba_t60.h"
+#include "d/actor/d_a_player_bghit_t60.h"
 
 static PlayerJ3DSysState j3dSysState;
 static PlayerFrameCounter g_Counter;
@@ -607,6 +611,11 @@ void daPy_lk_c::setTextureScrollResource(u32 btk, int r31) {
     m_maba_flg = 3; /* setMorfFrame(3) */
     m_morf_frame = 1;
     m_maba_timer = 0;                                      /* offMabaFlg() */
+    /* true60 (the 30 Hz visual-motion rule, d_a_player_maba_t60.h): the blink timer's draw (visual only) on the frame's tick30 step */
+    if (lkT60Maba::defer()) {
+        lkT60Maba::note();
+        return;
+    }
     m_morf_frame = (u8)gabi::ftoi(cM_rndF(30.0f) + 75.0f); /* setMabaTimer */
 }
 
@@ -973,6 +982,8 @@ void daPy_lk_c::setDamageCurseEmitter() {
 void daPy_lk_c::freeGrabItem() {
     u32 barrel = gabi::ea(mActorKeepGrab.mActor.get());
     if (barrel != 0) {
+        /* true60 (d_a_player_t60.h): a release on a later step of the frame keeps the frame-start placement */
+        lkT60_grabRelease(barrel, gabi::ea(&gabi::at<fopAc_ac_c>(barrel)->current.pos));
         fopAcM_cancelCarryNow(gabi::at<fopAc_ac_c>(barrel));
         gabi::at<fopAc_ac_c>(barrel)->shape_angle.z = 0; /* shape_angle.z */
         if (checkGrabBarrelSearch(0)) {
@@ -1002,23 +1013,45 @@ void daPy_lk_c::animeUpdate() {
                          .mpAnmTransform.v; /* getNowAnmPackUnder(UNDER_MOVE0_e) */
     u32 upperPack1 = reinterpret_cast<Player01AnmRatioPack *>(mAnmRatioUpper)[1].mpAnmTransform.v;
     u32 underPack1 = reinterpret_cast<Player01AnmRatioPack *>(mAnmRatioUnder)[1].mpAnmTransform.v;
-    Player01_updateFrameCtrl(&mFrameCtrlUnder[0]);
+    /* true60 (2026-11-16, new animations: play order as in the original): a frame control whose animation was set
+     * on an earlier step of this frame (not its tick30 step) is not played until the next frame (d_a_player_t60.h) */
+    if (!lkT60_anmSetPending(gabi::ea(&mFrameCtrlUnder[0]))) {
+        const f32 put = lkT60_rateHoldBegin(&mFrameCtrlUnder[0], 0); /* true60: the frame-start rate (d_a_player_t60.h) */
+        Player01_updateFrameCtrl(&mFrameCtrlUnder[0]);
+        lkT60_rateHoldEnd(&mFrameCtrlUnder[0], 0, put);
+    }
     fcpy_l(underPack0, gabi::ea(&mFrameCtrlUnder[0].mFrame)); /* setFrame (HD: frame at +0) */
     if (underPack1 != 0) {
-        Player01_updateFrameCtrl(&mFrameCtrlUnder[1]);
+        if (!lkT60_anmSetPending(gabi::ea(&mFrameCtrlUnder[1]))) {
+            const f32 put = lkT60_rateHoldBegin(&mFrameCtrlUnder[1], 1); /* true60: the frame-start rate (d_a_player_t60.h) */
+            Player01_updateFrameCtrl(&mFrameCtrlUnder[1]);
+            lkT60_rateHoldEnd(&mFrameCtrlUnder[1], 1, put);
+        }
         fcpy_l(underPack1, gabi::ea(&mFrameCtrlUnder[1].mFrame));
     }
     if (upperPack0 != 0 && upperPack0 != underPack0) {
-        Player01_updateFrameCtrl(&mFrameCtrlUpper[0]);
+        if (!lkT60_anmSetPending(gabi::ea(&mFrameCtrlUpper[0]))) {
+            const f32 put = lkT60_rateHoldBegin(&mFrameCtrlUpper[0], 2); /* true60: the frame-start rate (d_a_player_t60.h) */
+            Player01_updateFrameCtrl(&mFrameCtrlUpper[0]);
+            lkT60_rateHoldEnd(&mFrameCtrlUpper[0], 2, put);
+        }
         fcpy_l(upperPack0, gabi::ea(&mFrameCtrlUpper[0].mFrame));
     }
     if (upperPack1 != 0 && upperPack1 != underPack1) {
-        Player01_updateFrameCtrl(&mFrameCtrlUpper[1]);
+        if (!lkT60_anmSetPending(gabi::ea(&mFrameCtrlUpper[1]))) {
+            const f32 put = lkT60_rateHoldBegin(&mFrameCtrlUpper[1], 3); /* true60: the frame-start rate (d_a_player_t60.h) */
+            Player01_updateFrameCtrl(&mFrameCtrlUpper[1]);
+            lkT60_rateHoldEnd(&mFrameCtrlUpper[1], 3, put);
+        }
         fcpy_l(upperPack1, gabi::ea(&mFrameCtrlUpper[1].mFrame));
     }
     u32 upperPack2 = reinterpret_cast<Player01AnmRatioPack *>(mAnmRatioUpper)[2].mpAnmTransform.v;
     if (upperPack2 != 0) {
-        Player01_updateFrameCtrl(&mFrameCtrlUpper[2]);
+        if (!lkT60_anmSetPending(gabi::ea(&mFrameCtrlUpper[2]))) {
+            const f32 put = lkT60_rateHoldBegin(&mFrameCtrlUpper[2], 4); /* true60: the frame-start rate (d_a_player_t60.h) */
+            Player01_updateFrameCtrl(&mFrameCtrlUpper[2]);
+            lkT60_rateHoldEnd(&mFrameCtrlUpper[2], 4, put);
+        }
         fcpy_l(upperPack2, gabi::ea(&mFrameCtrlUpper[2].mFrame));
     }
     u32 morf =
@@ -1225,8 +1258,14 @@ void daPy_lk_c::initSeAnime() {
                                     (u32) * reinterpret_cast<be<u32> *>(_658C), dir, loop);
         fc = mpSeAnmFrameCtrl;
         if ((u8)Player01_frameCtrl(fc)->mAttribute == 2 /* J3DFrameCtrl::EMode_LOOP */) {
-            f32 position = gabi::fsubs_ppc((f32)Player01_frameCtrl(fc)->mFrame,
-                                           (f32)Player01_frameCtrl(fc)->mRate);
+            /* true60 (01, the animation-rate rule): the play position is the previous update's frame (frame - rate); at a
+             * step of dt the previous step's (frame - rate x dt): a full rate back would replay the keys of the step
+             * before when a procedure re-inits every update (procCutTurnMove) */
+            f32 position = t60::dt() == 1.0f
+                               ? gabi::fsubs_ppc((f32)Player01_frameCtrl(fc)->mFrame,
+                                                 (f32)Player01_frameCtrl(fc)->mRate)
+                               : gabi::fsubs_ppc((f32)Player01_frameCtrl(fc)->mFrame,
+                                                 (f32)Player01_frameCtrl(fc)->mRate * (f32)t60::dt());
             if (!(position > (f32)(s16)Player01_frameCtrl(fc)->mStart)) {
                 position = gabi::fsubs_ppc((f32)(s16)Player01_frameCtrl(fc)->mEnd, position);
             } else if (!(position < (f32)(s16)Player01_frameCtrl(fc)->mEnd)) {
@@ -1561,10 +1600,12 @@ BOOL daPy_lk_c::setActAnimeUpper(u32 bckIdx, int upperIdx, f32 rate, f32 start, 
         u32 attr = Player01_animation(bck)->getAttribute(); /* getAttribute() */
         Player01_setFrameCtrl(this, fc, attr, (s32)(s16)gabi::ftoi(start), end, rate, frame);
         Player01_animation(bck)->mFrame = frame; /* setFrame (HD: frame at +0) */
+        lkT60_markAnmSet(fc); /* true60: a new animation plays from the next frame (d_a_player_t60.h) */
     } else {
         u32 attr = Player01_animation(bck)->getAttribute();
         Player01_setFrameCtrl(this, fc, attr, (s32)(s16)gabi::ftoi(start), end, rate, start);
         Player01_animation(bck)->mFrame = start;
+        lkT60_markAnmSet(fc); /* true60: a new animation plays from the next frame (d_a_player_t60.h) */
     }
     if (!(i_morf < 0.0f)) {
         Player01_initOldFrameMorf((u32)m_old_fdata, i_morf, 2, 0x1D);
@@ -2320,7 +2361,10 @@ u16 daPy_lk_c::checkNormalFace() {
     }
     if (proc == player01::daPyProc_WAIT_e &&
         Player01_game()->play.mEvtCtrl.mMode == 0 /* !dComIfGp_event_runCheck() */) {
-        f64 rnd = Player01_random();
+        /* true60 (the per-step chance rule, WAITRND): the 1% face pick is a per-frame chance: a converted Link's
+         * first-step call notes it in the Maba queue (common outcome), the matching tick30 call takes the made value
+         * (d_a_player_maba_t60.h kKeyP / pick) */
+        f64 rnd = !lkT60Maba::conv() ? Player01_random() : lkT60Maba::pick();
         u16 idx = (u16) reinterpret_cast<daPy_anmHeap_c *>(m_tex_anm_heap)
                       ->mIdx; /* m_tex_anm_heap.mIdx */
         if (idx == 0x22D /* TMABAA */ || idx == 0x22E /* TMABAB */) {
@@ -2382,12 +2426,14 @@ BOOL daPy_lk_c::setSingleMoveAnime(int anm, f32 rate, f32 start, int end, f32 i_
         start16 = (s16)gabi::ftoi(start);
         Player01_setFrameCtrl(this, gabi::ea(&mFrameCtrlUnder[0]), attr, start16, endUnder, rate,
                               frame);
+        lkT60_markAnmSet(gabi::ea(&mFrameCtrlUnder[0])); /* true60: a new animation plays from the next frame */
         Player01_animation(*under_bck)->mFrame = frame;
     } else {
         u32 attr = Player01_animation((u32)*under_bck)->getAttribute();
         start16 = (s16)gabi::ftoi(start);
         Player01_setFrameCtrl(this, gabi::ea(&mFrameCtrlUnder[0]), attr, start16, endUnder, rate,
                               start);
+        lkT60_markAnmSet(gabi::ea(&mFrameCtrlUnder[0])); /* true60: a new animation plays from the next frame */
         Player01_animation(*under_bck)->mFrame = start;
     }
     u32 upper = *upper_bck;
@@ -2400,11 +2446,13 @@ BOOL daPy_lk_c::setSingleMoveAnime(int anm, f32 rate, f32 start, int end, f32 i_
                            ->getAttribute(); /* under_bck's attribute, as in the GameCube code */
             Player01_setFrameCtrl(this, gabi::ea(&mFrameCtrlUpper[0]), attr, start16, endUpper,
                                   rate, frame);
+            lkT60_markAnmSet(gabi::ea(&mFrameCtrlUpper[0])); /* true60: a new animation plays from the next frame */
             Player01_animation(*upper_bck)->mFrame = frame;
         } else {
             u32 attr = Player01_animation((u32)*under_bck)->getAttribute();
             Player01_setFrameCtrl(this, gabi::ea(&mFrameCtrlUpper[0]), attr, start16, endUpper,
                                   rate, start);
+            lkT60_markAnmSet(gabi::ea(&mFrameCtrlUpper[0])); /* true60: a new animation plays from the next frame */
             Player01_animation(*upper_bck)->mFrame = start;
         }
     } else {
@@ -2645,9 +2693,35 @@ void daPy_lk_c::setSwordModel(BOOL r28) {
     }
 }
 
+/* true60: setTextureAnime's glance chance is drawn now (dt 1: the original); a converted first-step call
+ * notes it in the deferred queue (the flush draws and applies it), later-step calls make none */
+static inline bool lkT60TexAnmGlanceNow(bool conv, bool first) {
+    if (!conv)
+        return true;
+    if (first)
+        lkT60Maba::note_as(lkT60Maba::kKeyG);
+    return false;
+}
+
 /* 023DD768 */
 void daPy_lk_c::setTextureAnime(u32 param_1 /* u16 */, int param_2) {
     u32 face = param_1;
+    /* true60 (WAITRND): a converted call's queue step comes first, before checkNormalFace's pick (A's
+     * order inside one call: the pick, then dVar9): a first-step call opens its group (kKeyC) so the pick it notes is
+     * part of it; the tick30 step's k-th call makes the k-th first-step call's noted draws
+     * (pmaba13 frame 45: positional flush), so its pick's made value is there for checkNormalFace below
+     * (d_a_player_maba_t60.h kKeyP). Nothing between here and the old place draws (texture pattern setup only). */
+    const bool lkConv = t60::steps() != 1 && t60::dt() != 1.0f;
+    const bool lkFirst = t60::first_step();
+    if (lkConv) {
+        if (lkFirst)
+            lkT60Maba::call_first();
+        else
+            lkT60Maba::call_tick30(gabi::ea(this));
+    }
+    /* true60 (km75 frame 539): a tick30-step call without a first-step counterpart is the original
+     * frame's call: its draws are made here, as at dt 1 (d_a_player_maba_t60.h unmatched_tick30; pick() likewise) */
+    const bool lkUnm = lkConv && !lkFirst && lkT60Maba::unmatched_tick30();
     if (face == 0) {
         face = checkNormalFace();
     }
@@ -2674,7 +2748,37 @@ void daPy_lk_c::setTextureAnime(u32 param_1 /* u16 */, int param_2) {
             Player01_setTextureAnimeResource(this, loadTextureAnimeResource(btp_idx, 0), p2);
         }
     }
-    f64 dVar9 = Player01_random();
+    /* true60 (the per-step chance rule, pmaba10 frame 75): the upfront draw dVar9 and the 2.5%
+     * eye-glance chance below are made once per call in the original. A converted Link's FIRST-step calls are the
+     * original frame's calls (procedure inits call this once, first-step AI-timer; the move procedures on every step): each notes its
+     * dVar9 draw, and its glance chance where it reaches it, in the deferred queue that Link's tick30 execute flushes
+     * in note order (d_a_player_maba_t60.h). Later-step calls draw nothing, except the eye-move pick's own value when
+     * the event starts on a later step; a first-step call that reaches the pick draws dVar9 at once (the pick needs
+     * it). dt 1 (N = 1, the fallback, an unconverted Link): the original. */
+    f64 dVar9 = 0.0;
+    if (!lkConv || lkUnm) {
+        dVar9 = Player01_random();
+    } else if (lkFirst) { /* (the group's kKeyC and the tick30 flush: at the top of the function) */
+        daPy_anmHeap_c *hs = reinterpret_cast<daPy_anmHeap_c *>(m_tex_scroll_heap);
+        if ((u16)hs->mIdx != btk_idx && bVar3 && (mModeFlg & 1) && (u8)m_maba_timer != 0 &&
+            Player01_game()->play.mEvtCtrl.mMode == 0 && mpAttnActorLockOn == nullptr &&
+            btk_idx == dRes_INDEX_LKANM_BTK_TMABA_e && (u8)m_morf_frame == 0) {
+            if ((u16)hs->mPriIdx == 0xFFFF && (u16)hs->mDemoIdx == 0xFFFF) {
+                /* true60 (rt77m frames 121 / 208; form (1)): the eye-move event is
+                 * noted in this call's group and made by the tick30 flush at Link's place in the process order (after
+                 * the unconverted processes before him); the first step holds the face (d_a_player_maba_t60.h kKeyV).
+                 * The event is this function's last block: nothing after it is skipped. */
+                lkT60Maba::note_event((u16)hs->mIdx, p2);
+                return;
+            }
+            /* (a priority / demo scroll animation holds the eye: the event only stores mIdx, which this frame's later
+             * calls read: drawn at once, as before) */
+            lkT60Maba::now(gabi::ea(this)); /* true60: the frame's earlier noted draws first (A's order) */
+            dVar9 = Player01_random(); /* the eye-move pick below uses it */
+        } else {
+            lkT60Maba::note_as(lkT60Maba::kKeyD);
+        }
+    }
     /* daPy_matAnm_c statics (HD): m_maba_flg 0x101CEF18, m_maba_timer 0x101CEF19 */
 
     h = reinterpret_cast<daPy_anmHeap_c *>(m_tex_scroll_heap); /* m_tex_scroll_heap */
@@ -2684,6 +2788,9 @@ void daPy_lk_c::setTextureAnime(u32 param_1 /* u16 */, int param_2) {
             btk_idx == dRes_INDEX_LKANM_BTK_TMABA_e) {
             if ((u8)m_morf_frame != 0) {
                 return;
+            }
+            if (lkConv && !lkFirst && !lkUnm) {
+                dVar9 = Player01_random(); /* true60: the event's own draw on a later step */
             }
             if (dVar9 < 0.44f) {
                 btk_idx = 0x1A7;
@@ -2725,6 +2832,7 @@ void daPy_lk_c::setTextureAnime(u32 param_1 /* u16 */, int param_2) {
     } else if (bVar3 && (mModeFlg & 1) && Player01_game()->play.mEvtCtrl.mMode == 0 &&
                (u8)m_morf_frame == 0 && mpAttnActorLockOn == nullptr && btk_idx == 0x1A7 &&
                (u16)h->mPriIdx == 0xFFFF && (u16)h->mDemoIdx == 0xFFFF &&
+               lkT60TexAnmGlanceNow(lkConv && !lkUnm, lkFirst) /* true60: first-step calls defer the chance */ &&
                Player01_random() < 0.025f) {
         u16 idx;
         if (dVar9 < 0.125f) {
@@ -2986,6 +3094,9 @@ BOOL daPy_lk_c::jointBeforeCB(int jnt_no, u32 param_2 /* J3DTransformInfo* */, u
 /* 023DFDD8 */
 BOOL daPy_lk_c::commonProcInit(int proc) {
     u32 self = gabi::ea(this);
+    lkT60Maba::proc_init(); /* true60: the first step's setTextureAnime calls from here on are init calls (positional flush) */
+    lkT60_procEntered(gabi::ea(&mCurProc)); /* true60 (rule 1, 2026-11-17): a first-step change holds the new body */
+    lkT60Bg::procEntered(gabi::ea(&mCurProc), lkT60_frameTag()); /* true60: entry stamp */
     Player01ProcInitEntry *procInit =
         &mProcInitTable
              .mEntries[proc]; /* mProcInitTable.mEntries[proc]: ProcFunc (8 bytes), mProcFlags */

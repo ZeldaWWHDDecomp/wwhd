@@ -1,0 +1,16 @@
+# true60 N-step spec (not a gate unit). (pair f182): procAtnActorMove 02419E70's stick
+# turn (setSpeedAndAngleAtnActor 02419CC8) once a frame, whole at dt 1 on the first step; the later steps do not turn
+# (d_a_player_main_04b.cpp lkT60_atnMoveTurn). Net current.angle.y of N steps = one step, exact. The compare is the
+# frame's net state: the per-step form also passes (cLib_addCalcAngleS' dt form is net-exact; the in-between direction is
+# read by posMove outside the function, the pair shows it).
+include d_a_player_main_04.txt
+t60conv 02419E70
+real 02419CC8
+t60cand 02419CC8
+# cLib_addCalcAngleS run for real in its dt form (as the atncos spec)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200F378
+t60cand 0200F378
+# stick over 0.05 (r3+0x6A08); mCurProc ATN_ACTOR_MOVE 9 (r3+0x65F0)
+field 02419E70 r3+0x6A08 f32 0.1 1
+field 02419E70 r3+0x65F0 i32 9

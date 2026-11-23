@@ -1,6 +1,7 @@
 /* Rat-operated trapdoor. GameCube structure corrected against WWHD.
  */
 #include "d/actor/d_a_obj_pfall.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 #include "gc_api/JSystem/JUTAssert.h"
 #include "gc_api/d/d_lib.h"
 #include "gc_api/f_op/f_op_actor_mng.h"
@@ -402,6 +403,9 @@ void daObj_Pfall_c::mode_event() {
 void daObj_Pfall_c::mode_proc_call() { (this->*mode_proc[(u32)mCurMode])(); }
 /* 023837E4 */
 BOOL daObj_Pfall_c::_execute() {
+    t60w::Guard<daObj_Pfall_c> t60g(this, t60npc::Logic<daObj_Pfall_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return 0;
     // HD: copy position bits without quieting signaling NaNs; retain store order.
     PfallPositionBits *bits = reinterpret_cast<PfallPositionBits *>(this);
     u32 z = bits->current.z, y = bits->current.y, x = bits->current.x;
@@ -444,6 +448,7 @@ BOOL daObj_Pfall_c::_execute() {
     }
     morph->play(nullptr, 0, 0);
     fopAcM_posMoveF(this, nullptr);
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     mode_proc_call();
     setAnm();

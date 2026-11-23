@@ -1,0 +1,12 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+# (2026-11-20, rt77e frame 339; d_a_player_maba_t60.h kKeyR): procFreeWait_init 024176A8. On a converted
+# first step the init notes its random part (the choice, mProcVar6, setSingleMoveAnime) for Link's tick30 flush and keeps
+# the pre-init animation and mProcVar6. The harness runs no Link flush: the N-step run's first step notes only, its later
+# (tick30) step is a later-step entry and runs the original init (choice + animation at once). The N-step end state then
+# equals the one step's (one choice draw, one animation set); the RNG count and order in game are proven by the rt pair.
+include d_a_player_main_04.txt
+t60conv 024176A8
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200ECD4 0200EF78 0200F378 0200F428 0200F564 0200F5C8 0200F8D0
+t60cand 0200ECD4 0200EF78 0200F378 0200F428 0200F564 0200F5C8 0200F8D0

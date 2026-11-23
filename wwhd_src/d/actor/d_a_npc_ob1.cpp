@@ -8,6 +8,7 @@
  * NPC structure (jnt control, event cuts, talk) follows d_a_npc_km1.cpp.
  */
 #include "d/actor/d_a_npc_ob1.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 enum Ob1State : s8 {
     Ob1Wait = 1,
@@ -1428,6 +1429,9 @@ BOOL daNpc_Ob1_c::_draw() {
 
 /* 022A7BB4 */
 BOOL daNpc_Ob1_c::_execute() {
+    t60w::Guard<daNpc_Ob1_c> t60g(this, t60npc::Logic<daNpc_Ob1_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     if (mbInit == 0) {
         // HD: preserve the GHS word-copy order z, x, y without quieting NaNs.
         mHomeAngle.y = current.angle.y;
@@ -1474,6 +1478,7 @@ BOOL daNpc_Ob1_c::_execute() {
         }
     }
     eventOrder();
+    t60g.model = true; /* true60: the frame reached its model step */
     setMtx(0);
     if (mbDemo == 0) {
         setCollision(80.0f, 160.0f);

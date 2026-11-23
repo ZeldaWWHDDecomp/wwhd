@@ -1,0 +1,20 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_movebox.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule + addendum, cross-actor coupling;
+# d_a_obj_movebox_t60.h): the push box's Execute 02378638. The tick30 step runs the original Execute whole at dt 1 from
+# the frame start; the earlier steps change no state (the picture writes the model's base matrix only, none here: no
+# previous frame) and leave the background matrix (mMtx, the output) at the frame's value: net effect = the one step's,
+# byte exact. PPCallBack 023775DC / RideCallBack 02377308 (Link calls them on each of his steps): only the tick30 step's
+# call counts. Negative control (T60C_NEGCTRL: Execute and the callbacks on every step at dt) must fail.
+t60conv 02378638 023775DC 02377308
+# the frame's logic runs its candidate code under Execute (the modes behind l_modeTable: wait / walk / afloat with the
+# push count, the walk timer, the afloat spring and bob draw; proc_vertical; set_mtx; the land / break effects), so the
+# timers, the movers and the decisions are in the compared memory
+real 02379308 02379834 0237A0A8 02376914 02377764 02378D18 02379D00 02377B84 0237845C 023792E8 02378484 02378544 02378594 02378150 023781C8 023782D8
+t60cand 02379308 02379834 0237A0A8 02376914 02377764 02378D18 02379D00 02377B84 0237845C 023792E8 02378484 02378544 02378594 02378150 023781C8 023782D8
+# t60once 02379308 02379834 0237A0A8 02376914 02377764 02378D18 02379D00 02377B84 0237845C 023792E8 02378484 02378544 02378594 02378150 023781C8 023782D8: run only inside Execute's tick30 whole run (whole-frame form); never on their own N steps
+# effect calls (sound / particle starts, actor / item creation, the landing shock): as many calls over the N steps as in
+# the one step
+t60calls 025E19CC 025E1A40 025A847C 025D5834 025D8120 025CB374
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 02008438 02008974 02008DAC 02008E0C 0200E240 02376314 02376518 02376914 023772EC 02377B84 02378150 023781C8 023782D8 0237845C 02378484 02378544 02378594 024EECAC 024EEEB8 024EF7C0 024EFBC0 025162A4 02516680 02520540 025D57E0 025D57E4 025F1C28 028E8E64 028E8F64 C000A848

@@ -8,6 +8,7 @@
  */
 #include "gc_api/gc_api.h"
 #include "d/actor/d_a_spc_item01.h"
+#include "d/actor/d_a_spc_item01_t60.h" /* true60 (t60conv): step helpers */
 
 static dCcD_SrcCyl l_cyl_src;
 
@@ -95,8 +96,8 @@ BOOL daSpcItem01_c::CreateInit() {
 BOOL daSpcItem01_c::_execute() {
     eyePos.copy(current.pos);
     attention_info.position.copy(current.pos);
-    m_timer = m_timer + 1;
-    set_effect();
+    if (t60c::end()) { m_timer = m_timer + 1; } /* true60 (t60conv): counted on the tick30 step */
+    if (t60c::end()) set_effect(); /* true60 (t60conv): a per-frame start, once per 30 Hz frame */
     scale_anim();
     anim_play();
     move();
@@ -148,7 +149,7 @@ void daSpcItem01_c::move() {
         break;
     default:
         if (mAcch.ChkGroundLanding()) {
-            mBounceCount = mBounceCount + 1;
+            mBounceCount = mBounceCount + 1; /* true60 (hand): a landing count, per event: ChkGroundLanding is set only on the step that lands (dBgS_Acch GroundCheck), so it counts on that step */
             f32 newGravity = mLastSpeedY * 0.62f;
             if (newGravity > gravity - 0.5f) {
                 speedF = 0.0f;
@@ -169,9 +170,9 @@ void daSpcItem01_c::move() {
 /* 0248A08C */
 void daSpcItem01_c::rotate_item() {
     if (isRupee(m_itemNo)) {
-        if (mBounceCount == 0) {
+        if (t60c::first() && (mBounceCount == 0)) { /* true60 (t60conv): a decision on the first-step timer, on the first step */
             mTargetAngleX = current.angle.x + 0x2000;
-        } else {
+        } else if (t60c::first()) { /* true60 (t60conv): the other branch of the timer decision, on the first step */
             mTargetAngleX = 0;
         }
         cLib_chaseAngleS(&current.angle.x, mTargetAngleX, 0x2000);

@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_npc_cb1_execute.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 using namespace cb1_execute;
 static cb1_execute::ActionPtmf cbExec_waitNpcAction;
@@ -1343,6 +1344,9 @@ static inline void cb1_execDamage(daNpc_Cb1_c *i_this, u32 pmf, bool player) {
 
 /* 0222091C */
 BOOL daNpc_Cb1_c::execute() {
+    t60w::Guard<daNpc_Cb1_c> t60g(this, t60npc::Logic<daNpc_Cb1_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
 
     cb1_execute::daNpc_Cb1_HIO_c &hio = cb1_HIO();
     actor_status = actor_status & ~0x20u;     /* fopAcStts_SHOWMAP_e */
@@ -1469,6 +1473,7 @@ BOOL daNpc_Cb1_c::execute() {
         }
     }
     eventOrder();
+    t60g.model = true; /* true60: the frame reached its model step */
     setBaseMtx(); /* setBaseMtx */
     /* HD: attention_info.position and eyePos are not set here */
     return TRUE;

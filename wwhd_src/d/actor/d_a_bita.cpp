@@ -8,6 +8,7 @@
  * mode_normal and mode_dead are inlined into daBita_Execute.
  */
 #include "d/actor/d_a_bita.h"
+#include "d/actor/d_a_bita_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule), the draw's light state */
 const gc_tu_data gc_tu = {.safeString = 0x100093AC, .headerStatics = {0x10462300, 0x10191414, 0x1046230C}};
 // HD: per-unit vtables for the native actor and collision constructors.
 enum { BITA_VTBL = 0x100093D4, CYL_AAB_VTBL = 0x100093C4 };
@@ -37,7 +38,8 @@ static void *b_a_sub(void *search, void *user) {
 
 /* 02098094 */
 static BOOL daBita_Draw(bita_class *i_this) {
-    settingTevStruct(dKy_getEnvlight(), TEV_TYPE_BG0, &i_this->current.pos, &i_this->tevStr);
+    if (bita_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+        settingTevStruct(dKy_getEnvlight(), TEV_TYPE_BG0, &i_this->current.pos, &i_this->tevStr);
     if (i_this->mMode == bita_class::MODE_DEAD && i_this->mSub == 1) {
         setLightTevColorType(dKy_getEnvlight(), i_this->mpModelEf, &i_this->tevStr);
         J3DModel *ef = i_this->mpModelEf;
@@ -124,6 +126,10 @@ static inline void mode_dead(bita_class *i_this) {
 
 /* 020982D8 */
 static BOOL daBita_Execute(bita_class *i_this) {
+    /* true60: the whole frame on the tick30 step (the whole-frame form rule; end at the return) */
+    t60w::Guard<bita_class> t60g(i_this, bita_t60::ops());
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     if (btd == nullptr)
         btd = (BitaBossHD *)fpcM_Search(gabi::guest_fn((const void *)b_a_sub), i_this);
 
@@ -139,6 +145,7 @@ static BOOL daBita_Execute(bita_class *i_this) {
         break;
     }
 
+    t60g.model = true; /* true60: the frame reached its model step */
     base_mtx_set(i_this);
     PSMTXCopy(calc_mtx(), &i_this->mMtx);
     i_this->mpBgW->Move();

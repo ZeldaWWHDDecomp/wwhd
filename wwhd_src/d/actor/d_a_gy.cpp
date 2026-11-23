@@ -7,6 +7,7 @@
  * from the WWHD code (cking.rpx) and verified against it. GameCube function names are kept.
  */
 #include "d/actor/d_a_gy.h"
+#include "d/actor/d_a_gy_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule addendum) */
 #include "gc_api/d/d_com_inf_game.h"
 #include "gc_api/d/d_kankyo.h"
 #include "gc_api/d/d_lib.h"
@@ -1425,6 +1426,10 @@ f32 daGy_c::getWaterY() {
 
 /* 021689C8 */
 BOOL daGy_c::_execute() {
+    t60w::Guard<daGy_c> t60g(this, gy_t60::ops()); /* true60: the whole frame on the tick30 step (end at every return) */
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
+    t60g.model = true;
 
     mpCtrl = nullptr;
     gabi::Local<be<u32>> parent;
@@ -1714,7 +1719,11 @@ cPhs_State daGy_c::_create() {
                                    0x3FA0)) {
             return cPhs_ERROR_e;
         }
-        createInit();
+        {
+            const f32 t60PrevDt = gy_t60::createBegin(); /* true60: create's first pose and move, the original at dt 1 */
+            createInit();
+            gy_t60::createEnd(t60PrevDt);
+        }
     }
     return phase;
 }

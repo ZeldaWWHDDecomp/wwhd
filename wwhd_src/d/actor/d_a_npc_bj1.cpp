@@ -8,6 +8,7 @@
  * HD field names describe their verified use.
  */
 #include "d/actor/d_a_npc_bj1.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 const gc_tu_data gc_tu = {.safeString = 0x10016B84};
 
@@ -3274,6 +3275,9 @@ BOOL daNpc_Bj1_c::_draw() {
 }
 /* 021F7944 */
 BOOL daNpc_Bj1_c::_execute() {
+    t60w::Guard<daNpc_Bj1_c> t60g(this, t60npc::Logic<daNpc_Bj1_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return 1;
     if ((u8)mInitialTransformSaved == 0) {
         u16 ax = (u16)(s16)current.angle.x, ay = (u16)(s16)current.angle.y;
         mInitialAngleX = (s16)(u16)(ax);
@@ -3361,6 +3365,7 @@ BOOL daNpc_Bj1_c::_execute() {
         s32 reverb = dComIfGp_getReverb(room);
         Bj1_startSound(0x50BF, &current.pos, soundValue, reverb);
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     setMtx(0);
     if ((u8)mDemoActive == 0) {
         setCollision_SP_();

@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_vtil.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule + addendum, d/t60_objw.h): Vtil: hits (co / bg), mode procs, attention, collider, light.
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 023B6B70
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 023B602C 023B6268 023B6290 023B6508 023B654C 023B6604 023B663C 023B668C 023B6770 023B6868 023B6878 023B68DC 023B695C 023B69BC 023B69F4
+t60cand 023B602C 023B6268 023B6290 023B6508 023B654C 023B6604 023B663C 023B668C 023B6770 023B6868 023B6878 023B68DC 023B695C 023B69BC 023B69F4
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 02008E0C 0200E240 0201ADE0 02311CD8 023129C4 02312E54 023B602C 023B6268 023B6290 023B6508 023B654C 023B6604 023B663C 023B668C 023B6770 023B6868 023B6878 023B68DC 023B695C 023B69BC 023B69F4 024EECAC 024F43DC 025052BC 02515E50 02515F14 02516094 025160DC 0251621C 025162A4 025165A4 025200D4 02520540 0255F458 025CB374 025D57E0 025D57E4 025DAE64 025E19CC 025E1A40 025E55A0 025F1B48 0273AA24 027F4D5C 028E8DD0 028E8E64 028E93CC 028F4384

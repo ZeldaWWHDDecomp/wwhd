@@ -1,5 +1,6 @@
 // Cannon minigame actor.
 #include "d/actor/d_a_canon.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 #include "bindings.h"
 static canon::ArchiveName M_arcname;
 static canon::ArchiveName M_textureArcname;
@@ -463,12 +464,16 @@ BOOL daCanon_c::_delete() {
 }
 /* 02109AF8 */
 BOOL daCanon_c::_execute() {
+    t60w::Guard<daCanon_c> t60g(this, t60objw::Logic<daCanon_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return 0;
     if ((u8)this->mEffectActive) {
         canon_clearDiceWeather(0, 0, 0, 0.f);
         canon_removePointLight(&l_pointLight);
         canon_removePointWind(&l_pointWind);
         this->mEffectActive = 0;
     }
+    t60g.model = true; /* true60: the frame reached its model step (the matrix comes before the process) */
     this->set_mtx();
     // HD: compact GHS member descriptor preserves virtual and adjusted-this dispatch.
     (this->*mProcess)();

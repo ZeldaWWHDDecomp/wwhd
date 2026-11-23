@@ -2,6 +2,7 @@
 #include "bindings.h"
 #include "d/hd_input_ctrl.h"
 #include "port_hooks.h"
+#include "true60.h"
 static void* sControllerMgr;
 static hdInputManager* sInputManager;
 static hdInputDisposer* sInputDisposer;
@@ -158,8 +159,13 @@ u32 hdInputManager::isTvMode() {
 }
 
 // per-frame update
+// true60 (per-step input, true 60 fps input): also after a later step's read of the GamePad (true60.h t60_in_later; at N = 1
+// never): the orientation (the gyro) follows every step; the pointer's recalibration count and the cursor (its inertia)
+// count 30 Hz frames and stay on the frame's first read. The controller routing (disconnects, attachments) repeats
+// unchanged.
 /* 02617AF4 */
 void hdInputManager::calc() {
+    const bool later = t60_in_later();
     hdInputPlatformUpdate(1u);
     hdInputPlatformUpdate(2u);
     hdInputPlatformUpdate(3u);
@@ -172,7 +178,7 @@ void hdInputManager::calc() {
             if (c && (s32)((hdDrcController*)c)->mChannels[0].mConnectedCount > 0) {
                 const u32 b = (u8)((hdDrcController*)c)->mChannels[0].mStatus;
                 if (b == 0x1F) {
-                    if (hdInputControllerByOrder(mgr, INPUT_CONTROLLER_DRC, 0u) && !this->mPointer.mTouchActive) {
+                    if (!later && hdInputControllerByOrder(mgr, INPUT_CONTROLLER_DRC, 0u) && !this->mPointer.mTouchActive) {
                         u32 n = this->mRecalibrationTimer;
                         if (n > 15) {
                             this->mRecalibrationTimer = 0;
@@ -206,6 +212,7 @@ void hdInputManager::calc() {
         }
     }
     hdInputUpdateOrientation(&this->mOrientation);
+    if (later) return;
     if (this->isTvMode()) return;
     hdInputPosition pos;
     const f32 z = sPointerZero;

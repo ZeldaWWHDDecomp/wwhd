@@ -8,6 +8,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_ykgr.h"
+#include "d/actor/d_a_ykgr_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 const gc_tu_data gc_tu = { .safeString = 0x10043040 };
 static daYkgr_HIO_c l_HIO;
 static dPa_YkgrPcallBack YkgrCB;
@@ -147,6 +148,10 @@ static BOOL daYkgrDelete(void* v_this) {
 // HD: daYkgrExecute (_execute inlined)
 static BOOL daYkgrExecute(void* v_this) {
     daYkgr_c* i_this = (daYkgr_c*)v_this;
+    /* true60: the whole frame on the tick30 step (d_a_ykgr_t60.h) */
+    t60w::Guard<daYkgr_c> t60g(i_this, ykgr_t60::ops());
+    if (t60g.skip) /* a step before the tick30 step: nothing changes */
+        return true;
     cLib_addCalc2(&i_this->mAimRate, m_aim_rate, 0.25f, 0.05f);
     cLib_addCalc2(&m_aim_rate, l_HIO.mAimRateTarget, 0.25f, 0.05f);
     f32 rate = i_this->getPosRate();
@@ -175,6 +180,7 @@ static BOOL daYkgrExecute(void* v_this) {
             m_alpha = 0xFF;
         }
     }
+    t60g.model = true; /* true60: the frame reached its end */
     return true;
 }
 

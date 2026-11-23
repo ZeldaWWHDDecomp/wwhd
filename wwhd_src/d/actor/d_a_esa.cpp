@@ -9,6 +9,7 @@
 #include "d/actor/d_a_esa.h"
 #include "gc_api/f_op/f_op_actor_mng.h"
 #include "gc_api/f_pc/f_pc.h"
+#include "d/actor/d_a_esa_t60.h" /* true60 (t60conv): step helpers */
 
 #define ESA_VTBL 0x1000E604        /* esa_class vtable (HD virtual destructor) */
 #define SAFESTRING_VTBL 0x1000E54C /* this TU's sead::SafeString vtable */
@@ -64,7 +65,7 @@ static void esaGroundCheckDestruct(dBgS_GndChk* c) {
  * stored in mGroundHeight (when the sea check does not apply); state 3 for water; a resting
  * bait is lifted 3 units above the ground. */
 /* inlined into daEsa_Execute */
-static inline void bg_check(esa_class* i_this) {
+static inline void bg_check(esa_class* i_this, const cXyz* frameStart) {
     dBgS_GndChk gndChk;
     dBgS_GndChk_ct(&gndChk, l_gnd_vt, false);
     {
@@ -114,19 +115,25 @@ static inline void bg_check(esa_class* i_this) {
     cXyz spD4;
     cXyz sp50;
     cXyz spEC;
-    cXyz_mi(&i_this->current.pos, &sp5C, &i_this->old.pos);
+    /* true60: the wall check is the original's per-frame decision: on the
+     * tick30 step from the frame-start position (latched on the first step) over the whole frame's move; the earlier
+     * steps neither check nor clear fopAcStts_UNK4000 (the bit stays as the frame began). dt 1: old.pos, every step. */
+    const bool wallStep = !t60c::on() || t60c::end();
+    const cXyz* from = t60c::on() ? frameStart : &i_this->old.pos;
+    cXyz_mi(&i_this->current.pos, &sp5C, from);
     cXyz_ml(&sp5C, &spE0, 1.5f);
-    cXyz_pl(&i_this->old.pos, &spD4, &spE0);
+    cXyz_pl(from, &spD4, &spE0);
     sp50.copy(spD4);
-    sp50.y = i_this->old.pos.y;
-    cXyz_mi(&i_this->old.pos, &sp5C, &sp50);
+    sp50.y = from->y;
+    cXyz_mi(from, &sp5C, &sp50);
     spEC.copy(sp5C);
-    if (std_sqrtf(PSVECSquareMag(&spEC)) > 1.0f) {
-        dBgS_LinChk_Set(&linChk, &i_this->old.pos, &sp50, i_this);
+    if (!wallStep) {
+    } else if (std_sqrtf(PSVECSquareMag(&spEC)) > 1.0f) {
+        dBgS_LinChk_Set(&linChk, const_cast<cXyz*>(from), &sp50, i_this);
         if (cBgS_LineCross(dComIfG_Bgsp(), &linChk)) {
             i_this->current.angle.y -= 0x8000;
-            i_this->current.pos.x = i_this->old.pos.x;
-            i_this->current.pos.z = i_this->old.pos.z;
+            i_this->current.pos.x = from->x;
+            i_this->current.pos.z = from->z;
             i_this->speedF = i_this->speedF * 0.5f;
             cXyz sp6C;
             cXyz sp60;
@@ -178,14 +185,16 @@ static inline void esa_setRipple(esa_class* i_this) {
 // HD: esa_1_move and bg_check inlined
 /* 021300C4 */
 static BOOL daEsa_Execute(esa_class* i_this) {
+    cXyz frameStart; /* true60: the frame-start position (bg_check's wall check), held over the frame's steps */
+    esa60_frameStart(i_this, &frameStart);
     for (int i = 0; i < 2; i++) {
         if (i_this->mTimer[i] != 0) {
-            i_this->mTimer[i] -= 1;
+            if (t60c::first()) { i_this->mTimer[i] -= 1; } /* true60 (t60conv): counted on the frame's first step */
         }
     }
 
     /* esa_1_move */
-    u32 act = (u32)(s32)i_this->mActionState;
+    u32 act = esa60_act(i_this, (s32)i_this->mActionState); /* true60 (hand): the frame's state dispatched on every step */
     if (act < 1 || act == 1) {
         if (act < 1) {
             i_this->current.angle.y += (s16)gabi::ftoi(cM_rndFX(4000.0f));
@@ -200,8 +209,10 @@ static BOOL daEsa_Execute(esa_class* i_this) {
             i_this->mActionState = 1;
         }
         /* case 1 */
+        if (esa60_stopped(i_this)) /* true60 (hand): stopped on an earlier step of this frame */
+            return esa_setMtx(i_this);
         s8 st = i_this->mState;
-        if (st != 0) {
+        if (st != 0 && t60c::first()) { /* true60 (hand): the landing reaction (water start, ground bounce, its draws) is frame logic on the first step, from the previous step's ground state (= the frame start's, as in the original) */
             if (st >= 2) { /* HD: also water (state 3) */
                 i_this->mTimer[0] = (s16)gabi::ftoi(cM_rndF(50.0f) + 200.0f);
                 bool noEmitter = i_this->mRippleCb.getEmitter() == nullptr;
@@ -229,16 +240,17 @@ static BOOL daEsa_Execute(esa_class* i_this) {
                 if (i_this->speedF < 0.1f) {
                     i_this->mActionState = 4; /* HD: GameCube 2 */
                     i_this->mTimer[0] = (s16)gabi::ftoi(cM_rndF(50.0f) + 200.0f);
+                    esa60_stop(i_this); /* true60 (hand): the frame ends here for the later steps too */
                     return esa_setMtx(i_this);
                 }
             }
         }
         f32 sy = i_this->speed.y;
-        i_this->current.pos.x = i_this->current.pos.x + i_this->speed.x;
-        i_this->current.pos.y = i_this->current.pos.y + sy;
-        i_this->current.pos.z = i_this->current.pos.z + i_this->speed.z;
-        i_this->speed.y = sy - 3.0f;
-        bg_check(i_this);
+        i_this->current.pos.x = i_this->current.pos.x + t60c::step(i_this->speed.x); /* true60 (hand): v x dt */
+        i_this->current.pos.y = i_this->current.pos.y + esa60_fall(sy, 3.0f); /* true60 (hand): exact arc */
+        i_this->current.pos.z = i_this->current.pos.z + t60c::step(i_this->speed.z); /* true60 (hand): v x dt */
+        i_this->speed.y = sy - t60c::step(3.0f); /* true60 (hand): gravity x dt */
+        bg_check(i_this, &frameStart);
     } else if (act == 3) {
         /* HD: no mRippleCb.remove(); bobs on the water or at the water height */
         if (esaEventStartCheck(dComIfGp_getPEvtManager(), "SO_ESA_XY")) {
@@ -250,10 +262,10 @@ static BOOL daEsa_Execute(esa_class* i_this) {
         } else {
             y = i_this->mGroundHeight;
         }
-        s16 bob = (s16)(i_this->mBobAngle + 3000);
+        s16 bob = (s16)(i_this->mBobAngle + t60c::share(3000)); /* true60 (hand): the step's share of 3000 */
         i_this->mBobAngle = bob;
         i_this->current.pos.y = y + cM_ssin(bob);
-        if (i_this->mTimer[0] == 0) {
+        if (t60c::first() && (i_this->mTimer[0] == 0)) { /* true60 (t60conv): a decision on the first-step timer, on the first step */
             i_this->mActionState = 4;
         }
         if (i_this->mTaken == 0x23) { /* HD */

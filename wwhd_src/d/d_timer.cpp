@@ -1,6 +1,7 @@
 /** Minigame countdown. HD uses frame counters and native HUD visibility rather than J2D animation.
  * All entry signatures and clobberable call order are preserved. Private game-derived source. */
 #include "d/d_timer.h"
+#include "d/d_timer_t60.h"
 
 static dTimerShowFlags l_showFlags;
 static dTimerIconType l_iconType;
@@ -326,15 +327,23 @@ s32 dTimer_Create(dTimer_c* i_this) { return i_this->_create(); }
 
 /* 025C60F4 */
 u32 dTimer_createTimer(u32 mode, u32 seconds, u32 bits, u32 icon, f32 x, f32 y, f32 rx, f32 ry) {
-    if (dTimer_getPlay()->mTimerInfo.mTimerMode != -1) return u32(-1);
-    return dTimer_createAppend(fpcNm_TIMER_e, mode & 0xFF, seconds, bits, icon, 0, x, y, rx, ry);
+    /* the frame's request, made on an earlier step (d_timer_t60.h) */
+    T60TMR_ARGS(mode, seconds, bits, icon, T60TMR_F(x), T60TMR_F(y), T60TMR_F(rx), T60TMR_F(ry));
+    u32 t60Repeat;
+    if (T60TMR_REPEAT(kCreate, &t60Repeat)) return t60Repeat;
+    if (dTimer_getPlay()->mTimerInfo.mTimerMode != -1) return T60TMR_MADE(kCreate, u32(-1));
+    return T60TMR_MADE(kCreate, dTimer_createAppend(fpcNm_TIMER_e, mode & 0xFF, seconds, bits, icon, 0, x, y, rx, ry));
 }
 
 /* 025C61E4 */
 u32 dTimer_createStockTimer() {
-    if (dTimer_getPlay()->mTimerInfo.mTimerMode == -1) return u32(-1);
+    /* the frame's request, made on an earlier step (d_timer_t60.h) */
+    T60TMR_ARGS(0);
+    u32 t60Repeat;
+    if (T60TMR_REPEAT(kStock, &t60Repeat)) return t60Repeat;
+    if (dTimer_getPlay()->mTimerInfo.mTimerMode == -1) return T60TMR_MADE(kStock, u32(-1));
     f32 x = l_stockTimerX, rx = l_stockRupeeX, ry = l_stockRupeeY, y = l_stockTimerY;
-    return dTimer_createAppend(fpcNm_TIMER_e, dTimer_c::STOCK, 0, 3, 0, 0, x, y, rx, ry);
+    return T60TMR_MADE(kStock, dTimer_createAppend(fpcNm_TIMER_e, dTimer_c::STOCK, 0, 3, 0, 0, x, y, rx, ry));
 }
 
 /* 025C6250 */

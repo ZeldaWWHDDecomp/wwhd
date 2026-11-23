@@ -1,6 +1,7 @@
 /** ChuChu collision, Deku Tree demo and stone actions, using tww names and the HD layout.
  * Verified against the original WWHD instructions. */
 #include "d/actor/d_a_cc_act.h"
+#include "d/actor/d_a_cc_t60.h"
 #include "gc_api/tu.h"
 const gc_tu_data gc_tu = {.safeString = 0x1000C548};
 // HD: each inlined demo has its own checked cut-name table.
@@ -62,7 +63,20 @@ static BOOL body_atari_check(cc_class* i_this) {
     fopAc_ac_c* a_this = &i_this->actor;
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
 
-    i_this->mStts.Move();
+    /* true60: one hit read per 30 Hz frame (the original reads one Move per frame). The first step
+     * reads the tick30 Move (mixed pairs with unconverted attackers are checked there only) with the attacker-id shift.
+     * A converted attacker (Link converted) meets the ChuChu on every step's Move, and each Move's result is cleared by
+     * the next one: a later step reads its predecessor's Move when it holds a hit and none was read this frame
+     * (cckP2_4 frame 406: Link's sword capsules overlapped the ChuChu after steps 0-2 only, the first-step-only read
+     * lost the kill A makes at 407). The attacker-id shift stays once per frame (first step). */
+    if (!bk_t60_first()) {
+        if (!i_this->mCyl.ChkTgHit() || bk_t60_pending(&i_this->mCyl))
+            return FALSE;
+    } else {
+        i_this->mStts.Move();
+    }
+    if (t60::dt() != 1.0f && i_this->mCyl.ChkTgHit()) /* (dt = 1: no extra call, the original's call order) */
+        bk_t60_mark_set(&i_this->mCyl);
 
     if (i_this->mCyl.ChkTgHit()) {
         auto* pcVar6 = static_cast<dCcD_GObjInf*>(i_this->mCyl.GetTgHitObj());
@@ -247,6 +261,8 @@ static BOOL body_atari_check(cc_class* i_this) {
 
         case AT_TYPE_LIGHT_ARROW:
             i_this->mEnemyIce.mLightShrinkTimer = 1;
+            /* true60: set after this execute's enemy_ice call: its phase starts next frame */
+            bk_t60_mark_set(&i_this->mEnemyIce.mLightShrinkTimer);
             i_this->mEnemyIce.mParticleScale = 0.5f;
             i_this->mEnemyIce.mYOffset = 80.0f;
             fopAcM_seStart(a_this, JA_SE_CM_CC_DIE_SWING, 0);
@@ -263,6 +279,8 @@ static BOOL body_atari_check(cc_class* i_this) {
                 fopAcM_seStart(a_this, JA_SE_LK_MS_WEP_HIT, 0x36);
             } else {
                 i_this->mEnemyIce.mFreezeDuration = REG_S(8, 2) + 200;
+                /* true60: set after this execute's enemy_ice call: the freeze starts next frame */
+                bk_t60_mark_set(&i_this->mEnemyIce.mFreezeDuration);
                 if (REG_S(8, 2) != 0) {
                     /* HD: after the store GHS treats the actor as non-null */
                     a_this->health = 100;
@@ -451,6 +469,7 @@ static void action_noboru(cc_class* i_this) {
         a_this->attention_info.flags = 0;
         anm_init(i_this, dRes_INDEX_CC_BCK_DEKU_START_e, 0.0f, 0, 0.0f, -1);
         i_this->mMode = i_this->mMode + 1;
+        cc_t60_ai_ran(i_this); /* true60: mode 0x3D's body runs in this call (fall-through): not held */
         [[fallthrough]];
 
     case 0x3D:
@@ -468,6 +487,7 @@ static void action_noboru(cc_class* i_this) {
         i_this->mVoiceFrame = cM_rndF(43.0f);
         anm_init(i_this, dRes_INDEX_CC_BCK_TACHI_WALK_e, 1.0f, 2, 1.0f, -1);
         i_this->mMode = i_this->mMode + 1;
+        cc_t60_ai_ran(i_this); /* true60: mode 0x3F's body runs in this call (fall-through): not held */
         [[fallthrough]];
 
     case 0x3F:
@@ -481,6 +501,7 @@ static void action_noboru(cc_class* i_this) {
 
         anm_init(i_this, dRes_INDEX_CC_BCK_ATACK01_e, 0.0f, 0, 1.0f, -1);
         i_this->mMode = i_this->mMode + 1;
+        cc_t60_ai_ran(i_this); /* true60: mode 0x40's body runs in this call (fall-through): not held */
         [[fallthrough]];
 
     case 0x40:
@@ -572,6 +593,7 @@ static void action_noboru(cc_class* i_this) {
         a_this->speed.z = 0.0f;
         a_this->speedF = 0.0f;
         i_this->mMode = i_this->mMode + 1;
+        cc_t60_ai_ran(i_this); /* true60: mode 0x45's body runs in this call (fall-through): not held */
         [[fallthrough]];
 
     case 0x45:
@@ -599,6 +621,7 @@ static void action_noboru(cc_class* i_this) {
         i_this->mDekuState = 4;
         i_this->mCenterRotZ = -0x4000;
         i_this->mMode = i_this->mMode + 1;
+        cc_t60_ai_ran(i_this); /* true60: mode 0x46's body runs in this call (fall-through): not held */
         [[fallthrough]];
 
     case 0x46:
@@ -609,7 +632,8 @@ static void action_noboru(cc_class* i_this) {
             i_this->mMode = 0x3E;
         }
 
-        if (i_this->mTimers[0] == 30 && i_this->mRetDemoStep == 1) {
+        /* true60 (the first-step AI-timer rule): a timer `== v` one-shot on the first step (where the timer counts) */
+        if (i_this->mTimers[0] == 30 && i_this->mRetDemoStep == 1 && bk_t60_first()) {
             i_this->mRetDemoStep = 2;
             i_this->mEventIdx = dComIfGp_evmng_getEventIdx("CyuCyu_RET", 0xFF);
             i_this->mScale = 1.0f;
@@ -618,14 +642,16 @@ static void action_noboru(cc_class* i_this) {
         break;
 
     case 0x47:
-        deku_ret_demo(i_this);
+        if (bk_t60_end()) /* true60 (the event-step rule): the event steps once per 30 Hz frame */
+            deku_ret_demo(i_this);
         if (demoFlags().DEMO_RET_START_FLAG >= 2 && i_this->mAnmResIdx == dRes_INDEX_CC_BCK_START_e &&
             i_this->mpMorf->isStop()) {
             anm_init(i_this, dRes_INDEX_CC_BCK_TACHI_WALK_e, 1.0f, 2, 1.0f, -1);
         }
     }
 
-    if (i_this->mComeDemoStep != 0) {
+    /* true60 (the event-step rule): the event steps with the (unconverted) event manager, once per 30 Hz frame */
+    if (i_this->mComeDemoStep != 0 && bk_t60_end()) {
         deku_come_demo(i_this);
     }
 }
@@ -739,21 +765,29 @@ static void action_up_check(cc_class* i_this) {
             i_this->mTimers[4] = 600;
         }
 
-        if (i_this->mTimers[4] == 1) {
+        /* true60 (the first-step AI-timer rule): timer `== v` one-shots on the frame's first step (where the timer counts) */
+        if (i_this->mTimers[4] == 1 && bk_t60_first()) {
             i_this->mTimers[2] = 0x28;
             seStart_nn(a_this, JA_SE_CM_CC_STONED_RECOVER, 0);
         }
 
+        /* true60: the shake (visual) while the timer (counted on the frame's first step) runs, its phase
+         * by the step's share of the per-frame step; its end one-shot on the first step (the first-step AI-timer rule) */
         if (i_this->mTimers[2] != 0) {
-            i_this->mWavePhase[0] += 20000;
+            i_this->mWavePhase[0] += cc_t60_step_s16(20000);
             a_this->shape_angle.z = (s16)gabi::ftoi(cM_ssin(i_this->mWavePhase[0]) * 2000.0f);
             if (i_this->mTimers[2] == 1) {
-                i_this->mStoneState = 2;
-                i_this->mStoneAnmFrame = 0;
-                a_this->shape_angle.z = 0;
-                Cc_view<CcAnimation>(gabi::ea(i_this->mpStoneRecoverBrk))->mFrame = 0.0f;
-                Cc_view<CcAnimation>(gabi::ea(i_this->mpStoneRecoverBtk))->mFrame = 0.0f;
-                a_this->attention_info.flags &= ~(u32)fopAc_Attn_ACTION_CARRY_e;
+                if (bk_t60_first()) {
+                    i_this->mStoneState = 2;
+                    i_this->mStoneAnmFrame = 0;
+                    a_this->shape_angle.z = 0;
+                    Cc_view<CcAnimation>(gabi::ea(i_this->mpStoneRecoverBrk))->mFrame = 0.0f;
+                    Cc_view<CcAnimation>(gabi::ea(i_this->mpStoneRecoverBtk))->mFrame = 0.0f;
+                    a_this->attention_info.flags &= ~(u32)fopAc_Attn_ACTION_CARRY_e;
+                } else {
+                    /* true60: the frame's first step ended the shake (its phase still adds the frame's step) */
+                    a_this->shape_angle.z = 0;
+                }
             }
         }
 
@@ -778,7 +812,8 @@ static void action_up_check(cc_class* i_this) {
         }
     }
 
-    if (i_this->mCurrAction != 0 && i_this->mStoneState != 2) {
+    /* true60: the stone's hit read once per 30 Hz frame, on its first step (tick30 collision Move) */
+    if (i_this->mCurrAction != 0 && i_this->mStoneState != 2 && bk_t60_first()) {
         i_this->mStts.Move();
         if (i_this->mCyl.ChkTgHit()) {
             player = dComIfGp_getPlayer(0);

@@ -1,6 +1,7 @@
 /* Notice-board/message actor. Restored from tww onto the verified WWHD
  * behavior. */
 #include "d/actor/d_a_obj_paper.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using namespace daObjPaper;
 
 const gc_tu_data gc_tu = {.safeString = 0x1002E420};
@@ -239,9 +240,13 @@ void Act_c::damage_cc_proc() {
 
 /* 02381AEC */
 BOOL Act_c::_execute() {
+  t60w::Guard<Act_c> t60g(this, t60objw::Logic<Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+  if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+    return TRUE;
   if (mbHasCc)
     damage_cc_proc();
   (this->*mode_proc[mMode].function)();
+  t60g.model = true; /* true60: the frame reached its model step */
   set_mtx();
   if (mbHasCc) {
     mCylinderCol.SetC(&current.pos);

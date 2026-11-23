@@ -1,6 +1,7 @@
 /** JAIZelBasic initialization, wave-bank loading, scene and camera transitions.
  * HD constructor/layout and reload order retained. */
 #include "JAZelAudio/JAIZelBasic_7.h"
+#include "JAZelAudio/JAIZelBasic_t60.h"
 using namespace jaizel7;
 namespace {
 enum IslandRoom {
@@ -1097,6 +1098,8 @@ void JAIZelBasic::resetRecover() {
 /* 02027558 */
 void JAIZelBasic::getCameraInfo(cXyz *pos, Mtx34 *mtx, u32 idx) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    /* true60: the timer moves on the frame's first hand-over only (JAIZelBasic_t60.h) */
+    const bool counts = t60_audio_camtimer_counts();
     bool none = false;
     auto camera = cameraAt(idx);
     if (pos == nullptr)
@@ -1119,26 +1122,33 @@ void JAIZelBasic::getCameraInfo(cXyz *pos, Mtx34 *mtx, u32 idx) {
     cameraAt(idx)->previousPosition = &mCameraOldPos;
     cameraAt(idx)->matrix = mtx;
     if (none) {
-        mNoCameraTimer = 10;
+        if (counts)
+            mNoCameraTimer = 10;
         mCameraOldPos.x = 1e7f;
         mCameraOldPos.y = 1e7f;
         mCameraOldPos.z = 1e7f;
         return;
     }
     u32 timer = mNoCameraTimer;
-    if (timer != 0)
+    if (timer != 0 && counts)
         mNoCameraTimer = timer - 1;
 }
 
 /* 02027668 */
 void JAIZelBasic::getCameraMapInfo(u32 v) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    /* true60: the camera's ground sound on the frame's first hand-over only (JAIZelBasic_t60.h) */
+    if (!t60_audio_cammap_counts())
+        return;
     mCameraMapInfo = v;
 }
 
 /* 02027670 */
 void JAIZelBasic::setCameraGroupInfo(u32 g) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    /* true60: the camera's group on the frame's first hand-over only (JAIZelBasic_t60.h) */
+    if (!t60_audio_camgroup_counts())
+        return;
     if (isDemo() == 1)
         return;
     if (mSceneBgmLocked != 0)

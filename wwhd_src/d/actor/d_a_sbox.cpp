@@ -1,6 +1,7 @@
 /** Salvaged treasure box. Ported from zeldaret/tww, checked against WWHD cking.rpx.
  * HD animation/light layouts and emitter inline writes differ. */
 #include "d/actor/d_a_sbox.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 // HD: per-TU SafeString and common-header static copies.
 const gc_tu_data gc_tu = {
     .safeString = 0x10039CB4,
@@ -396,8 +397,12 @@ static BOOL daSbox_Draw(daSbox_c *self) {
 }
 /* 0246ACB4 */
 static BOOL daSbox_Execute(daSbox_c *self) {
+    t60w::Guard<daSbox_c> t60g(self, t60objw::Logic<daSbox_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     if (self->mAction == 0)
         self->actionWait();
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 /* 0246ACE4 */

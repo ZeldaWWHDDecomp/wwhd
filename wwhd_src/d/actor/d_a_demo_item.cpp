@@ -8,6 +8,7 @@
  */
 #include "d/actor/d_a_demo_item.h"
 #include "gc_api/JSystem/JPAMath.h"
+#include "d/actor/d_a_demo_item_t60.h" /* true60 (t60conv): step helpers */
 
 // HD: per-unit inline-constructor vtables and header objects.
 const gc_tu_data gc_tu = {.objAcch = {0x1000DA84, 0x1000DAA4, 0x1000DA94},
@@ -43,6 +44,8 @@ void daDitem_c::setParticle() {
     if (chkArgFlag(FLAG_UNK02) || chkArgFlag(FLAG_UNK04) || chkArgFlag(FLAG_UNK08)) {
         return;
     }
+    if (!t60c::first()) /* true60: the emitters are tried once per frame (sound-gate; a failed set retries next frame) */
+        return;
 
     gabi::Local<csXyz> angle;
     angle->x = (s16)(Ditem_cameraAngleX(dComIfGp_getCamera(0)) - 0x2000);
@@ -262,7 +265,7 @@ static BOOL daDitem_IsDelete(daDitem_c *i_this) {
 
 /* 02123AA4 */
 BOOL daDitem_c::execute() {
-    m_timer = m_timer + 1;
+    if (t60c::first()) { m_timer = m_timer + 1; } /* true60 (t60conv): counted on the frame's first step */
 
     if (chkDraw()) {
         setParticle();

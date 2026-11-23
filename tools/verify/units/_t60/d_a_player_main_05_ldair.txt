@@ -1,0 +1,9 @@
+# true60 N-step spec (not a gate unit). (pair f133): procLargeDamage 0241E7D4 in the air
+# (after the launch: mProcVar0 r3+0x6916 = 0) in the whole-frame form (d_a_player_crawl_t60.h lkT60Ld_*): the body once
+# a frame, on the tick30 step at dt 1; the earlier steps skip it. Net effect of N steps = one step, exact.
+include d_a_player_main_05.txt
+t60conv 0241E7D4
+field 0241E7D4 r3+0x6916 i16 0
+field 0241E7D4 r3+0x691C i16 0 15
+# the form's predicate reads mCurProc (r3+0x65F0): procLargeDamage's own (as in the game, where this body runs for it)
+field 0241E7D4 r3+0x65F0 i32 104

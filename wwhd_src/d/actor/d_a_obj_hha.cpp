@@ -2,6 +2,7 @@
  * GC part, splash, gush and actor methods use asserted HD layouts. */
 #include "d/actor/d_a_obj_hha.h"
 #include "gabi.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using Actor = daObjHha_c;
 enum HhaResource {
     dRes_INDEX_HHA_BCK_YGSTP00_e = 6,
@@ -783,6 +784,9 @@ void daObjHha_c::ygush_manager() {
 
 /* 02355AE8 */
 u8 daObjHha_c::_execute() {
+  t60w::Guard<daObjHha_c> t60g(this, t60objw::Logic<daObjHha_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+  if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+    return 1;
   u32 p = gabi::ea(this);
   u8 state = mState;
   switch (state) {

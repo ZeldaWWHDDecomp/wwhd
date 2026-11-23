@@ -1,0 +1,18 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_pirate_flag.txt
+# ---- true60 N-step spec (pirate_flag, 2026-11-16): the pirate ship's flag (d_a_pirate_flag_t60.h) on
+# a general step length. Callees are mocks (cLib_addCalcAngleS2, cM_ssin: the same answer on every step and on the one
+# step).
+# setCorrectNrmAngle 023D1804: the sail's form (d_a_sail_t60.h): cM_rndF(200) on the tick30 step only, held for the
+# frame's other steps; mNrmWobblePhase += rnd + 900 a frame, dt shares with the tick30 step's rest (sail60_wobbleAdd; the
+# harness advances the step counter per step): the N steps add exactly the frame's amount; mNrmAngle from the frame's
+# end values: exact, no t60tol line.
+# pirate_flag_move 023D1EA4 is not in the N-step spec list: its integrator runs on the vector mocks' outputs (cloth_packet's
+# reason: dt-1 check for dt 1, the cloth statistically in the paired runs, the cloth-simulation rule); its wind phase (mWindPhase +=
+# 0x40 a frame) is cloth60_share, exact per frame by construction (_t60/d_cloth_packet.txt's setNrm proof).
+t60conv 023D1804
+fret! 020198D8 0 200
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200F428
+t60cand 0200F428

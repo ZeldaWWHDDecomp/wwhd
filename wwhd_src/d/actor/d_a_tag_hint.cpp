@@ -1,5 +1,6 @@
 /* Local WWHD hint trigger reconstruction. */
 #include "d/actor/d_a_tag_hint.h"
+#include "d/actor/d_a_tag_hint_t60.h" /* true60: the shared-world-state rule whole-execute form */
 
 // HD: each translation unit owns these common-header statics.
 static u32 l_headerZero[4] = {0, 0, 0, 0};
@@ -625,6 +626,7 @@ static s32 daTag_Hint_Draw(daTag_Hint_c* a) { return 1; }
 
 /* 024AA254 */
 static s32 daTag_Hint_Execute(daTag_Hint_c* a) {
+    if (!t60c::end()) return TRUE; /* true60 (the shared-world-state rule): the hint tag's frame on the tick30 step at the line place */
     switch ((u8)a->mCurProc) {
     case hint::ACTION_LIGHT:
         a->actionLight();

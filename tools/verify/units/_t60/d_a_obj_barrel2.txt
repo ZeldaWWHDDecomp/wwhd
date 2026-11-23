@@ -1,0 +1,15 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_barrel2.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule + the cross-actor rule): the
+# barrel's execute 0232101C. The tick30 step runs the original execute whole at dt 1 from the frame start (springs,
+# random kicks once, every decision incl. the mine range checks against the ship's current state, the cylinder
+# registration); the earlier steps change no state (a visual extrapolation by the previous frame's change, none here:
+# no previous frame): net effect = the one step's, byte exact.
+t60conv 0232101C
+# the execute's logic runs its candidate code (member calls go through the guest
+# glue): execute_sub, mode_proc_call and the nine modes, afl_sway, set_pos_y (set_water_pos, set_mtx and the item / mine helpers stay
+# mocks: nested real runs of them read uninitialized stack outputs), so the springs, the mode timers and the decisions are in the compared memory
+real 02320AD4 02320968 02321564 0232183C 023219D8 02321B74 02321D54 02321F44 02322024 02322090 02322168 0232115C 0231ED94
+t60cand 02320AD4 02320968 02321564 0232183C 023219D8 02321B74 02321D54 02321F44 02322024 02322090 02322168 0232115C 0231ED94
+# set_water_pos: both the sea path and the wobble spring (with its two cM_rndFX kicks)
+ret 0246B6A4 0,1

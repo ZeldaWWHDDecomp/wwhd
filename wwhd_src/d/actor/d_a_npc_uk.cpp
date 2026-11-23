@@ -10,6 +10,7 @@
  * difference from the GameCube build.
  */
 #include "d/actor/d_a_npc_uk.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 const gc_tu_data gc_tu = {
     .safeString=0x10022FF8,
@@ -1814,6 +1815,9 @@ BOOL daNpc_Uk_c::_draw() {
 
 /* 022F1F98 */
 BOOL daNpc_Uk_c::_execute() {
+    t60w::Guard<daNpc_Uk_c> t60g(this, t60npc::Logic<daNpc_Uk_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     m_jnt.setParam(0, 0x1C84, 0, -0x1C84, 0x1F40, 0x2328, -0x7D0, -0x2328, 0x3E8);
     playTexPatternAnm();
     switch ((s32)mCurrAnmIdx) {
@@ -1888,6 +1892,7 @@ BOOL daNpc_Uk_c::_execute() {
         setFlag(FLAG_AIRBORNE);
     }
     clrFlag(FLAG_PUSHED);
+    t60g.model = true; /* true60: the frame reached its model step */
     J3DModel* pModel = mpMorf->getModel();
     mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
     mDoMtx_stack_c::YrotM(shape_angle.y);

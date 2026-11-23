@@ -1,5 +1,6 @@
 /** Liftable and breakable stones, WWHD. */
 #include "d/actor/d_a_stone2.h"
+#include "d/actor/d_a_stone2_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule addendum) */
 using daStone2::Act_c;
 using daStone2::Attr_c;
 const gc_tu_data gc_tu = {.safeString = 0x1003E3E0,
@@ -899,6 +900,12 @@ void daStone2::Act_c::demo_proc_call() {
 /* 0249F6CC */
 BOOL daStone2::Act_c::Execute(gptr<Mtx34>* output) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (t60w::begin(this, stone2_t60::kOps)) { /* true60: a step before the tick30 step: the picture only */
+        set_mtx();
+        *output = &M_tmp_mtx;
+        return TRUE;
+    }
+    bool t60Model = false; /* true60: the frame reached its model step */
     cull_set_move();
     bool active = mForceExecute || mMode != Mode_Wait;
     // HD: the actor-condition bit bypasses the culling call.
@@ -919,6 +926,7 @@ BOOL daStone2::Act_c::Execute(gptr<Mtx34>* output) {
         }
         demo_proc_call();
         if (mode_proc_call()) {
+            t60Model = true;
             if (mMode != Mode_Fine) {
                 u8 room = current.roomNo;
                 mStts.mRoomId = room;
@@ -951,6 +959,7 @@ BOOL daStone2::Act_c::Execute(gptr<Mtx34>* output) {
     set_mtx();
     *output = &M_tmp_mtx;
     cull_set_draw();
+    t60w::end(this, stone2_t60::kOps, t60Model); /* true60: the frame's change kept for the next frame's picture */
     return TRUE;
 }
 /* 0249F8B4 */

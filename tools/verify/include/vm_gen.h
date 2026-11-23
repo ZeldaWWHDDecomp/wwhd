@@ -32,10 +32,13 @@ static inline void vm_psq_store(Cpu* c, int fs, uint32_t ea, int w, int i) {
     uint32_t g = c->gqr[i], type = g & 7, scale = (g >> 8) & 0x3F;
     int sz = (type == 4 || type == 6) ? 1 : (type == 5 || type == 7) ? 2 : 4;
     uint32_t d0 = psq_quant(c->f[fs].ps0, type, scale);
-    if (sz == 1) vm_st8(ea, d0); else if (sz == 2) vm_st16(ea, d0); else vm_st32(ea, d0);
+    /* a 4-byte word (types 0-3: single float bits, psq_quant) is a float store like stfs: it carries the float mark, so the NaN payload
+     * tolerance applies (2026-11-18, the Keese: PSMTX / MtxTrans builders run `real` showed a NaN-sign-only
+     * dt-1 check difference); quantised integer words (types 4-7) stay integer stores */
+    if (sz == 1) vm_st8(ea, d0); else if (sz == 2) vm_st16(ea, d0); else vm_stf32w(ea, d0);
     if (!w) {
         uint32_t d1 = psq_quant(c->f[fs].ps1, type, scale);
-        if (sz == 1) vm_st8(ea + 1, d1); else if (sz == 2) vm_st16(ea + 2, d1); else vm_st32(ea + 4, d1);
+        if (sz == 1) vm_st8(ea + 1, d1); else if (sz == 2) vm_st16(ea + 2, d1); else vm_stf32w(ea + 4, d1);
     }
 }
 static inline uint32_t vm_lwarx(Cpu* c, uint32_t ea) { c->res_addr = ea; c->res_val = vm_ld32(ea); return c->res_val; }

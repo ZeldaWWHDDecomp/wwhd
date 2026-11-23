@@ -4,6 +4,7 @@
  * "HD:" marks differences from the GameCube source.
  */
 #include "d/actor/d_a_obj_akabe.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using daObjAkabe::Act_c;
 const gc_tu_data gc_tu = { .safeString = 0x10024A60,
     .headerStatics = {0x104690A0, 0x101C7B4C, 0x104690AC} };
@@ -134,6 +135,9 @@ bool Act_c::_delete() {
 
 /* 02316938 */
 bool Act_c::_execute() {
+    t60w::Guard<Act_c> t60g(this, t60objw::Logic<Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
     // HD: test the full result register of chk_appear.
     if (!Akabe_chk_appear_result(this))
         fopAcM_delete(this);

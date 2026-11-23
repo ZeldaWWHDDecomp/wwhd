@@ -10,6 +10,7 @@
 #include <cmath>
 
 #include "d/actor/d_a_kui.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 // HD: compiler data belongs to this translation unit.
 const gc_tu_data gc_tu = {
@@ -348,6 +349,9 @@ static inline void kui_bell(kui_class* i_this, fopAc_ac_c* player) {
 
 /* 021ACB0C */
 static BOOL daKui_Execute(kui_class* i_this) {
+    t60w::Guard<kui_class> t60g(i_this, t60objw::Logic<kui_class>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     fopAc_ac_c* actor = i_this;
 
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
@@ -372,6 +376,7 @@ static BOOL daKui_Execute(kui_class* i_this) {
         }
     }
 
+    t60g.model = true; /* true60: the frame reached its model step (both branches set the models' matrices) */
     if (i_this->type == 3) {
         kui_bell(i_this, player);
     } else {

@@ -8,6 +8,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_bdk_draw.h"
+#include "d/actor/d_a_bdk_t60.h" /* true60: the draw's light state */
 
 static BdkDrawTailScales tial_scale;
 static BdkDrawMaskStages kamen_pt;
@@ -128,7 +129,8 @@ static BOOL daBdk_Draw(bdk_class* i_this) {
         }
     }
     /* obj_draw */
-    settingTevStruct(dKy_getEnvlight(), TEV_TYPE_BG3, &actor->current.pos, &i_this->mBgTevStr);
+    if (bdk_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+        settingTevStruct(dKy_getEnvlight(), TEV_TYPE_BG3, &actor->current.pos, &i_this->mBgTevStr);
     J3DModel* m = i_this->mp62D8;
     setLightTevColorType(dKy_getEnvlight(), m, &i_this->mBgTevStr);
     mDoExt_modelUpdateDL(m);

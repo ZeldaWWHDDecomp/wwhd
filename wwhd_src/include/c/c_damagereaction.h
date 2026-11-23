@@ -3,6 +3,23 @@
 // tail.
 #pragma once
 #include "bindings.h"
+#include "true60.h"
+
+/* true60: the set latch of the damage reaction's phase counters (c_damagereaction.cpp): a counter whose
+ * phase runs in damage_reaction / enemy_ice / enemy_fire (mLightShrinkTimer, mFreezeDuration, mParalysisTimer,
+ * mBodyBgCheckDelay, mJntBgCheckTimer, mFireTimer) set on an in-between step of a converted enemy's frame, after that frame's call, starts
+ * its phase with the next 30 Hz frame, as the original's set in frame f runs it from f + 1 on. Enemy code that sets one
+ * of them after its call marks it: t60dr_mark_set(&counter). dt = 1 and a set on the tick30 step record nothing. Frame
+ * tag: g_Counter.mCounter0 (data 101FF558, a 30 Hz count that changes after the tick30 step's executes). */
+inline u32 t60dr_frame_tag() { return *gabi::at<be<u32>>(0x101FF558); }
+inline void t60dr_mark_set(const void* counter) {
+    if (t60::dt() == 1.0f || t60::tick30())
+        return;
+    wwhd_t60_latch_set(gabi::ea(counter), t60dr_frame_tag());
+}
+inline bool t60dr_pending(const void* counter) {
+    return t60::dt() != 1.0f && wwhd_t60_latch_pending(gabi::ea(counter), t60dr_frame_tag()) != 0;
+}
 using gabi::load;
 using gabi::store;
 static void line_init(u32 p);

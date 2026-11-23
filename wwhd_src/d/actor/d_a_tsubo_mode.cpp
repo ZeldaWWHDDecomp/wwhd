@@ -9,6 +9,8 @@
  */
 #include <cmath>
 #include "d/actor/d_a_tsubo_mode.h"
+#include "d/t60_py.h" /* true60 (the process-order read rule addendum): Link status frame latch */
+#include "d/actor/d_a_tsubo_mode_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule, carryables) */
 
 using daTsuboMode::Act_c;
 using namespace daTsuboMode;
@@ -303,7 +305,8 @@ void daTsuboMode::Act_c::mode_carry(u32 r4, u32 harness_r5) {
             m686 = 1;
             m685 = 1;
         } else if (daPy_getGrabActorID(player) == mBsPcId /* fopAcM_GetID */) {
-            harness_r5 = daPy_status(player);
+            /* true60 (the process-order read rule addendum, d/t60_py.h): the grab-up start as any of Link's steps this frame had it */
+            harness_r5 = t60py::status_frame(gabi::ea(player), 0x8000);
             if (harness_r5 & 0x8000 /* getGrabUpStart */) {
                 m686 = 1;
                 m685 = 1;
@@ -318,7 +321,9 @@ void daTsuboMode::Act_c::mode_carry(u32 r4, u32 harness_r5) {
         shape_angle.z = 0;
         shape_angle.x = 0;
     }
-    u32 st = daPy_status(player);
+    /* true60 (the process-order read rule addendum 2, d/t60_py.h): getGrabUpEnd / getRightFootOnGround are reset flags (mResetFlg0, one
+     * Link step): as any of his steps this frame had them */
+    u32 st = t60py::status_frame(gabi::ea(player), 0x20 | 0x400);
     if (!(st & 0x20))
         harness_r5 = st & 0x400;
     bool bVar2 = (st & 0x20) /* getGrabUpEnd */ || (st & 0x400) /* getRightFootOnGround */;
@@ -782,7 +787,7 @@ void daTsuboMode::Act_c::calc_afl_param(be<f32>* outArg1, be<f32>* outArg2, be<f
 /* 024CF2BC */
 void daTsuboMode::Act_c::se_pickup_carry() {
     if (mType == 7) {
-        if (m811 != 0 && (daPy_status(dComIfGp_getPlayer(0)) & 0x8000) /* getGrabUpStart */) {
+        if (m811 != 0 && (t60py::status_frame(gabi::ea(dComIfGp_getPlayer(0)), 0x8000) & 0x8000) /* getGrabUpStart (true60: frame latch, d/t60_py.h) */) {
             m811 = 0;
             tsuboMode_se_pickup(this);
         }
@@ -791,6 +796,9 @@ void daTsuboMode::Act_c::se_pickup_carry() {
 
 /* 024CE71C */
 bool daTsuboMode::Act_c::_execute() {
+    if (t60w::begin(this, tsubo_t60::kOps)) /* true60: a step before the tick30 step: the picture only */
+        return true;
+    bool t60Model = false; /* true60: the frame reached its model step */
     tsuboMode_cull_set_move(this);
     bool hiddenBySwitch;
     if (prm_get_spec(this) == 5) {
@@ -811,6 +819,7 @@ bool daTsuboMode::Act_c::_execute() {
                     }
                     if (mode_proc_call()) {
                         shouldDelete = FALSE;
+                        t60Model = true;
                         tsuboMode_set_mtx(this);
                         tsuboMode_spec_carry_spec(this);
                         if (mMode != 0) {
@@ -839,6 +848,7 @@ bool daTsuboMode::Act_c::_execute() {
         }
     }
     tsuboMode_cull_set_draw(this);
+    t60w::end(this, tsubo_t60::kOps, t60Model); /* true60: the frame's change kept for the next frame's picture */
     return true;
 }
 

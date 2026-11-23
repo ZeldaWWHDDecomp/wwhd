@@ -9,6 +9,7 @@
  */
 
 #include "d/actor/d_a_obj_lpalm.h"
+#include "d/actor/d_a_obj_lpalm_t60.h" /* true60 (t60conv): step helpers */
 
 /* HD: this translation unit's copies of inline-constructed vtables (GHS emits one per TU) */
 const gc_tu_data gc_tu = {
@@ -162,7 +163,7 @@ bool daObjLpalm_c::_execute() {
         mBaseQuatTarget.w = cM_scos(angle);
     }
 
-    mDoMtx_quatSlerp(&mBaseQuat, &mBaseQuatTarget, &q, 0.25f);
+    mDoMtx_quatSlerp(&mBaseQuat, &mBaseQuatTarget, &q, t60c::ratio(0.25f));
     mBaseQuat = q;
 
     for (s32 i = 0; i < 2; i++) {
@@ -170,8 +171,8 @@ bool daObjLpalm_c::_execute() {
         if (target > 0x100)
             target = 0x100;
         cLib_addCalcAngleS2(&mAnimDir[i], target, 4, 0x20);
-        s32 add = ftoi((windPow * 0x800) + cM_rndFX(128.0f));
-        mAnimWave[i] += add;
+        s32 add = ftoi((windPow * 0x800) + (t60c::end() ? cM_rndFX(128.0f) : 0.0f));
+        mAnimWave[i] += t60c::frameAdd(&mAnimWave[i], 1, add); /* true60 (t60conv): the step's share, exact per frame */
         f32 w = cM_ssin(mAnimDir[i]);
         mAnmMtxQuat[i].x = w * cM_ssin(mAnimWave[i]);
         mAnmMtxQuat[i].y = 0.0f;

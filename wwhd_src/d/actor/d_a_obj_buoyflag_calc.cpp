@@ -6,6 +6,7 @@
  * WWHD code (cking.rpx) and verified against it, with the GameCube names.
  */
 #include "d/actor/d_a_obj_buoyflag.h"
+#include "d/actor/d_a_obj_buoyflag_t60.h" /* true60: step-length helpers */
 
 namespace daObjBuoyflag {
 
@@ -16,14 +17,14 @@ static inline u32 buf_ea(Packet_c* p, u32 idx) {
 /* 02329CE4 */
 void Packet_c::calc_wind_base(Act_c* a) {
 
-    mAng[0] += 0x578;
-    mAng[1] += 0x157C;
-    mAng[2] += 0x690;
-    mAng[3] += 0x1DE2;
-    mAng[4] += 0x76C;
-    mAng[5] += 0x1964;
+    mAng[0] += buoy60_ang(a, 0x578);
+    mAng[1] += buoy60_ang(a, 0x157C);
+    mAng[2] += buoy60_ang(a, 0x690);
+    mAng[3] += buoy60_ang(a, 0x1DE2);
+    mAng[4] += buoy60_ang(a, 0x76C);
+    mAng[5] += buoy60_ang(a, 0x1964);
     cXyz* oldPos = &buoyflag_view<ClothBuf>(buf_ea(this, (u32)mCurBuf ^ 1))->mPos[0][0];
-    if (!(cM_rnd() >= 0.05f)) {
+    if (buoy60_draw(a) && !(cM_rnd() >= 0.05f)) { /* true60: the jump draw once per 30 Hz frame (tick30 step) */
         mAng[0] += 2000;
         mAng[1] += 2000;
         mAng[2] += 2000;
@@ -31,19 +32,19 @@ void Packet_c::calc_wind_base(Act_c* a) {
         mAng[4] += 2000;
         mAng[5] += 2000;
     }
-    mAng[6] += 0x1AE;
-    mAng[7] += 0x5DC;
-    mAng[8] += 0x1F40;
-    mAng[9] += 0x3E8;
-    mAng[10] += 0xC8A;
-    mAng[11] += 0x223D;
+    mAng[6] += buoy60_ang(a, 0x1AE);
+    mAng[7] += buoy60_ang(a, 0x5DC);
+    mAng[8] += buoy60_ang(a, 0x1F40);
+    mAng[9] += buoy60_ang(a, 0x3E8);
+    mAng[10] += buoy60_ang(a, 0xC8A);
+    mAng[11] += buoy60_ang(a, 0x223D);
     s16 rx = (s16)gabi::ftoi(gabi::fmadds(cM_ssin(mAng[0]), 4096.0f, cM_ssin(mAng[1]) * 1024.0f));
     s16 ry = (s16)gabi::ftoi(gabi::fmadds(cM_ssin(mAng[2]), 4608.0f, cM_ssin(mAng[3]) * 1536.0f));
     s16 rz = (s16)gabi::ftoi(gabi::fmadds(cM_ssin(mAng[4]), 5632.0f, cM_ssin(mAng[5]) * 2048.0f));
     f32 w =
         gabi::fmadds(cM_ssin(mAng[8]), 0.15f, gabi::fmadds(cM_ssin(mAng[6]), 0.5f, cM_ssin(mAng[7]) * 0.35f));
     f32 pow = gabi::fmadds(w + 1.0f, 0.35f, 0.2f);
-    pow = pow + cM_rndF(0.2f);
+    pow = pow + (buoy60_draw(a) ? cM_rndF(0.2f) : 0.1f); /* true60: drawn on the tick30 step, the mean between */
 
     gabi::Local<cXyz> allWind;
     gabi::Local<cXyz> wind;
@@ -52,9 +53,10 @@ void Packet_c::calc_wind_base(Act_c* a) {
     wind->copy(*allWind);
     PSVECScale(wind, wind, 20.0f * (0.5f * pow));
     /* the setup matrix's translation since last frame */
-    move->x = (a->mOldMtx.m[0][3] - a->m1090.m[0][3]) * 0.2f;
-    move->y = (a->mOldMtx.m[1][3] - a->m1090.m[1][3]) * 0.2f;
-    move->z = (a->mOldMtx.m[2][3] - a->m1090.m[2][3]) * 0.2f;
+    const f32 moveK = 0.2f / buoy60_dt(a); /* true60: the step's translation as a per-frame speed */
+    move->x = (a->mOldMtx.m[0][3] - a->m1090.m[0][3]) * moveK;
+    move->y = (a->mOldMtx.m[1][3] - a->m1090.m[1][3]) * moveK;
+    move->z = (a->mOldMtx.m[2][3] - a->m1090.m[2][3]) * moveK;
     f32 mag = PSVECSquareMag(move);
     if (!(mag <= 625.0f)) {
         PSVECScale(move, move, 1.0f / std_sqrtf(mag));
@@ -142,22 +144,29 @@ void Packet_c::calc_pos(Act_c* a) {
             cXyz_ml(nrm, nrmF, dot * ((wave * 0.6f) * 0.05f));
             PSVECAdd(&mSpring, nrmF, &mSpring);
             cXyz* spd = &mSpd[j][i];
-            PSVECAdd(spd, &mSpring, spd);
             /* drag against the (jittered) wind */
             f32 k = -(0.03f * gabi::fmadds(hx, 0.4f, 0.6f));
+            if (buoy60_dt(a) != 1.0f) /* true60: the step's share of the frame's push (drag-consistent) */
+                PSVECScale(&mSpring, &mSpring, buoy60_push(a, k));
+            PSVECAdd(spd, &mSpring, spd);
             wind->x = (f32)mWind.x;
             wind->y = (f32)mWind.y;
             wind->z = (f32)mWind.z;
-            f32 rx = cM_rndF(0.2f) + 0.9f;
-            f32 ry = cM_rndF(0.2f) + 0.9f;
-            f32 rz = cM_rndF(0.2f) + 0.9f;
+            f32 rx = buoy60_draw(a) ? cM_rndF(0.2f) + 0.9f : 1.0f; /* true60: tick30 draw, mean between */
+            f32 ry = buoy60_draw(a) ? cM_rndF(0.2f) + 0.9f : 1.0f; /* true60: tick30 draw, mean between */
+            f32 rz = buoy60_draw(a) ? cM_rndF(0.2f) + 0.9f : 1.0f; /* true60: tick30 draw, mean between */
             wind->x = wind->x * rx;
             wind->y = wind->y * ry;
             wind->z = wind->z * rz;
             cXyz_mi(spd, d, wind);
-            cXyz_ml(d, drag, k);
+            cXyz_ml(d, drag, buoy60_dragK(a, k)); /* true60: (1 + k)^dt - 1 */
             PSVECAdd(spd, drag, spd);
-            cXyz_pl(&buoyflag_view<ClothBuf>(oldPos)->mPos[j][i], np, spd);
+            if (buoy60_dt(a) != 1.0f) { /* true60: pos += speed x dt (a per-frame speed) */
+                cXyz_ml(spd, np, buoy60_dt(a));
+                PSVECAdd(&buoyflag_view<ClothBuf>(oldPos)->mPos[j][i], np, np);
+            } else {
+                cXyz_pl(&buoyflag_view<ClothBuf>(oldPos)->mPos[j][i], np, spd);
+            }
             (&buoyflag_view<ClothBuf>(curPos)->mPos[j][i])->copy(*np);
         }
     }

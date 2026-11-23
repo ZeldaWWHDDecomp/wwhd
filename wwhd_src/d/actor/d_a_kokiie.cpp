@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_kokiie.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 const gc_tu_data gc_tu = {.safeString = 0x100134AC};
 
 #define SAFESTRING_VTBL 0x100134AC /* this TU's sead::SafeString vtable */
@@ -272,6 +273,9 @@ static inline bool demo_camera(kokiie_class* i_this) {
 /* 021A57A0 */
 // HD: kokiie_move and demo_camera inlined
 static BOOL daKokiie_Execute(kokiie_class* i_this) {
+    t60w::Guard<kokiie_class> t60g(i_this, t60objw::Logic<kokiie_class>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     fopAc_ac_c* actor = i_this;
     dComIfGp_get(); /* HD: two accessor calls whose results are unused */
     dComIfGp_get();
@@ -299,6 +303,7 @@ static BOOL daKokiie_Execute(kokiie_class* i_this) {
         MtxPull();
     }
     demo_camera(i_this);
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 

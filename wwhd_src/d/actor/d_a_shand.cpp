@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_shand.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 // HD: checked collision-source fields; flags and shape match tww.
 static ShandCylinderSource tg_cyl_src = {0,    0, 0, 0,    0,    0,    0,     0xFF1DFEFF, 3,
@@ -414,6 +415,9 @@ static inline void hand_move(shand_class* i_this) {
 
 /* 0246FB78 */
 static BOOL daShand_Execute(shand_class* i_this) {
+    t60w::Guard<shand_class> t60g(i_this, t60objw::Logic<shand_class>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     dComIfGp_get(); /* unused accessor call */
     i_this->mExecuteCount += 1;
 
@@ -425,6 +429,7 @@ static BOOL daShand_Execute(shand_class* i_this) {
     if (i_this->mNoHitTimer != 0)
         i_this->mNoHitTimer -= 1;
 
+    t60g.model = true; /* true60: the frame reached its model step */
     hand_move(i_this);
     return TRUE;
 }

@@ -1,5 +1,6 @@
 // WWHD mapped wrapper and buffered input aggregation from local instructions.
 #include "sead/ControllerMapping.h"
+#include "true60.h"
 
 static u32 sMappingTable;
 static u32 sMappingBaseTable;
@@ -75,7 +76,11 @@ void MappedInput::calc(u32 previous,u32 previousPointer) {
         gabi::call_ptr<void>(table[11],this);
     }
     be<u32>* table = mTable.get();
-    if (gabi::call_ptr<u32>(table[13],this) == 0) mIdleFrames = 0;
+    // (true60 per-step input: the idle count counts 30 Hz frames: on the frame's first read only, true60.h t60_in_later; the
+    // idle test itself is still made, as in the original)
+    u32 idle = gabi::call_ptr<u32>(table[13],this);
+    if (t60_in_later()) return;
+    if (idle == 0) mIdleFrames = 0;
     else mIdleFrames = (u32)mIdleFrames + 1;
 }
 

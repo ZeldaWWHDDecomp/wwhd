@@ -1,6 +1,7 @@
 /* Hami2 hinged gate. Derived from WWHD disassembly;
  */
 #include "d/actor/d_a_obj_hami2.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using daObjHami2::Act_c;
 enum Mode { MODE_CLOSED, MODE_WAIT_OPEN, MODE_OPENING, MODE_OPEN, MODE_WAIT_CLOSE, MODE_CLOSING };
 // HD: retain float loads before stores for overlapping matrix buffers.
@@ -213,6 +214,12 @@ void daObjHami2::Act_c::daObjHami2_close_demo() {
 }
 /* 0234E938 */
 s32 daObjHami2::Act_c::Execute(be<u32>* out) {
+    t60w::Guard<daObjHami2::Act_c> t60g(this, t60objw::Logic<daObjHami2::Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) { /* true60: a step before the tick30 step: the picture only (frame interpolation); the background stays: the
+                      * wrapper gets the actor's own mBgMtx (sBgMatrix is a static shared by all gates) */
+        *out = gabi::ea(&mBgMtx);
+        return TRUE;
+    }
   switch (this->mMode) {
   case MODE_CLOSED:
     this->daObjHami2_close_stop();
@@ -233,6 +240,7 @@ s32 daObjHami2::Act_c::Execute(be<u32>* out) {
     this->daObjHami2_close_demo();
     break;
   }
+  t60g.model = true; /* true60: the frame reached its model step */
   this->set_mtx();
   *out=gabi::ea(&sBgMatrix);
   return 1;

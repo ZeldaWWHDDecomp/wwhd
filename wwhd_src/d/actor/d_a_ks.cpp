@@ -8,9 +8,12 @@
  * daKS_Execute (with the inlined action functions): d_a_ks_exec.cpp.
  */
 #include "d/actor/d_a_ks.h"
+#include "d/t60_draw.h"
 
 #include <cmath>
 #include "gc_api/d/d_com_inf_game.h"
+#include "d/t60_draw.h" /* true60: the spin angle once per 30 Hz frame */
+#include "d/t60conv.h" /* true60: step helpers (body_atari_check, speed_keisan) */
 
 const gc_tu_data gc_tu = {.safeString = KS_SAFESTRING_VTBL};
 static s32 KS_ALL_COUNT;
@@ -156,12 +159,20 @@ void draw_SUB(ks_class* i_this) {
     mDoMtx_stack_c::transS(actor->current.pos.x, actor->current.pos.y + fVar1, actor->current.pos.z);
     mDoMtx_stack_c::YrotM(iVar3);
     mDoMtx_XrotM(mDoMtx_stack_c::get(), iVar4);
+    /* true60 (t60_draw.h): the spin angle is a per-draw counter; it is written on the 30 Hz frame's pass only and every
+     * pass draws from the local copy (the original picture on every step; at N = 1 the original). The member is loaded
+     * where 021A6F64 loads it relative to the calls (lha 0x576 before ZrotM #1, again after it for the add / sth, and
+     * again after scaleM): dt-1 check clobbers memory across mocked calls (tools/verify/README.md "Ordering"). */
+    const bool framePass = t60_draw_frame_pass();
     mDoMtx_ZrotM(mDoMtx_stack_c::get(), (s16)(actor->shape_angle.z + i_this->mSpinAngle));
 
-    i_this->mSpinAngle += i_this->mSpinSpeed;
+    const s16 spinAfter = (s16)(i_this->mSpinAngle + i_this->mSpinSpeed);
+    if (framePass) {
+        i_this->mSpinAngle = spinAfter;
+    }
 
     mDoMtx_stack_c::scaleM(1.0f, 1.0f, 1.0f);
-    mDoMtx_ZrotM(mDoMtx_stack_c::get(), (s16)(actor->shape_angle.z - i_this->mSpinAngle));
+    mDoMtx_ZrotM(mDoMtx_stack_c::get(), (s16)(actor->shape_angle.z - (framePass ? (s16)i_this->mSpinAngle : spinAfter)));
     J3DModel_setBaseTRMtx(pBodyModel, mDoMtx_stack_c::get());
 
     mDoMtx_stack_c::transS(actor->current.pos.x, actor->current.pos.y + fVar1, actor->current.pos.z);
@@ -279,7 +290,9 @@ BOOL body_atari_check(ks_class* i_this) {
 
     i_this->mStts.Move();
 
-    BOOL tgHit = i_this->mSph.ChkTgHit();
+    /* true60 (the mixed-pair hit-flag rule): the TG hit of the frame's collision pass is taken once, on the next frame's first step (a
+     * later step would take the same hit again) */
+    BOOL tgHit = t60c::first() && i_this->mSph.ChkTgHit();
     u32 play = dComIfGp_ea();
     if (tgHit) {
         fopAc_ac_c* player = ksPlayerAt(play);
@@ -409,8 +422,8 @@ void speed_keisan(ks_class* i_this, s16 i_speed) {
     cXyz local_8;
     MtxPosition(&local_14, &local_8);
 
-    actor->current.pos.x += local_8.x;
-    actor->current.pos.z += local_8.z;
+    actor->current.pos.x += t60c::step(local_8.x); /* true60 (the per-step movement rule): the sway's per-frame shift x dt */
+    actor->current.pos.z += t60c::step(local_8.z);
 }
 
 /* gm_birth_delet inlined */

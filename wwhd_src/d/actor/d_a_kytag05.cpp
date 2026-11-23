@@ -1,5 +1,6 @@
 /** Weather tag 5: Tower of the Gods / Hyrule wind cycle. */
 #include "d/actor/d_a_kytag05.h"
+#include "d/actor/d_a_kytag05_t60.h" /* true60 (t60conv): step helpers */
 
 const gc_tu_data gc_tu = {
     .headerStatics = {0x10464D54, 0x101B8D0C, 0x10464D60},
@@ -22,7 +23,7 @@ static BOOL daKytag05_Draw(kytag05_class*) {
 }
 
 /* 021B0710 */
-static BOOL daKytag05_Execute(kytag05_class* a_this) {
+static BOOL daKytag05_Execute(kytag05_class* a_this) { if (!t60c::first()) return TRUE; /* true60 (t60conv): frame-level logic on the frame's first step (the first-step AI-timer rule / first-step frame-level) */
     Kytag05Camera* camera = kytag05_getCamera(0);
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
     f32 windPow = dKyw_get_wind_pow();

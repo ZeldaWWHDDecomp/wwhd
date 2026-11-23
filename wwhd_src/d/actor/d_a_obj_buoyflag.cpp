@@ -8,6 +8,7 @@
  * d_a_obj_buoyflag_pending.cpp (weak guest-call stubs for the functions of the other parts).
  */
 #include "d/actor/d_a_obj_buoyflag.h"
+#include "d/actor/d_a_obj_buoyflag_t60.h" /* true60: step-length helpers */
 
 #define M_arcname "Cloth" /* "Cloth" */
 #define ACT_VTBL 0x10026570
@@ -101,9 +102,11 @@ BOOL Act_c::mode_jumpToSea() {
         k2 = 0.015f;
         k1 = 0.04f;
     }
-    s32 add = gabi::ftoi(spd);
-    mRotSpeed = spd;
-    mRotAngle = (s16)(mRotAngle + add);
+    if (buoy60_spin()) { /* true60: the spin once per 30 Hz frame (first step), held between */
+        s32 add = gabi::ftoi(spd);
+        mRotSpeed = spd;
+        mRotAngle = (s16)(mRotAngle + add);
+    }
     daObj_posMoveF_stream(this, nullptr, cXyz_Zero, k1, k2);
     PSMTXTrans(mDoMtx_stack_c::get(), current.pos.x, current.pos.y, current.pos.z);
     mDoMtx_stack_transM(0.0f, 60.0f, 0.0f);

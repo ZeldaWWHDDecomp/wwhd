@@ -1,0 +1,9 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_npc_tt.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule NPC form; d_a_npc_tt_t60.h): Tott's
+# execute 022EECA0. The tick30 step runs the original execute whole at dt 1 from the frame start; the earlier steps change
+# no state (no previous frame here: nothing shown): net effect = the one step's, byte exact. Negative control
+# (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 022EECA0
+# once-per-frame calls: as many over the N steps as in the one step (the mover fopAcM_posMoveF, the morf play)
+t60calls 025D6870 025E535C

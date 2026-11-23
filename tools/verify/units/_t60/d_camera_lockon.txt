@@ -1,0 +1,112 @@
+# true60 N-step spec (not a gate unit): lockonCamera 025052E8 with a lock-on target (
+# lkTargetStale). The harness never converts a process (t60_converted false), so the target is a 30 Hz one:
+# its globe (the work's m3A8: radius +0x3AC, latitude +0x3B0, longitude +0x3B2) is held on the earlier steps and chased
+# once on the tick30 step with the frame's ratios m3B4 / m3B0 (+0x3B8 / +0x3B4, themselves per-step chases that compose).
+# The cSAngle / cSGlobe family runs for real (as d_camera_e2manualang.txt). Steered: target present (not BDK), no
+# parallel status, no attention reset, mode timer past the start. The mocked target holds still (the same answers per
+# step), so this checks that the hold form composes to the one step (globe / ratios within float rounding); the moving
+# 30 Hz target the form is for is a pair matter.
+include d_camera.txt
+include shared/c_angle_statics.txt
+t60conv 025052E8
+# the real cSAngle / cSGlobe helpers leave stack temps that mocks do not write, read from different stacks by the original
+# and the candidate (as d_camera_e2body2.txt): the rows are the N-step spec verdict alone (dt-1 check with the dt-1 check unit: s53_lock_*)
+t60nocmp 025052E8
+real 0200658C 020066C0 02006644 020065FC 02006894 020068B0 02006838 02006814 0200693C 020068E0 020068CC 02006880
+real 0200685C 02006804 020069A0 02006908 020068F4 02006584 020065EC 02006638 020065DC 02006694 020067AC
+real 020072E0 02007324 020073AC 02007248 02007068 02007178 020071E0 02007100 02006A3C
+ret! 025200D4 0x54000000 0x54000000
+# the lock-on style of the pkk pairs (71: its ratio params 3 / 4 in 0..1; random styles give other engines' params)
+arg! 025052E8 r4 71
+# Link (mpPlayerActor +0x128) and the target (mpLockonTarget +0x12C). The names must be profiles NOT in kT60Converted
+# (true60.h): the harness's t60_converted is the list itself, and a converted target takes the per-step form, not this
+# spec's hold form (the per-step globe chase with its ratio m3B4 easing inside the frame is a nested ratio, as m390.y
+# below). 0xEE (BDK, the Helmaroc King, its positionOf branch) was one of them until its mark (2026-11-19):
+# from then on a third of the inputs ran the per-step form and failed the globe rows (q86a). Non-BDK,
+# unconverted at: 0x1F2, 0x100, 0xC0.
+field 025052E8 r3+0x128 u32 0x5A200000
+field 025052E8 5A200008 i16 0xA9
+field 025052E8 r3+0x12C u32 0x5A900000
+field 025052E8 5A900008 i16 0xC0,0x1F2,0x100
+field 025052E8 r3+0x11C u32 2,5,30,200
+field 025052E8 r3+0x108 u32 0,0x100,0x80080
+field 025052E8 54005824 u32 0
+field 025052E8 54005CD8 u32 0
+# the camera setup (mCamSetup +0x73C): CusCus, m028, base / jump cushion, parallel distance, curve weight, charge
+field 025052E8 r3+0x760 f32 0.05 1
+field 025052E8 r3+0x768 f32 0.05 1
+# the centre-height cushion settled (m3B8 +0x3BC = base = jump cushion): its chase m390.y with the cushion moving inside
+# the frame is a nested ratio (the pre-existing per-step form), not this spec's subject
+field 025052E8 r3+0x778 f32 0.3
+field 025052E8 r3+0x77C f32 0.3
+field 025052E8 r3+0x780 f32 100 1000
+field 025052E8 r3+0x78C f32 0 1
+field 025052E8 r3+0x7E8 f32 -30 30
+field 025052E8 r3+0x7EC i32 0,10
+field 025052E8 r3+0x7F0 f32 0 1
+field 025052E8 r3+0x7F4 i32 10,0
+field 025052E8 r3+0x7F8 f32 0 1
+# the attention points (attentionPos 024F8F3C, a mock): one point on every call
+mockfield 024F8F3C r4+0x0 f32 20
+mockfield 024F8F3C r4+0x4 f32 100
+mockfield 024F8F3C r4+0x8 f32 -30
+field 025052E8 r3+0x394 f32 -1000 1000
+field 025052E8 r3+0x398 f32 -1000 1000
+field 025052E8 r3+0x39C f32 -1000 1000
+# the param / math mocks in range: centre height, release distance, radius ratio, bezier ratios, fovy, distance
+fret 024F75CC 0 100
+fret 024EE49C 500 2000
+fret 024F7370 0 1
+fret 024F7194 0 1
+fret 024F6F9C 0 1
+fret 024F75B4 30 90
+fret 024F7AC4 0 2000
+# the target - Link vector (cXyz::operator- 0201ADE0, a mock; the same answer per step: a target that holds still)
+mockfield 0201ADE0 r4+0x0 f32 300
+mockfield 0201ADE0 r4+0x4 f32 50
+mockfield 0201ADE0 r4+0x8 f32 400
+field 025052E8 r3+0x388 f32 0.5 1.5
+# the work's globe and ratios
+field 025052E8 r3+0x3AC f32 100 1500
+field 025052E8 r3+0x3B0 i16 -12000 12000
+field 025052E8 r3+0x3B2 i16 -32768 32767
+field 025052E8 r3+0x3B4 f32 0 1
+field 025052E8 r3+0x3B8 f32 0 1
+field 025052E8 r3+0x3BC f32 0.3
+field 025052E8 r3+0x38C i32 0,0,3,60
+# the view
+field 025052E8 r3+0x3C f32 100 2000
+field 025052E8 r3+0x40 i16 -12288 12288
+field 025052E8 r3+0x42 i16 -32768 32767
+field 025052E8 r3+0x44 f32 -1000 1000
+field 025052E8 r3+0x48 f32 -1000 1000
+field 025052E8 r3+0x4C f32 -1000 1000
+field 025052E8 r3+0x50 f32 -1000 1000
+field 025052E8 r3+0x54 f32 -1000 1000
+field 025052E8 r3+0x58 f32 -1000 1000
+field 025052E8 r3+0x60 f32 30 90
+# checked: the globe and its ratios; the centre base height (+0x398, the cushion chase)
+t60tol 025052E8 r3+0x3AC f32 absrel 0.01 0.0001
+t60tol 025052E8 r3+0x3B0 a16x2 abs 2
+t60tol 025052E8 r3+0x3B4 f32x3 absrel 0.0001 0.0001
+t60tol 025052E8 r3+0x398 f32 absrel 0.001 0.0001
+# not checked: the camera side m3A0 (+0x3A4: the sign of the view longitude against the target's, the view moving per
+# step: near the boundary the frame's last step may see the other side; pre-existing per-step form, the speed-ramp position-gap rule)
+t60tol 025052E8 r3+0x3A4 u32 skip
+# not checked: the view (eye / centre / direction / fovy chase the frame's targets per step: the speed-ramp position-gap rule)
+t60tol 025052E8 r3+0x3C f32 skip
+t60tol 025052E8 r3+0x40 a16x2 skip
+t60tol 025052E8 r3+0x44 f32x6 skip
+t60tol 025052E8 r3+0x5C a16 skip
+t60tol 025052E8 r3+0x60 f32 skip
+retarg 0200658C r3
+retarg 020066C0 r3
+retarg 02006644 r3
+retarg 020065FC r3
+retarg 02007248 r3
+retarg 02007324 r3
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200ECD4 0200F5C8
+t60cand 0200ECD4 0200F5C8
+# known-fail clib-real: ? (sweep: N-step spec N2 differs with the eases converted; fails without them too)

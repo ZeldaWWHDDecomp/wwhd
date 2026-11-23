@@ -1,6 +1,7 @@
 /* WWHD Timer. Derived from zeldaret/tww and audited against HD code.
  * Reconstruction; */
 #include "d/actor/d_a_obj_timer.h"
+#include "d/actor/d_a_obj_timer_t60.h" /* true60 (t60conv): step helpers */
 namespace daObjTimer {
 /* 023A257C */
 u32 prmAbstract(Act_c* actor, u32 width, u32 shift) {
@@ -40,6 +41,7 @@ cPhs_State Act_c::_create() {
 
 /* 023A2258 */
 bool Act_c::_execute() {
+    if (!t60c::end()) return true; /* true60 (the shared-world-state rule): the frame's logic on shared world state (switches / events / other actors) on the tick30 step at the line place */
     // HD: GHS stores each pointer to member in eight bytes.
     static ModeEntry mode_proc[] = {
         {&Act_c::mode_wait},

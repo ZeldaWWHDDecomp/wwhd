@@ -1,0 +1,24 @@
+# true60 N-step spec (not a gate unit): dCamera_c::Run 024FE3E8's WaitAnyKey hold release
+# (pair's type 25 / style 84 pull-back 0.75 frame early). mEventFlags (0x510) carries the hold
+# 0x200000; the player is off the floor (mPlayerOnFloor +0x364 = 0: the release condition holds on every step, the
+# harness's mocks answer each step alike). At 30 Hz the frame's one Run takes the hold path and clears the flag: no
+# engine call, no frame / type / style / mode timer count. At N steps the release falls on step 1; the frame's later
+# steps keep the hold path (d_camera_run_t60.h holdReleaseStep), so the N steps' net effect equals the one step's:
+# the timers (+0x07C, +0x080, +0x108, +0x118, +0x11C) and the flag exact. Without the latch the later steps call the
+# engine and count the timers on the tick30 step (negative control: the timers differ by 1).
+# Per-step chases outside the hold (the bank 0.05, the per-step smoothing rule) get angle tolerances.
+include _t60/d_camera_run.txt
+include shared/c_angle_statics.txt
+t60conv 024FE3E8
+field 024FE3E8 r3+0x510 u32 0x200000,0x200001,0x200400
+field 024FE3E8 r3+0x364 u8 0
+# no sound request pending at the frame's start (Run plays new bits and keeps the call's request as the last one: a
+# per-call record, not the hold's subject; with a request pending the N steps' last record is the cleared value)
+field 024FE3E8 r3+0x258 s32 0
+# mHoldType 0, its only value in WWHD (never set non-zero; d_camera.h): an event-engine style's held steps (hold)
+# store 0 when the last event-engine result was 0, a store of the value it already holds in the game
+field 024FE3E8 r3+0x518 s32 0
+# (2026-11-20, rule on the YAW N-step spec): the whole-frame rerun (d_camera_follow_whole_t60.h, Run calls Run at dt 1
+# on the tick30 step) runs the candidate body with the mock stream restarted (harness `t60self`), not a mock: the
+# N-step compare covers the whole form (without it step 2 ended at the frame start: s78y 5659 -> 3537 was that)
+t60self 024FE3E8

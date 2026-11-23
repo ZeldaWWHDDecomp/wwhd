@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_dr2.h"
+#include "d/actor/d_a_dr2_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule), the draw's light state and Valoo's play */
 
 #define SAFESTRING_VTBL 0x1000E0D0
 #define DR2_VTBL 0x1000E0F8     /* HD: dr2_class vtable */
@@ -273,10 +274,12 @@ static inline void dr_draw(dr2_class* i_this) {
         J3DModel_setBaseScale(model, sp08.get());
         J3DModel_setBaseTRMtx(model, mDoMtx_stack_c::get());
 
-        settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &i_this->current.pos, &i_this->tevStr);
+        if (dr2_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+            settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &i_this->current.pos, &i_this->tevStr);
         setLightTevColorType(dKy_getEnvlight(), model, &i_this->tevStr);
 
-        i_this->mpMorf2->play(nullptr, 0, 0);
+        if (dr2_t60::drawStep()) /* true60: Valoo's animation advances on the tick30 step's draw only (rule 14) */
+            i_this->mpMorf2->play(nullptr, 0, 0);
         i_this->mpMorf2->calc();
         i_this->mpMorf2->entryDL();
     }
@@ -285,7 +288,8 @@ static inline void dr_draw(dr2_class* i_this) {
 /* 0212AEEC */
 static BOOL daDr2_Draw(dr2_class* i_this) {
     J3DModel* model = i_this->mpMorf1->getModel();
-    settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &i_this->current.pos, &i_this->tevStr);
+    if (dr2_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+        settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &i_this->current.pos, &i_this->tevStr);
     setLightTevColorType(dKy_getEnvlight(), model, &i_this->tevStr);
     i_this->mpMorf1->entryDL();
     iwa_draw(i_this);
@@ -729,6 +733,10 @@ static inline void yuka_move(dr2_class* i_this) {
 
 /* 0212B3D0 */
 static BOOL daDr2_Execute(dr2_class* i_this) {
+    /* true60: the whole frame on the tick30 step (the whole-frame form rule; end at the return) */
+    t60w::Guard<dr2_class> t60g(i_this, dr2_t60::ops());
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     i_this->mFrameCounter = (s16)(i_this->mFrameCounter + 1);
 
     for (s32 i = 0; i < 5; i++) {
@@ -745,6 +753,7 @@ static BOOL daDr2_Execute(dr2_class* i_this) {
     i_this->scale.y = s;
     i_this->scale.x = s;
 
+    t60g.model = true; /* true60: the frame reached its model step */
     J3DModel* model = i_this->mpMorf1->getModel();
     settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &i_this->current.pos, &i_this->tevStr);
     setLightTevColorType(dKy_getEnvlight(), model, &i_this->tevStr);

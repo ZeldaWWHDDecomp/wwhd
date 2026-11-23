@@ -1,4 +1,5 @@
 #include "d/actor/d_a_tag_photo.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 #include "bindings.h"
 // HD: message manager and EventCut have different APIs from GameCube.
 namespace dSv_event_flag_c { enum { UNK_1601 = 0x1601 }; }
@@ -231,6 +232,9 @@ void daTagPhoto_c::eventMove() {
 }
 /* 024B2374 */
 s32 daTagPhoto_c::_execute() {
+    t60w::Guard<daTagPhoto_c> t60g(this, t60objw::Logic<daTagPhoto_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return 1;
     daTagPhoto_c* p = this;
 
     if (!dComIfGp_event_runCheck()) {
@@ -272,7 +276,10 @@ void daTagPhoto_c::executeWait() {
 
     gabi::Local<PhotoWaitFrame> frame;
     fopAc_ac_c* player = dComIfGp_getLinkPlayer();
-    cXyz_mi(&player->current.pos, &frame->difference, &p->current.pos);
+    /* true60 (the process-order read rule): Link as A reads him: his frame-start position while he is later in the line */
+    gabi::Local<cXyz> fsLink;
+    cXyz* link = t60objw::fsPos(gabi::ea(player), fsLink.get()) ? fsLink.get() : &player->current.pos;
+    cXyz_mi(link, &frame->difference, &p->current.pos);
     f32 x = frame->difference.x;
     frame->horizontal.x = x;
     f32 z = frame->difference.z;

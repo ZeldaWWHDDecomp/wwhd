@@ -7,6 +7,7 @@
  * verified against cking.rpx.
  */
 #include "d/actor/d_a_warpgn.h"
+#include "d/actor/d_a_warpgn_t60.h" /* true60: the whole form (the whole-frame form rule, d/t60_objw.h) */
 #include "bindings.h"
 static const u32 action_table[6] = {0x100425E0, 0x100425E8, 0x100425F0, 0x100425FC, 0x1004260C, 0x10042618};
 static WarpgnEventMethod event_init_tbl[6] = {};
@@ -381,6 +382,9 @@ s32 daWarpgn_c::_create() {
 
 /* 024D9E00 */
 s32 daWarpgn_c::_execute() {
+  t60w::Guard<daWarpgn_c> t60g(this, t60objw::Logic<daWarpgn_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+  if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+    return 1;
   if (!this->demoActorID) {
     this->checkOrder();
     this->demo_proc();

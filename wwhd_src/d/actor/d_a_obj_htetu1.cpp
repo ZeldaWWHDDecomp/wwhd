@@ -2,6 +2,7 @@
 #include "d/actor/d_a_obj_htetu1.h"
 #include "gc_api/gc_api.h"
 #include <cmath>
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 const gc_tu_data gc_tu = {.safeString = 0x1002AF88};
 static const char *l_arcName = "Htetu1";
 static cXyz l_baseY;
@@ -288,6 +289,9 @@ void daObjHtetu1_c::splash_manager() {
 }
 /* 0235CDF0 */
 BOOL daObjHtetu1_c::_execute() {
+  t60w::Guard<daObjHtetu1_c> t60g(this, t60objw::Logic<daObjHtetu1_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+  if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+    return TRUE;
   u8 state = mEventState;
   if (state == EVENT_WAIT) {
     dSv_info_c *save = dComIfGs_info();
@@ -371,6 +375,7 @@ BOOL daObjHtetu1_c::_execute() {
   current.pos.x = mMovingPosition.x;
   current.pos.y = y;
   current.pos.z = mMovingPosition.z;
+  t60g.model = true; /* true60: the frame reached its model step */
   htetu1_nativeInitMtx(this);
   htetu1_nativeSplashManager(this);
   s16 quake = mQuakeTimer;

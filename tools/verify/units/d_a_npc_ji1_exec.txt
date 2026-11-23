@@ -17,3 +17,28 @@ field 0224B268 r3+0xF8C i32 0x13,0x14,0x17,0x17,0x18,0,0xC,0xD,5
 field 0224B268 r3+0x654 f32 -1 70
 field 0224B268 r3+0x5DC f32 0 31
 field 0224B268 r3+0xE64 u8 0,0,1,10
+# zero-page steering (true60 2026-11-20): _execute's pointers pinned (morfs, the head
+# texture pattern and its vtable, the tear emitter NULL or pinned), else the original takes page-0 DSIs on ~99% of inputs
+field 0224B268 r3+0x43C u32 0x58000000,0x58000000
+field 0224B268 r3+0x55C u32 0x59000000,0x59000000
+field 0224B268 r3+0x4E0 u32 0x5A000000,0x5A000000
+field 0224B268 5A000004 u32 0x5A100000,0x5A100000
+field 0224B268 r3+0x658 u32 0,0x5B000000
+stable 0x4000043C 4                   # mpOrcaMorf of the pinned this (r3 = 0x40000000): the mocked calls must not clobber it
+stable 0x400004E0 4                   # headTexPattern
+stable 0x4000055C 4                   # mpSpearMorf
+stable 0x40000658 4                   # mpTearEmitter
+stable 0x5A000004 4                   # the pattern's vtable pointer
+ret! 0257DB04 0x5C100000    # dKyw_get_wind_power: a pointer (the hair's wind)
+ret! 0257DAA8 0x5C200000    # dKyw_get_wind_vec: a pointer
+field 0224B268 58000090 u32 0x58100000,0x58100000   # the Orca morf's model
+stable 0x58000090 4
+field 0224B268 5810002C u32 0x58200000,0x58200000   # the model's matrix buffer
+stable 0x5810002C 4
+field 0224B268 5A100014 u32 0x5A200000,0x5A200000   # getFrameMax slot: a non-code target (generic mock)
+stable 0x5A100014 4
+field 0224B268 r3+0x3CC u32 0x0000FFFF,0x0000FFFF   # mAction: a plain (non-virtual) member pointer, this delta 0
+field 0224B268 r3+0x3D0 u32 0x02250A1C,0x0225AEC8,0x0225268C,0x02255908,0x02252FD0,0x022596CC   # normal / battle / talk / teach / speak / event
+stable 0x400003CC 8
+field 0224B268 58200010 u32 0x58300000,0x58300000   # the anm matrix array
+stable 0x58200010 4

@@ -1,6 +1,8 @@
 /** HD layout animation: update frame bounds and dispatch layout animation lists.
  * Verified against LYT_animframe; no GameCube or SDK implementation template. */
 #include "nw/lyt/LYT_animframe.h"
+#include "true60.h"
+#include "nw/lyt/LYT_t60.h"
 
 using FrameConstant = be<f32>;
 static FrameConstant l_zeroFrame;
@@ -11,8 +13,16 @@ void nw::lyt::Animator::UpdateFrame() {
     u32 flags = mFlags;
     f32 speed = mSpeed;
     mFlags = flags & ~(FrameFlag_Ended | FrameFlag_ForwardWrap | FrameFlag_BackwardWrap);
-    if (speed == zero) return;
-    f32 frame = f32(mFrame) + speed;
+    if (speed == zero) {
+        // true60 (LYT_t60.h): a held animator is recorded too (the picture re-applies every animator in order)
+        if (t60lyt_recording()) wwhd_t60_lyt_record(gabi::ea(this), mFrame, speed, mFrame, u32(mPlayType), u32(mFlags));
+        return;
+    }
+    f32 before = mFrame; /* (true60: the picture's frame start, LYT_t60.h) */
+    // true60 (the animation crossing-check rule and 7): the layout play speed is per 30 Hz frame, a step advances speed*dt; the
+    // end/wrap flags stay a per-update latch (set on the step whose update ends or wraps, cleared by the next update),
+    // as J3DFrameCtrl::update. dt = 1 is the original code.
+    f32 frame = t60::dt() != 1.0f ? f32(mFrame) + speed * t60::dt() : f32(mFrame) + speed;
     if (speed > zero) {
         f32 end = f32(LYTAnimator_getFrameCount(this));
         if (!(frame < end)) {
@@ -67,6 +77,8 @@ void nw::lyt::Animator::UpdateFrame() {
         }
     }
     mFrame = frame;
+    // true60 (LYT_t60.h): the first step's whole-frame update of an N > 1 frame, for the port's picture
+    if (t60lyt_recording()) wwhd_t60_lyt_record(gabi::ea(this), before, speed, frame, u32(mPlayType), u32(mFlags));
 }
 
 /* 0287FB68 */

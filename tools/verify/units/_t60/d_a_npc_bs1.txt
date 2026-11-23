@@ -1,0 +1,16 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_npc_bs1.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule NPC form; d/t60_npc.h):
+# Beedle (Bs1)'s execute 02213E18 in the whole form, logic only. The tick30 step runs the original execute whole at dt 1 from the
+# frame start (joint params, texture pattern and animation play, order check, the action proc, the shop camera and the shop items, event order, the mover, CrrPos, the matrix steps (Beedle + sold signs), the collision registration once); the earlier steps change no state (the picture between steps comes from frame interpolation): net effect = the
+# one step's, byte exact. Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 02213E18
+# the execute's own steps run real (matrix step / order checks), so their state is in the compared memory
+real 022139EC 02213D00
+# calls over the N steps as many as in the one step: daNpc_Bs1_c::setCollision (once a frame, the one-sweep-per-frame attack rule) and fopAcM_posMoveF (the mover once a frame); with these the negative control fails
+t60calls 02213D5C 025D6870
+# steering (zero-page rule: < 1000 clean inputs without it): the action member pointer (+0x8E8 GHS ptmf d / i / f) on the
+# real actions (event 0221709C, wait 02217258, getdemo 02217368)
+field 02213E18 r3+0x8E8 i16 0
+field 02213E18 r3+0x8EA i16 -1
+field 02213E18 r3+0x8EC u32 0x0221709C,0x02217258,0x02217368

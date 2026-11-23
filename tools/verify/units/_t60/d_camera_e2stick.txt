@@ -1,0 +1,48 @@
+# true60 N-step spec (not a gate unit): hungCamera's settled body in the fall:
+# the fall count (mFallFrames, +1 per 30 Hz frame on the frame's end step, the rate blend 1 - count / 10 from it), the
+# fall's centre-height count (mFrameWeight, the same) and blend (ratio count x 0.005 per frame), the C stick's ease
+# (mStickX 0.15, mStickY 0.5 per frame toward the stick's bezier ratio), the smoothed player height (0.05), fovy.
+# Counts exact; chased floats absrel. The radius is skipped here: in the fall its target is the eye-centre distance g
+# blended by the eased stick, and the harness's g (a mock) does not follow the radius (d_camera_e2body.txt checks the
+# radius where the target's base is the radius itself).
+include d_camera.txt
+include shared/c_angle_statics.txt
+t60conv 0250EF98
+ret! 025200D4 0x54000000 0x54000000
+# Link's position (positionOf 024F8D5C, a mock): y 100 on every call. The body reads it twice (the smoothed player
+# height's chase, then the fall test y < height - 1); different answers per call flip the test between the steps
+# (the height moves per step), a mock artefact: with one position the test on the frame's last step sees the same
+# height as the one step (the chase composes), and an earlier step's reset or blend move is redone by the last step
+mockfield 024F8D5C r4+0x4 f32 100
+arg! 0250EF98 r4 34,35
+field 0250EF98 r3+0x100 u8 1
+field 0250EF98 r3+0x11C u32 1,9,30,200
+field 0250EF98 r3+0x37C u32 0x48554E47
+field 0250EF98 54005CD8 u32 0x80000000,0x80000080,0x80000100,0x80,0
+field 0250EF98 r3+0x388 f32 0,1,4,20
+field 0250EF98 r3+0x390 i32 0,1,3,8,9,10,12
+field 0250EF98 r3+0x398 f32 -1000 1000
+field 0250EF98 r3+0x3A8 f32 0 1
+field 0250EF98 r3+0x3B0 f32 -1000 1000
+field 0250EF98 r3+0x3DC f32 -1 1
+field 0250EF98 r3+0x3E0 f32 -1 1
+fret! 024F6F9C -1 1
+field 0250EF98 r3+0x3C f32 100 1000
+field 0250EF98 r3+0x60 f32 30 90
+t60tol 0250EF98 r3+0x3C f32 skip
+t60tol 0250EF98 r3+0x40 a16x2 skip
+t60tol 0250EF98 r3+0x44 f32x6 skip
+t60tol 0250EF98 r3+0x60 f32 absrel 0.0001 0.0001
+t60tol 0250EF98 r3+0x398 f32 absrel 0.001 0.0001
+t60tol 0250EF98 r3+0x3A8 f32 absrel 0.0001 0.0001
+t60tol 0250EF98 r3+0x3DC f32x2 absrel 0.0001 0.0001
+retarg 0200658C r3
+retarg 020066C0 r3
+retarg 02006644 r3
+retarg 020065FC r3
+retarg 02007248 r3
+retarg 02007324 r3
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200ECD4 0200F5C8
+t60cand 0200ECD4 0200F5C8

@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_kanoke.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule + addendum, d/t60_objw.h): the coffin's _execute 02367FFC (capsule collider, mode proc (wait / lid open), setMtx, two dBgW Move).
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 02367FFC
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 02367674 0236770C 02367A38
+t60cand 02367674 0236770C 02367A38
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200E240 02018808 02367674 0236770C 02367A38 024F43DC 02515E50 025F1884 025F1BF4 025F1C28 025F1C5C 025F24E0 028E8D88 028E8F64 028E90D4 028E93CC

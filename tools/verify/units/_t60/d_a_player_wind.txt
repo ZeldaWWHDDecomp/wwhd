@@ -1,0 +1,40 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+# ---- (2026-11-16): objWindHitCheck on the wind-hit path (ChkTgHit 1, a wind attacker:
+# AT type 0x200000), the wind vector mRVec fixed at (5, 0, -7) (|xz| 8.6: between 1 and 30, so the target is the vector
+# itself, maxStep 1, minStep 0.5). The |xz| < 1 branch (target from Link's distance to the hit position, which moves
+# with Link inside the frame: finer sampling, per-step ground-check class) is not N-step spec checked (LIMIT).
+src wwhd_src/d/actor/d_a_player.cpp
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+stackfill periodic
+callee 028E8DD0 r3=12
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 0201AE48 r3=12 r4=out12
+callee 028E8E64 r3=12 r4=out12
+# PSVECSquareMag and the square root run for real (the wind vector's length picks the branch and the scale)
+real 028E8DD0 028F4384
+real 0200ECD4
+t60cand 0200ECD4
+t60conv 023D4890
+arg! 023D4890 r3 0x51000000 0x51000000
+arg! 023D4890 r4 0x52000000 0x52000000
+ret! 025162A4 1 1
+ret! 02516300 0x53000000 0x53000000
+field 023D4890 53000010 u32 0x200000 0x200000
+field 023D4890 520000C0 f32 5 5
+field 023D4890 520000C4 f32 0 0
+field 023D4890 520000C8 f32 -7 -7
+field 023D4890 51000314 f32 -100 100
+field 023D4890 51000318 f32 -100 100
+field 023D4890 5100031C f32 -100 100
+field 023D4890 51000414 f32 -40 40
+field 023D4890 51000418 f32 -40 40
+field 023D4890 5100041C f32 -40 40
+t60tol 023D4890 r3+0x414 f32 clamp 1 0.5 5 0.0001 0.00001
+t60tol 023D4890 r3+0x41C f32 clamp 1 0.5 -7 0.0001 0.00001
+# the position moves by the mean of the steps' velocities x dt: each step's move of the chase is monotone toward
+# the target, so the N steps' mean lies between the frame's start velocity and its end velocity and differs from
+# the one step's by at most |dv| (1 - dt) <= maxStep 1 x (1 - dt) (the speed-ramp position-gap class: (1 - dt)/2 x |dv| on a linear
+# capped ramp, more where the ratio part moves faster early): 0.5 at N = 2, 0.75 at N = 4 (the larger here; t60stat
+# gives each N's largest)
+t60tol 023D4890 r3+0x314 f32 abs 0.75
+t60tol 023D4890 r3+0x31C f32 abs 0.75

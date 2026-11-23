@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_obj_ebomzo.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 const gc_tu_data gc_tu = {.safeString = 0x10027960};
 static const char* M_arcname = "Ebomzo";
@@ -159,6 +160,12 @@ void Act_c::demo() {
 
 /* 02339EE8 */
 BOOL Act_c::Execute(gptr<Mtx34>* matrix) {
+    t60w::Guard<daObjEbomzo::Act_c> t60g(this, t60objw::Logic<daObjEbomzo::Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) { /* true60: a step before the tick30 step: the picture only (frame interpolation); the background stays: the
+                      * wrapper gets the actor's own mBgMtx (M_tmp_mtx is a static shared by the statues of this kind) */
+        *matrix = &mBgMtx;
+        return TRUE;
+    }
     gabi::Local<cXyz> offset;
     s32 ay = (u16)current.angle.y;
     offset->x = cM_ssin(ay) * 50.0f;
@@ -178,6 +185,7 @@ BOOL Act_c::Execute(gptr<Mtx34>* matrix) {
     shape_angle.z = current.angle.z;
     shape_angle.y = current.angle.y;
     shape_angle.x = current.angle.x;
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     *matrix = &M_tmp_mtx;
     return TRUE;

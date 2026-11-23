@@ -1,5 +1,6 @@
 /* d_a_pw.cpp (WWHD): Poe enemy, verified against cking.rpx. */
 #include "d/actor/d_a_pw.h"
+#include "d/actor/d_a_pw_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule addendum) */
 using namespace gabi;
 const gc_tu_data gc_tu = {
     .safeString = 0x10038364,
@@ -1169,7 +1170,11 @@ s32 daPW_Create(pw_class* actor) {
         }
     }
     Pw_BG_check(a);
-    Pw_draw_SUB(a);
+    {
+        const f32 t60PrevDt = pw_t60::createBegin(); /* true60: create's draw_SUB pose, the original at dt 1 */
+        Pw_draw_SUB(a);
+        pw_t60::createEnd(t60PrevDt);
+    }
     return phase;
 }
 
@@ -1790,6 +1795,7 @@ static void action_dousa(pw_class* actor) {
     play = Pw_dComIfGp_get();
     s16 mode = static_cast<s16>(actor->mMode);
     u32 camera = static_cast<u32>(pwViewPwPlayView(play)->mpCamera);
+    pw_t60::seeCamera(camera); /* true60 (process-order read): the camera for the skip step's frame-start eye note */
     Local<cXyz> vector;
     Local<be<u32>> found;
     auto animation = [&](s32 index, f32 blend, u32 loop, s32 sound = -1) {
@@ -1901,7 +1907,11 @@ static void action_dousa(pw_class* actor) {
         break;
     }
     case 11: {
-        Pw_dKyr_get_vectle_calc(pwAddress(actor, offsetof(pw_class, current.pos)), camera + 0xDC,
+        Local<cXyz> eye0; /* true60 (process-order read): the frame-start camera eye noted by the skip step (live at N 1) */
+        const f32* e0 = t60cam::frameStartEye(camera);
+        if (e0)
+            eye0->set(e0[0], e0[1], e0[2]);
+        Pw_dKyr_get_vectle_calc(pwAddress(actor, offsetof(pw_class, current.pos)), e0 ? gabi::ea(eye0.get()) : camera + 0xDC,
                                 gabi::ea(vector.get()));
         u32 id = static_cast<u32>(actor->mKanteraID);
         f32 x = static_cast<f32>(actor->mLanternHandPos.x), vx = vector->x, z = static_cast<f32>(actor->mLanternHandPos.z),
@@ -2726,6 +2736,12 @@ static void action_itai(pw_class* actor) {
 
 /* 0244B3E4 */
 s32 daPW_Execute(pw_class* actor) {
+    t60w::Guard<pw_class> t60g(actor, pw_t60::ops()); /* true60: the whole frame on the tick30 step */
+    if (t60g.skip) { /* a step before the tick30 step: the picture only (frame interpolation) */
+        pw_t60::noteEye(); /* true60 (process-order read): the frame-start camera eye for mode 11's lantern place */
+        return 1;
+    }
+    t60g.model = true;
     u32 a = ea(actor);
     Pw_fopAcM_setGbaName(a, 60, 13, 45);
     if (Pw_enemy_ice(pwAddress(actor, offsetof(pw_class, mEnemyIce)))) {

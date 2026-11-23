@@ -8,6 +8,8 @@ callee 0201B47C r3=12
 callee 028E8DD0 r3=12
 callee 028E8E64 r3=12 r4=out12
 callee 0251E7A8 r4=12
+# dLib_waveRot(pos, f32, wave): pos read, wave updated; without sizes the generic mock clobbered actor+0x400 (mpModel) -> ghostMatrices DSI on 98 % of inputs (t60 zero-page rule)
+callee 025872F4 r3=12 r4=inout12
 callee 0274D458 r3=out16 r4=16
 callee 0214B3F4 r3=out16 r4=4
 ret 02520460 0,1,3,4,5
@@ -60,3 +62,20 @@ stable 580003B4 4
 stable 59000004 4
 stable 5B00003C 4
 stable 5B00004C 4
+# t60 (zero-page rule): mpModel (actor+0x400; the actor sits at 40000000 in generated inputs) is the
+# actor's own model pointer, which no callee writes; clobbering it to 0 sent 98 % of _execute's inputs into a page-0 DSI
+# in ghostMatrices (after every other site)
+stable 40000400 4
+# _execute's cloths always exist in game (created in _createHeap, which fails without them): non-null, with a vtable whose
+# cloth_move slot (+0x3C) is dCloth_packet_c::cloth_move (mocked); stable (no callee writes the actor's pointers)
+field 0214A9A4 r3+0x3F8 u32 0x5C000000
+field 0214A9A4 r3+0x3FC u32 0x5C001000
+field 0214A9A4 5C00000C u32 0x5C002000
+field 0214A9A4 5C00100C u32 0x5C002000
+field 0214A9A4 5C00203C u32 0x0251C968
+stable 400003F8 8
+stable 5C00000C 4
+stable 5C00100C 4
+stable 5C00203C 4
+# dKyw_get_wind_vec returns the address of the global wind vector (never null)
+ret 0257DAA8 0x5E800000

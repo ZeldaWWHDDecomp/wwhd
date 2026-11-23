@@ -1,0 +1,26 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include m_Do_ext_02.txt
+# ---- true60 N-step spec: mDoExt_MtxCalcOldFrame::decOldFrameMorfCounter takes one frame off
+# the old-frame morf counter on the frame's tick30 step (Link's logic reads the counter in frames; the calc before it
+# uses the frame's rate split over the steps, rho^(1/N), on every step: d_a_player aim re-inits, pairs).
+# Counter and remaining weight (counter * 1/duration) to float rounding, the step (zeroed at the end) exact;
+# mOldFrameRate (this step's weight over the previous step's) and mOldFrameMorfRemainOld (the previous step's weight)
+# are per-step quantities (the blend of this step's matrices), not compared.
+t60conv 025E3EC8
+field 025E3EC8 r3+4 f32 0 20
+field 025E3EC8 r3+8 f32 0.05 1
+field 025E3EC8 r3+0x10 f32 0 1
+field 025E3EC8 r3+0x14 f32 0 1
+t60tol 025E3EC8 r3+4 f32 absrel 0.00001 0.00001
+t60tol 025E3EC8 r3+0x10 f32 absrel 0.00001 0.00001
+t60tol 025E3EC8 r3+0xC f32 skip
+t60tol 025E3EC8 r3+0x14 f32 skip
+# ---- true60 N-step spec: mDoExt_MtxCalcOldFrame::initOldFrameMorf in a 30 Hz update: the init's own
+# dec takes one frame on any step (its rate split over the frame's steps: rho^(1/N)), the same init repeated on the
+# frame's later steps is held (the original's update inits once per frame). N steps of the init = the one init: every field
+# exact. (The init's own decOldFrameMorfCounter call is a callee here, on both sides: this spec proves the hold; the
+# frame dec is the spec above.)
+t60conv 025E3F3C
+arg 025E3F3C f1 -1 20
+arg 025E3F3C r4 0 42
+arg 025E3F3C r5 0 42

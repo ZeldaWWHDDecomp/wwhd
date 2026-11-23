@@ -1,0 +1,19 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_bomb2.txt
+# known-fail dt-1 check input class (tagsweep, 2026-11-21): Act_c::_execute 1968/2000, page-0 instruction fetch by the original only (target 0, depth 1 in 020C9A6C) on generated inputs with this spec's real callees (the base unit's dt-1 check passes); same with the fresh and the shared frame tag; not an N-step spec / conversion difference
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule carryables; d_a_bomb2_t60.h): the bomb's
+# _execute 020C9E78. The tick30 step runs the original _execute whole at dt 1 from the frame start; the earlier steps
+# change no state (a visual extrapolation by the previous frame's change, none here: no previous frame): net effect =
+# the one step's, byte exact. Negative control (T60C_NEGCTRL: _execute on every step at dt) must fail.
+t60conv 020C9E78
+# the frame's logic runs its candidate code under _execute (wind, the modes and their fuse / explosion timers, the
+# tensor procs and the vibration, anm_play, cc_set), so the timers and decisions are in the compared memory; the mode /
+# tensor bodies stay mocks: as real, mode_sink's call 025D9F70 got a different leftover r5 from the candidate's
+# dispatch than from the original's (traced, gen seed 1000014: a register-composition artefact, not the conversion);
+# set_wind_vec stays a mock too: as real it calls through generated junk pointers whose mock answers follow the stack
+# addresses (traced, gen seed 1005203)
+real 020C9A6C 020C9C14 020C9B18 020C9BB8 020C9CBC 020C9D04
+t60cand 020C9A6C 020C9C14 020C9B18 020C9BB8 020C9CBC 020C9D04
+# t60once 020C9A6C 020C9C14 020C9B18 020C9BB8 020C9CBC 020C9D04: run only inside _execute's tick30 whole run (whole-frame form); never on their own N steps
+# effect calls (sound / particle starts): as many calls over the N steps as in the one step
+t60calls 025E1A40 025A847C 025A866C

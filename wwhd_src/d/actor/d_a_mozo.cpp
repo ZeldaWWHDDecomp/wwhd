@@ -2,6 +2,7 @@
  * HD: expanded animation, actor and collision layouts retain their guest offsets.
  */
 #include "d/actor/d_a_mozo.h"
+#include "d/actor/d_a_mozo_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule addendum) */
 #include "bindings.h"
 using MozoByte = be<u8>;
 static MozoByte l_headerAngle;
@@ -817,7 +818,11 @@ s32 daMozo_c::_create() {
                            0x1AA0))
             return 5;
         phase = CreateInit();
-        _execute();
+        {
+            const f32 t60PrevDt = mozo_t60::createBegin(); /* true60: create's run of the execute, the original at dt 1 */
+            _execute();
+            mozo_t60::createEnd(t60PrevDt);
+        }
     }
     return phase;
 }
@@ -883,6 +888,10 @@ void daMozo_c::event_move() {
 
 /* 021D4734 */
 BOOL daMozo_c::_execute() {
+    t60w::Guard<daMozo_c> t60g(this, mozo_t60::ops()); /* true60: the whole frame on the tick30 step */
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
+    t60g.model = true;
     mozoMorfCalc(this->mAnimMorf.get());
     s32 index = this->mCurrentProc.i;
     s32 adjustment = (s16)this->mCurrentProc.d;
@@ -911,7 +920,8 @@ BOOL daMozo_c::_draw() {
     u32 model = (u32)((*reinterpret_cast<be<u32> *>(&this->mAnimMorf->mpModel)));
     u32 data = (u32)(gabi::at<MozoModel>(model)->mpModelData);
     u32 light = mozoGetEnvironment();
-    mozoSettingTev(mozoPtr(light), 1, &this->current.pos, &this->tevStr);
+    if (mozo_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+        mozoSettingTev(mozoPtr(light), 1, &this->current.pos, &this->tevStr);
     u32 morf = gabi::ea(this->mAnimMorf.get());
     light = mozoGetEnvironment();
     model = (u32)((*reinterpret_cast<be<u32> *>(&gabi::at<mDoExt_McaMorf>(morf)->mpModel)));

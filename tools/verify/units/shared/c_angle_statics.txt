@@ -1,0 +1,15 @@
+# SHARED FRAGMENT (include only; 2026-11-18, N-step spec harness sin/cos limit): the c_angle header statics.
+# cSAngle::Radian 02006760 (and 02006638 / the cSAngle constants) read pi and the angle constants from .bss words that
+# only the TU's static initialiser cAngle_staticInit 02007410 fills (pi 40490FDB at 101FF33C, -pi at 101FF338, the
+# cSAngle constants 0 / 182 / 0x4000 / -0x8000 / -0x4000 at 101FF354..101FF35D). The harness runs no static
+# initialiser on its own, so without this include those words are generated / zero and every real cSAngle::Radian
+# returns 0: real sin / cos then give 0 / 1 and cSPolar::Xyz writes (0, R, 0) (the camera N-step spec of 2026-11-18).
+# Use it in any spec that runs the cSAngle / cSGlobe / cSPolar family for real (`include shared/c_angle_statics.txt`).
+# Proof (t02 follow spec, seed 1, -watch 0x101FCE00:0x2DD3C8 over all of .bss): these are the only .bss words the run
+# reads; with the setup + stable every read of 101FF33C gives 40490FDB; cSPolar::Xyz returns e.g. (12.1, -683.9, 729.5).
+# The initialiser's other callees (__register_global_object 028F026C, the flag / byte constructors 028ED6F8 / 028EAB2C)
+# stay mocked: they write 101FF340 / 101FF341 and the registration records 1018C454.., which no angle function reads.
+real 02007410 0200658C 02006584
+setup * 02007410
+# mocked calls in the tested function must not clobber them (stores to them stay compared)
+stable 101FF338 0x26

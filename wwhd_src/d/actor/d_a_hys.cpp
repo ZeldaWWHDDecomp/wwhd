@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_hys.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 const gc_tu_data gc_tu = {.safeString = 0x100117D8};
 // HD: checked archive indices and packed collision source match this image.
@@ -117,8 +118,15 @@ BOOL daHys_c::Create() {
 
 /* 0217A96C */
 BOOL daHys_c::Execute(gptr<Mtx34>* mtx) {
+    t60w::Guard<daHys_c> t60g(this, t60objw::Logic<daHys_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) { /* true60: a step before the tick30 step: the picture only (frame interpolation); the background stays: the
+                      * wrapper gets the actor's own mBgMtx, as on the tick30 step */
+        *mtx = &mBgMtx;
+        return TRUE;
+    }
     mode_proc_call();
 
+    t60g.model = true; /* true60: the frame reached its model step */
     mpModel->setBaseScale(scale);
     mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
     mDoMtx_stack_c::YrotM(current.angle.y);

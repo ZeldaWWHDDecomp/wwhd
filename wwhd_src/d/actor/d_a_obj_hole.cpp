@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_obj_hole.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 const gc_tu_data gc_tu = {
     .safeString = 0x1002A820,
     .objAcch = {0x1002A858, 0x1002A878, 0x1002A868},
@@ -162,7 +163,11 @@ void daObj_Hole_c::modeEvent() {
 
 /* 023578B8 */
 bool daObj_Hole_c::_execute() {
+    t60w::Guard<daObj_Hole_c> t60g(this, t60objw::Logic<daObj_Hole_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return false;
     modeProc(PROC_EXEC_e, MODE_NULL);
+    t60g.model = true; /* true60: the frame reached its model step */
     setMtx();
     return false;
 }

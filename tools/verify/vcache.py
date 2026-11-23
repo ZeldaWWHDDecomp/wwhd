@@ -9,6 +9,8 @@ One entry per (unit spec, function, every result-affecting option), keyed by a S
     (a section-relative relocation, an unknown relocation type, a missing map entry) makes that function's key cover
     every `src` object of the unit whole, so uncertainty only costs hits;
     on a spec declaring `osmem ... threads` every key covers every `src` object (candidate code runs in other rows there);
+    on a spec with `t60cand` lines (true60 T-02) every key also covers the closures of those callees' entry thunks: the
+    harness swaps their candidate code in at run time, through a guest call that is no relocation edge (2026-11-17);
   - every compiled object a function can run for real: unit.c.o whole (all originals, real callees and setup /
     postsetup chains of the unit), harness, espresso_fp and support objects;
   - the expanded spec (includes and shared world files inlined; comment-only lines dropped except `# verify:` /
@@ -549,7 +551,7 @@ def env_key():
 class Session:
     """one verify.py run's cache: keys for the run's functions, lookups, stores"""
 
-    def __init__(self, unit, spec_lines, args, shards, build_info, cdir):
+    def __init__(self, unit, spec_lines, args, shards, build_info, cdir, cand_vm=None):
         self.cdir, self.unit = cdir, unit
         self.stats = {"hit": 0, "miss": 0, "fallback": 0}
         bi = build_info
@@ -572,6 +574,12 @@ class Session:
         self.rec = rec_dir(args)
         self.whole = sha(*["src:%s:%s" % (os.path.basename(o), file_sha(o)) for o in bi["src_objs"]])
         self.closure = None
+        # `t60cand ADDR...` (true60 T-02): the harness runs these callees' candidate code wherever the original would be
+        # called (top level and nested), so their compiled code is an input of every row of the unit
+        self.t60cand = sorted({int(a, 16) for f in (l.split("#")[0].split() for l in spec_lines) if f[:1] == ["t60cand"]
+                               for a in f[1:]})
+        self.cand_vm = cand_vm or {}
+        self.cand_code = None
         # `osmem ... threads` (2026-11-02): a guest thread, AX callback or alarm callback runs candidate code of any unit function
         # in any row (harness gthr::unit_fn), outside the closure of the row's own entry thunk: keys cover all unit sources
         thread_spec = any(f[:1] == ["osmem"] and "threads" in f for f in (l.split("#")[0].split() for l in spec_lines))
@@ -582,6 +590,29 @@ class Session:
             self.closure = Closure(bi["src_objs"], bi["linkmap"])
         except (Uncertain, OSError, ValueError, struct.error, IndexError) as e:
             self.note("vcache: object reader: %s; keys cover all unit sources" % e)
+
+    def t60cand_code(self):
+        """the key part of the spec's `t60cand` callees: each callee's candidate closure, or all unit sources when one
+        cannot be followed (no entry thunk listed, the object reader cannot follow it)"""
+        if self.cand_code is None:
+            if not self.t60cand:
+                self.cand_code = "-"
+            else:
+                parts = []
+                for a in self.t60cand:
+                    vm, code = self.cand_vm.get(a), None
+                    if vm is not None and self.closure is not None:
+                        try:
+                            code = self.closure.function(vm)
+                        except (Uncertain, ValueError, struct.error, IndexError, KeyError) as e:
+                            self.note("vcache: t60cand %08X: %s; keys cover all unit sources" % (a, e))
+                    if code is None:
+                        self.cand_code = "whole:" + self.whole
+                        break
+                    parts.append("%08X:%s" % (a, code))
+                else:
+                    self.cand_code = sha(*parts)
+        return self.cand_code
 
     def note(self, msg):
         print(msg, file=sys.stderr, flush=True)
@@ -601,7 +632,7 @@ class Session:
             d = os.path.join(self.rec if os.path.isabs(self.rec) else os.path.join(ROOT, self.rec), "%08X" % addr)
             if os.path.isdir(d):
                 rec = sha(*[x for f in sorted(os.listdir(d)) if ".tap" in f for x in (f, file_sha(os.path.join(d, f)))])
-        return sha(self.unit_key, "%08X" % addr, code, rec, "runlist:" + (runsel or "-"))
+        return sha(self.unit_key, "%08X" % addr, code, rec, "runlist:" + (runsel or "-"), "t60cand:" + self.t60cand_code())
 
     def path(self, key):
         return os.path.join(self.cdir, key[:2], key + ".json")
@@ -670,9 +701,9 @@ class ResumeStore(Session):
     or removed."""
     RESUME_VERSION = "resume-1"
 
-    def __init__(self, unit, spec_lines, args, shards, build_info, cdir, exe):
+    def __init__(self, unit, spec_lines, args, shards, build_info, cdir, exe, cand_vm=None):
         os.makedirs(cdir, exist_ok=True)
-        Session.__init__(self, unit, spec_lines, args, shards, build_info, cdir)
+        Session.__init__(self, unit, spec_lines, args, shards, build_info, cdir, cand_vm)
         self.unit_key = sha(self.unit_key, self.RESUME_VERSION, "exe:" + file_sha(exe))
 
     def part_path(self, key, i, k, lo, hi):

@@ -9,6 +9,7 @@
  */
 
 #include "d/actor/d_a_npc_nz.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 /* HD: this translation unit's copies of inline-constructed vtables (GHS emits one per TU) */
 const gc_tu_data gc_tu = {
@@ -1118,6 +1119,9 @@ void daNpc_Nz_c::anmAtr(u16 i_msgStatus) {
 
 /* 022A45E4 */
 bool daNpc_Nz_c::_execute() {
+    t60w::Guard<daNpc_Nz_c> t60g(this, t60npc::Logic<daNpc_Nz_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return false;
     cLib_addCalc2(&speedF, mSpeedTarget, 0.3f, 4.0f);
     checkOrder();
     modeProc(PROC_EXEC_e, 2);
@@ -1130,6 +1134,7 @@ bool daNpc_Nz_c::_execute() {
     mAcch.CrrPos(*dComIfG_Bgsp());
     mpBait = NULL;
     mBaitDist = FLOAT_MAX;
+    t60g.model = true; /* true60: the frame reached its model step */
     setMtx();
 
     return false;

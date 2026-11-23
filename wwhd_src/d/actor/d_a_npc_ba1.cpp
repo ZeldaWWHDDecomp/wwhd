@@ -8,6 +8,7 @@
  */
 #include "d/actor/d_a_npc_ba1.h"
 #include "gc_api/gc_api.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 const gc_tu_data gc_tu = {
     .safeString = 0x10016888,
@@ -1866,6 +1867,9 @@ BOOL daNpc_Ba1_c::_draw() {
 
 /* 021F1064 */
 BOOL daNpc_Ba1_c::_execute() {
+    t60w::Guard<daNpc_Ba1_c> t60g(this, t60npc::Logic<daNpc_Ba1_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     if (!mbRanExecute) {
         mInitialAngle.y = current.angle.y;
         mInitialAngle.z = current.angle.z;
@@ -1907,6 +1911,7 @@ BOOL daNpc_Ba1_c::_execute() {
         }
     }
     eventOrder();
+    t60g.model = true; /* true60: the frame reached its model step */
     setMtx(false);
     if (!mbInDemo && !mbNoCollision) {
         f32 radius = 50.0f;

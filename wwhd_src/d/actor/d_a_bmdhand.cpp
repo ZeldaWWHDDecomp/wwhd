@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_bmdhand.h"
+#include "d/actor/d_a_bmdhand_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule), the draw's light state */
 
 enum {
     dRes_INDEX_BMDHAND_BCK_FOOK_HIRAKU_e = 5,
@@ -55,7 +56,8 @@ static BOOL daBmdhand_Draw(bmdhand_class* i_this) {
 
     fopAc_ac_c* actor = i_this;
     if (i_this->mSegmentLength > 0.1f) {
-        settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &actor->eyePos, &actor->tevStr);
+        if (bmdhand_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+            settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &actor->eyePos, &actor->tevStr);
         /* hand_draw */
         if (i_this->mHandScale > 0.01f) {
             J3DModel* model = i_this->mpMorf->getModel();
@@ -677,6 +679,11 @@ static void* s_a_d_sub(void* param_1, void* param_2) {
 
 /* 020B8D9C */
 static BOOL daBmdhand_Execute(bmdhand_class* i_this) {
+    /* true60: the whole frame on the tick30 step (the whole-frame form rule; end at the return) */
+    t60w::Guard<bmdhand_class> t60g(i_this, bmdhand_t60::ops());
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
+    t60g.model = true; /* hand_mtx_set (hand_move) sets the model matrices */
 
     dComIfGp_get(); /* HD: an unused call */
     if (boss == nullptr) {

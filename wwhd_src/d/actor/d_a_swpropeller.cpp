@@ -8,6 +8,7 @@
  * GameCube names and header layout where they match.
  */
 #include "d/actor/d_a_swpropeller.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 const gc_tu_data gc_tu = {
     .safeString = 0x1003EC2C,
     .objAcch = {0x1003EC54, 0x1003EC74, 0x1003EC64},
@@ -149,6 +150,9 @@ cPhs_State daSwProp_c::_create() {
 
 /* 024A31E4 */
 bool daSwProp_c::_execute() {
+    t60w::Guard<daSwProp_c> t60g(this, t60objw::Logic<daSwProp_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
     bool windHit = false;
     mAcch.CrrPos(dComIfG_Bgsp());
 
@@ -198,6 +202,7 @@ bool daSwProp_c::_execute() {
     }
 
     mWindHit = windHit;
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
 
     gabi::Local<cXyz> c;

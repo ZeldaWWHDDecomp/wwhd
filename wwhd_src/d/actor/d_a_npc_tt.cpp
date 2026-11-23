@@ -7,6 +7,7 @@
  * verified against cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_npc_tt.h"
+#include "d/actor/d_a_npc_tt_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule NPC form) */
 
 static BOOL nodeCallBack_Tt(J3DNode*, int);
 static BOOL CheckCreateHeap(fopAc_ac_c*);
@@ -64,6 +65,7 @@ static BOOL nodeCallBack_Tt(J3DNode* node, int calcTiming) {
                 cMtx_ZrotM(calc_mtx(),
                            (s16) - (i_this->m_jnt.mAngles[0][0] + i_this->mHeadAnm.mSwingAngle.x));
                 MtxPosition(&temp, &temp2);
+                if (tt_t60::drawStep()) { /* true60: logic stores on the tick30 step's draw only (rule 14) */
                 i_this->mAttnBasePos.copy(temp2); /* setAttentionBasePos( &temp2) */
                 temp.x = 20.0f;
                 temp.y = -20.0f;
@@ -72,6 +74,7 @@ static BOOL nodeCallBack_Tt(J3DNode* node, int calcTiming) {
                 i_this->mEyePos.copy(temp2);         /* setEyePos( &temp2) */
                 if (i_this->mAttnSetCount != 0xFF) { /* incAttnSetCount() */
                     i_this->mAttnSetCount = i_this->mAttnSetCount + 1;
+                }
                 }
             } else if (jntNo == (u32)(s32)i_this->m_backbone_jnt_num) {
                 cMtx_XrotM(calc_mtx(), i_this->m_jnt.mAngles[1][1]);
@@ -981,6 +984,8 @@ BOOL daNpc_Tt_c::_draw() {
 
 /* 022EECA0 */
 BOOL daNpc_Tt_c::_execute() {
+    if (t60w::begin(this, tt_t60::kOps)) /* true60: a step before the tick30 step: the picture only */
+        return TRUE;
 
     m_jnt.setParam(0, 0x1C70, 0, -0x1C70, 0x1FFE, 9000, -0x1FFE, -9000, 0x1000);
     playTexPatternAnm();
@@ -1020,6 +1025,7 @@ BOOL daNpc_Tt_c::_execute() {
                   mDoMtx_stack_c::get()); /* pModel->setBaseTRMtx */
     setCollision();
     ke_execute();
+    t60w::end(this, tt_t60::kOps, true); /* true60: the frame's change kept for the next frame's picture */
     return TRUE;
 }
 

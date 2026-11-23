@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_amiprop.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 // HD: GHS emits translation unit specific SafeString and actor vtables.
 const gc_tu_data gc_tu = {.safeString = 0x10007124};
@@ -118,6 +119,9 @@ void daAmiProp_c::setMoveBGMtx() {
 
 /* 02050D14 */
 bool daAmiProp_c::_execute() {
+    t60w::Guard<daAmiProp_c> t60g(this, t60objw::Logic<daAmiProp_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
     s32 is_switch = fopAcM_isSwitch(this, mSwitchNo);
     if ((u32)is_switch != (u32)mPrevSwitch) {
         mTurning = true;
@@ -155,6 +159,7 @@ bool daAmiProp_c::_execute() {
     mPrevSwitch = is_switch;
     set_mtx();
     mpBgW->Move();
+    t60g.model = true; /* true60: the frame reached its model step */
     return true;
 }
 

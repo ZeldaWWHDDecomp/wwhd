@@ -9,6 +9,7 @@
  * and also stores the effect matrix in the model (+0xF8).
  */
 #include "d/actor/d_a_obj_zouK.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 const gc_tu_data gc_tu = {.safeString = 0x10033C08};
 namespace daObjZouk {
 static ZoukText M_arcname;
@@ -212,6 +213,10 @@ BOOL daObjZouk::Act_c::jokai_demo() {
 
 /* 023BFA38 */
 bool daObjZouk::Act_c::_execute() {
+    t60w::Guard<daObjZouk::Act_c> t60g(this, t60objw::Logic<daObjZouk::Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     texture_scroll();
     zouk_fopAcM_rollPlayerCrash(this, 288.0f, 0x0D);

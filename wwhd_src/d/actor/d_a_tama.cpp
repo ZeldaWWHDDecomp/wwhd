@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_tama.h"
+#include "d/actor/d_a_tama_t60.h" /* true60 (t60conv): step helpers */
 
 // HD: constructor/destructor vtables and common-header statics are per translation unit.
 const gc_tu_data gc_tu = {
@@ -46,7 +47,7 @@ BOOL daTama_c::_execute() {
                 del = true;
             }
 
-            if (!del && mSph.ChkCoHit()) {
+            if (!del && t60c::hit(mSph.ChkCoHit(), 1, &mSph)) {
                 dCcD_GObjInf* hitobj = tamaGetCoHitObj(&mSph);
                 del = true;
                 if (hitobj != NULL) {

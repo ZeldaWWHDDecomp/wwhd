@@ -7,6 +7,8 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_bk_action.h"
+#include "d/actor/d_a_bk_t60.h"
+#include "c/c_damagereaction_carrier_t60.h" /* true60: b_hang on a rope bridge, coupled to it (rider rule) */
 
 const gc_tu_data gc_tu = {
     .safeString = 0x10009474,
@@ -78,14 +80,17 @@ void hukki(bk_class* i_this) {
     }
         // Fall-through
     case 13:
-        if (i_this->mTimers[2] == 1) {
+        /* true60 (the first-step AI-timer rule): timer one-shots on the frame's first step (the only step the timer
+         * changes) */
+        if (i_this->mTimers[2] == 1 && bk_t60_first()) {
             i_this->mSmokeTimer = l_bkHIO().mSmokeTimerBase + 6;
             i_this->mSmokeType = 3;
         }
         if (i_this->mTimers[2] > 3) {
             i_this->dr.mSkipMoveOnce = 1;
         }
-        if (i_this->mpMorf->isStop()) {
+        /* true60: the end decision reads Link's distance: tick30 step (stopped stays stopped) */
+        if (en_t60_isStop(i_this->mpMorf) && bk_t60_end()) {
             if (i_this->mPlayerDistance < l_bkHIO().mAttackDist) {
                 i_this->dr.mMode = 14;
                 i_this->mTimers[1] = 10;
@@ -227,10 +232,14 @@ void yogan_fail(bk_class* i_this) {
         }
         // Fall-through
     case 1:
-        dComIfGp_particle_setSimple(ID_IT_SN_O_FIREK_KASU, &i_this->current.pos);
-        dComIfGp_particle_setSimple(ID_IT_SN_O_MAGT_FCHIP, &i_this->current.pos);
+        /* true60 (the one-emitter-per-event rule): per-frame particles on the tick30 step */
+        if (bk_t60_end()) {
+            dComIfGp_particle_setSimple(ID_IT_SN_O_FIREK_KASU, &i_this->current.pos);
+            dComIfGp_particle_setSimple(ID_IT_SN_O_MAGT_FCHIP, &i_this->current.pos);
+        }
 
-        if ((i_this->mFrameCounter & 7) == 0) {
+        /* true60 (the first-step AI-timer rule): the phase-timed spit once per frame, on the first step (where the phase counter counts) */
+        if ((i_this->mFrameCounter & 7) == 0 && bk_t60_first()) {
             i_this->mEffectAngle.y = (s16)gabi::ftoi(cM_rndF(65536.0f));
             i_this->mEffectAngle.x = -0x2000;
             dComIfGp_particle_set(ID_AK_JN_TUBA00, &i_this->mSpitPos, &i_this->mEffectAngle);
@@ -270,7 +279,11 @@ void water_fail(bk_class* i_this) {
         // Fall-through
     case 1:
         actor->speed.y = 0.0f;
-        actor->current.pos.y -= 1.0f;
+        /* true60 (the per-step movement rule): sinks 1 per frame */
+        if (t60::dt() != 1.0f)
+            actor->current.pos.y -= t60::dt();
+        else
+            actor->current.pos.y -= 1.0f;
         cLib_addCalcAngleS2(&actor->current.angle.x, 0, 8, 0x800);
         if (i_this->mTimers[3] == 0) {
             fopAcM_delete(actor);
@@ -323,7 +336,7 @@ void wepon_search(bk_class* i_this) {
         actor->speedF = 0.0f;
         if (i_this->mAnmStopTimer == 0) {
             cLib_addCalcAngleS2(&actor->current.angle.y, i_this->dr.mTurnTargetY, 2, 0x3000);
-            if (i_this->mpMorf->isStop() || i_this->mTimers[1] == 0) {
+            if (en_t60_isStop(i_this->mpMorf) || i_this->mTimers[1] == 0) {
                 i_this->dr.mMode = 1;
                 i_this->mWeaponRunTimer = l_bkHIO().mWeaponRunTime;
                 anm_init(i_this, dRes_INDEX_BK_BCK_BK_RUN_e, 3.0f, J3DFrameCtrl::EMode_LOOP,
@@ -367,7 +380,8 @@ void wepon_search(bk_class* i_this) {
         break;
     case 2:
         actor->speedF = 0.0f;
-        if (i_this->mTimers[1] == 24) {
+        /* true60 (the 30 Hz timer rule, the first-step AI-timer rule): the pick-up at 24 once, on the frame's first step */
+        if (i_this->mTimers[1] == 24 && bk_t60_first()) {
             if (boko != nullptr && !fopAcM_checkCarryNow(boko)) {
                 i_this->mHoldWeapon = 2;
                 if (fopAcM_GetParam(boko) == 0 /* daBoko_c::Type_BOKO_STICK_e */) {
@@ -393,7 +407,8 @@ void wepon_search(bk_class* i_this) {
             i_this->dr.mTurnTargetY = ang;
             cLib_addCalcAngleS2(&actor->current.angle.y, ang, 3, 0x800);
         }
-        if (i_this->mpMorf->isStop()) {
+        /* true60: the end decision reads Link: tick30 step (stopped stays stopped) */
+        if (en_t60_isStop(i_this->mpMorf) && bk_t60_end()) {
             if (l_bkHIO().mNoPickupAttack == 0 && !(daPy_getGrabWearTimer(player) < 0.0f) &&
                 i_this->mPlayerDistance < l_bkHIO().mAttackDist) {
                 i_this->dr.mAction = 5;
@@ -434,7 +449,7 @@ void wepon_search(bk_class* i_this) {
         break;
     case 6:
         actor->speedF = 0.0f;
-        if (i_this->mpMorf->isStop()) {
+        if (en_t60_isStop(i_this->mpMorf)) {
             i_this->dr.mMode = 1;
             anm_init(i_this, dRes_INDEX_BK_BCK_BK_RUN_e, 3.0f, J3DFrameCtrl::EMode_LOOP,
                      l_bkHIO().mDashAnmSpeed, dRes_INDEX_BK_BAS_BK_RUN_e);
@@ -470,7 +485,7 @@ void d_dozou(bk_class* i_this) {
         }
         break;
     case 2:
-        if (i_this->mpMorf->isStop()) {
+        if (en_t60_isStop(i_this->mpMorf)) {
             i_this->dr.mStts.Init(200, 0xFF, i_this);
             i_this->dr.mAction = 0;
             i_this->dr.mMode = 0;
@@ -516,7 +531,7 @@ void carry_drop(bk_class* i_this) {
         cLib_addCalcAngleS2(&i_this->shape_angle.x, 0, 1, 0x1000);
         cLib_addCalcAngleS2(&i_this->shape_angle.z, 0, 1, 0x1000);
         cLib_addCalc0(&i_this->speedF, 1.0f, 1.0f);
-        if (i_this->mpMorf->isStop()) {
+        if (en_t60_isStop(i_this->mpMorf)) {
             anm_init(i_this, dRes_INDEX_BK_BCK_BK_KIME_e, 0.0f, J3DFrameCtrl::EMode_NONE, 1.0f, -1);
             i_this->dr.mMode = 3;
             fopAcM_monsSeStart(actor, JA_SE_CV_BK_SURPRISE, 0);
@@ -524,7 +539,7 @@ void carry_drop(bk_class* i_this) {
         break;
     case 3:
         cLib_addCalc0(&i_this->speedF, 1.0f, 1.0f);
-        if (i_this->mpMorf->isStop()) {
+        if (en_t60_isStop(i_this->mpMorf)) {
             i_this->dr.mAction = 0;
             i_this->dr.mMode = 0;
             i_this->current.angle.x = i_this->shape_angle.x;
@@ -545,7 +560,9 @@ void d_mahi(bk_class* i_this) {
         i_this->mTimers[0] = 100;
         // Fall-through
     case 1:
-        if (i_this->mTimers[0] <= 80 && i_this->mTimers[0] >= 40) {
+        /* true60 (the 30 Hz timer rule, 11, first-step AI-timer): the stars, the dizzy sound (per frame) and the timer marks
+         * once per frame, on its first step (the only step the timer changes) */
+        if (i_this->mTimers[0] <= 80 && i_this->mTimers[0] >= 40 && bk_t60_first()) {
             if (i_this->mTimers[0] == 80) {
                 /* enemy_piyo_set(i_this): HD inline, stars on the HD follow callback */
                 dComIfGp_particle_set(0x27A, &i_this->attention_info.position, nullptr, nullptr,
@@ -555,10 +572,10 @@ void d_mahi(bk_class* i_this) {
         }
         i_this->speedF = 0.0f;
         /* HD: the stars end at 35 */
-        if (i_this->mTimers[0] == 35) {
+        if (i_this->mTimers[0] == 35 && bk_t60_first()) {
             dPa_followEcallBack_end((dPa_followEcallBack*)&i_this->mHdFollowCb);
         }
-        if (i_this->mTimers[0] == 30) {
+        if (i_this->mTimers[0] == 30 && bk_t60_first()) {
             i_this->dr.mParalysisTimer = 0xF;
         }
         if (i_this->mTimers[0] == 0) {
@@ -628,7 +645,7 @@ void tubo_wait(bk_class* i_this) {
         break;
     case 2:
         r28 = true;
-        if (i_this->mpMorf->isStop()) {
+        if (en_t60_isStop(i_this->mpMorf)) {
             i_this->dr.mMode = 11;
             anm_init(i_this, dRes_INDEX_BK_BCK_BK_JATTACK3_e, 0.0f, J3DFrameCtrl::EMode_NONE, 1.0f,
                      dRes_INDEX_BK_BAS_BK_JATTACK3_e);
@@ -645,18 +662,18 @@ void tubo_wait(bk_class* i_this) {
         break;
     case 11:
         cLib_addCalc0(&i_this->speedF, 1.0f, 20.0f);
-        if (i_this->mpMorf->isStop()) {
+        if (en_t60_isStop(i_this->mpMorf)) {
             i_this->dr.mAction = 0;
             i_this->dr.mMode = 0;
         }
         break;
     case 20:
         if (i_this->mTimers[0] != 0) {
-            if (i_this->mTimers[0] == 1) {
+            if (i_this->mTimers[0] == 1 && bk_t60_first()) { /* true60 (the first-step AI-timer rule): once, on the frame's first step */
                 anm_init(i_this, dRes_INDEX_BK_BCK_BK_SUWARI_e, 0.0f, J3DFrameCtrl::EMode_NONE,
                          1.0f, dRes_INDEX_BK_BAS_BK_SUWARI_e);
             }
-        } else if (i_this->mpMorf->isStop()) {
+        } else if (en_t60_isStop(i_this->mpMorf)) {
             i_this->dr.mAction = 0;
             i_this->dr.mMode = 0;
         }
@@ -667,10 +684,12 @@ void tubo_wait(bk_class* i_this) {
         i_this->mWeaponSph.SetC(&actor->current.pos);
         i_this->mWeaponSph.SetR(20.0f);
         dComIfG_Ccsp_Set(&i_this->mWeaponSph);
+        bk_t60_wsph_note(i_this, 3); /* true60: a held tick30 step registers it again (d_a_bk_t60.h) */
     } else if (r28) {
         i_this->mWeaponSph.SetC(&i_this->mWeaponTipPos);
         i_this->mWeaponSph.SetR(60.0f);
         dComIfG_Ccsp_Set(&i_this->mWeaponSph);
+        bk_t60_wsph_note(i_this, 3); /* true60: a held tick30 step registers it again (d_a_bk_t60.h) */
     }
 }
 
@@ -697,8 +716,10 @@ void z_demo_1(bk_class* i_this) {
         }
         break;
     case 1:
-        if (i_this->mTimers[0] == 87 || i_this->mTimers[0] == 69 || i_this->mTimers[0] == 51 ||
-            i_this->mTimers[0] == 33 || i_this->mTimers[0] == 15) {
+        /* true60: the timer's sound marks once, on the frame's first step */
+        if ((i_this->mTimers[0] == 87 || i_this->mTimers[0] == 69 || i_this->mTimers[0] == 51 ||
+             i_this->mTimers[0] == 33 || i_this->mTimers[0] == 15) &&
+            bk_t60_first()) {
             fopAcM_monsSeStart(actor, JA_SE_CV_BK_JUMP, 0);
         }
         if (i_this->mTimers[0] == 0) {
@@ -734,7 +755,8 @@ void z_demo_1(bk_class* i_this) {
     } else {
         f1 = 500.0f;
     }
-    if (i_this->mPlayerDistance < f1 &&
+    /* true60 (first-step input addendum): the sighting reads Link: tick30 step */
+    if (bk_t60_end() && i_this->mPlayerDistance < f1 &&
         std::fabs(player->current.pos.y - actor->current.pos.y) < 250.0f) {
         i_this->mType = 0;
         i_this->dr.mAction = 1;
@@ -759,6 +781,7 @@ void b_hang(bk_class* i_this) {
             i_this->dr.mMode = 0;
             return;
         }
+        t60drCarrier::couple(i_this, r29); /* true60: it follows the bridge's 30 Hz side position: held at 30 Hz */
     }
 
     i_this->mCoCyl.OffCoSPrmBit(1); /* OffCoSetBit */
@@ -776,7 +799,7 @@ void b_hang(bk_class* i_this) {
         fopAcM_monsSeStart(actor, JA_SE_CV_BK_LOST_BOKO, 0);
         break;
     case 1:
-        if ((i_this->mTimers[0] & 0x1F) == 0) {
+        if ((i_this->mTimers[0] & 0x1F) == 0 && bk_t60_first()) { /* true60: once per frame */
             i_this->mSpitTimer = 2;
         }
         if (i_this->mTimers[0] == 0) {
@@ -786,7 +809,7 @@ void b_hang(bk_class* i_this) {
         }
         break;
     case 2:
-        if (i_this->mpMorf->isStop()) {
+        if (en_t60_isStop(i_this->mpMorf)) {
             r30 = true;
         }
         break;
@@ -885,7 +908,7 @@ void rope_on(bk_class* i_this) {
         break;
     case 4:
         i_this->speedF = 0.0f;
-        if (i_this->mpMorf->isStop()) {
+        if (en_t60_isStop(i_this->mpMorf)) {
             i_this->dr.mMode = 2;
             anm_init(i_this, dRes_INDEX_BK_BCK_BK_WALK_e, 10.0f, J3DFrameCtrl::EMode_LOOP, 2.0f,
                      dRes_INDEX_BK_BAS_BK_WALK_e);

@@ -5,6 +5,7 @@
  * HD-specific layouts, ABI and copy ordering retain the verified reconstruction's behavior.
  */
 #include "d/actor/d_a_npc_auction.h"
+#include "d/t60_npc.h" /* true60 (npc_auction): the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 // HD: AutoFrame keeps the original entry frame and conditional Local allocation order.
 // GHS matrices retain separate load/store loops, including their f32 quieting behavior.
@@ -1277,6 +1278,9 @@ u32 daNpc_AuctionDraw(daNpcAuction_c* a) {
 /* 021ED31C */
 u32 daNpc_AuctionExecute(daNpcAuction_c* a) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    t60w::Guard<daNpcAuction_c> t60g(a, t60npc::Logic<daNpcAuction_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return 0;
     if (!a->isExecute())
         return 0;
     AuctionHIO* parameters = &l_HIO.mCostumes[(u8)a->mMdlNo];
@@ -1322,6 +1326,7 @@ u32 daNpc_AuctionExecute(daNpcAuction_c* a) {
     a->eyePos.x = x;
     a->eyePos.y = y + height;
     a->lookBack();
+    t60g.model = true; /* true60: the frame reached its model step */
     a->setMtx();
     s16 timer = (s16)a->mVoiceTimer;
     if (timer) {

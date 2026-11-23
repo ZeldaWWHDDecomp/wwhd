@@ -3,6 +3,7 @@
  * Every original function and caller workspace
  */
 #include "d/d_grass.h"
+#include "d/d_grass_t60.h"
 #include "port_native_draw.h"
 #include "port_hooks.h"
 using namespace GrassHD;
@@ -929,8 +930,51 @@ void GrassHD::dGrass_packet_c::draw(u32 state) {
     GrassHD::SDK::RenderState_apply(Data::defaultRenderState);
 }
 
+// true60 (d_grass_t60.h): an earlier step of a pushed blade's slot (hitCheck's no-hit branch at dt: the X
+// angle back to its wind slot's, then the heading; no sound, no state change, no return to the wind slot)
+static void grass60_recover_between(u32 packet, u32 data) {
+    const s32 index = (s8)(at<dGrass_data_c>(data)->mAnimIdx);
+    if (index < 8)
+        return;
+    const u32 animation = packet + 0x18F0C + (u32)index * 0x38;
+    const u32 rotation = (u16)(at<dGrass_anm_c>(animation)->mRotY);
+    const s32 target = (s16)(rotation & 0xE000);
+    const u32 base = packet + 0x18F0C + (rotation >> 13) * 0x38;
+    Grass60Slot &s = grass60_enter((u32)index, animation);
+    const f64 dt = (f64)t60::dt();
+    // cLib_addCalcAngleS(X, wind slot's X, 16, 4000, 100) at dt
+    const f64 d = grass60_angleDiff(s.rx, (s32)(s16)(at<dGrass_anm_c>(base)->mRotX));
+    if (d != 0.0) {
+        f64 mv = d * (1.0 - std::pow(1.0 - 1.0 / 16.0, dt));
+        const f64 mx = 4000.0 * dt, mn = 100.0 * dt;
+        if (mv > mx) mv = mx;
+        if (mv < -mx) mv = -mx;
+        if (mv > -mn && mv < mn) mv = d > 0 ? (mn < d ? mn : d) : (-mn > d ? -mn : d);
+        s.rx += mv;
+    }
+    if (std::fabs(grass60_angleDiff(s.rx, (s32)(s16)(at<dGrass_anm_c>(base)->mRotX))) < 0.5) {
+        // there: the heading chases the wind slot's (cLib_chaseAngleS 800 at dt)
+        const f64 e = grass60_angleDiff(s.ry, target), step = 800.0 * dt;
+        s.ry += std::fabs(e) <= step ? e : (e > 0 ? step : -step);
+    }
+    at<dGrass_anm_c>(animation)->mRotX = grass60_s16(s.rx, (s32)(s16)(u16)(s.start[1] >> 16));
+    at<dGrass_anm_c>(animation)->mRotY = grass60_s16(s.ry, (s32)(s16)(u16)(s.start[0] & 0xFFFFu));
+    grass60_leave(s, animation);
+}
+
 /* 0254C6C4 */
 void GrassHD::dGrass_packet_c::calc() {
+    // true60 (d_grass_t60.h): the earlier steps sway the wind slots at the step's time and move the pushed
+    // blades' slots at dt (no hit checks: the one-sweep-per-frame attack rule); the tick30 step puts the slots back to the frame's start and
+    // runs the original frame at dt 1
+    const f32 t60p = grass60_progress();
+    f32 t60PreviousDt = 1.0f;
+    bool t60Pinned = false;
+    if (t60::dt() != 1.0f && t60::tick30()) {
+        grass60_restore_all(gabi::ea(&mGrassAnm[0]), 104);
+        t60PreviousDt = t60_set_dt(1.0f);
+        t60Pinned = true;
+    }
 
     float wind = (f32)(*at<be<f32>>(Data::zero));
     bool enabled = true;
@@ -970,15 +1014,24 @@ void GrassHD::dGrass_packet_c::calc() {
             wind = maximum;
     }
     for (u32 i = 0; i < 8; ++i) {
-        u32 time = (u32)(*at<be<u32>>(Data::counterTimer)) + i * 250;
-        u16 angle = (u16)gabi::ftoi(gabi::fmuls_ppc((float)time, wind));
+        f32 time = grass60_wind_time((u32)(*at<be<u32>>(Data::counterTimer)), i, t60p);
+        u16 angle = (u16)gabi::ftoi(gabi::fmuls_ppc(time, wind));
         float cosine = (f32)at<SinCos>(Data::sincosTable)[(u32)angle >> 3].mCos;
         mGrassAnm[i].mRotX = (u16)gabi::ftoi(gabi::fmadds(wind, cosine, wind));
     }
     s32 room = (s8)(*at<be<s8>>(Data::stayRoomNo));
     u32 data = (u32)mGrassRoom[(u32)room].mpData;
-    if (!data)
+    if (!data) {
+        if (t60Pinned)
+            t60_set_dt(t60PreviousDt);
         return;
+    }
+    if (grass60_between()) {
+        for (; data; data = (u32)(at<dGrass_data_c>(data)->mpNextData))
+            if (!((u8)(at<dGrass_data_c>(data)->mInitFlags) & 2) && (s8)(at<dGrass_data_c>(data)->mAnimIdx) >= 0)
+                grass60_recover_between(gabi::ea(this), data);
+        return;
+    }
     *at<be<u8>>(Data::cutSoundFlag) = 0;
     u32 play = GrassHD::SDK::dComIfGp_get(), attribute = play + 0x26A4, mass = play + 0x4EF8;
     GrassHD::SDK::cM3dGCyl__SetR(play + 0x5008, (f32)(*at<be<f32>>(Data::bendRadius)));
@@ -990,6 +1043,8 @@ void GrassHD::dGrass_packet_c::calc() {
             GrassHD::SDK::dGrass_data_c__hitCheck(data, room);
         data = (u32)(at<dGrass_data_c>(data)->mpNextData);
     } while (data);
+    if (t60Pinned)
+        t60_set_dt(t60PreviousDt);
 }
 
 /* 02549F4C */

@@ -1,5 +1,6 @@
 /* Big Octo/Jabun whirlpool, WWHD implementation. */
 #include "d/actor/d_a_obj_auzu.h"
+#include "d/actor/d_a_obj_auzu_t60.h" /* true60 (t60conv): step helpers */
 using namespace daObjAuzu;
 enum { dRes_INDEX_AUZU_BDL_AUZU_e = 4, dRes_INDEX_AUZU_BTK_AUZU_e = 7 };
 enum {
@@ -183,7 +184,8 @@ bool Act_c::_execute() {
     auto *play = auzuPlay();
     if (play->mPlayerStatus & daPyStts0_SHIP_RIDE_e)
         ship_whirl();
-    else if (mScaleAnimFactor > 0.009999999776482582f) {
+    else if (t60c::held(mScaleAnimFactor > 0.009999999776482582f, 3, this)) { /* true60: the frame-start
+        * scale decides (A reads it before the frame's chase); an earlier step's chase must not switch Link's whirl on */
         play = auzuPlay();
         AuzuPlayer *player = play->mPlayer;
         fopAcM_searchActorDistanceXZ2(this, reinterpret_cast<fopAc_ac_c *>(player));
@@ -206,11 +208,12 @@ bool Act_c::_execute() {
     cLib_chaseF(&mScaleAnimFactor, target, 0.019999999552965164f);
     s8 soundParam = (s8)gabi::ftoi((f32)mScaleAnimFactor * 100.0f);
     s32 reverb = dComIfGp_getReverb(current.roomNo);
-    mDoAud_seStart(0x1068, &eyePos, soundParam, reverb);
+    if (t60c::end()) mDoAud_seStart(0x1068, &eyePos, soundParam, reverb); /* true60 (t60conv): a per-frame start, once per 30 Hz frame */
     f32 factor = mScaleAnimFactor;
     if (factor > 0.0f) {
         u32 tag = mKytagPcId;
         if (tag == 0xFFFFFFFF) {
+            if (t60c::end()) { /* true60: the wave tag is created on the tick30 step, with the frame's end scale; no earlier step of the frame creates or sizes it */
             f32 radius = (f32)L_radius;
             f32 mult = attr().mRadiusMult;
             f32 inner = radius * mult, outer = (radius + 500.0f) * mult;
@@ -221,6 +224,7 @@ bool Act_c::_execute() {
             s8 room = tevStr.mRoomNo;
             mKytagPcId = fopAcM_create(fpcNm_KYTAG01_e, -1, &current.pos, room, &current.angle,
                                        size.get(), -1, 0);
+            }
         } else {
             auto *found = reinterpret_cast<AuzuWaveTag *>(fopAcM_SearchByID(tag));
             if (found) {

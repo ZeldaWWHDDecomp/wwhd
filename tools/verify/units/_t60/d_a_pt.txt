@@ -1,0 +1,81 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_pt.txt
+# ---- true60 N-step spec (2026-11-18; d_a_pt_t60.h): the Miniblin's execute 02446374 and its AI
+# action 02447300 (called by the execute on every step) run on every step. Counters / AI timers / one-shots / draws on the
+# first step (first-step AI-timer), Link-reading decisions and the hit reaction on the tick30 step (first-step input addendum, mixed-pair hit-flag), one AI state step
+# per frame with the dispatch motion replayed on held steps, At / Co / Tg for the tick30 Move only (one-sweep-per-frame attack), the tick30 push
+# held over the frame (first-step push). Negative control (T60C_NEGCTRL: every helper in the per-step form) must fail.
+t60conv 02446374 02447300
+# callees with changed code: the action (from the execute), the animation set (the split-actor state latch), the wall angle and the
+# smoke set (state-change blocks)
+real 02447300 02445DBC 02446074 02445F98
+t60cand 02447300 02445DBC
+# effect starts (cries, sounds, particles, the disappear effect, the water pillar, the smoke end): as many calls over the
+# N steps as in the one step
+t60calls 025E1AA4 025E1A40 025A847C 025D99E8 025DAE64 025A5F88
+# the ground check dBgS_Acch::CrrPos once per frame, on the tick30 step (the frame form of the
+# gravity + ground check, d_a_pt_t60.h pt_t60_bg_frame): N steps call it as often as the one step
+t60calls 024F08A8
+# float rounding of the split motion (pos += v x dt; the arc term): current.pos, speed, the hop
+t60tol * r3+0x314 f32x3 absrel 0.0001 0.0001
+t60tol * r3+0x33C f32x3 absrel 0.0001 0.0001
+t60tol * r3+0x430 f32x2 absrel 0.0001 0.0001
+# the RNG (cM_rndF, cM_rndFX): fixed answers (the harness's per-step mock answers restart each step by call index); the
+# draw count over the N steps must equal the one step's
+fretf64! 020198D8 0.375
+fretf64! 02019918 0.625
+t60calls 020198D8 02019918
+# the Link angle / distances (fopAcM_searchPlayerAngleY 025D6894): read on the first step's dispatch and the tick30
+# reaction; a per-step answer by call index differs from the one step's call
+ret! 025D6894 0x1A50
+# dComIfGp_get (025200D4, the play / player pointer): strict, as in the other _t60 specs
+ret! 025200D4 0x54000000 0x54000000
+# steering: Link (play + 0x5B2C) at a fixed block of its own (a generated pointer can name the Miniblin itself)
+field 02446374 54005B2C u32 0x10702000 0x10702000
+field 02447300 54005B2C u32 0x10702000 0x10702000
+# cXyz::operator- (0201ADE0, PSVECSubtract 028E8DAC), PSVECAdd 028E8D88, PSVECSquareMag 028E8DD0 + sqrt 028F4384 and the matrix helpers the motion uses (YrotS / XrotM,
+# MtxPosition): real (a mock's output is per call index; a block replayed on a held step read another call's output)
+real 0201ADE0 028E8DAC 0200FCD8 025F1884 025F1BF4 028E8D88 028E8DD0 028F4384
+# the scratch matrix calc_mtx (0x101FF5F0, 48 bytes): rebuilt before every use; its last contents depend on which step
+# ran the last motion block
+t60tol * 101FF5F0 u8x48 skip
+field * 1018C7B0 u32 0x101FF5F0 0x101FF5F0
+# the model matrix: mpMorf (r3+0x3DC) and its mpModel (+0x90) at fixed blocks, the model's base matrix skipped (its
+# inputs, current.pos with the motion's tolerance and the angles, are compared)
+field 02446374 r3+0x3DC u32 0x10700000 0x10700000
+field 02446374 10700090 u32 0x10701000 0x10701000
+t60tol * 107010BC u8x60 skip
+# steering: old.pos (r3+0x300) = current.pos (r3+0x314) in x / z at the input, as in the game (fopAc_Execute copies
+# current to old before every step's execute; the knockback goes back to the step's start, which the converted code
+# keeps as the position at action()'s entry, the harness does not repeat that copy between the steps)
+field 02446374 r3+0x300 f32 100 100
+field 02446374 r3+0x308 f32 -50 -50
+field 02446374 r3+0x314 f32 100 100
+field 02446374 r3+0x31C f32 -50 -50
+field 02447300 r3+0x300 f32 100 100
+field 02447300 r3+0x308 f32 -50 -50
+field 02447300 r3+0x314 f32 100 100
+field 02447300 r3+0x31C f32 -50 -50
+# steering: the hop height mHopY (r3+0x430) is never below 0 in the game (the action floors it at 0 after every add)
+field 02446374 r3+0x430 f32 0 60
+field 02447300 r3+0x430 f32 0 60
+# steering: the collision push mStts.m_cc_move (r3+0x644) is a few units in the game
+field 02446374 r3+0x644 f32 -5 5
+field 02446374 r3+0x648 f32 -5 5
+field 02446374 r3+0x64C f32 -5 5
+# the smoke's emitter (dPa_control_c::set 025A847C, from smoke_set): a mock answers by call index, and the tick30 hit
+# reaction's smoke_set is another call index than in the one step (null on one side: no smoke count); fixed to null
+ret! 025A847C 0 0
+# steering: the speed (r3+0x33C) is finite and a few hundred units at most in the game (a NaN / 1e27 speed made the
+# position NaN / huge between the steps)
+field 02446374 r3+0x33C f32 -150 150
+field 02446374 r3+0x340 f32 -150 400
+field 02446374 r3+0x344 f32 -150 150
+field 02447300 r3+0x33C f32 -150 150
+field 02447300 r3+0x340 f32 -150 400
+field 02447300 r3+0x344 f32 -150 150
+# the central smoothers real with their candidates (as d_a_ki,'s c_lib-real sweep:
+# a mock answers by call index at the harness step's dt and ignores the dt a caller sets)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200ED84 0200EDC8 0200F428
+t60cand 0200ED84 0200EDC8 0200F428

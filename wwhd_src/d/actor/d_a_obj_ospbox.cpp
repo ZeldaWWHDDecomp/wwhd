@@ -3,6 +3,7 @@
  * GameCube names and flow, with the verified WWHD behavior.
  */
 #include "d/actor/d_a_obj_ospbox.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using daObjOspbox::Act_c;
 
 const gc_tu_data gc_tu = {
@@ -176,6 +177,12 @@ void Act_c::sound_break() {
 }
 /* 02380A00 */
 BOOL Act_c::Execute(gptr<Mtx34> *output) {
+    t60w::Guard<Act_c> t60g(this, t60objw::Logic<Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) { /* true60: a step before the tick30 step: the picture only (frame interpolation); the background stays: the
+                      * wrapper gets the actor's own mBgMtx (M_tmp_mtx is a static shared by all boxes) */
+        *output = &mBgMtx;
+        return TRUE;
+    }
     if (mCyl.ChkTgHit()) {
         make_item();
         eff_break();
@@ -194,6 +201,7 @@ BOOL Act_c::Execute(gptr<Mtx34> *output) {
         ospbox_MoveCAtTg(&mCyl, &current.pos);
         cCcS_Set(dComIfG_Ccsp(), &mCyl);
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     set_ground();
     set_mtx();
     *output = &M_tmp_mtx;

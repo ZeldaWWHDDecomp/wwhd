@@ -1,6 +1,7 @@
 /* Tower of the Gods glowing statue/pillar. GameCube source names and typed HD layout.
  * Verified call order, full-register results, floating-point and guest-stack semantics retained. */
 #include "d/actor/d_a_obj_try_private.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 #include <cmath>
 using daObjTry::Act_c;
 using Actor = Act_c;
@@ -1246,6 +1247,9 @@ f64 daObjTry::Act_c::get_water_h() {
 
 /* 023AD758 */
 s32 daObjTry::Act_c::_execute() {
+    t60w::Guard<daObjTry::Act_c> t60g(this, t60objw::Logic<daObjTry::Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return 1;
 
     this->cull_set_move();
     bool skip = false;
@@ -1270,6 +1274,7 @@ s32 daObjTry::Act_c::_execute() {
             if (!this->mode_proc_call())
                 damaged = true;
             else {
+                t60g.model = true; /* true60: the frame reached its model step */
                 this->set_mtx();
                 this->mStts.mRoomId = u8(this->current.roomNo);
                 tryMoveCylinder(&this->mCyl, &this->current.pos);

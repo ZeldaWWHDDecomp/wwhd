@@ -8,6 +8,8 @@
  * defines mDoExt_J3DModelPacketS (the reflection packets other actors use as well).
  */
 #include "d/actor/d_a_bgn_main.h"
+#include "d/t60_draw.h"
+#include "d/actor/d_a_bgn_t60.h" /* true60: the parts' light states */
 
 const gc_tu_data gc_tu = {.safeString = BGN_SAFESTRING_VTBL, .safeStringAssure = 0x0208AEF4};
 
@@ -381,40 +383,43 @@ void part_draw(bgn_class* i_this, part_s* param_2) {
     if (model == nullptr)
         return;
     BgnPartTevStr* tev = &param_2->mPartTevStr;
-    settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &param_2->mPartPos, (dKy_tevstr_c*)tev);
-    if (i_this->mFogFade > 0.0f) {
-        f32 z = tev->mFogStartZ;
-        tev->mFogColorR = 0;
-        tev->mFogColorG = 0;
-        tev->mFogColorB = 0;
-        tev->mFogStartZ = gabi::fmadds(-50000.0f, i_this->mFogFade, z);
-    }
-    s16 timer = param_2->mPartArrowHitFlashTimer;
-    if (timer != 0) {
-        s16 c8 = param_2->mPartFogColorAdd;
-        s16 uVar4 = (s16)(tev->mFogColorR + c8);
-        if (uVar4 > 0xFF)
-            uVar4 = 0xFF;
-        s16 g = tev->mFogColorG;
-        s16 uVar5 = (s16)(g + c8);
-        if (uVar5 > 0xFF)
-            uVar5 = 0xFF;
-        s16 uVar6 = (s16)(g + c8 / 2);
-        if (uVar6 > 0xFF)
-            uVar6 = 0xFF;
-        if (timer > 40) {
-            cLib_addCalcAngleS2(&param_2->mPartFogColorAdd, 0x118, 1, 30);
-            cLib_addCalc2(&param_2->mPartFogStartAdd, -50000.0f, 1.0f, 5000.0f);
-        } else {
-            cLib_addCalcAngleS2(&param_2->mPartFogColorAdd, 0, 1, 7);
-            cLib_addCalc0(&param_2->mPartFogStartAdd, 1.0f, 1250.0f);
+    if (bgn_t60::drawStep()) { /* true60: the part's light state on the tick30 step's draw only (rule 14) */
+        settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &param_2->mPartPos, (dKy_tevstr_c*)tev);
+        if (i_this->mFogFade > 0.0f) {
+            f32 z = tev->mFogStartZ;
+            tev->mFogColorR = 0;
+            tev->mFogColorG = 0;
+            tev->mFogColorB = 0;
+            tev->mFogStartZ = gabi::fmadds(-50000.0f, i_this->mFogFade, z);
         }
-        f32 z = tev->mFogStartZ;
-        f32 cc = param_2->mPartFogStartAdd;
-        tev->mFogColorR = (s16)(uVar4 & 0xFF);
-        tev->mFogColorG = (s16)(uVar5 & 0xFF);
-        tev->mFogColorB = (s16)(uVar6 & 0xFF);
-        tev->mFogStartZ = z + cc;
+        s16 timer = param_2->mPartArrowHitFlashTimer;
+        if (timer != 0) {
+            s16 c8 = param_2->mPartFogColorAdd;
+            s16 uVar4 = (s16)(tev->mFogColorR + c8);
+            if (uVar4 > 0xFF)
+                uVar4 = 0xFF;
+            s16 g = tev->mFogColorG;
+            s16 uVar5 = (s16)(g + c8);
+            if (uVar5 > 0xFF)
+                uVar5 = 0xFF;
+            s16 uVar6 = (s16)(g + c8 / 2);
+            if (uVar6 > 0xFF)
+                uVar6 = 0xFF;
+            if (!t60_draw_frame_pass()) { /* true60 (t60_draw.h): the flash fades once per 30 Hz frame */
+            } else if (timer > 40) {
+                cLib_addCalcAngleS2(&param_2->mPartFogColorAdd, 0x118, 1, 30);
+                cLib_addCalc2(&param_2->mPartFogStartAdd, -50000.0f, 1.0f, 5000.0f);
+            } else {
+                cLib_addCalcAngleS2(&param_2->mPartFogColorAdd, 0, 1, 7);
+                cLib_addCalc0(&param_2->mPartFogStartAdd, 1.0f, 1250.0f);
+            }
+            f32 z = tev->mFogStartZ;
+            f32 cc = param_2->mPartFogStartAdd;
+            tev->mFogColorR = (s16)(uVar4 & 0xFF);
+            tev->mFogColorG = (s16)(uVar5 & 0xFF);
+            tev->mFogColorB = (s16)(uVar6 & 0xFF);
+            tev->mFogStartZ = z + cc;
+        }
     }
     gabi::Local<cXyz> local_38;
     BgnCameraView* camera = (BgnCameraView*)dComIfGp_getCamera(0);

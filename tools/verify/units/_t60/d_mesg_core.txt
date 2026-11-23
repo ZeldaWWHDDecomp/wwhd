@@ -1,0 +1,6 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_mesg_core.txt
+# ---- (2026-11-18): dMesg_core_c::update 025F77B0 is called on every pass (the port's per-frame
+# child 11), so on every step at N; it runs on the tick30 step only (d_mesg_core_t60.h): the N steps' net effect (frame
+# counter, glyph timers, the two play flags) equals the one step.
+t60conv 025F77B0

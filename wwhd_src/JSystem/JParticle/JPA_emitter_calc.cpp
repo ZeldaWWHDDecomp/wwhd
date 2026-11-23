@@ -1,5 +1,6 @@
 /** Particle emitter calculation and volume sampling. Verified WWHD behavior, tww names. */
 #include "JSystem/JParticle/JPA_emitter_calc.h"
+#include "JSystem/JParticle/JPA_emitter_t60.h"
 #include <climits>
 #include <cstring>
 namespace jpa_emitter_calc {
@@ -56,7 +57,7 @@ bool jpa_emitter_calc::JPABaseEmitter::doStartFrameProcess() {
     if (!(time < (f32)(s16)mStartFrame))
         return true;
     if (!((u32)mFlags & JPAEmtrStts_StopCalc)) {
-        f32 next = time + 1.0f;
+        f32 next = time + t60::dt(); // true60: the start delay counts in step lengths
         mTime = next < 0.0f ? 0.0f : next;
     }
     return false;
@@ -66,6 +67,9 @@ bool jpa_emitter_calc::JPABaseEmitter::doTerminationProcess() {
     // HD: deletion waits two frames once the particle lists become empty.
     u8 delay = mDeleteCountdown;
     if (delay) {
+        // true60 (JPA_emitter_t60.h): the two-frame wait counts 30 Hz frames (the frame's tick30 step)
+        if (!jpa_t60::frame_count())
+            return false;
         delay--;
         mDeleteCountdown = delay;
         return delay == 0;
@@ -83,7 +87,7 @@ bool jpa_emitter_calc::JPABaseEmitter::doTerminationProcess() {
         empty = (u32)mActiveParticleCount + (u32)mChildParticleCount == 0;
     }
     if (empty && !(u8)mDeleteCountdown) {
-        mDeleteCountdown = 2;
+        mDeleteCountdown = jpa_t60::countdown_start(2); // (one more on an earlier step: the frame's tick30 takes it)
         return false;
     }
     return empty;
@@ -92,8 +96,11 @@ bool jpa_emitter_calc::JPABaseEmitter::doTerminationProcess() {
 void jpa_emitter_calc::JPABaseEmitter::calc() {
     emtrInfo.mVolumeEmitCount = 0;
     if ((u32)mFlags & JPAEmtrStts_StopCalc) {
-        emitterCallback(this, CallbackExecute);
-        emitterCallback(this, CallbackExecuteAfter);
+        // true60 (JPA_emitter_t60.h): the game's emitter callbacks once per 30 Hz frame (tick30 step)
+        if (jpa_t60::frame_count()) {
+            emitterCallback(this, CallbackExecute);
+            emitterCallback(this, CallbackExecuteAfter);
+        }
         return;
     }
     // HD: defer calculation while the teardown/clear countdowns are active.
@@ -101,22 +108,27 @@ void jpa_emitter_calc::JPABaseEmitter::calc() {
         return;
     u8 clear = mClearCountdown;
     if (clear) {
+        // true60: the HD clear countdown counts 30 Hz frames; earlier steps wait
+        if (!jpa_t60::frame_count())
+            return;
         mClearCountdown = --clear;
         if (!clear)
             JPADeleteAllParticleHD(this, 0);
         return;
     }
     JPACalcKey(this);
-    emitterCallback(this, CallbackExecute);
+    if (jpa_t60::frame_count()) // (true60: the game's callbacks on the tick30 step)
+        emitterCallback(this, CallbackExecute);
     JPACalcEmitterInfo(this);
     JPADrawCalc(mDraw);
     JPAFieldPreCalc(mFieldManager);
     if (!((u32)mFlags & JPAEmtrStts_EnableDeleteEmitter))
         JPACalcCreatePtcls(this);
-    emitterCallback(this, CallbackExecuteAfter);
+    if (jpa_t60::frame_count())
+        emitterCallback(this, CallbackExecuteAfter);
     JPACalcParticle(this);
     JPACalcChild(this);
-    f32 tick = (f32)mTick + 1.0f;
+    f32 tick = (f32)mTick + t60::dt(); // true60: the emitter age advances by the step length
     mTick = tick < 0.0f ? 0.0f : tick;
 }
 /* 0282167C */
@@ -128,17 +140,36 @@ void jpa_emitter_calc::JPAEmitterManager::calc(u8 group) {
     while (link) {
         JPABaseEmitter* emitter = link->object;
         link = link->next;
+        // true60 (JPA_emitter_t60.h): an emitter's first calc runs at the frame time already elapsed (k / N)
+        f32 first = jpa_t60::first_calc_dt(emitter, JPAEmtrStts_FirstEmit);
+        f32 previous = first > 0.0f ? t60_set_dt(first) : 0.0f;
+        // true60 (JPA_emitter_t60.h): a one-update emitter keeps its frame's emission
+        jpa_t60::fresh_note(emitter, group, JPAEmtrStts_FirstEmit, JPAEmtrStts_StopEmit);
+        const bool restop = jpa_t60::fresh_unstop(emitter, group, JPAEmtrStts_StopEmit, JPAEmtrStts_EnableDeleteEmitter);
+        bool deleted = false;
         if (emitter->doStartFrameProcess()) {
-            if (emitter->doTerminationProcess())
+            if (emitter->doTerminationProcess()) {
                 JPADeleteEmitter(manager, emitter);
-            else
+                deleted = true;
+            } else
                 emitter->calc();
         }
+        if (restop && !deleted)
+            jpa_t60::fresh_restop(emitter, JPAEmtrStts_StopEmit);
+        if (first > 0.0f)
+            t60_set_dt(previous);
     }
+    jpa_t60::fresh_end(group);
 }
 
 /* 0281F878 */
 void jpa_emitter_calc::JPABaseEmitter::calcCreatePtcls() {
+    // true60 (-10, JPA_emitter_t60.h): the earlier steps of a frame only advance the rate-step timer; the
+    // frame's emission and crossing happen on its tick30 step, after the frame's emitter callbacks (the 30 Hz order)
+    if (!jpa_t60::frame_count()) {
+        mRateStepTimer = (f32)mRateStepTimer + t60::dt();
+        return;
+    }
     if ((u32)mFlags & JPAEmtrStts_RateStepEmit) {
         s32 count = 0;
         if ((u32)mDataFlag & JPADynFlag_FixedInterval) {
@@ -168,7 +199,9 @@ void jpa_emitter_calc::JPABaseEmitter::calcCreatePtcls() {
                 break;
     }
     f32 limit = (f32)((u8)mRateStep + 1);
-    f32 timer = (f32)mRateStepTimer + 1.0f;
+    // true60 (JPA_emitter_t60.h): the rate-step timer advances by the step length; the emission flag is set on
+    // the step that crosses the limit, so a frame's emission (count, the emitter RNG's draws) is the 30 Hz frame's
+    f32 timer = (f32)mRateStepTimer + t60::dt();
     mRateStepTimer = timer;
     if (!(timer < limit)) {
         mRateStepTimer = timer - limit;

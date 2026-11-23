@@ -4,6 +4,7 @@
  */
 #include "d/actor/d_a_obj_vtil.h"
 #include <cmath>
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 daObjVtil_c* daObjVtil_construct(daObjVtil_c*);
 
@@ -452,6 +453,9 @@ BOOL daObjVtil_c::check_circle() {
 
 /* 023B6B70 */
 BOOL daObjVtil_c::_execute() {
+    t60w::Guard<daObjVtil_c> t60g(this, t60objw::Logic<daObjVtil_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return 1;
     hit_co();
     hit_bg();
     if (!u8(mDeleteState)) {
@@ -462,6 +466,7 @@ BOOL daObjVtil_c::_execute() {
         }
         l_modeProc[mode].invoke(this);
         renew_attention_pos();
+        t60g.model = true; /* true60: the frame reached its model step */
         init_mtx();
         vtilMoveCAtTg(&mCylinder, &current.pos);
         dComIfG_inf_c* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());

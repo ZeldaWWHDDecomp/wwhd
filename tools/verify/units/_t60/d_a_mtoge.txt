@@ -1,0 +1,25 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_mtoge.txt
+# ---- true60 N-step spec (2026-11-18): the spikes (d_a_mtoge_t60.h) through the execute 021E039C
+# (all five actions, mAction 0..4). Up / Down: the frame's two chases whole on the first step (dt 1), the height glides
+# from start to end, the tick30 step lands on the end and takes the arrival; Hind / Arrival: the switch decision on the
+# tick30 step only. cLib_chaseF 0200F5C8 runs for real (the frame's speed and height are the real ones).
+t60conv 021E039C
+real 0200F5C8
+# the dispatch: the action table copied in (guard 1, the five entries), the five actions run their candidate code
+field 021E039C 101FDB3C u32 1
+field 021E039C 101FDB40 u32 0x021E010C
+field 021E039C 101FDB44 u32 0x021E0120
+field 021E039C 101FDB48 u32 0x021E01B8
+field 021E039C 101FDB4C u32 0x021E0230
+field 021E039C 101FDB50 u32 0x021E02C8
+real 021E010C 021E0120 021E01B8 021E0230 021E02C8
+t60cand 021E010C 021E0120 021E01B8 021E0230 021E02C8
+# the move's domain: heights between the two ends (and a little past them), speeds around the 30 cap, so arrivals
+# (a chase that reaches its target in the frame) and non-arrivals both occur
+field 021E039C r3+0x3C0 f32 -340 40
+field 021E039C r3+0x370 f32 0 34
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200F5C8
+t60cand 0200F5C8

@@ -1,0 +1,22 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_buoyflag_calc.txt
+# ---- true60 N-step spec (2026-11-16): the buoy flag's wind (d_a_obj_buoyflag_t60.h) on a
+# general step length. Callees are mocks.
+# calc_wind_base 02329CE4: the twelve wind phases mAng[0..11] (per-frame integer adds) shared by cloth60_share (exact
+# over the frame's N steps); the jump draw (cM_rnd < 0.05: +2000 on six phases) and the power draw cM_rndF(0.2) once per
+# frame on the tick30 step (constant mocks: the frame's one draw sees the same value as the 30 Hz call). The move push
+# (the barrel's translation since the flag's last execute, mOldMtx - m1090: Mthd_Execute copies m1090 to mOldMtx after
+# each step, which this harness does not run) is steered to no move: equal translations. mMode 0 (mode_afl: the
+# per-step form; mode_jumpToSea holds in Mthd_Execute, not here).
+# calc_pos 0232A218 is not in the N-step spec list: its integrator runs on the vector mocks' outputs (cloth_packet's reason:
+# dt-1 check for dt 1, the cloth statistically in the paired runs, the cloth-simulation rule).
+t60conv 02329CE4
+fret! 02019788 0 1
+fret! 020198D8 0 0.2
+field 02329CE4 r4+0x3218 u32 0
+field 02329CE4 r4+0x3190 f32 0
+field 02329CE4 r4+0x31A0 f32 0
+field 02329CE4 r4+0x31B0 f32 0
+field 02329CE4 r4+0x31C0 f32 0
+field 02329CE4 r4+0x31D0 f32 0
+field 02329CE4 r4+0x31E0 f32 0

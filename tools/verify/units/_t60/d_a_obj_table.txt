@@ -1,0 +1,5 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_table.txt
+# ---- true60 N-step spec (2026-11-20): no code change: Table: Execute = set_mtx + the matrix out (no per-frame state).
+# Two steps at dt 0.5 = one step at dt 1 on the unchanged execute (idempotent per frame).
+t60conv 023994C8

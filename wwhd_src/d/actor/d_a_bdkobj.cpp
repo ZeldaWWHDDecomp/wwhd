@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_bdkobj.h"
+#include "d/actor/d_a_bdkobj_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule) */
 
 const gc_tu_data gc_tu = {.safeString = 0x1000835C};
 
@@ -64,6 +65,8 @@ static void bdo_eff_s_dt(bdo_eff_s *, s32);
 
 /* 02072888 */
 static void ride_call_back(dBgW *param1, fopAc_ac_c *param2, fopAc_ac_c *param3) {
+    if (bdkobj_t60::cbSkip()) /* true60: the rider's earlier steps (only the tick30 step's call counts) */
+        return;
     if (param3 == nullptr || fpcM_GetName(param3) != fpcNm_PLAYER_e) { /* HD: fopAcM_GetName null check */
         return;
     }
@@ -421,6 +424,11 @@ static inline void set_actor_mtx(bdkobj_class *i_this) {
 
 /* 020729A8 */
 static BOOL daBdkobj_Execute(bdkobj_class *i_this) {
+    /* true60: the whole frame on the tick30 step (the whole-frame form rule; end at every return) */
+    t60w::Guard<bdkobj_class> t60g(i_this, bdkobj_t60::ops());
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
+    t60g.model = true;
     if (i_this->mType == 2) {
         settingTevStruct(dKy_getEnvlight(), TEV_TYPE_BG0, &i_this->current.pos, &i_this->tevStr);
         tower_kaidan_move(i_this);

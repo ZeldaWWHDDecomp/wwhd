@@ -13,6 +13,7 @@
 #pragma once
 #include "gc_api/d/d_com_inf_game.h"
 #include "gc_api/m_Do/m_Do_mtx.h"
+#include "f_pc/f_pc_t60_frame_latch.h"
 
 /* ---- statics of this translation unit ---- */
 #define SAFESTRING_VTBL 0x1003A1ECu /* this TU's sead::SafeString vtable */
@@ -56,6 +57,8 @@ static inline cXyz* ship_staticVec(u32 guard, u32 addr, f32 x, f32 y, f32 z) {
 
 /* HD helpers defined in d_a_ship.cpp */
 BOOL daShip_checkSirenInside();
+/* true60: the same test on Link's frame-start room (the process-order read rule addendum; execute's early return) */
+BOOL daShip_checkSirenInside_fs();
 void daShip_sightPacket_setMtx(u8* pkt);
 void daShip_sightPacket_setSegMtx(u8* pkt, s32 idx, Mtx34* mtx);
 
@@ -323,8 +326,11 @@ BOOL daPy_shipSpecialDemoStart(fopAc_ac_c* link);
 f32 cLib_addCalcPosXZ(cXyz* p, const cXyz* t, f32 scale, f32 maxStep, f32 minStep);
 
 /* ---- player (daPy_lk_c) ---- */
-/* dComIfGp_checkPlayerStatus0(0, flag): play+0x5CD8 */
-static inline u32 ship_playerStatus0() { return gabi::load<u32>(dComIfGp_ea() + 0x5CD8); }
+/* dComIfGp_checkPlayerStatus0(0, flag): play+0x5CD8. true60 (the process-order read rule addendum, f_pc_t60_frame_latch.h): Link
+ * (later in the process line) sets and clears it in his execute, so the ship's decisions read its frame-start value on
+ * every step (N = 1: the live word); ship_playerStatus0_live() for the picture reads (draw, the tiller joint callback) */
+static inline u32 ship_playerStatus0() { return t60_flatch_load<u32>(dComIfGp_ea() + 0x5CD8); }
+static inline u32 ship_playerStatus0_live() { return gabi::load<u32>(dComIfGp_ea() + 0x5CD8); }
 enum { daPyStts0_SHIP_RIDE_e = 0x10000 };
 /* HD inline: the link player (play+0x5B34, read first) is the current player 0 (play+0x5B2C) */
 static inline bool ship_isLinkPlayer0() {
@@ -353,6 +359,9 @@ WWHD_OFFSET(ShipRipple, mRate, 0x10);
 /* J3DTexMtx layout view (TWW J3DTexMtxInfo + mMtx, 0x94), defined below */
 struct ShipTexMtx;
 
+extern u32 g_ship60ProcSets; /* true60 (the 30 Hz visual-motion rule (2)), defined in d_a_ship_exec.cpp */
+extern u32 g_ship60TillerWholeStep; /* true60 (frame form): the step the tiller chase ran whole, d_a_ship_exec.cpp */
+extern u32 g_ship60YExactStep; /* true60 (frame form): the step whose y came from the exact frame move, d_a_ship_exec.cpp */
 struct daShip_c : fopAc_ac_c {
     /* 0x03AC */ request_of_phase_process_class mPhs;
     /* 0x03B4 */ gptr<mDoExt_McaMorf> mpBodyAnm;
@@ -588,6 +597,7 @@ struct daShip_c : fopAc_ac_c {
 
     /* mProc = &daShip_c::procX (GHS pointer to member: this delta, vtable index -1, function) */
     void setProc(u32 fn) {
+        g_ship60ProcSets++; /* true60 (the 30 Hz visual-motion rule (2)): host count of procedure sets (d_a_ship_exec.cpp's dispatch) */
         mProc.d = 0;
         mProc.i = -1;
         mProc.f = fn;
@@ -1065,6 +1075,8 @@ struct AttackObject {
 };
 WWHD_SIZE(AttackObject, 0x14);
 WWHD_OFFSET(AttackObject, mType, 0x10);
+/* naming note (2026-11-21): by daPy_py_c (d_a_player.h) +0x3B8 is mNoResetFlg0 and +0x3BC mNoResetFlg1
+ * (mResetFlg0 is +0x3C0); the offsets below are right (0247D880 loads lwz 0x3BC), only the two names are shifted */
 struct LinkState {
     /* 0x0000 */ u8 mPrefix[0x3B8];
     /* 0x03B8 */ be<u32> mResetFlg0;

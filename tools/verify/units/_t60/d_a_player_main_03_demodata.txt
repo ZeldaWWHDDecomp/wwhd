@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit).: setDemoData 023F22FC,
+# DEMO_INIT_WAIT (4) / DEMO_POS_INIT (0x2C) from the demo actor (ENABLE_ANM 0x20 | ENABLE_TRANS 2): the placement (speed
+# clears, setPlayerPosAndAngle, the ship's start position) on the frame's first step only. Net effect of N steps = one step.
+include d_a_player_main_03.txt
+t60conv 023F22FC
+# the play pointer (dComIfGp, 025200D4) is one value in the game; a per-call mock answer moved with the call count
+# (fewer calls on a later step: the placement's) and pointed the BOOMERANG_WAIT clear at page 0
+ret! 025200D4 0x54000000 0x54000000
+field 023F22FC r3+0x2DC u8 1,0x20
+field 023F22FC 56000004 u16 0x22,0x2A,0x3A,0x3E
+field 023F22FC 5600002C i32 4,0x2C

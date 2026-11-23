@@ -1,4 +1,5 @@
 #include "d/actor/d_a_tag_light.h"
+#include "d/actor/d_a_tag_light_t60.h" /* true60 (t60conv): step helpers */
 using namespace daTagLight;
 
 const gc_tu_data gc_tu = {.safeString = 0x1003F724};
@@ -129,7 +130,7 @@ u8 Act_c::_delete() {
 }
 /* 024AE080 */
 u32 Act_c::chk_light() {
-    if (mSph.ChkTgHit()) {
+    if (t60c::hit(mSph.ChkTgHit(), 1, &mSph)) {
         mSph.ClrTgHit();
         return 1;
     }
@@ -139,8 +140,11 @@ u32 Act_c::chk_light() {
 /* 024AE0E8 */
 u8 Act_c::_execute() {
     if (mType == Type_Detector) {
+        /* true60 (the shared-world-state rule / one-sweep-per-frame attack): the detector's whole frame (the light read, the count, the switch it sets
+         * at 11 and its collider registration) on the tick30 step at the line place; the earlier steps leave it */
+        if (!t60c::end()) return 1;
         bool hit = chk_light();
-        s16 count = s16(u16(mLitCount) + (hit ? 1u : 0xFFFFu));
+        s16 count = s16(s16(u16(mLitCount) + (hit ? 1u : 0xFFFFu)));
         if (count < 0)
             count = 0;
         else if (count > 20)

@@ -1,0 +1,55 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_player_main_07.txt
+# ---- true60 N-step spec: the procedures' 30 Hz waits count on tick30 (mProcVar0 exact after N
+# steps); inputs steered to the waiting branch (mFrameCtrlUnder[0] stopped: rate 0).
+t60conv 0243CA98 0242DF08 02436AB4
+field 0243CA98 r3+0x5898 f32 0 0.001
+field 0243CA98 r3+0x589C f32 0 0.001
+field 0243CA98 r3+0x6916 i16 1 12
+field 0242DF08 r3+0x5898 f32 0 0.001
+field 0242DF08 r3+0x589C f32 0 0.001
+field 0242DF08 r3+0x6916 i16 1 12
+field 0242DF08 r3+0x69C0 i32 0
+# procRopeHangWait: the hang turn (rope turn x dt with the carry). The turn speed mProcVar2 ramps by 64 x stick a frame
+# (exact over the frame) and is smoothed by cLib_addCalcAngleS (central; clamp regime the clamped-smoothing rule: max step 0x40
+# x (1 - dt)); the facing adds the turn speed per step, so it may differ by (1 - dt) / 2 x the frame's change of the
+# turn speed (<= 64 + 64): 32 (N 2) / 48 (N 4) -> abs 48. The carry continues over an input's steps (the harness's step
+# counter advances per step since), so its old +1 allowance is gone (2026-11-16).
+field 02436AB4 r3+0x6A08 f32 0.06 1
+field 02436AB4 r3+0x691A i16 -512 512
+field 02436AB4 r3+0x6916 i16 -1
+t60tol 02436AB4 r3+0x691A s16 abs 48
+t60tol 02436AB4 r3+0x32A a16 abs 48
+t60tol 02436AB4 r3+0x322 a16 abs 48
+# procRopeReady (024352F4, 2026-11-16): no N-step spec. The pull's target (the rope actor's position, read
+# through mActorKeepEquip.mActor +0x6594) is pointee memory the `field` directive cannot steer (no dereference form):
+# generated inputs put it ~1e38 away (trial s13_rr_t02_try: every compared input differs by float overflow, nothing
+# about the step length). Evidence: dt-1 check s1 / s7 and the rope pair (prope7).
+# ---- true60 N-step spec: procVomitWait's and setShipAttnetionBodyAngle's turn (ramp 64 x stick
+# a frame + facing, with the carry: the rope hang form above, tolerances the same), procVomitJump's launch delay,
+# procVomitLand's lie-down wait and procTactWait's match wait (frame counts on the frame's step: exact).
+t60conv 0243BA94 02430D28 0243BC78 0243BEE4 0243A094
+field 0243BA94 r3+0x3BC i32 0
+field 0243BA94 r3+0x6916 i16 0
+field 0243BA94 r3+0x6A08 f32 0.06 1
+field 0243BA94 r3+0x691A i16 -512 512
+t60tol 0243BA94 r3+0x691A s16 abs 48
+t60tol 0243BA94 r3+0x32A a16 abs 48
+t60tol 0243BA94 r3+0x322 a16 abs 48
+field 02430D28 r3+0x65B0 i32 0
+field 02430D28 r3+0x6A08 f32 0.06 1
+field 02430D28 r3+0x6920 i16 -512 512
+t60tol 02430D28 r3+0x6920 s16 abs 48
+t60tol 02430D28 r3+0x32A a16 abs 48
+t60tol 02430D28 r3+0x322 a16 abs 48
+field 0243BC78 r3+0x6918 i16 1 12
+field 0243BEE4 r3+0x69C0 i32 0
+field 0243BEE4 r3+0x5898 f32 0 0.001
+field 0243BEE4 r3+0x589C f32 0 0.001
+field 0243BEE4 r3+0x6916 i16 1 12
+field 0243A094 r3+0x69C0 i32 -2
+field 0243A094 r3+0x6918 i16 1 12
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200ECD4 0200F378 0200F564 0200F5C8
+t60cand 0200ECD4 0200F378 0200F564 0200F5C8

@@ -8,6 +8,7 @@
  * marks the differences.
  */
 #include "d/actor/d_a_npc_kp1.h"
+#include "d/actor/d_a_npc_kp1_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule NPC form) */
 
 // HD: resource-key vtable and per-TU data retain their original guest addresses.
 const gc_tu_data gc_tu = {.safeString = 0x1001CDC4};
@@ -107,11 +108,13 @@ static BOOL nodeCallBack_Kp(J3DNode* i_node, int i_calcTiming) {
             Mtx34* stk = mDoMtx_stack_c::get();
             PSMTXCopy(model->getAnmMtx(jointIdx), stk);
             if (jointIdx == (u32)(s32)kp1Actor->m_head_jnt_num) {
-                PSMTXMultVec(stk, &a_att_pos_offst, &kp1Actor->mAttPos);
+                if (kp1_t60::drawStep()) /* true60: logic store on the tick30 step's draw only (rule 14) */
+                    PSMTXMultVec(stk, &a_att_pos_offst, &kp1Actor->mAttPos);
                 // HD: compared with Km1, Y instead of X, both angles negated
                 mDoMtx_YrotM(stk, (s16)-kp1Actor->m_jnt.mAngles[0][1]);
                 mDoMtx_ZrotM(stk, (s16)-kp1Actor->m_jnt.mAngles[0][0]);
-                PSMTXMultVec(stk, &a_eye_pos_offst, &kp1Actor->mEyePos);
+                if (kp1_t60::drawStep()) /* true60: logic store on the tick30 step's draw only (rule 14) */
+                    PSMTXMultVec(stk, &a_eye_pos_offst, &kp1Actor->mEyePos);
             } else if (jointIdx == (u32)(s32)kp1Actor->m_backbone_jnt_num) {
                 mDoMtx_XrotM(stk, kp1Actor->m_jnt.mAngles[1][1]);
                 mDoMtx_ZrotM(stk,
@@ -945,6 +948,8 @@ BOOL daNpc_Kp1_c::_draw() {
 
 /* 0227C774 */
 BOOL daNpc_Kp1_c::_execute() {
+    if (t60w::begin(this, kp1_t60::kOps)) /* true60: a step before the tick30 step: the picture only */
+        return true;
 
     if (mbRanExecute == 0) {
         mInitialPos.copy(current.pos);
@@ -974,6 +979,7 @@ BOOL daNpc_Kp1_c::_execute() {
     }
     setMtx();
     setCollision(60.0f, 170.0f);
+    t60w::end(this, kp1_t60::kOps, true); /* true60: the frame's change kept for the next frame's picture */
     return true;
 }
 

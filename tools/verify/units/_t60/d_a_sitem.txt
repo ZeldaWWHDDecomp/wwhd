@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_sitem.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule + addendum, cross-actor reads;
+# d_a_sitem_t60.h): daSitem_Execute 024867D0 (hand_move, control1/2/3, cut_control, hit_check inlined; hand_mtx_set and
+# my_break called). The tick30 step runs the original execute whole at dt 1 from the frame start; the earlier steps
+# change no logic state (a visual extrapolation of the line segments / hand / eye by the previous frame's change, none
+# here: no previous frame): net effect = the one step's, byte exact. Negative control (T60C_NEGCTRL) must fail.
+t60conv 024867D0
+# effect calls (sound / particle starts, item / actor creation, delete) and the collider registrations (one-sweep-per-frame attack): as many
+# calls over the N steps as in the one step
+t60calls 025A847C 025D5834 025D8120 025E19CC 025E1A40 0200E240

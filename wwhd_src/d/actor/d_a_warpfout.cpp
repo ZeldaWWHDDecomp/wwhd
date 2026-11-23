@@ -1,5 +1,6 @@
 /* Warp departure effect: tww actor methods with verified HD event and particle semantics. */
 #include "d/actor/d_a_warpfout.h"
+#include "d/actor/d_a_warpfout_t60.h" /* true60: the shared-world-state rule whole-execute form */
 
 // HD: table storage is GHS's eight-byte member-pointer representation. Dispatch preserves linkage.
 static WarpfoutAction event_init_tbl[] = {{&daWarpfout_c::initWarp1},
@@ -73,6 +74,7 @@ void daWarpfout_c::demo_proc() {
 
 /* 024D83E8 */
 s32 daWarpfout_c::_execute() {
+    if (!t60c::end()) return TRUE; /* true60 (the shared-world-state rule): the warp-out (warpfout)'s frame on the tick30 step at the line place */
     // HD: checkOrder/eventOrder were folded away; only demo_proc remains.
     demo_proc();
     return 1;

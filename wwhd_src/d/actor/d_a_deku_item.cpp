@@ -1,5 +1,6 @@
 /* Collectable Deku Leaf; derived from WWHD disassembly. */
 #include "d/actor/d_a_deku_item.h"
+#include "d/actor/d_a_deku_item_t60.h" /* true60: held mode, sound once a frame */
 using namespace DekuItem;
 static u32 resource(gabi::Local<ResourceLocal> &local, u32 id) {
   local->name.text = ArcName;
@@ -184,7 +185,7 @@ void daDekuItem_c::checkOrder() {
 }
 /* 0211EE34 */
 void daDekuItem_c::mode_proc_call() {
-  ModeProc *entry = &modeTable()[(u32)mMode];
+  ModeProc *entry = &modeTable()[(u32)t60c::heldInt((s32)mMode, 1, this)]; /* true60: the frame's mode */
   s16 slot = entry->slot, adjust = entry->adjustment;
   void *object = view<void>(gabi::ea(this) + (s32)adjust);
   u32 target;
@@ -223,7 +224,9 @@ void daDekuItem_c::mode_wait() {
   u32 emitter = gabi::ea((void *)mpEmitter);
   if (hit)
     mMode = Mode_GETDEMO_INIT_e;
-  if (!emitter) {
+  if (t60c::held(!emitter, 2, this)) { /* true60: the frame began without the emitter: created once, no follow */
+    if (emitter)
+      goto t60_emitter_done;
     u32 play = sdk::play<u32>();
     u32 particles = playView(play)->particles;
     emitter = sdk::setParticle<u32>(
@@ -243,8 +246,10 @@ void daDekuItem_c::mode_wait() {
       view<Emitter>(emitter)->translation.y =
           -(f32)view<Emitter>(emitter)->translation.y;
   }
+t60_emitter_done:
   s32 reverb = sdk::getReverb<s32>((s32)current.roomNo);
-  sdk::startSound(LeafSound, &eyePos, 0, reverb);
+  if (t60c::end()) /* true60: a continuous sound, once per 30 Hz frame (the one-emitter-per-event rule) */
+    sdk::startSound(LeafSound, &eyePos, 0, reverb);
   sdk::setCylinderCenter(&mCyl.center, &current.pos);
   u32 play = sdk::play<u32>();
   sdk::registerCollision(playView(play)->collision, &mCyl);

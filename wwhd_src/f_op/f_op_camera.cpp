@@ -1,5 +1,6 @@
 /* Camera process dispatch; tww flow with verified HD pause and creation semantics. Local only. */
 #include "f_op/f_op_camera.h"
+#include "d/d_s_play_t60.h"
 
 /* 025DA3C4 */
 BOOL fopCam_Draw(camera_class* camera) {
@@ -12,7 +13,8 @@ BOOL fopCam_Draw(camera_class* camera) {
 /* 025DA418 */
 BOOL fopCam_Execute(camera_class* camera) {
     // HD returns TRUE on either pause path; the GC source leaves ret uninitialized there.
-    if (dMenu_flag() || dScnPly_ply_c::isPause())
+    // true60 (d_s_play_t60.h (c)): on in-between steps the frame's pause answer, as the actors
+    if (dMenu_flag() || t60_frame_isPause([] { return dScnPly_ply_c::isPause(); }))
         return TRUE;
     return fpcMtd_Execute(&camera->mpMtd->base, camera);
 }

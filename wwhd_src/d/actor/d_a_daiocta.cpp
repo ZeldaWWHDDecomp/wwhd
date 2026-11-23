@@ -10,6 +10,7 @@
  */
 #include "d/actor/d_a_daiocta.h"
 #include "d/actor/d_a_daiocta_eye.h"
+#include "d/actor/d_a_daiocta_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule addendum) */
 
 #include <cmath>
 
@@ -146,7 +147,8 @@ static f32 oct_abs(u32 a, u32 b, gabi::Local<cXyz>& diff) {
 static void oct_settingTevStruct(u32 t, s32 type) {
     auto* i_this = T(t);
     dScnKy_env_light_c* env = dKy_getEnvlight();
-    settingTevStruct(env, type, &i_this->current.pos, &i_this->tevStr);
+    if (daiocta_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+        settingTevStruct(env, type, &i_this->current.pos, &i_this->tevStr);
 }
 
 /* forward declarations (calls between the unit's functions are guest calls) */
@@ -1407,6 +1409,11 @@ void daDaiocta_c::setWater() {
 
 /* 0211AE68 */
 bool daDaiocta_c::_execute() {
+    /* true60: the whole frame on the tick30 step (end at every return) */
+    t60w::Guard<daDaiocta_c> t60g(this, daiocta_t60::ops());
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return false;
+    t60g.model = true;
     auto* i_this = this;
     u32 t = A(i_this);
     s32 mode = i_this->mMode;

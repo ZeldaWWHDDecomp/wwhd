@@ -7,6 +7,7 @@
  * "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_msw.h"
+#include "d/actor/d_a_msw_t60.h"
 #define REG6_F(i) REG_F(6, i)
 #define REG6_S(i) REG_S(6, i)
 static dCcD_Cyl *dCcD_Cyl_ct_tu(dCcD_Cyl *);
@@ -18,6 +19,15 @@ static dCcD_SrcCyl himo_cyl_src;
 /* 021D6270 */
 static void ride_call_back(dBgW *bgw, fopAc_ac_c *i_ac, fopAc_ac_c *i_pt) {
     msw_class *pActor = static_cast<msw_class *>(i_ac);
+    /* true60: one declarator each: the glue moves single-declarator locals to the guest stack (a multi-declarator cXyz
+     * stayed a host local: be<> views of guest memory at a host address) */
+    cXyz riderStart;
+    cXyz platStart;
+    const cXyz *riderOld, *platPos;
+    /* true60: once per 30 Hz frame, on the rider's tick30 step (frame-end rider, d_a_msw_t60.h) */
+    if (!mswT60::ride(i_ac, i_pt, &riderStart, &riderOld, &platStart, &platPos))
+        return;
+    const f32 t60prevDt = mswT60::rideDtBegin(); /* true60: the frame's ride at dt 1 (d_a_msw_t60.h) */
 
     cMtx_YrotS(calc_mtx(), -i_ac->current.angle.y);
 
@@ -25,11 +35,10 @@ static void ride_call_back(dBgW *bgw, fopAc_ac_c *i_ac, fopAc_ac_c *i_pt) {
     cXyz tmp;
     cXyz pos1;
     cXyz pos2;
-    cXyz_mi(&i_pt->current.pos, &res,
-            &i_ac->current.pos); /* tmp = i_pt->current.pos - i_ac->current.pos */
+    cXyz_mi(&i_pt->current.pos, &res, platPos); /* tmp = i_pt->current.pos - i_ac->current.pos */
     tmp.copy(res);
     MtxPosition(&tmp, &pos1);
-    cXyz_mi(&i_pt->old.pos, &res, &i_ac->current.pos);
+    cXyz_mi(riderOld, &res, platPos);
     tmp.copy(res);
     MtxPosition(&tmp, &pos2);
 
@@ -61,6 +70,7 @@ static void ride_call_back(dBgW *bgw, fopAc_ac_c *i_ac, fopAc_ac_c *i_pt) {
     if (dist > 10.0f && pActor->mSwayAmp.z < dist) {
         cLib_addCalc2(&pActor->mSwayAmp.z, dist, 1.0f, REG0_F(7) + 1.2f);
     }
+    mswT60::rideDtEnd(t60prevDt);
 }
 
 /* inlined into daMsw_Draw */
@@ -146,7 +156,8 @@ static BOOL daMsw_Execute(msw_class *i_this) {
     fopAc_ac_c *player = dComIfGp_getPlayer(0);
     dComIfGp_get(); /* HD: a second play-object access whose result is unused */
 
-    msw_move(i_this);
+    if (!mswT60::move(i_this, msw_move)) /* true60: the frame's move, glided */
+        msw_move(i_this);
 
     MtxTrans(actor->current.pos.x, actor->current.pos.y, actor->current.pos.z, false);
     cMtx_YrotM(calc_mtx(), actor->shape_angle.y);
@@ -164,17 +175,18 @@ static BOOL daMsw_Execute(msw_class *i_this) {
         src.x = xd[chainIdx] * k;
         MtxPosition(&src, &i_this->mChainLowerPos[chainIdx]);
 
-        if (i_this->mChainInitTimer != 0) {
+        const bool frameWork = mswT60::frameWork(); /* true60: the chains' frame work on the tick30 step */
+        if (frameWork && i_this->mChainInitTimer != 0) {
             i_this->mChainInitTimer = (s16)(i_this->mChainInitTimer - 1);
             i_this->mChainUpperPos[chainIdx].copy(i_this->mChainLowerPos[chainIdx]);
             i_this->mChainUpperPos[chainIdx].y = i_this->mChainLowerPos[chainIdx].y + 1000.0f;
         }
 
-        if (i_this->mChainHitTimer[chainIdx] != 0) {
+        if (frameWork && i_this->mChainHitTimer[chainIdx] != 0) {
             i_this->mChainHitTimer[chainIdx] = (s16)(i_this->mChainHitTimer[chainIdx] - 1);
         }
 
-        if (i_this->mChainCyls[chainIdx].ChkTgHit() && i_this->mChainHitTimer[chainIdx] < 10) {
+        if (frameWork && i_this->mChainCyls[chainIdx].ChkTgHit() && i_this->mChainHitTimer[chainIdx] < 10) {
             i_this->mChainHitTimer[chainIdx] = (s16)(REG6_S(3) + 15);
 
             s32 reverb = dComIfGp_getReverb(fopAcM_GetRoomNo(actor));
@@ -189,7 +201,8 @@ static BOOL daMsw_Execute(msw_class *i_this) {
         }
         i_this->mChainCyls[chainIdx].SetC(&i_this->mChainLowerPos[chainIdx]);
 
-        dComIfG_Ccsp_Set(&i_this->mChainCyls[chainIdx]);
+        if (frameWork)
+            dComIfG_Ccsp_Set(&i_this->mChainCyls[chainIdx]);
     }
 
     MtxPull();

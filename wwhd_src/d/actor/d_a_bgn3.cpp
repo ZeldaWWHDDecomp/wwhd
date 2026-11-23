@@ -6,6 +6,7 @@
  * (zeldaret/tww d_a_bgn3.cpp) and the WWHD code.
  */
 #include "d/actor/d_a_bgn3.h"
+#include "d/actor/d_a_bgn3_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule) */
 #include "gc_api/d/d_com_inf_game.h"
 #include "gc_api/f_op/f_op_actor_mng.h"
 #include <bit>
@@ -1342,6 +1343,12 @@ u32 ki_c_sub(u32 a, u32 ignored) {
 /* 02090680 */
 bool daBgn3_Execute(u32 a) {
     auto* i_this = gabi::at<bgn3_class>(a);
+    /* true60: the whole frame on the tick30 step (the whole-frame form rule; end at every return); daBgn3_Create's own
+     * call runs at dt 1 (bgn3_t60::createBegin / createEnd), where the Guard does nothing and the original runs */
+    t60w::Guard<bgn3_class> t60g(i_this, bgn3_t60::ops());
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
+    t60g.model = true;
     dComIfGp_ea();
     u32 boss = Bgn3Bindings::fpcM_Search(gabi::guest_fn((const void*)&bgn_s_sub), a);
     bgn = gabi::at<Bgn3BossView>(boss);
@@ -1582,7 +1589,11 @@ s32 daBgn3_Create(u32 a) {
     i_this->health = 3;
     for (int i = 0; i < 9; ++i)
         copyActorTev(a, a + 0x1BE8 + 0x19D8 * i + 0xB4);
-    daBgn3_Execute(a);
+    {
+        const f32 t60PrevDt = bgn3_t60::createBegin(); /* true60: create's run of the execute, the original at dt 1 */
+        daBgn3_Execute(a);
+        bgn3_t60::createEnd(t60PrevDt);
+    }
     return phase;
 }
 

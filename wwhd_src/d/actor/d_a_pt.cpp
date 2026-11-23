@@ -10,6 +10,7 @@
 #include "d/actor/d_a_pt.h"
 #include "gc_api/f_op/f_op_actor_mng.h"
 #include "gc_api/d/d_com_inf_game.h"
+#include "d/actor/d_a_pt_t60.h" /* true60 */
 
 #define SAFESTRING_VTBL 0x100380AC /* this TU's sead::SafeString vtable */
 #define PT_VTBL 0x10038234         /* pt_class vtable (HD virtual destructor) */
@@ -54,6 +55,7 @@ static daPt_HIO_c* daPt_HIO_c_ct(daPt_HIO_c* self) {
 
 /* 02445DBC */
 void anm_init(pt_class* i_this, int bckFileIdx, float morf, unsigned char loopMode, float playSpeed, int soundFileIdx) {
+    bk_t60_mark_anm(&i_this->mpMorf); /* true60 (the split-actor state rule Bokoblin form): a middle-step set plays next frame */
     if (soundFileIdx >= 0) {
         J3DAnmTransform* anm = (J3DAnmTransform*)dComIfG_getObjectRes("Pt", bckFileIdx, SAFESTRING_VTBL);
         void* sound = dComIfG_getObjectRes("Pt", soundFileIdx, SAFESTRING_VTBL);
@@ -161,6 +163,9 @@ void action(pt_class* i_this); /* 02447300, d_a_pt_action.cpp */
 
 /* 02446374 */
 static BOOL daPt_Execute(pt_class* i_this) {
+    pt_t60_cc_restore(i_this); /* true60 (the one-sweep-per-frame attack rule): the set bits masked on the previous in-between step */
+    if (pt_t60_deleted(i_this)) /* true60: deleted on an earlier step of this frame */
+        return TRUE;
     gabi::Local<cXyz> zero;
     zero->x = 0.0f;
     zero->y = 0.0f;
@@ -175,13 +180,20 @@ static BOOL daPt_Execute(pt_class* i_this) {
         return TRUE;
     }
 
-    settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &i_this->current.pos, &i_this->tevStr);
+    /* true60 (the per-step chance rule, the Bokoblin): the lighting draws the light flicker from cM_rnd: once per
+     * frame, on the first step before the dispatch as in the original (every step drew it N times a frame) */
+    if (t60c::first())
+        settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &i_this->current.pos, &i_this->tevStr);
 
-    s16 counter = i_this->mFrameCounter + 1;
+    pt_t60_old_note(i_this); /* true60: the frame-start position for the tick30 ground check (d_a_pt_t60.h) */
+    /* true60 (the first-step AI-timer rule): the counters and AI timers count on the frame's first step */
+    const bool t60First = t60c::first();
+    s16 counter = i_this->mFrameCounter + (t60First ? 1 : 0);
     i_this->mFrameCounter = counter;
-    if ((counter & 0x1F) == 0 && i_this->current.pos.y - i_this->home.pos.y < -3000.0f) {
+    if (t60First && (counter & 0x1F) == 0 && i_this->current.pos.y - i_this->home.pos.y < -3000.0f) {
         /* fell out of the world */
         fopAcM_delete(i_this);
+        pt_t60_mark_deleted(i_this); /* true60 */
         dComIfGs_onActor(i_this->setID, i_this->home.roomNo);
         if (i_this->mBehaviorType == 0) {
             i_this->mRespawn = 1;
@@ -193,29 +205,40 @@ static BOOL daPt_Execute(pt_class* i_this) {
         return TRUE;
     }
 
-    for (int i = 0; i < 3; i++) {
-        if (i_this->mTimers[i] != 0) {
-            i_this->mTimers[i]--;
+    if (t60First) {
+        for (int i = 0; i < 3; i++) {
+            if (i_this->mTimers[i] != 0) {
+                i_this->mTimers[i]--;
+            }
         }
-    }
-    if (i_this->mNoHitTimer != 0) {
-        i_this->mNoHitTimer--;
+        if (i_this->mNoHitTimer != 0) {
+            i_this->mNoHitTimer--;
+        }
     }
 
     if (l_HIO.mbStop != 0) {
         return TRUE;
     }
     pt_action(i_this);
+    /* true60: deleted by this (non-tick30) step's action: the rest of A's call runs once, as the whole frame (dt 1) */
+    f32 t60PrevDt = -1.0f;
+    if (pt_t60_deleted(i_this) && !t60::tick30())
+        t60PrevDt = t60_set_dt(1.0f);
     if (i_this->mInitialSpawnWaitsUntilOffScreen != 0) {
+        if (t60PrevDt >= 0.0f) t60_set_dt(t60PrevDt); /* true60 */
         return TRUE;
     }
 
-    if (i_this->mbBgCheck != 0) {
+    /* true60: the push, the fall speed and the ground check once per frame, whole on the tick30
+     * step from the frame-start position (d_a_pt_t60.h pt_t60_bg_frame) */
+    if (i_this->mbBgCheck != 0 && pt_t60_bg_frame(i_this)) {
         cXyz* ccMove = &i_this->mStts.m_cc_move; /* GetCCMoveP: null-preserving */
         if (gabi::ea(ccMove) != 0) {
-            i_this->current.pos.x = i_this->current.pos.x + ccMove->x;
-            i_this->current.pos.y = i_this->current.pos.y + ccMove->y;
-            i_this->current.pos.z = i_this->current.pos.z + ccMove->z;
+            f32 t60Px = ccMove->x, t60Py = ccMove->y, t60Pz = ccMove->z;
+            pt_t60_push(i_this, &t60Px, &t60Py, &t60Pz); /* true60 (the first-step push rule): the push once, on the tick30 step */
+            i_this->current.pos.x = i_this->current.pos.x + t60Px;
+            i_this->current.pos.y = i_this->current.pos.y + t60Py;
+            i_this->current.pos.z = i_this->current.pos.z + t60Pz;
         }
         i_this->mFallSpeedY = i_this->speed.y;
         i_this->mAcch.CrrPos(dComIfG_Bgsp());
@@ -232,8 +255,9 @@ static BOOL daPt_Execute(pt_class* i_this) {
     J3DModel* model = i_this->mpMorf->getModel();
     J3DModel_setBaseTRMtx(model, mDoMtx_stack_c::get());
 
-    /* blinking */
-    if (i_this->mBlinkTimer != 0) {
+    /* blinking (true60: a visual counter and its draw once per frame, on the tick30 step: the per-step chance rule, 11) */
+    if (!t60c::end()) {
+    } else if (i_this->mBlinkTimer != 0) {
         s16 t = i_this->mBlinkTimer - 1;
         i_this->mBlinkTimer = t;
         if (t <= 7) {
@@ -242,7 +266,10 @@ static BOOL daPt_Execute(pt_class* i_this) {
     } else {
         i_this->mBlinkTimer = (s16)gabi::ftoi(cM_rndF(30.0f) + 20.0f);
     }
-    i_this->mpMorf->play(&i_this->eyePos, 0, 0);
+    /* true60 (the split-actor state rule, d_a_bk_t60.h bk_t60_mark_anm, as daBk_Execute): an animation set on a middle step (N >= 4)
+     * is first played next frame; a set on the tick30 step plays its first morf there at dt 1 (bk_t60_play) */
+    if (!bk_t60_pending(&i_this->mpMorf))
+        bk_t60_play(&i_this->mpMorf, &i_this->eyePos, 0, 0);
     i_this->mpBrkAnm->setFrame((f32)i_this->mColorNo);
     i_this->mpMorf->calc();
     pt_enemyFire(&i_this->mEnemyFire);
@@ -255,10 +282,18 @@ static BOOL daPt_Execute(pt_class* i_this) {
     attnPos->y = i_this->eyePos.y + 30.0f;
     i_this->mSph.SetC(&i_this->eyePos);
     i_this->mSph.SetR(40.0f);
-    dComIfG_Ccsp_Set(&i_this->mSph);
+    pt_t60_cc_mask(i_this); /* true60 (the one-sweep-per-frame attack rule): At, Co and Tg for the tick30 Move only */
+    /* true60: listed for the tick30 Move only, as the Peahat / Keese do: a sphere listed (masked) on an earlier
+     * step went through that step's collision Move, which reset its status's push result before the tick30 action's
+     * mStts.Move took it (a7p91n2: the two Miniblins' Co push one frame late, A f214 / B f215, |pos| 2.27) */
+    if (t60c::end())
+        dComIfG_Ccsp_Set(&i_this->mSph);
 
     gabi::Local<cXyz> atPos;
-    if (i_this->mbAttack != 0) {
+    /* true60: the attack sphere and its mbAttack consume on the tick30 step only (frame form: set on the first
+     * step, used by the tick30 Move; a consume on an earlier step parked the sphere one frame early, a10p91n2) */
+    if (!t60c::end()) {
+    } else if (i_this->mbAttack != 0) {
         PSMTXCopy(getAnmMtx(model, 15), calc_mtx());
         zero->y = 0.0f;
         zero->z = 0.0f;
@@ -266,14 +301,15 @@ static BOOL daPt_Execute(pt_class* i_this) {
         MtxPosition(zero, atPos);
         i_this->mbAttack = 0;
         i_this->mAtSph.SetC(atPos);
-        dComIfG_Ccsp_Set(&i_this->mAtSph);
+        if (t60c::end()) dComIfG_Ccsp_Set(&i_this->mAtSph); /* true60: tick30 Move only */
     } else {
         atPos->x = 20000.0f;
         atPos->y = 50000.0f;
         atPos->z = 20000.0f;
         i_this->mAtSph.SetC(atPos);
-        dComIfG_Ccsp_Set(&i_this->mAtSph);
+        if (t60c::end()) dComIfG_Ccsp_Set(&i_this->mAtSph); /* true60: tick30 Move only */
     }
+    if (t60PrevDt >= 0.0f) t60_set_dt(t60PrevDt); /* true60 */
     return TRUE;
 }
 

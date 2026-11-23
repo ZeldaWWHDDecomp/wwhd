@@ -1,7 +1,9 @@
 /** Moblin patrol, combat movement and spear collision.
  * WWHD behavior verified against cking.rpx; names/layout follow zeldaret/tww. */
 #include "d/actor/d_a_mo2_move.h"
+#include "d/actor/d_a_mo2_t60.h"
 #include <cmath>
+#include <unordered_map>
 using namespace mo2Move;
 // HD: inline collision construction uses this Moblin translation unit's
 // vtables.
@@ -86,6 +88,28 @@ static inline void walk_set(mo2_class *i_this) {
   }
 }
 
+/* true60: the frame's per-frame work in the dispatch goes on its last dispatch call: the tick30 step, or
+ * the in-between step whose execute changed the AI state (held after it; d_a_mo2_t60.h). Mo2_move's entry state and
+ * whether damage_check already changed it on this step. */
+static uint64_t s_mo2T60EntryState;
+static bool s_mo2T60ChangedBefore;
+/* the first-step AI-timer rule: the deciding per-frame work (the dash count, the guard decision, the push
+ * count) goes on the frame's FIRST step, before the frame's motion, once per frame (d_a_bk_t60.h bk_t60_frame_work). */
+static inline bool mo2_t60_frame_work(mo2_class *i_this) {
+  (void)i_this;
+  return bk_t60_first();
+}
+/* the floor hit's smoke and sound (an effect read with the frame-end attack frame) keep the frame's last dispatch call:
+ * the tick30 step, or the in-between step whose execute changed the AI state (the form before the first-step AI-timer rule) */
+static inline bool mo2_t60_frame_end_work(mo2_class *i_this) {
+  return bk_t60_end() || s_mo2T60ChangedBefore || mo2_t60_ai_state(i_this) != s_mo2T60EntryState;
+}
+
+/* true60 (the animation crossing-check rule): the animation frame entered v on this step (once per pass, as the 30 Hz frame check) */
+static inline bool morf_frame_is(mo2_class *i_this, int v) {
+  return bk_t60_frame_is(i_this->mpMorf->getFrame(), i_this->mpMorf->getPlaySpeed(), v);
+}
+
 /* inlined into Mo2_move */
 static inline void jyunkai(mo2_class *i_this) {
   dComIfGp_get();
@@ -95,6 +119,7 @@ static inline void jyunkai(mo2_class *i_this) {
   case (u16)-10:
     i_this->mTimers[1] = 0x3c;
     i_this->mDamageReaction.mMode = -9;
+    mo2_t60_ai_ran(i_this); /* true60: mode -9's body runs in this call (fall-through): not held */
     /* fallthrough */
   case (u16)-9:
     if (i_this->mTimers[1] == 0) {
@@ -144,6 +169,7 @@ static inline void jyunkai(mo2_class *i_this) {
       set_m05A4_rnd(i_this, 1, 25.0f, 30.0f);
     }
     i_this->mTimers[2] = 0x1e;
+    mo2_t60_ai_ran(i_this); /* true60: mode 1's body runs in this call (fall-through): not held */
     /* fallthrough */
   case 1: {
     s16 maxSpeed;
@@ -232,8 +258,8 @@ static inline void jyunkai(mo2_class *i_this) {
     /* fallthrough */
   case 3: {
     i_this->actor.speedF = 0.0f;
-    s32 frame = gabi::ftoi(i_this->mpMorf->getFrame());
-    if (frame == 3 || frame == 0x35) {
+    /* true60 (the animation crossing-check rule): the animation frame entered 3 / 53 on this step */
+    if (morf_frame_is(i_this, 3) || morf_frame_is(i_this, 0x35)) {
       fopAcM_monsSeStart(&i_this->actor, JA_SE_CV_MO_SEARCH, 0);
     }
     if (i_this->mTimers[1] == 0) {
@@ -247,7 +273,8 @@ static inline void jyunkai(mo2_class *i_this) {
   }
   s32 iVar6 = fopAcM_otoCheck(&i_this->actor, 1000.0f);
   iVar6 += moveSearchSpecial;
-  if (has_weapon(i_this)) {
+  /* true60 (first-step input addendum): the notice decision reads Link (and the sound contact): tick30 step */
+  if (has_weapon(i_this) && bk_t60_end()) {
     if (iVar6 != 0 || (i_this->mTargetDist < moveHIO.mSearchDist &&
                        daMo2_player_view_check(
                            i_this, &i_this->mDamageReaction.mpLookTarget->current.pos,
@@ -274,9 +301,9 @@ static inline void jyunkai(mo2_class *i_this) {
         fopAcM_monsSeStart(&i_this->actor, JA_SE_CV_MO_FIND_ENEMY, 0);
       }
     }
-  } else if (i_this->mWeaponSearchGaveUp == 0 && i_this->mDamageReaction.mMode == 2) {
-    s32 frame = gabi::ftoi(i_this->mpMorf->getFrame());
-    if ((frame == 0xb || frame == 0x19) && cM_rndF(1.0f) < 0.5f) {
+  } else if (!has_weapon(i_this) && i_this->mWeaponSearchGaveUp == 0 && i_this->mDamageReaction.mMode == 2) {
+    /* true60 (the animation crossing-check rule): the animation frame entered 11 / 25 on this step */
+    if ((morf_frame_is(i_this, 0xb) || morf_frame_is(i_this, 0x19)) && cM_rndF(1.0f) < 0.5f) {
       if (i_this != nullptr) {
         fopAcM_monsSeStart(&i_this->actor, JA_SE_CV_MO_LOSE_LANCE, 0);
       }
@@ -286,7 +313,7 @@ static inline void jyunkai(mo2_class *i_this) {
     i_this->mDamageReaction.mAction = ACTION_WEPON_SEARCH;
     i_this->mDamageReaction.mMode = -1;
   }
-  if (daMo2_bomb_view_check(i_this)) {
+  if (bk_t60_end() && daMo2_bomb_view_check(i_this)) { /* true60: reads the bombs and Link: tick30 step */
     i_this->mDamageReaction.mAction = ACTION_B_NIGE;
     i_this->mDamageReaction.mMode = 0;
   }
@@ -318,10 +345,10 @@ static inline void back_wall_check(mo2_class *i_this) {
   spA0->copy(*sp94);
   dBgS_LinChk_Set(linChk, sp34, spA0, &i_this->actor);
   if (cBgS_LineCross(dComIfG_Bgsp(), linChk)) {
-    i_this->actor.current.pos.x = gabi::fnmsubs(sp48->x, REG_F(18, 9) + 0.2f,
-                                                i_this->actor.current.pos.x);
-    i_this->actor.current.pos.z = gabi::fnmsubs(sp48->z, REG_F(18, 9) + 0.2f,
-                                                i_this->actor.current.pos.z);
+    /* true60 (the per-step movement rule): a fifth of the offset per frame: x dt */
+    f32 k = mo2_t60_rate(REG_F(18, 9) + 0.2f);
+    i_this->actor.current.pos.x = gabi::fnmsubs(sp48->x, k, i_this->actor.current.pos.x);
+    i_this->actor.current.pos.z = gabi::fnmsubs(sp48->z, k, i_this->actor.current.pos.z);
     hd_debug_print(0x1E, 0x190, "MO2 BACK KABE HIT!");
   }
   dBgS_LinChk_dt(linChk, moveLineCheckVtables);
@@ -346,6 +373,7 @@ static inline bool fight_run(mo2_class *i_this) {
       fight_run_set(i_this);
       i_this->mDamageReaction.mMode = 1;
       i_this->mDashFrames = 0;
+      mo2_t60_ai_ran(i_this); /* true60: mode 1's body runs in this call (fall-through): not held */
     } else {
       i_this->actor.speedF = 0.0f;
       break;
@@ -367,7 +395,11 @@ static inline bool fight_run(mo2_class *i_this) {
       fVar10 = 5.0f;
     }
     cLib_addCalc2(&i_this->actor.speedF, target, 1.0f, fVar10);
-    if (daMo2_player_way_check(i_this)) {
+    /* true60 (first-step input addendum): the way check reads Link's facing, so the run / dash choice is a
+     * decision: both branches (the dash stop, the dash start and its count, the range / attack decisions) on the tick30
+     * step, once per frame as A's call; the earlier steps keep the frame's speed and motion. dt = 1: every call. */
+    if (!bk_t60_end()) {
+    } else if (daMo2_player_way_check(i_this)) {
       if (i_this->mDashFrames > 0x14) {
         i_this->mDashFrames = 0;
         anm_init(i_this, dRes_INDEX_MO2_BCK_GAKEDEMO_e, 3.0f,
@@ -389,6 +421,7 @@ static inline bool fight_run(mo2_class *i_this) {
                  J3DFrameCtrl::EMode_LOOP, moveHIO.mDashAnmSpeed,
                  dRes_INDEX_MO2_BAS_DASH_e);
       }
+      /* true60 (the 30 Hz timer rule): a per-frame count: this branch runs once per frame (the tick30 step, above) */
       if (i_this->mDashFrames != 0) {
         i_this->mDashFrames = i_this->mDashFrames + 1;
       }
@@ -403,6 +436,9 @@ static inline bool fight_run(mo2_class *i_this) {
     break;
   }
   case 2:
+    /* true60: this mode only decides (Link's distance and stick): its body on the tick30 step */
+    if (!bk_t60_end())
+      break;
     i_this->mDashFrames = 0;
     if (cM_rndF(1.0f) < 0.3f && i_this->mbHasInnateWeapon == 0) {
       i_this->mDamageReaction.mMode = 8;
@@ -502,10 +538,13 @@ static inline bool fight_run(mo2_class *i_this) {
     }
   }
   if (i_this->mDamageReaction.mMode >= 3 && i_this->mSideStepTimer <= 2) {
-    if (i_this->mTargetDist > moveHIO.mFightDist + 75.0f) {
+    /* true60 (first-step input addendum): the range decisions read Link: tick30 step (the guard reaction below
+     * stays on the first step, the first-step AI-timer rule, as the Bokoblin's) */
+    const bool t60Decide = bk_t60_end();
+    if (t60Decide && i_this->mTargetDist > moveHIO.mFightDist + 75.0f) {
       to_jyunkai(i_this, 0);
     }
-    if (i_this->mTargetDist < moveHIO.mAttackDist + 62.5f &&
+    if (t60Decide && i_this->mTargetDist < moveHIO.mAttackDist + 62.5f &&
         i_this->mTargetDist > moveHIO.mAttackDist - 62.5f && i_this->mTimers[4] == 0) {
       i_this->mTimers[4] = moveHIO.mAttackCheckWait;
       if (cM_rndF(100.0f) < moveHIO.mAttackChance &&
@@ -516,7 +555,9 @@ static inline bool fight_run(mo2_class *i_this) {
         i_this->mDamageReaction.mMode = 0;
       }
     }
-    if (i_this->mNoGuardTimer == 0) {
+    /* true60 (the per-step chance rule, the first-step AI-timer rule): the guard reaction to the player's cut: decided once per 30 Hz frame,
+     * on its first step, before the frame's motion (the original call's decisions) */
+    if (i_this->mNoGuardTimer == 0 && mo2_t60_frame_work(i_this)) {
       mo2Move::Attention *attention =
           &reinterpret_cast<mo2Move::Play *>(dComIfGp_get())->mAttention;
       if (i_this->mbHasInnateWeapon != 0 &&
@@ -531,7 +572,15 @@ static inline bool fight_run(mo2_class *i_this) {
       }
     }
   }
-  if (i_this->mbHasInnateWeapon != 0 && i_this->mTargetDist < moveHIO.mAttackDist - 62.5f &&
+  /* true60 (the 30 Hz timer rule): the push count is a per-frame count: counted (or cleared) once per 30 Hz frame, on
+   * the frame's last dispatch call (first-step AI-timer addendum: order beats first-step placement): it reads
+   * Link's distance / view and comes after the mode 2 body in A's call; decided on the first step, the push set the
+   * action there, the tick30 step was held and the mode 2 body (tick30) was lost (pair frame 41: timer[1] 34 in
+   * A, 0 in B). The tick30 step, or the in-between step whose call changed the state (its tick30 step held: kmoG2_2
+   * frame 33, d_a_bk_t60.h bk_t60_last_call_once). */
+  if (!bk_t60_last_call_once(&i_this->mOshiCount, s_mo2T60ChangedBefore ||
+                                                      mo2_t60_ai_state(i_this) != s_mo2T60EntryState)) {
+  } else if (i_this->mbHasInnateWeapon != 0 && i_this->mTargetDist < moveHIO.mAttackDist - 62.5f &&
       i_this->mTargetDistY <
           REG_F(10, 3) +
               250.0f && // HD: target height also limits this transition.
@@ -548,15 +597,16 @@ static inline bool fight_run(mo2_class *i_this) {
   } else {
     i_this->mOshiCount = 0;
   }
-  if (daMo2_player_bg_check(i_this,
-                            &i_this->mDamageReaction.mpLookTarget->current.pos)) {
+  /* true60 (first-step input addendum): the line check to Link: tick30 step */
+  if (bk_t60_end() && daMo2_player_bg_check(i_this,
+                                            &i_this->mDamageReaction.mpLookTarget->current.pos)) {
     to_jyunkai(i_this, -10);
   }
   if (i_this->mbHasInnateWeapon == 0 && daMo2_wepon_view_check(i_this)) {
     i_this->mDamageReaction.mAction = ACTION_WEPON_SEARCH;
     i_this->mDamageReaction.mMode = -1;
   }
-  if (daMo2_bomb_view_check(i_this)) {
+  if (bk_t60_end() && daMo2_bomb_view_check(i_this)) { /* true60: reads the bombs and Link: tick30 step */
     i_this->mDamageReaction.mAction = ACTION_B_NIGE;
     i_this->mDamageReaction.mMode = 0;
   }
@@ -598,8 +648,100 @@ static inline bool fight_run(mo2_class *i_this) {
   return false;
 }
 
-/* inlined into Mo2_move */
-static inline fopAc_ac_c *yari_hit_check(mo2_class *i_this) {
+/* true60 (the animation-rate rule): the attack frame mAttackFrame is a hand-stepped animation frame (the step's play
+ * speed per frame, beside the animation it follows): + speed x dt per step. Its window compares (At spheres, sounds,
+ * blur) fall on whole and half frames, so a 30 Hz frame the attack ran through on every step ends exactly on the
+ * original's value: the frame's start and speed are held (host memory keyed by the actor, frame tag g_Counter.mCounter0)
+ * and its tick30 step stores start + speed (the original's add); a frame that changed the attack inside it (a new step
+ * speed, an attack set on an in-between step) keeps the steps' sum. (The Bokoblin's bk_t60_attack_advance.) */
+namespace {
+struct Mo2T60AttackFrame {
+  u32 frame;  /* 30 Hz frame tag */
+  f32 start;  /* mAttackFrame at the frame's first step */
+  f32 speed;  /* the per-frame speed added */
+  f32 expect; /* mAttackFrame after the last step's add (a change from outside breaks the hold) */
+  u8 steps;
+  bool valid;
+};
+std::unordered_map<u32, Mo2T60AttackFrame> s_mo2T60AttackFrames;
+/* the At positions of the frame's first step (mo2_t60_at_frame_start), key: the actor */
+struct Mo2T60AtStart {
+  u32 frame; /* 30 Hz frame tag */
+  Vec3f pos, pos2; /* plain host values: a host cXyz would read / write guest memory at ea(host address) */
+};
+std::unordered_map<u32, Mo2T60AtStart> s_mo2T60AtStart;
+} // namespace
+/* true60 (the one-sweep-per-frame attack rule, as the Bokoblin's bk_t60_at_frame_start): the hand / spear positions the
+ * execute reads come from the last model calc (the previous frame's in the original, the frame's earlier step's at N
+ * steps); the tick30 registration takes the positions the frame's first step read. dt = 1: nothing. */
+/* true60 (True60 pair f31 mAtPos +0x2D0C / +0x2D10 2.98 off): the Bokoblin's form
+ * does not fit the Moblin's execute order. daMo2_Execute plays and calcs its morf BEFORE Mo2_move (d_a_mo2_exec.cpp,
+ * the process-order read rule) while the action is below ACTION_CARRY: the original's yari_hit_check reads the spear / hand points of
+ * frame f's own calc, and the tick30 step's read is that frame-end pose (on frame f - 1's base matrix, as A's). The
+ * first step's read is the half-frame pose, so restoring it put the tick30 registration half a frame back (mAtPos the
+ * spear head of step 0, A's f31 83.01 / 151.54 vs B 81.81 / 154.52). Only an action at or past ACTION_CARRY calcs
+ * after Mo2_move (the Bokoblin's order: the last calc is the previous step's): the hold stays there. Negative control
+ * WWHD_T60_MO2AT_NEGCTRL=1 (game build: the hold on every action, the form before). dt = 1: nothing. */
+static inline bool mo2_t60_at_calc_before_move(mo2_class *i_this) {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+  static const bool nc = [] { const char *e = getenv("WWHD_T60_MO2AT_NEGCTRL"); return e && e[0] == '1'; }();
+#else
+  const bool nc = false;
+#endif
+  return !nc && i_this->mDamageReaction.mAction < ACTION_CARRY;
+}
+static inline void mo2_t60_at_frame_start(mo2_class *i_this) {
+  if (!bk_t60_at_grid() || mo2_t60_at_calc_before_move(i_this))
+    return;
+  if (t60::first_step()) {
+    Mo2T60AtStart &e = s_mo2T60AtStart[gabi::ea(i_this)];
+    e.frame = bk_t60_frame_tag();
+    e.pos = i_this->mAtPos.get();
+    e.pos2 = i_this->mAt2Pos.get();
+  } else if (t60::tick30()) {
+    auto it = s_mo2T60AtStart.find(gabi::ea(i_this));
+    if (it != s_mo2T60AtStart.end() && it->second.frame == bk_t60_frame_tag()) {
+      i_this->mAtPos = it->second.pos;
+      i_this->mAt2Pos = it->second.pos2;
+    }
+  }
+}
+/* the step's new attack frame (dt = 1: the original's add); *frameEnd: the frame-end value the original frame reaches */
+static f32 mo2_t60_attack_advance(mo2_class *i_this, f32 speed, f32 *frameEnd) {
+  f32 cur = i_this->mAttackFrame;
+  if (t60::dt() == 1.0f) {
+    *frameEnd = cur + speed;
+    return cur + speed;
+  }
+  u32 key = gabi::ea(i_this), tag = bk_t60_frame_tag();
+  if (t60::first_step())
+    s_mo2T60AttackFrames[key] = Mo2T60AttackFrame{tag, cur, speed, cur, 0, true};
+  auto it = s_mo2T60AttackFrames.find(key);
+  bool held = it != s_mo2T60AttackFrames.end() && it->second.valid && it->second.frame == tag;
+  if (held && (it->second.speed != speed || it->second.expect != cur))
+    held = it->second.valid = false;
+  f32 next = cur + gabi::fmuls_ppc(speed, t60::dt());
+  *frameEnd = held ? it->second.start + speed : next;
+  if (held) {
+    it->second.steps++;
+    if (t60::tick30() && it->second.steps == (u8)t60::steps())
+      next = it->second.start + speed;
+    it->second.expect = next;
+  }
+  if (t60::tick30() && it != s_mo2T60AttackFrames.end())
+    s_mo2T60AttackFrames.erase(it);
+  return next;
+}
+/* the reversal's immediate extra play (a guard bounce) is one original frame of the animation: dt 1 */
+static inline void mo2_t60_play_frame(mo2_class *i_this) {
+  f32 previous = t60_set_dt(1.0f);
+  i_this->mpMorf->play(&i_this->actor.eyePos, 0, 0);
+  t60_set_dt(previous);
+}
+
+/* inlined into Mo2_move. true60: prev = mAttackFrame before this step's add, frameEnd = the value the
+ * 30 Hz frame ends on (mo2_t60_attack_advance) */
+static inline fopAc_ac_c *yari_hit_check(mo2_class *i_this, f32 prev, f32 frameEnd) {
   dComIfGp_get();
   i_this->mPrevAtPos.copy(i_this->mAtPos);
   i_this->m2940 = 0;
@@ -616,11 +758,24 @@ static inline fopAc_ac_c *yari_hit_check(mo2_class *i_this) {
     i_this->mAt2Pos.copy(i_this->mSpearShaftPos);
     i_this->mWeapon2Sph.SetR(62.5f);
   }
+  mo2_t60_at_frame_start(i_this);
   if (i_this->mAtWaitTimer != 0) {
-    i_this->mAtWaitTimer--;
+    /* true60 (the 30 Hz timer rule): a per-frame count, on the frame's first step (the read step) */
+    if (bk_t60_first())
+      i_this->mAtWaitTimer--;
     return nullptr;
   }
-  if (i_this->mAttackFrame < i_this->mAtStartFrame || i_this->mAttackFrame > i_this->mAtEndFrame) {
+  /* true60: the At spheres are swept once per 30 Hz frame (with an unconverted
+   * player they meet it only in the tick30 collision Move anyway): the attack keeps the original's 30 Hz grid. The frame's registration (start, or the swing since the last one, at the
+   * frame-end attack frame) goes on the tick30 step; its hit is read, the window tested with the frame's end value and
+   * the swing sound started on the next frame's first step, where the original frame reads them (as the Bokoblin). */
+  const bool grid = bk_t60_at_grid();
+  if (grid && !t60::first_step() && !t60::tick30()) {
+    return nullptr;
+  }
+  const bool readStep = !grid || t60::first_step();
+  const f32 frame = grid && t60::first_step() ? frameEnd : (f32)i_this->mAttackFrame;
+  if (frame < i_this->mAtStartFrame || frame > i_this->mAtEndFrame) {
     return nullptr;
   }
   i_this->m2940 = (u8)(i_this->m2940 << 1);
@@ -635,11 +790,43 @@ static inline fopAc_ac_c *yari_hit_check(mo2_class *i_this) {
     i_this->mWeaponSph.SetAtType(AT_TYPE_UNK800);
     i_this->mWeapon2Sph.SetAtType(AT_TYPE_UNK800);
   }
-  if ((u32)gabi::ftoi(i_this->mAttackFrame) == (u32)gabi::ftoi(i_this->mAtStartFrame)) {
+  /* true60: the swing sound once, on the step whose attack frame entered the start frame (the animation crossing-check rule) */
+  if (readStep && (u32)gabi::ftoi(frame) == (u32)gabi::ftoi(i_this->mAtStartFrame) &&
+      (grid || t60::dt() == 1.0f || gabi::ftoi(prev) != gabi::ftoi(i_this->mAtStartFrame) ||
+       (prev == frame && t60::tick30()))) {
     s32 se = moveAttackSound.values[i_this->mAttackKind];
     if (i_this != nullptr) {
       fopAcM_monsSeStart(&i_this->actor, se, 0);
     }
+  }
+  if (grid) {
+    if (t60::first_step()) {
+      if (i_this->mAtStarted != 0 && (i_this->mWeaponSph.ChkAtHit() || i_this->mWeapon2Sph.ChkAtHit())) {
+        void *obj;
+        if (i_this->mWeaponSph.ChkAtHit()) {
+          obj = GetAtHitObj(&i_this->mWeaponSph);
+        } else {
+          obj = GetAtHitObj(&i_this->mWeapon2Sph);
+        }
+        return hit_obj_actor(obj);
+      }
+      return nullptr;
+    }
+    if (i_this->mAtStarted == 0) {
+      i_this->mAtStarted = 1;
+      dCcD_Sph_StartCAt(&i_this->mWeaponSph, &i_this->mAtPos);
+      dCcD_Sph_StartCAt(&i_this->mWeapon2Sph, &i_this->mAt2Pos);
+    } else {
+      dCcD_Sph_MoveCAt(&i_this->mWeaponSph, &i_this->mAtPos);
+      dCcD_Sph_MoveCAt(&i_this->mWeapon2Sph, &i_this->mAt2Pos);
+      dComIfG_Ccsp_Set(&i_this->mWeaponSph);
+      dComIfG_Ccsp_Set(&i_this->mWeapon2Sph);
+      if (i_this->mAttackKind == 2 || i_this->mAttackKind == 1) {
+        dComIfG_Ccsp_SetMass(&i_this->mWeaponSph, 3);
+        dComIfG_Ccsp_SetMass(&i_this->mWeapon2Sph, 3);
+      }
+    }
+    return nullptr;
   }
   if (i_this->mAtStarted == 0) {
     i_this->mAtStarted = 1;
@@ -677,13 +864,15 @@ static inline void fight(mo2_class *i_this) {
     tex_anm_set(i_this, 6);
     i_this->mDamageReaction.mMode = 1;
     i_this->mTimers[2] = 8;
+    mo2_t60_ai_ran(i_this); /* true60: mode 1's body runs in this call (fall-through): not held */
     /* fallthrough */
   case 1: {
     i_this->mWeaponSph.SetAtAtp((u8)moveAttackPower.values[i_this->mAttackKind]);
     i_this->mWeapon2Sph.SetAtAtp((u8)moveAttackPower.values[i_this->mAttackKind]);
     attack_info_s *info = moveAttackInfo.values[i_this->mAttackKind];
     f32 r3 = info[i_this->mAttackStep].speed;
-    i_this->mAttackFrame += r3;
+    f32 attackPrev = i_this->mAttackFrame, attackEnd = attackPrev;
+    i_this->mAttackFrame = mo2_t60_attack_advance(i_this, r3, &attackEnd); /* true60: + r3 x dt (the animation-rate rule) */
     cLib_addCalc2(&i_this->actor.speedF, 0.0f, 1.0f, 20.0f);
     if (i_this->mAttackKind == 3 && i_this->mAttackStep == 0) {
       i_this->actor.speedF = 30.0f;
@@ -747,14 +936,18 @@ static inline void fight(mo2_class *i_this) {
         i_this->mSmokeAngleY = i_this->actor.current.angle.y + REG0_S(8) + 0x2000;
       }
     }
+    /* true60 (the one-emitter-per-event rule): the floor hit's smoke and sound per original frame in the window: on the tick30
+     * step, with the frame-end attack frame */
     if (i_this->mAttackKind == 1 && !(i_this->mAttackFrame < 31.0f) &&
-        !(i_this->mAttackFrame > 32.1f)) {
+        !(i_this->mAttackFrame > 32.1f) && mo2_t60_frame_end_work(i_this)) {
       i_this->mSmokeTimer = moveHIO.mSmokeTimerBase + 8;
       i_this->mSmokeType = 2;
       s32 reverb = dComIfGp_getReverb(fopAcM_GetRoomNo(&i_this->actor));
       mDoAud_seStart(JA_SE_CM_LANCE_HIT_FLOOR, &i_this->mSpearHeadPos, 0, reverb);
     }
-    if (i_this->mAttackKind == 2 && i_this->mTimers[2] == 1) {
+    /* true60 (the first-step AI-timer rule): the timer one-shot on the frame's first step (the only step the timer
+     * changes) */
+    if (i_this->mAttackKind == 2 && i_this->mTimers[2] == 1 && bk_t60_first()) {
       i_this->mSmokeTimer = moveHIO.mSmokeTimerBase + 4;
       i_this->mSmokeType = 4;
     }
@@ -765,7 +958,7 @@ static inline void fight(mo2_class *i_this) {
       cLib_addCalcAngleS2(&i_this->actor.current.angle.y,
                           i_this->mDamageReaction.mTurnTargetY, 4, 0x800);
     }
-    fopAc_ac_c *hitActor = yari_hit_check(i_this);
+    fopAc_ac_c *hitActor = yari_hit_check(i_this, attackPrev, attackEnd);
     if (hitActor != nullptr) {
       if (fpcM_GetName(hitActor) == fpcNm_PLAYER_e) {
         if (reinterpret_cast<mo2Move::Player *>(player)->checkPlayerGuard() &&
@@ -775,7 +968,7 @@ static inline void fight(mo2_class *i_this) {
             i_this->mSmokeTimer = moveHIO.mSmokeTimerBase + 6;
           }
           i_this->mAttackDir = -1;
-          i_this->mpMorf->play(&i_this->actor.eyePos, 0, 0);
+          mo2_t60_play_frame(i_this); /* true60: the bounce's extra play is one frame */
         }
       } else if (fpcM_GetName(hitActor) == fpcNm_MO2_e) {
         i_this->mHitActorId = fopAcM_GetID(hitActor);
@@ -791,7 +984,7 @@ static inline void fight(mo2_class *i_this) {
             i_this->mSmokeTimer = moveHIO.mSmokeTimerBase + 6;
           }
           i_this->mAttackDir = -1;
-          i_this->mpMorf->play(&i_this->actor.eyePos, 0, 0);
+          mo2_t60_play_frame(i_this); /* true60: the bounce's extra play is one frame */
         } else {
           to_jyunkai(i_this, 2);
         }
@@ -810,7 +1003,10 @@ static inline void fight(mo2_class *i_this) {
           (i_this->mAttackKind == 4 && i_this->mAttackStep == 0) ||
           (i_this->mAttackDir < 0 && i_this->mAttackStep == 0) ||
           (i_this->mAttackKind == 5 && i_this->mAttackDir < 0 && i_this->mAttackStep == 1)) {
-        if (i_this->mAttackKind == 3) {
+        /* true60: the attack's end reads Link's distance / view: decided on the tick30 step (the
+         * stopped animation stays stopped over the frame, the held end, animation-driven decision) */
+        if (!bk_t60_end()) {
+        } else if (i_this->mAttackKind == 3) {
           attack_set(i_this, 1);
           i_this->mDamageReaction.mTurnTargetY = i_this->mTargetAngleY;
         } else if (i_this->mHitActorId != fpcM_ERROR_PROCESS_ID_e) {
@@ -856,14 +1052,73 @@ static inline void fight(mo2_class *i_this) {
   }
 }
 
+/* true60 (first-step input addendum; the process-order read rule: Link runs before the Moblin, so its reads of
+ * Link take his current state on the tick30 step): the first step's sensing keeps the Moblin's frame-start position and
+ * the sensed target (the heard sound's position or the look target); the tick30 step takes the sensing again from them,
+ * with the target's current (frame-end) position, as A's frame computes it (the Darknut's form; the
+ * Bokoblin's bk_t60_sense). Nothing when the frame's first step took no sensing. dt = 1: nothing. Host memory, this unit
+ * only (split-actor state (1)). */
+struct Mo2T60Sense {
+  u32 frame, target;
+  bool sound;
+  f32 x, y, z;
+};
+static std::unordered_map<u32, Mo2T60Sense> s_mo2T60Sense;
+static void mo2_t60_sense(mo2_class *i_this, bool sound) {
+  if (t60::dt() == 1.0f)
+    return;
+  if (t60::first_step()) {
+    Mo2T60Sense &e = s_mo2T60Sense[gabi::ea(i_this)];
+    e.frame = bk_t60_frame_tag();
+    e.sound = sound;
+    e.target = gabi::ea(static_cast<fopAc_ac_c *>(i_this->mDamageReaction.mpLookTarget));
+    e.x = i_this->actor.current.pos.x;
+    e.y = i_this->actor.current.pos.y;
+    e.z = i_this->actor.current.pos.z;
+    return;
+  }
+  if (!t60::tick30())
+    return;
+  auto it = s_mo2T60Sense.find(gabi::ea(i_this));
+  if (it == s_mo2T60Sense.end() || it->second.frame != bk_t60_frame_tag())
+    return;
+  const Mo2T60Sense &e = it->second;
+  f32 tx, ty, tz;
+  if (e.sound) {
+    tx = i_this->mSoundTargetPos.x;
+    ty = i_this->mSoundTargetPos.y;
+    tz = i_this->mSoundTargetPos.z;
+  } else {
+    const fopAc_ac_c *target = gabi::at<fopAc_ac_c>(e.target);
+    tx = target->current.pos.x;
+    ty = target->current.pos.y;
+    tz = target->current.pos.z;
+  }
+  const f32 x = tx - e.x, y = ty - e.y, z = tz - e.z;
+  i_this->mTargetDist = std_sqrtf(gabi::fmadds(x, x, z * z));
+  i_this->mTargetDistY = std::fabs(y);
+  i_this->mTargetAngleY = cM_atan2s(x, z);
+}
+
 /* 021D0A14 */
 static void Mo2_move(mo2_class *i_this) {
   dComIfGp_get();
-  i_this->mDamageReaction.mLookMode = 0;
-  i_this->mDamageReaction.mDefencePose = 0;
-  i_this->mMoveAngleOffset = 0;
+  /* true60: a state entered on an earlier step of this 30 Hz frame is first run next frame (one state
+   * step per frame, d_a_mo2_t60.h mo2_t60_ai_held): its remaining steps keep the outputs of the frame's dispatch (move
+   * angle offset, look mode, guard pose, speed) and skip the decisions; the speed is still turned into the motion */
+  const bool t60Held = mo2_t60_ai_held(i_this);
+  s_mo2T60EntryState = mo2_t60_ai_state(i_this);
+  s_mo2T60ChangedBefore = mo2_t60_changed_before_move(i_this);
+  if (!t60Held) {
+    i_this->mDamageReaction.mLookMode = 0;
+    i_this->mDamageReaction.mDefencePose = 0;
+    i_this->mMoveAngleOffset = 0;
+  }
   cLib_addCalcAngleS2(&i_this->mJawAngleZ, 0, 2, 0x800);
   if (i_this->mDamageReaction.mMode <= -0x64) {
+    /* true60: the knock-down entered on an earlier step of this frame is first run next frame (held) */
+    if (t60Held)
+      return;
     if (i_this->mDamageReaction.mAcch.ChkGroundLanding()) {
       tex_anm_set(i_this, 0);
     }
@@ -892,7 +1147,9 @@ static void Mo2_move(mo2_class *i_this) {
   } else {
     i_this->mCoCyl.OffCoSPrmBit(1);
   }
-  if (i_this->mDamageReaction.mHitStunTimer != 0 && i_this->mDamageReaction.mKnockedDown == 0) {
+  if (t60Held) {
+    /* true60: held, no decisions on this step */
+  } else if (i_this->mDamageReaction.mHitStunTimer != 0 && i_this->mDamageReaction.mKnockedDown == 0) {
     if (i_this->mDamageReaction.mHitStunTimer == 1) {
       if ((i_this->mMode != 1 || moveJailMode == 0) &&
           (i_this->mDamageReaction.mAction != ACTION_P_LOST ||
@@ -909,8 +1166,12 @@ static void Mo2_move(mo2_class *i_this) {
     }
   } else {
     gabi::Local<cXyz> local_20;
+    const bool t60Sound = i_this->mSoundTargetTimer != 0; /* true60: the target this call senses */
     if (i_this->mSoundTargetTimer != 0) {
-      i_this->mSoundTargetTimer--;
+      /* true60 (the 30 Hz timer rule): a per-frame count, on the tick30 step (the sound target is followed until it
+       * runs out) */
+      if (bk_t60_end())
+        i_this->mSoundTargetTimer--;
       gabi::Local<cXyz> d;
       cXyz_mi(&i_this->mSoundTargetPos, d, &i_this->actor.current.pos);
       *local_20 = d->get();
@@ -921,14 +1182,22 @@ static void Mo2_move(mo2_class *i_this) {
               &i_this->actor.current.pos);
       *local_20 = d->get();
     }
+    /* true60 (the first-step AI-timer rule; the Bokoblin's form): the frame's sensing (distance,
+     * height and direction to the target) on the frame's FIRST step, as the original's call takes it before the frame's
+     * motion: the decisions that read it cannot cross on a later step. dt = 1: every call (the original). */
+    if (bk_t60_first()) {
     i_this->mTargetDist = std_sqrtf(
         gabi::fmadds(local_20->x, local_20->x, local_20->z * local_20->z));
     i_this->mTargetDistY = std::fabs(
         (f32)local_20->y); // HD: target height also limits this transition.
 
     i_this->mTargetAngleY = cM_atan2s(local_20->x, local_20->z);
+    }
+    mo2_t60_sense(i_this, t60Sound); /* true60: the tick30 step's sensing (first-step input addendum / process-order read) */
     i_this->mCoCyl.SetR(REG0_F(3) + 90.0f);
-    if (i_this->mParalyzeDelay != 0) {
+    /* true60 (the 30 Hz timer rule): counted on the frame's first step (damage_check's set on another step starts one
+     * lower, mo2_exec) */
+    if (i_this->mParalyzeDelay != 0 && bk_t60_first()) {
       i_this->mParalyzeDelay--;
       if (i_this->mParalyzeDelay == 0) {
         i_this->mDamageReaction.mCarryOffsetZ =

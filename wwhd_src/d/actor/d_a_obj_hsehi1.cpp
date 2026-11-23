@@ -1,5 +1,6 @@
 /* Command Melody monuments. */
 #include "d/actor/d_a_obj_hsehi1.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 const gc_tu_data gc_tu = {.safeString = 0x1002ADF4};
 // HD: private emitter/message/virtual views cover fields absent from the shared API.
 struct HshEmitter : JPABaseEmitter {
@@ -580,6 +581,9 @@ void daObj_hsh_c::setBaseMtx() {
 }
 /* 0235AD5C */
 s32 daObj_hsh_c::execute() {
+    t60w::Guard<daObj_hsh_c> t60g(this, t60objw::Logic<daObj_hsh_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     if (argument == 0) {
         bool on = dComIfGs_isEventBit(0x2B10);
         u32 status = actor_status;
@@ -606,6 +610,7 @@ s32 daObj_hsh_c::execute() {
     }
     eventOrder();
     setBaseMtx();
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 /* 0235AE94 */

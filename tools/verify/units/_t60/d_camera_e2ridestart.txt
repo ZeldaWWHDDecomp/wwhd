@@ -1,0 +1,73 @@
+# true60 N-step spec (not a gate unit): rideCamera's start step (the mode-start-once rule).
+# Timer 0: the frame that starts the style runs the start-up block once (e2Start slot 4: the tag, the zero stick offset,
+# entry mode, blur armed, the entry view index, the side offset ratio 0, the radius and latitude taken from the view,
+# the speed scales 0, the centre follow ratio 0.2, the ship heading test against the zero angle) and then the frame's
+# chases (0.08 radius / latitude / speed scales, 0.05 / 0.1 side offset, 0.2 centre follow, the transition share
+# 1 / (T - 0)). Unlike d_camera_e2start.txt this does prove once per start: a start block re-run on step 2 resets the
+# radius, the scales and the ratios to their start values after step 1 chased them, so the N-step result keeps only
+# the last step's share (negative control: rideStart as `timer == 0` per step). Tag, entry mode, flags, steering exact;
+# chased floats absrel; the view angles, centre, eye, bank and the centre target skipped (mocked helpers).
+include d_camera.txt
+include shared/c_angle_statics.txt
+t60conv 0250D4E8
+ret! 025200D4 0x54000000 0x54000000
+arg! 0250D4E8 r4 26,32,36,41,42,110,111
+# the ride globe (cSGlobe::Val(f32, s16, s16) 02006FE4, a mock) gets radius 500: the radius target of the transition
+# (entry mode 0) and of the settled body's follow chase is then a fixed 500, not the stack fill
+mockfield 02006FE4 r3+0x0 f32 500
+field 0250D4E8 r3+0x100 u8 0
+field 0250D4E8 r3+0x11C u32 0
+field 0250D4E8 r3+0x3B8 f32 100 2000
+field 0250D4E8 r3+0x3BC f32 -500 500
+field 0250D4E8 r3+0x3C0 f32 -60 60
+field 0250D4E8 r3+0x3C4 f32 -60 60
+field 0250D4E8 r3+0x3C8 f32 -1 1
+field 0250D4E8 r3+0x3CC f32 0.2 1
+field 0250D4E8 r3+0x3C f32 100 1000
+field 0250D4E8 r3+0x40 i16 -12288 12288
+field 0250D4E8 r3+0x42 i16 -32768 32767
+field 0250D4E8 r3+0x44 f32 -1000 1000
+field 0250D4E8 r3+0x48 f32 -1000 1000
+field 0250D4E8 r3+0x4C f32 -1000 1000
+field 0250D4E8 r3+0x50 f32 -1000 1000
+field 0250D4E8 r3+0x54 f32 -1000 1000
+field 0250D4E8 r3+0x58 f32 -1000 1000
+field 0250D4E8 r3+0x60 f32 30 90
+t60tol 0250D4E8 r3+0x3C f32 absrel 0.001 0.0001
+t60tol 0250D4E8 r3+0x40 a16x2 skip
+t60tol 0250D4E8 r3+0x44 f32x6 skip
+t60tol 0250D4E8 r3+0x5C a16 skip
+t60tol 0250D4E8 r3+0x60 f32 absrel 0.0001 0.0001
+# the ship pointer and the steering flag after the frame: the start block clears both on the start step; the call's
+# top re-takes the ship every call (mpShip = Judge(...) under status1 4) and the steering test compares the heading
+# change since the last call with +-dt degrees, so the N-step run's step 2 does what the original's next frame does
+# (the ship pointer is set again, the steering flag may be set half a frame early): the 30 Hz timer rule, not a start re-run.
+# The same holds for what the ship pointer gates on the start frame: the original's start frame runs with the ship
+# cleared (unless the start block takes it again), so the side offset ratio stays 0 and the boost blur does not fire;
+# at N steps steps 2..N run as the next frame: the blur (armed flag +0x389, one-shot, re-armed only by boost status
+# 0) fires up to (N - 1) / N frame early, and the side offset ratio (start value 0, target in [-1, 1], ratio <= 0.1
+# per frame) starts its chase early by at most 1 - 0.9^((N - 1) / N) <= 0.077 (N 4): abs 0.08 on +0x3C8 below.
+# Since (the speed-ramp position-gap rule (3)) the eased fields take A's frame-end value from the frame's start on
+# every step (camera_ride_t60::ease): a steering flag that flips on a later step (the 30 Hz timer rule, the original's next
+# frame) moves the side offset target from +1 to -1 for the frame's ease, so the tick30 value is the frame start +
+# 0.05 (-1 - s0) against A's + 0.05 (1 - s0): |d| = 0.05 x 2 = 0.1 at any N (1957/2000 at
+# with the old 0.08, every fail 0.100000001 on +0x3C8; 2000/2000 at its parent). Bound: abs 0.1001.
+t60tol 0250D4E8 r3+0x380 u32 skip
+t60tol 0250D4E8 r3+0x388 u8 skip
+t60tol 0250D4E8 r3+0x389 u8 skip
+t60tol 0250D4E8 r3+0x390 f32x3 skip
+t60tol 0250D4E8 r3+0x3A8 f32x3 skip
+t60tol 0250D4E8 r3+0x3B8 f32x4 absrel 0.001 0.0001
+t60tol 0250D4E8 r3+0x3C8 f32 abs 0.1001
+t60tol 0250D4E8 r3+0x3CC f32 absrel 0.001 0.0001
+retarg 0200658C r3
+retarg 020066C0 r3
+retarg 02006644 r3
+retarg 020065FC r3
+retarg 02007248 r3
+retarg 02007324 r3
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200ECD4 0200F5C8
+t60cand 0200ECD4 0200F5C8
+# known-fail clib-real: ? (sweep: N-step spec N2 differs with the eases converted; fails without them too)

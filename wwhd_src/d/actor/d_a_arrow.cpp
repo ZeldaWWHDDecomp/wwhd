@@ -7,6 +7,7 @@
  * "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_arrow.h"
+#include "d/actor/d_a_arrow_t60.h" /* true60 (t60conv): step helpers */
 
 const gc_tu_data gc_tu = {.safeString = 0x10007210};
 
@@ -195,6 +196,10 @@ void daArrow_c::checkCreater() {
 
 /* 02052C40 */
 void daArrow_c::setLightEffect() {
+    /* true60 (hand, the one-emitter-per-event rule): the light effect's state step (delete on a type change, the create a frame later) once
+     * per frame on the tick30 step: per step the create followed the delete on the next step, not the next frame */
+    if (!t60c::end())
+        return;
     u8 type = mArrowType;
     if (mLightEffType == type) {
         if (type == TYPE_NORMAL) {
@@ -616,7 +621,8 @@ void daArrow_c::setKeepMatrix() {
 /* 02053DDC */
 void daArrow_c::setStopActorMatrix() {
     s16 xRot = 0;
-    if (arrow_calcTimer(&mHitShakeTimer) != 0) {
+    /* true60 (hand, the per-step chance rule): the shake timer (visual) counted on the tick30 step; the other steps read it */
+    if ((t60c::end() ? arrow_calcTimer(&mHitShakeTimer) : (s16)mHitShakeTimer) != 0) {
         s16 timer = mHitShakeTimer;
         f32 temp = (f32)timer / 40.0f;
         xRot = (s16)gabi::ftoi(((1024.0f * temp) * temp) * cM_ssin(timer * 0x52FB));
@@ -676,7 +682,9 @@ BOOL daArrow_c::procWait() {
     mHitAngle.y = sy;
     mHitAngle.z = sz;
 
-    if (fopAcM_GetParam(this) == 1) {
+    /* true60 (hand, rule 14 order): the archer sets the shot on one of its steps; the arrow shoots on the frame's tick30
+     * step from the frame-end hand matrix, as the original's execute after the archer's frame (d_a_arrow_t60.h) */
+    if (fopAcM_GetParam(this) == 1 && t60c::end()) {
         if (!mbSetByZelda) {
             arrowUseMp();
             checkRestMp();
@@ -691,6 +699,37 @@ BOOL daArrow_c::procWait() {
 
 /* 02054040 */
 BOOL daArrow_c::procMove() {
+    /* true60 (hand, rules 14 / one-sweep-per-frame attack / 6): the in-between steps show the frame's flight (visual only); the tick30 step
+     * restores the frame start and runs the original frame: hit reads, the BG line check over the whole frame segment,
+     * the AT capsule once per frame (d_a_arrow_t60.h) */
+    f32 t60cap = 1.0f;
+    if (ar60::on() && t60::first_step()) {
+        /* visual only: the share of the frame move before the wall the frame's flight stops at (A's resting point,
+         * the cross point less speed / 4), so the in-between steps do not show the arrow behind it */
+        gabi::Local<cXyz> ahead;
+        cXyz_ml(&speed, ahead, 1.25f);
+        gabi::Local<cXyz> reach;
+        cXyz_pl(&current.pos, reach, ahead);
+        dBgS_LinChk_Set(&mLinChk, &current.pos, reach, this);
+        const f32 sp = vec_abs(&speed);
+        if (sp > 0.0f && cBgS_LineCross(dComIfG_Bgsp(), &mLinChk)) {
+            gabi::Local<cXyz> d;
+            cXyz_mi(&mLinChk.mLin.mEnd, d, &current.pos);
+            t60cap = vec_abs(d) / sp - 0.25f;
+            if (t60cap < 0.0f)
+                t60cap = 0.0f;
+        }
+    }
+    const s32 t60step =
+        ar60::frameStep(this, &current.pos, &old.pos, &shape_angle.x, speed.x, speed.y, speed.z, 0, t60cap,
+                        mpModel ? gabi::ea(&mpModel->mBaseTransformMtx) : 0u);
+    if (t60step == ar60::kVisual) {
+        if (t60::first_step()) /* the frame start's matrix copy, as A takes it */
+            PSMTXCopy(mpModel ? &mpModel->mBaseTransformMtx : nullptr, &mModelMtx);
+        speedF = 100.0f;
+        set_model_mtx(this);
+        return TRUE;
+    }
     speedF = 100.0f;
     PSVECAdd(&current.pos, &speed, &current.pos);
     gabi::Local<cXyz> step;
@@ -705,7 +744,8 @@ BOOL daArrow_c::procMove() {
     mHitAngle.x = sx;
     mHitAngle.y = sy;
 
-    PSMTXCopy(mpModel ? &mpModel->mBaseTransformMtx : nullptr, &mModelMtx);
+    if (t60step != ar60::kTick30) /* true60: on the tick30 step the first step's copy stands */
+        PSMTXCopy(mpModel ? &mpModel->mBaseTransformMtx : nullptr, &mModelMtx);
     mBlurAngle.z = mBlurAngle.z + 0x889;
 
     void *poly = static_cast<cBgS_PolyInfo *>(&mLinChk);
@@ -964,6 +1004,15 @@ BOOL daArrow_c::procMove() {
 
 /* 02055450 */
 BOOL daArrow_c::procReturn() {
+    /* true60 (hand, rules 14 / 6): the in-between steps show the frame's fall and spin (visual only); the tick30 step
+     * restores the frame start and runs the original frame (d_a_arrow_t60.h) */
+    if (ar60::frameStep(this, &current.pos, &old.pos, &shape_angle.x, speed.x, speed.y - 2.0f, speed.z,
+                        (s16)mSpinSpeedX, 1.0f, mpModel ? gabi::ea(&mpModel->mBaseTransformMtx) : 0u) ==
+        ar60::kVisual) {
+        speedF = 0.0f;
+        set_model_mtx(this);
+        return TRUE;
+    }
     f32 sy = speed.y - 2.0f;
     speedF = 0.0f;
     speed.y = sy;
@@ -1005,6 +1054,10 @@ BOOL daArrow_c::procReturn() {
 
 /* 02054FE0 */
 BOOL daArrow_c::procStop_BG() {
+    /* true60 (hand, 30 Hz visual-motion): the 30 Hz form, on the tick30 step only (timers, the moving background's frame transform, the
+     * CO sphere and its pick-up read once per tick30 collision Move) */
+    if (!t60c::end())
+        return TRUE;
     speedF = 0.0f;
     void *poly = static_cast<cBgS_PolyInfo *>(&mLinChk); /* mLinChk's cBgS_PolyInfo */
 
@@ -1099,7 +1152,8 @@ BOOL daArrow_c::procStop_Actor() {
         return TRUE;
     }
 
-    setBlur();
+    if (t60c::end()) /* true60 (hand, the per-step chance rule): the blur fade once per frame */
+        setBlur();
 
     if (fopAcM_SearchByID(mHitActorProcID)) {
         setStopActorMatrix();
@@ -1112,6 +1166,8 @@ BOOL daArrow_c::procStop_Actor() {
 
 /* 02055734 */
 BOOL daArrow_c::procWater() {
+    if (!t60c::end()) /* true60 (hand, 30 Hz visual-motion): the in-water timer and the delete on the tick30 step (A's moment) */
+        return TRUE;
     if (mInWaterTimer <= 0) {
         fopAcM_delete(this);
         return TRUE;
@@ -1204,9 +1260,18 @@ BOOL daArrow_c::_execute() {
         }
     }
 
+    /* true60 (t60conv + hand, first-step AI-timer): the sparkle timer counted on the frame's first step; the frame's outcome of the
+     * block held: when the first step returned in it (the sparkle shown at the player), the later steps follow the
+     * player and return too; when it fell through (or did not run), the later steps skip it (N-step spec input 7009189: the
+     * count to 0 on the first step let the second step run the dispatch a frame early) */
     s16 sparkle = mSparkleTimer;
-    if (sparkle != 0) {
-        mSparkleTimer = sparkle - 1;
+    bool sparkleFrame = sparkle != 0;
+    if (t60c::first())
+        t60c::unmark(2, this);
+    else
+        sparkleFrame = t60c::marked(2, this);
+    if (sparkleFrame) {
+        if (t60c::first()) { mSparkleTimer = sparkle - 1; } /* true60 (t60conv): counted on the frame's first step */
         fopAc_ac_c *player = dComIfGp_getPlayer(0);
 
         gabi::Local<cXyz> offset;
@@ -1229,6 +1294,7 @@ BOOL daArrow_c::_execute() {
 
         u32 e = mpSparkleEmitter;
         if (!e) {
+            t60c::mark(2, this);
             return TRUE;
         }
         s16 t = mSparkleTimer;
@@ -1254,6 +1320,7 @@ BOOL daArrow_c::_execute() {
             gabi::at<ArrowEmitter>(e)->mGlobalParticleScale.x = scaleMag;
             gabi::at<ArrowEmitter>(e)->mGlobalParticleScale.y = scaleMag;
             gabi::at<ArrowEmitter>(e)->mGlobalParticleScale.z = scaleMag;
+            t60c::mark(2, this);
             return TRUE;
         }
         /* becomeInvalidEmitter() */
@@ -1267,8 +1334,11 @@ BOOL daArrow_c::_execute() {
         mDeleteRequest = true;
     }
 
+    /* true60 (t60conv + hand, first-step AI-timer): the btk frame counted, its end test and the start draw on the frame's first step
+     * only (a later step's end test would see the first step's start, frame 1, a frame early: N-step spec input 1000265) */
     f32 frame = mBtkFrame;
-    if (frame > 0.0f) { // ble: unordered takes the else branch
+    if (!t60c::first()) {
+    } else if (frame > 0.0f) { // ble: unordered takes the else branch
         frame = frame + 1.0f;
         mBtkFrame = frame;
         if (!(frame < (f32)gabi::at<ArrowAnimation>(mpBtk)->mFrameMax)) { /* mpBtk->getFrameMax() */
@@ -1283,8 +1353,9 @@ BOOL daArrow_c::_execute() {
     setLightEffect();
 
     /* if (mCurrProcFunc) (this->*mCurrProcFunc)() */
+    /* true60 (hand, the 30 Hz visual-motion rule (2)): a procedure set on a step first runs next frame (t60conv.h procBegin / procEnd) */
     s16 vidx = mCurrProcFunc.i;
-    if (vidx != 0) {
+    if (vidx != 0 && t60c::procBegin(1, this, t60c::procWord(mCurrProcFunc))) {
         u32 p = self(this) + mCurrProcFunc.d;
         if (vidx < 0) {
             gabi::call_ptr(mCurrProcFunc.f, gabi::at<void>(p));
@@ -1293,6 +1364,7 @@ BOOL daArrow_c::_execute() {
             gabi::call_ptr(gabi::at<ArrowDispatchVtable>(vt)->mEntries[(u32)vidx].mpFunction,
                            gabi::at<void>(p));
         }
+        t60c::procEnd(1, this, t60c::procWord(mCurrProcFunc));
     }
 
     u32 cx = gabi::at<ArrowWords>(self(&current.pos))->x, cy = gabi::at<ArrowWords>(self(&current.pos))->y,

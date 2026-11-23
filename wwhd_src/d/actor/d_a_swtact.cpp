@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_swtact.h"
+#include "d/actor/d_a_swtact_t60.h" /* true60: the whole form (the whole-frame form rule, d/t60_objw.h) */
 #include "gc_api/d/d_com_inf_game.h"
 #include "gc_api/f_op/f_op_actor_mng.h"
 
@@ -128,6 +129,9 @@ s32 daSwTact_c::getAnswer() {
 
 /* 024A3A48 */
 bool daSwTact_c::_execute() {
+    t60w::Guard<daSwTact_c> t60g(this, t60objw::Logic<daSwTact_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
     fopAc_ac_c* player = dComIfGp_getPlayer(0); /* daPy_getPlayerActorClass() */
     u32 stts1 = checkPlayerStatus(1, daPyStts1_WIND_WAKER_CONDUCT_e);
 

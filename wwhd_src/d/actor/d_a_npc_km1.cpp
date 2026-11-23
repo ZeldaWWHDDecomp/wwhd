@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_npc_km1.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 // HD: per-TU resource-key and compiler-generated vtables.
 const gc_tu_data gc_tu = {.safeString=0x1001C604};
@@ -614,6 +615,9 @@ BOOL daNpc_Km1_c::_draw() {
 
 /* 022726A0 */
 BOOL daNpc_Km1_c::_execute() {
+    t60w::Guard<daNpc_Km1_c> t60g(this, t60npc::Logic<daNpc_Km1_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     if (mbRanExecute == 0) {
         mInitialPos.copy(current.pos);
         mInitialAngle.x = current.angle.x;
@@ -639,6 +643,7 @@ BOOL daNpc_Km1_c::_execute() {
     if (mInDemo == 0) {
         fopAcM_posMoveF(this, &mStts.m_cc_move); /* &mStts.m_cc_move */
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     setMtx();
     setCollision(60.0f, 150.0f);
     return true;

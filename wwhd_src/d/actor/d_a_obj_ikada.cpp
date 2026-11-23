@@ -3,6 +3,7 @@
  */
 #include "d/actor/d_a_obj_ikada.h"
 #include "gc_api/gc_api.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 const gc_tu_data gc_tu = {
     .safeString = 0x1002B2E4,
@@ -1018,6 +1019,9 @@ void daObj_Ikada_c::epProc() {
 }
 /* 02362C54 */
 s32 daObj_Ikada_c::_execute() {
+    t60w::Guard<daObj_Ikada_c> t60g(this, t60objw::Logic<daObj_Ikada_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return 1;
     mWaveAnimTimer = (s16)((s32)mWaveAnimTimer + REG_S(8, 4) + 0x200);
     f32 target = REG_F(8, 5) + 5.0f;
     if (mCurMode == 10 && speedF > 1.0f)
@@ -1120,6 +1124,7 @@ s32 daObj_Ikada_c::_execute() {
         ikadaApi_startSound(0x303D, &eyePos, volume, reverb);
     }
     // HD: execute returns success rather than the GC false result.
+    t60g.model = true; /* true60: the frame reached its model step */
     return 1;
 }
 /* 02363168 */

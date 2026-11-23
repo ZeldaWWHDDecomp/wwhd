@@ -1,0 +1,29 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_dai_item.txt
+# ---- true60 N-step spec (2026-11-18, hand; t60conv's generated whole-function gate replaced, see
+# d_a_dai_item_t60.h): the execute path on a general step length. Step functions: _execute, the Execute thunk,
+# execAction, itemProc, the item actions with converted code (Fobj06 pinwheel, Fobj09) and the two animation testers.
+t60conv 02117A84 02117AEC 02117960 02117A24 02117B80 021180D8 02117F20 02118390
+# the dispatchers reach the actions through guest member tables (0x101B3E98 / 0x101B3EF8): the actions that call a
+# converted tester run real with their candidate code
+real 02117960 02117A24 02117B80 021180D8 02117F20 02118390 02117E64 02117E88 02117EAC 021180B4 021186E4 02118708
+t60cand 02117B80 021180D8 02117F20 02118390
+# effect starts counted over the N steps vs the one step: particle sets (emitters 0x82B3..0x82B5), the landing sound
+t60calls 025A847C 025E1A40
+# pinwheel (actionFobj06, visual only: daiItemNodeCallBack turns the joints by mSpinAngle): the wind push x dt + the
+# central ease per step round differently from one push + one ease per frame (f32), and mSpinSpeed = ftoi(1536 x power)
+# / the frame's spin follow that rounding
+t60tol * r3+0x7E0 f32 absrel 0.0001 0.0001
+t60tol * r3+0x7CE s16 abs 4
+t60tol * r3+0x7D0 a16 abs 8
+# the pinwheel's power is 0..4 in the game (clamped to 4 after each push, eased to 0); generated garbage (|power| in the
+# thousands) wraps mSpinSpeed's s16 and magnifies the rounding
+field 02117F20 r3+0x7E0 f32 0,0.25,1,2.5,4
+field 02117A24 r3+0x7E0 f32 0,0.25,1,2.5,4
+field 02117A84 r3+0x7E0 f32 0,0.25,1,2.5,4
+field 02117AEC r3+0x7E0 f32 0,0.25,1,2.5,4
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200ECD4 0200F164 0200F428
+t60cand 0200ECD4 0200F164 0200F428
+# known-fail clib-real: (sweep: N-step spec N2 differs with the eases converted; new with them; tagsweep: itemProc byte 2001FB8E CD/CE, _execute r3+0x7CE s16 4680/4585, the same with the fresh and the shared frame tag)

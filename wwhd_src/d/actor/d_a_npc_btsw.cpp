@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_npc_btsw.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 #include "gc_api/d/d_com_inf_game.h"
 
 #include <cmath>
@@ -1132,6 +1133,9 @@ BOOL daNpc_Btsw_c::_draw() {
 
 /* 02219618 */
 BOOL daNpc_Btsw_c::_execute() {
+    t60w::Guard<daNpc_Btsw_c> t60g(this, t60npc::Logic<daNpc_Btsw_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     u32 a = A(this);
     const u32 h = BTSW_HIO;
     /* m_jnt.setParam(l_HIO.mNpc...) */
@@ -1164,6 +1168,7 @@ BOOL daNpc_Btsw_c::_execute() {
     tevStr.mEnvrIdxOverride = ((u8)Btsw_dBgS_GetPolyColor(
         play + 0x12A0, gabi::ea(static_cast<cBgS_PolyInfo*>(
                            &mObjAcch.m_gnd)))); /* mEnvrIdxOverride = GetPolyColor(m_gnd) */
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     Btsw_fopNpc_npc_c_setCollision(a, 60.0f, 150.0f); /* setCollision */
     return TRUE;

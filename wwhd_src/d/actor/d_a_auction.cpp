@@ -1,5 +1,6 @@
 // Auction controller, verified against the WWHD implementation.
 #include "d/actor/d_a_auction.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 #include "bindings.h"
 
 static s16 l_rest_msg_time1[4] = {30000, 10000, 5000, -1000};
@@ -295,6 +296,9 @@ BOOL daAuction_c::_draw() {
 
 /* 0205AAC8 */
 BOOL daAuction_c::_execute() {
+    t60w::Guard<daAuction_c> t60g(this, t60objw::Logic<daAuction_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
     checkOrder();
     u32 play = dComIfGp_ea();
     if (!auctionGameInfo(play).play.mEvtCtrl.mMode || eventInfo.mCommand == 1)
@@ -337,6 +341,7 @@ BOOL daAuction_c::_execute() {
                 auctionEmitter(emitter)->mGlobalAlpha = (u8)gabi::ftoi(next);
         }
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     setMtx();
     return true;
 }

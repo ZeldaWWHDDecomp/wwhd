@@ -1,0 +1,26 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_tree.txt
+# ---- true60 N-step spec (2026-11-16): the trees on a general step length (d_tree_t60.h).
+# animation 025C6D40: the earlier steps move a hit tree's slot at dt (the spring's exact fractional power with the
+# angle's carry, the settled top's chase, the cut top's fall with the exact-arc term); the tick30 step puts the slot
+# back to the frame's start and runs the original frame at dt 1: the slot ends the frame byte exact (no t60tol line;
+# the spring tolerance |d| <= 1 is not needed). The chases (cLib_chaseAngleS / cLib_chaseF) are mocks here: c_lib
+# as a second source duplicates cM_atan2s (d_tree.cpp's own extern); their dt forms are c_lib's N-step spec (_t60/c_lib.txt).
+# calc 025C9948: the wind clock at the step's time (the tick30 step: the original), the hit checks and the sword /
+# mass set-up on the tick30 step only (hitCheck / animation are mocks here: called once / N times, no writes):
+# exact.
+t60conv 025C6D40 025C9948
+# the swing in the game's range (the push strength is at most 4000): trunk X angle, speed; the settled case (0, 0)
+field 025C6D40 7C002EC4 i16 -4000 4000
+field 025C6D40 7C002EC4 i16 0
+field 025C6D40 7C002EC8 f32 -4000 4000
+field 025C6D40 7C002EC8 f32 0,30,-399,401,4000
+# the cut top: falling speeds and offsets as WorkAt starts them and the fall reaches
+field 025C6D40 7C002ED0 f32 -40 12
+field 025C6D40 7C002ED4 f32 -50 50
+field 025C6D40 7C002ED8 f32 -5 200
+field 025C6D40 7C002EDC f32 -50 50
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200F4FC 0200F5C8 0200F8D0
+t60cand 0200F4FC 0200F5C8 0200F8D0

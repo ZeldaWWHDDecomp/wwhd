@@ -1,5 +1,6 @@
 /* Tower pedestal. */
 #include "d/actor/d_a_pedestal.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using daPedestal::Action;
 using daPedestal::daPds_c;
 using daPedestal::daPds_infiniteEcallBack_c;
@@ -378,9 +379,13 @@ void daPds_c::action(void *argument) {
 }
 /* 023C9188 */
 BOOL daPds_c::_execute() {
+    t60w::Guard<daPds_c> t60g(this, t60objw::Logic<daPds_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     playBrkAnm();
     if (!eventProc())
         action(nullptr);
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     mpBgW->Move();
     if (mOctagonGlowCb.mpEmitter)

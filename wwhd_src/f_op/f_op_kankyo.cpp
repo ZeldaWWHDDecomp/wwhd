@@ -2,6 +2,7 @@
 #include "bindings.h"
 #include "f_op/f_op_kankyo.h"
 #include "gc_api/f_pc/f_pc.h"
+#include "d/d_s_play_t60.h"
 
 static s32 fopKy_KANKYO_TYPE;
 
@@ -24,7 +25,9 @@ static s32 fopKy_Draw(kankyo_class* i_this) {
 /* 025DA9BC */
 static s32 fopKy_Execute(kankyo_class* i_this) {
     // HD: return TRUE when paused or skipped; keep null checks before reading a process name.
-    if (dScnPly_ply_c::isPause() != 0) {
+    // true60 (d_s_play_t60.h (c)): a converted environment process (e.g. KANKYO 0x13 wind pairs) runs on
+    // in-between steps too and asks the frame's pause answer there, as the actors and the camera
+    if (t60_frame_isPause([] { return dScnPly_ply_c::isPause(); }) != 0) {
         return TRUE;
     }
     bool allowed = dMenu_flag() == 0;

@@ -4,6 +4,7 @@
 using daObjShelf::Act_c;
 #include "gc_api/f_op/f_op_actor_mng.h"
 #include "gc_api/d/d_com_inf_game.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 const gc_tu_data gc_tu = {.safeString = 0x1002F2B8};
 static const char M_arcname[] = "Otana";
 static Mtx34 M_tmp_mtx;
@@ -80,12 +81,19 @@ BOOL Act_c::Create() {
 }
 /* 0238E118 */
 BOOL Act_c::Execute(gptr<Mtx34>* matrix) {
+    t60w::Guard<Act_c> t60g(this, t60objw::Logic<Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) { /* true60: a step before the tick30 step: the picture only (frame interpolation); the background stays: the
+                      * wrapper gets the actor's own mBgMtx (M_tmp_mtx is a static shared by all shelves) */
+        *matrix = &mBgMtx;
+        return TRUE;
+    }
     // HD: GHS stores the named member-function descriptors in eight bytes.
     static ShelfModeEntry mode_proc[] = {
         {&Act_c::mode_wait}, {&Act_c::mode_vib},
         {&Act_c::mode_rot}, {&Act_c::mode_fell}
     };
     (this->*mode_proc[mMode].proc)();
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     *matrix = &M_tmp_mtx;
     return TRUE;

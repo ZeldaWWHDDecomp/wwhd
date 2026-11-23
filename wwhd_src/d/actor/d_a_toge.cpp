@@ -7,6 +7,7 @@
  * Layout: every GameCube member +0x11C (class size 0x5A4).
  */
 #include "d/actor/d_a_toge.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 const gc_tu_data gc_tu = {.safeString = 0x1004079C};
 static TogeText m_arcname;
 static TogeText sourceName;
@@ -152,6 +153,9 @@ cPhs_State daToge_c::_create() {
 
 /* 024C77F0 */
 BOOL daToge_c::_execute() {
+    t60w::Guard<daToge_c> t60g(this, t60objw::Logic<daToge_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     if (mSwitchNo != 0xFF) {
         if (fopAcM_isSwitch(this, mSwitchNo) != 0) {
             if (mEventState != RETRACT_WAIT) {
@@ -178,6 +182,7 @@ BOOL daToge_c::_execute() {
 
     toge_move();
 
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
 
     dBgW_Move(mpBgW2);

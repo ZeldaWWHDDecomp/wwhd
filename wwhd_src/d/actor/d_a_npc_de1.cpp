@@ -7,6 +7,7 @@
  * written from the WWHD code, verified against cking.rpx. Names follow the GameCube symbols.
  */
 #include "d/actor/d_a_npc_de1.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 static BOOL CheckCreateHeap(fopAc_ac_c*);
 
 const gc_tu_data gc_tu = {.safeString = 0x10019664};
@@ -924,6 +925,9 @@ BOOL daNpc_De1_c::_draw() {
 
 /* 0222C218 */
 BOOL daNpc_De1_c::_execute() {
+    t60w::Guard<daNpc_De1_c> t60g(this, t60npc::Logic<daNpc_De1_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     if (mInitDone == 0) {
         mInitAngle.y = current.angle.y;
         mInitAngle.z = current.angle.z;
@@ -946,6 +950,7 @@ BOOL daNpc_De1_c::_execute() {
         shape_angle.z = current.angle.z;
     }
     eventOrder();
+    t60g.model = true; /* true60: the frame reached its model step */
     setMtx();
     return TRUE;
 }

@@ -1,5 +1,6 @@
 // Phantom Ganon, reconstructed locally from WWHD.
 #include "d/actor/d_a_fganon.h"
+#include "d/actor/d_a_fganon_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule addendum) */
 // HD: checked collision source records and matrix-stack addresses.
 static const u32 l_weponSphSrc[] = {
     0x00000000, 0x00000008, 0x00000000, 0x0000000F, 0x00000000, 0x00000000, 0x00000000, 0x000D0700,
@@ -178,8 +179,9 @@ BOOL daFganon_Draw(fganon_class *actor) {
     if ((s8)actor->mKenState != 2) {
         model = (u32)actor->mpKenModel.v;
         env = (unsigned int)fg_dComIfGp_getEnvLight();
-        fg_dScnKy_env_light_c_settingTevStruct(env, 0, gabi::ea(&actor->current.pos),
-                                               gabi::ea(&actor->mKenTevStr));
+        if (fganon_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+            fg_dScnKy_env_light_c_settingTevStruct(env, 0, gabi::ea(&actor->current.pos),
+                                                   gabi::ea(&actor->mKenTevStr));
         env = (unsigned int)fg_dComIfGp_getEnvLight();
         fg_setLightTevColorType(env, model, gabi::ea(&actor->mKenTevStr));
         brkEntry((u32)actor->mpBrkAnm2.v, model, false);
@@ -2388,6 +2390,11 @@ static void demo_camera(fganon_class *actor) {
 }
 /* 02134B28 */
 BOOL daFganon_Execute(fganon_class *actor) {
+    /* true60: the whole frame on the tick30 step (end at every return) */
+    t60w::Guard<fganon_class> t60g(actor, fganon_t60::ops());
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
+    t60g.model = true;
     execute_model(actor);
     demo_camera(actor);
     energy_ball_move(actor);

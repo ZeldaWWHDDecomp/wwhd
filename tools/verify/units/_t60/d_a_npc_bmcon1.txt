@@ -1,0 +1,9 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_npc_bmcon1.txt
+# ---- true60 N-step spec (2026-11-20; the whole-frame form rule NPC form; d/t60_npc.h):
+# Willi and Obli at the Flight Control Platform (Bmcon): daNpcBmcon_c::_execute 02206D64 in the whole form, logic only (mode / event procs run inside it). The tick30 step runs the
+# original execute whole at dt 1 from the frame start; the earlier steps change no state (the picture between steps comes
+# from frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 02206D64
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200F428 0200F5C8 020182E0 02018428 020184DC 02018C8C 02018D40 02204E40 02204FA8 02205080 02205160 02205750 02205A6C 02205AF4 02205BF4 02205DAC 02205E14 02205E1C 02206340 0220639C 022063CC 022065C4 02206650 0220677C 022068A8 02206954 02206A74 02206B58 024F08A8 025200D4 02542D88 02542EDC 02543280 0254407C 025440C8 025447C8 0259D54C 0259D624 0259DED0 0259F858 025CB374 025D6870 025D76A8 025D7970 025D7DEC 025E18EC 025E1988 025E535C 025E742C 025F1C28 025F74D0 025F795C 025F7DB0 026067F4 028E90D4

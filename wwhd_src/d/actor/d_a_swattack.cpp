@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_swattack.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 static dCcD_SrcCyl l_cyl_src;
 
@@ -40,6 +41,9 @@ cPhs_State daSwAt_c::_create() {
 
 /* 024A0CBC */
 bool daSwAt_c::_execute() {
+    t60w::Guard<daSwAt_c> t60g(this, t60objw::Logic<daSwAt_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
     bool triggered = false;
     if (mCyl.ChkTgHit()) {
         void* obj = mCyl.GetTgHitObj();

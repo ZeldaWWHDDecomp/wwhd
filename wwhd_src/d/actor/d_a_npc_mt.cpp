@@ -1,5 +1,6 @@
 /* Carlov, Nintendo Gallery. Reconstructed from the WWHD game. */
 #include "d/actor/d_a_npc_mt.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 // HD: GHS emits these inline-destructor vtables for this translation unit.
 const gc_tu_data gc_tu = {.safeString = 0x1001E998, .objAcchDt = {0x1001E9B0, 0x1001E9C0}};
@@ -356,6 +357,9 @@ BOOL daNpcMt_c::_draw() {
 
 /* 022A1914 */
 BOOL daNpcMt_c::_execute() {
+    t60w::Guard<daNpcMt_c> t60g(this, t60npc::Logic<daNpcMt_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return FALSE;
     chkAttention();
     checkOrder();
     if (dComIfGp_event_runCheck() && eventInfo.mCommand != dEvtCmd_INTALK_e)
@@ -382,6 +386,7 @@ BOOL daNpcMt_c::_execute() {
     this->eyePos.x = x;
     this->eyePos.y = y + offset;
     lookBack();
+    t60g.model = true; /* true60: the frame reached its model step */
     setMtx();
     return FALSE;
 }

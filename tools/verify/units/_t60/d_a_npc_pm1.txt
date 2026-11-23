@@ -1,0 +1,14 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_npc_pm1.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule NPC form; d/t60_npc.h):
+# Poor Maggie's execute 022D1F70 in the whole form, logic only. The tick30 step runs the original execute whole at dt 1
+# from the frame start (home set, joint params, order check, demo / event cuts or the action proc, event order, the mover,
+# the matrix step, the collision registration once); the earlier steps change no state (the picture between steps comes
+# from frame interpolation): net effect = the one step's, byte exact. Negative control (T60C_NEGCTRL: the execute on every step at dt)
+# must fail. (The Execute wrapper 022D2124 is untouched.)
+t60conv 022D1F70
+# the execute's own steps run real (matrix step / order checks), so their state is in the compared memory
+real 022D15F0 022D1F38 022D1A5C
+# calls over the N steps as many as in the one step: fopNpc_npc_c::setCollision (the cylinder registered once a frame,
+# the one-sweep-per-frame attack rule) and fopAcM_posMoveF (the mover once a frame); with these the negative control fails
+t60calls 025A15AC 025D6870

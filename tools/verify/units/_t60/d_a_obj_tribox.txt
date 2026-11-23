@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_tribox.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule + addendum, d/t60_objw.h): tribox: block / correct mode procs, push input, flash brk; push_pullCB once a frame via cbSkip.
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 023A9090 023A956C
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 023A8E74 023A8EF0 023A9018 023AB3B4
+t60cand 023A8E74 023A8EF0 023A9018 023AB3B4
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 023A8E74 023A8EF0 023A9018 023AB3B4 025E742C

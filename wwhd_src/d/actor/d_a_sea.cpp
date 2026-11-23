@@ -11,6 +11,8 @@
 #include "gc_api/d/d_com_inf_game.h"
 #include "gc_api/f_op/f_op_actor.h"
 #include "port_native_draw.h"
+#include "true60.h"
+#include "f_pc/f_pc_t60_frame_start.h"
 
 const gc_tu_data gc_tu = {.safeString = 0x10039E38};
 
@@ -455,15 +457,56 @@ void daSea_packet_c::CheckRoomChange() {
     }
 }
 
+/* true60 (rule 14 coupling with the ship, the per-step smoothing rule): the sea is converted together with the ship. Its 65x65
+ * height grid is what the ship (and Link, the camera) sample with sea_calcWave on every step; unconverted, the grid
+ * was the previous frame's on the ship's in-between steps (ps3: the ship's float offset 6 units off before any RNG
+ * difference). At N steps the grid is rebuilt on every step at the step's wave phase: the wave counters (integers,
+ * one per 30 Hz frame, read by GetRatio) still advance on the tick30 step only, and step k of a frame (k = 1..N, k = N
+ * the tick30 step) reads them k/N - 1 frames back, so the tick30 step's grid is the 30 Hz frame's grid. Unconverted
+ * readers (tick30 only) see the original grid. The per-step progress k/N is counted here (one sea, unit-local host
+ * state, reset on the tick30 step). */
+static int s_sea60Steps;
+static f32 sea60_phaseBack() {
+    /* frames the step's wave phase lies before the counters' (0 on the tick30 step and at N = 1) */
+    if (t60::tick30() || t60::dt() == 1.0f) {
+        return 0.0f;
+    }
+    f32 p = (f32)(s_sea60Steps + 1) * t60::dt();
+    return p < 1.0f ? 1.0f - p : 0.0f;
+}
+
+/* true60 (frame-anchored, the per-step smoothing rule exact form): the flat ramp and the wave scale's ease keep their 30 Hz
+ * state (mFlatInter / mFlatInterCounter, mWaveInfo.mCurScale) at the frame-start value on the frame's earlier steps and
+ * apply A's own once-per-frame update on the tick30 step, so the tick30 step's grid is A's bit for bit (zfbrl1n2: the
+ * per-step compounding of the eases differed from A's single step by float rounding, a few ulps in every floating
+ * barrel's wave height). An earlier step k of N uses a view at the frame's elapsed share p = k / N, not stored. */
+static f32 s_sea60FlatView;
+static bool sea60_viewStep() { return t60::dt() != 1.0f && !t60::tick30(); }
+static f32 sea60_elapsed() {
+    f32 p = (f32)(s_sea60Steps + 1) * t60::dt();
+    return p < 1.0f ? p : 1.0f;
+}
+
 /* 0246BD4C */
 void daSea_packet_c::CalcFlatInter() {
+    const bool view = sea60_viewStep();
     if (mFlags & 1) {
         if (mFlatInterCounter != 0.0f) {
             f32 cnt = mFlatInterCounter;
             f32 inter = mFlatInter;
+            if (view) {
+                /* the frame's ramp (gap x 1 / cnt) to the elapsed share p; a counter below p ends on its target */
+                f32 h = cnt < sea60_elapsed() ? cnt : sea60_elapsed();
+                s_sea60FlatView = inter + (mFlatTarget - inter) * h / cnt;
+                return;
+            }
             mFlatInterCounter = (f32)mFlatInterCounter - 1.0f;
             mFlatInter = inter + (mFlatTarget - inter) / cnt;
         } else {
+            if (view) {
+                s_sea60FlatView = mFlatTarget;
+                return;
+            }
             copy_word(gabi::ea(&mFlatInter), gabi::ea(&mFlatTarget));
         }
     } else {
@@ -471,9 +514,18 @@ void daSea_packet_c::CalcFlatInter() {
         if (mFlatInterCounter != 0.0f) {
             f32 cnt = mFlatInterCounter;
             f32 inter = mFlatInter;
+            if (view) {
+                f32 h = cnt < sea60_elapsed() ? cnt : sea60_elapsed();
+                s_sea60FlatView = inter + (target - inter) * h / cnt;
+                return;
+            }
             mFlatInterCounter = (f32)mFlatInterCounter - 1.0f;
             mFlatInter = inter + (target - inter) / cnt;
         } else {
+            if (view) {
+                s_sea60FlatView = target;
+                return;
+            }
             mFlatInter = target;
         }
     }
@@ -539,7 +591,10 @@ void daSea_packet_c::execute(cXyz* i_pos) {
     }
 
     CalcFlatInter();
-    dKy_usonami_set(mFlatInter);
+    /* true60: an earlier step's flat value is the frame-anchored view (CalcFlatInter above); dt 1 / the
+     * tick30 step read mFlatInter at each use, as the original does (it is reloaded after the calls in between) */
+    const bool flatView = sea60_viewStep();
+    dKy_usonami_set(flatView ? s_sea60FlatView : (f32)mFlatInter);
     // 25600 = GRID_SIZE * 32?
     mDrawMinX = pos.x - 25600.0f;
     mDrawMaxX = pos.x + 25600.0f;
@@ -551,8 +606,17 @@ void daSea_packet_c::execute(cXyz* i_pos) {
 
     int h = mWaterHeightMgr.GetHeight((f32)pos.x, (f32)pos.z);
 
-    f32 gs = mWaveInfo.GetScale((f32)h);
-    f32 scale = gabi::fmuls_ppc(mFlatInter, gs);
+    f32 gs;
+    if (sea60_viewStep()) {
+        /* true60 (frame-anchored): GetScale's cur += (v - cur) / 100 per frame, on an earlier step the view
+         * at the elapsed share p (ratio 1 - 0.99^p), not stored; the tick30 step runs A's GetScale on the frame-start cur */
+        f32 cur = mWaveInfo.mCurScale;
+        gs = cur + ((f32)h - cur) * t60_ratio(0.01f, sea60_elapsed());
+    } else {
+        gs = mWaveInfo.GetScale((f32)h);
+    }
+    const f32 back = sea60_phaseBack();
+    f32 scale = gabi::fmuls_ppc(flatView ? s_sea60FlatView : (f32)mFlatInter, gs);
 
     s16 aOffsAnimTable[4];
     f32 aThetaXTable[4];
@@ -569,7 +633,15 @@ void daSea_packet_c::execute(cXyz* i_pos) {
         aThetaZTable[i] =
             gabi::fmuls_ppc(km, (f32)gabi::at<daSea_WaveInfoDat>(dat)->mScaleZ); /* GetVz */
 
+        if (back != 0.0f) {
+            /* true60: the step's phase, `back` frames before the counter (the counter wraps at mCounterMax:
+             * a phase below 0 is the same angle as one below 1, both through the s16 wrap) */
+            f32 r = ((f32)(s32)mWaveInfo.mCounters[i] - back) /
+                    (f32)sead::elementAt<daSea_WaveInfoDat>(mWaveInfo.mWaveInfoTable, (u32)i).mCounterMax;
+            aOffsAnimTable[i] = (s16)gabi::ftoi(65536.0f * (r - 0.5f));
+        } else {
         aOffsAnimTable[i] = (s16)gabi::ftoi(65536.0f * (mWaveInfo.GetRatio(i) - 0.5f));
+        }
         aHeightTable[i] = gabi::fmuls_ppc(
             scale, (f32)gabi::at<daSea_WaveInfoDat>(dat)->mHeight); /* GetBaseHeight */
     }
@@ -659,7 +731,13 @@ void daSea_packet_c::execute(cXyz* i_pos) {
         theta[3] += waveTheta_DeltaZ[3];
     }
 
-    mWaveInfo.AddCounter();
+    if (t60::tick30()) {
+        /* true60 (the 30 Hz timer rule): the wave counters count 30 Hz frames */
+        mWaveInfo.AddCounter();
+        s_sea60Steps = 0;
+    } else {
+        s_sea60Steps++;
+    }
     mCurPos.copy(pos);
 }
 
@@ -837,6 +915,13 @@ static BOOL daSea_Execute(sea_class* i_this) {
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
     gabi::Local<cXyz> pos;
     pos->copy(player->current.pos);
+    /* true60 (the process-order read rule): the sea executes before Link in the process line, so at 30 Hz its frame reads
+     * Link's previous-frame-end position. At N steps its tick30 step would read Link after his first step of the frame
+     * (half a frame on): the 65x65 grid's origin (mDrawMinX/Z), the height area index and the flat target moved with
+     * it, and every floating reader's interpolated wave height differed from A's by a few ulps that grew (zfbrl1n2,
+     * Build B: 38 barrels + buoy, logic words from the first N2 frame). Link's frame-start position, as A reads it;
+     * live position when Link is not converted, has executed on this step already, or N = 1. */
+    t60_fs_read(gabi::ea(player), 1, pos.get());
     l_cloth()->execute(pos);
     /* HD: clears actor_status bit 0x4000 */
     i_this->actor_status &= ~(u32)fopAcStts_UNK4000_e;

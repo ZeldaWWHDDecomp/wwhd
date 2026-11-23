@@ -3,6 +3,7 @@
  * are verified against the recompiled original. */
 #include "d/actor/d_a_obj_ice.h"
 #include "bindings.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 const gc_tu_data gc_tu = {.safeString = 0x1002B0F4};
 static const char l_arcname[] = "Ikori";
 static dCcD_SrcCyl l_cyl_src;
@@ -404,9 +405,13 @@ void effectMatrices(daObjIce_c *ice) {
 } // namespace
 /* 0235DFF8 */
 BOOL daObjIce_c::_execute() {
+    t60w::Guard<daObjIce_c> t60g(this, t60objw::Logic<daObjIce_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     auto *ice = this;
     ice->mCyl.SetR((75.f * (f32)ice->scale.x) * (f32)ice->mScaleXZ);
     ice->mCyl.SetH((120.f * (f32)ice->scale.y) * (f32)ice->mScaleY);
+    t60g.model = true; /* true60: the frame reached its model step */
     ice->set_mtx();
     dBgW *bg = ice->mBgw;
     if (bg && bg->ChkUsed())

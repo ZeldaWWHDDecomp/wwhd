@@ -1,0 +1,5 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_tag_etc.txt
+# ---- true60 N-step spec (2026-11-22): the shared-world-state rule whole-execute form; the execute path on a
+# general step length, callees are mocks (the same answer on every step and on the one step)
+t60conv 024A6304

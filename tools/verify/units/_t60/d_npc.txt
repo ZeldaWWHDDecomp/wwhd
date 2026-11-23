@@ -1,0 +1,29 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_npc.txt
+# ---- (2026-11-18, review, no code change, the whole-frame form rule "NPC form"):
+# NPC actors take the whole form (t60_whole.h: the whole update on the frame's tick30 step at dt 1, the earlier steps only
+# show the picture), so the d_npc.cpp helpers (dNpc_JntCtrl_c, dNpc_HeadAnm_c swings, dNpc_PathRun_c, dNpc_EventCut_c cut
+# procs incl. the "Timer" wait, fopNpc_npc_c::talk) are reached only at dt 1, once per 30 Hz frame. Run with -t60steps 2 /
+# 4: the library consults no step state (no t60conv line: nothing is converted here); every function must match the
+# original as at N 1 (the same as the gate unit d_npc.txt).
+# RESULT 2026-11-18: dt-1 check d_npc s1/s7 75/75 ok. With -t60steps 2 / 4 (s1, s7) 62 functions are
+# step-invariant (N calls = one call) and 13 are not (expected: they keep per-call state, so they must run once per 30 Hz
+# frame, which the NPC form guarantees by calling them only inside the whole run at dt 1): JntCtrl follow_current /
+# lookAtTarget, PathRun incIdx / incIdxLoop / incIdxAuto / decIdx / decIdxLoop / decIdxAuto, HeadAnm swing_vertical /
+# swing_horizone, EventCut cutMoveToActorProc / cutMoveToPosProc, fopNpc_npc_c::talk. This spec was therefore a reference
+# list (exit 1 by design), not a gate: an NPC that calls one of these on the earlier steps of a frame is not in the NPC form.
+# N-step spec list (2026-11-21: lint - no t60conv line made the harness compare every
+# function, so this spec could only exit 1). The roots are the 62 step-invariant functions (N calls at dt 1/N = one call):
+# the library's helpers an NPC may reach on any step without changing its state. The 13 per-call functions above (0259E28C 0259E2D4 0259EB1C 0259EB60 0259EBA4 0259EC0C 0259EC50 0259EC94 0259F448 0259F5A4 025A0730 025A0F00 025A11EC)
+# are left out by design: they keep per-call state and must run once per 30 Hz frame, which the NPC whole form guarantees
+# (t60w::Guard: the update on the tick30 step only). Results: 2000/2000 N2 / N4 x s1 / s7 on
+# the list; negative control = the previous spec form (no list: the 13 per-call functions compared too) fails exactly
+# those 13 (npc_base_n2_s1.log, npc_base_n4_s7.log) - N-step spec sees per-call state.
+t60conv 0259D24C 0259D344 0259D454 0259D54C 0259D624 0259D6C8 0259D734 0259D79C
+t60conv 0259D8BC 0259DA18 0259DAA0 0259DB48 0259DB6C 0259DCEC 0259DDA0 0259DED0
+t60conv 0259E08C 0259E0C8 0259E104 0259E1DC 0259E6D0 0259E730 0259E744 0259E778
+t60conv 0259E838 0259ECFC 0259ED58 0259EDB8 0259EDD0 0259EE4C 0259EE7C 0259EFE0
+t60conv 0259F0F8 0259F220 0259F36C 0259F514 0259F67C 0259F740 0259F7D4 0259F814
+t60conv 0259F858 0259FA00 0259FA64 0259FAB0 0259FD08 0259FE88 025A02DC 025A0984
+t60conv 025A0B3C 025A0D5C 025A1090 025A1178 025A1388 025A1458 025A15A0 025A15A8
+t60conv 025A15AC 025A1648 025A16DC 025A16F0 025A16F8 025A1794

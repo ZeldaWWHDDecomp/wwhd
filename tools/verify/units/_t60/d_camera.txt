@@ -1,0 +1,137 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_camera.txt
+include shared/c_angle_statics.txt
+# ---- true60 N-step spec: shakeCamera. While the pattern runs (mShakeFrame < mShakeLength) the
+# frame's pattern step, its draws and the blur counts happen on the tick30 step only: exact after N steps. After it, the
+# offsets decay by 0.9 per frame, 1 - 0.9^dt per step: float rounding on eye / centre / fovy; the bank (s16, truncating
+# multiply per call) may end a few units apart.
+t60conv 024FC108
+field 024FC108 r3+0x558 i32 0 40
+field 024FC108 r3+0x554 i32 0 32
+field 024FC108 r3+0x584 f32 -10 10
+t60tol 024FC108 r3+0x56C f32x3 absrel 0.001 0.0001
+t60tol 024FC108 r3+0x578 f32x3 absrel 0.001 0.0001
+t60tol 024FC108 r3+0x584 f32 absrel 0.001 0.0001
+t60tol 024FC108 r3+0x588 a16 abs 4
+# ---- true60 N-step spec: the entry transitions of hungCamera, vomitCamera,
+# shieldCamera and towerCamera. Per 30 Hz frame the transition moves a share k = r / W (r = frames left, W = the
+# weights left) and subtracts r from W; at N steps k is 1 - (1 - k)^dt per step and W / the settle change on the frame's
+# end step only, so W never reaches 0 inside the transition (prope5 B: k = r / 0, NaN in the eye). Steered into the
+# transition (mStyleSettle0 0; timer 0 = the start block, once per start with the per-step counter; 1..T-2 inside;
+# T-1 = the settle on the frame end) with W >= r. W, mFrameWeight and the settle flags exact (no line); NaN fails.
+t60conv 0250EF98 02513518 02513E98 0250B30C
+field 0250EF98 r3+0x100 u8 0
+field 0250EF98 r3+0x11C u32 1,2,3,4,5,6,7,8
+field 0250EF98 r3+0x37C u32 0x48554E47
+field 0250EF98 r3+0x380 i32 9
+field 0250EF98 r3+0x384 f32 45,36,28,21,15,10,9
+field 02513518 r3+0x100 u8 0
+field 02513518 r3+0x11C u32 1,2,3,4,5,6,7,8
+field 02513518 r3+0x37C u32 0x564D4954
+field 02513518 r3+0x380 i32 9
+field 02513518 r3+0x384 f32 45,36,28,21,15,10,9
+field 02513E98 r3+0x100 u8 0
+field 02513E98 r3+0x11C u32 1,2,3,4,5,6,7,8
+field 02513E98 r3+0x37C u32 0x53484C44
+field 02513E98 r3+0x380 i32 9
+field 02513E98 r3+0x384 f32 45,36,28,21,15,10,9
+field 0250B30C r3+0x100 u8 0
+field 0250B30C r3+0x108 u32 1,2,3,4,5,6,7,8
+field 0250B30C r3+0x37C u32 0x544F5752
+field 0250B30C r3+0x380 i32 9
+field 0250B30C r3+0x384 f32 45,36,28,21,15,10,9
+# the view: radius 100..1000, latitude within +-0x3000, any longitude, centre / eye within 1000, fovy 30..90; the work
+# centre (hung / vomit +0x38, tower +0x40) within 1000. The math helpers run for real (the per-step chase is the test);
+# cSGlobe::Xyz stays a mock (no sin table in the harness): the eye is the centre plus the same mocked offset per step.
+field 0250EF98 r3+0x3C f32 100 1000
+field 0250EF98 r3+0x40 i16 -12288 12288
+field 0250EF98 r3+0x42 i16 -32768 32767
+field 0250EF98 r3+0x44 f32 -1000 1000
+field 0250EF98 r3+0x48 f32 -1000 1000
+field 0250EF98 r3+0x4C f32 -1000 1000
+field 0250EF98 r3+0x50 f32 -1000 1000
+field 0250EF98 r3+0x54 f32 -1000 1000
+field 0250EF98 r3+0x58 f32 -1000 1000
+field 0250EF98 r3+0x60 f32 30 90
+field 0250EF98 r3+0x3B4 f32 -1000 1000
+field 0250EF98 r3+0x3B8 f32 -1000 1000
+field 0250EF98 r3+0x3BC f32 -1000 1000
+t60tol 0250EF98 r3+0x3C f32 absrel 0.001 0.0001
+t60tol 0250EF98 r3+0x40 a16x2 skip
+t60tol 0250EF98 r3+0x44 f32x6 skip
+t60tol 0250EF98 r3+0x60 f32 absrel 0.0001 0.0001
+t60tol 0250EF98 r3+0x3B4 f32x3 skip
+field 02513518 r3+0x3C f32 100 1000
+field 02513518 r3+0x40 i16 -12288 12288
+field 02513518 r3+0x42 i16 -32768 32767
+field 02513518 r3+0x44 f32 -1000 1000
+field 02513518 r3+0x48 f32 -1000 1000
+field 02513518 r3+0x4C f32 -1000 1000
+field 02513518 r3+0x50 f32 -1000 1000
+field 02513518 r3+0x54 f32 -1000 1000
+field 02513518 r3+0x58 f32 -1000 1000
+field 02513518 r3+0x60 f32 30 90
+field 02513518 r3+0x3B4 f32 -1000 1000
+field 02513518 r3+0x3B8 f32 -1000 1000
+field 02513518 r3+0x3BC f32 -1000 1000
+t60tol 02513518 r3+0x3C f32 absrel 0.001 0.0001
+t60tol 02513518 r3+0x40 a16x2 skip
+t60tol 02513518 r3+0x44 f32x6 skip
+t60tol 02513518 r3+0x60 f32 absrel 0.0001 0.0001
+t60tol 02513518 r3+0x3B4 f32x3 skip
+field 02513E98 r3+0x3C f32 100 1000
+field 02513E98 r3+0x40 i16 -12288 12288
+field 02513E98 r3+0x42 i16 -32768 32767
+field 02513E98 r3+0x44 f32 -1000 1000
+field 02513E98 r3+0x48 f32 -1000 1000
+field 02513E98 r3+0x4C f32 -1000 1000
+field 02513E98 r3+0x50 f32 -1000 1000
+field 02513E98 r3+0x54 f32 -1000 1000
+field 02513E98 r3+0x58 f32 -1000 1000
+field 02513E98 r3+0x60 f32 30 90
+t60tol 02513E98 r3+0x3C f32 absrel 0.001 0.0001
+t60tol 02513E98 r3+0x40 a16x2 skip
+t60tol 02513E98 r3+0x44 f32x6 skip
+t60tol 02513E98 r3+0x60 f32 absrel 0.0001 0.0001
+field 0250B30C r3+0x3C f32 100 1000
+field 0250B30C r3+0x40 i16 -12288 12288
+field 0250B30C r3+0x42 i16 -32768 32767
+field 0250B30C r3+0x44 f32 -1000 1000
+field 0250B30C r3+0x48 f32 -1000 1000
+field 0250B30C r3+0x4C f32 -1000 1000
+field 0250B30C r3+0x50 f32 -1000 1000
+field 0250B30C r3+0x54 f32 -1000 1000
+field 0250B30C r3+0x58 f32 -1000 1000
+field 0250B30C r3+0x60 f32 30 90
+field 0250B30C r3+0x3BC f32 -1000 1000
+field 0250B30C r3+0x3C0 f32 -1000 1000
+field 0250B30C r3+0x3C4 f32 -1000 1000
+t60tol 0250B30C r3+0x3C f32 absrel 0.001 0.0001
+t60tol 0250B30C r3+0x40 a16x2 skip
+t60tol 0250B30C r3+0x44 f32x6 skip
+t60tol 0250B30C r3+0x60 f32 absrel 0.0001 0.0001
+t60tol 0250B30C r3+0x3BC f32x3 skip
+# constructors return this (the generated mock returned a random r3: the original read through it, page-0 DSI)
+retarg 0200658C r3
+retarg 020066C0 r3
+retarg 02006644 r3
+retarg 020065FC r3
+retarg 02007248 r3
+retarg 02007324 r3
+# the radius copies in the work (hung / vomit +0x20 +0x24, shield +0x10 +0x14, tower +0x1C +0x20), the smoothed player
+# height (hung / vomit +0x1C, 0.05 per frame) and tower's centre offset x (+0x30, 0.04 / 0.06 per frame): chases toward
+# a fixed target, float rounding
+t60tol 0250EF98 r3+0x398 f32x3 absrel 0.001 0.0001
+t60tol 02513518 r3+0x398 f32x3 absrel 0.001 0.0001
+t60tol 02513E98 r3+0x38C f32x2 absrel 0.001 0.0001
+t60tol 0250B30C r3+0x398 f32x2 absrel 0.001 0.0001
+t60tol 0250B30C r3+0x3AC f32 absrel 0.001 0.0001
+# the start block (timer 0) in the game's domain: lengths and heights positive, the angle norm within [-1, 1]
+fret 028E8DD0 0 1000000
+fret 020067AC -1 1
+fret 024F8EF0 10 200
+real 02007248
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200ECD4 0200F5C8
+t60cand 0200ECD4 0200F5C8

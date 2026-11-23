@@ -1,0 +1,12 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_npc_ba1.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule NPC form;
+# d_a_npc_ba1_t60.h): Grandma's execute 021F1064 in the whole form. The tick30 step runs the original execute whole at
+# dt 1 from the frame start (partner search, event order / talk, event_proc or the action proc, the mover, setMtx with
+# the morf play, the collision registration once); the earlier steps change no state (logic only: the picture between
+# steps comes from frame interpolation): net effect = the one step's, byte exact. Negative control (T60C_NEGCTRL: the execute on
+# every step at dt) must fail.
+t60conv 021F1064 021F1288
+# the execute's own steps run real (setMtx with the morf frame bookkeeping, partner_srch, checkOrder, eventOrder), so
+# their state is in the compared memory (with mocks only the negative control could not fail)
+real 021EF2A0 021EF848 021EF8B4 021F0F78

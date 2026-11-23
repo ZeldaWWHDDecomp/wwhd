@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_ladder.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule + addendum, d/t60_objw.h): the ladder's Execute(matrixOut) 02369638 (demo end reset, wait / demoreq / vib / drop / fell modes, set_mtx); background actor: own mBgMtx on the earlier steps.
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 02369638
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 023692C0 023695C8 023697B0 02369830 02369934 023699A0 02369C64
+t60cand 023692C0 023695C8 023697B0 02369830 02369934 023699A0 02369C64
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 023123C0 023692C0 023693C8 023695C8 0236979C 023697B0 02369810 02369830 023698FC 02369934 023699A0 02369C64 02369CEC 024EECAC 02544044 025440C8 025A847C 025D7A58 025F1B48 025F24E0 0274D458 028E90D4

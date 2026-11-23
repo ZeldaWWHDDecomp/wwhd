@@ -1,5 +1,6 @@
 /** Steam vent tag; local only. */
 #include "d/actor/d_a_steam_tag.h"
+#include "d/actor/d_a_steam_tag_t60.h" /* true60 (t60conv): step helpers */
 static u8 mEmitterNum;
 static SteamStageName l_Adanmae;
 static SteamSafeStringVtable l_safeStringVtable;
@@ -69,6 +70,27 @@ static BOOL daSteamTag_Draw() {
 
 /* inlined into daSteamTag_Execute */
 BOOL daSteamTag_c::execute() {
+    /* true60 (t60conv): frame-level logic on the frame's first step (the first-step AI-timer rule / first-step frame-level). Two parts of an emitting
+     * frame run on every step of it (pairs):
+     * - the point wind's move (dPointWind_c::set_pwind_move) is a per-step primitive (chase with dt,
+     *   restart at the end point on the tick30 step); on the first step only it moved half a frame per frame and
+     *   never restarted (+0x680);
+     * - the capsule's collision registration: dCcS::Move runs on every step and checks what that step registered
+     *   (d_s_play_8), so a collider set on the first step only never met the unconverted parties on the tick30 step
+     *   (0x56C hit flags). It is registered for the tick30 Move only (the one-sweep-per-frame attack rule; collision
+     *   audit): an earlier step's Move would clear its hit flags and count its effect counter down once more per step
+     *   (ClrAtHitInf / ClrTgHitInf -> SubtractEffCounter), the record-timing frames of pair.
+     * The sound start and the timers stay once a frame. dt 1: one step, the original. */
+    if (!t60c::first()) {
+        if (t60c::held(false, 1, this)) {
+            SteamGeometryCps_Set(SteamCapsule(&mCps), &mPntWindCpsS);
+            if (t60c::end()) /* true60: registered for the tick30 Move only (one-sweep-per-frame attack) */
+                dComIfG_Ccsp_Set(&mCps);
+            SteamPointWind_move(&mPointWind);
+        }
+        return TRUE;
+    }
+    bool t60Moved = false;
     f32 windStrength;
     if ((mEmitTimer == 0) && (mCreateTimer > 0)) {
         mCreateTimer = mCreateTimer - 1;
@@ -115,10 +137,13 @@ BOOL daSteamTag_c::execute() {
                 mpEmitter->mGlobalAlpha = 0xB4;
             }
             SteamGeometryCps_Set(SteamCapsule(&mCps), &mPntWindCpsS);
-            dComIfG_Ccsp_Set(&mCps);
+            if (t60c::end()) /* true60: registered for the tick30 Move only (one-sweep-per-frame attack); at N > 1 on the frame's tick30 step above */
+                dComIfG_Ccsp_Set(&mCps);
             SteamPointWind_move(&mPointWind);
+            t60Moved = true;
         }
     }
+    t60c::held(t60Moved, 1, this);
     return TRUE;
 }
 

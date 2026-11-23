@@ -1,0 +1,163 @@
+# true60 N-step spec (not a gate unit): the settled bodies of vomitCamera 02513518, shieldCamera 02513E98 and
+# towerCamera 0250B30C, and tornadoCamera 025121E8 after its start step.
+# Per 30 Hz frame these chase with fixed ratios r (centre follow, radius, latitude, longitude, fovy, vomit's fall blend
+# c x 0.01, tower's movement blend, longitude target 0.33 and its chased rates, tornado's C-stick centre offset 0.25 and
+# bank 0.01 |w|); at N steps each ratio is 1 - (1 - r)^dt per step (e2R); the frame counts (vomit's fall weight
+# mFrameWeight and fall count, tower's idle count) change on the frame's end step only and every step of the frame uses
+# the frame's count; tornado's transition share k = 1 / (T - timer) per frame is e2R(k) per step and it settles on the
+# frame's end. Timer >= 1 (no start step: the start block once per style start is e2Start, slot 6, the helper
+# d_camera_e2ridestart.txt proves for ride).
+# Counts, flags, tags and the settle exact (no line); chased floats absrel; NaN fails by itself.
+# Steering: the rates tower chases (radius / latitude / fovy rate) sit at their style's targets (style 66 IN01: radius
+# limit rate 0.66, latitude rate 0.05, fovy rate 0.05) and its radius limits at the style's (250 / 680), so the chases the
+# radius and fovy take are toward fixed targets with fixed ratios inside the frame (exact composition); with the rates
+# moving the steps take their own rates (speed-ramp position-gap class): d_camera_e2body2r.txt checks the rates themselves there.
+# Not checked (mocked helpers: the harness answers each step alike): the view angles, centre, eye, bank, the works'
+# centres and tower's longitude target (cXyz / cSAngle / cSGlobe helpers are mocks, see d_camera.txt).
+include d_camera.txt
+include shared/c_angle_statics.txt
+t60conv 02513518 02513E98 0250B30C 025121E8
+# the steering below (Val and its angle helpers real, the actor search answered) leaves stack temps that mocks do not
+# write, which the original and the candidate read from different stacks (an artefact: dt-1 check of all four passes s1 / s7
+# 10000/10000 with the dt-1 check unit, verify/s21_e2b_*): the rows are the N-step spec verdict alone
+t60nocmp 02513518 02513E98 0250B30C 025121E8
+# the play object on every call (status words below)
+ret! 025200D4 0x54000000 0x54000000
+# Link's position (positionOf 024F8D5C, a mock): y 100 on every call (see d_camera_e2body.txt)
+mockfield 024F8D5C r4+0x4 f32 100
+# limitf and cSGlobe::Val(f32, const cSAngle&, const cSAngle&) run (tornado's radius is written through Val)
+real 025028A0
+real 020071E0
+# Val's own helpers: cSAngle(s16) (else Val copies an unwritten stack temp: the two sides' stacks differ) and
+# cSGlobe::Formal
+real 0200658C
+real 02006F30
+# cSAngle(f32 degrees) and Val(f32): tornado's latitude limits lo / hi are compared as s16 (an unwritten stack temp
+# otherwise)
+real 020066C0
+real 02006694
+# rationalBezierRatio answers 0.6 (tower's movement blend ratio, tornado's stick curve)
+fret! 024F6F9C 0.6 0.6
+# ---- vomitCamera settled (mStyleSettle0 1), style 39 HN18 (engine 15)
+arg! 02513518 r4 39
+field 02513518 r3+0x100 u8 1
+field 02513518 r3+0x11C u32 1,9,30,200
+field 02513518 r3+0x37C u32 0x564D4954
+# fall weight (frames below the start height), fall count, smoothed / last player height (Link at y 100: the fall
+# branch runs when the height is above 101), centre height blend
+field 02513518 r3+0x388 f32 0,1,4,20
+field 02513518 r3+0x390 i32 0,3,12
+field 02513518 r3+0x398 f32 60 140
+field 02513518 r3+0x3A8 f32 0 1
+# the last player height (the previous call's y: "falling since the last call", per step at N steps, Link's own y per
+# step; the harness's Link does not move, so a value above 100 would see a fall on the first step only): at most 100
+field 02513518 r3+0x3B0 f32 60 100
+field 02513518 54005CD8 u32 0,0x80,0x80000000,0x80000080
+field 02513518 r3+0x3C f32 100 1000
+field 02513518 r3+0x60 f32 30 90
+# the eye-centre globe (cSGlobe(const cXyz&) 02007324, a mock): radius below the minimum 80, between, above the max 520
+mockfield 02007324 r3+0x0 f32 50,300,700
+t60tol 02513518 r3+0x3C f32 absrel 0.001 0.0001
+t60tol 02513518 r3+0x40 a16x2 skip
+t60tol 02513518 r3+0x44 f32x6 skip
+t60tol 02513518 r3+0x60 f32 absrel 0.0001 0.0001
+t60tol 02513518 r3+0x398 f32 absrel 0.001 0.0001
+t60tol 02513518 r3+0x3A8 f32 absrel 0.0001 0.0001
+# ---- shieldCamera settled, styles 124 DD01, 126 DD02, 138 DD04 (engine 16)
+arg! 02513E98 r4 124,126,138
+field 02513E98 r3+0x100 u8 1
+field 02513E98 r3+0x11C u32 1,9,30,200
+field 02513E98 r3+0x37C u32 0x53484C44
+field 02513E98 r3+0x3C f32 100 1000
+field 02513E98 r3+0x60 f32 30 90
+t60tol 02513E98 r3+0x3C f32 absrel 0.001 0.0001
+t60tol 02513E98 r3+0x40 a16x2 skip
+t60tol 02513E98 r3+0x44 f32x6 skip
+t60tol 02513E98 r3+0x60 f32 absrel 0.0001 0.0001
+# ---- towerCamera settled, style 66 IN01 (engine 7); followCamera off (mCurArrowIdx 0), Makar / Medli flying off
+arg! 0250B30C r4 66
+field 0250B30C r3+0x100 u8 1
+field 0250B30C r3+0x108 u32 1,9,30,200
+field 0250B30C r3+0x5EC i32 0
+field 0250B30C 101BDC2D u8 0
+field 0250B30C 101D5F3E u8 0
+field 0250B30C r3+0x364 u8 0,0,1
+field 0250B30C 54005CD8 u32 0,0,0x100000,0x20
+field 0250B30C 54005CDC u32 0,0x10000
+field 0250B30C r3+0x37C u32 0x544F5752
+# idle count (0: the frame's first idle frame, 79 / 80: the end of the blend), movement blend, radius limits at the
+# style's, latitude, centre offset x, radius / latitude / fovy rates at the style's targets, longitude rate, centre follow
+field 0250B30C r3+0x38C i32 0,1,10,79,80
+field 0250B30C r3+0x394 f32 0 0.9
+field 0250B30C r3+0x398 f32 250
+field 0250B30C r3+0x39C f32 680
+field 0250B30C r3+0x3A0 f32 -30 60
+field 0250B30C r3+0x3AC f32 -45 45
+field 0250B30C r3+0x3DC f32 0.66
+field 0250B30C r3+0x3E0 f32 0.05
+field 0250B30C r3+0x3E4 f32 0 1
+field 0250B30C r3+0x3E8 f32 0.05
+field 0250B30C r3+0x3EC f32 0.75
+field 0250B30C r3+0x3F0 f32 0.25
+field 0250B30C r3+0x158 f32 -1 1
+field 0250B30C r3+0x3C f32 100 1000
+field 0250B30C r3+0x60 f32 30 90
+# the eye-centre globe radius against the limits: below 250, within, above 680
+mockfield 02007324 r3+0x0 f32 100,450,1500
+t60tol 0250B30C r3+0x3C f32 absrel 0.001 0.0001
+t60tol 0250B30C r3+0x40 a16x2 skip
+t60tol 0250B30C r3+0x44 f32x6 skip
+t60tol 0250B30C r3+0x60 f32 absrel 0.0001 0.0001
+t60tol 0250B30C r3+0x394 f32 absrel 0.0001 0.0001
+t60tol 0250B30C r3+0x398 f32x3 absrel 0.001 0.0001
+t60tol 0250B30C r3+0x3A4 a16 skip
+t60tol 0250B30C r3+0x3AC f32 absrel 0.001 0.0001
+t60tol 0250B30C r3+0x3BC f32x3 skip
+t60tol 0250B30C r3+0x3DC f32x4 absrel 0.0001 0.0001
+# ---- tornadoCamera: the transition (mStyleSettle0 0; entry mode 0: T 20, 1: T 40, 2: T 8) at timers 1..T-1 and the
+# settled body (mStyleSettle0 1), style 52 QN07 (engine 14). The game never runs a transition past its T - 1 (it settles
+# there), so the timers here fit entry modes 0 and 1 (1..19); d_camera_e2body2t1.txt takes mode 1 to its settle at 39 and
+# d_camera_e2body2t2.txt mode 2 (1..7)
+arg! 025121E8 r4 52
+field 025121E8 r3+0x100 u8 0,1
+field 025121E8 r3+0x11C u32 1,2,5,10,18,19
+field 025121E8 r3+0x37C u32 0x54524E44
+field 025121E8 r3+0x38C i32 0,1
+field 025121E8 r3+0x39C f32 -200 200
+field 025121E8 r3+0x3A0 f32 0 500
+field 025121E8 r3+0x23C f32 0 60
+field 025121E8 r3+0x170 f32 -1 1
+field 025121E8 r3+0x174 f32 -1 1
+field 025121E8 r3+0x158 f32 -1 1
+field 025121E8 r3+0x3C f32 100 1000
+field 025121E8 r3+0x60 f32 30 90
+# the tornado / ship searches (fopAcIt_Judge 025D5218, a mock) find one actor at 0x5C000000 (ship = tornado: the ship
+# distance 0, w 1); status0 0x10000 keeps the tornado (its side / ride angle, the C-stick centre offset, the sea
+# latitude), status0 0 drops it (Link's direction); status1 2 = the ride angle
+ret! 025D5218 0x5C000000 0x5C000000
+field 025121E8 54005CD8 u32 0,0x10000,0x10000
+field 025121E8 54005CDC u32 0,0,2
+field 025121E8 5C00064C i16 -32768 32767
+field 025121E8 5C000680 i16 -32768 32767
+# the target globe (cSGlobe::Val(f32, s16, s16) 02006FE4, a mock) gets radius 500: a fixed radius target
+mockfield 02006FE4 r3+0x0 f32 500
+t60tol 025121E8 r3+0x3C f32 absrel 0.001 0.0001
+t60tol 025121E8 r3+0x40 a16x2 skip
+t60tol 025121E8 r3+0x44 f32x6 skip
+t60tol 025121E8 r3+0x5C a16 skip
+t60tol 025121E8 r3+0x60 f32 absrel 0.0001 0.0001
+t60tol 025121E8 r3+0x39C f32x3 absrel 0.001 0.0001
+t60tol 025121E8 r3+0x3A8 f32x3 skip
+# constructors return this (see d_camera.txt's N-step spec: else page-0 DSI in the original; `include d_camera.txt` is the
+# dt-1 check unit, so these are repeated here)
+retarg 0200658C r3
+retarg 020066C0 r3
+retarg 02006644 r3
+retarg 020065FC r3
+retarg 02007248 r3
+retarg 02007324 r3
+real 02007248
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200ECD4 0200F5C8
+t60cand 0200ECD4 0200F5C8

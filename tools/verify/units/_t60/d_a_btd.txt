@@ -1,0 +1,90 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_btd.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule, the Magtail's form; d_a_btd_t60.h):
+# Gohma: daBtd_Execute 020F1494 in the whole form (move / damage_check / the demo camera / debris / splash / effects once
+# per frame). The tick30 step runs the original execute whole at dt 1 from the frame start; the earlier steps change no
+# state (the picture between steps comes from frame interpolation): net effect = the one step's, byte exact. Negative control
+# (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 020F1494
+# N-step spec steering (boss2, zero-page rule): with -nulltrap every input of 020F1494 faulted in page 0 (morf model pointer
+# clobbered, debris model pointers, the item search, play unpinned in 1 of 8, the magma floor): pinned below so the
+# whole execute runs (probe: 182 of 200 inputs clean, coverage 220/248 blocks; was 0 clean, 95/248)
+stable 55000090 4
+stable 400063D8 1400
+field 020F1494 r3+0x63D8 u32 0x5D000000
+field 020F1494 r3+0x63DC u8 0,0,0,1
+field 020F1494 r3+0x6400 u32 0x5D000000
+field 020F1494 r3+0x6404 u8 0,0,0,1
+field 020F1494 r3+0x6428 u32 0x5D000000
+field 020F1494 r3+0x642C u8 0,0,0,1
+field 020F1494 r3+0x6450 u32 0x5D000000
+field 020F1494 r3+0x6454 u8 0,0,0,1
+field 020F1494 r3+0x6478 u32 0x5D000000
+field 020F1494 r3+0x647C u8 0,0,0,1
+field 020F1494 r3+0x64A0 u32 0x5D000000
+field 020F1494 r3+0x64A4 u8 0,0,0,1
+field 020F1494 r3+0x64C8 u32 0x5D000000
+field 020F1494 r3+0x64CC u8 0,0,0,1
+field 020F1494 r3+0x64F0 u32 0x5D000000
+field 020F1494 r3+0x64F4 u8 0,0,0,1
+field 020F1494 r3+0x6518 u32 0x5D000000
+field 020F1494 r3+0x651C u8 0,0,0,1
+field 020F1494 r3+0x6540 u32 0x5D000000
+field 020F1494 r3+0x6544 u8 0,0,0,1
+field 020F1494 r3+0x6568 u32 0x5D000000
+field 020F1494 r3+0x656C u8 0,0,0,1
+field 020F1494 r3+0x6590 u32 0x5D000000
+field 020F1494 r3+0x6594 u8 0,0,0,1
+field 020F1494 r3+0x65B8 u32 0x5D000000
+field 020F1494 r3+0x65BC u8 0,0,0,1
+field 020F1494 r3+0x65E0 u32 0x5D000000
+field 020F1494 r3+0x65E4 u8 0,0,0,1
+field 020F1494 r3+0x6608 u32 0x5D000000
+field 020F1494 r3+0x660C u8 0,0,0,1
+field 020F1494 r3+0x6630 u32 0x5D000000
+field 020F1494 r3+0x6634 u8 0,0,0,1
+field 020F1494 r3+0x6658 u32 0x5D000000
+field 020F1494 r3+0x665C u8 0,0,0,1
+field 020F1494 r3+0x6680 u32 0x5D000000
+field 020F1494 r3+0x6684 u8 0,0,0,1
+field 020F1494 r3+0x66A8 u32 0x5D000000
+field 020F1494 r3+0x66AC u8 0,0,0,1
+field 020F1494 r3+0x66D0 u32 0x5D000000
+field 020F1494 r3+0x66D4 u8 0,0,0,1
+field 020F1494 r3+0x66F8 u32 0x5D000000
+field 020F1494 r3+0x66FC u8 0,0,0,1
+field 020F1494 r3+0x6720 u32 0x5D000000
+field 020F1494 r3+0x6724 u8 0,0,0,1
+field 020F1494 r3+0x6748 u32 0x5D000000
+field 020F1494 r3+0x674C u8 0,0,0,1
+field 020F1494 r3+0x6770 u32 0x5D000000
+field 020F1494 r3+0x6774 u8 0,0,0,1
+field 020F1494 r3+0x6798 u32 0x5D000000
+field 020F1494 r3+0x679C u8 0,0,0,1
+field 020F1494 r3+0x67C0 u32 0x5D000000
+field 020F1494 r3+0x67C4 u8 0,0,0,1
+field 020F1494 r3+0x67E8 u32 0x5D000000
+field 020F1494 r3+0x67EC u8 0,0,0,1
+field 020F1494 r3+0x6810 u32 0x5D000000
+field 020F1494 r3+0x6814 u8 0,0,0,1
+field 020F1494 r3+0x6838 u32 0x5D000000
+field 020F1494 r3+0x683C u8 0,0,0,1
+field 020F1494 r3+0x6860 u32 0x5D000000
+field 020F1494 r3+0x6864 u8 0,0,0,1
+field 020F1494 r3+0x6888 u32 0x5D000000
+field 020F1494 r3+0x688C u8 0,0,0,1
+field 020F1494 r3+0x68B0 u32 0x5D000000
+field 020F1494 r3+0x68B4 u8 0,0,0,1
+field 020F1494 r3+0x68D8 u32 0x5D000000
+field 020F1494 r3+0x68DC u8 0,0,0,1
+field 020F1494 r3+0x6900 u32 0x5D000000
+field 020F1494 r3+0x6904 u8 0,0,0,1
+field 020F1494 r3+0x6928 u32 0x5D000000
+field 020F1494 r3+0x692C u8 0,0,0,1
+ret! 020F032C 0x55000000 0x55000000
+ret! 025DE508 0,0x5E000000
+ret! 025200D4 0x54000000 0x54000000
+field 020F1494 r3+0x70D0 u32 0x5F000000
+stable 400070D0 4
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200E240 0200ED84 0200EDC8 0200F428 0200FAD8 0200FCD8 020182E0 02018428 020184DC 02018C8C 02018D40 020198D8 0201ADE0 0201B31C 020F02D4 020F032C 020F035C 020F038C 020F6004 020F90C4 020F94DC 024F8044 02514EE4 02514F2C 02514F38 02514FE8 0251510C 02515280 025160DC 025167C0 025167E4 025200D4 02520540 02555D0C 025626A4 025A8D40 025B9098 025CB408 025CB610 025D7B24 025D9874 025DE508 025E1988 025E19CC 025E1A40 025E55A0 025F1884 025F1BF4 025F1C28 025F1C5C 027EC9E8 027F4D5C 028E8D88 028E8DD0 028E93CC 028F4384

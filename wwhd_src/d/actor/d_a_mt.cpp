@@ -10,6 +10,7 @@
  * helpers here.
  */
 #include "d/actor/d_a_mt_main.h"
+#include "d/actor/d_a_mt_t60.h" /* true60: create's execute run, the draw's light state */
 
 const gc_tu_data gc_tu = {.safeString = MT_SAFESTRING_VTBL};
 static u32 followEcallBack_ct(dPa_followEcallBack *);
@@ -290,7 +291,8 @@ static BOOL daMt_Draw(mt_class *i_this) {
         if (i_this->mEnemyIce.mLightShrinkTimer == 0) {
             cXyz pos;
             PSMTXMultVec(J3DModel_getBaseTRMtx(model), &zero, &pos);
-            settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &pos, &i_this->tevStr);
+            if (mt_t60::drawStep()) /* true60: the light state on the tick30 step's draw only (rule 14) */
+                settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &pos, &i_this->tevStr);
             setLightTevColorType(dKy_getEnvlight(), model, &i_this->tevStr);
         } else {
             f32 s = i_this->mEnemyIce.mScaleXZ;
@@ -628,7 +630,11 @@ static cPhs_State daMt_Create(fopAc_ac_c *a_this) {
     i_this->mHeadHealth = 2;
     a_this->health = 8;
     i_this->mEnemyIce.mpActor = a_this;
-    daMt_Execute(i_this);
+    {
+        const f32 t60PrevDt = mt_t60::createBegin(); /* true60: create's run of the execute, the original at dt 1 */
+        daMt_Execute(i_this);
+        mt_t60::createEnd(t60PrevDt);
+    }
     return res;
 }
 

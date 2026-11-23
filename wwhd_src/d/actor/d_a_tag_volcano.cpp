@@ -1,5 +1,6 @@
 /* HD Volcano tag reconstruction derived from zeldaret/tww. */
 #include "d/actor/d_a_tag_volcano.h"
+#include "d/actor/d_a_tag_volcano_t60.h" /* true60 (t60conv): step helpers */
 const gc_tu_data gc_tu = {.safeString = 0x1003FCA0};
 enum { JA_SE_ISLE_TIMER_0 = 0x8B2, dIsleRoom_FireMountain_e = 20, dIsleRoom_IceRingIsle_e = 40 };
 using daTagvolcano::Act_c;
@@ -117,7 +118,7 @@ static void expire() {
     p->play.mVibration.StartShock(6, -33, direction.get());
 }
 /* 024B3280 */
-BOOL Act_c::_execute() {
+BOOL Act_c::_execute() { if (!t60c::end()) return TRUE; /* true60 (the shared-world-state rule): the frame's logic on shared world state (switches / events / other actors) on the tick30 step at the line place */
     if (mType == 0) {
         u32 sw = prmAbstract(this, 8, 8);
         dSv_info_c* save = saveInfo();

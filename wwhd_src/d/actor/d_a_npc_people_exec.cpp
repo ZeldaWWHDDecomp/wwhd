@@ -10,6 +10,7 @@
 #include <cmath>
 
 #include "d/actor/d_a_npc_people_exec.h"
+#include "d/actor/d_a_npc_people_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule NPC form) */
 #include "gc_api/f_op/f_op_msg.h"
 
 enum { dItemNo_COLLECT_MAP_15_e = 0xF0, dItemNo_PEARL_NAYRU_e = 0x69 };
@@ -217,6 +218,8 @@ static PeopleMoveProc moveProc[] = {{&daNpcPeople_c::executeWait}, {&daNpcPeople
 
 /* 022C305C */
 bool daNpcPeople_c::_execute() {
+    if (t60w::begin(this, people_t60::kOps)) /* true60: a step before the tick30 step: the picture only */
+        return false;
     // HD: reset the photo object here.
     mPsoNo = 0xFF;
     warp();
@@ -367,6 +370,7 @@ bool daNpcPeople_c::_execute() {
     eyePos.set(current.pos.x, current.pos.y + mpNpcDat->mEyeYOffset, current.pos.z);
     lookBack();
     setMtx();
+    t60w::end(this, people_t60::kOps, true); /* true60: the frame's change kept for the next frame's picture */
     return false;
 }
 

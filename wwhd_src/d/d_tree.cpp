@@ -1,6 +1,7 @@
 /* Tree collision, animation and HD native rendering. Verified against the original unit. */
 #include "d/d_tree.h"
 #include "port_hooks.h"
+#include "d/d_tree_t60.h"
 #include "sead/ElementAt.h"
 #include "port_native_draw.h"
 #include <cmath>
@@ -488,6 +489,50 @@ f64 Tree_checkGroundY(u32 ignored, cXyz* pos) {
     return h;
 }
 
+// true60 (d_tree_t60.h): an earlier step of a hit / cut tree's slot (no decisions: the tick30 step's)
+static void tree60_animate_between(dTree_data_c* data, u32 anm) {
+    Tree60Slot& s = tree60_enter((u8)data->mAnimIdx, anm);
+    dTree_anm_c* m = at<dTree_anm_c>(anm);
+    const f32 dt = t60::dt();
+    if (!(data->mCut)) {
+        if (tree60_settled(s)) {
+            // settled: the top chases its wind animation (the original's settle branch; the return is the tick30 step's)
+            u32 game = getGameInfo();
+            u32 base = (at<TreeGameView>(game)->mpTree.v) + ((u16)(m->mTrunkAngleY) >> 13) * 0x84 + 0x2A9C;
+            if (chaseAngle(at<void>(anm + 4), (s32)(s16)(u16)(at<dTree_anm_c>(base)->mTopAngleX), 800))
+                chaseAngle(at<void>(anm + 6), (s32)(s16)(u16)(at<dTree_anm_c>(base)->mTopAngleY), 800);
+            m->mTopAngleX = (s16)(u16)(m->mTrunkAngleX);
+        } else {
+            tree60_spring(s.x, s.v, (f64)dt, damping);
+            s16 x = (s16)(s.x0 + (s32)std::trunc(s.x - (f64)s.x0));
+            m->mAnimTimer = (f32)s.v;
+            m->mTrunkAngleX = x;
+            m->mTopAngleX = x;
+        }
+    } else {
+        // the cut top falls (the per-step movement rule: v += g dt, p += v dt + g dt (1 - dt) / 2 below the terminal speed)
+        u32 trig = 0x104A44F8 + ((u16)(m->mCutAngleY) >> 3) * 8;
+        f32 velocity = (m->mFallSpeedXZ), vert = (m->mFallSpeedY) + gravity * dt, arc = gravity * dt * (1.0f - dt) * 0.5f;
+        if (vert < terminalVelocity) {
+            vert = terminalVelocity;
+            arc = 0.0f;
+        }
+        m->mFallSpeedY = vert;
+        m->mTopOffsetX = (m->mTopOffsetX) + velocity * (f32)at<TreeTrig>(trig)->mSin * dt;
+        m->mTopOffsetZ = (m->mTopOffsetZ) + velocity * (f32)at<TreeTrig>(trig)->mCos * dt;
+        f32 y = (m->mTopOffsetY) + vert * dt + arc;
+        if (y < groundOffset) {
+            y = groundOffset;
+            m->mFallSpeedXZ = treeZero;
+        }
+        m->mTopOffsetY = y;
+        chaseFloat(at<void>(anm + 12), cutTargetSpeed, swingStep);
+        if ((s16)(u16)(m->mTopAngleX) != 13600)
+            chaseAngle(at<void>(anm + 4), 13600, (s32)(s16)ftoi((m->mAnimTimer)));
+    }
+    tree60_leave(s, anm);
+}
+
 // HD: preserve callback reloads and the original single-precision force arithmetic.
 /* 025C65CC */
 void dTree_data_c::WorkCo(TreeActorView* actor, u32 unused, u32 room) {
@@ -662,6 +707,16 @@ void dTree_data_c::animation(u32 room) {
     u32 a = ea(this);
     u32 game = getGameInfo(),
         anm = (at<TreeGameView>(game)->mpTree.v) + 0x2A9C + (u32)(s32)(s8)(mAnimIdx) * 0x84;
+    // true60 (d_tree_t60.h): the earlier steps move the slot at dt; the tick30 step runs the original
+    // frame at dt 1 from the frame's start (its chases through tree60_chase*: the full 30 Hz step)
+    if (t60::dt() != 1.0f) {
+        if (!t60::tick30()) {
+            tree60_animate_between(this, anm);
+            return;
+        }
+        tree60_restore((u8)mAnimIdx, anm);
+        tree60_done((u8)mAnimIdx);
+    }
     f32 zero = treeZero, one = treeOne, threshold = swingStep;
     if (!(mCut)) {
         s32 angle = (s16)(u16)(at<dTree_anm_c>(anm)->mTrunkAngleX);
@@ -679,9 +734,9 @@ void dTree_data_c::animation(u32 room) {
                 at<dTree_anm_c>(anm)->mAnimTimer = zero;
                 game = getGameInfo();
                 u32 base = (at<TreeGameView>(game)->mpTree.v) + idx * 0x84 + 0x2A9C;
-                if (chaseAngle(at<void>(anm + 4),
+                if (tree60_chaseAngle(at<void>(anm + 4),
                                (s32)(s16)(u16)(at<dTree_anm_c>(base)->mTopAngleX), 800) &&
-                    chaseAngle(at<void>(anm + 6),
+                    tree60_chaseAngle(at<void>(anm + 6),
                                (s32)(s16)(u16)(at<dTree_anm_c>(base)->mTopAngleY), 800)) {
                     game = getGameInfo();
                     at<TreeGameView>(game)->mpTree->mAnm[(u32)(s32)(s8)mAnimIdx].mState = 0;
@@ -731,9 +786,9 @@ void dTree_data_c::animation(u32 room) {
         at<dTree_anm_c>(anm)->mFallSpeedXZ = zero;
     }
     at<dTree_anm_c>(anm)->mTopOffsetY = y;
-    chaseFloat(at<void>(anm + 12), cutTargetSpeed, threshold);
+    tree60_chaseFloat(at<void>(anm + 12), cutTargetSpeed, threshold);
     if ((s16)(u16)(at<dTree_anm_c>(anm)->mTopAngleX) != 13600) {
-        if (!chaseAngle(at<void>(anm + 4), 13600,
+        if (!tree60_chaseAngle(at<void>(anm + 4), 13600,
                         (s32)(s16)ftoi((at<dTree_anm_c>(anm)->mAnimTimer))))
             return;
         if (!(u32)l_particleOffsetReady) {
@@ -1181,16 +1236,18 @@ void TreePacketState::calc() {
     u32 a = ea(this);
     u32 base = a + 0x2A9C;
     f32 amp = windAmplitude, rate = windFrequency, speed = maximumSwing;
+    // true60 (d_tree_t60.h): the wind clock at the step's time (the original on dt 1 / the tick30 step)
+    const f32 t60p = tree60_progress();
     for (u32 i = 0; i < 8; i++) {
         u32 p = base + i * 132;
-        f32 frame = (f32)((u32)g_Counter.mTimer + i * 250);
+        f32 frame = tree60_wind_frame((u32)g_Counter.mTimer, i, t60p);
         u16 theta = (u16)ftoi(fmuls_ppc(frame, speed));
         // HD: zero-extend the angle before indexing the sine/cosine table.
         u32 trig = 0x104A44F8 + (theta >> 3) * 8;
         f32 initial = fadds_ppc((f32)(s16)(u16)(at<dTree_anm_c>(p)->mTrunkAngleY), amp);
         f32 heading = fmadds(amp, (f32)at<TreeTrig>(trig)->mCos, initial);
         at<dTree_anm_c>(p)->mTopAngleY = ftoi(heading);
-        frame = (f32)((u32)g_Counter.mTimer + i * 250);
+        frame = tree60_wind_frame((u32)g_Counter.mTimer, i, t60p);
         theta = (u16)ftoi(fmuls_ppc(frame, rate));
         trig = 0x104A44F8 + (theta >> 3) * 8;
         at<dTree_anm_c>(p)->mTopAngleX = ftoi(fmadds(amp, (f32)at<TreeTrig>(trig)->mCos, amp));
@@ -1201,6 +1258,16 @@ void TreePacketState::calc() {
         end = start + (at<dTree_room_c>(list)->mCount) * 4;
     if (start == end)
         return;
+    // true60 (the one-sweep-per-frame attack rule): the sword angles, the mass set-up and the hit checks once per 30 Hz frame
+    // (dt 1 / the tick30 step); the earlier steps only animate the trees that have their own slot
+    if (!tree60_frame_step()) {
+        for (u32 p = start; p != end; p += 4) {
+            u32 data = at<be<u32>>(p)->get();
+            if ((s8)(at<dTree_data_c>(data)->mAnimIdx) >= 8)
+                animateTree(at<void>(data), room);
+        }
+        return;
+    }
     u32 game = getGameInfo(), player = (at<TreeGameView>(game)->mpPlayer.v);
     at<TreePacketState>(base + -10908)->mPlayerCutFlg =
         ((at<TreeActorView>(player)->mNoResetFlg0) & 64) != 0;
@@ -1229,6 +1296,11 @@ void TreePacketState::calc() {
     for (u32 p = start; p != end; p += 4) {
         u32 data = at<be<u32>>(p)->get();
         if (!((at<dTree_data_c>(data)->mState) & TreeState_Fallen)) {
+            // true60: the slot back at the frame's start before the hit check (d_tree_t60.h; dt 1: nothing)
+            if ((s8)(at<dTree_data_c>(data)->mAnimIdx) >= 8)
+                tree60_restore((u8)(at<dTree_data_c>(data)->mAnimIdx),
+                               (at<TreeGameView>(game)->mpTree.v) + 0x2A9C +
+                                   (u32)(s32)(s8)(at<dTree_data_c>(data)->mAnimIdx) * 0x84);
             hitCheckCall(at<void>(data), at<void>(player), room);
             data = at<be<u32>>(p)->get();
         }

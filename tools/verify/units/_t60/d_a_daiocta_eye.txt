@@ -1,0 +1,9 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_daiocta_eye.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule addendum, the Big Octo's whole form; d_a_daiocta_eye_t60.h):
+# Big Octo eye: daDaiocta_Eye_c::_execute 0211DCAC in the whole form. The tick30 step runs the original _execute whole at
+# dt 1 from the frame start; the earlier steps change no state (the picture between steps comes from frame interpolation): net
+# effect = the one step's, byte exact. Negative control (T60C_NEGCTRL: _execute on every step at dt) must fail.
+t60conv 0211DCAC
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200E240 0200F428 02018C8C 02018D40 0211D65C 0211DB28 0211DB74 0211DFB8 0211DFC4 0211E114 0211E40C 0211E410 0211E4E8 0211E664 0211E680 0211E6EC 024F17D4 024F43DC 02515860 02515AE8 02515E50 02516300 025200D4 02520540 02587BE0 025A847C 025D50BC 025E19CC 025E1A40 025E1AA4 025E1FD8 025E535C 025E742C 025E7CE0 025E8154 025F1B48 025F24E0 026066C4 0273AF40

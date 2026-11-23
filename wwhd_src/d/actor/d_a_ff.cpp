@@ -13,6 +13,7 @@
 #include "gc_api/d/d_com_inf_game.h"
 #include "gc_api/f_op/f_op_actor_mng.h"
 #include "gc_api/f_pc/f_pc.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 #define FF_VTBL 0x1000EB2C         /* ff_class vtable (HD virtual destructor) */
 #define SAFESTRING_VTBL 0x1000EAC4 /* this TU's sead::SafeString vtable */
@@ -53,7 +54,8 @@ static BOOL daFf_Draw(ff_class* i_this) {
     MtxScale(s, s, s, true);
     J3DModel_setBaseTRMtx(i_this->mpModel[0], calc_mtx());
     if (i_this->mScale > 0.01f) {
-        i_this->mBrkAnm[0]->play();
+        if (t60objw::drawStep()) /* true60: the draw plays the brk once a 30 Hz frame, on the tick30 step's draw */
+            i_this->mBrkAnm[0]->play();
         J3DModel* m = i_this->mpModel[0];
         mDoExt_brkAnm* brk = i_this->mBrkAnm[0];
         brk->entry(m->getModelData(), brk->mFrameCtrl.mFrame);
@@ -83,6 +85,9 @@ static inline void ff_groundGlow(ff_class* i_this) {
 // HD: fire_fly_move inlined
 /* 02133070 */
 static BOOL daFf_Execute(ff_class* i_this) {
+    t60w::Guard<ff_class> t60g(i_this, t60objw::Logic<ff_class>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     for (int i = 0; i < 5; i++) {
         if (i_this->mTimers[i] != 0) {
             i_this->mTimers[i] -= 1;
@@ -258,6 +263,7 @@ static BOOL daFf_Execute(ff_class* i_this) {
     }
     i_this->mSph.SetC(&i_this->current.pos);
     dComIfG_Ccsp_Set(&i_this->mSph);
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 

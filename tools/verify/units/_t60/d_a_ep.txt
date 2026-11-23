@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_ep.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule + addendum, d/t60_objw.h): ep (torch): switch / event move, flame state, ga (glow) move, ground check, collider.
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 0212DBFC
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 0212DAE8 0212DB44
+t60cand 0212DAE8 0212DB44
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 02008860 02008974 02008B4C 02008DAC 02008E0C 02008FEC 0200ED84 0200EDC8 0200F428 0200FAD8 0200FC74 0200FCD8 020182E0 02018D40 020195B0 020198D8 02019918 0201AD78 0201ADE0 0201AE48 0212DAE8 0212DB44 023129C4 024F1AFC 025162A4 02516300 025200D4 02542D88 02542EDC 02543280 02543F10 02544044 0254457C 025447C8 025A847C 025D57E0 025D57E4 025D69FC 025D6B70 025D77DC 025E19CC 025F1884 025F1BF4 025F1C28 0274D458 0283801C 028E8D88 028E8DD0 028E90D4 028F4384

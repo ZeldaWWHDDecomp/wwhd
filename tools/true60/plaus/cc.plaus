@@ -1,0 +1,20 @@
+# compare60 --plaus-spec (the strict RNG-pair rule): the ChuChu (cc_class, profile 0x00CE), dump WWHD_ACTOR_DUMP=cc.admp:0210DD3C:F10
+# (daCC_Execute; the body starts at the actor)
+dump cc.admp
+profile 00CE
+state 3FC u8      # mCurrAction
+state 3FD u8      # mMode
+health 3A1 s8     # health
+timer 456 s16     # mTimers[0..6]
+timer 458 s16
+timer 45A s16
+timer 45C s16
+timer 45E s16
+timer 460 s16
+timer 462 s16
+value 314 f32     # current.pos
+value 318 f32
+value 31C f32
+value 370 f32     # speedF
+value 434 f32     # the damage swing amplitude
+attack 2          # action 2: the attack (modes 30-34)

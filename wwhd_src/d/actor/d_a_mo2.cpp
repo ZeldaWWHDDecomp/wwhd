@@ -7,7 +7,9 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_mo2_main.h"
+#include "d/actor/d_a_mo2_t60.h"
 #include <cmath>
+#include <unordered_map>
 
 const gc_tu_data gc_tu = {.safeString = 0x10014D94, .safeStringAssure = 0x021D3DEC};
 
@@ -127,21 +129,104 @@ static void tex_anm_set(mo2_class* i_this, u16 idx) {
                        1.0f, 0, -1, 1, 0);
 }
 
+/* true60 (option (a); d_a_mo2_t60.h): an animation set before the frame's tick30 step
+ * is a request, set on the tick30 step after its play / calc (wwhd_t60_mo2_anm_apply, called by daMo2_Execute). Host
+ * state of this unit only (the split-actor state rule), keyed by the Moblin's guest address. A setFrame / setPlaySpeed made after the
+ * set in the same frame (d_dozou) belongs to the new animation: it goes into the request. */
+struct Mo2T60AnmReq {
+    u32 tag = 0;
+    s32 bck = 0, bas = -1;
+    f32 morf = 0.0f, speed = 0.0f, frame = 0.0f, playSpeed = 0.0f;
+    u8 mode = 0;
+    bool hasFrame = false, hasPlaySpeed = false;
+};
+static std::unordered_map<u32, Mo2T60AnmReq>& mo2_t60_anm_reqs() {
+    static std::unordered_map<u32, Mo2T60AnmReq> s_reqs;
+    return s_reqs;
+}
+/* the request pending in this 30 Hz frame (its &mpMorf latch is set: verify's latch starts empty for each input), else
+ * nullptr */
+static Mo2T60AnmReq* mo2_t60_anm_req_now(mo2_class* i_this) {
+    if (!bk_t60_pending(&i_this->mpMorf))
+        return nullptr;
+    auto& reqs = mo2_t60_anm_reqs();
+    auto it = reqs.find(gabi::ea(i_this));
+    if (it == reqs.end() || it->second.tag != bk_t60_frame_tag())
+        return nullptr;
+    return &it->second;
+}
+static void mo2_anm_set(mo2_class* i_this, int bckFileIdx, f32 morf, u8 loopMode, f32 speed, int soundFileIdx) {
+    if (soundFileIdx >= 0) {
+        J3DAnmTransform* anm = (J3DAnmTransform*)dComIfG_getObjectRes("Mo2", bckFileIdx, SAFESTRING_VTBL);
+        void* bas = dComIfG_getObjectRes("Mo2", soundFileIdx, SAFESTRING_VTBL);
+        i_this->mpMorf->setAnm(anm, loopMode, morf, speed, 0.0f, -1.0f, bas);
+    } else {
+        J3DAnmTransform* anm = (J3DAnmTransform*)dComIfG_getObjectRes("Mo2", bckFileIdx, SAFESTRING_VTBL);
+        i_this->mpMorf->setAnm(anm, loopMode, morf, speed, 0.0f, -1.0f, nullptr);
+    }
+}
+/* a setFrame / setPlaySpeed after anm_init in the same frame: into the frame's request, else on the morf */
+static inline void mo2_t60_set_frame(mo2_class* i_this, f32 frame) {
+    if (Mo2T60AnmReq* r = mo2_t60_anm_req_now(i_this)) {
+        r->hasFrame = true;
+        r->frame = frame;
+        return;
+    }
+    i_this->mpMorf->setFrame(frame);
+}
+static inline void mo2_t60_set_play_speed(mo2_class* i_this, f32 speed) {
+    if (Mo2T60AnmReq* r = mo2_t60_anm_req_now(i_this)) {
+        r->hasPlaySpeed = true;
+        r->playSpeed = speed;
+        return;
+    }
+    i_this->mpMorf->setPlaySpeed(speed);
+}
+/* daMo2_Execute, the tick30 step after its play / calc, when the &mpMorf latch is pending (d_a_mo2_t60.h) */
+extern "C" __attribute__((visibility("default"))) void wwhd_t60_mo2_anm_apply(void* mo2) {
+    mo2_class* i_this = static_cast<mo2_class*>(mo2);
+    auto& reqs = mo2_t60_anm_reqs();
+    auto it = reqs.find(gabi::ea(i_this));
+    if (it == reqs.end())
+        return;
+    const Mo2T60AnmReq r = it->second;
+    reqs.erase(it);
+    if (r.tag != bk_t60_frame_tag())
+        return;
+    /* the set by the original anm_init, entered at its guest address: its "Mo2" literal is glued `in 021C6440` (the
+     * running function picks the guest copy; called directly from here the running function is daMo2_Execute, which
+     * has none: glue_fatal, pairs). This is the tick30 step, so anm_init takes the set path; its
+     * mDashStopTimer guard reads what the request read (the timer becomes nonzero only in Mo2_move's tick30 branch,
+     * after this apply) */
+    gabi::call<void>(0x021C6440 /* anm_init */, i_this, r.bck, r.morf, r.mode, r.speed, r.bas);
+    if (r.hasFrame)
+        i_this->mpMorf->setFrame(r.frame);
+    if (r.hasPlaySpeed)
+        i_this->mpMorf->setPlaySpeed(r.playSpeed);
+}
+
 //
 /* 021C6440 */
 static void anm_init(mo2_class* i_this, int bckFileIdx, f32 morf, u8 loopMode, f32 speed,
                      int soundFileIdx) {
     if (i_this->mDashStopTimer == 0) {
-        if (soundFileIdx >= 0) {
-            J3DAnmTransform* anm =
-                (J3DAnmTransform*)dComIfG_getObjectRes("Mo2", bckFileIdx, SAFESTRING_VTBL);
-            void* bas = dComIfG_getObjectRes("Mo2", soundFileIdx, SAFESTRING_VTBL);
-            i_this->mpMorf->setAnm(anm, loopMode, morf, speed, 0.0f, -1.0f, bas);
-        } else {
-            J3DAnmTransform* anm =
-                (J3DAnmTransform*)dComIfG_getObjectRes("Mo2", bckFileIdx, SAFESTRING_VTBL);
-            i_this->mpMorf->setAnm(anm, loopMode, morf, speed, 0.0f, -1.0f, nullptr);
+        /* true60: set before the frame's tick30 step: a request (above); the old animation plays to the
+         * frame end and the morf blends from its frame-end pose, as the original's set after the frame's play */
+        if (t60::dt() != 1.0f && !t60::tick30()) {
+            Mo2T60AnmReq& r = mo2_t60_anm_reqs()[gabi::ea(i_this)];
+            r = Mo2T60AnmReq{};
+            r.tag = bk_t60_frame_tag();
+            r.bck = bckFileIdx;
+            r.bas = soundFileIdx;
+            r.morf = morf;
+            r.speed = speed;
+            r.mode = loopMode;
+            bk_t60_mark_set(&i_this->mpMorf);
+            return;
         }
+        if (t60::dt() != 1.0f)
+            mo2_t60_anm_reqs().erase(gabi::ea(i_this)); /* the tick30 set supersedes an earlier request */
+        mo2_anm_set(i_this, bckFileIdx, morf, loopMode, speed, soundFileIdx);
     }
 }
 
@@ -1162,6 +1247,9 @@ static void nage(mo2_class* i_this) {
     i_this->mDamageReaction.mTurnTargetY = i_this->mTargetAngleY;
     switch ((u16)i_this->mDamageReaction.mMode) {
     case (u16)-10:
+        /* true60 (first-step input addendum): the alert / give-up decision reads Link's view: tick30 step */
+        if (!bk_t60_end())
+            break;
         if (i_this->mNoHitTimer != 0 || i_this->mSoundTargetTimer != 0 ||
             daMo2_player_view_check(i_this, &i_this->mDamageReaction.mpLookTarget->current.pos,
                                     i_this->mTargetAngleY, l_mo2HIO.mViewAngle)) {
@@ -1180,6 +1268,7 @@ static void nage(mo2_class* i_this) {
             iVar5 = 1;
             break;
         }
+        mo2_t60_ai_ran(i_this); /* true60: mode -9's body runs in this call (fall-through): not held */
         /* fallthrough */
     case (u16)-9:
         maxSpeed = i_this->mTimers[0] != 0 ? (s16)0 : (s16)0x1000;
@@ -1188,7 +1277,8 @@ static void nage(mo2_class* i_this) {
             iVar5 = 2;
             break;
         }
-        if (i_this->mTimers[2] == 0 &&
+        /* true60 (first-step input addendum): the sighting reads Link: tick30 step */
+        if (i_this->mTimers[2] == 0 && bk_t60_end() &&
             daMo2_player_view_check(i_this, &i_this->mDamageReaction.mpLookTarget->current.pos,
                                     i_this->mTargetAngleY, l_mo2HIO.mViewAngle)) {
             /* HD: run at the player first (state -8) */
@@ -1204,7 +1294,8 @@ static void nage(mo2_class* i_this) {
     case (u16)-8:
         /* HD */
         cLib_addCalc2(&i_this->speedF, l_mo2HIO.mRunSpeedArmed, 1.0f, 20.0f);
-        if (i_this->mTimers[0] == 0 || i_this->mTargetDist < l_mo2HIO.mFightDist * 0.5f) {
+        /* true60 (first-step input addendum): the decision reads Link's distance / view: tick30 step */
+        if ((i_this->mTimers[0] == 0 || i_this->mTargetDist < l_mo2HIO.mFightDist * 0.5f) && bk_t60_end()) {
             if (daMo2_player_view_check(i_this, &i_this->mDamageReaction.mpLookTarget->current.pos,
                                         i_this->mTargetAngleY, l_mo2HIO.mViewAngle)) {
                 i_this->mDamageReaction.mMode = -5;
@@ -1237,7 +1328,8 @@ static void nage(mo2_class* i_this) {
         break;
     case 1:
         cLib_addCalc2(&i_this->speedF, l_mo2HIO.mRunSpeedArmed, 1.0f, 20.0f);
-        if (i_this->mTargetDist < l_mo2HIO.mFightDist) {
+        /* true60 (first-step input addendum): the throw range reads Link's distance: tick30 step */
+        if (i_this->mTargetDist < l_mo2HIO.mFightDist && bk_t60_end()) {
             i_this->mDamageReaction.mMode = 2;
             anm_init(i_this, dRes_INDEX_MO2_BCK_KNAGE_e, 5.0f, J3DFrameCtrl::EMode_NONE, 1.0f,
                      dRes_INDEX_MO2_BAS_KNAGE_e);
@@ -1258,8 +1350,9 @@ static void nage(mo2_class* i_this) {
     }
     }
     cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mDamageReaction.mTurnTargetY, 3, maxSpeed);
+    /* true60 (first-step input addendum): the line check to Link: tick30 step */
     if (iVar5 != 0 ||
-        daMo2_player_bg_check(i_this, &i_this->mDamageReaction.mpLookTarget->current.pos) == 1) {
+        (bk_t60_end() && daMo2_player_bg_check(i_this, &i_this->mDamageReaction.mpLookTarget->current.pos) == 1)) {
         i_this->mDamageReaction.mAction = ACTION_JYUNKAI;
         wait_set(i_this);
         if (iVar5 == 2) {
@@ -1274,6 +1367,41 @@ static void nage(mo2_class* i_this) {
 }
 
 //
+/* true60 (2026-11-18 item 3: the Moblin's facing at kmoH2_2 / kmoJ2_2 frame 43): a turn toward
+ * mTargetAngleY, Link's direction. The first step senses Link's frame-start position (Link runs later, on the tick30
+ * step); the tick30 step senses again (mo2_t60_sense: A's target). Per step the first step turned toward the old target
+ * and the tick30 step from there, so the frame's turn ended elsewhere than A's one turn (kmoJ2_2 43: B 2358, A 2314).
+ * The exact form: the frame's first call keeps the frame-start angle; the tick30 call turns from it once with the whole
+ * frame (dt 1) toward the target it sees, A's turn; the earlier steps keep their per-step turn (the in-between pose).
+ * A call on the tick30 step only (no first-step call this frame) turns per step. dt = 1: the original call. */
+namespace {
+struct Mo2T60Turn {
+    u32 frame;
+    s16 start;
+};
+std::unordered_map<u32, Mo2T60Turn> s_mo2T60Turn;
+}  // namespace
+static inline void mo2_t60_turn_to_target(mo2_class* i_this, s16 scale, s16 maxStep) {
+    if (t60::dt() != 1.0f) {
+        const u32 key = gabi::ea(i_this);
+        if (t60::first_step()) {
+            Mo2T60Turn& e = s_mo2T60Turn[key];
+            e.frame = bk_t60_frame_tag();
+            e.start = i_this->current.angle.y;
+        } else if (t60::tick30()) {
+            auto it = s_mo2T60Turn.find(key);
+            if (it != s_mo2T60Turn.end() && it->second.frame == bk_t60_frame_tag()) {
+                i_this->current.angle.y = it->second.start;
+                const f32 previous = t60_set_dt(1.0f);
+                cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mDamageReaction.mTurnTargetY, scale, maxStep);
+                t60_set_dt(previous);
+                return;
+            }
+        }
+    }
+    cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mDamageReaction.mTurnTargetY, scale, maxStep);
+}
+
 /* 021CDE6C */
 static void p_lost(mo2_class* i_this) {
     dComIfGp_getPlayer(0);
@@ -1291,7 +1419,8 @@ static void p_lost(mo2_class* i_this) {
         break;
     case (u16)-9:
         i_this->speedF = 0.0f;
-        if (i_this->mTimers[1] == (s16)(REG_S(17, 5) + 0x19)) {
+        /* true60 (the first-step AI-timer rule): timer one-shots on the frame's first step (the only step the timer changes) */
+        if (i_this->mTimers[1] == (s16)(REG_S(17, 5) + 0x19) && bk_t60_first()) {
             fopAcM_monsSeStart(i_this, JA_SE_CV_MO_STOLEN, 0);
         }
         if (i_this->mTimers[1] == 0) {
@@ -1307,7 +1436,8 @@ static void p_lost(mo2_class* i_this) {
         break;
     case 1:
         i_this->speedF = 0.0f;
-        if ((i_this->mFrameCounter & 0x1F) == 0 && cM_rndF(1.0f) < 0.5f) {
+        /* true60 (the per-step chance rule, first-step AI-timer): once per frame, on the first step (where the phase counter counts) */
+        if ((i_this->mFrameCounter & 0x1F) == 0 && bk_t60_first() && cM_rndF(1.0f) < 0.5f) {
             fopAcM_monsSeStart(i_this, JA_SE_CV_MO_SEARCH, 0);
         }
         if (i_this->mpMorf->isStop()) {
@@ -1318,7 +1448,8 @@ static void p_lost(mo2_class* i_this) {
             i_this->mDamageReaction.mMode = 2;
         }
     }
-    if (gabi::ftoi(i_this->mpMorf->getFrame()) > 25 && i_this->mTimers[1] == 0 &&
+    /* true60 (first-step input addendum): the re-sighting reads Link: tick30 step */
+    if (gabi::ftoi(i_this->mpMorf->getFrame()) > 25 && i_this->mTimers[1] == 0 && bk_t60_end() &&
         daMo2_player_view_check(i_this, &i_this->mDamageReaction.mpLookTarget->current.pos, i_this->mTargetAngleY,
                                 l_mo2HIO.mViewAngle)) {
         i_this->mDamageReaction.mAction = ACTION_FIGHT_RUN;
@@ -1347,6 +1478,7 @@ static void b_nige(mo2_class* i_this) {
             anm_init(i_this, dRes_INDEX_MO2_BCK_SHAKKEN_e, 3.0f, J3DFrameCtrl::EMode_NONE, 1.0f,
                      dRes_INDEX_MO2_BAS_SHAKKEN_e);
             i_this->mTimers[1] = 0x14;
+            mo2_t60_ai_ran(i_this); /* true60: mode 1's body runs in this call (fall-through): not held */
             /* fallthrough */
         case 1:
             i_this->speedF = 0.0f;
@@ -1397,6 +1529,7 @@ static void defence(mo2_class* i_this) {
         i_this->mTimers[1] = REG_S(6, 3) + 0x1e;
         tex_anm_set(i_this, 4);
         i_this->speedF = -20.0f;
+        mo2_t60_ai_ran(i_this); /* true60: mode 1's body runs in this call (fall-through): not held */
         /* fallthrough */
     case 1:
         i_this->mDefenseSph.SetR(62.5f);
@@ -1419,7 +1552,7 @@ static void oshi(mo2_class* i_this) {
     dComIfGp_getPlayer(0);
     i_this->mEyeAnmWait = 2;
     i_this->mDamageReaction.mTurnTargetY = i_this->mTargetAngleY;
-    cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mDamageReaction.mTurnTargetY, 3, 0x800);
+    mo2_t60_turn_to_target(i_this, 3, 0x800); /* true60: the frame's turn toward Link from the frame-start angle */
     switch ((u16)i_this->mDamageReaction.mMode) {
     case 0:
         i_this->mDamageReaction.mMode = 1;
@@ -1427,6 +1560,7 @@ static void oshi(mo2_class* i_this) {
                  dRes_INDEX_MO2_BAS_ADOTSUKI_e);
         tex_anm_set(i_this, 4);
         i_this->speedF = 0.0f;
+        mo2_t60_ai_ran(i_this); /* true60: mode 1's body runs in this call (fall-through): not held */
         /* fallthrough */
     case 1:
         i_this->mDefenseSphPos.copy(i_this->mSpearShaftPos);
@@ -1478,6 +1612,7 @@ static void hukki(mo2_class* i_this) {
         i_this->old.pos.y -= i_this->mDamageReaction.mPivot.y;
         i_this->mDamageReaction.mPivot.y = 0.0f;
         i_this->mNoHitTimer = REG_S(10, 0) + 0x23;
+        mo2_t60_ai_ran(i_this); /* true60: mode 13's body runs in this call (fall-through): not held */
         /* fallthrough */
     case 13:
         i_this->mEyeAnmWait = 2;
@@ -1485,17 +1620,20 @@ static void hukki(mo2_class* i_this) {
             cLib_addCalc0(&i_this->mDamageReaction.mBodyOffset.x, 1.0f, (REG_F(6, 5) + 100.0f) * 0.25f);
             cLib_addCalc0(&i_this->mDamageReaction.mBodyOffset.z, 1.0f, (REG_F(6, 5) + 100.0f) * 0.25f);
             if (i_this->mTimers[2] >= REG_S(6, 6) + 1) {
-                local_2c->z = 25.0f;
+                /* true60 (the per-step movement rule): 25 per frame: x dt */
+                local_2c->z = mo2_t60_rate(25.0f);
                 MtxPosition(local_2c, local_38);
                 i_this->current.pos.x += local_38->x;
                 i_this->current.pos.z += local_38->z;
             }
         }
-        if (i_this->mTimers[2] == 1) {
+        /* true60 (the first-step AI-timer rule): the timer one-shot on the first step (the only step the timer changes) */
+        if (i_this->mTimers[2] == 1 && bk_t60_first()) {
             i_this->mSmokeTimer = l_mo2HIO.mSmokeTimerBase + 6;
             i_this->mSmokeType = 3;
         }
-        if (i_this->mpMorf->isStop()) {
+        /* true60: the end decision reads Link's distance: tick30 step (stopped stays stopped) */
+        if (i_this->mpMorf->isStop() && bk_t60_end()) {
             if (!daPy_checkGrabWear(player) && i_this->mTargetDist < l_mo2HIO.mFightDist) {
                 i_this->mDamageReaction.mKnockedDown = 0;
                 i_this->mDamageReaction.mMode = 0xe;
@@ -1550,6 +1688,7 @@ static void aite_miru(mo2_class* i_this) {
         i_this->mDamageReaction.mMode = 1;
         tex_anm_set(i_this, 4);
         fopAcM_monsSeStart(i_this, JA_SE_CV_MO_SEARCH, 0);
+        mo2_t60_ai_ran(i_this); /* true60: mode 1's body runs in this call (fall-through): not held */
         /* fallthrough */
     case 1: {
         cLib_addCalcAngleS2(&i_this->mJawAngleZ, 12000, 2, 0x1800);
@@ -1616,11 +1755,16 @@ static void yogan_fail(mo2_class* i_this) {
         if (i_this->mbHasInnateWeapon != 0) {
             i_this->mSpawnWeaponActor = 1;
         }
+        mo2_t60_ai_ran(i_this); /* true60: mode 1's body runs in this call (fall-through): not held */
         /* fallthrough */
     case 1:
-        dComIfGp_particle_setSimple(0x8061 /* ID_IT_SN_O_FIREK_KASU */, &i_this->current.pos);
-        dComIfGp_particle_setSimple(0x8058 /* ID_IT_SN_O_MAGT_FCHIP */, &i_this->current.pos);
-        if ((i_this->mFrameCounter & 3U) == 0) {
+        /* true60 (the one-emitter-per-event rule): per-frame particles on the tick30 step */
+        if (bk_t60_end()) {
+            dComIfGp_particle_setSimple(0x8061 /* ID_IT_SN_O_FIREK_KASU */, &i_this->current.pos);
+            dComIfGp_particle_setSimple(0x8058 /* ID_IT_SN_O_MAGT_FCHIP */, &i_this->current.pos);
+        }
+        /* true60 (the first-step AI-timer rule): the phase-timed spit once per frame, on the first step (where the phase counter counts) */
+        if ((i_this->mFrameCounter & 3U) == 0 && bk_t60_first()) {
             i_this->mEffectAngle.y = (s16)gabi::ftoi(cM_rndF(65536.0f));
             i_this->mEffectAngle.x = -0x2000;
             dComIfGp_particle_set(0xE /* ID_AK_JN_TUBA00 */, &i_this->mSpitPos, &i_this->mEffectAngle);
@@ -1663,6 +1807,8 @@ static void wepon_search(mo2_class* i_this) {
             i_this->mTimers[1] = 200;
         }
         i_this->mAnmStopTimer = 5;
+        /* true60: set after this execute's animation play: the stop starts next frame */
+        bk_t60_mark_set(&i_this->mAnmStopTimer);
         tex_anm_set(i_this, 2);
         if (i_this != nullptr) {
             fopAcM_monsSeStart(i_this, JA_SE_CV_MO_FIND_LANCE, 0);
@@ -1705,7 +1851,9 @@ static void wepon_search(mo2_class* i_this) {
         break;
     case 2:
         i_this->speedF = 0.0f;
-        if (i_this->mTimers[1] == 0x18) {
+        /* true60 (the first-step AI-timer rule): the pick-up at 24 once, on the frame's first step (per step it would delete the
+         * spear on the first and give up on the next) */
+        if (i_this->mTimers[1] == 0x18 && bk_t60_first()) {
             if (boko != nullptr && !fopAcM_checkCarryNow(boko)) {
                 i_this->mbHasInnateWeapon = 1;
                 fopAcM_delete(boko);
@@ -1719,7 +1867,8 @@ static void wepon_search(mo2_class* i_this) {
             i_this->mDamageReaction.mTurnTargetY = i_this->mTargetAngleY;
             cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->mDamageReaction.mTurnTargetY, 3, 0x800);
         }
-        if (i_this->mpMorf->isStop()) {
+        /* true60: the end decision reads Link: tick30 step (stopped stays stopped) */
+        if (i_this->mpMorf->isStop() && bk_t60_end()) {
             if (l_mo2HIO.mNoAttack == 0 && !daPy_checkGrabWear(player) &&
                 i_this->mTargetDist < l_mo2HIO.mFightDist) {
                 i_this->mDamageReaction.mAction = ACTION_FIGHT;
@@ -1778,6 +1927,7 @@ static void hip_damage(mo2_class* i_this) {
         i_this->mTimers[0] = 0xF;
         i_this->mSmokeTimer = l_mo2HIO.mSmokeTimerBase + 3;
         i_this->mSmokeType = 4;
+        mo2_t60_ai_ran(i_this); /* true60: mode 1's body runs in this call (fall-through): not held */
         /* fallthrough */
     case 1:
         cLib_addCalc2(&i_this->speedF, 0.0f, 1.0f, REG_F(6, 1) + 10.0f);
@@ -1790,7 +1940,8 @@ static void hip_damage(mo2_class* i_this) {
         }
         break;
     case 2:
-        if ((i_this->mFrameCounter & 7) == 0) {
+        /* true60 (the per-step chance rule, 11, first-step AI-timer): once per frame, on the first step (where the phase counter counts) */
+        if ((i_this->mFrameCounter & 7) == 0 && bk_t60_first()) {
             i_this->mEffectAngle.y = (s16)gabi::ftoi(cM_rndF(65536.0f));
             i_this->mEffectAngle.x = -0x2000;
             dComIfGp_particle_set(0xE /* ID_AK_JN_TUBA00 */, &i_this->mSpitPos, &i_this->mEffectAngle);
@@ -1818,16 +1969,19 @@ static void d_mahi(mo2_class* i_this) {
         anm_init(i_this, dRes_INDEX_MO2_BCK_KOKERUF_e, 5.0f, J3DFrameCtrl::EMode_NONE, 1.0f,
                  dRes_INDEX_MO2_BAS_KOKERUF_e);
         i_this->mTimers[0] = 100;
+        mo2_t60_ai_ran(i_this); /* true60: mode 1's body runs in this call (fall-through): not held */
         /* fallthrough */
     case 1:
-        if (i_this->mTimers[0] <= 0x50 && i_this->mTimers[0] >= 0x28) {
+        /* true60 (the 30 Hz timer rule, 11, first-step AI-timer): the stars, the dizzy sound (per frame) and the timer marks once
+         * per frame, on its first step (the only step the timer changes) */
+        if (i_this->mTimers[0] <= 0x50 && i_this->mTimers[0] >= 0x28 && bk_t60_first()) {
             if (i_this->mTimers[0] == 0x50) {
                 enemy_piyo_set(i_this);
             }
             fopAcM_seStart(i_this, JA_SE_CM_MD_PIYO, 0);
         }
         i_this->speedF = 0.0f;
-        if (i_this->mTimers[0] == 0x1E) {
+        if (i_this->mTimers[0] == 0x1E && bk_t60_first()) {
             i_this->mDamageReaction.mParalysisTimer = 0xF;
         }
         if (i_this->mTimers[0] == 0) {
@@ -1858,10 +2012,10 @@ static void d_mahi(mo2_class* i_this) {
         sp48->copy(*sp3C);
         dBgS_LinChk_Set(linChk, sp18, sp48, i_this);
         if (cBgS_LineCross(dComIfG_Bgsp(), linChk)) {
-            i_this->current.pos.x =
-                gabi::fnmsubs(sp30->x, REG_F(18, 10) + 1.0f, i_this->current.pos.x);
-            i_this->current.pos.z =
-                gabi::fnmsubs(sp30->z, REG_F(18, 10) + 1.0f, i_this->current.pos.z);
+            /* true60 (the per-step movement rule): the offset per frame: x dt */
+            f32 k = mo2_t60_rate(REG_F(18, 10) + 1.0f);
+            i_this->current.pos.x = gabi::fnmsubs(sp30->x, k, i_this->current.pos.x);
+            i_this->current.pos.z = gabi::fnmsubs(sp30->z, k, i_this->current.pos.z);
             hd_debug_print(100, 0x19A, "MO2 BACK KABE HIT2!");
         }
         dBgS_LinChk_dt(linChk, LINCHK_VTBLS);
@@ -1878,6 +2032,7 @@ static void d_sit(mo2_class* i_this) {
         anm_init(i_this, dRes_INDEX_MO2_BCK_KOKERUF_e, 3.0f, J3DFrameCtrl::EMode_NONE, 1.0f,
                  dRes_INDEX_MO2_BAS_KOKERUF_e);
         i_this->mTimers[0] = 0x32;
+        mo2_t60_ai_ran(i_this); /* true60: mode 1's body runs in this call (fall-through): not held */
         /* fallthrough */
     case 1:
         i_this->speedF = 0.0f;
@@ -1903,18 +2058,19 @@ static void d_dozou(mo2_class* i_this) {
         if (i_this->mFrozenInTimePose == 0) {
             anm_init(i_this, dRes_INDEX_MO2_BCK_TACKLEDEMO_e, 1.0f, J3DFrameCtrl::EMode_NONE, 0.0f,
                      -1);
-            i_this->mpMorf->setFrame(3.0f);
+            mo2_t60_set_frame(i_this, 3.0f); /* true60: into a request made by this call (anm_init) */
         } else {
             anm_init(i_this, dRes_INDEX_MO2_BCK_WALK_e, 1.0f, J3DFrameCtrl::EMode_NONE, 0.0f,
                      dRes_INDEX_MO2_BAS_WALK_e);
-            i_this->mpMorf->setFrame(37.0f);
+            mo2_t60_set_frame(i_this, 37.0f); /* true60: into a request made by this call (anm_init) */
         }
+        mo2_t60_ai_ran(i_this); /* true60: mode 1's body runs in this call (fall-through): not held */
         /* fallthrough */
     case 1:
         if ((i_this->mEnableSpawnSwitch != 0xFF &&
              dComIfGs_isSwitch(i_this->mEnableSpawnSwitch, fopAcM_GetRoomNo(i_this))) ||
             (i_this->mEnableSpawnSwitch == 0xFF && dComIfGs_isEventBit(COLORS_IN_HYRULE))) {
-            i_this->mpMorf->setPlaySpeed(1.0f);
+            mo2_t60_set_play_speed(i_this, 1.0f); /* true60: into a request made by this call (mode 0's anm_init) */
             i_this->mDamageReaction.mMode = 2;
         }
         break;
@@ -1948,6 +2104,7 @@ static void carry_drop(mo2_class* i_this) {
         i_this->mDamageReaction.mMode = 1;
         anm_init(i_this, dRes_INDEX_MO2_BCK_JSTART_e, 10.0f, J3DFrameCtrl::EMode_NONE, 1.0f,
                  dRes_INDEX_MO2_BAS_JSTART_e);
+        mo2_t60_ai_ran(i_this); /* true60: mode 1's body runs in this call (fall-through): not held */
         /* fallthrough */
     case 1:
         if (i_this->mDamageReaction.mAcch.ChkGroundHit()) {
@@ -1993,6 +2150,7 @@ static void e3_demo(mo2_class* i_this) {
         i_this->mDamageReaction.mMode = 1;
         dMeter_mtrHide();
         i_this->mCatchTimer = 200;
+        mo2_t60_ai_ran(i_this); /* true60: mode 1's body runs in this call (fall-through): not held */
         /* fallthrough */
     case 1:
         if (i_this->mTimers[1] == 0) {

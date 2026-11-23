@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_npc_ah.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 // HD: compiler-generated copies owned by this translation unit.
 const gc_tu_data gc_tu = {.safeString = 0x10015EC4, .safeStringAssure = 0x021E6F50,
@@ -227,6 +228,9 @@ BOOL daNpcAh_c::_draw() {
 
 /* 021E688C */
 BOOL daNpcAh_c::_execute() {
+    t60w::Guard<daNpcAh_c> t60g(this, t60npc::Logic<daNpcAh_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return FALSE;
     switch (getPrmArg0()) {
     case 2:
         if (dComIfGs_isSwitch(0x6C, home.roomNo) /* fopAcM_isSwitch: home room */) fopAcM_delete(this);
@@ -270,6 +274,7 @@ BOOL daNpcAh_c::_execute() {
     wcopy(&eyePos.x, &current.pos.x);
     eyePos.y = gabi::fadds_ppc(y, eyeOffs);
     lookBack();
+    t60g.model = true; /* true60: the frame reached its model step */
     setMtx();
     return FALSE;
 }

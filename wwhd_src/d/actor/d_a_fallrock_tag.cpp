@@ -3,6 +3,7 @@
  * WWHD, GameCube-style source verified against the original (unit d_a_fallrock_tag).
  */
 #include "d/actor/d_a_fallrock_tag.h"
+#include "d/actor/d_a_fallrock_tag_t60.h" /* true60 (t60conv): step helpers */
 
 enum { fpcNm_FallRock_e = 0x1A6, JA_SE_ATM_RAKUBAN = 0x105F };
 
@@ -28,7 +29,7 @@ BOOL daFallRockTag_c::execute() {
         if (endTime < dKy_get_schbit_timer()) {
             int timer = dKy_get_schbit_timer();
             timer -= getData()->mTimerOffset;
-            if (timer % (30 / getData()->mRockNumPerSec) == 0) {
+            if (t60c::first() && (timer % (30 / getData()->mRockNumPerSec) == 0)) { /* true60 (t60conv): a periodic test on a 30 Hz counter, decided on the first step */
                 f32 range = getData()->mRange * scale.x;
                 cXyz pos;
                 pos.x = cM_rndFX(range);

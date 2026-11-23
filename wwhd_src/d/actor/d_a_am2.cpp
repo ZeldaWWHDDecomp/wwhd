@@ -1,4 +1,5 @@
 #include "d/actor/d_a_am2.h"
+#include "d/actor/d_a_am2_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule addendum) */
 
 // Armos behavior and rendering. HD embeds the action helpers in Execute.
 enum Action {
@@ -651,7 +652,11 @@ static s32 daAM2_Create(am2_class* actor) {
     actor->mSpawnPos.copy(actor->current.pos);
     actor->mSpawnRotY = actor->shape_angle.y;
     BG_check(actor);
-    draw_SUB(actor);
+    {
+        const f32 t60PrevDt = am2_t60::createBegin(); /* true60: create's first pose, the original at dt 1 */
+        draw_SUB(actor);
+        am2_t60::createEnd(t60PrevDt);
+    }
     if (actor->mStartsInactive == 1 && actor->mSwitch != 0xFF) {
         dSv_info_c* save = dComIfGs_info();
         s8 room = dComIfGp_roomControl_getStayNo();
@@ -1478,6 +1483,10 @@ static void action_handou_move(am2_class* actor) {
 
 /* 0204D3A4 */
 static BOOL daAM2_Execute(am2_class* actor) {
+    t60w::Guard<am2_class> t60g(actor, am2_t60::ops()); /* true60: the whole frame on the tick30 step (end at every return) */
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
+    t60g.model = true;
     for (auto& timer : actor->mCountDownTimers) {
         s16 value = timer;
         if (value)

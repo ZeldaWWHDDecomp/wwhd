@@ -10,6 +10,7 @@
  * action_tama_dousa are inlined into their WWHD callers.
  */
 #include "d/actor/d_a_wz.h"
+#include "d/actor/d_a_wz_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule addendum) */
 #include "gc_api/tu.h"
 #include "gc_api/d/d_com_inf_game.h"
 
@@ -1382,7 +1383,11 @@ static cPhs_State daWZ_Create(fopAc_ac_c *a_this) {
     cpy_u32(gabi::ea(&i_this->mBaseY), gabi::ea(&a_this->current.pos.y));
     cpy_u32(gabi::ea(&wz::state(i_this)->mHomeZ),
             gabi::ea(&a_this->current.pos.z));
-    draw_SUB(i_this);
+    {
+        const f32 t60PrevDt = wz_t60::createBegin(); /* true60: create's draw_SUB pose, the original at dt 1 */
+        draw_SUB(i_this);
+        wz_t60::createEnd(t60PrevDt);
+    }
     wz_setCylinder((&i_this->mBodyCyl),
                    gabi::at<void>(0x101D3B04)); /* dCcD_Cyl::Set */
     i_this->mBodyCyl.mStts.v = gabi::ea((&i_this->mStts));
@@ -3001,6 +3006,10 @@ static void action_tama_dousa(wz_class *i_this) {
 
 /* 024E398C */
 static BOOL daWZ_Execute(wz_class *i_this) {
+  t60w::Guard<wz_class> t60g(i_this, wz_t60::ops()); /* true60: the whole frame on the tick30 step */
+  if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+    return TRUE;
+  t60g.model = true;
   if (i_this->mBehaviorType < wz::FIRE_BALL &&
       i_this->mEnableSpawnSwitch != 0xFF &&
       !dComIfGs_isSwitch(i_this->mEnableSpawnSwitch, l_stayRoom)) {

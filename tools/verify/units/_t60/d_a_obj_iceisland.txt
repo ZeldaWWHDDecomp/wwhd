@@ -1,0 +1,11 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_iceisland.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule + addendum, d/t60_objw.h): the ice island's _execute 0235F8F0 (freeze / melt / demo / failure state machine, btk play, set_mtx, wind SE volume ramp).
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 0235F8F0
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 0235EEF8 0235EFD0 0235F420 0235F498 0235F574 0235F5E0 0235F658 0235F6D4 0235F740 0235F7AC 0235F7B4 0235F870
+t60cand 0235EEF8 0235EFD0 0235F420 0235F498 0235F574 0235F5E0 0235F658 0235F6D4 0235F740 0235F7AC 0235F7B4 0235F870
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0235EEF8 0235EFD0 0235F420 0235F498 0235F574 0235F5E0 0235F658 0235F6D4 0235F740 0235F7AC 0235F7B4 0235F870 02520540 025440C8 025A847C 025D7A58 025E1988 025E19CC 025E1A40 025E742C 025F1C28 028E93CC 028F4560

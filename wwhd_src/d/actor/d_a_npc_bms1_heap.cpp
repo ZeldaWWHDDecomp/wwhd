@@ -6,6 +6,7 @@
  * "Nonmatching"); see d_a_npc_bms1.cpp.
  */
 #include "d/actor/d_a_npc_bms1.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 /* 022083A4 */
 static BOOL nodeCallBack_Bms(J3DNode* i_node, int i_calcTiming) {
@@ -290,6 +291,9 @@ BOOL daNpc_Bms1_c::_draw() {
 /* 0220A7AC */
 BOOL daNpc_Bms1_c::_execute() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    t60w::Guard<daNpc_Bms1_c> t60g(this, t60npc::Logic<daNpc_Bms1_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     daNpc_Bms1_HIO_c& hio = bms1HIO();
     mJntCtrl.setParam(hio.mMaxBackboneX, hio.mMaxBackboneY, hio.mMinBackboneX, hio.mMinBackboneY,
                       hio.mMaxHeadX, hio.mMaxHeadY, hio.mMinHeadX, hio.mMinHeadY, hio.mMaxTurnStep);
@@ -314,6 +318,7 @@ BOOL daNpc_Bms1_c::_execute() {
     mAcch.CrrPos(dComIfG_Bgsp());
     tevStr.mRoomNo = (s8)bms1BackgroundRoom(&mAcch); /* dBgS::GetRoomId */
     tevStr.mEnvrIdxOverride = (u8)bms1BackgroundEnvironment(&mAcch);
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     setCollision();
     return TRUE;

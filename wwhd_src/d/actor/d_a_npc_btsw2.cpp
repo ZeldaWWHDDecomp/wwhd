@@ -5,6 +5,7 @@
  * Written from the WWHD code, verified against cking.rpx.
  */
 #include "d/actor/d_a_npc_btsw2.h"
+#include "d/t60_npc.h" /* true60 (npc_btsw2): the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 const gc_tu_data gc_tu = {.safeString = 0x10018A00};
 const char daNpc_Btsw2_c::m_arc_name[] = "Btsw";
@@ -676,6 +677,9 @@ BOOL daNpc_Btsw2_c::_delete() {
 
 /* 0221D034 */
 BOOL daNpc_Btsw2_c::_execute() {
+    t60w::Guard<daNpc_Btsw2_c> t60g(this, t60npc::Logic<daNpc_Btsw2_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     u32 a = address(this);
     s16 neckMin = l_HIO.mNpc.mMinHeadX;
     s16 headMax = l_HIO.mNpc.mMaxHeadX;
@@ -721,6 +725,7 @@ BOOL daNpc_Btsw2_c::_execute() {
     f32 z = current.pos.z;
     tevStr.mEnvrIdxOverride = color;
     u32 model = gabi::at<mDoExt_McaMorf>(morf)->mpModel.v.get();
+    t60g.model = true; /* true60: the frame reached its model step */
     PSMTXTrans(mDoMtx_stack_c::get(), x, y, z);
     s16 rotation = current.angle.y;
     mDoMtx_YrotM(mDoMtx_stack_c::get(), rotation);

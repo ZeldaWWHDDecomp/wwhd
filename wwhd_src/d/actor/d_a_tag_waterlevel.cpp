@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_tag_waterlevel.h"
+#include "d/actor/d_a_tag_waterlevel_t60.h" /* true60 (t60conv): step helpers */
 const gc_tu_data gc_tu = { .headerStatics={0x1046E698, 0x101D21F8, 0x1046E6A4} };
 namespace daTagWaterlevel {
 // HD: file-scope aliases for the GameCube static class members (autoglue data mapping).
@@ -62,6 +63,12 @@ void Act_c::bgm_proc() {
 /* 024B3AC0 */
 // HD: the step clamp is computed before the single store of mLevelStep
 bool Act_c::_execute() {
+    if (!t60c::first()) { /* true60: the level's ramped ease (clamps, reach threshold) runs whole on the
+                           * frame's first step; the later steps show the line to its frame end value (t60c glide) */
+        t60c::glideStep(&M_now, 1);
+        return true;
+    }
+    const f32 levelBefore = M_now;
     f32 target;
     u8 prm_sch = prm_get_sch();
     u8 sch_bit = dKy_get_schbit();
@@ -96,11 +103,18 @@ bool Act_c::_execute() {
             else if (step < attr().field_0x0c)
                 step = attr().field_0x0c;
             mLevelStep = step;
+            /* true60: the whole frame's update runs on the first step: the ease at dt 1 (at the step's
+             * dt the converted cLib_addCalc took half a frame; N-step spec with the c_lib eases converted) */
+            const bool wholeAtOne = t60c::on();
+            const float stepDt = wholeAtOne ? t60_set_dt(1.0f) : 0.0f;
             cLib_addCalc(&M_now, target, attr().field_0x04, step, attr().field_0x0c);
+            if (wholeAtOne)
+                t60_set_dt(stepDt);
         }
     }
 
     bgm_proc();
+    t60c::glideBegin(&M_now, 1, levelBefore);
     return true;
 }
 

@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_demo_dk.h"
+#include "d/actor/d_a_demo_dk_t60.h" /* true60 (t60conv): step helpers */
 
 const gc_tu_data gc_tu = {.safeString = 0x1000D9FC};
 // HD: the archive is named "Demo_Dk", while the GameCube source spells it "DEMO_DK".
@@ -46,7 +47,7 @@ static void anm_init(demo_dk_class* i_this, s32 bckAnmIdx, f32 morf, u8 loopMode
 }
 
 /* mode_wait (inlined into Execute) */
-static inline void mode_wait(demo_dk_class* i_this) {
+static inline void mode_wait(demo_dk_class* i_this) { if (!t60c::first()) return; /* true60 (t60conv): frame-level logic on the frame's first step (the first-step AI-timer rule / first-step frame-level) */
     if (i_this->mpMorf->isStop()) {
         f32 tmp = 0.099999995f;
 
@@ -64,7 +65,7 @@ static inline void mode_wait(demo_dk_class* i_this) {
 }
 
 /* mode_akubi (inlined into Execute) */
-static inline void mode_akubi(demo_dk_class* i_this) {
+static inline void mode_akubi(demo_dk_class* i_this) { if (!t60c::first()) return; /* true60 (t60conv): frame-level logic on the frame's first step (the first-step AI-timer rule / first-step frame-level) */
     if (i_this->mpMorf->isStop()) {
         anm_init(i_this, dRes_INDEX_DEMO_DK_BCK_DK_L_WAIT1_e, 5.0f, 0, 2.0f, 0);
         i_this->mYawnWait = 3;
@@ -76,7 +77,7 @@ static inline void mode_akubi(demo_dk_class* i_this) {
 static BOOL daDEMO_DK_Execute(demo_dk_class* i_this) {
     for (s32 i = 0; i < 2; i++) {
         if (i_this->mTimers[i] != 0) {
-            i_this->mTimers[i] = i_this->mTimers[i] - 1;
+            if (t60c::first()) { i_this->mTimers[i] = i_this->mTimers[i] - 1; } /* true60 (t60conv): counted on the frame's first step */
         }
     }
 

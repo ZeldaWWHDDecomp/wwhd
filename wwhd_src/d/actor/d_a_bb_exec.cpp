@@ -8,6 +8,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_bb.h"
+#include "d/actor/d_a_bb_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule addendum) */
 
 /* ---- local bindings (SHARED-CANDIDATE) ---- */
 /* daPy_py_c::checkPlayerGuard(): virtual (vtable at +0xB4, slot +0x3C) */
@@ -668,6 +669,10 @@ static inline void bb_eye_tex_anm(bb_class* i_this) {
 
 /* 0205EA58 */
 BOOL daBb_Execute(bb_class* i_this) {
+    t60w::Guard<bb_class> t60g(i_this, bb_t60::ops()); /* true60: the whole frame on the tick30 step (end at every return) */
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
+    t60g.model = true;
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
 
     i_this->mEnemyIce.mIceOffsetY = REG0_F(5) + 50.0f;

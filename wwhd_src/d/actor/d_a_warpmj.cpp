@@ -2,6 +2,7 @@
  * HD: preserve verified animation construction, draw-tag callbacks, and guest call ordering.
  */
 #include "d/actor/d_a_warpmj.h"
+#include "d/actor/d_a_warpmj_t60.h" /* true60: the whole form (the whole-frame form rule, d/t60_objw.h) */
 static void* sResourceManager;
 static WarpmjLightBlock sLightDefault;
 static WarpmjSave* sSave;
@@ -207,6 +208,9 @@ s32 daWarpmj_c::_create() {
 }
 /* 024DDF70 */
 BOOL daWarpmj_c::_execute() {
+    t60w::Guard<daWarpmj_c> t60g(this, t60objw::Logic<daWarpmj_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
 
     if (!demoActorID) {
         checkOrder();

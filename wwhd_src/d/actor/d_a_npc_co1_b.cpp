@@ -8,6 +8,7 @@
  * written from the WWHD code, verified against cking.rpx.
  */
 #include "d/actor/d_a_npc_co1.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 /* ---- local bindings (SHARED-CANDIDATE) ---- */
 /* save info: event flags (dSv_event_c) at *(0x101F84DC) + 0x644, the pointer re-read at each use */
@@ -263,6 +264,9 @@ void daNpc_Co1_c::setCollision_SP_() {
 
 /* 02229558 */
 BOOL daNpc_Co1_c::_execute() {
+    t60w::Guard<daNpc_Co1_c> t60g(this, t60npc::Logic<daNpc_Co1_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     if (!mSavedInitialTransform) {
         mSavedAngleX = current.angle.x;
         mSavedAngleY = current.angle.y;
@@ -299,6 +303,7 @@ BOOL daNpc_Co1_c::_execute() {
         }
     }
     eventOrder();
+    t60g.model = true; /* true60: the frame reached its model step */
     setMtx(0);
     if (!mInDemo) {
         setCollision_SP_();

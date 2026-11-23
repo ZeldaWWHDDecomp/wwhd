@@ -1,0 +1,9 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_npc_co1_b.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule NPC form; d/t60_npc.h):
+# Komali (Co1): the execute 02229558 in the whole form, logic only (wrapper with it). The tick30 step runs the original execute whole
+# at dt 1 from the frame start; the earlier steps change no state (the picture between steps comes from frame interpolation): net
+# effect = the one step's, byte exact. Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 02229558 02229734
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0200F428 020182E0 02018428 020184DC 02018C8C 02018D40 02228014 02228728 02228848 022289FC 02228BF4 02228C38 02228C78 02228CE4 02228D20 02228D2C 02228DDC 02228E34 02228EB8 02228EFC 02228FD0 02229210 02229378 022293E8 02542EDC 02543280 025440C8 025447C8 0254487C 0259D54C 0259DED0 0259E08C 0259F858 025A847C 025D6870 025D76A8 025D7A58 025F1C28 0274D458 028E8F64 028E90D4

@@ -1,5 +1,6 @@
 /* Fire hazard, derived from GameCube source and audited HD disassembly. */
 #include "d/actor/d_a_fire.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 /* 0213F5D0 */
 bool daFire_c::_delete() {
     for (int i = 0; i < 3; ++i) {
@@ -170,6 +171,9 @@ s32 daFire_c::_create() {
 
 /* 0213FAF4 */
 bool daFire_c::_execute() {
+    t60w::Guard<daFire_c> t60g(this, t60objw::Logic<daFire_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
     s8 t = (s8)mEventDelay;
     if (t >= 0)
         mEventDelay = t - 1;
@@ -178,6 +182,7 @@ bool daFire_c::_execute() {
     // HD: the empty normal_proc call is omitted.
     eventOrder();
     checkCol();
+    t60g.model = true; /* true60: the frame reached its model step */
     return true;
 }
 

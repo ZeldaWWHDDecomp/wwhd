@@ -9,6 +9,7 @@
  * Part B: 021FFFFC .. 02204358 (the rest is in d_a_npc_bm1.cpp).
  */
 #include "d/actor/d_a_npc_bm1_b.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 // HD: part A owns global gc_tu; behavior-only vtables stay private to this source.
 static const gc_tu_data l_behaviorTu = {
@@ -1860,6 +1861,9 @@ BOOL daNpc_Bm1_c::_draw() {
 
 /* 02200D58 */
 BOOL daNpc_Bm1_c::_execute() {
+    t60w::Guard<daNpc_Bm1_c> t60g(this, t60npc::Logic<daNpc_Bm1_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+        return TRUE;
     mHD_A08 = 0; /* HD */
     if (!mbRanExecute) {
         mInitialPos.copy(current.pos);
@@ -1902,6 +1906,7 @@ BOOL daNpc_Bm1_c::_execute() {
         }
     }
     eventOrder();
+    t60g.model = true; /* true60: the frame reached its model step */
     setMtx(0);
     if (!mbInDemo) {
         setCollision(50.0f, 160.0f);

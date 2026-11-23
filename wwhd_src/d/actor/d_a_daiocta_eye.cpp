@@ -3,6 +3,7 @@
  * HD: animation/resource ABI, callback cleanup and compiler-generated initialization differ.
  */
 #include "d/actor/d_a_daiocta_eye.h"
+#include "d/actor/d_a_daiocta_eye_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule addendum) */
 #include "gc_api/JSystem/JUTAssert.h"
 #include "gc_api/d/d_com_inf_game.h"
 #include "gc_api/f_op/f_op_actor.h"
@@ -299,6 +300,11 @@ void daDaiocta_Eye_c::modeProcCall() {
 }
 /* 0211DCAC */
 BOOL daDaiocta_Eye_c::_execute() {
+    /* true60: the whole frame on the tick30 step (end at every return) */
+    t60w::Guard<daDaiocta_Eye_c> t60g(this, daiocta_eye_t60::ops());
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return 0;
+    t60g.model = true;
     if (!mbAppear)
         return 0;
     if (mbIsDead)
@@ -377,8 +383,11 @@ BOOL daDaiocta_Eye_c::_execute() {
 BOOL daDaiocta_Eye_c::_draw() {
     if (!mbAppear)
         return 0;
-    void* light = eyeGetLighting();
-    eyeSetLighting(light, 0, &current.pos, &tevStr);
+    void* light;
+    if (daiocta_eye_t60::drawStep()) { /* true60: the light state on the tick30 step's draw only (rule 14) */
+        light = eyeGetLighting();
+        eyeSetLighting(light, 0, &current.pos, &tevStr);
+    }
     light = eyeGetLighting();
     eyeModelLighting(light, mpModel, &tevStr);
     J3DModelData* data = mpModel->getModelData();

@@ -1,0 +1,10 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_npc_kamome.txt
+# ---- true60 N-step spec (2026-11-21; d_a_npc_kamome_t60.h):
+# daNpc_kam_c::execute 0225E598, the NPC frames (player 0 != this: the base spec's 0x12340000): the NPC whole form (rule
+# the whole-frame form rule, d/t60_npc.h): the tick30 step runs the original execute whole at dt 1 from the frame start, the earlier steps
+# change no state: byte exact. The player frames (player 0 == this, 0x40000000) take the per-step form (unit
+# _t60/d_a_npc_kamome_pl). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 0225E598
+field 0225E598 54005B2C u32 0x12340000
+field 0225E598 10474BDC u32 0x12340000  # player 0 as the form test reads it (the guest word)

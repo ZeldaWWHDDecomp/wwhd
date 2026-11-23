@@ -1,0 +1,13 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_obj_homen.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule + addendum, d/t60_objw.h): the Homen mask's _execute 02358C54 (hookshot adjust, event, item / enemy timers, main process, dBgW move, spin, speed, posMove, set_mtx).
+# The tick30 step runs the original whole at dt 1 from the frame start; the earlier steps change no state (the
+# picture: frame interpolation). Negative control (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 02358C54
+# the frame's callees run their original code under the execute (timers, modes, decisions in the compared memory)
+real 02357EC4 023588F4 02358AA8 02358BDC 02358BFC
+t60cand 02357EC4 023588F4 02358AA8 02358BDC 02358BFC
+# adjust_hookshot 02358820 stays mocked under the execute: its own dt-1 check has the base's "trap by the original only" (the
+# player's vtable call through random fixture memory: fetch page 0), the same on the true60 base
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 0201A478 02357EC4 0235874C 02358820 023588F4 023589FC 02358AA8 02358AC8 02358BDC 02358BFC 02359AB0 024F43DC 025200D4 025440C8 025D5218 025D5834 025D67A8 025D6800 025D7A58 025D8120 025F1884 025F1BF4 025F1C28 025F1C5C 025F24E0 0273AA24 028E8F64 028E90D4 028E93CC

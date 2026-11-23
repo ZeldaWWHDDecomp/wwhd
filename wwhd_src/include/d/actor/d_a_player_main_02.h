@@ -4,6 +4,7 @@
 #include "gc_api/d/d_com_inf_game.h"
 #include "gc_api/tu.h"
 #include "SSystem/SComponent/c_m3d_g_pla.h"
+#include "true60.h"
 
 // HD: preserves the complete caller registers before the callee narrows its frame parameters.
 void player02SetFrameCtrl(daPy_lk_c* player, J3DFrameCtrl* ctrl, u32 attr,
@@ -1096,7 +1097,13 @@ enum : u32 {
 
 namespace player02 {
 // HD: compute each guest field address before conversion, preserving zero-page and wrapping accesses.
+/* (true60, the input rule / per-step input: the release word holds the frame's releases like the triggers, c_API_controller.cpp
+ * cpadTrig; a converted context takes the releases of the step's own read, true60.h t60_in_step_word, so a release is
+ * consumed by exactly one step) */
 inline u32 padReleaseWord() {
+    if (t60::dt() != 1.0f)
+        return t60_in_step_word([] { return gabi::load<u32>(0x101F5088) + 0x18; }, offsetof(padRelease_c, mRelease) - 0x18,
+                                [] { return gabi::load<u32>(gabi::load<u32>(0x101F5088) + offsetof(padRelease_c, mRelease)); });
     return gabi::load<u32>(gabi::load<u32>(0x101F5088) + offsetof(padRelease_c, mRelease));
 }
 inline u32 actorParameters(fopAc_ac_c* actor) {

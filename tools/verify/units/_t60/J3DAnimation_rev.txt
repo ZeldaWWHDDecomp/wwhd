@@ -1,0 +1,18 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+src wwhd_src/J3DAnimation.cpp
+# true60 N-step spec: J3DFrameCtrl::update in the reverse modes (REVERSE, LOOP_REVERSE). A bounce at the end (rate
+# negated, frame end-eps) inside a frame lets the later sub-steps run backwards already, which the one 30 Hz step does
+# only in the next frame: a regime change like a clamp (the one-dt-per-step rule.5.3a), bounded by |rate|*(1-dt) <= 1.5 for rates
+# within 2 at N <= 4. Rate and the latch stay exact (OR over the updates). The frame starts inside [start, end)
+# (see _t60/J3DAnimation.txt).
+real 028F4034
+t60conv 027F2FC4
+field 027F2FC4 r3+0 f32 -2 2
+field 027F2FC4 r3+4 f32 5 19.9
+field 027F2FC4 r3+8 s16 0,1,2,3,4,5
+field 027F2FC4 r3+10 s16 20,22,25,28,30
+field 027F2FC4 r3+12 s16 0,2,5,8,10
+field 027F2FC4 r3+14 u8 3,4
+field 027F2FC4 r3+15 u8 0,1,2,3
+t60tol 027F2FC4 r3+4 f32 abs 1.5
+t60tol 027F2FC4 r3+15 u8 orsteps

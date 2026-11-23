@@ -3,6 +3,7 @@
 #include "d/actor/d_a_obj_movebox.h"
 #include "d/actor/d_a_player.h"
 #include "gc_api/d/d_kankyo.h"
+#include "d/actor/d_a_obj_movebox_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 void moveboxGroundBaseDestroy(dBgS_GndChk*, s32);
 namespace daObjMovebox {
 static MoveboxRegistrationsHD l_registrations;
@@ -388,6 +389,8 @@ void Bgc_c::proc_vertical(Act_c* actor) {
 // HD: autoglue requires the original instrumentation for this static callback.
 fopAc_ac_c* Act_c::PPCallBack(fopAc_ac_c* target, fopAc_ac_c* unused, s16 angle, u32 label) {
     WWHD_FUNC(0x023775DC, fopAc_ac_c*, target, unused, angle, label);
+    if (movebox_t60::cbSkip()) /* true60: Link's push counts once a frame, on the tick30 step */
+        return target;
     Act_c* box = (Act_c*)target;
     u32 push = label & 3;
     bool eligible = box->attr(0x1002D300)->mbHeavy ? ((label >> 3) & 1) != 0 : true;
@@ -493,6 +496,8 @@ void Act_c::eff_smoke_slip_start() {
 // HD: autoglue requires the original instrumentation for this static callback.
 void Act_c::RideCallBack(dBgW* bg, fopAc_ac_c* target, fopAc_ac_c* rider) {
     WWHD_FUNC(0x02377308, void, bg, target, rider);
+    if (movebox_t60::cbSkip()) /* true60: a rider's sink / tilt counts once a frame, on the tick30 step */
+        return;
     Act_c* box = (Act_c*)target;
     if (box->mMode != 2)
         return;
@@ -856,6 +861,11 @@ void Act_c::mode_walk() {
 
 /* 02378638 */
 BOOL Act_c::Execute(gptr<Mtx34>* output) {
+    t60w::Guard<Act_c> t60g(this, movebox_t60::kOps); /* true60: t60w::end on every return */
+    if (t60g.skip) { /* true60: a step before the tick30 step: the picture only, the background stays (mMtx) */
+        *output = &mMtx;
+        return TRUE;
+    }
     if (mCyl.ChkTgHit() || mbRollCrash) {
         make_item();
         eff_break();
@@ -915,6 +925,7 @@ BOOL Act_c::Execute(gptr<Mtx34>* output) {
         moveboxMoveCollisionCenter(&mCyl, &current.pos);
         cCcS_Set(dComIfG_Ccsp(), &mCyl);
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     *output = &mMtx;
     return TRUE;
 }

@@ -1,6 +1,7 @@
 /* Warp-pot actor: GameCube reconstruction corrected against WWHD disassembly.
  */
 #include "d/actor/d_a_obj_warpt.h"
+#include "d/actor/d_a_obj_warpt_t60.h" /* true60: the whole form (the whole-frame form rule, d/t60_objw.h) */
 static const WarptTU gc_tu = {
     0x100337FC, // mBodyCylinderData
     0x10033840, // mLidCylinderData
@@ -216,6 +217,8 @@ bool daObj_Warpt_c::createBodyHeap() {
 }
 /* 023B9E88 */
 static void ride_CB(u8 *bg, daObj_Warpt_c *self, fopAc_ac_c *rider) {
+  if (t60_converted(0x41) && t60objw::cbSkip()) /* true60: a ride callback the rider calls on each of its steps: the tick30 step's call only (whole-frame form whole form, bdkobj form); only while the pot (0x41) is converted, so the form is inert before its mark */
+    return;
   self->_ride(rider);
 }
 /* 023B9D5C */
@@ -580,6 +583,9 @@ void daObj_Warpt_c::modeProc(s32 operation, s32 mode) {
 }
 /* 023BAD74 */
 BOOL daObj_Warpt_c::_execute() {
+  t60w::Guard<daObj_Warpt_c> t60g(this, t60objw::Logic<daObj_Warpt_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+  if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+    return TRUE;
   u32 emitter = gabi::ea((u8 *)mOpenSmokeCallBack.mEmitter);
   if (emitter) {
     if (warptCustomColor(gabi::ea(&l_HIO.mSmokePrmColorOverride)))

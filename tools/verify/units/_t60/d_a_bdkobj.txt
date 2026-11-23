@@ -1,0 +1,10 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_bdkobj.txt
+# ---- true60 N-step spec (2026-11-19; the whole-frame form rule; d_a_bdkobj_t60.h):
+# Helmaroc King fight objects: daBdkobj_Execute 020729A8 in the whole form (hits, the stairs' ride count and fall, the
+# BG move, the fragments once per frame). The tick30 step runs the original execute whole at dt 1 from the frame start;
+# the earlier steps change no state (picture: frame interpolation): net effect = the one step's, byte exact. Negative control
+# (T60C_NEGCTRL: the execute on every step at dt) must fail.
+t60conv 020729A8
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 020087EC 02008860 02008974 0200A030 0200EDC8 0200F428 0200FAD8 0200FC74 0200FCD8 020182E0 02018428 020184DC 02018C8C 02018D40 020195B0 020198D8 02019918 0201A554 0201ADE0 0206BAA8 020F52B8 020FEA30 02139E80 024F06B4 024F1AFC 024F43DC 02514F50 02514F88 025162A4 02516300 02516518 0251677C 02518DB0 02520540 02555D0C 025626A4 025A847C 025D8870 025E19CC 025E1A40 025F1884 025F1BF4 025F1C28 025F1C5C 0274D458 028E8D88 028E8DD0 028E90D4 028F4384

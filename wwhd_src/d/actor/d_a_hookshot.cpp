@@ -13,6 +13,7 @@
  * draw (021783F4) are reconstructed in d_a_hookshot_shape.cpp with explicit proof scopes.
  */
 #include "d/actor/d_a_hookshot.h"
+#include "d/actor/d_a_hookshot_t60.h"
 namespace {
 struct HookshotLinkage {
     u8 bytes[32];
@@ -267,15 +268,27 @@ static void daHookshot_rockLineCallback(fopAc_ac_c* hookshot_actor, dCcD_GObjInf
 /* 02176D98 */
 BOOL daHookshot_c::execute() {
     fopAc_ac_c* link = dComIfGp_getLinkPlayer();
-    if (fopAcM_GetParam(this) != Mode_Wait) {
+    /* true60 (hand, the one-emitter-per-event rule): the chain / wind-up sounds once per frame on the tick30 step, from the frame-start mode */
+    const s32 frameMode = t60c::heldInt(fopAcM_GetParam(this), 1, this);
+    if (frameMode != Mode_Wait && t60c::end()) {
         mDoAud_seStart(JA_SE_LK_HS_CHAIN, &link->current.pos, 0,
                        dComIfGp_getReverb(current.roomNo));
-        if (fopAcM_GetParam(this) != Mode_Shot)
+        if (t60c::heldInt(fopAcM_GetParam(this), 1, this) != Mode_Shot) /* re-read after the start, as the original */
             mDoAud_seStart(JA_SE_LK_HS_WIND_UP, &link->current.pos, 0,
                            dComIfGp_getReverb(current.roomNo));
     }
-    if (mCurrProcFunc.i != 0)
+    /* true60 (hand, 30 Hz visual-motion): one proc state step per 30 Hz frame: a state change on a step holds the dispatch for the
+     * frame's remaining steps */
+    if (t60c::first())
+        t60c::unmark(2, this);
+    if (mCurrProcFunc.i != 0 && !t60c::marked(2, this)) {
+        const u32 procBefore = (u32)mCurrProcFunc.f;
+        const s32 idxBefore = (s32)mCurrProcFunc.i;
+        const u8 reboundBefore = mRebound;
         (this->*mCurrProcFunc)();
+        if ((u32)mCurrProcFunc.f != procBefore || (s32)mCurrProcFunc.i != idxBefore || mRebound != reboundBefore)
+            t60c::mark(2, this);
+    }
 
     /* eyePos = attention_info.position = current.pos (word copies) */
     auto* positionWords = hookshotView<HookshotWordVector>(gabi::ea(&current.pos));
@@ -331,12 +344,17 @@ BOOL daHookshot_c::execute() {
     if (fopAcM_GetParam(this) != Mode_Wait) {
         /* HD: setItemWaterEffect(actor, u8, int) is not a member of the player */
         mWaterEffect = hs_setItemWaterEffect(this, (u8)mWaterEffect, 0);
+        /* true60 (hand, the per-step movement rule): the step's distance / dt, a per-frame speed */
         if (fopAcM_GetParam(this) == Mode_Shot) {
             speedF = std_sqrtf(PSVECSquareDistance(&current.pos, &old.pos));
+            if (t60c::on())
+                speedF = speedF / t60::dt();
             return TRUE;
         }
         if (fopAcM_GetParam(this) == Mode_Return || fopAcM_GetParam(this) == Mode_Pull) {
             speedF = -std_sqrtf(PSVECSquareDistance(&current.pos, &old.pos));
+            if (t60c::on())
+                speedF = speedF / t60::dt();
             return TRUE;
         }
     }
@@ -465,7 +483,11 @@ BOOL daHookshot_c::procWait() {
     mObjHookFlg = FALSE;
     u32 c = sightCps();
 
-    if (fopAcM_GetParam(this) == Mode_Shot) {
+    /* true60 (hand, rule 14 order): Link sets Mode_Shot on one of his steps; the hookshot starts the shot on the frame's
+     * tick30 step, from Link's frame-end root and body angle, as the original's execute after Link's frame (on the
+     * in-between steps it only follows the root) */
+    if (fopAcM_GetParam(this) == Mode_Shot && !t60c::end()) {
+    } else if (fopAcM_GetParam(this) == Mode_Shot) {
         s16 angleY = (s16)(link_bodyAngleY(link) + link->shape_angle.y);
         u16 angleX = link_bodyAngleX(link);
         mMoveVec.x = cM_ssin(angleY) * cM_scos(angleX);
@@ -546,6 +568,11 @@ BOOL daHookshot_c::procShot() {
     }
     u32 c = sightCps();
     if (hs_checkAtHit(c) /* mSightCps.ChkAtHit() */) {
+        /* true60 (hand, rule 14 order / mixed-pair hit-flag, N-step spec with the procs compared): the hit (from the tick30
+         * collision Move, standing over the frame) is acted on at the tick30 step from the unmoved frame start, as the
+         * original's execute; the in-between steps hold (no move): the new mode shows to Link from the next frame */
+        if (!t60c::end())
+            return TRUE;
         fopAc_ac_c* hit_ac = hs_getHitActor(c + 0x50); /* GetAtHitAc() */
         if (hit_ac != nullptr) {
             mCarryActorID = fopAcM_GetID(hit_ac);
@@ -599,18 +626,25 @@ BOOL daHookshot_c::procShot() {
     /* mRebound || current.pos.abs(root) >= 1500: mRebound is read again after the distance */
     bool rebound = mRebound != 0;
     bool stop = rebound;
-    if (!rebound) {
+    /* true60 (hand, first-step AI-timer + rule 14 order): the range test on the frame's first step (the original tests it at the frame
+     * start), its answer held over the frame; a frame that stops does not move and the stop (Mode_Return) is made on
+     * the tick30 step, so it shows to Link from the next frame (N-step spec with the procs compared) */
+    bool far = false;
+    if (!rebound && t60c::first()) {
         fopAc_ac_c* link = dComIfGp_getLinkPlayer();
         HookshotLocal<cXyz> root;
         cXyz* r = link_hookshotRootPos(link);
         root->x = r->x;
         root->y = r->y;
         root->z = r->z;
-        if (!(std_sqrtf(PSVECSquareDistance(&current.pos, root)) < 1500.0f)) {
-            stop = true;
-            rebound = mRebound != 0;
-        }
+        far = !(std_sqrtf(PSVECSquareDistance(&current.pos, root)) < 1500.0f);
     }
+    if (!rebound && t60c::held(far, 7, this)) {
+        stop = true;
+        rebound = mRebound != 0;
+    }
+    if (stop && !t60c::end())
+        return TRUE;
     if (stop) {
         if (rebound) {
             u16 id = mReboundEffectId;
@@ -630,12 +664,33 @@ BOOL daHookshot_c::procShot() {
         return TRUE;
     }
 
+    /* true60 (hand, the per-step movement rule): the tip moves 15 x mMoveVec x dt; the frame move exact (moveBegin / moveEnd) */
+    if (t60c::first())
+        hs60::latchStart(this, current.pos, mChainCnt);
+    t60c::moveBegin(&current.pos.x, &current.pos.z, 3);
+    t60c::moveBegin(&current.pos.y, &current.pos.y, 4);
     HookshotLocal<cXyz> mv;
-    cXyz_ml(&mMoveVec, mv, 15.0f);
+    cXyz_ml(&mMoveVec, mv, t60c::step(15.0f));
     HookshotLocal<cXyz> sp8C;
     cXyz_pl(&current.pos, sp8C, mv);
-    dBgS_LinChk_Set(mLinChk, &current.pos, sp8C, this);
-    if (cBgS_LineCross(dComIfG_Bgsp(), mLinChk)) {
+    /* true60 (hand, rule 14 order): the line check on the tick30 step only, over the whole frame segment from the
+     * frame start (the original's single check); a stick / rebound shows to Link from the next frame */
+    bool crossed = false;
+    if (!t60c::on()) {
+        dBgS_LinChk_Set(mLinChk, &current.pos, sp8C, this);
+        crossed = cBgS_LineCross(dComIfG_Bgsp(), mLinChk);
+    } else if (t60c::end()) {
+        HookshotLocal<cXyz> s0;
+        s32 chain0;
+        if (!hs60::start(this, s0, &chain0))
+            s0->copy(current.pos);
+        HookshotLocal<cXyz> full;
+        cXyz_ml(&mMoveVec, full, 15.0f);
+        cXyz_pl(s0, sp8C, full);
+        dBgS_LinChk_Set(mLinChk, s0, sp8C, this);
+        crossed = cBgS_LineCross(dComIfG_Bgsp(), mLinChk);
+    }
+    if (crossed) {
         sp8C->copy(*&hookshotLine(mLinChk)->mLin.mEnd); /* mLinChk.GetCross() */
         if (dBgS_ChkPolyHSStick(dComIfG_Bgsp(), mLinChk + 0x14)) {
             fopAcM_SetParam(this, Mode_Pull);
@@ -693,11 +748,21 @@ BOOL daHookshot_c::procShot() {
     dComIfG_Ccsp_Set(gabi::at<void>(c));
     dComIfG_Ccsp_SetMass(c, 1);
     current.pos.copy(*sp8C);
+    if (!crossed && t60c::on()) {
+        const f32 fx = mMoveVec.x * 15.0f, fy = mMoveVec.y * 15.0f, fz = mMoveVec.z * 15.0f;
+        t60c::moveEnd(&current.pos.x, &current.pos.z, &fx, &fz, 3);
+        t60c::moveEnd(&current.pos.y, &current.pos.y, &fy, &fy, 4);
+    }
     return TRUE;
 }
 
 /* 02179888 */
 BOOL daHookshot_c::procPlayerPull() {
+    /* true60 (hand, rule 14 order, pair): the pull is decided on the frame's tick30 step from
+     * Link's frame-end root, as the original's execute after Link's frame; the in-between steps hold (Link adds the
+     * frame's vector over his steps of the NEXT frame, as he adds it in the next frame at 30 Hz) */
+    if (t60c::on() && !t60c::end())
+        return TRUE;
     fopAc_ac_c* carry_actor = nullptr;
     if (mCarryActorID != 0xFFFFFFFFu) {
         carry_actor = fopAcM_SearchByID(mCarryActorID);
@@ -722,7 +787,8 @@ BOOL daHookshot_c::procPlayerPull() {
             setProc(PROC_RETURN);
             return TRUE;
         }
-        if (dBgS_ChkMoveBG(dComIfG_Bgsp(), mLinChk + 0x14))
+        /* true60 (hand, 30 Hz visual-motion): the moving background's frame transform once per frame, on the tick30 step */
+        if (t60c::end() && dBgS_ChkMoveBG(dComIfG_Bgsp(), mLinChk + 0x14))
             dBgS_MoveBgTransPos(dComIfG_Bgsp(), mLinChk + 0x14, true, &current.pos, &mHookAngle,
                                 nullptr);
     }
@@ -740,10 +806,18 @@ BOOL daHookshot_c::procPlayerPull() {
     if (r5 > 0) {
         s32 cnt = mChainCnt;
         r5 = (r5 > cnt ? s32(u32(r5) - u32(cnt)) : 0);
-        s32 iVar6 = s32(u32(r5) + u32(cnt <= 9 ? cnt : 9));
+        const s32 links = 9;
+        s32 iVar6 = s32(u32(r5) + u32(cnt <= links ? cnt : links));
         mChainCnt = s32(u32(cnt) - u32(iVar6));
         HookshotLocal<cXyz> mv;
         cXyz_ml(sp40, mv, (7.0f * (f32)iVar6) / f1);
+        /* true60 (hand, the per-step movement rule): Link adds mMoveVec on each of his N steps of the next frame: the step's part of the
+         * frame's pull (dt = 1: the original vector) */
+        if (t60c::on()) {
+            HookshotLocal<cXyz> part;
+            cXyz_ml(mv, part, t60::dt());
+            mv->copy(*part);
+        }
         mMoveVec.copy(*mv);
         if (mChainCnt > 0)
             return TRUE;
@@ -771,7 +845,23 @@ BOOL daHookshot_c::procReturn() {
         carry_actor = nullptr;
     }
 
-    bool done = mChainCnt <= 9;
+    /* true60 (hand, rule 14 order): the arrival test on the tick30 step, from the frame-start position and chain
+     * count (latched on the first step) and Link's frame-end root, as the original's single execute; the return to
+     * Mode_Wait shows to Link (earlier in the order) from the next frame */
+    const bool frameStart = t60c::first();
+    if (frameStart)
+        hs60::latchStart(this, current.pos, mChainCnt);
+    if (frameStart && carry_actor != nullptr && t60c::on())
+        hs60::latchCarry(this, gabi::ea(&carry_actor->current.pos), gabi::ea(&hookshotGround(mGndChk)->m_pos));
+    const bool decide = t60c::end();
+    HookshotLocal<cXyz> s0;
+    s32 chain0 = mChainCnt;
+    cXyz* startPos = &current.pos; /* dt = 1: the original's own operands */
+    if (t60c::on() && hs60::start(this, s0, &chain0))
+        startPos = s0;
+    else
+        chain0 = mChainCnt;
+    bool done = decide && chain0 <= 9;
     HookshotLocal<cXyz> sp4C;
     f32 f1 = 0.0f;
     if (!done) {
@@ -781,11 +871,13 @@ BOOL daHookshot_c::procReturn() {
         root->x = r->x;
         root->y = r->y;
         root->z = r->z;
-        cXyz_mi(&current.pos, sp4C, root);
+        cXyz_mi(startPos, sp4C, root);
         f1 = std_sqrtf(PSVECSquareMag(sp4C));
-        done = gabi::ftoi(f1 / 7.0f) <= 9;
+        done = decide && gabi::ftoi(f1 / 7.0f) <= 9;
     }
     if (done) {
+        if (carry_actor != nullptr && t60c::on()) /* true60: the arriving frame does not move the carried actor */
+            hs60::restoreCarry(this, gabi::ea(&carry_actor->current.pos));
         if (carry_actor != nullptr)
             carry_actor->actor_status =
                 carry_actor->actor_status &
@@ -795,11 +887,40 @@ BOOL daHookshot_c::procReturn() {
         return TRUE;
     }
     f32 s = 63.0f / f1;
-    mChainCnt = mChainCnt - 9;
+    /* true60 (hand, N-step spec with the procs compared): 9 links a frame, taken on the tick30 step (per step
+     * the count fell 9 x N a frame); the in-between steps keep the frame-start count */
+    if (!t60c::on() || decide)
+        mChainCnt = mChainCnt - 9;
     HookshotLocal<cXyz> d;
     cXyz_ml(sp4C, d, s);
-    PSVECSubtract(&current.pos, d, &current.pos);
-    if (carry_actor != nullptr) {
+    if (t60c::on()) {
+        /* true60 (hand, the per-step movement rule): 63 units per frame along the frame-start direction (latched on the first step),
+         * the step's part dt of it; the frame move exact (moveBegin / moveEnd: tick30 = frame start - d) */
+        if (frameStart)
+            hs60::latch(this, d->x, d->y, d->z);
+        f32 lx, ly, lz;
+        if (!decide && hs60::latched(this, &lx, &ly, &lz)) { /* the tick30 step: its own frame vector (exact) */
+            d->x = lx;
+            d->y = ly;
+            d->z = lz;
+        }
+        const f32 nx = -d->x, ny = -d->y, nz = -d->z;
+        t60c::moveBegin(&current.pos.x, &current.pos.z, 5);
+        t60c::moveBegin(&current.pos.y, &current.pos.y, 6);
+        const f32 dt = t60::dt();
+        current.pos.x = current.pos.x - d->x * dt;
+        current.pos.y = current.pos.y - d->y * dt;
+        current.pos.z = current.pos.z - d->z * dt;
+        t60c::moveEnd(&current.pos.x, &current.pos.z, &nx, &nz, 5);
+        t60c::moveEnd(&current.pos.y, &current.pos.y, &ny, &ny, 6);
+    } else {
+        PSVECSubtract(&current.pos, d, &current.pos);
+    }
+    /* true60 (hand, rule 14 order): a 30 Hz carried actor is placed on the tick30
+     * step only (hs60::carry30) */
+    if (carry_actor != nullptr &&
+        (!t60c::on() || decide ||
+         !hs60::carry30(fpcM_GetName(carry_actor), fopAcM_GetID(carry_actor), gabi::ea(carry_actor)))) {
         HookshotLocal<cXyz> p;
         cXyz_pl(&current.pos, p, &mCarryOffset);
         f32 x = p->x, y = p->y, z = p->z;
@@ -812,7 +933,8 @@ BOOL daHookshot_c::procReturn() {
         f32 ground_y = cBgS_GroundCross(dComIfG_Bgsp(), mGndChk);
         if (ground_y > carry_actor->current.pos.y) {
             carry_actor->current.pos.y = ground_y;
-            mCarryOffset.y = ground_y - current.pos.y;
+            if (!t60c::on() || decide) /* true60: the offset's correction once per frame, from the frame-end tip */
+                mCarryOffset.y = ground_y - current.pos.y;
         }
     }
     return TRUE;

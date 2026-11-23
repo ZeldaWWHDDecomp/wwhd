@@ -1,5 +1,6 @@
 /* Merchant display pedestal. GameCube source style with verified HD layout/ABI differences. */
 #include "d/actor/d_a_dai.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 const gc_tu_data gc_tu = {.objAcchDt = {0x1000CBDC, 0x1000CBEC}};
 static u16 m_savelabel[256] = {}; // HD: byte-indexed original table; reads retain the full index span.
 static u8 mNowDaizaNum;
@@ -189,9 +190,13 @@ void daDai_c::eventOrder() {
 }
 /* 0211676C */
 BOOL daDai_c::_execute() {
+    t60w::Guard<daDai_c> t60g(this, t60objw::Logic<daDai_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     checkOrder(); proc(); eventOrder();
     mCyl.SetC(&current.pos);
     dComIfG_Ccsp_Set(&mCyl);
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 /* 021167CC */

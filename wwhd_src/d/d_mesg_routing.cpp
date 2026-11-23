@@ -1,5 +1,6 @@
 /** HD message lookup and renderer routing. Local verification */
 #include "d/d_mesg_routing.h"
+#include "d/d_mesg_routing_t60.h"
 using namespace MesgRouting;
 using Word = be<u32>;
 using FloatConstant = be<f32>;
@@ -165,6 +166,9 @@ u32 dMesg_routeMessage(u32 i_manager, u32 i_msgNo, u32 i_lookAtPos) {
 
 /* 025F7DB0 */
 u32 fopMsgM_messageSet(u32 i_manager, u32 i_msgNo, u32 i_lookAtPos) {
+    u32 t60Repeat; /* the frame's request, made on an earlier step (d_mesg_routing_t60.h) */
+    if (T60MSR_REPEAT(kMessageSet, i_manager, i_msgNo, i_lookAtPos, &t60Repeat))
+        return t60Repeat;
     gabi::Local<u8[24]> frame;
     u32 status = MesgRoute_getStatus();
     if (status == MESG_IDLE) {
@@ -172,15 +176,18 @@ u32 fopMsgM_messageSet(u32 i_manager, u32 i_msgNo, u32 i_lookAtPos) {
         MesgRoute_getPlay()->mMesgCameraTag = MESG_ERROR;
         u32 result = MesgRoute_select(i_manager, i_msgNo, i_lookAtPos);
         MesgRoute_setStatus(gabi::at<Manager>(i_manager), 1);
-        return result;
+        return T60MSR_MADE(kMessageSet, i_manager, i_msgNo, i_lookAtPos, result);
     }
     if (status == MESG_CONTINUES)
-        return MesgRoute_select(i_manager, i_msgNo, i_lookAtPos);
-    return MESG_ERROR;
+        return T60MSR_MADE(kMessageSet, i_manager, i_msgNo, i_lookAtPos, MesgRoute_select(i_manager, i_msgNo, i_lookAtPos));
+    return T60MSR_MADE(kMessageSet, i_manager, i_msgNo, i_lookAtPos, MESG_ERROR);
 }
 
 /* 025F7E68 */
 u32 fopMsgM_scopeMessageSet(u32 i_manager, u32 i_msgNo) {
+    u32 t60Repeat; /* the frame's request, made on an earlier step (d_mesg_routing_t60.h) */
+    if (T60MSR_REPEAT(kScope, i_manager, i_msgNo, 0, &t60Repeat))
+        return t60Repeat;
     gabi::Local<u8[88]> storage;
     KeyFrame* frame = reinterpret_cast<KeyFrame*>(storage.get());
     Manager* manager = gabi::at<Manager>(i_manager);
@@ -188,7 +195,7 @@ u32 fopMsgM_scopeMessageSet(u32 i_manager, u32 i_msgNo) {
     MessageEntry* entry =
         lookup(manager, frame, &l_scopeKey, &l_scopeKeyInitialized, "dummy", &l_scopeColor);
     if (!entry)
-        return MESG_ERROR;
+        return T60MSR_MADE(kScope, i_manager, i_msgNo, 0, MESG_ERROR);
     if ((static_cast<u32>(MesgRoute_getPlay()->mPlayerStatus) & PLAYER_TELESCOPE_LOOK) &&
         MesgRoute_getPlay()->mScopeMesgStatus == MESG_SCOPE_ACTIVE) {
         setMessageMetadata(entry);
@@ -196,13 +203,16 @@ u32 fopMsgM_scopeMessageSet(u32 i_manager, u32 i_msgNo) {
     }
     u32 context = manager->mMessageContext;
     if (!MesgRoute_render(manager->mRenderWork, context, i_msgNo))
-        return MESG_ERROR;
+        return T60MSR_MADE(kScope, i_manager, i_msgNo, 0, MESG_ERROR);
     manager->mMsgNo = i_msgNo;
-    return 0;
+    return T60MSR_MADE(kScope, i_manager, i_msgNo, 0, 0);
 }
 
 /* 025F8088 */
 u32 fopMsgM_tactMessageSet(u32 i_manager) {
+    u32 t60Repeat; /* the frame's request, made on an earlier step (d_mesg_routing_t60.h) */
+    if (T60MSR_REPEAT(kTact, i_manager, 0, 0, &t60Repeat))
+        return t60Repeat;
     gabi::Local<u8[32]> storage;
     PositionFrame* frame = reinterpret_cast<PositionFrame*>(storage.get());
     // HD: tact routing seeds all three position components from the TU's 1.0f constant.
@@ -217,15 +227,18 @@ u32 fopMsgM_tactMessageSet(u32 i_manager) {
         u32 result = MesgRoute_select(i_manager, MSG_TACT, gabi::ea(&frame->x));
         if (status == MESG_IDLE)
             MesgRoute_setStatus(manager, 2);
-        return result;
+        return T60MSR_MADE(kTact, i_manager, 0, 0, result);
     }
     if (MesgRoute_getPlay()->mScopeMesgStatus != 0)
         MesgRoute_setStatus(manager, 0);
-    return MESG_ERROR;
+    return T60MSR_MADE(kTact, i_manager, 0, 0, MESG_ERROR);
 }
 
 /* 025F8154 */
 u32 fopMsgM_messageSetDemo(u32 i_manager, u32 i_msgNo) {
+    u32 t60Repeat; /* the frame's request, made on an earlier step (d_mesg_routing_t60.h) */
+    if (T60MSR_REPEAT(kDemo, i_manager, i_msgNo, 0, &t60Repeat))
+        return t60Repeat;
     gabi::Local<u8[88]> storage;
     KeyFrame* frame = reinterpret_cast<KeyFrame*>(storage.get());
     Manager* manager = gabi::at<Manager>(i_manager);
@@ -233,19 +246,19 @@ u32 fopMsgM_messageSetDemo(u32 i_manager, u32 i_msgNo) {
     MesgRoute_getPlay()->mMesgCameraTag = MESG_ERROR;
     u32 status = MesgRoute_getStatus();
     if (status != MESG_IDLE && status != MESG_CONTINUES)
-        return MESG_ERROR;
+        return T60MSR_MADE(kDemo, i_manager, i_msgNo, 0, MESG_ERROR);
     formatName(&frame->name, i_msgNo, "%05d");
     MessageEntry* entry =
         lookup(manager, frame, &l_demoKey, &l_demoKeyInitialized, "dummy", &l_demoColor);
     u32 context = manager->mMessageContext;
     if (!entry)
-        return MESG_ERROR;
+        return T60MSR_MADE(kDemo, i_manager, i_msgNo, 0, MESG_ERROR);
     setMessageMetadata(entry);
     manager->mMode = MODE_AUX;
     MesgRoute_aux(manager->mAuxScreenWork, 2, context, i_msgNo);
     manager->mMsgNo = i_msgNo;
     MesgRoute_setStatus(manager, 2);
-    return 0;
+    return T60MSR_MADE(kDemo, i_manager, i_msgNo, 0, 0);
 }
 
 static void copyName(String64* destination, StringBase* source) {

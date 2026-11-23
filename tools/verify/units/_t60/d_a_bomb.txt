@@ -1,0 +1,17 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_bomb.txt
+# ---- true60 N-step spec (2026-11-18; the whole-frame form rule carryables; d_a_bomb_t60.h): the bomb's
+# execute 020C4D84. The tick30 step runs the original execute whole at dt 1 from the frame start; the earlier steps
+# change no state (a visual extrapolation by the previous frame's change, none here: no previous frame): net effect =
+# the one step's, byte exact. Negative control (T60C_NEGCTRL: execute on every step at dt) must fail.
+t60conv 020C4D84
+# the frame's logic runs its candidate code under execute (wind, the shadow flag / draw delay, the nut animation, the
+# matrix, the fire effect, and the procs behind mFunc: wait / carry / explode with the fuse timer, the movers and the
+# explosion light fade), so the timers and decisions are in the compared memory
+real 020C480C 020C4B10 020C4C04 020C4C84 020C475C 020C7358 020C76E0 020C74A0
+t60cand 020C480C 020C4B10 020C4C04 020C4C84 020C475C 020C7358 020C76E0 020C74A0
+# t60once 020C480C 020C4B10 020C4C04 020C4C84 020C475C 020C7358 020C76E0 020C74A0: run only inside execute's tick30 whole run (whole-frame form); never on their own N steps
+# effect calls (sound / particle starts, water pillar, shock): as many calls over the N steps as in the one step
+t60calls 025E19CC 025E1A40 025A847C 025A866C 025DAE64 025CB374
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+t60calls 02008DAC 0200E240 02018034 020182E0 020184DC 02018C8C 02018D40 020195B0 0201AD78 0201AE48 02082DDC 020C4260 020C475C 020C480C 020C4B10 020C4C04 020C6C04 020C8084 020C80B0 020CB8F0 020CB92C 024EFD9C 02515860 02515AE8 02515BBC 02515E50 025162A4 02516300 02516C14 025200D4 02520540 025D4ED0 025D50BC 025D57E0 025E535C 025E742C 0273AF40 0274D458 027F3628 028E8DD0 028E8E64 028E8F64 028F4384

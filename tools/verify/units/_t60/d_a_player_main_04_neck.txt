@@ -1,0 +1,29 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include d_a_player_main_04.txt
+# ---- 2026-11-17 (rule 2, fight root, probe5): setNeckAngle 02400C4C computes the neck look-at
+# from the frame-start head pose on a converted frame's later steps (the first step's head centre / eye point / head
+# translation / neck angles); the neck chases are central (cLib_addCalcAngleS, pinned to the frame value). The harness
+# keeps the model still between the steps, so the N-step net effect must equal the one step.
+t60conv 02400C4C
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200ECD4 0200EF78 0200F378 0200F428 0200F564 0200F5C8 0200F8D0
+t60cand 0200ECD4 0200EF78 0200F378 0200F428 0200F564 0200F5C8 0200F8D0
+# known-fail clib-real: (sweep: N-step spec N2 differs with the eases converted; new with them)
+# ---- (c_lib run converted): the eye scroll values (m_tex_eye_scroll[0/1] +0x74 / +0x78, the
+# daPy_matAnm_c pointees at 77000000 / 77000100) were unsteered and clobbered by the mocked calls, so the N-step and the
+# one-step runs started from different values (first difference 77000079 after the neck fix); steered and stable here
+# (no callee writes them). They are eased by cLib_addCalc (0.5, max 0.1 / 0.08, min 0.03 / 0.02 per 30 Hz frame) toward
+# the frame's eye target: per step the ratio form (the per-step smoothing rule), so the frame's end differs from the one ease by up to
+# the clamp allowance max(MAX, MIN) x (1 - dt) (README t60tol clamp; the target is computed in the function, not in
+# memory, hence abs with the N 4 bound 0.75 x MAX): a picture value (the eye texture scroll).
+field 02400C4C 77000074 f32 -0.2 0.2
+field 02400C4C 77000078 f32 -0.2 0.2
+field 02400C4C 77000174 f32 -0.2 0.2
+field 02400C4C 77000178 f32 -0.2 0.2
+stable 77000074 8
+stable 77000174 8
+t60tol 02400C4C 77000074 f32 abs 0.075
+t60tol 02400C4C 77000078 f32 abs 0.06
+t60tol 02400C4C 77000174 f32 abs 0.075
+t60tol 02400C4C 77000178 f32 abs 0.06

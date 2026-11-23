@@ -7,6 +7,7 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
 #include "d/actor/d_a_obj_nest.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 using daObjNest::Act_c;
 
 const gc_tu_data gc_tu = {
@@ -46,6 +47,7 @@ BOOL Act_c::Create() {
     mcsXyz_0x2E6.x = csXyz_Zero.x;
     mcsXyz_0x2E6.y = csXyz_Zero.y;
     mcsXyz_0x2E6.z = csXyz_Zero.z;
+    t60wc::noteWhole(gabi::ea(this)); /* true60: a whole-form carrier from its first frame (Link held on it) */
     return TRUE;
 }
 
@@ -91,6 +93,8 @@ void Act_c::init_mtx() {
 // HD: free callback preserves the three actor-callback arguments.
 /* 0237EBD0 */
 static void rideCB(dBgW* bgw, fopAc_ac_c* i_ac, fopAc_ac_c* i_pt) {
+    if (t60objw::cbSkip()) /* true60: a callback on each of the rider's steps: only the tick30 step's call counts */
+        return;
     Act_c* i_this = (Act_c*)i_ac;
     f32 actorDistXZ2 = fopAcM_searchActorDistanceXZ2(i_this, i_pt);
     if (actorDistXZ2 > 100.0f * 100.0f) { /* SQUARE(attr().field_0x04) */
@@ -130,7 +134,14 @@ void Act_c::vib_proc() {
 
 /* 0237EE58 */
 BOOL Act_c::Execute(Mtx34** pMtx) {
+    t60w::Guard<Act_c> t60g(this, t60objw::Logic<Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) { /* true60: a step before the tick30 step: the picture only (frame interpolation); the background stays: the
+                      * wrapper gets the actor's own mBgMtx (M_tmp_mtx is a static shared by all instances) */
+        *reinterpret_cast<gptr<Mtx34>*>(pMtx) = &mBgMtx;
+        return TRUE;
+    }
     vib_proc();
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     *reinterpret_cast<gptr<Mtx34>*>(pMtx) = &M_tmp_mtx; // HD: guest pointer representation.
     return TRUE;

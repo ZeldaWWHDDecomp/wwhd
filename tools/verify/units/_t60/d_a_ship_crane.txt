@@ -1,0 +1,51 @@
+# true60 N-step spec (not a gate unit): procCraneUp's swing decision, apart from _t60/d_a_ship because setControllAngle
+# runs real here (a mock there for the other rows)
+include d_a_ship.txt
+# ---- (q6bv, the first-step AI-timer rule / animation-driven decision): procCraneUp 0247FBC4's swing decision. The original pulls the
+# lean (setControllAngle, real here) toward mProcVar1 and then, within 0x400 of it, draws a new target (cM_rnd) and may
+# start the swing sound 0x381E, once a frame on the frame-end lean. Now: on the frame's first step against the projected
+# frame-end lean, the new target held to the tick30 step. Checked: mProcVar1 exact, the draw and the sound start counted
+# (t60calls: cM_rnd 02019788, shipHD_startSound 025E1A40) over the N steps against the one step. The lean itself is the spring of
+# setControllAngle (real, its candidate code: t60cand; cLib_addCalcAngleS's damping is a mock). Steered: the lean near the target (the
+# test's threshold reached from both sides), the crane side, the ripple emitter present (the base spec's 0 / emitter).
+t60conv 0247FBC4 024751E0
+real 024751E0
+t60cand 024751E0
+# cLib_distanceAngleS runs real (a pure helper): the test then reads the projected lean (N steps) and the pulled lean (one step)
+real 0200FAAC
+field 0247FBC4 r3+0x654 i16 -0x900 0x900
+field 0247FBC4 r3+0x656 i16 -0x200 0x200
+field 0247FBC4 r3+0x682 i16 -0x3000,0x3000
+t60tol 0247FBC4 r3+0x68E s16 exact
+# The lean and its speed are not compared here (skip). Before 2026-11-18 the damping cLib_addCalcAngleS was a mock that
+# answered every step with the one call's pointee write (traced, gen seed 1000047: P writes 0x009F / 0x0000 / 0x0061 into
+# +0x656 per step). Now it runs real (for setControllAngle's exact row below); with the skips removed procCraneUp still
+# differs on the lean on 162/4000 inputs (N 4 s1, craneaud6_try: e.g. seed 1000017 +0x654 0x2B vs 0x90 low byte). Cause
+# (crope_20 / crope_23): the steering mRopeCnt 20-22 leaves to procCrane on every step, and the harness
+# runs procCraneUp again on the later steps (the game's 30 Hz visual-motion (2) hold does not): after a swing decision the leave branch
+# applies the held target, so the extra steps pull toward it. With mRopeCnt 23..40 (no leave) the lean and speed are
+# exact: _t60/d_a_ship_crane_lean (4000/4000 N 2 / N 4 s1, N 4 s7). The spring itself is exact in
+# setControllAngle's own row (below; and _t60/d_a_ship). The decision does not read it: the first step projects the frame
+# end from the frame start (its own formula), the one step reads the lean its one pull left (the same dt-1 formula).
+t60tol 0247FBC4 r3+0x656 s16 skip
+t60tol 0247FBC4 r3+0x654 a16 skip
+t60calls 02019788 025E1A40
+# setControllAngle 024751E0 on this spec's t60conv line too (board N-step spec audit 2026-11-18: a t60cand needs an N-step compare
+# where it runs changed code). The frame-anchored lean spring (Ship60Lean) is exact against the one step only with
+# the damping cLib_addCalcAngleS 0200F378 real (tools/lean_t02.py's form; with the mock the N steps replay the one call's
+# pointee write: |d| up to 71 on the speed). Steering as its row in _t60/d_a_ship: |angle - lean| <= 0x2000, |speed| <= 0x400.
+real 0200F378
+# procCraneUp's crane turn chase cLib_addCalcAngleS(&mCraneTurnAngle +0x684) runs per step through the central converted
+# c_lib (dt share, the frame's full answer pinned on the tick30 step; exact in _t60/c_lib's N-step spec). With 0200F378 real
+# here the harness runs the ORIGINAL per step (N full moves; c_lib.cpp cannot be linked into this unit as t60cand:
+# duplicate cLib_addCalc with d_a_ship.cpp), so +0x684 is not compared here (with the mock it replayed the one write).
+t60tol 0247FBC4 r3+0x684 s16 skip
+arg! 024751E0 r4 -4096,-2048,-512,0,512,2048,4096
+field 024751E0 r3+0x654 i16 -0x1000 0x1000
+field 024751E0 r3+0x656 i16 -0x400 0x400
+t60tol 024751E0 r3+0x656 s16 exact
+t60tol 024751E0 r3+0x654 a16 exact
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200ECD4 0200EF78 0200F378 0200F428 0200F4FC 0200F564 0200F5C8 0200F8D0
+t60cand 0200ECD4 0200EF78 0200F378 0200F428 0200F4FC 0200F564 0200F5C8 0200F8D0

@@ -3,6 +3,7 @@
 #include "d/actor/d_a_door12.h"
 #include "gc_api/f_op/f_op_actor.h"
 #include "gc_api/tu.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 const gc_tu_data gc_tu = {.safeString = 0x1000DF90};
 u8 door12Arg1(daDoor12_c*);
@@ -618,6 +619,9 @@ s32 daDoor12_c::draw() {
 static s32 daDoor12_Draw(daDoor12_c* p) { return p->draw(); }
 /* 02129830 */
 static s32 daDoor12_Execute(daDoor12_c* p) {
+    t60w::Guard<daDoor12_c> t60g(p, t60objw::Logic<daDoor12_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     if (sActionGuard == 0) {
         sActionGuard = 1;
         memcpy_g(&sActions, &sActionPrototype, 16);
@@ -641,6 +645,7 @@ static s32 daDoor12_Execute(daDoor12_c* p) {
         break;
     }
     p->mRoomNo2 = sStayRoom;
+    t60g.model = true; /* true60: the frame reached its model step */
     return TRUE;
 }
 /* 02129938 */

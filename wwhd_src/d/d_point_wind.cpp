@@ -1,5 +1,8 @@
 /** Point-wind utility, WWHD. */
 #include "d/d_point_wind.h"
+#include "d/t60conv.h" /* true60: t60c::end */
+/* cLib_addCalc (0200ECD4) under a unit-local name (glue below), so an N-step spec can link c_lib.cpp's candidate */
+f32 pointWind_addCalc(be<f32>*, f32, f32, f32, f32);
 
 // HD: guest bytes for the stage name "sea".
 static const char l_sea[4] = {0x73, 0x65, 0x61, 0};
@@ -110,20 +113,24 @@ void dPointWind_c::set_pwind_move() {
         f32 half = currentRadius * 0.5f;
         cps = mpCps;
         f32 end = f32(cps->mEnd.x);
-        cLib_addCalc(&mWind.mPos.x, end, 0.1f, currentRadius, half);
+        pointWind_addCalc(&mWind.mPos.x, end, 0.1f, currentRadius, half);
         currentRadius = mWind.mRadius;
         cps = mpCps;
         half = currentRadius * 0.5f;
         end = f32(cps->mEnd.y);
-        cLib_addCalc(&mWind.mPos.y, end, 0.1f, currentRadius, half);
+        pointWind_addCalc(&mWind.mPos.y, end, 0.1f, currentRadius, half);
         currentRadius = mWind.mRadius;
         cps = mpCps;
         half = currentRadius * 0.5f;
         end = f32(cps->mEnd.z);
-        cLib_addCalc(&mWind.mPos.z, end, 0.1f, currentRadius, half);
+        pointWind_addCalc(&mWind.mPos.z, end, 0.1f, currentRadius, half);
         f32 distance = PSVECSquareDistance(&mWind.mPos, &p1);
         distance = std_sqrtf(distance);
-        if (distance < (f32)mWind.mRadius) {
+        /* true60: the chase above steps with dt (central cLib_addCalc); the restart at the end point is a
+         * decision on the frame's moved position, taken once a frame on the tick30 step (a converted caller, wind_tag
+         * 0x187, runs this on every step; tested on an earlier step it restarted up to a step early each cycle, so the
+         * cycle drifted ahead of the original's). dt 1: every step (the original). */
+        if (t60c::end() && distance < (f32)mWind.mRadius) {
             cps = mpCps;
             mWind.mPos.x = f32(cps->mStart.x);
             mWind.mPos.y = f32(cps->mStart.y);
@@ -173,7 +180,7 @@ ext 0257DE5C void dKyw_pwind_cylinder_set(PointWind::WIND_INFLUENCE*)
 ext 0257D1B8 void dKyw_pntwind_cut(PointWind::WIND_INFLUENCE*)
 ext 02563F64 void dKyr_get_vectle_calc(cXyz*, cXyz*, cXyz*)
 ext 028E8DE8 f32 PSVECSquareDistance(cXyz*, cXyz*)
-ext 0200ECD4 f32 cLib_addCalc(be<f32>*, f32, f32, f32, f32)
+ext 0200ECD4 f32 pointWind_addCalc(be<f32>*, f32, f32, f32, f32)
 ext 028ED6F8 void PointWindFirstHeaderObject_ct(u8*)
 ext 028EAB2C void PointWindSecondHeaderObject_ct(u8*)
 */

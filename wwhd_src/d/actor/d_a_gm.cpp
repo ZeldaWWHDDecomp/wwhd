@@ -6,6 +6,7 @@
  * particle and reaction layouts retain its names and the verified GHS operation order.
  */
 #include "d/actor/d_a_gm.h"
+#include "d/actor/d_a_gm_t60.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule addendum) */
 #include "bindings.h"
 #include "gc_api/d/actor/d_a_player.h"
 #include "gc_api/tu.h"
@@ -2360,6 +2361,10 @@ void action_demo(gm_class* actor) {
 
 /* 0214D128 */
 BOOL daGM_Execute(gm_class* actor) {
+    t60w::Guard<gm_class> t60g(actor, gm_t60::ops()); /* true60: the whole frame on the tick30 step */
+    if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
+    t60g.model = true;
     if ((u8)actor->mLarvaType == 0) {
         GmHD_fopAcM_setGbaName(actor, 45, 9, 38);
         if ((s16)actor->mDemoMode != 1) {
@@ -2876,7 +2881,11 @@ s32 daGM_Create(gm_class* actor) {
         actor->mEnemyFire.mFlameJntIdxs[i] = l_flameJoints.mValues[i];
         actor->mEnemyFire.mParticleScale[i] = l_flameScales.mValues[i];
     }
-    draw_SUB(actor);
+    {
+        const f32 t60PrevDt = gm_t60::createBegin(); /* true60: create's draw_SUB pose, the original at dt 1 */
+        draw_SUB(actor);
+        gm_t60::createEnd(t60PrevDt);
+    }
     specialType = actor->mType;
     if (specialType == 0) {
         actor->actor_status = ((u32)actor->actor_status | 0x04004000u) & ~0x20u;

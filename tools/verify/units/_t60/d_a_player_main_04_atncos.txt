@@ -1,0 +1,15 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+# (2026-11-20): setSpeedAndAngleAtn 02417538 / setSpeedAndAngleAtnActor 02419CC8: on the frame's
+# first step the attention moves' cosine reads the original's one turn from the frame start (d_a_player_movecos_t60.h;
+# model: lk_atnTurnCos' step turn / dt differs for |diff| < 17994).
+include d_a_player_main_04.txt
+t60conv 02417538
+t60conv 02419CC8
+# (candidate lint): in-unit callees with true60 code run as candidates
+real 02416230 0241650C
+t60cand 02416230 0241650C
+# cLib_addCalcAngleS run for real in its dt form (it was mocked: the mock ignores dt, so the first
+# step's turn share never existed and base could not fail)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200F378
+t60cand 0200F378

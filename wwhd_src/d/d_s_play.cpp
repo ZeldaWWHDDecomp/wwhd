@@ -1,6 +1,9 @@
 /* Play scene. */
 // HD: native scene, wind and resource systems extend the GameCube play scene.
 #include "d/d_s_play.h"
+#include "true60.h"
+#include "d/d_s_play_t60.h"
+#include "d/d_event_t60.h"
 const gc_tu_data gc_tu = {.safeString = 0x10052EEC, .safeStringAssure = 0x025B376C};
 const dScnPly_TuData play_tu = {0x10052FBC, 0x10052FD4,
                                 0x10052FFC, 0x10053014,
@@ -78,7 +81,9 @@ static dScnPly_EnvData g_envHIO;
 /* 025B02E8 */
 s8 dScnPly::dScnPly_ply_c::calcPauseTimer() {
     s8 next = (s8)l_timers.nextPauseTimer;
-    if (next != 0) {
+    /* true60 (follow-up, d_s_play_t60.h): a pause set on an in-between step of this frame (a converted actor's
+     * hit read before this tick30 execute) starts next frame, as the original's set after this execute */
+    if (next != 0 && !t60_next_pause_latched()) {
         l_timers.pauseTimer = next;
         l_timers.nextPauseTimer = 0;
         return next;
@@ -255,7 +260,8 @@ static BOOL dScnPly_Execute(dScnPly::dScnPly_ply_c *i_this) {
         }
     }
     dScnPly_dKy_itudemo_se();
-    if (!dScnPly_dMenu_flag() && !dScnPly_isPause()) {
+    BOOL running = !dScnPly_dMenu_flag() && !dScnPly_isPause();
+    if (running) {
         dScnPly_updateSceneSystem(gabi::ea(&i_this->mSceneSystem));
         if (i_this->mIsOcean != 0) {
             u32 wv = dScnPly_dKyw_get_wind_vec();
@@ -313,6 +319,21 @@ static BOOL dScnPly_Execute(dScnPly::dScnPly_ply_c *i_this) {
         dScnPly_processDetect(
             gabi::ea(&dScnPly_gameInfo()->play.mDetect)); /* dComIfGp_getDetect().proc() */
     }
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    // true60: the 30 Hz fallback. The next 30 Hz frame may run its N steps only when this tick30 step played
+    // the world with nothing that is still 30 Hz-only in charge: no menu or pause (the HD pause screens, hitstop: the early
+    // return above), no event (dComIfGp_event_runCheck: play.mEvtCtrl.mMode, game info + 0x5292), no message, no stage
+    // change requested. The step driver clears the flag at every 30 Hz frame, so other scenes (title, file select, the
+    // scene change itself) stay at 30 Hz. Until the event manager, messages and the demo manager are converted .
+    // (2026-11-17: the event test read play + 0x5292, i.e. game info + 0x6532, a byte that stays 0: no
+    // event ever held the world at 30 Hz. 0x5292 is the offset from the game info, not from play.)
+    dComIfG_play_c* play = &dScnPly_gameInfo()->play;
+    // (d_event_t60.h: WWHD_T60_EVENTS60 lifts the fallback for events and messages)
+    if (running && i_this->mMode == dScnPly::MODE_GAME &&
+        (((u8)play->mEvtCtrl.mMode == 0 && play->mMesgStatus == 0) || t60_events60()) &&
+        play->mNextStage.enable == 0)
+        wwhd_t60_world60 = 1;
+#endif
     mode_update(i_this);
     return TRUE;
 }

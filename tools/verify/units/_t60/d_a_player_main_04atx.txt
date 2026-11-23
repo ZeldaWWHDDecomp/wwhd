@@ -1,0 +1,39 @@
+# true60 N-step spec (not a gate unit): the one-sweep-per-frame attack rule's scope: setCollision 024076CC's
+# other Link volumes that hit, push or catch something are registered once per 30 Hz frame, for the frame's tick30
+# collision Move: the bottle swing's catch capsules (BOTTLE_OPEN with mProcVar3 on: mAtCps[0], mAtCps[1] with
+# mProcVar2), the Deku Leaf gust capsule mFanWindCps (mFanWindTimer 1..10, or the crash effect's frames) and sphere
+# mFanWindSph (mFanWindSphTimer), the Mirror Shield's reflected beam mFanLightCps (daPyRFlg0_LIGHT_REFLECT). The
+# collision space's Set (cCcS::Set 0200E240) runs for real into the pinned play state as in d_a_player_main_04at.txt:
+# the AT list (count at +0x2800) is free, the TG / CO / all lists are full, the body / wind / light cylinders' AT set
+# bit is off, so the AT list holds exactly the volumes registered in the frame: N steps must leave what one update
+# leaves (the per-step form leaves N times the entries: negative control). No sword attack (daPyRFlg0_UNK2 off).
+include d_a_player_main_04.txt
+t60conv 024076CC
+real 0200E240
+ret! 025200D4 0x54000000
+# no attack window; the light reflection on or off
+field 024076CC r3+0x3C0 u32 0,0x200000
+# the procedures: BOTTLE_OPEN, FAN_GLIDE (the gust sphere at the root joint), a wait
+field 024076CC r3+0x65F0 s32 0xA4,0x93,0
+field 024076CC r3+0x691C s16 0,1
+field 024076CC r3+0x691A s16 0,1
+# the gust's timers (the capsule 10 frames, the sphere 3 / 5)
+field 024076CC r3+0x6984 s16 0,1,5,10
+field 024076CC r3+0x698A s16 0,1,3,5
+# the collision space: AT list free (0..2 entries), TG / CO / all lists full
+field 024076CC 54004EA4 s32 0,1,2
+field 024076CC 54004EA8 s32 0x300
+field 024076CC 54004EAC s32 0x100
+field 024076CC 54004EB0 s32 0x500
+field 024076CC 540026A4 u32 0
+# AT set bit off on the body, wind and light cylinders; on for the gust capsule / sphere and the beam
+field 024076CC r3+0x765C u32 0
+field 024076CC r3+0x778C u32 0
+field 024076CC r3+0x79EC u32 0
+field 024076CC r3+0x7EC4 u32 1
+field 024076CC r3+0x7FFC u32 1
+field 024076CC r3+0x8128 u32 1
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200ECD4 0200EF78 0200F378 0200F428 0200F564 0200F5C8 0200F8D0
+t60cand 0200ECD4 0200EF78 0200F378 0200F428 0200F564 0200F5C8 0200F8D0

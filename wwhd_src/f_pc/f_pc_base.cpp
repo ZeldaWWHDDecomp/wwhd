@@ -9,6 +9,7 @@
  */
 
 #include "f_pc/f_pc_base.h"
+#include "f_pc/f_pc_t60_exec_proc.h"
 #include "gc_api/SSystem/c_malloc.h"
 #include "gc_api/f_pc/f_pc.h"
 
@@ -34,9 +35,26 @@ int fpcBs_MakeOfType(be<int>* i_type) {
     return *i_type;
 }
 
+/* true60 test aid WWHD_TEST_PROC_ID_BASE (port savestate.cpp, default off): a portable state load sets the next process id,
+ * so the new stage's processes get the same ids in both runs of a pair whatever the boot created before the load (the
+ * title's short-lived processes, 01C1, count with the async loading time; id-derived values such as the ChuChu's chase
+ * angle offset then differed). A weak definition (0: no change): the port's own definition (t60.cpp) replaces it; the
+ * verify harness links this one. */
+#ifdef GABI_GAME_BUILD
+/* the game build reads the port's definition (t60.cpp): a weak definition here let the link keep this copy (0) and the
+ * compiler fold the check away (build32: fpcBs_MakeOfId without the load, the pairs' ids 0x24x and unequal) */
+extern "C" uint32_t wwhd_test_proc_id_base;
+#else
+extern "C" __attribute__((weak)) uint32_t wwhd_test_proc_id_base = 0;
+#endif
+
 /* 025DD290 */
 fpc_ProcID fpcBs_MakeOfId() {
     static fpc_ProcID process_id = 1;
+    if (wwhd_test_proc_id_base != 0) {
+        process_id = wwhd_test_proc_id_base;
+        wwhd_test_proc_id_base = 0;
+    }
     fpc_ProcID id = process_id;
     // HD: the next id skips 0xFFFFFFFE and fpcM_ERROR_PROCESS_ID_e (GameCube: process_id++)
     fpc_ProcID next = id;
@@ -121,6 +139,7 @@ base_process_class* fpcBs_Create(s16 i_profName, fpc_ProcID i_procID, void* i_da
 
 /* 025DD538 */
 cPhs_State fpcBs_SubCreate(base_process_class* i_proc) {
+    T60_EXEC_PROC(i_proc);  // (true60 test aid: draws in the create method keyed by the created process)
     switch (fpcMtd_Create(i_proc->mpPcMtd, i_proc)) {
     case cPhs_NEXT_e:
     case cPhs_COMPLEATE_e:

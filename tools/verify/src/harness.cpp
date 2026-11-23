@@ -52,6 +52,7 @@
 #include <pthread.h>
 
 #include "gabi.h"
+#include "gabi_t60.h"     /* true60 step state (dt-1 check/N-step spec) */
 #include "unit.h"
 #include "verify_tap.h"
 #include "vm.h"
@@ -66,6 +67,13 @@ thread_local Cpu* cpu;
 static Candidate* g_cands;
 Candidate::Candidate(u32 a, const char* n, EntryFn f, RetKind r) : addr(a), name(n), fn(f), ret(r), next(g_cands) { g_cands = this; }
 }  // namespace gabi
+static gabi::EntryFn t60_cand_fn(uint32_t target); /* true60 `t60cand` (defined with the other N-step spec support) */
+static void t60_cand_run(gabi::EntryFn fn, Cpu* c);
+static gabi::EntryFn t60_self_fn(uint32_t target); /* true60 `t60self` (N-step spec support below) */
+static std::set<uint32_t> g_t60_calls;            /* true60 `t60calls` (N-step spec support below) */
+static std::set<uint32_t> g_t60_wcalls;           /* true60 `t60wcalls` (mixed whole form, N-step spec support below) */
+static std::map<uint32_t, long> g_t60_callcnt; /* this N-step spec phase's counts (target -> calls) */
+static bool g_t60_counting = false;           /* set by t60_check around its runs */
 
 extern "C" {
 int g_ppc_trace;
@@ -3050,6 +3058,24 @@ static bool g_orig_badfetch_on = false;                       /* set for a candi
     if (g_trace) printf("        fetch %08X (candidate side, depth %d): candidate-only non-code target, fault\n", target, V.depth);
     nulltrap_hit('X', target);
 }
+/* a generated mock's declared output storage on the stack (rN=outSIZE / inoutSIZE facts: ci->fill): written with bytes
+ * from the call's own hash h, the same on both sides and independent of where a side's frame put the object. Top-level
+ * mocks always did this; nested mocks (inside `real` / `t60cand` callees) do it too since 2026-11-18 (
+ * s25h): before, a nested mock left the out object unwritten, so the real caller read its own frame's stale
+ * `stackfill` bytes, which depend on the address; a candidate whose frame layout differs (t60cand code, a t60 whole-form
+ * wrapper) then read another found-actor pointer (fopAcM_SearchByName r4=out4, d_a_obj_shelf hold_event) or other
+ * vectors (PSMTXMultVec r5=out12 / mtx-to-rot r4=out6, d_a_obj_drift calc_flower_param) than the original. */
+static void mock_fill_out(const CalleeInfo* ci, const uint32_t* argr, uint64_t h) {
+    if (!ci || !ci->fill) return;
+    V.depth++;
+    for (int i = 3; i <= 10; i++)
+        if ((ci->fill >> i & 1) && ci->ptrsz[i] && ci->ptrsz[i] != 255 && ci->ptrsz[i] != 0xFFFE && in_stack(argr[i])) /* only declared output storage (rN=outSIZE / inoutSIZE) */
+            for (uint32_t j = 0; j < ci->ptrsz[i]; j += 4) {
+                uint32_t w = typed_word(hash3(h, i, j));
+                for (uint32_t b = 0; b < 4 && j + b < ci->ptrsz[i]; b++) patch8(argr[i] + j + b, (uint8_t)(w >> (24 - 8 * b)));
+            }
+    V.depth--;
+}
 static void do_call(Cpu* c, uint32_t target, int kind, int nint, int nflt) {
     /* -nulltrap: an indirect call or branch to page 0 or a non-code address is an instruction-fetch fault (ISI) on the
      * console. A page-0 target (word address below 0x1000: a NULL function pointer or vtable slot) faults on EITHER side,
@@ -3069,6 +3095,7 @@ static void do_call(Cpu* c, uint32_t target, int kind, int nint, int nflt) {
         longjmp(V.abort_jmp, 1);
     }
     dl_count_call(target); /* mockdisplaylist: GX2 commands issued into an open recording (top level and nested) */
+    if (__builtin_expect(g_t60_counting, 0) && !g_setup_what && (g_t60_calls.count(target) || g_t60_wcalls.count(target))) g_t60_callcnt[target]++; /* `t60calls` / `t60wcalls` */
     const CalleeInfo* ci = callee_info(target);
     /* a callee with a known pointee size (unit/global fact rN=SIZE or outSIZE): the candidate's gabi::Local passed
      * there must hold SIZE bytes, else the real callee reads/writes past it (game test: initTextureScroll 0x1C vs 0x40,
@@ -3155,7 +3182,8 @@ static void do_call(Cpu* c, uint32_t target, int kind, int nint, int nflt) {
         if (ci && ci->real) { /* a callee the unit lists as `real` (pure helper) also runs for real when nested */
             if (V.real_chain.size() >= g_depth_budget && V.can_abort) depth_exceeded();
             V.real_chain.push_back(target);
-            ci->real(c);
+            if (gabi::EntryFn cf = t60_cand_fn(target)) t60_cand_run(cf, c); /* `t60cand`: the candidate's own code */
+            else ci->real(c);
             V.real_chain.pop_back();
             if (g_trace) printf("        nested return %08X r3=%08X\n", target, c->r[3]);
             return;
@@ -3240,6 +3268,7 @@ static void do_call(Cpu* c, uint32_t target, int kind, int nint, int nflt) {
         }
         if (g_alloc_nested.count(target)) alloc_steer(c, target, nargr);
         if (g_nested_mockfield.count(target)) apply_mockfield(target, nargr, h); /* `nestedmockfield`: also inside real callees */
+        mock_fill_out(ci, nargr, h); /* declared stack out objects, as at top level (mock_fill_out) */
         return;
     }
     size_t k = V.calls.size();
@@ -3402,11 +3431,22 @@ static void do_call(Cpu* c, uint32_t target, int kind, int nint, int nflt) {
     if (V.is_candidate && V.depth == 0 && k < V.orig_seq.size() && V.orig_seq[k].first == target && k < V.orig_lr.size())
         c->lr = V.orig_lr[k];
 
+    if (V.is_candidate && V.depth == 0 && target == g_cur_func && t60_self_fn(target)) {
+        if (gabi::EntryFn cf = t60_self_fn(target)) { /* `t60self` (above): the candidate's whole rerun, mock stream restarted */
+            V.per_target.clear();
+            V.epoch = 0;
+            V.real_chain.push_back(target);
+            t60_cand_run(cf, c);
+            V.real_chain.pop_back();
+            return;
+        }
+    }
     if (ci && ci->real) {
         if (V.real_chain.size() >= g_depth_budget && V.can_abort) depth_exceeded();
         V.depth++;
         V.real_chain.push_back(target);
-        ci->real(c);
+        if (gabi::EntryFn cf = t60_cand_fn(target)) t60_cand_run(cf, c); /* `t60cand`: the candidate's own code */
+        else ci->real(c);
         V.real_chain.pop_back();
         V.depth--;
         return;
@@ -3578,16 +3618,7 @@ static void do_call(Cpu* c, uint32_t target, int kind, int nint, int nflt) {
             V.depth--;
         }
     }
-    if (ci) {
-        V.depth++;
-        for (int i = 3; i <= 10; i++)
-            if ((ci->fill >> i & 1) && ci->ptrsz[i] && ci->ptrsz[i] != 255 && ci->ptrsz[i] != 0xFFFE && in_stack(argr[i])) /* only declared output storage (rN=outSIZE / inoutSIZE) */
-                for (uint32_t j = 0; j < ci->ptrsz[i]; j += 4) {
-                    uint32_t w = typed_word(hash3(h, i, j));
-                    for (uint32_t b = 0; b < 4 && j + b < ci->ptrsz[i]; b++) patch8(argr[i] + j + b, (uint8_t)(w >> (24 - 8 * b)));
-                }
-        V.depth--;
-    }
+    mock_fill_out(ci, argr, h);
     apply_mockfield(target, argr, h);
 }
 
@@ -3799,6 +3830,259 @@ static const char* parse_span(const char* tok, ObservePtr& o) {
     return nullptr;
 }
 
+/* ------------------------------------------------------------------ true60 (dt-1 check / N-step spec, 2026-11-14) */
+/* The step state converted sources read (include/gabi_t60.h): defined here for every harness. dt-1 check: every run starts with
+ * it pinned to the original step (dt 1, tick30 1, N 1), so the normal bit-exact check of a converted function runs its dt
+ * code with dt = 1; a candidate that changes the state fails (`t60 step state written`). N-step spec (-t60steps N): after the
+ * normal comparison of an input, the candidate runs N times in a row at dt = 1/N (tick30 on the last step) from the
+ * input's post-setup state, each step starting from the memory the previous one left, and its net effect is compared with
+ * one candidate run at dt = 1 per the unit's `t60tol` field tolerances (README "true60"). */
+extern "C" {
+float wwhd_t60_dt = 1.0f;
+uint32_t wwhd_t60_tick30 = 1;
+uint32_t wwhd_t60_first = 1; /* the first step of a 30 Hz frame (the input read; always 1 at N = 1) */
+uint32_t wwhd_t60_stepk = 1; /* the step within the 30 Hz frame, 1..N (always 1 at N = 1) */
+uint32_t wwhd_t60_steps = 1;
+uint32_t wwhd_t60_step_counter = 0; /* true60.h t60_step_counter: host memory, never compared */
+uint32_t wwhd_t60_ismooth_peak = 0, wwhd_t60_ismooth_overflow = 0; /* true60.h (table use): never compared */
+/* true60.h set latch (c_damagereaction.h t60dr_mark_set): host memory, never compared; cleared before each
+ * input's first N-step spec step */
+static std::unordered_map<uint32_t, uint32_t> g_t60_latch;
+void wwhd_t60_latch_set(uint32_t key, uint32_t frame) { g_t60_latch[key] = frame; }
+int wwhd_t60_latch_pending(uint32_t key, uint32_t frame) {
+    auto it = g_t60_latch.find(key);
+    if (it == g_t60_latch.end()) return 0;
+    if (it->second == frame) return 1;
+    g_t60_latch.erase(it);
+    return 0;
+}
+}
+struct T60State { float dt = 1.0f; uint32_t tick30 = 1, steps = 1, first = 1, step = 1; };
+static T60State g_t60_cur;                /* the state the next run starts with */
+static int g_t60_steps = 0;               /* -t60steps N (0: N-step spec off) */
+static bool g_t60_ref_step = false;       /* N-step spec: t60_check's one step at dt 1 (the reference) is running */
+static const NetMap* g_t60_overlay = nullptr; /* N-step spec: the earlier steps' writes, installed after the setups */
+static bool g_t60_force_base = false;     /* N-step spec: every run rebases after the setups (its net effect is the function's) */
+/* whether the spec sets the frame tag word itself (t60conv.h frameTag at 101FF558): an absolute `field` or `poke` over it */
+static bool g_t60_tag_given() {
+    static int given = -1;
+    if (given < 0) {
+        given = 0;
+        for (auto& f : g_specs)
+            if (f.base_reg < 0 && f.off < 0x101FF55Cu && 0x101FF558u < f.off + (uint32_t)f.size) given = 1;
+        for (auto& p : g_poke_specs)
+            if (p.base_reg < 0 && p.off < 0x101FF55Cu && 0x101FF558u < p.off + p.size) given = 1;
+    }
+    return given != 0;
+}
+/* `t60tol FUNC|* rN+OFF|ADDR TYPE[xK] MODE [A [R]]`: a field's tolerance between N steps and one step. TYPE f32 f64 s8 u8
+ * s16 u16 s32 u32 a16 (s16 angle, difference taken mod 65536); xK: K consecutive elements. MODE exact | skip | abs A |
+ * rel R | absrel A R: |d| <= A + R * max(|one step|, |N steps|); NaN equals NaN. Bytes no `t60tol` covers: exact. */
+/* `... clamp MAX MIN TARGET [A R]` (rule 1.5.3 note): a smoothing primitive with a step clamp.
+ * MAX / MIN: the clamp limits per 30 Hz frame (fN: the entry FPR, or a number; MIN 0: none); TARGET: what the field
+ * converges to (fN, rN+OFF: K elements of TYPE in the initial memory, or a number). The xK elements form one vector.
+ * When no step (neither the one step nor any of the N steps) moved by its limit (|move| >= MAX*dt or <= MIN*dt, or ended on
+ * the target), the steps must agree to A + R*max(|one step|, |N steps|) (float rounding). When one did, the clamp-regime
+ * change allows max(MAX, MIN) * (1 - dt) more, and both results must lie between the start value and the target
+ * (convergence to the same target, no overshoot). */
+struct T60Src { int kind = 0; int reg = 0; uint32_t off = 0; double num = 0; }; /* kind 0 number, 1 FPR, 2 rN+OFF memory */
+struct T60Tol { uint32_t func; int reg; uint32_t off; int type; uint32_t count; int mode; double a, r; std::string text; T60Src cmax, cmin, ctgt; };
+enum { T60_F32, T60_F64, T60_S8, T60_U8, T60_S16, T60_U16, T60_S32, T60_U32, T60_A16 };
+enum { T60M_EXACT, T60M_SKIP, T60M_TOL, T60M_CLAMP, T60M_ORSTEPS };
+/* `... orsteps` (integer types): a per-update latch (J3DFrameCtrl mState: stop/loop flags set by the update that stops or
+ * loops, cleared by the next): the OR of its values after each of the N steps must equal the one step's value */
+static std::vector<T60Tol> g_t60_tols;
+static std::set<uint32_t> g_t60_conv;     /* `t60conv FUNC...`: the converted functions N-step spec applies to (none listed: all) */
+/* `t60nocmp FUNC...` (test units only, -t60steps): N-step spec runs even when the normal comparison differs, and the row is the
+ * N-step spec verdict alone. For a test copy whose structure differs from the original by design (t60_test.py: posMoveF with
+ * calcSpeed / posMove as plain helpers, since a nested marked function always runs as the original) */
+static std::set<uint32_t> g_t60_nocmp;
+/* `t60cand ADDR...` (2026-11-14): a `real` callee whose source is linked in the unit runs its CANDIDATE (decomp) code on
+ * the candidate side, top level and nested; the original side keeps the original. For converted callers of converted
+ * central primitives (cLib_chaseF, J3DFrameCtrl::update, ...): dt-1 check then checks the pair at dt = 1, N-step spec sees the
+ * primitives step with dt as the true60 build does. */
+static std::set<uint32_t> g_t60_cand;
+/* true60 `t60self FUNC...` (2026-11-20, rule on the YAW N-step spec): a call of the tested FUNC from its
+ * own candidate code (the whole-frame rerun of d_camera_follow_whole_t60.h: Run calls Run at dt 1 on the tick30 step) runs
+ * the candidate's own body at depth 0 instead of a mock, with the run's mock stream restarted (per-target answer
+ * indices and the epoch from 0, as at the run's start): the rerun then sees the answers the one step sees, and the
+ * N-step compare covers the whole form. Without it the self-call was a mocked callee and step 2 ended at the frame start. */
+static std::set<uint32_t> g_t60_self;
+static gabi::EntryFn t60_self_fn(uint32_t target) {
+    if (g_t60_steps <= 1 || !V.is_candidate || !g_t60_self.count(target)) return nullptr;
+    for (gabi::Candidate* c = gabi::g_cands; c; c = c->next)
+        if (c->addr == target) return c->fn;
+    return nullptr;
+}
+static gabi::EntryFn t60_cand_fn(uint32_t target) {
+    if (!V.is_candidate || g_t60_cand.empty() || !g_t60_cand.count(target)) return nullptr;
+    for (gabi::Candidate* c = gabi::g_cands; c; c = c->next)
+        if (c->addr == target) return c->fn;
+    return nullptr;
+}
+static void t60_cand_run(gabi::EntryFn fn, Cpu* c) { /* entered like a top-level candidate (its own activation, not nested) */
+    const int depth = gabi::Activation::depth;
+    const u32 current = gabi::Activation::current;
+    gabi::Activation::depth = 0;
+    fn(c);
+    gabi::Activation::depth = depth;
+    gabi::Activation::current = current;
+}
+/* `t60calls ADDR...` (2026-11-17; opt-in per spec): N-step spec also counts the candidate's calls to these targets
+ * (top level and nested in `real` callees; not in setups) over the N steps and over the one step, and the counts must be
+ * equal. For sound starts and particle emitters: a per-frame effect called on every step changes no memory the N-step spec
+ * comparison sees, so without this a missing gate shows only as a weak negative control. */
+/* (g_t60_calls, g_t60_callcnt, g_t60_counting: declared at the top, do_call counts) */
+static std::map<uint32_t, int> g_t60_ret; /* `t60ret FUNC|* exact|skip` (default exact) */
+/* `t60wcalls ADDR...` + `t60wsel FUNC|* rN+OFF|ADDR TYPE V,V,...` (2026-11-19; for the mixed
+ * form, first case d_a_nz: frames that start in the damage / bomb action run whole through t60w::Guard, every other frame
+ * per step): the whole-form calls (tools/t60conv writes them as `t60wcalls` when the spec has a `t60wsel` line) are
+ * counted like `t60calls`, but compared only for inputs whose frame-start value at the selector (the input's value after
+ * the setups, before the first step) is one of the listed values, i.e. the inputs whose frame takes the Guard path. The
+ * other inputs run per step: their calls repeat on every step by design and the N-step spec memory comparison checks them.
+ * Without a `t60wsel` line for the function, `t60wcalls` are compared on every input (= `t60calls`). The negative control
+ * (T60C_NEGCTRL: never the whole path) keeps the selector, so the selected inputs still count its repeated calls. */
+struct T60Sel { uint32_t func; int reg; uint32_t off; int type; std::set<long long> vals; };
+static std::vector<T60Sel> g_t60_wsel;
+static int t60_size(int t) { return t == T60_F64 ? 8 : (t == T60_F32 || t == T60_S32 || t == T60_U32) ? 4 : (t == T60_S8 || t == T60_U8) ? 1 : 2; }
+static void t60_set(const T60State& s) { wwhd_t60_dt = s.dt; wwhd_t60_tick30 = s.tick30; wwhd_t60_steps = s.steps; wwhd_t60_first = s.first; wwhd_t60_stepk = s.step; }
+static std::string t60_state_written() { /* after a run: did the code change the step state it was given? */
+    if (!memcmp(&wwhd_t60_dt, &g_t60_cur.dt, 4) && wwhd_t60_tick30 == g_t60_cur.tick30 && wwhd_t60_steps == g_t60_cur.steps &&
+        wwhd_t60_first == g_t60_cur.first && wwhd_t60_stepk == g_t60_cur.step) return "";
+    char b[200];
+    snprintf(b, sizeof b, "t60 step state written by the code under test (dt %g tick30 %u N %u, given dt %g tick30 %u N %u)",
+             wwhd_t60_dt, wwhd_t60_tick30, wwhd_t60_steps, g_t60_cur.dt, g_t60_cur.tick30, g_t60_cur.steps);
+    return b;
+}
+static void t60_parse(const char* kw, const char* line) {
+    char w[9][64] = {};
+    int n = sscanf(line, "%*s %63s %63s %63s %63s %63s %63s %63s %63s %63s", w[0], w[1], w[2], w[3], w[4], w[5], w[6], w[7], w[8]);
+    auto bad = [&](const char* why) {
+        fprintf(stderr, "%s:%d: invalid %s directive (%s): %s", g_spec_path, g_spec_lineno, kw, why, g_spec_line);
+        exit(2);
+    };
+    if (!strcmp(kw, "t60wsel")) { /* t60wsel FUNC|* rN+OFF|ADDR TYPE V,V,... */
+        if (n != 4) bad("t60wsel FUNC|* rN+OFF|ADDR TYPE V,V,...");
+        T60Sel s{};
+        s.func = spec_func(w[0], kw);
+        if (w[1][0] == 'r') {
+            char* plus;
+            s.reg = (int)strtol(w[1] + 1, &plus, 10);
+            if (plus == w[1] + 1 || s.reg < 3 || s.reg > 10 || (*plus && *plus != '+')) bad("register rN, 3..10");
+            s.off = *plus == '+' ? (uint32_t)spec_uint(plus + 1, 0, kw, "offset") : 0;
+        } else {
+            s.reg = -1;
+            s.off = (uint32_t)spec_uint(w[1], 16, kw, "address");
+        }
+        static const char* tn[] = {"s8", "u8", "s16", "u16", "s32", "u32"};
+        static const int tt[] = {T60_S8, T60_U8, T60_S16, T60_U16, T60_S32, T60_U32};
+        s.type = -1;
+        for (int i = 0; i < 6; i++) if (!strcmp(w[2], tn[i])) s.type = tt[i];
+        if (s.type < 0) bad("type s8 u8 s16 u16 s32 u32");
+        for (char* p = w[3]; *p;) {
+            char* e;
+            long long v = strtoll(p, &e, 0);
+            if (e == p || (*e && *e != ',')) bad("values: integers separated by commas");
+            s.vals.insert(v);
+            p = *e ? e + 1 : e;
+        }
+        g_t60_wsel.push_back(s);
+        return;
+    }
+    if (!strcmp(kw, "t60conv") || !strcmp(kw, "t60nocmp") || !strcmp(kw, "t60cand") || !strcmp(kw, "t60calls") || !strcmp(kw, "t60wcalls") || !strcmp(kw, "t60self")) { /* any number of addresses (a fixed word array took only the first few, 2026-11-14) */
+        if (n < 1) bad("t60conv|t60nocmp FUNC...");
+        std::set<uint32_t>& into = !strcmp(kw, "t60conv") ? g_t60_conv : !strcmp(kw, "t60nocmp") ? g_t60_nocmp
+                                 : !strcmp(kw, "t60calls") ? g_t60_calls : !strcmp(kw, "t60wcalls") ? g_t60_wcalls
+                                 : !strcmp(kw, "t60self") ? g_t60_self : g_t60_cand;
+        char tok[64];
+        int at = 0, used = 0;
+        if (sscanf(line, "%*s%n", &used) != 0 || used <= 0) bad("t60conv FUNC...");
+        at = used;
+        while (sscanf(line + at, "%63s%n", tok, &used) == 1) {
+            into.insert((uint32_t)spec_uint(tok, 16, kw, "function address"));
+            at += used;
+        }
+        return;
+    }
+    if (!strcmp(kw, "t60ret")) {
+        if (n != 2 || (strcmp(w[1], "exact") && strcmp(w[1], "skip"))) bad("t60ret FUNC|* exact|skip");
+        g_t60_ret[spec_func(w[0], kw)] = !strcmp(w[1], "skip");
+        return;
+    }
+    /* t60tol */
+    if (n < 4) bad("t60tol FUNC|* rN+OFF|ADDR TYPE[xK] exact|skip|abs A|rel R|absrel A R|clamp MAX MIN TARGET [A R]");
+    T60Tol t{};
+    t.text = std::string(w[1]) + " " + w[2];
+    t.func = spec_func(w[0], kw);
+    if (w[1][0] == 'r') {
+        char* plus;
+        t.reg = (int)strtol(w[1] + 1, &plus, 10);
+        if (plus == w[1] + 1 || t.reg < 3 || t.reg > 10 || (*plus && *plus != '+')) bad("register rN, 3..10");
+        t.off = *plus == '+' ? (uint32_t)spec_uint(plus + 1, 0, kw, "offset") : 0;
+    } else {
+        t.reg = -1;
+        t.off = (uint32_t)spec_uint(w[1], 16, kw, "address");
+    }
+    static const char* names[] = {"f32", "f64", "s8", "u8", "s16", "u16", "s32", "u32", "a16"};
+    std::string ty = w[2];
+    t.count = 1;
+    if (size_t x = ty.find('x'); x != std::string::npos) {
+        char* e;
+        long k = strtol(ty.c_str() + x + 1, &e, 10);
+        if (*e || k < 1 || k > 4096) bad("element count xK, 1..4096");
+        t.count = (uint32_t)k;
+        ty = ty.substr(0, x);
+    }
+    t.type = -1;
+    for (int i = 0; i < 9; i++) if (ty == names[i]) t.type = i;
+    if (t.type < 0) bad("type f32 f64 s8 u8 s16 u16 s32 u32 a16");
+    auto num = [&](const char* s) { char* e; double v = strtod(s, &e); if (!*s || *e || !(v >= 0)) bad("tolerance: a number >= 0"); return v; };
+    if (!strcmp(w[3], "exact") && n == 4) t.mode = T60M_EXACT;
+    else if (!strcmp(w[3], "skip") && n == 4) t.mode = T60M_SKIP;
+    else if (!strcmp(w[3], "abs") && n == 5) { t.mode = T60M_TOL; t.a = num(w[4]); }
+    else if (!strcmp(w[3], "rel") && n == 5) { t.mode = T60M_TOL; t.r = num(w[4]); }
+    else if (!strcmp(w[3], "absrel") && n == 6) { t.mode = T60M_TOL; t.a = num(w[4]); t.r = num(w[5]); }
+    else if (!strcmp(w[3], "orsteps") && n == 4) {
+        t.mode = T60M_ORSTEPS;
+        if (t.type == T60_F32 || t.type == T60_F64) bad("orsteps: an integer type");
+    }
+    else if (!strcmp(w[3], "clamp") && (n == 7 || n == 9)) {
+        auto src = [&](const char* s, bool mem) {
+            T60Src v;
+            if (s[0] == 'f' && isdigit((unsigned char)s[1])) {
+                char* e;
+                v.kind = 1, v.reg = (int)strtol(s + 1, &e, 10);
+                if (*e || v.reg < 1 || v.reg > 13) bad("clamp source fN, 1..13");
+            } else if (mem && s[0] == 'r' && isdigit((unsigned char)s[1])) {
+                char* plus;
+                v.kind = 2, v.reg = (int)strtol(s + 1, &plus, 10);
+                if (v.reg < 3 || v.reg > 10 || (*plus && *plus != '+')) bad("clamp target rN+OFF, 3..10");
+                v.off = *plus == '+' ? (uint32_t)spec_uint(plus + 1, 0, kw, "offset") : 0;
+            } else {
+                char* e;
+                v.num = strtod(s, &e);
+                if (!*s || *e) bad("clamp source: fN, a number (target also rN+OFF)");
+            }
+            return v;
+        };
+        t.mode = T60M_CLAMP;
+        t.cmax = src(w[4], false), t.cmin = src(w[5], false), t.ctgt = src(w[6], true);
+        if (n == 9) t.a = num(w[7]), t.r = num(w[8]);
+    }
+    else bad("mode exact | skip | abs A | rel R | absrel A R | clamp MAX MIN TARGET [A R] | orsteps");
+    g_t60_tols.push_back(t);
+}
+/* per function: the largest deviation seen per tolerance field (evidence on stderr, `t60stat` lines) */
+static std::map<std::string, std::pair<double, long>> g_t60_maxdev;
+static long g_t60_compared = 0, g_t60_noev = 0;
+static std::string t60_where(uint32_t ea, const Cpu& e) {
+    char b[48];
+    for (int r = 3; r <= 10; r++)
+        if (e.r[r] && ea - e.r[r] < 0x10000) { snprintf(b, sizeof b, "r%d+0x%X", r, ea - e.r[r]); return b; }
+    snprintf(b, sizeof b, "%08X", ea);
+    return b;
+}
+
 static void load_specs(const char* path) {
     g_spec_path = path;
     g_spec_lineno = 0;
@@ -3829,6 +4113,7 @@ static void load_specs(const char* path) {
         double lo, hi;
         int n = sscanf(line, "%31s %31s %63s %15s %lf %lf", kw, fn, where, ty, &lo, &hi);
         if (n < 1) continue;
+        if (!strcmp(kw, "t60tol") || !strcmp(kw, "t60conv") || !strcmp(kw, "t60ret") || !strcmp(kw, "t60nocmp") || !strcmp(kw, "t60cand") || !strcmp(kw, "t60calls") || !strcmp(kw, "t60wcalls") || !strcmp(kw, "t60wsel") || !strcmp(kw, "t60self")) { t60_parse(kw, line); continue; }
         if (!strcmp(kw, "mockset")) { // mockset TARGET rDST rVAL rSIZE
             unsigned target, dst, val, size;
             if (sscanf(line, "%*s %x r%u r%u r%u", &target, &dst, &val, &size) != 4 ||
@@ -5434,6 +5719,7 @@ struct Result {
     int dsi_depth = 0;
     std::vector<uint32_t> badfetch; /* -nulltrap, original side: non-code indirect call targets in call order (fetch_check) */
     std::string why;
+    std::string t60w; /* true60: the run changed the step state it was given (t60_state_written) */
     uint32_t stray = 0, first_stray = 0;
     int traps = 0;
     /* `osmem ... threads`: the run's guest-thread summary (schedule digest, per-thread call logs, deadlock) and the
@@ -5999,6 +6285,7 @@ static void run(void (*fn)(Cpu*), const Input& in, bool candidate, Result* out, 
     V.cov = cov;
     V.mode = in.recorded ? MODE_REC : MODE_GEN;
     V.rec_calls = &in.calls;
+    t60_set(g_t60_cur); /* true60: the step state this run is given (dt-1 check: the original step, dt 1 / tick30 1 / N 1) */
     V.entry_sp = in.entry.r[1];
     V.stack_lo = in.entry.r[1] - 0x10000;
     Cpu c = in.entry;
@@ -6159,7 +6446,29 @@ static void run(void (*fn)(Cpu*), const Input& in, bool candidate, Result* out, 
         }
         run_setups(g_postsetup_specs, "postsetup");
         gthr::drain();
-        if (V.mode == MODE_GEN && prestate)
+        if ((g_t60_cur.steps > 1 || g_t60_ref_step) && V.mode == MODE_GEN && !g_t60_tag_given()) {
+            /* N-step spec (2026-11-21): a fresh frame tag (t60conv.h frameTag, the game's frame counter at 101FF558)
+             * per input, the same on its N steps: without it every input shared one tag, so a held / marked entry an
+             * earlier input left looked like this frame's (tag_light's first-step hit). Not when the spec sets the word
+             * itself (field / poke tests of a stale or next-frame tag). Also on N-step spec's one step at dt 1, the
+             * reference: the word is g_Counter.mCounter0, which original code reads as data (d_a_bomb's l_counter:
+             * mMassCounter = the counter, once-per-frame sphere registration), so both sides need the same counter
+             * (the one step without it kept the generated word: d_a_bomb 1837/2000, r3+0xB48 F6 vs F3). */
+            uint64_t th = V.seed * 0xD6E8FEB86659FD93ull + 0x9E3779B97F4A7C15ull;
+            th ^= th >> 32;
+            const uint32_t tag = (uint32_t)th | 0x40000000u;
+            V.depth++;
+            for (uint32_t j = 0; j < 4; j++) patch8(0x101FF558u + j, (uint8_t)(tag >> (8 * (3 - j))));
+            V.depth--;
+            if (g_trace) printf("        t60 frame tag %08X (fresh per input)\n", tag);
+        }
+        if (g_t60_overlay && V.mode == MODE_GEN) { /* N-step spec: the earlier steps' net writes, part of this step's baseline */
+            V.depth++;
+            for (auto& kv : *g_t60_overlay) patch8(kv.first, kv.second);
+            V.depth--;
+            if (g_trace) printf("        t60 overlay: %zu bytes from the earlier steps\n", g_t60_overlay->size());
+        }
+        if (V.mode == MODE_GEN && (prestate || g_t60_force_base))
             /* the state after the setups, pokes and postsetups is the baseline (2026-10-25, AGL#18 speed; 2026-10-26: every
              * materialized byte, not only the setups' own writes, so poked bytes and mock effects inside setups count too,
              * AGL#18 027CDE3C): it is identical on both sides (the same original setups and pokes on the same input), so the
@@ -6226,6 +6535,8 @@ static void run(void (*fn)(Cpu*), const Input& in, bool candidate, Result* out, 
     }
     run_timer(false);
     V.can_abort = false;
+    out->t60w = t60_state_written();
+    t60_set(g_t60_cur); /* (an aborted run may have left it changed) */
     if (g_fast_prebase) { /* -fastreset: ended before the rebase */
         tmpl_unbaseline();
         g_fast_prebase = false;
@@ -8317,6 +8628,262 @@ static void memstat_func(uint32_t addr) {
             g_badfetch.capacity());
 }
 
+/* N-step spec (-t60steps N): N candidate steps at dt = 1/N against one candidate step at dt = 1, from the same generated input
+ * (same post-setup state, same mock answers per step, clobbering off on both). Returns the first difference ("" = within
+ * the unit's tolerances); *noev: a run aborted or stopped (no evidence, not counted). */
+static double t60_value(int type, const uint8_t* b) {
+    switch (type) {
+    case T60_F32: { uint32_t u = (uint32_t)b[0] << 24 | b[1] << 16 | b[2] << 8 | b[3]; float f; memcpy(&f, &u, 4); return f; }
+    case T60_F64: { uint64_t u = 0; for (int i = 0; i < 8; i++) u = u << 8 | b[i]; double d; memcpy(&d, &u, 8); return d; }
+    case T60_S8: return (int8_t)b[0];
+    case T60_U8: return b[0];
+    case T60_S16: case T60_A16: return (int16_t)(b[0] << 8 | b[1]);
+    case T60_U16: return (uint16_t)(b[0] << 8 | b[1]);
+    case T60_S32: return (int32_t)((uint32_t)b[0] << 24 | b[1] << 16 | b[2] << 8 | b[3]);
+    default: return (uint32_t)b[0] << 24 | b[1] << 16 | b[2] << 8 | b[3];
+    }
+}
+static std::string t60_check(const gabi::Candidate* cand, const Input& in, gabi::RetKind rk, bool* noev) {
+    *noev = false;
+    const int N = g_t60_steps;
+    const bool clob = V.clobber_now;
+    const uint64_t seed = V.seed;
+    V.clobber_now = false;
+    g_t60_force_base = true;
+    char buf[640];
+    std::string res;
+    /* the N steps: each from the state the previous ones left (their net writes, installed after the setups) */
+    std::map<uint32_t, uint8_t> comp;
+    std::vector<std::map<uint32_t, uint8_t>> snaps;
+    Result s;
+    g_t60_callcnt.clear();
+    g_t60_counting = !g_t60_calls.empty() || !g_t60_wcalls.empty();
+    for (int k = 0; k < N && res.empty() && !*noev; k++) {
+        NetMap ov;
+        for (auto& kv : comp) ov.push(kv.first, kv.second);
+        g_t60_overlay = k ? &ov : nullptr;
+        g_t60_cur = T60State{1.0f / (float)N, (uint32_t)(k == N - 1), (uint32_t)N, (uint32_t)(k == 0), (uint32_t)(k + 1)};
+        /* the step counter (true60.h) advances by one per step as in the game, so per-site carries of an input's
+         * steps continue from step to step; +2 before an input's first step leaves a gap (no carry across inputs)
+         * (2026-11-16) */
+        wwhd_t60_step_counter += k == 0 ? 2u : 1u;
+        if (k == 0) g_t60_latch.clear(); /* (the set latch starts empty for each input's steps) */
+        if (g_trace) printf("    t60 step %d of %d (dt %g tick30 %d)\n", k + 1, N, g_t60_cur.dt, k == N - 1);
+        s = Result();
+        V.seed = seed;
+        run(cand->fn, in, true, &s, nullptr);
+        g_t60_overlay = nullptr;
+        /* an aborted step (a page-0 trap, a budget) ends inside the code: a step state it changed for a stretch and puts
+         * back at its end (a dt-1 section, d_a_player_crawl_t60.h / lkT60_chaseOpen) is no evidence then */
+        if (s.aborted || s.stopped || s.dsi) *noev = true;
+        else if (!s.t60w.empty()) res = s.t60w;
+        for (auto& kv : s.net) comp[kv.first] = kv.second;
+        snaps.push_back(comp); /* the field values after each step (clamp tolerances) */
+    }
+    std::map<uint32_t, long> callsN;
+    callsN.swap(g_t60_callcnt);
+    /* the one step, last: its memory afterwards gives every byte's baseline (initial value after the setups) */
+    Result f;
+    if (res.empty() && !*noev) {
+        g_t60_cur = T60State();
+        if (g_trace) printf("    t60 one step (dt 1)\n");
+        V.seed = seed;
+        g_t60_ref_step = true; /* the same fresh frame tag as the N steps */
+        run(cand->fn, in, true, &f, nullptr);
+        g_t60_ref_step = false;
+        if (f.aborted || f.stopped || f.dsi) *noev = true;
+        else if (!f.t60w.empty()) res = f.t60w;
+    }
+    g_t60_cur = T60State();
+    g_t60_force_base = false;
+    g_t60_counting = false;
+    V.clobber_now = clob;
+    V.seed = seed;
+    if (!res.empty() || *noev) return res.empty() ? res : "t60 N=" + std::to_string(N) + ": " + res;
+    auto base8 = [](uint32_t ea) {
+        Page* p = page(ea >> 12);
+        materialize(p, ea, false);
+        uint32_t o = ea & 0xFFF;
+        return p->ch[o >> 6]->init[o & 63];
+    };
+    /* `t60wsel`: does this input's frame take the whole-form (Guard) path? (no selector for the function: always) */
+    bool wsel = true;
+    for (const T60Sel& s : g_t60_wsel) {
+        if (s.func && s.func != cand->addr) continue;
+        const uint32_t a0 = (s.reg >= 0 ? in.entry.r[s.reg] : 0) + s.off, sz = t60_size(s.type);
+        uint32_t u = 0;
+        for (uint32_t i = 0; i < sz; i++) u = (u << 8) | base8(a0 + i);
+        long long v = s.type == T60_S8 ? (long long)(int8_t)u : s.type == T60_S16 ? (long long)(int16_t)u
+                    : s.type == T60_S32 ? (long long)(int32_t)u : (long long)u;
+        wsel = s.vals.count(v) != 0;
+        break;
+    }
+    for (int pass = 0; pass < 2; pass++) { /* `t60calls`, then `t60wcalls`: as many calls over the N steps as in the one step */
+        if (pass == 1 && !wsel) break;
+        for (uint32_t t : pass ? g_t60_wcalls : g_t60_calls) {
+            long cn = callsN.count(t) ? callsN[t] : 0, c1 = g_t60_callcnt.count(t) ? g_t60_callcnt[t] : 0;
+            if (cn != c1) {
+                snprintf(buf, sizeof buf, "t60 N=%d: calls to %s: %ld over the %d steps, %ld in the one step (%s)", N,
+                         callee_name(t).c_str(), cn, N, c1, pass ? "t60wcalls" : "t60calls");
+                return buf;
+            }
+        }
+    }
+    auto valN = [&](uint32_t ea) { auto it = comp.find(ea); return it != comp.end() ? it->second : base8(ea); };
+    auto val1 = [&](uint32_t ea) { auto it = f.net.find(ea); return it != f.net.end() ? it->second : base8(ea); };
+    /* tolerance fields of this function: byte -> (field, element start) */
+    std::map<uint32_t, std::pair<const T60Tol*, uint32_t>> cover;
+    for (const T60Tol& t : g_t60_tols) {
+        if (t.func && t.func != cand->addr) continue;
+        uint32_t a0 = (t.reg >= 0 ? in.entry.r[t.reg] : 0) + t.off, sz = t60_size(t.type);
+        for (uint32_t e = 0; e < t.count; e++)
+            for (uint32_t j = 0; j < sz; j++) cover[a0 + e * sz + j] = {&t, a0 + e * sz};
+    }
+    /* orsteps: the OR over the N steps' values (each element) against the one step */
+    for (const T60Tol& t : g_t60_tols) {
+        if (t.mode != T60M_ORSTEPS || (t.func && t.func != cand->addr)) continue;
+        const uint32_t a0 = (t.reg >= 0 ? in.entry.r[t.reg] : 0) + t.off, sz = t60_size(t.type);
+        for (uint32_t e = 0; e < t.count; e++) {
+            uint8_t ob[8] = {}, b1[8];
+            for (auto& sn : snaps)
+                for (uint32_t j = 0; j < sz; j++) {
+                    auto it = sn.find(a0 + e * sz + j);
+                    ob[j] |= it != sn.end() ? it->second : base8(a0 + e * sz + j);
+                }
+            for (uint32_t j = 0; j < sz; j++) b1[j] = val1(a0 + e * sz + j);
+            auto& md = g_t60_maxdev[t.text + " (or of steps)"];
+            md.second++;
+            if (memcmp(ob, b1, sz)) {
+                md.first = std::max(md.first, 1.0);
+                snprintf(buf, sizeof buf, "t60 N=%d: %s at %s: one step %.0f, OR of the %d steps %.0f (orsteps)", N, t.text.c_str(),
+                         t60_where(a0 + e * sz, in.entry).c_str(), t60_value(t.type, b1), N, t60_value(t.type, ob));
+                return buf;
+            }
+        }
+    }
+    /* clamp tolerances: the whole xK field as one vector (see T60Tol) */
+    const std::string head0 = "t60 N=" + std::to_string(N) + ": ";
+    for (const T60Tol& t : g_t60_tols) {
+        if (t.mode != T60M_CLAMP || (t.func && t.func != cand->addr)) continue;
+        const uint32_t a0 = (t.reg >= 0 ? in.entry.r[t.reg] : 0) + t.off, sz = t60_size(t.type), K = t.count;
+        auto field = [&](auto&& byte) {
+            std::vector<double> v(K);
+            for (uint32_t e = 0; e < K; e++) {
+                uint8_t b[8];
+                for (uint32_t j = 0; j < sz; j++) b[j] = byte(a0 + e * sz + j);
+                v[e] = t60_value(t.type, b);
+            }
+            return v;
+        };
+        auto srcval = [&](const T60Src& v, uint32_t e) -> double {
+            if (v.kind == 1) return in.entry.f[v.reg].ps0;
+            if (v.kind == 2) {
+                uint8_t b[8];
+                for (uint32_t j = 0; j < sz; j++) b[j] = base8(in.entry.r[v.reg] + v.off + e * sz + j);
+                return t60_value(t.type, b);
+            }
+            return v.num;
+        };
+        std::vector<double> v0 = field(base8), x1 = field(val1), xn = field(valN), tg(K);
+        for (uint32_t e = 0; e < K; e++) tg[e] = srcval(t.ctgt, e);
+        std::vector<std::vector<double>> steps{v0};
+        for (auto& sn : snaps) steps.push_back(field([&](uint32_t ea) { auto it = sn.find(ea); return it != sn.end() ? it->second : base8(ea); }));
+        const double M = fabs(srcval(t.cmax, 0)), m = fabs(srcval(t.cmin, 0)), dt = 1.0 / N, eps = 1e-4;
+        auto dist = [&](const std::vector<double>& p, const std::vector<double>& q) {
+            double d = 0;
+            for (uint32_t e = 0; e < K; e++) d += (p[e] - q[e]) * (p[e] - q[e]);
+            return sqrt(d);
+        };
+        auto clamped = [&](const std::vector<double>& from, const std::vector<double>& to, double f) {
+            double mv = dist(from, to);
+            return mv >= M * f * (1 - eps) || (m > 0 && mv <= m * f * (1 + eps)) || dist(to, tg) == 0;
+        };
+        bool cl = clamped(v0, x1, 1.0);
+        for (size_t k = 1; k < steps.size(); k++) cl = cl || clamped(steps[k - 1], steps[k], dt);
+        bool bad_any = false;
+        double worst = 0, worst_lim = 0;
+        uint32_t we = 0;
+        for (uint32_t e = 0; e < K; e++) {
+            double x = x1[e], y = xn[e], d;
+            if (std::isnan(x) || std::isnan(y)) d = std::isnan(x) && std::isnan(y) ? 0 : INFINITY;
+            else if (std::isinf(x) || std::isinf(y)) d = x == y ? 0 : INFINITY;
+            else d = fabs(x - y);
+            const double round = t.a + t.r * std::max(fabs(x), fabs(y));
+            double lim = round + (cl ? std::max(M, m) * (1 - dt) : 0);
+            /* convergence: both between the start value and the target (not for equal results, the one step and the N
+             * steps agree: a value the caller reset after the ease, e.g. bflower's regrow to 0, lies outside on both sides) */
+            if (cl && x != y && std::isfinite(x) && std::isfinite(y)) {
+                const double lo = std::min(v0[e], tg[e]) - round, hi = std::max(v0[e], tg[e]) + round;
+                if (x < lo || x > hi || y < lo || y > hi) d = std::max(d, lim) + (std::max({lo - x, x - hi, lo - y, y - hi}));
+            }
+            auto& md = g_t60_maxdev[t.text + (cl ? " (clamp)" : " (no clamp)")];
+            md.first = std::max(md.first, d);
+            md.second++;
+            if (d != 0 && !(d <= lim) && !bad_any) bad_any = true, worst = d, worst_lim = lim, we = e;
+        }
+        if (bad_any) {
+            snprintf(buf, sizeof buf, "%s%s at %s: one step %.9g, %d steps %.9g, start %.9g, target %.9g (%s; |d| %.9g > %.9g)",
+                     head0.c_str(), t.text.c_str(), t60_where(a0 + we * sz, in.entry).c_str(), x1[we], N, xn[we], v0[we], tg[we],
+                     cl ? "a step clamped" : "no step clamped", worst, worst_lim);
+            return buf;
+        }
+    }
+    std::set<uint32_t> addrs;
+    for (auto& kv : comp) addrs.insert(kv.first);
+    for (auto& kv : f.net) addrs.insert(kv.first);
+    std::set<uint32_t> done_elem;
+    const std::string head = "t60 N=" + std::to_string(N) + ": ";
+    for (uint32_t ea : addrs) {
+        auto cv = cover.find(ea);
+        if (cv == cover.end() || cv->second.first->mode == T60M_EXACT) {
+            uint8_t x = val1(ea), y = valN(ea);
+            if (x != y) {
+                snprintf(buf, sizeof buf, "%s%s byte %s one step %02X, %d steps %02X (exact)", head.c_str(),
+                         cv == cover.end() ? "" : cv->second.first->text.c_str(), t60_where(ea, in.entry).c_str(), x, N, y);
+                return buf;
+            }
+            continue;
+        }
+        const T60Tol& t = *cv->second.first;
+        uint32_t e0 = cv->second.second;
+        if (t.mode == T60M_SKIP || t.mode == T60M_CLAMP || t.mode == T60M_ORSTEPS || !done_elem.insert(e0).second) continue; /* checked above */
+        uint8_t b1[8], bn[8];
+        for (int j = 0; j < t60_size(t.type); j++) { b1[j] = val1(e0 + j); bn[j] = valN(e0 + j); }
+        double x = t60_value(t.type, b1), y = t60_value(t.type, bn), d;
+        if (std::isnan(x) || std::isnan(y)) d = std::isnan(x) && std::isnan(y) ? 0 : INFINITY;
+        else if (std::isinf(x) || std::isinf(y)) d = x == y ? 0 : INFINITY;
+        else d = fabs(x - y);
+        if (t.type == T60_A16) d = std::min(d, 65536.0 - d);
+        double lim = t.a + t.r * std::max(fabs(x), fabs(y));
+        auto& md = g_t60_maxdev[t.text];
+        md.first = std::max(md.first, d);
+        md.second++;
+        if (d != 0 && !(d <= lim)) {
+            snprintf(buf, sizeof buf, "%s%s at %s: one step %.9g, %d steps %.9g (|d| %.9g > %.9g)", head.c_str(), t.text.c_str(),
+                     t60_where(e0, in.entry).c_str(), x, N, y, d, lim);
+            return buf;
+        }
+    }
+    int rs = 0;
+    if (auto it = g_t60_ret.find(cand->addr); it != g_t60_ret.end()) rs = it->second;
+    else if (auto it2 = g_t60_ret.find(0); it2 != g_t60_ret.end()) rs = it2->second;
+    if (!rs) {
+        if (rk == gabi::RET_FLOAT) {
+            if (!same_f(f.exit.f[1].ps0, s.exit.f[1].ps0)) {
+                snprintf(buf, sizeof buf, "%sreturn f1: one step %.9g, last of %d steps %.9g", head.c_str(), f.exit.f[1].ps0, N, s.exit.f[1].ps0);
+                return buf;
+            }
+        } else if (rk != gabi::RET_VOID) {
+            uint32_t m = rk == gabi::RET_INT1 ? 0xFF : rk == gabi::RET_INT2 ? 0xFFFF : 0xFFFFFFFF;
+            if ((f.exit.r[3] & m) != (s.exit.r[3] & m) || (rk == gabi::RET_PAIR32 && f.exit.r[4] != s.exit.r[4])) {
+                snprintf(buf, sizeof buf, "%sreturn r3: one step %08X, last of %d steps %08X", head.c_str(), f.exit.r[3], N, s.exit.r[3]);
+                return buf;
+            }
+        }
+    }
+    return "";
+}
+
 int main(int argc, char** argv) {
 #if GABI_GUEST_GUARD >= 2
     atexit(wrap_summary); /* -guardstrict build: the closing summary, also when nothing wrapped */
@@ -8406,6 +8973,10 @@ int main(int argc, char** argv) {
         else if (!strcmp(argv[i], "-spec") && i + 1 < argc) load_specs(argv[++i]);
         else if (!strcmp(argv[i], "-v")) g_verbose = ++verbose;
         else if (!strcmp(argv[i], "-noclobber")) V.clobber = false;
+        else if (!strcmp(argv[i], "-t60steps") && i + 1 < argc) { /* N-step spec: N steps at dt 1/N against one step (N 2, 4 or 8) */
+            g_t60_steps = atoi(argv[++i]);
+            if (g_t60_steps != 2 && g_t60_steps != 4 && g_t60_steps != 8) { fprintf(stderr, "invalid -t60steps (2, 4 or 8)\n"); return 2; }
+        }
         else if (!strcmp(argv[i], "-strictnan")) g_strict_nan = true;
         else if (!strcmp(argv[i], "-nulltrap")) g_nulltrap = g_nulltrap_cli = true;
         else if (!strcmp(argv[i], "-p0exclude")) g_p0exclude = true;
@@ -8795,6 +9366,16 @@ int main(int argc, char** argv) {
                           : a.aborted != b.aborted ? std::string("only one side aborted: ") + (a.aborted ? a.why : b.why)
                                                    : compare(a, b, eff_ret, in);
             if (gthr::on && d.empty() && !a.aborted && !b.aborted) d = gthr::compare(a.thr, b.thr); /* the guest threads' call logs */
+            /* `t60nocmp FUNC`: a test-only candidate whose normal comparison differs by construction (N-step spec decides the row) */
+            if (g_t60_steps > 1 && g_t60_nocmp.count(cand->addr) && !a.aborted && !b.aborted && b.t60w.empty()) d.clear();
+            if (d.empty() && !b.t60w.empty()) d = b.t60w; /* dt-1 check: the candidate changed the true60 step state */
+            if (d.empty() && g_t60_steps > 1 && !rec && !a.aborted && !b.aborted &&
+                (g_t60_conv.empty() || g_t60_conv.count(cand->addr))) { /* N-step spec: N steps against one */
+                bool noev = false;
+                d = t60_check(cand, in, eff_ret, &noev);
+                if (noev) g_t60_noev++;
+                else g_t60_compared++;
+            }
             if (gthr::on && b.dsi && !a.dsi && b.dsi_thread > 0) d += " [in guest thread T" + std::to_string(b.dsi_thread) + "]";
             if (g_p0exclude && a.p0 && !d.empty()) { /* after the original's page-0 access: no evidence (zero-page rule) */
                 if (p0x++ == 0) p0x_first = d + "  {" + in.label + "}";
@@ -9115,6 +9696,14 @@ int main(int argc, char** argv) {
             fprintf(dsiout, "# %08X done\n", cand->addr);
             fflush(dsiout);
         }
+        if (g_t60_steps > 1 && (g_t60_compared || g_t60_noev)) { /* N-step spec evidence: inputs compared, largest deviation per field */
+            fprintf(stderr, "t60stat %08X N=%d: %ld inputs compared, %ld without evidence (a step aborted)", cand->addr, g_t60_steps,
+                    g_t60_compared, g_t60_noev);
+            for (auto& kv : g_t60_maxdev) fprintf(stderr, "; %s max |d| %.9g", kv.first.c_str(), kv.second.first);
+            fprintf(stderr, "\n");
+        }
+        g_t60_maxdev.clear();
+        g_t60_compared = g_t60_noev = 0;
         uint32_t hit = 0;
         for (uint32_t k = 0; k < of->nblocks; k++) hit += cov[k] > 0;
         if (shardout) { /* @SHARD addr gpass gn rpass rn rbad aborted first_idx nblocks covered-blocks | name | first */

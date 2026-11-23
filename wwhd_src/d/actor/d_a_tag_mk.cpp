@@ -1,5 +1,6 @@
 /** Mrs. Marie event tag. HD behaviour verified against the original; local source. */
 #include "d/actor/d_a_tag_mk.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 static u32 l_msgId;
 static char* action_table[4] = {"WAIT", "MAKE", "DELETE", "SETGOAL"};
@@ -38,7 +39,10 @@ BOOL daTag_Mk_c::checkArea(f32 width, f32 depth, f32 radius) {
     cXyz relative;
     cXyz xz;
     cXyz normalized;
-    subtractPosition(&player->current.pos, &relative, &current.pos);
+    /* true60 (the process-order read rule): Link as A reads him: his frame-start position while he is later in the line */
+    gabi::Local<cXyz> fsLink;
+    cXyz* link = t60objw::fsPos(gabi::ea(player), fsLink.get()) ? fsLink.get() : &player->current.pos;
+    subtractPosition(link, &relative, &current.pos);
     xz.x = relative.x;
     xz.y = 0.0f;
     xz.z = relative.z;
@@ -344,6 +348,9 @@ BOOL daTag_Mk_c::actionDaichi() {
 }
 /* 024B0D90 */
 BOOL daTag_Mk_c::execute() {
+    t60w::Guard<daTag_Mk_c> t60g(this, t60objw::Logic<daTag_Mk_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return TRUE;
     switch (u8(mActionTypes)) {
     case ACT_ARRIVAL_e:
         actionArrival();

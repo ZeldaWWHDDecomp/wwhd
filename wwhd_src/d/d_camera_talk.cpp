@@ -6,7 +6,20 @@
  * written from the WWHD code and verified against cking.rpx.
  */
 #include "d/d_camera_talk.h"
+#include "d/d_camera_key_t60.h"
+#include "d/d_camera_engine_t60.h"
 using namespace talkDetail;
+
+/* true60 (the per-step smoothing rule / 4, the mode-start-once rule; helpers d_camera_engine_t60.h): talktoCamera runs on every
+ * logical step of the camera. The shot counter mShotFrames and the PAIR transition's weight bookkeeping (mWeightSum)
+ * count 30 Hz frames (frame end); the transition's per-frame blend k = (T - f) / W_f is applied per step as
+ * 1 - (1 - k)^dt, so the steps of a frame compose to the original frame's blend (exact for a still target). The style
+ * start block (mCurStyleTimer == 0; the ship's frame-1 block) and the shots' first-frame blocks (mShotFrames == 0) run
+ * once per start, on the first step that sees the value; the engine's own resets (a new speaker, a new shot type)
+ * are new starts. dt == 1 is the original code path. */
+static camera_key_t60::PerCam<CamStepEdge> s_talkStyleEdge;
+static camera_key_t60::PerCam<CamStepEdge> s_talkShotEdge;
+static inline bool talkShotZero(const TalkWork* w) { return w->mShotFrames == 0 && camEdgeFirst(s_talkShotEdge(), 0); }
 
 static s16 talkAngleZero;
 static s16 talkAngle90;
@@ -66,7 +79,7 @@ static void talkShoulder(dCamera_c* c, TalkWork* work, fopAc_ac_c* listener, fop
     gabi::Local<cXyz> pos;
     c->positionOf(pos, speaker);
     c->mViewCache.mCenter.copy(*pos);
-    if (work->mShotFrames == 0) {
+    if (talkShotZero(work)) { /* true60: the shot's first step */
         gabi::Local<cXyz> a, b, d, ep, sp;
         c->positionOf(a, listener);
         c->positionOf(b, speaker);
@@ -92,7 +105,7 @@ static void talkShoulder(dCamera_c* c, TalkWork* work, fopAc_ac_c* listener, fop
  * B rotated by the A -> B direction (first frame), then a fixed globe around it */
 static void talkSide(dCamera_c* c, TalkWork* work, fopAc_ac_c* A, fopAc_ac_c* B, bool side,
                      f32 ofsY, bool attnA, f32 u0, f32 u1, f32 radius, f32 lat, f32 fovy) {
-    if (work->mShotFrames == 0) {
+    if (talkShotZero(work)) { /* true60: the shot's first step */
         gabi::Local<cXyz> o, ea, ab, d, eb, x, s;
         gabi::Local<cSGlobe_l> gb, g30;
         gabi::Local<cSAngle_l> t, tmp;
@@ -153,8 +166,9 @@ bool dCamera_c::talktoCamera(s32 style) {
     f32 maxLatitude = camParamVal(style, 19);
     f32 latitudeScale = camParamVal(style, 3);
     bool ret = true;
-    if (mCurStyleTimer == 0) {
+    if (mCurStyleTimer == 0 && camEdgeFirst(s_talkStyleEdge(), 0)) { /* true60 (mode-start-once): once per style start */
         work->mShotFrames = 0;
+        camEdgeRestart(s_talkShotEdge(), 0);
         work->mSide = -1;
         work->mTransitionFrames = 20;
         work->mShotType = 0;
@@ -222,16 +236,20 @@ bool dCamera_c::talktoCamera(s32 style) {
     }
     if (work->mpPreviousSpeaker.get() != a2) {
         mCurStyleTimer = 0;
+        camEdgeRestart(s_talkStyleEdge(), 0); /* true60 (mode-start-once): a new speaker restarts the style */
         mStyleSettle0 = 0;
         work->mShotFrames = 0;
+        camEdgeRestart(s_talkShotEdge(), 0);
         work->mpPreviousSpeaker = a2;
     }
     {
         s32 t = talk_getTableIndexHD(); // HD: talk shot type
         s32 prev = work->mPreviousShotType;
         work->mShotType = t;
-        if (t != prev)
+        if (t != prev) {
             work->mShotFrames = 0;
+            camEdgeRestart(s_talkShotEdge(), 0); /* true60 (mode-start-once): a new shot */
+        }
     }
     gabi::Local<cSAngle_l> latHi, latLo, lonMax, lonMin, tmp;
     talk_angleFromDegrees(latHi.get(), maxLatitude);
@@ -239,7 +257,8 @@ bool dCamera_c::talktoCamera(s32 style) {
     talk_angleFromDegrees(lonMax.get(), 180.0f - minLongitude);
     talk_angleFromDegrees(lonMin.get(), minLongitude);
     u32 c11C = mCurStyleTimer;
-    if (c11C == 0 || (a2 != nullptr && fpcM_GetName(a2) == fpcNm_SHIP_e && c11C <= 1)) {
+    if ((c11C == 0 || (a2 != nullptr && fpcM_GetName(a2) == fpcNm_SHIP_e && c11C <= 1)) &&
+        camEdgeFirst(s_talkStyleEdge(), c11C)) { /* true60 (mode-start-once): once per frame value */
         gabi::Local<cXyz> ofs, at1, at2, ep, r;
         ofs->x = centerOffsetX;
         ofs->y = centerOffsetY;
@@ -449,7 +468,7 @@ bool dCamera_c::talktoCamera(s32 style) {
             gabi::Local<cXyz> d, s;
             gabi::Local<cSAngle_l> tb0, tae, tac;
             f32 r = (f32)(s32)((s32)work->mTransitionFrames - (s32)work->mShotFrames);
-            f32 k = r / work->mWeightSum;
+            f32 k = camStepRatio(r / work->mWeightSum); /* true60: the frame's blend per step */
             work->mFrameWeight = r;
             cXyz_mi(&work->mCenter, d, &mViewCache.mCenter);
             cXyz_ml(d, s, k);
@@ -467,9 +486,11 @@ bool dCamera_c::talktoCamera(s32 style) {
             talkEye(this);
             f32 fv = mViewCache.mFovy;
             mViewCache.mFovy = gabi::fmadds(work->mFovy - fv, k, fv);
-            work->mWeightSum = work->mWeightSum - work->mFrameWeight;
-            if ((s32)work->mShotFrames >= (s32)work->mTransitionFrames - 1)
-                flagsDone(this);
+            if (camFrameEnd()) { /* true60: 30 Hz frame bookkeeping */
+                work->mWeightSum = work->mWeightSum - work->mFrameWeight;
+                if ((s32)work->mShotFrames >= (s32)work->mTransitionFrames - 1)
+                    flagsDone(this);
+            }
             ret = false;
         }
         break;
@@ -506,7 +527,7 @@ bool dCamera_c::talktoCamera(s32 style) {
         gabi::Local<cXyz> pos;
         positionOf(pos, speaker);
         mViewCache.mCenter.copy(*pos);
-        if (work->mShotFrames == 0) {
+        if (talkShotZero(work)) { /* true60: the shot's first step */
             gabi::Local<cXyz> e1, e2, d;
             eyePos(e1, listener);
             eyePos(e2, speaker);
@@ -555,7 +576,7 @@ bool dCamera_c::talktoCamera(s32 style) {
         fopAc_ac_c* Y = (type == TALK_CLOSEUP_B || type == TALK_CLOSEUP_WIDE_B) ? a1 : a2;
         bool side = (type == TALK_CLOSEUP_B || type == TALK_CLOSEUP_WIDE_B) ? (work->mSide != 0)
                                                                             : (work->mSide == 0);
-        if (work->mShotFrames != 0)
+        if (!talkShotZero(work)) /* true60: the shot's first step only */
             break;
         gabi::Local<cXyz> e1, pX, eY, o, oB, a, b, d, x, s;
         gabi::Local<cSGlobe_l> g164, g30;
@@ -609,7 +630,7 @@ bool dCamera_c::talktoCamera(s32 style) {
         break;
     }
     case TALK_WIDE: {
-        if (work->mShotFrames == 0)
+        if (talkShotZero(work))
             flagsDone(this);
         mViewCache.mCenter.copy(work->mCenter);
         gabi::Local<cSAngle_l> l, step, t18;
@@ -655,7 +676,7 @@ bool dCamera_c::talktoCamera(s32 style) {
         break;
     }
     case TALK_MIDPOINT: {
-        if (work->mShotFrames == 0)
+        if (talkShotZero(work))
             flagsDone(this);
         gabi::Local<cXyz> b, a, d, h, c;
         gabi::Local<cSGlobe_l> g;
@@ -691,7 +712,8 @@ bool dCamera_c::talktoCamera(s32 style) {
         break;
     }
     work->mPreviousShotType = work->mShotType;
-    work->mShotFrames = work->mShotFrames + 1;
+    if (camFrameEnd()) /* true60 (the 30 Hz timer rule): the shot counter counts 30 Hz frames */
+        work->mShotFrames = work->mShotFrames + 1;
     return ret;
 }
 

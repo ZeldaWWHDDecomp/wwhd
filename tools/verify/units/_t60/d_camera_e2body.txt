@@ -1,0 +1,105 @@
+# true60 N-step spec (not a gate unit): hungCamera's settled body and rideCamera after its start step (
+#). Per 30 Hz frame these chase with fixed ratios r (centre follow, stick,
+# radius, latitude, fovy, ride's 0.08 radius / latitude / speed-scale chases, 0.05 / 0.1 side offset, 0.2 centre
+# follow); at N steps each ratio is 1 - (1 - r)^dt per step (e2R); the frame counts (hung's mFrameWeight in the fall,
+# mFallFrames) and ride's transition settle change on the frame's end step only; ride's transition share
+# k = 1 / (T - timer) per frame is e2R(k) per step. Timer >= 1 (no start step; the start: d_camera_e2start.txt).
+# Counts, flags, tags, the steering flag and the settle exact (no line); chased floats absrel; NaN fails by itself.
+# Not checked (mocked helpers: the harness answers each step alike): the view angles, centre, eye, bank, hung's work
+# centre and ride's centre target (cXyz / cSAngle / cSGlobe helpers are mocks, see d_camera.txt).
+include d_camera.txt
+include shared/c_angle_statics.txt
+t60conv 0250EF98 0250D4E8
+# the play object on every call (the dt-1 check line leaves 1 call in 8 to the generated answer: a status re-read inside the
+# body then sees a random status, e.g. hung's fall count reset without the fall bit, a mock artefact between steps)
+ret! 025200D4 0x54000000 0x54000000
+# Link's position (positionOf 024F8D5C, a mock): y 100 on every call. The body reads it twice (the smoothed player
+# height's chase, then the fall test y < height - 1); different answers per call flip the test between the steps
+# (the height moves per step), a mock artefact: with one position the test on the frame's last step sees the same
+# height as the one step (the chase composes), and an earlier step's reset or blend move is redone by the last step
+mockfield 024F8D5C r4+0x4 f32 100
+# ---- hungCamera: settled (mStyleSettle0 1)
+# the hung styles (style table 0x1004487C, engine 9): 34 HP16, 35 HN16
+arg! 0250EF98 r4 34,35
+field 0250EF98 r3+0x100 u8 1
+field 0250EF98 r3+0x11C u32 1,9,30,200
+field 0250EF98 r3+0x37C u32 0x48554E47
+field 0250EF98 r3+0x388 f32 0,1,4,20
+field 0250EF98 r3+0x390 i32 10,12
+field 0250EF98 r3+0x398 f32 -1000 1000
+field 0250EF98 r3+0x3A8 f32 0 1
+field 0250EF98 r3+0x3B0 f32 -1000 1000
+field 0250EF98 r3+0x3DC f32 0.6
+field 0250EF98 r3+0x3E0 f32 0.6
+field 0250EF98 r3+0x3C f32 100 1000
+field 0250EF98 r3+0x40 i16 -12288 12288
+field 0250EF98 r3+0x42 i16 -32768 32767
+field 0250EF98 r3+0x44 f32 -1000 1000
+field 0250EF98 r3+0x48 f32 -1000 1000
+field 0250EF98 r3+0x4C f32 -1000 1000
+field 0250EF98 r3+0x50 f32 -1000 1000
+field 0250EF98 r3+0x54 f32 -1000 1000
+field 0250EF98 r3+0x58 f32 -1000 1000
+field 0250EF98 r3+0x60 f32 30 90
+# The radius (e2Blend): the frame's target R = b + (T - b) x c (b the eye-centre distance g or, in the bud, the radius;
+# T the limit and the C stick's 80 / 700) is exact per step where b = the radius. The harness's g is a mock (cSGlobe(const
+# cXyz&) 02007324) that does not follow the radius, so the radius is checked where the base is the radius or the
+# target does not involve g: the bud (status 0x80, 0x80000080 with the fall count >= 10: the bud branch), the hang /
+# plain body with g in HN16's band 320..350 (R = g, a fixed target) or above HP16's 200 / 200 (l = 1: R = 200). The fall
+# branch (R = g blended by the stick) is in d_camera_e2stick.txt with the radius skipped. The stick is settled at 0.6
+# (rationalBezierRatio 024F6F9C answers 0.6, mStickX / mStickY 0.6), so its blend weight is the same on every step.
+mockfield 02007324 r3+0x0 f32 320,335,350
+fret! 024F6F9C 0.6 0.6
+field 0250EF98 54005CD8 u32 0,0x80,0x100,0x80000080
+t60tol 0250EF98 r3+0x3C f32 absrel 0.001 0.0001
+t60tol 0250EF98 r3+0x40 a16x2 skip
+t60tol 0250EF98 r3+0x44 f32x6 skip
+t60tol 0250EF98 r3+0x60 f32 absrel 0.0001 0.0001
+t60tol 0250EF98 r3+0x398 f32 absrel 0.001 0.0001
+t60tol 0250EF98 r3+0x3A8 f32 absrel 0.0001 0.0001
+t60tol 0250EF98 r3+0x3DC f32x2 absrel 0.0001 0.0001
+# ---- rideCamera: the transition (mStyleSettle0 0; entry mode 0: T 20, 1: T 40, 2: no share) at timers 1..19 and
+# the settled body (mStyleSettle0 1)
+# the ride styles (engine 8): 26 BW07, 32 BP07, 36 BN07, 41 BP08, 42 BN08, 110 BE08, 111 BE07
+arg! 0250D4E8 r4 26,32,36,41,42,110,111
+# the ride globe (cSGlobe::Val(f32, s16, s16) 02006FE4, a mock) gets radius 500: the radius target of the transition
+# (entry mode 0) and of the settled body's follow chase is then a fixed 500, not the stack fill
+mockfield 02006FE4 r3+0x0 f32 500
+field 0250D4E8 r3+0x100 u8 0,1
+field 0250D4E8 r3+0x11C u32 1,2,5,10,18,19
+field 0250D4E8 r3+0x37C u32 0x52494445
+field 0250D4E8 r3+0x38C i32 0,1,2
+field 0250D4E8 r3+0x3B8 f32 100 2000
+field 0250D4E8 r3+0x3BC f32 -500 500
+field 0250D4E8 r3+0x3C0 f32 -60 60
+field 0250D4E8 r3+0x3C4 f32 -60 60
+field 0250D4E8 r3+0x3C8 f32 -1 1
+field 0250D4E8 r3+0x3CC f32 0.2 1
+field 0250D4E8 r3+0x3C f32 100 1000
+field 0250D4E8 r3+0x40 i16 -12288 12288
+field 0250D4E8 r3+0x42 i16 -32768 32767
+field 0250D4E8 r3+0x44 f32 -1000 1000
+field 0250D4E8 r3+0x48 f32 -1000 1000
+field 0250D4E8 r3+0x4C f32 -1000 1000
+field 0250D4E8 r3+0x50 f32 -1000 1000
+field 0250D4E8 r3+0x54 f32 -1000 1000
+field 0250D4E8 r3+0x58 f32 -1000 1000
+field 0250D4E8 r3+0x60 f32 30 90
+t60tol 0250D4E8 r3+0x3C f32 absrel 0.001 0.0001
+t60tol 0250D4E8 r3+0x40 a16x2 skip
+t60tol 0250D4E8 r3+0x44 f32x6 skip
+t60tol 0250D4E8 r3+0x5C a16 skip
+t60tol 0250D4E8 r3+0x60 f32 absrel 0.0001 0.0001
+t60tol 0250D4E8 r3+0x3A8 f32x3 skip
+t60tol 0250D4E8 r3+0x3B8 f32x6 absrel 0.001 0.0001
+# constructors return this (see d_camera.txt's N-step spec: else page-0 DSI in the original)
+retarg 0200658C r3
+retarg 020066C0 r3
+retarg 02006644 r3
+retarg 020065FC r3
+retarg 02007248 r3
+retarg 02007324 r3
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200ECD4 0200F5C8
+t60cand 0200ECD4 0200F5C8

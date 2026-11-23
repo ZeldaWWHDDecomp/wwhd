@@ -9,6 +9,7 @@
 #include "d/actor/d_a_obj_ladder.h"
 #include "gc_api/f_op/f_op_actor_mng.h"
 #include "gc_api/d/d_com_inf_game.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 const gc_tu_data gc_tu = {
     .safeString = 0x1002BD20,
@@ -241,6 +242,12 @@ void Act_c::init_mtx() {
 
 /* 02369638 */
 BOOL Act_c::Execute(gptr<Mtx34>* ppMtx) {
+    t60w::Guard<daObjLadder::Act_c> t60g(this, t60objw::Logic<daObjLadder::Act_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) { /* true60: a step before the tick30 step: the picture only (frame interpolation); the background stays: the
+                      * wrapper gets the actor's own mBgMtx (M_tmp_mtx is a static shared by the ladders) */
+        *ppMtx = &mBgMtx;
+        return TRUE;
+    }
     // HD: GHS stores each member-function descriptor in eight bytes.
     static LadderModeEntry mode_proc[] = {
         {&Act_c::mode_wait}, {&Act_c::mode_demoreq}, {&Act_c::mode_vib},
@@ -249,6 +256,7 @@ BOOL Act_c::Execute(gptr<Mtx34>* ppMtx) {
     demo_end_reset();
     (this->*mode_proc[mMode].proc)();
     eyePos.y = current.pos.y;
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     // HD: the output slot contains a four-byte guest pointer.
     *ppMtx = &M_tmp_mtx;

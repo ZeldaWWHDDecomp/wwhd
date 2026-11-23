@@ -1,5 +1,6 @@
 // WWHD controller registration and lookup. Reconstructed from local instructions.
 #include "sead/Controller.h"
+#include "true60.h"
 #include "sead/ElementAt.h"
 
 static sead::ControllerManager* sControllerManager;
@@ -146,7 +147,9 @@ void sead::Controller::calc() {
     u32 wrapperOffset = mWrappers.mMemberOffset;
     be<u8>* wrapper = reinterpret_cast<be<u8>*>(mWrappers.mNext.get()) - wrapperOffset;
     sentinel = reinterpret_cast<be<u8>*>(&mWrappers) - wrapperOffset;
-    if (idle) mIdleFrames = (u32)mIdleFrames + 1;
+    // (true60 per-step input: the idle count counts 30 Hz frames: on the frame's first read only, true60.h t60_in_later)
+    if (t60_in_later()) {
+    } else if (idle) mIdleFrames = (u32)mIdleFrames + 1;
     else mIdleFrames = 0;
     while (wrapper != sentinel) {
         ControllerWrapper* object = reinterpret_cast<ControllerWrapper*>(wrapper);

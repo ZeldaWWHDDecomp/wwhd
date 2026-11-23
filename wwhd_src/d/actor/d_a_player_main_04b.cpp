@@ -9,6 +9,13 @@
  * Canonical GameCube methods use the shared Link declarations; HD adapters retain the fixed GHS ABI.
  */
 #include "d/actor/d_a_player_main_04b.h"
+#include "d/actor/d_a_player_anm_t60.h"
+#include "true60.h"
+#include "d/actor/d_a_player_t60.h"
+#include "d/actor/d_a_player_maba_t60.h"
+#include "d/actor/d_a_player_atnturn_t60.h"
+#include "d/actor/d_a_player_waitturn_t60.h"
+#include "d/actor/d_a_player_movecos_t60.h"
 #include "d/d_com_lib_game.h"
 
 static void* daPy_lk_ct(void*);
@@ -393,17 +400,66 @@ f32 daPy_lk_c::getCrawlMoveAnmSpeed() {
     return 1.0f + (s + s); /* HD: getAnmSpeedStickRate(HIO) folded */
 }
 
+/* true60: the attention moves take their target speed from cos(the turn this call made): k x stick x
+ * cos(current.angle.y - before). That turn is a per-frame amount (cLib_addCalcAngleS: a step turns its share of
+ * the frame's turn), so at N steps the cosine of a step's share would lift the target speed while Link turns (cos of
+ * half the angle). The turn is read as a per-frame rate: the step's turn / dt (clamped to the s16 range); dt = 1: the
+ * original cosine of the turn itself (bit-exact). */
+/* true60 (N-step spec atncos with the movecos form really run; the base without the form failed alike, NC(a) q87f3
+ * 1914 / 1929 of 2000): the attention moves turn the walk around (current.angle.y - 0x8000, mNormalSpeed negated) when
+ * the stick points backward from current.angle.y. The original tests that once a frame, on the frame-start angle; per
+ * step the test ran again on the angle the earlier step's partial turn left and flipped a second time (seed 1000008:
+ * one step 06D7, two steps 90B0; the speed negated twice under the held setNormalSpeedF). Form: on a converted frame
+ * the test runs on the first call of the frame only (the first step, or the first step a move of this proc runs in the
+ * frame); a later step right after a call on the step before keeps that decision. dt 1: always (the original). */
+static uint32_t g_lkT60AtnFlipStep = 0xFFFFFFFFu, g_lkT60AtnFlipKey = 0;
+static inline bool lkT60_atnFlipTest(uint32_t key) {
+    if (t60::dt() == 1.0f)
+        return true;
+    const uint32_t now = t60_step_counter();
+    const bool test = t60::first_step() || g_lkT60AtnFlipKey != key || g_lkT60AtnFlipStep + 1 != now;
+    g_lkT60AtnFlipStep = now;
+    g_lkT60AtnFlipKey = key;
+    return test;
+}
+/* true60: setSpeedAndAngleNormal's shape yaw snap on a converted frame (host state; see there) */
+struct LkT60ShapeSnap {
+    uint32_t firstStep = 0xFFFFFFFFu, lastStep = 0xFFFFFFFFu; /* step counters: the frame's first step, the last snap step */
+    s16 startY = 0, easeY = 0, snapY = 0;                     /* frame-start shape yaw, the chase's own value, the snap */
+    bool snapped = false;
+};
+static LkT60ShapeSnap g_lkT60ShapeSnap;
+static inline f32 lk_atnTurnCos(s16 turn) {
+    if (t60::dt() == 1.0f) {
+        return cM_scos(turn);
+    }
+    f32 rate = (f32)turn / t60::dt();
+    if (rate > 32767.0f) {
+        rate = 32767.0f;
+    } else if (rate < -32768.0f) {
+        rate = -32768.0f;
+    }
+    return cM_scos((s16)rate);
+}
+/* true60 (d_a_player_movecos_t60.h): on the frame's first step at N > 1 (the speed chase runs there once, rule (a))
+ * the cosine of the original's one turn from the frame start; else lk_atnTurnCos */
+static inline f32 lk_atnTurnCosFrame(s16 origAngleY, s16 turnedAngleY, s32 target) {
+    if (lkT60_moveCosStep())
+        return cM_scos((s16)(lkT60_moveCosAngle(origAngleY, turnedAngleY, target, 0xBB8, 0x7D0, 6) - origAngleY));
+    return lk_atnTurnCos((s16)(turnedAngleY - origAngleY));
+}
+
 /* 0241699C */
 void daPy_lk_c::setSpeedAndAngleAtnBack() {
     f32 f1;
     if (mStickDistance > 0.05f) {
-        if (getDirectionFromCurrentAngle() == player04b::DIR_BACKWARD) {
+        if (lkT60_atnFlipTest(gabi::ea(&mCurProc)) && getDirectionFromCurrentAngle() == player04b::DIR_BACKWARD) { /* true60 */
             current.angle.y = (s16)(current.angle.y - 0x8000);
             mNormalSpeed = -mNormalSpeed;
         }
         s16 origAngleY = current.angle.y;
         cLib_addCalcAngleS(&current.angle.y, mMoveTargetAngleY, 6, 0xBB8, 0x7D0); /* HD: HIO folded */
-        f1 = (2.5f * mStickDistance) * cM_scos((s16)(current.angle.y - origAngleY));
+        f1 = (2.5f * mStickDistance) * lk_atnTurnCos((s16)(current.angle.y - origAngleY)); /* true60: lk_atnTurnCos */
     } else {
         f1 = 0.0f;
     }
@@ -440,13 +496,13 @@ void daPy_lk_c::setAngleAtnHD() {
 /* 02416B70 */
 void daPy_lk_c::setSpeedAndAngleAtnNoShapeHD() {
     if (mStickDistance > 0.05f) {
-        if (getDirectionFromCurrentAngle() == 1) {
+        if (lkT60_atnFlipTest(gabi::ea(&mCurProc)) && getDirectionFromCurrentAngle() == 1) { /* true60 */
             current.angle.y = (s16)(current.angle.y - 0x8000);
             mNormalSpeed = -mNormalSpeed;
         }
         s16 origAngleY = current.angle.y;
         cLib_addCalcAngleS(&current.angle.y, mMoveTargetAngleY, 6, 0xBB8, 0x7D0);
-        f32 f1 = (5.0f * mStickDistance) * cM_scos((s16)(current.angle.y - origAngleY));
+        f32 f1 = (5.0f * mStickDistance) * lk_atnTurnCos((s16)(current.angle.y - origAngleY)); /* true60: lk_atnTurnCos */
         setNormalSpeedF(f1, 0.5f, 7.5f, 4.0f);
     } else {
         setNormalSpeedF(0.0f, 0.5f, 7.5f, 4.0f);
@@ -498,13 +554,13 @@ void daPy_lk_c::setSpeedAndAngleAtn() {
     }
     f32 f1;
     if (mStickDistance > 0.05f) {
-        if (getDirectionFromCurrentAngle() == 1) {
+        if (lkT60_atnFlipTest(gabi::ea(&mCurProc)) && getDirectionFromCurrentAngle() == 1) { /* true60 */
             current.angle.y = (s16)(current.angle.y - 0x8000);
             mNormalSpeed = -mNormalSpeed;
         }
         s16 origAngleY = current.angle.y;
         cLib_addCalcAngleS(&current.angle.y, mMoveTargetAngleY, 6, 0xBB8, 0x7D0);
-        f1 = (5.0f * mStickDistance) * cM_scos((s16)(current.angle.y - origAngleY));
+        f1 = (5.0f * mStickDistance) * lk_atnTurnCosFrame(origAngleY, current.angle.y, mMoveTargetAngleY); /* true60 */
     } else {
         f1 = 0.0f;
     }
@@ -526,9 +582,34 @@ BOOL daPy_lk_c::procAtnMove() {
 /* 02419C70 */
 void daPy_lk_c::setShapeAngleToAtnActor() {
     if (mpAttnActorLockOn != NULL) {
-        s16 targetAngle = cLib_targetAngleY(&current.pos, &mpAttnActorLockOn->eyePos);
+        s16 targetAngle;
+        if (!lkT60_fsSelfTargetAngleY(this, mpAttnActorLockOn.get(), &mpAttnActorLockOn->eyePos, &targetAngle) && /* true60: process-order read, Link's frame-start pos */
+            !lkT60_fsTargetAngleY(&current.pos, mpAttnActorLockOn.get(), 0, &targetAngle)) /* true60: the process-order read rule */
+            targetAngle = cLib_targetAngleY(&current.pos, &mpAttnActorLockOn->eyePos);
         cLib_addCalcAngleS(&shape_angle.y, targetAngle, 2, 0x2000, 0x800);
     }
+}
+
+/* true60 (pair f182): procAtnActorMove's
+ * stick turn in the frame form (the rule names it procAtnMove after AtnActorWait: the pair's proc 9 is
+ * daPyProc_ATN_ACTOR_MOVE_e). A turns current.angle.y by the frame's whole amount in its one update
+ * (cLib_addCalcAngleS, scale 6, 0xBB8 / 0x7D0) and the frame's move (posMove, after the procedure) runs along the end
+ * direction. Per step B turned its dt share (1500) and the first half step moved along the half-turned direction
+ * (|d| 0.87 -> 2.35 at f179..187; the f77..85 offset 0.6 the same). Form: in procAtnActorMove's call of
+ * setSpeedAndAngleAtnActor the stick turn is decided once, whole at dt 1 on the frame's first step; the frame's later
+ * steps do not turn, so every step moves its share along the frame-end direction. The first step's cosine already reads
+ * the whole turn (lk_atnTurnCosFrame). Only procAtnActorMove's call (host flag around it); procAtnActorWait and the
+ * other callers keep their forms; the shape chase (setShapeAngleToAtnActor) is unchanged.
+ * LKT60_ATNMOVE_NEGCTRL: the per-step form (negative control). dt = 1 (N = 1): never (the original call). */
+static bool g_lkT60AtnMoveCall = false;
+enum { LKT60_ATNMOVE_STEP = 0, LKT60_ATNMOVE_WHOLE = 1, LKT60_ATNMOVE_HELD = 2 };
+static inline int lkT60_atnMoveTurn() {
+#ifdef LKT60_ATNMOVE_NEGCTRL
+    return LKT60_ATNMOVE_STEP;
+#endif
+    if (!g_lkT60AtnMoveCall || t60::dt() == 1.0f)
+        return LKT60_ATNMOVE_STEP;
+    return t60::first_step() ? LKT60_ATNMOVE_WHOLE : LKT60_ATNMOVE_HELD;
 }
 
 /*  (not named by the matcher, which put the name on ) */
@@ -536,15 +617,26 @@ void daPy_lk_c::setShapeAngleToAtnActor() {
 void daPy_lk_c::setSpeedAndAngleAtnActor() {
     f32 f1;
     if (mStickDistance > 0.05f) {
-        if (getDirectionFromCurrentAngle() == player04b::DIR_BACKWARD) {
+        if (lkT60_atnFlipTest(gabi::ea(&mCurProc)) && getDirectionFromCurrentAngle() == player04b::DIR_BACKWARD) { /* true60 */
             current.angle.y = (s16)(current.angle.y - 0x8000);
             mNormalSpeed = -mNormalSpeed;
         }
         s16 origAngleY = current.angle.y;
-        cLib_addCalcAngleS(&current.angle.y, mMoveTargetAngleY, 6, 0xBB8, 0x7D0);
-        f1 = (5.0f * mStickDistance) * cM_scos((s16)(current.angle.y - origAngleY));
+        if (lkT60_atnTurnRecordStep()) /* true60: 30 Hz visual-motion (2) addendum (no extra guest reads at dt 1) */
+            lkT60_atnTurnRecord(true, origAngleY, mMoveTargetAngleY, shape_angle.y);
+        const int lkT60Turn = lkT60_atnMoveTurn(); /* true60: procAtnActorMove's turn once a frame, whole */
+        if (lkT60Turn == LKT60_ATNMOVE_STEP) {
+            cLib_addCalcAngleS(&current.angle.y, mMoveTargetAngleY, 6, 0xBB8, 0x7D0);
+        } else if (lkT60Turn == LKT60_ATNMOVE_WHOLE) {
+            f32 previousDt = t60_set_dt(1.0f);
+            cLib_addCalcAngleS(&current.angle.y, mMoveTargetAngleY, 6, 0xBB8, 0x7D0);
+            t60_set_dt(previousDt);
+        }
+        f1 = (5.0f * mStickDistance) * lk_atnTurnCosFrame(origAngleY, current.angle.y, mMoveTargetAngleY); /* true60 */
     } else {
         f1 = 0.0f;
+        if (lkT60_atnTurnRecordStep()) /* true60: 30 Hz visual-motion (2) addendum (no extra guest reads at dt 1) */
+            lkT60_atnTurnRecord(false, current.angle.y, mMoveTargetAngleY, shape_angle.y);
     }
     setShapeAngleToAtnActor();
     setNormalSpeedF(f1, 0.5f, 7.5f, 4.0f);
@@ -559,13 +651,26 @@ BOOL daPy_lk_c::procAtnActorWait() {
         } else {
             setBlendMoveAnime(-1.0f);
         }
+    } else if (const LkT60AtnTurn* t = lkT60_atnTurnCatchUp(gabi::ea(&mCurProc))) {
+        /* true60 (30 Hz visual-motion (2) addendum, d_a_player_atnturn_t60.h): the frame's later steps are held: this step turns the
+         * whole frame's share, from the frame's start at dt 1 */
+        f32 previousDt = t60_set_dt(1.0f);
+        if (t->turned) {
+            current.angle.y = t->angle;
+            cLib_addCalcAngleS(&current.angle.y, t->target, 6, 0xBB8, 0x7D0);
+        }
+        shape_angle.y = t->shape;
+        setShapeAngleToAtnActor();
+        t60_set_dt(previousDt);
     }
     return TRUE;
 }
 
 /* 02419E70 */
 BOOL daPy_lk_c::procAtnActorMove() {
+    g_lkT60AtnMoveCall = true; /* true60: see lkT60_atnMoveTurn */
     setSpeedAndAngleAtnActor();
+    g_lkT60AtnMoveCall = false;
     if (!checkNextMode(0) && !checkIceSlipFall()) {
         setBlendAtnMoveAnime(-1.0f);
     }
@@ -772,6 +877,13 @@ int daPy_lk_c::getCrawlMoveVec(cXyz* start, cXyz* end, cXyz* moveVec) {
 
 /* 02416230 */
 void daPy_lk_c::setNormalSpeedF(f32 acceleration, f32 decelerationRate, f32 maxDeceleration, f32 minDeceleration) {
+    /* true60 (rule (a), 2026-11-17): the frame's speed change once, on the frame's first step at dt 1 (the
+     * acceleration and the deceleration chase below), held over the frame's later steps (d_a_player_t60.h, speed
+     * chases): every step moves dt of the frame's end speed, the frame's move is the original's */
+    if (lkT60_chaseHeld(0, &mNormalSpeed, &mCurProc)) {
+        return;
+    }
+    lkT60_chaseOpen();
     f32 maxSpeed;
     if (dComIfGp_event_runCheck() ||
         checkHeavyStateOn() ||
@@ -782,6 +894,7 @@ void daPy_lk_c::setNormalSpeedF(f32 acceleration, f32 decelerationRate, f32 maxD
         maxSpeed = (mMaxNormalSpeed * st) * st;
     }
     if (mDemo.mDemoMode == daPy_demo_c::DEMO_KEEP_e || getSlidePolygon() != 0) {
+        lkT60_chaseClose(0, &mNormalSpeed, &mCurProc);
         return;
     }
     if (mAcch.m_flags & dBgS_Acch::WALL_HIT) {
@@ -819,7 +932,9 @@ void daPy_lk_c::setNormalSpeedF(f32 acceleration, f32 decelerationRate, f32 maxD
         targetSpeed = 0.0f;
     }
     if (!(std::fabs(acceleration) < 3.8146973e-06f)) { /* !cM3d_IsZero(acceleration) */
-        f32 s = normalSpeed + acceleration;
+        /* true60: the acceleration is per frame, a step adds dt of it (the deceleration below goes
+         * through cLib_addCalc, which takes dt itself) */
+        f32 s = t60::dt() != 1.0f ? normalSpeed + acceleration * t60::dt() : normalSpeed + acceleration;
         if (s > maxSpeed) {
             mNormalSpeed = maxSpeed;
         } else {
@@ -828,6 +943,7 @@ void daPy_lk_c::setNormalSpeedF(f32 acceleration, f32 decelerationRate, f32 maxD
     } else {
         cLib_addCalc_l(&mNormalSpeed, targetSpeed, decelerationRate, deceleration, minDeceleration);
     }
+    lkT60_chaseClose(0, &mNormalSpeed, &mCurProc);
 }
 
 /* 02416C78 */
@@ -974,7 +1090,7 @@ BOOL daPy_lk_c::procCall() {
         cLib_addCalcAngleS(&shape_angle.y, targetAngle, 2, 0x2000, 0x800);
         current.angle.y = shape_angle.y;
     }
-    if (mFrameCtrlUnder[0].getRate() < 0.01f) {
+    if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         if (gabi::ea(dComIfGp_getCb1Player()) != 0) {
             u32 partner = gabi::ea(dComIfGp_getCb1Player()); /* partner->onNpcCallCommand() */
             gabi::at<daPy_py_c>(partner)->onNoResetFlg1(daPyFlg1_NPC_CALL_COMMAND);
@@ -1009,19 +1125,26 @@ BOOL daPy_lk_c::procIceSlipAlmostFall_init() {
 BOOL daPy_lk_c::procFreeWait_init() {
     commonProcInit(player04b::daPyProc_FREE_WAIT_e);
     mNormalSpeed = 0.0f;
-    f32 animationChoice = cM_rnd();
-    int anm;
-    if (animationChoice < 0.3333f) {
-        anm = player04b::ANM_FREEA;
-        mProcVar6 = 0;
-    } else if (animationChoice < 0.6666f) {
-        anm = player04b::ANM_FREEB;
-        mProcVar6 = 1;
+    /* true60 (rt77e frame 339; d_a_player_maba_t60.h kKeyR): on a converted first step the choice, mProcVar6
+     * and the animation wait for the tick30 flush (note order, at Link's place in the process order); the first step
+     * keeps the pre-init animation and mProcVar6. dt 1 / N = 1 / a later step: the original. */
+    if (lkT60Maba::conv() && t60::first_step()) {
+        lkT60Maba::note_as(lkT60Maba::kKeyR);
     } else {
-        anm = player04b::ANM_FREED;
-        mProcVar6 = 0;
+        f32 animationChoice = cM_rnd();
+        int anm;
+        if (animationChoice < 0.3333f) {
+            anm = player04b::ANM_FREEA;
+            mProcVar6 = 0;
+        } else if (animationChoice < 0.6666f) {
+            anm = player04b::ANM_FREEB;
+            mProcVar6 = 1;
+        } else {
+            anm = player04b::ANM_FREED;
+            mProcVar6 = 0;
+        }
+        setSingleMoveAnime(anm, 1.0f, 0.0f, -1, 5.0f);
     }
-    setSingleMoveAnime(anm, 1.0f, 0.0f, -1, 5.0f);
     mDirection = player04b::DIR_NONE;
     current.angle.y = shape_angle.y;
     return TRUE;
@@ -1035,9 +1158,9 @@ BOOL daPy_lk_c::procFreeWait() {
         setSpeedAndAngleNormal(0xBB8); /* HD: m_HIO->mMove.m.field_0x0 folded */
     }
     if (mProcVar6 != 0) {
-        if (mFrameCtrlUnder[0].checkPass(168.0f)) {
+        if (lkT60_pass(&mFrameCtrlUnder[0], 168.0f)) {
             LK_voiceStart(48);
-        } else if (mFrameCtrlUnder[0].checkPass(105.0f)) {
+        } else if (lkT60_pass(&mFrameCtrlUnder[0], 105.0f)) {
             LK_voiceStart(47);
         }
     }
@@ -1081,17 +1204,41 @@ BOOL daPy_lk_c::procWait() {
         }
     }
     s16 previousShapeAngle = shape_angle.y;
-    if (lk_checkAttentionLock(this)) {
+    if (lkT60_waitTurnStep()) /* true60: 30 Hz visual-motion (2) addendum 2 (d_a_player_waitturn_t60.h; no extra guest reads at dt 1) */
+        lkT60_waitTurnBegin(current.angle.y, shape_angle.y, (f32)mNormalSpeed);
+    bool atnTurn = lk_checkAttentionLock(this);
+    if (atnTurn) {
         setSpeedAndAngleAtn();
     } else {
         setSpeedAndAngleNormal(0xBB8); /* HD: m_HIO->mMove.m.field_0x0 folded */
     }
+    if (lkT60_waitTurnStep())
+        lkT60_waitTurnEnd(current.angle.y, shape_angle.y, (f32)mNormalSpeed);
     m35A0 = 0.0f;
     if (checkNextMode(0)) {
+        if (lkT60_waitTurnStep()) {
+            if (const LkT60WaitTurn* t = lkT60_waitTurnCatchUp(gabi::ea(&mCurProc), mCurProc == player04b::daPyProc_MOVE_e,
+                                                              current.angle.y, shape_angle.y, (f32)mNormalSpeed)) {
+                /* true60 (30 Hz visual-motion (2) addendum 2, d_a_player_waitturn_t60.h): the frame's later steps are held: this step
+                 * turns the whole frame's share from the frame's start at dt 1, and MOVE's blend is set from it */
+                f32 previousDt = t60_set_dt(1.0f);
+                current.angle.y = t->angle;
+                shape_angle.y = t->shape;
+                mNormalSpeed = t->speed;
+                if (atnTurn) {
+                    setSpeedAndAngleAtn();
+                } else {
+                    setSpeedAndAngleNormal(0xBB8);
+                }
+                if (current.angle.y != t->angle1 || shape_angle.y != t->shape1 || (f32)mNormalSpeed != t->speed1)
+                    setBlendMoveAnime(-1.0f); /* the init's blend from the frame's turn; no new morf */
+                t60_set_dt(previousDt);
+            }
+        }
         return TRUE;
     }
     if (m34C3 == 0) {
-        if (mFrameCtrlUnder[0].getRate() < 0.01f || !checkRestHPAnime()) {
+        if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f || !checkRestHPAnime()) {
             setBlendMoveAnime(2.4f); /* HD: m_HIO->mBasic.m.field_0xC folded */
             mModeFlg = (mModeFlg & ~(u32)player04b::ModeFlg_00000400) | player04b::ModeFlg_00000100;
         }
@@ -1108,10 +1255,17 @@ BOOL daPy_lk_c::procWait() {
         m35A0 = 0.005f * (f32)(s16)(shape_angle.y - previousShapeAngle);
         setBlendMoveAnime(-1.0f);
     }
+    /* true60 (the 30 Hz timer rule and 8): the idle countdowns below count 30 Hz frames and their random draws are made
+     * once per 30 Hz frame (on the frame's FIRST step: the first-step AI-timer rule for Link, count and decide where the 30 Hz update
+     * runs; the whole block runs there only, so no hold), so the wait lasts as long as at 30 Hz and the cM_rnd sequence
+     * keeps its count */
+    if (!lkT60_countStep()) {
+        return TRUE;
+    }
     if (mDemo.mDemoMode == daPy_demo_c::DEMO_KM_WAIT_e) {
         if (mProcVar0 != 0) {
             mProcVar0 = mProcVar0 - 1;
-        } else if (cM_rnd() < 0.05f) {
+        } else if ((lkT60Maba::now(gabi::ea(this)), cM_rnd() < 0.05f)) { /* true60 now(): the frame's noted draws first */
             LK_voiceStart(38);
             mProcVar0 = 20;
         }
@@ -1125,6 +1279,8 @@ BOOL daPy_lk_c::procWait() {
         if (mProcVar1 == 0) {
             procFreeWait_init();
         }
+    } else if (lkT60Maba::defer()) {
+        lkT60Maba::note_as(lkT60Maba::kKeyW); /* true60 (d_a_player_maba_t60.h kKeyW): the idle-timer draw in A's order, tick30 step */
     } else {
         mProcVar1 = (s16)gabi::ftoi(cM_rndF(150.0f) + 300.0f);
     }
@@ -1518,6 +1674,11 @@ BOOL daPy_lk_c::checkIceSlipFall() {
         xz->y = 0.0f;
         xz->z = mSlipSpeed.z;
         if (!(PSVECSquareMag(xz) < minSlipSpeedSquared)) {
+            /* true60 (the 30 Hz timer rule; the first-step AI-timer rule for Link): the slip countdown (20) counts 30 Hz frames and its
+             * end decides: on the frame's first step only */
+            if (!lkT60_countStep()) {
+                return FALSE;
+            }
             mProcVar0 = mProcVar0 - 1;
             if (mProcVar0 == 0) {
                 return procIceSlipFall_init();
@@ -1575,6 +1736,8 @@ void daPy_lk_c::setSpeedAndAngleNormal(s16 maxAngleStep) {
             turn = true;
         }
         bool cosPart = true;
+        s16 cosStartAngle = lkT60_moveCosStep() ? (s16)current.angle.y : 0; /* true60: d_a_player_movecos_t60.h (no read at dt 1) */
+        s32 cosMaxStep = maxAngleStep, cosMinStep = 100;
         if (turn) {
             if (mModeFlg & player04b::ModeFlg_00000001) {
                 return;
@@ -1609,9 +1772,15 @@ void daPy_lk_c::setSpeedAndAngleNormal(s16 maxAngleStep) {
                 }
             }
             cLib_addCalcAngleS(&current.angle.y, mMoveTargetAngleY, 5, angleStep, minAngleStep);
+            cosMaxStep = angleStep;
+            cosMinStep = minAngleStep;
         }
         if (cosPart) {
-            f32 c = cM_scos((u16)(mMoveTargetAngleY - current.angle.y));
+            /* true60 (d_a_player_movecos_t60.h): on the frame's first step the angle after the frame's whole turn */
+            s16 cosAngle = lkT60_moveCosStep() ? lkT60_moveCosAngle(cosStartAngle, current.angle.y, mMoveTargetAngleY,
+                                                                      cosMaxStep, cosMinStep)
+                                               : (s16)current.angle.y;
+            f32 c = cM_scos((u16)(mMoveTargetAngleY - cosAngle));
             f32 half = mMaxNormalSpeed * 0.5f;
             if (mNormalSpeed > half) {
                 if (c < 0.7f) {
@@ -1641,13 +1810,36 @@ void daPy_lk_c::setSpeedAndAngleNormal(s16 maxAngleStep) {
         }
     }
     if (!lk_checkAttentionLock(this) && mCurProc != player04b::daPyProc_MOVE_TURN_e && mStickDistance > 0.05f) {
-        s16 angleStep = shape_angle.y;
+        /* true60 (N-step spec movecos with the form really run: seed 1000999 shape_angle.y one step 34E0, two steps 73B2):
+         * the snap onto current.angle.y below wrote the shape yaw after its chase on a converted frame's earlier step,
+         * so cLib_addCalcAngleS's frame entry (c_lib.cpp) restarted from the snapped value on the next step as a
+         * partial frame. As setNeckAngle's look-cone clamp: the chase continues from its own unsnapped value of
+         * the step before; the snap test still runs on every step, and on the tick30 step it reads the frame-start shape
+         * yaw (the original's one chase from the frame start). Host state only; dt 1: the original. */
+        const bool lkConv = t60::dt() != 1.0f;
+        const uint32_t lkNow = t60_step_counter();
+        LkT60ShapeSnap& lkSn = g_lkT60ShapeSnap;
+        if (lkConv && t60::first_step()) {
+            lkSn.firstStep = lkNow;
+            lkSn.startY = shape_angle.y;
+        }
+        const bool lkOfFrame = lkConv && !t60::first_step() && lkNow - lkSn.firstStep < (uint32_t)t60::steps();
+        if (lkOfFrame && lkSn.snapped && lkSn.lastStep + 1 == lkNow && (s16)shape_angle.y == lkSn.snapY)
+            shape_angle.y = lkSn.easeY;
+        s16 angleStep = lkOfFrame && t60::tick30() ? lkSn.startY : (s16)shape_angle.y;
         cLib_addCalcAngleS(&shape_angle.y, mMoveTargetAngleY, 5, (s16)(maxAngleStep << 1), 200);
         s16 cur = current.angle.y;
         s32 temp = (s16)(angleStep - cur);
         s32 temp2 = (s16)(shape_angle.y - cur);
+        const s16 lkEase = shape_angle.y;
         if (!(temp * temp2 > 0)) {
             shape_angle.y = cur;
+        }
+        if (lkConv && !t60::tick30()) {
+            lkSn.lastStep = lkNow;
+            lkSn.easeY = lkEase;
+            lkSn.snapY = shape_angle.y;
+            lkSn.snapped = (s16)shape_angle.y != lkEase;
         }
     }
     setNormalSpeedF(acceleration, 0.6f, 2.5f, 1.8f); /* HD: HIO folded */

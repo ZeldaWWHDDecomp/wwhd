@@ -5,6 +5,7 @@
 #include "d/d_cc_uty.h"
 #include "gc_api/JSystem/JUTAssert.h"
 #include "gc_api/d/actor/d_a_player.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 const char daObjShmrgrd_c::M_arcname[8] = "Shmrgrd";
 using ShmrgrdResourceControl = gptr<u8>;
 static ShmrgrdResourceControl resourceControl = {};
@@ -583,6 +584,9 @@ void daObjShmrgrd_c::mode_lower() {}
 
 /* 0238F9F4 */
 s32 daObjShmrgrd_c::_execute() {
+    t60w::Guard<daObjShmrgrd_c> t60g(this, t60objw::Logic<daObjShmrgrd_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return 1;
 
     set_damage();
     if ((s32)M_damage == 1) {
@@ -593,6 +597,7 @@ s32 daObjShmrgrd_c::_execute() {
     calc_top_pos();
     vib_proc();
     crush_proc();
+    t60g.model = true; /* true60: the frame reached its model step */
     set_mtx();
     if (mMode == MODE_UPPER) {
         mCylTg.mCyl.SetC(&current.pos);

@@ -1,5 +1,6 @@
 /** Master Sword pedestal sword. */
 #include "d/actor/d_a_obj_vmsms.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 
 // HD: archive resources use this translation unit's SafeString vtable.
 const gc_tu_data gc_tu = { .safeString = 0x10032ED4 };
@@ -59,11 +60,15 @@ bool daObjVmsms_c::_delete() {
 
 /* 023B39C0 */
 bool daObjVmsms_c::_execute() {
+    t60w::Guard<daObjVmsms_c> t60g(this, t60objw::Logic<daObjVmsms_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
     if (dComIfGp_event_runCheck()) {
         // HD: the old event-manager entry point takes only the event name.
         if (vmsms_startCheckOld(dComIfGp_getPEvtManager(), "master_sword"))
             fopAcM_delete(this);
     }
+    t60g.model = true; /* true60: the frame reached its model step (the matrix is the create's) */
     return true;
 }
 

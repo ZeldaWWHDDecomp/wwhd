@@ -1,5 +1,6 @@
 // Ganon's Tower trials door.
 #include "d/actor/d_a_obj_vgnfd.h"
+#include "d/t60_objw.h" /* true60: the whole frame on the tick30 step (the whole-frame form rule + addendum) */
 const gc_tu_data gc_tu = {.safeString = 0x10032BBC, .headerStatics = {0x1046C878, 0x101CD990, 0x1046C884}};
 enum { dRes_INDEX_VGNFD_BTK_YGCBD00_e = 0x16, dRes_INDEX_VGNFD_DZB_VGNFD_e = 0x19 };
 enum { STATE_WAIT, STATE_DEMO, STATE_DEMO_FIN };
@@ -256,6 +257,9 @@ void daObjVgnfd_c::set_timer() {
 }
 /* 023B1A00 */
 bool daObjVgnfd_c::_execute() {
+    t60w::Guard<daObjVgnfd_c> t60g(this, t60objw::Logic<daObjVgnfd_c>::kOps); /* true60: the whole frame on the tick30 step (whole-frame form) */
+    if (t60g.skip) /* true60: a step before the tick30 step: the picture only (frame interpolation) */
+        return true;
     bool done = false;
     u8 state = mState;
     if (state == STATE_DEMO || state == STATE_DEMO_FIN) {
@@ -367,6 +371,7 @@ bool daObjVgnfd_c::_execute() {
             }
         }
     }
+    t60g.model = true; /* true60: the frame reached its model step */
     for (u32 i = 0; i < 5; ++i)
         mBrkAnm[i].play();
     mBtkAnm.play();

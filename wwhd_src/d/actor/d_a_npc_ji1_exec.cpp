@@ -9,6 +9,7 @@
  * and verified against the WWHD code (cking.rpx).
  */
 #include "d/actor/d_a_npc_ji1_exec.h"
+#include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
 
 static daNpc_Ji1_HIO_c l_hio;
 static cXyz l_head_front;
@@ -438,6 +439,9 @@ static inline void daNpc_Ji1_setHairAngle(daNpc_Ji1_c *i_this) {
 
 /* 0224B268 */
 BOOL daNpc_Ji1_c::_execute() {
+  t60w::Guard<daNpc_Ji1_c> t60g(this, t60npc::Logic<daNpc_Ji1_c>::kOps); /* true60: whole frame on tick30, end at every return */
+  if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
+    return true;
 
   dComIfGp_get(); /* daPy_getPlayerActorClass(), unused */
   // HD: retain the unused play-object access before decrementing the hit
@@ -582,6 +586,7 @@ BOOL daNpc_Ji1_c::_execute() {
   s32 col = ji1ExecPolyColorHD(dComIfG_Bgsp(),
                                static_cast<cBgS_PolyInfo *>(&mAcch.m_gnd));
   tevStr.mEnvrIdxOverride = (u8)col;
+  t60g.model = true; /* true60: the frame reached its model step */
   set_mtx();
   mCyl.SetC(&current.pos);
   dComIfG_Ccsp_Set(&mCyl);

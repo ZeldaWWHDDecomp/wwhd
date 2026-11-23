@@ -1,0 +1,19 @@
+# true60 N-step spec (not a gate unit: units/_t60/ is left out of verify_all and the game build's unit list)
+include JPA_field_a.txt
+# true60 N-step spec: JPABaseField::calcVel 02822B54 on a general step length (JPA_field_t60.h) and the fields that
+# end in it (gravity 02822D60, air 02822EC0, magnet 0282312C, Newton 02823334; calcVel runs real + t60cand inside them).
+# Domain: the acceleration and base-velocity types (0, 1): N steps add the frame's change in N parts. The field-velocity
+# type (2) is rebuilt per calcVelocity (+0x58 zeroed there), so its N-step form is the particle walk's (JPA-07), not a
+# repeated call; no speed limit inside the frame (air field flag 0x4 JPA_FIELD_LIMIT_SPEED off: the cap is a clamp across the steps).
+real 02822B54
+t60cand 02822B54
+t60conv 02822B54 02822D60 02822EC0 0282312C 02823334
+field 02822B54 r4+0x94 u8 0,1
+field 02822D60 r4+0x94 u8 0,1
+field 02822EC0 r4+0x94 u8 0,1
+field 0282312C r4+0x94 u8 0,1
+field 02823334 r4+0x94 u8 0,1
+field 02822EC0 r4+0x90 u16 0,1,2,8,16,32,64,128,256
+# float rounding of the split add (v + x/N ... vs v + x)
+t60tol * r5+0x40 f32x3 absrel 0.0001 0.0001
+t60tol * r5+0x64 f32x3 absrel 0.0001 0.0001
