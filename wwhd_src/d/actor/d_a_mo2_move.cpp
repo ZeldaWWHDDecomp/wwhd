@@ -354,14 +354,51 @@ static inline void back_wall_check(mo2_class *i_this) {
   dBgS_LinChk_dt(linChk, moveLineCheckVtables);
 }
 
+/* true60 (True60 pair f45 shape / current angle.y -1133 A / -220 B): the turn
+ * at fight_run's head runs BEFORE the mode switch, so A's call that takes mode 0 -> 1 (the fall-through into mode 1's
+ * body) gates it with mode 0: no turn in that frame, the turn starts the next frame (set this frame, act next frame).
+ * At N steps the fall-through on step 0 leaves mode 1 for the frame's later steps (not held, mo2_t60_ai_ran: mode 1's
+ * body continues there), and their head turned with mode 1's 0x800 on f45's tick30 step, one frame early. The head's
+ * gate (and its max speed) reads the mode fight_run had on the frame's first step, as A's one call reads it. Host
+ * memory keyed by the actor, this unit only (split-actor state (1)). Negative control WWHD_T60_MO2TURN_NEGCTRL=1 (game build: the
+ * step's own mode, the form before). dt = 1: the original (the call's own mode). */
+namespace {
+struct Mo2T60RunMode {
+  u32 frame; /* 30 Hz frame tag */
+  s16 mode;  /* mDamageReaction.mMode at fight_run's head on the frame's first step */
+};
+std::unordered_map<u32, Mo2T60RunMode> s_mo2T60RunMode;
+} // namespace
+static inline s16 mo2_t60_run_turn_mode(mo2_class *i_this) {
+  const s16 mode = i_this->mDamageReaction.mMode;
+  if (t60::dt() == 1.0f)
+    return mode;
+#if defined(GABI_GAME_BUILD) && GABI_T60
+  static const bool nc = [] { const char *e = getenv("WWHD_T60_MO2TURN_NEGCTRL"); return e && e[0] == '1'; }();
+  if (nc)
+    return mode;
+#endif
+  if (t60::first_step()) {
+    Mo2T60RunMode &e = s_mo2T60RunMode[gabi::ea(i_this)];
+    e.frame = bk_t60_frame_tag();
+    e.mode = mode;
+    return mode;
+  }
+  auto it = s_mo2T60RunMode.find(gabi::ea(i_this));
+  if (it == s_mo2T60RunMode.end() || it->second.frame != bk_t60_frame_tag())
+    return mode;
+  return it->second.mode;
+}
+
 /* inlined into Mo2_move */
 static inline bool fight_run(mo2_class *i_this) {
   fopAc_ac_c *player = dComIfGp_getPlayer(0);
   f32 dVar9 = CPad_GET_STICK_POS_X(0);
   i_this->mDamageReaction.mTurnTargetY = i_this->mTargetAngleY;
-  if (i_this->mDashStopTimer == 0 && i_this->mDamageReaction.mMode != 0) {
+  const s16 t60TurnMode = mo2_t60_run_turn_mode(i_this); /* true60: the frame's first-step mode */
+  if (i_this->mDashStopTimer == 0 && t60TurnMode != 0) {
     s16 maxSpeed = 0x400;
-    if (i_this->mDamageReaction.mMode == 1) {
+    if (t60TurnMode == 1) {
       maxSpeed = 0x800;
     }
     cLib_addCalcAngleS2(&i_this->actor.current.angle.y,
@@ -854,6 +891,22 @@ static inline fopAc_ac_c *yari_hit_check(mo2_class *i_this, f32 prev, f32 frameE
   return nullptr;
 }
 
+/* true60 (True60 pair: the far Moblin 47C59A80's yaw +22 at f43, +88 from
+ * f57, kept into its oshi: the body collider +0x2938 off from f87): fight's turn takes Link's direction as its target
+ * while the attack frame is below the turn's end frame (mTurnEndFrame). A's frame f43 reads the frame's whole advance
+ * (13 + 1 = 14, not below 14: the target stays f42's 2090); at N steps the first step read the in-between frame 13.5
+ * and took that step's direction (2178), one half frame more of the turn toward a moving Link. The gate reads the frame
+ * the 30 Hz frame ends on (mo2_t60_attack_advance's frameEnd; = the step's frame at dt = 1, the original). Negative
+ * control WWHD_T60_MOPOSE_NEGCTRL=1 (game build: the step's own frame, the form before). */
+static inline bool mo2_t60_pose_nc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+  static const bool nc = [] { const char *e = getenv("WWHD_T60_MOPOSE_NEGCTRL"); return e && e[0] == '1'; }();
+  return nc;
+#else
+  return false;
+#endif
+}
+
 /* inlined into Mo2_move */
 static inline void fight(mo2_class *i_this) {
   fopAc_ac_c *player = dComIfGp_getPlayer(0);
@@ -952,7 +1005,10 @@ static inline void fight(mo2_class *i_this) {
       i_this->mSmokeType = 4;
     }
     if (fopAcM_searchPlayerDistance(&i_this->actor) < 500.0f) {
-      if (i_this->mAttackFrame < i_this->mTurnEndFrame || i_this->mTurnAlways != 0) {
+      /* true60: the frame-end attack frame (above); dt = 1: the field, as the original reads it */
+      const f32 t60TurnFrame =
+          (t60::dt() == 1.0f || mo2_t60_pose_nc()) ? (f32)i_this->mAttackFrame : attackEnd;
+      if (t60TurnFrame < i_this->mTurnEndFrame || i_this->mTurnAlways != 0) {
         i_this->mDamageReaction.mTurnTargetY = i_this->mTargetAngleY;
       }
       cLib_addCalcAngleS2(&i_this->actor.current.angle.y,

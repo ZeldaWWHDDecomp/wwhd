@@ -29,6 +29,7 @@
 #include "true60.h"
 #include "d/actor/d_a_enemy_anm_t60.h"
 #include <unordered_map>
+#include <cstdlib>
 
 /* the set latch of (c_damagereaction.h t60dr_mark_set / t60dr_pending, the same port-owned latch and frame tag
  * g_Counter.mCounter0; repeated here so these units need not include the damage reaction's unit header): a counter set on
@@ -151,6 +152,63 @@ template <class T> static inline int bk_t60_turn_due(T* i_this) {
     return -1;
 }
 
+/* fight_run's jump-run launch (pair frame 50 = A 3552, Bokoblin 47C5CE68). In
+ * jump steps 0 / 2 A's one call turns current.angle.y twice: the prelude's turn (scale 4, 0x800) and the jump step's
+ * (scale 2, 0x2000); step 2's launch then adds its random yaw. The c_lib integer ease keeps one frame entry per value:
+ * the tick30 prelude turn pins the frame's full step from the frame-start angle and ends the entry, so the jump step's
+ * turn after it began a partial entry and moved only its dt share (3549: A 2239 -> 2201, B -> 2210; 3550 2145 / 2163).
+ * (a) fight_run bk_t60_jump_turn: on the tick30 step after a pinned prelude turn (noted on the first step,
+ * bk_t60_turn_due > 0) the jump step's turn is the original's one step from there (dt 1): A's frame.
+ * (b) a launch on an earlier step (mJumpStep 2 -> 1 holds the tick30 step, bk_t60_ai_held): the held step's prelude
+ * turn (Bk_move) ran after the random add, a write from outside the ease (partial entry): B turned 1045 -> 1168 for A's
+ * 988, 7 frames; a tick30 step that is not held does the same in fight_run's prelude, 1028 -> 1154).
+ * bk_t60_jlaunch_note keeps the launch's pre-add angle; the tick30 step (held: Bk_move; else fight_run's prelude,
+ * bk_t60_jlaunch_complete) puts it back, turns the
+ * frame's two turns (the prelude's pins its full step from the frame start, the jump step's at dt 1, as (a)) and adds
+ * the launch's yaw again (cur - pre): A's order.
+ * dt = 1: nothing is noted (the original). */
+/* negative control WWHD_T60_BKLAUNCH_NEGCTRL=1: the launch form off (no note, no dt-1 jump turn, no ramp
+ * catch-up): the form before it */
+/* negative control WWHD_T60_BKLAND_NEGCTRL=1: fight_run's jump landing (step 1 -> 2) reads the ground
+ * live on every step: the form before it */
+static inline bool bk_t60_land_nc() {
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_BKLAND_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
+}
+static inline bool bk_t60_launch_nc() {
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_BKLAUNCH_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
+}
+/* the note lives in the port's latch (shared by the bk TUs: a header-static or inline host map is one copy per TU in
+ * this build, so fight_run's note never reached Bk_move's held step, 1028 -> 1154): key ea(&current.angle.y) ^
+ * 0xC0000000, + 16 the launch mark, + 0..15 the pre-add angle's bits (set: the frame tag; clear: ~tag) */
+template <class T> static inline u32 bk_t60_jlaunch_key(T* i_this, u32 i) {
+    return (gabi::ea(&i_this->current.angle.y) ^ 0xC0000000u) + i;
+}
+template <class T> static inline void bk_t60_jlaunch_note(T* i_this) {
+    if (t60::dt() == 1.0f || t60::tick30() || bk_t60_launch_nc())
+        return;
+    const u32 tag = bk_t60_frame_tag(), pre = (u16)(s16)i_this->current.angle.y;
+    for (u32 i = 0; i < 16; i++)
+        wwhd_t60_latch_set(bk_t60_jlaunch_key(i_this, i), (pre >> i) & 1u ? tag : ~tag);
+    wwhd_t60_latch_set(bk_t60_jlaunch_key(i_this, 16), tag);
+}
+/* the tick30 step: true (and *pre) when a launch on an earlier step of this frame was noted; the note is used up */
+template <class T> static inline bool bk_t60_jlaunch_take(T* i_this, s16* pre) {
+    if (t60::dt() == 1.0f || !t60::tick30())
+        return false;
+    const u32 tag = bk_t60_frame_tag();
+    if (wwhd_t60_latch_pending(bk_t60_jlaunch_key(i_this, 16), tag) == 0)
+        return false;
+    wwhd_t60_latch_set(bk_t60_jlaunch_key(i_this, 16), ~tag); /* used */
+    u32 v = 0;
+    for (u32 i = 0; i < 16; i++)
+        if (wwhd_t60_latch_pending(bk_t60_jlaunch_key(i_this, i), tag) != 0)
+            v |= 1u << i;
+    *pre = (s16)(u16)v;
+    return true;
+}
+
 /* jyunkai's walk (pair f171 / 187 / 198, three patrolling Bokoblins): mode 0 / -1 falls
  * through into mode 1, whose tail turns current.angle.y toward mTurnTargetY (scale 4, 0x400 / 0x1000) and ramps speedF
  * toward the patrol speed (cLib_addCalc2 by 5): A's entry frame ends on +1024 / 5.0. At N steps the entry came on the
@@ -176,6 +234,27 @@ template <class T> static inline s16 bk_t60_walk_due(T* i_this) {
     if (wwhd_t60_latch_pending(bk_t60_walk_key(i_this, false), tag) != 0)
         return 0x400;
     return 0;
+}
+
+/* jyunkai's notice on a held tick30 step (pair frame 346, Bokoblin 47C5B4B4): the
+ * held step runs the notice (Bk_move, jyunkai_notice) as the tail of A's call after a mode switch jyunkai made on an
+ * earlier step. When jyunkai was only ENTERED on the earlier step (aite_miru 14 -> 0 on its timer), A's call ran
+ * aite_miru, not jyunkai: no notice that frame; jyunkai (and its notice -> fight_run) first runs next frame. B ran it on
+ * the held tick30 step: 14 -> 0 -> 4 in one frame, fight_run one frame early (bk 1189@347). Form: jyunkai marks the frame
+ * when its body runs on an earlier step (key m0320's address ^ 0xD0000000); the held step's notice needs the mark.
+ * dt = 1: nothing is marked (the original). NC WWHD_T60_BKCHAIN_NEGCTRL=1: the held step's notice unconditional. */
+static inline bool bk_t60_chain_nc() {
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_BKCHAIN_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
+}
+template <class T> static inline u32 bk_t60_jyunkai_key(T* i_this) { return gabi::ea(&i_this->m0320) ^ 0xD0000000u; }
+template <class T> static inline void bk_t60_jyunkai_ran(T* i_this) {
+    if (t60::dt() == 1.0f || t60::tick30())
+        return;
+    wwhd_t60_latch_set(bk_t60_jyunkai_key(i_this), bk_t60_frame_tag());
+}
+template <class T> static inline bool bk_t60_jyunkai_ran_here(T* i_this) {
+    return bk_t60_chain_nc() || wwhd_t60_latch_pending(bk_t60_jyunkai_key(i_this), bk_t60_frame_tag()) != 0;
 }
 
 /* (the form before the first-step AI-timer rule) the frame's last dispatch call (the Moblin's pattern). The per-frame

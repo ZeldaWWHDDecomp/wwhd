@@ -1,6 +1,7 @@
 /** ChuChu execution and inlined actions, following tww with verified HD behaviour. */
 #include "d/actor/d_a_cc_exec.h"
 #include "d/actor/d_a_cc_t60.h"
+#include "f_pc/f_pc_t60_frame_start.h" /* true60: t60_fs_read (the process-order read rule) */
 #include "gc_api/tu.h"
 #include <cstdlib>
 #include <unordered_map>
@@ -215,6 +216,314 @@ static inline bool cc_t60_gnd(cc_class* i) {
     }
     return i->mAcch.ChkGroundHit();
 }
+/* true60 (the exact arc for speedF, the Rat's
+ * nz_t60_ease0F form): the dispatch eases speedF per step (cLib_addCalc2 / cLib_addCalc0 at dt: the walk's 2.0 by 0.2,
+ * the swim's, the damage swing's decay by 0.8 / 4) before the step's move, and each step moves at its eased speed; A
+ * moves the whole frame at the frame-end speed. Each walk start lagged ~0.47 behind A (et route: 0.094 on the
+ * first frame, 0.47 per 0 -> 2 ramp; with the heading aimed from the lagging spot, 3.46 after the jump attacks; ccr3_4
+ * at N 4: the 56 -> 0 knock-back decay 1.5 a frame ahead, 20.8 in all). The step's ease change dv is noted (host memory;
+ * the unit runs one execute at a time, cleared at the execute's start) and the move adds dv x (1 - dt) / 2 along the
+ * step's heading; the tick30 step adds the remainder to the frame-end speed's whole-frame distance, so N steps end
+ * where one does (cc_t60_ramp_arc; the ratio ease's second difference, 0.03 on the et walk starts, seeded the contact
+ * episodes' growth with the first form). Sets (speedF = 18, = 0, ...) note nothing: they take the whole frame on the
+ * step that makes them. dt = 1: nothing. Negative control WWHD_T60_CCRAMP_NEGCTRL=1. */
+static f32 s_ccT60RampDv = 0.0f;
+static inline bool cc_t60_ramp_negctrl() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_CCRAMP_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
+#else
+    return false;
+#endif
+}
+static inline void cc_t60_ramp_note(f32 before, f32 after) {
+    if (t60::dt() == 1.0f || cc_t60_ramp_negctrl())
+        return;
+    s_ccT60RampDv = gabi::fadds_ppc(s_ccT60RampDv, gabi::fsubs_ppc(after, before));
+}
+/* the step's arc term (forward distance, added after the move): dv x (1 - dt) / 2 on the frame's earlier steps; on the
+ * tick30 step of a frame with an ease the remainder that makes the frame's commanded forward distance (speedF x dt +
+ * arc over its steps) the frame-end speedF, A's one-step distance (the ratio ease's second difference included).
+ * Frames without an ease: none. Called once per step, after the dispatch. */
+struct CcT60Ramp {
+    u32 frame;
+    f32 dist; /* the frame's commanded forward distance so far */
+    bool eased;
+};
+static std::unordered_map<u32, CcT60Ramp> s_ccT60Ramps;
+static inline f32 cc_t60_ramp_arc(cc_class* i) {
+    if (t60::dt() == 1.0f || cc_t60_ramp_negctrl())
+        return 0.0f;
+    const u32 key = gabi::ea(i), frame = bk_t60_frame_tag();
+    CcT60Ramp& r = s_ccT60Ramps[key];
+    if (r.frame != frame || t60::first_step())
+        r = CcT60Ramp{frame, 0.0f, false};
+    const f32 dt = t60::dt(), v = i->actor.speedF;
+    if (s_ccT60RampDv != 0.0f)
+        r.eased = true;
+    f32 arc = 0.0f;
+    if (t60::tick30()) {
+        if (r.eased)
+            arc = v * (1.0f - dt) - r.dist;
+        s_ccT60Ramps.erase(key);
+        return arc;
+    }
+    if (s_ccT60RampDv != 0.0f)
+        arc = s_ccT60RampDv * (1.0f - dt) * 0.5f;
+    r.dist += v * dt + arc;
+    return arc;
+}
+/* true60 (2026-11-23;, ChuChu proc 211C at frame 139: the 30 Hz visual-motion rule (2)
+ * addendum 2, "a step followed by held steps runs with the frame's remaining dt"): when the dispatch call that eased
+ * speedF also changed the AI state on a step before the tick30 step (mode 5's walk ease to 2, then timer 0: 5 -> 6 -> 7),
+ * the frame's later steps are held (cc_t60_ai_note) and no later ease runs, so the frame ended on the step's dt share of
+ * the ease (B 1.9017, A 1.9120) and the held motion (mode 7 keeps speedF) trailed 0.0103 a frame from then on (1.07 at
+ * 150, 10.45 at 600; the ChuChu reached Link at 262 and pushed him differently). Form: the step's last speedF ease is
+ * recorded (its start value and arguments; host memory, cleared at the execute's start); after the dispatch, a state
+ * change that will be held (the ai_note condition: not the tick30 step, not a fall-through whose body ran) redoes that
+ * ease from its start value at the frame's remaining dt ((N - k) / N on step k; dt 1 on the first step: A's one ease),
+ * and the ramp note takes the redone change (the frame's distance then ends on the frame-end speed, cc_t60_ramp_arc).
+ * dt = 1: nothing. Negative control WWHD_T60_CCEASEHOLD_NEGCTRL=1. */
+struct CcT60EaseRec {
+    bool valid;
+    bool zero; /* cLib_addCalc0 (else cLib_addCalc2) */
+    f32 before, after, target, scale, maxStep;
+};
+static CcT60EaseRec s_ccT60Ease;
+static std::unordered_map<u32, u32> s_ccT60FirstStep; /* actor -> step counter of its execute on the frame's first step */
+static inline bool cc_t60_easehold_negctrl() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_CCEASEHOLD_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
+#else
+    return false;
+#endif
+}
+static inline void cc_t60_ease_rec(bool zero, f32 before, f32 after, f32 target, f32 scale, f32 maxStep) {
+    if (t60::dt() == 1.0f)
+        return;
+    s_ccT60Ease = CcT60EaseRec{true, zero, before, after, target, scale, maxStep};
+}
+static inline void cc_t60_ease2F(cc_class* i, f32 target, f32 scale, f32 maxStep) {
+    const f32 before = i->actor.speedF;
+    cLib_addCalc2(&i->actor.speedF, target, scale, maxStep);
+    cc_t60_ramp_note(before, i->actor.speedF);
+    cc_t60_ease_rec(false, before, i->actor.speedF, target, scale, maxStep);
+}
+static inline void cc_t60_ease0F(cc_class* i, f32 scale, f32 maxStep) {
+    const f32 before = i->actor.speedF;
+    cLib_addCalc0(&i->actor.speedF, scale, maxStep);
+    cc_t60_ramp_note(before, i->actor.speedF);
+    cc_t60_ease_rec(true, before, i->actor.speedF, 0.0f, scale, maxStep);
+}
+/* the execute's start, every step */
+static inline void cc_t60_ease_begin(cc_class* i) {
+    s_ccT60Ease.valid = false;
+    if (t60::dt() != 1.0f && t60::first_step())
+        s_ccT60FirstStep[gabi::ea(i)] = t60_step_counter();
+}
+/* after the dispatch: the held-state catch-up of the step's speedF ease (see above) */
+static inline void cc_t60_ease_held(cc_class* i, u32 entry, bool ranNow) {
+    if (t60::dt() == 1.0f || t60::tick30() || !s_ccT60Ease.valid || cc_t60_easehold_negctrl())
+        return;
+    if (cc_t60_ai_state(i) == entry || ranNow)
+        return; /* no change, or a fall-through whose body ran: the frame's later steps dispatch on */
+    if ((f32)i->actor.speedF != s_ccT60Ease.after)
+        return; /* speedF set after the ease (a set takes the whole frame on its step) */
+    auto it = s_ccT60FirstStep.find(gabi::ea(i));
+    if (it == s_ccT60FirstStep.end())
+        return;
+    const u32 idx = t60_step_counter() - it->second;
+    if (idx >= t60::steps())
+        return; /* no first-step record this frame: the per-step form */
+    const f32 rem = (f32)(t60::steps() - idx) * t60::dt();
+    const f32 dt0 = t60_set_dt(rem);
+    i->actor.speedF = s_ccT60Ease.before;
+    if (s_ccT60Ease.zero)
+        cLib_addCalc0(&i->actor.speedF, s_ccT60Ease.scale, s_ccT60Ease.maxStep);
+    else
+        cLib_addCalc2(&i->actor.speedF, s_ccT60Ease.target, s_ccT60Ease.scale, s_ccT60Ease.maxStep);
+    t60_set_dt(dt0);
+    cc_t60_ramp_note(s_ccT60Ease.after, i->actor.speedF); /* the ramp note: the redone change */
+    s_ccT60Ease.valid = false;
+}
+/* true60 (the process-order read rule: a reader of an actor EARLIER in the
+ * line reads its state on the tick30 step): the dispatch aims at Link on the step that makes the decision, the frame's
+ * first step as a rule: the chase heading (search_angle_set, d_a_cc.cpp, first step only), the jump
+ * attack's heading (mode 0x20) and the knock-back heading (damage, away from Link). Link executes before the ChuChu: A's
+ * one call reads his frame-end position, B's first step read him after HIS first step only, 1 / N of his frame's motion
+ * (a pair at N 4, frame 309: Link 12 a frame, read 9 short, chase heading 9600 / A 9327; 405: 3478 / 3126; a route at
+ * N 2: the jump attacks 37 .. 425 units off A (frame 554), Link's knock-back angle 280 / 461). The aiming step keeps its
+ * aim (the steps before the tick30 step need a heading) and notes it; the tick30 step aims again, before the frame's
+ * last move, with A's inputs: the ChuChu's frame-start position (taken at the execute's start on the first step) and
+ * Link's position as A reads it (live: his frame-end position when he is earlier in the line; t60_fs_read's frame-start
+ * copy when he is later). The frame ends on A's heading; the earlier steps keep their share of the old one. The chase
+ * keeps its 40 distance test; the FIXED behaviour (aims at its home on every step) is not noted. dt = 1: nothing.
+ * Negative control WWHD_T60_CCAIM_NEGCTRL=1. */
+struct CcT60Aim {
+    u32 frame;
+    f32 x, y, z;    /* the frame-start position */
+    s16 shapeY;     /* the frame-start shape_angle.y */
+    bool pending;   /* an aim at Link was made this frame */
+    bool chase;     /* search_angle_set's (distance test, + mChaseAngleOffset) */
+    s16 off;        /* added to the angle (attack 0, knock-back 0x8000) */
+};
+static std::unordered_map<u32, CcT60Aim> s_ccT60Aim;
+static bool s_ccT60AimTurned; /* this tick30 step's aim changed the heading (WALKDRIFT2 part 3, cc_t60_posadd) */
+static inline bool cc_t60_aim_negctrl() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_CCAIM_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
+#else
+    return false;
+#endif
+}
+/* the execute's start, every step */
+static inline void cc_t60_aim_begin(cc_class* i_this) {
+    if (t60::dt() == 1.0f || !t60::first_step() || cc_t60_aim_negctrl())
+        return;
+    const fopAc_ac_c* a = &i_this->actor;
+    s_ccT60Aim[gabi::ea(i_this)] = CcT60Aim{bk_t60_frame_tag(), a->current.pos.x, a->current.pos.y, a->current.pos.z,
+                                            (s16)a->shape_angle.y, false, false, 0};
+}
+/* an aim at Link made on this step */
+static inline void cc_t60_aim_note(cc_class* i_this, bool chase, s16 off) {
+    if (t60::dt() == 1.0f || cc_t60_aim_negctrl())
+        return;
+    auto it = s_ccT60Aim.find(gabi::ea(i_this));
+    if (it == s_ccT60Aim.end() || it->second.frame != bk_t60_frame_tag())
+        return; /* an execute that missed the frame's first step: live, as before */
+    it->second.pending = true;
+    it->second.chase = chase;
+    it->second.off = off;
+}
+/* search_angle_set + the note (the call aims on the first step only, from the frame-start positions) */
+static inline void cc_t60_search_angle_set(cc_class* i_this) {
+    const bool aimed = search_angle_set(i_this) != FALSE;
+    if (aimed && i_this->mBehaviorType != CC_BEHAVIOR_FIXED)
+        cc_t60_aim_note(i_this, true, i_this->mChaseAngleOffset);
+}
+/* the tick30 step, before the frame's last move: the noted aim again with A's inputs */
+static inline void cc_t60_aim_tick30(cc_class* i_this) {
+    if (t60::dt() == 1.0f || !t60::tick30() || cc_t60_aim_negctrl())
+        return;
+    auto it = s_ccT60Aim.find(gabi::ea(i_this));
+    if (it == s_ccT60Aim.end() || it->second.frame != bk_t60_frame_tag() || !it->second.pending)
+        return;
+    it->second.pending = false;
+    fopAc_ac_c* player = dComIfGp_getPlayer(0);
+    gabi::Local<cXyz> lp;
+    lp->copy(player->current.pos);
+    t60_fs_read(gabi::ea(player), 1, lp.get());
+    gabi::Local<cXyz> cp;
+    cp->x = it->second.x;
+    cp->y = it->second.y;
+    cp->z = it->second.z;
+    if (it->second.chase) {
+        const f32 dx = lp->x - cp->x, dy = lp->y - cp->y, dz = lp->z - cp->z;
+        if (!(std::sqrt(dx * dx + dy * dy + dz * dz) > 40.0f))
+            return;
+    }
+    const s16 a = cLib_targetAngleY(cp, lp);
+    const s16 t60Old = i_this->actor.current.angle.y;
+    i_this->actor.current.angle.y = (s16)(a + it->second.off);
+    s_ccT60AimTurned = (s16)i_this->actor.current.angle.y != t60Old;
+    /* the frame's shape-angle chase (the dispatch's cLib_addCalcAngleS2(shape, heading, 1, step), noted by
+     * cc_t60_note_chase) as A's one call makes it toward the frame's final heading: from the frame-start shape angle,
+     * one whole step (scale 1: the heading, or step toward it). The per-step chase turned the in-between steps toward
+     * the first step's heading and the tick30 step only step x dt toward the new one (ccr3_4 at N 4: shape 9590 / A
+     * 9327 at 309 with the heading = A). */
+    auto ch = s_ccT60Chases.find(gabi::ea(i_this));
+    if (ch != s_ccT60Chases.end() && ch->second.frame == bk_t60_frame_tag() && ch->second.step != 0) {
+        const s32 step = ch->second.step;
+        s32 diff = (s16)((u16)i_this->actor.current.angle.y - (u16)it->second.shapeY);
+        if (diff > step)
+            diff = step;
+        else if (diff < -step)
+            diff = -step;
+        i_this->actor.shape_angle.y = (s16)(it->second.shapeY + diff);
+    }
+}
+/* true60 (part 2, 2026-11-23, ChuChu proc 211C in mode 9 (HUSE_WALK, speedF 1, the
+ * heading constant): the move adds speed x dt per step (fopAcM_posMove), each add rounded to the world coordinate's f32
+ * ulp (1/1024 at z ~ 13560); A adds the frame's speed once. B gained 0.001 a frame on z (0.056 by frame 219), the chase
+ * heading aimed from it at 241 was 8 units off A (7833 / 7825) and the ChuChu met Link at 262 0.025 apart (Link's push
+ * 0.019 off, 10.3 at 529). Form (Link's compensated add, d_a_player_posadd_t60.h): per actor a
+ * host shadow S (f64, x / z), the exact own-move position (frame-start position + the steps' own moves speed x dt + the
+ * ramp arc term + the corrections found between the writes: BG_check, outside sets), and C, the frame's push handed out
+ * so far; a step writes round(S + C), the tick30 step round((f32)round(S) + C) = A's two roundings (own add, then the
+ * push add). Reset on the frame's first step and whenever the record is not of this frame; dropped after the tick30
+ * step. Host memory only. dt = 1: nothing. Negative control WWHD_T60_CCPOSADD_NEGCTRL=1. */
+struct CcT60PosAdd {
+    double S[2], C[2];
+    double V[2], D; /* part 3: the earlier steps' own moves this frame (vector sum, forward distance sum) */
+    f32 W[2];
+    u32 stamp;
+    bool valid;
+};
+static std::unordered_map<u32, CcT60PosAdd> s_ccT60PosAdd;
+static inline bool cc_t60_posadd_negctrl() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_CCPOSADD_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
+#else
+    return false;
+#endif
+}
+/* after the step's move: p0 = x / z before it, own = the step's own move (speed x dt + arc), push = its push part */
+/* part 3 (WALKDRIFT2, the walk target re-read: the process-order read rule's tick30 aim): the tick30 step aims the
+ * heading again with A's inputs, but the frame's earlier steps had moved along the first step's heading (the N4ANGLE
+ * form kept their share of the old one): HUSE_WALK at speedF 1 while Link walks, 0.0011 a frame sideways from 220
+ * (0.046 by 260, the ChuChu met Link at 262 0.023 apart). A moves the whole frame along the final heading. When the
+ * tick30 aim changed the heading, the earlier steps' own moves are redone along it: the shadow drops their vector sum
+ * and adds their forward distance along the tick30 step's direction (its speed / speedF), so the frame's own move is
+ * A's. The corrections between the writes stay. Negative control WWHD_T60_CCAIMMOVE_NEGCTRL=1 (part 2 stays). */
+static inline bool cc_t60_aimmove_negctrl() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_CCAIMMOVE_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
+#else
+    return false;
+#endif
+}
+static inline void cc_t60_posadd(cc_class* i, const f32 p0[2], const double own[2], const double push[2], f32 fwd) {
+    if (t60::dt() == 1.0f || cc_t60_posadd_negctrl())
+        return;
+    CcT60PosAdd& s = s_ccT60PosAdd[gabi::ea(i)];
+    const u32 now = t60_step_counter();
+    if (t60::first_step() || !s.valid || now - s.stamp >= t60::steps()) {
+        s.S[0] = p0[0];
+        s.S[1] = p0[1];
+        s.C[0] = s.C[1] = 0.0;
+        s.V[0] = s.V[1] = s.D = 0.0;
+        s.stamp = now;
+        s.valid = true;
+    } else {
+        s.S[0] += (double)p0[0] - (double)s.W[0]; /* the corrections since the last write */
+        s.S[1] += (double)p0[1] - (double)s.W[1];
+    }
+    if (t60::tick30() && s_ccT60AimTurned && s.D != 0.0 && (f32)i->actor.speedF != 0.0f && !cc_t60_aimmove_negctrl()) {
+        const double sp = (double)(f32)i->actor.speedF;
+        s.S[0] += s.D * ((double)(f32)i->actor.speed.x / sp) - s.V[0];
+        s.S[1] += s.D * ((double)(f32)i->actor.speed.z / sp) - s.V[1];
+    }
+    if (!t60::tick30()) {
+        s.V[0] += own[0];
+        s.V[1] += own[1];
+        s.D += (double)fwd;
+    }
+    f32 out[2];
+    for (int k = 0; k < 2; k++) {
+        s.S[k] += own[k];
+        s.C[k] += push[k];
+        out[k] = t60::tick30() ? (f32)((double)(f32)s.S[k] + s.C[k]) : (f32)(s.S[k] + s.C[k]);
+        s.W[k] = out[k];
+    }
+    i->actor.current.pos.x = out[0];
+    i->actor.current.pos.z = out[1];
+    if (t60::tick30())
+        s.valid = false;
+}
 static inline void zero_m35C(cc_class* i_this) {
     for (s32 i = 0; i < 5; i++)
         i_this->mWavePhase[i] = 0;
@@ -302,11 +611,11 @@ static inline void action_nomal_move(cc_class* i_this) {
     }
 
     case 5:
-        search_angle_set(i_this);
+        cc_t60_search_angle_set(i_this); /* true60: + the aim note */
         if (i_this->mpMorf->checkFrame(0.0f)) {
             fopAcM_seStart(a_this, JA_SE_CM_CC_MOVE_STAND, 0);
         }
-        cLib_addCalc2(&a_this->speedF, 2.0f, 0.2f, 0.5f);
+        cc_t60_ease2F(i_this, 2.0f, 0.2f, 0.5f); /* true60: cLib_addCalc2(&speedF, 2, 0.2, 0.5), noted */
         if (i_this->mTimers[0] != 0) {
             break;
         }
@@ -359,7 +668,7 @@ static inline void action_nomal_move(cc_class* i_this) {
         if (i_this->mpMorf->checkFrame(0.0f)) {
             fopAcM_seStart(a_this, JA_SE_CM_CC_MOVE_LIE, 0);
         }
-        search_angle_set(i_this);
+        cc_t60_search_angle_set(i_this); /* true60: + the aim note */
         if (i_this->mTimers[0] != 0) {
             break;
         }
@@ -449,9 +758,9 @@ static inline void action_oyogu(cc_class* i_this) {
             f32 h = i_this->mAcch.m_wtr.m_height - 20.0f;
             if (std::fabs((f32)(a_this->current.pos.y - h)) < 2.0f) {
                 i_this->mOnWaterSurface = 1;
-                cLib_addCalc2(&a_this->speedF, REG_F(8, 17) + 1.0f, 0.3f, 1.0f);
+                cc_t60_ease2F(i_this, REG_F(8, 17) + 1.0f, 0.3f, 1.0f); /* true60: noted */
                 if (REG_F(8, 17) != 0.0f || a_this->speedF < 2.0f) {
-                    search_angle_set(i_this);
+                    cc_t60_search_angle_set(i_this); /* true60: + the aim note */
                 }
             }
         }
@@ -509,6 +818,7 @@ static inline void action_attack_move(cc_class* i_this, u32 t60Entry) {
     case 0x20:
         if (i_this->mTimers[0] == 0) {
             a_this->current.angle.y = fopAcM_searchPlayerAngleY(a_this);
+            cc_t60_aim_note(i_this, false, 0); /* true60: aimed again on the tick30 step */
             cyl_OnAtSet(i_this);
             i_this->mCyl.mObjAt.mRPrm = 1; /* OnAtHitBit (HD: a plain store) */
             anm_init(i_this, dRes_INDEX_CC_BCK_ATACK02_e, 0.0f, 0, 1.0f, -1);
@@ -602,7 +912,7 @@ static inline void damage_swing(cc_class* i_this) {
     MtxPosition(sp28, sp1C);
     i_this->mSwingAngle.z = (s16)gabi::ftoi(-sp1C->x);
     i_this->mSwingAngle.x = (s16)gabi::ftoi(sp1C->z);
-    cLib_addCalc0(&a_this->speedF, 0.8f, 4.0f);
+    cc_t60_ease0F(i_this, 0.8f, 4.0f); /* true60: cLib_addCalc0(&speedF, 0.8, 4), noted */
     if (i_this->mDamageType != 3) {
         /* true60: the swing's phase (visual) by the step's share of its per-frame step */
         i_this->mSwingPhase = i_this->mSwingPhase + cc_t60_step_s16(0x3000);
@@ -699,6 +1009,7 @@ static inline void action_damage_move(cc_class* i_this) {
         if (i_this->mDamageType != 3) {
             s16 a = fopAcM_searchPlayerAngleY(a_this);
             a_this->current.angle.y = (s16)(a + 0x8000);
+            cc_t60_aim_note(i_this, false, (s16)0x8000); /* true60: aimed again on the tick30 step */
         }
 
         i_this->mMode += 1;
@@ -918,6 +1229,10 @@ static BOOL daCC_Execute(cc_class* i_this) {
     fopAc_ac_c* a_this = &i_this->actor;
     cc_t60_at_restore(i_this); /* true60: the At set bit an in-between step's Move did not see (cc_t60_at_mask) */
     cc_t60_gnd_begin(i_this);  /* true60: the frame-start ground answer for the dispatch's landing decisions */
+    cc_t60_aim_begin(i_this);  /* true60: the frame-start position for the tick30 aim */
+    s_ccT60RampDv = 0.0f;      /* true60: this step's speedF ease change (cc_t60_ramp_note) */
+    cc_t60_ease_begin(i_this); /* true60: the step's ease record, the frame's first step */
+    s_ccT60AimTurned = false;  /* true60: set by this step's tick30 aim (WALKDRIFT2 part 3) */
 
     a_this->model = 0;
     switch (i_this->mColorType) {
@@ -1022,6 +1337,9 @@ static BOOL daCC_Execute(cc_class* i_this) {
         action_tubo_search(i_this);
         break;
     }
+    /* true60: a state change held for the frame's rest: the step's ease at the remaining dt */
+    if (!t60Held)
+        cc_t60_ease_held(i_this, t60Entry, cc_t60_ai_ran_now(i_this));
 
     if (i_this->mBehaviorType == 4) {
         cc_t60_ai_note(i_this, t60Entry);
@@ -1081,6 +1399,7 @@ static BOOL daCC_Execute(cc_class* i_this) {
         }
     }
 
+    cc_t60_aim_tick30(i_this); /* true60: the frame's aim at Link with A's inputs */
     cMtx_YrotS(calc_mtx(), a_this->current.angle.y);
     cMtx_XrotM(calc_mtx(), a_this->current.angle.x);
     gabi::Local<cXyz> sp30;
@@ -1093,6 +1412,21 @@ static BOOL daCC_Execute(cc_class* i_this) {
 
     a_this->speed.x = sp24->x;
     a_this->speed.z = sp24->z;
+    /* true60: the speedF ease's exact-arc term dv x (1 - dt) / 2 along the same heading, added after
+     * the step's move (none at dt = 1 or without an ease this step) */
+    const f32 t60RampArc = cc_t60_ramp_arc(i_this);
+    const bool t60Ramp = t60RampArc != 0.0f;
+    f32 t60RampX = 0.0f, t60RampZ = 0.0f;
+    if (t60Ramp) {
+        gabi::Local<cXyz> rf;
+        gabi::Local<cXyz> rv;
+        rf->x = 0.0f;
+        rf->y = 0.0f;
+        rf->z = t60RampArc;
+        MtxPosition(rf, rv);
+        t60RampX = rv->x;
+        t60RampZ = rv->z;
+    }
     /* true60 (the per-step movement rule): v += g dt; the move below adds the exact-arc term of the change this step made */
     const f32 t60Vy0 = a_this->speed.y;
     if (t60::dt() == 1.0f)
@@ -1172,6 +1506,8 @@ static BOOL daCC_Execute(cc_class* i_this) {
     cc_t60_at_mask(i_this); /* true60: the At and the Co are checked by the tick30 Move only */
     dComIfG_Ccsp_Set(&i_this->mCyl);
     if (!((a_this->actor_status & fopAcStts_CARRY_e) != 0)) {
+        const f32 t60P0[2] = {a_this->current.pos.x, a_this->current.pos.z}; /* true60 (WALKDRIFT2 part 2) */
+        double t60Push2[2] = {0.0, 0.0};
         if ((i_this->mCyl.mObjCo.mSPrm & 1) || cc_t60_co_masked(i_this)) { /* ChkCoSet (or masked for this step's Move) */
             if (t60::dt() == 1.0f) {
                 fopAcM_posMove(a_this, &i_this->mStts.m_cc_move);
@@ -1179,6 +1515,8 @@ static BOOL daCC_Execute(cc_class* i_this) {
                 gabi::Local<cXyz> t60Push; /* true60 (the first-step push rule): the frame's held push */
                 cc_t60_push_step(i_this, t60Push);
                 fopAcM_posMove(a_this, t60Push);
+                t60Push2[0] = (double)gabi::fmuls_ppc(t60Push->x, t60::dt());
+                t60Push2[1] = (double)gabi::fmuls_ppc(t60Push->z, t60::dt());
             }
         } else {
             fopAcM_posMove(a_this, nullptr);
@@ -1187,6 +1525,16 @@ static BOOL daCC_Execute(cc_class* i_this) {
          * where the original frame's v += g, p += v ends). Not while resting on the ground (falling or still, and the
          * last step met the ground): the ground stops that fall on every step, there is no arc to carry, and the term
          * would lift the body off the ground at N >= 4 ('s ice block, pair). */
+        if (t60Ramp) {
+            a_this->current.pos.x = gabi::fadds_ppc((f32)a_this->current.pos.x, t60RampX);
+            a_this->current.pos.z = gabi::fadds_ppc((f32)a_this->current.pos.z, t60RampZ);
+        }
+        if (t60::dt() != 1.0f) { /* true60 (WALKDRIFT2 part 2): the frame's own move rounded as A's one add */
+            const double t60Own[2] = {(double)gabi::fmuls_ppc((f32)a_this->speed.x, t60::dt()) + (double)t60RampX,
+                                      (double)gabi::fmuls_ppc((f32)a_this->speed.z, t60::dt()) + (double)t60RampZ};
+            cc_t60_posadd(i_this, t60P0, t60Own, t60Push2,
+                          gabi::fadds_ppc(gabi::fmuls_ppc((f32)a_this->speedF, t60::dt()), t60RampArc));
+        }
         if (t60::dt() != 1.0f) {
             f32 dv = gabi::fsubs_ppc((f32)a_this->speed.y, t60Vy0);
             if (dv != 0.0f && !((f32)a_this->speed.y <= 0.0f && i_this->mAcch.ChkGroundHit()))

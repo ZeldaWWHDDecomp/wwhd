@@ -79,6 +79,7 @@ static inline void jyunkai(bk_class* i_this) {
         return;
     }
 
+    bk_t60_jyunkai_ran(i_this); /* true60: its body runs in this call (for a held tick30 step's notice) */
     switch ((s16)i_this->dr.mMode) {
     case 0:
         walk_set(i_this);
@@ -857,7 +858,24 @@ void Bk_move(bk_class* i_this) {
             const int t60Turn = bk_t60_turn_due(i_this);
             if (t60Turn >= 0)
                 i_this->dr.mTurnTargetY = i_this->mTargetAngleY;
-            if (t60Turn > 0)
+            s16 t60Pre;
+            if (t60Turn >= 0 && bk_t60_jlaunch_take(i_this, &t60Pre)) {
+                /* ... a jump-run launch on an earlier step (fight_run jump step 2 -> 1): A's call turned twice before
+                 * the launch's random yaw. Back to the pre-add angle (the c_lib entry's last value), the prelude's turn
+                 * (pins the frame's full step), the jump step's at dt 1, then the yaw again (d_a_bk_t60.h
+                 * bk_t60_jlaunch_note) */
+                const s16 t60Add = (s16)((u32)(s16)i_this->current.angle.y - (u32)t60Pre);
+                i_this->current.angle.y = t60Pre;
+                if (t60Turn > 0) {
+                    cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->dr.mTurnTargetY, 4, t60Turn);
+                    const f32 t60Previous = t60_set_dt(1.0f);
+                    cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->dr.mTurnTargetY, 2, 0x2000);
+                    t60_set_dt(t60Previous);
+                } else {
+                    cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->dr.mTurnTargetY, 2, 0x2000);
+                }
+                i_this->current.angle.y = (s16)((u32)(s16)i_this->current.angle.y + (u32)t60Add);
+            } else if (t60Turn > 0)
                 cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->dr.mTurnTargetY, 4, t60Turn);
             /* ... and jyunkai's walk tail (turn + speed ramp) when its mode 1 ran on an earlier step (entered there from
              * mode 0 / -1: A's entry call turns and ramps in the same call; d_a_bk_t60.h bk_t60_walk_due, f171) */
@@ -871,7 +889,9 @@ void Bk_move(bk_class* i_this) {
         /* ... except jyunkai's notice, the tail of A's call after the mode switch the first step made (jyunkai_notice),
          * with the tick30 step's sensing as on any tick30 step */
         if (t60::tick30() && i_this->dr.mAction == BK_ACTION_JYUNKAI &&
-            (i_this->mHoldWeapon != 0 || i_this->mBareHanded != 0)) {
+            (i_this->mHoldWeapon != 0 || i_this->mBareHanded != 0) &&
+            bk_t60_jyunkai_ran_here(i_this) /* true60: only after jyunkai's own call (not an entry from another action,
+                                              * aite_miru 14 -> 0; d_a_bk_t60.h) */) {
             bk_t60_sense(i_this);
             s32 r3 = fopAcM_otoCheck(i_this, 1000.0f);
             r3 += search_sp();

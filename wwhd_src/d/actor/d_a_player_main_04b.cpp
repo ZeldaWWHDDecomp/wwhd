@@ -1217,8 +1217,9 @@ BOOL daPy_lk_c::procWait() {
     m35A0 = 0.0f;
     if (checkNextMode(0)) {
         if (lkT60_waitTurnStep()) {
-            if (const LkT60WaitTurn* t = lkT60_waitTurnCatchUp(gabi::ea(&mCurProc), mCurProc == player04b::daPyProc_MOVE_e,
-                                                              current.angle.y, shape_angle.y, (f32)mNormalSpeed)) {
+            if (const LkT60WaitTurn* t = lkT60_waitTurnCatchUp(gabi::ea(&mCurProc), (s32)mCurProc,
+                                                              mCurProc == player04b::daPyProc_MOVE_e, current.angle.y,
+                                                              shape_angle.y, (f32)mNormalSpeed)) {
                 /* true60 (30 Hz visual-motion (2) addendum 2, d_a_player_waitturn_t60.h): the frame's later steps are held: this step
                  * turns the whole frame's share from the frame's start at dt 1, and MOVE's blend is set from it */
                 f32 previousDt = t60_set_dt(1.0f);
@@ -1230,7 +1231,9 @@ BOOL daPy_lk_c::procWait() {
                 } else {
                     setSpeedAndAngleNormal(0xBB8);
                 }
-                if (current.angle.y != t->angle1 || shape_angle.y != t->shape1 || (f32)mNormalSpeed != t->speed1)
+                if (mCurProc == kLkT60WaitTurnCrouch) {
+                    current.angle.y = shape_angle.y; /* procCrouch_init's copy from the frame's turn */
+                } else if (current.angle.y != t->angle1 || shape_angle.y != t->shape1 || (f32)mNormalSpeed != t->speed1)
                     setBlendMoveAnime(-1.0f); /* the init's blend from the frame's turn; no new morf */
                 t60_set_dt(previousDt);
             }

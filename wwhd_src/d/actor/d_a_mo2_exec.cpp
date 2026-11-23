@@ -9,6 +9,7 @@
  */
 #include "d/actor/d_a_mo2_exec.h"
 #include "d/actor/d_a_mo2_t60.h"
+#include <cstdlib>
 #include <unordered_map>
 
 /* true60 (the first-step AI-timer rule): the AI timers (slots 0-10) and the phase counter count on the frame's FIRST
@@ -99,6 +100,72 @@ static void mo2_t60_base_frame(mo2_class* i_this) {
     const Mo2T60Base& e = it->second;
     for (int i = 0; i < 3; i++)
         for (int j = 0; j < 4; j++) base->m[i][j] = e.m[i][j];
+}
+
+/* true60 (True60 pair: Moblin 47C5CECC f45 mLeftHandPos.y A 81.46 / B 69.29,
+ * f46 58.18 / 53.55, with the morf (WALK frame 27, no blend) and the base matrix equal): the calc's joint callback
+ * (nodeCallBack, d_a_mo2.cpp 021C6854) rotates the joints by the damage reaction's mJntAngle[] (the look / body bend)
+ * and the jaw by mJawAngleZ, which damage_reaction / Mo2_move write AFTER the calc. A's calc of frame f reads frame
+ * f - 1's angles; at N steps the tick30 calc read the angles the frame's first step had already moved (f45: fight_run
+ * started on step 0, its look turned the upper body half a frame early: every joint-callback word ahead, the hand
+ * 12 off, decaying to f47; the same per-step lead wherever the angles move). As the base matrix above: the frame's
+ * first step keeps the angles it finds (frame f - 1's end) and the later steps' calcs run on them; the angles the
+ * steps moved are put back after the calc, so the per-step easing continues from them. Host memory keyed by the actor,
+ * frame tag, this unit only (split-actor state (1)). Negative control WWHD_T60_MOPOSE_NEGCTRL=1 (game build: the calc on the
+ * step's own angles, the form before). dt = 1: nothing. */
+namespace {
+constexpr u32 kMo2T60JntWords = 21 * 3; /* mJntAngle[21] (csXyz) */
+struct Mo2T60Jnt {
+    u32 frame;
+    bool held; /* the frame-start angles are in place for this calc; cur / curJaw: the step's own */
+    u16 a[kMo2T60JntWords], cur[kMo2T60JntWords];
+    u16 jaw, curJaw;
+};
+std::unordered_map<u32, Mo2T60Jnt> s_mo2T60Jnt;
+}  // namespace
+static inline bool mo2_t60_pose_nc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_MOPOSE_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
+#else
+    return false;
+#endif
+}
+static void mo2_t60_jnt_frame(mo2_class* i_this) {
+    if (t60::dt() == 1.0f || mo2_t60_pose_nc())
+        return;
+    const u32 jnt = gabi::ea(&i_this->mDamageReaction.mJntAngle[0]), jaw = gabi::ea(&i_this->mJawAngleZ);
+    if (t60::first_step()) {
+        Mo2T60Jnt& e = s_mo2T60Jnt[gabi::ea(i_this)];
+        e.frame = bk_t60_frame_tag();
+        e.held = false;
+        for (u32 k = 0; k < kMo2T60JntWords; k++) e.a[k] = gabi::load<u16>(jnt + k * 2u);
+        e.jaw = gabi::load<u16>(jaw);
+        return;
+    }
+    auto it = s_mo2T60Jnt.find(gabi::ea(i_this));
+    if (it == s_mo2T60Jnt.end() || it->second.frame != bk_t60_frame_tag())
+        return;
+    Mo2T60Jnt& e = it->second;
+    e.held = true;
+    for (u32 k = 0; k < kMo2T60JntWords; k++) {
+        e.cur[k] = gabi::load<u16>(jnt + k * 2u);
+        gabi::store<u16>(jnt + k * 2u, e.a[k]);
+    }
+    e.curJaw = gabi::load<u16>(jaw);
+    gabi::store<u16>(jaw, e.jaw);
+}
+static void mo2_t60_jnt_restore(mo2_class* i_this) {
+    if (t60::dt() == 1.0f)
+        return;
+    auto it = s_mo2T60Jnt.find(gabi::ea(i_this));
+    if (it == s_mo2T60Jnt.end() || !it->second.held)
+        return;
+    Mo2T60Jnt& e = it->second;
+    e.held = false;
+    const u32 jnt = gabi::ea(&i_this->mDamageReaction.mJntAngle[0]), jaw = gabi::ea(&i_this->mJawAngleZ);
+    for (u32 k = 0; k < kMo2T60JntWords; k++) gabi::store<u16>(jnt + k * 2u, e.cur[k]);
+    gabi::store<u16>(jaw, e.curJaw);
 }
 
 enum {
@@ -826,7 +893,9 @@ static BOOL daMo2_Execute(mo2_class* i_this) {
 #ifndef T60C_NEGCTRL
             mo2_t60_base_frame(i_this); /* true60 (process-order read): the calc on frame f - 1's base matrix, as A's (above) */
 #endif
+            mo2_t60_jnt_frame(i_this); /* true60 (process-order read): ... and on frame f - 1's joint angles (above) */
             i_this->mpMorf->calc();
+            mo2_t60_jnt_restore(i_this);
         }
         mo2_t60_anm_apply(i_this);
         r23 = damage_check(i_this);

@@ -23,6 +23,7 @@
  * m_morf_frame and wrote the deferred draw into 0x101CEF1B, leaving 0x101CEF19 at 1 (pmaba5: B's setTextureAnime then
  * made a second draw on the tick30 step where A made one). */
 #include "true60.h"
+#include <cstdlib>
 
 namespace lkT60Maba {
 static constexpr uint32_t kTimer = 0x101CEF19u; /* setMabaTimer's byte (main_01 `m_morf_frame`) */
@@ -121,7 +122,17 @@ inline uint32_t g_matchLo = 1u, g_matchHi = 0u; /* host: the slot range of the t
  * SE / face (picture and sound). The new animation plays from the next frame either way (lkT60_markAnmSet). */
 static constexpr uint32_t kKeyR = 0x9F1CEF19u;
 static constexpr uint32_t kKeyRB = 0xA01CEF19u;
-static constexpr uint32_t kTypes[] = {kKey, kKeyD, kKeyG, kKeyC, kKeyE, kKeyI, kKeyX, kKeyK, kKeyW, kKeyP, kKeyV, kKeyR};
+/* the first step's procedure dispatch starts (marker, no draw; 2026-11-23, Niko route frame 127): a
+ * procedure entered BEFORE the dispatch (execute's setDemoData / endDemoMode / checkNextMode: the event end's
+ * procWait_init) is not held on the frame's later steps (lkT60_procOpen marks only inits from the dispatch on), so the
+ * tick30 step runs the new procedure's body again and its setTextureAnime call is the counterpart of the first step's
+ * body call. Without this marker that body call sat after the init's kKeyI and counted as first-step-only: the tick30
+ * call was unmatched and drew its own pick and dVar9, and the first step's noted pair was made at the body's end as well
+ * (B two draws more than A at the event end; the Link stream drifted from there: +104 by frame 2442, another FREE_WAIT
+ * animation). The marker ends the init's first-step-only span: the body's calls after it match the tick30 body's calls
+ * in order. NC WWHD_T60_NIKORND_NEGCTRL=1 (no marker: the old matching). */
+static constexpr uint32_t kKeyB = 0xA11CEF19u;
+static constexpr uint32_t kTypes[] = {kKey, kKeyD, kKeyG, kKeyC, kKeyE, kKeyI, kKeyX, kKeyK, kKeyW, kKeyP, kKeyV, kKeyR, kKeyB};
 /* slot k's entry type (its base key), 0 when free */
 static inline uint32_t slot(uint32_t k, uint32_t tag) {
     for (uint32_t t : kTypes)
@@ -313,6 +324,19 @@ static inline void now(uint32_t link) {
     flush_upto(link, kMax - 1);
     flush_upto(link, kMax - 1); /* a glance hit made above notes its timer draw (first step: deferred) at the queue end */
 }
+static inline bool nikoNegctrl() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_NIKORND_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return false;
+#endif
+}
+/* the first step's procedure dispatch starts (converted; kKeyB) */
+static inline void body_start() {
+    if (conv() && t60::first_step() && !nikoNegctrl())
+        note_as(kKeyB);
+}
 /* a first-step setTextureAnime call starts (converted) */
 static inline void call_first() { note_as(kKeyC); }
 /* commonProcInit on a converted first step: the setTextureAnime calls after it are first-step-only */
@@ -346,12 +370,14 @@ static inline void call_tick30(uint32_t link) {
             init = false;
         } else if (t == kKeyI) {
             init = true;
+        } else if (t == kKeyB) {
+            init = false; /* the dispatch starts: the body's calls have tick30 counterparts (kKeyB above) */
         } else if (t == kKeyC && s == seg && !init) {
             if (n++ == j) {
                 uint32_t last = k;
                 for (uint32_t q = k + 1; q < kMax; q++) {
                     const uint32_t u = slot(q, tag);
-                    if (!u || u == kKeyC || u == kKeyE || u == kKeyI || u == kKeyX)
+                    if (!u || u == kKeyC || u == kKeyE || u == kKeyI || u == kKeyX || u == kKeyB)
                         break;
                     last = q;
                 }

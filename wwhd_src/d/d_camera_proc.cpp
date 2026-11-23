@@ -1337,7 +1337,7 @@ static BOOL camera_draw(camera_class* i_this) {
     cameraInverseView(cameraArgument(gabi::ea(&cameraView(i_this)->mViewMtx)),
                       cameraArgument(gabi::ea(
                           &cameraView(i_this)->mInvViewMtx))); /* PSMTXInverse(view, invView) */
-    const bool audioPass = camera_t60_audio_pass(); /* true60: the frame's camera to the audio, tick30 draw only (d_camera_proc_t60.h) */
+    const bool audioPass = camera_t60_audio_pass(camId2); /* true60: the frame's camera to the audio, tick30 draw only, once per step (d_camera_proc_t60.h) */
     if (audioPass)
         audioCameraInfo(cameraArgument(gabi::ea(&cameraView(i_this)->mLookat.mEye.x)),
                         cameraArgument(gabi::ea(&sJ3DView)),

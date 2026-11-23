@@ -20,6 +20,7 @@
 #include "d/d_camera_key_t60.h"
 #include "true60.h"
 #include <cstring>
+#include <cstdlib>
 
 namespace camera_run_t60 {
 /* host memory, this unit, one camera: Run's result from the last event-engine call (the held steps return it) */
@@ -251,6 +252,30 @@ static inline bool eventWholeSwitchIn(bool eventStyle) {
         return false;
     g_eventWholeFrame() = g_runFrameStart().stamp;
     return true;
+}
+/* A frame whose camera Run starts on the tick30 step. camera_execute runs
+ * NotRun while the body is inactive or paused (Stay, mPause: set by the event / demo side, cleared by NotRun) and Run
+ * otherwise. At the end of an event the frame's earlier steps can still take NotRun (Kalle Demos pair,
+ * event 2's end, B steps 9396 NotRun, 9397 Run; Run was not called from the event start), so the frame's one
+ * Run fell on the tick30 step at the step's dt 0.5: the new style (type 46 / style 120, the return chase) ran half a
+ * frame where A's one Run ran the whole frame (B eye 1061.2 vs A 1101.4 on that frame end, 54.13 @1164 after, the
+ * follow-whole frames after it exact from a wrong start; cam-tslack eye 3.35 @1560). Form: a Run on the tick30 step of
+ * a frame whose first step did not run Run (the frame-start record is not this frame's) runs once at dt 1 (the whole
+ * frame, from the state the earlier steps' NotRun left, as A's Run of the frame after its earlier NotRun frames; the
+ * frame-start state is noted for the frame's later readers). WWHD_T60_CAMLATE_NEGCTRL=1: the step's dt (form).
+ * dt = 1 (N = 1): never (the original). */
+static inline bool lateEntryTick30() {
+    if (t60::dt() == 1.0f || !t60::tick30() || t60::first_step())
+        return false;
+    static int s = -1;
+    if (s < 0) {
+        const char* e = getenv("WWHD_T60_CAMLATE_NEGCTRL");
+        s = (e && e[0] == '1') ? 0 : 1;
+    }
+    if (s == 0)
+        return false;
+    const RunFrameStart& f = g_runFrameStart();
+    return !(f.valid && t60_step_counter() - f.stamp == (uint32_t)(t60::steps() - 1));
 }
 /* The ship rock and the camera's sound requests per 30 Hz frame (2026-11-19, tool owner's long-idle pairs /
  * otas2 on: the camera sound 0x381B JA_SE_ATM_PRT_SHIP_CREAK, Run's mSeRequest bit 2, every 132 frames at

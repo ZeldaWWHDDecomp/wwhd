@@ -15,6 +15,7 @@
 #include "d/actor/d_a_player_t60.h"
 #include "d/actor/d_a_player_maba_t60.h"
 #include <cmath>
+#include <cstdlib> /* true60: getenv (NC) */
 
 const gc_tu_data gc_tu = { .safeString = 0x10034B24 };
 namespace player02_cpp {
@@ -2540,10 +2541,32 @@ BOOL daPy_lk_c::checkNextActionHookshotReady() {
     return cancelItemUpperReadyAnime();
 }
 
+/* true60 (class 4 gate, bow route 2026-11-23): the reload anime's end sets the bow
+ * wait anime (upper 0x36) on the frame's first step (the 0xC branch below); the frame's later steps then took the 0x36
+ * branch at once and read the release there (m355C = 1 on the later step: B started the shot anime on the next frame's
+ * first step, a frame before A, whose update reaches the 0x36 branch only in the next frame; the arrow / SWAP_MODES R
+ * status and the hit sound 0x2879 followed a frame early). Form: on a later step of the frame whose earlier step set
+ * the upper wait anime, the 0x36 branch is not taken (as in A's frame, which ended in the 0xC branch); the next frame's
+ * first step takes it. NC WWHD_T60_BTNSTSHOLD_NEGCTRL=1 (the row's switch). dt 1: the original. */
+static inline bool lk02_bowWaitEntryHeld(u32 upperFc) {
+    if (t60::dt() == 1.0f || t60::first_step()) {
+        return false;
+    }
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_BTNSTSHOLD_NEGCTRL"); return e && e[0] == '1'; }();
+    if (nc) {
+        return false;
+    }
+#endif
+    return lkT60_anmSetPending(upperFc);
+}
+
 /* 023EB208 */
 BOOL daPy_lk_c::checkNextActionBowReady() {
     u16 upper = (u16)player02::heaps(m_anm_heap_upper)[2].mIdx;
-    if (upper == 0x36) { /* checkBowWaitAnime() */
+    if (upper == 0x36 && lk02_bowWaitEntryHeld(gabi::ea(&mFrameCtrlUpper[2]))) {
+        /* true60: the wait anime set on this frame's earlier step: A's frame ended in the reload */
+    } else if (upper == 0x36) { /* checkBowWaitAnime() */
         s16 shot = m355C;
         u32 arrow = gabi::ea(mActorKeepEquip.mActor.get());
         if (lkT60_countHeld(LKT60_KEY_BOW, 0, 1)) {

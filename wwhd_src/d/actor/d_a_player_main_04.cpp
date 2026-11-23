@@ -62,6 +62,9 @@ static const be<u16>* const aura_model_joint = gabi::at<be<u16>>(0x10035AA0);
 #include "d/actor/d_a_player_main_04_update.h"
 #include "d/actor/d_a_player_bghit_t60.h"
 #include "d/actor/d_a_player_carry_t60.h"
+#include "d/actor/d_a_player_rootmode_t60.h"
+#include "d/actor/d_a_player_footga_t60.h"
+#include "d/actor/d_a_player_landline_t60.h"
 #include "d/t60_whole_carrier.h"
 
 static cXyz l_debug_keep_pos;
@@ -4400,19 +4403,29 @@ static inline s8 lk_playU8_s(u32 o) { return gabi::load<s8>(dComIfGp_ea() + o); 
 // HD: heavy-state and frame counters precede setGetDemo; forest water expires by
 // swapping the bottle and setting the event register. Warp/pitfall events shrink
 // Link's models, and the HD event-order state has no GameCube counterpart.
-/* true60 (Wind Waker press): Link's update clears the
- * button statuses at its start on EVERY step, and checkNextAction (d_a_player_main_03) sets the R status (CROUCH 15 /
- * DEFEND / ...) only while no equip animation runs (!checkEquipAnime()). The update that takes the item trigger starts
- * the equip (pull-out) animation after that set, so A's frame keeps R 15 and its next frame shows 0; in B the frame's
- * later step already runs with the equip animation and leaves 0, so the tick30 readers (dMeter, actors after Link) saw
- * the R status drop a frame early (ps +0x5 15 / 0 at frame 32). Form: on a frame whose first step started an equip
- * animation, the later steps keep the R status that first step's update left (A's frame-end value), unless the
- * original's event / not-the-player clear applies on that step. NC WWHD_T60_RSTSEQUIP_NEGCTRL=1. dt 1: the original. */
-static struct { uint32_t stamp; u8 rStatus; bool valid; } s_lk04RStsEquip;
-static bool s_lk04RStsEquipAtStart;
-static inline bool lk04_rStsEquipNegctrl() {
+/* true60 (2026-11-23; general rule, subsumes): Link's update
+ * clears the button statuses Do / R / A (play.mDoStatus / mRStatus / mAStatus, the A, R and B buttons) at its start on
+ * EVERY step, and the sets come from the step's procedure body (checkNextAction and the procedures) and the update's
+ * own defaults. The 30 Hz decisions are the frame's first step's (the first-step AI-timer rule): a procedure entered on the first step has
+ * its body held on the later steps (s_lkT60ProcHold), held count branches return before their set (procTactWait,
+ * checkNextActionRopeReady), some sets are made on the counting step only (checkNextActionBowReady), and the first
+ * step flips the gates of the R block (equip / grab animation, NPC call flag, guard accept); A's frame then ends with
+ * the first step's statuses, but B's later step left them blank, so the tick30 readers (dMeter, the actors after Link)
+ * saw a status drop for one frame (ps +0x5 15 / 0 at 32 on 's Wind Waker press; the R crouch on entering
+ * procCrouch). Form: the first step's update leaves its final Do / R / A (A's frame-end values); on a later step of
+ * that frame, after the procedure dispatch, a status the step left blank takes the first step's value (a status the
+ * later step set itself stays); the update's defaults and its event / not-the-player clear then run as in the
+ * original. NC WWHD_T60_BTNSTSHOLD_NEGCTRL=1. dt 1: the original. */
+static struct { uint32_t tag; u8 doSts, rSts, aSts; bool valid; } s_lk04BtnSts;
+/* (same form, class 4 gate) the NPC call command (daPyFlg1_NPC_CALL_COMMAND, set once a 30 Hz frame by the calling NPC:
+ * Medli / the Rito Komali, unconverted) is cleared at the end of every Link update: in B the first step consumed it and
+ * the later steps' R block took the crouch / defend branch instead of CALL (crouch route: R 0x24 / 0 and 0x24 / 15
+ * over frames 117-150, and procCrouch entered on the later step of frame 202, A at 203). The later steps of a frame
+ * whose first update started with the command see it as that update did (cleared again at their end). */
+static struct { uint32_t tag; bool on; } s_lk04NpcCall;
+static inline bool lk04_btnStsNegctrl() {
 #if defined(GABI_GAME_BUILD) && GABI_T60
-    static const bool v = [] { const char* e = getenv("WWHD_T60_RSTSEQUIP_NEGCTRL"); return e && e[0] == '1'; }();
+    static const bool v = [] { const char* e = getenv("WWHD_T60_BTNSTSHOLD_NEGCTRL"); return e && e[0] == '1'; }();
     return v;
 #else
     return false;
@@ -4422,8 +4435,13 @@ static inline bool lk04_rStsEquipNegctrl() {
 /* 0240CDD0 */
 BOOL daPy_lk_c::execute() {
     u32 b = gabi::ea(this);
-    if (t60::dt() != 1.0f && t60::first_step()) { /* true60: equip animation at the frame's start */
-        s_lk04RStsEquipAtStart = checkEquipAnime() != FALSE;
+    if (t60::dt() != 1.0f) { /* true60 (s_lk04NpcCall) */
+        if (t60::first_step()) {
+            s_lk04NpcCall.tag = lkT60_frameTag();
+            s_lk04NpcCall.on = (mNoResetFlg1 & daPyFlg1_NPC_CALL_COMMAND) != 0;
+        } else if (s_lk04NpcCall.on && s_lk04NpcCall.tag == lkT60_frameTag() && !lk04_btnStsNegctrl()) {
+            mNoResetFlg1 = mNoResetFlg1 | daPyFlg1_NPC_CALL_COMMAND;
+        }
     }
     lkT60Crawl_begin(this); /* true60 (d_a_player_crawl_t60.h): a crawl frame's later steps start from its start */
     lkT60Maba::begin_first_step(); /* true60: the deferred-draw queue starts empty on the first step (replays) */
@@ -4593,6 +4611,7 @@ BOOL daPy_lk_c::execute() {
         } else if (m != 0xC) {
             mRootMoveMode = 0;
         }
+        lkT60RootMode_noteReset(m, m != 8 && m != 0xC); /* true60 (d_a_player_rootmode_t60.h): for a held body */
     }
     {
         fopAc_ac_c* grab = mActorKeepGrab.mActor; /* mActorKeepGrab.getActor() */
@@ -4618,6 +4637,7 @@ BOOL daPy_lk_c::execute() {
     /* true60 (d_a_player_bghit_t60.h): window 2 - the frame's later steps decide on the frame-end BG
      * check's hits (setDemoData / endDemoMode / checkNextMode, setStickData, the procedure dispatch) */
     lkT60Bg::begin(mAcch.m_flags, mAcchCir[0].m_flags, mAcchCir[1].m_flags, mAcchCir[2].m_flags, lkT60_frameTag());
+    lkT60_gaViewBegin(mGroundAngle); /* true60 (d_a_player_footga_t60.h): the frame-start ground angle */
     setDemoData();
     setStickData();
     if (mEquipItem == LinkUpdateConstants::dItemNo_GRAPPLING_HOOK_e /* dItemNo_GRAPPLING_HOOK_e */ && (mCurProc == LinkUpdateConstants::daPyProc_ROPE_SUBJECT_e || mCurProc == LinkUpdateConstants::daPyProc_ROPE_MOVE_e)) {
@@ -4649,7 +4669,8 @@ BOOL daPy_lk_c::execute() {
          * later steps the two are not consulted (as if they found nothing to change), the next frame's first step
          * consults them again, where the original's next update does */
         const bool lkT60ChgHeld = lkT60Bg::procChangeHeld();
-        if (!(!lkT60ChgHeld && changeDemoProc()) && !changeDeadProc() &&
+        /* true60 (d_a_player_bghit_t60.h deadChangeHeld): changeDeadProc on the first step only */
+        if (!(!lkT60ChgHeld && changeDemoProc()) && !(!lkT60Bg::deadChangeHeld() && changeDeadProc()) &&
             mCurProc != LinkUpdateConstants::daPyProc_DEMO_LAVA_DAMAGE_e && mCurProc != LinkUpdateConstants::daPyProc_DEMO_FREEZE_DAMAGE_e) {
             if (lkT60ChgHeld || !changeAutoJumpProc()) {
                 if (!lkT60Bg::swimInHeld()) /* true60: the water entry on the frame's first step */
@@ -4683,6 +4704,7 @@ BOOL daPy_lk_c::execute() {
         mNoResetFlg0 = mNoResetFlg0 | daPyFlg0_UNK10000000;
     }
     lkT60_procOpen(gabi::ea(&mCurProc)); /* true60 (rule 1, 2026-11-17): first step: inits from here on mark */
+    lkT60Maba::body_start(); /* true60 (d_a_player_maba_t60.h kKeyB): the body's calls match the tick30 body's */
     if (lk_t60FirstExec() || !(s_lkT60ProcHold.valid && s_lkT60ProcHold.tag == lkT60_frameTag() &&
                                s_lkT60ProcHold.proc == (s32)mCurProc)) { /* held: entered on the first step */
         s16 idx = mCurProcFunc.i; /* (this->*mCurProcFunc)() */
@@ -4699,12 +4721,27 @@ BOOL daPy_lk_c::execute() {
             }
             lkT60Bg::entryHideEnd(mAcch.m_flags, lkT60EntryHid);
         }
+    } else {
+        lkT60RootMode_held(mRootMoveMode); /* true60: the held body's root mode */
     }
     /* true60 (positional flush, d_a_player_maba_t60.h): the first step marks the body's end; the tick30 step makes the
      * body's unmatched noted draws here (inits: where the procedure called them) */
     lkT60Maba::body_end(b);
     lkT60Crawl_afterBody(this);
+    lkT60_gaViewEnd(mGroundAngle); /* true60: the step's real ground angle back */
     lkT60Bg::end(mAcch.m_flags, mAcchCir[0].m_flags, mAcchCir[1].m_flags, mAcchCir[2].m_flags); /* true60: the real hits back, the part's own writes kept */
+    if (t60::dt() != 1.0f && !t60::first_step() && s_lk04BtnSts.valid && s_lk04BtnSts.tag == lkT60_frameTag() &&
+        !lk04_btnStsNegctrl()) { /* true60: a later step keeps the first step's statuses it left blank */
+        if (dComIfGp_getDoStatus() == 0) {
+            dComIfGp_setDoStatus(s_lk04BtnSts.doSts);
+        }
+        if (dComIfGp_getRStatus() == 0) {
+            dComIfGp_setRStatus(s_lk04BtnSts.rSts);
+        }
+        if (dComIfGp_getAStatus() == 0) {
+            dComIfGp_setAStatus(s_lk04BtnSts.aSts);
+        }
+    }
     if (mEquipItem == LinkItemConstants::daPyItem_BOKO_e && dComIfGp_getDoStatus() == 0) {
         dComIfGp_setDoStatus(0x2F);
     }
@@ -4717,6 +4754,10 @@ BOOL daPy_lk_c::execute() {
     sp14z = lk_fbits(current.pos.z);
     sp14x = lk_fbits(current.pos.x);
     sp14y = lk_fbits(current.pos.y);
+    if (lkT60Land::frameStartStep()) { /* true60: the frame start for the landing frame's check */
+        lkT60Land::frameStart(this, lkT60_frameTag(), LinkPoseApi::checkHeavyStateOn(this) != 0);
+    }
+    lkT60Land::bodyPos(sp14x, sp14y, sp14z, lkT60_frameTag()); /* true60: a set held by the tick30 body */
     if (!lkT60Crawl_moveSkip()) { /* true60: a crawl frame moves once, on its tick30 step at dt 1 */
         lkT60Crawl_ccTick30(this); /* true60: the frame's collision push (the first step's Move cleared it) */
         f32 crawlDt = lkT60Crawl_moveOpen();
@@ -4729,7 +4770,9 @@ BOOL daPy_lk_c::execute() {
     u32 sp8y = lk_fbits(current.pos.y);
     u32 sp8x = lk_fbits(current.pos.x);
     mAcch.m_flags = acf & ~0x20u; /* mAcch.ClrGroundHit() */
+    lkT60Land::begin(acf, old.pos, current.pos, lkT60_frameTag()); /* true60 (d_a_player_landline_t60.h) */
     mAcch.CrrPos(dComIfG_Bgsp());
+    lkT60Land::end(mAcch.m_flags, old.pos); /* true60: the step's old.pos back; a landing on an earlier step noted */
     setWaterY();
     autoGroundHit();
     checkLavaFace(oldPos.get(), 0);
@@ -5100,16 +5143,12 @@ BOOL daPy_lk_c::execute() {
             dComIfGp_setAStatus(0);
         }
     }
-    if (t60::dt() != 1.0f) { /* true60 (s_lk04RStsEquip) */
-        const bool evClear = ((dComIfG_inf_c*)dComIfGp_get())->play.mEvtCtrl.mMode != 0 || gabi::ea(dComIfGp_getPlayer(0)) != b;
-        if (t60::first_step()) {
-            s_lk04RStsEquip.valid = !s_lk04RStsEquipAtStart && checkEquipAnime();
-            s_lk04RStsEquip.stamp = t60_step_counter();
-            s_lk04RStsEquip.rStatus = dComIfGp_getRStatus();
-        } else if (s_lk04RStsEquip.valid && !evClear && !lk04_rStsEquipNegctrl() &&
-                   t60_step_counter() - s_lk04RStsEquip.stamp < t60::steps()) {
-            dComIfGp_setRStatus(s_lk04RStsEquip.rStatus);
-        }
+    if (t60::dt() != 1.0f && t60::first_step()) { /* true60: the first step's final statuses */
+        s_lk04BtnSts.tag = lkT60_frameTag();
+        s_lk04BtnSts.doSts = dComIfGp_getDoStatus();
+        s_lk04BtnSts.rSts = dComIfGp_getRStatus();
+        s_lk04BtnSts.aSts = dComIfGp_getAStatus();
+        s_lk04BtnSts.valid = true;
     }
     mNoResetFlg1 = mNoResetFlg1 & ~(daPyFlg1_UNK4 | daPyFlg1_FORCE_VOMIT_JUMP | daPyFlg1_FORCE_VOMIT_JUMP_SHORT | daPyFlg1_UNK10000000);
     if (dComIfGp_getPlayerStatus0() & LinkPoseConstants::daPyStts0_SHIP_RIDE_e) {

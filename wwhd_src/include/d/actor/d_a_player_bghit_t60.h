@@ -166,4 +166,22 @@ static inline bool swimInHeld() {
 #endif
     return !(t60::dt() == 1.0f || t60::first_step());
 }
+
+/* (2026-11-23; gnd route: Link at life 0 with a fairy bottle, DAMAGE -> WAIT at
+ * 852). changeDeadProc 023F7820 (the same execute line) tests life 0 with ModeFlg_DAMAGE off once per 30 Hz frame in the
+ * original, before the dispatch: A's frame 852 still has the DAMAGE flag there (procDamage's end clears it in procWait_init,
+ * after the test), so the LINK_DOWN fairy is made in frame 853 and its life count reaches the save in 853's meter (life
+ * 20 visible to Link from 854: procWait's checkRestHPAnime ends WAITATOB and sets WAITS at 854). Per step, B's procDamage
+ * ended on the first step of 852 and the tick30 step consulted changeDeadProc with the flag already off: the fairy came a
+ * frame early, life 20 at 853 and WAITS set at 853 (anim 1.1 > tol 1 on 853-882). Form (as procChangeHeld): changeDeadProc
+ * decides on the frame's first step only. Negative control WWHD_T60_DEADCHG_NEGCTRL=1 (game build); dt = 1 (N = 1):
+ * never. */
+static inline bool deadChangeHeld() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool negctrl = [] { const char* e = getenv("WWHD_T60_DEADCHG_NEGCTRL"); return e && e[0] == '1'; }();
+    if (negctrl)
+        return false;
+#endif
+    return !(t60::dt() == 1.0f || t60::first_step());
+}
 }  // namespace lkT60Bg

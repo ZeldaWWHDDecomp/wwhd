@@ -71,6 +71,13 @@ u32 dCamera_c::Run() {
     u32 res = 0;                     /* the engine's r3, returned unmasked */
     if (t60::dt() != 1.0f) /* true60: the rollback form's frame-start state (d_camera_run_t60.h; no call at dt 1) */
         camera_run_t60::noteFrameStart(this, dComIfGp_ea() + mCameraID * 0x34 + 0x5B00);
+    /* true60 (d_camera_run_t60.h lateEntryTick30): the frame's first Run on its tick30 step runs the whole frame at dt 1 */
+    if (camera_run_t60::lateEntryTick30()) {
+        const float dt0 = t60_set_dt(1.0f);
+        const u32 r = Run();
+        t60_set_dt(dt0);
+        return r;
+    }
     /* true60: an event-engine style runs Run whole on the tick30 step at dt 1, the
      * earlier steps hold the camera (d_camera_run_t60.h eventWholeEntry) */
     const int evWhole = camera_run_t60::eventWholeEntry(camStyleAlg(mCurStyle) == dCamAlg_EVENT_CAMERA_e);

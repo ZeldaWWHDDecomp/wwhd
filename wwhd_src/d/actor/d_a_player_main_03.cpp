@@ -22,6 +22,7 @@
 #include "d/actor/d_a_player_footbg_t60.h"
 #include "d/actor/d_a_player_posadd_t60.h"
 #include "d/actor/d_a_player_swimrise_t60.h"
+#include "d/actor/d_a_player_footga_t60.h"
 #include <cstdlib>
 /* true60: the swim stroke's animation frame for the stroke speed (posMove, SWIM_MOVE) */
 static inline f32 lkT60_swimChaseFrame(J3DFrameCtrl* fc) {
@@ -4709,6 +4710,8 @@ void daPy_lk_c::posMoveFromFootPos() {
     } else {
         v = lk_fmaddsD(step, r, v);
     }
+    /* true60 (d_a_player_footga_t60.h): a later step's slope test reads the frame's first-step BG check */
+    lkT60_footGaBegin(mAcch.m_flags, *static_cast<cBgS_PolyInfo *>(&mAcch.m_gnd), mGroundCode);
     if ((mAcch.m_flags & dBgS_Acch::GROUND_HIT) &&
         LinkMotionApi::chkPolySafe(dComIfG_Bgsp(),
                                    gabi::ea(static_cast<cBgS_PolyInfo *>(&mAcch.m_gnd))) &&
@@ -4722,6 +4725,7 @@ void daPy_lk_c::posMoveFromFootPos() {
     } else {
         v = v * cM_scos(0);
     }
+    lkT60_footGaEnd(mAcch.m_flags, *static_cast<cBgS_PolyInfo *>(&mAcch.m_gnd), mGroundCode);
     u32 z0, x0, y0;
     if (!(std::fabs(v) < 0.05f)) {
         s32 proc = mCurProc;
@@ -5910,8 +5914,10 @@ void daPy_lk_c::footBgCheck() {
     u32 model = gabi::ea(mpCLModel.get());
     u32 base = model != 0 ? model + 0xC8 : 0; /* mpCLModel->getBaseTRMtx() */
     u32 mode1 = mModeFlg & 1;
-    LinkMotionApi::concatMatrix(&mInvWorldMtx, gabi::at<Mtx34>(linkGetAnmMtx(model, 0x1E)),
-                                gabi::at<Mtx34>(stk));
+    const u32 waistMtx = linkGetAnmMtx(model, 0x1E);
+    if (t60FootConv)
+        lkT60_footBgPose(t60FootRecs, waistMtx); /* true60: the frame's waist / leg matrices */
+    LinkMotionApi::concatMatrix(&mInvWorldMtx, gabi::at<Mtx34>(waistMtx), gabi::at<Mtx34>(stk));
     u16 wa = (u16)mWaistAngleZ;
     f32 sn = cM_ssin(wa);
     f32 cs = cM_scos(wa);
@@ -6456,6 +6462,10 @@ void daPy_lk_c::setDemoData() {
             /* true60 (the first-step AI-timer rule for Link; d_a_player_t60.h lkT60_demoWalkDecides): the arrival
              * and slow-down tests decide on the frame's first step only, from the frame-start position */
             const bool lkT60WalkDec = lkT60_demoWalkDecides();
+            /* true60 (d_a_player_t60.h lkT60_demoWalkHeld): a later step replays the first step's
+             * decision (the stick reset to 1 above runs on every step) */
+            bool lkT60Release = false;
+            const bool lkT60Held = !lkT60WalkDec && lkT60_demoWalkHeld(&stop, &lkT60Release);
             if (!lkT60WalkDec) {
             } else if (sq < (f64)100.0f) {
                 stop = true;
@@ -6465,9 +6475,12 @@ void daPy_lk_c::setDemoData() {
             if (stop) {
                 demo_mode = 1;
                 mNormalSpeed = 0.0f;
-            } else if (lkT60WalkDec && ((demo_mode == 2 && sq < (f64)400.0f) || sq < (f64)2500.0f)) {
+            } else if (lkT60WalkDec ? ((demo_mode == 2 && sq < (f64)400.0f) || sq < (f64)2500.0f) : lkT60Held && lkT60Release) {
                 mDemo.mStick = 0.0f; /* mDemo.setStick(0.0f) */
+                lkT60Release = true;
             }
+            if (lkT60WalkDec)
+                lkT60_demoWalkNote(stop, lkT60Release);
             mDemo.mDemoMoveAngle = (s16)LinkActionApi::atan2sWide(x, z);
             mDemo.mDemoMode = demo_mode;
         } else if (demo_mode == 5 /* DEMO_WAIT_TURN */ || demo_mode == 0x18 /* DEMO_SURPRISED */) {

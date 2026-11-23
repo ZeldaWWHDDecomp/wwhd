@@ -6,6 +6,7 @@
  * stubs. HD: movement logic below preserves the verified HD implementation.
  */
 #include "d/actor/d_a_gnd_move.h"
+#include "d/actor/d_a_gnd_t60.h" /* true60: the shot read (the process-order read rule) */
 
 static GndMoveHioHD l_moveHio;
 struct GndMoveZeldaPointer {
@@ -938,7 +939,8 @@ void gnd_move(gnd_class* i_this) {
         /* the light arrows */
         bool hit = false;
         bool check = true;
-        fopAc_ac_c* shot = (fopAc_ac_c*)fpcM_Search(0x02154E4C /* shot_s_sub */, i_this);
+        /* true60: a later-in-line shot as A reads it (process-order read, d_a_gnd_t60.h) */
+        fopAc_ac_c* shot = gndT60::shotBegin((fopAc_ac_c*)fpcM_Search(0x02154E4C /* shot_s_sub */, i_this));
         if (shot != nullptr) {
             gabi::Local<cXyz> d;
             gabi::Local<cXyz> v;
@@ -970,6 +972,7 @@ void gnd_move(gnd_class* i_this) {
                     hit = true;
             }
         }
+        gndT60::shotEnd();
         f32 pd = fopAcM_searchActorDistance(i_this, dComIfGp_getPlayer(0));
         if (!hit) {
             check = reinterpret_cast<GndMoveActorFlagsHD*>(player)->mArrowState != 0 &&

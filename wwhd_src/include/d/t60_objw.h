@@ -34,6 +34,9 @@ static inline bool fsOldEarlier(uint32_t ea, void* out12) { return t60_fs_read(e
 /* ... and its shape_angle (6 bytes, csXyz) as A reads it: its frame-start shape_angle when it is later in the line, under fsPos's
  * condition; false otherwise: the caller keeps its live read */
 static inline bool fsShapeAngle(uint32_t ea, void* out6) { return t60_fs_read(ea, 4, out6); }
+/* ... and its speedF (4 bytes, big-endian f32) as A reads it: its frame-start speedF when it is later in the line, under
+ * fsPos's condition; false otherwise: the caller keeps its live read */
+static inline bool fsSpeedF(uint32_t ea, void* out4) { return t60_fs_read(ea, 5, out4); }
 template <class A> struct Logic {
     static void get(A*, f32*) {}
     static void set(A*, const f32*) {}

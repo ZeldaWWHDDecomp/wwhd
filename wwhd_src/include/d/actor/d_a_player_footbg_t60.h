@@ -20,6 +20,15 @@
  * own values. dt 1 (N = 1): never (the original). Host memory, one player. */
 #pragma once
 #include "true60.h"
+#include <cstdlib>
+
+static inline bool lkT60_footBgPoseNegCtrl() {
+    static const bool nc = [] {
+        const char *e = getenv("WWHD_T60_FOOTBGPOSE_NEGCTRL");
+        return e && e[0] == '1';
+    }();
+    return nc;
+}
 
 struct LkT60FootBg {
     uint32_t stamp;           /* step counter of the frame's first step */
@@ -31,6 +40,13 @@ struct LkT60FootBg {
     bool active;              /* this call is under the form (dt != 1) */
     bool valid;
     float prevDt;             /* the step's dt, put back at the end (the call's eases run at dt 1:) */
+    /* pose reads */
+    uint8_t fsWaist[0x30];    /* waist joint 0x1E world matrix as the frame's first step's call began */
+    uint8_t fsLeg[2][0x90];   /* both feet's mLegMtx[3] then */
+    uint8_t ownWaist[0x30];   /* this step's, put back after the call */
+    uint8_t ownLeg[2][0x90];
+    uint32_t waistEa;
+    bool pose;                /* this call substituted the pose reads */
 };
 static LkT60FootBg s_lkT60FootBg;
 
@@ -78,11 +94,41 @@ static inline void lkT60_footBgBegin(uint32_t fd, uint32_t off) {
         s.timer[i] = gabi::load<uint8_t>(fd + i * 0x118 + 0x01);
 }
 
+/* footBgCheck, before the waist concat: waist = the model's joint 0x1E matrix (guest address); after footBgBegin */
+static inline void lkT60_footBgPose(uint32_t fd, uint32_t waist) {
+    LkT60FootBg &s = s_lkT60FootBg;
+    s.pose = false;
+    if (!s.active || lkT60_footBgPoseNegCtrl())
+        return;
+    if (t60::first_step()) {
+        lkT60_fbRead(s.fsWaist, waist, 0x30);
+        for (int i = 0; i < 2; i++)
+            lkT60_fbRead(s.fsLeg[i], fd + i * 0x118 + 0x88, 0x90);
+        return;
+    }
+    if (!s.later)
+        return;
+    s.pose = true;
+    s.waistEa = waist;
+    lkT60_fbRead(s.ownWaist, waist, 0x30);
+    lkT60_fbWrite(waist, s.fsWaist, 0x30);
+    for (int i = 0; i < 2; i++) {
+        lkT60_fbRead(s.ownLeg[i], fd + i * 0x118 + 0x88, 0x90);
+        lkT60_fbWrite(fd + i * 0x118 + 0x88, s.fsLeg[i], 0x90);
+    }
+}
+
 /* end of footBgCheck */
 static inline void lkT60_footBgEnd(uint32_t fd) {
     LkT60FootBg &s = s_lkT60FootBg;
     if (!s.active)
         return;
+    if (s.pose) {
+        lkT60_fbWrite(s.waistEa, s.ownWaist, 0x30);
+        for (int i = 0; i < 2; i++)
+            lkT60_fbWrite(fd + i * 0x118 + 0x88, s.ownLeg[i], 0x90);
+        s.pose = false;
+    }
     for (int i = 0; i < 2; i++) {
         const uint32_t f = fd + i * 0x118;
         if (s.later)

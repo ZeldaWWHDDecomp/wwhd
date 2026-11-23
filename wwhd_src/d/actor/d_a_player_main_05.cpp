@@ -69,6 +69,80 @@ static inline bool lk05AjApexDecides() {
     return t60::dt() == 1.0f || nc || t60::first_step();
 }
 
+/* true60 (the step-resolution threshold rule frame-grid form; slope step-resolution threshold 86/85): procSlowFall's height test
+ * (pos.y - groundH < 200: chase maxFallSpeed -20 -> -5) is a threshold on a per-step position. A tests it once a frame
+ * with the frame-start height (the previous frame's end); B's tick30 step read the half-step height and crossed the
+ * threshold a frame early (B 85 step 2, A 86: speed.y slope 1 one frame early). Form: the decision is taken on the
+ * frame's first step with the frame-start height (= A's) and held over the frame's later steps; the chase itself still
+ * runs per step (60 Hz motion). A frame whose first step did not run procSlowFall (init on a later step) decides on
+ * the step itself. NC WWHD_T60_SLOWFALL_NEGCTRL=1 (game build: the per-step test). dt 1: the original. */
+static bool s_lk05SfLow;
+static uint32_t s_lk05SfFirst = 0xFFFFFFFFu;
+static inline bool lk05SlowFallLow(bool low) {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_SLOWFALL_NEGCTRL"); return e && e[0] == '1'; }();
+#else
+    const bool nc = false;
+#endif
+    if (t60::dt() == 1.0f || nc) {
+        return low;
+    }
+    if (t60::first_step()) {
+        s_lk05SfLow = low;
+        s_lk05SfFirst = t60_step_counter();
+        return low;
+    }
+    if (s_lk05SfFirst != 0xFFFFFFFFu && t60_step_counter() - s_lk05SfFirst < (uint32_t)t60::steps()) {
+        return s_lk05SfLow;
+    }
+    return low;
+}
+
+/* true60 (the step-resolution threshold rule frame-grid form; / uiWP10 / uiWX10 / uiWXfl1 jump 5 205/204):
+ * dProcTalk's talk-start step back (setTalkStartBack: ANM_WALK at -1.2, speed 5 away from the partner) ends when Link
+ * has passed the back point m370C (its direction more than 0x4000 off his heading) or walks into a wall: a threshold
+ * on the per-step position. A tests it once a frame with the frame-start position; B's tick30 step read the half-step
+ * position, passed the point a frame early and snapped to it (speedF 5 -> 0 at B 204 step 2, A 205). Form: the decision
+ * is taken on the frame's first step with the frame-start position and wall flags (= A's) and held over the frame's
+ * later steps; the walk itself still moves per step. NC WWHD_T60_TALKBACK_NEGCTRL=1 (game build: the per-step test).
+ * dt 1: the original. */
+static bool s_lk05TbPassed;
+static uint32_t s_lk05TbFirst = 0xFFFFFFFFu;
+static inline bool lk05TalkBackPassed(bool passed) {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_TALKBACK_NEGCTRL"); return e && e[0] == '1'; }();
+#else
+    const bool nc = false;
+#endif
+    if (t60::dt() == 1.0f || nc) {
+        return passed;
+    }
+    if (t60::first_step()) {
+        s_lk05TbPassed = passed;
+        s_lk05TbFirst = t60_step_counter();
+        return passed;
+    }
+    if (s_lk05TbFirst != 0xFFFFFFFFu && t60_step_counter() - s_lk05TbFirst < (uint32_t)t60::steps()) {
+        return s_lk05TbPassed;
+    }
+    return passed;
+}
+/* the frame whose first step snapped to m370C: A's single update ran only the step-back branch that frame, so B's later
+ * steps of it skip the mProcVar6 == 0 branch (heading = shape angle, texture switch) too; the next frame runs it as A */
+static uint32_t s_lk05TbSnap = 0xFFFFFFFFu;
+static inline void lk05TalkBackSnapped() {
+    s_lk05TbSnap = (t60::dt() != 1.0f && t60::first_step()) ? t60_step_counter() : 0xFFFFFFFFu;
+}
+static inline bool lk05TalkBackSnapHeld() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_TALKBACK_NEGCTRL"); return e && e[0] == '1'; }();
+#else
+    const bool nc = false;
+#endif
+    return !nc && t60::dt() != 1.0f && s_lk05TbSnap != 0xFFFFFFFFu && t60_step_counter() != s_lk05TbSnap &&
+           t60_step_counter() - s_lk05TbSnap < (uint32_t)t60::steps();
+}
+
 /* true60 (M2g, pot potP4 @263): the apex frame's root mode. A's apex frame sets
  * ANM_JMPEDS and mRootMoveMode 2 after the per-frame mRootMoveMode = 1, so its one calc keeps the root translation in x /
  * z (jointBeforeCB holds it only in mode 1): the hands, and the carried pot placed at them (setGrabItemPos), sit 1.968
@@ -1475,7 +1549,7 @@ BOOL daPy_lk_c::procFall() {
 
 /* 0241DF20 */
 BOOL daPy_lk_c::procSlowFall() {
-    if (current.pos.y - mAcch.GetGroundH() < 200.0f) {
+    if (lk05SlowFallLow(current.pos.y - mAcch.GetGroundH() < 200.0f) /* true60 */) {
         cLib_chaseF(&maxFallSpeed, -5.0f, 1.0f);
     }
     if (mAcch.ChkGroundHit()) {
@@ -2969,8 +3043,8 @@ BOOL daPy_lk_c::dProcTalk() {
         }
       }
     }
-    if (cLib_distanceAngleS(cM_atan2s(d->x, d->z), current.angle.y) > 0x4000 ||
-        iVar2 > 0x4000) {
+    if (lk05TalkBackPassed(cLib_distanceAngleS(cM_atan2s(d->x, d->z), current.angle.y) > 0x4000 ||
+        iVar2 > 0x4000) /* true60 */) {
       u32 mode = mDemo.getDemoMode();
       lk05CopyFloatBits(&current.pos.x, &m370C.x);
       mProcVar6 = 0;
@@ -2987,7 +3061,10 @@ BOOL daPy_lk_c::dProcTalk() {
         mModeFlg = mModeFlg & ~0x80u;
       }
       mNormalSpeed = 0.0f;
+      lk05TalkBackSnapped(); /* true60: the snap frame's later steps hold */
     }
+  } else if (lk05TalkBackSnapHeld()) {
+    /* true60: A's snap frame runs the step-back branch only; its heading follows the next frame */
   } else {
     u32 pv7 = mProcVar7;
     u32 p1 = mDemo.getParam1(); /* mDemo.getParam1() */

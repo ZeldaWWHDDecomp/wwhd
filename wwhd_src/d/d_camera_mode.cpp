@@ -9,6 +9,7 @@
  */
 #include "d/d_camera_mode.h"
 #include "true60.h"
+#include "d/d_camera_force_t60.h"
 
 namespace camera_mode {
 static CameraTypes types;
@@ -275,6 +276,11 @@ bool dCamera_c::ChangeModeOK(s32 mode) {
 // a map-tool type does not replace the type while a subject style is active
 s32 dCamera_c::nextType(s32 cur) {
     s32 next = cur;
+    { /* true60 (d_camera_force_t60.h): a 30 Hz requester's forced type holds over the frame's earlier steps */
+        const s32 carried = camera_force_t60::forceTypeAtEntry(mForceType, mpForceTypeActor.v.get());
+        if (carried != 0xFF)
+            mForceType = carried;
+    }
     auto chooseType = [&]() -> s32 {
         if (cameraModeIsPlaying() /* dComIfGp_evmng_cameraPlay() */ || chkFlag(0x20000000)) {
             next = mCamTypeEvent;

@@ -119,6 +119,54 @@ static inline void bk_t60_run_catch_up(bk_class* i_this) {
     t60_set_dt(previous);
 }
 
+/* true60 (d_a_bk_t60.h bk_t60_jlaunch_note (a)): the jump step's turn (scale 2, 0x2000) after the
+ * prelude's on the same angle. On the tick30 step after a prelude turn the first step noted (turnHeld > 0: the c_lib
+ * entry pinned the prelude's full step from the frame start) it is the original's one step from there (dt 1), A's
+ * frame. The same for jump step 0 of a jump-run launch decided on the tick30 step (launch) when the first step noted no
+ * prelude turn (turnHeld 0: the angle had no ease earlier in the frame; a pair's frame 245, Bokoblin 47C5B4B4 from jyunkai:
+ * fight_run 0 -> 1 on the first step, the tick30 launch's turn began a partial entry, +4096 for A's +8192). Else (and
+ * dt = 1) the converted call. */
+static inline void bk_t60_jump_turn(bk_class* i_this, int turnHeld, bool launch = false) {
+    if (t60::dt() != 1.0f && t60::tick30() && (turnHeld > 0 || (launch && turnHeld == 0)) && !bk_t60_launch_nc()) {
+        f32 previous = t60_set_dt(1.0f);
+        cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->dr.mTurnTargetY, 2, 0x2000);
+        t60_set_dt(previous);
+        return;
+    }
+    cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->dr.mTurnTargetY, 2, 0x2000);
+}
+/* true60 (d_a_bk_t60.h bk_t60_jlaunch_note (b)): the tick30 step after a jump-run launch on an earlier
+ * step of the frame. When that step is not held, fight_run's own prelude would turn the noted 0x800 after the launch's
+ * random yaw (a pair: 1028 -> 1154 for A's 988, as the held Bk_move turn did in). Back to the pre-add angle, the
+ * prelude's turn (pins the frame's full step from the frame start), the jump step's at dt 1, then the yaw again: A's
+ * order. True when the launch was noted (the caller skips its prelude turn). */
+static inline bool bk_t60_jlaunch_complete(bk_class* i_this, int turnHeld) {
+    s16 pre;
+    if (turnHeld < 0 || !bk_t60_jlaunch_take(i_this, &pre))
+        return false;
+    const s16 add = (s16)((u32)(s16)i_this->current.angle.y - (u32)pre);
+    i_this->current.angle.y = pre;
+    if (turnHeld > 0)
+        cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->dr.mTurnTargetY, 4, turnHeld);
+    bk_t60_jump_turn(i_this, turnHeld);
+    i_this->current.angle.y = (s16)((u32)(s16)i_this->current.angle.y + (u32)add);
+    return true;
+}
+/* true60 (pair A 3560): the jump-run -> run switch is decided on the tick30 step (t60Way); the
+ * frame's earlier steps took the jump branch, whose jump-run speed overwrote their share of the run speed ramp
+ * (cLib_addCalc2 by 5) above it. A's one call ramps the whole frame (90 -> 85); B ended on the tick30 share (87.5).
+ * The switch's step catches up the earlier steps' share (1 - dt, the ramp's scale 1: the clamped steps sum to A's).
+ * Only when the frame's first step ran fight_run (turnHeld >= 0) with the weapon held (the jump-run speed set).
+ * dt = 1: nothing. */
+static inline void bk_t60_run_speed_catch_up(bk_class* i_this, f32 target, int turnHeld) {
+    if (t60::dt() == 1.0f || !t60::tick30() || t60::first_step() || turnHeld < 0 || i_this->mHoldWeapon == 0 ||
+        bk_t60_launch_nc())
+        return;
+    f32 previous = t60_set_dt(1.0f - t60::dt());
+    cLib_addCalc2(&i_this->speedF, target, 1.0f, 5.0f);
+    t60_set_dt(previous);
+}
+
 /* weak guest-call stubs for TU functions defined in d_a_bk.cpp (lets this part build alone;
  * the decompiled definitions replace them) */
 __attribute__((weak)) void anm_init(bk_class* a, int b, f32 m, u8 l, f32 s, int snd) {
@@ -243,7 +291,9 @@ void fight_run(bk_class* i_this) {
      * bk_t60_turn_due; f141 addendum); noted for a held tick30 step */
     const int t60TurnHeld = bk_t60_turn_due(i_this);
     int t60Turn = 0;
-    if (t60TurnHeld >= 0) {
+    if (bk_t60_jlaunch_complete(i_this, t60TurnHeld)) {
+        t60Turn = t60TurnHeld; /* true60: the launch frame's turns done in A's order */
+    } else if (t60TurnHeld >= 0) {
         t60Turn = t60TurnHeld;
         if (t60Turn != 0)
             cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->dr.mTurnTargetY, 4, t60Turn);
@@ -296,6 +346,7 @@ void fight_run(bk_class* i_this) {
             if (t60Way && i_this->mJumpMove != 0) {
                 anm_init(i_this, dRes_INDEX_BK_BCK_BK_RUN_e, 10.0f, 2, l_bkHIO().mRunAnmSpeed,
                          dRes_INDEX_BK_BAS_BK_RUN_e);
+                bk_t60_run_speed_catch_up(i_this, scaleMag, t60TurnHeld); /* true60: the ramp's earlier-step share */
                 i_this->mJumpMove = 0;
             }
             /* true60 (first-step input addendum): the attack-range decision reads Link: tick30 step (the
@@ -319,14 +370,21 @@ void fight_run(bk_class* i_this) {
             switch (i_this->mJumpStep) {
             case 0:
                 i_this->mJumpStep = 1;
-                cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->dr.mTurnTargetY, 2, 0x2000);
+                bk_t60_jump_turn(i_this, t60TurnHeld, t60Launch); /* true60: the frame's turn */
                 anm_init(i_this, dRes_INDEX_BK_BCK_BK_JUMP2_e, 5.0f, 0, 1.0f,
                          dRes_INDEX_BK_BAS_BK_JUMP2_e);
                 if (t60Launch) /* true60: the launch decided on tick30 catches up the frame's earlier steps */
                     bk_t60_run_catch_up(i_this);
                 break;
             case 1:
-                if (i_this->dr.mAcch.ChkGroundHit() && en_t60_isStop(i_this->mpMorf)) {
+                /* true60 (pair 47C5B4B4 frame 266): the landing reads
+                 * the ground answer of the frame's first step (the previous frame's BG check, A's), held over the frame
+                 * (bk_t60_ground_held). Read live, a landing met by the first step's BG check was decided on the tick30
+                 * step, one frame before A (B 3769 / A 3770), and the next launch came a frame early with another yaw.
+                 * Negative control WWHD_T60_BKLAND_NEGCTRL=1 (the live read). dt = 1: the live read (the original). */
+                if ((bk_t60_land_nc() ? i_this->dr.mAcch.ChkGroundHit() != 0
+                                      : bk_t60_ground_held(i_this, i_this->dr.mAcch.ChkGroundHit() != 0)) &&
+                    en_t60_isStop(i_this->mpMorf)) {
                     anm_init(i_this, dRes_INDEX_BK_BCK_BK_JUMP2_e, 0.0f, 0, 1.0f,
                              dRes_INDEX_BK_BAS_BK_JUMP2_e);
                     i_this->mJumpStep = 2;
@@ -336,12 +394,13 @@ void fight_run(bk_class* i_this) {
                 break;
             case 2:
                 i_this->speedF = 0.0f;
-                cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->dr.mTurnTargetY, 2, 0x2000);
+                bk_t60_jump_turn(i_this, t60TurnHeld); /* true60: after the prelude's turn */
                 if (i_this->dr.mAcch.ChkGroundHit() && en_t60_isStop(i_this->mpMorf)) {
                     i_this->mJumpStep = 1;
                     anm_init(i_this, dRes_INDEX_BK_BCK_BK_JUMP1_e, 2.0f, 0, 1.0f,
                              dRes_INDEX_BK_BAS_BK_JUMP1_e);
                     i_this->speed.y = cM_rndF(REG8_F(7) + 10.0f) + 65.0f + REG8_F(8);
+                    bk_t60_jlaunch_note(i_this); /* true60: the pre-add angle for the held tick30 step */
                     if ((i_this->mGroundCheck & 0xC) == 0) {
                         s16 temp = (s16)gabi::ftoi(cM_rndFX(REG6_F(13) + 3000.0f));
                         i_this->current.angle.y = i_this->current.angle.y + temp;

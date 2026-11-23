@@ -47,16 +47,31 @@ static inline void lkT60_waitTurnEnd(s16 angle, s16 shape, f32 speed) {
     s_lkT60WaitTurn.speed1 = speed;
     s_lkT60WaitTurn.valid = true;
 }
-/* procWait after checkNextMode entered a procedure: this step's record when the entered procedure is MOVE and its
- * init left the turn's values (the caller redoes the turn) */
-static inline const LkT60WaitTurn* lkT60_waitTurnCatchUp(uint32_t curProcEa, bool enteredMove, s16 angle, s16 shape,
-                                                         f32 speed) {
+/* (2026-11-23; crouch, stick held while R ends the NPC call: A's
+ * frame 202 turns procWait's whole 0xBB8 (-13743 -> -16743) and enters CROUCH, B's first step its dt share (-15243),
+ * the crouch body then held on the later step: link-motion angle 1500 at 204, camera 3.1 at 209) the same catch-up for
+ * an entered CROUCH: procCrouch_init keeps the shape angle and the speed and copies the shape angle into
+ * current.angle.y (the caller redoes the turn and that copy). NC WWHD_T60_CALLTURN_NEGCTRL=1: MOVE only, as before. */
+static constexpr s32 kLkT60WaitTurnCrouch = 0xE; /* daPyProc_CROUCH_e (d_a_player_main_03.h) */
+static inline bool lkT60_waitTurnCrouchNegctrl() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_CALLTURN_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return false;
+#endif
+}
+/* procWait after checkNextMode entered a procedure: this step's record when the entered procedure is MOVE (or CROUCH)
+ * and its init left the turn's values (the caller redoes the turn) */
+static inline const LkT60WaitTurn* lkT60_waitTurnCatchUp(uint32_t curProcEa, s32 curProc, bool enteredMove, s16 angle,
+                                                         s16 shape, f32 speed) {
     LkT60WaitTurn& t = s_lkT60WaitTurn;
     if (!lkT60_waitTurnStep() || !t.valid || t.stamp != t60_step_counter())
         return nullptr;
     t.valid = false;
-    if (!enteredMove || !lkT60_procEnteredThisFrame(curProcEa) || angle != t.angle1 || shape != t.shape1 ||
-        speed != t.speed1)
+    const bool crouch = curProc == kLkT60WaitTurnCrouch && !lkT60_waitTurnCrouchNegctrl();
+    if (!(enteredMove || crouch) || !lkT60_procEnteredThisFrame(curProcEa) ||
+        angle != (crouch ? t.shape1 : t.angle1) || shape != t.shape1 || speed != t.speed1)
         return nullptr;
     return &t;
 }

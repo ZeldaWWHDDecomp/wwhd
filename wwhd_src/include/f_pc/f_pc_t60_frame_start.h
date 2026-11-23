@@ -30,7 +30,9 @@ __attribute__((visibility("default"))) void wwhd_t60_fs_exec(uint32_t ea, int co
  * else 0; what 3: the target's frame-start position = its old.pos as A reads it when the target is EARLIER in the line
  * (it has executed on this step), else 0; what 4 (additive, 2026-11-21, rule for mbdoor ACT_ADJUSTMENT):
  * the 6 bytes of the target's frame-start shape_angle (fopAc_ac_c 0x328), under the what 0-2 condition (later in the line).
- * Fields / layout of what 0-3 unchanged; only readers that ask for what 4 see it */
+ * Fields / layout of what 0-3 unchanged; only readers that ask for what 4 see it. what 5 (additive,
+ * 2026-11-23, the process-order read rule addendum (a): state as well as position): the 4 bytes of the target's frame-start speedF
+ * (fopAc_ac_c 0x370), under the what 0-2 condition (later in the line) */
 __attribute__((visibility("default"))) int wwhd_t60_fs_read(uint32_t ea, int what, void* out12);
 }
 static inline bool t60_fs_read(uint32_t ea, int what, void* out12) {
@@ -51,6 +53,7 @@ struct Entry {
     uint8_t pos[12];
     uint8_t old[12]; /* old.pos as A reads it: the previous frame's start position (A: old = current at each execute) */
     uint8_t shp[6];  /* fopAc_ac_c::shape_angle at the frame start (what 4; additive field) */
+    uint8_t spd[4];  /* fopAc_ac_c::speedF at the frame start (what 5; additive field) */
 };
 enum { kSize = 512, kProbe = 32 };
 static Entry s_tab[kSize];
@@ -114,6 +117,7 @@ extern "C" __attribute__((visibility("default"))) void wwhd_t60_fs_exec(uint32_t
         std::memcpy(e->eye, gabi::at<uint8_t>(ea + 0x37C), 12); /* fopAc_ac_c::eyePos */
         std::memcpy(e->pos, gabi::at<uint8_t>(ea + 0x314), 12); /* fopAc_ac_c::current.pos */
         std::memcpy(e->shp, gabi::at<uint8_t>(ea + 0x328), 6);  /* fopAc_ac_c::shape_angle (what 4) */
+        std::memcpy(e->spd, gabi::at<uint8_t>(ea + 0x370), 4);  /* fopAc_ac_c::speedF (what 5) */
         e->stamp = now;
         return;
     }
@@ -140,6 +144,10 @@ extern "C" __attribute__((visibility("default"))) int wwhd_t60_fs_read(uint32_t 
         return 0;
     if (what == 4) {
         std::memcpy(out12, e->shp, 6);
+        return 1;
+    }
+    if (what == 5) {
+        std::memcpy(out12, e->spd, 4);
         return 1;
     }
     std::memcpy(out12, what == 0 ? e->eye : what == 1 ? e->pos : e->old, 12);

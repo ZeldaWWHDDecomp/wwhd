@@ -387,3 +387,37 @@ static inline bool lkT60_demoWalkDecides() {
 #endif
     return t60::dt() == 1.0f || t60::first_step();
 }
+/* (an event end: BS_SHUTTER_START cut 454, 003n_dash): the first-step-only
+ * tests above left the frame's later steps without the slow-down's stick release: setDemoData sets mDemo.mStick = 1 for a
+ * system demo on every step before the tests, so the tick30 step ran with stick 1 where A's whole frame has 0 (the frame-end
+ * speedF 7.13 / 4.12 / 2.37 against A's 9.98 / 7.10 / 0.00 from mNormalSpeed 12 / 9.5 / 7): Link reached the goal (cut end
+ * flag 1115) a frame late, the shutter-start demo ended a frame late and the day clock resumed a frame late (KANKYO). Form:
+ * the first step's outcome (stop / stick release) is latched and the frame's later steps apply it again, so every step of
+ * the frame sees A's one decision. Host state only (the split-actor state rule (1)); NC WWHD_T60_DEMOSTICK_NEGCTRL=1 (game build: the
+ * later steps decide nothing, as before); dt 1: the original. */
+struct LkT60DemoWalk {
+    uint32_t stamp;
+    bool valid, stop, release;
+};
+static LkT60DemoWalk s_lkT60DemoWalk;
+static inline void lkT60_demoWalkNote(bool stop, bool release) {
+    if (t60::dt() == 1.0f || !t60::first_step())
+        return;
+    s_lkT60DemoWalk = {t60_step_counter(), true, stop, release};
+}
+/* a later step of a frame whose first step decided: true and that decision */
+static inline bool lkT60_demoWalkHeld(bool* stop, bool* release) {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool negctrl = [] { const char* e = getenv("WWHD_T60_DEMOSTICK_NEGCTRL"); return e && e[0] == '1'; }();
+    if (negctrl)
+        return false;
+#endif
+    if (t60::dt() == 1.0f || t60::first_step())
+        return false;
+    const LkT60DemoWalk& h = s_lkT60DemoWalk;
+    if (!h.valid || t60_step_counter() - h.stamp >= t60::steps())
+        return false;
+    *stop = h.stop;
+    *release = h.release;
+    return true;
+}
