@@ -10,6 +10,7 @@
  * does not restart yj_out while yj_delete is playing. */
 #include "d/d_attention.h"
 #include "port_hooks.h"
+#include "d/d_attention_t60.h" /* true60 (the Z-target arrow) */
 
 // HD: endian-aware image accesses retained for word copies and dynamic virtual slots.
 namespace AttentionMemory3 {
@@ -543,7 +544,9 @@ static void dAttention_c_Draw(u32 i_this) {
         return; /* dComIfGp_getScopeMesgStatus */
     u32 inv = gabi::ea(invCamera.get());
     if (target != 0) {
+        t60att::followBegin(target, i_this + A_DRAW); /* true60: the target's place at the world's time */
         dAttDraw_c_draw(i_this + A_DRAW, target + AC_ATTN_POS, inv);
+        t60att::followEnd();
         s32 cnt = (s32)(u32)self->mLockonCount;
         if (cnt >= 2 && AttentionMemory3::ld(i_this + A_DRAW + 0xC + 4) != 0) {
             s32 off = (s32)(u32)self->mLockOnOffset;
@@ -551,7 +554,11 @@ static void dAttention_c_Draw(u32 i_this) {
                 off = cnt;
             u32 e = i_this + A_LLIST + (off - 1) * 0x10;
             if (att3_getActor(e) != 0)
+            {
+                t60att::followBegin(att3_getActor(e), i_this + A_DRAW + 0xC); /* true60 */
                 dAttDraw_c_draw(i_this + A_DRAW + 0xC, att3_getActor(e) + AC_ATTN_POS, inv);
+                t60att::followEnd();
+            }
         }
         self->mDrawLockonTargetID = att3_LockonTargetPId(i_this, 0);
         AttentionMemory3::st(i_this + A_DRAWPOS + 0,
@@ -564,7 +571,9 @@ static void dAttention_c_Draw(u32 i_this) {
     } else if ((s8)(u8)self->mCursorDrawState > 0) {
         target = searchByID((u32)self->mDrawLockonTargetID);
         if (target != 0) {
+            t60att::followBegin(target, i_this + A_DRAW); /* true60 */
             dAttDraw_c_draw(i_this + A_DRAW, target + AC_ATTN_POS, inv);
+            t60att::followEnd();
             copy_pos(i_this + A_DRAWPOS, target + AC_ATTN_POS);
         } else {
             dAttDraw_c_draw(i_this + A_DRAW, i_this + A_DRAWPOS, inv);

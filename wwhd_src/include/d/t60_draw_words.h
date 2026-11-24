@@ -24,9 +24,10 @@ __attribute__((visibility("default"))) void wwhd_t60_draw_words_end(unsigned ea)
 #endif
 
 namespace t60dw {
-enum Kind { kWhole = 0, kFloats = 1, kMatrix = 2, kFrameEnd = 3 };
-/* a point list that shifts / floats blended / 3x4 matrices / floats (the first third positions, the rest unit vectors)
- * drawn between the two frame ends around W when both are kept (the earlier steps' own pictures not drawn) */
+enum Kind { kWhole = 0, kFloats = 1, kMatrix = 2, kFrameEnd = 3, kUnitVecs = 0x80 };
+/* a point list that shifts / floats blended / 3x4 matrices / floats drawn between the two frame ends around W when both
+ * are kept (the earlier steps' own pictures not drawn; a frame end not kept: as kFloats). kUnitVecs (with kFrameEnd): the
+ * block's first third are positions, the last two thirds unit vectors (renormalized after the blend) */
 /* (kind | logWord(w): the port's DRAWLOG shows the point at word w of the block) */
 static inline int logWord(int w) { return w << 8; }
 static inline void begin(u32 owner, const void* block, u32 bytes, int kind) {

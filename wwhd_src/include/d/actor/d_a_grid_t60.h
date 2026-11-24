@@ -257,7 +257,7 @@ static inline void griddrawlog(daGrid_c* a) {
 static inline void drawBegin(daGrid_c* a) {
     t60dw::begin(gabi::ea(a), &a->mPacket.mMtx, 48, t60dw::kMatrix);
     t60dw::begin(gabi::ea(a), &a->mPacket.mPos[0], kN * 4 * (nrmWordsOn() ? 3 : 1),
-                 nrmWordsOn() && frameEndOn() ? t60dw::kFrameEnd : t60dw::kFloats);
+                 nrmWordsOn() && frameEndOn() ? t60dw::kFrameEnd | t60dw::kUnitVecs : t60dw::kFloats);
     griddrawlog(a);
 }
 static inline void drawEnd(daGrid_c* a) {
