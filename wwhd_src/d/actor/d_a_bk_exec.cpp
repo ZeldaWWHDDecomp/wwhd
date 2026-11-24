@@ -9,6 +9,7 @@
  */
 #include "d/actor/d_a_bk_exec.h"
 #include "d/actor/d_a_bk_t60.h"
+#include "c/c_damagereaction_bounce_t60.h" /* true60: the frame's bounce, for the shape copy */
 #include <unordered_map>
 
 /* true60 (the first-step AI-timer rule): the AI timers (mTimers, mSideStepTimer, mSideStepWait, mWeaponRunTimer,
@@ -1055,7 +1056,7 @@ BOOL daBk_Execute(bk_class* i_this) {
         i_this->dr.mpEnemy = i_this;
         i_this->dr.mEnemyType = 2;
     }
-    if (i_this->dr.mAction != 31) {
+    if (i_this->dr.mAction != 31 && !t60drb::shapeHeld(gabi::ea(&i_this->dr))) { /* true60 */
         i_this->shape_angle.x = i_this->current.angle.x;
         i_this->shape_angle.y = i_this->current.angle.y;
         i_this->shape_angle.z = i_this->current.angle.z;

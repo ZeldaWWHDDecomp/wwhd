@@ -3,6 +3,8 @@
 #include "c/c_damagereaction.h"
 #include "true60.h"
 #include "c/c_damagereaction_carrier_t60.h" /* rider rule: hold on a 30 Hz carrier */
+#include "c/c_damagereaction_bounce_t60.h" /* the landing bounce once per frame */
+#include "c/c_damagereaction_fall_t60.h" /* the tick30 fall from the frame start height */
 #include <unordered_map>
 using gabi::load;
 using gabi::store;
@@ -111,6 +113,8 @@ struct T60drFall {
     f32 start; /* the speed.y the frame's term moves with */
     f32 sum;   /* the y term the frame's earlier steps moved */
     f32 left;  /* speed.y as the last step's reaction left it (a change after it is the enemy's own set) */
+    f32 y0;    /* the height before the frame's first share */
+    bool launched; /* a speed set between the steps */
 };
 std::unordered_map<u32, T60drFall> t60drFalls;
 }  // namespace
@@ -121,6 +125,7 @@ static f32 t60dr_fall_step(damagereaction* dr, f32 quarter) {
     if (t60::first_step()) {
         T60drFall& e = t60drFalls[a];
         e.frame = frame, e.start = v, e.left = v;
+        e.y0 = dr->mpEnemy->current.pos.y, e.launched = false;
         e.sum = gabi::fmuls_ppc(v, quarter);
         return e.sum;
     }
@@ -129,9 +134,11 @@ static f32 t60dr_fall_step(damagereaction* dr, f32 quarter) {
         return gabi::fmuls_ppc(v, quarter); /* no first-step move this frame: the step's own */
     T60drFall& e = it->second;
     if (v != e.left)
-        e.start = v;
+        e.start = v, e.launched = true;
     if (t60::tick30()) {
         f32 fy = gabi::fsubs_ppc(gabi::fmuls_ppc(e.start, 0.25f), e.sum);
+        if (!e.launched) /* true60: from the frame start's height (c_damagereaction_fall_t60.h) */
+            fy = t60drFall::tick30(e.y0, gabi::fmuls_ppc(e.start, 0.25f), dr->mpEnemy->current.pos.y, fy, e.sum);
         t60drFalls.erase(it);
         return fy;
     }
@@ -1818,9 +1825,10 @@ static s32 dr_damage_set(u32 address) {
         }
     }
 
-    if (dr->mAcch.ChkGroundHit()) {
+    if (dr->mAcch.ChkGroundHit() && !t60drb::skip(&dr->mBounceCount, gabi::ea(dr), dr->mpEnemy.get())) { /* true60: one ground reaction a frame */
         if (dr->mKnockedDown != 0 && react == 0 && (dr->mBounceCount == 0 || !(dr->mpEnemy->speed.y > -100.0f))) {
             react = 0x14;
+            t60drb::entry(gabi::ea(dr), dr->mpEnemy.get()); /* true60: the speed before the bounce */
             dr->mpEnemy->speed.x *= 0.75f;
             dr->mpEnemy->speed.z *= 0.75f;
             dr->mShakeJntMask = 0xFF;
@@ -1834,6 +1842,7 @@ static s32 dr_damage_set(u32 address) {
             }
 
             dr->mBounceCount += 1;
+            t60drb::bounced(gabi::ea(dr)); /* true60: the shape copy waits for the next frame */
             dr->mLaunched = 0;
             dr->mJntBgCheckTimer = REG0_S(3) + 1;
             t60dr_mark_set(&dr->mJntBgCheckTimer); /* true60: its phase starts with the next frame */
@@ -1885,7 +1894,9 @@ static s32 dr_damage_set(u32 address) {
                 dr->mpEnemy->speed.x = temp4.x;
                 dr->mpEnemy->speed.z = temp4.z;
             }
+            t60drb::note(&dr->mBounceCount, gabi::ea(dr), dr->mpEnemy.get()); /* true60: the frame's ground reaction */
         } else {
+            t60drb::entry(gabi::ea(dr), dr->mpEnemy.get()); /* true60: the speed before the stop */
             if (dr->mKnockbackSpeed != 0) {
                 dr->mJntBgCheckTimer = 1;
                 t60dr_mark_set(&dr->mJntBgCheckTimer); /* true60: its phase starts with the next frame */
@@ -1917,6 +1928,7 @@ static s32 dr_damage_set(u32 address) {
                 dr->mJnt2AddZ = 0;
                 dr->mJnt3AddZ = 0;
             }
+            t60drb::note(&dr->mBounceCount, gabi::ea(dr), dr->mpEnemy.get()); /* true60: the frame's ground reaction */
         }
     }
 
