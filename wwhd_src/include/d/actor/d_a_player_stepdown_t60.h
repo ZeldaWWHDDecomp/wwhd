@@ -104,11 +104,15 @@ struct LkT60LiftOff {
 };
 static LkT60LiftOff s_lkT60LiftOff;
 
+/* the step on which lkT60_liftOffStart records (its caller evaluates the heavy-state query only there: at dt 1 the
+ * execute makes no call the original does not) */
+static inline bool lkT60_liftOffStartStep() { return t60::dt() != 1.0f && t60::steps() > 1 && t60::first_step(); }
+
 /* the frame's first step, before posMove: y0 / speed.y / gravity / maxFallSpeed as the frame starts, ground = the
  * previous check's GROUND_HIT, skip = a fly mode or hover */
 static inline void lkT60_liftOffStart(f32 y0, f32 vy, f32 g, f32 maxFall, bool heavy, bool ground, bool skip) {
     LkT60LiftOff &s = s_lkT60LiftOff;
-    if (t60::dt() == 1.0f || t60::steps() <= 1 || !t60::first_step())
+    if (!lkT60_liftOffStartStep())
         return;
     s.valid = !skip && ground && !lkT60_liftOffNegCtrl();
     if (!s.valid)

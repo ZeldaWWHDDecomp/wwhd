@@ -4766,8 +4766,10 @@ BOOL daPy_lk_c::execute() {
         lkT60Land::frameStart(this, lkT60_frameTag(), LinkPoseApi::checkHeavyStateOn(this) != 0);
     }
     lkT60Land::bodyPos(sp14x, sp14y, sp14z, lkT60_frameTag()); /* true60: a set held by the tick30 body */
-    /* true60 (d_a_player_stepdown_t60.h): the lift-off frame's start */
-    lkT60_liftOffStart(current.pos.y, speed.y, gravity, maxFallSpeed, LinkPoseApi::checkHeavyStateOn(this) != 0,
+    /* true60 (d_a_player_stepdown_t60.h): the lift-off frame's start; the heavy-state query
+     * only where the form reads it (a frame's first step at N > 1): dt 1 makes the original's calls */
+    lkT60_liftOffStart(current.pos.y, speed.y, gravity, maxFallSpeed,
+                       lkT60_liftOffStartStep() && LinkPoseApi::checkHeavyStateOn(this) != 0,
                        (mAcch.m_flags & dBgS_Acch::GROUND_HIT) != 0,
                        (mModeFlg & 0x10452822) != 0 || (mNoResetFlg0 & 0x80000000) != 0);
     if (!lkT60Crawl_moveSkip()) { /* true60: a crawl frame moves once, on its tick30 step at dt 1 */
@@ -4881,8 +4883,8 @@ BOOL daPy_lk_c::execute() {
                 mNoResetFlg0 = r0;
                 if (py < 2000.0f) {
                     if (LinkUpdateApi::GetSpecialCode(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mAcch.m_gnd)) != 1 &&
-                        LinkUpdateApi::GetTriPla(dComIfG_Bgsp(), (u32)mAcch.m_gnd.mBgIndex,
-                                                        (u32)mAcch.m_gnd.mPolyIndex)->y >= 0.5f) {
+                        !(LinkUpdateApi::GetTriPla(dComIfG_Bgsp(), (u32)mAcch.m_gnd.mBgIndex,
+                                                          (u32)mAcch.m_gnd.mPolyIndex)->y < 0.5f)) { /* (fcmpo + blt: a NaN normal clears too) */
                         r0 = mNoResetFlg0 & ~daPyFlg0_DEKU_SP_RETURN_FLG; /* offNoResetFlg0(DEKU_SP_RETURN_FLG) */
                         mNoResetFlg0 = r0;
                     } else {
@@ -4931,6 +4933,15 @@ BOOL daPy_lk_c::execute() {
             s->mStr = r9;
             s->__vtbl = LK_SAFESTRING_VTBL;
             LinkUpdateApi::assureSoundName(s.get());
+            {
+                /* the original's inlined length of the name (0240DC64..0240DC94: up to 0x40000 bytes, the result
+                 * unused): its reads, so a NULL name faults where the original's does (assureSoundName 02444F48 is an
+                 * empty function in HD) */
+                u32 p = s->mStr;
+                for (u32 n = 0; gabi::load<u8>(p) != 0 && ++n <= 0x40000;) {
+                    p++;
+                }
+            }
             s8 rev = mReverb;
             LinkUpdateSoundFrame* sc = gabi::at<LinkUpdateSoundFrame>(mpSeAnmFrameCtrl);
             LinkUpdateApi::setAnimSound(mJAIZelAnime, &current.pos, (f32)sc->mFrame,
