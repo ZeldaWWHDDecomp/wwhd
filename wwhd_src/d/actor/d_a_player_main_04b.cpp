@@ -491,7 +491,7 @@ void daPy_lk_c::setAngleAtnHD() {
             current.angle.y = (s16)(current.angle.y - 0x8000);
             mNormalSpeed = -mNormalSpeed;
         }
-        const s16 lkT60H0 = current.angle.y;
+        const s16 lkT60H0 = lkT60_headingStartOf(current.angle.y); /* (read on the note step only) */
         cLib_addCalcAngleS(&current.angle.y, target, 6, 0xBB8, 0x7D0);
         if (lkT60_headingNoteStep()) /* true60 (d_a_player_heading_t60.h): the frame's whole turn */
             lkT60_headingNote(lkT60H0, lkT60_moveCosAngle(lkT60H0, current.angle.y, target, 0xBB8, 0x7D0, 6));

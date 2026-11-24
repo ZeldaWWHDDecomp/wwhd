@@ -36,6 +36,11 @@ static inline bool lkT60_headingNegctrl() {
 #endif
 }
 static inline bool lkT60_headingNoteStep() { return t60::dt() != 1.0f && t60::steps() > 1 && t60::first_step(); }
+/* the turn's frame start, read only on the note step: at dt 1 the caller makes no read the original does not
+ * (setAngleAtnHD 02416AB4 reads current.angle.y only through cLib_addCalcAngleS; the call-trace check 2026-11-24) */
+template <class A> static inline s16 lkT60_headingStartOf(const A& angle) {
+    return lkT60_headingNoteStep() ? (s16)angle : (s16)0;
+}
 /* the turn's caller, first step: the frame start and the frame's whole turn */
 static inline void lkT60_headingNote(s16 start, s16 whole) {
     if (!lkT60_headingNoteStep())
