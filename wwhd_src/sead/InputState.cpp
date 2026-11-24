@@ -1,6 +1,7 @@
 // WWHD controller input state. All behavior and layouts reconstructed from the binary.
 #include "sead/InputState.h"
 #include "true60.h"
+#include "sead/InputState_t60.h"
 
 void* allocateInputObject(u32 size);
 u32 inputAtan(f32);
@@ -298,7 +299,8 @@ u32 sead::InputState::stickDirections(u32 previous, const InputPair* stick, u32 
 static void t60_updateLater(sead::InputState* state, u32 previous, u32 buttons, u32 previousPointer) {
     const u32 press = buttons & ~previous;
     const u32 release = previous & ~buttons;
-    state->mRelease = (u32)state->mRelease | press;
+    /* (InputState_t60.h: the carried later presses of the previous frame leave the union first) */
+    state->mRelease = ((u32)state->mRelease & ~sead_t60::latePressLater(gabi::ea(state))) | press;
     state->mTrigger = (u32)state->mTrigger | release;
     u32 pointer = state->mPointerState;
     if (previousPointer == 0 && (pointer & 1) != 0) pointer |= 2;
@@ -333,9 +335,12 @@ void sead::InputState::update(u32 previous, u32 previousPointer) {
         mPointer.mY = gabi::ftoi(laterY);
         return;
     }
+    /* true60 (InputState_t60.h): the press word the previous frame left, for the later presses it carries */
+    const u32 t60Union = t60::steps() > 1 ? (u32)mRelease : 0u;
     mTrigger = previous & ~buttons;
     s32 count = mButtonCount;
     mRelease = buttons & ~previous;
+    const u32 t60Carry = t60::steps() > 1 ? sead_t60::latePressFirst(gabi::ea(this), t60Union, (u32)mRelease) : 0u;
     mRepeat = 0;
     for (s32 index = 0; index < count; ++index) {
         u32 bit = buttonBit(index);
@@ -370,6 +375,8 @@ void sead::InputState::update(u32 previous, u32 previousPointer) {
     mPointer.mY = iy;
     // (true60 per-step input: the frame's first read's own edges, for converted code; host memory only)
     t60_in_edges(gabi::ea(this), mRelease, mTrigger, mRepeat);
+    if (t60Carry != 0) /* true60 (InputState_t60.h): the frame-level work on this first step sees the later presses */
+        mRelease = (u32)mRelease | t60Carry;
 }
 
 /* WWHD glue
