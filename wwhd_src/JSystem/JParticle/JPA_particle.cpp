@@ -38,6 +38,7 @@ static void calcParticles(JPABaseEmitter* emitter, bool children) {
             if (status & JPAPtclStts_UNK_80)
                 p->mStatus = status | JPAPtclStts_Delete;
             else {
+                jpa_t60p::wind_unpicture(p); // (true60, JPA_particle_t60.h: the last step's wind picture out)
                 // true60: a child's first frame (age <= 0 on the steps) skips the velocity update
                 if (!children || (jpa_t60p::full() ? gabi::ftoi(p->mCurFrame) != 0 : (f32)p->mCurFrame > 0.0f))
                     p->calcVelocity();
@@ -52,6 +53,7 @@ static void calcParticles(JPABaseEmitter* emitter, bool children) {
                     if (!children && emitter->mpDataLinkInfo->mpSweepShape.get() && p->checkCreateChild())
                         emitter->createChildren(p);
                     p->calcPosition();
+                    jpa_t60p::wind_picture(emitter, p); // (true60, JPA_particle_t60.h: the frame's wind drift shown per step)
                 }
             }
             if ((u32)p->mStatus & JPAPtclStts_Delete)
