@@ -485,3 +485,52 @@ template <class T> static inline bool bk_t60_ground_held(T* i_this, bool live) {
         return false;
     return live;
 }
+
+/* (2026-11-24; a lock-on pair, Bokoblin 47C5E81C frame 316): fight_run's jump step 2 (the
+ * landing's stop) zeroes speedF. The run / jump-run choice is the tick30 step's (the way check reads Link, t60Way): an
+ * earlier step that is still in the jump branch runs step 2 and zeroes speedF although A's one call takes the run switch
+ * (break before the jump switch) and ramps its speed from the frame start's (90 -> 85). B's tick30 step then ramped from
+ * 0 (5), the frame moved ~1 unit for A's 21 and the Bokoblin fell behind (20 at 316, 90 by 323). The earlier step notes
+ * the frame start's speedF before it zeroes it; the tick30 step's mode-1 call puts it back before its ramp, so the run
+ * switch ramps from A's value and a frame that stays in the jump zeroes it again in step 2 (A's form). The tick30 step's
+ * move is the frame's at the tick30 speed (c_damagereaction t60dr_speed_step), so the position ends where A's does.
+ * Host memory per including unit (d_a_bk_fight.cpp only). dt 1: nothing. NC WWHD_T60_BKJSTOP_NEGCTRL=1. */
+static inline bool bk_t60_jstop_nc() {
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_BKJSTOP_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
+}
+struct BkT60JStop { u32 tag; f32 speedF; s16 turn; /* the jump step's turn on the earlier steps */ };
+static std::unordered_map<u32, BkT60JStop> s_bkT60JStop;
+/* jump step 2 on an earlier step, before it zeroes speedF: the frame start's speedF (the first note of the frame) */
+template <class T> static inline void bk_t60_jstop_note(T* i_this) {
+    if (t60::dt() == 1.0f || t60::tick30() || bk_t60_jstop_nc())
+        return;
+    const u32 tag = bk_t60_frame_tag();
+    BkT60JStop& e = s_bkT60JStop[gabi::ea(i_this)];
+    if (e.tag != tag)
+        e.tag = tag, e.speedF = i_this->speedF, e.turn = 0;
+}
+/* (the same pair, 47C5E81C frame 316: angle 7175 for A's 6365): step 2 also turns (bk_t60_jump_turn, 0x2000)
+ * after its stop; A's call took the run switch and made no such turn. After that turn on an earlier step: its share is
+ * kept, and the tick30 restore takes it off again (the other turns of the frame stay). */
+template <class T> static inline void bk_t60_jstop_turn(T* i_this, s16 before) {
+    if (t60::dt() == 1.0f || t60::tick30() || bk_t60_jstop_nc())
+        return;
+    auto it = s_bkT60JStop.find(gabi::ea(i_this));
+    if (it == s_bkT60JStop.end() || it->second.tag != bk_t60_frame_tag())
+        return;
+    it->second.turn = (s16)(it->second.turn + (s16)((s16)i_this->current.angle.y - before));
+}
+/* the tick30 step's mode-1 call, before its ramp: the noted speedF back (used up) */
+template <class T> static inline void bk_t60_jstop_restore(T* i_this) {
+    if (t60::dt() == 1.0f || !t60::tick30() || bk_t60_jstop_nc())
+        return;
+    auto it = s_bkT60JStop.find(gabi::ea(i_this));
+    if (it == s_bkT60JStop.end())
+        return;
+    if (it->second.tag == bk_t60_frame_tag()) {
+        i_this->speedF = it->second.speedF;
+        i_this->current.angle.y = (s16)((s16)i_this->current.angle.y - it->second.turn); /* */
+    }
+    s_bkT60JStop.erase(it);
+}

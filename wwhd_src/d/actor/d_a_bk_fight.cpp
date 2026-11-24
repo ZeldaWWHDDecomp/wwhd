@@ -332,6 +332,7 @@ void fight_run(bk_class* i_this) {
         } else {
             scaleMag = l_bkHIO().mRunSpeedNoWeapon;
         }
+        bk_t60_jstop_restore(i_this); /* true60: an earlier step's jump stop undone before the ramp */
         cLib_addCalc2(&i_this->speedF, scaleMag, 1.0f, 5.0f);
         /* true60 (the 30 Hz timer rule, the first-step AI-timer rule): a per-frame phase counter (it times the jump start): counts on the
          * frame's first step (d_a_bk_t60.h bk_t60_frame_work) and in the call that started the run */
@@ -393,8 +394,13 @@ void fight_run(bk_class* i_this) {
                 }
                 break;
             case 2:
+                bk_t60_jstop_note(i_this); /* true60: the frame start's speed, for the tick30 step */
                 i_this->speedF = 0.0f;
-                bk_t60_jump_turn(i_this, t60TurnHeld); /* true60: after the prelude's turn */
+                {
+                    const s16 t60Before = i_this->current.angle.y; /* true60 */
+                    bk_t60_jump_turn(i_this, t60TurnHeld); /* true60: after the prelude's turn */
+                    bk_t60_jstop_turn(i_this, t60Before); /* true60: its share, for the tick30 restore */
+                }
                 if (i_this->dr.mAcch.ChkGroundHit() && en_t60_isStop(i_this->mpMorf)) {
                     i_this->mJumpStep = 1;
                     anm_init(i_this, dRes_INDEX_BK_BCK_BK_JUMP1_e, 2.0f, 0, 1.0f,
