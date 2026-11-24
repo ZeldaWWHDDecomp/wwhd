@@ -1,6 +1,7 @@
 /** Point-wind utility, WWHD. */
 #include "d/d_point_wind.h"
 #include "d/t60conv.h" /* true60: t60c::end */
+#include "d/d_point_wind_t60.h" /* true60: the chase on the frame grid */
 /* cLib_addCalc (0200ECD4) under a unit-local name (glue below), so an N-step spec can link c_lib.cpp's candidate */
 f32 pointWind_addCalc(be<f32>*, f32, f32, f32, f32);
 
@@ -109,21 +110,29 @@ void dPointWind_c::set_pwind_move() {
     mWind.field_0x20 = 0.0f;
     mWind.mRadius = radius;
     if (animate) {
-        f32 currentRadius = mWind.mRadius;
-        f32 half = currentRadius * 0.5f;
-        cps = mpCps;
-        f32 end = f32(cps->mEnd.x);
-        pointWind_addCalc(&mWind.mPos.x, end, 0.1f, currentRadius, half);
-        currentRadius = mWind.mRadius;
-        cps = mpCps;
-        half = currentRadius * 0.5f;
-        end = f32(cps->mEnd.y);
-        pointWind_addCalc(&mWind.mPos.y, end, 0.1f, currentRadius, half);
-        currentRadius = mWind.mRadius;
-        cps = mpCps;
-        half = currentRadius * 0.5f;
-        end = f32(cps->mEnd.z);
-        pointWind_addCalc(&mWind.mPos.z, end, 0.1f, currentRadius, half);
+        /* true60 (d_point_wind_t60.h): the chase whole on the frame's first step, held on the others */
+        const bool pwWhole = t60pw::whole();
+        if (!pwWhole || t60c::first()) {
+            const f32 pwDt = pwWhole ? t60_set_dt(1.0f) : 1.0f;
+            f32 currentRadius = mWind.mRadius;
+            f32 half = currentRadius * 0.5f;
+            cps = mpCps;
+            f32 end = f32(cps->mEnd.x);
+            pointWind_addCalc(&mWind.mPos.x, end, 0.1f, currentRadius, half);
+            currentRadius = mWind.mRadius;
+            cps = mpCps;
+            half = currentRadius * 0.5f;
+            end = f32(cps->mEnd.y);
+            pointWind_addCalc(&mWind.mPos.y, end, 0.1f, currentRadius, half);
+            currentRadius = mWind.mRadius;
+            cps = mpCps;
+            half = currentRadius * 0.5f;
+            end = f32(cps->mEnd.z);
+            pointWind_addCalc(&mWind.mPos.z, end, 0.1f, currentRadius, half);
+            if (pwWhole) {
+                t60_set_dt(pwDt);
+            }
+        }
         f32 distance = PSVECSquareDistance(&mWind.mPos, &p1);
         distance = std_sqrtf(distance);
         /* true60: the chase above steps with dt (central cLib_addCalc); the restart at the end point is a

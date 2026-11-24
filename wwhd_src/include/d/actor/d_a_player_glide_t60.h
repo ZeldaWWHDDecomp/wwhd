@@ -28,6 +28,7 @@
 #pragma once
 #include "true60.h"
 #include "d/actor/d_a_player_t60.h"
+#include "d/actor/d_a_player_anm_t60.h"
 #include <cstdlib>
 
 namespace lkT60Glide {
@@ -78,5 +79,30 @@ static inline s16 moveAngle(s16 shared, s16 whole) {
         return s_angle;
     }
     return shared;
+}
+} // namespace lkT60Glide
+
+/* (2026-11-24): procFanSwing's recoil (the swing's frame 22: mNormalSpeed 10 back
+ * along the swing, the gust's start) tests the swing animation's frame against 22 once a frame in A (the frame-end
+ * frame: A plays before the dispatch). At N 2 the earlier step read 21.5 and the tick30 step 22: the recoil started on
+ * the tick30 step and the frame moved half of A's 10 (route: z 5 short from A 3572, pos 10 at compare
+ * frame 107). The test reads the frame-end frame (lkT60_endFrame, the frame-end form) on every step of the frame, and the
+ * recoil frame's later steps skip the slow-down chase (swingRecoilFrame). dt 1: the original. NC: WWHD_T60_FAN_GUST_NEGCTRL=1. */
+namespace lkT60Glide {
+static const bool s_gustNc = [] {
+    const char* e = getenv("WWHD_T60_FAN_GUST_NEGCTRL");
+    return e != nullptr && atoi(e) != 0;
+}();
+static inline f32 swingFrame(J3DFrameCtrl* fc) { return s_gustNc ? (f32)fc->getFrame() : lkT60_endFrame(fc); }
+/* the recoil (mProcVar6 = 1) is A's whole frame: the frame's later steps do not start the slow-down (A: from the next
+ * frame on; the chase's per-step form took 0.75 of it on the recoil frame's tick30 step) */
+static bool s_recoilValid = false;
+static uint32_t s_recoilTag = 0;
+static inline void swingRecoil() {
+    s_recoilValid = t60::dt() != 1.0f && !s_gustNc;
+    s_recoilTag = lkT60_frameTag();
+}
+static inline bool swingRecoilFrame() {
+    return s_recoilValid && t60::dt() != 1.0f && !s_gustNc && s_recoilTag == lkT60_frameTag();
 }
 } // namespace lkT60Glide

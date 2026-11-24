@@ -3662,7 +3662,7 @@ BOOL daPy_lk_c::procFanSwing() {
         dPa_control_set(pa, 1, Link07::ID_AK_JN_LEAFFAN00, root, &shape_angle, nullptr, 0xFF,
                         gabi::at<dPa_levelEcallBack>(cb), -1, nullptr, nullptr, nullptr);
     }
-    if (frameCtrl.getFrame() < 22.0f) {
+    if (lkT60Glide::swingFrame(&frameCtrl) < 22.0f) { /* true60 (d_a_player_glide_t60.h): the frame-end frame */
         LKT60_CHASE_S(2, &mNormalSpeed, &mCurProc, cLib_addCalc_l(&mNormalSpeed, 0.0f, 0.6f, 2.5f, 1.8f)); /* HD: HIO folded; true60: frame-exact */
     } else if (mProcVar6 == 0) {
         if (mProcVar0 != 0) {
@@ -3760,7 +3760,8 @@ BOOL daPy_lk_c::procFanSwing() {
         }
         Link07::voiceStart(this, 1);
         mProcVar6 = 1;
-    } else if (LKT60_CHASE(3, &mNormalSpeed, 0.0f, &mCurProc, cLib_addCalc_l(&mNormalSpeed, 0.0f, 0.5f, 1.5f, 0.3f)) < 0.5f) { /* true60: frame-exact */
+        lkT60Glide::swingRecoil(); /* true60: the recoil frame */
+    } else if (!lkT60Glide::swingRecoilFrame() && LKT60_CHASE(3, &mNormalSpeed, 0.0f, &mCurProc, cLib_addCalc_l(&mNormalSpeed, 0.0f, 0.5f, 1.5f, 0.3f)) < 0.5f) { /* true60: frame-exact */
         resetFootEffect();
     }
     m35EC = frameCtrl.getFrame();
