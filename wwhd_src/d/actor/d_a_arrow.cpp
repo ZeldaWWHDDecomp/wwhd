@@ -627,6 +627,7 @@ void daArrow_c::setStopActorMatrix() {
         f32 temp = (f32)timer / 40.0f;
         xRot = (s16)gabi::ftoi(((1024.0f * temp) * temp) * cM_ssin(timer * 0x52FB));
     }
+    ar60::shakePicture((s16)mHitShakeTimer, xRot); /* true60: an earlier step's own shake */
     fopAc_ac_c *hitActor = fopAcM_SearchByID(mHitActorProcID);
     if (!hitActor) {
         return;
@@ -1057,7 +1058,7 @@ BOOL daArrow_c::procStop_BG() {
     /* true60 (hand, 30 Hz visual-motion): the 30 Hz form, on the tick30 step only (timers, the moving background's frame transform, the
      * CO sphere and its pick-up read once per tick30 collision Move) */
     if (!t60c::end())
-        return TRUE;
+        return ar60::stopBgPicture(this); /* (an earlier step's own shake, a picture) */
     speedF = 0.0f;
     void *poly = static_cast<cBgS_PolyInfo *>(&mLinChk); /* mLinChk's cBgS_PolyInfo */
 

@@ -12,3 +12,11 @@ t60cand 0231CD50 0231D2A0 0231D5C4 0231D724 0231DD40 0231DE48 0231E0AC 0231E110 
 # t60once 0231CD50 0231D2A0 0231D5C4 0231D724 0231DD40 0231DE48 0231E0AC 0231E110 0231E154 0231E1BC 0231E248: run only inside _execute's tick30 whole run (whole-frame form); never on their own N steps
 # effect calls (sound / particle starts, actor creation): as many calls over the N steps as in the one step
 t60calls 023129C4 025A847C 025E1A40
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200F8D0
+t60cand 0200F8D0
+# ---- the step form (d/t60_carry_step.h, 2026-11-23): the earlier steps run the frame's motion
+# as a picture (movers predicted on a copy, chases, set_mtx); every other call of the execute (decisions, effects, inits,
+# hit reads, the collider registration, room / light) as many over the N steps as in the one step
+t60calls 02008E0C 0200E240 020182E0 0201AD78 0201ADE0 0201AE48 02311CD8 02312968 02312C8C 0231C5F4 0231CABC 0231CAC4 0231CBE0 0231CC24 0231CC9C 0231CD08 0231CD50 0231D0F0 0231D128 0231D20C 0231D25C 0231D2A0 0231D344 0231D3BC 0231D5B4 0231D5C4 0231E08C 0231E0F0 024EEABC 024EECAC 024EEEB8 02515BBC 02515F14 02516094 025160DC 0251621C 025162A4 02516300 02520540 0255F458 025B8B68 025D57E0 025D57E4 025D5834 025D9D24 025DAE64 028E8E64

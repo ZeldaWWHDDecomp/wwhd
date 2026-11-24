@@ -285,6 +285,7 @@ static constexpr short kT60Converted[] = {
     0x01CE, /* dai_item (Windfall pedestal items,  pairs, 14 items, FROM 6, strict;
              * differing words: +0x1C0 a tevStr draw copy of +0x138, +0x748 mBckSpeed = the central cLib_addCalc ease's
              * f32 rounding (the per-step smoothing rule, max 1.25e-3)) */
+    0x01BE, /* the grappling hook / rope (himo2; its rope pair is strict yes with the rope converted) */
     0x01B0, /* boomerang (pairs with Link's hand:
              * position exact A/B on all 296 frames (throw, flight, catch), Link procs / motion strict PASS, sound / procs
              * PASS; the only failure is the camera: after the throw the follow eye settles 2.2-3.0 off (radius 59.7 vs

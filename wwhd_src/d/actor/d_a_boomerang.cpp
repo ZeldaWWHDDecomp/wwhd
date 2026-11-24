@@ -639,6 +639,8 @@ void daBoomerang_blur_c::copyBlur(void *matrix, s16 angle) {
 /* 020CDF78 */
 void daBoomerang_blur_c::draw() {
     u32 a = ea(this);
+    /* true60: the trail as the boomerang's step at the world's time (its model is drawn there) */
+    t60dw::begin(a - bm60::kBlur, at<u8>(a + bm60::kTrailWords), bm60::kTrailBytes, t60dw::kWhole | t60dw::logWord(1));
     boomerangBindRenderResource(&this->mResource.v);
     struct boomerangMatrix_c {
         be<f32> values[12];
@@ -709,6 +711,7 @@ void daBoomerang_blur_c::draw() {
     boomerangDrawBlurRing(a, a + 0xBEC, a + 0xA8, a + 0x378, count, step, zero, one);
     boomerangDrawBlurRing(a, a + 0x12364, a + 0x648, a + 0x918,
                           static_cast<s32>(this->numTrailSegments), step, zero, one);
+    t60dw::end(at<u8>(a + bm60::kTrailWords)); /* true60: the live trail words back */
 }
 
 /* 020CDBFC */
@@ -1149,6 +1152,8 @@ BOOL daBoomerang_c::procWait() {
     /* true60 (hand, the per-step chance rule): the trail fade is visual, once per frame (tick30) */
     if (segments > 0 && t60c::end())
         this->mBlur.numTrailSegments = segments - 5;
+    else if (segments > 0 && bm60::trailPicture(this)) /* true60: an earlier step: the fade so far */
+        this->mBlur.numTrailSegments = bm60::trailFadeSoFar(segments);
     /* true60 (hand, rule 14 order): Link sets the throw on one of his steps; the boomerang
      * throws on the frame's tick30 step from Link's frame-end pose (the original's execute after Link's frame) */
     if (t60c::first()) {
@@ -1528,7 +1533,9 @@ BOOL daBoomerang_c::procMove() {
     play = ea(dComIfGp_get());
     if (!static_cast<u8>(at<boomerangGameInfo_c>(play)->play.mEvtCtrl.mMode)) {
         spin = static_cast<s16>(this->mModelRotY);
-        if (t60c::end()) /* true60 (hand, the per-step chance rule): the trail keeps one segment per frame (tick30) */
+        /* true60 (hand, the per-step chance rule): the trail keeps one segment per frame (tick30): an earlier step copies a
+         * picture head (the frame start's words back on the next execute) */
+        if (t60c::end() || bm60::trailPicture(this))
             at<daBoomerang_blur_c>(ea(at<void>(ea(&this->mBlur))))
                 ->copyBlur(at<void>(ea(&l_matrixStack)), spin);
         /* true60 (hand, the one-sweep-per-frame attack rule; rule (a)): the boomerang's AT for the tick30 collision Move only */
@@ -1539,7 +1546,7 @@ BOOL daBoomerang_c::procMove() {
             boomerang_setMassCollision(at<void>(play + 0x4EF8), at<void>(lock + 0x84), 1);
         }
     } else {
-        if (t60c::end())
+        if (t60c::end() || bm60::trailPicture(this)) /* true60 (as above) */
             at<daBoomerang_blur_c>(ea(at<void>(ea(&this->mBlur))))
                 ->copyBlur(at<void>(ea(&l_matrixStack)), 0);
         boomerang_resetAttackHit(at<void>(lock + 0x84));
@@ -1553,6 +1560,7 @@ BOOL daBoomerang_c::procMove() {
 
 /* 020CC328 */
 BOOL daBoomerang_c::execute() {
+    bm60::trailRestore(this); /* true60: the step before's trail picture goes (frame-start words back) */
     ea(dComIfGp_get());
     ea(dComIfGp_get());
     for (u32 i = 0; i < static_cast<u8>(this->mLockCnt); ++i) {

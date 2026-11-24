@@ -1705,6 +1705,9 @@ void daShip_c::setRopePos() {
         dPa_rippleEcallBack_end((dPa_rippleEcallBack*)&mRopeRipple);
     }
     if (!ship60_tick30()) { /* true60 (the per-step chance rule): the ripple's per-frame jitter (two draws), on the tick30 step */
+        /* true60 (d_a_ship_t60.h ship60_ropeJitStep): the place moves with the rope, the frame's jitter kept */
+        ship60_ropeJitStep(this, gabi::at<cXyz>(gabi::ea(mRopeLine.getPos(0)))->x, gabi::at<cXyz>(gabi::ea(mRopeLine.getPos(0)))->z,
+                           mWaterY, &mRopeRipplePos);
         return;
     }
     u32 rb = gabi::ea(mRopeLine.getPos(0));
@@ -1714,6 +1717,7 @@ void daShip_c::setRopePos() {
     u32 rb2 = gabi::ea(mRopeLine.getPos(0));
     f32 r2 = cM_rndFX(20.0f);
     mRopeRipplePos.z = gabi::at<cXyz>(rb2)->z + r2;
+    ship60_ropeJitNote(this, r1, r2); /* true60: the frame's jitter for the next frame's earlier steps */
 }
 
 

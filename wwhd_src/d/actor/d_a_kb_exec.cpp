@@ -699,6 +699,7 @@ static BOOL daKb_Execute(kb_class *i_this) {
     if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
         return kb_t60::held_picture(i_this, draw_SUB); /* (held: the holder's placement of this step) */
     t60g.model = true;
+    kb_t60::runEntry(i_this); /* true60: the carried pig's draw offset for the held picture */
     fopAc_ac_c *actor = i_this;
 
     // HD: the esa demo cool-down (mTimers[4]) does not run while an event runs (play+0x5292)
@@ -842,6 +843,7 @@ static BOOL daKb_Execute(kb_class *i_this) {
         }
     }
 
+    kb_t60::runDraw(i_this); /* true60 */
     draw_SUB(i_this);
 
     if (fopAcM_checkCarryNow(actor)) {

@@ -187,13 +187,15 @@ void daTsuboMode::Act_c::spec_set_room() {
 
 /* 024CEAFC */
 void daTsuboMode::Act_c::mode_hide() {
-    if (is_switch(this)) {
+    if (!t60cs::pic() && is_switch(this)) { /* true60: decisions on the frame grid (d/t60_carry_step.h) */
         tsuboMode_mode_appear_init(this);
     }
 }
 
 /* 024CEB50 */
 void daTsuboMode::Act_c::mode_appear() {
+    if (t60cs::pic()) /* true60: the appear timer, its sounds and the swell on the frame grid */
+        return;
     if (prm_get_spec(this) == 4) {
         m802 = (s16)(m802 - 1);
         if (m802 == 0x46 /* M_attrSpine.mRecoverSeTime */) {
@@ -238,8 +240,10 @@ void daTsuboMode::Act_c::mode_appear() {
 
 /* 024CEF30 */
 void daTsuboMode::Act_c::mode_wait() {
+    /* true60: a PIC step moves (the predicted frame move) and decides nothing (d/t60_carry_step.h) */
     if (prm_get_stick(this)) {
-        attn_onBit(this, fopAc_Attn_ACTION_CARRY_e);
+        if (!t60cs::pic())
+            attn_onBit(this, fopAc_Attn_ACTION_CARRY_e);
     } else if (mAcch.ChkGroundHit()) {
         if (speedF > 0.1f) {
             speedF = speedF * 0.5f;
@@ -247,14 +251,16 @@ void daTsuboMode::Act_c::mode_wait() {
             speedF = 0.0f;
         }
         gravity = data(this)->mGravity;
-        fopAcM_posMoveF(this, &mStts.m_cc_move);
-        attn_onBit(this, fopAc_Attn_ACTION_CARRY_e);
+        t60cs::move(this, fopAcM_posMoveF, &mStts.m_cc_move);
+        if (!t60cs::pic())
+            attn_onBit(this, fopAc_Attn_ACTION_CARRY_e);
     } else {
         gabi::Local<be<f32>> sp10, sp0C, sp08;
         calc_drop_param(sp08, sp0C, sp10);
         gravity = *sp08;
-        daObj_posMoveF_stream(this, &mStts.m_cc_move, cXyz_Zero, *sp0C, *sp10);
-        attn_offBit(this, fopAc_Attn_ACTION_CARRY_e);
+        t60cs::move(this, daObj_posMoveF_stream, &mStts.m_cc_move, cXyz_Zero, (f32)*sp0C, (f32)*sp10);
+        if (!t60cs::pic())
+            attn_offBit(this, fopAc_Attn_ACTION_CARRY_e);
     }
 }
 
@@ -276,11 +282,14 @@ void daTsuboMode::Act_c::mode_walk(u32 r4, u32 r5, u32 r6, u32 r7, u32 harness_r
         Act_c::Data_c* d = data(this);
         s16 deg = (s16)gabi::ftoi(((f32)(s16)d->mNoGradeAngle - 0.5f) * 182.04445f); /* cM_deg2s */
         gabi::Local<u32> r8tmp; /* harness: the original's r8 is this stack address here */
-        tsuboMode_daObj_posMoveF_grade(this, &mStts.m_cc_move, &mWindVec, *sp0C, *sp10, pNorm, d->mGradeFriction, cM_scos((u16)deg), &m6F0,
-                             gabi::ea(r8tmp.get()));
+        t60cs::move(this, tsuboMode_daObj_posMoveF_grade, &mStts.m_cc_move, &mWindVec, (f32)*sp0C, (f32)*sp10, pNorm,
+                    (f32)d->mGradeFriction, cM_scos((u16)deg), &m6F0, gabi::ea(r8tmp.get())); /* true60: PIC predicts */
     } else {
-        tsuboMode_daObj_posMoveF_grade(this, &mStts.m_cc_move, &mWindVec, *sp0C, *sp10, nullptr, 0.0f, 0.0f, &m6F0, harness_r8);
+        t60cs::move(this, tsuboMode_daObj_posMoveF_grade, &mStts.m_cc_move, &mWindVec, (f32)*sp0C, (f32)*sp10, (const void*)nullptr,
+                    0.0f, 0.0f, &m6F0, harness_r8);
     }
+    if (t60cs::pic()) /* true60: decisions on the frame grid */
+        return;
     if (mAcch.ChkGroundHit()) {
         attn_onBit(this, fopAc_Attn_ACTION_CARRY_e);
         cXyz sp1C;
@@ -297,6 +306,8 @@ void daTsuboMode::Act_c::mode_walk(u32 r4, u32 r5, u32 r6, u32 r7, u32 harness_r
 
 /* 024CF844 */
 void daTsuboMode::Act_c::mode_carry(u32 r4, u32 harness_r5) {
+    if (t60cs::pic()) /* true60: Link places it on every step; the carry / throw decisions on the frame grid */
+        return;
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
     const bool tmp = m685 != 0;
     if (!tmp) {
@@ -376,7 +387,8 @@ void daTsuboMode::Act_c::mode_drop_init() {
 
 /* 024CF6C8 */
 void daTsuboMode::Act_c::mode_drop() {
-    tsuboMode_daObj_SetCurrentRoomNo(this, acch_gnd(this));
+    if (!t60cs::pic()) /* true60: the room on the frame grid */
+        tsuboMode_daObj_SetCurrentRoomNo(this, acch_gnd(this));
     cXyz sp14;
     sp14.x = mStts.m_cc_move.x;
     sp14.y = 0.0f;
@@ -387,37 +399,44 @@ void daTsuboMode::Act_c::mode_drop() {
     gabi::Local<be<f32>> sp10, sp08, sp0C;
     calc_drop_param(sp10, sp08, sp0C);
     gravity = *sp10;
-    daObj_posMoveF_stream(this, &mStts.m_cc_move, &mWindVec, *sp08, *sp0C);
+    t60cs::move(this, daObj_posMoveF_stream, &mStts.m_cc_move, &mWindVec, (f32)*sp08, (f32)*sp0C); /* true60: PIC predicts */
 }
 
 /* 024CFAB8 */
 void daTsuboMode::Act_c::mode_sink() {
-    tsuboMode_daObj_SetCurrentRoomNo(this, acch_gnd(this));
+    if (!t60cs::pic()) /* true60: the room on the frame grid */
+        tsuboMode_daObj_SetCurrentRoomNo(this, acch_gnd(this));
     water_tention();
     Act_c::Data_c* d = data(this);
-    daObj_posMoveF_stream(this, &mStts.m_cc_move, cXyz_Zero, d->mWaterResistLinear, d->mWaterResistQuad);
+    t60cs::move(this, daObj_posMoveF_stream, &mStts.m_cc_move, cXyz_Zero, (f32)d->mWaterResistLinear, (f32)d->mWaterResistQuad);
 }
 
 /* 024CFD3C */
 void daTsuboMode::Act_c::mode_afl() {
-    tsuboMode_daObj_SetCurrentRoomNo(this, acch_gnd(this));
+    if (!t60cs::pic()) /* true60: the room on the frame grid */
+        tsuboMode_daObj_SetCurrentRoomNo(this, acch_gnd(this));
     cXyz* pStreamSpd = tsuboMode_daObj_get_path_spd(Acch_gnd(&mAcch), 30.0f);
     cXyz sp20;
     cXyz_ml(&mWindVec, &sp20, data(this)->mAirResistLinear);
     gabi::Local<be<f32>> sp08, sp0C, sp10;
     calc_afl_param(sp08, sp0C, sp10);
+    if (!t60cs::pic()) { /* true60: the bob's random draws on the frame grid (the per-step chance rule) */
     s32 t = gabi::ftoi(cM_rndF(400.0f));
     m804 = (s16)(m804 + t + 0x514);
+    }
     gravity = gabi::fmadds(cM_ssin(m804), 0.3f, *sp08);
     water_tention();
-    tsuboMode_daObj_posMoveF_grade(this, &mStts.m_cc_move, pStreamSpd, *sp0C, *sp10, nullptr, 0.0f, 0.0f, &sp20, 0x10040000 /* harness */);
+    t60cs::move(this, tsuboMode_daObj_posMoveF_grade, &mStts.m_cc_move, pStreamSpd, (f32)*sp0C, (f32)*sp10, (const void*)nullptr, 0.0f,
+                0.0f, (const cXyz*)&sp20, (u32)0x10040000 /* harness */); /* true60: PIC predicts */
+    if (t60cs::pic())
+        return;
     s32 t2 = gabi::ftoi(cM_rndF(400.0f));
     m806 = (s16)(m806 + t2 + 0x514);
 }
 
 /* 024CE454 */
 bool daTsuboMode::Act_c::mode_proc_call() {
-    if ((actor_status & 0x102000) && mMode != 4) { /* fopAcM_checkCarryNow || fopAcM_checkHookCarryNow */
+    if (!t60cs::pic() && (actor_status & 0x102000) && mMode != 4) { /* fopAcM_checkCarryNow || fopAcM_checkHookCarryNow (true60: on the frame grid) */
         tsuboMode_mode_carry_init(this);
     }
     s32 mode = mMode;
@@ -428,7 +447,12 @@ bool daTsuboMode::Act_c::mode_proc_call() {
     (this->*mode_proc.mProc[mode])();
     bool isMoveBg = prm_get_moveBg(this);
     f32 verticalSpeed = speed.y;
-    tsuboMode_crr_pos(this, &sp08);
+    t60cs::check(this, &mAcch, tsuboMode_crr_pos, this, &sp08); /* true60: a PIC step's ground check: no check, only the picture floor */
+    if (t60cs::pic()) { /* true60: the frame's motion only: the offset ease, the pose on the line to its frame end */
+        moment_proc_call();
+        tsubo_t60::tensorPic(this, set_tensor_proc.mProc[mMode]);
+        return true;
+    }
     if (tsuboMode_damage_bg_proc_directly(this)) {
         return false;
     }
@@ -796,8 +820,11 @@ void daTsuboMode::Act_c::se_pickup_carry() {
 
 /* 024CE71C */
 bool daTsuboMode::Act_c::_execute() {
-    if (t60w::begin(this, tsubo_t60::kOps)) /* true60: a step before the tick30 step: the picture only */
+    /* true60: the step form (d/t60_carry_step.h): an earlier step runs the frame's motion as a picture, the tick30 step
+     * the original from the frame-start words at dt 1. NC WWHD_T60_CARRYSTEP_NEGCTRL=1: the whole form */
+    if (t60cs::nc() && t60w::begin(this, tsubo_t60::kOps)) /* (NC) a step before the tick30 step: the picture only */
         return tsubo_t60::picture(this); /* (held: the holder's placement of this step) */
+    t60cs::begin(this, tsubo_t60::kSpec);
     bool t60Model = false; /* true60: the frame reached its model step */
     tsuboMode_cull_set_move(this);
     bool hiddenBySwitch;
@@ -809,6 +836,13 @@ bool daTsuboMode::Act_c::_execute() {
     if (!hiddenBySwitch) {
         if (m682 != 0 || mMode != 2 || !mAcch.ChkGroundHit() || mAcch.ChkGroundLanding() || prm_get_cull(this) == 0 ||
             !(actor_condition & 4) || !tsuboMode_fopAcM_cullingCheck(this) || m800 != 0 || prm_get_moveBg(this)) {
+            if (t60cs::pic()) { /* true60: a PIC step: the frame's motion and the model only */
+                mode_proc_call();
+                tsubo_t60::picMtx(this);
+                tsuboMode_cull_set_draw(this);
+                t60cs::end();
+                return true;
+            }
             m682 = 0;
             BOOL shouldDelete = TRUE;
             tsuboMode_spec_set_actor(this);
@@ -848,7 +882,9 @@ bool daTsuboMode::Act_c::_execute() {
         }
     }
     tsuboMode_cull_set_draw(this);
-    t60w::end(this, tsubo_t60::kOps, t60Model); /* true60: the frame's change kept for the next frame's picture */
+    if (t60cs::nc())
+        t60w::end(this, tsubo_t60::kOps, t60Model); /* true60 (NC): the frame's change kept for the next frame's picture */
+    t60cs::end();
     return true;
 }
 

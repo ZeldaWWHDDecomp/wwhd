@@ -16,6 +16,7 @@
 #include "d/actor/d_a_player_t60.h"
 #include "d/actor/d_a_player_swimrise_t60.h"
 #include "d/actor/d_a_player_crawl_t60.h"
+#include "d/actor/d_a_player_lavarestart_t60.h" /* true60: the lava restart test */
 #include <cstdlib>
 
 namespace link05 {
@@ -1502,8 +1503,16 @@ BOOL daPy_lk_c::procLandDamage() {
 }
 
 /* 0241DD5C */
+/* true60 (the first-step AI-timer rule for Link: first-step decision): procFall's "falling below the start"
+ * test (mProcStartPos.y > pos.y: the fall face, mProcVar6) is a body decision on the position. A's body reads the
+ * previous frame's end position; at N steps a frame whose body first runs on the tick30 step (the procedure entered in
+ * the previous frame's execute after its body) read the first step's half fall and set it a frame early (stZ1-route
+ * stG1, ledge landing -> FALL 3633: B's tick30 at 636.67 < 637.60, A from 3634). The test runs on the frame's first step
+ * (the previous frame-end position, as A); a later step keeps the first step's result. NC WWHD_T60_FALLFACE_NEGCTRL=1;
+ * dt 1: every call (the original). */
+
 BOOL daPy_lk_c::procFall() {
-    if (mProcVar6 == 0 && mProcStartPos.y > current.pos.y && reinterpret_cast<Link05AnmHeapHD*>(m_tex_anm_heap)->mIdx != 0x22B /* m_tex_anm_heap.mIdx */) {
+    if (mProcVar6 == 0 && lkT60_fallFaceStep() && mProcStartPos.y > current.pos.y && reinterpret_cast<Link05AnmHeapHD*>(m_tex_anm_heap)->mIdx != 0x22B /* m_tex_anm_heap.mIdx */) {
         lk05SetTextureAnime(this, 0x37, 0);
         mProcVar6 = 1;
     }
@@ -2470,7 +2479,7 @@ BOOL daPy_lk_c::dProcLavaDamage() {
                            0xFFFF)) {
       lk05DemoLavaInitSub(this);
     }
-  } else if (speed.y < -gravity) {
+  } else if (speed.y < -gravity && lkT60_lavaRestartTest()) { /* true60: once a frame (d_a_player_lavarestart_t60.h) */
     lk05DemoRestartRoom(this, 4, 0xCA, -1.0f, 1);
   }
   return TRUE;

@@ -22,10 +22,23 @@
  *                                  limit, move speedF, BG line check, roll, collision set, water effect
  *     procMove           mov  6    the spin t60c::share(0x1F00) on every step (exact 0x1F00 per frame; the wrap sound
  *                                  per wrap)
- *     procMove           vis  8    the blur trail copy once per frame (tick30)
- */
+ *     procMove           vis  8    the blur trail copy once per frame (tick30); (2026-11-23): an
+ *                                  earlier step copies a picture head (below)
+ *     procWait           vis  8: an earlier step shows the frame's fade so far (picture, below)
+ *     blur draw          vis  -: the trail drawn at the world's time (d/t60_draw_words.h)
+ *
+ * (picture head): the trail keeps one copy per 30 Hz frame (tick30), so between frame ends its head sat on
+ * the previous frame end while the boomerang glided on per step. On an earlier step (procMove) the trail words (segment
+ * count, head position, the four point lanes) are kept and the step's copy runs on them as a picture: the head on the
+ * step's place, five points from the frame start to it. In procWait an earlier step shows the frame's fade so far
+ * (5 x k / N segments). The next execute puts the kept words back first, so the tick30 step's copy / fade starts from the
+ * frame start's words and every frame end has the 30 Hz words. Host memory (one boomerang, Link's). dt 1: never.
+ * Negative control WWHD_T60_BOOMTRAIL_NEGCTRL=1: no picture (the form before). */
 #pragma once
 #include "d/t60conv.h"
+#include "d/t60_draw_words.h"
+#include <cstdlib>
+#include <cstring>
 
 namespace bm60 {
 
@@ -100,4 +113,46 @@ static inline bool start(const void* k, f32* x, f32* y, f32* z) {
     return true;
 }
 
+
+/* the trail words (daBoomerang_blur_c numTrailSegments, pos, mTrail[4][60]) at the actor's mBlur (0x2054) */
+enum { kBlur = 0x2054, kTrailWords = 0x98, kTrailBytes = 0xBEC - 0x98 };
+struct TrailPic {
+    u32 ea;
+    bool on;
+    u8 words[kTrailBytes];
+};
+static TrailPic s_trailPic;
+static inline bool trailNc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_BOOMTRAIL_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return false;
+#endif
+}
+static inline u8* trailWords(const void* k) { return gabi::at<u8>(gabi::ea(k) + kBlur + kTrailWords); }
+/* the execute's head: a picture left by the step before goes (the frame start's trail words back) */
+static inline void trailRestore(const void* k) {
+    if (!s_trailPic.on)
+        return;
+    s_trailPic.on = false;
+    if (s_trailPic.ea == gabi::ea(k))
+        memcpy(trailWords(k), s_trailPic.words, kTrailBytes);
+}
+/* an earlier step (not the tick30 step): keeps the trail words for the next execute and returns true (the caller then
+ * changes them as a picture) */
+static inline bool trailPicture(const void* k) {
+    if (t60c::end() || trailNc())
+        return false;
+    s_trailPic.ea = gabi::ea(k);
+    s_trailPic.on = true;
+    memcpy(s_trailPic.words, trailWords(k), kTrailBytes);
+    return true;
+}
+/* procWait's fade on an earlier step: the frame's 5 segments x k / N so far (rounded), never below 0 */
+static inline s32 trailFadeSoFar(s32 segments) {
+    const s32 n = (s32)t60::steps(), k = (s32)t60::step();
+    const s32 cut = (10 * k + n) / (2 * n);
+    return segments - cut > 0 ? segments - cut : 0;
+}
 }  // namespace bm60

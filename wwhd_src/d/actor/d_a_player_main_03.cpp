@@ -23,6 +23,8 @@
 #include "d/actor/d_a_player_posadd_t60.h"
 #include "d/actor/d_a_player_swimrise_t60.h"
 #include "d/actor/d_a_player_footga_t60.h"
+#include "d/actor/d_a_player_drawsplit_t60.h"
+#include "d/actor/d_a_player_stepdown_t60.h"
 #include <cstdlib>
 /* true60: the swim stroke's animation frame for the stroke speed (posMove, SWIM_MOVE) */
 static inline f32 lkT60_swimChaseFrame(J3DFrameCtrl* fc) {
@@ -5261,6 +5263,7 @@ void daPy_lk_c::setWaterY() {
 /* 023FE2F0 */
 void daPy_lk_c::autoGroundHit() {
 
+    lkT60_stepDownFrame(); /* true60 (d_a_player_stepdown_t60.h) */
     u32 flg = mNoResetFlg0;
     u32 was = flg & LinkMotionConstants::daPyFlg0_UNK80000000;
     flg = flg & ~0x80000000u;
@@ -5286,7 +5289,17 @@ void daPy_lk_c::autoGroundHit() {
     if (acchFlg & dBgS_Acch::GROUND_HIT) {
         return;
     }
-    if (d < 0.0f && !(d < -30.1f) && was == 0) {
+    /* true60 (d_a_player_stepdown_t60.h): an earlier step snaps only when the frame's end does */
+    const float t60Rest = lkT60_stepDownRest();
+    if (d < 0.0f && !(d < -30.1f) && was == 0 &&
+        !(t60Rest > 0.0f &&
+          lkT60_stepDownHold(t60Rest, current.pos.x, current.pos.y, current.pos.z, speed.x, speed.y, speed.z, gravity,
+                             gabi::ea(mGndChk), 0x54, [&](float x, float y, float z) {
+                                 linkMotionGroundCheck(mGndChk).m_pos.x = x; /* mGndChk.SetPos() */
+                                 linkMotionGroundCheck(mGndChk).m_pos.y = y;
+                                 linkMotionGroundCheck(mGndChk).m_pos.z = z;
+                                 return (double)LinkActionApi::groundCross(dComIfG_Bgsp(), mGndChk);
+                             }))) {
         speed.y = 0.0f;
         current.pos.y = gh;
         mAcch.m_flags = mAcch.m_flags | dBgS_Acch::GROUND_HIT;
@@ -5653,7 +5666,16 @@ void daPy_lk_c::setStepsOffset() {
         oldPos->z = oz;
         movedFrom = oldPos.get();
     }
+    const f32 t60Start = m35C4;
+    const float t60EaseDt = lkT60_stepsOffsetEaseBegin(); /* true60: the frame's one ease */
     LinkMotionApi::addCalc(&m35C4, 0.0f, 0.5f, 25.0f, 5.0f);
+    lkT60_stepsOffsetEaseEnd(t60EaseDt);
+    /* true60 (d_a_player_drawsplit_t60.h): an earlier step takes its share of the frame's ease */
+    if (t60::dt() != 1.0f && s_lkT60StepsOffset.valid && t60_step_counter() - s_lkT60StepsOffset.stamp < t60::steps()) {
+        f32 m = m35C4;
+        lkT60_drawSplitEase(m, t60Start, s_lkT60StepsOffset.stamp);
+        m35C4 = m;
+    }
     u16 a = (u16)mGroundAngle;
     f32 t = cM_ssin(a) / cM_scos(a);
     f32 sp = speedF;
@@ -6006,7 +6028,14 @@ void daPy_lk_c::footBgCheck() {
             target = linkFloatSelect(h[1] - h[0], h[0], h[1]) - current.pos.y;
         }
     }
+    const f32 t60FbStart = mFootBgOffsetY;
     LinkMotionApi::addCalc(&mFootBgOffsetY, target, 0.5f, 7.5f, 2.5f);
+    /* true60 (d_a_player_drawsplit_t60.h): an earlier step takes its share of the frame's ease */
+    if (t60FootConv && s_lkT60FootBg.active && s_lkT60FootBg.valid && t60_step_counter() - s_lkT60FootBg.stamp < t60::steps()) {
+        f32 o = mFootBgOffsetY;
+        lkT60_drawSplitEase(o, t60FbStart, s_lkT60FootBg.stamp);
+        mFootBgOffsetY = o;
+    }
     gabi::at<Mtx34>(base)->m[1][3] = (f32)((f32)gabi::at<Mtx34>(base)->m[1][3] + mFootBgOffsetY);
     mInvWorldMtx.m[1][3] = mInvWorldMtx.m[1][3] - mFootBgOffsetY;
     if (none) {
@@ -6038,6 +6067,9 @@ void daPy_lk_c::footBgCheck() {
             *upper[k].get() = 0;
         }
     }
+    /* true60 (d_a_player_drawsplit_t60.h): an earlier step takes its share of the leg angles' ease */
+    const bool t60LegSplit = t60FootConv && s_lkT60FootBg.active && s_lkT60FootBg.valid &&
+                             t60_step_counter() - s_lkT60FootBg.stamp < t60::steps();
     for (int i = 0; i < 2; i++) {
         LinkMotionFootData &footData = reinterpret_cast<LinkMotionFootData *>(mFootData)[i];
         s32 u = *upper[i].get();
@@ -6046,8 +6078,13 @@ void daPy_lk_c::footBgCheck() {
             u = (s16)(u >= 0 ? u - 0x4000 : u + 0x4000);
             *upper[i].get() = (s16)u;
         }
+        const s16 t60LegA = (s16)footData.mLegAAngle, t60LegB = (s16)footData.mLegBAngle;
         cLib_addCalcAngleS(&footData.mLegAAngle, (s16)u, 2, 0x1800, 0x10);
         cLib_addCalcAngleS(&footData.mLegBAngle, *lower[i].get(), 2, 0x1800, 0x10);
+        if (t60LegSplit) {
+            footData.mLegAAngle = lkT60_legSplitAngle((s16)footData.mLegAAngle, t60LegA, s_lkT60FootBg.stamp);
+            footData.mLegBAngle = lkT60_legSplitAngle((s16)footData.mLegBAngle, t60LegB, s_lkT60FootBg.stamp);
+        }
         s16 f6 = (s16)footData.mLegBAngle;
         s16 f8 = (s16)footData.mLegAAngle;
         footData.mLegBJointAngle = (s16)((s16)(f6 - f8));
@@ -6067,7 +6104,10 @@ void daPy_lk_c::footBgCheck() {
         } else {
             g = 0;
         }
+        const s16 t60Roll = (s16)footData.field_0x004;
         cLib_addCalcAngleS(&footData.field_0x004, (s16)g, 2, 0x1800, 0x10);
+        if (t60LegSplit) /* true60 */
+            footData.field_0x004 = lkT60_legSplitAngle((s16)footData.field_0x004, t60Roll, s_lkT60FootBg.stamp);
     }
     if (t60FootConv)
         lkT60_footBgEnd(t60FootRecs);

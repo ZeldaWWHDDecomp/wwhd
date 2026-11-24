@@ -1024,8 +1024,8 @@ void daBomb_c::waitState_bomtyu() {
 
 /* 020C4D84 */
 BOOL daBomb_c::execute() {
-  if (t60w::begin(this, bomb_t60::kOps)) /* true60: a step before the tick30 step: the picture only */
-    return bomb_t60::held_picture(this); /* (held: the holder's placement of this step) */
+  if (bomb_t60::head(this)) /* true60: an earlier step shows this frame's own motion (t60cs) */
+    return TRUE;
   bool t60model = false; /* true60: the frame reached its model step (host flag) */
   if (!(u32)l_fuseOffset.mGuard) {
     l_fuseOffset.mOffset.z = 5;
@@ -1094,7 +1094,7 @@ BOOL daBomb_c::execute() {
   }
   if (mExplodeCcSet)
     mExplodeFrame = (u32)mExplodeFrame + 1;
-  t60w::end(this, bomb_t60::kOps, t60model); /* true60: the frame's change kept for the next frame's picture */
+  bomb_t60::tail(this, t60model); /* true60: the tick30 run's end (t60cs; NC: the whole form's end) */
   return TRUE;
 }
 

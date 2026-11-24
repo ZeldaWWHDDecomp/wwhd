@@ -18,6 +18,7 @@
 #pragma once
 #include "true60.h"
 #include <cstring>
+#include <cstdlib>
 #include "f_pc/f_pc_t60_picture.h" /* WWHD_T60_PIC_RESET: the shown values only around the draw */
 #include "d/t60_whole_carrier.h" /* extension: the frame's whole-form actors, for their riders */
 #include "d/t60_py.h" /* the process-order read rule addendum 2: Link reset-flag frame-OR for the tick30 run */
@@ -119,6 +120,15 @@ static inline Latch* make(u32 actor, u32 tag, u32 pcid) {
 
 /* the execute's head: true when this step is handled here (a step before the tick30 step: the picture only); on the
  * tick30 step it puts the shown values back, sets dt 1 for the whole run and returns false */
+/* negative control of the held put-back below (WWHD_T60_WHOLEHELD_NEGCTRL=1: the form before) */
+static inline bool heldShownNc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_WHOLEHELD_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return false;
+#endif
+}
 template <class A> static inline bool begin(A* a, const Ops<A>& o) {
     if (!on()) {
         if (s_whole && s_wholeStep == t60_step_counter()) { /* nested inside this step's open whole run: one level more */
@@ -175,6 +185,28 @@ template <class A> static inline bool begin(A* a, const Ops<A>& o) {
          * (an execute path that skips set_mtx, e.g. a cull check, keeps it; pair,-obj-tv
          *) */
         o.mtx(a);
+    } else if (e->shown && held && !heldShownNc()) {
+        /* (route hook, pair hookL frame 295): an actor that became held within the frame (the
+         * hookshot's hit on the field item 47C08D90) had its earlier step shown while it was free: the picture wrote its
+         * angles (the item's spin, half a frame on) and fopAc_Execute copied them into old on this step. Held now, the
+         * put-back above was skipped: old.angle / current.angle stayed 400 ahead of A for the rest of the route (and the
+         * item cylinder's word +0x6DC with them). The angles (the values after nPos) still at the picture's value and the old
+         * place go back to the frame start; the positions and an angle the holder set stay (its placement of this step). Negative control
+         * WWHD_T60_WHOLEHELD_NEGCTRL=1. */
+        f32 v[kMax];
+        o.get(a, v);
+        bool back = false;
+        for (int i = o.nPos; i < o.n; i++) { /* (only a value still at the picture's: one the holder set stays) */
+            const f32 shown = (f32)(s16)(s32)(e->v0[i] + e->dv[i] * e->span); /* (as the picture set it: t60w::angle) */
+            if (v[i] == shown && v[i] != e->v0[i]) {
+                v[i] = e->v0[i];
+                back = true;
+            }
+        }
+        if (back)
+            o.set(a, v);
+        for (u32 i = 0; i < 5; i++)
+            *gabi::at<be<u32>>(actor + 0x300 + 4 * i) = e->old0[i];
     }
     s_prevDt = t60_set_dt(1.0f);
     s_whole = true;

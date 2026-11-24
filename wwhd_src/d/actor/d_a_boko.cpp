@@ -1061,8 +1061,8 @@ BOOL daBoko_c::procCarry() {
 BOOL daBoko_c::execute() {
   /* true60: the whole frame on the tick30 step (end at every return; d_a_boko_t60.h) */
   t60w::Guard<daBoko_c> t60g(this, boko_t60::ops());
-  if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation) */
-    return 1;
+  if (t60g.skip) /* a step before the tick30 step: the picture only (frame interpolation; held: the carrier's hand) */
+    return boko_t60::heldPicture(this);
   t60g.model = true;
   s16 delay = s16(this->mSpawnDelay);
   if (delay) {

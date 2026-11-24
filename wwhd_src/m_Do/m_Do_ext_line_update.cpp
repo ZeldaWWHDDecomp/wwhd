@@ -2,6 +2,7 @@
  * Based on tww m_Do/m_Do_ext.cpp.
  */
 #include "m_Do/m_Do_ext_line_update.h"
+#include "d/t60_draw_words.h" /* true60: lines at the owner's world time */
 using namespace line_layout;
 static f32 lineZero;
 static f32 lineHalf;
@@ -38,6 +39,7 @@ void line_layout::mDoExt_3DlineMat0_c::update(u32 count, const be<u32>* color, u
     mNumSegments = count;
     if (count > capacity)
         mNumSegments = capacity;
+    t60dw::linesBegin(mpLines.get(), mNumLines, mNumSegments); /* true60 */
     CameraView* camera = lineGetView();
     mDoExt_3Dline_c* line = mpLines;
     f32 zero = lineZero;
@@ -165,6 +167,7 @@ void line_layout::mDoExt_3DlineMat0_c::update(u32 count, const be<u32>* color, u
     for (u32 i = 0; i < mNumLines; ++i)
         lineFinalize(mpLines[i].mpMeshBuffer, 0, 1);
     lineMaterialSetup(this, mpTevStr, &mColor);
+    t60dw::linesEnd(mpLines.get(), mNumLines); /* true60 */
 }
 
 /* 025EAF58 */
@@ -175,6 +178,7 @@ void line_layout::mDoExt_3DlineMat0_c::updateWidths(u32 count, const be<u32>* co
     mNumSegments = count;
     if (count > capacity)
         mNumSegments = capacity;
+    t60dw::linesBegin(mpLines.get(), mNumLines, mNumSegments); /* true60 */
     CameraView* camera = lineGetView();
     mDoExt_3Dline_c* line = mpLines;
     f32 zero = lineZero;
@@ -302,6 +306,7 @@ void line_layout::mDoExt_3DlineMat0_c::updateWidths(u32 count, const be<u32>* co
     for (u32 i = 0; i < mNumLines; ++i)
         lineFinalize(mpLines[i].mpMeshBuffer, 0, 1);
     lineMaterialSetup(this, mpTevStr, &mColor);
+    t60dw::linesEnd(mpLines.get(), mNumLines); /* true60 */
 }
 
 /* WWHD glue (tools/verify/autoglue.py)

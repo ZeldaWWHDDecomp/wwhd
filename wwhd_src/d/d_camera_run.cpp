@@ -202,6 +202,8 @@ u32 dCamera_c::Run() {
         camera_run_t60::restoreFrameStart(this, dComIfGp_ea() + mCameraID * 0x34 + 0x5B00);
         return camera_run_t60::heldEventEngineRes();
     }
+    if (t60::dt() != 1.0f) /* true60 (d_camera_follow_whole_t60.h switchIn): an earlier step entered a whole-form style */
+        camera_follow_whole_t60::switchIn(camStyleAlg(mCurStyle));
     u32 flags = mEventFlags & ~0x20u;
     s32 m = mCurMode;
     mEventFlags = flags;

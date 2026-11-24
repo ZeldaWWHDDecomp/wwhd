@@ -39,6 +39,7 @@
  * Not in kT60Converted: the profile is added after the paired runs. */
 #pragma once
 #include "d/t60conv.h"
+#include <cstdlib>
 
 namespace ar60 {
 
@@ -141,4 +142,51 @@ static inline int frameStep(const void* k, V* pos, V* old, A* angleX, f32 vx, f3
     return kVisual;
 }
 
+/* (2026-11-23): the shake of an arrow stuck in an actor (setStopActorMatrix:
+ * xRot = 1024 (t / 40)^2 sin(t * 0x52FB), t = mHitShakeTimer counted down on the tick30 step only (the per-step chance rule)). The earlier
+ * steps read the stored timer (the previous frame's end) and showed that frame's shake: 30 Hz stairs at N > 1. The
+ * picture: an earlier step k of N shows the countdown at its own time, t_k = timer - k / N (phase timer * 0x52FB -
+ * (k / N) * 0x52FB); on the tick30 step (k = N) the frame's end value, the original (frame-end identity). Picture only:
+ * xRot feeds only the model's base matrix (current.pos comes before it). dt 1: nothing. Negative control
+ * WWHD_T60_ARROWSHAKE_NEGCTRL=1: the form before. */
+static inline bool shakeNc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_ARROWSHAKE_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return false;
+#endif
+}
+static inline void shakePicture(s16 timer, s16& xRot) {
+    if (t60::dt() == 1.0f || t60::tick30() || timer <= 0 || shakeNc())
+        return;
+    const f32 k = (f32)t60::step() / (f32)t60::steps();
+    const f32 t = (f32)timer - k, temp = t / 40.0f;
+    xRot = (s16)gabi::ftoi(((1024.0f * temp) * temp) * cM_ssin((s16)((s32)timer * 0x52FB - (s32)(k * (f32)0x52FB))));
+}
+/* ... and an arrow stuck in the background (procStop_BG: the 30 Hz form on the tick30 step only, shape_angle.x = the hit
+ * angle + the shake, current.pos 50 back from the impact along it, set_model_mtx): on an earlier step the model's base
+ * matrix from the step's own shake (t_k as above), current.pos / shape_angle put back (picture only). Not on a moving
+ * background (its frame transform is a tick30 read). A template: the arrow's members are complete at the call. */
+template <class A> static inline BOOL stopBgPicture(A* a) {
+    const s16 timer = a->mHitShakeTimer;
+    if (t60::dt() == 1.0f || t60::tick30() || timer <= 0 || shakeNc())
+        return TRUE;
+    void* poly = static_cast<cBgS_PolyInfo*>(&a->mLinChk);
+    if (!cBgS_ChkPolySafe(dComIfG_Bgsp(), poly) || dBgS_ChkMoveBG(dComIfG_Bgsp(), poly))
+        return TRUE;
+    const f32 k = (f32)t60::step() / (f32)t60::steps();
+    const f32 t = (f32)timer - k, r = t * (1 / 40.0f);
+    const f32 amp = (1024.0f * r) * r, base = (f32)(s16)a->mHitAngle.x;
+    const s16 sx = (s16)gabi::ftoi(gabi::fmadds(amp, cM_ssin((s16)((s32)timer * 0x52FB - (s32)(k * (f32)0x52FB))), base));
+    const s16 sy = a->mHitAngle.y;
+    const f32 xCos = cM_scos(sx);
+    const f32 px = gabi::fnmsubs(50.0f * cM_ssin(sy), xCos, a->mImpactPos.x);
+    const f32 py = gabi::fmadds(50.0f, cM_ssin(sx), a->mImpactPos.y);
+    const f32 pz = gabi::fnmsubs(50.0f * cM_scos(sy), xCos, a->mImpactPos.z);
+    mDoMtx_stack_c::transS(px, py, pz);
+    mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), sx, sy, 0);
+    J3DModel_setBaseTRMtx(a->mpModel, mDoMtx_stack_c::get());
+    return TRUE;
+}
 }  // namespace ar60

@@ -31,6 +31,14 @@ struct LkT60CountLatch {
 static LkT60CountLatch s_lkT60Count[24];
 
 static inline bool lkT60_countStep() { return t60::dt() == 1.0f || t60::first_step(); }
+/* procFall's fall-face test on every step again (negative control
+ * WWHD_T60_FALLFACE_NEGCTRL=1); kept in this header, a function-local static in a glued unit needs a data glue line */
+static inline bool lkT60_fallFaceNegCtrl() {
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_FALLFACE_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
+}
+/* procFall's fall-face test runs on the frame's first step; every call at dt 1 or under the NC */
+static inline bool lkT60_fallFaceStep() { return lkT60_fallFaceNegCtrl() || lkT60_countStep(); }
 
 static inline void lkT60_counted(int32_t key, int site, int32_t value) {
     if (t60::dt() == 1.0f) {

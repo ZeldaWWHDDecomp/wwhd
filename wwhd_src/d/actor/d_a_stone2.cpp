@@ -670,6 +670,8 @@ void daStone2::Act_c::mode_wait_init() {
 /* 0249FA28 */
 void daStone2::Act_c::mode_wait() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (t60cs::pic()) /* true60: the carry entry and the lock timer on the frame grid (d/t60_carry_step.h) */
+        return;
     if (actor_status & 0x2000) {
         mode_carry_init();
         return;
@@ -703,6 +705,8 @@ void daStone2::Act_c::mode_carry_init() {
 /* 0249FF48 */
 void daStone2::Act_c::mode_carry() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (t60cs::pic()) /* true60: Link places it on every step; the lift smoke and the throw on the frame grid */
+        return;
     dComIfG_inf_c* p = play();
     stone2::Player* player = reinterpret_cast<stone2::Player*>((fopAc_ac_c*)p->play.mPlayerInfo[0].mpPlayer);
     if (player->mGrabFlags & 0x8000)
@@ -750,7 +754,8 @@ void daStone2::Act_c::mode_drop_init() {
 /* 0249FE90 */
 void daStone2::Act_c::mode_drop() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    stoneSetRoom(this, &mAcch.m_gnd);
+    if (!t60cs::pic()) /* true60: the room on the frame grid */
+        stoneSetRoom(this, &mAcch.m_gnd);
     u32 type = mType;
     if (type >= Type_Max) {
         JUT_ASSERT_fail("d_a_stone2.cpp", 0x247, "M_type >= 0 && M_type < Type_Max");
@@ -763,8 +768,8 @@ void daStone2::Act_c::mode_drop() {
         second = stone2::attributeAt(&M_attr, type);
     }
     f32 stream = first->mResistLinear, damping = second->mResistQuad;
-    stonePosMoveStream(this, &mStts, &l_zeroVector, stream, damping);
-    shape_angle.x = (s16)((s16)shape_angle.x + 1000);
+    t60cs::move(this, stonePosMoveStream, &mStts, &l_zeroVector, stream, damping); /* true60: PIC predicts */
+    shape_angle.x = (s16)((s16)shape_angle.x + (s16)t60c::frameAdd(&shape_angle.x, 1, 1000)); /* (PIC: the step's share) */
 }
 /* 0249F19C */
 void daStone2::Act_c::mode_fine_init() {
@@ -789,6 +794,8 @@ void daStone2::Act_c::mode_fine_init() {
 /* 0249FFE0 */
 void daStone2::Act_c::mode_fine() {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (t60cs::pic()) /* true60: the timer on the frame grid */
+        return;
     s16 timer = mFineTimer;
     if (timer > 0) {
         timer = (s16)(timer - 1);
@@ -811,13 +818,15 @@ BOOL daStone2::Act_c::mode_proc_call() {
     if (mode != Mode_Fine) {
         f32 y = current.pos.y, z = current.pos.z, x = current.pos.x;
         dComIfG_inf_c* p = play();
-        mAcch.CrrPos(&p->play.mBgS);
+        t60cs::crrPos(this, &mAcch, &p->play.mBgS); /* true60: a PIC step's ground check: no check, only the picture floor */
         if (mMode == Mode_Carry) {
             current.pos.y = y;
             current.pos.x = x;
             current.pos.z = z;
         }
     }
+    if (t60cs::pic()) /* true60: the landing break, room light and the fine end on the frame grid */
+        return TRUE;
     if (!damage_bg_proc_directly()) {
         if (mMode != Mode_Carry) {
             u8 room = current.roomNo;
@@ -900,11 +909,14 @@ void daStone2::Act_c::demo_proc_call() {
 /* 0249F6CC */
 BOOL daStone2::Act_c::Execute(gptr<Mtx34>* output) {
     auto originalFrame = gabi::AutoFrame(gabi::current_function());
-    if (t60w::begin(this, stone2_t60::kOps)) { /* true60: a step before the tick30 step: the picture only */
+    /* true60: the step form (d/t60_carry_step.h): an earlier step runs the frame's motion as a picture, the tick30 step
+     * the original from the frame-start words at dt 1. NC WWHD_T60_CARRYSTEP_NEGCTRL=1: the whole form */
+    if (t60cs::nc() && t60w::begin(this, stone2_t60::kOps)) { /* (NC) a step before the tick30 step: the picture only */
         set_mtx();
         *output = &M_tmp_mtx;
         return TRUE;
     }
+    t60cs::begin(this, stone2_t60::kSpec);
     bool t60Model = false; /* true60: the frame reached its model step */
     cull_set_move();
     bool active = mForceExecute || mMode != Mode_Wait;
@@ -915,6 +927,10 @@ BOOL daStone2::Act_c::Execute(gptr<Mtx34>* output) {
             active = true;
         else
             active = !stoneCullingCheck(this);
+    }
+    if (active && t60cs::pic()) { /* true60: a PIC step: the frame's motion only (the model below) */
+        mode_proc_call();
+        active = false;
     }
     if (active) {
         s32 mode = mMode;
@@ -956,10 +972,12 @@ BOOL daStone2::Act_c::Execute(gptr<Mtx34>* output) {
         } else
             stoneDeleteActor(this);
     }
-    set_mtx();
+    stone2_t60::picMtx(this); /* (PIC, held: at Link's picture place) */
     *output = &M_tmp_mtx;
     cull_set_draw();
-    t60w::end(this, stone2_t60::kOps, t60Model); /* true60: the frame's change kept for the next frame's picture */
+    if (t60cs::nc())
+        t60w::end(this, stone2_t60::kOps, t60Model); /* true60 (NC): the frame's change kept for the next frame's picture */
+    t60cs::end();
     return TRUE;
 }
 /* 0249F8B4 */

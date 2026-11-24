@@ -333,7 +333,9 @@ static BOOL daSail_Draw(sail_class* i_this) {
         (u32)sail_view<SailPlayView>(dComIfGp_ea())->sailOpaqueBuffer;
     sail_view<SailGraphicsSystem>(sail_tu::graphicsSystem)->translucentBuffer =
         (u32)sail_view<SailPlayView>(dComIfGp_ea())->sailTranslucentBuffer;
+    sail60_drawBegin(i_this, &i_this->mSailPacket); /* true60: matrix and cloth of the step at the world's time */
     i_this->mSailPacket.update();
+    sail60_drawEnd(&i_this->mSailPacket);
     return TRUE;
 }
 

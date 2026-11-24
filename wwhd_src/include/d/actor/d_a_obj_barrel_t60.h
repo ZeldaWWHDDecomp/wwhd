@@ -15,6 +15,8 @@
 #pragma once
 #include "d/t60_whole.h"
 #include "d/t60_held_pic.h" /* the held picture */
+#include "d/t60_carry_step.h" /* the step form */
+#include "d/t60conv.h"
 
 namespace barrel_t60 {
 static inline void get(daObjBarrel::Act_c* a, f32* v) {
@@ -30,6 +32,9 @@ static inline void mtx(daObjBarrel::Act_c* a) { a->set_mtx(); }
 static inline bool held(daObjBarrel::Act_c* a) {
     return (static_cast<u32>(a->actor_status) & (fopAcStts_CARRY_e | fopAcStts_HOOK_CARRY_e)) != 0 ||
            static_cast<s32>(a->mMode) == daObjBarrel::Act_c::MODE_CARRY;
+}
+static inline bool carried(daObjBarrel::Act_c* a) {
+    return (static_cast<u32>(a->actor_status) & (fopAcStts_CARRY_e | fopAcStts_HOOK_CARRY_e)) != 0;
 }
 static const t60w::Ops<daObjBarrel::Act_c> kOps = {6, 3, get, set, mtx, held};
 /* the execute's earlier-step tail; held, the model from this step's placement (set_mtx writes the
@@ -56,4 +61,16 @@ static inline bool held_picture(daObjBarrel::Act_c* a) {
     t60hp::picture(a, kOps, heldMtx);
     return true;
 }
+/* The step form (d/t60_carry_step.h; "convert the whole-form carriables to per-step logic",
+ * rule: exact-frame-move family, decisions on the frame grid). The barrel's earlier steps run its mode's motion
+ * as a picture of the current frame: the predicted moves (Barrel_posMoveF, daObj posMoveF_stream / _grade from the frame
+ * start), the shape / tilt chases (central cLib_chaseAngleS), set_walk_rot's turn and roll (from the frame's predicted
+ * move: its frame-grid thresholds magnitude > 5 / 2.5 on the frame's move, the integer roll / tilt adds as the step's
+ * share through t60c::frameAdd), vib_pos_ang's spin, the picture ground check and set_mtx (held: Link's place and
+ * bounce picture). No decision there: the mode inits, the carry entry / release, the timers mTimer / mInitTimer, the
+ * hit / water / landing-break checks, the attention and weight, the room, the sounds and effects, the collider
+ * registration (one-sweep-per-frame attack), mMove's decay. The tick30 step puts the frame-start words back (the base words and the barrel's
+ * tilt / dir / timer / roll words) and runs the original _execute at dt 1: the frame end is A's bit for bit. NC
+ * WWHD_T60_CARRYSTEP_NEGCTRL=1: the whole form above. */
+static const t60cs::Spec<daObjBarrel::Act_c> kSpec = {{{0x72C, 8}, {0x74C, 4}}, held, 0x750, 0x3B4, carried};
 }  // namespace barrel_t60

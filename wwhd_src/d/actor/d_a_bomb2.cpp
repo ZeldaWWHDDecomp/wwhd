@@ -220,6 +220,7 @@ void daBomb2::FuseSparksCB_c::deleteCallBack() {
 void daBomb2::FuseSparksCB_c::execute(void *emitter) {
   u32 e = gabi::ea(emitter);
   f32 y = mpPos->y, z = mpPos->z, x = mpPos->x;
+  bomb2_t60::sparksPos(gabi::ea(mpPos.get()), x, y, z); /* true60: the held picture's fuse place */
   // HD: volume types at and above seven mirror the emitter Y translation.
   u8 type = (u8)gabi::at<Bomb2Emitter>(e)->mVolumeType;
   u32 link = (u32)gabi::at<Bomb2Emitter>(e)->mAlivePtclHead;
@@ -1302,13 +1303,13 @@ void daBomb2::Act_c::tensor_proc_call() {
 
 /* 020C9E78 */
 bool daBomb2::Act_c::_execute() {
-  if (t60w::begin(this, bomb2_t60::kOps)) /* true60: a step before the tick30 step: the picture only */
-    return bomb2_t60::held_picture(this); /* (held: the holder's placement of this step) */
+  if (bomb2_t60::head(this)) /* true60: an earlier step shows this frame's own motion (t60cs) */
+    return true;
   set_wind_vec();
   mode_proc_call();
   if (mDeleteReq) {
     bomb2_fopAcM_delete(this);
-    t60w::end(this, bomb2_t60::kOps, false); /* true60: dt back (deleted: no picture) */
+    bomb2_t60::tail(this, false); /* true60: the tick30 run's end (t60cs; NC: the whole form's, deleted: no picture) */
     return true;
   }
   tensor_proc_call();
@@ -1323,7 +1324,7 @@ bool daBomb2::Act_c::_execute() {
   attention_info.position.z = z;
   set_mtx();
   cc_set();
-  t60w::end(this, bomb2_t60::kOps, true); /* true60: the frame's change kept for the next frame's picture */
+  bomb2_t60::tail(this, true); /* true60: the tick30 run's end (t60cs; NC: the whole form's) */
   return true;
 }
 

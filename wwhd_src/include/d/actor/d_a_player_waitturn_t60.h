@@ -13,7 +13,9 @@
  * from the recorded start at dt 1 (the frame's whole share: what A turned; the speed chase runs again from the same start,
  * now from A's angle), and procMove_init's blend (setBlendMoveAnime) is set again without a new morf from the turned
  * state, as A's init set it. Other procedures entered from procWait keep the per-step form (their inits may set the
- * angles themselves; handled as they are met). dt 1: never. */
+ * angles themselves; handled as they are met). dt 1: never.
+ * (2026-11-23) also included by d_a_player_main_07.cpp (procGrabWait) for the same catch-up there, and
+ * used by procFreeWait / procBoomerangCatch (d_a_player_main_04b.cpp / _07.cpp): each unit keeps its own record. */
 #pragma once
 #include "true60.h"
 
@@ -24,6 +26,12 @@ struct LkT60WaitTurn {
     s16 angle1, shape1;   /* after the turn */
     f32 speed1;
     bool valid;
+    /* before the turn: mDirection (setSpeedAndAngleAtn's branch, setBlendAtnMoveAnime's previous
+     * direction) and mMaxNormalSpeed (the turn's speed chase); noted by lkT60_waitTurnNoteAtn */
+    u8 dir;
+    f32 maxSpeed;
+    f32 m3598; /* setBlendAtnMoveAnime's strafe blend state (the init's call writes it) */
+    bool atnNoted;
 };
 static LkT60WaitTurn s_lkT60WaitTurn;
 
@@ -37,6 +45,17 @@ static inline void lkT60_waitTurnBegin(s16 angle, s16 shape, f32 speed) {
     s_lkT60WaitTurn.angle = angle;
     s_lkT60WaitTurn.shape = shape;
     s_lkT60WaitTurn.speed = speed;
+    s_lkT60WaitTurn.atnNoted = false;
+}
+/* the caller, first step, before the turn (after lkT60_waitTurnBegin): the values an ATN_MOVE
+ * catch-up puts back before it redoes the turn and the init's blend */
+static inline void lkT60_waitTurnNoteAtn(u8 dir, f32 maxSpeed, f32 m3598) {
+    if (!lkT60_waitTurnStep() || s_lkT60WaitTurn.stamp != t60_step_counter())
+        return;
+    s_lkT60WaitTurn.dir = dir;
+    s_lkT60WaitTurn.maxSpeed = maxSpeed;
+    s_lkT60WaitTurn.m3598 = m3598;
+    s_lkT60WaitTurn.atnNoted = true;
 }
 /* procWait, first step, after the turn */
 static inline void lkT60_waitTurnEnd(s16 angle, s16 shape, f32 speed) {
@@ -61,6 +80,20 @@ static inline bool lkT60_waitTurnCrouchNegctrl() {
     return false;
 #endif
 }
+/* (2026-11-23; pig lift route pigH, : A's frame 76 turns procGrabWait's whole step 173 -> 1029
+ * and enters MOVE, B's first step its dt share (625), the MOVE body then held on the later step: B one frame behind in
+ * angle, Link x off 7.34 @205) the same catch-up for the procedures that turn as procWait does and then ask
+ * checkNextMode: procGrabWait, procFreeWait, procBoomerangCatch. NC WWHD_T60_GRABTURN_NEGCTRL=1: procWait only, as
+ * before. */
+static constexpr s32 kLkT60WaitTurnMove = 6; /* daPyProc_MOVE_e (procMove_init: commonProcInit(6)) */
+static inline bool lkT60_grabTurnNegctrl() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_GRABTURN_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return false;
+#endif
+}
 /* procWait after checkNextMode entered a procedure: this step's record when the entered procedure is MOVE (or CROUCH)
  * and its init left the turn's values (the caller redoes the turn) */
 static inline const LkT60WaitTurn* lkT60_waitTurnCatchUp(uint32_t curProcEa, s32 curProc, bool enteredMove, s16 angle,
@@ -74,4 +107,70 @@ static inline const LkT60WaitTurn* lkT60_waitTurnCatchUp(uint32_t curProcEa, s32
         angle != (crouch ? t.shape1 : t.angle1) || shape != t.shape1 || speed != t.speed1)
         return nullptr;
     return &t;
+}
+
+/* procGrabWait / procFreeWait / procBoomerangCatch after checkNextMode entered a procedure: this
+ * step's record when the entered procedure is MOVE (only) and its init left the turn's values (the caller redoes the
+ * turn) */
+static inline const LkT60WaitTurn* lkT60_moveTurnCatchUp(uint32_t curProcEa, s32 curProc, s16 angle, s16 shape, f32 speed) {
+    if (curProc != kLkT60WaitTurnMove) {
+        s_lkT60WaitTurn.valid = false;
+        return nullptr;
+    }
+    return lkT60_waitTurnCatchUp(curProcEa, curProc, true, angle, shape, speed);
+}
+
+/* (2026-11-23; Z-target strafe start, a Z-target pair: Z 2.0-5.0 s, no
+ * target, strafe right from 2.5 s: A's frame 76 turns setSpeedAndAngleAtn's whole step 14986 -> 12258 and enters
+ * ATN_MOVE, B's first step its dt share (13559), the ATN_MOVE body then held on the later step: B a frame of turn
+ * behind, Link xz 1.4 -> 10.5 by frame 84) the same catch-up for an entered ATN_MOVE, from procWait, procMove and the
+ * three procedures above. procAtnMove_init's setBlendAtnMoveAnime(2.4) picks mDirection from the turned angles and its
+ * previous value (the band hysteresis; a direction change forces the 2.4 morf) and reads mMaxNormalSpeed, which
+ * checkNextMode's attention branch set to 12 just before the init. The caller puts back the noted direction and max
+ * speed, redoes the turn at dt 1, sets 12, puts back m3598 and calls setBlendAtnMoveAnime(2.4) again with t60::tick30()
+ * reading true (lkT60_frameEndBegin: the band test takes the frame-end form, as A's init at the frame's one update; the
+ * f_pc_t60.h frame-work precedent): the init's own call from A's state (the second morf in the same step, before any
+ * animation calc, starts from the same old frame). NC
+ * WWHD_T60_ATNMOVETURN_NEGCTRL=1: no ATN_MOVE catch-up, as before. */
+static constexpr s32 kLkT60WaitTurnAtnMove = 7; /* daPyProc_ATN_MOVE_e (procAtnMove_init: commonProcInit(7)) */
+static constexpr f32 kLkT60AtnMaxNormalSpeed = 12.0f; /* checkNextMode: the attention branch's mMaxNormalSpeed */
+static inline bool lkT60_atnMoveTurnNegctrl() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_ATNMOVETURN_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return false;
+#endif
+}
+/* after checkNextMode entered a procedure: this step's record when it entered ATN_MOVE (with the direction noted) and
+ * the init left the turn's values; the caller redoes the turn and the init's blend (lkT60_waitTurnAtnRedo's order) */
+static inline const LkT60WaitTurn* lkT60_atnMoveTurnCatchUp(uint32_t curProcEa, s32 curProc, s16 angle, s16 shape,
+                                                            f32 speed) {
+    LkT60WaitTurn& t = s_lkT60WaitTurn;
+    if (curProc != kLkT60WaitTurnAtnMove || lkT60_atnMoveTurnNegctrl() || !t.atnNoted)
+        return nullptr;
+    if (!lkT60_waitTurnStep() || !t.valid || t.stamp != t60_step_counter())
+        return nullptr;
+    t.valid = false;
+    if (!lkT60_procEnteredThisFrame(curProcEa) || angle != t.angle1 || shape != t.shape1 || speed != t.speed1)
+        return nullptr;
+    return &t;
+}
+
+/* around the redone init blend: t60::tick30() reads true (returns the value to put back); N = 1 / no t60: nothing */
+static inline u32 lkT60_frameEndBegin() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    u32 previous = wwhd_t60_tick30;
+    wwhd_t60_tick30 = 1;
+    return previous;
+#else
+    return 1;
+#endif
+}
+static inline void lkT60_frameEndEnd(u32 previous) {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    wwhd_t60_tick30 = previous;
+#else
+    (void)previous;
+#endif
 }

@@ -18,6 +18,7 @@
 #pragma once
 #include "true60.h"
 #include <cmath>
+#include <cstdlib>
 #include <cstring>
 
 static inline bool ship60_tick30() { return t60::dt() == 1.0f || t60::tick30(); }
@@ -926,4 +927,45 @@ static inline void ship60_ctrlBack(Ship60Ctrl& c, const void* owner, u32 frameId
         std::memcpy(fc, c.kept, sizeof(c.kept));
     }
     c.valid = false;
+}
+/* follow-up (2026-11-23): the rope's ripple place (setRopePos's end, d_a_ship.cpp,
+ * mRopeRipplePos = the rope's first point + a fresh cM_rndFX(20) jitter in x and z, y the water) is set on the tick30
+ * step only (the per-step chance rule: the two draws at A's place), so on the earlier steps it held the previous frame's place while the
+ * rope and the hull moved on; the ripple emitter (dPa_rippleEcallBack, which follows it per step with JPA_emitter_t60.h
+ * follow_step) then stairs. Form: the tick30 step notes the frame's jitter (the two draws' results, after the original
+ * sets the place); an earlier step of the next frame sets the place from this step's rope point + the noted jitter and
+ * this step's water y: no draw (the RNG and the draw count are A's), and the tick30 step's original overwrites all three
+ * words (the frame end is A's). No note from the frame just before (a new ship, a skipped frame): the place holds as
+ * before. WWHD_T60_SHIP_ROPEJIT=0: the place held (the negative control). dt 1: never run. Host memory. */
+struct Ship60RopeJit {
+    const void* owner;
+    u32 stamp;
+    f32 dx, dz;
+    bool valid;
+};
+static Ship60RopeJit s_ship60RopeJit;
+static inline bool ship60_ropeJitOn() {
+    static const bool on = [] {
+        const char* e = getenv("WWHD_T60_SHIP_ROPEJIT");
+        return !(e && e[0] == '0');
+    }();
+    return on;
+}
+/* the tick30 step, after the original set the place: the frame's jitter */
+static inline void ship60_ropeJitNote(const void* owner, f32 dx, f32 dz) {
+    if (t60::dt() == 1.0f) return;
+    s_ship60RopeJit.owner = owner;
+    s_ship60RopeJit.stamp = t60_step_counter();
+    s_ship60RopeJit.dx = dx;
+    s_ship60RopeJit.dz = dz;
+    s_ship60RopeJit.valid = true;
+}
+/* an earlier step: the place from this step's rope point (x, z) and water y with the previous frame's jitter */
+template <class V> static inline void ship60_ropeJitStep(const void* owner, f32 ropeX, f32 ropeZ, f32 waterY, V* pos) {
+    const Ship60RopeJit& j = s_ship60RopeJit;
+    if (t60::dt() == 1.0f || !ship60_ropeJitOn() || !j.valid || j.owner != owner) return;
+    if (t60_step_counter() - j.stamp >= t60::steps()) return; /* not the frame just before */
+    pos->x = ropeX + j.dx;
+    pos->y = waterY;
+    pos->z = ropeZ + j.dz;
 }

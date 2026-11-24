@@ -72,8 +72,9 @@ struct FollowWhole {
     uint32_t stamp;        /* t60_step_counter of the frame's first step */
     uint32_t objEa, comEa; /* the camera body and its com status block */
     uint32_t restoredStep; /* the tick30 step whose first execute put the frame start back */
-    bool follow;           /* the frame started in a follow-engine style */
+    bool follow;           /* the frame started in a follow-engine style (or switched into one: switchIn) */
     bool valid;
+    bool switchIn;         /* an earlier step's style decision entered a whole-form style */
 };
 inline camera_key_t60::PerCam<FollowWhole> g_followWhole;
 /* top of Run on the frame's first step (after noteFrameStart): the frame's starting style family */
@@ -85,10 +86,46 @@ static inline void noteFrame(uint32_t objEa, uint32_t comEa, u32 alg) {
     f.objEa = objEa;
     f.comEa = comEa;
     f.restoredStep = 0xFFFFFFFFu;
+    f.switchIn = false;
     f.follow = alg == kFollowAlg || alg == kLockonAlg /* lock-on (see kLockonAlg) */ ||
-               alg == kRideAlg /* ride candidate (see kRideAlg) */ ||
+               alg == kRideAlg /*: ride candidate (see kRideAlg) */ ||
                (alg == kHungAlg && hungWholeOn()); /* M2f: hung (see kHungAlg) */
     f.valid = true;
+}
+/* Switch-in (2026-11-23; the follow form's counterpart of eventWholeSwitchIn). Boomerang
+ * catch pair (frame 115 = step 3635): Link leaves BOOMERANG_SUBJECT on B's first step and the camera's
+ * style decision on that step goes SUBJ (type 12 mode 11 style 45) -> LOCK (mode 2 style 70). The frame STARTED in the
+ * subject style, so noteFrame did not mark it whole and the lock-on camera's first frame ran per step at dt 0.5: eye z
+ * +1.36 at 115 (every frame before exact to 0.03), about 1 unit / 0.9 deg of yaw kept through the follow camera after
+ * it (view V -163 vs A -173); Link's camera-relative MOVE heading took the 0.9 deg (MOVE entry angle 12219 vs 12187) and
+ * his xz drifted ~11 units in 65 frames (link-tslack pos 11.75 @180 on bcF1). Form: a style decision on an earlier
+ * (non-tick30) step that enters a whole-form style (follow / lock-on / ride / hung) in a frame that started outside one
+ * marks the frame whole: the earlier steps keep their per-step run (the picture; the shown values stay per step on
+ * this frame, no extrapolation from the previous style's motion), the tick30 step's first execute puts the frame start
+ * back and the tick30 Run runs the whole frame once at dt 1 from it, taking the switch again on the frame-end world
+ * (A's switch and A's first frame of the new style). Switch-out (a frame that starts whole and leaves mid-frame) is
+ * already whole: the tick30 run from the frame start takes the switch itself. NC WWHD_T60_FWSWITCHIN_NEGCTRL=1 (the
+ * per-step switch frame, as before). dt = 1: never. */
+static inline bool fwSwitchInNegctrl() {
+    static int s = -1;
+    if (s < 0) {
+        const char* e = getenv("WWHD_T60_FWSWITCHIN_NEGCTRL");
+        s = (e && e[0] == '1') ? 1 : 0;
+    }
+    return s == 1;
+}
+/* after Run's style decision (the caller tests dt != 1 first) */
+static inline void switchIn(u32 alg) {
+    if (t60::dt() == 1.0f || t60::tick30() || fwSwitchInNegctrl())
+        return;
+    FollowWhole& f = g_followWhole();
+    if (!f.valid || f.follow || !camera_run_t60::g_runFrameStart().valid ||
+        camera_run_t60::g_runFrameStart().stamp != f.stamp)
+        return;
+    if (!(alg == kFollowAlg || alg == kLockonAlg || alg == kRideAlg || (alg == kHungAlg && hungWholeOn())))
+        return;
+    f.follow = true;
+    f.switchIn = true;
 }
 /* the record is of the running frame (its first step recorded it, this is its last step) */
 static inline bool ofThisFrame(const FollowWhole& f, uint32_t now) {
@@ -188,7 +225,8 @@ extern "C" __attribute__((visibility("default"))) void wwhd_t60_cam_follow_pictu
     }
     const FollowWhole& f = g_followWhole();
     const uint32_t k = now - f.stamp + 1; /* this step's place in the frame: 1 .. N - 1 */
-    if (!f.valid || !f.follow || k < 1 || k >= n || !L.valid || !L.dvValid || L.endStep + 1 != f.stamp)
+    if (!f.valid || !f.follow || f.switchIn /* a switch-in frame keeps its per-step picture */ ||
+        k < 1 || k >= n || !L.valid || !L.dvValid || L.endStep + 1 != f.stamp)
         return;
     const f32 share = (f32)k / (f32)n;
     /* (walkcam: an R-stick onset shows only on the tick30 refresh,

@@ -20,6 +20,9 @@
 #include "true60.h"
 #include <cstdlib>
 #include "d/actor/d_a_player_carry_t60.h"
+#include "d/actor/d_a_player_waitturn_t60.h"
+#include "d/actor/d_a_player_swimbob_t60.h"
+#include "d/actor/d_a_player_glide_t60.h"
 
 /* true60: true on the step that ends a 30 Hz frame in a converted context, and always at dt 1: the
  * procedures' 30 Hz frame counts (mProcVar0 waits) count down here only (the 30 Hz timer rule) */
@@ -532,12 +535,21 @@ BOOL daPy_lk_c::procGrabWait() {
         resetActAnimeUpper(Link07::UPPER_MOVE2_e, -1.0f);
         return checkNextMode(0);
     }
-    if (LK_checkAttentionLock()) {
+    /* true60 (d_a_player_waitturn_t60.h): the frame's start / turn for MOVE's catch-up below */
+    const bool lkT60Gt = lkT60_waitTurnStep() && !lkT60_grabTurnNegctrl();
+    if (lkT60Gt) {
+        lkT60_waitTurnBegin(current.angle.y, shape_angle.y, (f32)mNormalSpeed);
+        lkT60_waitTurnNoteAtn(mDirection, mMaxNormalSpeed, m3598); /* */
+    }
+    const bool lkT60GtAtn = LK_checkAttentionLock();
+    if (lkT60GtAtn) {
         setSpeedAndAngleAtn();
     } else {
         setSpeedAndAngleNormal(0xBB8);
         // HD: HIO folded
     }
+    if (lkT60Gt)
+        lkT60_waitTurnEnd(current.angle.y, shape_angle.y, (f32)mNormalSpeed);
     if (m35D8 > -29.0f) {
         mFrameCtrlUnder[0].setRate(1.0f);
         // HD: HIO folded
@@ -552,6 +564,47 @@ BOOL daPy_lk_c::procGrabWait() {
         mFrameCtrlUnder[0].setRate(0.0f);
     }
     if (checkNextMode(0)) {
+        if (lkT60Gt) {
+            if (const LkT60WaitTurn* ta = lkT60_atnMoveTurnCatchUp(gabi::ea(&mCurProc), (s32)mCurProc, current.angle.y,
+                                                                           shape_angle.y, (f32)mNormalSpeed)) {
+                /* true60 (d_a_player_waitturn_t60.h): the entered ATN_MOVE's body is held on the frame's
+                 * later steps: this step turns the whole frame's share from the frame's start at dt 1, then sets the init's
+                 * blend again from A's state (direction, max speed, m3598; the band test at the frame end) */
+                f32 previousDt = t60_set_dt(1.0f);
+                current.angle.y = ta->angle;
+                shape_angle.y = ta->shape;
+                mNormalSpeed = ta->speed;
+                mDirection = ta->dir;
+                mMaxNormalSpeed = ta->maxSpeed;
+                if (lkT60GtAtn) {
+                    setSpeedAndAngleAtn();
+                } else {
+                    setSpeedAndAngleNormal(0xBB8);
+                }
+                mMaxNormalSpeed = kLkT60AtnMaxNormalSpeed;
+                m3598 = ta->m3598;
+                u32 previousTick30 = lkT60_frameEndBegin();
+                setBlendAtnMoveAnime(2.4f);
+                lkT60_frameEndEnd(previousTick30);
+                t60_set_dt(previousDt);
+            } else if (const LkT60WaitTurn* t = lkT60_moveTurnCatchUp(gabi::ea(&mCurProc), (s32)mCurProc, current.angle.y,
+                                                              shape_angle.y, (f32)mNormalSpeed)) {
+                /* true60 (as procWait): the frame's later steps are held: this step turns the whole
+                 * frame's share from the frame's start at dt 1, and MOVE's blend is set from it */
+                f32 previousDt = t60_set_dt(1.0f);
+                current.angle.y = t->angle;
+                shape_angle.y = t->shape;
+                mNormalSpeed = t->speed;
+                if (lkT60GtAtn) {
+                    setSpeedAndAngleAtn();
+                } else {
+                    setSpeedAndAngleNormal(0xBB8);
+                }
+                if (current.angle.y != t->angle1 || shape_angle.y != t->shape1 || (f32)mNormalSpeed != t->speed1)
+                    setBlendMoveAnime(-1.0f); /* the init's blend from the frame's turn; no new morf */
+                t60_set_dt(previousDt);
+            }
+        }
         if (LK_checkGrabAnime()) {
             lk_setUpperRatio(m_pbCalc[1], 1.0f);
         }
@@ -780,7 +833,8 @@ BOOL daPy_lk_c::procSwimWait() {
         s16 step = (s16)gabi::ftoi(gabi::fmuls_ppc(2330.0f, gabi::fadds_ppc(r, 0.85f)));
         mProcVar2 = (s16)(mProcVar2 + step);
     }
-    m35C4 = gabi::fmadds(5.0f, cM_ssin(mProcVar2), 1.0f);
+    /* true60 (d_a_player_swimbob_t60.h): the earlier steps draw k / N of the frame's mean phase step */
+    m35C4 = gabi::fmadds(5.0f, cM_ssin(lkT60_swimBobPhase(mProcVar2)), 1.0f);
     if (changeSwimOutProc()) {
         return TRUE;
     }
@@ -3183,15 +3237,65 @@ BOOL daPy_lk_c::procBoomerangMove() {
 
 /* 02437900 */
 BOOL daPy_lk_c::procBoomerangCatch() {
-    if (lk_attentionLock(mpAttention)) {
+    /* true60 (d_a_player_waitturn_t60.h): the frame's start / turn for MOVE's catch-up below */
+    const bool lkT60Bt = lkT60_waitTurnStep() && !lkT60_grabTurnNegctrl();
+    if (lkT60Bt) {
+        lkT60_waitTurnBegin(current.angle.y, shape_angle.y, (f32)mNormalSpeed);
+        lkT60_waitTurnNoteAtn(mDirection, mMaxNormalSpeed, m3598); /* */
+    }
+    const bool lkT60BtAtn = lk_attentionLock(mpAttention);
+    if (lkT60BtAtn) {
         setSpeedAndAngleAtn();
     } else {
         setSpeedAndAngleNormal(0xBB8); /* HD: HIO folded */
     }
+    if (lkT60Bt)
+        lkT60_waitTurnEnd(current.angle.y, shape_angle.y, (f32)mNormalSpeed);
     if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         resetActAnimeUpper(Link07::UPPER_MOVE2_e, -1.0f);
     }
-    checkNextMode(0);
+    if (checkNextMode(0) && lkT60Bt) {
+        if (const LkT60WaitTurn* ta = lkT60_atnMoveTurnCatchUp(gabi::ea(&mCurProc), (s32)mCurProc, current.angle.y,
+                                                                       shape_angle.y, (f32)mNormalSpeed)) {
+            /* true60 (d_a_player_waitturn_t60.h): the entered ATN_MOVE's body is held on the frame's
+             * later steps: this step turns the whole frame's share from the frame's start at dt 1, then sets the init's
+             * blend again from A's state (direction, max speed, m3598; the band test at the frame end) */
+            f32 previousDt = t60_set_dt(1.0f);
+            current.angle.y = ta->angle;
+            shape_angle.y = ta->shape;
+            mNormalSpeed = ta->speed;
+            mDirection = ta->dir;
+            mMaxNormalSpeed = ta->maxSpeed;
+            if (lkT60BtAtn) {
+                setSpeedAndAngleAtn();
+            } else {
+                setSpeedAndAngleNormal(0xBB8);
+            }
+            mMaxNormalSpeed = kLkT60AtnMaxNormalSpeed;
+            m3598 = ta->m3598;
+            u32 previousTick30 = lkT60_frameEndBegin();
+            setBlendAtnMoveAnime(2.4f);
+            lkT60_frameEndEnd(previousTick30);
+            t60_set_dt(previousDt);
+        } else if (const LkT60WaitTurn* t = lkT60_moveTurnCatchUp(gabi::ea(&mCurProc), (s32)mCurProc, current.angle.y,
+                                                          shape_angle.y, (f32)mNormalSpeed)) {
+            /* true60 (as procWait; d_a_player_waitturn_t60.h): the frame's later steps are held:
+             * this step turns the whole frame's share from the frame's start at dt 1, and MOVE's blend is set
+             * from it */
+            f32 previousDt = t60_set_dt(1.0f);
+            current.angle.y = t->angle;
+            shape_angle.y = t->shape;
+            mNormalSpeed = t->speed;
+            if (lkT60BtAtn) {
+                setSpeedAndAngleAtn();
+            } else {
+                setSpeedAndAngleNormal(0xBB8);
+            }
+            if (current.angle.y != t->angle1 || shape_angle.y != t->shape1 || (f32)mNormalSpeed != t->speed1)
+                setBlendMoveAnime(-1.0f); /* the init's blend from the frame's turn; no new morf */
+            t60_set_dt(previousDt);
+        }
+    }
     return TRUE;
 }
 
@@ -5816,6 +5920,7 @@ BOOL daPy_lk_c::procFanGlide() {
         }
     }
     if (mProcVar0 <= 0) {
+        lkT60Glide::start(); /* true60: the start frame (d_a_player_glide_t60.h) */
         if (!checkHeavyStateOn()) {
             maxFallSpeed = -2.0f; /* HD: HIO folded */
             if (mProcVar0 == 0) {
@@ -5827,6 +5932,9 @@ BOOL daPy_lk_c::procFanGlide() {
             speed.y = 15.0f;
         }
         mProcVar0 = 1;
+        return TRUE;
+    }
+    if (lkT60Glide::startFrame()) { /* true60: the start frame's later steps: the start only */
         return TRUE;
     }
     /* true60 (the 30 Hz timer rule): the magic drain (one point per 40 frames) counts 30 Hz frames: on the frame's step */
@@ -5862,7 +5970,7 @@ BOOL daPy_lk_c::procFanGlide() {
         }
         return procFall_init(2, 6.0f); /* HD: HIO folded */
     }
-    if (speed.y < -gravity && !checkHeavyStateOn()) {
+    if (lkT60Glide::gravityCheck() && speed.y < -gravity && !checkHeavyStateOn()) { /* true60: frame start */
         gravity = -0.5f;
         maxFallSpeed = -2.0f;
     }
@@ -5898,7 +6006,13 @@ BOOL daPy_lk_c::procFanGlide() {
         LKT60_CHASE_S(7, &mNormalSpeed, &mCurProc,
                       cLib_addCalc_l(&mNormalSpeed, (12.0f * stick) * cM_scos(diff), 0.5f, gabi::fmadds(0.4f, stick, 0.1f),
                                      0.01f)); /* HD: HIO folded; true60: frame-exact */
-        cLib_addCalcAngleS(&mProcVar2, (s16)gabi::ftoi((512.0f * mStickDistance) * cM_ssin(diff)), 5, 0x40, 8);
+        if (lkT60Glide::s_nc) {
+            cLib_addCalcAngleS(&mProcVar2, (s16)gabi::ftoi((512.0f * mStickDistance) * cM_ssin(diff)), 5, 0x40, 8);
+        } else { /* true60: frame-exact (d_a_player_glide_t60.h) */
+            LKT60_CHASE_S(11, &mProcVar2, &mCurProc,
+                          cLib_addCalcAngleS(&mProcVar2, (s16)gabi::ftoi((512.0f * mStickDistance) * cM_ssin(diff)), 5,
+                                             0x40, 8));
+        }
     }
     f32 step;
     if (lk07_windTgHit(&mWindCyl, v)) { /* *mWindCyl.GetTgRVecP (true60: the frame's hit, the mixed-pair hit-flag rule) */
@@ -5951,9 +6065,10 @@ BOOL daPy_lk_c::procFanGlide() {
         current.pos.y = current.pos.y + mWindSpeed.y * dt;
         current.pos.z = current.pos.z + mWindSpeed.z * dt;
     }
+    const s16 lkGlideWhole = (s16)(shape_angle.y + mProcVar2); /* true60: the frame's whole turn */
     s16 a = (s16)(shape_angle.y + lk07_share(s_lk07FanTurn, mProcVar2));
     shape_angle.y = a;
-    current.angle.y = a;
+    current.angle.y = lkT60Glide::moveAngle(a, lkGlideWhole); /* true60: the move's frame-end heading */
     f32 s = cM_ssin(a), c = cM_scos(a);
     f32 mz = mWindSpeed.z, mx = mWindSpeed.x;
     f32 lx = gabi::fmsubs(mx, c, mz * s);

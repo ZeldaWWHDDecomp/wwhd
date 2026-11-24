@@ -1,5 +1,6 @@
 /** Wind direction arrow. */
 #include "d/d_wind_arrow.h"
+#include "d/d_wind_arrow_t60.h"
 static const f32 l_zero;
 static const f32 l_offsetY;
 static const f32 l_offsetZ;
@@ -38,8 +39,13 @@ u32 dWindArrow_c::draw() {
     gabi::AutoFrame frame{gabi::current_function()};
     gabi::Local<Mtx34> mtx, rotMtx;
     gabi::Local<cXyz> offs;
-    mDoMtx_stack_c::transS(ac->current.pos.x, ac->current.pos.y, ac->current.pos.z);
-    mDoMtx_stack_c::YrotM(ac->shape_angle.y);
+    /* true60 (d_wind_arrow_t60.h): the owner's frame-end place on the draws after the earlier steps */
+    f32 t60x, t60y, t60z;
+    s16 t60ay;
+    windArrow60_place(gabi::ea(ac), ac->current.pos.x, ac->current.pos.y, ac->current.pos.z, ac->shape_angle.y, &t60x, &t60y,
+                      &t60z, &t60ay);
+    mDoMtx_stack_c::transS(t60x, t60y, t60z);
+    mDoMtx_stack_c::YrotM(t60ay);
     PSMTXCopy(mDoMtx_stack_c::get(), mtx.get());
     cXyz* windVec = dKyw_get_wind_vec();
     s16 windAngle = cM_atan2s(windVec->x, windVec->z);

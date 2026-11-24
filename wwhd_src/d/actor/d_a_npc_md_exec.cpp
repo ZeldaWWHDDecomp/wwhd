@@ -9,6 +9,7 @@
  */
 #include "d/actor/d_a_npc_md_exec.h"
 #include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
+#include "d/t60_npc_held.h" /* true60: carried by Link, the held picture */
 using namespace MdExec;
 static RoomTable roomStatus;
 static NamePointer l_staff_name;
@@ -1140,9 +1141,9 @@ void daNpc_Md_c::checkPlayerRoom() {
 
 /* 02288B08 */
 BOOL daNpc_Md_c::execute() {
-    t60w::Guard<daNpc_Md_c> t60g(this, t60npc::Logic<daNpc_Md_c>::kOps); /* true60: whole frame on tick30, end at every return */
-    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
-        return TRUE;
+    t60w::Guard<daNpc_Md_c> t60g(this, t60nh::Logic<daNpc_Md_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation; carried: d/t60_npc_held.h) */
+        return t60nh::picture(this, t60nh::morf2(mpMorf.get()), t60nh::morf2(mpArmMorf.get()), t60nh::morf1(mpWingMorf.get()));
     clearStatus(daMdStts_UNK20000);
     mOldLightBodyHit = checkStatus(daMdStts_LIGHT_BODY_HIT) ? 1 : 0; /* setOldLightBodyHit() */
     actor_status &= ~fopAcStts_SHOWMAP_e;                                         /* fopAcM_OffStatus(SHOWMAP) */

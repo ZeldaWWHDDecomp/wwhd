@@ -21,6 +21,7 @@
  * Host memory only, keyed by the owner (the sail actor / its packet). */
 #pragma once
 #include "d/actor/d_a_ship_t60.h"
+#include "d/t60_draw_words.h"
 
 /* a per-frame rate change for a step of dt */
 static inline f32 sail60_rate(f32 perFrame) {
@@ -168,4 +169,16 @@ static inline s32 sail60_wobbleAdd(Sail60Add& c, const void* owner, s32 perFrame
     c.acc -= (f32)add;
     c.given += add;
     return add;
+}
+
+/* (2026-11-23): the packet's update reads mMtx (from the place of the sail's newest
+ * step) and the cloth vertices in use (mPos[mCurArr], 0x54 points); the stick (a J3DModel) and the ship are drawn at
+ * the world's time. Around the update both go to the port (d/t60_draw_words.h): the step at the world's time. */
+template <class A, class P> static inline void sail60_drawBegin(A* a, P* p) {
+    t60dw::begin(gabi::ea(a), &p->mMtx, 48, t60dw::kMatrix);
+    t60dw::begin(gabi::ea(a), p->getPos(), 0x54 * 12, t60dw::kFloats);
+}
+template <class P> static inline void sail60_drawEnd(P* p) {
+    t60dw::end(p->getPos());
+    t60dw::end(&p->mMtx);
 }

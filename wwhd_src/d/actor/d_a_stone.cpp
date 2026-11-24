@@ -718,16 +718,18 @@ void daStone::Act_c::mode_wait_init() {
 /* 0249D588 */
 void daStone::Act_c::mode_wait() {
 
+    /* true60: a PIC step moves (the predicted frame move) and decides nothing (d/t60_carry_step.h) */
     if (static_cast<u32>(this->mAcch.m_flags) & 0x20) {
-        stone_fopAcM_posMoveF(this, static_cast<void*>(&this->mStts));
+        t60cs::move(this, stone_fopAcM_posMoveF, static_cast<void*>(&this->mStts));
+        if (!t60cs::pic())
         this->attention_info.flags = static_cast<u32>(static_cast<u32>(this->attention_info.flags) | 0x10);
     } else {
         const daStone::Data_c* first = data(this, "d_a_stone.cpp", "M_type >= 0 && M_type < Type_Max");
         const daStone::Data_c* second = data(this, "d_a_stone.cpp", "M_type >= 0 && M_type < Type_Max");
         f32 friction = static_cast<f32>(first->airFriction), speed = static_cast<f32>(second->airStreamSpeed);
-        stone_daObj__posMoveF_stream(this, static_cast<void*>(&this->mStts),
-                                     static_cast<void*>(const_cast<cXyz*>(&stone_zeroVector())), friction,
-                                     speed);
+        t60cs::move(this, stone_daObj__posMoveF_stream, static_cast<void*>(&this->mStts),
+                    static_cast<void*>(const_cast<cXyz*>(&stone_zeroVector())), friction, speed);
+        if (!t60cs::pic())
         this->attention_info.flags = static_cast<u32>(static_cast<u32>(this->attention_info.flags) & ~0x10u);
     }
 }
@@ -754,7 +756,8 @@ void daStone::Act_c::mode_carry_init() {
 
 /* 0249DBC8 */
 void daStone::Act_c::mode_carry() {
-
+    if (t60cs::pic()) /* true60: Link places it on every step; carry / throw / put on the frame grid */
+        return;
     if (static_cast<u32>(this->actor_status) & 0x2000) {
         u32 play = address(stone_getPlay());
         u8 started = static_cast<u8>(this->mGrabStarted);
@@ -840,13 +843,14 @@ void daStone::Act_c::mode_drop_init() {
 
 /* 0249DB04 */
 void daStone::Act_c::mode_drop() {
-    stone_daObj__SetCurrentRoomNo(this, static_cast<void*>(&this->mAcch.m_gnd));
+    if (!t60cs::pic()) /* true60: the room on the frame grid */
+        stone_daObj__SetCurrentRoomNo(this, static_cast<void*>(&this->mAcch.m_gnd));
     void* movement = stone_daObj__get_wind_spd(this, static_cast<f32>(stone_windScale()));
     const daStone::Data_c* first = data(this, "d_a_stone.cpp", "M_type >= 0 && M_type < Type_Max");
     const daStone::Data_c* second = data(this, "d_a_stone.cpp", "M_type >= 0 && M_type < Type_Max");
     f32 friction = static_cast<f32>(first->airFriction), speed = static_cast<f32>(second->airStreamSpeed);
-    stone_daObj__posMoveF_stream(this, static_cast<void*>(&this->mStts), movement, friction, speed);
-    stone_set_drop_rot(this);
+    t60cs::move(this, stone_daObj__posMoveF_stream, static_cast<void*>(&this->mStts), movement, friction, speed);
+    stone_t60::rot(this, stone_set_drop_rot); /* true60: PIC: the tilt on the line to its frame end */
 }
 
 /* 0249C5F4 */
@@ -897,21 +901,22 @@ void daStone::Act_c::mode_sink_init() {
 
 /* 0249DF24 */
 void daStone::Act_c::mode_sink() {
-    stone_daObj__SetCurrentRoomNo(this, static_cast<void*>(&this->mAcch.m_gnd));
+    if (!t60cs::pic()) /* true60: the room on the frame grid */
+        stone_daObj__SetCurrentRoomNo(this, static_cast<void*>(&this->mAcch.m_gnd));
     this->water_tention();
     const daStone::Data_c *first = data(this, "d_a_stone.cpp", "M_type >= 0 && M_type < Type_Max"),
                           *second = data(this, "d_a_stone.cpp", "M_type >= 0 && M_type < Type_Max");
     f32 friction = static_cast<f32>(first->waterFriction), speed = static_cast<f32>(second->waterStreamSpeed);
-    stone_daObj__posMoveF_stream(this, static_cast<void*>(&this->mStts),
-                                 static_cast<void*>(const_cast<cXyz*>(&stone_zeroVector())), friction, speed);
-    this->set_sink_rot();
+    t60cs::move(this, stone_daObj__posMoveF_stream, static_cast<void*>(&this->mStts),
+                static_cast<void*>(const_cast<cXyz*>(&stone_zeroVector())), friction, speed);
+    stone_t60::rot(this, &daStone::Act_c::set_sink_rot); /* true60: PIC: the tilt on the line to its frame end */
 }
 
 /* 0249D078 */
 s32 daStone::Act_c::mode_proc_call() {
 
     s32 mode;
-    if (static_cast<u32>(this->actor_status) & 0x2000) {
+    if (!t60cs::pic() && (static_cast<u32>(this->actor_status) & 0x2000)) { /* true60: the carry entry on the frame grid */
         mode = static_cast<s32>(this->mMode);
         if (mode != daStone::MODE_CARRY) {
             this->init_rot_clean();
@@ -933,6 +938,16 @@ s32 daStone::Act_c::mode_proc_call() {
         restorePosition = true;
     }
     u32 play = address(stone_getPlay());
+    if (t60cs::pic()) { /* true60: a PIC step's ground check: no check, only the picture floor; the water / lava / moving-ground checks on the frame grid */
+        t60cs::check(this, &this->mAcch, stone_dBgS_Acch__CrrPos, static_cast<void*>(&this->mAcch),
+                     static_cast<void*>(&gabi::object_at<StonePlayView>(play).background[0]));
+        if (restorePosition) {
+            this->current.pos.y = static_cast<f32>(y);
+            this->current.pos.x = static_cast<f32>(x);
+            this->current.pos.z = static_cast<f32>(z);
+        }
+        return 1;
+    }
     stone_dBgS_Acch__CrrPos(static_cast<void*>(&this->mAcch),
                             static_cast<void*>(&gabi::object_at<StonePlayView>(play).background[0]));
     this->bg_crr_water();
@@ -1529,8 +1544,11 @@ void daStone::Act_c::cam_lockoff() {
 
 /* 0249D2BC */
 s32 daStone::Act_c::_execute() {
-    if (t60w::begin(this, stone_t60::kOps)) /* true60: a step before the tick30 step: the picture only */
+    /* true60: the step form (d/t60_carry_step.h): an earlier step runs the frame's motion as a picture, the tick30 step
+     * the original from the frame-start words at dt 1. NC WWHD_T60_CARRYSTEP_NEGCTRL=1: the whole form */
+    if (t60cs::nc() && t60w::begin(this, stone_t60::kOps)) /* (NC) a step before the tick30 step: the picture only */
         return stone_t60::held_picture(this); /* (held: the holder's placement of this step) */
+    t60cs::begin(this, stone_t60::kSpec);
     bool t60Model = false; /* true60: the frame reached its model step */
 
     this->cull_set_move();
@@ -1542,6 +1560,11 @@ s32 daStone::Act_c::_execute() {
             (static_cast<u32>(this->actor_condition) & 4) && stone_fopAcM_cullingCheck(this) &&
             parameter(this, daStone::PRM_MOVEBG_W, daStone::PRM_MOVEBG_S) != 1)
             skip = true;
+    }
+    if (!skip && t60cs::pic()) { /* true60: a PIC step: the frame's motion and the model only */
+        this->mode_proc_call();
+        stone_t60::picMtx(this);
+        skip = true;
     }
     if (!skip) {
         this->mMovingGround = static_cast<u8>(0);
@@ -1593,7 +1616,9 @@ s32 daStone::Act_c::_execute() {
             stone_fopAcM_delete(this);
     }
     this->cull_set_draw();
-    t60w::end(this, stone_t60::kOps, t60Model); /* true60: the frame's change kept for the next frame's picture */
+    if (t60cs::nc())
+        t60w::end(this, stone_t60::kOps, t60Model); /* true60 (NC): the frame's change kept for the next frame's picture */
+    t60cs::end();
     return 1;
 }
 

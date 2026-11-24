@@ -16,6 +16,7 @@
 #include "d/actor/d_a_player_t60.h"
 #include "d/actor/d_a_player_crawl_t60.h"
 #include "d/actor/d_a_player_climb_t60.h"
+#include "d/actor/d_a_player_hang_t60.h"
 
 const gc_tu_data gc_tu = {.safeString = 0x10034B24};
 
@@ -1603,13 +1604,22 @@ BOOL daPy_lk_c::procHangMove() {
         xz->y = 0.0f;
         xz->z = local_64->z;
         f32 dVar12 = std_sqrtf(PSVECSquareMag(xz)); /* absXZ() */
+        /* true60: the frame's move is A's |d - m35A0| from the frame's first step (the hands
+         * of the previous frame's end), mNormalSpeed = it on every step, the frame's d left in m35A0
+         * (d_a_player_hang_t60.h; NC WWHD_T60_HANGMOVE_NEGCTRL=1 = the per-step form below) */
+        const bool hangFrame = lkT60Hang_on();
+        f32 frameMove = 0.0f;
+        if (hangFrame) {
+            frameMove = lkT60Hang_frameMove(dVar12, m35A0);
+            dVar12 = lkT60Hang_spacing();
+        }
         if (changeHangMoveProc(4)) {
-            f32 spd = std::fabs(dVar12 - m35A0); /* HD: HIO field_0x30 (1.0) folded */
+            f32 spd = hangFrame ? frameMove : std::fabs(dVar12 - m35A0); /* HD: HIO field_0x30 (1.0) folded */
             /* true60 (the per-step movement rule): the hands' spread changes by this step's share (the animation ran rate x dt):
              * per frame it is that / dt, the unit mNormalSpeed keeps (posMove moves dt of it); the wall probe and the
              * snap below take the step's own travel */
-            const f32 stepTravel = spd;
-            if (t60::dt() != 1.0f) {
+            const f32 stepTravel = hangFrame ? spd * (f32)t60::dt() : spd;
+            if (t60::dt() != 1.0f && !hangFrame) {
                 spd = spd / (f32)t60::dt();
             }
             mNormalSpeed = spd;

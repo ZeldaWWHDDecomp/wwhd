@@ -17,3 +17,12 @@ t60cand 020C9A6C 020C9C14 020C9B18 020C9BB8 020C9CBC 020C9D04
 # t60once 020C9A6C 020C9C14 020C9B18 020C9BB8 020C9CBC 020C9D04: run only inside _execute's tick30 whole run (whole-frame form); never on their own N steps
 # effect calls (sound / particle starts): as many calls over the N steps as in the one step
 t60calls 025E1A40 025A847C 025A866C
+# c_lib eases run their converted (dt-aware) code (t60conv default, 2026-11-20; a mocked or plain-real ease ignores the step dt)
+src wwhd_src/SSystem/SComponent/c_lib.cpp
+real 0200ECD4
+t60cand 0200ECD4
+# whole-form calls (tools/t60conv): every call of the whole-form execute but its picture, as many over the N steps as in the one step
+# (2026-11-23): the first step's prediction (d/t60_whole_pred.h: set_wind_vec + the mover at dt 1 on
+# the actor's copied words, put back) and the explosion light picture call the wind / mover / light callees on an
+# earlier step: taken out of the count: 020195B0 0201AD78 0201AE48 020C9674 020CB5E0 (PrmAbstract: the PRM_1 test of the earlier step) 02515BBC 025162A4 02516300 025200D4 028E8DD0 028E8E64 028F4384
+t60calls 0200E240 02018C8C 02018D40 020C8C58 020C9980 020C99DC 020C9A6C 020C9B18 020C9BB8 020C9C14 020C9CBC 020C9D04 02312548 02515E50 02516C14 025D57E0 025E742C 025F2518 028E8C78 028E90D4

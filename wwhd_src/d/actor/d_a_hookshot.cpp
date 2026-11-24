@@ -743,7 +743,10 @@ BOOL daHookshot_c::procShot() {
             mRebound = true;
         }
     }
-    cps_SetStartEnd(c, &current.pos, sp8C, 5.0f);
+    cXyz* cpsStart = &current.pos;
+    if (t60c::on() && t60c::end() && hs60::cpsFromStart(this, mv)) /* true60: the tick30 capsule over the frame's segment */
+        cpsStart = mv;
+    cps_SetStartEnd(c, cpsStart, sp8C, 5.0f);
     cps_CalcAtVec(c);
     dComIfG_Ccsp_Set(gabi::at<void>(c));
     dComIfG_Ccsp_SetMass(c, 1);
@@ -875,6 +878,8 @@ BOOL daHookshot_c::procReturn() {
         f1 = std_sqrtf(PSVECSquareMag(sp4C));
         done = decide && gabi::ftoi(f1 / 7.0f) <= 9;
     }
+    if (carry_actor != nullptr && t60c::on() && !decide) /* true60: an arriving frame's picture */
+        hs60::notePicArrive(this, gabi::ea(carry_actor), gabi::ea(&carry_actor->current.pos), chain0 <= 9 || gabi::ftoi(f1 / 7.0f) <= 9);
     if (done) {
         if (carry_actor != nullptr && t60c::on()) /* true60: the arriving frame does not move the carried actor */
             hs60::restoreCarry(this, gabi::ea(&carry_actor->current.pos));
@@ -916,6 +921,9 @@ BOOL daHookshot_c::procReturn() {
     } else {
         PSVECSubtract(&current.pos, d, &current.pos);
     }
+    if (carry_actor != nullptr && t60c::on() && !decide && /* true60: the held picture's place */
+        hs60::carry30(fpcM_GetName(carry_actor), fopAcM_GetID(carry_actor), gabi::ea(carry_actor)))
+        hs60::notePic(gabi::ea(carry_actor), current.pos, mCarryOffset);
     /* true60 (hand, rule 14 order): a 30 Hz carried actor is placed on the tick30
      * step only (hs60::carry30) */
     if (carry_actor != nullptr &&

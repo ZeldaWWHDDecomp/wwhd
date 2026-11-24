@@ -119,6 +119,8 @@ void jpa_emitter_calc::JPABaseEmitter::calc() {
     JPACalcKey(this);
     if (jpa_t60::frame_count()) // (true60: the game's callbacks on the tick30 step)
         emitterCallback(this, CallbackExecute);
+    else // (true60 JPA_emitter_t60.h: a follow emitter at its owner's place of this step)
+        jpa_t60::follow_step<JPABaseEmitter, EmitterCallback>(this, false);
     JPACalcEmitterInfo(this);
     JPADrawCalc(mDraw);
     JPAFieldPreCalc(mFieldManager);
@@ -126,6 +128,8 @@ void jpa_emitter_calc::JPABaseEmitter::calc() {
         JPACalcCreatePtcls(this);
     if (jpa_t60::frame_count())
         emitterCallback(this, CallbackExecuteAfter);
+    else
+        jpa_t60::follow_step<JPABaseEmitter, EmitterCallback>(this, true);
     JPACalcParticle(this);
     JPACalcChild(this);
     f32 tick = (f32)mTick + t60::dt(); // true60: the emitter age advances by the step length
@@ -140,6 +144,8 @@ void jpa_emitter_calc::JPAEmitterManager::calc(u8 group) {
     while (link) {
         JPABaseEmitter* emitter = link->object;
         link = link->next;
+        // true60 (JPA_emitter_t60.h): a follow emitter moved on the earlier steps: the frame start back
+        jpa_t60::follow_restore(gabi::ea(emitter));
         // true60 (JPA_emitter_t60.h): an emitter's first calc runs at the frame time already elapsed (k / N)
         f32 first = jpa_t60::first_calc_dt(emitter, JPAEmtrStts_FirstEmit);
         f32 previous = first > 0.0f ? t60_set_dt(first) : 0.0f;
@@ -156,10 +162,13 @@ void jpa_emitter_calc::JPAEmitterManager::calc(u8 group) {
         }
         if (restop && !deleted)
             jpa_t60::fresh_restop(emitter, JPAEmtrStts_StopEmit);
+        if (!deleted)
+            jpa_t60::follow_log<JPABaseEmitter, EmitterCallback>(emitter, group); // (WWHD_T60_EMTRLOG)
         if (first > 0.0f)
             t60_set_dt(previous);
     }
     jpa_t60::fresh_end(group);
+    jpa_t60::follow_end(group);
 }
 
 /* 0281F878 */

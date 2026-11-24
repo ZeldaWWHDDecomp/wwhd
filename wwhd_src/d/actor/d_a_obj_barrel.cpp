@@ -316,10 +316,10 @@ bool daObjBarrel::Act_c::_draw() {
 /* 0231DE48 */
 void daObjBarrel::Act_c::mode_carry() {
     s16 angle = this->mSlantAngle;
-    if ((s32)this->mTimer > 0)
+    if (!t60cs::pic() && (s32)this->mTimer > 0) /* true60: timers and decisions on the frame grid (t60_carry_step.h) */
         this->mTimer = (s32)this->mTimer - 1;
     Barrel_chaseAngleS(&this->shape_angle.z, angle, 0x1000);
-    if (!((u32)this->actor_status & (fopAcStts_CARRY_e | fopAcStts_HOOK_CARRY_e))) {
+    if (!t60cs::pic() && !((u32)this->actor_status & (fopAcStts_CARRY_e | fopAcStts_HOOK_CARRY_e))) {
         this->mLastGroundY = this->current.pos.y;
         Barrel_SetCurrentRoomNo(this, &this->mAcch.m_gnd);
         this->mTiltAngle = 0;
@@ -332,13 +332,15 @@ void daObjBarrel::Act_c::vib_pos_ang() {
     f32 factor = this->mAcch.ChkGroundHit() ? 0.8f : 1.f;
     f32 angle = gabi::fmadds((f32)(s16)this->mTiltAngle, 8.544921729480848e-05f, 0.3f);
     angle = ((16000.f * angle) * 0.1f) * factor;
-    Barrel_posMoveF(this, &this->mStts.m_cc_move);
-    this->shape_angle.y = (s16)this->shape_angle.y + (s16)gabi::ftoi(angle);
-    this->mTiltDir = (s16)this->mTiltDir + (s16)gabi::ftoi(14400.f * factor);
+    t60cs::move(this, Barrel_posMoveF, &this->mStts.m_cc_move); /* true60: the predicted frame move (PIC) */
+    this->shape_angle.y = (s16)this->shape_angle.y + (s16)t60c::frameAdd(&this->shape_angle.y, 1, (s16)gabi::ftoi(angle));
+    this->mTiltDir = (s16)this->mTiltDir + (s16)t60c::frameAdd(&this->mTiltDir, 2, (s16)gabi::ftoi(14400.f * factor));
 }
 /* 0231E0AC */
 void daObjBarrel::Act_c::mode_vib0() {
     this->vib_pos_ang();
+    if (t60cs::pic()) /* true60: the timer on the frame grid */
+        return;
     this->mTimer = (u32)this->mTimer - 1u;
     if ((s32)this->mTimer <= 0)
         this->mode_vib1_init();
@@ -346,6 +348,8 @@ void daObjBarrel::Act_c::mode_vib0() {
 /* 0231E110 */
 void daObjBarrel::Act_c::mode_vib1() {
     this->vib_pos_ang();
+    if (t60cs::pic()) /* true60: the timer on the frame grid */
+        return;
     this->mTimer = (u32)this->mTimer - 1u;
     if ((s32)this->mTimer <= 0)
         this->mode_vib2_init();
@@ -354,6 +358,8 @@ void daObjBarrel::Act_c::mode_vib1() {
 void daObjBarrel::Act_c::mode_vib2() {
     Barrel_chaseAngleS(&this->mTiltAngle, 0, 150);
     this->vib_pos_ang();
+    if (t60cs::pic()) /* true60: the timer on the frame grid */
+        return;
     this->mTimer = (u32)this->mTimer - 1u;
     if ((s32)this->mTimer <= 0) {
         this->shape_angle.x = 0;
@@ -367,7 +373,11 @@ bool daObjBarrel_Method_Draw(Act_c* a) { return a->_draw(); }
 /* 0231DB3C */
 void daObjBarrel::Act_c::set_walk_rot() {
     gabi::Local<cXyz> delta;
-    Barrel_xyzSubtract(&this->current.pos, delta.get(), &this->old.pos);
+    f32 t60d[3]; /* true60: a PIC step reads the frame's move (its thresholds on the frame grid, t60_carry_step.h) */
+    if (t60cs::frameDelta(this, t60d))
+        delta->x = t60d[0], delta->y = t60d[1], delta->z = t60d[2];
+    else
+        Barrel_xyzSubtract(&this->current.pos, delta.get(), &this->old.pos);
     gabi::Local<cXyz> horizontal;
     horizontal->x = delta->x;
     horizontal->y = 0.f;
@@ -386,6 +396,8 @@ void daObjBarrel::Act_c::set_walk_rot() {
     f32 roll = (magnitude / (6.28f * gabi::fmadds(5.f, cosine, 45.f))) * 65535.f;
     s16 rotation = gabi::ftoi(roll * 3.f);
     s16 walk = gabi::ftoi(roll);
+    rotation = (s16)t60c::frameAdd(&this->mTiltDir, 3, rotation); /* true60: the step's share (PIC); dt 1: the add */
+    walk = (s16)t60c::frameAdd(&this->mRollAngle, 4, walk);
     if (negative) {
         this->mTiltDir = (s16)this->mTiltDir + rotation;
         this->mRollAngle = (s16)this->mRollAngle + walk;
@@ -400,9 +412,11 @@ void daObjBarrel::Act_c::set_walk_rot() {
 }
 /* 0231DD40 */
 void daObjBarrel::Act_c::mode_wait() {
-    Barrel_posMoveF(this, &this->mStts.m_cc_move);
-    Barrel_chaseAngleS(&this->shape_angle.z, (s16)this->shape_angle.z > 0x1000 ? 0x4000 : 0, 0xC00);
+    t60cs::move(this, Barrel_posMoveF, &this->mStts.m_cc_move); /* true60: the predicted frame move (PIC) */
+    Barrel_chaseAngleS(&this->shape_angle.z, t60cs::startS16(0x32C, this->shape_angle.z) > 0x1000 ? 0x4000 : 0, 0xC00);
     this->set_walk_rot();
+    if (t60cs::pic()) /* true60: decisions on the frame grid */
+        return;
     if (this->mAcch.ChkGroundHit()) {
         this->attention_info.flags |= fopAc_Attn_ACTION_CARRY_e;
         if ((s16)this->shape_angle.z == 0x4000) {
@@ -422,18 +436,21 @@ void daObjBarrel::Act_c::mode_wait() {
 }
 /* 0231E1BC */
 void daObjBarrel::Act_c::mode_jump() {
-    Barrel_SetCurrentRoomNo(this, &this->mAcch.m_gnd);
-    if (this->mAcch.ChkGroundLanding())
-        this->mode_walk_init();
-    else {
-        Barrel_posMoveF_stream(this, &this->mStts.m_cc_move, &this->mMove, 0.006f, 0.001f);
+    if (!t60cs::pic()) /* true60: decisions and the room on the frame grid */
+        Barrel_SetCurrentRoomNo(this, &this->mAcch.m_gnd);
+    if (this->mAcch.ChkGroundLanding()) {
+        if (!t60cs::pic())
+            this->mode_walk_init();
+    } else {
+        t60cs::move(this, Barrel_posMoveF_stream, &this->mStts.m_cc_move, &this->mMove, 0.006f, 0.001f);
         Barrel_chaseAngleS(&this->shape_angle.z, 0x4000, 0xC00);
         this->set_walk_rot();
     }
 }
 /* 0231E248 */
 void daObjBarrel::Act_c::mode_walk() {
-    Barrel_SetCurrentRoomNo(this, &this->mAcch.m_gnd);
+    if (!t60cs::pic()) /* true60: the room on the frame grid */
+        Barrel_SetCurrentRoomNo(this, &this->mAcch.m_gnd);
     if (this->mAcch.ChkGroundHit()) {
         auto* play = dComIfGp_get();
         auto* normal =
@@ -450,10 +467,12 @@ void daObjBarrel::Act_c::mode_walk() {
             friction = 0.1f;
             cosine = cM_scos(0xA4F);
         }
-        Barrel_posMoveF_grade(this, &this->mStts.m_cc_move, &this->mMove, 0.006f, 0.001f, normal,
-                              friction, cosine, acceleration.get());
+        t60cs::move(this, Barrel_posMoveF_grade, &this->mStts.m_cc_move, &this->mMove, 0.006f, 0.001f, normal,
+                    friction, cosine, acceleration.get()); /* true60: the predicted frame move (PIC) */
         Barrel_chaseAngleS(&this->shape_angle.z, 0x4000, 0xC00);
         this->set_walk_rot();
+        if (t60cs::pic()) /* true60: decisions on the frame grid */
+            return;
         this->attention_info.flags |= fopAc_Attn_ACTION_CARRY_e;
         if (normal) {
             gabi::Local<cXyz> horizontal;
@@ -466,7 +485,7 @@ void daObjBarrel::Act_c::mode_walk() {
                 this->mode_wait_init();
         }
     } else {
-        Barrel_posMoveF_stream(this, &this->mStts.m_cc_move, &this->mMove, 0.006f, 0.001f);
+        t60cs::move(this, Barrel_posMoveF_stream, &this->mStts.m_cc_move, &this->mMove, 0.006f, 0.001f);
         Barrel_chaseAngleS(&this->shape_angle.z, 0x4000, 0xC00);
         this->set_walk_rot();
     }
@@ -507,15 +526,16 @@ void daObjBarrel::Act_c::mode_carry_init() {
 }
 /* 0231D724 */
 bool daObjBarrel::Act_c::mode_proc_call() {
-    if (((u32)this->actor_status & (fopAcStts_CARRY_e | fopAcStts_HOOK_CARRY_e)) &&
-        (s32)this->mMode != MODE_CARRY)
+    if (!t60cs::pic() && ((u32)this->actor_status & (fopAcStts_CARRY_e | fopAcStts_HOOK_CARRY_e)) &&
+        (s32)this->mMode != MODE_CARRY) /* true60: the carry entry on the frame grid */
         this->mode_carry_init();
     (this->*mode_proc.mProc[(u32)this->mMode])();
     f32 y = this->current.pos.y, z = this->current.pos.z, x = this->current.pos.x;
     auto* play = dComIfGp_get();
-    this->mAcch.CrrPos(&Barrel_gameInfo(play)->play.mBgS);
+    /* true60: a PIC step's ground check: no check, only the picture floor (t60_carry_step.h) */
+    t60cs::crrPos(this, &this->mAcch, &Barrel_gameInfo(play)->play.mBgS);
     play = dComIfGp_get();
-    if (Barrel_ChkMoveBG(&Barrel_gameInfo(play)->play.mBgS,
+    if (!t60cs::pic() && Barrel_ChkMoveBG(&Barrel_gameInfo(play)->play.mBgS,
                          static_cast<cBgS_PolyInfo*>(&this->mAcch.m_gnd)))
         this->mForceExec = 1;
     if ((s32)this->mMode == MODE_CARRY) {
@@ -523,6 +543,8 @@ bool daObjBarrel::Act_c::mode_proc_call() {
         this->current.pos.x = x;
         this->current.pos.z = z;
     }
+    if (t60cs::pic()) /* true60: the landing checks, room light and mMove's decay on the frame grid */
+        return true;
     if (this->damage_bg_proc_directly())
         return false;
     if ((s32)this->mMode != MODE_CARRY) {
@@ -661,8 +683,11 @@ bool daObjBarrel::Act_c::damage_cc_proc() {
 }
 /* 0231D944 */
 bool daObjBarrel::Act_c::_execute() {
-    if (t60w::begin(this, barrel_t60::kOps)) /* true60: a step before the tick30 step: the picture only */
+    /* true60: the step form (d/t60_carry_step.h): an earlier step runs the frame's motion as a picture, the tick30 step
+     * the original from the frame-start words at dt 1. NC WWHD_T60_CARRYSTEP_NEGCTRL=1: the whole form */
+    if (t60cs::nc() && t60w::begin(this, barrel_t60::kOps)) /* (NC) a step before the tick30 step: the picture only */
         return barrel_t60::held_picture(this); /* (held: the holder's placement of this step) */
+    t60cs::begin(this, barrel_t60::kSpec);
     bool t60Model = false; /* true60: the frame reached its model step */
     this->cull_set_move();
     bool execute = this->mForceExec || (s32)this->mMode != MODE_WAIT ||
@@ -672,18 +697,20 @@ bool daObjBarrel::Act_c::_execute() {
                   !((u32)this->actor_condition & fopAcCnd_NODRAW_e) || !Barrel_cullingCheck(this);
     }
     if (execute) {
-        this->mForceExec = 0;
+        if (!t60cs::pic()) /* true60: decisions on the frame grid */
+            this->mForceExec = 0;
         bool broken = true;
-        if (!this->damage_cc_proc() && !this->damage_bg_proc()) {
+        if (t60cs::pic() || (!this->damage_cc_proc() && !this->damage_bg_proc())) {
             s32 mode = this->mMode;
-            if (mode != MODE_VIB0 && mode != MODE_VIB1 && mode != MODE_VIB2 && mode != MODE_JUMP &&
+            if (!t60cs::pic() && mode != MODE_VIB0 && mode != MODE_VIB1 && mode != MODE_VIB2 && mode != MODE_JUMP &&
                 mode != MODE_WALK && !((u32)this->actor_status & fopAcStts_CARRY_e) &&
                 (s16)this->shape_angle.x != 0)
                 this->mode_vib0_init();
             if (this->mode_proc_call()) {
                 broken = false;
                 t60Model = true;
-                this->set_mtx();
+                t60cs::mtx(this, barrel_t60::held(this), &Act_c::set_mtx); /* (PIC, held: the holder's picture place) */
+                if (!t60cs::pic()) { /* true60: the collider once a frame (one-sweep-per-frame attack), the eye / attention on the frame grid */
                 this->mStts.mRoomId = this->current.roomNo;
                 Barrel_Cyl_SetC(&this->mCyl.mCyl, &this->current.pos);
                 auto* play = dComIfGp_get();
@@ -692,13 +719,16 @@ bool daObjBarrel::Act_c::_execute() {
                 this->eyePos.y = (f32)this->current.pos.y + 50.f;
                 this->eyePos.z = this->current.pos.z;
                 this->attention_info.position = this->eyePos;
+                }
             }
         }
         if (broken)
             fopAcM_delete(this);
     }
     this->cull_set_draw();
-    t60w::end(this, barrel_t60::kOps, t60Model); /* true60: the frame's change kept for the next frame's picture */
+    if (t60cs::nc())
+        t60w::end(this, barrel_t60::kOps, t60Model); /* true60 (NC): the frame's change kept for the next frame's picture */
+    t60cs::end();
     return true;
 }
 /* 0231E4F4 */

@@ -4,6 +4,7 @@
  * arrays. Verified against WWHD by m_Do_ext_13. Private game-derived source.
  */
 #include "m_Do/m_Do_ext_line_mat1.h"
+#include "d/t60_draw_words.h" /* true60: lines at the owner's world time */
 #include "port_native_draw.h"
 using namespace line_mat1;
 static ShaderNames l_shaderNames;
@@ -440,6 +441,7 @@ void line_mat1::mDoExt_3DlineMat1_c::update(u32 count, const be<u32>* color, u32
     mNumSegments = (u16)count;
     if (count > capacity)
         mNumSegments = (u16)capacity;
+    t60dw::linesBegin(mpLines.get(), mNumLines, mNumSegments); /* true60 */
     CameraView* camera = ((PlayView*)dComIfGp_get())->mView;
     line_mat1::mDoExt_3Dline_c* line = mpLines;
     f32 zero = texturedLineZero;
@@ -574,6 +576,7 @@ void line_mat1::mDoExt_3DlineMat1_c::update(u32 count, const be<u32>* color, u32
     for (u32 i = 0; i < mNumLines; i++)
         texturedLineFinalize(mpLines[i].mpMeshBuffer, 0, 1);
     texturedLineMaterialSetup(this, mpTevStr, &mColor);
+    t60dw::linesEnd(mpLines.get(), mNumLines); /* true60 */
 }
 
 /* 025ED1BC */
@@ -586,6 +589,7 @@ void line_mat1::mDoExt_3DlineMat1_c::updateWidths(u32 count, const be<u32>* colo
     mNumSegments = (u16)count;
     if (count > capacity)
         mNumSegments = (u16)capacity;
+    t60dw::linesBegin(mpLines.get(), mNumLines, mNumSegments); /* true60 */
     CameraView* camera = ((PlayView*)dComIfGp_get())->mView;
     line_mat1::mDoExt_3Dline_c* line = mpLines;
     f32 zero = texturedLineZero;
@@ -722,6 +726,7 @@ void line_mat1::mDoExt_3DlineMat1_c::updateWidths(u32 count, const be<u32>* colo
     for (u32 i = 0; i < mNumLines; i++)
         texturedLineFinalize(mpLines[i].mpMeshBuffer, 0, 1);
     texturedLineMaterialSetup(this, mpTevStr, &mColor);
+    t60dw::linesEnd(mpLines.get(), mNumLines); /* true60 */
 }
 
 // clang-format off

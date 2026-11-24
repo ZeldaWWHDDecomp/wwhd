@@ -1017,7 +1017,9 @@ bool daGrid_c::_draw() {
     }
     gabi::object_at<GridDrawBuffer>(gabi::ea(buffer)).zMatrix = static_cast<u32>(grid_matrixAddress());
     grid_J3DDrawBuffer__entryImm(buffer, static_cast<void*>(&this->mPacket), 0);
+    grid_t60::drawBegin(this); /* true60: the matrix and vertices of the step at the world's time */
     grid_updateSailMaterial(static_cast<void*>(&this->mPacket));
+    grid_t60::drawEnd(this);
     return true;
 }
 

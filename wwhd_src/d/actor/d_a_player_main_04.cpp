@@ -16,6 +16,7 @@
 #include "true60.h"
 #include "m_Do/m_Do_ext_animation_t60.h"
 #include "d/actor/d_a_player_t60.h"
+#include "d/actor/d_a_player_grabpic_t60.h" /* true60: the carried item's bounce picture */
 #include "d/actor/d_a_player_crawl_t60.h"
 #include "d/actor/d_a_player_at_t60.h"
 #include "d/actor/d_a_player_maba_t60.h"
@@ -65,6 +66,8 @@ static const be<u16>* const aura_model_joint = gabi::at<be<u16>>(0x10035AA0);
 #include "d/actor/d_a_player_rootmode_t60.h"
 #include "d/actor/d_a_player_footga_t60.h"
 #include "d/actor/d_a_player_landline_t60.h"
+#include "d/actor/d_a_player_landhist_t60.h"
+#include "d/actor/d_a_player_stepdown_t60.h"
 #include "d/t60_whole_carrier.h"
 
 static cXyz l_debug_keep_pos;
@@ -1664,6 +1667,8 @@ void daPy_lk_c::setGrabItemPos() {
      * form). dt 1: the original. */
     if (t60::dt() != 1.0f && !lk04_grabBounceNegctrl()) {
         if (!t60::tick30()) {
+            lk04_grabPicNote(gabi::ea(grab_actor), mGrabItemBounceY, (mNoResetFlg0 & LinkEffectConstants::daPyFlg0_UNK400) != 0,
+                             (mModeFlg & LinkEffectConstants::ModeFlg_MIDAIR) != 0, speed.y); /* picture */
             grab_actor->current.pos.y = grab_actor->current.pos.y + mGrabItemBounceY;
             return;
         }
@@ -4638,6 +4643,7 @@ BOOL daPy_lk_c::execute() {
      * check's hits (setDemoData / endDemoMode / checkNextMode, setStickData, the procedure dispatch) */
     lkT60Bg::begin(mAcch.m_flags, mAcchCir[0].m_flags, mAcchCir[1].m_flags, mAcchCir[2].m_flags, lkT60_frameTag());
     lkT60_gaViewBegin(mGroundAngle); /* true60 (d_a_player_footga_t60.h): the frame-start ground angle */
+    lkT60GcView::begin(mGroundCode); /* true60 (d_a_player_landhist_t60.h): the frame-start ground code */
     setDemoData();
     setStickData();
     if (mEquipItem == LinkUpdateConstants::dItemNo_GRAPPLING_HOOK_e /* dItemNo_GRAPPLING_HOOK_e */ && (mCurProc == LinkUpdateConstants::daPyProc_ROPE_SUBJECT_e || mCurProc == LinkUpdateConstants::daPyProc_ROPE_MOVE_e)) {
@@ -4728,6 +4734,7 @@ BOOL daPy_lk_c::execute() {
      * body's unmatched noted draws here (inits: where the procedure called them) */
     lkT60Maba::body_end(b);
     lkT60Crawl_afterBody(this);
+    lkT60GcView::end(mGroundCode); /* true60: the step's real ground code back */
     lkT60_gaViewEnd(mGroundAngle); /* true60: the step's real ground angle back */
     lkT60Bg::end(mAcch.m_flags, mAcchCir[0].m_flags, mAcchCir[1].m_flags, mAcchCir[2].m_flags); /* true60: the real hits back, the part's own writes kept */
     if (t60::dt() != 1.0f && !t60::first_step() && s_lk04BtnSts.valid && s_lk04BtnSts.tag == lkT60_frameTag() &&
@@ -4758,6 +4765,10 @@ BOOL daPy_lk_c::execute() {
         lkT60Land::frameStart(this, lkT60_frameTag(), LinkPoseApi::checkHeavyStateOn(this) != 0);
     }
     lkT60Land::bodyPos(sp14x, sp14y, sp14z, lkT60_frameTag()); /* true60: a set held by the tick30 body */
+    /* true60 (d_a_player_stepdown_t60.h): the lift-off frame's start */
+    lkT60_liftOffStart(current.pos.y, speed.y, gravity, maxFallSpeed, LinkPoseApi::checkHeavyStateOn(this) != 0,
+                       (mAcch.m_flags & dBgS_Acch::GROUND_HIT) != 0,
+                       (mModeFlg & 0x10452822) != 0 || (mNoResetFlg0 & 0x80000000) != 0);
     if (!lkT60Crawl_moveSkip()) { /* true60: a crawl frame moves once, on its tick30 step at dt 1 */
         lkT60Crawl_ccTick30(this); /* true60: the frame's collision push (the first step's Move cleared it) */
         f32 crawlDt = lkT60Crawl_moveOpen();
@@ -4770,11 +4781,28 @@ BOOL daPy_lk_c::execute() {
     u32 sp8y = lk_fbits(current.pos.y);
     u32 sp8x = lk_fbits(current.pos.x);
     mAcch.m_flags = acf & ~0x20u; /* mAcch.ClrGroundHit() */
-    lkT60Land::begin(acf, old.pos, current.pos, lkT60_frameTag()); /* true60 (d_a_player_landline_t60.h) */
+    const bool lkT60Seg = lkT60Land::begin(acf, old.pos, current.pos, lkT60_frameTag()); /* true60 (d_a_player_landline_t60.h) */
+    lkT60LandHist::note(acf, lkT60Seg, lkT60_frameTag()); /* true60 (d_a_player_landhist_t60.h) */
     mAcch.CrrPos(dComIfG_Bgsp());
     lkT60Land::end(mAcch.m_flags, old.pos); /* true60: the step's old.pos back; a landing on an earlier step noted */
     setWaterY();
     autoGroundHit();
+    {
+        /* true60 (d_a_player_stepdown_t60.h): the lift-off frame ends where A's does */
+        f32 lkY = current.pos.y, lkVy = speed.y;
+        bool lkGnd = false;
+        if (lkT60_liftOffStep((mAcch.m_flags & dBgS_Acch::GROUND_HIT) != 0,
+                              (mModeFlg & 0x10452822) != 0 || (mNoResetFlg0 & 0x80000000) != 0, mAcch.m_ground_h, lkY,
+                              lkVy, lkGnd)) {
+            current.pos.y = lkY;
+            speed.y = lkVy;
+            if (lkGnd)
+                mAcch.m_flags = mAcch.m_flags | dBgS_Acch::GROUND_HIT;
+        }
+    }
+    if (t60::dt() != 1.0f) /* true60 (d_a_player_landhist_t60.h): the direct-hit bits as A's check */
+        mAcch.m_flags = lkT60LandHist::apply(mAcch.m_flags, mAcch.m_ground_h, mAcch.m_ground_up_h,
+                                             (mModeFlg & 0x10452822) != 0, lkT60_frameTag());
     checkLavaFace(oldPos.get(), 0);
     if (mModeFlg & LinkPoseConstants::ModeFlg_SWIM) { /* ModeFlg_SWIM */
         if ((mNoResetFlg0 & daPyFlg0_UNK100) && !checkSwimFallCheck()) {

@@ -8,6 +8,7 @@
  */
 #include "d/actor/d_a_npc_cb1_execute.h"
 #include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
+#include "d/t60_npc_held.h" /* true60: carried by Link, the held picture */
 
 using namespace cb1_execute;
 static cb1_execute::ActionPtmf cbExec_waitNpcAction;
@@ -1344,9 +1345,9 @@ static inline void cb1_execDamage(daNpc_Cb1_c *i_this, u32 pmf, bool player) {
 
 /* 0222091C */
 BOOL daNpc_Cb1_c::execute() {
-    t60w::Guard<daNpc_Cb1_c> t60g(this, t60npc::Logic<daNpc_Cb1_c>::kOps); /* true60: whole frame on tick30, end at every return */
-    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
-        return TRUE;
+    t60w::Guard<daNpc_Cb1_c> t60g(this, t60nh::Logic<daNpc_Cb1_c>::kOps); /* true60: whole frame on tick30, end at every return */
+    if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation; carried: d/t60_npc_held.h) */
+        return t60nh::picture(this, t60nh::morf1(mpMorf.get()), t60nh::none(), t60nh::none());
 
     cb1_execute::daNpc_Cb1_HIO_c &hio = cb1_HIO();
     actor_status = actor_status & ~0x20u;     /* fopAcStts_SHOWMAP_e */
