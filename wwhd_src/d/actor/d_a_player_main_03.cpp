@@ -16,6 +16,7 @@
 #include "port_hooks.h"
 #include "true60.h"
 #include "d/actor/d_a_player_t60.h"
+#include "d/actor/d_a_player_heading_t60.h"
 #include "d/actor/d_a_player_maba_t60.h"
 #include "d/actor/d_a_player_camyaw_t60.h"
 #include "d/actor/d_a_player_stepsoffset_t60.h"
@@ -4759,7 +4760,9 @@ void daPy_lk_c::posMoveFromFootPos() {
             if (proc == 0x56) {
                 v = speedF;
             }
-            u16 ay = (u16)current.angle.y;
+            /* true60 (d_a_player_heading_t60.h): on a turning frame's earlier steps the move's
+             * heading is the frame's whole turn (the frame-end heading A moves the frame along); dt 1: current.angle.y */
+            u16 ay = (u16)lkT60_moveHeading(current.angle.y);
             speed.x = v * cM_ssin(ay);
             speed.z = speedF * cM_scos(ay);
         }

@@ -16,6 +16,7 @@
 #include "d/actor/d_a_player_atnturn_t60.h"
 #include "d/actor/d_a_player_waitturn_t60.h"
 #include "d/actor/d_a_player_movecos_t60.h"
+#include "d/actor/d_a_player_heading_t60.h"
 #include "d/d_com_lib_game.h"
 #include "d/t60_draw_words.h"
 
@@ -460,6 +461,8 @@ void daPy_lk_c::setSpeedAndAngleAtnBack() {
         }
         s16 origAngleY = current.angle.y;
         cLib_addCalcAngleS(&current.angle.y, mMoveTargetAngleY, 6, 0xBB8, 0x7D0); /* HD: HIO folded */
+        if (lkT60_headingNoteStep()) /* true60 (d_a_player_heading_t60.h): the frame's whole turn */
+            lkT60_headingNote(origAngleY, lkT60_moveCosAngle(origAngleY, current.angle.y, mMoveTargetAngleY, 0xBB8, 0x7D0, 6));
         f1 = (2.5f * mStickDistance) * lk_atnTurnCos((s16)(current.angle.y - origAngleY)); /* true60: lk_atnTurnCos */
     } else {
         f1 = 0.0f;
@@ -488,7 +491,10 @@ void daPy_lk_c::setAngleAtnHD() {
             current.angle.y = (s16)(current.angle.y - 0x8000);
             mNormalSpeed = -mNormalSpeed;
         }
+        const s16 lkT60H0 = current.angle.y;
         cLib_addCalcAngleS(&current.angle.y, target, 6, 0xBB8, 0x7D0);
+        if (lkT60_headingNoteStep()) /* true60 (d_a_player_heading_t60.h): the frame's whole turn */
+            lkT60_headingNote(lkT60H0, lkT60_moveCosAngle(lkT60H0, current.angle.y, target, 0xBB8, 0x7D0, 6));
     }
 }
 
@@ -503,6 +509,8 @@ void daPy_lk_c::setSpeedAndAngleAtnNoShapeHD() {
         }
         s16 origAngleY = current.angle.y;
         cLib_addCalcAngleS(&current.angle.y, mMoveTargetAngleY, 6, 0xBB8, 0x7D0);
+        if (lkT60_headingNoteStep()) /* true60 (d_a_player_heading_t60.h): the frame's whole turn */
+            lkT60_headingNote(origAngleY, lkT60_moveCosAngle(origAngleY, current.angle.y, mMoveTargetAngleY, 0xBB8, 0x7D0, 6));
         f32 f1 = (5.0f * mStickDistance) * lk_atnTurnCos((s16)(current.angle.y - origAngleY)); /* true60: lk_atnTurnCos */
         setNormalSpeedF(f1, 0.5f, 7.5f, 4.0f);
     } else {
@@ -561,6 +569,8 @@ void daPy_lk_c::setSpeedAndAngleAtn() {
         }
         s16 origAngleY = current.angle.y;
         cLib_addCalcAngleS(&current.angle.y, mMoveTargetAngleY, 6, 0xBB8, 0x7D0);
+        if (lkT60_headingNoteStep()) /* true60 (d_a_player_heading_t60.h): the frame's whole turn */
+            lkT60_headingNote(origAngleY, lkT60_moveCosAngle(origAngleY, current.angle.y, mMoveTargetAngleY, 0xBB8, 0x7D0, 6));
         f1 = (5.0f * mStickDistance) * lk_atnTurnCosFrame(origAngleY, current.angle.y, mMoveTargetAngleY); /* true60 */
     } else {
         f1 = 0.0f;
@@ -633,6 +643,8 @@ void daPy_lk_c::setSpeedAndAngleAtnActor() {
             cLib_addCalcAngleS(&current.angle.y, mMoveTargetAngleY, 6, 0xBB8, 0x7D0);
             t60_set_dt(previousDt);
         }
+        if (lkT60_headingNoteStep()) /* true60 (d_a_player_heading_t60.h): the frame's whole turn */
+            lkT60_headingNote(origAngleY, lkT60_moveCosAngle(origAngleY, current.angle.y, mMoveTargetAngleY, 0xBB8, 0x7D0, 6));
         f1 = (5.0f * mStickDistance) * lk_atnTurnCosFrame(origAngleY, current.angle.y, mMoveTargetAngleY); /* true60 */
     } else {
         f1 = 0.0f;
@@ -903,7 +915,8 @@ void daPy_lk_c::setNormalSpeedF(f32 acceleration, f32 decelerationRate, f32 maxD
         for (int i = 0; i < 3; i++) {
             dBgS_AcchCir& cir = mAcchCir[i];
             if (cir.ChkWallHit()) {
-                wallAngleDelta = (s16)((current.angle.y + 0x8000) - cir.GetWallAngleY());
+                /* true60 (d_a_player_heading_t60.h): the frame's turned angle on the chase step */
+                wallAngleDelta = (s16)((lkT60_wallSpeedAngle(current.angle.y) + 0x8000) - cir.GetWallAngleY());
                 break;
             }
         }
@@ -1861,10 +1874,14 @@ void daPy_lk_c::setSpeedAndAngleNormal(s16 maxAngleStep) {
                     cosPart = false; // Keep zero acceleration while reversing at high speed.
                 } else {
                     cLib_addCalcAngleS(&current.angle.y, mMoveTargetAngleY, 5, maxAngleStep, 100); /* HD: HIO folded */
+                    if (lkT60_headingNoteStep()) /* true60 (d_a_player_heading_t60.h): the frame's whole turn */
+                        lkT60_headingNote(cosStartAngle, lkT60_moveCosAngle(cosStartAngle, current.angle.y, mMoveTargetAngleY, maxAngleStep, 100));
                     return;
                 }
             } else {
                 cLib_addCalcAngleS(&current.angle.y, mMoveTargetAngleY, 5, maxAngleStep, 100);
+                if (lkT60_headingNoteStep()) /* true60 (d_a_player_heading_t60.h): the frame's whole turn */
+                    lkT60_headingNote(cosStartAngle, lkT60_moveCosAngle(cosStartAngle, current.angle.y, mMoveTargetAngleY, maxAngleStep, 100));
             }
         } else {
             s16 angleStep;
@@ -1883,6 +1900,8 @@ void daPy_lk_c::setSpeedAndAngleNormal(s16 maxAngleStep) {
                 }
             }
             cLib_addCalcAngleS(&current.angle.y, mMoveTargetAngleY, 5, angleStep, minAngleStep);
+            if (lkT60_headingNoteStep()) /* true60 (d_a_player_heading_t60.h): the frame's whole turn */
+                lkT60_headingNote(cosStartAngle, lkT60_moveCosAngle(cosStartAngle, current.angle.y, mMoveTargetAngleY, angleStep, minAngleStep));
             cosMaxStep = angleStep;
             cosMinStep = minAngleStep;
         }
