@@ -13,6 +13,7 @@
 #include "d/actor/d_a_player_anm_t60.h"
 #include "port_hooks.h"
 #include "d/actor/d_a_player_t60.h"
+#include "d/actor/d_a_player_grabwear_t60.h"
 #include "d/actor/d_a_player_maba_t60.h"
 #include <cmath>
 #include <cstdlib> /* true60: getenv (NC) */
@@ -2256,7 +2257,7 @@ BOOL daPy_lk_c::procGrabPut_init() {
         return FALSE;
     }
     commonProcInit(0x72);
-    if (mGrabItemOffsetY < 0.0f) { /* checkGrabWear() (daPy_py_c, GameCube 0x2B0) */
+    if (lkgw::wear(&mGrabItemOffsetY, mGrabItemOffsetY)) { /* checkGrabWear (daPy_py_c, GameCube 0x2B0); true60 */
         mProcVar6 = 1;
         setSingleMoveAnime(player02::ANM_GRABWAIT, 1.0f, 0.0f, -1, 3.0f); // HD: HIO folded
     } else {
@@ -3779,7 +3780,7 @@ void daPy_lk_c::setBlendMoveAnime(f32 param_1) {
     }
     int r28 = 0; /* ANM_WAITS */
     int r27, r26;
-    if (mGrabItemOffsetY < 0.0f) { /* checkGrabWear() */
+    if (lkgw::wear(&mGrabItemOffsetY, mGrabItemOffsetY)) { /* checkGrabWear; true60 */
         r27 = 0x95; /* ANM_WALKBARREL */
         r26 = 0x95;
     } else if (checkHeavyStateOn()) {
@@ -4126,7 +4127,7 @@ void daPy_lk_c::setFrontWallType() {
     if (!(mAcch.m_flags & 0x10) /* !ChkWallHit() */ && !(mModeFlg & 0x200200) /* ModeFlg_HOOKSHOT | ModeFlg_PUSHPULL */) {
         return;
     }
-    if (mGrabItemOffsetY < 0.0f) { /* checkGrabWear() */
+    if (lkgw::wear(&mGrabItemOffsetY, mGrabItemOffsetY)) { /* checkGrabWear; true60 */
         return;
     }
     s16 sy = shape_angle.y;

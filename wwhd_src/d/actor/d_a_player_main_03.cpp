@@ -17,6 +17,7 @@
 #include "true60.h"
 #include "d/actor/d_a_player_t60.h"
 #include "d/actor/d_a_player_heading_t60.h"
+#include "d/actor/d_a_player_grabwear_t60.h"
 #include "d/actor/d_a_player_maba_t60.h"
 #include "d/actor/d_a_player_camyaw_t60.h"
 #include "d/actor/d_a_player_stepsoffset_t60.h"
@@ -1124,7 +1125,7 @@ BOOL daPy_lk_c::checkNextActionFromButton() {
     }
     if (gabi::ea(LinkActionPlay().mPlayerInfo[0].mpPlayer.get()) ==
             gabi::ea(this) /* daPy_getPlayerActorClass() == this */
-        && !dComIfGp_event_runCheck() && !(mGrabItemOffsetY < 0.0f) /* !checkGrabWear() */) {
+        && !dComIfGp_event_runCheck() && !lkgw::wear(&mGrabItemOffsetY, mGrabItemOffsetY) /* !checkGrabWear; true60 */) {
         mResetFlg0 = mResetFlg0 | LinkActionConstants::daPyRFlg0_SUBJECT_ACCEPT;
         s32 camIdx = mCameraInfoIdx;
         if (dComIfGp_getCameraAttentionStatus(camIdx) & 0x1000) {
@@ -2928,7 +2929,7 @@ BOOL daPy_lk_c::changeAutoJumpProc() {
                 0 ||
             LinkMotionApi::checkBottle(gabi::ea(&LinkActionSave().mSavedata.mPlayer.mPlayerItem),
                                        0x57)) {
-            if (mOldGroundCode != 3 && !(mGrabItemOffsetY < 0.0f) /* !checkGrabWear() */ && !(nspeed < 9.0f) &&
+            if (mOldGroundCode != 3 && !lkgw::wear(&mGrabItemOffsetY, mGrabItemOffsetY) /* !checkGrabWear; true60 */ && !(nspeed < 9.0f) &&
                 mStickDistance > 0.85f && cLib_distanceAngleS(a, shape_angle.y) < 0x800) {
                 if (pla != 0) {
                     current.pos.x = (f32)linkMotionQueries(me)

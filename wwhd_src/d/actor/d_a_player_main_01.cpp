@@ -12,6 +12,7 @@
 #include "port_hooks.h"
 #include "true60.h"
 #include "d/actor/d_a_player_t60.h"
+#include "d/actor/d_a_player_grabwear_t60.h"
 #include "d/actor/d_a_player_maba_t60.h"
 #include "d/actor/d_a_player_bghit_t60.h"
 
@@ -983,7 +984,8 @@ void daPy_lk_c::freeGrabItem() {
     u32 barrel = gabi::ea(mActorKeepGrab.mActor.get());
     if (barrel != 0) {
         /* true60 (d_a_player_t60.h): a release on a later step of the frame keeps the frame-start placement */
-        lkT60_grabRelease(barrel, gabi::ea(&gabi::at<fopAc_ac_c>(barrel)->current.pos));
+        if (!lkgw::putDownNow(&mActorKeepGrab)) /* true60 (d_a_player_grabwear_t60.h): a put-down keeps its placement */
+            lkT60_grabRelease(barrel, gabi::ea(&gabi::at<fopAc_ac_c>(barrel)->current.pos));
         fopAcM_cancelCarryNow(gabi::at<fopAc_ac_c>(barrel));
         gabi::at<fopAc_ac_c>(barrel)->shape_angle.z = 0; /* shape_angle.z */
         if (checkGrabBarrelSearch(0)) {
@@ -1743,7 +1745,7 @@ void daPy_lk_c::setBgCheckParam() {
         cir0->m_wall_h = 25.0f;
         cir2->m_wall_h = 25.0f;
         cir1->m_wall_h = 25.0f;
-    } else if (mGrabItemOffsetY < 0.0f /* checkGrabWear() */) {
+    } else if (lkgw::wear(&mGrabItemOffsetY, mGrabItemOffsetY) /* checkGrabWear; true60 */) {
         Player01_setWallR(cir0, 50.0f);
     } else {
         Player01_setWallR(cir0, 35.0f);
@@ -3269,7 +3271,7 @@ BOOL daPy_lk_c::commonProcInit(int proc) {
     f32 wear = mGrabItemOffsetY;
     u16 item = mEquipItem;
     u32 nf1b = noResetFlg1();
-    if (!(wear < 0.0f) /* !checkGrabWear() */) {
+    if (!lkgw::wear(&mGrabItemOffsetY, wear) /* !checkGrabWear; true60: A's frame-start read */) {
         m35D8 = 0.0f;
     }
     m35EC = 0.0f;

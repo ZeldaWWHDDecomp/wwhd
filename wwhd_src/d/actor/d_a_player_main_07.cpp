@@ -17,6 +17,7 @@
 #include "gc_api/d/d_com_inf_game.h"
 #include "port_hooks.h"
 #include "d/actor/d_a_player_t60.h"
+#include "d/actor/d_a_player_grabwear_t60.h"
 #include "d/actor/d_a_player_maba_t60.h"
 #include "true60.h"
 #include <cstdlib>
@@ -431,7 +432,7 @@ BOOL daPy_lk_c::procGrabPut() {
         return checkNextMode(0);
     }
     if (mProcVar6 == 1) {
-        if (mGrabItemOffsetY < 0.0f) { /* checkGrabWear() */
+        if (lkgw::wear(&mGrabItemOffsetY, mGrabItemOffsetY)) { /* checkGrabWear; true60 */
             return TRUE;
         }
         mProcVar6 = 0;
@@ -479,6 +480,7 @@ BOOL daPy_lk_c::procGrabPut() {
     m370C.y = grab->current.pos.y;
     if (mFrameCtrlUnder[0].getRate() > -0.01f) {
         grab->speedF = 0.0f;
+        lkgw::putDown(&mActorKeepGrab); /* true60: no frame-start put-back */
         freeGrabItem();
         if (mDemo.mDemoMode == daPy_demo_c::DEMO_GRAB_PUT_e) {
             LK_cutEnd();
@@ -487,6 +489,7 @@ BOOL daPy_lk_c::procGrabPut() {
         }
     } else if (mFrameCtrlUnder[0].getFrame() < 0.0f && checkNextMode(1)) {
         grab->speedF = 0.0f;
+        lkgw::putDown(&mActorKeepGrab); /* true60 */
         freeGrabItem();
     }
     return TRUE;

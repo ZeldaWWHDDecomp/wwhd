@@ -18,6 +18,7 @@
 #include "d/actor/d_a_player_t60.h"
 #include "d/actor/d_a_player_slant_t60.h" /* true60: the running lean once a frame */
 #include "d/actor/d_a_player_grabpic_t60.h" /* true60: the carried item's bounce picture */
+#include "d/actor/d_a_player_grabwear_t60.h"
 #include "d/actor/d_a_player_crawl_t60.h"
 #include "d/actor/d_a_player_at_t60.h"
 #include "d/actor/d_a_player_maba_t60.h"
@@ -1539,6 +1540,7 @@ void daPy_lk_c::setGrabItemPos() {
         return;
     }
     lkT60_grabNote(gabi::ea(grab_actor), gabi::ea(&grab_actor->current.pos)); /* true60: the frame-start placement */
+    lkgw::frameStart(&mGrabItemOffsetY, mGrabItemOffsetY); /* true60 (d_a_player_grabwear_t60.h): the frame-start wear, before the ease */
     if (mCurProc == LinkEffectConstants::daPyProc_GRAB_READY_e) {
         mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
         mDoMtx_stack_c::YrotM((s16)(shape_angle.y - mProcVar2));
@@ -1641,6 +1643,7 @@ void daPy_lk_c::setGrabItemPos() {
             if (groundY > (f64)(f32)grab_actor->current.pos.y) {
                 grab_actor->speedF = 0.0f;
                 grab_actor->current.pos.y = (f32)groundY;
+                lkgw::putDown(&mActorKeepGrab); /* true60: A's ground placement stays */
                 freeGrabItem();
                 return;
             }
@@ -2532,7 +2535,7 @@ void daPy_lk_c::setHatAngle() {
     sp94->y = (mHatPrevPos.y - spA0->y) - 7.5f;
     sp94->x = mHatPrevPos.x - spA0->x;
     sp94->z = mHatPrevPos.z - spA0->z;
-    if (!(mModeFlg & LinkPoseConstants::ModeFlg_WHIDE) || mGrabItemOffsetY < 0.0f /* checkGrabWear() */) {
+    if (!(mModeFlg & LinkPoseConstants::ModeFlg_WHIDE) || lkgw::wear(&mGrabItemOffsetY, mGrabItemOffsetY) /* checkGrabWear; true60 */) {
         gabi::Local<cXyz> t;
         cXyz_ml(spAC, t, f29);
         PSVECAdd(sp94, t, sp94);
@@ -3825,7 +3828,7 @@ void daPy_lk_c::setCollision() {
         c->z = z;
     }
     cM3dGCyl* cyl = &mCyl.mCyl;
-    cyl->SetR(fsel_l(mGrabItemOffsetY, 30.0f, 50.0f)); /* checkGrabWear() ? 50 : 30 */
+    cyl->SetR(lkgw::wear(&mGrabItemOffsetY, mGrabItemOffsetY) ? 50.0f : 30.0f); /* checkGrabWear ? 50 : 30 (fsel_l(mGrabItemOffsetY, 30, 50)); true60 */
     u32 mode = mModeFlg;
     if (mode & LinkCollisionConstants::ModeFlg_IN_SHIP) { /* ModeFlg_IN_SHIP: mCyl.OnCoSPrmBit(NoCrr) */
         mCyl.mObjCo.mSPrm = mCyl.mObjCo.mSPrm | 0x100;
