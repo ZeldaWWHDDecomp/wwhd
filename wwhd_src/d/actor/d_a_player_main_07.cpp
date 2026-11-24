@@ -11,6 +11,7 @@
  */
 #include "d/actor/d_a_player_main_07.h"
 #include "d/actor/d_a_player_anm_t60.h"
+#include "d/actor/d_a_player_grabthrow_t60.h" /* true60: procGrabThrow's frame threshold */
 #include "sead/ElementAt.h"
 #include "gc_api/tu.h"
 #include "gc_api/d/d_com_inf_game.h"
@@ -409,7 +410,7 @@ BOOL daPy_lk_c::procGrabThrow() {
             setAnimeEquipSword(0);
         }
         checkNextMode(0);
-    } else if (frameCtrl.getFrame() > 7.0f) {
+    } else if (lkT60_grabThrowFrame(&frameCtrl) > 7.0f) { /* true60: the frame-end frame */
         if (mProcVar6 != 0) {
             mProcVar6 = 0;
             setAnimeEquipSword(0);

@@ -16,6 +16,7 @@
 #include "true60.h"
 #include "m_Do/m_Do_ext_animation_t60.h"
 #include "d/actor/d_a_player_t60.h"
+#include "d/actor/d_a_player_slant_t60.h" /* true60: the running lean once a frame */
 #include "d/actor/d_a_player_grabpic_t60.h" /* true60: the carried item's bounce picture */
 #include "d/actor/d_a_player_crawl_t60.h"
 #include "d/actor/d_a_player_at_t60.h"
@@ -4970,8 +4971,10 @@ BOOL daPy_lk_c::execute() {
     }
     if (mCurProc != LinkUpdateConstants::daPyProc_DAMAGE_e /* daPyProc_DAMAGE_e */) {
         cLib_addCalcAngleS(&mBodyAngle.z, 0, 4, 0xC00, 0x180);
-        if (mCurProc != LinkUpdateConstants::daPyProc_FAN_GLIDE_e) {
+        if (mCurProc != LinkUpdateConstants::daPyProc_FAN_GLIDE_e && !lkT60_slantEarlier(&m34DE)) {
+            const int16_t lkT60SlantOwn = lkT60_slantBegin(&m34DE); /* true60: tick30: the frame-start facing, dt 1 */
             setMoveSlantAngle();
+            lkT60_slantEnd(&m34DE, lkT60SlantOwn);
         }
         if (!(mModeFlg & LinkUpdateConstants::ModeFlg_SUBJECT)) { /* ModeFlg_SUBJECT */
             cLib_addCalcAngleS(&mBodyAngle.x, 0, 4, 0xC00, 0x180);
