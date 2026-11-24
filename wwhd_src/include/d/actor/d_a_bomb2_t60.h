@@ -150,6 +150,33 @@ static inline void predRelease(daBomb2::Act_c* b) {
     b->mode_wait_init();
     b->posMoveF();
 }
+/* (2026-11-24) the sparks of an unheld moving bomb on the earlier steps. The picture
+ * set_mtx moves mFusePos (the sparks emitter's place), but the particle library runs the game's emitter callbacks on the
+ * tick30 step only: the sparks stayed at the frame end's place on the earlier steps. As the held picture
+ * (heldMtx): the picture's fuse place is noted for sparksPos and the sparks callback runs here, before this
+ * step's particle calc; the tick30 calc's own callback places them at mFusePos again (the frame end as A; the word is
+ * put back on the tick30 step as a t60cs extra). Game build only. NC WWHD_T60_BOMBSPARKS_NEGCTRL=1 (and the held
+ * picture's WWHD_T60_FUSEPIC_NEGCTRL=1). */
+static inline bool sparksNc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_BOMBSPARKS_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc || fusePicNc();
+#else
+    return true;
+#endif
+}
+static inline void picSparks(daBomb2::Act_c* a) {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    if (sparksNc() || !static_cast<u8>(a->mFuseLit) || gabi::ea(a->mSparks.mpEmitter.get()) == 0)
+        return;
+    s_fusePic.posEa = gabi::ea(&a->mFusePos);
+    s_fusePic.step = t60_step_counter();
+    s_fusePic.p[0] = a->mFusePos.x, s_fusePic.p[1] = a->mFusePos.y, s_fusePic.p[2] = a->mFusePos.z;
+    a->mSparks.execute(a->mSparks.mpEmitter.get());
+#else
+    (void)a;
+#endif
+}
 /* the explosion light line: this frame's and the previous frame's mIntensity at their first steps (host memory) */
 struct Light {
     u32 actor, pcid, tag;
@@ -213,6 +240,7 @@ static inline void picture(daBomb2::Act_c* a) {
             (f32)a->current.pos.y < fy) /* (started on or above the ground it found) */
             a->current.pos.y = fy;
         t60cs::mtxF(a, false, [a] { mtx(a); }); /* the picture set_mtx: the model and the fuse emitter's place */
+        picSparks(a); /* the sparks at the picture's fuse place on this step */
     }
     f32 l;
     if (mode == daBomb2::Mode_EXPLODE_e && light(a, l))
