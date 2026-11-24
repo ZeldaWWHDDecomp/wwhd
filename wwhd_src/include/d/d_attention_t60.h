@@ -36,6 +36,16 @@ static inline void followBegin(u32 target, u32 draw) {
     (void)target, (void)draw;
 #endif
 }
+/* followBegin with the target from a lookup (e.g. the lock-on list entry's actor), called only when the port takes it:
+ * at N = 1 the draw makes the original's calls (dt-1 check 024EDDF8 dAttention_c_Draw, gate 2026-11-24) */
+template <class G> static inline void followBeginOf(G actorOf, u32 e, u32 draw) {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    if (t60::steps() > 1)
+        followBegin(actorOf(e), draw);
+#else
+    (void)actorOf, (void)e, (void)draw;
+#endif
+}
 static inline void followEnd() {
 #if defined(GABI_GAME_BUILD) && GABI_T60
     if (t60::steps() > 1)

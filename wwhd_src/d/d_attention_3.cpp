@@ -555,7 +555,7 @@ static void dAttention_c_Draw(u32 i_this) {
             u32 e = i_this + A_LLIST + (off - 1) * 0x10;
             if (att3_getActor(e) != 0)
             {
-                t60att::followBegin(att3_getActor(e), i_this + A_DRAW + 0xC); /* true60 */
+                t60att::followBeginOf(att3_getActor, e, i_this + A_DRAW + 0xC); /* true60 */
                 dAttDraw_c_draw(i_this + A_DRAW + 0xC, att3_getActor(e) + AC_ATTN_POS, inv);
                 t60att::followEnd();
             }

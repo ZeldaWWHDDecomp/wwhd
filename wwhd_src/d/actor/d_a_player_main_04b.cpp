@@ -3618,7 +3618,7 @@ void player04b::daPy_swBlur_c::draw() {
     auto* packet = this;
     /* true60: the blur as Link's step at the world's time (his models are drawn there); point count to
      * the bottom points (+0x9C..+0x65C) */
-    t60dw::begin(gabi::ea(dComIfGp_getLinkPlayer()), &packet->mPointCount, 0x65C - 0x9C, t60dw::kWhole | t60dw::logWord(8));
+    t60dw::beginOf(dComIfGp_getLinkPlayer, &packet->mPointCount, 0x65C - 0x9C, t60dw::kWhole | t60dw::logWord(8));
     u32 cache = player04bGetActiveShader(0x104B45C0u);
     lk_hdBindShader(cache, gabi::load<u32>((u32)packet->mpMaterial));
     gabi::Local<Mtx34> mtx;

@@ -42,9 +42,9 @@ u32 dWindArrow_c::draw() {
     /* true60 (d_wind_arrow_t60.h): the owner's frame-end place on the draws after the earlier steps */
     f32 t60x, t60y, t60z;
     s16 t60ay;
-    windArrow60_place(gabi::ea(ac), ac->current.pos.x, ac->current.pos.y, ac->current.pos.z, ac->shape_angle.y, &t60x, &t60y,
-                      &t60z, &t60ay);
+    windArrow60_pos(gabi::ea(ac), ac->current.pos.x, ac->current.pos.y, ac->current.pos.z, &t60x, &t60y, &t60z);
     mDoMtx_stack_c::transS(t60x, t60y, t60z);
+    t60ay = windArrow60_angle(ac->shape_angle.y); /* (read after transS, as the original) */
     mDoMtx_stack_c::YrotM(t60ay);
     PSMTXCopy(mDoMtx_stack_c::get(), mtx.get());
     cXyz* windVec = dKyw_get_wind_vec();

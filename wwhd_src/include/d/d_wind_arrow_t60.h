@@ -27,6 +27,8 @@ struct WindArrow60 {
     bool valid;
     unsigned tag;   /* the 30 Hz frame counter at the last draw */
     unsigned first; /* the step counter at the draw where it changed (the draw after the frame's first step) */
+    bool live;      /* windArrow60_pos: this draw places from the live owner (the angle with it: windArrow60_angle) */
+    bool noteAy;    /* windArrow60_pos: this draw notes the owner's angle with its place */
 };
 static WindArrow60 s_windArrow60;
 static inline bool windArrow60_on() {
@@ -53,4 +55,32 @@ static inline void windArrow60_place(unsigned owner, float x, float y, float z, 
         x = w.x, y = w.y, z = w.z, ay = w.ay;
     }
     *ox = x, *oy = y, *oz = z, *oay = ay;
+}
+
+/* windArrow60_place in the original's read order (dt-1 check 025CCAE8 dWindArrow_c::draw, gate 2026-11-24: the original reads
+ * the owner's shape_angle.y after transS, which writes the matrix stack): the position first, the angle after the
+ * transS from windArrow60_angle; the same decision and notes as windArrow60_place */
+static inline void windArrow60_pos(unsigned owner, float x, float y, float z, float* ox, float* oy, float* oz) {
+    WindArrow60& w = s_windArrow60;
+    const unsigned tag = (unsigned)*gabi::at<be<u32>>(0x101FF558u), now = t60_step_counter();
+    if (tag != w.tag) w.tag = tag, w.first = now;
+    const bool frameEnd = now - w.first + 1u >= t60::steps();
+    w.live = true;
+    w.noteAy = false;
+    if (t60::steps() == 1 || frameEnd || !windArrow60_on()) {
+        w.owner = owner, w.x = x, w.y = y, w.z = z, w.valid = true;
+        w.noteAy = true;
+    } else if (w.valid && w.owner == owner) {
+        x = w.x, y = w.y, z = w.z;
+        w.live = false;
+    }
+    *ox = x, *oy = y, *oz = z;
+}
+static inline short windArrow60_angle(short ay) {
+    WindArrow60& w = s_windArrow60;
+    if (!w.live)
+        return w.ay;
+    if (w.noteAy)
+        w.ay = ay;
+    return ay;
 }

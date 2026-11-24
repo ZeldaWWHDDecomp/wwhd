@@ -38,6 +38,16 @@ static inline void begin(u32 owner, const void* block, u32 bytes, int kind) {
     (void)owner, (void)block, (void)bytes, (void)kind;
 #endif
 }
+/* begin with the owner from a getter (e.g. dComIfGp_getLinkPlayer), called only when the port takes the words: at
+ * N = 1 the draw makes no call the original does not (dt-1 check 024142F0 daPy_swBlur_c::draw, gate 2026-11-24) */
+template <class G> static inline void beginOf(G owner, const void* block, u32 bytes, int kind) {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    if (t60::steps() > 1)
+        wwhd_t60_draw_words_begin(gabi::ea(owner()), gabi::ea(block), bytes / 4, kind);
+#else
+    (void)owner, (void)block, (void)bytes, (void)kind;
+#endif
+}
 static inline void end(const void* block) {
 #if defined(GABI_GAME_BUILD) && GABI_T60
     if (t60::steps() > 1)
