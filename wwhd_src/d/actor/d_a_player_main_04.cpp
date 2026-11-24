@@ -19,6 +19,7 @@
 #include "d/actor/d_a_player_slant_t60.h" /* true60: the running lean once a frame */
 #include "d/actor/d_a_player_grabpic_t60.h" /* true60: the carried item's bounce picture */
 #include "d/actor/d_a_player_grabwear_t60.h"
+#include "d/actor/d_a_player_seinit_t60.h"
 #include "d/actor/d_a_player_crawl_t60.h"
 #include "d/actor/d_a_player_at_t60.h"
 #include "d/actor/d_a_player_maba_t60.h"
@@ -4927,7 +4928,8 @@ BOOL daPy_lk_c::execute() {
             }
         }
         u32 se = mpSeAnmFrameCtrl; /* mpSeAnmFrameCtrl */
-        if (se != 0 && !LinkUpdateApi::checkDemoSound()) {
+        /* true60 (d_a_player_seinit_t60.h): the anim sound once a frame, on the tick30 step */
+        if (se != 0 && lkT60_animSoundStep() && !LinkUpdateApi::checkDemoSound()) {
             /* the sound animation's name: the name of mAnmRatioUnder[0]'s animation */
             LinkUpdateSoundNameEntry* entry = LinkUpdateUnderAnimation(this)->mpNameEntry.get();
             u32 nm = (u32)entry->mNameOffset;

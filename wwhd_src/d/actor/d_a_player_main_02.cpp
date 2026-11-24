@@ -3691,6 +3691,16 @@ int daPy_lk_c::setMoveAnime(f32 f27, f32 f28, f32 f25, int r27, int r28, int r29
     } else {
         setTextureAnime((u32)player02::animationData(r27).mTexAnmIdx, 0);
     }
+    /* true60: the set's latch (below in the original order) is marked before the sound animation's
+     * init, which reads it (d_a_player_seinit_t60.h); nothing between reads it */
+    if (prev == 0 || prev == 9 || prev == 10 || lkSwitch) {
+        lkT60_markAnmSet(gabi::ea(frameCtrl0));
+        lkT60_markAnmSet(gabi::ea(frameCtrl1));
+        if (*sp18 != 0)
+            lkT60_markAnmSet(gabi::ea(&mFrameCtrlUpper[0]));
+        if (*sp1C != 0)
+            lkT60_markAnmSet(gabi::ea(&mFrameCtrlUpper[1]));
+    }
     if (r29 == 5 || r29 == 2) {
         setSeAnime((u32)gabi::at<player02::anmRatioPack_c>(gabi::ea(mAnmRatioUnder))[0].mpAnmTransform, gabi::ea(&player02::heaps(m_anm_heap_under)[0]), gabi::ea(frameCtrl0));
     } else {
@@ -3701,14 +3711,6 @@ int daPy_lk_c::setMoveAnime(f32 f27, f32 f28, f32 f25, int r27, int r28, int r29
      * setSingleMoveAnime's (d_a_player_t60.h lkT60_markAnmSet: a set on a step other than the frame's tick30 step first
      * plays on the next frame's first step, as the original's next animeUpdate). A set that carries the running phase
      * (the walk / wait blend re-set every update) stays a continuation (not latched; psword2d). dt 1: never. */
-    if (prev == 0 || prev == 9 || prev == 10 || lkSwitch) {
-        lkT60_markAnmSet(gabi::ea(frameCtrl0));
-        lkT60_markAnmSet(gabi::ea(frameCtrl1));
-        if (*sp18 != 0)
-            lkT60_markAnmSet(gabi::ea(&mFrameCtrlUpper[0]));
-        if (*sp1C != 0)
-            lkT60_markAnmSet(gabi::ea(&mFrameCtrlUpper[1]));
-    }
     m34C3 = (u8)r29;
     return TRUE;
 }

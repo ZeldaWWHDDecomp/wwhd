@@ -13,6 +13,7 @@
 #include "true60.h"
 #include "d/actor/d_a_player_t60.h"
 #include "d/actor/d_a_player_grabwear_t60.h"
+#include "d/actor/d_a_player_seinit_t60.h"
 #include "d/actor/d_a_player_maba_t60.h"
 #include "d/actor/d_a_player_bghit_t60.h"
 
@@ -1263,11 +1264,13 @@ void daPy_lk_c::initSeAnime() {
             /* true60 (01, the animation-rate rule): the play position is the previous update's frame (frame - rate); at a
              * step of dt the previous step's (frame - rate x dt): a full rate back would replay the keys of the step
              * before when a procedure re-inits every update (procCutTurnMove) */
+            /* true60 (d_a_player_seinit_t60.h): a latched first-step set steps the whole rate back */
+            const f32 lkT60Back = lkT60_seInitBack(fc);
             f32 position = t60::dt() == 1.0f
                                ? gabi::fsubs_ppc((f32)Player01_frameCtrl(fc)->mFrame,
                                                  (f32)Player01_frameCtrl(fc)->mRate)
                                : gabi::fsubs_ppc((f32)Player01_frameCtrl(fc)->mFrame,
-                                                 (f32)Player01_frameCtrl(fc)->mRate * (f32)t60::dt());
+                                                 (f32)Player01_frameCtrl(fc)->mRate * lkT60Back);
             if (!(position > (f32)(s16)Player01_frameCtrl(fc)->mStart)) {
                 position = gabi::fsubs_ppc((f32)(s16)Player01_frameCtrl(fc)->mEnd, position);
             } else if (!(position < (f32)(s16)Player01_frameCtrl(fc)->mEnd)) {

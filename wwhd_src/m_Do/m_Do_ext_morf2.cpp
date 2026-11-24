@@ -1,5 +1,6 @@
 /** Two-animation morph controller, tww field/method names; private source. */
 #include "m_Do/m_Do_ext_morf2.h"
+#include "m_Do/m_Do_ext_morf_snd_t60.h"
 using gabi::cpu;
 using gabi::ftoi;
 // HD: reordered animation arguments and extended guest-stack constructor arguments stay exact.
@@ -153,8 +154,9 @@ u32 mDoExt_McaMorf2::play(void *position, u32 sound, s32 reverb) {
   }
   mDoExtMorf2_frameUpdate(gabi::at<void>(o + 0xA4));
   u32 audio = mDoExtMorf2_at<mDoExt_McaMorf2>(o)->mpSound;
+  /* true60 (m_Do_ext_morf_snd_t60.h): the animation sound once a frame, on the tick30 step */
   if (audio && mDoExtMorf2_at<mDoExtMorf2::Sound>(audio)->mpBasAnm &&
-      gabi::ea(position)) {
+      gabi::ea(position) && morf_t60_animSoundStep()) {
     f32 frame = mDoExtMorf2_at<mDoExt_McaMorf2>(o)->mFrameCtrl.mFrame,
         rate = mDoExtMorf2_at<mDoExt_McaMorf2>(o)->mFrameCtrl.mRate;
     mDoExtMorf2_animSound(gabi::at<void>(audio), position, sound, reverb, frame,
