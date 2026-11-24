@@ -215,8 +215,10 @@ static inline void fall_move(kantera_class* i_this) {
 /* 0218D3F8 */
 static BOOL daKantera_Execute(kantera_class* i_this) {
     t60w::Guard<kantera_class> t60g(i_this, kantera_t60::kOps); /* true60: t60w::end on every return */
-    if (t60g.skip) /* true60: a step before the tick30 step: the picture only */
+    if (t60g.skip) { /* true60: a step before the tick30 step: the picture only */
+        kantera_t60::skipStep(i_this); /* true60 (d_a_kantera_t60.h): a held lantern's step is a picture step */
         return TRUE;
+    }
     dComIfGp_get(); /* HD: leftover accessor call (result unused) */
     if (i_this->mSwitchNo != 0) {
         if (!dComIfGs_isSwitch(i_this->mSwitchNo - 1, fopAcM_GetRoomNo(i_this))) {

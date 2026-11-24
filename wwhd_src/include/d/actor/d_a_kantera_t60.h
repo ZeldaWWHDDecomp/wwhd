@@ -17,6 +17,7 @@
  * control: T60C_NEGCTRL runs the execute on every step at dt. */
 #pragma once
 #include "d/t60_whole.h"
+#include <cstdlib>
 
 namespace kantera_t60 {
 static inline void get(kantera_class* a, f32* v) {
@@ -47,4 +48,25 @@ static inline void mtx(kantera_class* a) {
  * State 1 (carried by Link, mParam0 0x23) follows the hand in its own frame: not held. */
 static inline bool held(kantera_class* a) { return a->mParam0 == 1; }
 static const t60w::Ops<kantera_class> kOps = {8, 6, get, set, mtx, held};
+/* A held lantern (2026-11-24): a held lantern's earlier steps are picture steps. Its
+ * holders (the Poe, d_a_pw: whole form, d/t60_whole.h) place it only in their tick30 run (kantera_calc), and their own
+ * earlier steps are picture steps (frame interpolation): the port draws the Poe between its frame ends. The held lantern's earlier
+ * steps were kept in its draw history as steps of their own ("its holder places it on every step"), with the matrices
+ * of the previous frame end: drawn at N 2 it moved only on every other pass while the Poe's hand moved on every pass
+ * (stair sweep G1, ghost ship: 3.23 / 0 / 3.23 / 0 units, the hand 1.6 / 1.6). Told as picture steps, the lantern is
+ * drawn between its frame ends as its holder (no logic, host only). dt 1: never (no earlier steps). Negative control
+ * WWHD_T60_KANTERA_HELDPIC_NEGCTRL=1: as before (no picture step). */
+static inline bool heldpicNc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_KANTERA_HELDPIC_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return false;
+#endif
+}
+/* daKantera_Execute's earlier-step return (the Guard skipped) */
+static inline void skipStep(kantera_class* a) {
+    if (held(a) && !heldpicNc())
+        t60w_picture_step(gabi::ea(a));
+}
 }  // namespace kantera_t60
