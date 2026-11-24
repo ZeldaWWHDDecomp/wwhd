@@ -6,6 +6,7 @@
 #include "d/actor/d_a_player_main_08.h"
 #include "d/actor/d_a_player_anm_t60.h"
 #include "d/actor/d_a_player_t60.h"
+#include "d/actor/d_a_player_weaponthrow_t60.h"
 #include "true60.h"
 
 /* true60 (the 30 Hz timer rule, the first-step AI-timer rule order: count and decide on the frame's FIRST
@@ -271,7 +272,8 @@ BOOL daPy_lk_c::procWeaponFrontSwingEnd() {
 BOOL daPy_lk_c::procWeaponThrow() {
 
     J3DFrameCtrl* frameCtrl = &mFrameCtrlUnder[Link08::UNDER_MOVE0_e];
-    if (lkT60_endRate(frameCtrl) < 0.01f || mActorKeepEquip.mActor == nullptr) {
+    if (lkT60_endRate(frameCtrl) < 0.01f ||
+        (mActorKeepEquip.mActor == nullptr && !lk08wt::emptiedThisFrame(&mActorKeepEquip))) { /* true60 (d_a_player_weaponthrow_t60.h) */
         return Link08_checkNextMode(this, 0);
     }
     if (frameCtrl->getFrame() > 100.0f) {
@@ -300,6 +302,7 @@ BOOL daPy_lk_c::procWeaponThrow() {
         link08VoiceStart(this, 0);
         Link08_seStartSwordCut(this, 0x2800); // HD: an extra sound
         Link08_deleteEquipItem(this, 0);
+        lk08wt::thrown(&mActorKeepEquip); /* true60: the procedure sees the empty slot next frame */
     }
     return TRUE;
 }
