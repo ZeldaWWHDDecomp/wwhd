@@ -510,7 +510,12 @@ static inline bool bk_t60_jstop_nc() {
     static const bool nc = [] { const char* e = getenv("WWHD_T60_BKJSTOP_NEGCTRL"); return e && e[0] == '1'; }();
     return nc;
 }
-struct BkT60JStop { u32 tag; f32 speedF; s16 turn; /* the jump step's turn on the earlier steps */ };
+struct BkT60JStop {
+    u32 tag;
+    f32 speedF;
+    s16 turn;  /* the jump step's turn on the earlier steps */
+    s16 after; /* current.angle.y right after the last such turn */
+};
 static std::unordered_map<u32, BkT60JStop> s_bkT60JStop;
 /* jump step 2 on an earlier step, before it zeroes speedF: the frame start's speedF (the first note of the frame) */
 template <class T> static inline void bk_t60_jstop_note(T* i_this) {
@@ -519,7 +524,7 @@ template <class T> static inline void bk_t60_jstop_note(T* i_this) {
     const u32 tag = bk_t60_frame_tag();
     BkT60JStop& e = s_bkT60JStop[gabi::ea(i_this)];
     if (e.tag != tag)
-        e.tag = tag, e.speedF = i_this->speedF, e.turn = 0;
+        e.tag = tag, e.speedF = i_this->speedF, e.turn = 0, e.after = (s16)i_this->current.angle.y;
 }
 /* (the same pair, 47C5E81C frame 316: angle 7175 for A's 6365): step 2 also turns (bk_t60_jump_turn, 0x2000)
  * after its stop; A's call took the run switch and made no such turn. After that turn on an earlier step: its share is
@@ -531,6 +536,18 @@ template <class T> static inline void bk_t60_jstop_turn(T* i_this, s16 before) {
     if (it == s_bkT60JStop.end() || it->second.tag != bk_t60_frame_tag())
         return;
     it->second.turn = (s16)(it->second.turn + (s16)((s16)i_this->current.angle.y - before));
+    it->second.after = (s16)i_this->current.angle.y;
+}
+/* (2026-11-24; the sweep's route at N 2, Bokoblin 47C5CE68 frame 47: A 2973 -> 3058
+ * (the prelude turn, scale 4 / 0x800) -> 3187 (jump step 2's turn, scale 2 / 0x2000 at dt 1); B's tick30 step pinned the
+ * prelude turn to 3058 from the frame start, then the restore below took the earlier step's jump-turn share (73) off again
+ * (2985) and the dt-1 jump turn ended on 3150; Link's look at it 18 off at 48, the route diverged from there). The prelude
+ * turn's pin writes the frame's full step from the frame-start angle, which already drops every earlier step's share,
+ * the jump turn's included: the share is taken off only when current.angle.y is still the value that turn left (no pin
+ * or other write since). NC WWHD_T60_BKJTURNPIN_NEGCTRL=1: always taken off (as before). */
+static inline bool bk_t60_jturn_pin_nc() {
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_BKJTURNPIN_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
 }
 /* the tick30 step's mode-1 call, before its ramp: the noted speedF back (used up) */
 template <class T> static inline void bk_t60_jstop_restore(T* i_this) {
@@ -541,7 +558,8 @@ template <class T> static inline void bk_t60_jstop_restore(T* i_this) {
         return;
     if (it->second.tag == bk_t60_frame_tag()) {
         i_this->speedF = it->second.speedF;
-        i_this->current.angle.y = (s16)((s16)i_this->current.angle.y - it->second.turn); /* */
+        if (bk_t60_jturn_pin_nc() || (s16)i_this->current.angle.y == it->second.after) /* */
+            i_this->current.angle.y = (s16)((s16)i_this->current.angle.y - it->second.turn); /* */
     }
     s_bkT60JStop.erase(it);
 }
