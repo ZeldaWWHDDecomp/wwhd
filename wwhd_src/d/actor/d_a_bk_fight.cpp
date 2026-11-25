@@ -10,6 +10,7 @@
 #include "sead/ElementAt.h"
 #include "d/actor/d_a_bk_t60.h"
 #include <unordered_map>
+#include "d/actor/d_a_bk_turnend_t60.h" /* true60: */
 
 /* true60 (the animation-rate rule): the attack frame mAttackFrame is a hand-stepped animation frame (the step's play
  * speed per frame, beside the animation it follows): + speed x dt per step. Its window compares (At sphere, sound, blur)
@@ -823,7 +824,8 @@ static inline void fight_attack(bk_class* i_this, fopAc_ac_c* player) {
         }
     }
 
-    if ((i_this->mAttackFrame < i_this->mTurnEndFrame) || i_this->mTurnAlways != 0) {
+    /* true60 (d_a_bk_turnend_t60.h): the frame-end attack frame */
+    if ((t60bkte::frame(i_this->mAttackFrame, attackEnd) < i_this->mTurnEndFrame) || i_this->mTurnAlways != 0) {
         i_this->dr.mTurnTargetY = i_this->mTargetAngleY;
     }
 
