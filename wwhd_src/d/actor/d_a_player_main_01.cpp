@@ -957,6 +957,7 @@ BOOL daPy_lk_c::resetActAnimeUpper(int upperIdx, f32 i_morf) {
     reinterpret_cast<daPy_anmHeap_c *>(m_anm_heap_upper)[upperIdx].mIdx =
         0xFFFF; /* m_anm_heap_upper[upperIdx].mIdx */
     Player01_initFrameCtrl(gabi::ea(&mFrameCtrlUpper[0]) + upperIdx * 0x10, 0);
+    lkT60_upperReset(upperIdx); /* true60 (d_a_player_upperplay_t60.h): no frame play of the cleared slot */
     if (!(i_morf < 0.0f)) { /* i_morf >= 0.0f (taken on NaN) */
         Player01_initOldFrameMorf((u32)m_old_fdata, i_morf, 2, 0x1D);
     }

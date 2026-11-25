@@ -52,6 +52,21 @@ static inline bool lkT60_upperContinue(int i, bool pending) {
         return false;
     return (lkup60::s_played >> i) & 1u;
 }
+/* (2026-11-25): resetActAnimeUpper(i) cleared slot `i` (initFrameCtrl: frame 0, no
+ * animation). In A the frame's one play came before the proc's reset, which leaves frame 0 until the next set; at N steps
+ * a reset after the first step's play left the played bit, and the later step's continue played the cleared control
+ * (bmA N 2 on intgc6: mFrameCtrlUpper[2].mFrame 0.5 vs A 0 from 3731, read by m35EC / the bow and hookshot waits).
+ * The reset drops the slot's frame play. NC WWHD_T60_UPPERRESET_NEGCTRL=1. dt 1: never. */
+static inline void lkT60_upperReset(int i) {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_UPPERRESET_NEGCTRL"); return e && e[0] == '1'; }();
+#else
+    const bool nc = false;
+#endif
+    if (t60::dt() == 1.0f || nc || i < 0 || i > 2)
+        return;
+    lkup60::s_played &= (uint8_t)~(1u << i);
+}
 
 /* carry placement, worn barrel (frame 244 WAIT_GRAB 117 -> GRAB_WAIT 115): the hands (and
  * the barrel on them) 8.79 low on the tick30 step with every frame / rate word equal; the one animation word apart was
