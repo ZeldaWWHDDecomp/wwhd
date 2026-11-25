@@ -296,6 +296,8 @@ void JPABaseParticle::incFrame() {
         // true60 (JPA_particle_t60.h): on an earlier step the expiry waits for the frame's tick30 step
         if (jpa_t60p::expire_now(age))
             mStatus = (u32)mStatus | JPAPtclStts_Delete;
+        else
+            mHidden = 1; // (held to the tick30 step: not drawn, as the earlier deletion left it)
     } else
         mCurNormTime = age < 0.0f ? 0.0f : age / lifetime;
 }
