@@ -742,7 +742,7 @@ BOOL daPy_lk_c::procFrontRoll() {
             mNormalSpeed = mNormalSpeed - 5.0f;
         }
         lk05CheckNextMode(this, 0);
-    } else if (mFrameCtrlUnder[0].getFrame() > 17.0f) {
+    } else if (lkT60_rollEndFrame(&mFrameCtrlUnder[0]) > 17.0f) { /* true60: frame end */
         lk05CheckNextMode(this, 1);
     } else if (!(speedF < 10.0f) && !(noResetFlg1() & daPyFlg1_UNK100000)) {
         if (!(mNoResetFlg0 & 8)) {
@@ -770,7 +770,7 @@ BOOL daPy_lk_c::procFrontRollCrash() {
     if (!(mModeFlg & link05::ModeFlg_MIDAIR)) {
         if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
             lk05CheckNextMode(this, 0);
-        } else if (mFrameCtrlUnder[0].getFrame() > 20.0f) {
+        } else if (lkT60_rollEndFrame(&mFrameCtrlUnder[0]) > 20.0f) { /* true60: frame end */
             lk05CheckNextMode(this, 1);
         }
     }
@@ -787,7 +787,7 @@ BOOL daPy_lk_c::procFrontRollCrash() {
 BOOL daPy_lk_c::procNockBackEnd() {
     if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         lk05CheckNextMode(this, 0);
-    } else if (mFrameCtrlUnder[0].getFrame() > 16.0f) {
+    } else if (lkT60_rollEndFrame(&mFrameCtrlUnder[0]) > 16.0f) { /* true60: frame end */
         lk05CheckNextMode(this, 1);
     }
     return TRUE;

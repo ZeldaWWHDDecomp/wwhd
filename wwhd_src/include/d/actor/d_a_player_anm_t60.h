@@ -28,6 +28,7 @@
  *
  * Host state: one per-translation-unit stamp of the frame's first step (the split-actor state rule (1): each Link part its own). */
 #include "true60.h"
+#include <cstdlib>
 #include "d/actor/d_a_player_t60.h"
 
 static uint32_t s_lkT60AnmFirst = 0xFFFFFFFFu; /* t60_step_counter() of the frame's first step (this TU saw it) */
@@ -134,6 +135,25 @@ static inline f32 lkT60_endFrame(J3DFrameCtrl* fc) {
         return fc->mFrame;
     }
     return lkT60_projectFrame(fc, plays);
+}
+
+/* (2026-11-24; ghost ship pair at N 4, frame 377: procFrontRoll's
+ * `getFrame() > 17` opened checkNextMode(1) on B's step 2 of 4, the step whose play crossed 17; MOVE then ran its body
+ * (and its turn) on steps 3 and 4, while A enters MOVE at its frame end and turns from the next frame: angle 508 off,
+ * Link 6.7 off by frame 400) the same frame-end form as the earlier form for the run-out thresholds of procFrontRoll (17),
+ * procFrontRollCrash (20) and procNockBackEnd (16): the frame-end frame on every step of the frame, so the change is
+ * taken on the frame's first step and the entered body is held for the rest of the frame .
+ * NC WWHD_T60_ROLLEND_NEGCTRL=1: the per-step frame, as before. */
+static inline bool lkT60_rollEndNegctrl() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_ROLLEND_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return false;
+#endif
+}
+static inline f32 lkT60_rollEndFrame(J3DFrameCtrl* fc) {
+    return lkT60_rollEndNegctrl() ? (f32)fc->mFrame : lkT60_endFrame(fc);
 }
 
 /* the lookahead test: `fc->checkPass(f)` at dt 1, A's window on the frame's first step, false on its later steps */
