@@ -13,6 +13,7 @@
 #include "d/actor/d_a_player_anm_t60.h"
 #include "port_hooks.h"
 #include "d/actor/d_a_player_t60.h"
+#include "d/actor/d_a_player_moveinit_t60.h" /* true60 */
 #include "d/actor/d_a_player_grabwear_t60.h"
 #include "d/actor/d_a_player_maba_t60.h"
 #include <cmath>
@@ -3637,7 +3638,7 @@ int daPy_lk_c::setMoveAnime(f32 f27, f32 f28, f32 f25, int r27, int r28, int r29
      * (first played on the next frame's first step). Before: the phase after 1/N of the old play, then (N - 1)/N of the
      * new one (the lock-on init's ATN wait 0.518 frame ahead). A re-set of the running animations (the walk / wait blend
      * every update) is a continuation: unchanged. dt 1: not run. */
-    const bool lkSwitch = t60::dt() != 1.0f && (u32)*sp14 != r3;
+    const bool lkSwitch = t60::dt() != 1.0f && ((u32)*sp14 != r3 || lkT60_moveInitHold(gabi::ea(&mCurProc))); /* (an entered procedure's set too) */
     if (lkSwitch && !(prev == 0 || prev == 9 || prev == 10) && !t60::tick30() &&
         !lkT60_anmSetPending(gabi::ea(frameCtrl0))) {
         int plays = lkT60_anmRemaining();
