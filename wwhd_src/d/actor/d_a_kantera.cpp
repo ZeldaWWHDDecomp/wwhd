@@ -219,6 +219,7 @@ static BOOL daKantera_Execute(kantera_class* i_this) {
         kantera_t60::skipStep(i_this); /* true60 (d_a_kantera_t60.h): a held lantern's step is a picture step */
         return TRUE;
     }
+    kantera_t60::follow(i_this); /* true60: carried, drawn with its holder's correction */
     dComIfGp_get(); /* HD: leftover accessor call (result unused) */
     if (i_this->mSwitchNo != 0) {
         if (!dComIfGs_isSwitch(i_this->mSwitchNo - 1, fopAcM_GetRoomNo(i_this))) {

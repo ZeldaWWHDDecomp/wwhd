@@ -9,6 +9,7 @@
  */
 #include "d/actor/d_a_mo2_exec.h"
 #include "d/actor/d_a_mo2_t60.h"
+#include "d/t60_basehold.h" /* true60 */
 #include <cstdlib>
 #include <unordered_map>
 
@@ -92,6 +93,7 @@ static void mo2_t60_base_frame(mo2_class* i_this) {
         e.frame = bk_t60_frame_tag();
         for (int i = 0; i < 3; i++)
             for (int j = 0; j < 4; j++) e.m[i][j] = base->m[i][j];
+        t60bh_hold(gabi::ea(i_this), model, &e.m[0][0]); /* true60: drawn at the step's base */
         return;
     }
     auto it = s_mo2T60Base.find(gabi::ea(i_this));
@@ -100,6 +102,7 @@ static void mo2_t60_base_frame(mo2_class* i_this) {
     const Mo2T60Base& e = it->second;
     for (int i = 0; i < 3; i++)
         for (int j = 0; j < 4; j++) base->m[i][j] = e.m[i][j];
+    t60bh_hold(gabi::ea(i_this), model, &e.m[0][0]); /* true60: drawn at the step's base */
 }
 
 /* true60 (True60 pair: Moblin 47C5CECC f45 mLeftHandPos.y A 81.46 / B 69.29,

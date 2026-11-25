@@ -17,6 +17,7 @@
  * control: T60C_NEGCTRL runs the execute on every step at dt. */
 #pragma once
 #include "d/t60_whole.h"
+#include "d/t60_basehold.h"
 #include <cstdlib>
 
 namespace kantera_t60 {
@@ -65,7 +66,14 @@ static inline bool heldpicNc() {
 #endif
 }
 /* daKantera_Execute's earlier-step return (the Guard skipped) */
+/* (d/t60_basehold.h): carried (state 1, the Moblin's lantern) it is placed from its holder's hand words,
+ * which the holder's calc on its held base matrix gave: drawn with the holder's correction of the step */
+static inline void follow(kantera_class* a) {
+    if (a->mState == 1)
+        t60bh_follow(gabi::ea(a), a->mTargetActorID);
+}
 static inline void skipStep(kantera_class* a) {
+    follow(a);
     if (held(a) && !heldpicNc())
         t60w_picture_step(gabi::ea(a));
 }
