@@ -1,6 +1,7 @@
 /** ChuChu execution and inlined actions, following tww with verified HD behaviour. */
 #include "d/actor/d_a_cc_exec.h"
 #include "d/actor/d_a_cc_t60.h"
+#include "d/actor/d_a_cc_easefe_t60.h" /* true60: */
 #include "f_pc/f_pc_t60_frame_start.h" /* true60: t60_fs_read (the process-order read rule) */
 #include "gc_api/tu.h"
 #include <cstdlib>
@@ -306,13 +307,31 @@ static inline void cc_t60_ease_rec(bool zero, f32 before, f32 after, f32 target,
 }
 static inline void cc_t60_ease2F(cc_class* i, f32 target, f32 scale, f32 maxStep) {
     const f32 before = i->actor.speedF;
-    cLib_addCalc2(&i->actor.speedF, target, scale, maxStep);
+    f32 start; /* true60: the tick30 step ends the frame on A's one ease */
+    if (t60ccfe::redo(gabi::ea(i), bk_t60_frame_tag(), before, false, target, scale, maxStep, &start)) {
+        const f32 dt0 = t60_set_dt(1.0f);
+        i->actor.speedF = start;
+        cLib_addCalc2(&i->actor.speedF, target, scale, maxStep);
+        t60_set_dt(dt0);
+    } else {
+        cLib_addCalc2(&i->actor.speedF, target, scale, maxStep);
+    }
+    t60ccfe::after(gabi::ea(i), i->actor.speedF);
     cc_t60_ramp_note(before, i->actor.speedF);
     cc_t60_ease_rec(false, before, i->actor.speedF, target, scale, maxStep);
 }
 static inline void cc_t60_ease0F(cc_class* i, f32 scale, f32 maxStep) {
     const f32 before = i->actor.speedF;
-    cLib_addCalc0(&i->actor.speedF, scale, maxStep);
+    f32 start; /* true60: the tick30 step ends the frame on A's one ease */
+    if (t60ccfe::redo(gabi::ea(i), bk_t60_frame_tag(), before, true, 0.0f, scale, maxStep, &start)) {
+        const f32 dt0 = t60_set_dt(1.0f);
+        i->actor.speedF = start;
+        cLib_addCalc0(&i->actor.speedF, scale, maxStep);
+        t60_set_dt(dt0);
+    } else {
+        cLib_addCalc0(&i->actor.speedF, scale, maxStep);
+    }
+    t60ccfe::after(gabi::ea(i), i->actor.speedF);
     cc_t60_ramp_note(before, i->actor.speedF);
     cc_t60_ease_rec(true, before, i->actor.speedF, 0.0f, scale, maxStep);
 }
