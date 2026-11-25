@@ -9,6 +9,7 @@
 #include "c/c_damagereaction_push_t60.h" /* no push first seen on a later step */
 #include "c/c_damagereaction_posadd_t60.h" /* the tick30 step writes A's position */
 #include "c/c_damagereaction_landhist_t60.h" /* the frame's ground-history bits */
+#include "c/c_damagereaction_jointease_t60.h" /* a mid-frame state change: A's one joint ease */
 #include "d/actor/d_a_bk_kdturn_t60.h" /* a Bokoblin knock-down on an earlier step: the frame's turn */
 #include <unordered_map>
 using gabi::load;
@@ -2431,6 +2432,9 @@ static void dr_damage_anime(damagereaction* dr) {
     csxyz_temp.x = 0;
     csxyz_temp.y = 0;
     csxyz_temp.z = 0;
+    /* true60 (c_damagereaction_jointease_t60.h): the limit changed within the frame: A's one call */
+    const bool t60JointWhole = t60drJoint::begin(gabi::ea(dr), t60dr_frame(), dr->mJntAngle, (s32)maxSpeed);
+    const f32 t60JointDt = t60JointWhole ? t60_set_dt(1.0f) : 0.0f;
     for (int i = 0; i < 20; i++) {
         if ((dr->mShakeAmplitude > 0.1f && (i == 2 || i == 6 || i == 7 || i == 3) && (dr->mShakeJntMask & 8)) ||
             ((i == 0 || i == 4 || i == 5 || i == 1) && (dr->mShakeJntMask & 4)) ||
@@ -2445,6 +2449,8 @@ static void dr_damage_anime(damagereaction* dr) {
         cLib_addCalcAngleS2(&dr->mJntAngle[i].y, dr->mJntTargetAngle[i].y + csxyz_temp.y, 2, (int)maxSpeed);
         cLib_addCalcAngleS2(&dr->mJntAngle[i].z, dr->mJntTargetAngle[i].z + csxyz_temp.z, 2, (int)maxSpeed);
     }
+    if (t60JointWhole)
+        t60_set_dt(t60JointDt);
 }
 
 /* inlined into caller */
