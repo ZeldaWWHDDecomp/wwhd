@@ -63,6 +63,9 @@ struct Rec {
     bool airSeg;      /* this tick30 check has the landing frame's segment (air + landed) */
     uint32_t pre3[3]; /* the position before an earlier step's CrrPos (bit copies) */
     bool moved;       /* an earlier step's CrrPos of this frame moved Link */
+    uint32_t hist0;   /* the frame-start check's GROUND_FIND / LANDING / AWAY bits */
+    uint8_t pla0[0x14]; /* the frame-start ground plane (dBgS_Acch m_pla) */
+    bool hist0Valid;
 };
 static Rec s_rec;
 
@@ -225,6 +228,39 @@ static inline bool snapSegOff() {
 #else
     return true;
 #endif
+}
+/* (2026-11-25, long1 N 2 seg 8 frame 8326 after: the tick30
+ * check's old.pos, pos and speed.y were A's, but its flags came from the first step's check, which lost the ground:
+ * no GROUND_FIND (B 0x2010, A 0x20d0). CrrPos's wall correction raises the circles by the ground plane (GetWallAddY)
+ * only while GROUND_FIND is set, so B's circles met the wall at another height: push (+1.47, -1.35) / A (+2.00, -1.83),
+ * the ramp found 0.04 above (A: none), Link 0.73 off. Form: a SNAPSEG check (begin() true with r.snapOn: the tick30
+ * step and, at N > 2, the middle steps) also takes the frame-start check's input history: GROUND_FIND / LANDING / AWAY and the
+ * ground plane m_pla as the frame's first check had them (the previous frame-end check's). Only the input; the check
+ * writes its own result. NC WWHD_T60_SEGHIST_NEGCTRL=1; dt 1 never. */
+static inline bool segHistOff() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_SEGHIST_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
+#else
+    return true;
+#endif
+}
+/* right after begin(), before mAcch.CrrPos (seg: begin()'s result) */
+template <class A> static inline void segHist(A& acch, bool seg) {
+    Rec& r = s_rec;
+    if (t60::dt() == 1.0f || segHistOff())
+        return;
+    const uint32_t mask = (uint32_t)(dBgS_Acch::GROUND_FIND | dBgS_Acch::GROUND_LANDING | dBgS_Acch::GROUND_AWAY);
+    if (t60::first_step()) {
+        r.hist0 = (uint32_t)acch.m_flags & mask;
+        std::memcpy(r.pla0, acch.m_pla, sizeof r.pla0);
+        r.hist0Valid = true;
+        return;
+    }
+    if (!seg || !r.snapOn || !r.hist0Valid) /* (SNAPSEG's checks only; the other segment forms keep their proof) */
+        return;
+    acch.m_flags = ((uint32_t)acch.m_flags & ~mask) | r.hist0;
+    std::memcpy(acch.m_pla, r.pla0, sizeof r.pla0);
 }
 /* (2026-11-25, long1 N 2 seg 8 frame 8326: Link walks down a ramp along a wall, B's
  * first step lost the ground and autoGroundHit snapped him down, so the tick30 step's CrrPos took SNAPSEG's segment
