@@ -761,6 +761,67 @@ static inline void ship60_eyePos(Ship60Eye& e, const void* owner, u32 frameId, M
 #endif
 }
 
+/* KoRL's head calc for the logic reads (2026-11-24, tk pair: the talk at frame 72, talktoCamera's
+ * speaker eye / attention). execute calcs the head model (headJointCallBack1: mHeadAngleX / Y) BEFORE it eases the head
+ * angles toward the look target, then reads eyePos from J_FN_ME_L (ship60_eyePos) and the head sphere from J_FN_ATAMA:
+ * at 30 Hz both come from the previous frame's end angles. At N steps the tick30 step's calc used the angles after the
+ * frame's earlier eases (half a frame of the head turn on): B's published eye 4.0 / 2.9 / 2.1 / 1.5 units off A's at
+ * 69-72 with every angle equal at the frame ends, the talk camera's eye 0.19 off at 73, 4.23 at 86. Form: on a later step
+ * of the frame (dt < 1) the head calc for the logic runs with the frame-start angles (latched on the frame's first call,
+ * ship60_start), the angles go back right after it (the ease is unchanged); at the end of execute the head is calced
+ * again with the step's pre-ease angles, the pose the drawn head had before (the picture moves per step). The frame's
+ * first step calcs with the frame-start angles anyway: nothing changes there. WWHD_T60_SHIPHEAD_NEGCTRL=1: the per-step
+ * angles for the logic calc (the old form). dt 1: never (the original). */
+struct Ship60HeadCalc {
+    Ship60Start x, y;
+    s16 preX, preY;
+    bool logic;
+};
+inline Ship60HeadCalc g_ship60Head; /* host memory: the ship's head calc (execute's unit reads it) */
+static inline bool ship60_headNc() {
+    static int s = -1;
+    if (s < 0) {
+        const char* e = getenv("WWHD_T60_SHIPHEAD_NEGCTRL");
+        s = (e && e[0] == '1') ? 1 : 0;
+    }
+    return s == 1;
+}
+/* before the head calc: the frame-start angles in (later steps) */
+template <class A>
+static inline void ship60_headLogicBegin(Ship60HeadCalc& h, const void* owner, u32 frameId, A& ax, A& ay) {
+    h.logic = false;
+    if (t60::dt() == 1.0f) {
+        return;
+    }
+    const s16 x0 = (s16)ship60_start(h.x, owner, frameId, (s16)ax);
+    const s16 y0 = (s16)ship60_start(h.y, owner, frameId, (s16)ay);
+    if (t60::first_step() || ship60_headNc()) {
+        return;
+    }
+    h.preX = (s16)ax, h.preY = (s16)ay;
+    ax = x0, ay = y0;
+    h.logic = true;
+}
+/* right after the head calc: the step's angles back */
+template <class A>
+static inline void ship60_headLogicEnd(Ship60HeadCalc& h, A& ax, A& ay) {
+    if (h.logic) {
+        ax = h.preX, ay = h.preY;
+    }
+}
+/* the end of execute: the drawn head pose (the step's pre-ease angles), the eased angles kept */
+template <class A, class M>
+static inline void ship60_headPicture(Ship60HeadCalc& h, A& ax, A& ay, Ship60AnmReq& req, M* morf, u32 frameId) {
+    if (!h.logic) {
+        return;
+    }
+    const s16 postX = (s16)ax, postY = (s16)ay;
+    ax = h.preX, ay = h.preY;
+    ship60_calcAnm(req, morf, frameId);
+    ax = postX, ay = postY;
+    h.logic = false;
+}
+
 /* Link as the ship sees him (the process-order read rule): the ship (0xA5) executes before Link (0xA8) in the
  * process line, so at 30 Hz its frame reads Link's previous-frame-end state. At N steps its tick30 step would read Link
  * after his first step of the frame (half a frame on). ship60_fsActor: true and the 12 bytes of `a`'s frame-start

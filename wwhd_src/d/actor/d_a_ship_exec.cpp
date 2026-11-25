@@ -862,7 +862,10 @@ BOOL daShip_c::execute() {
     ship60_calcAnm(s_ship60BodyReq, mpBodyAnm.get(), ship_exec_counter); /* true60: a request's pose: the old one */
     setHeadAnm();
     J3DModel_setBaseTRMtx(model2, model_getAnmMtx(model1, FN_BODY_JNT_J_FN_GATTAI_e));
+    /* true60 (d_a_ship_t60.h): the logic head pose from the frame-start head angles (A's order) */
+    ship60_headLogicBegin(g_ship60Head, this, ship_exec_counter, mHeadAngleX, mHeadAngleY);
     ship60_calcAnm(s_ship60HeadReq, mpHeadAnm.get(), ship_exec_counter);
+    ship60_headLogicEnd(g_ship60Head, mHeadAngleX, mHeadAngleY);
 
     if (mPart == PART_CRANE_e) {
         if (mBodyAnmFileIdx == dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e) {
@@ -1283,6 +1286,8 @@ BOOL daShip_c::execute() {
     offStateFlg(daSFLG_UNK40000000_e);
     mNextMode = mCurMode;
     ship60_nextModeLeave(s_ship60NextMode, this, &mNextMode);
+    /* true60: the drawn head pose, the step's own angles (the logic reads above had A's) */
+    ship60_headPicture(g_ship60Head, mHeadAngleX, mHeadAngleY, s_ship60HeadReq, mpHeadAnm.get(), ship_exec_counter);
     return TRUE;
 }
 
