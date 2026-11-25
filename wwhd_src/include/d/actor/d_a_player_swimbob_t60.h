@@ -35,3 +35,24 @@ static inline s16 lkT60_swimBobPhase(s16 phase) {
         return phase;
     return (s16)(uint16_t)((uint16_t)phase + (uint16_t)(2330 * k / n));
 }
+
+/* (2026-11-25; bdk, N 2 + WALLSEG-Y, frame 241: Link swims
+ * (SWIM_WAIT) and the stick turns to (1, 0) at 8 s): A's procSwimWait advances the bob phase mProcVar2 once a frame
+ * before its mode checks, and the frame that enters SWIM_MOVE has advanced it too (25602 -> 27951); the 07#3 form draws
+ * the advance on the tick30 step only, and B entered SWIM_MOVE on the frame's first step, so its tick30 step ran
+ * procSwimMove and the frame's advance was lost: mProcVar2 2349 short for good (lk.admp +0x4 from frame 242). Form:
+ * procSwimWait leaving for SWIM_MOVE on an earlier step takes the frame's advance there (its one random draw, then the
+ * step). NC WWHD_T60_SWIMBOBEXIT_NEGCTRL=1 (game build): the advance on the tick30 step only, as before. dt 1: never. */
+static inline bool lkT60_swimBobExitNegctrl() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_SWIMBOBEXIT_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
+#else
+    return false;
+#endif
+}
+/* the caller (procSwimWait, before procSwimMove_init) advances the phase when this is true: an earlier step whose tick30
+ * advance will not run in SWIM_WAIT */
+static inline bool lkT60_swimBobExitAdvance() {
+    return t60::dt() != 1.0f && !t60::tick30() && !lkT60_swimBobExitNegctrl();
+}

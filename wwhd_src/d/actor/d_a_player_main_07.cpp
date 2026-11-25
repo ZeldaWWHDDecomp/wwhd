@@ -896,6 +896,11 @@ BOOL daPy_lk_c::procSwimWait() {
          * projected with the frame's rate (taken above, before the body's setRate for the next frame) */
         if (lkT60St && !lkT60_swimEntryFrameNegctrl())
             mFrameCtrlUnder[0].setFrame(lkT60WaitEnd);
+        if (lkT60_swimBobExitAdvance()) { /* true60 (d_a_player_swimbob_t60.h): the frame's bob step */
+            f32 r = cM_rndF(0.3f);
+            s16 step = (s16)gabi::ftoi(gabi::fmuls_ppc(2330.0f, gabi::fadds_ppc(r, 0.85f)));
+            mProcVar2 = (s16)(mProcVar2 + step);
+        }
         procSwimMove_init(1);
         if (lkT60St) {
             if (const LkT60WaitTurn* t = lkT60_swimTurnCatchUp(gabi::ea(&mCurProc), (s32)mCurProc, current.angle.y,
