@@ -495,10 +495,9 @@ template <class T> static s32 t60Chase(be<T>* pValue, s32 target, s32 step, int 
     bool write;
     s32 full = t60ChaseFull(start, target, step, kind, &ret, &write);
     if (t60PinFull(e)) {
-        if (e)
-            e->addr = 0;
         if (write || start != cur)
             *pValue = (T)full;
+        t60cs_pinned(e, (s32)(T)*pValue); /* true60: open for another site on this step */
         if (t60::tick30())
             return ret;
         return step == 0 ? cur == target : (T)full == (T)target;
@@ -598,9 +597,8 @@ void cLib_addCalcAngleS2(be<s16>* pValue, s32 target, s32 scale, s32 maxStep) {
         s32 start = e ? e->start : cur;
         s16 full = t60AngleS2Full(start, target, scale, maxStep);
         if (t60PinFull(e)) {
-            if (e)
-                e->addr = 0;
             *pValue = full; /* the original always stores */
+            t60cs_pinned(e, (s32)(s16)*pValue); /* true60: open for another site on this step */
             return;
         }
         double dt = t60::dt();
@@ -635,15 +633,18 @@ s32 cLib_addCalcAngleL(be<s32>* pValue, s32 target, s32 scale, s32 maxStep, s32 
         s32 start = e ? e->start : cur;
         s32 diff = (s32)((u32)target - (u32)cur);
         if (diff == 0 && start == cur) { /* the original returns before any store */
-            if (t60::tick30() && e)
-                e->addr = 0;
+            if (t60::tick30()) {
+                if (t60PinFull(e))
+                    t60cs_pinned(e, cur); /* true60: the pin without a store, open as above */
+                else
+                    e->addr = 0;
+            }
             return diff;
         }
         s32 full = t60AngleLFull((u32)start, target, scale, maxStep, minStep);
         if (t60PinFull(e)) {
-            if (e)
-                e->addr = 0;
             *pValue = full;
+            t60cs_pinned(e, (s32)*pValue); /* true60: open for another site on this step */
             return t60::tick30() ? (s32)((u32)target - (u32)start) : diff;
         }
         double dt = t60::dt();
