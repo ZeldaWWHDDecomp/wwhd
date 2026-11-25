@@ -486,10 +486,17 @@ BOOL daPy_lk_c::procMoveTurn() {
               lkT60Pv3 = lkT60Mt ? (s16)mProcVar3 : (s16)0;
     if (lkT60Mt)
         lkT60_waitTurnBegin(current.angle.y, shape_angle.y, (f32)mNormalSpeed);
+    const bool lkT60MidOn = lkT60_midStep(); /* true60: the chase's proc vars on a middle step */
+    const s16 lkT60Pv0m = lkT60MidOn ? (s16)mProcVar0 : (s16)0, lkT60Pv2m = lkT60MidOn ? (s16)mProcVar2 : (s16)0,
+              lkT60Pv3m = lkT60MidOn ? (s16)mProcVar3 : (s16)0;
     lk05SetSpeedAndAngleNormal(this, 0xBB8);
     cLib_addCalcAngleS(&shape_angle.y, current.angle.y, mProcVar0, mProcVar2, mProcVar3);
     if (lkT60Mt)
         lkT60_waitTurnEnd(current.angle.y, shape_angle.y, (f32)mNormalSpeed);
+    /* true60: a middle step's turn result, to see whether the entered MOVE's init kept it */
+    const LkT60WaitTurn* lkT60Mid = lkT60_midEntryRecord();
+    const s16 lkT60MidA = lkT60Mid ? (s16)current.angle.y : (s16)0, lkT60MidS = lkT60Mid ? (s16)shape_angle.y : (s16)0;
+    const f32 lkT60MidV = lkT60Mid ? (f32)mNormalSpeed : 0.0f;
     if (!lk05CheckNextMode(this, 0)) {
         lk05SetBlendMoveAnime(this, -1.0f);
     } else if (lkT60Mt) {
@@ -510,6 +517,25 @@ BOOL daPy_lk_c::procMoveTurn() {
                 lk05SetBlendMoveAnime(this, -1.0f); /* the init's blend from the frame's turn; no new morf */
             t60_set_dt(previousDt);
         }
+    } else if (lkT60Mid && (s32)mCurProc == kLkT60WaitTurnMove && current.angle.y == lkT60MidA &&
+               shape_angle.y == lkT60MidS && (f32)mNormalSpeed == lkT60MidV) {
+        /* true60: MOVE entered on a middle step: the frame's whole turn and shape chase from its start
+         * at dt 1 (A's one turn before its frame-end entry), MOVE's blend from it, and MOVE's body held for the rest of
+         * the frame */
+        f32 previousDt = t60_set_dt(1.0f);
+        const s32 proc = mCurProc;
+        mCurProc = kLkT60WaitTurnMoveTurn;
+        current.angle.y = lkT60Mid->angle;
+        shape_angle.y = lkT60Mid->shape;
+        mNormalSpeed = lkT60Mid->speed;
+        lk05SetSpeedAndAngleNormal(this, 0xBB8);
+        cLib_addCalcAngleS(&shape_angle.y, current.angle.y, lkT60Pv0m, lkT60Pv2m, lkT60Pv3m);
+        mCurProc = proc;
+        lk05SetBlendMoveAnime(this, -1.0f);
+        t60_set_dt(previousDt);
+        g_lkT60MidHold.tag = lkT60_frameTag();
+        g_lkT60MidHold.proc = proc;
+        g_lkT60MidHold.valid = true;
     }
     return TRUE;
 }

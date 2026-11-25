@@ -202,6 +202,43 @@ static inline bool lkT60_moveTurnTurnNegctrl() {
 #endif
 }
 
+/* (the held body extended to middle-step entries; bomb route
+ * N 4 frame 134: MOVE_TURN's ease reached its end on step 2 of 4 and checkNextMode entered MOVE there, MOVE's body then
+ * turning on steps 3 and 4, while A enters MOVE at its frame end) a procedure entered on a non-tick30 step after the
+ * first redoes the frame's turn from the frame start at dt 1 at the entry (the first step's record) and its body is held
+ * on the frame's remaining steps (the dispatch in d_a_player_main_04 reads g_lkT60MidHold). First implemented for
+ * MOVE_TURN -> MOVE (procMoveTurn). NC WWHD_T60_MIDENTRY_NEGCTRL=1. dt 1: never. */
+struct LkT60MidHold {
+    uint32_t tag;  /* the frame (lkT60_frameTag) */
+    int32_t proc;  /* the entered procedure */
+    bool valid;
+};
+inline LkT60MidHold g_lkT60MidHold;
+static inline bool lkT60_midEntryNegctrl() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_MIDENTRY_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return true;
+#endif
+}
+/* a middle step of a converted frame (not the first, not the tick30 step) */
+static inline bool lkT60_midStep() {
+    return t60::dt() != 1.0f && t60::steps() > 2 && !t60::first_step() && !t60::tick30();
+}
+/* the first step's record of this frame (procWait-style record taken by the same caller on the frame's first step) */
+static inline const LkT60WaitTurn* lkT60_midEntryRecord() {
+    const LkT60WaitTurn& t = s_lkT60WaitTurn;
+    if (!lkT60_midStep() || lkT60_midEntryNegctrl() || !t.valid || t60_step_counter() - t.stamp >= t60::steps())
+        return nullptr;
+    return &t;
+}
+/* the dispatch (d_a_player_main_04): the body of the procedure entered on a middle step of this frame is held */
+static inline bool lkT60_midHeld(int32_t curProc, uint32_t tag) {
+    const LkT60MidHold& h = g_lkT60MidHold;
+    return t60::dt() != 1.0f && !t60::first_step() && h.valid && h.tag == tag && h.proc == curProc;
+}
+
 /* around the redone init blend: t60::tick30() reads true (returns the value to put back); N = 1 / no t60: nothing */
 static inline u32 lkT60_frameEndBegin() {
 #if defined(GABI_GAME_BUILD) && GABI_T60

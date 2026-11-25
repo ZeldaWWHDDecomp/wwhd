@@ -16,6 +16,7 @@
 #include "true60.h"
 #include "m_Do/m_Do_ext_animation_t60.h"
 #include "d/actor/d_a_player_t60.h"
+#include "d/actor/d_a_player_waitturn_t60.h" /* true60: the middle-step entry hold */
 #include "d/actor/d_a_player_slant_t60.h" /* true60: the running lean once a frame */
 #include "d/actor/d_a_player_grabpic_t60.h" /* true60: the carried item's bounce picture */
 #include "d/actor/d_a_player_grabwear_t60.h"
@@ -4738,8 +4739,10 @@ BOOL daPy_lk_c::execute() {
     }
     lkT60_procOpen(gabi::ea(&mCurProc)); /* true60 (rule 1, 2026-11-17): first step: inits from here on mark */
     lkT60Maba::body_start(); /* true60 (d_a_player_maba_t60.h kKeyB): the body's calls match the tick30 body's */
-    if (lk_t60FirstExec() || !(s_lkT60ProcHold.valid && s_lkT60ProcHold.tag == lkT60_frameTag() &&
-                               s_lkT60ProcHold.proc == (s32)mCurProc)) { /* held: entered on the first step */
+    if (lk_t60FirstExec() || !((s_lkT60ProcHold.valid && s_lkT60ProcHold.tag == lkT60_frameTag() &&
+                                s_lkT60ProcHold.proc == (s32)mCurProc) ||
+                               lkT60_midHeld((s32)mCurProc, lkT60_frameTag()))) { /* held: entered on the first step
+                                                                                   * (or a middle step) */
         s16 idx = mCurProcFunc.i; /* (this->*mCurProcFunc)() */
         if (idx != 0) {
             /* true60: a body of a procedure entered at an earlier step of this frame does not
