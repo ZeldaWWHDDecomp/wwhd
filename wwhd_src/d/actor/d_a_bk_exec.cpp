@@ -11,6 +11,7 @@
 #include "d/actor/d_a_bk_t60.h"
 #include "c/c_damagereaction_bounce_t60.h" /* true60: the frame's bounce, for the shape copy */
 #include <unordered_map>
+#include "d/actor/d_a_bk_react5_t60.h" /* */
 
 /* true60 (the first-step AI-timer rule): the AI timers (mTimers, mSideStepTimer, mSideStepWait, mWeaponRunTimer,
  * mWeaponViewWait, dr.mHitStunTimer) and the phase counter mFrameCounter count on the frame's FIRST step, before its
@@ -1063,6 +1064,13 @@ BOOL daBk_Execute(bk_class* i_this) {
     }
 
     s32 r3 = damage_reaction(&i_this->dr);
+    /* true60 (d_a_bk_react5_t60.h): an earlier step's flinch (5) meets the frame's AI decision in A's order */
+    if (t60bkr5::recheck(gabi::ea(i_this), r3) && i_this->dr.mAction != 4 && i_this->dr.mAction != 11) {
+        wait_set(i_this);
+        i_this->dr.mAction = 4;
+        i_this->dr.mMode = 0;
+        i_this->mTimers[1] = 30;
+    }
     if (r3 != 0) {
         i_this->mSmokeTimer = 1;
         bk_t60_mark_set(&i_this->mSmokeTimer); /* true60: after this frame's smoke count */
