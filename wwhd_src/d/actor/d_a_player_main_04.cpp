@@ -4833,6 +4833,7 @@ BOOL daPy_lk_c::execute() {
     const f32 lkT60SnapY = lkT60SnapOn ? (f32)current.pos.y : 0.0f;
     const u32 lkT60SnapF = lkT60SnapOn ? (u32)mAcch.m_flags : 0u;
     autoGroundHit();
+    lkT60Land::fallSpeed(this, mAcch.m_flags); /* true60: A's frame fall speed when its check ends in the air */
     if (lkT60SnapOn)
         lkT60Land::snapNote(lkT60SnapY, current.pos.y, lkT60SnapF, mAcch.m_flags, lkT60_frameTag());
     {

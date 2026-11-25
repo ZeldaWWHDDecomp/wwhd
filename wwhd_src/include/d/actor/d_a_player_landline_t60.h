@@ -56,12 +56,28 @@ struct Rec {
     bool bgNote;
     bool snapped;     /* an earlier step's autoGroundHit snapped Link down onto ground */
     bool snapOn;      /* this step's check has the segment (a non-tick30 step keeps the record) */
+    bool airSeg;      /* this tick30 check has the landing frame's segment (air + landed) */
 };
 static Rec s_rec;
 
 static inline bool negctrl() {
 #if defined(GABI_GAME_BUILD) && GABI_T60
     static const bool nc = [] { const char* e = getenv("WWHD_T60_LANDLINE_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
+#else
+    return false;
+#endif
+}
+/* (2026-11-25, long1 seg 0 frame 106): the landing frame's form gives the tick30 step
+ * A's segment, and A's check can end in the air (a fall past a ledge lip: an earlier step's half-step check stood on the
+ * lip, ground hit, speed.y 0; A's frame line passes it, pushed by the wall only). The tick30 position is then A's, but
+ * speed.y kept the earlier step's landing (0, then one half gravity tick: -1.25 against A's -68.84), and the fall
+ * restarted from rest (y 70 off from 107). Form: after that check and autoGroundHit, no ground hit (A's frame stays in
+ * the air): speed.y = A's frame fall speed (the record's sy, the frame-start speed.y + gravity, limited). A ground hit:
+ * as before. Negative control WWHD_T60_FALLSPEEDY_NEGCTRL=1 (game build). */
+static inline bool negctrlFall() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_FALLSPEEDY_NEGCTRL"); return e && e[0] == '1'; }();
     return nc;
 #else
     return false;
@@ -171,6 +187,7 @@ static inline bool snapSegOff() {
 static inline bool begin(uint32_t acf, cXyz& oldPos, cXyz& pos, uint32_t tag) {
     Rec& r = s_rec;
     r.on = false;
+    r.airSeg = false;
     if (t60::dt() == 1.0f || negctrl() || !r.valid || r.tag != tag)
         return false;
     r.bgNote = false;
@@ -239,7 +256,20 @@ static inline bool begin(uint32_t acf, cXyz& oldPos, cXyz& pos, uint32_t tag) {
     std::memcpy(&p0y, &r.p0[1], 4);
     pos.y = p0y + r.sy; /* A's add: f32(frame-start y + speed.y) */
     r.on = true;
+    r.airSeg = true; /* */
     return true;
+}
+/* after autoGroundHit on the step whose check had the landing frame's segment: A's frame ended in
+ * the air (no ground hit) -> A's frame fall speed */
+template <class P>
+static inline void fallSpeed(P* py, uint32_t flags) {
+    Rec& r = s_rec;
+    if (!r.airSeg)
+        return;
+    r.airSeg = false;
+    if (negctrlFall() || (flags & (uint32_t)dBgS_Acch::GROUND_HIT))
+        return;
+    py->speed.y = r.sy;
 }
 /* after autoGroundHit (y0 / f0: current.pos.y and the Acch flags before it) */
 static inline void snapNote(f32 y0, f32 y1, uint32_t f0, uint32_t f1, uint32_t tag) {
