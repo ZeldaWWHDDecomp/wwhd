@@ -216,6 +216,7 @@ bool dCamera_c::CalcSubjectAngle(s16* outV, s16* outU) {
     cSAngle_l* r = subject_angleFromShort(tmp.get(), (s16)mpPlayerActor.get()->shape_angle.y);
     work->m3BA = (s16)*r;
     subject_t60::noteBase(gabi::ea(this), s_subjectCameraCall(), (s16)work->m3BA); /* true60 */
+    const f32 t60Pre388 = work->m388; /* true60 (d_camera_subjbase_t60.h) */
     f32 yaw = x, pitch = y;
     f32 eyeY = mEye.y;
     bool keep = eyeY > mGroundHeight + 5.0f && eyeY > mBG.mCameraGround.mGroundY + 5.0f;
@@ -294,6 +295,7 @@ bool dCamera_c::CalcSubjectAngle(s16* outV, s16* outU) {
         *(be<s16>*)outU = (s16)*c;
         *(be<s16>*)outV = 0;
     }
+    subject_t60::noteCarry(gabi::ea(this), s_subjectCameraCall(), t60Pre388, work->m388); /* true60 */
     return res;
 }
 

@@ -33,6 +33,7 @@
 #include <cstdlib>
 #include "d/d_camera_key_t60.h"
 #include "d/d_camera_run_t60.h"
+#include "d/d_camera_subjbase_t60.h"
 
 namespace camera_follow_whole_t60 {
 constexpr u32 kFollowAlg = 1; /* dCamAlg_FOLLOW_CAMERA_e (d_camera_mode.h) */
@@ -161,8 +162,10 @@ static inline bool wholeOnTick30(void* self, uint32_t comEa) {
     const uint32_t now = t60_step_counter();
     if (!ofThisFrame(f, now))
         return false;
-    if (f.restoredStep != now)
+    if (f.restoredStep != now) {
         camera_run_t60::restoreFrameStart(self, comEa);
+        subject_t60::applyCarry(gabi::ea(self)); /* (d_camera_subjbase_t60.h) */
+    }
     f.valid = false;
     camera_run_t60::g_seFrameReq() = 0; /* the earlier steps' requests: the whole run makes the frame's */
     return true;
@@ -187,6 +190,7 @@ extern "C" __attribute__((visibility("default"))) void wwhd_t60_cam_tick30_start
             camera_run_t60::copyToGuest(f.objEa, camera_run_t60::g_runFrameStart().obj, camera_run_t60::kCamObjSize);
             camera_run_t60::copyToGuest(f.comEa, camera_run_t60::g_runFrameStart().com, camera_run_t60::kCamComSize);
             camera_run_t60::restoreZoom(); /* the env light's HD zoom and the pad's subject base (Run's stores outside obj / com) */
+            subject_t60::applyCarry(f.objEa); /* (d_camera_subjbase_t60.h) */
             f.restoredStep = now;
         }
     }

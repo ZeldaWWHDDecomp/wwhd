@@ -17,6 +17,7 @@
 #include <cstdlib>
 #include "true60.h"
 #include "d/d_camera_key_t60.h"
+#include "d/d_camera_run_t60.h"
 
 namespace subject_t60 {
 struct Base {
@@ -67,5 +68,63 @@ static inline bool frameBase(uint32_t camEa, int16_t* out) {
         return false;
     *out = b.base;
     return true;
+}
+/* (2026-11-25; the rope route at N 4): the pitch share
+ * m388 (SubjectWork +0x10, guest obj +0x38C) is an accumulator; every player call (Link's setBodyAngleToCamera, each
+ * converted step) adds pitch x k x dt to it, the camera's call its own share. In the follow-whole form the frame-start
+ * copy is taken at the camera's step-1 Run (after Link's step-1 call) and the tick30 restore puts it back before Link's
+ * tick30 call: the player's adds of steps 2 .. N-1 were dropped (none at N 2; at N 4 half a frame of the stick's pitch:
+ * rp frame-end pitch V B -114 / -291 / -502 vs A -229 / -584 / -1008 from the hook aim's first frame, camera 315.4 @119).
+ * Form: the player's m388 change on a call made after this frame's frame-start copy and before the tick30 step is
+ * summed (per camera body) and added back (clamped to +-1 as the call clamps) right after the restore. The camera's own
+ * calls and the tick30 step's calls are not carried (the restore takes the picture steps' camera share back; the whole
+ * run makes the frame's). NC WWHD_T60_SUBJCARRY_NEGCTRL=1: dropped, as before. N 1: never. */
+struct Carry {
+    uint32_t stamp; /* the frame-start copy's stamp the sum belongs to */
+    float d388;
+};
+inline camera_key_t60::PerCam<Carry> g_carry;
+static inline bool carryNc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_SUBJCARRY_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return false;
+#endif
+}
+/* CalcSubjectAngle end: the player's call's m388 change (pre / post); snapStamp / snapValid: this camera's frame-start
+ * copy (camera_run_t60::g_runFrameStart, read by the caller in the camera's slot) */
+static inline void noteCarry(uint32_t camEa, bool cameraCall, float pre, float post) {
+    if (t60::steps() <= 1 || cameraCall || t60::tick30() || carryNc() || pre == post)
+        return;
+    const int s = slotOf(camEa);
+    if (s < 0)
+        return;
+    const int saved = camera_key_t60::g_cur;
+    camera_key_t60::g_cur = s;
+    const camera_run_t60::RunFrameStart& F = camera_run_t60::g_runFrameStart();
+    if (F.valid && t60_step_counter() - F.stamp < (uint32_t)(t60::steps() - 1)) {
+        Carry& c = g_carry();
+        if (c.stamp != F.stamp)
+            c = Carry{F.stamp, 0.0f};
+        c.d388 += post - pre;
+    }
+    camera_key_t60::g_cur = saved;
+}
+/* right after a whole-form restore (current camera slot = this camera's): the carried player share back on m388 */
+static inline void applyCarry(uint32_t objEa) {
+    if (t60::steps() <= 1 || carryNc())
+        return;
+    Carry& c = g_carry();
+    const camera_run_t60::RunFrameStart& F = camera_run_t60::g_runFrameStart();
+    if (!F.valid || c.stamp != F.stamp)
+        return;
+    float v = gabi::load<float>(objEa + 0x38C) + c.d388;
+    if (v > 1.0f)
+        v = 1.0f;
+    else if (v < -1.0f)
+        v = -1.0f;
+    gabi::store<float>(objEa + 0x38C, v);
+    c = Carry{0xFFFFFFFFu, 0.0f};
 }
 } // namespace subject_t60
