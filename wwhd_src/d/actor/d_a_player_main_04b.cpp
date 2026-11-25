@@ -10,6 +10,7 @@
  */
 #include "d/actor/d_a_player_main_04b.h"
 #include "d/actor/d_a_player_anm_t60.h"
+#include "d/actor/d_a_player_atnentry_t60.h" /* true60 */
 #include "true60.h"
 #include "d/actor/d_a_player_t60.h"
 #include "d/actor/d_a_player_maba_t60.h"
@@ -659,7 +660,29 @@ void daPy_lk_c::setSpeedAndAngleAtnActor() {
 /* 02419E00 */
 BOOL daPy_lk_c::procAtnActorWait() {
     setSpeedAndAngleAtnActor();
-    if (!checkNextMode(0)) {
+    /* true60 (d_a_player_atnentry_t60.h): the first step's check at the frame's whole turn */
+    const LkT60AtnTurn* lkT60Pre = lkT60_atnEntryPre();
+    const s16 lkT60A0 = current.angle.y, lkT60S0 = shape_angle.y;
+    if (lkT60Pre) {
+        f32 previousDt = t60_set_dt(1.0f);
+        if (lkT60Pre->turned) {
+            current.angle.y = lkT60Pre->angle;
+            cLib_addCalcAngleS(&current.angle.y, lkT60Pre->target, 6, 0xBB8, 0x7D0);
+        }
+        shape_angle.y = lkT60Pre->shape;
+        setShapeAngleToAtnActor();
+        t60_set_dt(previousDt);
+    }
+    const BOOL lkT60Next = checkNextMode(0);
+    if (lkT60Pre) {
+        if (lkT60Next) {
+            s_lkT60AtnTurn.valid = false; /* (the catch-up below is not needed: the angles are the frame's whole turn) */
+        } else {
+            current.angle.y = lkT60A0;
+            shape_angle.y = lkT60S0;
+        }
+    }
+    if (!lkT60Next) {
         if (checkAtnWaitAnime()) {
             setBlendAtnMoveAnime(-1.0f);
         } else {
