@@ -22,6 +22,7 @@
 #include "d/actor/d_a_player_grabwear_t60.h"
 #include "d/actor/d_a_player_seinit_t60.h"
 #include "d/actor/d_a_player_crawl_t60.h"
+#include "d/actor/d_a_player_neckdmg_t60.h" /* true60: the damage neck eases at the full step */
 #include "d/actor/d_a_player_at_t60.h"
 #include "d/actor/d_a_player_maba_t60.h"
 #include "d/actor/d_a_player_hatwind_t60.h"
@@ -3049,6 +3050,7 @@ void daPy_lk_c::setNeckAngle() {
         r23 = 0;
         r29 = 0;
     }
+    const float lkNeckDt = lkT60_neckDmgOpen(&mCurProc); /* true60: procDamage rewrote x / y */
     cLib_addCalcAngleS(&mNeckAngle.x, r4, 3, 0x1000, 0x100);
     /* true60 (c_lib run converted in N-step spec): the look-cone clamp below writes the neck yaw after its chase; on a
      * converted frame's earlier step that write made the chase's frame entry (c_lib.cpp) start again from the
@@ -3060,6 +3062,7 @@ void daPy_lk_c::setNeckAngle() {
         mNeckAngle.y = g_lkT60NeckRef.easeY;
     }
     cLib_addCalcAngleS(&mNeckAngle.y, r23, 3, 0x1000, 0x100);
+    lkT60_neckDmgClose(lkNeckDt);
     const s16 lkEaseY = mNeckAngle.y;
     if (mModeFlg & LinkPoseConstants::ModeFlg_00000080) {
         s16 v = (s16)(r25_3 + mNeckAngle.y);
