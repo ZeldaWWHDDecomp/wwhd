@@ -78,6 +78,36 @@ static inline unsigned long t60cs_off(const void* p) {
     return p && dladdr(p, &i) && i.dli_fbase ? (unsigned long)((const char*)p - (const char*)i.dli_fbase) : 0ul;
 }
 
+/* pin hand-off (2026-11-24): two call sites easing one value on every step (Link's neck yaw in procDamage + the
+ * neck update; the original: v2 = ease2(ease1(S)) per frame). The first site's tick30 pin writes ease1(S) from the frame
+ * start; until now it also ended the entry, so the second site on that step opened a partial entry and moved only its
+ * share (B: ease1(S) + a share, A: ease2(ease1(S))). Now the pin keeps the entry open for this step (k = kT60csPinned,
+ * start = last = the stored value); another site on the same step takes the pin over from there (t60cs_check: start =
+ * cur, not partial), so its own pin writes its original full step from ease1(S). Any other later call ends it as
+ * before. NC WWHD_T60_LIBPIN_NEGCTRL=1 (and the call-site NC): the pin ends the entry (e->addr = 0), as before. */
+constexpr unsigned kT60csPinned = 0xFFFFFFFFu;
+static inline bool t60cs_pin_nc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] {
+        const char* e = getenv("WWHD_T60_LIBPIN_NEGCTRL");
+        return e && e[0] == '1';
+    }();
+    return nc;
+#else
+    return false;
+#endif
+}
+/* the pin branch of an ease that calls t60cs_check: stored = the value after the pin's store */
+template <class E> static inline void t60cs_pinned(E* e, int stored) {
+    if (t60cs_nc() || t60cs_pin_nc()) {
+        e->addr = 0;
+        return;
+    }
+    e->k = kT60csPinned;
+    e->start = stored;
+    e->last = stored;
+    e->partial = false;
+}
 /* t60IntEntry's restart of an entry another writer changed within the frame (last != cur): the call sites and
  * parameters the entry met this frame stay met (Link's neck yaw, mo / bk3 N 4: the look-cone restore writes it between
  * the neck update and procDamage on the first step; without this procDamage, met on that step, counted as a new site
@@ -88,6 +118,7 @@ template <class E> static inline void t60cs_keep(E* e, const E& met) {
     e->sig2 = met.sig2;
     e->site = met.site;
     e->site2 = met.site2;
+    e->lastSite = met.lastSite;
 }
 /* the entry e (T60IntEntry: addr, frame, start, last, k, partial; sig, step, sig2, site, site2) for this call (sig, site);
  * restarts it as a partial frame from cur when a call site it has not met meets it with other parameters on a later step */
@@ -95,6 +126,26 @@ template <class E> __attribute__((always_inline)) static inline void t60cs_check
     if (t60cs_nc())
         return;
     const unsigned now = t60_step_counter();
+    if (e->k == kT60csPinned) { /* pinned earlier on a step (t60cs_pinned) */
+        if (e->step == now && site != e->lastSite && !t60cs_pin_nc()) { /* another site on the pin's step: its own pin */
+            e->start = cur;
+            e->last = cur;
+            e->k = 0;
+            e->partial = false;
+            e->sig = sig;
+            e->site = site;
+            e->sig2 = 0;
+            e->site2 = 0;
+        } else { /* any other call: the entry ended with the pin (as before the hand-off) */
+            const E fresh{e->addr, e->frame, cur, cur, 0, !t60::first_step()};
+            *e = fresh;
+            e->sig = sig;
+            e->site = site;
+        }
+        e->step = now;
+        e->lastSite = site;
+        return;
+    }
     if (e->sig == 0) {
         e->sig = sig;
         e->site = site;
@@ -115,4 +166,5 @@ template <class E> __attribute__((always_inline)) static inline void t60cs_check
             e->sig2 = sig;
     }
     e->step = now;
+    e->lastSite = site;
 }

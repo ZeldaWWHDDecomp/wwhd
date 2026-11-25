@@ -303,6 +303,7 @@ struct T60IntEntry {
     u32 sig2 = 0;  /* another call site's parameters met within the frame */
     u32 site = 0;  /* the opening call's site (t60cs_site) */
     u32 site2 = 0; /* another call site met within the frame */
+    u32 lastSite = 0; /* the site of the entry's last call (the pin hand-off) */
 };
 constexpr u32 kT60IntSlots = 2048, kT60IntProbes = 8, kT60FrameCounter = 0x101FF558;
 T60IntEntry t60IntTable[kT60IntSlots];
@@ -523,10 +524,9 @@ s16 cLib_addCalcAngleS(be<s16>* pValue, s32 target, s32 scale, s32 maxStep, s32 
         s16 ret;
         s16 full = t60AngleSFull(start, target, scale, maxStep, minStep, &ret);
         if (t60PinFull(e)) {
-            if (e)
-                e->addr = 0;
             if (start != target || start != cur) /* the original stores unless the value is on the target */
                 *pValue = full;
+            t60cs_pinned(e, (s32)(s16)*pValue); /* true60: open for another site on this step */
             return ret;
         }
         double dt = t60::dt();
