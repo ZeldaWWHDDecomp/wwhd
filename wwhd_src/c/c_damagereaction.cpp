@@ -8,6 +8,7 @@
 #include "c/c_damagereaction_fall_t60.h" /* the tick30 fall from the frame start height */
 #include "c/c_damagereaction_push_t60.h" /* no push first seen on a later step */
 #include "c/c_damagereaction_posadd_t60.h" /* the tick30 step writes A's position */
+#include "c/c_damagereaction_landhist_t60.h" /* the frame's ground-history bits */
 #include "d/actor/d_a_bk_kdturn_t60.h" /* a Bokoblin knock-down on an earlier step: the frame's turn */
 #include <unordered_map>
 using gabi::load;
@@ -1088,6 +1089,7 @@ static void dr_body_bg_check(damagereaction* dr, u32 scratch) {
         dr->mpEnemy->old.pos.y -= dr->mPivot.y + lift;
         dr->mpEnemy->speed.y *= 0.25f;
         dr->mAcch.CrrPos(dComIfG_Bgsp());
+        t60drLand::apply(gabi::ea(dr), dr->mAcch); /* true60: the frame's ground-history bits as A's check */
         t60drCarrier::check(dr); /* true60: on a 30 Hz carrier, run at 30 Hz (rider rule) */
         dr->mpEnemy->speed.y *= 4.0f;
         dr->mpEnemy->current.pos.y += dr->mPivot.y + lift;
