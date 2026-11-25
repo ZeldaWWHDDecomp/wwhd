@@ -23,6 +23,7 @@
 #include "d/actor/d_a_player_crawl_t60.h"
 #include "d/actor/d_a_player_at_t60.h"
 #include "d/actor/d_a_player_maba_t60.h"
+#include "d/actor/d_a_player_pose_t60.h"
 #include "d/actor/d_a_player_main_04_item.h"
 #include "d/actor/d_a_player_main_04_effect.h"
 static cXyz l_attention_crawl_offset = {0.0f, 30.0f, 20.0f};
@@ -4495,6 +4496,7 @@ BOOL daPy_lk_c::execute() {
         }
         lkT60Bg::end(mAcch.m_flags, mAcchCir[0].m_flags, mAcchCir[1].m_flags, mAcchCir[2].m_flags); /* true60: window 1 */
     }
+    lkT60Pose::frameStart(b); /* true60: every step reads the frame-start pose */
     /* true60 (the shared-world-state rule): the forest water's expiry (bottle swap, event register 0x9EFF, the system sound) reads and
      * writes save data, so it runs on the frame's tick30 step at Link's place in the actor line. On every step it fired
      * on the first step that saw the timer at 0: one step early in the frame whenever the timer's writer runs after

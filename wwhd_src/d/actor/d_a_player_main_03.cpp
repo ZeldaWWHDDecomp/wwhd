@@ -18,6 +18,7 @@
 #include "d/actor/d_a_player_t60.h"
 #include "d/actor/d_a_player_heading_t60.h"
 #include "d/actor/d_a_player_grabwear_t60.h"
+#include "d/actor/d_a_player_pose_t60.h"
 #include "d/actor/d_a_player_maba_t60.h"
 #include "d/actor/d_a_player_camyaw_t60.h"
 #include "d/actor/d_a_player_stepsoffset_t60.h"
@@ -4693,7 +4694,7 @@ void daPy_lk_c::posMoveFromFootPos() {
             xz->y = 0.0f;
             step = LinkActionApi::sqrtWide(LinkActionApi::squareMagnitude(xz.get()));
         } else {
-            step = step / (f64)dt;
+            step = lkT60Pose::footRaw(step, dt); /* true60: the raw travel under the frame-start view */
         }
         const bool smooth = r < 1.0f && lk_stickSteadyFrame(std::fabs((f32)(mOldStickDistance - mStickDistance)) < 0.2f);
         const f64 mean = lk_footFrameMean(step);
