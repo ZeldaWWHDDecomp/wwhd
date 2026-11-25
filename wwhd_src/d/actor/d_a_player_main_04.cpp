@@ -21,6 +21,7 @@
 #include "d/actor/d_a_player_grabpic_t60.h" /* true60: the carried item's bounce picture */
 #include "d/actor/d_a_player_grabwear_t60.h"
 #include "d/actor/d_a_player_seinit_t60.h"
+#include "d/actor/d_a_player_swshsnd_t60.h"
 #include "d/actor/d_a_player_crawl_t60.h"
 #include "d/actor/d_a_player_neckdmg_t60.h" /* true60: the damage neck eases at the full step */
 #include "d/actor/d_a_player_at_t60.h"
@@ -3536,13 +3537,15 @@ s32 daPy_lk_c::setItemModel() {
         } else {
             lk_setBaseTRMtx(sm, lHand);
         }
-        LinkItemApi::setSwordSoundType(swordType, 1);
+        if (lkT60_swShSndStep()) /* true60 */
+            LinkItemApi::setSwordSoundType(swordType, 1);
     } else {
         PSMTXTrans(mDoMtx_stack_c::get(), -11.25f, 4.5f, 0.45f);
         mDoMtx_ZrotM(mDoMtx_stack_c::get(), -0x1C71);
         lk_stackRevConcat(pod);
         lk_setBaseTRMtx(mpEquippedSwordModel.v, stk);
-        LinkItemApi::setSwordSoundType(swordType, 2);
+        if (lkT60_swShSndStep())
+            LinkItemApi::setSwordSoundType(swordType, 2);
     }
     mpEquippedSwordModel->calc();
     /* the shield */
@@ -3583,10 +3586,12 @@ s32 daPy_lk_c::setItemModel() {
         u32 cl = mpCLModel.v;
         u32 sh = LinkItem(this).mpEquippedShieldModel.v;
         lk_setBaseTRMtx(sh, cl != 0 ? cl + 0xC8 : 0);
-        LinkItemApi::setShieldSoundType(shieldType, 1);
+        if (lkT60_swShSndStep())
+            LinkItemApi::setShieldSoundType(shieldType, 1);
     } else if (place == 1) {
         lk_setBaseTRMtx(LinkItem(this).mpEquippedShieldModel.v, rHand);
-        LinkItemApi::setShieldSoundType(shieldType, 1);
+        if (lkT60_swShSndStep())
+            LinkItemApi::setShieldSoundType(shieldType, 1);
     } else {
         PSMTXTrans(mDoMtx_stack_c::get(), 15.5f, 4.75f, shieldType == 2 ? -0.2f : 0.0f);
         mDoMtx_ZrotM(mDoMtx_stack_c::get(), -0x4000);
@@ -3614,7 +3619,8 @@ s32 daPy_lk_c::setItemModel() {
             gmem_stf32(stk + 0x2C, t2);
             lk_setBaseTRMtx(LinkItem(this).mpEquippedShieldModel.v, stk);
         }
-        LinkItemApi::setShieldSoundType(shieldType, 2);
+        if (lkT60_swShSndStep())
+            LinkItemApi::setShieldSoundType(shieldType, 2);
     }
     LinkItemApi::entryBck(&LinkItem(this).mAtngshaBck, LinkItem(this).mpEquippedShieldModel->mModelData,
                           (f32)m35E8);
