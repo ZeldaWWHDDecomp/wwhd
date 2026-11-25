@@ -2,6 +2,7 @@
  * WWHD behavior verified against cking.rpx; names/layout follow zeldaret/tww. */
 #include "d/actor/d_a_mo2_move.h"
 #include "d/actor/d_a_mo2_t60.h"
+#include "d/actor/d_a_mo2_arrive_t60.h" /* the patrol arrival tests on the frame-start answer */
 #include <cmath>
 #include <unordered_map>
 using namespace mo2Move;
@@ -186,7 +187,7 @@ static inline void jyunkai(mo2_class *i_this) {
     i_this->mDamageReaction.mTurnTargetY = cM_atan2s(x, z);
     if (i_this->mPathOn != 0 && has_weapon(i_this)) {
       f32 d = std_sqrtf(gabi::fmadds(x, x, z * z));
-      if (d < (dVar12 * 0.25f) * 15.0f) {
+      if (d < (dVar12 * 0.25f) * 15.0f && t60marr::test()) {
         mo2Move::dPnt *point = &i_this->ppd->m_points[i_this->mPathPoint];
         if (point->mArg3 == 3 || point->mArg3 == 7 || point->mArg3 == 8) {
           wait_set(i_this);
@@ -209,11 +210,12 @@ static inline void jyunkai(mo2_class *i_this) {
       }
     } else {
       f32 d = std_sqrtf(gabi::fmadds(x, x, z * z));
-      if (d < (dVar12 * 0.25f) + (dVar12 * 0.25f) ||
-          (i_this->mTimers[2] == 0 &&
-           (i_this->mDamageReaction.mAcch.ChkWallHit() ||
-            ground_4_check(i_this, 1, i_this->actor.current.angle.y,
-                           200.0f)))) {
+      if (t60marr::test() &&
+          (d < (dVar12 * 0.25f) + (dVar12 * 0.25f) ||
+           (i_this->mTimers[2] == 0 &&
+            (i_this->mDamageReaction.mAcch.ChkWallHit() ||
+             ground_4_check(i_this, 1, i_this->actor.current.angle.y,
+                            200.0f))))) {
         wait_set(i_this);
         i_this->mDamageReaction.mMode = 2;
       }

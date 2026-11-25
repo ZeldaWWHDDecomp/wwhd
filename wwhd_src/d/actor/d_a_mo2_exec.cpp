@@ -10,6 +10,7 @@
 #include "d/actor/d_a_mo2_exec.h"
 #include "d/actor/d_a_mo2_t60.h"
 #include "d/t60_basehold.h" /* true60 */
+#include "d/actor/d_a_mo2_tilt_t60.h" /* frame 72: the ground tilt once per frame */
 #include <cstdlib>
 #include <unordered_map>
 
@@ -1055,7 +1056,7 @@ static BOOL daMo2_Execute(mo2_class* i_this) {
             dComIfGp_particle_set(ID_AK_JN_TUBA00, &i_this->mSpitPos, &i_this->mEffectAngle);
         }
     }
-    if (i_this->mDamageReaction.mAcch.ChkGroundHit()) {
+    if (i_this->mDamageReaction.mAcch.ChkGroundHit() && !t60mtilt::skip()) {
         gabi::Local<Mo2ExecGndChk> gndChk;
         dBgS_GndChk_ct(gndChk);
         s16 r22 = 0x7FFF;
@@ -1102,10 +1103,12 @@ static BOOL daMo2_Execute(mo2_class* i_this) {
             speedRatio = 8;
         }
         if (r22 != 0x7FFF) {
-            cLib_addCalcAngleS2(&i_this->mDamageReaction.mSlopeTilt.x, r22, speedRatio, maxSpeed);
+            if (!t60mtilt::ease(&i_this->mDamageReaction.mSlopeTilt.x, r22, speedRatio, maxSpeed))
+                cLib_addCalcAngleS2(&i_this->mDamageReaction.mSlopeTilt.x, r22, speedRatio, maxSpeed);
         }
         if (r21 != 0x7FFF) {
-            cLib_addCalcAngleS2(&i_this->mDamageReaction.mSlopeTilt.z, r21, speedRatio, maxSpeed);
+            if (!t60mtilt::ease(&i_this->mDamageReaction.mSlopeTilt.z, r21, speedRatio, maxSpeed))
+                cLib_addCalcAngleS2(&i_this->mDamageReaction.mSlopeTilt.z, r21, speedRatio, maxSpeed);
         }
         dBgS_GndChk_dt(gndChk);
     }

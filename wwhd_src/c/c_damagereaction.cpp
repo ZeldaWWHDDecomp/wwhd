@@ -2,6 +2,7 @@
  * Complete fourteen-entry HD inventory 020402C8..0204698C. */
 #include "c/c_damagereaction.h"
 #include "true60.h"
+#include "c/c_damagereaction_facedown_t60.h" /* frame 72: the face-down flag once per frame */
 #include "c/c_damagereaction_carrier_t60.h" /* rider rule: hold on a 30 Hz carrier */
 #include "c/c_damagereaction_bounce_t60.h" /* the landing bounce once per frame */
 #include "c/c_damagereaction_fall_t60.h" /* the tick30 fall from the frame start height */
@@ -2421,7 +2422,8 @@ static void dr_matrix_set(damagereaction* dr) {
     cXyz out;
     (&v)->set(0.0f, 0.0f, 10000.0f);
     MtxPosition((&v), (&out));
-    dr->mFaceDown = (&out)->y < dr->mpEnemy->current.pos.y ? 1 : 0;
+    if (t60drfd::write())
+        dr->mFaceDown = (&out)->y < dr->mpEnemy->current.pos.y ? 1 : 0;
     dr->mHitFlags = 0;
 }
 
