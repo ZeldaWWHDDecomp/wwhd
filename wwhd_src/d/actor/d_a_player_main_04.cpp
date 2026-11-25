@@ -4817,7 +4817,12 @@ BOOL daPy_lk_c::execute() {
     mAcch.CrrPos(dComIfG_Bgsp());
     lkT60Land::end(mAcch.m_flags, old.pos, current.pos); /* true60: the step's old.pos back; a landing on an earlier step noted */
     setWaterY();
+    const bool lkT60SnapOn = t60::dt() != 1.0f; /* true60 (d_a_player_landline_t60.h): no read at dt 1 */
+    const f32 lkT60SnapY = lkT60SnapOn ? (f32)current.pos.y : 0.0f;
+    const u32 lkT60SnapF = lkT60SnapOn ? (u32)mAcch.m_flags : 0u;
     autoGroundHit();
+    if (lkT60SnapOn)
+        lkT60Land::snapNote(lkT60SnapY, current.pos.y, lkT60SnapF, mAcch.m_flags, lkT60_frameTag());
     {
         /* true60 (d_a_player_stepdown_t60.h): the lift-off frame ends where A's does */
         f32 lkY = current.pos.y, lkVy = speed.y;
