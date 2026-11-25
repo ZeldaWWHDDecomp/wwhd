@@ -17,6 +17,7 @@
 #include "d/actor/d_a_player_swimrise_t60.h"
 #include "d/actor/d_a_player_crawl_t60.h"
 #include "d/actor/d_a_player_lavarestart_t60.h" /* true60: the lava restart test */
+#include "d/actor/d_a_player_waitturn_t60.h" /* true60 */
 #include <cstdlib>
 
 namespace link05 {
@@ -479,10 +480,36 @@ BOOL daPy_lk_c::procWaitTurn() {
 /* 0241B050 */
 BOOL daPy_lk_c::procMoveTurn() {
     // HD: HIO folded
+    /* true60 (d_a_player_waitturn_t60.h): the frame's start / turn for the MOVE catch-up below */
+    const bool lkT60Mt = lkT60_waitTurnStep() && !lkT60_moveTurnTurnNegctrl();
+    const s16 lkT60Pv0 = lkT60Mt ? (s16)mProcVar0 : (s16)0, lkT60Pv2 = lkT60Mt ? (s16)mProcVar2 : (s16)0,
+              lkT60Pv3 = lkT60Mt ? (s16)mProcVar3 : (s16)0;
+    if (lkT60Mt)
+        lkT60_waitTurnBegin(current.angle.y, shape_angle.y, (f32)mNormalSpeed);
     lk05SetSpeedAndAngleNormal(this, 0xBB8);
     cLib_addCalcAngleS(&shape_angle.y, current.angle.y, mProcVar0, mProcVar2, mProcVar3);
+    if (lkT60Mt)
+        lkT60_waitTurnEnd(current.angle.y, shape_angle.y, (f32)mNormalSpeed);
     if (!lk05CheckNextMode(this, 0)) {
         lk05SetBlendMoveAnime(this, -1.0f);
+    } else if (lkT60Mt) {
+        if (const LkT60WaitTurn* t = lkT60_moveTurnCatchUp(gabi::ea(&mCurProc), (s32)mCurProc, current.angle.y,
+                                                           shape_angle.y, (f32)mNormalSpeed)) {
+            /* true60: MOVE entered on the frame's first step: the frame's whole turn and shape
+             * chase from its start at dt 1, as A turned before it entered MOVE; MOVE's blend from it */
+            f32 previousDt = t60_set_dt(1.0f);
+            const s32 proc = mCurProc;
+            mCurProc = kLkT60WaitTurnMoveTurn;
+            current.angle.y = t->angle;
+            shape_angle.y = t->shape;
+            mNormalSpeed = t->speed;
+            lk05SetSpeedAndAngleNormal(this, 0xBB8);
+            cLib_addCalcAngleS(&shape_angle.y, current.angle.y, lkT60Pv0, lkT60Pv2, lkT60Pv3);
+            mCurProc = proc;
+            if (current.angle.y != t->angle1 || shape_angle.y != t->shape1 || (f32)mNormalSpeed != t->speed1)
+                lk05SetBlendMoveAnime(this, -1.0f); /* the init's blend from the frame's turn; no new morf */
+            t60_set_dt(previousDt);
+        }
     }
     return TRUE;
 }

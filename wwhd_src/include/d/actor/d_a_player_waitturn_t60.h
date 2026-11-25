@@ -186,6 +186,22 @@ static inline const LkT60WaitTurn* lkT60_cutTurnCatchUp(uint32_t curProcEa, s32 
     return &t;
 }
 
+/* (2026-11-24; the bomb route, frame 134: procMoveTurn's
+ * frame turns setSpeedAndAngleNormal's whole step and the shape chase, then checkNextMode enters MOVE; B's first step
+ * turned its dt share and entered MOVE there, its body held on the later step: angle 73 short, speed 9.3282 vs A
+ * 9.3097, Link 0.45 off by frame 142) the same catch-up from procMoveTurn (d_a_player_main_05.cpp): the caller redoes
+ * the turn and the shape chase from the frame start at dt 1 with mCurProc read as MOVE_TURN (setSpeedAndAngleNormal's
+ * MOVE_TURN test) and the chase's proc vars as the turn had them. NC WWHD_T60_MOVETURNTURN_NEGCTRL=1. */
+static constexpr s32 kLkT60WaitTurnMoveTurn = 0x18; /* daPyProc_MOVE_TURN_e */
+static inline bool lkT60_moveTurnTurnNegctrl() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_MOVETURNTURN_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return true;
+#endif
+}
+
 /* around the redone init blend: t60::tick30() reads true (returns the value to put back); N = 1 / no t60: nothing */
 static inline u32 lkT60_frameEndBegin() {
 #if defined(GABI_GAME_BUILD) && GABI_T60
