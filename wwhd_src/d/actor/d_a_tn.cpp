@@ -1740,6 +1740,7 @@ static void tn_moveAttack(tn_class* actor, f32 zero, f32 one, f32 blend, f32 acc
 
 // Darknut execution phases retain the native guest call frame.
 #include <initializer_list>
+#include "d/actor/d_a_tn_tilt_t60.h" /* */
 
 static void tn_placePart(tn_class* i_this, tn_p* part, int index, u32 joint); /* true60: part_move's tail */
 namespace tn_execute {
@@ -2152,6 +2153,7 @@ static void updateCollisionShapes(tn_class* actor, u32 initialPlayer) {
 
 static void updateGroundTilt(tn_class* actor) {
     if ((static_cast<u32>(actor->mDamageReaction.mAcch.m_flags) & 0x20) == 0) return;
+    if (t60tntilt::skip()) return; /* true60 (d_a_tn_tilt_t60.h): the ground tilt once per frame */
     s16 pitch = 0x7FFF, roll = 0x7FFF;
     if (static_cast<s16>(actor->mDamageReaction.mFallPitch) == 0) pitch = roll = 0;
     else {
@@ -2204,8 +2206,10 @@ static void updateGroundTilt(tn_class* actor) {
         check->mGroupPassVtable = 0x100403C0;
         tn_abi::cBgS_Chk_destroy(check.get(), 0);
     }
-    if (pitch != 0x7FFF) cLib_addCalcAngleS2(reinterpret_cast<be<s16>*>(&actor->mDamageReaction.mSlopeTilt), pitch, 1, 0x400);
-    if (roll != 0x7FFF) cLib_addCalcAngleS2(&actor->mDamageReaction.mSlopeTilt.z, roll, 1, 0x400);
+    if (pitch != 0x7FFF && !t60tntilt::ease(reinterpret_cast<be<s16>*>(&actor->mDamageReaction.mSlopeTilt), pitch, 1, 0x400))
+        cLib_addCalcAngleS2(reinterpret_cast<be<s16>*>(&actor->mDamageReaction.mSlopeTilt), pitch, 1, 0x400);
+    if (roll != 0x7FFF && !t60tntilt::ease(&actor->mDamageReaction.mSlopeTilt.z, roll, 1, 0x400))
+        cLib_addCalcAngleS2(&actor->mDamageReaction.mSlopeTilt.z, roll, 1, 0x400);
 }
 
 // Mark joint matrices current, then perform the original guest matrix copy.
