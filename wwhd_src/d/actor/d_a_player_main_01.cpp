@@ -17,6 +17,7 @@
 #include "d/actor/d_a_player_seinit_t60.h"
 #include "d/actor/d_a_player_maba_t60.h"
 #include "d/actor/d_a_player_bghit_t60.h"
+#include "d/actor/d_a_player_atnthrow_t60.h" /* true60 */
 
 static PlayerJ3DSysState j3dSysState;
 static PlayerFrameCounter g_Counter;
@@ -1395,8 +1396,9 @@ void daPy_lk_c::setAtnList() {
                                                                     daPyStts0_BOOMERANG_WAIT_e) */
         *a = (u32)*a & ~0x400000u;
     }
-    if (mActorKeepThrow.mActor != nullptr &&
-        ((u32)Player01_game()->play.mPlayerStatus[0][0] & 0x400000)) {
+    if (lkT60AtnThrow::lock(mActorKeepThrow.mActor != nullptr &&
+                                ((u32)Player01_game()->play.mPlayerStatus[0][0] & 0x400000),
+                            mActorKeepThrow.mActor != nullptr)) { /* true60 (d_a_player_atnthrow_t60.h) */
         mpAttnActorA = mActorKeepThrow.mActor;
         mpAttnActorLockOn = mpAttnActorA;
     } else {
