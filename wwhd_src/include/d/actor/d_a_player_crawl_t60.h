@@ -102,8 +102,28 @@ struct LkT60CrawlFrame {
     float span;        /* the frame's dt so far */
     float dpos[3];     /* the previous frame's change (picture) */
     float dsy, dcy;
-    float cc[3];       /* the collision push m_cc_move as the frame's first step found it (the tick30 Move's) */
+    float cc[3];       /*: the collision push m_cc_move as the frame's first step found it (the tick30 Move's) */
+    uint32_t bg[5];    /* mAcch.m_flags and m_gnd's poly info (4 words) at the frame start */
+    int16_t ga;        /* mGroundAngle at the frame start */
+    int32_t gc;        /* mGroundCode at the frame start */
 };
+/* (2026-11-24; pair on intgc2,  crawl down a slope, frame 90):
+ * the whole-frame move on the tick30 step reads the BG check of the frame start, as A's one posMove reads its previous
+ * frame end's. The earlier steps run no body and no move, but the execute's BG check (mAcch.CrrPos) still ran on them
+ * from the unmoved place and left no ground hit and mGroundAngle 0 (B 90 s0: flags 0x2000, ga 0; A 89: 0x20E0, ga
+ * 2670): the tick30 step's slope test (posMoveFromFootPos: speedF = v x cos(ground angle)) then took the flat speed, B's
+ * crawl 3.3% faster down the slope (speedF 7.399 vs A 7.162; x 0.22 off at 90, 0.49 at 91). Form: the frame start's
+ * mAcch flags, ground poly info, mGroundAngle and mGroundCode are put back with Link's place on the tick30 step, before
+ * the body and the move; the tick30 step's own CrrPos then runs as before. Negative control
+ * WWHD_T60_CRAWLBG_NEGCTRL=1 (game build): the earlier step's check as it stands (the form before). */
+static inline bool lkT60Crawl_bgNc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_CRAWLBG_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return false;
+#endif
+}
 struct LkT60CrawlPrev {
     uint32_t tag;
     float pos[3];
@@ -179,6 +199,10 @@ template <class L> static inline void lkT60Crawl_begin(L* lk) {
         c.cc[0] = lk->mStts.m_cc_move.x;
         c.cc[1] = lk->mStts.m_cc_move.y;
         c.cc[2] = lk->mStts.m_cc_move.z;
+        lkT60Crawl_save(c.bg, gabi::ea(&lk->mAcch) + 0x28, 1);     /* m_flags */
+        lkT60Crawl_save(c.bg + 1, gabi::ea(&lk->mAcch) + 0xD4, 4); /* m_gnd (cBgS_PolyInfo, 0x10) */
+        c.ga = (s16)lk->mGroundAngle;
+        c.gc = (s32)lk->mGroundCode;
         return;
     }
     if (!c.on || c.tag != tag) {
@@ -194,6 +218,12 @@ template <class L> static inline void lkT60Crawl_begin(L* lk) {
     if (t60::tick30()) {
         lkT60Crawl_load(gabi::ea(lk->mpCLModel->getBaseTRMtx()), c.mtx, 12);
         lkT60Crawl_load(gabi::ea(&lk->mInvWorldMtx), c.mtx + 12, 12);
+        if (!lkT60Crawl_bgNc()) { /* the frame start's BG check */
+            lkT60Crawl_load(gabi::ea(&lk->mAcch) + 0x28, c.bg, 1);
+            lkT60Crawl_load(gabi::ea(&lk->mAcch) + 0xD4, c.bg + 1, 4);
+            lk->mGroundAngle = c.ga;
+            lk->mGroundCode = c.gc;
+        }
     }
 }
 
