@@ -333,7 +333,9 @@ static inline void action_kougeki(oq_class* i_this) {
         break;
     case 0x15:
         search_y_check_(i_this, 0x1000);
-        cLib_addCalc2(&i_this->current.pos.y, player->current.pos.y + 30.0f, 1.0f, 30.0f);
+        /* true60 (d_a_oq_t60.h oq_t60_rise_step): the rise eases once a frame, on the tick30 step at dt 1 */
+        if (oq_t60_rise_step(i_this))
+            oq_t60_whole([&] { cLib_addCalc2(&i_this->current.pos.y, player->current.pos.y + 30.0f, 1.0f, 30.0f); });
         /* true60 (the first-step input rule addendum): the arrival at Link's height: on the tick30 step */
         if (!oq_t60_link() || std::fabs(i_this->current.pos.y - (player->current.pos.y + 30.0f)) > 2.0f) {
             break;
@@ -938,6 +940,7 @@ static BOOL daOQ_Execute(oq_class* i_this) {
         }
     }
     draw_SUB_(i_this);
+    oq_t60_rise_pic(i_this, dComIfGp_getPlayer(0)); /* true60: an earlier rise step's picture (draw only) */
     oq_t60_delete_due(i_this); /* true60: a deletion decided on an earlier step of this frame (A: after its whole call) */
     return TRUE;
 }

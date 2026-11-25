@@ -33,9 +33,11 @@
  * next frame's steps, dt of it per step (the first-step push rule). */
 #pragma once
 #include "true60.h"
+#include <cstdlib>
 #include "d/t60conv.h"
 #include "d/actor/d_a_bk_t60.h"
 #include "d/actor/d_a_oq.h"
+#include "d/t60_basehold.h"
 
 /* the frame's first / tick30 step (every step at dt = 1). Negative control (OQ_T60_NEGCTRL, with T60C_NEGCTRL): every
  * site in the per-step form (decide, count, read and register on every step, nothing held or replayed). */
@@ -106,6 +108,80 @@ static inline bool oq_t60_bob_ran(const oq_class* i) {
     return false;
 #endif
     return t60::dt() != 1.0f && wwhd_t60_latch_pending(gabi::ea(&i->mBobPhase) ^ 0x40000000u, t60_step_counter()) != 0;
+}
+
+/* kougeki 0x15, the rock Octorok's rise to Link's height (2026-11-24): A eases pos.y
+ * once a frame, cLib_addCalc2(y, Link y + 30, 1.0, 30) (a snap when within 30), then the move adds speed.y, and the arrival
+ * test (|y - (Link y + 30)| <= 2, tick30 step) reads the ease's result. Per step with dt the ease moved half of the gap per
+ * step (capped 15) and its target moved with Link inside the frame, so the tick30 test missed the snap (pair /
+ * oqD2, N 2, step 3753: B 364.59 vs A 349.70) and the spit (0x58C7, the rock 00E3) came 2 frames late (N 4: 5).
+ * Form (the bob's move, oq_t60_bob_mark): every step of the rise keeps only the ease's y; the frame's earlier steps do
+ * not ease (logic y held at the frame start), the tick30 step eases once at dt 1 toward Link's frame-end height
+ * (oq_t60_whole) and its move adds the whole frame's speed.y: the frame ends on A's height.
+ * The picture (pair: the earlier steps drawn at the frame start, 13.5 off the frame ends' midpoint): an earlier
+ * step's models are drawn moved by the share of the frame's rise the step stands for (oq_t60_rise_pic after draw_SUB_:
+ * span x (the ease's capped gap to Link's frame-end height, extrapolated from his last step, + speed.y)), through the port's base-hold draw correction
+ * (d/t60_basehold.h); logic and guest words untouched. dt 1: the original call, nothing drawn moved. Negative control
+ * WWHD_T60_OQ_RISE_NEGCTRL=1 (game build): the per-step ease. */
+static inline bool oq_t60_rise_nc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_OQ_RISE_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return false;
+#endif
+}
+struct OqT60Rise {
+    u32 ea, tag, step;
+    f32 span; /* the frame's dt so far, this step's included */
+};
+static OqT60Rise s_oqT60Rise[8];
+/* true when this step eases (run the ease through oq_t60_whole) */
+static inline bool oq_t60_rise_step(const oq_class* i) {
+    if (t60::dt() == 1.0f || oq_t60_rise_nc())
+        return true;
+    oq_t60_bob_mark(i);
+    const u32 ea = gabi::ea(i), tag = bk_t60_frame_tag();
+    OqT60Rise* slot = nullptr;
+    for (int k = 0; k < 8 && !slot; k++)
+        if (s_oqT60Rise[k].ea == ea)
+            slot = &s_oqT60Rise[k];
+    for (int k = 0; k < 8 && !slot; k++)
+        if (s_oqT60Rise[k].tag != tag)
+            slot = &s_oqT60Rise[k];
+    if (!slot)
+        slot = &s_oqT60Rise[(ea >> 4) & 7];
+    if (slot->ea != ea || slot->tag != tag)
+        slot->span = 0.0f;
+    slot->ea = ea;
+    slot->tag = tag;
+    slot->step = t60_step_counter();
+    slot->span = gabi::fadds_ppc(slot->span, t60::dt());
+    return t60::tick30();
+}
+/* after draw_SUB_ (the model's base matrix set): an earlier step of the rise draws its models moved up by its share */
+static inline void oq_t60_rise_pic(oq_class* i, fopAc_ac_c* player) {
+    if (t60::dt() == 1.0f || oq_t60_rise_nc() || t60::tick30() || player == nullptr)
+        return;
+    const u32 ea = gabi::ea(i);
+    const OqT60Rise* slot = nullptr;
+    for (int k = 0; k < 8; k++)
+        if (s_oqT60Rise[k].ea == ea && s_oqT60Rise[k].tag == bk_t60_frame_tag() && s_oqT60Rise[k].step == t60_step_counter())
+            slot = &s_oqT60Rise[k];
+    if (!slot || !i->mpMorf || !i->mpMorf->getModel())
+        return;
+    /* Link's frame-end height, extrapolated from his last step's move (old.pos: his place before that step) */
+    const f32 ly = (f32)player->current.pos.y, ly0 = (f32)player->old.pos.y;
+    const f32 lyEnd = ly + (ly - ly0) * (1.0f - slot->span) / t60::dt();
+    f32 d = gabi::fsubs_ppc(gabi::fadds_ppc(lyEnd, 30.0f), (f32)i->current.pos.y);
+    d = d > 30.0f ? 30.0f : (d < -30.0f ? -30.0f : d);
+    const f32 dy = slot->span * (d + (f32)i->speed.y);
+    const u32 model = gabi::ea(i->mpMorf->getModel());
+    float held[12];
+    for (int k = 0; k < 12; k++)
+        held[k] = (f32)gabi::at<be<f32>>(model + 0xC8)[k]; /* J3DModel mBaseTransformMtx */
+    held[7] -= dy;
+    t60bh_hold(ea, model, held);
 }
 
 /* the animation-end test as the frame's dispatch sees it (d_a_enemy_anm_t60.h) */
