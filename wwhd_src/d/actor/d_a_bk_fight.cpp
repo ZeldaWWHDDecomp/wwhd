@@ -940,11 +940,17 @@ static inline void fight_attack(bk_class* i_this, fopAc_ac_c* player) {
             wait_set(i_this);
             i_this->dr.mMode = 2;
         }
-    } else if (bk_t60_ground_held(i_this, i_this->dr.mAcch.ChkGroundHit() != 0)) {
+    } else if (bk_t60_ground_held(i_this, i_this->dr.mAcch.ChkGroundHit() != 0) && bk_t60_end()) {
         /* true60 (pair f119 / f138): the next attack step after the landing reads the
          * ground state A's call reads (the previous frame's BG check), held over the frame (bk_t60_ground_held, as the
          * advance above): the live test saw the first step's landing and switched on the tick30 step a frame early
          * (kind 1 step 0 -> 1 at 119 instead of 120; every later step and the attack's end followed a frame early) */
+        /* true60 (2026-11-24, bk3 frame 68 / stick 47C58678 @153): the switch to the next
+         * attack step is made on the tick30 step (bk_t60_end), as the attack's end above. A's frame advances
+         * mAttackFrame by the old step's speed (1.2) and then switches; the switch on the first step (the held stop
+         * answer is true from the frame start) gave the tick30 step's advance the new speed (1.0): 19.1 vs A's 19.2, the
+         * attack 0.1 frame behind from then on, the hand (BUKI joint) and the held stick off from frame 153. dt 1: the
+         * original. */
         attack_info_s* r6 = bkFight_attackInfo(i_this->mAttackKind);
         f32 speed;
         if (i_this->mAttackDir > 0) {
