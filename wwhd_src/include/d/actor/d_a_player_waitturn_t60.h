@@ -257,6 +257,34 @@ static inline bool lkT60_midHeld(int32_t curProc, uint32_t tag) {
     return t60::dt() != 1.0f && !t60::first_step() && h.valid && h.tag == tag && h.proc == curProc;
 }
 
+/* (2026-11-24; the Forest Haven pair, frame 384: Link running at
+ * a ledge, procMove turns setSpeedAndAngleNormal's whole step and then changeFrontWallTypeProc enters SMALL_JUMP (the
+ * front wall timer); B's first step turned its dt share (-23146 vs A -23063) and entered the jump there, the jump body
+ * held on the later step: the jump's heading 83 off, Link 8.4 off by 542) the same catch-up from procMove for an entered
+ * SMALL_JUMP: procSmallJump_init keeps current.angle.y and shape_angle.y and sets mNormalSpeed / speed.y itself; the
+ * caller redoes the turn from the frame start at dt 1 (angles and the speedF it derives, as A's turn left them before
+ * the init) and puts the init's mNormalSpeed back. NC WWHD_T60_JUMPTURN_NEGCTRL=1. */
+static constexpr s32 kLkT60WaitTurnSmallJump = 0x29; /* daPyProc_SMALL_JUMP_e (procSmallJump_init: commonProcInit(0x29)) */
+static inline bool lkT60_jumpTurnNegctrl() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_JUMPTURN_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return true;
+#endif
+}
+static inline const LkT60WaitTurn* lkT60_jumpTurnCatchUp(uint32_t curProcEa, s32 curProc, s16 angle, s16 shape) {
+    LkT60WaitTurn& t = s_lkT60WaitTurn;
+    if (curProc != kLkT60WaitTurnSmallJump || lkT60_jumpTurnNegctrl())
+        return nullptr;
+    if (!lkT60_waitTurnStep() || !t.valid || t.stamp != t60_step_counter())
+        return nullptr;
+    t.valid = false;
+    if (!lkT60_procEnteredThisFrame(curProcEa) || angle != t.angle1 || shape != t.shape1)
+        return nullptr;
+    return &t;
+}
+
 /* around the redone init blend: t60::tick30() reads true (returns the value to put back); N = 1 / no t60: nothing */
 static inline u32 lkT60_frameEndBegin() {
 #if defined(GABI_GAME_BUILD) && GABI_T60

@@ -1828,7 +1828,23 @@ BOOL daPy_lk_c::procMove() {
             t60_set_dt(previousDt);
         }
     }
-    if (!lkT60Next && !changeFrontWallTypeProc() &&
+    const BOOL lkT60Wall = !lkT60Next && changeFrontWallTypeProc(); /* (the original's order: only when no next mode) */
+    if (lkT60Wall && lkT60Mt) {
+        if (const LkT60WaitTurn* tj = lkT60_jumpTurnCatchUp(gabi::ea(&mCurProc), (s32)mCurProc, current.angle.y,
+                                                            shape_angle.y)) {
+            /* true60 (d_a_player_waitturn_t60.h): SMALL_JUMP entered on the frame's first step: the
+             * frame's whole turn from its start at dt 1, then the init's speed back */
+            const f32 initSpeed = mNormalSpeed;
+            f32 previousDt = t60_set_dt(1.0f);
+            current.angle.y = tj->angle;
+            shape_angle.y = tj->shape;
+            mNormalSpeed = tj->speed;
+            setSpeedAndAngleNormal(0xBB8);
+            mNormalSpeed = initSpeed;
+            t60_set_dt(previousDt);
+        }
+    }
+    if (!lkT60Next && !lkT60Wall &&
         !checkIceSlipFall()) {
         if (mDemo.mDemoMode == daPy_demo_c::DEMO_N_WALK_e) {
             f32 lim = mMaxNormalSpeed * 0.5f;
