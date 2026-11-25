@@ -99,6 +99,23 @@ static inline bool negctrlFall() {
  * step's check of the frame changing the position (bit equal before / after; no ground hit either: the landing form),
  * the check gets A's segment: old.pos = the frame's first-step old.pos, put back after the call. Any other frame, dt 1:
  * the step's own check. NC WWHD_T60_LINESEG_NEGCTRL=1 (game build). */
+/* (2026-11-25; walk route at N 4, frame 111: a fall past a ledge corner). The landing
+ * frame's form (air + an earlier step's check met the ground: the tick30 check gets A's segment, old.pos = the frame start,
+ * pos.y = the frame start + A's fall) ran the check with the step's own speed.y: the earlier step's ground hit zeroed it
+ * and the tick30 step added only its gravity share (-0.625 at N 4), where A's check reads the frame's fall (-68.84). The
+ * check's wall correction reads pm_speed: from the same place and segment A's check lands on the
+ * ledge corner (LAND, fall 977.9) and B's pushed Link (-22.3, -23.3) off it, 2.2 under the top: no ground hit, the fall
+ * on to the floor 240 lower, LAND_DAMAGE (1217.9 >= 1000). Form: that check also gets A's speed.y (the WallSeg speed
+ * part: r.sy before, the step's own back after when the check left it; a ground hit's 0 stays; FALL-SPEEDY then sets
+ * A's fall when the check ends in the air). Not in / on water. NC WWHD_T60_AIRSEG_NEGCTRL=1; dt 1 never. */
+static inline bool airSegOff() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_AIRSEG_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
+#else
+    return true;
+#endif
+}
 static inline bool lineSegOff() {
 #if defined(GABI_GAME_BUILD) && GABI_T60
     static const bool nc = [] { const char* e = getenv("WWHD_T60_LINESEG_NEGCTRL"); return e && e[0] == '1'; }();
@@ -320,6 +337,7 @@ static inline bool begin(uint32_t acf, cXyz& oldPos, cXyz& pos, uint32_t tag) {
     pos.y = p0y + r.sy; /* A's add: f32(frame-start y + speed.y) */
     r.on = true;
     r.airSeg = true; /* */
+    r.wallSegOn = !r.water && !airSegOff(); /* A's speed.y for the check too (wallSegSpeedBegin / End) */
     return true;
 }
 /* after autoGroundHit on the step whose check had the landing frame's segment: A's frame ended in
