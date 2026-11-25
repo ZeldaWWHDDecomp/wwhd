@@ -52,3 +52,46 @@ static inline bool lkT60_upperContinue(int i, bool pending) {
         return false;
     return (lkup60::s_played >> i) & 1u;
 }
+
+/* carry placement, worn barrel (frame 244 WAIT_GRAB 117 -> GRAB_WAIT 115): the hands (and
+ * the barrel on them) 8.79 low on the tick30 step with every frame / rate word equal; the one animation word apart was
+ * mFrameCtrlUnder[0]'s mState (A 1, B 0). A plays the old animation's whole frame (18.4 + 1.1 reaches its end 19:
+ * stopped, mState 1) before the dispatch sets the new one, and the set keeps mState; B's set on the first step came
+ * after half that play (18.95, not stopped), and the latched control is not played again this frame, so it kept 0.
+ * Form: after a control's play on the frame's first step the frame-end state its remaining plays reach is noted (a
+ * copy run through J3DFrameCtrl::update 027F2FC4); a control set on an earlier step (latched) gets that state on the
+ * frame's later step before its calc, as A's set left it. NC WWHD_T60_ENDSTATE_NEGCTRL=1. dt 1: never. */
+namespace lkup60 {
+struct EndState {
+    uint32_t ea = 0, stamp = ~0u;
+    uint8_t st = 0;
+};
+static EndState s_end[5]; /* U0, U1, P0, P1, P2 */
+static inline bool endNc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_ENDSTATE_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return true;
+#endif
+}
+}  // namespace lkup60
+template <class FC> static inline void lkT60_noteEndState(int slot, FC* fc) {
+    if (t60::dt() == 1.0f || !t60::first_step() || lkup60::endNc())
+        return;
+    gabi::Local<FC> c;
+    *c.get() = *fc;
+    for (int i = 1; i < (int)t60::steps(); i++)
+        gabi::call(0x027F2FC4, c.get());
+    lkup60::EndState& e = lkup60::s_end[slot];
+    e.ea = gabi::ea(fc), e.stamp = t60_step_counter(), e.st = (uint8_t)c->mState;
+}
+template <class FC> static inline void lkT60_applyEndState(int slot, FC* fc) {
+    if (t60::dt() == 1.0f || t60::first_step() || lkup60::endNc())
+        return;
+    lkup60::EndState& e = lkup60::s_end[slot];
+    if (e.ea != gabi::ea(fc) || t60_step_counter() - e.stamp >= (uint32_t)t60::steps())
+        return;
+    fc->mState = e.st;
+    e.ea = 0;
+}

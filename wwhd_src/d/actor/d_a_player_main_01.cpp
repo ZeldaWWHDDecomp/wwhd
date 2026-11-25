@@ -1023,6 +1023,9 @@ void daPy_lk_c::animeUpdate() {
         const f32 put = lkT60_rateHoldBegin(&mFrameCtrlUnder[0], 0); /* true60: the frame-start rate (d_a_player_t60.h) */
         Player01_updateFrameCtrl(&mFrameCtrlUnder[0]);
         lkT60_rateHoldEnd(&mFrameCtrlUnder[0], 0, put);
+        lkT60_noteEndState(0, &mFrameCtrlUnder[0]); /* true60: the frame-end state (d_a_player_upperplay_t60.h) */
+    } else {
+        lkT60_applyEndState(0, &mFrameCtrlUnder[0]); /* true60: a set on an earlier step: the old play's end state */
     }
     fcpy_l(underPack0, gabi::ea(&mFrameCtrlUnder[0].mFrame)); /* setFrame (HD: frame at +0) */
     if (underPack1 != 0) {
@@ -1031,6 +1034,9 @@ void daPy_lk_c::animeUpdate() {
             Player01_updateFrameCtrl(&mFrameCtrlUnder[1]);
             lkT60_rateHoldEnd(&mFrameCtrlUnder[1], 1, put);
             lkT60_upperPlayed(3); /* true60: the frame's play noted (d_a_player_upperplay_t60.h) */
+            lkT60_noteEndState(1, &mFrameCtrlUnder[1]); /* true60: the frame-end state (d_a_player_upperplay_t60.h) */
+        } else {
+            lkT60_applyEndState(1, &mFrameCtrlUnder[1]); /* true60: a set on an earlier step: the old play's end state */
         }
         fcpy_l(underPack1, gabi::ea(&mFrameCtrlUnder[1].mFrame));
     } else if (lkT60_upperContinue(3, lkT60_anmSetPending(gabi::ea(&mFrameCtrlUnder[1])))) { /* true60: no longer driven mid-frame: the frame's play */
@@ -1044,6 +1050,9 @@ void daPy_lk_c::animeUpdate() {
             Player01_updateFrameCtrl(&mFrameCtrlUpper[0]);
             lkT60_rateHoldEnd(&mFrameCtrlUpper[0], 2, put);
             lkT60_upperPlayed(0); /* true60: the frame's play noted (d_a_player_upperplay_t60.h) */
+            lkT60_noteEndState(2, &mFrameCtrlUpper[0]); /* true60: the frame-end state (d_a_player_upperplay_t60.h) */
+        } else {
+            lkT60_applyEndState(2, &mFrameCtrlUpper[0]); /* true60: a set on an earlier step: the old play's end state */
         }
         fcpy_l(upperPack0, gabi::ea(&mFrameCtrlUpper[0].mFrame));
     } else if (lkT60_upperContinue(0, lkT60_anmSetPending(gabi::ea(&mFrameCtrlUpper[0])))) { /* true60: no longer driven mid-frame: the frame's play */
@@ -1057,6 +1066,9 @@ void daPy_lk_c::animeUpdate() {
             Player01_updateFrameCtrl(&mFrameCtrlUpper[1]);
             lkT60_rateHoldEnd(&mFrameCtrlUpper[1], 3, put);
             lkT60_upperPlayed(1); /* true60: the frame's play noted (d_a_player_upperplay_t60.h) */
+            lkT60_noteEndState(3, &mFrameCtrlUpper[1]); /* true60: the frame-end state (d_a_player_upperplay_t60.h) */
+        } else {
+            lkT60_applyEndState(3, &mFrameCtrlUpper[1]); /* true60: a set on an earlier step: the old play's end state */
         }
         fcpy_l(upperPack1, gabi::ea(&mFrameCtrlUpper[1].mFrame));
     } else if (lkT60_upperContinue(1, lkT60_anmSetPending(gabi::ea(&mFrameCtrlUpper[1])))) { /* true60: no longer driven mid-frame: the frame's play */
@@ -1071,6 +1083,9 @@ void daPy_lk_c::animeUpdate() {
             Player01_updateFrameCtrl(&mFrameCtrlUpper[2]);
             lkT60_rateHoldEnd(&mFrameCtrlUpper[2], 4, put);
             lkT60_upperPlayed(2); /* true60: the frame's play noted (d_a_player_upperplay_t60.h) */
+            lkT60_noteEndState(4, &mFrameCtrlUpper[2]); /* true60: the frame-end state (d_a_player_upperplay_t60.h) */
+        } else {
+            lkT60_applyEndState(4, &mFrameCtrlUpper[2]); /* true60: a set on an earlier step: the old play's end state */
         }
         fcpy_l(upperPack2, gabi::ea(&mFrameCtrlUpper[2].mFrame));
     } else if (lkT60_upperContinue(2, lkT60_anmSetPending(gabi::ea(&mFrameCtrlUpper[2])))) { /* true60: no longer driven mid-frame: the frame's play */
