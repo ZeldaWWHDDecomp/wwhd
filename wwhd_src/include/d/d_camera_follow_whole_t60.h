@@ -87,6 +87,25 @@ static inline bool subjWholeOn() {
     }
     return s == 1;
 }
+/* (2026-11-25; the Bokoblin tower route bdk at N 2: the
+ * camera runs the tower style (towerCamera, work "TOWR", type 35 style 128) while Link stands and then runs; towerCamera
+ * builds its yaw target from the eye's direction about the chased centre through a radius blend t = Bezier((radius - min)
+ * / range) that is steep at the minimum radius, so the frame-end radius's last bits decide it: A's frame 92 (Link's
+ * first running frame was 91) has t 0.333 (radius exactly on the 500.0 minimum), yaw target 18242, mLongitude 11674 ->
+ * 13841 and the view yaw +1819; B's per-step run left the radius a few ulps above: t 0.019 / 0, the view yaw +947 or +59
+ * by the origin's step parity, and Link, whose move target is the camera yaw, turned 174 short at frame 93 and the run
+ * divided. The forward tilt (Run's forward check before the style) took one unit less a frame on B's tick30 step in a
+ * mode-local whole run, so the frame-start restore has to be Run's, not towerCamera's.) the tower camera
+ * (dCamAlg_TOWER_CAMERA_e) in the same whole form. NC WWHD_T60_TOWERWHOLE_NEGCTRL=1 (per step, as before). */
+constexpr u32 kTowerAlg = 7;
+static inline bool towerWholeOn() {
+    static int s = -1;
+    if (s < 0) {
+        const char* e = getenv("WWHD_T60_TOWERWHOLE_NEGCTRL");
+        s = (e && e[0] == '1') ? 0 : 1;
+    }
+    return s == 1;
+}
 struct FollowWhole {
     uint32_t stamp;        /* t60_step_counter of the frame's first step */
     uint32_t objEa, comEa; /* the camera body and its com status block */
@@ -109,7 +128,8 @@ static inline void noteFrame(uint32_t objEa, uint32_t comEa, u32 alg) {
     f.follow = alg == kFollowAlg || alg == kLockonAlg /* lock-on (see kLockonAlg) */ ||
                alg == kRideAlg /*: ride candidate (see kRideAlg) */ ||
                (alg == kHungAlg && hungWholeOn()) /* M2f: hung (see kHungAlg) */ ||
-               (alg == kSubjectAlg && subjWholeOn()); /* (see kSubjectAlg) */
+               (alg == kSubjectAlg && subjWholeOn()) /* (see kSubjectAlg) */ ||
+               (alg == kTowerAlg && towerWholeOn()); /* (see kTowerAlg) */
     f.valid = true;
 }
 /* Switch-in (2026-11-23; the follow form's counterpart of eventWholeSwitchIn). Boomerang
@@ -143,7 +163,7 @@ static inline void switchIn(u32 alg) {
         camera_run_t60::g_runFrameStart().stamp != f.stamp)
         return;
     if (!(alg == kFollowAlg || alg == kLockonAlg || alg == kRideAlg || (alg == kHungAlg && hungWholeOn()) ||
-          (alg == kSubjectAlg && subjWholeOn())))
+          (alg == kSubjectAlg && subjWholeOn()) || (alg == kTowerAlg && towerWholeOn())))
         return;
     f.follow = true;
     f.switchIn = true;
