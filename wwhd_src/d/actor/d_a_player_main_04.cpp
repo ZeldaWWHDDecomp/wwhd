@@ -26,6 +26,7 @@
 #include "d/actor/d_a_player_at_t60.h"
 #include "d/actor/d_a_player_maba_t60.h"
 #include "d/actor/d_a_player_hatwind_t60.h"
+#include "d/actor/d_a_player_necktgt_t60.h" /* true60 */
 #include "d/actor/d_a_player_pose_t60.h"
 #include "d/actor/d_a_player_shipride_t60.h" /* true60: the held ship body's ride placement */
 #include "d/actor/d_a_player_main_04_item.h"
@@ -2924,6 +2925,15 @@ void daPy_lk_c::setNeckAngle() {
                 *sp18 = gabi::ea(&la->eyePos);
                 r28 = TRUE;
             }
+        }
+    }
+    gabi::Local<cXyz> lkTgt; /* true60 (d_a_player_necktgt_t60.h): the frame's first-step look point */
+    if (t60::dt() != 1.0f && *sp18 != 0 && *sp18 != gabi::ea(spA0.get()) && *sp18 != gabi::ea(sp98.get())) {
+        if (lkRef) {
+            if (lkT60NeckTgt::use(lkT60Maba::frameTag(), *sp18, lkTgt.get()))
+                *sp18 = gabi::ea(lkTgt.get());
+        } else {
+            lkT60NeckTgt::keep(lkT60Maba::frameTag(), *sp18, gabi::at<cXyz>(*sp18));
         }
     }
     gabi::Local<cXyz> spC4;
