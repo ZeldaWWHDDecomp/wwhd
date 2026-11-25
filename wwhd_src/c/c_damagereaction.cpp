@@ -7,6 +7,7 @@
 #include "c/c_damagereaction_bounce_t60.h" /* the landing bounce once per frame */
 #include "c/c_damagereaction_fall_t60.h" /* the tick30 fall from the frame start height */
 #include "c/c_damagereaction_push_t60.h" /* no push first seen on a later step */
+#include "c/c_damagereaction_posadd_t60.h" /* the tick30 step writes A's position */
 #include "d/actor/d_a_bk_kdturn_t60.h" /* a Bokoblin knock-down on an earlier step: the frame's turn */
 #include <unordered_map>
 using gabi::load;
@@ -235,7 +236,7 @@ static void t60dr_bend_eased(damagereaction* dr, f32 before) {
     e.frame = frame;
     e.after = after;
 }
-static void t60dr_push_step(const cXyz* cc, f32 out[3]) {
+static void t60dr_push_step(const cXyz* cc, f32 out[3], f32* whole = nullptr) {
     u32 a = gabi::ea(cc), frame = t60dr_frame();
     f32 dt = t60::dt();
     auto it = t60drPushes.find(a);
@@ -251,6 +252,8 @@ static void t60dr_push_step(const cXyz* cc, f32 out[3]) {
     }
     for (int i = 0; i < 3; i++)
         out[i] = gabi::fmuls_ppc(e->held[i], dt);
+    if (whole != nullptr) /* the frame's whole push, A's m_cc_move */
+        whole[0] = e->held[0], whole[1] = e->held[1], whole[2] = e->held[2];
     if (t60::tick30())
         t60drPushes.erase(a);
 }
@@ -1653,6 +1656,12 @@ static s32 dr_damage_set(u32 address) {
             /* true60 (the per-step movement rule): the quarter speed and the pushback are per-frame displacements: x dt */
             f32 dt = t60::dt();
             f32 quarter = 0.25f;
+            /* true60 (c_damagereaction_posadd_t60.h): the frame start (first step) or the corrections since
+             * the last step's write; the full pushback vector before x dt */
+            t60drPos::Entry* t60Pos = t60drPos::begin(gabi::ea(dr), t60dr_frame(), (f32)dr->mpEnemy->current.pos.x,
+                                                      (f32)dr->mpEnemy->current.pos.z, (f32)temp3.x, (f32)temp3.z);
+            bool t60PosPush = false;
+            f32 t60PosHeld[3] = {0.0f, 0.0f, 0.0f};
             if (dt != 1.0f) {
                 quarter = gabi::fmuls_ppc(quarter, dt);
                 temp3.x = gabi::fmuls_ppc((f32)temp3.x, dt);
@@ -1690,8 +1699,9 @@ static s32 dr_damage_set(u32 address) {
                     /* true60 (the first-step push rule): the tick30 collision push spread over the frame's steps */
                     f32 push[3];
                     if (dt != 1.0f) {
-                        t60dr_push_step(pStts->GetCCMoveP(), push);
+                        t60dr_push_step(pStts->GetCCMoveP(), push, t60PosHeld);
                         moveX = push[0];
+                        t60PosPush = true;
                     }
                     dr->mpEnemy->current.pos.x = gabi::fadds_ppc(positionX, moveX);
                     f32 positionZ = (f32)dr->mpEnemy->current.pos.z;
@@ -1700,6 +1710,13 @@ static s32 dr_damage_set(u32 address) {
                         moveZ = push[2];
                     dr->mpEnemy->current.pos.z = gabi::fadds_ppc(positionZ, moveZ);
                 }
+            }
+            if (t60Pos != nullptr) { /* true60: the tick30 step writes A's x / z; every step notes its write */
+                f32 px = dr->mpEnemy->current.pos.x, pz = dr->mpEnemy->current.pos.z;
+                t60drPos::end(t60Pos, gabi::ea(dr), (f32)dr->mpEnemy->speed.x, (f32)dr->mpEnemy->speed.z, t60PosPush,
+                              t60PosHeld[0], t60PosHeld[2], px, pz);
+                dr->mpEnemy->current.pos.x = px;
+                dr->mpEnemy->current.pos.z = pz;
             }
 
             if (dr->mInvincibleTimer == 0) {
