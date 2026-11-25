@@ -47,6 +47,28 @@ static inline bool nc() {
 #endif
 }
 static inline bool on() { return t60::dt() != 1.0f && !nc(); }
+/* (2026-11-24, the sweep gm: the pot 0x2145 carried on Sue-Belle's head (mode 4,
+ * carried by status) moved on the frame-end pass only, fracT 0.20): a carryable carried by a holder other than Link (an
+ * NPC: unconverted or whole form, placing it once a frame on its tick30 step) showed its previous frame's place on the
+ * earlier steps. As the rider rule: carried by status, and neither Link's grab (0x65A4) nor
+ * hook-carried, the actor asks the 30 Hz hold (t60_hold30_request): it runs at dt 1 on the tick30 step (the original)
+ * and is drawn between its frame ends like its holder. Game build, N > 1. NC WWHD_T60_NPCHOLD_NEGCTRL=1 */
+static inline void npcHold(u32 actor, bool carried) {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_NPCHOLD_NEGCTRL"); return e && e[0] == '1'; }();
+    if (nc || !carried || t60::steps() <= 1)
+        return;
+    const u32 st = *gabi::at<be<u32>>(actor + 0x2E0); /* actor_status */
+    if (!(st & 0x2000u) || (st & 0x100000u)) /* carried by status (fopAcStts_CARRY), not hook-carried */
+        return;
+    const u32 link = gabi::ea(dComIfGp_getPlayer(0));
+    if (link != 0 && *gabi::at<be<u32>>(link + 0x65A4) == actor) /* Link's grab (mActorKeepGrab.mActor) */
+        return;
+    t60_hold30_request(*gabi::at<be<u32>>(actor + 4) /* base.mBsPcId */);
+#else
+    (void)actor, (void)carried;
+#endif
+}
 /* negative control (WWHD_T60_HELDMOVE_NEGCTRL=1: a held actor's PIC mover runs as before) */
 static inline bool heldMoveNc() {
 #if defined(GABI_GAME_BUILD) && GABI_T60
@@ -190,6 +212,8 @@ template <class A> static inline Phase begin(A* a, const Spec<A>& s) {
     s_stamp = t60_step_counter();
     s_size = s.size <= kActorMax ? s.size & ~3u : 0;
     s_modelOff = s.modelOff;
+    if (t60::steps() > 1) /* (also on a held run's dt 1 step, so the hold lasts while it is carried) */
+        npcHold(gabi::ea(a), s.carried ? s.carried(a) : s.held(a));
     if (!on())
         return WHOLE;
     const u32 actor = gabi::ea(a), tag = t60w::frameTag();
