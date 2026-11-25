@@ -68,6 +68,24 @@ static inline bool hungWholeOn() {
     }
     return s == 1;
 }
+/* (2026-11-25; the boomerang aim route at N 2: Link
+ * draws the boomerang (BOOMERANG_SUBJECT) at frame 65 and the camera goes FLLW -> SUBJ (type 12 mode 11 style 45); the
+ * switch frame started in the follow style (whole, exact), but the subject style's frames after it ran per step: its
+ * entry glide eases centre / radius / latitude / yaw / fovy toward a goal made from Link (subjectCentre, the globe
+ * default) by t = 1 / (end - mCurModeTimer) a frame, a moving goal, so the per-step share (sjR) undershot (radius frame
+ * 66: B 62.620 vs A 62.714 at the frame end, 0.09 at 66, 17.3 by 96 with the right-stick aim on top), Link exact
+ * throughout) the subject camera (dCamAlg_SUBJECT_CAMERA_e) in the same whole form: the earlier steps keep the per-step
+ * run (the picture), the tick30 step runs the whole frame once at dt 1 from the frame start: A's arithmetic on the
+ * frame-end Link, the stick read in A's place (the run's step words). NC WWHD_T60_SUBJWHOLE_NEGCTRL=1 (per step, as before). */
+constexpr u32 kSubjectAlg = 4;
+static inline bool subjWholeOn() {
+    static int s = -1;
+    if (s < 0) {
+        const char* e = getenv("WWHD_T60_SUBJWHOLE_NEGCTRL");
+        s = (e && e[0] == '1') ? 0 : 1;
+    }
+    return s == 1;
+}
 struct FollowWhole {
     uint32_t stamp;        /* t60_step_counter of the frame's first step */
     uint32_t objEa, comEa; /* the camera body and its com status block */
@@ -89,7 +107,8 @@ static inline void noteFrame(uint32_t objEa, uint32_t comEa, u32 alg) {
     f.switchIn = false;
     f.follow = alg == kFollowAlg || alg == kLockonAlg /* lock-on (see kLockonAlg) */ ||
                alg == kRideAlg /*: ride candidate (see kRideAlg) */ ||
-               (alg == kHungAlg && hungWholeOn()); /* M2f: hung (see kHungAlg) */
+               (alg == kHungAlg && hungWholeOn()) /* M2f: hung (see kHungAlg) */ ||
+               (alg == kSubjectAlg && subjWholeOn()); /* (see kSubjectAlg) */
     f.valid = true;
 }
 /* Switch-in (2026-11-23; the follow form's counterpart of eventWholeSwitchIn). Boomerang
@@ -122,7 +141,8 @@ static inline void switchIn(u32 alg) {
     if (!f.valid || f.follow || !camera_run_t60::g_runFrameStart().valid ||
         camera_run_t60::g_runFrameStart().stamp != f.stamp)
         return;
-    if (!(alg == kFollowAlg || alg == kLockonAlg || alg == kRideAlg || (alg == kHungAlg && hungWholeOn())))
+    if (!(alg == kFollowAlg || alg == kLockonAlg || alg == kRideAlg || (alg == kHungAlg && hungWholeOn()) ||
+          (alg == kSubjectAlg && subjWholeOn())))
         return;
     f.follow = true;
     f.switchIn = true;
