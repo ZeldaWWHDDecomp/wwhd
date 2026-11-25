@@ -75,6 +75,7 @@ static const be<u16>* const aura_model_joint = gabi::at<be<u16>>(0x10035AA0);
 #include "d/actor/d_a_player_landhist_t60.h"
 #include "d/actor/d_a_player_stepdown_t60.h"
 #include "d/actor/d_a_player_hammer_t60.h"
+#include "d/actor/d_a_player_lavarel_t60.h" /* */
 #include "d/t60_whole_carrier.h"
 
 static cXyz l_debug_keep_pos;
@@ -1545,7 +1546,8 @@ void daPy_lk_c::setGrabItemPos() {
         return;
     }
     lkT60_grabNote(gabi::ea(grab_actor), gabi::ea(&grab_actor->current.pos)); /* true60: the frame-start placement */
-    lkgw::frameStart(&mGrabItemOffsetY, mGrabItemOffsetY); /* true60 (d_a_player_grabwear_t60.h): the frame-start wear, before the ease */
+    lkgw::frameStart(&mGrabItemOffsetY, mGrabItemOffsetY); /* true60: the frame-start wear, before the ease */
+    lkT60LavaRel::Keep lkLavaRel(this, grab_actor, dComIfG_Bgsp()); /* true60 (d_a_player_lavarel_t60.h): no placement on an earlier step of a frame that ends in the lava */
     if (mCurProc == LinkEffectConstants::daPyProc_GRAB_READY_e) {
         mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
         mDoMtx_stack_c::YrotM((s16)(shape_angle.y - mProcVar2));
