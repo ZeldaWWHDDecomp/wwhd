@@ -26,6 +26,7 @@
 #include "d/actor/d_a_player_stepsoffset_t60.h"
 #include "d/actor/d_a_player_footbg_t60.h"
 #include "d/actor/d_a_player_posadd_t60.h"
+#include "d/actor/d_a_player_cohold_t60.h" /* */
 #include "d/actor/d_a_player_swimrise_t60.h"
 #include "d/actor/d_a_player_footga_t60.h"
 #include "d/actor/d_a_player_drawsplit_t60.h"
@@ -5154,6 +5155,8 @@ void daPy_lk_c::posMove() {
                 !checkHeavyStateOn()) {
                 u16 a = (u16)mOutPowerAngle;
                 f32 k = mOutPower;
+                if (!lkT60_outPowerTake(k)) /* true60 (d_a_player_cohold_t60.h) */
+                    k = 0.0f;
                 current.pos.x = gabi::fmadds(k, cM_ssin(a), current.pos.x);
                 current.pos.z = gabi::fmadds(k, cM_scos(a), current.pos.z);
             }

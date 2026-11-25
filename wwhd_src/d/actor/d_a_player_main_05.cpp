@@ -22,6 +22,7 @@
 #include "d/actor/d_a_player_waitturn_t60.h" /* true60 */
 #include "d/actor/d_a_player_ropeblend_t60.h" /* true60 */
 #include <cstdlib>
+#include "d/actor/d_a_player_cohold_t60.h" /* */
 
 namespace link05 {
 static u16 l_curseType;
@@ -975,8 +976,15 @@ BOOL daPy_lk_c::procShipJumpRide_init() {
 
 /* 0241C344 */
 BOOL daPy_lk_c::checkJumpRideShip() {
-    if (mCyl.ChkCoHit()) {
-        fopAc_ac_c* ac = mCyl.GetCoHitAc();
+    /* true60 (d_a_player_cohold_t60.h): the Co hit as the frame's first call saw it */
+    bool lkT60CoHit;
+    u32 lkT60CoAc;
+    {
+        const bool live = mCyl.ChkCoHit() != 0;
+        lkT60_shipRideCo(live, live ? gabi::ea(mCyl.GetCoHitAc()) : 0u, &lkT60CoHit, &lkT60CoAc);
+    }
+    if (lkT60CoHit) {
+        fopAc_ac_c* ac = lkT60CoAc != 0 ? gabi::at<fopAc_ac_c>(lkT60CoAc) : nullptr;
         if (ac != 0 && ac->mProcName.get() == link05::fpcNm_SHIP_e) {
             /* ship->getBodyMtx(): the body model's base matrix (NULL-preserving) */
             J3DModel* model = static_cast<Link05ShipHD*>(ac)->mpBodyAnm->mpModel;
