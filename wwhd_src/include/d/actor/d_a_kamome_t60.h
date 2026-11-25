@@ -8,7 +8,7 @@
  * the frame's move at N 2 (stair sweep, sail route: A 50.06 / B 25 after the 1.2 scale -> B took the slow branch, its target
  * height eased the other way and the bird flew ~660 units higher, changing its sing decisions: the extra 0x4805 cries).
  * Here the frame's first step notes Link's place before his first step (player->old.pos then: the frame start), and the
- * tick30 run measures from it: A's old -> current. N 1: the same words as the original. NC WWHD_T60_KAMOME_LINKMOVE_NEGCTRL=1. */
+ * tick30 run measures from it: A's old -> current (Link held at 30 Hz: not noted, his old.pos is the frame start). N 1: the same words as the original. NC WWHD_T60_KAMOME_LINKMOVE_NEGCTRL=1. */
 #pragma once
 #include "d/t60_whole.h"
 #include <cstdlib>
@@ -31,6 +31,10 @@ static LinkStart s_linkStart = {0xFFFFFFFFu, 0.0f, 0.0f, 0.0f};
 /* daKamome_Execute's head on every step (before the whole form's skip): the frame's first step notes the frame start */
 static inline void note(fopAc_ac_c* player) {
     if (player == nullptr || !t60::first_step())
+        return;
+    /* Link held at 30 Hz this frame (t60_held: a carrier's rider): he runs on the tick30 step only, where
+     * old.pos is his frame start as in A; his old.pos now is the previous frame's (pair, frame 201: 1.25 x) */
+    if (t60_held(*gabi::at<be<u32>>(gabi::ea(player) + 4) /* base.mBsPcId */))
         return;
     s_linkStart.tag = t60w::frameTag();
     s_linkStart.x = player->old.pos.x;
