@@ -10,6 +10,7 @@
  */
 #include "d/actor/d_a_kamome.h"
 #include "d/t60_npc.h" /* true60: the NPC form, the whole frame on the tick30 step (the whole-frame form rule) */
+#include "d/actor/d_a_kamome_t60.h" /* true60: Link's frame move */
 
 /* ---- functions of d_a_kamome.cpp (guest calls, same signatures) ---- */
 static void anm_init(kamome_class* i_this, int a, float m, unsigned char l, float s, int snd) {
@@ -251,7 +252,10 @@ static inline void kamome_heisou_move(kamome_class* i_this) {
     }
 
     f32 fVar6;
-    i_this->mVelocityFwdTarget = diff_abs(&player->old.pos, &player->current.pos) * (REG_F(17, 8) + 1.2f);
+    /* true60: Link's frame move, from the frame start (d_a_kamome_t60.h) */
+    cXyz linkFrom;
+    kamome_t60::moveFrom(player, &linkFrom);
+    i_this->mVelocityFwdTarget = diff_abs(&linkFrom, &player->current.pos) * (REG_F(17, 8) + 1.2f);
     if (i_this->mVelocityFwdTarget > REG_F(17, 13) + 30.0f && iVar2) {
         fVar6 = 0.0f;
         if (diff_abs(&i_this->mTargetPos, &a_this->current.pos) < REG_F(17, 9) + 200.0f) {
@@ -745,6 +749,7 @@ static inline void kamome_imouto2_move(kamome_class* i_this) {
 
 /* 021861D4 */
 static BOOL daKamome_Execute(kamome_class* i_this) {
+    kamome_t60::note(dComIfGp_getPlayer(0)); /* true60: the frame start of Link's move */
     t60w::Guard<kamome_class> t60g(i_this, t60npc::Logic<kamome_class>::kOps); /* true60: whole frame on tick30, end at every return */
     if (t60g.skip) /* true60: a step before the tick30 step: no logic (picture: frame interpolation) */
         return TRUE;
