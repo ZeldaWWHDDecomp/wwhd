@@ -4826,7 +4826,17 @@ BOOL daPy_lk_c::execute() {
     mAcch.m_flags = acf & ~0x20u; /* mAcch.ClrGroundHit() */
     const bool lkT60Seg = lkT60Land::begin(acf, old.pos, current.pos, lkT60_frameTag()); /* true60 (d_a_player_landline_t60.h) */
     lkT60LandHist::note(acf, lkT60Seg, lkT60_frameTag()); /* true60 (d_a_player_landhist_t60.h) */
+    {
+        f32 lkT60Vy = speed.y; /* true60 (d_a_player_landline_t60.h): A's speed.y for the wall check */
+        lkT60Land::wallSegSpeedBegin(lkT60Vy);
+        speed.y = lkT60Vy;
+    }
     mAcch.CrrPos(dComIfG_Bgsp());
+    {
+        f32 lkT60Vy = speed.y;
+        lkT60Land::wallSegSpeedEnd(lkT60Vy);
+        speed.y = lkT60Vy;
+    }
     lkT60Land::end(mAcch.m_flags, old.pos, current.pos); /* true60: the step's old.pos back; a landing on an earlier step noted */
     setWaterY();
     const bool lkT60SnapOn = t60::dt() != 1.0f; /* true60 (d_a_player_landline_t60.h): no read at dt 1 */

@@ -55,6 +55,8 @@ struct Rec {
     f32 pre[2];       /* xz before an earlier step's CrrPos */
     bool bgNote;
     bool snapped;     /* an earlier step's autoGroundHit snapped Link down onto ground */
+    bool wallSegOn;   /* this tick30 check has the wall segment */
+    f32 wsv;          /* the step's own speed.y, put back after the check when it kept A's */
     bool snapOn;      /* this step's check has the segment (a non-tick30 step keeps the record) */
     bool airSeg;      /* this tick30 check has the landing frame's segment (air + landed) */
 };
@@ -186,8 +188,9 @@ static inline bool snapSegOff() {
 /* (2026-11-25; pig route frame 91: Link's carry drift): the speed-ramp position-gap (3)
  * wall frame's tick30 check (A's segment start, old.pos = the frame start) also gets A's height, pos.y = the frame start +
  * A's frame fall: Link walks into a wall on the ground, the earlier step's check snapped y back to the floor, so the tick30
- * step's own y add stood at 549.06 where A's input is 547.5; the wall circles met the wall at another height (x 0.03 /
- * z 0.06 off, then the wall term's speed, 1.0 by frame 213). NC WWHD_T60_WALLSEGY_NEGCTRL=1; dt 1 never. */
+ * step's own y add stood at 549.06 where A's input is 547.5, and its speed.y (read by the wall correction) was its own
+ * share -1.25 where A's is -2.5 (x 0.03 / z 0.06 off, then the wall term's speed, 1.0 by frame 213; the legs helper's
+ * mdc frame 433: the wall circles met the other polygon of a corner). NC WWHD_T60_WALLSEGY_NEGCTRL=1; dt 1 never. */
 static inline bool wallSegYOff() {
 #if defined(GABI_GAME_BUILD) && GABI_T60
     static const bool nc = [] { const char* e = getenv("WWHD_T60_WALLSEGY_NEGCTRL"); return e && e[0] == '1'; }();
@@ -201,6 +204,7 @@ static inline bool begin(uint32_t acf, cXyz& oldPos, cXyz& pos, uint32_t tag) {
     Rec& r = s_rec;
     r.on = false;
     r.airSeg = false;
+    r.wallSegOn = false;
     if (t60::dt() == 1.0f || negctrl() || !r.valid || r.tag != tag)
         return false;
     r.bgNote = false;
@@ -245,6 +249,7 @@ static inline bool begin(uint32_t acf, cXyz& oldPos, cXyz& pos, uint32_t tag) {
         if (!(r.air && r.landed)) {
             ld3(r.old, oldPos);
             st3(oldPos, r.p0);
+            r.wallSegOn = true;
             if (!wallSegYOff()) {
                 /* A's height too: the frame start + A's frame fall (on the ground the earlier
                  * step's check snapped y back, so the step's own add stood 0.94 above A's 547.5: the wall circles met
@@ -291,6 +296,26 @@ static inline void fallSpeed(P* py, uint32_t flags) {
     if (negctrlFall() || (flags & (uint32_t)dBgS_Acch::GROUND_HIT))
         return;
     py->speed.y = r.sy;
+}
+/* around mAcch.CrrPos: the wall-segment check also reads Link's speed (pm_speed: the check's wall
+ * correction depends on speed.y; A's speed.y going in is the frame's fall, -2.5 on the ground, B's tick30 step had only
+ * its own share after the earlier step's ground hit zeroed it; dc7: A's check run twice from the same input agrees only
+ * with speed put back). Before: speed.y = A's frame fall (noting the step's own); after: when the check left it there,
+ * the step's own back (a ground hit's 0 stays). */
+static inline void wallSegSpeedBegin(f32& vy) {
+    Rec& r = s_rec;
+    if (!r.wallSegOn || wallSegYOff())
+        return;
+    r.wsv = vy;
+    vy = r.sy;
+}
+static inline void wallSegSpeedEnd(f32& vy) {
+    Rec& r = s_rec;
+    if (!r.wallSegOn || wallSegYOff())
+        return;
+    r.wallSegOn = false;
+    if (vy == r.sy)
+        vy = r.wsv;
 }
 /* after autoGroundHit (y0 / f0: current.pos.y and the Acch flags before it) */
 static inline void snapNote(f32 y0, f32 y1, uint32_t f0, uint32_t f1, uint32_t tag) {
