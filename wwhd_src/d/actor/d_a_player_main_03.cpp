@@ -4853,7 +4853,9 @@ void daPy_lk_c::posMoveFromFootPos() {
                              lkT60_swimRiseAdd((double)(f32)(mv->y * dt + dvy * (1.0f - dt) * 0.5f), mv == &speed),
                              (double)(f32)(mv->z * dt)};
         f32 q[3];
-        lkT60_posAdd(p, v, q);
+        /* true60 (d_a_player_posadd_t60.h): the step's speed as a whole frame's move, for the tick30 step */
+        const double vf[3] = {(double)(f32)mv->x, 0.0, (double)(f32)mv->z};
+        lkT60_posAdd(p, v, vf, q);
         current.pos.x = q[0];
         current.pos.y = q[1];
         current.pos.z = q[2];

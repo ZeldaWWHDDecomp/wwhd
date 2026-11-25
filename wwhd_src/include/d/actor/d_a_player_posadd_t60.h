@@ -24,9 +24,13 @@
  * tick30 step's add (nothing carries into the next frame, as in A). Link only (one player). */
 #pragma once
 #include "true60.h"
+#include <cstdio>
+#include <cstdlib>
 
 struct LkT60PosAdd {
     double S[3];    /* the exact own-move position (corrections included) */
+    double P0[3];   /* (speed-ramp position-gap (3)) the frame-start place */
+    double K[3];    /* (speed-ramp position-gap (3)) the frame's per-step corrections so far */
     double C[3];    /* the frame's push handed out so far */
     f32 W[3];       /* the coordinates this form last wrote (a difference at the next call = a per-step correction) */
     uint32_t stamp; /* step counter of the frame's first step */
@@ -44,25 +48,64 @@ static inline bool lkT60_posAddLive() {
     return s.valid && t60_step_counter() - s.stamp < t60::steps();
 }
 
-/* dt != 1: v = this step's own move (move x dt, plus y's arc term); returns the new coordinates in out */
-static inline void lkT60_posAdd(const f32 p[3], const double v[3], f32 out[3]) {
+/* (carriables helper 2026-11-24; user approval, trial: the speed-ramp position-gap rule (3) applied to Link's own xz move): the
+ * frame's tick30 step places Link at the frame-start place + the frame-end speed's whole move (A's one add of the speed
+ * the frame ends with) + the frame's per-step corrections (the per-step ground-check rule), instead of the sum of the steps' own moves; the
+ * earlier steps move as before (their own speed x dt, the picture). Exact on A's frame end while the corrections agree
+ * (pig route frame 91: B's two half-step moves of a speed ramp summed 2 ulp off A at z 319256). The picture takes the
+ * difference on the tick30 pass (the speed-ramp position-gap gap, ramps only). y keeps its exact-arc form. NC WWHD_T60_LKMOVE6C3_NEGCTRL=1;
+ * WWHD_T60_LKMOVE6C3_LOG=1 prints each tick30 correction ([t60] lkmove6c3 step dx dz). Game build only; dt 1 never. */
+static inline bool lkT60_move6c3Off() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_LKMOVE6C3_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return true;
+#endif
+}
+static inline bool lkT60_move6c3Log() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_LKMOVE6C3_LOG"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return false;
+#endif
+}
+/* dt != 1: v = this step's own move (move x dt, plus y's arc term), vf = the step's speed as a whole frame's move (the
+ * move A adds once with the frame-end speed); returns the new coordinates in out */
+static inline void lkT60_posAdd(const f32 p[3], const double v[3], const double vf[3], f32 out[3]) {
     LkT60PosAdd &s = s_lkT60PosAdd;
     if (t60::first_step() || !lkT60_posAddLive()) {
         for (int i = 0; i < 3; i++) {
             s.S[i] = (double)p[i];
             s.C[i] = 0.0;
+            s.P0[i] = (double)p[i];
+            s.K[i] = 0.0;
         }
         s.stamp = t60_step_counter();
         s.valid = true;
     } else {
-        for (int i = 0; i < 3; i++)
-            s.S[i] += (double)p[i] - (double)s.W[i]; /* the corrections since the last write (the per-step ground-check rule) */
+        for (int i = 0; i < 3; i++) {
+            const double corr = (double)p[i] - (double)s.W[i]; /* the corrections since the last write (the per-step ground-check rule) */
+            s.S[i] += corr;
+            s.K[i] += corr;
+        }
     }
+    const bool m6c3 = t60::tick30() && !lkT60_move6c3Off();
+    double dl[3] = {0.0, 0.0, 0.0};
     for (int i = 0; i < 3; i++) {
-        s.S[i] += v[i];
+        if (m6c3 && i != 1) { /* (speed-ramp position-gap (3)) xz: the frame start + A's one move + the corrections */
+            const double s6 = s.P0[i] + s.K[i] + vf[i];
+            dl[i] = s6 - (s.S[i] + v[i]);
+            s.S[i] = s6;
+        } else {
+            s.S[i] += v[i];
+        }
         out[i] = (f32)(s.S[i] + s.C[i]);
         s.W[i] = out[i];
     }
+    if (m6c3 && lkT60_move6c3Log() && (dl[0] != 0.0 || dl[2] != 0.0))
+        fprintf(stderr, "[t60] lkmove6c3 %u %.6f %.6f\n", t60_step_counter(), dl[0], dl[2]);
 }
 
 /* posMove's push add, dt != 1: c = this step's part of the frame's push (lk_ccMoveStep); p = the coordinates now.
