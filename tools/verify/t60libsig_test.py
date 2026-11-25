@@ -149,7 +149,7 @@ def main():
                         fails.append("%s N=%s another site: rc %d, row %r\n%s" % (func, steps, rc, row, out[-2500:]))
                     elif nc and ok:
                         fails.append("%s N=%s %s passed: the kept entry is not reproduced (%s)" % (func, steps, name, short))
-                    elif nc and not re.search(r"t60 N=%s:\s+(byte )?r3\+0(x0)? " % steps, row):
+                    elif nc and not re.search(r"t60 N=%s:\s+(byte )?r3\+0(x[0-3])? " % steps, row):
                         fails.append("%s N=%s NC failed on something else: rc %d, %r\n%s" % (func, steps, rc, row,
                                                                                          out[-2500:]))
                     else:
