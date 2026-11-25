@@ -32,6 +32,18 @@ template <class L> static inline void lkT60ShipRide_held(L* lk) {
         lk->setShipRidePos(0);
         return;
     }
+    /* (2026-11-25; long3 seg 5, N 2, frame 4019: SHIP_CANNON entered on the
+     * first step kept its init's setShipRidePos(1) at the first step's ship matrix over the frame, Link 49.7 behind the
+     * sailing ship for that frame) SHIP_CANNON (0x8E) the same: its body's placement setShipRidePos(1) (procShipCannon,
+     * when it does not end the ride). NC WWHD_T60_SHIPCANNON_HOLD_NEGCTRL=1. */
+    static const bool cannonNc = [] {
+        const char* e = getenv("WWHD_T60_SHIPCANNON_HOLD_NEGCTRL");
+        return e && e[0] == '1';
+    }();
+    if (proc == 0x8E && !cannonNc) { /* daPyProc_SHIP_CANNON_e */
+        lk->setShipRidePos(1);
+        return;
+    }
     if (negctrl || (proc != 0x88 && proc != 0x89)) /* daPyProc_SHIP_STEER_e, daPyProc_SHIP_PADDLE_e */
         return;
     lk->setShipRidePos(1);
