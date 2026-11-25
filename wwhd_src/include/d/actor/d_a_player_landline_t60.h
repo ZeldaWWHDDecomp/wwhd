@@ -56,7 +56,7 @@ struct Rec {
     bool bgNote;
     bool snapped;     /* an earlier step's autoGroundHit snapped Link down onto ground */
     bool wallSegOn;   /* this tick30 check has the wall segment */
-    bool water;       /* the frame started in / on water (the first check's acf WATER_HIT | WATER_IN) */
+    bool water;       /* the frame started in water (the first check's acf WATER_IN) */
     f32 wsv;          /* the step's own speed.y, put back after the check when it kept A's */
     bool snapOn;      /* this step's check has the segment (a non-tick30 step keeps the record) */
     bool airSeg;      /* this tick30 check has the landing frame's segment (air + landed) */
@@ -220,7 +220,7 @@ static inline bool begin(uint32_t acf, cXyz& oldPos, cXyz& pos, uint32_t tag) {
         g_lkT60WallSeg = false;
         g_lkT60WallSegAll = false;
         r.air = !(acf & (uint32_t)dBgS_Acch::GROUND_HIT);
-        r.water = (acf & ((uint32_t)dBgS_Acch::WATER_HIT | (uint32_t)dBgS_Acch::WATER_IN)) != 0;
+        r.water = (acf & (uint32_t)dBgS_Acch::WATER_IN) != 0; /* (WATER_HIT alone: a water plane found below, e.g. land by the sea) */
         /* the frame-start segment start and whether the body set the position */
         ld3(r.o0, oldPos);
         r.set = !negctrlSet() && (r.o0[0] != r.p0[0] || r.o0[1] != r.p0[1] || r.o0[2] != r.p0[2]);
