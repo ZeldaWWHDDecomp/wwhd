@@ -20,6 +20,7 @@
 #include "d/actor/d_a_player_swimupturn_t60.h" /* true60 */
 #include "d/actor/d_a_player_grabwear_t60.h"
 #include "d/actor/d_a_player_pose_t60.h"
+#include "d/actor/d_a_player_demokeep_t60.h" /* true60 */
 #include "d/actor/d_a_player_maba_t60.h"
 #include "d/actor/d_a_player_camyaw_t60.h"
 #include "d/actor/d_a_player_stepsoffset_t60.h"
@@ -6445,7 +6446,8 @@ void daPy_lk_c::setDemoData() {
                 xz.y = 0.0f;
                 xz.z = d.z;
                 f64 sq = LinkActionApi::squareMagnitude(&xz);
-                if (sq > (f64)90000.0f) {
+                /* true60 (d_a_player_t60.h): the leave-the-spot test on the frame's first step */
+                if (sq > (f64)90000.0f && lkT60_demoKeepLeaveStep()) {
                     mDemo.mTimer = 0;
                     linkEndEventCut(mStaffIdx);
                 }
