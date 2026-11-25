@@ -27,6 +27,7 @@
  * a converted player no longer meets the sword / spear per step (N chords along the arc, not the frame's one). */
 #pragma once
 #include "true60.h"
+#include "t60_earlier_steps.h"
 #include "d/actor/d_a_enemy_anm_t60.h"
 #include "d/actor/d_a_bk_kdturn_t60.h" /* the knock-down's turn catch-up */
 #include <unordered_map>
@@ -225,9 +226,18 @@ template <class T> static inline void bk_t60_walk_note(T* i_this, s16 maxStep) {
         return;
     wwhd_t60_latch_set(bk_t60_walk_key(i_this, maxStep == 0x1000), bk_t60_frame_tag());
 }
+/* (t60_earlier_steps.h) every held step after the noting step runs the tail, not only the tick30 step:
+ * at N 4 the steps between (2..N-1) were held without the ramp and the turn (pair, Bokoblin 47C59B00 frame 144,
+ * jyunkai 0 -> 1 on step 1: speedF 1.25, 1.25, 1.25, 2.5 for A's 5.0; the float ramp moves its dt share per step, so it
+ * needs every step; the integer turn pins the frame's full step on the tick30 step either way). N 2: the tick30 step only,
+ * as before. NC WWHD_T60_BKWALKN_NEGCTRL=1: the tick30 step only (the form before). */
+static inline bool bk_t60_walk_n_nc() {
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_BKWALKN_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
+}
 /* 0: jyunkai's mode-1 tail did not run on an earlier step of this frame; else its turn's max step */
 template <class T> static inline s16 bk_t60_walk_due(T* i_this) {
-    if (t60::dt() == 1.0f || !t60::tick30())
+    if (t60::dt() == 1.0f || (bk_t60_walk_n_nc() ? !t60::tick30() : !t60es::later()))
         return 0;
     const u32 tag = bk_t60_frame_tag();
     if (wwhd_t60_latch_pending(bk_t60_walk_key(i_this, true), tag) != 0)

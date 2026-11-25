@@ -405,6 +405,7 @@ static inline bool fight_run(mo2_class *i_this) {
     }
     cLib_addCalcAngleS2(&i_this->actor.current.angle.y,
                         i_this->mDamageReaction.mTurnTargetY, 4, maxSpeed);
+    mo2_t60_headturn_note(i_this, maxSpeed); /* true60: for the held steps after it */
   }
   switch ((u16)i_this->mDamageReaction.mMode) {
   case 0:
@@ -1206,7 +1207,18 @@ static void Mo2_move(mo2_class *i_this) {
     i_this->mCoCyl.OffCoSPrmBit(1);
   }
   if (t60Held) {
-    /* true60: held, no decisions on this step */
+    /* true60: held, no decisions on this step; fight_run's head turn when it turned on an earlier step of this frame
+     * (d_a_mo2_t60.h mo2_t60_headturn_due), toward the tick30 step's sensing on the tick30 step (A's
+     * call senses before the head turn; the Bokoblin's held tick30 step, bk_t60_sense / bk_t60_turn_due) */
+    if (t60::tick30() && !mo2_t60_heldturn_nc())
+      mo2_t60_sense(i_this, false); /* (the kind of target: the first step's) */
+    const s16 t60HeadTurn = mo2_t60_headturn_due(i_this);
+    if (t60HeadTurn != 0) {
+      if (t60::tick30())
+        i_this->mDamageReaction.mTurnTargetY = i_this->mTargetAngleY;
+      cLib_addCalcAngleS2(&i_this->actor.current.angle.y,
+                          i_this->mDamageReaction.mTurnTargetY, 4, t60HeadTurn);
+    }
   } else if (i_this->mDamageReaction.mHitStunTimer != 0 && i_this->mDamageReaction.mKnockedDown == 0) {
     if (i_this->mDamageReaction.mHitStunTimer == 1) {
       if ((i_this->mMode != 1 || moveJailMode == 0) &&

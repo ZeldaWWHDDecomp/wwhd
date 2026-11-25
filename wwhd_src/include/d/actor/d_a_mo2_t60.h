@@ -21,6 +21,8 @@
  * The spear's At spheres keep the 30 Hz grid while the player is unconverted (d_a_mo2_move.cpp yari_hit_check). */
 #pragma once
 #include "d/actor/d_a_bk_t60.h"
+#include "t60_earlier_steps.h"
+#include <cstdlib>
 
 /* one AI state step per 30 Hz frame (d_a_bk_t60.h bk_t60_ai_state): a state
  * entered on an in-between step (by the dispatch, damage_check, damage_reaction or its result switch, the ice thaw) waits
@@ -57,6 +59,43 @@ template <class T> static inline void mo2_t60_ai_note(T* i_this, uint64_t before
 }
 template <class T> static inline bool mo2_t60_ai_held(T* i_this) {
     return t60::dt() != 1.0f && wwhd_t60_latch_pending(mo2_t60_ai_key(i_this), bk_t60_frame_tag()) != 0;
+}
+
+/* fight_run's head turn on the held steps (t60_earlier_steps.h; pair, Moblin 47C59A80 frame 109):
+ * A's one call turns current.angle.y toward mTurnTargetY at fight_run's head (scale 4, 0x400; 0x800 in mode 1) and then
+ * switches mode (3 -> 2 on its timer). At N steps the switch came on step 1 after that step's turn share (+32 at N 4); the
+ * frame's remaining steps were held (mo2_t60_ai_held) and never turned: 4674 for A's 4755, and a frame behind from then
+ * on. Form: the head marks the frame when it turns on an earlier step (port latch, key the mTurnTargetY address ^
+ * 0xE0000000, | 1 for 0x800); every held step after it turns once more (Mo2_move's held branch): the integer ease moves
+ * the frame's split on the steps between and pins its full step from the frame start on the tick30 step, A's turn. The
+ * held tick30 step first takes the tick30 sensing (mo2_t60_sense) and the head's target from it, as A's call (moF44,
+ * 47C5CECC frame 300, mode 4 -> 2 on step 1: B turned toward the first step's target, 15627 for A's 15817).
+ * dt 1: nothing is marked (the original). NC WWHD_T60_MO2HELDTURN_NEGCTRL=1: the held steps neither sense nor turn (the
+ * form before). */
+static inline bool mo2_t60_heldturn_nc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_MO2HELDTURN_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
+#else
+    return false;
+#endif
+}
+template <class T> static inline u32 mo2_t60_headturn_key(T* i_this, bool wide) {
+    return (gabi::ea(&i_this->mDamageReaction.mTurnTargetY) ^ 0xE0000000u) | (wide ? 1u : 0u);
+}
+template <class T> static inline void mo2_t60_headturn_note(T* i_this, s16 maxSpeed) {
+    if (!mo2_t60_heldturn_nc())
+        t60es::mark(mo2_t60_headturn_key(i_this, maxSpeed == 0x800));
+}
+/* on a held later step: the head turn's max step when the head turned on an earlier step of this frame, else 0 */
+template <class T> static inline s16 mo2_t60_headturn_due(T* i_this) {
+    if (mo2_t60_heldturn_nc() || !t60es::later())
+        return 0;
+    if (t60es::marked(mo2_t60_headturn_key(i_this, true)))
+        return 0x800;
+    if (t60es::marked(mo2_t60_headturn_key(i_this, false)))
+        return 0x400;
+    return 0;
 }
 
 /* the frame's last dispatch call. The per-frame work inside the dispatch (counts, the decisions drawn once per frame)

@@ -23,6 +23,7 @@
  * dt 1: nothing is marked (the original). Negative control WWHD_T60_DRBOUNCE_NEGCTRL=1: the form before. */
 #pragma once
 #include "c/c_damagereaction.h"
+#include "t60_earlier_steps.h"
 #include <cstdlib>
 
 namespace t60drb {
@@ -34,8 +35,27 @@ static inline bool nc() {
     return false;
 #endif
 }
+/* (t60_earlier_steps.h): a reaction taken on an earlier step k of N; the frame's steps between it and the
+ * tick30 step (k+1..N-1) move on with the frame's speed x / z (the speed before the reaction), the reaction's speed is
+ * set on the tick30 step only (the frame end). Before, every later step set the reaction's speed, exact only at N 2:
+ * at N 4 the steps after k moved with it (pair, Bokoblin lock-on, Bokoblin 47C5CE68's knock-back
+ * stop on step 2 of 4 at frame 203: the tick30 step ended the frame on the stop's zero speed, back at the frame start
+ * 322.77 for A's 304.76, 47C5CE68's landing bounce on step 1 of 4 at frame 193: steps 2-4 at the bounce speed, x / z
+ * 6.2 short of A's -345.89 456.87). Negative controls (the N 2 form: the reaction's speed on every later step):
+ * WWHD_T60_DRSTOPN_NEGCTRL=1 the stop, WWHD_T60_DRBOUNCEN_NEGCTRL=1 the bounce. */
+static inline bool ncN(bool bounce) {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool s = [] { const char* e = getenv("WWHD_T60_DRSTOPN_NEGCTRL"); return e && e[0] == '1'; }();
+    static const bool b = [] { const char* e = getenv("WWHD_T60_DRBOUNCEN_NEGCTRL"); return e && e[0] == '1'; }();
+    return bounce ? b : s;
+#else
+    (void)bounce;
+    return false;
+#endif
+}
 struct Kept {
     u32 dr, tag;
+    bool bounce;     /* the frame's reaction: the bounce (else the stop) */
     f32 x, y, z;     /* the bounce's speed (the frame end's, as A leaves it) */
     f32 x0, z0;      /* speed x / z before the bounce: the frame's later steps move on with it */
 };
@@ -60,8 +80,12 @@ template <class E> static inline bool skip(const void* bounceCount, u32 dr, E* e
     if (nc() || !t60dr_pending(bounceCount))
         return false;
     if (Kept* k = kept(dr, false))
-        if (k->tag == t60dr_frame_tag())
-            enemy->speed.x = k->x, enemy->speed.y = k->y, enemy->speed.z = k->z;
+        if (k->tag == t60dr_frame_tag()) {
+            if (t60es::between() && !ncN(k->bounce)) /* a step before the frame end: the frame's speed x / z on */
+                enemy->speed.x = k->x0, enemy->speed.y = k->y, enemy->speed.z = k->z0;
+            else
+                enemy->speed.x = k->x, enemy->speed.y = k->y, enemy->speed.z = k->z;
+        }
     return true;
 }
 /* the bounce / stop branch's entry: speed x / z before it (an earlier step only) */
@@ -75,12 +99,13 @@ template <class E> static inline void entry(u32 dr, E* enemy) {
  * nothing). Called after the branch's speed sets. The frame's later steps move on with the speed x / z the frame had
  * (A's frame moves its whole step before the bounce's x 0.75): put back here, the kept bounce speed set at their end
  * (skip; a fix run: x / z 6.2 off from the landing frame on, A -345.9 456.9 / B -343.4 462.5). */
-template <class E> static inline void note(const void* bounceCount, u32 dr, E* enemy) {
+template <class E> static inline void note(const void* bounceCount, u32 dr, E* enemy, bool bounce) {
     if (nc() || t60::dt() == 1.0f || t60::tick30())
         return;
     t60dr_mark_set(bounceCount);
     Kept* k = kept(dr, true);
     k->tag = t60dr_frame_tag();
+    k->bounce = bounce;
     k->x = enemy->speed.x, k->y = enemy->speed.y, k->z = enemy->speed.z;
     enemy->speed.x = k->x0, enemy->speed.z = k->z0;
 }

@@ -877,14 +877,15 @@ void Bk_move(bk_class* i_this) {
                 i_this->current.angle.y = (s16)((u32)(s16)i_this->current.angle.y + (u32)t60Add);
             } else if (t60Turn > 0)
                 cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->dr.mTurnTargetY, 4, t60Turn);
-            /* ... and jyunkai's walk tail (turn + speed ramp) when its mode 1 ran on an earlier step (entered there from
-             * mode 0 / -1: A's entry call turns and ramps in the same call; d_a_bk_t60.h bk_t60_walk_due, f171) */
-            const s16 t60Walk = bk_t60_walk_due(i_this);
-            if (t60Walk != 0) {
-                cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->dr.mTurnTargetY, 4, t60Walk);
-                cLib_addCalc2(&i_this->speedF,
-                              t60Walk == 0x400 ? l_bkHIO().mPatrolSpeed : l_bkHIO().mPatrolSpeedNoWeapon, 1.0f, 5.0f);
-            }
+        }
+        /* ... and jyunkai's walk tail (turn + speed ramp) when its mode 1 ran on an earlier step (entered there from
+         * mode 0 / -1: A's entry call turns and ramps in the same call; d_a_bk_t60.h bk_t60_walk_due, f171): on
+         * every held step after it */
+        const s16 t60Walk = bk_t60_walk_due(i_this);
+        if (t60Walk != 0) {
+            cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->dr.mTurnTargetY, 4, t60Walk);
+            cLib_addCalc2(&i_this->speedF,
+                          t60Walk == 0x400 ? l_bkHIO().mPatrolSpeed : l_bkHIO().mPatrolSpeedNoWeapon, 1.0f, 5.0f);
         }
         /* ... except jyunkai's notice, the tail of A's call after the mode switch the first step made (jyunkai_notice),
          * with the tick30 step's sensing as on any tick30 step */

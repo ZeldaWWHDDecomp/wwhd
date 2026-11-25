@@ -1898,7 +1898,7 @@ static s32 dr_damage_set(u32 address) {
                 dr->mpEnemy->speed.x = temp4.x;
                 dr->mpEnemy->speed.z = temp4.z;
             }
-            t60drb::note(&dr->mBounceCount, gabi::ea(dr), dr->mpEnemy.get()); /* true60: the frame's ground reaction */
+            t60drb::note(&dr->mBounceCount, gabi::ea(dr), dr->mpEnemy.get(), true); /* true60: the frame's ground reaction */
         } else {
             t60drb::entry(gabi::ea(dr), dr->mpEnemy.get()); /* true60: the speed before the stop */
             if (dr->mKnockbackSpeed != 0) {
@@ -1932,7 +1932,7 @@ static s32 dr_damage_set(u32 address) {
                 dr->mJnt2AddZ = 0;
                 dr->mJnt3AddZ = 0;
             }
-            t60drb::note(&dr->mBounceCount, gabi::ea(dr), dr->mpEnemy.get()); /* true60: the frame's ground reaction */
+            t60drb::note(&dr->mBounceCount, gabi::ea(dr), dr->mpEnemy.get(), false); /* true60: the frame's ground reaction */
         }
     }
 
