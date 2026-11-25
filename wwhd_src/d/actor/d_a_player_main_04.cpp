@@ -3051,7 +3051,9 @@ void daPy_lk_c::setNeckAngle() {
         r29 = 0;
     }
     const float lkNeckDt = lkT60_neckDmgOpen(); /* true60: procDamage rewrote x / y */
-    cLib_addCalcAngleS(&mNeckAngle.x, r4, 3, 0x1000, 0x100);
+    const bool lkNeckHold = lkT60_neckDmgHold(); /* true60: the frame's full step taken already */
+    if (!lkNeckHold)
+        cLib_addCalcAngleS(&mNeckAngle.x, r4, 3, 0x1000, 0x100);
     /* true60 (c_lib run converted in N-step spec): the look-cone clamp below writes the neck yaw after its chase; on a
      * converted frame's earlier step that write made the chase's frame entry (c_lib.cpp) start again from the
      * clamped value on the next step, as a partial frame (the tick30 step then no longer lands on the original's one
@@ -3061,7 +3063,8 @@ void daPy_lk_c::setNeckAngle() {
     if (lkRef && g_lkT60NeckRef.clampTag == g_lkT60NeckRef.tag && (s16)mNeckAngle.y == g_lkT60NeckRef.clampY) {
         mNeckAngle.y = g_lkT60NeckRef.easeY;
     }
-    cLib_addCalcAngleS(&mNeckAngle.y, r23, 3, 0x1000, 0x100);
+    if (!lkNeckHold)
+        cLib_addCalcAngleS(&mNeckAngle.y, r23, 3, 0x1000, 0x100);
     lkT60_neckDmgClose(lkNeckDt);
     const s16 lkEaseY = mNeckAngle.y;
     if (mModeFlg & LinkPoseConstants::ModeFlg_00000080) {

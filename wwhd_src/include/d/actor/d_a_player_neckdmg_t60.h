@@ -41,12 +41,26 @@ static inline void lkT60_neckDmgMark() {
 static inline bool lkT60_neckDmgLive() {
     return t60::dt() != 1.0f && !lkT60_neckDmgNc() && g_lkT60NeckDmgStep == t60_step_counter();
 }
+/* the step of the frame's last full-step neck ease (lkT60_neckDmgOpen at dt 1; host only) */
+inline uint32_t g_lkT60NeckFullStep = 0;
+inline bool g_lkT60NeckFullValid = false; /* (a full step taken since the start) */
 /* before the neck's x / y eases: the step's dt to put back (1.0f: unchanged); dt 1 only on a step whose procDamage
  * rewrote the neck (a value carried from the step before keeps the frame split) */
 static inline float lkT60_neckDmgOpen() {
     if (t60::dt() == 1.0f || lkT60_neckDmgNc() || g_lkT60NeckDmgStep != t60_step_counter())
         return 1.0f;
+    g_lkT60NeckFullStep = t60_step_counter();
+    g_lkT60NeckFullValid = true;
     return t60_set_dt(1.0f);
+}
+/* a later step of a frame whose earlier step already took the neck's full step (the damage reaction ended on that
+ * step: mo N 2 frame 214, the step after it eased again from a new entry, y 584 ahead): the x / y eases hold, as the
+ * original eases once in that frame; any other step (and dt 1): false */
+static inline bool lkT60_neckDmgHold() {
+    if (t60::dt() == 1.0f || lkT60_neckDmgNc() || !g_lkT60NeckFullValid || t60::first_step() ||
+        g_lkT60NeckDmgStep == t60_step_counter())
+        return false;
+    return t60_step_counter() - g_lkT60NeckFullStep < (uint32_t)t60::steps();
 }
 static inline void lkT60_neckDmgClose(float prev) {
     if (prev != 1.0f)
