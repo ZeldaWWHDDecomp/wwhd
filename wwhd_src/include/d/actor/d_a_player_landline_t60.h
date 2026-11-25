@@ -56,6 +56,7 @@ struct Rec {
     bool bgNote;
     bool snapped;     /* an earlier step's autoGroundHit snapped Link down onto ground */
     bool wallSegOn;   /* this tick30 check has the wall segment */
+    bool water;       /* the frame started in / on water (the first check's acf WATER_HIT | WATER_IN) */
     f32 wsv;          /* the step's own speed.y, put back after the check when it kept A's */
     bool snapOn;      /* this step's check has the segment (a non-tick30 step keeps the record) */
     bool airSeg;      /* this tick30 check has the landing frame's segment (air + landed) */
@@ -219,6 +220,7 @@ static inline bool begin(uint32_t acf, cXyz& oldPos, cXyz& pos, uint32_t tag) {
         g_lkT60WallSeg = false;
         g_lkT60WallSegAll = false;
         r.air = !(acf & (uint32_t)dBgS_Acch::GROUND_HIT);
+        r.water = (acf & ((uint32_t)dBgS_Acch::WATER_HIT | (uint32_t)dBgS_Acch::WATER_IN)) != 0;
         /* the frame-start segment start and whether the body set the position */
         ld3(r.o0, oldPos);
         r.set = !negctrlSet() && (r.o0[0] != r.p0[0] || r.o0[1] != r.p0[1] || r.o0[2] != r.p0[2]);
@@ -243,7 +245,9 @@ static inline bool begin(uint32_t acf, cXyz& oldPos, cXyz& pos, uint32_t tag) {
     }
     if (!t60::tick30())
         return false;
-    const bool lkSegAll = g_lkT60WallSegAll && !r.air; /* (widened) a grounded frame without a push */
+    /* (widened) a grounded frame without a push; not in / on water: there the frame's y does not follow
+     * the gravity fall r.sy (oq frame 246, Link rising out of the water at +6 / frame: A 277.2, the form's 274.2) */
+    const bool lkSegAll = g_lkT60WallSegAll && !r.air && !r.water;
     g_lkT60WallSegAll = false;
     if (g_lkT60WallSeg || lkSegAll) {
         /* (speed-ramp position-gap (3) K=0 probe) the wall frame: the tick30 place is A's (frame start + A's move); the check gets A's
@@ -252,8 +256,8 @@ static inline bool begin(uint32_t acf, cXyz& oldPos, cXyz& pos, uint32_t tag) {
         if (!(r.air && r.landed)) {
             ld3(r.old, oldPos);
             st3(oldPos, r.p0);
-            r.wallSegOn = true;
-            if (!wallSegYOff()) {
+            r.wallSegOn = !r.water; /* (the y / speed.y part: A's gravity fall; not in / on water) */
+            if (!wallSegYOff() && !r.water) {
                 /* A's height too: the frame start + A's frame fall (on the ground the earlier
                  * step's check snapped y back, so the step's own add stood 0.94 above A's 547.5: the wall circles met
                  * the wall at another height) */
