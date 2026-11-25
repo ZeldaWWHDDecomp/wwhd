@@ -13,6 +13,7 @@
 #include "true60.h"
 #include "d/actor/d_a_player_t60.h"
 #include "d/actor/d_a_player_grabwear_t60.h"
+#include "d/actor/d_a_player_upperplay_t60.h" /* true60: an upper control left mid-frame keeps the frame's play */
 #include "d/actor/d_a_player_seinit_t60.h"
 #include "d/actor/d_a_player_maba_t60.h"
 #include "d/actor/d_a_player_bghit_t60.h"
@@ -1029,24 +1030,39 @@ void daPy_lk_c::animeUpdate() {
             const f32 put = lkT60_rateHoldBegin(&mFrameCtrlUnder[1], 1); /* true60: the frame-start rate (d_a_player_t60.h) */
             Player01_updateFrameCtrl(&mFrameCtrlUnder[1]);
             lkT60_rateHoldEnd(&mFrameCtrlUnder[1], 1, put);
+            lkT60_upperPlayed(3); /* true60: the frame's play noted (d_a_player_upperplay_t60.h) */
         }
         fcpy_l(underPack1, gabi::ea(&mFrameCtrlUnder[1].mFrame));
+    } else if (lkT60_upperContinue(3, lkT60_anmSetPending(gabi::ea(&mFrameCtrlUnder[1])))) { /* true60: no longer driven mid-frame: the frame's play */
+        const f32 put = lkT60_rateHoldBegin(&mFrameCtrlUnder[1], 1);
+        Player01_updateFrameCtrl(&mFrameCtrlUnder[1]);
+        lkT60_rateHoldEnd(&mFrameCtrlUnder[1], 1, put);
     }
     if (upperPack0 != 0 && upperPack0 != underPack0) {
         if (!lkT60_anmSetPending(gabi::ea(&mFrameCtrlUpper[0]))) {
             const f32 put = lkT60_rateHoldBegin(&mFrameCtrlUpper[0], 2); /* true60: the frame-start rate (d_a_player_t60.h) */
             Player01_updateFrameCtrl(&mFrameCtrlUpper[0]);
             lkT60_rateHoldEnd(&mFrameCtrlUpper[0], 2, put);
+            lkT60_upperPlayed(0); /* true60: the frame's play noted (d_a_player_upperplay_t60.h) */
         }
         fcpy_l(upperPack0, gabi::ea(&mFrameCtrlUpper[0].mFrame));
+    } else if (lkT60_upperContinue(0, lkT60_anmSetPending(gabi::ea(&mFrameCtrlUpper[0])))) { /* true60: no longer driven mid-frame: the frame's play */
+        const f32 put = lkT60_rateHoldBegin(&mFrameCtrlUpper[0], 2);
+        Player01_updateFrameCtrl(&mFrameCtrlUpper[0]);
+        lkT60_rateHoldEnd(&mFrameCtrlUpper[0], 2, put);
     }
     if (upperPack1 != 0 && upperPack1 != underPack1) {
         if (!lkT60_anmSetPending(gabi::ea(&mFrameCtrlUpper[1]))) {
             const f32 put = lkT60_rateHoldBegin(&mFrameCtrlUpper[1], 3); /* true60: the frame-start rate (d_a_player_t60.h) */
             Player01_updateFrameCtrl(&mFrameCtrlUpper[1]);
             lkT60_rateHoldEnd(&mFrameCtrlUpper[1], 3, put);
+            lkT60_upperPlayed(1); /* true60: the frame's play noted (d_a_player_upperplay_t60.h) */
         }
         fcpy_l(upperPack1, gabi::ea(&mFrameCtrlUpper[1].mFrame));
+    } else if (lkT60_upperContinue(1, lkT60_anmSetPending(gabi::ea(&mFrameCtrlUpper[1])))) { /* true60: no longer driven mid-frame: the frame's play */
+        const f32 put = lkT60_rateHoldBegin(&mFrameCtrlUpper[1], 3);
+        Player01_updateFrameCtrl(&mFrameCtrlUpper[1]);
+        lkT60_rateHoldEnd(&mFrameCtrlUpper[1], 3, put);
     }
     u32 upperPack2 = reinterpret_cast<Player01AnmRatioPack *>(mAnmRatioUpper)[2].mpAnmTransform.v;
     if (upperPack2 != 0) {
@@ -1054,8 +1070,13 @@ void daPy_lk_c::animeUpdate() {
             const f32 put = lkT60_rateHoldBegin(&mFrameCtrlUpper[2], 4); /* true60: the frame-start rate (d_a_player_t60.h) */
             Player01_updateFrameCtrl(&mFrameCtrlUpper[2]);
             lkT60_rateHoldEnd(&mFrameCtrlUpper[2], 4, put);
+            lkT60_upperPlayed(2); /* true60: the frame's play noted (d_a_player_upperplay_t60.h) */
         }
         fcpy_l(upperPack2, gabi::ea(&mFrameCtrlUpper[2].mFrame));
+    } else if (lkT60_upperContinue(2, lkT60_anmSetPending(gabi::ea(&mFrameCtrlUpper[2])))) { /* true60: no longer driven mid-frame: the frame's play */
+        const f32 put = lkT60_rateHoldBegin(&mFrameCtrlUpper[2], 4);
+        Player01_updateFrameCtrl(&mFrameCtrlUpper[2]);
+        lkT60_rateHoldEnd(&mFrameCtrlUpper[2], 4, put);
     }
     u32 morf =
         reinterpret_cast<PlayerModelState *>(mD90)->mpParachuteFanMorf.v; /* mpParachuteFanMorf */
