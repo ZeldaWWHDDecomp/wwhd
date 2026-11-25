@@ -14,6 +14,7 @@
 #include "d/actor/d_a_player_hammerhit_t60.h" /* */
 #include "d/actor/d_a_player_aimboost_t60.h" /*-FRAME */
 #include "d/actor/d_a_player_grabthrow_t60.h" /* true60: procGrabThrow's frame threshold */
+#include "d/actor/d_a_player_ropeblend_t60.h" /* true60 (part 2) */
 #include "sead/ElementAt.h"
 #include "gc_api/tu.h"
 #include "gc_api/d/d_com_inf_game.h"
@@ -6306,7 +6307,13 @@ BOOL daPy_lk_c::checkRopeSwingTurn(cXyz* foot, f32 swingX, f32 swingZ) {
         f32 s = cM_fsin_l(swingX - 0.62831855f);
         target = (s16)gabi::ftoi((f32)(-(s32)mProcVar2) * s);
     }
-    cLib_addCalcAngleS(&shape_angle.x, target, 8, 0xC00, 0x100);
+    if (lkT60RopeBlend::simOnCopy()) { /* true60 (part 2, d_a_player_ropeblend_t60.h) */
+        gabi::Local<be<s16>> lkSimX;
+        *lkSimX = (s16)shape_angle.x;
+        cLib_addCalcAngleS(lkSimX.get(), target, 8, 0xC00, 0x100);
+    } else {
+        cLib_addCalcAngleS(&shape_angle.x, target, 8, 0xC00, 0x100);
+    }
     gabi::Local<cXyz> down; /* sp+0x1C */
     down->x = 0.0f;
     down->y = -m35A0;

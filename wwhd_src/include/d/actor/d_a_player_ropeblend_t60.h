@@ -28,4 +28,15 @@ static inline void close(float prev) {
     if (prev != 0.0f)
         t60_set_dt(prev);
 }
+/* part 2: daPy_lk_c::checkRopeSwingTurn (HD, ROPE_SWING's turn test) simulates the swing: it eases
+ * shape_angle.x with cLib_addCalcAngleS, then puts the angle back. The simulated angle is not read. At N steps the eased
+ * address' frame entry (c_lib.cpp T60IntEntry, keyed by the address) saw the restore as a foreign write: the real ease
+ * after it restarted the frame as partial, so the tick30 step did not get the frame's whole step (rp N 2 on intgc8 +
+ * part 1, from 3688: shape_angle.x A 7424 / B 7491, then up to 509 apart; Link's swing pose with it). Form: at N > 1 the
+ * simulated ease runs on a copy, so the real ease's entry sees no foreign write. NC: WWHD_T60_ROPESIM_NEGCTRL=1. */
+static const bool s_simNc = [] {
+    const char* e = getenv("WWHD_T60_ROPESIM_NEGCTRL");
+    return e != nullptr && atoi(e) != 0;
+}();
+static inline bool simOnCopy() { return t60::dt() != 1.0f && !s_simNc; }
 } // namespace lkT60RopeBlend
