@@ -1164,9 +1164,9 @@ BOOL daPy_lk_c::procLadderUpStart() {
                 procFall_init(1, 6.0f);
             } else {
                 { /* true60 (d_a_player_ladder_t60.h): a first-step entry eases the whole frame */
-                    const LkT60LadderEase lkT60Le = lkT60_ladderEaseNote(this);
+                    lkT60_ladderEaseNote(this);
                     changeLadderMoveProc(1);
-                    lkT60_ladderEaseRedo(this, lkT60Le);
+                    lkT60_ladderEaseRedo(this);
                 }
             }
         } else if (lkT60_pass(&frameCtrl, 9.0f)) {
@@ -1210,9 +1210,9 @@ BOOL daPy_lk_c::procLadderDownStart() {
                 procFall_init(1, 6.0f);
             } else {
                 { /* true60 (d_a_player_ladder_t60.h): a first-step entry eases the whole frame */
-                    const LkT60LadderEase lkT60Le = lkT60_ladderEaseNote(this);
+                    lkT60_ladderEaseNote(this);
                     changeLadderMoveProc(1);
-                    lkT60_ladderEaseRedo(this, lkT60Le);
+                    lkT60_ladderEaseRedo(this);
                 }
             }
         } else if (lkT60_pass(&frameCtrl, 26.0f) || lkT60_pass(&frameCtrl, 36.0f) || lkT60_pass(&frameCtrl, 43.0f)) {
@@ -1260,9 +1260,9 @@ BOOL daPy_lk_c::procLadderMove() {
                 }
             } else {
                 { /* true60 (d_a_player_ladder_t60.h): a first-step entry eases the whole frame */
-                    const LkT60LadderEase lkT60Le = lkT60_ladderEaseNote(this);
+                    lkT60_ladderEaseNote(this);
                     changeLadderMoveProc(mProcVar6);
-                    lkT60_ladderEaseRedo(this, lkT60Le);
+                    lkT60_ladderEaseRedo(this);
                 }
             }
         } else {

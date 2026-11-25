@@ -28,17 +28,22 @@ struct LkT60LadderEase {
     f32 p[3], t[3];
     bool on;
 };
-template <class L> static inline LkT60LadderEase lkT60_ladderEaseNote(const L* lk) {
-    LkT60LadderEase e{};
+/* the note of the call in flight (one call at a time; no local object in the glued unit: gabi_construct) */
+inline LkT60LadderEase g_lkT60LadderEase;
+template <class L> static inline void lkT60_ladderEaseNote(const L* lk) {
+    LkT60LadderEase& e = g_lkT60LadderEase;
+    e.on = false;
     if (!lkT60_procStep() || lkT60_ladderEaseNegctrl())
-        return e;
+        return;
     e.p[0] = lk->current.pos.x, e.p[1] = lk->current.pos.y, e.p[2] = lk->current.pos.z;
     e.t[0] = lk->m370C.x, e.t[1] = lk->m370C.y, e.t[2] = lk->m370C.z;
     e.on = true;
-    return e;
 }
-template <class L> static inline void lkT60_ladderEaseRedo(L* lk, const LkT60LadderEase& e) {
-    if (!e.on || !lkT60_procEnteredThisFrame(gabi::ea(&lk->mCurProc)))
+template <class L> static inline void lkT60_ladderEaseRedo(L* lk) {
+    LkT60LadderEase& e = g_lkT60LadderEase;
+    const bool on = e.on;
+    e.on = false;
+    if (!on || !lkT60_procEnteredThisFrame(gabi::ea(&lk->mCurProc)))
         return;
     lk->current.pos.x = e.p[0], lk->current.pos.y = e.p[1], lk->current.pos.z = e.p[2];
     const f32 previousDt = t60_set_dt(1.0f);
