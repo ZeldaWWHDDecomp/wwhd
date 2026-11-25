@@ -41,6 +41,19 @@ static LkT60PosAdd s_lkT60PosAdd;
  * frame): the step's CrrPos then checks A's segment from the frame start (d_a_player_landline_t60.h, main_04; one
  * instance across the player units) */
 inline bool g_lkT60WallSeg = false;
+/* (widened: pig route frame 134) set on every speed-ramp position-gap (3) tick30 place without an
+ * earlier-step push; the check takes A's segment too when the frame started on the ground (landline begin()): there
+ * the step's own check input (old.pos = the earlier step's end, its own y / speed.y share) met the sloped wall
+ * differently from A's one check. NC WWHD_T60_WALLSEGALL_NEGCTRL=1 (the push frames only, as before). */
+inline bool g_lkT60WallSegAll = false;
+static inline bool lkT60_wallSegAllOff() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_WALLSEGALL_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return true;
+#endif
+}
 /* the xz moves of this frame's earlier steps' BG checks (mAcch.CrrPos: wall pushes), noted around the call in main_04
  * (d_a_player_landline_t60.h); reset on the frame's first step */
 inline double g_lkT60BgK[2] = {0.0, 0.0};
@@ -201,6 +214,8 @@ static inline void lkT60_posAdd(const f32 p[3], const double v[3], const double 
     }
     if (m6c3 && !lkT60_move6c3K() && (g_lkT60BgK[0] != 0.0 || g_lkT60BgK[1] != 0.0))
         g_lkT60WallSeg = true;
+    else if (m6c3 && !lkT60_move6c3K() && !lkT60_wallSegAllOff())
+        g_lkT60WallSegAll = true; /* (widened) */
     if (m6c3 && lkT60_move6c3Log() && (dl[0] != 0.0 || dl[2] != 0.0))
         fprintf(stderr, "[t60] lkmove6c3 %u %.6f %.6f\n", t60_step_counter(), dl[0], dl[2]);
 }

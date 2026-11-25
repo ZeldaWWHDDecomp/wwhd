@@ -217,6 +217,7 @@ static inline bool begin(uint32_t acf, cXyz& oldPos, cXyz& pos, uint32_t tag) {
     }
     if (t60::first_step()) {
         g_lkT60WallSeg = false;
+        g_lkT60WallSegAll = false;
         r.air = !(acf & (uint32_t)dBgS_Acch::GROUND_HIT);
         /* the frame-start segment start and whether the body set the position */
         ld3(r.o0, oldPos);
@@ -242,7 +243,9 @@ static inline bool begin(uint32_t acf, cXyz& oldPos, cXyz& pos, uint32_t tag) {
     }
     if (!t60::tick30())
         return false;
-    if (g_lkT60WallSeg) {
+    const bool lkSegAll = g_lkT60WallSegAll && !r.air; /* (widened) a grounded frame without a push */
+    g_lkT60WallSegAll = false;
+    if (g_lkT60WallSeg || lkSegAll) {
         /* (speed-ramp position-gap (3) K=0 probe) the wall frame: the tick30 place is A's (frame start + A's move); the check gets A's
          * segment start, old.pos = the frame-start position */
         g_lkT60WallSeg = false;
