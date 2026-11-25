@@ -12,6 +12,7 @@
 #include "c/c_damagereaction_bounce_t60.h" /* true60: the frame's bounce, for the shape copy */
 #include <unordered_map>
 #include "d/actor/d_a_bk_react5_t60.h" /* */
+#include "d/actor/d_a_bk_tilt_t60.h" /* */
 
 /* true60 (the first-step AI-timer rule): the AI timers (mTimers, mSideStepTimer, mSideStepWait, mWeaponRunTimer,
  * mWeaponViewWait, dr.mHitStunTimer) and the phase counter mFrameCounter count on the frame's FIRST step, before its
@@ -1227,7 +1228,8 @@ BOOL daBk_Execute(bk_class* i_this) {
         }
     }
 
-    if (i_this->dr.mAcch.ChkGroundHit() || i_this->dr.mAction == 19) {
+    /* true60 (d_a_bk_tilt_t60.h): the ground tilt once per frame, on the tick30 step */
+    if ((i_this->dr.mAcch.ChkGroundHit() || i_this->dr.mAction == 19) && !t60bktilt::skip()) {
         gabi::Local<bkExecGroundCheck> gndChk;
         dBgS_GndChk_ct(gndChk);
         s16 r21 = 0x7FFF;
@@ -1270,10 +1272,12 @@ BOOL daBk_Execute(bk_class* i_this) {
             r21 = 0;
         }
         if (r21 != 0x7FFF) {
-            cLib_addCalcAngleS2(&i_this->dr.mSlopeTilt.x, r21, 1, 0x400);
+            if (!t60bktilt::ease(&i_this->dr.mSlopeTilt.x, r21, 1, 0x400))
+                cLib_addCalcAngleS2(&i_this->dr.mSlopeTilt.x, r21, 1, 0x400);
         }
         if (r23 != 0x7FFF) {
-            cLib_addCalcAngleS2(&i_this->dr.mSlopeTilt.z, r23, 1, 0x400);
+            if (!t60bktilt::ease(&i_this->dr.mSlopeTilt.z, r23, 1, 0x400))
+                cLib_addCalcAngleS2(&i_this->dr.mSlopeTilt.z, r23, 1, 0x400);
         }
         dBgS_GndChk_dt(gndChk);
     }
