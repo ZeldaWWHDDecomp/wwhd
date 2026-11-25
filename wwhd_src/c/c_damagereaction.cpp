@@ -6,6 +6,7 @@
 #include "c/c_damagereaction_carrier_t60.h" /* rider rule: hold on a 30 Hz carrier */
 #include "c/c_damagereaction_bounce_t60.h" /* the landing bounce once per frame */
 #include "c/c_damagereaction_fall_t60.h" /* the tick30 fall from the frame start height */
+#include "d/actor/d_a_bk_kdturn_t60.h" /* a Bokoblin knock-down on an earlier step: the frame's turn */
 #include <unordered_map>
 using gabi::load;
 using gabi::store;
@@ -1509,6 +1510,8 @@ static s32 dr_damage_set(u32 address) {
         if (temp || (dr->mHitFlags != 0 && dr->mKnockbackPower > 25.0f)) {
             dr->mMode = -100;
             dr->mKnockedDown = 1;
+            if (dr->mEnemyType == damagereaction::TYPE_BOKOBLIN) /* true60: A's one call's turn */
+                bk_t60_kdturn_catch_up(&dr->mpEnemy->current.angle.y, &dr->mpEnemy->shape_angle.y, dr->mTurnTargetY);
             dr->mPlayerInView = 0;
             dr->mPivot.y = -125.0f;
             dr->mFallPitchTarget = 0x4000;

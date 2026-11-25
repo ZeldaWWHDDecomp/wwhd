@@ -825,6 +825,7 @@ static inline void fight_attack(bk_class* i_this, fopAc_ac_c* player) {
         i_this->dr.mTurnTargetY = i_this->mTargetAngleY;
     }
 
+    bk_t60_kdturn_note(&i_this->current.angle.y, i_this->current.angle.y); /* true60 */
     cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->dr.mTurnTargetY, 4, 0x800);
 
     u8 attackType = 0;

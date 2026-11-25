@@ -28,6 +28,7 @@
 #pragma once
 #include "true60.h"
 #include "d/actor/d_a_enemy_anm_t60.h"
+#include "d/actor/d_a_bk_kdturn_t60.h" /* the knock-down's turn catch-up */
 #include <unordered_map>
 #include <cstdlib>
 
