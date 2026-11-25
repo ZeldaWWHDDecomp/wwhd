@@ -1030,3 +1030,36 @@ template <class V> static inline void ship60_ropeJitStep(const void* owner, f32 
     pos->y = waterY;
     pos->z = ropeZ + j.dz;
 }
+
+/* (2026-11-25; long3 seg 5 at N 2, the ship at full sail): procSteerMove
+ * reads the game's Swift Sail flag (play+0x5D2C, written by unconverted code) each call; its 0 -> 1 starts the Swift
+ * Sail (mSwiftSailActive, justRaised) and the frame's speed block sets speedF to 1.2 x the wind speed (A 50.65 ->
+ * 101.28). In A the flag's writer ran after the ship's call of frame f - 1, so the ship started it on frame f. At N steps
+ * the writer ran between the ship's steps, the ship saw the flag on frame f - 1's tick30 step, whose speed block is held
+ * (ship60_speedPath): no set, the ship ramped up slowly (Link 51.7 off at 3870, 186 by 3873). Form: the flag as the
+ * frame's first call saw it (noted there, read on the later steps), so the start comes on the next frame's first step, as
+ * A. NC WWHD_T60_SHIPSWIFTSET_NEGCTRL=1. dt 1: the live flag. */
+static inline bool ship60_swiftSetNc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_SHIPSWIFTSET_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return true;
+#endif
+}
+inline u32 g_ship60SwiftStamp = 0;
+inline u8 g_ship60SwiftFlag = 0;
+inline bool g_ship60SwiftValid = false;
+static inline u8 ship60_swiftFlag(u8 live) {
+    if (t60::dt() == 1.0f || ship60_swiftSetNc())
+        return live;
+    if (t60::first_step()) {
+        g_ship60SwiftStamp = t60_step_counter();
+        g_ship60SwiftFlag = live;
+        g_ship60SwiftValid = true;
+        return live;
+    }
+    if (g_ship60SwiftValid && t60_step_counter() - g_ship60SwiftStamp < (u32)t60::steps())
+        return g_ship60SwiftFlag;
+    return live;
+}

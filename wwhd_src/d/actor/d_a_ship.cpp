@@ -3083,7 +3083,8 @@ BOOL daShip_c::procSteerMove() {
         cXyz* windVec;
         f32 windPower;
         /* HD: the Swift Sail (play+0x5D2C): the wind always follows the boat, top speed 100 */
-        if (shipTail::swiftSailEnabled(dComIfGp_ea()) != 0) {
+        /* true60 (d_a_ship_t60.h): the flag as the frame's first step saw it */
+        if (ship60_swiftFlag(shipTail::swiftSailEnabled(dComIfGp_ea())) != 0) {
             dKyw_tact_wind_set(0, (s16)((0x5000 - shape_angle.y) & ~0x1FFF));
             if (mSwiftSailActive == 0) {
                 mSwiftSailActive = 1;
