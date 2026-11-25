@@ -8,8 +8,8 @@
  * someone else, a partial frame), so each step moved only its 1/N share: mo N 4, neck yaw B 1024 for A 4096 (0x1000,
  * the step's limit / 4) through the damage frames, x thousands off. The value does not carry from step to step there
  * (rewritten before the ease), so each step takes the original's full step from its own reset value: the two eases
- * run at dt 1 while the procedure is DAMAGE; the tick30 step then lands on A's frame value. dt 1 / other procedures:
- * nothing (mCurProc is read only on a general step length). NC WWHD_T60_NECKDMG_NEGCTRL=1. Host state only. */
+ * run at dt 1 on a step whose procDamage rewrote them (lkT60_neckDmgMark); the tick30 step then lands on A's frame
+ * value. dt 1 / any other step: nothing (host state only, no guest read). NC WWHD_T60_NECKDMG_NEGCTRL=1. Host state only. */
 #pragma once
 #include "true60.h"
 #include <cstdint>
@@ -26,9 +26,18 @@ static inline bool lkT60_neckDmgNc() {
     return false;
 #endif
 }
-/* before the neck's x / y eases: the step's dt to put back (1.0f: unchanged) */
-template <class P> static inline float lkT60_neckDmgOpen(const P* curProc) {
-    if (t60::dt() == 1.0f || lkT60_neckDmgNc() || (int32_t)*curProc != 0x66 /* daPyProc_DAMAGE_e */)
+/* the step on which procDamage last rewrote the neck (t60_step_counter; one copy for the unit's sources: C++17 inline
+ * variable, host only; 0: none) */
+inline uint32_t g_lkT60NeckDmgStep = 0;
+/* procDamage, after its writes of mNeckAngle */
+static inline void lkT60_neckDmgMark() {
+    if (t60::dt() != 1.0f)
+        g_lkT60NeckDmgStep = t60_step_counter();
+}
+/* before the neck's x / y eases: the step's dt to put back (1.0f: unchanged); dt 1 only on a step whose procDamage
+ * rewrote the neck (a value carried from the step before keeps the frame split) */
+static inline float lkT60_neckDmgOpen() {
+    if (t60::dt() == 1.0f || lkT60_neckDmgNc() || g_lkT60NeckDmgStep != t60_step_counter())
         return 1.0f;
     return t60_set_dt(1.0f);
 }

@@ -14,6 +14,7 @@
 #include "d/actor/d_a_player_anm_t60.h"
 #include "true60.h"
 #include "d/actor/d_a_player_t60.h"
+#include "d/actor/d_a_player_neckdmg_t60.h" /* true60 */
 #include "d/actor/d_a_player_swimrise_t60.h"
 #include "d/actor/d_a_player_crawl_t60.h"
 #include "d/actor/d_a_player_lavarestart_t60.h" /* true60: the lava restart test */
@@ -1704,6 +1705,7 @@ BOOL daPy_lk_c::procDamage() {
     mNeckAngle.y = 0;
     mBodyAngle.x = bx;
     mNeckAngle.z = az;
+    lkT60_neckDmgMark(); /* true60: setNeckAngle eases these at the full step */
     mBodyAngle.z = bz;
     mBodyAngle.y = 0;
     // HD: HIO folded

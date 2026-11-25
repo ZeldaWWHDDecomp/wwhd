@@ -3050,7 +3050,7 @@ void daPy_lk_c::setNeckAngle() {
         r23 = 0;
         r29 = 0;
     }
-    const float lkNeckDt = lkT60_neckDmgOpen(&mCurProc); /* true60: procDamage rewrote x / y */
+    const float lkNeckDt = lkT60_neckDmgOpen(); /* true60: procDamage rewrote x / y */
     cLib_addCalcAngleS(&mNeckAngle.x, r4, 3, 0x1000, 0x100);
     /* true60 (c_lib run converted in N-step spec): the look-cone clamp below writes the neck yaw after its chase; on a
      * converted frame's earlier step that write made the chase's frame entry (c_lib.cpp) start again from the
