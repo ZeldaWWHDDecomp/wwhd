@@ -1517,6 +1517,8 @@ static s32 dr_damage_set(u32 address) {
             dr->mKnockedDown = 1;
             if (dr->mEnemyType == damagereaction::TYPE_BOKOBLIN) /* true60: A's one call's turn */
                 bk_t60_kdturn_catch_up(&dr->mpEnemy->current.angle.y, &dr->mpEnemy->shape_angle.y, dr->mTurnTargetY);
+            if (dr->mEnemyType == damagereaction::TYPE_BOKOBLIN) /* true60: noted for the tick30 step */
+                bk_t60_kdhold_note(dr);
             dr->mPlayerInView = 0;
             dr->mPivot.y = -125.0f;
             dr->mFallPitchTarget = 0x4000;
@@ -1588,6 +1590,9 @@ static s32 dr_damage_set(u32 address) {
 
         break;
     case 1: {
+        /* true60 (d_a_bk_kdturn_t60.h): the knock-down's own frame makes no knocked-down step */
+        if (dr->mEnemyType == damagereaction::TYPE_BOKOBLIN && bk_t60_kdhold_skip(dr))
+            break;
         s16 temp5;
         if (dr->mFallPitchTarget > 0) {
             temp5 = 0x350;

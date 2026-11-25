@@ -53,3 +53,32 @@ static inline void bk_t60_kdturn_catch_up(be<s16>* angleY, be<s16>* shapeY, s16 
     t60_set_dt(previous);
     *shapeY = (s16)*angleY;
 }
+
+/* addendum (2026-11-25, bkL frame 165, holder 47C5CE68, its stick
+ * 47C58678): A's call that knocks the Bokoblin down (dr_damage_set, mKnockedDown 0 -> 1) makes no knocked-down step in
+ * that call (case 1: the fall pitch ease toward mFallPitchTarget, the bounce / down checks) - they start next frame. A
+ * knock-down on an earlier step left the tick30 step's dr_damage_set in case 1: one ease step (mFallPitch 424, A 0) that
+ * dr_matrix_set put into the body, the BUKI hand and the stick thrown from it (yaw 35 off). Form: the knock-down on an
+ * earlier step is noted (frame tag, keyed by the dr's address); that frame's tick30 call skips case 1. dt 1: nothing.
+ * Negative control WWHD_T60_BKKDHOLD_NEGCTRL=1. */
+static inline bool bk_t60_kdhold_nc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_BKKDHOLD_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
+#else
+    return true;
+#endif
+}
+static inline u32 bk_t60_kdhold_key(const void* dr) { return gabi::ea(dr) ^ 0xC9000000u; }
+/* the knock-down set (case 0): noted on an earlier step */
+static inline void bk_t60_kdhold_note(const void* dr) {
+    if (t60::dt() == 1.0f || t60::tick30() || bk_t60_kdhold_nc())
+        return;
+    wwhd_t60_latch_set(bk_t60_kdhold_key(dr), bk_t60_kdturn_tag());
+}
+/* case 1 on the tick30 step of the frame whose earlier step knocked it down: skip (A's call made no knocked-down step) */
+static inline bool bk_t60_kdhold_skip(const void* dr) {
+    if (t60::dt() == 1.0f || !t60::tick30() || bk_t60_kdhold_nc())
+        return false;
+    return wwhd_t60_latch_pending(bk_t60_kdhold_key(dr), bk_t60_kdturn_tag()) != 0;
+}
