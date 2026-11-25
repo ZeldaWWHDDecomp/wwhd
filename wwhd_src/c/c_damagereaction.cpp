@@ -1711,13 +1711,6 @@ static s32 dr_damage_set(u32 address) {
                     dr->mpEnemy->current.pos.z = gabi::fadds_ppc(positionZ, moveZ);
                 }
             }
-            if (t60Pos != nullptr) { /* true60: the tick30 step writes A's x / z; every step notes its write */
-                f32 px = dr->mpEnemy->current.pos.x, pz = dr->mpEnemy->current.pos.z;
-                t60drPos::end(t60Pos, gabi::ea(dr), (f32)dr->mpEnemy->speed.x, (f32)dr->mpEnemy->speed.z, t60PosPush,
-                              t60PosHeld[0], t60PosHeld[2], px, pz);
-                dr->mpEnemy->current.pos.x = px;
-                dr->mpEnemy->current.pos.z = pz;
-            }
 
             if (dr->mInvincibleTimer == 0) {
                 if (dt != 1.0f)
@@ -1747,6 +1740,14 @@ static s32 dr_damage_set(u32 address) {
                     dr->mpEnemy->current.pos.x = gabi::fadds_ppc((f32)dr->mpEnemy->current.pos.x, (f32)temp3.x);
                     dr->mpEnemy->current.pos.z = gabi::fadds_ppc((f32)dr->mpEnemy->current.pos.z, (f32)temp3.z);
                 }
+            }
+            if (t60Pos != nullptr) { /* true60: the tick30 step writes A's x / z; every step notes its write,
+                                * after the whole move (the pushback's exact-arc term included: picture only) */
+                f32 px = dr->mpEnemy->current.pos.x, pz = dr->mpEnemy->current.pos.z;
+                t60drPos::end(t60Pos, gabi::ea(dr), (f32)dr->mpEnemy->speed.x, (f32)dr->mpEnemy->speed.z, t60PosPush,
+                              t60PosHeld[0], t60PosHeld[2], px, pz);
+                dr->mpEnemy->current.pos.x = px;
+                dr->mpEnemy->current.pos.z = pz;
             }
         } else if (dr->mDownTimers[0] == 1 && dr->mFallPitchTarget == 0) {
             dr->mFallPitchTarget = -0x4000;
