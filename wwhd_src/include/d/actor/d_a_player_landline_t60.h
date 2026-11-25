@@ -33,6 +33,7 @@
 #pragma once
 #include "true60.h"
 #include "d/d_bg_s.h"
+#include "d/actor/d_a_player_posadd_t60.h"
 #include <cstdlib>
 #include <cstring>
 
@@ -51,6 +52,8 @@ struct Rec {
     f32 d1x, d1z;     /* the first step's posMove xz */
     bool set;         /* the first step's body moved Link by a set (p0 != o0) */
     bool setHold;     /* the tick30 step's body left him at p0 */
+    f32 pre[2];       /* xz before an earlier step's CrrPos */
+    bool bgNote;
 };
 static Rec s_rec;
 
@@ -124,7 +127,16 @@ static inline bool begin(uint32_t acf, cXyz& oldPos, cXyz& pos, uint32_t tag) {
     r.on = false;
     if (t60::dt() == 1.0f || negctrl() || !r.valid || r.tag != tag)
         return false;
+    r.bgNote = false;
+    if (!t60::tick30()) { /* an earlier step: its BG check's xz move is noted in end */
+        if (t60::first_step())
+            g_lkT60BgK[0] = g_lkT60BgK[1] = 0.0;
+        r.pre[0] = pos.x;
+        r.pre[1] = pos.z;
+        r.bgNote = true;
+    }
     if (t60::first_step()) {
+        g_lkT60WallSeg = false;
         r.air = !(acf & (uint32_t)dBgS_Acch::GROUND_HIT);
         /* the frame-start segment start and whether the body set the position */
         ld3(r.o0, oldPos);
@@ -138,6 +150,17 @@ static inline bool begin(uint32_t acf, cXyz& oldPos, cXyz& pos, uint32_t tag) {
     }
     if (!t60::tick30())
         return false;
+    if (g_lkT60WallSeg) {
+        /* (speed-ramp position-gap (3) K=0 probe) the wall frame: the tick30 place is A's (frame start + A's move); the check gets A's
+         * segment start, old.pos = the frame-start position */
+        g_lkT60WallSeg = false;
+        if (!(r.air && r.landed)) {
+            ld3(r.old, oldPos);
+            st3(oldPos, r.p0);
+            r.on = true;
+            return true;
+        }
+    }
     if (!(r.air && r.landed)) {
         if (!(r.set && r.setHold))
             return false;
@@ -160,9 +183,14 @@ static inline bool begin(uint32_t acf, cXyz& oldPos, cXyz& pos, uint32_t tag) {
     r.on = true;
     return true;
 }
-/* after mAcch.CrrPos */
-static inline void end(uint32_t flags, cXyz& oldPos) {
+/* after mAcch.CrrPos (pos: the checked position) */
+static inline void end(uint32_t flags, cXyz& oldPos, const cXyz& pos) {
     Rec& r = s_rec;
+    if (r.bgNote) {
+        g_lkT60BgK[0] += (double)pos.x - (double)r.pre[0];
+        g_lkT60BgK[1] += (double)pos.z - (double)r.pre[1];
+        r.bgNote = false;
+    }
     if (r.on) {
         st3(oldPos, r.old);
         r.on = false;

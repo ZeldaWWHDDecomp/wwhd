@@ -37,6 +37,13 @@ struct LkT60PosAdd {
     bool valid;
 };
 static LkT60PosAdd s_lkT60PosAdd;
+/* (speed-ramp position-gap (3) K=0 probe) set on a tick30 step whose place left out earlier-step xz corrections (a wall / ground push of this
+ * frame): the step's CrrPos then checks A's segment from the frame start (d_a_player_landline_t60.h, main_04; one
+ * instance across the player units) */
+inline bool g_lkT60WallSeg = false;
+/* the xz moves of this frame's earlier steps' BG checks (mAcch.CrrPos: wall pushes), noted around the call in main_04
+ * (d_a_player_landline_t60.h); reset on the frame's first step */
+inline double g_lkT60BgK[2] = {0.0, 0.0};
 
 /* dt 1 (the original's add, held / whole steps included): the shadows are dropped */
 static inline void lkT60_posAddReset() {
@@ -63,6 +70,18 @@ static inline bool lkT60_move6c3Off() {
     return true;
 #endif
 }
+/* The tick30 place leaves the earlier steps' BG-check xz moves (wall pushes) out: frame start + the other per-step
+ * corrections + A's one move; the tick30 step's own check corrects from A's input (pig route: the earlier step's wall
+ * push carried into the frame end seeded a speed / turn divergence). Other corrections between the adds (root motion,
+ * sets) stay. WWHD_T60_LKMOVE6C3_K=1 keeps the wall pushes too. */
+static inline bool lkT60_move6c3K() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_LKMOVE6C3_K"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return true;
+#endif
+}
 static inline bool lkT60_move6c3Log() {
 #if defined(GABI_GAME_BUILD) && GABI_T60
     static const bool v = [] { const char* e = getenv("WWHD_T60_LKMOVE6C3_LOG"); return e && e[0] == '1'; }();
@@ -84,6 +103,7 @@ static inline void lkT60_posAdd(const f32 p[3], const double v[3], const double 
         }
         s.stamp = t60_step_counter();
         s.valid = true;
+        g_lkT60BgK[0] = g_lkT60BgK[1] = 0.0;
     } else {
         for (int i = 0; i < 3; i++) {
             const double corr = (double)p[i] - (double)s.W[i]; /* the corrections since the last write (the per-step ground-check rule) */
@@ -95,7 +115,7 @@ static inline void lkT60_posAdd(const f32 p[3], const double v[3], const double 
     double dl[3] = {0.0, 0.0, 0.0};
     for (int i = 0; i < 3; i++) {
         if (m6c3 && i != 1) { /* (speed-ramp position-gap (3)) xz: the frame start + A's one move + the corrections */
-            const double s6 = s.P0[i] + s.K[i] + vf[i];
+            const double s6 = s.P0[i] + s.K[i] - (lkT60_move6c3K() ? 0.0 : g_lkT60BgK[i == 0 ? 0 : 1]) + vf[i];
             dl[i] = s6 - (s.S[i] + v[i]);
             s.S[i] = s6;
         } else {
@@ -104,6 +124,8 @@ static inline void lkT60_posAdd(const f32 p[3], const double v[3], const double 
         out[i] = (f32)(s.S[i] + s.C[i]);
         s.W[i] = out[i];
     }
+    if (m6c3 && !lkT60_move6c3K() && (g_lkT60BgK[0] != 0.0 || g_lkT60BgK[1] != 0.0))
+        g_lkT60WallSeg = true;
     if (m6c3 && lkT60_move6c3Log() && (dl[0] != 0.0 || dl[2] != 0.0))
         fprintf(stderr, "[t60] lkmove6c3 %u %.6f %.6f\n", t60_step_counter(), dl[0], dl[2]);
 }

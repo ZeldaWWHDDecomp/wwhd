@@ -4798,7 +4798,7 @@ BOOL daPy_lk_c::execute() {
     const bool lkT60Seg = lkT60Land::begin(acf, old.pos, current.pos, lkT60_frameTag()); /* true60 (d_a_player_landline_t60.h) */
     lkT60LandHist::note(acf, lkT60Seg, lkT60_frameTag()); /* true60 (d_a_player_landhist_t60.h) */
     mAcch.CrrPos(dComIfG_Bgsp());
-    lkT60Land::end(mAcch.m_flags, old.pos); /* true60: the step's old.pos back; a landing on an earlier step noted */
+    lkT60Land::end(mAcch.m_flags, old.pos, current.pos); /* true60: the step's old.pos back; a landing on an earlier step noted */
     setWaterY();
     autoGroundHit();
     {
