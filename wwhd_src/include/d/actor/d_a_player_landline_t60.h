@@ -116,6 +116,32 @@ static inline void frameStart(P* py, uint32_t tag, bool heavy /* checkHeavyState
     r.setHold = false;
 }
 
+/* (2026-11-24, oq route frame 107, AUTO_JUMP landing on the Kita platform): execute's
+ * moving-ground carry (dBgS::MoveBgCrrPos at the execute start when the last check's ground polygon is a moving BG;
+ * Kita's dBgS_MoveBGProc_Typical moves Link by the platform's last matrix change, the ground-hit argument unused). A's
+ * landing frame starts in the air: the frame-start ground polygon is the floor far below (no moving BG), no carry; the
+ * carry starts with the next frame. At N steps an earlier step's check of this frame already put the platform in
+ * mAcch.m_gnd, so the tick30 step carried Link with the platform's last move (x +0.023, z -0.002 at oq frame 107) one
+ * frame before A, an offset kept from then on. Form: on the tick30 step of the landing frame (the frame started in the
+ * air, an earlier step met the ground: LANDLINE's own record) the carry is skipped (A's frame-start view). Any other
+ * step / frame, dt 1: the original. Negative control WWHD_T60_LANDCARRY_NEGCTRL=1 (game build). Host memory, one
+ * player. */
+static inline bool negctrlCarry() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_LANDCARRY_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
+#else
+    return false;
+#endif
+}
+static inline bool carrySkip(uint32_t tag) {
+    const Rec& r = s_rec;
+    if (t60::dt() == 1.0f || negctrl() || negctrlCarry() || !r.valid || r.tag != tag || !t60::tick30() ||
+        t60::first_step())
+        return false;
+    return r.air && r.landed;
+}
+
 /* every step, after the body, before posMove (x, y, z: the pre-posMove position's bits): the
  * tick30 step notes whether its body left Link at the first step's set position */
 static inline void bodyPos(uint32_t x, uint32_t y, uint32_t z, uint32_t tag) {

@@ -4576,7 +4576,8 @@ BOOL daPy_lk_c::execute() {
     if (mCurProc != LinkUpdateConstants::daPyProc_HOOKSHOT_FLY_e /* daPyProc_HOOKSHOT_FLY_e */ && !(dComIfGp_getPlayerStatus0() & LinkPoseConstants::daPyStts0_SHIP_RIDE_e) &&
         !(mModeFlg & (LinkUpdateConstants::ModeFlg_ROPE | LinkUpdateConstants::ModeFlg_CLIMB | LinkUpdateConstants::ModeFlg_LADDER)) && mCurProc != LinkUpdateConstants::daPyProc_DEMO_TOOL_e && mAcch.m_ground_h != -1000000000.0f &&
         !(mNoResetFlg0 & (daPyFlg0_UNK20000000 | daPyFlg0_UNK80000000)) && LinkUpdateApi::ChkPolySafe(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mAcch.m_gnd)) &&
-        LinkPoseApi::ChkMoveBG(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mAcch.m_gnd))) {
+        LinkPoseApi::ChkMoveBG(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mAcch.m_gnd)) &&
+        !lkT60Land::carrySkip(lkT60_frameTag()) /* true60 (d_a_player_landline_t60.h) */) {
         u32 bgs = gabi::ea(dComIfG_Bgsp());
         lkT60Carry::mark(current.pos, shape_angle.y); /* true60: picture only */
         LinkUpdateApi::MoveBgCrrPos(gabi::at<dBgS>(bgs), static_cast<cBgS_PolyInfo*>(&mAcch.m_gnd), (mAcch.m_flags >> 5) & 1, &current.pos, &current.angle, &shape_angle);
