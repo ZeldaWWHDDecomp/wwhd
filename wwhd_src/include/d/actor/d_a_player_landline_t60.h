@@ -55,6 +55,7 @@ struct Rec {
     f32 pre[2];       /* xz before an earlier step's CrrPos */
     bool bgNote;
     bool snapped;     /* an earlier step's autoGroundHit snapped Link down onto ground */
+    bool snapOn;      /* this step's check has the segment (a non-tick30 step keeps the record) */
 };
 static Rec s_rec;
 
@@ -109,6 +110,7 @@ static inline void frameStart(P* py, uint32_t tag, bool heavy /* checkHeavyState
     r.valid = true;
     r.landed = false;
     r.snapped = false;
+    r.snapOn = false;
     r.on = false;
     r.set = false;
     r.setHold = false;
@@ -123,6 +125,22 @@ static inline void bodyPos(uint32_t x, uint32_t y, uint32_t z, uint32_t tag) {
     r.setHold = r.set && x == r.p0[0] && y == r.p0[1] && z == r.p0[2];
 }
 
+/* (2026-11-24; the bomb route, frame 135: Link walks back over
+ * a 24-unit drop. A's frame checks once on the upper level (CrrPos at the frame start + its move, the wall circles
+ * above the ledge face) and autoGroundHit then snaps him down: frame end 16.4 along. B's first step's autoGroundHit
+ * snapped him down mid-frame (the per-step ground-check rule), so the tick30 step's CrrPos checked on the lower level, its wall circles
+ * met the face of the drop behind him and pushed him 11.9 on (z 10.95 off from then on). Form: when an earlier step of a
+ * frame that started on the ground took such a snap, the tick30 step's CrrPos gets A's segment (old.pos = the frame
+ * start, pos.y = the frame start + A's frame fall, xz as the step placed it); autoGroundHit after it snaps as A's does.
+ * NC WWHD_T60_SNAPSEG_NEGCTRL=1; dt 1 never. */
+static inline bool snapSegOff() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_SNAPSEG_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
+#else
+    return true;
+#endif
+}
 /* before mAcch.CrrPos (acf: the flags before ClrGroundHit, the previous check's result) */
 static inline bool begin(uint32_t acf, cXyz& oldPos, cXyz& pos, uint32_t tag) {
     Rec& r = s_rec;
@@ -150,6 +168,18 @@ static inline bool begin(uint32_t acf, cXyz& oldPos, cXyz& pos, uint32_t tag) {
         r.d1z = pos.z - p0z;
         return false;
     }
+    if (r.snapped && !r.air && !snapSegOff()) {
+        /* a later step of a frame whose earlier step snapped Link down: the check at A's height
+         * (the segment from the frame start, y = the frame start + A's frame fall); autoGroundHit snaps after it */
+        ld3(r.old, oldPos);
+        st3(oldPos, r.p0);
+        f32 p0y;
+        std::memcpy(&p0y, &r.p0[1], 4);
+        pos.y = p0y + r.sy;
+        r.on = true;
+        r.snapOn = true;
+        return true;
+    }
     if (!t60::tick30())
         return false;
     if (g_lkT60WallSeg) {
@@ -162,16 +192,6 @@ static inline bool begin(uint32_t acf, cXyz& oldPos, cXyz& pos, uint32_t tag) {
             r.on = true;
             return true;
         }
-    }
-    if (!(r.air && r.landed) && !(r.set && r.setHold) && r.snapped && !r.air) {
-        /* the step-down frame: A's segment, its autoGroundHit snaps after the check */
-        ld3(r.old, oldPos);
-        st3(oldPos, r.p0);
-        f32 p0y;
-        std::memcpy(&p0y, &r.p0[1], 4);
-        pos.y = p0y + r.sy;
-        r.on = true;
-        return true;
     }
     if (!(r.air && r.landed)) {
         if (!(r.set && r.setHold))
@@ -195,26 +215,10 @@ static inline bool begin(uint32_t acf, cXyz& oldPos, cXyz& pos, uint32_t tag) {
     r.on = true;
     return true;
 }
-/* (2026-11-24; the bomb route, frame 135: Link walks back over
- * a 24-unit drop. A's frame checks once on the upper level (CrrPos at the frame start + its move, the wall circles
- * above the ledge face) and autoGroundHit then snaps him down: frame end 16.4 along. B's first step's autoGroundHit
- * snapped him down mid-frame (the per-step ground-check rule), so the tick30 step's CrrPos checked on the lower level, its wall circles
- * met the face of the drop behind him and pushed him 11.9 on (z 10.95 off from then on). Form: when an earlier step of a
- * frame that started on the ground took such a snap, the tick30 step's CrrPos gets A's segment (old.pos = the frame
- * start, pos.y = the frame start + A's frame fall, xz as the step placed it); autoGroundHit after it snaps as A's does.
- * NC WWHD_T60_SNAPSEG_NEGCTRL=1; dt 1 never. */
-static inline bool negctrlSnap() {
-#if defined(GABI_GAME_BUILD) && GABI_T60
-    static const bool nc = [] { const char* e = getenv("WWHD_T60_SNAPSEG_NEGCTRL"); return e && e[0] == '1'; }();
-    return nc;
-#else
-    return true;
-#endif
-}
 /* after autoGroundHit (y0 / f0: current.pos.y and the Acch flags before it) */
 static inline void snapNote(f32 y0, f32 y1, uint32_t f0, uint32_t f1, uint32_t tag) {
     Rec& r = s_rec;
-    if (t60::dt() == 1.0f || t60::tick30() || !r.valid || r.tag != tag || negctrlSnap())
+    if (t60::dt() == 1.0f || t60::tick30() || !r.valid || r.tag != tag || snapSegOff())
         return;
     if (!(f0 & (uint32_t)dBgS_Acch::GROUND_HIT) && (f1 & (uint32_t)dBgS_Acch::GROUND_HIT) && y1 < y0)
         r.snapped = true;
@@ -231,6 +235,11 @@ static inline void end(uint32_t flags, cXyz& oldPos, const cXyz& pos) {
     if (r.on) {
         st3(oldPos, r.old);
         r.on = false;
+        if (r.snapOn && !t60::tick30()) { /* an earlier step: the record stays for the frame */
+            r.snapOn = false;
+            return;
+        }
+        r.snapOn = false;
         r.valid = false;
         return;
     }
