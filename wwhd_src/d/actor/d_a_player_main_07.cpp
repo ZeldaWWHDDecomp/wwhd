@@ -706,20 +706,24 @@ void daPy_lk_c::setSpeedAndAngleSwim() {
     if (mCurProc != Link07::daPyProc_SWIM_UP_e) {
         if (!LK_checkAttentionLock()) {
             s16 old = shape_angle.y;
+            bool lkT60Snap = false; /* true60 (backward addendum): the turn-around snaps, no ease */
             if (mStickDistance > 0.05f) {
                 if (getDirectionFromShapeAngle() == Link07::DIR_BACKWARD) {
                     Link07::swimTail(this, 0).onEnd();
                     Link07::swimTail(this, 1).onEnd();
                     shape_angle.y = mMoveTargetAngleY;
                     current.angle.y = shape_angle.y;
+                    lkT60Snap = !lkT60_swimBackSnapNegctrl();
                 } else {
                     cLib_addCalcAngleS(&shape_angle.y, mMoveTargetAngleY, 0x11, 0x1388, 0x4B0);
                     // HD: HIO folded
                 }
                 /* true60 (d_a_player_movecos_t60.h): on the first step the cosine of the frame's whole turn */
+                /* (backward addendum) a snapped turn-around takes its own angle: the frame's turn is the snap */
                 speedTarget = gabi::fmuls_ppc(gabi::fmuls_ppc(3.0f, mStickDistance),
-                                              cM_scos((s16)(lkT60_moveCosAngle(old, shape_angle.y, mMoveTargetAngleY, 0x1388,
-                                                                               0x4B0, 0x11) - old)));
+                                              cM_scos((s16)((lkT60Snap ? (s16)shape_angle.y
+                                                                       : lkT60_moveCosAngle(old, shape_angle.y, mMoveTargetAngleY,
+                                                                                            0x1388, 0x4B0, 0x11)) - old)));
             } else {
                 speedTarget = 0.0f;
             }

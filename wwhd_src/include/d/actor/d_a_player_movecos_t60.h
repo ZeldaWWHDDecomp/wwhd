@@ -20,6 +20,19 @@
 #pragma once
 #include "true60.h"
 
+/* backward addendum (2026-11-25; long2 seg 5 at N 2, frame 1831): the swim move's
+ * turn-around (stick backward of the shape angle) snaps shape / current angle to the target, no ease; the first step's
+ * cosine (lkT60_moveCosAngle below) re-ran an ease from the frame start (0x11 / 0x1388: a small turn, cos ~ +1) where A's
+ * cosine sees the snap (cos(180 deg) = -1): B swam forward at +2.95 where A braked to -3.0, Link 5.9 off at once. The
+ * snapped branch takes its own angle. NC WWHD_T60_SWIMBACKSNAP_NEGCTRL=1. */
+static inline bool lkT60_swimBackSnapNegctrl() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_SWIMBACKSNAP_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return true;
+#endif
+}
 static inline bool lkT60_moveCosStep() { return t60::dt() != 1.0f && t60::steps() > 1 && t60::first_step(); }
 /* the angle for the acceleration's cosine: on the first step the whole frame's turn from startAngle */
 static inline s16 lkT60_moveCosAngle(s16 startAngle, s16 turnedAngle, s32 target, s32 maxStep, s32 minStep,
