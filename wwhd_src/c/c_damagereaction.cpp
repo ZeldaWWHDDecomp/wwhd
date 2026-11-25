@@ -1088,7 +1088,11 @@ static void dr_body_bg_check(damagereaction* dr, u32 scratch) {
         dr->mpEnemy->current.pos.y -= dr->mPivot.y + lift;
         dr->mpEnemy->old.pos.y -= dr->mPivot.y + lift;
         dr->mpEnemy->speed.y *= 0.25f;
+        /* true60 (c_damagereaction_posadd_t60.h): the tick30 check on A's segment */
+        t60drPos::wallSegBegin(gabi::ea(dr), t60dr_frame(), dr->mpEnemy->old.pos, dr->mpEnemy->current.pos,
+                               dr->mpEnemy->speed.y, dr->mAcch.m_flags);
         dr->mAcch.CrrPos(dComIfG_Bgsp());
+        t60drPos::wallSegEnd(gabi::ea(dr), t60dr_frame(), dr->mpEnemy->old.pos, dr->mpEnemy->current.pos);
         t60drLand::apply(gabi::ea(dr), dr->mAcch); /* true60: the frame's ground-history bits as A's check */
         t60drCarrier::check(dr); /* true60: on a 30 Hz carrier, run at 30 Hz (rider rule) */
         dr->mpEnemy->speed.y *= 4.0f;
@@ -1672,7 +1676,8 @@ static s32 dr_damage_set(u32 address) {
             /* true60 (c_damagereaction_posadd_t60.h): the frame start (first step) or the corrections since
              * the last step's write; the full pushback vector before x dt */
             t60drPos::Entry* t60Pos = t60drPos::begin(gabi::ea(dr), t60dr_frame(), (f32)dr->mpEnemy->current.pos.x,
-                                                      (f32)dr->mpEnemy->current.pos.z, (f32)temp3.x, (f32)temp3.z);
+                                                      (f32)dr->mpEnemy->current.pos.z, (f32)temp3.x, (f32)temp3.z,
+                                                      (f32)dr->mpEnemy->speed.y);
             bool t60PosPush = false;
             f32 t60PosHeld[3] = {0.0f, 0.0f, 0.0f};
             if (dt != 1.0f) {
