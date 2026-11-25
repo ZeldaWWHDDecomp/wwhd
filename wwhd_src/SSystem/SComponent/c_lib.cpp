@@ -300,6 +300,9 @@ struct T60IntEntry {
     bool partial; /* begun after the frame's first step */
     u32 sig = 0;  /* the opening call's parameters (c_lib_callsig_t60.h; addCalcAngleS) */
     u32 step = 0; /* the step counter of the entry's last call */
+    u32 sig2 = 0;  /* another call site's parameters met within the frame */
+    u32 site = 0;  /* the opening call's site (t60cs_site) */
+    u32 site2 = 0; /* another call site met within the frame */
 };
 constexpr u32 kT60IntSlots = 2048, kT60IntProbes = 8, kT60FrameCounter = 0x101FF558;
 T60IntEntry t60IntTable[kT60IntSlots];
@@ -509,7 +512,7 @@ s16 cLib_addCalcAngleS(be<s16>* pValue, s32 target, s32 scale, s32 maxStep, s32 
     if (t60::dt() != 1.0f) {
         s32 cur = *pValue;
         T60IntEntry* e = t60IntEntry(pValue, cur);
-        t60cs_check(e, t60cs_sig(scale, maxStep, minStep), cur); /* true60: another call site's frame */
+        t60cs_check(e, t60cs_sig(scale, maxStep, minStep), cur, T60CS_SITE()); /* true60: another call site's frame */
         s32 start = e ? e->start : cur;
         s16 ret;
         s16 full = t60AngleSFull(start, target, scale, maxStep, minStep, &ret);
