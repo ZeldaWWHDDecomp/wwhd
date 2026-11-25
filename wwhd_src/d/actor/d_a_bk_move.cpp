@@ -847,6 +847,16 @@ void Bk_move(bk_class* i_this) {
          * sphere the frame's call registered before damage_reaction's change still goes into the tick30 Move */
         if (t60Held) {
             bk_t60_wsph_carry(i_this, true);
+            /* true60 (d_a_bk_t60.h): the tick30 step's sensing and fight_run's turn toward it, which
+             * A's call made before damage_check's switch, as the held steps below */
+            if (t60::tick30() && !bk_t60_dmgturn_nc()) {
+                bk_t60_sense(i_this);
+                const int t60Turn = bk_t60_turn_due(i_this);
+                if (t60Turn >= 0)
+                    i_this->dr.mTurnTargetY = i_this->mTargetAngleY;
+                if (t60Turn > 0)
+                    cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->dr.mTurnTargetY, 4, t60Turn);
+            }
             return;
         }
         i_this->mNoHitTimer = 5;

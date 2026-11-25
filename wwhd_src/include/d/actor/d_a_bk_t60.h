@@ -177,6 +177,16 @@ static inline bool bk_t60_land_nc() {
     static const bool nc = [] { const char* e = getenv("WWHD_T60_BKLAND_NEGCTRL"); return e && e[0] == '1'; }();
     return nc;
 }
+/* (2026-11-25, bkL frame 165, holder 47C5CE68 / its stick 47C58678): a hit read on
+ * the frame's first step puts the knock-down (mMode -100) in place there; its tick30 step is held (first run next
+ * frame) and returned before the held step's sensing and fight_run's turn. A's one call made the turn (toward the
+ * tick30 sensing) before damage_check's switch: 3861 -> 3964, B stayed on the first step's half turn (3924) and the
+ * stick's throw left the hand from there (2.5 off where it lands). Form: the held knock-down tick30 step senses and
+ * turns as the other held steps (bk_t60_turn_due). NC WWHD_T60_BKDMGTURN_NEGCTRL=1: the return as before. */
+static inline bool bk_t60_dmgturn_nc() {
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_BKDMGTURN_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
+}
 static inline bool bk_t60_launch_nc() {
     static const bool nc = [] { const char* e = getenv("WWHD_T60_BKLAUNCH_NEGCTRL"); return e && e[0] == '1'; }();
     return nc;
