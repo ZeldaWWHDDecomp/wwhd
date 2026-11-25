@@ -247,7 +247,7 @@ static inline bool begin(uint32_t acf, cXyz& oldPos, cXyz& pos, uint32_t tag) {
         return false;
     /* (widened) a grounded frame without a push; not in / on water: there the frame's y does not follow
      * the gravity fall r.sy (oq frame 246, Link rising out of the water at +6 / frame: A 277.2, the form's 274.2) */
-    const bool lkSegAll = g_lkT60WallSegAll && !r.air && !r.water;
+    const bool lkSegAll = g_lkT60WallSegAll && !r.air && !r.water && !r.set; /* (a position-set frame: its own segment) */
     g_lkT60WallSegAll = false;
     if (g_lkT60WallSeg || lkSegAll) {
         /* (speed-ramp position-gap (3) K=0 probe) the wall frame: the tick30 place is A's (frame start + A's move); the check gets A's
