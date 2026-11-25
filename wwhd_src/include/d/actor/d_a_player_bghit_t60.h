@@ -27,7 +27,45 @@ static const uint32_t kAcchHit = dBgS_Acch::WALL_HIT | dBgS_Acch::GROUND_HIT | d
 static const uint32_t kCirHit = dBgS_AcchCir::WALL_HIT;
 enum { N_CIR = 3 };
 
+/* (2026-11-25, long1 N 4 seg 1 frame 1094: B's game stopped on an assert in
+ * procFrontRoll's wall crash, lk05GetMtrlSndId -> dBgS::GetPolyId on an invalid poly): the view gave a later step the
+ * circles' frame-start WALL_HIT bit, but their wall poly (cBgS_PolyInfo, 0x10 bytes before m_flags) and wall angle
+ * (m_wall_angle_y) stayed the step's own check's (no wall there: no poly). The circle's hit view now carries its poly and
+ * wall angle with the bit: recorded on the first step, in place for the decision part, the real ones back after it (a
+ * part that wrote them keeps its write). NC WWHD_T60_BGHITPOLY_NEGCTRL=1 (the bits only). */
+static inline bool polyNc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_BGHITPOLY_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return true;
+#endif
+}
+enum { kCirPolyOff = 0x10, kCirAngleOff = 0x3C - 0x10, kPolyWords = 4 };
+struct CirPoly {
+    uint32_t w[kPolyWords];
+    uint16_t ang;
+};
+static inline void cirGet(be<u32>* flags, CirPoly& o) {
+    const uint32_t base = gabi::ea(flags) - kCirPolyOff;
+    for (int k = 0; k < kPolyWords; k++)
+        o.w[k] = *gabi::at<be<u32>>(base + 4 * k);
+    o.ang = *gabi::at<be<u16>>(gabi::ea(flags) + kCirAngleOff);
+}
+static inline void cirPut(be<u32>* flags, const CirPoly& o) {
+    const uint32_t base = gabi::ea(flags) - kCirPolyOff;
+    for (int k = 0; k < kPolyWords; k++)
+        *gabi::at<be<u32>>(base + 4 * k) = o.w[k];
+    *gabi::at<be<u16>>(gabi::ea(flags) + kCirAngleOff) = o.ang;
+}
+static inline bool cirSame(const CirPoly& a, const CirPoly& b) {
+    for (int k = 0; k < kPolyWords; k++)
+        if (a.w[k] != b.w[k])
+            return false;
+    return a.ang == b.ang;
+}
 struct View {
+    CirPoly poly0[3], polyReal[3], polySeen[3]; /* */
     uint32_t tag;           /* the frame the record is from */
     uint32_t acch0;         /* the frame's first-step hit bits */
     uint32_t cir0[N_CIR];
@@ -62,8 +100,10 @@ static inline void begin(be<u32>& acch, be<u32>& c0, be<u32>& c1, be<u32>& c2, u
         if (v.valid && v.tag == tag)
             return; /* the frame's record is made at its first begin (execute has two windows) */
         v.acch0 = (uint32_t)acch & kAcchHit;
-        for (int i = 0; i < N_CIR; i++)
+        for (int i = 0; i < N_CIR; i++) {
             v.cir0[i] = (uint32_t)*cir[i] & kCirHit;
+            cirGet(cir[i], v.poly0[i]); /* */
+        }
         v.tag = tag;
         v.valid = true;
         return;
@@ -77,6 +117,14 @@ static inline void begin(be<u32>& acch, be<u32>& c0, be<u32>& c1, be<u32>& c2, u
         v.cirReal[i] = *cir[i];
         v.cirSeen[i] = viewOf(v.cirReal[i], v.cir0[i], kCirHit);
         *cir[i] = v.cirSeen[i];
+        if (!polyNc() && (v.cir0[i] & kCirHit)) { /* the recorded wall's poly / angle with its bit */
+            cirGet(cir[i], v.polyReal[i]);
+            cirPut(cir[i], v.poly0[i]);
+            v.polySeen[i] = v.poly0[i];
+        } else {
+            cirGet(cir[i], v.polyReal[i]);
+            v.polySeen[i] = v.polyReal[i];
+        }
     }
     v.on = true;
 }
@@ -88,8 +136,13 @@ static inline void end(be<u32>& acch, be<u32>& c0, be<u32>& c1, be<u32>& c2) {
         return;
     v.on = false;
     acch = merge((uint32_t)acch, v.acchSeen, v.acchReal, kAcchHit);
-    for (int i = 0; i < N_CIR; i++)
+    for (int i = 0; i < N_CIR; i++) {
         *cir[i] = merge((uint32_t)*cir[i], v.cirSeen[i], v.cirReal[i], kCirHit);
+        CirPoly now; /* the real poly / angle back unless the part wrote them */
+        cirGet(cir[i], now);
+        if (cirSame(now, v.polySeen[i]))
+            cirPut(cir[i], v.polyReal[i]);
+    }
 }
 
 /* Addendum (BG-hit rule addendum; enemies pair, Siren
