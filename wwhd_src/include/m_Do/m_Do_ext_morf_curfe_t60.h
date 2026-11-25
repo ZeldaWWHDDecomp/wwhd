@@ -1,4 +1,4 @@
-/* m_Do_ext_morf_curfe_t60.h (WWHD, true 60 build, t60-pgp 2026-11-25): mDoExt_McaMorf's
+/* m_Do_ext_morf_curfe_t60.h (WWHD, true 60 build, 2026-11-25): mDoExt_McaMorf's
  * morf value ends each 30 Hz frame on the original's one chase. Decomp build only.
  * Separate file: m_Do_ext_morf.cpp keeps thin calls.
  *
@@ -6,10 +6,10 @@
  * N steps of mMorfStep / N do not add up to A's one mMorfStep in single precision (at N 4 the quarter steps round), so
  * the tick30 calc's blend (m_Do_ext_morf_t60.h: the frame-start pose blended with (cur - prev0) / (1 - prev0)) used a
  * cur one ulp off A's while a morf runs: the joints of an animation set with a morf (a translation channel that differs
- * between the two animations: the root's y) one ulp off. long2 at N 4 (board the l2an4d):
+ * between the two animations: the root's y) one ulp off. A long route at N 4:
  * the Bokoblins' first frames in Cave09 room 3 after the t222 load (A seq 10366 / B 10359): eyePos.y, the attention y,
  * the reaction joints' y, mSpitPos.y one ulp; 0.16 in eye x by 6983 after the look chains, and Link's lock-on turn
- * made long2 segment 15. Form: the frame's first play latches the morf value it found and the step; when every step of
+ * made a long route's segment off. Form: the frame's first play latches the morf value it found and the step; when every step of
  * the frame played on (the value the step before left, the same step), the tick30 play redoes the chase from the latch
  * at dt 1 (A's arithmetic). Earlier steps keep the dt form (the in-between pose). Host memory keyed by the morf's guest
  * address. dt = 1: nothing. Negative control WWHD_T60_MORFCUR_NEGCTRL=1: the per-step form. */

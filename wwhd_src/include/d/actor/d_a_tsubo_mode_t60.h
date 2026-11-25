@@ -48,7 +48,7 @@ static inline bool held_pic_nc() {
     static const bool nc = [] { const char* e = getenv("WWHD_T60_POTHELD_NEGCTRL"); return e && e[0] == '1'; }();
     return nc;
 }
-/* (carriables helper 2026-11-24, md-loop helper's pot route: the pot falling into lava drawn at
+/* (2026-11-24, the pot route: the pot falling into lava drawn at
  * y -857.62 on the earlier step where the frame stays at -837.53): the tick30 step's damage_bg_proc (before mode_proc_call)
  * kills a dropping / thrown pot whose frame-start place is below the lava surface (chk_sink_lava: mLavaY > pos.y +
  * min(mCenterHeight, 20), not in water first): A's frame ends where it started (damaged_lava, the pot deleted, no move);

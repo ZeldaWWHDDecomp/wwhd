@@ -5,7 +5,7 @@
  * In the coil demo (mDemoState HIMO2_DEMO_COIL, once mWrapOffsetZ is past -145) new_himo2_move adds the frame's wrap
  * step to mWrapCount (r5 = ftoi(mWrapSpeed / f1) + 1, f1 = 20 - (target scale.y - 1) x 17, at least 0.5) once per 30 Hz
  * frame, on the tick30 step (the 30 Hz timer rule). spin_draw (in daHimo2_Draw) winds that many rope segments around the target and
- * puts the hook head after them, so at N 2 the head jumped once a frame (stair sweep rp on intgc2: W 01BE 130 mrad,
+ * puts the hook head after them, so at N 2 the head jumped once a frame (the rope route stair sweep: W 01BE 130 mrad,
  * excess 8.4 units, fracT 0.18, the head still on every other pass while the count grew 2 .. 5 a frame; interp even).
  * The picture: the draw after an earlier step k of N winds mWrapCount + round(r5 x k / N) (the count the frame will
  * reach, at the step's share); the tick30 step's draw winds the count itself (the original). Draw only: the word is put

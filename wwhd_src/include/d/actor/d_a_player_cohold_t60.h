@@ -53,7 +53,7 @@ static inline void lkT60_shipRideCo(bool liveHit, uint32_t liveAc, bool* hit, ui
  * (mOutPower / mOutPowerAngle, cleared after the add). The ship sets it while Link's cylinder is in Co contact with it,
  * in its execute after Link's: A's Link consumes it on the frame after the contact. At N steps the contact was found by
  * the collision pass between the steps, the ship's first-step execute set the out power, and Link's tick30 posMove took
- * it the same frame: 37.6 in xz (long3 seg 4, the tick30 step before the ride), where A's frame has none. Form (as
+ * it the same frame: 37.6 in xz (a long route, the tick30 step before the ride), where A's frame has none. Form (as
  * for the Co push): only a frame that started with an out power takes one on its later steps; one
  * first seen on a later step is not taken (the actor hands it again at the frame end, for the next frame's first step).
  * NC WWHD_T60_OUTPOWERLATE_NEGCTRL=1 (the late take). dt 1: never. */

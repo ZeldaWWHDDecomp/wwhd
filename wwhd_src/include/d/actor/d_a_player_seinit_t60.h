@@ -51,7 +51,7 @@ static inline bool lkT60_animSoundNegctrl() {
 }
 static inline bool lkT60_animSoundStep() { return t60::steps() <= 1 || t60::tick30() || lkT60_animSoundNegctrl(); }
 
-/* (2026-11-25; long2 at N 2 on intgc13: Link's footstep 0x3831 started in A only, seg 9
+/* (2026-11-25; a long route at N 2: Link's footstep 0x3831 started in A only, seg 9
  * BOW_SUBJECT 0x94 A step 10001 and seg 16 MOVE A step 11602): setSeAnime re-inits the sound animation when the move
  * blend switches its SE animation (a continuation set, not latched). A's init comes after the frame's play and puts the
  * play position at the frame-end frame minus the whole rate (19.4759 - 0.5134 = 18.9625); the setAnimSound after it

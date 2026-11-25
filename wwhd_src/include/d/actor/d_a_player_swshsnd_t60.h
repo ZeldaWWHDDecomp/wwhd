@@ -6,7 +6,7 @@
  * every update; JAIZelBasic::mLinkSwordShieldOnBack (1: sword and shield both on the back) makes startAnimSound add
  * JA_SE_LK_FT_SW_SHIELD (0x3831) to the walk / jump keys. In A the frame's setAnimSound reads the place of the frame
  * before (setItemModel runs after it); setAnimSound is tick30-only, so on a converted frame the
- * first step's setItemModel set the frame-end place before it (long2 N 2: Link draws the sword on the frame of a walk
+ * first step's setItemModel set the frame-end place before it (a long route at N 2: Link draws the sword on the frame of a walk
  * key, A 11600: A starts 0x3831 with the flag still 1, B's first step had cleared it). Form: on a converted frame only
  * the tick30 step hands the place over (its state is the frame end's); the earlier steps leave the frame before's.
  * NC WWHD_T60_SWSHSND_NEGCTRL=1. dt 1: the original. */

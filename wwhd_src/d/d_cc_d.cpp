@@ -12,7 +12,7 @@
  * cCcD_ObjHitInf vtable at +0x3C and dCcD_GObjAt +0x50, dCcD_GObjTg +0x94, dCcD_GObjCo +0xDC
  * (dCcD_GAtTgCoCommonBase 0x1C: SPrm, RPrm, callback, apid, actor, eff counter, vtable +0x18). */
 #include "bindings.h"
-#include "d/d_cc_effcnt_t60.h" /* true60: */
+#include "d/d_cc_effcnt_t60.h" /* true60 */
 
 void CcAPI_cCcD_GStts_dt(u32 p, s32 flags);
 void CcAPI_cCcD_Stts_dt(u32 p, s32 flags);

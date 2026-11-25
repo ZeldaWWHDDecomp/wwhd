@@ -107,7 +107,7 @@ struct LkT60CrawlFrame {
     int16_t ga;        /* mGroundAngle at the frame start */
     int32_t gc;        /* mGroundCode at the frame start */
 };
-/* (2026-11-24; pair on intgc2,  crawl down a slope, frame 90):
+/* (2026-11-24; a crawl down a slope, frame 90):
  * the whole-frame move on the tick30 step reads the BG check of the frame start, as A's one posMove reads its previous
  * frame end's. The earlier steps run no body and no move, but the execute's BG check (mAcch.CrrPos) still ran on them
  * from the unmoved place and left no ground hit and mGroundAngle 0 (B 90 s0: flags 0x2000, ga 0; A 89: 0x20E0, ga

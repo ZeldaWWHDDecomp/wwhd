@@ -74,13 +74,13 @@ static const be<u16>* const aura_model_joint = gabi::at<be<u16>>(0x10035AA0);
 #include "d/actor/d_a_player_bghit_t60.h"
 #include "d/actor/d_a_player_carry_t60.h"
 #include "d/actor/d_a_player_rootmode_t60.h"
-#include "d/actor/d_a_player_athold_t60.h" /* */
+#include "d/actor/d_a_player_athold_t60.h" /* true60 */
 #include "d/actor/d_a_player_footga_t60.h"
 #include "d/actor/d_a_player_landline_t60.h"
 #include "d/actor/d_a_player_landhist_t60.h"
 #include "d/actor/d_a_player_stepdown_t60.h"
 #include "d/actor/d_a_player_hammer_t60.h"
-#include "d/actor/d_a_player_lavarel_t60.h" /* */
+#include "d/actor/d_a_player_lavarel_t60.h" /* true60 */
 #include "d/t60_whole_carrier.h"
 
 static cXyz l_debug_keep_pos;

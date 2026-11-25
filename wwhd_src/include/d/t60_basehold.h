@@ -6,7 +6,7 @@
  * move and the base-matrix set, and at N steps every step's calc runs on the frame-start base matrix (frame f - 1's end),
  * as A's calc of frame f; the joint-callback words (hands, spear points, eyePos) keep that logic. The skeleton the calc
  * leaves is placed at frame f - 1's end on both steps, so the body was drawn at 30 Hz, one frame behind (stair sweep,
- * majE15: 3.0 units every other pass). The draw side (port t60_draw.cpp, wwhd_t60_draw_basehold) moves the models the
+ * 3.0 units every other pass). The draw side (port t60_draw.cpp, wwhd_t60_draw_basehold) moves the models the
  * actor draws on the step rigidly from the held base to the base matrix the step set (B_step * inv(B_held)); logic and
  * guest words untouched. A follower placed from the holder's hand words (the Moblin's lantern, Kantera state 1) takes the
  * holder's correction of the same step (wwhd_t60_draw_basefollow, the holder's process id). dt 1: never called. Negative

@@ -63,7 +63,7 @@ static inline s16 lkT60_headingWhole(s16 angle) {
         return h.whole;
     return angle;
 }
-/* (2026-11-25; long1 at N 4, seg 7 frame 5638: Link walking along a wall,
+/* (2026-11-25; a long route at N 4, frame 5638: Link walking along a wall,
  * the sidle prompt (do status 0x10) enters WHIDE_READY from procMove). A's procMove turns current.angle.y the frame's
  * whole step toward the stick target (21146 -> 21097) before checkNextMode enters the new procedure, whose init takes
  * current.angle.y = shape_angle.y. At N 4 the entry came on the frame's first step, after that step's share of the turn
@@ -105,7 +105,7 @@ static inline s16 lkT60_moveHeading(s16 angle) {
 }
 
 /* (2026-11-25; the oq route  + SWIMTURN at N 2, pair
- * oqZ2, frame 244: Link swimming in a turn, x / z 0.16 / 0.11 off from then on, Link 72 off by 447) the same for the swim
+ * the Octorok route, frame 244: Link swimming in a turn, x / z 0.16 / 0.11 off from then on, Link 72 off by 447) the same for the swim
  * stroke: posMoveFromFootPos's SWIM_MOVE branch moves along current.angle.y, which setSpeedAndAngleSwim turns per step
  * (the free swim: shape_angle.y to the stick target, current.angle.y after it; with attention: current.angle.y to the
  * target); the swim turn notes the frame's whole turn of current.angle.y on the first step (d_a_player_main_07.cpp, the
@@ -126,7 +126,7 @@ static inline s16 lkT60_swimMoveHeading(s16 angle) {
     return lkT60_headingWhole(angle);
 }
 
-/* (2026-11-24; pig pigF3 / pigN3 frame 136: Link pushing against a wall turns 1643 on the stick's
+/* (2026-11-24; the pig route, frame 136: Link pushing against a wall turns 1643 on the stick's
  * change to diagonal; A's speed 6.813 -> 6.881, B's 6.814 -> 6.755, the walk -> run switch (8.5) then a frame late)
  * setNormalSpeedF's wall term (maxSpeed x (1 - 0.6 cos(current.angle.y + 0x8000 - wall angle))) runs once a frame, on
  * the frame's first step at dt 1 (the speed chase hold, rule (a)), where current.angle.y held only the first

@@ -32,7 +32,7 @@ static inline bool lkT60_moveInitNc() {
 /* (2026-11-25): a procedure entered on the frame's first step BEFORE the dispatch's
  * window (lkT60_procOpen): the execute's pre-dispatch checks (checkItemAction: the boomerang throw's procWait_init from
  * BOOMERANG_SUBJECT) run after the frame's animation play in A as well, so their setMoveAnime takes the frame-end phase;
- * at N steps it took the first step's (bmA N 2 on intgc7, frame 3635: mFrameCtrlUnder[1] A 29.159 / B 29.051, f31 A
+ * at N steps it took the first step's (the boomerang route at N 2, frame 3635: mFrameCtrlUnder[1] A 29.159 / B 29.051, f31 A
  * 0.88361 / B 0.87459, three frames off). Such an entry is not a held body (A runs its body in the same frame's dispatch),
  * so it only takes MOVEINIT-PHASE's set form (projected phase, latched). Key: Link's mCurProc EA + 2, frame-tagged.
  * NC WWHD_T60_MOVEINITPRE_NEGCTRL=1. dt 1: never. */
@@ -64,7 +64,7 @@ static inline bool lkT60_moveInitHold(uint32_t curProcEa) {
              wwhd_t60_latch_pending(lkT60_procPreKey(curProcEa), lkT60_frameTag()) != 0));
 }
 
-/* (2026-11-25, long1 seg 7 walk start frame 5450 -> 5813): the original's phase
+/* (2026-11-25, a long route, walk start frame 5450 -> 5813): the original's phase
  * f31 reads the move animation's own frame (r3->getFrame()), which animeUpdate 023D9F6C left at the frame of the LAST
  * frame control that played it: with the wait blend both under slots hold the same animation, so control 1 (rate
  * (rate x f26) x f30, 2.3000002 where control 0 has 2.3) writes it last. The switch form projected control 0 instead:

@@ -6,7 +6,7 @@
  * setBodyAngleToCamera) as Link's facing before that call's turn. In A that call runs once a frame, so m3BA is the
  * frame start's facing and the camera's yaw offset is the frame's whole aim turn. At N steps every converted Link step
  * calls it, so on the tick30 step (and in the camera's whole run) m3BA was the facing before the last
- * step only: the view took 1/N of the frame's turn (boomerang aim route bmA at N 2: view yaw U at frame 77 B
+ * step only: the view took 1/N of the frame's turn (the boomerang aim route at N 2: view yaw U at frame 77 B
  * -18021 vs A -18100 under the right stick; camera 17.3 @96 with Link exact). Form: the frame's first player call
  * records its base (per camera body); the camera's steady branch measures the offset from it on every step of that
  * frame (the frame's turn so far on the earlier steps, the whole turn on the tick30 step: A's). The player's own call is
@@ -74,7 +74,7 @@ static inline bool frameBase(uint32_t camEa, int16_t* out) {
  * converted step) adds pitch x k x dt to it, the camera's call its own share. In the follow-whole form the frame-start
  * copy is taken at the camera's step-1 Run (after Link's step-1 call) and the tick30 restore puts it back before Link's
  * tick30 call: the player's adds of steps 2 .. N-1 were dropped (none at N 2; at N 4 half a frame of the stick's pitch:
- * rp frame-end pitch V B -114 / -291 / -502 vs A -229 / -584 / -1008 from the hook aim's first frame, camera 315.4 @119).
+ * the rope route's frame-end pitch V B -114 / -291 / -502 vs A -229 / -584 / -1008 from the hook aim's first frame, camera 315.4 @119).
  * Form: the player's m388 change on a call made after this frame's frame-start copy and before the tick30 step is
  * summed (per camera body) and added back (clamped to +-1 as the call clamps) right after the restore. The camera's own
  * calls and the tick30 step's calls are not carried (the restore takes the picture steps' camera share back; the whole

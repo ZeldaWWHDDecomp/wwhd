@@ -11,7 +11,7 @@
  */
 #include "d/actor/d_a_player_main_07.h"
 #include "d/actor/d_a_player_anm_t60.h"
-#include "d/actor/d_a_player_hammerhit_t60.h" /* */
+#include "d/actor/d_a_player_hammerhit_t60.h" /* true60 */
 #include "d/actor/d_a_player_aimboost_t60.h" /*-FRAME */
 #include "d/actor/d_a_player_grabthrow_t60.h" /* true60: procGrabThrow's frame threshold */
 #include "d/actor/d_a_player_ropeblend_t60.h" /* true60 (part 2) */
@@ -148,7 +148,7 @@ static inline void lk07_boostUnapply(daPy_lk_c* t) {
         return;
     }
     if (s_lk07Boost.valid && t60_step_counter() - s_lk07Boost.stamp == 1 && (f32)t->mNormalSpeed == s_lk07Boost.post &&
-        !lkT60AimBoost::keepBoost()) { /* true60 (-FRAME): a frame starts from the boosted speed, as A's */
+        !lkT60AimBoost::keepBoost()) { /* true60: a frame starts from the boosted speed, as A's */
         t->mNormalSpeed = s_lk07Boost.pre;
     }
     s_lk07Boost.valid = false;

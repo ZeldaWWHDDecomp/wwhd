@@ -154,7 +154,7 @@ template <class T> static inline int bk_t60_turn_due(T* i_this) {
     return -1;
 }
 
-/* (2026-11-25; long2 seg 3 + at N 2, Bokoblin 47C5E81C frame
+/* (2026-11-25; a long route at N 2, Bokoblin 47C5E81C frame
  * 1012): fight_run's jump-run landing (jump step 1 -> 2, case 1) breaks out of the jump switch, and the same call then
  * decides the fight distance (mPlayerDistance < mFightDist: action 5, mode 0, the attack). A's landing call attacked at
  * 1012. At N steps the landing came on the first step (the ground answer held), where the decision is
@@ -601,8 +601,8 @@ template <class T> static inline void bk_t60_jstop_restore(T* i_this, bool prelu
         return;
     if (it->second.tag == bk_t60_frame_tag()) {
         i_this->speedF = it->second.speedF;
-        if (bk_t60_jturn_pin_nc() || !preludePinned) /* */
-            i_this->current.angle.y = (s16)((s16)i_this->current.angle.y - it->second.turn); /* */
+        if (bk_t60_jturn_pin_nc() || !preludePinned)
+            i_this->current.angle.y = (s16)((s16)i_this->current.angle.y - it->second.turn);
     }
     s_bkT60JStop.erase(it);
 }

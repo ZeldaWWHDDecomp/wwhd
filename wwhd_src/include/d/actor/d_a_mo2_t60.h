@@ -68,7 +68,7 @@ template <class T> static inline bool mo2_t60_ai_held(T* i_this) {
  * on. Form: the head marks the frame when it turns on an earlier step (port latch, key the mTurnTargetY address ^
  * 0xE0000000, | 1 for 0x800); every held step after it turns once more (Mo2_move's held branch): the integer ease moves
  * the frame's split on the steps between and pins its full step from the frame start on the tick30 step, A's turn. The
- * held tick30 step first takes the tick30 sensing (mo2_t60_sense) and the head's target from it, as A's call (moF44,
+ * held tick30 step first takes the tick30 sensing (mo2_t60_sense) and the head's target from it, as A's call (Moblin pair,
  * 47C5CECC frame 300, mode 4 -> 2 on step 1: B turned toward the first step's target, 15627 for A's 15817).
  * dt 1: nothing is marked (the original). NC WWHD_T60_MO2HELDTURN_NEGCTRL=1: the held steps neither sense nor turn (the
  * form before). */

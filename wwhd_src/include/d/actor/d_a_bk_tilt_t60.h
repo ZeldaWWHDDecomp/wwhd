@@ -1,4 +1,4 @@
-/* d_a_bk_tilt_t60.h (WWHD, true 60 build, t60-pgp 2026-11-25, route Bokoblin CB0C frame
+/* d_a_bk_tilt_t60.h (WWHD, true 60 build, 2026-11-25, Bokoblin CB0C frame
  * 125): the Bokoblin's ground tilt once per 30 Hz frame, the twin of the Moblin's d_a_mo2_tilt_t60.h (frame 72).
  * Decomp build only. Separate file: the source keeps
  * thin calls.

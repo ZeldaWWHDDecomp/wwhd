@@ -283,7 +283,7 @@ template <class A> static inline Phase begin(A* a, const Spec<A>& s) {
          * tick30 step, is Link's own step order and stays) */
         /* the position only: the old angles / room fopAc copied keep the holder's own writes of this frame (Link's
          * procGrabThrow sets current.angle.y before freeGrabItem; bomb pair btH: A's old.angle.y 0x3B17) */
-        /* carry placement (2026-11-24, obt worn barrel put-down obtH6 frame 351): a holder that
+        /* carry placement (2026-11-24, worn barrel put-down, frame 351): a holder that
          * placed the actor on its tick30 step and released it after (Link's GRAB_PUT end: setGrabItemPos, then the
          * release) is A's frame: fopAc_Execute's copy after the holder's frame is that placement (A old 2955.62 = current,
          * B had the previous frame's end 2962.46). Taken only when the position differs from the last PIC step's (a tick30
@@ -336,7 +336,7 @@ template <class A, class Fn, class... Args> static inline void move(A* a, Fn fn,
             fn(a, args...);
         return;
     }
-    /* (2026-11-24, barrel lift obtL2 / obtE4 frame 3662-3663): a held actor's
+    /* (2026-11-24, barrel lift, frame 3662-3663): a held actor's
      * picture is its holder's placement of this step. On the lift frame the mode is still the free one (the carry init
      * is a tick30 decision), so its own mover ran the frame's predicted move (the resting barrel's gravity: -2.25 at s
      * 0.5) under Link's placement, and the picture floor is not applied while held: the barrel showed 712.82, 2.25 into
@@ -503,7 +503,7 @@ static inline void riderHold(u32 actor, const void* acch) {
 template <class A, class Fn, class... Args> static inline void check(A* a, const void* acch, Fn fn, Args... args) {
     if (phase() != PIC) {
         fn(args...);
-        riderHold(gabi::ea(a), acch); /* */
+        riderHold(gabi::ea(a), acch);
         return;
     }
     f32 floor;

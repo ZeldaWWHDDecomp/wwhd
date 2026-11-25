@@ -6,7 +6,7 @@
  * The frame's later steps rebuild the frame's neck move from the frame-start pose (g_lkT60NeckRef, lkT60NeckUseRef), but
  * read the target's eyePos live: a converted actor later in the process line has moved on its earlier steps (the thrown
  * boomerang ~57 units a frame), so the target was half a frame ahead of A's (A reads it before the actor's frame-F run).
- * bmA  at N 2 on intgc6 +: the lock-on frames equal, the neck yaw at the boomerang's first
+ * The boomerang route at N 2: the lock-on frames equal, the neck yaw at the boomerang's first
  * locked frame B 2894 vs A 2987, the hat spring off after it. Form: the frame's first step keeps the actor look point it
  * read (address and value); the frame's later steps read that value while the target is the same address. Points made
  * from Link's own stack locals are not kept (built from the step's values by their own forms). N 1: the live read (the

@@ -8,7 +8,7 @@
  * setNeckAngle / setHatAngle (head, HATA), the procs (eye, head top, hands, sword). In A frame F's execute reads frame
  * F-1's calc. At N > 1 the frame's first step reads the previous tick30 step's calc (= A's), but a later step reads the
  * calc of the step before it (half a frame ahead at N 2), and the angles it derives (neck, hat, waist, the leg IK) feed
- * the frame's calc through jointBeforeCB: the bomb helper's bt route with B switched in at its own origin (btO17n / m,
+ * the frame's calc through jointBeforeCB: the bomb route with B switched in at its own origin (
  * WWHD_T60_AT_ORIGIN): Link's words equal to A up to the switch-in, 40 joint-derived words off from its first frame
  * (mHatPrevPos, mHeadFrontAngleX, mFootMoveDist, the sword's old top, the colliders), the animation frame equal.
  *
@@ -141,7 +141,7 @@ static inline f64 footRaw(f64 travel, f32 dt) {
     }
     return travel / (f64)dt;
 }
-/* (2026-11-25, long1 seg 7 frame 7642, the Atorizk exit): the first 30 Hz
+/* (2026-11-25, a long route, frame 7642, the Atorizk exit): the first 30 Hz
  * fallback frame (dt 1) after converted frames took posMoveFromFootPos's travel toe - mFootData.mToePos with the toe
  * the last step stored (the tick30 step's view, half a frame into the previous frame's pose at N 2: travel 14.72 /
  * A 12.52, speedF 13.52 / 12.51). A's stored toe is the previous frame's frame-start one (its one execute): the toe

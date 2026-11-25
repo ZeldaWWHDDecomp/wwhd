@@ -22,7 +22,7 @@
 #include "d/actor/d_a_player_waitturn_t60.h" /* true60 */
 #include "d/actor/d_a_player_ropeblend_t60.h" /* true60 */
 #include <cstdlib>
-#include "d/actor/d_a_player_cohold_t60.h" /* */
+#include "d/actor/d_a_player_cohold_t60.h" /* true60 */
 
 namespace link05 {
 static u16 l_curseType;

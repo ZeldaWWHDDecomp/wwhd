@@ -388,7 +388,7 @@ static inline s32 himo2_phaseMul(u32 counter, s32 k, f32 share) {
     return (s32)(counter * (u32)k) + (s32)(share * (f32)k);
 }
 
-/* true60 (2026-11-25, long3G14n2 Abesso): the rope's pull back to the hand (cases
+/* true60 (2026-11-25, a long route, Abesso): the rope's pull back to the hand (cases
  * 5 / 8 / 9 mv_pull_back, and HIMO2_WAIT's return ease) moves by a max step of k x mReturnSpeedRate, then eases the rate
  * toward 1. A moves the frame by the frame-start rate; at N steps the later steps took the rate the earlier steps had
  * already eased, so B pulled faster, came within 5 of the hand a frame early and its per-frame JA_SE_LK_ROPE_UNWIND

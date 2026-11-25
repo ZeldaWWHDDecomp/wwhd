@@ -1,4 +1,4 @@
-/* c_damagereaction_landhist_t60.h (WWHD, true 60 build, t60-pgp 2026-11-25, rule: the
+/* c_damagereaction_landhist_t60.h (WWHD, true 60 build, 2026-11-25): the
  * enemy twin of Link's LANDHIST, d_a_player_landhist_t60.h). Decomp build only.
  * Separate file: c_damagereaction.cpp keeps a thin call.
  *

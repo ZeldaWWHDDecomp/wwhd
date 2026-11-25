@@ -1,10 +1,10 @@
-/* d_a_cc_easefe_t60.h (WWHD, true 60 build, t60-pgp 2026-11-25): the ChuChu's speedF ease
+/* d_a_cc_easefe_t60.h (WWHD, true 60 build, 2026-11-25): the ChuChu's speedF ease
  * ends each 30 Hz frame on the original's one ease. Decomp build only.
  * Separate file: d_a_cc_exec.cpp keeps thin calls.
  *
  * cc_t60_ease0F / cc_t60_ease2F (d_a_cc_exec.cpp) run cLib_addCalc0 / cLib_addCalc2 on speedF on every
  * step in c_lib's dt form (ratio 1 - (1 - r)^dt, max step x dt). That form ends a frame on A's value only while the frame
- * stays in one regime (all max-step or all ratio). Exact-dump pair (intgc8, N 2), ChuChu proc de70 frame 307: the
+ * stays in one regime (all max-step or all ratio). Exact-dump pair (N 2), ChuChu proc de70 frame 307: the
  * knock-back decay cLib_addCalc0(&speedF, 0.8, 4) from 4: A one step 4 x 0.8 = 3.2 < 4, ratio: 0.8. B step 1 max step
  * (4 x 0.553 = 2.21 > 2): 2, step 2 ratio: 2 x 0.447 = 0.894. speedF stayed 1.118 x A's to rest (x 0.2 a frame), and
  * the ChuChu came to rest 0.109 further (856.63 / A 856.52), held for good.

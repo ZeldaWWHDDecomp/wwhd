@@ -9,8 +9,8 @@
  * boost chases from 1.2 x. Since the speed chase is the frame's once, on the first step (setNormalSpeedF,
  * lkT60_chaseHeld), a boost can compound only within a frame. Form: the take-back stays for
  * the frame's later steps; the frame's first step keeps the boosted speed, as A's frame starts. Hookshot aim route hkD on
- * intgc2 (frame 182, the strafe start): A 5.795 -> 12.811, B 5.795 -> 11.652 (the chase from 4.829 = 5.795 / 1.2), B
- * 1.6 units behind from there (hkAg2: link-motion 8.5 @228, camera 8.7). dt 1: nothing. Negative control
+ * (frame 182, the strafe start): A 5.795 -> 12.811, B 5.795 -> 11.652 (the chase from 4.829 = 5.795 / 1.2), B
+ * 1.6 units behind from there (hookshot aim: link-motion 8.5 @228, camera 8.7). dt 1: nothing. Negative control
  * WWHD_T60_AIMBOOST_FRAME_NEGCTRL=1: the take-back on every step (the form before). */
 #pragma once
 #include "true60.h"

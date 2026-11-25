@@ -9,7 +9,7 @@
 #include "d/actor/d_a_bk_action.h"
 #include "d/actor/d_a_bk_t60.h"
 #include "c/c_damagereaction_carrier_t60.h" /* true60: b_hang on a rope bridge, coupled to it (rider rule) */
-#include "d/actor/d_a_bk_wsearch_t60.h" /* */
+#include "d/actor/d_a_bk_wsearch_t60.h" /* true60 */
 
 const gc_tu_data gc_tu = {
     .safeString = 0x10009474,

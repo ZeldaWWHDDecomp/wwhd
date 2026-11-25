@@ -77,7 +77,7 @@ static inline bool negctrl() {
     return false;
 #endif
 }
-/* (2026-11-25, long1 seg 0 frame 106): the landing frame's form gives the tick30 step
+/* (2026-11-25, a long route, frame 106): the landing frame's form gives the tick30 step
  * A's segment, and A's check can end in the air (a fall past a ledge lip: an earlier step's half-step check stood on the
  * lip, ground hit, speed.y 0; A's frame line passes it, pushed by the wall only). The tick30 position is then A's, but
  * speed.y kept the earlier step's landing (0, then one half gravity tick: -1.25 against A's -68.84), and the fall
@@ -229,7 +229,7 @@ static inline bool snapSegOff() {
     return true;
 #endif
 }
-/* (2026-11-25, long1 N 2 seg 8 frame 8326 after: the tick30
+/* (2026-11-25, a long route at N 2, frame 8326 after: the tick30
  * check's old.pos, pos and speed.y were A's, but its flags came from the first step's check, which lost the ground:
  * no GROUND_FIND (B 0x2010, A 0x20d0). CrrPos's wall correction raises the circles by the ground plane (GetWallAddY)
  * only while GROUND_FIND is set, so B's circles met the wall at another height: push (+1.47, -1.35) / A (+2.00, -1.83),
@@ -262,7 +262,7 @@ template <class A> static inline void segHist(A& acch, bool seg) {
     acch.m_flags = ((uint32_t)acch.m_flags & ~mask) | r.hist0;
     std::memcpy(acch.m_pla, r.pla0, sizeof r.pla0);
 }
-/* (2026-11-25, long1 N 2 seg 8 frame 8326: Link walks down a ramp along a wall, B's
+/* (2026-11-25, a long route at N 2, frame 8326: Link walks down a ramp along a wall, B's
  * first step lost the ground and autoGroundHit snapped him down, so the tick30 step's CrrPos took SNAPSEG's segment
  * (A's old.pos, A's height: inputs bit-equal to A's) but its own speed.y share -1.25 where A's is -2.5: the check found
  * the ramp 0.065 above (flags 0x20F0, A 0x2010) and the wall push came out (+1.35, -1.23) against A's (+2.00, -1.83);
@@ -281,7 +281,7 @@ static inline bool snapSegYOff() {
  * wall frame's tick30 check (A's segment start, old.pos = the frame start) also gets A's height, pos.y = the frame start +
  * A's frame fall: Link walks into a wall on the ground, the earlier step's check snapped y back to the floor, so the tick30
  * step's own y add stood at 549.06 where A's input is 547.5, and its speed.y (read by the wall correction) was its own
- * share -1.25 where A's is -2.5 (x 0.03 / z 0.06 off, then the wall term's speed, 1.0 by frame 213; the legs helper's
+ * share -1.25 where A's is -2.5 (x 0.03 / z 0.06 off, then the wall term's speed, 1.0 by frame 213; the
  * mdc frame 433: the wall circles met the other polygon of a corner). NC WWHD_T60_WALLSEGY_NEGCTRL=1; dt 1 never. */
 static inline bool wallSegYOff() {
 #if defined(GABI_GAME_BUILD) && GABI_T60
@@ -306,7 +306,7 @@ static inline bool begin(uint32_t acf, cXyz& oldPos, cXyz& pos, uint32_t tag) {
         r.pre[0] = pos.x;
         r.pre[1] = pos.z;
         r.bgNote = true;
-        ld3(r.pre3, pos); /* */
+        ld3(r.pre3, pos);
     }
     if (t60::first_step()) {
         g_lkT60WallSeg = false;
@@ -389,7 +389,7 @@ static inline bool begin(uint32_t acf, cXyz& oldPos, cXyz& pos, uint32_t tag) {
     std::memcpy(&p0y, &r.p0[1], 4);
     pos.y = p0y + r.sy; /* A's add: f32(frame-start y + speed.y) */
     r.on = true;
-    r.airSeg = true; /* */
+    r.airSeg = true;
     r.wallSegOn = !r.water && !airSegOff(); /* A's speed.y for the check too (wallSegSpeedBegin / End) */
     return true;
 }
@@ -463,7 +463,7 @@ static inline void end(uint32_t flags, cXyz& oldPos, const cXyz& pos) {
         return;
     if (flags & (uint32_t)dBgS_Acch::GROUND_HIT)
         r.landed = true;
-    uint32_t p[3]; /* */
+    uint32_t p[3];
     ld3(p, pos);
     if (p[0] != r.pre3[0] || p[1] != r.pre3[1] || p[2] != r.pre3[2])
         r.moved = true;

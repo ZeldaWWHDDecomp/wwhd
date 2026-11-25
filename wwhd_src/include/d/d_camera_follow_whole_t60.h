@@ -106,7 +106,7 @@ static inline bool towerWholeOn() {
     }
     return s == 1;
 }
-/* (2026-11-25; long2 seg 3 + at N 2, Link
+/* (2026-11-25; a long route at N 2, Link
  * and the enemies exact: the camera leaves the lock-on for style 142 (dCamAlg_MANUAL_CAMERA_e, type 25 mode 12) at
  * frame 801; the manual style ran per step: its eye eases toward a goal made from Link each frame (a moving goal), the
  * per-step shares fell short: V 1710 / 1706 / 1700 for A's 1709 / 1704 / 1698, the eye 1.5 off at 802, 7.36 at 810, the

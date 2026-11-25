@@ -251,8 +251,8 @@ static inline const LkT60WaitTurn* lkT60_midEntryRecord() {
         return nullptr;
     return &t;
 }
-/* (2026-11-25, rule: N 4 items are fixed; long1 N 4 frame 128 (trail helper's
- * analysis): LAND_DAMAGE's animation reached its end on a middle step, its body entered WAIT there and WAIT's body ran on
+/* (2026-11-25; a long route at N 4, frame 128):
+ * LAND_DAMAGE's animation reached its end on a middle step, its body entered WAIT there and WAIT's body ran on
  * the frame's later steps, entering MOVE one frame before A (A: the end at its one update, WAIT's body the next frame).
  * Form: the held body extended to every middle-step entry, as the walk entry's hold: commonProcInit on a middle step
  * (not the first, not tick30) holds the entered procedure's body on the frame's remaining steps (g_lkT60MidHold). The

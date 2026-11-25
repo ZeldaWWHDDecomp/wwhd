@@ -8,7 +8,7 @@
  */
 #include "d/actor/d_a_himo2.h"
 #include "d/t60_draw.h"
-#include "d/actor/d_a_himo2_wrappic_t60.h" /* */
+#include "d/actor/d_a_himo2_wrappic_t60.h" /* true60 */
 
 const gc_tu_data gc_tu = {
     .safeString = HIMO2_SAFESTRING_VTBL,

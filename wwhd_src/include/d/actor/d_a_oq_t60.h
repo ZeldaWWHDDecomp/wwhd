@@ -114,7 +114,7 @@ static inline bool oq_t60_bob_ran(const oq_class* i) {
  * once a frame, cLib_addCalc2(y, Link y + 30, 1.0, 30) (a snap when within 30), then the move adds speed.y, and the arrival
  * test (|y - (Link y + 30)| <= 2, tick30 step) reads the ease's result. Per step with dt the ease moved half of the gap per
  * step (capped 15) and its target moved with Link inside the frame, so the tick30 test missed the snap (pair /
- * oqD2, N 2, step 3753: B 364.59 vs A 349.70) and the spit (0x58C7, the rock 00E3) came 2 frames late (N 4: 5).
+ * the Octorok route, N 2, step 3753: B 364.59 vs A 349.70) and the spit (0x58C7, the rock 00E3) came 2 frames late (N 4: 5).
  * Form (the bob's move, oq_t60_bob_mark): every step of the rise keeps only the ease's y; the frame's earlier steps do
  * not ease (logic y held at the frame start), the tick30 step eases once at dt 1 toward Link's frame-end height
  * (oq_t60_whole) and its move adds the whole frame's speed.y: the frame ends on A's height.

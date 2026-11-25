@@ -7,7 +7,7 @@
  * when changeRopeEndProc sees A / B (mItemTrigger & 3): the release speed (mNormalSpeed, speed.y from mProcVar2's ratio),
  * its direction (the phase) and the fall's start position are the frame-end swing's. At N steps the press is seen on
  * the frame's first step, so B let go after that step's dt share of the swing: from the half-swung rope end (pair
- * long3G13n2, Abesso grapple: the swing exact to 2767, the release frame 2768 FALL pos 6.26 off, speedF 13.18 / A 13.16).
+ * a long route, the Abesso grapple: the swing exact to 2767, the release frame 2768 FALL pos 6.26 off, speedF 13.18 / A 13.16).
  * Form: on a step before the tick30 step with A / B triggered (the let-go's own test; not on "ADMumi", where
  * changeRopeEndProc never lets go), the frame-start swing state (noted on the frame's first step) is put back and the
  * whole procedure runs once at dt 1: A's frame (the whole swing, then the release from the frame-end state); the frame's

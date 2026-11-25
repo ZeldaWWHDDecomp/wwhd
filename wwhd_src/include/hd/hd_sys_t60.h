@@ -1,5 +1,4 @@
-/* hd_sys_t60.h (WWHD, true 60 build): (2026-11-25; found by the
- * carriables helper on long2 seg 17).
+/* hd_sys_t60.h (WWHD, true 60 build): (2026-11-25; found on a long route).
  *
  * The HD game task's per-frame function (hdGameTask_calc, 0203593C) runs, before the loop body (the play scene and the
  * actors), the parts that count 30 Hz frames: the HOME / system / button / controller hold counters and the input

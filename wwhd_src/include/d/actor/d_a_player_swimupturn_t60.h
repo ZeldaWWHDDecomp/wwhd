@@ -6,7 +6,7 @@
  * (cLib_addCalcAngleS: the earlier steps take a share, the tick30 step ends on the original's one step from the frame
  * start). SWIM_MOVE's body then enters SWIM_UP (changeSwimUpProc) when Link surfaces; SWIM_UP does not turn.
  * In A the frame's one turn is whole before the change. At N steps a change on an earlier step leaves both angles at
- * that step's share and nothing finishes the turn: oq  at N 4 on intgc9, frame 253 (SWIM_UP 0x35): angle A
+ * that step's share and nothing finishes the turn: the Octorok route at N 4, frame 253 (SWIM_UP 0x35): angle A
  * 25476 / B 25576 (the first step's 300 of the frame's 400); the stroke's earlier steps moved along the whole turn
  * but the tick30 step's speed took the stuck angle: speed xz A (11.589, -13.773) / B (11.451,
  * -13.888), Link 7.97 off by 357. At N 2 the first step's share reached the turn's end (strict yes). Form: the free swim

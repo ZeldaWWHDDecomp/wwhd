@@ -4,7 +4,7 @@
 #include "true60.h"
 #include <cstdlib>
 
-/* (2026-11-25, long1 seg 8 frame 7710, the Atorizk arrival): the start demo's
+/* (2026-11-25, a long route, frame 7710, the Atorizk arrival): the start demo's
  * DEMO_KEEP (procedure body) ends when Link is more than 300 from home.pos. A tests it once per 30 Hz update, before
  * the frame's move (current.pos = the previous frame's end); at N steps a later step tested the position after the
  * frame's earlier steps had moved him (half a frame ahead at N 2): the timer cleared on B's tick30 step of 7707 (A:

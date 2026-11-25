@@ -64,7 +64,7 @@ extern "C" __attribute__((visibility("default"))) float wwhd_t60_grab_pic_dy(uin
 static inline void lk04_grabPicNote(uint32_t, float, bool, bool, float) {}
 #endif
 
-/* carry placement, worn barrel (obr on es3, frame 248 -> 249): the worn ease (setGrabItemPos: mGrabItemOffsetY +=
+/* carry placement, worn barrel (frame 248 -> 249): the worn ease (setGrabItemPos: mGrabItemOffsetY +=
  * m35D8, addCalc toward 0 / -115 / -85 by 0.5 with steps 1 .. 20, the part past -85 into m35D8, which lowers Link's body
  * chain in the calc) is a once-a-frame chase with a minimum step: A at 248 moved -86.875 -> -85.875 (half the gap 0.94,
  * the minimum 1: m35D8 -0.875), B's per-step chase 0.549 + 0.5 (m35D8 -0.8258), the next frame's calc 0.049 off. Form:

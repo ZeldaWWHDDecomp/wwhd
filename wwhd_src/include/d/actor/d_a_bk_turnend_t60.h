@@ -1,4 +1,4 @@
-/* d_a_bk_turnend_t60.h (WWHD, true 60 build, t60-pgp 2026-11-25; board):
+/* d_a_bk_turnend_t60.h (WWHD, true 60 build, 2026-11-25):
  * the attack's turn-target copy reads the frame's attack frame. Decomp build only.
  * Separate file: d_a_bk_fight.cpp keeps thin calls.
  *

@@ -1,4 +1,4 @@
-/* d_a_bk_failhold_t60.h (WWHD, true 60 build, t60-pgp 2026-11-25, route bkL, holder 47C5CE68
+/* d_a_bk_failhold_t60.h (WWHD, true 60 build, 2026-11-25, holder 47C5CE68
  * frame 222). Decomp build only. Separate file:
  * d_a_bk_move.cpp keeps thin calls.
  *

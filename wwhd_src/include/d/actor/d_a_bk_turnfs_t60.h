@@ -1,4 +1,4 @@
-/* d_a_bk_turnfs_t60.h (WWHD, true 60 build, t60-pgp 2026-11-24, the Bokoblin twin of the
+/* d_a_bk_turnfs_t60.h (WWHD, true 60 build, 2026-11-24, the Bokoblin twin of the
  * the frame-88 form t60marr::turnPlace, d_a_mo2_arrive_t60.h). Decomp build only.
  * Separate file: d_a_bk_move.cpp keeps thin calls.
  *

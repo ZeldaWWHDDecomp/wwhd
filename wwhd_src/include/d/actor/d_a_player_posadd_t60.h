@@ -57,7 +57,7 @@ static inline bool lkT60_wallSegAllOff() {
 /* the xz moves of this frame's earlier steps' BG checks (mAcch.CrrPos: wall pushes), noted around the call in main_04
  * (d_a_player_landline_t60.h); reset on the frame's first step */
 inline double g_lkT60BgK[2] = {0.0, 0.0};
-/* (2026-11-25, long1 N 4 seg 1 frame 1082: Link +0.079 / +0.021, then the roll's wall
+/* (2026-11-25, a long route at N 4, frame 1082: Link +0.079 / +0.021, then the roll's wall
  * crash at 1094 a frame apart): posMove's collision push (lk_ccMoveStep, main_03) took a push first seen
  * on a later step of a frame that started without one (the collision pass after an earlier step: Link and the pusher at
  * their mid-frame places) and handed out its share on that step; A's frame has no push there: its collision pass runs at
@@ -176,7 +176,7 @@ static inline bool lkT60_posAddLive() {
     return s.valid && t60_step_counter() - s.stamp < t60::steps();
 }
 
-/* (carriables helper 2026-11-24; user approval, trial: the speed-ramp position-gap rule (3) applied to Link's own xz move): the
+/* (2026-11-24, trial: the speed-ramp position-gap rule (3) applied to Link's own xz move): the
  * frame's tick30 step places Link at the frame-start place + the frame-end speed's whole move (A's one add of the speed
  * the frame ends with) + the frame's per-step corrections (the per-step ground-check rule), instead of the sum of the steps' own moves; the
  * earlier steps move as before (their own speed x dt, the picture). Exact on A's frame end while the corrections agree

@@ -1031,7 +1031,7 @@ template <class V> static inline void ship60_ropeJitStep(const void* owner, f32 
     pos->z = ropeZ + j.dz;
 }
 
-/* (2026-11-25; long3 seg 5 at N 2, the ship at full sail): procSteerMove
+/* (2026-11-25; a long route at N 2, the ship at full sail): procSteerMove
  * reads the game's Swift Sail flag (play+0x5D2C, written by unconverted code) each call; its 0 -> 1 starts the Swift
  * Sail (mSwiftSailActive, justRaised) and the frame's speed block sets speedF to 1.2 x the wind speed (A 50.65 ->
  * 101.28). In A the flag's writer ran after the ship's call of frame f - 1, so the ship started it on frame f. At N steps

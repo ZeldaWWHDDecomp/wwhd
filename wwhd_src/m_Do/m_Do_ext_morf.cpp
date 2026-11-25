@@ -1,7 +1,7 @@
 /** Single-animation morph controller, tww fields and methods. Private source. */
 #include "m_Do/m_Do_ext_morf.h"
 #include "m_Do/m_Do_ext_morf_snd_t60.h"
-#include "m_Do/m_Do_ext_morf_curfe_t60.h" /* true60: */
+#include "m_Do/m_Do_ext_morf_curfe_t60.h" /* true60 */
 using gabi::cpu;
 using gabi::ftoi;
 // HD: verified argument ordering, constructor guest-stack words and buffer state are retained.

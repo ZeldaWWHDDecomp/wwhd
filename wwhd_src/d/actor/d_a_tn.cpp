@@ -1740,7 +1740,7 @@ static void tn_moveAttack(tn_class* actor, f32 zero, f32 one, f32 blend, f32 acc
 
 // Darknut execution phases retain the native guest call frame.
 #include <initializer_list>
-#include "d/actor/d_a_tn_tilt_t60.h" /* */
+#include "d/actor/d_a_tn_tilt_t60.h" /* true60 */
 
 static void tn_placePart(tn_class* i_this, tn_p* part, int index, u32 joint); /* true60: part_move's tail */
 namespace tn_execute {

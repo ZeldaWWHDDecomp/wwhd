@@ -3,8 +3,8 @@
  *
  * At N steps per 30 Hz frame the earlier steps are 1..N-1 and the tick30 step is N. A form that notes something on "the"
  * earlier step and catches up on the tick30 step is exact at N 2, where the earlier steps are only the first step, but at
- * N 4 it leaves out the steps between the noting step and the tick30 step (2..N-1, "held"). Pairs at N 4 on gbc1 (t60-trail
- * /): the knock-back stop on step 2 of 4 ended the frame at its start, the landing bounce moved two
+ * N 4 it leaves out the steps between the noting step and the tick30 step (2..N-1, "held"). Pairs at N 4:
+ * the knock-back stop on step 2 of 4 ended the frame at its start, the landing bounce moved two
  * steps at the bounce's speed, jyunkai's walk ramp ran on steps 1 and 4 only (2.5 for A's 5.0), the Moblin's turn at
  * fight_run's head ran on step 1 only (+32 for A's +113).
  * The helpers below name the step sets so a form covers every earlier step:

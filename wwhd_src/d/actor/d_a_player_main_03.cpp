@@ -26,7 +26,7 @@
 #include "d/actor/d_a_player_stepsoffset_t60.h"
 #include "d/actor/d_a_player_footbg_t60.h"
 #include "d/actor/d_a_player_posadd_t60.h"
-#include "d/actor/d_a_player_cohold_t60.h" /* */
+#include "d/actor/d_a_player_cohold_t60.h" /* true60 */
 #include "d/actor/d_a_player_swimrise_t60.h"
 #include "d/actor/d_a_player_footga_t60.h"
 #include "d/actor/d_a_player_drawsplit_t60.h"

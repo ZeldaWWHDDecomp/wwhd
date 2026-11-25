@@ -179,7 +179,7 @@ static inline bool lkT60_rollEndNegctrl() {
 static inline f32 lkT60_rollEndFrame(J3DFrameCtrl* fc) {
     return lkT60_rollEndNegctrl() ? (f32)fc->mFrame : lkT60_endFrame(fc);
 }
-/* (2026-11-25, long1 N 4 seg 1 frame 1094): procFrontRoll's wall-crash window
+/* (2026-11-25, a long route at N 4, frame 1094): procFrontRoll's wall-crash window
  * (frame 6 .. 15) read the step's animation frame: A's frame plays first and tests 6.0 (crash), B's first step 5.775 (no
  * crash), its second 6.0: the crash a step late, the frame's launch on 3 of 4 steps (y 4.5 under A's arc, then the frame
  * end's check landed it). The window takes the frame-end frame (lkT60_endFrame). NC WWHD_T60_ROLLCRASH_NEGCTRL=1. */
@@ -192,7 +192,7 @@ static inline f32 lkT60_rollCrashFrame(J3DFrameCtrl* fc) {
     return nc ? (f32)fc->mFrame : lkT60_endFrame(fc);
 }
 
-/* (2026-11-25, long3 N 4 seg 8, A frame 6805): procHangClimb's run-out
+/* (2026-11-25, a long route at N 4, A frame 6805): procHangClimb's run-out
  * threshold (`getFrame() > 23`, then checkNextMode(1)) read the step's frame: at rate 0.75 A's frame plays 22.5 -> 23.25
  * and changes at its frame end; B at N 4 crossed 23 on step 3 of 4 (23.06) and changed there (WAIT / MOVE from the
  * climb's end placement at another frame): Link 1.3 off at the climb's end, 2.1 by 6821. N 2 steps 22.875 / 23.25 hit A's

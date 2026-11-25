@@ -1,4 +1,4 @@
-/* d_a_bk_athit_t60.h (WWHD, true 60 build, t60-pgp 2026-11-25): the frame whose first step
+/* d_a_bk_athit_t60.h (WWHD, true 60 build, 2026-11-25): the frame whose first step
  * reads the spear sphere's At hit still registers that frame's sweep on its tick30 step. Decomp build only.
  * Separate file: d_a_bk_fight.cpp keeps thin calls.
  *

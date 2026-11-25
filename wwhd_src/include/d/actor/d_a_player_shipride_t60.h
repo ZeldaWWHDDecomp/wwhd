@@ -20,7 +20,7 @@ template <class L> static inline void lkT60ShipRide_held(L* lk) {
         return e && e[0] == '1';
     }();
     const int proc = (int)lk->mCurProc;
-    /* (part 3, 2026-11-25; long3 seg 4 / 5, N 2: the drop onto the ship by
+    /* (part 3, 2026-11-25; a long route, N 2: the drop onto the ship by
      * LINK_WARP, SHIP_JUMP_RIDE entered on the first step: its init's setShipRidePos(0) at the first step's ship matrix
      * held over the frame, y -188.572 for A's -187.035, the ship's frame-end place) SHIP_JUMP_RIDE (0x87) the same,
      * with its body's placement setShipRidePos(0). NC WWHD_T60_SHIPJUMPRIDE_HOLD_NEGCTRL=1. */
@@ -32,7 +32,7 @@ template <class L> static inline void lkT60ShipRide_held(L* lk) {
         lk->setShipRidePos(0);
         return;
     }
-    /* (2026-11-25; long3 seg 5, N 2, frame 4019: SHIP_CANNON entered on the
+    /* (2026-11-25; a long route, N 2, frame 4019: SHIP_CANNON entered on the
      * first step kept its init's setShipRidePos(1) at the first step's ship matrix over the frame, Link 49.7 behind the
      * sailing ship for that frame) SHIP_CANNON (0x8E) the same: its body's placement setShipRidePos(1) (procShipCannon,
      * when it does not end the ride). NC WWHD_T60_SHIPCANNON_HOLD_NEGCTRL=1. */

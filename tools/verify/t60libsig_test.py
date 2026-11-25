@@ -23,7 +23,7 @@ WWHD_T60_LIBSIG_NEGCTRL=1 in the game, the check off; and the same-site variant)
 (B = A/16) from the first call's start, A - B = 15A/16 off: fails.
   two: two call sites on every step (the pin hand-off, c_lib_callsig_t60.h): the ease becomes a plain helper and a
         driver at its address calls it with the case's parameters and then with a second site's (scale 2, a larger
-        limit); the one step is the original pair(ease1(S)); byte exact (t60nocmp).
+        limit); the one step is the original pair ease2(ease1(S)); byte exact (t60nocmp).
 For each of the six functions: 1. site passes T-02 at N 2 and N 4; 2. its NC fails at N 2 and N 4 on the value;
 3. same (the entry kept) fails at N 2 on the value, as the NC does; 4. two passes byte exact at N 2 and N 4;
 5. two with the pin NC (the pin ends the entry: the second site moves only its share) fails at N 2 and N 4.
@@ -79,7 +79,7 @@ CASES = {
 }
 # two sites on every step (the pin hand-off): the marked ease becomes a plain helper t60ls_h; a driver at its address
 # calls it with the case's own parameters (site 1) and then with the second site's (site 2) on every step; the one
-# step is the original pair ((ease1(S))); byte exact (t60nocmp: the driver is not the original)
+# step is the original pair (ease2(ease1(S))); byte exact (t60nocmp: the driver is not the original)
 TWO = {
     "0200F378": ("s16", "pValue, target, scale, maxStep, minStep", "pValue, target, 2, 0x2000, minStep"),
     "0200F428": ("void", "pValue, target, scale, maxStep", "pValue, target, 2, 0x2000"),

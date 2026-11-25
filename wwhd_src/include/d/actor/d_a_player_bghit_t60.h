@@ -27,7 +27,7 @@ static const uint32_t kAcchHit = dBgS_Acch::WALL_HIT | dBgS_Acch::GROUND_HIT | d
 static const uint32_t kCirHit = dBgS_AcchCir::WALL_HIT;
 enum { N_CIR = 3 };
 
-/* (2026-11-25, long1 N 4 seg 1 frame 1094: B's game stopped on an assert in
+/* (2026-11-25, a long route at N 4, frame 1094: B's game stopped on an assert in
  * procFrontRoll's wall crash, lk05GetMtrlSndId -> dBgS::GetPolyId on an invalid poly): the view gave a later step the
  * circles' frame-start WALL_HIT bit, but their wall poly (cBgS_PolyInfo, 0x10 bytes before m_flags) and wall angle
  * (m_wall_angle_y) stayed the step's own check's (no wall there: no poly). The circle's hit view now carries its poly and
@@ -65,7 +65,7 @@ static inline bool cirSame(const CirPoly& a, const CirPoly& b) {
     return a.ang == b.ang;
 }
 struct View {
-    CirPoly poly0[3], polyReal[3], polySeen[3]; /* */
+    CirPoly poly0[3], polyReal[3], polySeen[3];
     uint32_t tag;           /* the frame the record is from */
     uint32_t acch0;         /* the frame's first-step hit bits */
     uint32_t cir0[N_CIR];
@@ -102,7 +102,7 @@ static inline void begin(be<u32>& acch, be<u32>& c0, be<u32>& c1, be<u32>& c2, u
         v.acch0 = (uint32_t)acch & kAcchHit;
         for (int i = 0; i < N_CIR; i++) {
             v.cir0[i] = (uint32_t)*cir[i] & kCirHit;
-            cirGet(cir[i], v.poly0[i]); /* */
+            cirGet(cir[i], v.poly0[i]);
         }
         v.tag = tag;
         v.valid = true;

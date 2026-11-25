@@ -1,12 +1,12 @@
-/* c_damagereaction_posadd_t60.h (WWHD, true 60 build, t60-pgp 2026-11-24, rule the same
- * day). Decomp build only. Separate file:
+/* c_damagereaction_posadd_t60.h (WWHD, true 60 build, 2026-11-24).
+ * Decomp build only. Separate file:
  * c_damagereaction.cpp keeps thin calls. The enemy-side twin of (d_a_player_posadd_t60.h).
  *
  * dr_damage_set moves the enemy once a frame in A: x = round(round(x + forward) + push), forward = speed.x / 4 + the
  * pushback (one f32 fmadds), push = the collision push m_cc_move (when the action / mode take it); z the same. At N steps
  * every step adds its share (forward x dt, the speed-ramp position-gap rule (3)'s tick30 rest; the held push x dt, the first-step push rule), each add
  * rounded at the enemy's coordinate (|x| ~ 180: ulp 1.5e-5). The frame's displacement equals A's in value, the position
- * drifts by a few ulps a frame (moF4 Moblin 47C59A80 from frame 6, 0.001 by frame 42): its Co push on Link at frames 43-49
+ * drifts by a few ulps a frame (a Moblin 47C59A80 from frame 6, 0.001 by frame 42): its Co push on Link at frames 43-49
  * then differed by 0.0005 a frame and left Link 0.016 off for the rest of the route.
  * Form: on the frame's first step the frame-start xz and the frame's full pushback vector (A's, before x dt) are recorded;
  * a later step carries any change made to xz since this form's last write (wall / BG corrections between the steps) into
@@ -29,7 +29,7 @@ static inline bool nc() {
     return false;
 #endif
 }
-/* (2026-11-25; long2 seg 3 at N 2, Bokoblin 47C5CE68 knocked back at speed.x
+/* (2026-11-25; a long route at N 2, Bokoblin 47C5CE68 knocked back at speed.x
  * -90 into a wall at frames 226-237): A moves the enemy once a frame (dr_damage_set) and checks once (dr_body_bg_check:
  * mAcch.CrrPos, old.pos the frame start -> pos the frame start + the frame's move): the wall slides it along the whole
  * move. At N steps each step checked its own part: the first step's wall correction stayed in's frame
@@ -61,7 +61,6 @@ struct Entry {
     double x0, z0;   /* the frame-start xz plus the corrections between the steps */
     f32 wx, wz;      /* the xz this form left after the last step's adds */
     f32 pbx, pbz;    /* the frame's full pushback vector (first step, before x dt) */
-    /* */
     double kx, kz;   /* the earlier steps' body BG check xz corrections (CrrPos) of this frame */
     f32 o0[3];       /* the first step's old.pos at its body BG check (A's segment start) */
     f32 oSave[3];    /* the tick30 step's own old.pos, put back after its check */

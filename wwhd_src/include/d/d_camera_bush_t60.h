@@ -1,7 +1,7 @@
 /* d_camera_bush_t60.h (WWHD, true 60 build; 2026-11-25). Decomp build only.
  * Separate file: d_camera_bg.cpp keeps a thin call.
  *
- * long3 N 2 seg 3 (the sea 28 warp at t95, Link standing at the hammer spot, style 90 in the follow whole form): camera
+ * a long route at N 2 (the sea 28 warp at t95, Link standing at the hammer spot, style 90 in the follow whole form): camera
  * eye 5.1 off at 3000 with Link exact; the camera yaw then went into Link's camera-relative MOVE heading at 3272 (-8100
  * vs -8092) and the heavy walk ended 2.06 off at 3348. checkGroundInfo's bush test (lineCollisionCheckBush: the eye /
  * attention segment against the CC mass list, the grass and bushes' camera colliders; then GetMassCamTopPos) sets

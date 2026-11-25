@@ -9,7 +9,7 @@
  * its own: setMoveAnime points mAnmRatioUpper[0] at the under animation, and animeUpdate plays an upper control only
  * while its pack is its own). At N steps a set that leaves it on an earlier step stops its play after that step: frame
  * 78 (GRAB_WAIT -> MOVE, MOVE's blend switch on the first step) mFrameCtrlUpper[0] 1.248 -> 1.947 (A 2.646) and kept;
- * frame 31 (WAIT -> GRAB_READY) the wait's upper 37.950 (A 38.500); the worn barrel (obr) on its GRAB_WAIT -> MOVE frame
+ * frame 31 (WAIT -> GRAB_READY) the wait's upper 37.950 (A 38.500); the worn barrel on its GRAB_WAIT -> MOVE frame
  * the same; mFrameCtrlUnder[1] (the move blend's second animation) likewise when a single animation replaces the blend
  * on an earlier step (setSingleMoveAnime: the stone throw's entry, stt N 4 frame 256, A 13.57 -> 15.87, B one step,
  * 14.14). Form: the frame's first step notes which of those controls it played; on a later step of that frame a noted
@@ -55,7 +55,7 @@ static inline bool lkT60_upperContinue(int i, bool pending) {
 /* (2026-11-25): resetActAnimeUpper(i) cleared slot `i` (initFrameCtrl: frame 0, no
  * animation). In A the frame's one play came before the proc's reset, which leaves frame 0 until the next set; at N steps
  * a reset after the first step's play left the played bit, and the later step's continue played the cleared control
- * (bmA N 2 on intgc6: mFrameCtrlUpper[2].mFrame 0.5 vs A 0 from 3731, read by m35EC / the bow and hookshot waits).
+ * (the boomerang route at N 2: mFrameCtrlUpper[2].mFrame 0.5 vs A 0 from 3731, read by m35EC / the bow and hookshot waits).
  * The reset drops the slot's frame play. NC WWHD_T60_UPPERRESET_NEGCTRL=1. dt 1: never. */
 static inline void lkT60_upperReset(int i) {
 #if defined(GABI_GAME_BUILD) && GABI_T60

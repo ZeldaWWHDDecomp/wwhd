@@ -6,7 +6,7 @@
  * (mActorKeepThrow set and daPyStts0_BOOMERANG_WAIT_e): both are set by throwBoomerang inside the proc. In A the throw
  * frame's setAtnList ran before the throw, so the lock-on (and what reads it: setNeckAngle's look target, the hat spring
  * through the head) starts on the next frame. At N steps the throw is made on an earlier step and the frame's later
- * steps' setAtnList saw it: the lock-on a frame early. bmA (boomerang) at N 2 on intgc6: mpAttnActorLockOn set
+ * steps' setAtnList saw it: the lock-on a frame early. The boomerang route at N 2: mpAttnActorLockOn set
  * at B's record 3635 vs A's 3636; mNeckAngle (681, 3066) vs A (0, 0) at 3635, the hat words (mHatSwingPhase ...) off
  * from 3636. Form: the frame's first step records the throw-lock condition as setAtnList reads it (before its proc: A's
  * frame-start state); the frame's later steps use that record. (A recorded throw whose actor is gone by a later step

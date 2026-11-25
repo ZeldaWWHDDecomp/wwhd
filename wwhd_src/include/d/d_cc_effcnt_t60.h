@@ -1,4 +1,4 @@
-/* d_cc_effcnt_t60.h (WWHD, true 60 build, t60-pgp 2026-11-25): the collider's hit-mark
+/* d_cc_effcnt_t60.h (WWHD, true 60 build, 2026-11-25): the collider's hit-mark
  * repeat guard counts 30 Hz frames. Decomp build only. Separate file:
  *d_cc_d.cpp keeps thin calls.
  *

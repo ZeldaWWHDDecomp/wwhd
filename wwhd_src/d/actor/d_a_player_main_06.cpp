@@ -16,7 +16,7 @@
 #include "d/actor/d_a_player_t60.h"
 #include "d/actor/d_a_player_crawl_t60.h"
 #include "d/actor/d_a_player_climb_t60.h"
-#include "d/actor/d_a_player_ladder_t60.h" /* */
+#include "d/actor/d_a_player_ladder_t60.h" /* true60 */
 #include "d/actor/d_a_player_hang_t60.h"
 
 const gc_tu_data gc_tu = {.safeString = 0x10034B24};

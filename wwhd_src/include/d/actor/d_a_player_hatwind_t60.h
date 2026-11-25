@@ -7,7 +7,7 @@
  * the frame's Link execute: the point winds of sources earlier in the process line at their frame F, later ones at F-1.
  * On B's tick30 step a converted source later in the line (wind_tag 0x187, the Wind Temple updrafts, its chase whole on
  * its first step since) has run frame F already: the hat read the bubble a frame ahead (glide route
- * glH19, B switched in at its own origin, in: the hat words equal to A up to frame 136, the updraft's
+ * the glide route, B switched in at its own origin, in: the hat words equal to A up to frame 136, the updraft's
  * edge, then 64 frames off, max 1425). The frame's first step samples the wind at HATA (its pose is the frame start
  * since: A's HATA) before the sources' tick30 work: every earlier-in-line source at F (converted: its
  * first step; unconverted ones run on the tick30 step, but A reads them at F too only when earlier in the line), every

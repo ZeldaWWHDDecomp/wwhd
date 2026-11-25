@@ -20,7 +20,7 @@
 #pragma once
 #include "true60.h"
 
-/* backward addendum (2026-11-25; long2 seg 5 at N 2, frame 1831): the swim move's
+/* backward addendum (2026-11-25; a long route at N 2, frame 1831): the swim move's
  * turn-around (stick backward of the shape angle) snaps shape / current angle to the target, no ease; the first step's
  * cosine (lkT60_moveCosAngle below) re-ran an ease from the frame start (0x11 / 0x1388: a small turn, cos ~ +1) where A's
  * cosine sees the snap (cos(180 deg) = -1): B swam forward at +2.95 where A braked to -3.0, Link 5.9 off at once. The

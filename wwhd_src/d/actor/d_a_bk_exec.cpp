@@ -11,9 +11,9 @@
 #include "d/actor/d_a_bk_t60.h"
 #include "c/c_damagereaction_bounce_t60.h" /* true60: the frame's bounce, for the shape copy */
 #include <unordered_map>
-#include "d/actor/d_a_bk_react5_t60.h" /* */
-#include "d/actor/d_a_bk_shapecopy_t60.h" /* */
-#include "d/actor/d_a_bk_tilt_t60.h" /* */
+#include "d/actor/d_a_bk_react5_t60.h" /* true60 */
+#include "d/actor/d_a_bk_shapecopy_t60.h" /* true60 */
+#include "d/actor/d_a_bk_tilt_t60.h" /* true60 */
 
 /* true60 (the first-step AI-timer rule): the AI timers (mTimers, mSideStepTimer, mSideStepWait, mWeaponRunTimer,
  * mWeaponViewWait, dr.mHitStunTimer) and the phase counter mFrameCounter count on the frame's FIRST step, before its

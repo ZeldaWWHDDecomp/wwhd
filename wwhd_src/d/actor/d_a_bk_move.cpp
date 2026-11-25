@@ -10,8 +10,8 @@
 #include "d/actor/d_a_bk_move.h"
 #include "d/actor/d_a_bk_t60.h"
 #include <unordered_map>
-#include "d/actor/d_a_bk_turnfs_t60.h" /* */
-#include "d/actor/d_a_bk_failhold_t60.h" /* */
+#include "d/actor/d_a_bk_turnfs_t60.h" /* true60 */
+#include "d/actor/d_a_bk_failhold_t60.h" /* true60 */
 
 enum {
     JA_SE_CV_BK_SEARCH = 0x482A,

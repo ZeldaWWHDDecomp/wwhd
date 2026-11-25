@@ -1,4 +1,4 @@
-/* d_a_tn_tilt_t60.h (WWHD, true 60 build, t60-pgp 2026-11-25): the Darknut's ground tilt once
+/* d_a_tn_tilt_t60.h (WWHD, true 60 build, 2026-11-25): the Darknut's ground tilt once
  * per 30 Hz frame, the twin of (d_a_bk_tilt_t60.h) and frame 72 (d_a_mo2_tilt_t60.h). Decomp build
  * only. Separate file: the source keeps thin calls.
  *

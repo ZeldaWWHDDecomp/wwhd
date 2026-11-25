@@ -1,7 +1,7 @@
 /** ChuChu execution and inlined actions, following tww with verified HD behaviour. */
 #include "d/actor/d_a_cc_exec.h"
 #include "d/actor/d_a_cc_t60.h"
-#include "d/actor/d_a_cc_easefe_t60.h" /* true60: */
+#include "d/actor/d_a_cc_easefe_t60.h" /* true60 */
 #include "f_pc/f_pc_t60_frame_start.h" /* true60: t60_fs_read (the process-order read rule) */
 #include "gc_api/tu.h"
 #include <cstdlib>

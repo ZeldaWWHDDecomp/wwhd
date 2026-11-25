@@ -182,7 +182,7 @@ static inline f32 advance(uint32_t ea, f32 frame, f32 rate) {
         s_frameFirst = now;
     FcLatch& L = slot(ea);
     const bool inFrame = now - s_frameFirst < (uint32_t)t60::steps();
-    const bool cont = inFrame && !j3d_t60_fcFirstStepRestart() /* */ && L.ea == ea &&
+    const bool cont = inFrame && !j3d_t60_fcFirstStepRestart() && L.ea == ea &&
                       L.lastStep + 1 == now && now - L.firstStep < (uint32_t)t60::steps() && L.rate == bits(rate) &&
                       j3d_t60_fcSameFrame(L.last, bits(frame)) /* (a re-set's ulp) */;
     if (!cont) {

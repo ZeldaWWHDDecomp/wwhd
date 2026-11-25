@@ -5,11 +5,11 @@
  * angles: ATN_ACTOR_MOVE's setBlendAtnMoveAnime(2.4) picks the strafe side (mDirection: the sign of
  * sin(current.angle.y - shape_angle.y)) and its animations from them. A's update turns the frame's whole share before
  * the check; at N steps the first step's check came after its dt share, and the atnturn catch-up
- * (d_a_player_atnturn_t60.h) redid the turn after the init. long2 seg 15 (A 7509): the init picked the other side; on
+ * (d_a_player_atnturn_t60.h) redid the turn after the init. a long route (A 7509): the init picked the other side; on
  * the next frame procAtnActorMove's own setBlendAtnMoveAnime(-1) saw the side change and re-inited the old-frame morph
  * (counter 2.4 -> 1.4 where A was at 0.4): B's pose at 7510 lagged A's, the foot-travel base foot flipped (A 1 / B 0),
  * speedF 9.06 / 9.26 (0.195), 2.57 at the damage of 7819. (A redo of the init's set after the catch-up broke other
- * entries: the second set read the first one's state, long2 frame 182.)
+ * entries: the second set read the first one's state, a long route, frame 182.)
  * Form: on the frame's first step (the atnturn record of this step) the check runs at A's angles: the frame's whole
  * turn from the record (at dt 1, as the catch-up computes it) before checkNextMode; an entry keeps them (the catch-up
  * is not needed), no entry puts the step's own angles back. NC WWHD_T60_ATNENTRYDIR_NEGCTRL=1. dt 1: never. */

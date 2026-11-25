@@ -54,7 +54,7 @@ static inline void bk_t60_kdturn_catch_up(be<s16>* angleY, be<s16>* shapeY, s16 
     *shapeY = (s16)*angleY;
 }
 
-/* (2026-11-25; long2 seg 3 + at N 2, Bokoblin 47C5CE68
+/* (2026-11-25; a long route at N 2, Bokoblin 47C5CE68
  * frame 290): the same catch-up for the flinch. A's one call turns the Bokoblin in fight_attack (10552 -> 10387) before
  * damage_reaction's flinch (react 5: dr action 4, mode 0) stops the attack; on the first step B turned its share
  * (-> 10463) and flinched there, the tick30 step held: the flinch pose's joint targets (dr_damage_anime from the angle)
@@ -97,7 +97,7 @@ static inline void bk_t60_kdhold_note(const void* dr) {
         return;
     wwhd_t60_latch_set(bk_t60_kdhold_key(dr), bk_t60_kdturn_tag());
 }
-/* (2026-11-25, bq / bk3 at N 4 on intgc10, holder 47C5CE68, frame 165): the skip only ran
+/* (2026-11-25, a Bokoblin route at N 4, holder 47C5CE68, frame 165): the skip only ran
  * on the tick30 step, so at N 4 the frame's middle steps after the knock-down made knocked-down steps: mFallPitch 0 ->
  * 0xD4 -> 0x1A8 (A 0) on steps 2 / 3, put into the body by dr_matrix_set; the model calc there froze the head on the
  * knock-down (mHeadAngleY A 16333 / B 18474, daBk_player_view_check's cone, from then on) with the joint points and the

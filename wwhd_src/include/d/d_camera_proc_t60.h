@@ -48,7 +48,7 @@ static inline bool camera_t60_audio_pass(s32 camId) {
     return true;
 }
 
-/* (bomb per-step helper 2026-11-24): the letterbox bars. camera_execute's CalcTrimSize eases mTrimHeight by
+/* (2026-11-24): the letterbox bars. camera_execute's CalcTrimSize eases mTrimHeight by
  * 0.25 toward the bar height (Vista / cinema scope) or back toward 0, once a 30 Hz frame in the original; camera_draw sets
  * the window's scissor from it (720 - 2 x trim high), and the next frame's Run reads that scissor: bumpCheck's lock-on
  * sight fit (radiusActorInSight's vertical half-angle from the scissor height). At N > 1 the ease ran on every step (N 2

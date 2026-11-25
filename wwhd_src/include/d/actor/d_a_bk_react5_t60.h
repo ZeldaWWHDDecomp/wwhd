@@ -1,4 +1,4 @@
-/* d_a_bk_react5_t60.h (WWHD, true 60 build, t60-pgp 2026-11-25, route). Decomp build
+/* d_a_bk_react5_t60.h (WWHD, true 60 build, 2026-11-25). Decomp build
  * only. Separate file: d_a_bk_exec.cpp keeps thin calls.
  *
  * daBk_Execute runs Bk_move (the AI) and then damage_reaction; its result 5 (a hit that only flinches) sends the Bokoblin

@@ -252,7 +252,7 @@ template <class A> static inline void end(A* a, const Ops<A>& o, bool model) {
     o.get(a, v);
     for (int i = 0; i < o.n; i++)
         e->dv[i] = i < o.nPos ? v[i] - e->v0[i] : (f32)(s16)(s32)((s32)v[i] - (s32)e->v0[i]);
-    /* (2026-11-24, obtF3 barrel put-down): the next frame's earlier steps show the
+    /* (2026-11-24, barrel put-down): the next frame's earlier steps show the
      * actor moving on by this frame's change; a frame that came down and ended at rest or rising again (speed.y >= 0: the
      * ground check's 0, a bounce's new upward speed) after a fall (speed.y < 0 at the previous frame's end) or a release
      * (held at the previous frame's end) is a landing: its downward change is not continued below the ground (the
