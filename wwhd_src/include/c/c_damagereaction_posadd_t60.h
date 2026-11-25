@@ -78,4 +78,17 @@ static inline void end(Entry* e, u32 key, f32 speedX, f32 speedZ, bool push, f32
     }
     e->wx = x, e->wz = z;
 }
+/* (2026-11-25, Bokoblin B4B4 on bq / bk3 / bkL at N 2, frame 6): the fall term's tick30 form
+ * (c_damagereaction_fall_t60.h) returns the share (y0 + term) - y that caller adds to y: two roundings
+ * where A's one fmadds(speed.y, 0.25, y) gives y0 + term (the product by 0.25 is exact): the pre-ground-check height (the
+ * Acch's copies of it) 1 ulp off. The caller now writes y0 + term itself when that form's frame-start path is taken.
+ * Negative control WWHD_T60_DRFALLX_NEGCTRL=1: the share add, as before. */
+inline bool fallNc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_DRFALLX_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return false;
+#endif
+}
 } // namespace t60drPos

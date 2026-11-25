@@ -123,7 +123,7 @@ struct T60drFall {
 std::unordered_map<u32, T60drFall> t60drFalls;
 }  // namespace
 /* the step's fall term (dt = 1: not called; the original's fmadds) */
-static f32 t60dr_fall_step(damagereaction* dr, f32 quarter) {
+static f32 t60dr_fall_step(damagereaction* dr, f32 quarter, f32* exactY = nullptr) {
     const f32 v = dr->mpEnemy->speed.y;
     const u32 a = gabi::ea(dr), frame = t60dr_frame();
     if (t60::first_step()) {
@@ -141,8 +141,14 @@ static f32 t60dr_fall_step(damagereaction* dr, f32 quarter) {
         e.start = v, e.launched = true;
     if (t60::tick30()) {
         f32 fy = gabi::fsubs_ppc(gabi::fmuls_ppc(e.start, 0.25f), e.sum);
-        if (!e.launched) /* true60: from the frame start's height (c_damagereaction_fall_t60.h) */
-            fy = t60drFall::tick30(e.y0, gabi::fmuls_ppc(e.start, 0.25f), dr->mpEnemy->current.pos.y, fy, e.sum);
+        if (!e.launched) { /* true60: from the frame start's height (c_damagereaction_fall_t60.h) */
+            const f32 term = gabi::fmuls_ppc(e.start, 0.25f), y = dr->mpEnemy->current.pos.y;
+            fy = t60drFall::tick30(e.y0, term, y, fy, e.sum);
+            /* true60 (c_damagereaction_posadd_t60.h): A's one rounding of y0 + term */
+            if (exactY != nullptr && !t60drPos::fallNc() && !t60drFall::nc() &&
+                __builtin_fabsf(y - (e.y0 + e.sum)) <= t60drFall::kJump)
+                *exactY = gabi::fadds_ppc(e.y0, term);
+        }
         t60drFalls.erase(it);
         return fy;
     }
@@ -1685,9 +1691,20 @@ static s32 dr_damage_set(u32 address) {
             }
             dr->mpEnemy->current.pos.x = gabi::fadds_ppc((f32)dr->mpEnemy->current.pos.x, forwardX);
             /* true60 (f233): the frame's start speed (t60dr_fall_step); dt = 1: the original */
-            if (dt != 1.0f)
-                dr->mpEnemy->current.pos.y =
-                    gabi::fadds_ppc((f32)dr->mpEnemy->current.pos.y, t60dr_fall_step(dr, quarter));
+            if (dt != 1.0f) {
+                f32 t60ExactY = 0.0f;
+                bool t60HasExact = false;
+                {
+                    f32 t60Probe = __builtin_nanf("");
+                    const f32 fall = t60dr_fall_step(dr, quarter, &t60Probe);
+                    t60HasExact = t60Probe == t60Probe; /* (not NaN: the tick30 form's frame-start path wrote it) */
+                    t60ExactY = t60Probe;
+                    if (!t60HasExact)
+                        dr->mpEnemy->current.pos.y = gabi::fadds_ppc((f32)dr->mpEnemy->current.pos.y, fall);
+                }
+                if (t60HasExact)
+                    dr->mpEnemy->current.pos.y = t60ExactY;
+            }
             else
                 dr->mpEnemy->current.pos.y =
                     gabi::fmadds((f32)dr->mpEnemy->speed.y, quarter, (f32)dr->mpEnemy->current.pos.y);
