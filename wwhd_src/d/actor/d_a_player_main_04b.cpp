@@ -17,6 +17,7 @@
 #include "d/actor/d_a_player_waitturn_t60.h"
 #include "d/actor/d_a_player_movecos_t60.h"
 #include "d/actor/d_a_player_heading_t60.h"
+#include "d/actor/d_a_player_frontwall_t60.h"
 #include "d/d_com_lib_game.h"
 #include "d/t60_draw_words.h"
 
@@ -1991,6 +1992,8 @@ BOOL daPy_lk_c::changeFrontWallTypeProc() {
     f32 st = mStickDistance;
     u32 modeFlg = mModeFlg;
     s16 previousWallDelay = mFrontWallTimer;
+    if (lkT60_frontWallHeld(modeFlg & player04b::ModeFlg_MIDAIR)) /* true60: ground decisions once a frame */
+        return FALSE;
     mFrontWallTimer = 0;
     u32 midair = modeFlg & player04b::ModeFlg_MIDAIR;
     if (!(st > 0.05f) && midair == 0) {
