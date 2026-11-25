@@ -5,6 +5,7 @@
  */
 #include "d/actor/d_a_player_main_08.h"
 #include "d/actor/d_a_player_anm_t60.h"
+#include "d/actor/d_a_player_cutend_t60.h" /* true60 */
 #include "d/actor/d_a_player_t60.h"
 #include "d/actor/d_a_player_weaponthrow_t60.h"
 #include "true60.h"
@@ -426,7 +427,7 @@ static inline BOOL lk_procCutCommon(daPy_lk_c* self, J3DFrameCtrl* frameCtrl, u8
         Link08_checkNextMode(self, 0);
         return TRUE;
     }
-    if (frameCtrl->getFrame() > endFrame) {
+    if (lkT60_cutEndFrame(frameCtrl) > endFrame) { /* true60: the frame-end frame */
         f32 speed = self->mNormalSpeed;
         u8 dir = self->mDirection;
         self->mNormalSpeed = 0.0f;
@@ -566,7 +567,7 @@ static inline BOOL lk_procCutExA(daPy_lk_c* self, J3DFrameCtrl* frameCtrl, s16 m
         Link08_checkNextMode(self, 0);
         return TRUE;
     }
-    if (frameCtrl->getFrame() > endFrame) {
+    if (lkT60_cutEndFrame(frameCtrl) > endFrame) { /* true60: the frame-end frame */
         f32 speed = self->mNormalSpeed;
         self->mNormalSpeed = 0.0f;
         if (Link08_checkNextMode(self, 1)) {
