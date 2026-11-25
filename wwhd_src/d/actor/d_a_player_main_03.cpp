@@ -17,6 +17,7 @@
 #include "true60.h"
 #include "d/actor/d_a_player_t60.h"
 #include "d/actor/d_a_player_heading_t60.h"
+#include "d/actor/d_a_player_swimupturn_t60.h" /* true60 */
 #include "d/actor/d_a_player_grabwear_t60.h"
 #include "d/actor/d_a_player_pose_t60.h"
 #include "d/actor/d_a_player_maba_t60.h"
@@ -3094,6 +3095,7 @@ BOOL daPy_lk_c::procSwimUp_init(int splash) {
     linkMotionInitializeScale(l_splashScaleInitialized, l_splashScale, 0.4f);
     linkMotionInitializeScale(l_rippleScaleInitialized, l_rippleScale, 0.3f);
     commonProcInit(LinkMotionConstants::daPyProc_SWIM_UP_e);
+    lkT60_swimUpTurnFinish(&shape_angle.y, &current.angle.y); /* true60 (d_a_player_swimupturn_t60.h) */
     speed.y = 0.0f;
     current.pos.y = mWaterY;
     gravity = 0.0f;
