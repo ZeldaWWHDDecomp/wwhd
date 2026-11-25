@@ -44,6 +44,78 @@ inline bool g_lkT60WallSeg = false;
 /* the xz moves of this frame's earlier steps' BG checks (mAcch.CrrPos: wall pushes), noted around the call in main_04
  * (d_a_player_landline_t60.h); reset on the frame's first step */
 inline double g_lkT60BgK[2] = {0.0, 0.0};
+/* (2026-11-25; bk3 at N 2, Link frame 125 CUT_A, A 75.859 -> 72.557 / B 72.529, then the
+ * Bokoblin 47C5CE68's sensing, its launch turn at 153 and the held stick 47C58678 0.15 off): posMove's root move (modes
+ * 1 / 5 / 8 / 9: the animation root's step, turned into the world by shape_angle.y) adds A's frame root step once, turned
+ * by the frame's angle. At N steps each step turned its own part by its own angle (a turning cut: step 0 -28659, A's
+ * -28778), and the speed-ramp position-gap (3) tick30 place kept the earlier step's turned part as a correction (K): x 0.028 off. Form, with
+ * speed-ramp position-gap (3): the earlier steps' root xz adds are noted (w); the tick30 place leaves them out (as the BG pushes), and the
+ * tick30 step's root add takes the frame's root step (the root now - the frame-start root, A's subtraction) turned by
+ * its angle: A's add on A's place. y (mode 5) keeps the per-step adds (no turn). Only when the tick30 place took the
+ * note out (speed-ramp position-gap (3), the root note of this frame live). NC WWHD_T60_LKROOTMOVE_NEGCTRL=1 (game build); dt 1: never. */
+struct LkT60RootMove {
+    uint32_t stamp; /* step counter of the frame's first step */
+    f32 s0[3];      /* the frame-start root (the first step's posMove start) */
+    double w[2];    /* the earlier steps' root adds (world x, z) */
+    bool sub;       /* the tick30 place left w out */
+    bool valid;
+};
+inline LkT60RootMove g_lkT60Root = {};
+static inline bool lkT60_rootNc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_LKROOTMOVE_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return true;
+#endif
+}
+static inline bool lkT60_rootLive() {
+    const LkT60RootMove& r = g_lkT60Root;
+    return r.valid && t60_step_counter() - r.stamp < t60::steps();
+}
+/* posMove, before posMoveFromFootPos: the step's root start (after the mode's own changes) */
+static inline void lkT60_rootStart(f32 x, f32 y, f32 z) {
+    LkT60RootMove& r = g_lkT60Root;
+    if (t60::dt() == 1.0f || lkT60_rootNc()) {
+        r.valid = false;
+        return;
+    }
+    if (t60::first_step()) {
+        r.stamp = t60_step_counter();
+        r.s0[0] = x;
+        r.s0[1] = y;
+        r.s0[2] = z;
+        r.w[0] = r.w[1] = 0.0;
+        r.sub = false;
+        r.valid = true;
+    }
+}
+/* posMove's root add: on the tick30 step whose place left the earlier adds out, the frame's root step (m: the root mode;
+ * nx / nz: the root now) */
+static inline void lkT60_rootFrame(int m, f32 nx, f32 nz, f32* dx, f32* dz) {
+    const LkT60RootMove& r = g_lkT60Root;
+    if (t60::dt() == 1.0f || !t60::tick30() || !lkT60_rootLive() || !r.sub)
+        return;
+    if (m == 1 || m == 5) {
+        *dx = nx - r.s0[0];
+        *dz = nz - r.s0[2];
+    } else {
+        *dx = r.s0[0] - nx;
+        *dz = r.s0[2] - nz;
+    }
+}
+/* after the root add: an earlier step's add noted; the tick30 step drops the note */
+static inline void lkT60_rootNote(f32 x0, f32 z0, f32 x1, f32 z1) {
+    LkT60RootMove& r = g_lkT60Root;
+    if (t60::dt() == 1.0f || !lkT60_rootLive())
+        return;
+    if (t60::tick30()) {
+        r.valid = false;
+        return;
+    }
+    r.w[0] += (double)x1 - (double)x0;
+    r.w[1] += (double)z1 - (double)z0;
+}
 
 /* dt 1 (the original's add, held / whole steps included): the shadows are dropped */
 static inline void lkT60_posAddReset() {
@@ -115,7 +187,10 @@ static inline void lkT60_posAdd(const f32 p[3], const double v[3], const double 
     double dl[3] = {0.0, 0.0, 0.0};
     for (int i = 0; i < 3; i++) {
         if (m6c3 && i != 1) { /* (speed-ramp position-gap (3)) xz: the frame start + A's one move + the corrections */
-            const double s6 = s.P0[i] + s.K[i] - (lkT60_move6c3K() ? 0.0 : g_lkT60BgK[i == 0 ? 0 : 1]) + vf[i];
+            const double s6 = s.P0[i] + s.K[i] - (lkT60_move6c3K() ? 0.0 : g_lkT60BgK[i == 0 ? 0 : 1]) -
+                              (lkT60_rootLive() ? g_lkT60Root.w[i == 0 ? 0 : 1] : 0.0) + vf[i]; /* (CUTA-MOVE) */
+            if (lkT60_rootLive())
+                g_lkT60Root.sub = true;
             dl[i] = s6 - (s.S[i] + v[i]);
             s.S[i] = s6;
         } else {

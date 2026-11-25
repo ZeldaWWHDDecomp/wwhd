@@ -5102,6 +5102,7 @@ void daPy_lk_c::posMove() {
     mPrevRootTrans.y = ty;
     mPrevRootTrans.z = tz;
     mPrevRootTrans.x = tx;
+    lkT60_rootStart(start->x, start->y, start->z); /* true60 (d_a_player_posadd_t60.h) */
     posMoveFromFootPos();
     /* true60: Link's own per-frame speeds below (whirlpool pull, ice slip, belt conveyor, wind) move
      * him dt of a frame per step. The out power another actor hands him (mOutPower, set by that actor's execute,
@@ -5226,8 +5227,11 @@ void daPy_lk_c::posMove() {
     }
     f32 dx = d->x;
     f32 dz = d->z;
+    lkT60_rootFrame(m, mPrevRootTrans.x, mPrevRootTrans.z, &dx, &dz); /* true60: A's frame root step */
+    const f32 t60RootX = current.pos.x, t60RootZ = current.pos.z;
     current.pos.x = current.pos.x + gabi::fmadds(dz, sn, dx * cs);
     current.pos.z = current.pos.z + gabi::fmsubs(dz, cs, dx * sn);
+    lkT60_rootNote(t60RootX, t60RootZ, current.pos.x, current.pos.z); /* true60 */
     if (mRootMoveMode == 5) {
         current.pos.y = current.pos.y + d->y;
     }
