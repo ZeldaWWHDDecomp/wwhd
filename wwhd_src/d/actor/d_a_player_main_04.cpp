@@ -2957,8 +2957,8 @@ void daPy_lk_c::setNeckAngle() {
     xz0->y = 0.0f;
     xz0->x = acx;
     xz0->z = acz;
-    s16 r24_4 = (s16)(cM_atan2s(-acy, std_sqrtf(PSVECSquareMag(xz0))) - (lkRef ? g_lkT60NeckRef.nx : (s16)mNeckAngle.x));
-    s16 r25_3 = (s16)((cM_atan2s(acx, acz) - lkFace) - (lkRef ? g_lkT60NeckRef.ny : (s16)mNeckAngle.y));
+    s16 r24_4 = (s16)(cM_atan2s(-acy, std_sqrtf(PSVECSquareMag(xz0))) - (lkRef && !lkT60_neckDmgLive() ? g_lkT60NeckRef.nx : (s16)mNeckAngle.x));
+    s16 r25_3 = (s16)((cM_atan2s(acx, acz) - lkFace) - (lkRef && !lkT60_neckDmgLive() ? g_lkT60NeckRef.ny : (s16)mNeckAngle.y));
     s16 r4;
     s16 r23;
     if ((mModeFlg & (LinkPoseConstants::ModeFlg_00000080 | LinkPoseConstants::ModeFlg_08000000)) &&
@@ -2981,7 +2981,7 @@ void daPy_lk_c::setNeckAngle() {
         xz2->y = 0.0f;
         xz2->z = bz;
         if (std_sqrtf(PSVECSquareMag(xz2)) < 30.0f) {
-            r23_3 = lkRef ? g_lkT60NeckRef.ny : (s16)mNeckAngle.y; /* true60: the frame-start neck */
+            r23_3 = lkRef && !lkT60_neckDmgLive() ? g_lkT60NeckRef.ny : (s16)mNeckAngle.y; /* true60: the frame-start neck (live on a damage step) */
         }
         if (r27 > 8000) {
             r27 = 8000;

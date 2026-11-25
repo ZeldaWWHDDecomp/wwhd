@@ -34,6 +34,13 @@ static inline void lkT60_neckDmgMark() {
     if (t60::dt() != 1.0f)
         g_lkT60NeckDmgStep = t60_step_counter();
 }
+/* setNeckAngle's look-at reference on a step whose procDamage rewrote the neck: the live (just written) angles, as
+ * the original reads them after procDamage; the frame-start reference (g_lkT60NeckRef.nx / ny, captured on the
+ * frame's first step after only that step's animation play) put the target off by the damage curve's change over
+ * the frame's later steps (mo N 2: neck pitch up to 811 off in the damage frames) */
+static inline bool lkT60_neckDmgLive() {
+    return t60::dt() != 1.0f && !lkT60_neckDmgNc() && g_lkT60NeckDmgStep == t60_step_counter();
+}
 /* before the neck's x / y eases: the step's dt to put back (1.0f: unchanged); dt 1 only on a step whose procDamage
  * rewrote the neck (a value carried from the step before keeps the frame split) */
 static inline float lkT60_neckDmgOpen() {
