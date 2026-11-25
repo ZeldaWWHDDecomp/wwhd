@@ -19,6 +19,7 @@
 #include "d/actor/d_a_player_crawl_t60.h"
 #include "d/actor/d_a_player_lavarestart_t60.h" /* true60: the lava restart test */
 #include "d/actor/d_a_player_waitturn_t60.h" /* true60 */
+#include "d/actor/d_a_player_ropeblend_t60.h" /* true60 */
 #include <cstdlib>
 
 namespace link05 {
@@ -1169,7 +1170,11 @@ void daPy_lk_c::setBlendRopeMoveAnime(int param_0) {
         if (pv0 != 0) {
             anm = pv0 == -1 ? link05::ANM_ROPESWINGF : link05::ANM_ROPESWINGB;
             dVar6 = 1.0f;
-            cLib_chaseF(&blend.mValue, 1.0f, 0.05f);
+            if (lkT60RopeBlend::run()) { /* true60 (d_a_player_ropeblend_t60.h): once a frame */
+                const float lkRbDt = lkT60RopeBlend::open();
+                cLib_chaseF(&blend.mValue, 1.0f, 0.05f);
+                lkT60RopeBlend::close(lkRbDt);
+            }
             pv0 = mProcVar0;
             if ((pv0 == -1 && 1.5707964f < f30) || (pv0 == 1 && -1.5707964f < f30)) {
                 mProcVar0 = 0;
@@ -1199,14 +1204,20 @@ void daPy_lk_c::setBlendRopeMoveAnime(int param_0) {
         }
         Link05AnmDataHD* data = lk05GetAnmData(this, anm);
         if (data->mBckIdx.get() != reinterpret_cast<Link05AnmHeapHD*>(m_anm_heap_under)[1].mIdx /* m_anm_heap_under[UNDER_MOVE1_e].mIdx */) {
-            lk05AddCalc(&blend.mValue, -dVar6, 0.5f, 0.05f, 0.005f);
+            if (lkT60RopeBlend::run()) { /* true60: once a frame */
+                const float lkRbDt = lkT60RopeBlend::open();
+                lk05AddCalc(&blend.mValue, -dVar6, 0.5f, 0.05f, 0.005f);
+                lkT60RopeBlend::close(lkRbDt);
+            }
             if (!(blend.mValue > 0.0f)) {
                 blend.mValue = 0.0f;
             } else {
                 anm = anm == link05::ANM_ROPESWINGB ? 0x76 : link05::ANM_ROPESWINGB;
             }
-        } else if (mProcVar0 == 0) {
+        } else if (mProcVar0 == 0 && lkT60RopeBlend::run()) { /* true60: once a frame */
+            const float lkRbDt = lkT60RopeBlend::open();
             lk05AddCalc(&blend.mValue, dVar6, 0.5f, 0.05f, 0.005f);
+            lkT60RopeBlend::close(lkRbDt);
         }
     }
     // HD: HIO folded
