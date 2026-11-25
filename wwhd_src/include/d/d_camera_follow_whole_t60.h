@@ -106,6 +106,20 @@ static inline bool towerWholeOn() {
     }
     return s == 1;
 }
+/* (2026-11-25; long2 seg 3 + at N 2, Link
+ * and the enemies exact: the camera leaves the lock-on for style 142 (dCamAlg_MANUAL_CAMERA_e, type 25 mode 12) at
+ * frame 801; the manual style ran per step: its eye eases toward a goal made from Link each frame (a moving goal), the
+ * per-step shares fell short: V 1710 / 1706 / 1700 for A's 1709 / 1704 / 1698, the eye 1.5 off at 802, 7.36 at 810, the
+ * centre exact) the manual camera in the same whole form. NC WWHD_T60_MANUALWHOLE_NEGCTRL=1 (per step, as before). */
+constexpr u32 kManualAlg = 10;
+static inline bool manualWholeOn() {
+    static int s = -1;
+    if (s < 0) {
+        const char* e = getenv("WWHD_T60_MANUALWHOLE_NEGCTRL");
+        s = (e && e[0] == '1') ? 0 : 1;
+    }
+    return s == 1;
+}
 struct FollowWhole {
     uint32_t stamp;        /* t60_step_counter of the frame's first step */
     uint32_t objEa, comEa; /* the camera body and its com status block */
@@ -129,7 +143,8 @@ static inline void noteFrame(uint32_t objEa, uint32_t comEa, u32 alg) {
                alg == kRideAlg /*: ride candidate (see kRideAlg) */ ||
                (alg == kHungAlg && hungWholeOn()) /* M2f: hung (see kHungAlg) */ ||
                (alg == kSubjectAlg && subjWholeOn()) /* (see kSubjectAlg) */ ||
-               (alg == kTowerAlg && towerWholeOn()); /* (see kTowerAlg) */
+               (alg == kTowerAlg && towerWholeOn()) /* (see kTowerAlg) */ ||
+               (alg == kManualAlg && manualWholeOn()); /* (see kManualAlg) */
     f.valid = true;
 }
 /* Switch-in (2026-11-23; the follow form's counterpart of eventWholeSwitchIn). Boomerang
@@ -163,7 +178,8 @@ static inline void switchIn(u32 alg) {
         camera_run_t60::g_runFrameStart().stamp != f.stamp)
         return;
     if (!(alg == kFollowAlg || alg == kLockonAlg || alg == kRideAlg || (alg == kHungAlg && hungWholeOn()) ||
-          (alg == kSubjectAlg && subjWholeOn()) || (alg == kTowerAlg && towerWholeOn())))
+          (alg == kSubjectAlg && subjWholeOn()) || (alg == kTowerAlg && towerWholeOn()) ||
+          (alg == kManualAlg && manualWholeOn())))
         return;
     f.follow = true;
     f.switchIn = true;
