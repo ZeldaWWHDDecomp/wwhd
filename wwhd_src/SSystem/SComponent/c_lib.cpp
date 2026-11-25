@@ -332,8 +332,11 @@ T60IntEntry* t60IntEntry(const void* p, s32 cur) {
     for (u32 i = 0; i < kT60IntProbes; i++) {
         T60IntEntry* e = &t60IntTable[(h + i) & (kT60IntSlots - 1)];
         if (e->addr == a && e->frame == frame) {
-            if (e->last != cur) /* written by someone else since: the frame starts again here */
+            if (e->last != cur) { /* written by someone else since: the frame starts again here */
+                const T60IntEntry met = *e;
                 *e = T60IntEntry{a, frame, cur, cur, 0, !t60::first_step()};
+                t60cs_keep(e, met); /* true60: the call sites met this frame stay met */
+            }
             return e;
         }
         if (!free && (e->addr == 0 || e->frame != frame || e->addr == a))
@@ -347,8 +350,11 @@ T60IntEntry* t60IntEntry(const void* p, s32 cur) {
         auto it = t60IntOverflow.find(a);
         if (it != t60IntOverflow.end() && it->second.addr == a && it->second.frame == frame) {
             T60IntEntry* e = &it->second;
-            if (e->last != cur)
+            if (e->last != cur) {
+                const T60IntEntry met = *e;
                 *e = T60IntEntry{a, frame, cur, cur, 0, !t60::first_step()};
+                t60cs_keep(e, met);
+            }
             return e;
         }
     }

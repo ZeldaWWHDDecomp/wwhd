@@ -78,6 +78,17 @@ static inline unsigned long t60cs_off(const void* p) {
     return p && dladdr(p, &i) && i.dli_fbase ? (unsigned long)((const char*)p - (const char*)i.dli_fbase) : 0ul;
 }
 
+/* t60IntEntry's restart of an entry another writer changed within the frame (last != cur): the call sites and
+ * parameters the entry met this frame stay met (Link's neck yaw, mo / bk3 N 4: the look-cone restore writes it between
+ * the neck update and procDamage on the first step; without this procDamage, met on that step, counted as a new site
+ * on the next one) */
+template <class E> static inline void t60cs_keep(E* e, const E& met) {
+    e->sig = met.sig;
+    e->step = met.step;
+    e->sig2 = met.sig2;
+    e->site = met.site;
+    e->site2 = met.site2;
+}
 /* the entry e (T60IntEntry: addr, frame, start, last, k, partial; sig, step, sig2, site, site2) for this call (sig, site);
  * restarts it as a partial frame from cur when a call site it has not met meets it with other parameters on a later step */
 template <class E> __attribute__((always_inline)) static inline void t60cs_check(E* e, unsigned sig, int cur, unsigned site) {
