@@ -10,6 +10,7 @@
 #include "d/actor/d_a_bk_move.h"
 #include "d/actor/d_a_bk_t60.h"
 #include <unordered_map>
+#include "d/actor/d_a_bk_turnfs_t60.h" /* */
 
 enum {
     JA_SE_CV_BK_SEARCH = 0x482A,
@@ -132,7 +133,13 @@ static inline void jyunkai(bk_class* i_this) {
 
         f32 x = i_this->m0320.x - i_this->current.pos.x;
         f32 z = i_this->m0320.z - i_this->current.pos.z;
-        i_this->dr.mTurnTargetY = cM_atan2s(x, z);
+        {
+            f32 px = i_this->current.pos.x, pz = i_this->current.pos.z;
+            if (t60bkturn::place(gabi::ea(i_this), &px, &pz)) /* true60 (d_a_bk_turnfs_t60.h): the turn target from the frame-start place */
+                i_this->dr.mTurnTargetY = cM_atan2s(i_this->m0320.x - px, i_this->m0320.z - pz);
+            else
+                i_this->dr.mTurnTargetY = cM_atan2s(x, z);
+        }
 
         /* true60 (the animation-driven decision rule, pair f337 / f362): the arrival / stop tests read the frame-start
          * Bokoblin (A's call, before the frame's move): the first step's answer. A later step tested its mid-frame position
@@ -400,7 +407,13 @@ static inline void stand(bk_class* i_this) {
         gabi::Local<cXyz> sp28;
         cXyz_mi(&i_this->home.pos, tmp, &i_this->current.pos);
         copy_f(sp28, tmp);
-        i_this->dr.mTurnTargetY = cM_atan2s(sp28->x, sp28->z);
+        {
+            f32 px = i_this->current.pos.x, pz = i_this->current.pos.z;
+            if (t60bkturn::place(gabi::ea(i_this), &px, &pz)) /* true60 (d_a_bk_turnfs_t60.h): the turn target from the frame-start place */
+                i_this->dr.mTurnTargetY = cM_atan2s(i_this->home.pos.x - px, i_this->home.pos.z - pz);
+            else
+                i_this->dr.mTurnTargetY = cM_atan2s(sp28->x, sp28->z);
+        }
         f32 d = std_sqrtf(gabi::fmadds(sp28->x, sp28->x, sp28->z * sp28->z));
         if (d < l_bkHIO().mRunSpeed * 0.25f * 5.0f) {
             i_this->dr.mMode = 0;
@@ -595,7 +608,15 @@ static inline void stand2(bk_class* i_this) {
             cXyz_mi(&i_this->home.pos, tmp, &i_this->current.pos);
             copy_f(sp24, tmp);
         }
-        i_this->dr.mTurnTargetY = cM_atan2s(sp24->x, sp24->z);
+        {
+            f32 px = i_this->current.pos.x, pz = i_this->current.pos.z;
+            if (t60bkturn::place(gabi::ea(i_this), &px, &pz)) { /* true60 (d_a_bk_turnfs_t60.h): the turn target from the frame-start place */
+                const cXyz* tgt = i_this->dr.mMode == 52 ? &i_this->m0320 : &i_this->home.pos;
+                i_this->dr.mTurnTargetY = cM_atan2s(tgt->x - px, tgt->z - pz);
+            } else {
+                i_this->dr.mTurnTargetY = cM_atan2s(sp24->x, sp24->z);
+            }
+        }
         f32 d = std_sqrtf(gabi::fmadds(sp24->x, sp24->x, sp24->z * sp24->z));
         if (d < l_bkHIO().mRunSpeed * 0.25f * 5.0f) {
             if (i_this->dr.mMode == 60) {
@@ -651,7 +672,13 @@ static inline void path_run(bk_class* i_this) {
         f32 z = point->m_position.z + i_this->m0320.z;
         f32 dx = x - i_this->current.pos.x;
         f32 dz = z - i_this->current.pos.z;
-        i_this->dr.mTurnTargetY = cM_atan2s(dx, dz);
+        {
+            f32 px = i_this->current.pos.x, pz = i_this->current.pos.z;
+            if (t60bkturn::place(gabi::ea(i_this), &px, &pz)) /* true60 (d_a_bk_turnfs_t60.h): the turn target from the frame-start place */
+                i_this->dr.mTurnTargetY = cM_atan2s(x - px, z - pz);
+            else
+                i_this->dr.mTurnTargetY = cM_atan2s(dx, dz);
+        }
 
         if (std_sqrtf(gabi::fmadds(dx, dx, dz * dz)) < 100.0f) {
             s8 idx = i_this->mPathPoint + i_this->mPathDir;
