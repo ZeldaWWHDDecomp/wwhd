@@ -8,6 +8,7 @@
  */
 #include "d/actor/d_a_himo2.h"
 #include "d/t60_draw.h"
+#include "d/actor/d_a_himo2_wrappic_t60.h" /* */
 
 const gc_tu_data gc_tu = {
     .safeString = HIMO2_SAFESTRING_VTBL,
@@ -820,6 +821,7 @@ static inline f32 himo2_drawDt(himo2_class* i_this) {
 // daHimo2_Draw (inlines spin_draw, himo2_disp, himo2_draw, himo_hang_draw)
 /* 0216CA5C */
 static BOOL daHimo2_Draw(himo2_class* i_this) {
+    t60himo2wp::Guard t60wrap(i_this); /* true60: the coil at the step's share, put back */
     if (i_this->mDemoState < HIMO2_DEMO_INACTIVE || i_this->mHideTimer != 0)
         return TRUE;
     if (i_this->mState == HIMO2_WAIT) {
