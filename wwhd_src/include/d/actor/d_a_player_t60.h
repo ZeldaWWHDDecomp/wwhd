@@ -113,7 +113,7 @@ struct LkT60RateHold {
     f32 rate;
     bool valid;
 };
-static LkT60RateHold s_lkT60RateHold[5];
+inline LkT60RateHold s_lkT60RateHold[5]; /* one for Link's TUs (lkT60_rateHeld in main_03) */
 /* before the play: returns the rate to put back after it (or NaN: nothing to put back) */
 template <class FC> /* J3DFrameCtrl (a template: not every includer has its definition) */
 static inline f32 lkT60_rateHoldBegin(FC* fc, int slot) {
@@ -157,6 +157,21 @@ static inline void lkT60_rateHoldEnd(FC* fc, int slot, f32 put) {
     if (put == put) {
         fc->mRate = put;
     }
+}
+
+/* the rate the frame's later plays of this control hold (the frame-start rate, see above) when
+ * the dispatch has set another one since the frame's first play; NaN: none (no hold this frame, the same rate, dt 1) */
+template <class FC>
+static inline f32 lkT60_rateHeld(FC* fc, int slot) {
+    if (t60::dt() == 1.0f || t60::steps() < 2) {
+        return __builtin_nanf("");
+    }
+    const LkT60RateHold& h = s_lkT60RateHold[slot];
+    if (!h.valid || h.ea != gabi::ea(fc) || t60_step_counter() - h.stamp >= t60::steps()) {
+        return __builtin_nanf("");
+    }
+    const f32 cur = fc->mRate;
+    return cur == h.rate ? __builtin_nanf("") : h.rate;
 }
 
 /* keys for counters outside a procedure (no procedure is negative) */

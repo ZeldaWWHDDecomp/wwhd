@@ -36,7 +36,7 @@ static inline f32 lkT60_swimChaseFrame(J3DFrameCtrl* fc) {
     if (nc)
         return fc->mFrame;
 #endif
-    return lkT60_endFrame(fc);
+    return lkT60_endFrameHeld(fc, 0); /* mFrameCtrlUnder[0]'s held rate (d_a_player_anm_t60.h) */
 }
 
 static LinkDemoEntry mDemoProcInitFuncTable[] = {

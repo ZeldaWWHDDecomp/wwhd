@@ -137,6 +137,30 @@ static inline f32 lkT60_endFrame(J3DFrameCtrl* fc) {
     return lkT60_projectFrame(fc, plays);
 }
 
+/* (oq pair at N 2: tag 4339, A frame 244) the frame-end frame of a control under the rate
+ * hold (d_a_player_t60.h lkT60_rateHoldBegin): the frame's later plays run at the frame-start rate and the dispatch's
+ * rate is put back after each, so after the dispatch fc->mRate is not the rate the remaining plays use. lkT60_endFrame
+ * projected them at the dispatch's rate (the swim stroke: SWIM_MOVE's rate from the stroke speed, 0.931 -> 1.014 at
+ * 4339: frame 3.269 vs A's 3.228, fr +0.0018 on 95 of 103 stroke frames, the stroke speed k 14.3168 vs 14.3325) and the
+ * frame-start form (J3DAnimation.cpp) did not apply (the rate differs from its latch). Form: the projection with the
+ * held rate in place (the frame-start form then applies: A's add), the dispatch's rate put back after it. NC
+ * WWHD_T60_SWIMWRAP_NEGCTRL=1: lkT60_endFrame as before. dt 1 / no hold: lkT60_endFrame. */
+static inline bool lkT60_swimWrapNc() {
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_SWIMWRAP_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
+}
+static inline f32 lkT60_endFrameHeld(J3DFrameCtrl* fc, int slot) {
+    const f32 held = lkT60_rateHeld(fc, slot);
+    if (held != held || lkT60_swimWrapNc()) {
+        return lkT60_endFrame(fc);
+    }
+    const f32 cur = fc->mRate;
+    fc->mRate = held;
+    const f32 f = lkT60_endFrame(fc);
+    fc->mRate = cur;
+    return f;
+}
+
 /* (2026-11-24; ghost ship pair at N 4, frame 377: procFrontRoll's
  * `getFrame() > 17` opened checkNextMode(1) on B's step 2 of 4, the step whose play crossed 17; MOVE then ran its body
  * (and its turn) on steps 3 and 4, while A enters MOVE at its frame end and turns from the next frame: angle 508 off,
