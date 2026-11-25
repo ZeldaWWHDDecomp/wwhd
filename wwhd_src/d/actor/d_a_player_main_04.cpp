@@ -5011,6 +5011,7 @@ BOOL daPy_lk_c::execute() {
             }
             s8 rev = mReverb;
             LinkUpdateSoundFrame* sc = gabi::at<LinkUpdateSoundFrame>(mpSeAnmFrameCtrl);
+            lkT60_seInitFinish(gabi::ea(this) + 0x64F0, (u32)mpSeAnmFrameCtrl, gabi::at<J3DFrameCtrl>(mpSeAnmFrameCtrl)); /* true60 */
             LinkUpdateApi::setAnimSound(mJAIZelAnime, &current.pos, (f32)sc->mFrame,
                        (f32)sc->mRate, (u32)mMtrlSndId, (s32)rev);
         }

@@ -50,3 +50,51 @@ static inline bool lkT60_animSoundNegctrl() {
 #endif
 }
 static inline bool lkT60_animSoundStep() { return t60::steps() <= 1 || t60::tick30() || lkT60_animSoundNegctrl(); }
+
+/* (2026-11-25; long2 at N 2 on intgc13: Link's footstep 0x3831 started in A only, seg 9
+ * BOW_SUBJECT 0x94 A step 10001 and seg 16 MOVE A step 11602): setSeAnime re-inits the sound animation when the move
+ * blend switches its SE animation (a continuation set, not latched). A's init comes after the frame's play and puts the
+ * play position at the frame-end frame minus the whole rate (19.4759 - 0.5134 = 18.9625); the setAnimSound after it
+ * fires the keys from there. B's init on the frame's first step took the first step's frame minus rate x dt (19.2865 -
+ * 0.2567 = 19.0298): a key between was never fired. With the tick30-only setAnimSound (above) the
+ * init's position only matters at the tick30 step's setAnimSound: an init on an earlier step of the frame is noted, and
+ * the tick30 step sets A's position from the frame-end frame and rate before its setAnimSound (the same wrap as
+ * initSeAnime's). Host memory (inline: initSeAnime in main_01 notes, the execute in main_04 finishes). dt 1 / N 1:
+ * nothing. NC WWHD_T60_SEINITEND_NEGCTRL=1 (and with WWHD_T60_ANIMSND_NEGCTRL=1): the step form as before. */
+static inline bool lkT60_seInitEndNegctrl() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_SEINITEND_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return true;
+#endif
+}
+struct LkT60SeInitPend {
+    uint32_t tag, fc;
+    bool valid;
+};
+inline LkT60SeInitPend g_lkT60SeInitPend;
+/* initSeAnime (a looping sound animation's position set) on an earlier step of the frame */
+static inline void lkT60_seInitNote(uint32_t fc) {
+    if (t60::dt() == 1.0f || t60::steps() <= 1 || t60::tick30() || lkT60_seInitEndNegctrl() || lkT60_animSoundNegctrl())
+        return;
+    g_lkT60SeInitPend = LkT60SeInitPend{lkT60_frameTag(), fc, true};
+}
+/* the tick30 step, before setAnimSound: an earlier step's init of this frame takes A's position (frame - rate, wrapped
+ * as initSeAnime does) */
+template <class FC>
+static inline void lkT60_seInitFinish(uint32_t sound, uint32_t fcEa, const FC* fc) {
+    LkT60SeInitPend& p = g_lkT60SeInitPend;
+    if (!p.valid || t60::dt() == 1.0f || !t60::tick30() || lkT60_seInitEndNegctrl())
+        return;
+    const bool mine = p.tag == lkT60_frameTag() && p.fc == fcEa;
+    p.valid = false;
+    if (!mine || (u8)fc->mAttribute != 2 /* EMode_LOOP */)
+        return;
+    f32 position = gabi::fsubs_ppc((f32)fc->mFrame, (f32)fc->mRate);
+    if (!(position > (f32)(s16)fc->mStart))
+        position = gabi::fsubs_ppc((f32)(s16)fc->mEnd, position);
+    else if (!(position < (f32)(s16)fc->mEnd))
+        position = gabi::fsubs_ppc(position, (f32)(s16)fc->mEnd);
+    gabi::call(0x0201BFD8 /* JAIZelAnime::setPlayPosition */, sound, position);
+}

@@ -1318,6 +1318,7 @@ void daPy_lk_c::initSeAnime() {
                 position = gabi::fsubs_ppc(position, (f32)(s16)Player01_frameCtrl(fc)->mEnd);
             }
             Player01_setPlayPosition(gabi::ea(this) + 0x64F0, position);
+            lkT60_seInitNote(fc); /* true60 (d_a_player_seinit_t60.h): the tick30 step sets A's position */
         }
     }
 }
