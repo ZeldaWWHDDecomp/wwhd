@@ -332,7 +332,9 @@ void fight_run(bk_class* i_this) {
         } else {
             scaleMag = l_bkHIO().mRunSpeedNoWeapon;
         }
-        bk_t60_jstop_restore(i_this); /* true60: an earlier step's jump stop undone before the ramp */
+        /* true60: an earlier step's jump stop undone before the ramp; the jump turn's
+         * earlier share stays off when the prelude turn above pinned the frame's full step (the first step noted it) */
+        bk_t60_jstop_restore(i_this, t60::dt() != 1.0f && t60::tick30() && t60TurnHeld > 0);
         cLib_addCalc2(&i_this->speedF, scaleMag, 1.0f, 5.0f);
         /* true60 (the 30 Hz timer rule, the first-step AI-timer rule): a per-frame phase counter (it times the jump start): counts on the
          * frame's first step (d_a_bk_t60.h bk_t60_frame_work) and in the call that started the run */
