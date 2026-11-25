@@ -29,6 +29,7 @@
  * Host memory per translation unit (the split-actor state rule (1)), keyed by actor address and process id. */
 #pragma once
 #include "d/t60_whole.h"
+#include "d/d_com_inf_game.h" /* (dComIfG_Bgsp) */
 #include "d/t60_held_pic.h"
 #include "d/t60_carry_floor.h" /* the plane floor (t60cf::floorAt) */
 #include <cstdlib>
@@ -408,9 +409,49 @@ static inline bool groundFloor(const void* acch, f32* y) {
  * world side effects: dBgS::RideCallBack on ride-callback backgrounds, the moving-background carry), only a picture
  * floor: a step's place does not go below the ground the frame-start check found under the actor (dBgS_Acch m_ground_h
  * +0x94 plus m_ground_up_h +0x8C; none found: as it is; held: as its holder placed it). Not PIC: the call itself */
+/* (2026-11-24: the pots on the Ikada (Obj_Ikada, whole form)
+ * rose with its bob on one pass kind only, fracT 0.09): a carryable resting on a 30 Hz carrier's BG (an unconverted
+ * carrier, or one that ran in the whole form this frame: its BG moves once a frame, on its tick30 step) is moved by it
+ * only in the tick30 step's ground check (MoveBgCrrPos); its earlier steps run no ground check, so its picture stood
+ * still and jumped by the carrier's whole frame move on the next pass, while the carrier itself is drawn moving. The
+ * rider rule (for Link, for the enemies, c/c_damagereaction_carrier_t60.h): standing on such a
+ * carrier at the tick30 ground check, the actor asks the 30 Hz hold (t60_hold30_request, from the next frame on): it
+ * runs at dt 1 on the tick30 step (the original) and is drawn between its frame ends like an unconverted actor. The
+ * logic is the original either way (the step form's tick30 run is A's). Game build, N > 1 only. NC
+ * WWHD_T60_RIDERHOLD_NEGCTRL=1 */
+static inline bool riderHoldNc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_RIDERHOLD_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return false;
+#endif
+}
+static inline void riderHold(u32 actor, const void* acch) {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    if (!acch || t60::steps() <= 1 || riderHoldNc())
+        return;
+    const u32 ac = gabi::ea(acch);
+    if (!(*gabi::at<be<u32>>(ac + 0x28) & (1u << 5)) /* GROUND_HIT */ || !(*gabi::at<be<f32>>(ac + 0x94) > -1.0e9f))
+        return;
+    const u32 gnd = ac + 0xD4 + 0x14; /* m_gnd's cBgS_PolyInfo */
+    const u32 bgs = gabi::ea(dComIfG_Bgsp());
+    if (!gabi::call<BOOL>(0x02008254, bgs, gnd) /* cBgS::ChkPolySafe */ || !gabi::call<BOOL>(0x024EEABC, bgs, gnd) /* dBgS::ChkMoveBG */)
+        return;
+    const u32 carrier = gabi::call<u32>(0x02008438, bgs, (u32)*gabi::at<be<u16>>(gnd + 2)) /* cBgS::GetActorPointer */;
+    if (carrier == 0 || carrier == actor)
+        return;
+    if (t60_converted((s16)gabi::at<fopAc_ac_c>(carrier)->mProfName) && !t60wc::ranThisFrame(carrier))
+        return; /* (a per-step carrier: its BG moves on every step) */
+    t60_hold30_request(*gabi::at<be<u32>>(actor + 4) /* base.mBsPcId */);
+#else
+    (void)actor, (void)acch;
+#endif
+}
 template <class A, class Fn, class... Args> static inline void check(A* a, const void* acch, Fn fn, Args... args) {
     if (phase() != PIC) {
         fn(args...);
+        riderHold(gabi::ea(a), acch); /* */
         return;
     }
     f32 floor;
