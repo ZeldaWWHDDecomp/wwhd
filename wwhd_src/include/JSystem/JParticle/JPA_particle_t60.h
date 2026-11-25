@@ -118,4 +118,36 @@ inline bool expire_defer_on() {
     return on;
 }
 inline bool expire_now(f32 age) { return frame_count() || !expire_defer_on() || !(age == age); }
+/* follow-up (2026-11-24, swim strict pair: WATER_MARK): particles whose game callback creates actors
+ * from the particle's place (Link's water drop, daPy_waterDropPcallBack_c 02414048: a WATER_MARK where the ground is
+ * above the drop) decide from their 30 Hz frame's state; stepped at 1 / N the drop's place differs from A's by the
+ * integration (air resistance, the arc term), and a decision on the ground line differs (marks one frame early / late).
+ * Form: such a particle is a 30 Hz particle: its calc runs once per frame, on the tick30 step at dt 1 (incFrame,
+ * calcVelocity, the callback, calcPosition: A's frame update bit for bit), the earlier steps leave it; the picture is the
+ * port's (interp_fx.cpp: drawn between its frame ends at W). WWHD_T60_PTCL_FRAME30=0: off (stepped as the others). */
+inline bool frame30_on() {
+    static const bool on = [] {
+        const char* e = getenv("WWHD_T60_PTCL_FRAME30");
+        return !(e && e[0] == '0');
+    }();
+    return on;
+}
+/* the particle callbacks that create actors from the particle's place (the 30 Hz particles' list):
+ *   02414048 daPy_waterDropPcallBack_c::execute (Link's water drops: a WATER_MARK where the ground is above the drop) */
+constexpr u32 kFrame30Execs[] = {0x02414048u};
+template <class Particle> inline bool frame30_kind(Particle* p) {
+    auto* cb = p->mpCallBack2.get();
+    if (!cb) return false;
+    const u32 ex = (u32)cb->mpVtable->execute.get();
+    for (u32 k : kFrame30Execs)
+        if (ex == k) return true;
+    return false;
+}
+/* at a particle's calcParticles visit: 0 a stepped particle (or dt 1); < 0 a 30 Hz particle on an earlier step (left as
+ * it is); > 0 a 30 Hz particle on the tick30 step: the step length set to 1 for its calc, the returned value to put back */
+template <class Particle> inline f32 frame30_dt(Particle* p) {
+    if (full() || !frame30_on() || !frame30_kind(p)) return 0.0f;
+    if (!frame_count()) return -1.0f;
+    return t60_set_dt(1.0f);
+}
 }  // namespace jpa_t60p

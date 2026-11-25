@@ -19,6 +19,12 @@ static void calcParticles(JPABaseEmitter* emitter, bool children) {
     while (link) {
         auto* p = link->mpObject.get();
         auto* next = link->mpNext.get();
+        // true60 (JPA_particle_t60.h): a 30 Hz particle (its callback creates actors) runs its frame at dt 1
+        const f32 f30 = jpa_t60p::frame30_dt(p);
+        if (f30 < 0.0f) {
+            link = next;
+            continue;
+        }
         u8 delay = p->mDeletionDelay;
         if (delay && !jpa_t60p::frame_count()) {
             // true60: the deletion delay counts 30 Hz frames; earlier steps leave the particle as it is.
@@ -59,6 +65,8 @@ static void calcParticles(JPABaseEmitter* emitter, bool children) {
             if ((u32)p->mStatus & JPAPtclStts_Delete)
                 emitter->deleteParticle(p);
         }
+        if (f30 > 0.0f)
+            t60_set_dt(f30);
         link = next;
     }
 }
