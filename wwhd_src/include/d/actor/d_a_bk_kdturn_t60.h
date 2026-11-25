@@ -76,9 +76,23 @@ static inline void bk_t60_kdhold_note(const void* dr) {
         return;
     wwhd_t60_latch_set(bk_t60_kdhold_key(dr), bk_t60_kdturn_tag());
 }
-/* case 1 on the tick30 step of the frame whose earlier step knocked it down: skip (A's call made no knocked-down step) */
+/* (2026-11-25, bq / bk3 at N 4 on intgc10, holder 47C5CE68, frame 165): the skip only ran
+ * on the tick30 step, so at N 4 the frame's middle steps after the knock-down made knocked-down steps: mFallPitch 0 ->
+ * 0xD4 -> 0x1A8 (A 0) on steps 2 / 3, put into the body by dr_matrix_set; the model calc there froze the head on the
+ * knock-down (mHeadAngleY A 16333 / B 18474, daBk_player_view_check's cone, from then on) with the joint points and the
+ * eye. At N 2 the only later step is the tick30 step (strict). Form: every later step of that frame skips case 1.
+ * NC WWHD_T60_BKKDHOLDN4_NEGCTRL=1: the tick30 step only, as before. */
+static inline bool bk_t60_kdhold_n4_nc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_BKKDHOLDN4_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
+#else
+    return true;
+#endif
+}
+/* case 1 on a later step of the frame whose earlier step knocked it down: skip (A's call made no knocked-down step) */
 static inline bool bk_t60_kdhold_skip(const void* dr) {
-    if (t60::dt() == 1.0f || !t60::tick30() || bk_t60_kdhold_nc())
+    if (t60::dt() == 1.0f || bk_t60_kdhold_nc() || t60::first_step() || (bk_t60_kdhold_n4_nc() && !t60::tick30()))
         return false;
     return wwhd_t60_latch_pending(bk_t60_kdhold_key(dr), bk_t60_kdturn_tag()) != 0;
 }
