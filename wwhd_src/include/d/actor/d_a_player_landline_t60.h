@@ -60,6 +60,8 @@ struct Rec {
     f32 wsv;          /* the step's own speed.y, put back after the check when it kept A's */
     bool snapOn;      /* this step's check has the segment (a non-tick30 step keeps the record) */
     bool airSeg;      /* this tick30 check has the landing frame's segment (air + landed) */
+    uint32_t pre3[3]; /* the position before an earlier step's CrrPos (bit copies) */
+    bool moved;       /* an earlier step's CrrPos of this frame moved Link */
 };
 static Rec s_rec;
 
@@ -84,6 +86,25 @@ static inline bool negctrlFall() {
     return nc;
 #else
     return false;
+#endif
+}
+/* (2026-11-25; oq pair + at N 2, frame 244, the swim stroke's
+ * dive): A's frame checks once (CrrPos), the Acch line from old.pos (the frame start) to the frame's end; a fast move
+ * meets a polygon (LINE_CHECK_HIT) and pulls Link back to the cross point. At N steps the earlier steps' checks met
+ * nothing (no correction) and only the tick30 step's line hit, from that step's start: another line (speed.y per step
+ * -23 / -20, A's -20 for the frame), another cross point. The position before the check was A's bit for bit, after it
+ * 0.059 off (A -6210.1982 / -3314.6428, B -6210.1846 / -3314.5842); the wall circles 115 frames later met another wall
+ * at the corner (frame 359: A's speed 18.0 unclamped, B's 15.94 under the side wall's term). Form: on the tick30 step of
+ * a frame that started in the air (no ground hit), with the line check on, no position set by the body and no earlier
+ * step's check of the frame changing the position (bit equal before / after; no ground hit either: the landing form),
+ * the check gets A's segment: old.pos = the frame's first-step old.pos, put back after the call. Any other frame, dt 1:
+ * the step's own check. NC WWHD_T60_LINESEG_NEGCTRL=1 (game build). */
+static inline bool lineSegOff() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_LINESEG_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
+#else
+    return true;
 #endif
 }
 static inline bool negctrlSet() {
@@ -133,6 +154,7 @@ static inline void frameStart(P* py, uint32_t tag, bool heavy /* checkHeavyState
     r.on = false;
     r.set = false;
     r.setHold = false;
+    r.moved = false;
 }
 
 /* (2026-11-24, oq route frame 107, AUTO_JUMP landing on the Kita platform): execute's
@@ -215,6 +237,7 @@ static inline bool begin(uint32_t acf, cXyz& oldPos, cXyz& pos, uint32_t tag) {
         r.pre[0] = pos.x;
         r.pre[1] = pos.z;
         r.bgNote = true;
+        ld3(r.pre3, pos); /* */
     }
     if (t60::first_step()) {
         g_lkT60WallSeg = false;
@@ -268,6 +291,13 @@ static inline bool begin(uint32_t acf, cXyz& oldPos, cXyz& pos, uint32_t tag) {
             r.on = true;
             return true;
         }
+    }
+    if (r.air && !r.landed && !r.moved && !r.set && (acf & (uint32_t)dBgS_Acch::LINE_CHECK) && !lineSegOff()) {
+        /* the air frame whose earlier checks changed nothing: A's segment start */
+        ld3(r.old, oldPos);
+        st3(oldPos, r.o0);
+        r.on = true;
+        return true;
     }
     if (!(r.air && r.landed)) {
         if (!(r.set && r.setHold))
@@ -356,5 +386,9 @@ static inline void end(uint32_t flags, cXyz& oldPos, const cXyz& pos) {
         return;
     if (flags & (uint32_t)dBgS_Acch::GROUND_HIT)
         r.landed = true;
+    uint32_t p[3]; /* */
+    ld3(p, pos);
+    if (p[0] != r.pre3[0] || p[1] != r.pre3[1] || p[2] != r.pre3[2])
+        r.moved = true;
 }
 }  // namespace lkT60Land
