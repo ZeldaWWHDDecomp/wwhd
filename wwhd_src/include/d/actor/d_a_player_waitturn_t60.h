@@ -314,6 +314,21 @@ static inline const LkT60WaitTurn* lkT60_swimTurnCatchUp(uint32_t curProcEa, s32
     return &t;
 }
 
+/* (2026-11-25; the oq route + SWIMTURN + SWIMHEADING at N 2,
+ * pair, frame 331: SWIM_WAIT -> SWIM_MOVE on the frame's first step, the angles and the speed A's, the stroke's
+ * velocity 1.957 vs A 2.684 (the stroke factor of the new animation's frame), Link 0.77 off at once, 27 by 350):
+ * setSwimMoveAnime takes the new animation's frame from the wait animation's frame, which A reads after the frame's whole
+ * play and the first step after its dt share; procSwimWait sets the frame-end frame (lkT60_endFrame) before the init.
+ * NC WWHD_T60_SWIMENTRY_NEGCTRL=1. */
+static inline bool lkT60_swimEntryFrameNegctrl() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_SWIMENTRY_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return true;
+#endif
+}
+
 /* around the redone init blend: t60::tick30() reads true (returns the value to put back); N = 1 / no t60: nothing */
 static inline u32 lkT60_frameEndBegin() {
 #if defined(GABI_GAME_BUILD) && GABI_T60

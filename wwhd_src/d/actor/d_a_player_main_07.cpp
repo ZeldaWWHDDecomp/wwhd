@@ -852,6 +852,8 @@ BOOL daPy_lk_c::procSwimWait() {
     const bool lkT60St = lkT60_waitTurnStep() && !lkT60_swimTurnNegctrl();
     if (lkT60St)
         lkT60_waitTurnBegin(current.angle.y, shape_angle.y, (f32)mNormalSpeed);
+    /* true60: the wait animation's frame-end frame, before the body sets its next rate below */
+    const f32 lkT60WaitEnd = lkT60St && !lkT60_swimEntryFrameNegctrl() ? lkT60_endFrame(&mFrameCtrlUnder[0]) : 0.0f;
     setSpeedAndAngleSwim();
     if (lkT60St)
         lkT60_waitTurnEnd(current.angle.y, shape_angle.y, (f32)mNormalSpeed);
@@ -888,6 +890,12 @@ BOOL daPy_lk_c::procSwimWait() {
     f32 rate = getSwimTimerRate();
     mFrameCtrlUnder[0].setRate(gabi::fmadds(rate, 2.5f, 0.5f));
     if (mStickDistance > 0.05f) {
+        /* true60 (d_a_player_anm_t60.h): setSwimMoveAnime starts the stroke from the wait
+         * animation's frame; A's init reads it after the frame's whole play (animeUpdate runs before the dispatch), the
+         * first step after its dt share: the wait animation's frame-end frame for the init (it replaces the animation),
+         * projected with the frame's rate (taken above, before the body's setRate for the next frame) */
+        if (lkT60St && !lkT60_swimEntryFrameNegctrl())
+            mFrameCtrlUnder[0].setFrame(lkT60WaitEnd);
         procSwimMove_init(1);
         if (lkT60St) {
             if (const LkT60WaitTurn* t = lkT60_swimTurnCatchUp(gabi::ea(&mCurProc), (s32)mCurProc, current.angle.y,
