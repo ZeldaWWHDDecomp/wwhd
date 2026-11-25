@@ -142,12 +142,30 @@ static inline bool lkT60_atnMoveTurnNegctrl() {
     return false;
 #endif
 }
-/* after checkNextMode entered a procedure: this step's record when it entered ATN_MOVE (with the direction noted) and
- * the init left the turn's values; the caller redoes the turn and the init's blend (lkT60_waitTurnAtnRedo's order) */
+/* (2026-11-24; the sweep's route at N 2, ZL held, stick
+ * 1-3 s diagonal: A's frame 31 turns setSpeedAndAngleAtn's whole step -32768 -> 30768 and procWait's checkNextMode enters
+ * ATN_ACTOR_MOVE (a lock-on target present), B's first step its dt share (31768), the ATN_ACTOR_MOVE body then held on the
+ * later step: current.angle.y 1000 behind for 3 frames, Link ~0.7 off from then on, a Bokoblin (from 257) and two sticks
+ * (165, 257) on other paths) the same catch-up for an entered ATN_ACTOR_MOVE: procAtnActorMove_init is procAtnMove_init
+ * with proc 9 (commonProcInit, setBlendAtnMoveAnime(2.4), mProcVar0 0x14), entered from the same attention branch of
+ * checkNextMode (mMaxNormalSpeed 12). NC WWHD_T60_ATNACTORTURN_NEGCTRL=1: ATN_MOVE only, as before. */
+static constexpr s32 kLkT60WaitTurnAtnActorMove = 9; /* daPyProc_ATN_ACTOR_MOVE_e (procAtnActorMove_init: commonProcInit(9)) */
+static inline bool lkT60_atnActorTurnNegctrl() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_ATNACTORTURN_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return false;
+#endif
+}
+/* after checkNextMode entered a procedure: this step's record when it entered ATN_MOVE or ATN_ACTOR_MOVE (with the
+ * direction noted) and the init left the turn's values; the caller redoes the turn and the init's blend
+ * (lkT60_waitTurnAtnRedo's order) */
 static inline const LkT60WaitTurn* lkT60_atnMoveTurnCatchUp(uint32_t curProcEa, s32 curProc, s16 angle, s16 shape,
                                                             f32 speed) {
     LkT60WaitTurn& t = s_lkT60WaitTurn;
-    if (curProc != kLkT60WaitTurnAtnMove || lkT60_atnMoveTurnNegctrl() || !t.atnNoted)
+    const bool atnActor = curProc == kLkT60WaitTurnAtnActorMove && !lkT60_atnActorTurnNegctrl();
+    if ((curProc != kLkT60WaitTurnAtnMove && !atnActor) || lkT60_atnMoveTurnNegctrl() || !t.atnNoted)
         return nullptr;
     if (!lkT60_waitTurnStep() || !t.valid || t.stamp != t60_step_counter())
         return nullptr;
