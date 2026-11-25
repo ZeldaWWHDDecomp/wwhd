@@ -47,6 +47,15 @@ static inline bool on() {
 #endif
 }
 static inline u32 frameTag() { return *gabi::at<be<u32>>(0x101FF558); /* g_Counter.mCounter0 */ }
+/* negative control (WWHD_T60_LANDPIC_NEGCTRL=1: a landing frame's change continued as before) */
+static inline bool landpicNc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_LANDPIC_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return false;
+#endif
+}
 
 enum { kMax = 8, kSlots = 128 };
 struct Latch {
@@ -58,6 +67,8 @@ struct Latch {
     f32 dv[kMax];        /* the previous frame's change */
     bool model;          /* the previous frame reached its model step (and was not held) */
     bool shown;          /* an earlier step of this frame moved the shown values */
+    f32 vyEnd;           /* speed.y (fopAc +0x340) at the previous frame's end */
+    bool heldEnd;        /* held at the previous frame's end */
     u32 step;            /* the step counter (true60.h) on the tick30 step that set dv / model: the next frame's
                           * first step follows it by one; anything else (a frame without a run, or the verify harness's
                           * next generated input: it advances the counter by two before an input's first step) shows
@@ -113,6 +124,8 @@ static inline Latch* make(u32 actor, u32 tag, u32 pcid) {
     e->model = false;
     e->shown = false;
     e->step = 0;
+    e->vyEnd = 0.0f;
+    e->heldEnd = false;
     for (int i = 0; i < kMax; i++)
         e->dv[i] = 0.0f;
     return e;
@@ -232,12 +245,26 @@ template <class A> static inline void end(A* a, const Ops<A>& o, bool model) {
     Latch* e = find(gabi::ea(a));
     if (!e)
         return;
-    e->model = model && !o.held(a);
+    const bool heldNow = o.held(a);
+    e->model = model && !heldNow;
     e->step = t60_step_counter();
     f32 v[kMax];
     o.get(a, v);
     for (int i = 0; i < o.n; i++)
         e->dv[i] = i < o.nPos ? v[i] - e->v0[i] : (f32)(s16)(s32)((s32)v[i] - (s32)e->v0[i]);
+    /* (2026-11-24, obtF3 barrel put-down): the next frame's earlier steps show the
+     * actor moving on by this frame's change; a frame that came down and ended at rest or rising again (speed.y >= 0: the
+     * ground check's 0, a bounce's new upward speed) after a fall (speed.y < 0 at the previous frame's end) or a release
+     * (held at the previous frame's end) is a landing: its downward change is not continued below the ground (the
+     * barrel's in-between picture 709.05 under its logic 715.07; a bomb's bounce frame 382.02 under 400.40 / 410.50). A
+     * walker coming down a slope (at rest before and after) keeps its y change. A landing inside the frame being shown
+     * is not known to its earlier steps (the bomb's second fall: 380.35 under that frame's end 382.17). Draw only
+     * (dv is the picture's; the tick30 run starts from v0). NC WWHD_T60_LANDPIC_NEGCTRL=1 */
+    const f32 vy = *gabi::at<be<f32>>(gabi::ea(a) + 0x340); /* fopAc_ac_c::speed.y */
+    if (o.nPos >= 2 && e->dv[1] < 0.0f && vy >= 0.0f && (e->vyEnd < 0.0f || e->heldEnd) && !landpicNc())
+        e->dv[1] = 0.0f;
+    e->vyEnd = vy;
+    e->heldEnd = heldNow;
 }
 
 /* scope form for an execute with several returns: begin at construction, end at every return (the destructor).
