@@ -251,6 +251,29 @@ static inline const LkT60WaitTurn* lkT60_midEntryRecord() {
         return nullptr;
     return &t;
 }
+/* (2026-11-25, rule: N 4 items are fixed; long1 N 4 frame 128 (trail helper's
+ * analysis): LAND_DAMAGE's animation reached its end on a middle step, its body entered WAIT there and WAIT's body ran on
+ * the frame's later steps, entering MOVE one frame before A (A: the end at its one update, WAIT's body the next frame).
+ * Form: the held body extended to every middle-step entry, as the walk entry's hold: commonProcInit on a middle step
+ * (not the first, not tick30) holds the entered procedure's body on the frame's remaining steps (g_lkT60MidHold). The
+ * MOVE_TURN -> MOVE turn redo stays procMoveTurn's. N 2 has no middle step: unchanged. NC
+ * WWHD_T60_MIDENTRYALL_NEGCTRL=1. dt 1: never. */
+static inline bool lkT60_midEntryAllNegctrl() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_MIDENTRYALL_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return true;
+#endif
+}
+/* d_a_player_main_01 commonProcInit(proc) */
+static inline void lkT60_midEntryAll(int32_t proc) {
+    if (!lkT60_midStep() || lkT60_midEntryNegctrl() || lkT60_midEntryAllNegctrl())
+        return;
+    g_lkT60MidHold.tag = lkT60_frameTag();
+    g_lkT60MidHold.proc = proc;
+    g_lkT60MidHold.valid = true;
+}
 /* the dispatch (d_a_player_main_04): the body of the procedure entered on a middle step of this frame is held */
 static inline bool lkT60_midHeld(int32_t curProc, uint32_t tag) {
     const LkT60MidHold& h = g_lkT60MidHold;

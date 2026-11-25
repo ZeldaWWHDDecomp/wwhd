@@ -19,6 +19,7 @@
 #include "d/actor/d_a_player_bghit_t60.h"
 #include "d/actor/d_a_player_atnthrow_t60.h" /* true60 */
 #include "d/actor/d_a_player_moveinit_t60.h" /* true60 */
+#include "d/actor/d_a_player_waitturn_t60.h" /* true60 */
 
 static PlayerJ3DSysState j3dSysState;
 static PlayerFrameCounter g_Counter;
@@ -3143,6 +3144,7 @@ BOOL daPy_lk_c::commonProcInit(int proc) {
     lkT60_procEntered(gabi::ea(&mCurProc)); /* true60 (rule 1, 2026-11-17): a first-step change holds the new body */
     lkT60_procEnteredPre(gabi::ea(&mCurProc)); /* true60 (d_a_player_moveinit_t60.h): before the dispatch's window */
     lkT60Bg::procEntered(gabi::ea(&mCurProc), lkT60_frameTag()); /* true60: entry stamp */
+    lkT60_midEntryAll(proc); /* true60 (d_a_player_waitturn_t60.h): a middle-step entry holds the new body */
     Player01ProcInitEntry *procInit =
         &mProcInitTable
              .mEntries[proc]; /* mProcInitTable.mEntries[proc]: ProcFunc (8 bytes), mProcFlags */
