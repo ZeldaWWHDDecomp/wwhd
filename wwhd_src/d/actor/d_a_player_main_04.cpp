@@ -1580,7 +1580,6 @@ void daPy_lk_c::setGrabItemPos() {
             } else {
                 grabOffset = -85.0f;
             }
-            f32 spd = speedF;
             if (lk04_grabEaseRun()) { /* true60 (carry placement): the worn ease once a frame, tick30 step, dt 1 */
                 const f32 easeDt = lk04_grabEaseBegin();
                 mGrabItemOffsetY = mGrabItemOffsetY + m35D8;
@@ -1594,6 +1593,7 @@ void daPy_lk_c::setGrabItemPos() {
                     m35D8 = 0.0f;
                 }
             }
+            f32 spd = speedF; /* (read after the ease, as the original: dt-1 check 0240A41C) */
             s16 target_slant_angle;
             if (spd > 0.0f && m34C3 != 0) {
                 f32 rad_angle = (6.2831855f * mFrameCtrlUnder[1].getFrame()) / (f32)mFrameCtrlUnder[1].getEnd();
