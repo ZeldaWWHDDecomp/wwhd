@@ -157,6 +157,35 @@ static inline const LkT60WaitTurn* lkT60_atnMoveTurnCatchUp(uint32_t curProcEa, 
     return &t;
 }
 
+/* (2026-11-24; ghost ship pair, frame 571: Link running (procMove), B
+ * pressed: A's frame turns setSpeedAndAngleNormal's whole step -31255 -> -30905 and then checkNextMode enters CUT_F;
+ * B's first step turned its dt share (-31069) and entered CUT_F there, the cut body not turning on the later step: the
+ * frame's move along a 164-unit different heading, Link 0.61 off from then on, amplified to 1.46 by a later direction
+ * pick) the same catch-up from procMove for an entered CUT_F: procCutF_init keeps current.angle.y, shape_angle.y and
+ * mNormalSpeed (it stores the cut target mMoveTargetAngleY, independent of the turn); the caller redoes the turn from the
+ * frame start at dt 1 (setSpeedAndAngleNormal reads mCurProc only against MOVE_TURN, which neither MOVE nor CUT_F is).
+ * NC WWHD_T60_CUTTURN_NEGCTRL=1: no CUT_F catch-up, as before. */
+static constexpr s32 kLkT60WaitTurnCutF = 0x42; /* daPyProc_CUT_F_e (procCutF_init: commonProcInit(0x42)) */
+static inline bool lkT60_cutTurnNegctrl() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_CUTTURN_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return true;
+#endif
+}
+static inline const LkT60WaitTurn* lkT60_cutTurnCatchUp(uint32_t curProcEa, s32 curProc, s16 angle, s16 shape, f32 speed) {
+    LkT60WaitTurn& t = s_lkT60WaitTurn;
+    if (curProc != kLkT60WaitTurnCutF || lkT60_cutTurnNegctrl())
+        return nullptr;
+    if (!lkT60_waitTurnStep() || !t.valid || t.stamp != t60_step_counter())
+        return nullptr;
+    t.valid = false;
+    if (!lkT60_procEnteredThisFrame(curProcEa) || angle != t.angle1 || shape != t.shape1 || speed != t.speed1)
+        return nullptr;
+    return &t;
+}
+
 /* around the redone init blend: t60::tick30() reads true (returns the value to put back); N = 1 / no t60: nothing */
 static inline u32 lkT60_frameEndBegin() {
 #if defined(GABI_GAME_BUILD) && GABI_T60

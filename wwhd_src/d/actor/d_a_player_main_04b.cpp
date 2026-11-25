@@ -1815,6 +1815,16 @@ BOOL daPy_lk_c::procMove() {
             setBlendAtnMoveAnime(2.4f);
             lkT60_frameEndEnd(previousTick30);
             t60_set_dt(previousDt);
+        } else if (const LkT60WaitTurn* tc = lkT60_cutTurnCatchUp(gabi::ea(&mCurProc), (s32)mCurProc, current.angle.y,
+                                                                    shape_angle.y, (f32)mNormalSpeed)) {
+            /* true60 (d_a_player_waitturn_t60.h): CUT_F entered on the frame's first step: the
+             * frame's whole turn from its start at dt 1, as A turned before its cut began */
+            f32 previousDt = t60_set_dt(1.0f);
+            current.angle.y = tc->angle;
+            shape_angle.y = tc->shape;
+            mNormalSpeed = tc->speed;
+            setSpeedAndAngleNormal(0xBB8);
+            t60_set_dt(previousDt);
         }
     }
     if (!lkT60Next && !changeFrontWallTypeProc() &&
