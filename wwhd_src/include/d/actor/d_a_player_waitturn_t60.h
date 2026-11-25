@@ -285,6 +285,35 @@ static inline const LkT60WaitTurn* lkT60_jumpTurnCatchUp(uint32_t curProcEa, s32
     return &t;
 }
 
+/* (2026-11-25; the oq route  + OQ-RISE at N 2, pair,
+ * frame 240: Link swimming, procSwimWait turns setSpeedAndAngleSwim's whole step (-24306 -> -25506) and then
+ * procSwimMove_init(1) enters SWIM_MOVE (stick out); B's first step turned its dt share (-24906) and entered the swim
+ * there, the swim body held on the later step: 600 behind from then on, speedF 2.995 vs 2.980, Link 109 off by 450) the
+ * same catch-up from procSwimWait (d_a_player_main_07.cpp): procSwimMove_init keeps current.angle.y, shape_angle.y and
+ * mNormalSpeed and sets the swim animation's rate from mNormalSpeed / mMaxNormalSpeed (setSwimMoveAnime); the caller
+ * redoes the turn from the frame start at dt 1 and puts the rate the init derives from A's speed. Taken only when
+ * the init left the turn's angles and speed (as the JUMPTURN / CUT-TURN checks). NC WWHD_T60_SWIMTURN_NEGCTRL=1. */
+static constexpr s32 kLkT60WaitTurnSwimMove = 0x37; /* daPyProc_SWIM_MOVE_e (procSwimMove_init: commonProcInit(0x37)) */
+static inline bool lkT60_swimTurnNegctrl() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_SWIMTURN_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return true;
+#endif
+}
+static inline const LkT60WaitTurn* lkT60_swimTurnCatchUp(uint32_t curProcEa, s32 curProc, s16 angle, s16 shape, f32 speed) {
+    LkT60WaitTurn& t = s_lkT60WaitTurn;
+    if (curProc != kLkT60WaitTurnSwimMove || lkT60_swimTurnNegctrl())
+        return nullptr;
+    if (!lkT60_waitTurnStep() || !t.valid || t.stamp != t60_step_counter())
+        return nullptr;
+    t.valid = false;
+    if (!lkT60_procEnteredThisFrame(curProcEa) || angle != t.angle1 || shape != t.shape1 || speed != t.speed1)
+        return nullptr;
+    return &t;
+}
+
 /* around the redone init blend: t60::tick30() reads true (returns the value to put back); N = 1 / no t60: nothing */
 static inline u32 lkT60_frameEndBegin() {
 #if defined(GABI_GAME_BUILD) && GABI_T60

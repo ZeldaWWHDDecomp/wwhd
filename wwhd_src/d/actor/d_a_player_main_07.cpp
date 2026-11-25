@@ -25,6 +25,7 @@
 #include <cstdlib>
 #include "d/actor/d_a_player_carry_t60.h"
 #include "d/actor/d_a_player_waitturn_t60.h"
+#include "d/actor/d_a_player_movecos_t60.h" /* true60: the swim speed's cosine */
 #include "d/actor/d_a_player_swimbob_t60.h"
 #include "d/actor/d_a_player_glide_t60.h"
 
@@ -713,8 +714,10 @@ void daPy_lk_c::setSpeedAndAngleSwim() {
                     cLib_addCalcAngleS(&shape_angle.y, mMoveTargetAngleY, 0x11, 0x1388, 0x4B0);
                     // HD: HIO folded
                 }
+                /* true60 (d_a_player_movecos_t60.h): on the first step the cosine of the frame's whole turn */
                 speedTarget = gabi::fmuls_ppc(gabi::fmuls_ppc(3.0f, mStickDistance),
-                                              cM_scos((s16)(shape_angle.y - old)));
+                                              cM_scos((s16)(lkT60_moveCosAngle(old, shape_angle.y, mMoveTargetAngleY, 0x1388,
+                                                                               0x4B0, 0x11) - old)));
             } else {
                 speedTarget = 0.0f;
             }
@@ -731,8 +734,10 @@ void daPy_lk_c::setSpeedAndAngleSwim() {
                     backward = TRUE;
                 } else {
                     cLib_addCalcAngleS(&current.angle.y, mMoveTargetAngleY, 0x11, 0x1388, 0x4B0);
+                    /* true60 (d_a_player_movecos_t60.h): on the first step the frame's whole turn */
                     speedTarget = gabi::fmuls_ppc(gabi::fmuls_ppc(3.0f, mStickDistance),
-                                                  cM_scos((s16)(current.angle.y - old)));
+                                                  cM_scos((s16)(lkT60_moveCosAngle(old, current.angle.y, mMoveTargetAngleY,
+                                                                                   0x1388, 0x4B0, 0x11) - old)));
                 }
             } else {
                 speedTarget = 0.0f;
@@ -832,7 +837,13 @@ BOOL daPy_lk_c::procSwimUp() {
 
 /* 0242F590 */
 BOOL daPy_lk_c::procSwimWait() {
+    /* true60 (d_a_player_waitturn_t60.h): the frame's start / turn for SWIM_MOVE's catch-up below */
+    const bool lkT60St = lkT60_waitTurnStep() && !lkT60_swimTurnNegctrl();
+    if (lkT60St)
+        lkT60_waitTurnBegin(current.angle.y, shape_angle.y, (f32)mNormalSpeed);
     setSpeedAndAngleSwim();
+    if (lkT60St)
+        lkT60_waitTurnEnd(current.angle.y, shape_angle.y, (f32)mNormalSpeed);
     /* true60 (the per-step chance rule and the 30 Hz visual-motion rule): the bob's phase step draws once a frame and the bob (m35C4, the
      * model's height offset: visual) stays on the 30 Hz grid: phase and draw on the frame's step, the offset held */
     if (lk07_perFrame()) {
@@ -867,6 +878,25 @@ BOOL daPy_lk_c::procSwimWait() {
     mFrameCtrlUnder[0].setRate(gabi::fmadds(rate, 2.5f, 0.5f));
     if (mStickDistance > 0.05f) {
         procSwimMove_init(1);
+        if (lkT60St) {
+            if (const LkT60WaitTurn* t = lkT60_swimTurnCatchUp(gabi::ea(&mCurProc), (s32)mCurProc, current.angle.y,
+                                                               shape_angle.y, (f32)mNormalSpeed)) {
+                /* true60 (d_a_player_waitturn_t60.h): SWIM_MOVE entered on the frame's first step: the
+                 * frame's whole turn from its start at dt 1, then the init's animation rate from the turned speed */
+                const f32 initRate = mFrameCtrlUnder[0].getRate();
+                f32 previousDt = t60_set_dt(1.0f);
+                current.angle.y = t->angle;
+                shape_angle.y = t->shape;
+                mNormalSpeed = t->speed;
+                setSpeedAndAngleSwim();
+                t60_set_dt(previousDt);
+                f32 r = 0.6f + (0.5f * std::fabs((f32)mNormalSpeed)) / mMaxNormalSpeed; /* setSwimMoveAnime's rate */
+                const f32 rate = gabi::fmadds(getSwimTimerRate(), 1.0f, r);
+                mFrameCtrlUnder[0].setRate(rate);
+                if (mFrameCtrlUpper[0].getRate() == initRate)
+                    mFrameCtrlUpper[0].setRate(rate);
+            }
+        }
     }
     setSwimTimerStartStop();
     return TRUE;
