@@ -9,6 +9,7 @@
 #include "c/c_damagereaction_push_t60.h" /* no push first seen on a later step */
 #include "c/c_damagereaction_posadd_t60.h" /* the tick30 step writes A's position */
 #include "c/c_damagereaction_landhist_t60.h" /* the frame's ground-history bits */
+#include "c/c_damagereaction_shake_t60.h" /* a shake set on a later step decays the frame's share */
 #include "c/c_damagereaction_jointease_t60.h" /* a mid-frame state change: A's one joint ease */
 #include "d/actor/d_a_bk_kdturn_t60.h" /* a Bokoblin knock-down on an earlier step: the frame's turn */
 #include <unordered_map>
@@ -1476,6 +1477,7 @@ static void damage_sound_inline(fopAc_ac_c* actor, u32 id) {
 /* 02043F34 */
 static s32 dr_damage_set(u32 address) {
     damagereaction* dr = gabi::at<damagereaction>(address);
+    t60drShake::begin(address, t60dr_frame(), (f32)dr->mShakeAmplitude); /* true60 */
     dComIfGp_ea();
     gabi::Local<DamageLine> checkScratch;
     gabi::Local<DamageGround> groundScratch;
@@ -2003,7 +2005,12 @@ static s32 dr_damage_set(u32 address) {
             cLib_addCalcAngleS2(&dr->mpEnemy->current.angle.y, dr->mLandAngleY, 1, 0x500);
         }
 
+        /* true60 (c_damagereaction_shake_t60.h): a set in this call on a later step: the frame's share */
+        const f32 t60ShakeDt = t60drShake::decayDt(address, t60dr_frame(), (f32)dr->mShakeAmplitude);
+        const f32 t60ShakePrev = t60ShakeDt != 0.0f ? t60_set_dt(t60ShakeDt) : 0.0f;
         cLib_addCalc0(&dr->mShakeAmplitude, 1.0f, gabi::fmadds(REG0_F(5), 10.0f, 300.0f));
+        if (t60ShakeDt != 0.0f)
+            t60_set_dt(t60ShakePrev);
     }
 
     t60dr_fall_left(dr); /* true60: the speed.y this step leaves (t60dr_fall_step) */
