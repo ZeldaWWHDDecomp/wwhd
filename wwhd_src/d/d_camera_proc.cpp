@@ -307,12 +307,26 @@ static BOOL camera_execute(camera_class* i_this) {
         cameraResetView(cameraArgument(body), cameraArgument(i_this)); /* ResetView */
     }
     sAutoFocus = 1; /* mDoGph_gInf_c::onAutoForcus() */
+    camera_trim_t60::noteStep(); /* true60: the frame's first step for the bars' picture */
+    if (camera_trim_t60::on()) { /* true60: the Run reads the logic bars' scissor, not a picture's */
+        f32 lt = (f32)gabi::ftoi(body->mTrimHeight);
+        windowSetScissor(cameraArgument(dComIfGp_ea() + PLAY_OFF(mDlstWindow) + winId * 0x2C), 0.0f, lt, 1280.0f,
+                         720.0f - (lt + lt));
+    }
     if (body->Active() && !body->Pause()) {
         cameraRun(cameraArgument(body)); /* Run */
     } else {
         cameraNotRun(cameraArgument(body)); /* NotRun */
     }
-    body->CalcTrimSize();
+    if (camera_trim_t60::easeStep()) { /* true60 (d_camera_proc_t60.h): the bars once a 30 Hz frame */
+        body->CalcTrimSize();
+    } else { /* an earlier step: the frame end predicted for the picture, the logic height kept */
+        const f32 h0 = body->mTrimHeight;
+        body->CalcTrimSize();
+        const f32 h1 = body->mTrimHeight;
+        body->mTrimHeight = h0;
+        camera_trim_t60::notePic(h0, h1);
+    }
     cameraStore(cameraArgument(i_this)); /* store */
     if (t60::steps() > 1) /* true60 (d_camera_follow_whole_t60.h): a follow-whole frame's earlier steps show their share */
         t60_cam_follow_picture(gabi::ea(i_this));
@@ -1210,7 +1224,11 @@ static BOOL camera_draw(camera_class* i_this) {
     s32 winId = fieldRead<s8>(cameraInfo(camId)->mDlstWindowIdx);
     u32 window = dComIfGp_ea() + PLAY_OFF(mDlstWindow) + winId * 0x2C;
     s32 camId2 = fopCamM_GetParam(i_this);
-    f32 trim = (f32)gabi::ftoi(body->mTrimHeight);
+    f32 th = body->mTrimHeight;
+    camera_key_t60::enter(gabi::ea(body)); /* true60: this camera's bars picture (d_camera_proc_t60.h) */
+    camera_trim_t60::picTrim(&th);         /* an earlier step's draw: the bars at the step's share of the frame */
+    camera_key_t60::leave();
+    f32 trim = (f32)gabi::ftoi(th);
     windowSetScissor(cameraArgument(window), 0.0f, trim, 1280.0f,
                      720.0f - (trim + trim)); /* window->setScissor */
     /* the port's aspect (port_hooks.h) may change fovy and aspect */
