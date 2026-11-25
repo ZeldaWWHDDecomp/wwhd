@@ -47,6 +47,23 @@
 namespace jpa_t60 {
 /* a per-frame count moves on this step: dt 1 or the frame's tick30 step */
 inline bool frame_count() { return t60::dt() == 1.0f || t60::tick30(); }
+/* follow-up (2026-11-24, swim WATER_MARK: the drop emitter emitted 2 where A emitted 1 at a frame):
+ * the key animations (calcKey: the emission rate, scale, colour, ... keyed on the emitter age mTick) were evaluated on
+ * the tick30 step at the age the frame's earlier steps had advanced (frame start + (N - 1) / N), where the 30 Hz frame
+ * reads its whole-frame age (an integer: the age advances by 1 per update from 0): the frame's emission count (rate x
+ * random) differed. Form: on the tick30 step the keys read the frame's age (the age's whole part); the earlier steps
+ * keep their own (picture only: the emission is the tick30 step's). WWHD_T60_EMTR_KEYTICK=0: off. */
+inline bool keytick_on() {
+    static const bool on = [] {
+        const char* e = getenv("WWHD_T60_EMTR_KEYTICK");
+        return !(e && e[0] == '0');
+    }();
+    return on;
+}
+inline f32 key_tick(f32 tick) {
+    if (t60::dt() == 1.0f || !t60::tick30() || !keytick_on() || !(tick >= 0.0f)) return tick;
+    return (f32)(s32)(tick + 1e-4f);
+}
 /* a countdown of n 30 Hz frames started on this step: n, or n + 1 on an earlier step (its frame's tick30 decrements) */
 inline unsigned countdown_start(unsigned n) { return frame_count() ? n : n + 1; }
 /* the dt of the manager's first visit of an emitter: the frame time elapsed by the end of this step (k / N); 0 when

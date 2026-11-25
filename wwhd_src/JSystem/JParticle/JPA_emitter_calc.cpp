@@ -224,7 +224,7 @@ void jpa_emitter_calc::JPABaseEmitter::calcKey() {
     for (u32 i = 0; i < (u8)data->keyNum; i++) {
         JPAKeyBlock* key = data->keyBlocks[i];
         u32 target = key->__vtbl->getKeyDataPtr;
-        f32 tick = mTick;
+        f32 tick = jpa_t60::key_tick(mTick); // (true60 JPA_emitter_t60.h: the frame's age on the tick30 step)
         // HD: virtual scalar results retain their full register width.
         u32 ptr = gabi::call_ptr<u32>(target, key);
         u32 number = gabi::call_ptr<u32>(key->__vtbl->getNumber, key);
