@@ -46,6 +46,15 @@ static inline bool nc() {
 #endif
 }
 static inline bool on() { return t60::dt() != 1.0f && !nc(); }
+/* negative control (WWHD_T60_HELDMOVE_NEGCTRL=1: a held actor's PIC mover runs as before) */
+static inline bool heldMoveNc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_HELDMOVE_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return false;
+#endif
+}
 
 enum Phase { WHOLE = 0, PIC = 1, TICK = 2 };
 /* an actor's extra words (offsets from the actor base; lengths in whole words) */
@@ -99,6 +108,7 @@ static f32 s_prevDt = 1.0f;
 static u32 s_size = 0;
 static u32 s_modelOff = 0;
 static bool s_held = false;
+static bool s_carried = false; /* the holder's carry status bits at this step (s.carried; else s_held) */
 static u32 s_w[kActorMax / 4];
 static u32 s_stamp = ~0u; /* the step counter begin() ran on: a phase left by a run that never reached end() (an aborted
                            * call, the verify harness's next input) is no phase */ /* a whole-actor copy (prediction, picture check) */
@@ -199,6 +209,7 @@ template <class A> static inline Phase begin(A* a, const Spec<A>& s) {
     f->span = gabi::fadds_ppc(f->span, t60::dt());
     t60wc::note(actor); /* extension: the frame's 30 Hz carrier for its riders (as the whole form) */
     s_held = s.held(a);
+    s_carried = s.carried ? s.carried(a) : s_held;
     s_extra = s.extra;
     /* a word another party wrote since the actor's last PIC step (Link's throw speed and angle,
      * his placement of a carried actor, the hookshot) is A's: it becomes the word's base; only the actor's own PIC
@@ -272,6 +283,15 @@ template <class A, class Fn, class... Args> static inline void move(A* a, Fn fn,
             fn(a, args...);
         return;
     }
+    /* (2026-11-24, barrel lift obtL2 / obtE4 frame 3662-3663): a held actor's
+     * picture is its holder's placement of this step. On the lift frame the mode is still the free one (the carry init
+     * is a tick30 decision), so its own mover ran the frame's predicted move (the resting barrel's gravity: -2.25 at s
+     * 0.5) under Link's placement, and the picture floor is not applied while held: the barrel showed 712.82, 2.25 into
+     * the ground it rests on (715.07). PIC: a held actor's mover leaves the place as the holder gave it. Picture only (the
+     * tick30 step puts the tracked words back and runs the original). Carried by status at this step only: a release
+     * earlier in the frame (a throw) keeps its predicted flight. NC WWHD_T60_HELDMOVE_NEGCTRL=1 */
+    if (s_held && s_carried && !heldMoveNc())
+        return;
     Frame* f = s_cur;
     const u32 actor = gabi::ea(a);
     if (!f->moved) {
