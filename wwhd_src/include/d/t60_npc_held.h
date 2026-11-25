@@ -19,7 +19,38 @@
 #include <cstdlib>
 #include <cstring>
 
+/* (2026-11-24): the held picture's earlier step as a picture step for the draw.
+ * Held, the step was a step of its own in the port's draw history (t60w::begin notes no picture step), so its matrices,
+ * the frame's pose at Link's place of the step, made the pose move on the earlier passes only (stair sweep mdk / mkc on
+ * Medli's joints fracT 0.07-0.29 with still 0.8, Makar's 0.01-0.16; with this held picture off 0 flagged). Now
+ * the step is told to the port as a picture step (frame interpolation: the skeleton drawn between the frame ends) and as a held one
+ * (wwhd_t60_draw_heldrigid): the draw moves that in-between skeleton rigidly to the base matrix this picture sets (port
+ * t60_draw.cpp). Host only (no guest word); game build only. Negative control WWHD_T60_HELDRIGID_NEGCTRL=1:
+ * the step of its own (the form before). */
+#if defined(GABI_GAME_BUILD) && GABI_T60
+extern "C" {
+__attribute__((visibility("default"))) void wwhd_t60_draw_heldrigid(uint32_t actor);
+}
+#endif
 namespace t60nh {
+static inline bool rigidNc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_HELDRIGID_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return true;
+#endif
+}
+static inline void rigidNote(u32 actor) {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    if (rigidNc())
+        return;
+    t60w_picture_step(actor);
+    wwhd_t60_draw_heldrigid(actor);
+#else
+    (void)actor;
+#endif
+}
 static inline bool nc() {
 #if defined(GABI_GAME_BUILD) && GABI_T60
     static const bool v = [] { const char* e = getenv("WWHD_T60_NPCHELD_NEGCTRL"); return e && e[0] == '1'; }();
@@ -87,6 +118,7 @@ template <class A> static inline BOOL picture(A* a, Morf m0, Morf m1, Morf m2) {
     if (t60w::Latch* e = t60w::find(gabi::ea(a))) /* the latch as the form before leaves it (see above) */
         if (e->model)
             e->shown = true;
+    rigidNote(gabi::ea(a)); /* a picture step for the draw, moved to this picture's base */
     static u8 s_actor[kActor];
     static Keep s_k[3];
     memcpy(s_actor, gabi::at<u8>(gabi::ea(a)), sizeof(A));
