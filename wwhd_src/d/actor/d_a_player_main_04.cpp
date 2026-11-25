@@ -4675,7 +4675,7 @@ BOOL daPy_lk_c::execute() {
         }
     }
     {
-        u32 f1 = mNoResetFlg1;
+        u32 f1 = lkT60FreezeAnm::view(mNoResetFlg1, lkT60_frameTag()); /* true60: the frame-start freeze bits */
         if (f1 & daPyFlg1_FREEZE_STATE) { /* checkFreezeState() */
             if (!(f1 & daPyFlg1_UNK40000)) {
                 LinkUpdateApi::fadeOut(&l_freeze_fade_color, 0x10030000u /* (GHS: r4 keeps the constant base) */, -0.02f);

@@ -34,6 +34,7 @@
 #include "true60.h"
 #include "d/d_bg_s.h"
 #include "d/actor/d_a_player_posadd_t60.h"
+#include "d/actor/d_a_player_freezeanm_t60.h" /* (main_04 reads it through this header) */
 #include <cstdlib>
 #include <cstring>
 
