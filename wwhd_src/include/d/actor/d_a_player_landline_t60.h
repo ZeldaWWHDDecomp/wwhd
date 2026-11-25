@@ -226,6 +226,21 @@ static inline bool snapSegOff() {
     return true;
 #endif
 }
+/* (2026-11-25, long1 N 2 seg 8 frame 8326: Link walks down a ramp along a wall, B's
+ * first step lost the ground and autoGroundHit snapped him down, so the tick30 step's CrrPos took SNAPSEG's segment
+ * (A's old.pos, A's height: inputs bit-equal to A's) but its own speed.y share -1.25 where A's is -2.5: the check found
+ * the ramp 0.065 above (flags 0x20F0, A 0x2010) and the wall push came out (+1.35, -1.23) against A's (+2.00, -1.83);
+ * Link 0.08 off, the ramp met a frame early at 8572 (waist tilt, speedF 2.54 / 3.34 at 8573). Form: the SNAPSEG check
+ * also gets A's speed.y (the frame's fall r.sy), as gives the wall-segment check. NC
+ * WWHD_T60_SNAPSEGY_NEGCTRL=1; dt 1 never. */
+static inline bool snapSegYOff() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_SNAPSEGY_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
+#else
+    return true;
+#endif
+}
 /* (2026-11-25; pig route frame 91: Link's carry drift): the speed-ramp position-gap (3)
  * wall frame's tick30 check (A's segment start, old.pos = the frame start) also gets A's height, pos.y = the frame start +
  * A's frame fall: Link walks into a wall on the ground, the earlier step's check snapped y back to the floor, so the tick30
@@ -282,6 +297,7 @@ static inline bool begin(uint32_t acf, cXyz& oldPos, cXyz& pos, uint32_t tag) {
         pos.y = p0y + r.sy;
         r.on = true;
         r.snapOn = true;
+        r.wallSegOn = !r.water && !snapSegYOff(); /* A's speed.y for the check too */
         return true;
     }
     if (!t60::tick30())
