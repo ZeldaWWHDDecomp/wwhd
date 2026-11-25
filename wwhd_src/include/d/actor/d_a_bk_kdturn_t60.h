@@ -54,6 +54,27 @@ static inline void bk_t60_kdturn_catch_up(be<s16>* angleY, be<s16>* shapeY, s16 
     *shapeY = (s16)*angleY;
 }
 
+/* (2026-11-25; long2 seg 3 + at N 2, Bokoblin 47C5CE68
+ * frame 290): the same catch-up for the flinch. A's one call turns the Bokoblin in fight_attack (10552 -> 10387) before
+ * damage_reaction's flinch (react 5: dr action 4, mode 0) stops the attack; on the first step B turned its share
+ * (-> 10463) and flinched there, the tick30 step held: the flinch pose's joint targets (dr_damage_anime from the angle)
+ * and the head (eyePos) 0.13 - 0.42 off, Link's lock-on shape that reads it 17 - 45 off from 293, Link 2.08 off at 676.
+ * The flinch entry on an earlier step now runs bk_t60_kdturn_catch_up (the turn noted by fight_attack this frame, A's
+ * one call at dt 1, current and shape angle). Negative control WWHD_T60_BKFLINCHTURN_NEGCTRL=1 (game build). */
+static inline bool bk_t60_flinchturn_nc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_BKFLINCHTURN_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
+#else
+    return true;
+#endif
+}
+static inline void bk_t60_flinchturn_catch_up(be<s16>* angleY, be<s16>* shapeY, s16 target) {
+    if (bk_t60_flinchturn_nc())
+        return;
+    bk_t60_kdturn_catch_up(angleY, shapeY, target);
+}
+
 /* addendum (2026-11-25, bkL frame 165, holder 47C5CE68, its stick
  * 47C58678): A's call that knocks the Bokoblin down (dr_damage_set, mKnockedDown 0 -> 1) makes no knocked-down step in
  * that call (case 1: the fall pitch ease toward mFallPitchTarget, the bounce / down checks) - they start next frame. A

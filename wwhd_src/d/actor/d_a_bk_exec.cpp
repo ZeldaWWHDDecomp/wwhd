@@ -1067,6 +1067,8 @@ BOOL daBk_Execute(bk_class* i_this) {
     s32 r3 = damage_reaction(&i_this->dr);
     /* true60 (d_a_bk_react5_t60.h): an earlier step's flinch (5) meets the frame's AI decision in A's order */
     if (t60bkr5::recheck(gabi::ea(i_this), r3) && i_this->dr.mAction != 4 && i_this->dr.mAction != 11) {
+        /* true60 (d_a_bk_kdturn_t60.h): A's one call's turn before the flinch */
+        bk_t60_flinchturn_catch_up(&i_this->current.angle.y, &i_this->shape_angle.y, i_this->dr.mTurnTargetY);
         wait_set(i_this);
         i_this->dr.mAction = 4;
         i_this->dr.mMode = 0;
@@ -1091,6 +1093,8 @@ BOOL daBk_Execute(bk_class* i_this) {
             break;
         case 5:
             if (i_this->dr.mAction != 4 && i_this->dr.mAction != 11) {
+                /* true60 (d_a_bk_kdturn_t60.h): A's one call's turn before the flinch */
+                bk_t60_flinchturn_catch_up(&i_this->current.angle.y, &i_this->shape_angle.y, i_this->dr.mTurnTargetY);
                 wait_set(i_this);
                 i_this->dr.mAction = 4;
                 i_this->dr.mMode = 0;
