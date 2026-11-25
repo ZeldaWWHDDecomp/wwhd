@@ -320,6 +320,21 @@ static inline const LkT60WaitTurn* lkT60_swimTurnCatchUp(uint32_t curProcEa, s32
  * setSwimMoveAnime takes the new animation's frame from the wait animation's frame, which A reads after the frame's whole
  * play and the first step after its dt share; procSwimWait sets the frame-end frame (lkT60_endFrame) before the init.
  * NC WWHD_T60_SWIMENTRY_NEGCTRL=1. */
+/* (stop addendum, 2026-11-25; route wfs (wft from) at N 2,
+ * frame 181: SWIM_MOVE -> SWIM_WAIT on the frame's first step, speedF A 13.983 / B 13.463, the wait animation's frame
+ * A 16.794 / B 16.136): the mirror of the entry. procSwimWait_init(1) takes the stroke's phase r = frame / end from the
+ * move animation (the new wait animation's frame r x end and mNormalSpeed's cos(r pi) share), which A reads after the
+ * frame's whole play and the first step after its dt share. procSwimMove sets the stroke's frame-end frame
+ * (lkT60_endFrame, taken at its top before the body's setRate) before the init, when the body set no new stroke
+ * animation this call. NC WWHD_T60_SWIMSTOP_NEGCTRL=1. */
+static inline bool lkT60_swimStopFrameNegctrl() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_SWIMSTOP_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return true;
+#endif
+}
 static inline bool lkT60_swimEntryFrameNegctrl() {
 #if defined(GABI_GAME_BUILD) && GABI_T60
     static const bool v = [] { const char* e = getenv("WWHD_T60_SWIMENTRY_NEGCTRL"); return e && e[0] == '1'; }();

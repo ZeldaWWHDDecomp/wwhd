@@ -923,6 +923,11 @@ BOOL daPy_lk_c::procSwimWait() {
 
 /* 0242F70C */
 BOOL daPy_lk_c::procSwimMove() {
+    /* true60 (stop addendum, d_a_player_waitturn_t60.h): the stroke's frame-end frame, before the
+     * body sets its next rate below (the frame's first step only) */
+    const bool lkT60Stop = lkT60_waitTurnStep() && !lkT60_swimStopFrameNegctrl();
+    const f32 lkT60MoveEnd = lkT60Stop ? lkT60_endFrame(&mFrameCtrlUnder[0]) : 0.0f;
+    bool lkT60NewAnm = false;
     setSpeedAndAngleSwim();
     J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
     s32 direction;
@@ -955,6 +960,7 @@ BOOL daPy_lk_c::procSwimMove() {
         Link07::TransformInfo* info = gabi::at<Link07::OldFrameData>(m_old_fdata)->mpOldFrameTransInfo.get();
         info->mTranslate.y = info->mTranslate.y - (off - old);
         setSwimMoveAnime(anm);
+        lkT60NewAnm = true; /* true60: a new stroke animation this call (its own frame for the init) */
         if (mDirection != 0) {
             setTextureAnime(3, 0);
             mModeFlg = (mModeFlg | 0x100) & ~0x400u;
@@ -991,6 +997,9 @@ BOOL daPy_lk_c::procSwimMove() {
         return TRUE;
     }
     if (!(mStickDistance > 0.05f)) {
+        /* true60 (stop addendum): the init reads the stroke's phase as A's after the frame's play */
+        if (lkT60Stop && !lkT60NewAnm)
+            frameCtrl.setFrame(lkT60MoveEnd);
         procSwimWait_init(1);
     } else if ((mDirection == 0 && lkT60_pass(&frameCtrl, 20.0f)) ||
                (mDirection != 0 && lkT60_pass(&frameCtrl, 0.0f))) {
