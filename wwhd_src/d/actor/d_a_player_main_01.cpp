@@ -12,6 +12,7 @@
 #include "port_hooks.h"
 #include "true60.h"
 #include "d/actor/d_a_player_t60.h"
+#include "d/actor/d_a_player_heading_t60.h"
 #include "d/actor/d_a_player_grabwear_t60.h"
 #include "d/actor/d_a_player_upperplay_t60.h" /* true60: an upper control left mid-frame keeps the frame's play */
 #include "d/actor/d_a_player_seinit_t60.h"
@@ -3145,6 +3146,7 @@ BOOL daPy_lk_c::commonProcInit(int proc) {
     lkT60_procEnteredPre(gabi::ea(&mCurProc)); /* true60 (d_a_player_moveinit_t60.h): before the dispatch's window */
     lkT60Bg::procEntered(gabi::ea(&mCurProc), lkT60_frameTag()); /* true60: entry stamp */
     lkT60_midEntryAll(proc); /* true60 (d_a_player_waitturn_t60.h): a middle-step entry holds the new body */
+    lkT60_procInitTurn(proc, current.angle.y, shape_angle.y); /* true60 (d_a_player_heading_t60.h): the move's whole turn first */
     Player01ProcInitEntry *procInit =
         &mProcInitTable
              .mEntries[proc]; /* mProcInitTable.mEntries[proc]: ProcFunc (8 bytes), mProcFlags */

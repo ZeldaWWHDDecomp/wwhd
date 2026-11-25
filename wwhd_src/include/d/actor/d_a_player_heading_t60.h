@@ -63,6 +63,40 @@ static inline s16 lkT60_headingWhole(s16 angle) {
         return h.whole;
     return angle;
 }
+/* (2026-11-25; long1 at N 4, seg 7 frame 5638: Link walking along a wall,
+ * the sidle prompt (do status 0x10) enters WHIDE_READY from procMove). A's procMove turns current.angle.y the frame's
+ * whole step toward the stick target (21146 -> 21097) before checkNextMode enters the new procedure, whose init takes
+ * current.angle.y = shape_angle.y. At N 4 the entry came on the frame's first step, after that step's share of the turn
+ * (21121): the init froze it, the held body turned no further, and the wall-hide turn (shape_angle.y +2048 per step) ran
+ * 24 off from there (the sidle's place at 5813: anim 2.26, pos 0.83). Form: a procedure init on an earlier step of a
+ * frame whose first step noted the move's whole turn (g_lkT60MoveHeading) puts current.angle.y and shape_angle.y (equal,
+ * on the turn's segment) at the whole turn first, as A's body left them. Only for the procedures listed below (an entry
+ * the waitturn / MIDENTRY catch-ups redo keeps its first-step angles: those redo the turn, speed and blend only while the
+ * angles equal their first-step record; 2026-11-25). NC WWHD_T60_PROCINITTURN_NEGCTRL=1; dt 1 never. */
+static inline bool lkT60_procInitTurnNc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_PROCINITTURN_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return true;
+#endif
+}
+/* the procedures whose init takes the whole turn: WHIDE_READY 0x13 (procWHideReady_init: current.angle.y = shape_angle.y) */
+static inline bool lkT60_procInitTurnProc(int proc) { return proc == 0x13; }
+/* commonProcInit, first: proc = the procedure entered; cur / shape = current.angle.y / shape_angle.y */
+template <class A>
+static inline void lkT60_procInitTurn(int proc, A& cur, A& shape) {
+    if (t60::dt() == 1.0f || t60::tick30() || !lkT60_procInitTurnProc(proc) || lkT60_procInitTurnNc())
+        return;
+    const s16 c = (s16)cur;
+    if ((s16)shape != c)
+        return;
+    const s16 w = lkT60_headingWhole(c);
+    if (w == c)
+        return;
+    cur = w;
+    shape = w;
+}
 /* posMoveFromFootPos: the heading of this step's move (angle = current.angle.y) */
 static inline s16 lkT60_moveHeading(s16 angle) {
     if (t60::dt() == 1.0f || lkT60_headingNegctrl())
