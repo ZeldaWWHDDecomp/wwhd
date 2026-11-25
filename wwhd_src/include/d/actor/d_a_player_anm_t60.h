@@ -192,6 +192,21 @@ static inline f32 lkT60_rollCrashFrame(J3DFrameCtrl* fc) {
     return nc ? (f32)fc->mFrame : lkT60_endFrame(fc);
 }
 
+/* (2026-11-25, long3 N 4 seg 8, A frame 6805): procHangClimb's run-out
+ * threshold (`getFrame() > 23`, then checkNextMode(1)) read the step's frame: at rate 0.75 A's frame plays 22.5 -> 23.25
+ * and changes at its frame end; B at N 4 crossed 23 on step 3 of 4 (23.06) and changed there (WAIT / MOVE from the
+ * climb's end placement at another frame): Link 1.3 off at the climb's end, 2.1 by 6821. N 2 steps 22.875 / 23.25 hit A's
+ * frame by chance. The threshold takes the frame-end frame (lkT60_endFrame, as ROLLEND). NC
+ * WWHD_T60_HANGCLIMBEND_NEGCTRL=1: the per-step frame. */
+static inline f32 lkT60_hangClimbEndFrame(J3DFrameCtrl* fc) {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_HANGCLIMBEND_NEGCTRL"); return e && e[0] == '1'; }();
+#else
+    const bool nc = true;
+#endif
+    return nc ? (f32)fc->mFrame : lkT60_endFrame(fc);
+}
+
 /* the lookahead test: `fc->checkPass(f)` at dt 1, A's window on the frame's first step, false on its later steps */
 static inline BOOL lkT60_pass(J3DFrameCtrl* fc, f32 frame) {
     if (t60::dt() == 1.0f) {

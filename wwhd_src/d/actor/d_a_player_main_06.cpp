@@ -1704,7 +1704,7 @@ BOOL daPy_lk_c::procHangMove() {
 BOOL daPy_lk_c::procHangClimb() {
     if (lkT60_endRate(&mFrameCtrlUnder[0]) < 0.01f) {
         checkNextMode(0);
-    } else if (mFrameCtrlUnder[0].getFrame() > 23.0f /* HD: HIO folded */) {
+    } else if (lkT60_hangClimbEndFrame(&mFrameCtrlUnder[0]) > 23.0f /* HD: HIO folded */) {
         checkNextMode(1);
     }
     return TRUE;
