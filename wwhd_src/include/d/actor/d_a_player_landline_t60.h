@@ -183,6 +183,19 @@ static inline bool snapSegOff() {
     return true;
 #endif
 }
+/* (2026-11-25; pig route frame 91: Link's carry drift): the speed-ramp position-gap (3)
+ * wall frame's tick30 check (A's segment start, old.pos = the frame start) also gets A's height, pos.y = the frame start +
+ * A's frame fall: Link walks into a wall on the ground, the earlier step's check snapped y back to the floor, so the tick30
+ * step's own y add stood at 549.06 where A's input is 547.5; the wall circles met the wall at another height (x 0.03 /
+ * z 0.06 off, then the wall term's speed, 1.0 by frame 213). NC WWHD_T60_WALLSEGY_NEGCTRL=1; dt 1 never. */
+static inline bool wallSegYOff() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_WALLSEGY_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
+#else
+    return true;
+#endif
+}
 /* before mAcch.CrrPos (acf: the flags before ClrGroundHit, the previous check's result) */
 static inline bool begin(uint32_t acf, cXyz& oldPos, cXyz& pos, uint32_t tag) {
     Rec& r = s_rec;
@@ -232,6 +245,14 @@ static inline bool begin(uint32_t acf, cXyz& oldPos, cXyz& pos, uint32_t tag) {
         if (!(r.air && r.landed)) {
             ld3(r.old, oldPos);
             st3(oldPos, r.p0);
+            if (!wallSegYOff()) {
+                /* A's height too: the frame start + A's frame fall (on the ground the earlier
+                 * step's check snapped y back, so the step's own add stood 0.94 above A's 547.5: the wall circles met
+                 * the wall at another height) */
+                f32 p0y;
+                std::memcpy(&p0y, &r.p0[1], 4);
+                pos.y = p0y + r.sy;
+            }
             r.on = true;
             return true;
         }
