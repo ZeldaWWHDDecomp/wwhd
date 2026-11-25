@@ -11,6 +11,7 @@
  */
 #include "d/actor/d_a_player_main_07.h"
 #include "d/actor/d_a_player_anm_t60.h"
+#include "d/actor/d_a_player_hammerhit_t60.h" /* */
 #include "d/actor/d_a_player_grabthrow_t60.h" /* true60: procGrabThrow's frame threshold */
 #include "sead/ElementAt.h"
 #include "gc_api/tu.h"
@@ -4711,6 +4712,7 @@ BOOL daPy_lk_c::procHammerFrontSwing() {
             f5 = fsel_l(f5, f5, 0.0f);
             frameCtrl.setRate(0.0f);
             frameCtrl.setFrame(f5);
+            lkT60HammerHit::frameSet(gabi::ea(&frameCtrl)); /* true60: no further play this frame */
             m35EC = f5;
             mProcVar0 = 10;
             setHammerQuake(gabi::at<cBgS_PolyInfo>(gabi::ea(this) + 0xB28), gp, mtrl);

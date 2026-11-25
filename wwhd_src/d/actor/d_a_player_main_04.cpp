@@ -68,10 +68,12 @@ static const be<u16>* const aura_model_joint = gabi::at<be<u16>>(0x10035AA0);
 #include "d/actor/d_a_player_bghit_t60.h"
 #include "d/actor/d_a_player_carry_t60.h"
 #include "d/actor/d_a_player_rootmode_t60.h"
+#include "d/actor/d_a_player_athold_t60.h" /* */
 #include "d/actor/d_a_player_footga_t60.h"
 #include "d/actor/d_a_player_landline_t60.h"
 #include "d/actor/d_a_player_landhist_t60.h"
 #include "d/actor/d_a_player_stepdown_t60.h"
+#include "d/actor/d_a_player_hammer_t60.h"
 #include "d/t60_whole_carrier.h"
 
 static cXyz l_debug_keep_pos;
@@ -3315,6 +3317,7 @@ s32 daPy_lk_c::setItemModel() {
                 LinkItem(this).mHammerSwingTimer = t;
             }
             f32 amp = (f32)t * 300.0f;
+            lkhammer::picture((s16)(t + 1), ang, amp); /* true60: an earlier step's own wobble */
             f32 s = cM_ssin(ang);
             s16 r = (s16)(LinkItem(this).mHammerSwingAngle + lk_ftos(s * amp));
             LinkItemApi::XYZrotS(mDoMtx_stack_c::get(), 0, 0, (s32)r);
@@ -4734,8 +4737,10 @@ BOOL daPy_lk_c::execute() {
             }
             lkT60Bg::entryHideEnd(mAcch.m_flags, lkT60EntryHid);
         }
+        lkT60AtHold::note(mResetFlg0, lkT60_frameTag(), mCurProc); /* true60: the body's attack window */
     } else {
         lkT60RootMode_held(mRootMoveMode); /* true60: the held body's root mode */
+        mResetFlg0 = mResetFlg0 | lkT60AtHold::held(lkT60_frameTag(), mCurProc); /* true60 */
     }
     /* true60 (positional flush, d_a_player_maba_t60.h): the first step marks the body's end; the tick30 step makes the
      * body's unmatched noted draws here (inits: where the procedure called them) */
