@@ -18,6 +18,7 @@
 #include "d/actor/d_a_player_maba_t60.h"
 #include "d/actor/d_a_player_bghit_t60.h"
 #include "d/actor/d_a_player_atnthrow_t60.h" /* true60 */
+#include "d/actor/d_a_player_moveinit_t60.h" /* true60 */
 
 static PlayerJ3DSysState j3dSysState;
 static PlayerFrameCounter g_Counter;
@@ -3140,6 +3141,7 @@ BOOL daPy_lk_c::commonProcInit(int proc) {
     u32 self = gabi::ea(this);
     lkT60Maba::proc_init(); /* true60: the first step's setTextureAnime calls from here on are init calls (positional flush) */
     lkT60_procEntered(gabi::ea(&mCurProc)); /* true60 (rule 1, 2026-11-17): a first-step change holds the new body */
+    lkT60_procEnteredPre(gabi::ea(&mCurProc)); /* true60 (d_a_player_moveinit_t60.h): before the dispatch's window */
     lkT60Bg::procEntered(gabi::ea(&mCurProc), lkT60_frameTag()); /* true60: entry stamp */
     Player01ProcInitEntry *procInit =
         &mProcInitTable

@@ -29,7 +29,37 @@ static inline bool lkT60_moveInitNc() {
     return false;
 #endif
 }
-/* a setMoveAnime from a procedure entered on this (first, not tick30) step: its body is held for the rest of the frame */
+/* (2026-11-25): a procedure entered on the frame's first step BEFORE the dispatch's
+ * window (lkT60_procOpen): the execute's pre-dispatch checks (checkItemAction: the boomerang throw's procWait_init from
+ * BOOMERANG_SUBJECT) run after the frame's animation play in A as well, so their setMoveAnime takes the frame-end phase;
+ * at N steps it took the first step's (bmA N 2 on intgc7, frame 3635: mFrameCtrlUnder[1] A 29.159 / B 29.051, f31 A
+ * 0.88361 / B 0.87459, three frames off). Such an entry is not a held body (A runs its body in the same frame's dispatch),
+ * so it only takes MOVEINIT-PHASE's set form (projected phase, latched). Key: Link's mCurProc EA + 2, frame-tagged.
+ * NC WWHD_T60_MOVEINITPRE_NEGCTRL=1. dt 1: never. */
+static inline bool lkT60_moveInitPreNc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] {
+        const char* e = getenv("WWHD_T60_MOVEINITPRE_NEGCTRL");
+        return e && e[0] == '1';
+    }();
+    return v;
+#else
+    return false;
+#endif
+}
+static inline uint32_t lkT60_procPreKey(uint32_t curProcEa) { return curProcEa + 2; }
+/* commonProcInit: a first-step entry before the dispatch's window */
+static inline void lkT60_procEnteredPre(uint32_t curProcEa) {
+    if (!lkT60_procStep() || lkT60_moveInitPreNc() || lkT60_moveInitNc() ||
+        wwhd_t60_latch_pending(lkT60_procOpenKey(curProcEa), lkT60_frameTag()))
+        return;
+    wwhd_t60_latch_set(lkT60_procPreKey(curProcEa), lkT60_frameTag());
+}
+/* a setMoveAnime from a procedure entered on this (first, not tick30) step: its body is held for the rest of the frame
+ * (or, MOVEINIT-PRE, entered before the dispatch: not held, the set form only) */
 static inline bool lkT60_moveInitHold(uint32_t curProcEa) {
-    return t60::dt() != 1.0f && !t60::tick30() && !lkT60_moveInitNc() && lkT60_procEnteredThisFrame(curProcEa);
+    return t60::dt() != 1.0f && !t60::tick30() && !lkT60_moveInitNc() &&
+           (lkT60_procEnteredThisFrame(curProcEa) ||
+            (lkT60_procStep() && !lkT60_moveInitPreNc() &&
+             wwhd_t60_latch_pending(lkT60_procPreKey(curProcEa), lkT60_frameTag()) != 0));
 }
