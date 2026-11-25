@@ -12,6 +12,7 @@
 #include "c/c_damagereaction_bounce_t60.h" /* true60: the frame's bounce, for the shape copy */
 #include <unordered_map>
 #include "d/actor/d_a_bk_react5_t60.h" /* */
+#include "d/actor/d_a_bk_shapecopy_t60.h" /* */
 #include "d/actor/d_a_bk_tilt_t60.h" /* */
 
 /* true60 (the first-step AI-timer rule): the AI timers (mTimers, mSideStepTimer, mSideStepWait, mWeaponRunTimer,
@@ -1060,11 +1061,14 @@ BOOL daBk_Execute(bk_class* i_this) {
     }
     if (i_this->dr.mAction != 31 && !t60drb::shapeHeld(gabi::ea(&i_this->dr))) { /* true60 */
         i_this->shape_angle.x = i_this->current.angle.x;
-        i_this->shape_angle.y = i_this->current.angle.y;
+        /* true60 (d_a_bk_shapecopy_t60.h): the tick30 copy without the first step's reaction turn */
+        i_this->shape_angle.y = t60bksc::copyY(gabi::ea(i_this), i_this->current.angle.y);
         i_this->shape_angle.z = i_this->current.angle.z;
     }
+    const s16 t60ScPre = i_this->current.angle.y; /* true60 */
 
     s32 r3 = damage_reaction(&i_this->dr);
+    t60bksc::note(gabi::ea(i_this), t60ScPre, i_this->current.angle.y); /* true60 */
     /* true60 (d_a_bk_react5_t60.h): an earlier step's flinch (5) meets the frame's AI decision in A's order */
     if (t60bkr5::recheck(gabi::ea(i_this), r3) && i_this->dr.mAction != 4 && i_this->dr.mAction != 11) {
         /* true60 (d_a_bk_kdturn_t60.h): A's one call's turn before the flinch */
