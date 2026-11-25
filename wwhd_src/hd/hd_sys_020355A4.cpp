@@ -1,6 +1,7 @@
 /* HD-only GameTask lifecycle, hold counters and per-frame subsystem scheduling. */
 #include "hd/hd_sys_020355A4.h"
 #include "true60.h"
+#include "hd/hd_sys_t60.h"
 
 static HdGameTaskPointer l_currentTask;
 static u32 l_taskVtable;
@@ -148,14 +149,15 @@ static void hdGameTask_updateHoldCounters() {
 /* 0203593C */
 // true60: the per-step entry. The port's step driver sets the step state (gabi_t60.h) before each pass of this
 // function; the parts that count 30 Hz frames run on the tick30 step only (as on frame interpolation's in-between
-// passes, where the port holds the same calls): the HOME / system / button / controller hold counters (30-frame
-// thresholds), the HD input manager and its event manager (recalibration counter, cursor inertia, swipe frames) and the
-// boot scene's execute; the input manager on every step that read the GamePad (per-step input, true 60 fps input; its frame
+// passes, where the port holds the same calls): the HD input manager's frame counts (recalibration counter, cursor
+// inertia, swipe frames) and the boot scene's execute; the HOME / system / button / controller hold counters (30-frame
+// thresholds) and the input event manager on the step of the frame-level work, before the play scene as in the original
+// frame (hd/hd_sys_t60.h); the input manager on every step that read the GamePad (per-step input, true 60 fps input; its frame
 // counts on the frame's first read, d/hd_input_ctrl.cpp). Everything else (heaps, frame setup, the loop body, lighting,
 // display) runs on every step.
 static void hdGameTask_calc() {
     if (hdGameTaskIsErrorVisible(l_errorViewer.mpValue) != 0) return;
-    if (t60::tick30()) hdGameTask_updateHoldCounters();
+    if (hdT60_frameInputStep()) hdGameTask_updateHoldCounters();  /* (hd/hd_sys_t60.h) */
     u32 heap = hdGameTaskGetFrameHeap();
     u32 previousHeap = 1;
     if (heap != 0) previousHeap = hdGameTaskChangeHeap(l_heapManager.mpValue, heap);
@@ -164,7 +166,7 @@ static void hdGameTask_calc() {
     // N = 1 only the first, as before)
     if (t60::first_step() || t60_in_later()) hdGameTaskInputCalc(l_input.mpValue);
     void* events = l_events.mpValue;
-    if (events != NULL && t60::tick30()) hdGameTaskEventsCalc(events);
+    if (events != NULL && hdT60_frameInputStep()) hdGameTaskEventsCalc(events);
     void* frameManager = l_frameManager.mpValue;
     if (frameManager != NULL) hdGameTaskBeginFrame(frameManager);
     hdGameTaskMatrixCalc();
