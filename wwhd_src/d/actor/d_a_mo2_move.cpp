@@ -182,8 +182,10 @@ static inline void jyunkai(mo2_class *i_this) {
       maxSpeed = 0x1000;
       dVar12 = moveHIO.mPatrolSpeedUnarmed;
     }
-    f32 x = i_this->mPathTargetPos.x - i_this->actor.current.pos.x;
-    f32 z = i_this->mPathTargetPos.z - i_this->actor.current.pos.z;
+    f32 t60px = i_this->actor.current.pos.x, t60pz = i_this->actor.current.pos.z;
+    t60marr::turnPlace(gabi::ea(i_this), &t60px, &t60pz); /* true60: the frame-start place (frame 88) */
+    f32 x = i_this->mPathTargetPos.x - t60px;
+    f32 z = i_this->mPathTargetPos.z - t60pz;
     i_this->mDamageReaction.mTurnTargetY = cM_atan2s(x, z);
     if (i_this->mPathOn != 0 && has_weapon(i_this)) {
       f32 d = std_sqrtf(gabi::fmadds(x, x, z * z));
