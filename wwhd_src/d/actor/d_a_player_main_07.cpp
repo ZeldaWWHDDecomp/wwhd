@@ -26,6 +26,7 @@
 #include "d/actor/d_a_player_carry_t60.h"
 #include "d/actor/d_a_player_waitturn_t60.h"
 #include "d/actor/d_a_player_movecos_t60.h" /* true60: the swim speed's cosine */
+#include "d/actor/d_a_player_heading_t60.h" /* true60: the swim stroke's heading */
 #include "d/actor/d_a_player_swimbob_t60.h"
 #include "d/actor/d_a_player_glide_t60.h"
 
@@ -721,7 +722,15 @@ void daPy_lk_c::setSpeedAndAngleSwim() {
             } else {
                 speedTarget = 0.0f;
             }
+            /* true60 (d_a_player_heading_t60.h): the frame's whole turn of the heading (first step) */
+            const bool lkT60Sh = lkT60_headingNoteStep() && !lkT60_swimHeadingNegctrl();
+            const s16 lkT60H0 = lkT60Sh ? (s16)current.angle.y : (s16)0;
+            const s16 lkT60Shape = lkT60Sh && mStickDistance > 0.05f && shape_angle.y != mMoveTargetAngleY
+                                       ? lkT60_moveCosAngle(old, shape_angle.y, mMoveTargetAngleY, 0x1388, 0x4B0, 0x11)
+                                       : (s16)shape_angle.y;
             cLib_addCalcAngleS(&current.angle.y, shape_angle.y, 2, 0x2000, 0x1000);
+            if (lkT60Sh)
+                lkT60_headingNote(lkT60H0, lkT60_moveCosAngle(lkT60H0, current.angle.y, lkT60Shape, 0x2000, 0x1000, 2));
             mMaxNormalSpeed = 18.0f;
         } else {
             setShapeAngleToAtnActor();
@@ -734,6 +743,8 @@ void daPy_lk_c::setSpeedAndAngleSwim() {
                     backward = TRUE;
                 } else {
                     cLib_addCalcAngleS(&current.angle.y, mMoveTargetAngleY, 0x11, 0x1388, 0x4B0);
+                    if (lkT60_headingNoteStep() && !lkT60_swimHeadingNegctrl()) /* true60 */
+                        lkT60_headingNote(old, lkT60_moveCosAngle(old, current.angle.y, mMoveTargetAngleY, 0x1388, 0x4B0, 0x11));
                     /* true60 (d_a_player_movecos_t60.h): on the first step the frame's whole turn */
                     speedTarget = gabi::fmuls_ppc(gabi::fmuls_ppc(3.0f, mStickDistance),
                                                   cM_scos((s16)(lkT60_moveCosAngle(old, current.angle.y, mMoveTargetAngleY,

@@ -70,7 +70,29 @@ static inline s16 lkT60_moveHeading(s16 angle) {
     return lkT60_headingWhole(angle);
 }
 
-/* (2026-11-24; a pig pair's frame 136: Link pushing against a wall turns 1643 on the stick's
+/* (2026-11-25; the oq route  + SWIMTURN at N 2, pair
+ * oqZ2, frame 244: Link swimming in a turn, x / z 0.16 / 0.11 off from then on, Link 72 off by 447) the same for the swim
+ * stroke: posMoveFromFootPos's SWIM_MOVE branch moves along current.angle.y, which setSpeedAndAngleSwim turns per step
+ * (the free swim: shape_angle.y to the stick target, current.angle.y after it; with attention: current.angle.y to the
+ * target); the swim turn notes the frame's whole turn of current.angle.y on the first step (d_a_player_main_07.cpp, the
+ * original's one turn from the frame start: the shape's, then the heading's after the whole shape) and the stroke's
+ * earlier steps move along it. NC WWHD_T60_SWIMHEADING_NEGCTRL=1: the per-step heading. dt 1: never. */
+static inline bool lkT60_swimHeadingNegctrl() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_SWIMHEADING_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return false;
+#endif
+}
+/* posMoveFromFootPos, SWIM_MOVE: the heading of this step's stroke (angle = current.angle.y) */
+static inline s16 lkT60_swimMoveHeading(s16 angle) {
+    if (t60::dt() == 1.0f || lkT60_swimHeadingNegctrl())
+        return angle;
+    return lkT60_headingWhole(angle);
+}
+
+/* (2026-11-24; pig pigF3 / pigN3 frame 136: Link pushing against a wall turns 1643 on the stick's
  * change to diagonal; A's speed 6.813 -> 6.881, B's 6.814 -> 6.755, the walk -> run switch (8.5) then a frame late)
  * setNormalSpeedF's wall term (maxSpeed x (1 - 0.6 cos(current.angle.y + 0x8000 - wall angle))) runs once a frame, on
  * the frame's first step at dt 1 (the speed chase hold, rule (a)), where current.angle.y held only the first

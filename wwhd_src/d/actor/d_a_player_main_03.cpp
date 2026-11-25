@@ -4751,7 +4751,9 @@ void daPy_lk_c::posMoveFromFootPos() {
             f32 den = lk_fmaddsD(rate, 0.35f, 1.0f);
             f32 num = gabi::fmadds(sp * std::fabs(c), 0.4f, sp * 0.6f);
             f32 k = num / den;
-            u16 ay = (u16)current.angle.y;
+            /* true60 (d_a_player_heading_t60.h): on a turning frame's earlier steps the stroke's
+             * heading is the frame's whole turn; dt 1: current.angle.y */
+            u16 ay = (u16)lkT60_swimMoveHeading(current.angle.y);
             speed.x = k * cM_ssin(ay);
             speed.z = k * cM_scos(ay);
         } else if (proc == LinkMotionConstants::daPyProc_CUT_ROLL_e && dComIfGp_event_runCheck() &&
