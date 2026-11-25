@@ -808,7 +808,7 @@ BOOL daPy_lk_c::procFrontRoll() {
             if (cLib_distanceAngleS((s16)(current.angle.y + 0x8000), mAcchCir[0].GetWallAngleY() ) > 0x1388) {
                 return TRUE;
             }
-            f32 frame = mFrameCtrlUnder[0].getFrame();
+            f32 frame = lkT60_rollCrashFrame(&mFrameCtrlUnder[0]); /* true60 (d_a_player_anm_t60.h) */
             if (frame < 6.0f || frame > 15.0f) {
                 return TRUE;
             }

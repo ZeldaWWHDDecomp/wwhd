@@ -179,6 +179,18 @@ static inline bool lkT60_rollEndNegctrl() {
 static inline f32 lkT60_rollEndFrame(J3DFrameCtrl* fc) {
     return lkT60_rollEndNegctrl() ? (f32)fc->mFrame : lkT60_endFrame(fc);
 }
+/* (2026-11-25, long1 N 4 seg 1 frame 1094): procFrontRoll's wall-crash window
+ * (frame 6 .. 15) read the step's animation frame: A's frame plays first and tests 6.0 (crash), B's first step 5.775 (no
+ * crash), its second 6.0: the crash a step late, the frame's launch on 3 of 4 steps (y 4.5 under A's arc, then the frame
+ * end's check landed it). The window takes the frame-end frame (lkT60_endFrame). NC WWHD_T60_ROLLCRASH_NEGCTRL=1. */
+static inline f32 lkT60_rollCrashFrame(J3DFrameCtrl* fc) {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_ROLLCRASH_NEGCTRL"); return e && e[0] == '1'; }();
+#else
+    const bool nc = true;
+#endif
+    return nc ? (f32)fc->mFrame : lkT60_endFrame(fc);
+}
 
 /* the lookahead test: `fc->checkPass(f)` at dt 1, A's window on the frame's first step, false on its later steps */
 static inline BOOL lkT60_pass(J3DFrameCtrl* fc, f32 frame) {
