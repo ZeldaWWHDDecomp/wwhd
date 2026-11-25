@@ -24,35 +24,48 @@ inline bool nc() {
     return false;
 #endif
 }
-/* daHimo2_Draw's scope: the earlier step's wrap count for the draw, the stored one back at the end */
+/* daHimo2_Draw's scope: the earlier step's wrap count for the draw, the stored one back at the end. A class-typed local of
+ * a glued unit is a guest stack object built by gabi_construct / ended by gabi_destroy (gabi.h LocalOf): the overloads
+ * below (found by ADL) do the work; the constructor / destructor do the same for an unglued compile. */
+struct Guard;
+inline void begin(Guard& g, himo2_class* x);
+inline void end(Guard& g);
 struct Guard {
     himo2_class* a;
     s32 keep;
     bool set;
-    explicit Guard(himo2_class* x) : a(x), keep(0), set(false) {
-        /* (the draw: dt is not the step's there; steps / step / tick30 are, as himo2_drawDt and t60_draw.h read them) */
-        if (t60::steps() < 2 || t60::tick30() || nc())
-            return;
-        if (a->mDemoState != HIMO2_DEMO_COIL || a->mpTarget == nullptr || !((f32)a->mWrapOffsetZ > -145.0f))
-            return;
-        const s32 bc = a->mWrapCount;
-        if (bc >= 400)
-            return;
-        f32 f1 = 20.0f - ((f32)a->mpTarget->scale.y - 1.0f) * 17.0f;
-        if (f1 < 0.5f)
-            f1 = 0.5f;
-        const s32 r5 = (s32)((f32)a->mWrapSpeed / f1) + 1;
-        const f32 share = (f32)t60::step() / (f32)t60::steps();
-        const s32 add = (s32)((f32)r5 * share + 0.5f);
-        if (add <= 0)
-            return;
-        keep = bc;
-        set = true;
-        a->mWrapCount = bc + add;
-    }
-    ~Guard() {
-        if (set)
-            a->mWrapCount = keep;
-    }
+    explicit Guard(himo2_class* x) { begin(*this, x); }
+    ~Guard() { end(*this); }
 };
+inline void begin(Guard& g, himo2_class* x) {
+    g.a = x;
+    g.keep = 0;
+    g.set = false;
+    /* (the draw: dt is not the step's there; steps / step / tick30 are, as himo2_drawDt and t60_draw.h read them) */
+    if (t60::steps() < 2 || t60::tick30() || nc())
+        return;
+    if (x->mDemoState != HIMO2_DEMO_COIL || x->mpTarget == nullptr || !((f32)x->mWrapOffsetZ > -145.0f))
+        return;
+    const s32 bc = x->mWrapCount;
+    if (bc >= 400)
+        return;
+    f32 f1 = 20.0f - ((f32)x->mpTarget->scale.y - 1.0f) * 17.0f;
+    if (f1 < 0.5f)
+        f1 = 0.5f;
+    const s32 r5 = (s32)((f32)x->mWrapSpeed / f1) + 1;
+    const f32 share = (f32)t60::step() / (f32)t60::steps();
+    const s32 add = (s32)((f32)r5 * share + 0.5f);
+    if (add <= 0)
+        return;
+    g.keep = bc;
+    g.set = true;
+    x->mWrapCount = bc + add;
+}
+inline void end(Guard& g) {
+    if (g.set)
+        g.a->mWrapCount = g.keep;
+    g.set = false;
+}
+inline void gabi_construct(Guard& g, himo2_class* x) { begin(g, x); }
+inline void gabi_destroy(Guard& g) { end(g); }
 }  // namespace t60himo2wp
