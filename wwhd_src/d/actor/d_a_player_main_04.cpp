@@ -26,6 +26,7 @@
 #include "d/actor/d_a_player_maba_t60.h"
 #include "d/actor/d_a_player_hatwind_t60.h"
 #include "d/actor/d_a_player_pose_t60.h"
+#include "d/actor/d_a_player_shipride_t60.h" /* true60: the held ship body's ride placement */
 #include "d/actor/d_a_player_main_04_item.h"
 #include "d/actor/d_a_player_main_04_effect.h"
 static cXyz l_attention_crawl_offset = {0.0f, 30.0f, 20.0f};
@@ -4761,6 +4762,7 @@ BOOL daPy_lk_c::execute() {
         lkT60AtHold::note(mResetFlg0, lkT60_frameTag(), mCurProc); /* true60: the body's attack window */
     } else {
         lkT60RootMode_held(mRootMoveMode); /* true60: the held body's root mode */
+        lkT60ShipRide_held(this); /* true60: a held ship body still rides the ship */
         mResetFlg0 = mResetFlg0 | lkT60AtHold::held(lkT60_frameTag(), mCurProc); /* true60 */
     }
     /* true60 (positional flush, d_a_player_maba_t60.h): the first step marks the body's end; the tick30 step makes the
@@ -5263,6 +5265,7 @@ BOOL daPy_lk_c::execute() {
 
 // clang-format off
 /* WWHD glue
+ext 023E287C void daPy_lk_c::setShipRidePos(int)
 ext 02526E70 u32 LinkAuraDemoApi::getActor(LinkAuraDemoObject*, u32)
 ext 02444F48 void LinkAuraDemoApi::assureTermination(void*)
 str 10035A98

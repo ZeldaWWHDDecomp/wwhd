@@ -1,0 +1,26 @@
+#pragma once
+/* true60 (2026-11-24; d_a_player_main_04.cpp execute, the held branch).
+ * Separate file: execute keeps one thin call.
+ *
+ * procShipSteer / procShipPaddle put Link on the ship every update: changeShipEndProc, then setShipRidePos(1) (current.pos =
+ * the ship body's base matrix x l_ship_offset). On the frame the sail goes up (or down) the first step enters the other
+ * procedure (procShipPaddle -> procShipSteer_init, its own setShipRidePos(1) at the first step's ship matrix) and the held-body
+ * form (s_lkT60ProcHold) holds the new body over the frame's later steps: Link stayed where the first step put him while
+ * the ship moved on (pair, N 2, frame 46: B y -60.796, A -62.617; the next frame lands on A again). A: the init's
+ * setShipRidePos at the frame's ship matrix. Form: a held later step of SHIP_STEER (0x88) / SHIP_PADDLE (0x89) runs the
+ * body's ride placement, setShipRidePos(1), as on every other frame's steps; no other part of the body. dt 1 (N = 1):
+ * nothing is held, never called. Negative control WWHD_T60_LK_SHIPRIDE_HOLD_NEGCTRL=1 (game build): the held step keeps
+ * the first step's place. */
+#include <cstdlib>
+
+/* the held branch (the body skipped on this later step): L = daPy_lk_c */
+template <class L> static inline void lkT60ShipRide_held(L* lk) {
+    static const bool negctrl = [] {
+        const char* e = getenv("WWHD_T60_LK_SHIPRIDE_HOLD_NEGCTRL");
+        return e && e[0] == '1';
+    }();
+    const int proc = (int)lk->mCurProc;
+    if (negctrl || (proc != 0x88 && proc != 0x89)) /* daPyProc_SHIP_STEER_e, daPyProc_SHIP_PADDLE_e */
+        return;
+    lk->setShipRidePos(1);
+}
