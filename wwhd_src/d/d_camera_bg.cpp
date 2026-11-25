@@ -12,6 +12,7 @@
 #include "d/d_camera_accessors.h"
 #include "port_hooks.h"
 #include "true60.h"
+#include "d/d_camera_bush_t60.h"
 /* true60 (bumpCheck; the per-step smoothing rule): the bumped eye mEye and the bumped direction mDirection are filter states
  * that persist from frame to frame (the wall, back-wall and corner cushions, the bush and no-hit returns ease them
  * toward the collision result), and mSightFitRadius eases toward the lock-on fit radius: each per-frame ratio r is
@@ -1186,9 +1187,11 @@ void dCamera_c::checkGroundInfo() {
         if (res != 0)
             massCameraTop(cameraArgument(cameraMassManager()),
                           cameraArgument(&mBushTopPos)); /* GetMassCamTopPos */
+        camera_bush_t60::frame(mBushHit, mBushHeight, mBushTopPos); /* true60 (d_camera_bush_t60.h) */
     } else {
         mBushHit = 0;
         mBushHeight = 0.0f;
+        camera_bush_t60::clear(); /* true60 */
     }
     gndChk_dt(o2);
     fieldWrite<u32>(gabi::at<dBgS_GndChk>(o)->cBgS_PolyInfo::__vtbl, kGroundPolyInfoVtable);
