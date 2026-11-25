@@ -33,7 +33,7 @@ static inline bool logOn() {
     return v;
 }
 /* Link (player ea) ends this frame in the lava: the predicate above (called after his move and lava check of this step) */
-template <class Bgs> static inline bool endsInLava(u32 player, Bgs* bgs) {
+static inline bool endsInLava(u32 player, u32 bgs) {
     const u32 n = t60::steps();
     if (n <= 1 || t60::tick30() || t60::step() >= n)
         return false;
@@ -64,26 +64,44 @@ template <class Bgs> static inline bool endsInLava(u32 player, Bgs* bgs) {
     return true;
 }
 /* setGrabItemPos's scope (after its null check): the carried actor's place / shape angle back on scope exit when the
- * predicate fires */
-template <class Lk, class Ac, class Bgs> struct Keep {
-    Lk* lk;
-    Ac* ac;
-    Bgs* bgs;
+ * predicate fires. A class-typed local of a glued unit is a guest stack object built by gabi_construct / ended by
+ * gabi_destroy (gabi.h LocalOf; as): the overloads below (found by ADL) do the work; the
+ * constructor / destructor do the same for an unglued compile. Guest addresses only (fopAc_ac_c current.pos 0x314,
+ * shape_angle 0x328). */
+struct Keep;
+inline void begin(Keep& k, u32 lk, u32 ac, u32 bgs);
+inline void end(Keep& k);
+struct Keep {
+    u32 lk, ac, bgs;
     f32 p[3];
     s16 r[3];
     bool on;
-    Keep(Lk* l, Ac* a, Bgs* b) : lk(l), ac(a), bgs(b), on(false) {
-        if (nc() || t60::steps() <= 1 || t60::tick30())
-            return;
-        on = true;
-        p[0] = ac->current.pos.x, p[1] = ac->current.pos.y, p[2] = ac->current.pos.z;
-        r[0] = ac->shape_angle.x, r[1] = ac->shape_angle.y, r[2] = ac->shape_angle.z;
-    }
-    ~Keep() {
-        if (!on || !endsInLava(gabi::ea(lk), bgs))
-            return;
-        ac->current.pos.x = p[0], ac->current.pos.y = p[1], ac->current.pos.z = p[2];
-        ac->shape_angle.x = r[0], ac->shape_angle.y = r[1], ac->shape_angle.z = r[2];
-    }
+    template <class Lk, class Ac, class Bgs> Keep(Lk* l, Ac* a, Bgs* b) { begin(*this, gabi::ea(l), gabi::ea(a), gabi::ea(b)); }
+    ~Keep() { end(*this); }
 };
+inline void begin(Keep& k, u32 lk, u32 ac, u32 bgs) {
+    k.lk = lk, k.ac = ac, k.bgs = bgs, k.on = false;
+    if (nc() || ac == 0 || t60::steps() <= 1 || t60::tick30())
+        return;
+    k.on = true;
+    for (u32 i = 0; i < 3; i++) {
+        k.p[i] = (f32)*gabi::at<be<f32>>(ac + 0x314 + 4 * i);
+        k.r[i] = (s16)*gabi::at<be<s16>>(ac + 0x328 + 2 * i);
+    }
+}
+inline void end(Keep& k) {
+    if (!k.on)
+        return;
+    k.on = false;
+    if (!endsInLava(k.lk, k.bgs))
+        return;
+    for (u32 i = 0; i < 3; i++) {
+        *gabi::at<be<f32>>(k.ac + 0x314 + 4 * i) = k.p[i];
+        *gabi::at<be<s16>>(k.ac + 0x328 + 2 * i) = k.r[i];
+    }
+}
+template <class Lk, class Ac, class Bgs> inline void gabi_construct(Keep& k, Lk* l, Ac* a, Bgs* b) {
+    begin(k, gabi::ea(l), gabi::ea(a), gabi::ea(b));
+}
+inline void gabi_destroy(Keep& k) { end(k); }
 }  // namespace lkT60LavaRel
