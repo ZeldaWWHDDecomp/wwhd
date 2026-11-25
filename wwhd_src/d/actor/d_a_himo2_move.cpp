@@ -214,9 +214,11 @@ static inline bool himo2_catchTest(f32 dist, f32 range, s16 timer) {
 
 /* cases 5/8/9: pull the hook back to the hand */
 static inline bool mv_pull_back(himo2_class* i_this, cXyz* sp100) {
-    f32 step = (l_himo2Regs.mChild[18].mFloatRegs[13] + 400.0f) * i_this->mReturnSpeedRate;
+    /* true60: the frame-start rate on every step (d_a_himo2.h) */
+    f32 step = (l_himo2Regs.mChild[18].mFloatRegs[13] + 400.0f) * himo2_frameRate(i_this->mReturnSpeedRate);
     cLib_addCalcPos2(&i_this->current.pos, *sp100, 1.0f, step);
     cLib_addCalc2(&i_this->mReturnSpeedRate, 1.0f, 1.0f, l_himo2Regs.mChild[18].mFloatRegs[14] + 0.1f);
+    himo2_rateEased(i_this->mReturnSpeedRate);
     mv_pl_pos_add(i_this);
     return mv_dist(i_this, sp100) > 5.0f;
 }
@@ -332,10 +334,13 @@ static void new_himo2_move(himo2_class* i_this) {
         } else {
             i_this->mRootSegment = 0x61 - gabi::ftoi(i_this->mHandDist *
                                               (l_himo2Regs.mChild[0].mFloatRegs[3] + 0.060000002f));
-            cLib_addCalc2(&i_this->current.pos.x, sp100->x, 1.0f, 200.0f * i_this->mReturnSpeedRate);
-            cLib_addCalc2(&i_this->current.pos.y, sp100->y, 1.0f, 200.0f * i_this->mReturnSpeedRate);
-            cLib_addCalc2(&i_this->current.pos.z, sp100->z, 1.0f, 200.0f * i_this->mReturnSpeedRate);
+            /* true60: the frame-start rate on every step (d_a_himo2.h) */
+            const f32 rate = himo2_frameRate(i_this->mReturnSpeedRate);
+            cLib_addCalc2(&i_this->current.pos.x, sp100->x, 1.0f, 200.0f * rate);
+            cLib_addCalc2(&i_this->current.pos.y, sp100->y, 1.0f, 200.0f * rate);
+            cLib_addCalc2(&i_this->current.pos.z, sp100->z, 1.0f, 200.0f * rate);
             cLib_addCalc2(&i_this->mReturnSpeedRate, 1.0f, 1.0f, 0.005f);
+            himo2_rateEased(i_this->mReturnSpeedRate);
             if (mv_dist(i_this, sp100) > 5.0f && perFrame) /* true60: the per-frame sound once a frame */
                 mv_seStartP(player, JA_SE_LK_ROPE_UNWIND);
         }

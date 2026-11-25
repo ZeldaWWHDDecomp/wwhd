@@ -387,3 +387,43 @@ static inline f32 himo2_stepShare(Himo2StepStamp& s) {
 static inline s32 himo2_phaseMul(u32 counter, s32 k, f32 share) {
     return (s32)(counter * (u32)k) + (s32)(share * (f32)k);
 }
+
+/* true60 (2026-11-25, long3G14n2 Abesso): the rope's pull back to the hand (cases
+ * 5 / 8 / 9 mv_pull_back, and HIMO2_WAIT's return ease) moves by a max step of k x mReturnSpeedRate, then eases the rate
+ * toward 1. A moves the frame by the frame-start rate; at N steps the later steps took the rate the earlier steps had
+ * already eased, so B pulled faster, came within 5 of the hand a frame early and its per-frame JA_SE_LK_ROPE_UNWIND
+ * ended a frame early (0x201F: A 6299-6328, B 6296-6324 = A 6327). Form: the max step reads the frame's start rate on
+ * every step (each step still moves dt of it, the rate still eases per step at its dt: the frame end = A's); a rate
+ * written outside the ease (a state's set, 0.1 / 0.02 / 0) is taken as the new start. dt 1: the rate itself.
+ * NC WWHD_T60_HIMO2RATE_NEGCTRL=1. */
+#include <cstdlib>
+struct Himo2RateHold {
+    f32 held;
+    f32 last;
+    uint32_t stamp;
+    bool valid;
+};
+inline Himo2RateHold g_himo2RateHold;
+static inline bool himo2_rateNegctrl() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_HIMO2RATE_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
+#else
+    return false;
+#endif
+}
+/* the rate the step's max step uses */
+static inline f32 himo2_frameRate(f32 rate) {
+    Himo2RateHold& h = g_himo2RateHold;
+    if (t60::dt() == 1.0f || himo2_rateNegctrl())
+        return rate;
+    const uint32_t now = t60_step_counter();
+    if (t60::first_step() || !h.valid || now - h.stamp >= (uint32_t)t60::steps() || rate != h.last) {
+        h.held = rate;
+        h.stamp = t60::first_step() || !h.valid || now - h.stamp >= (uint32_t)t60::steps() ? now : h.stamp;
+        h.valid = true;
+    }
+    return h.held;
+}
+/* after the step's ease of the rate: its value, so the next step of the frame knows the ease (not a state's set) wrote it */
+static inline void himo2_rateEased(f32 rate) { g_himo2RateHold.last = rate; }
