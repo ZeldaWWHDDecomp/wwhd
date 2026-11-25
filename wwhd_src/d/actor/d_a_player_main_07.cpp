@@ -5939,6 +5939,8 @@ static inline bool lk07_windTgHit(dCcD_Cyl* cyl, cXyz* vec) {
         vec->z = s_lk07WindVec.z;
         return true;
     }
+    if (hit && !s_lk07WindHeld && now - s_lk07WindFrame < t60::steps() && !lkT60Glide::windHitNc())
+        return false; /* true60 (d_a_player_glide_t60.h): a hit first seen on a later step is the next frame's */
     return hit;
 }
 
@@ -6051,7 +6053,7 @@ BOOL daPy_lk_c::procFanGlide() {
         seStartOnlyReverb(Link07::JA_SE_LK_FAN_CHUTE_RISE);
         mFanWindSphTimer = 5;
     }
-    if (mAcch.ChkWallHit()) {
+    if (mAcch.ChkWallHit() && lkT60Glide::wallStep()) { /* true60 (d_a_player_glide_t60.h) */
         for (s32 i = 0; i < 3; i++) {
             dBgS_AcchCir& circle = mAcchCir[i];
             if (circle.ChkWallHit() && cLib_distanceAngleS(current.angle.y, circle.GetWallAngleY()) > 0x6000) {

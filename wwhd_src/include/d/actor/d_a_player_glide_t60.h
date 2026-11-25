@@ -32,6 +32,28 @@
 #include <cstdlib>
 
 namespace lkT60Glide {
+/* (2026-11-25, glide pair: mProcVar6, the glide's in-wind flag, set
+ * a frame early at 161, then Link 21.6 / camera 18.2 off at 299-300): procFanGlide's wind test (lk07_windTgHit,
+ * main_07) reads his wind cylinder's tg hit. A's frame sees one collision pass, the previous frame end's; the frame's
+ * first step reads the same pass, but a later step reads the pass after the first step (his place / the wind's mid
+ * frame), and a hit first seen there switched the glide to the wind animation and its push a frame before A. Form:
+ * a later step answers as the frame's first step did (a hit held from it, as before; a new hit not: the next frame's
+ * first step reads it from the frame end's pass, as A). NC WWHD_T60_GLIDE_WINDHIT_NEGCTRL=1. */
+/* (2026-11-25, glide pair frame 300: Link 21.6 / camera 18.2 off):
+ * procFanGlide turns his glide speed back (mNormalSpeed = -mNormalSpeed) when his ground check's wall hit faces
+ * him. A's frame tests the previous frame end's wall hit once; at N 2 the first step turned it back (as A), and the
+ * tick30 step read the wall hit of the first step's own check (still at the wall after a half move) and turned it
+ * back again: Link stayed at the wall where A bounced off. Form: the test runs on the frame's first step only (a hit
+ * first seen on a later step is the next frame's, from the frame end's check, as A). NC
+ * WWHD_T60_GLIDE_WALLBOUNCE_NEGCTRL=1. */
+static inline bool wallStep() {
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_GLIDE_WALLBOUNCE_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc || t60::steps() <= 1 || t60::first_step();
+}
+static inline bool windHitNc() {
+    static const bool v = [] { const char* e = getenv("WWHD_T60_GLIDE_WINDHIT_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+}
 static const bool s_nc = [] {
     const char* e = getenv("WWHD_T60_GLIDE_START_NEGCTRL");
     return e != nullptr && atoi(e) != 0;
