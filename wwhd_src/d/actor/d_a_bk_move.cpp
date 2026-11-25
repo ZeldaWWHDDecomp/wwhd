@@ -11,6 +11,7 @@
 #include "d/actor/d_a_bk_t60.h"
 #include <unordered_map>
 #include "d/actor/d_a_bk_turnfs_t60.h" /* */
+#include "d/actor/d_a_bk_failhold_t60.h" /* */
 
 enum {
     JA_SE_CV_BK_SEARCH = 0x482A,
@@ -842,7 +843,10 @@ void Bk_move(bk_class* i_this) {
     }
     cLib_addCalcAngleS2(&i_this->mHeadAngleZ, 0, 2, 0x800);
 
-    if (i_this->dr.mMode <= -100) {
+    /* true60 (d_a_bk_failhold_t60.h): a held step of a frame whose first step was knocked down takes the
+     * knocked-down branch, as A's call did (FAIL set by damage_reaction on an earlier step) */
+    const bool t60KdFrame = t60bkfh::knockedFrame(gabi::ea(i_this), (s16)i_this->dr.mMode, t60Held);
+    if (i_this->dr.mMode <= -100 || t60KdFrame) {
         /* true60: the knock-down entered on an earlier step of this frame is first run next frame (held); the weapon
          * sphere the frame's call registered before damage_reaction's change still goes into the tick30 Move */
         if (t60Held) {
