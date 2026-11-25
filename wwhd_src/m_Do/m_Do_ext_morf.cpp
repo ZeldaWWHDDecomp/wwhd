@@ -1,6 +1,7 @@
 /** Single-animation morph controller, tww fields and methods. Private source. */
 #include "m_Do/m_Do_ext_morf.h"
 #include "m_Do/m_Do_ext_morf_snd_t60.h"
+#include "m_Do/m_Do_ext_morf_curfe_t60.h" /* true60: */
 using gabi::cpu;
 using gabi::ftoi;
 // HD: verified argument ordering, constructor guest-stack words and buffer state are retained.
@@ -63,7 +64,16 @@ u32 mDoExt_McaMorf::play(void *position, u32 sound, s32 reverb) {
   if (progress < one) {
     f32 delta = mDoExtMorf_at<mDoExt_McaMorf>(o)->mMorfStep;
     mDoExtMorf_at<mDoExt_McaMorf>(o)->mPrevMorf = progress;
-    mDoExtMorf_chaseF(gabi::at<void>(o + 0xB0), one, delta);
+    f32 t60Start; /* true60 (m_Do_ext_morf_curfe_t60.h): the tick30 play ends on A's one chase */
+    if (t60morfcur::redo(o, progress, delta, &t60Start)) {
+      f32 t60Dt = t60_set_dt(1.0f);
+      mDoExtMorf_at<mDoExt_McaMorf>(o)->mCurMorf = t60Start;
+      mDoExtMorf_chaseF(gabi::at<void>(o + 0xB0), one, delta);
+      t60_set_dt(t60Dt);
+    } else {
+      mDoExtMorf_chaseF(gabi::at<void>(o + 0xB0), one, delta);
+    }
+    t60morfcur::after(o, mDoExtMorf_at<mDoExt_McaMorf>(o)->mCurMorf);
   }
   mDoExtMorf_frameUpdate(gabi::at<void>(o + 0x98));
   u32 audio = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpSound;
