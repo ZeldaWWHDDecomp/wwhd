@@ -293,7 +293,9 @@ void JPABaseParticle::incFrame() {
     // HD: unordered ages also expire.
     if (!(age < lifetime)) {
         mCurNormTime = 1.0f;
-        mStatus = (u32)mStatus | JPAPtclStts_Delete;
+        // true60 (JPA_particle_t60.h): on an earlier step the expiry waits for the frame's tick30 step
+        if (jpa_t60p::expire_now(age))
+            mStatus = (u32)mStatus | JPAPtclStts_Delete;
     } else
         mCurNormTime = age < 0.0f ? 0.0f : age / lifetime;
 }

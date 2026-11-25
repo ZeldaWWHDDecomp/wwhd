@@ -101,4 +101,20 @@ template <class Emitter, class Particle> inline void wind_picture(Emitter* em, P
         w.add[i] = (f32)*g - before;
     }
 }
+/* follow-up (2026-11-24, swim strict pair: WATER_MARK A 38 / B 34): a particle's life (mLifeTime,
+ * often fractional: the emitter's life random) ran out on an earlier step of a frame (its age there is the frame start's +
+ * k / N), where the 30 Hz frame ends it on the frame's update (age + 1): it was deleted before the frame's tick30 step,
+ * so its last particle callback (the game's callbacks run on the tick30 step) never ran, e.g. Link's water
+ * drop's last ground check (daPy_waterDropPcallBack_c 02414048 creates a WATER_MARK from it). Form: on an earlier step
+ * the expiry waits for the frame's tick30 step (the particle stays at the end of its life: norm time 1), where the 30 Hz
+ * frame's expiry, callback and deletion happen as in A; an unordered (NaN) age expires at once. dt 1 / N 1: unchanged.
+ * WWHD_T60_PTCL_EXPIRE=0: off (the particle ends on the earlier step, as before). */
+inline bool expire_defer_on() {
+    static const bool on = [] {
+        const char* e = getenv("WWHD_T60_PTCL_EXPIRE");
+        return !(e && e[0] == '0');
+    }();
+    return on;
+}
+inline bool expire_now(f32 age) { return frame_count() || !expire_defer_on() || !(age == age); }
 }  // namespace jpa_t60p
