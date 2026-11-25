@@ -6,6 +6,7 @@
 #include "c/c_damagereaction_carrier_t60.h" /* rider rule: hold on a 30 Hz carrier */
 #include "c/c_damagereaction_bounce_t60.h" /* the landing bounce once per frame */
 #include "c/c_damagereaction_fall_t60.h" /* the tick30 fall from the frame start height */
+#include "c/c_damagereaction_push_t60.h" /* no push first seen on a later step */
 #include "d/actor/d_a_bk_kdturn_t60.h" /* a Bokoblin knock-down on an earlier step: the frame's turn */
 #include <unordered_map>
 using gabi::load;
@@ -243,7 +244,8 @@ static void t60dr_push_step(const cXyz* cc, f32 out[3]) {
     f32 x = cc->x, y = cc->y, z = cc->z;
     bool fresh = x != 0.0f || y != 0.0f || z != 0.0f;
     bool held = known && (e->held[0] != 0.0f || e->held[1] != 0.0f || e->held[2] != 0.0f);
-    if (!known || t60::first_step() || (fresh && !held)) {
+    /* true60 (c_damagereaction_push_t60.h): a later step's push is an in-between Move's (A: next frame) */
+    if (!known || t60::first_step() || (fresh && !held && t60drPush::takeLate())) {
         e->frame = frame;
         e->held[0] = x, e->held[1] = y, e->held[2] = z;
     }
