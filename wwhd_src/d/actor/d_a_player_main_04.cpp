@@ -23,6 +23,7 @@
 #include "d/actor/d_a_player_crawl_t60.h"
 #include "d/actor/d_a_player_at_t60.h"
 #include "d/actor/d_a_player_maba_t60.h"
+#include "d/actor/d_a_player_hatwind_t60.h"
 #include "d/actor/d_a_player_pose_t60.h"
 #include "d/actor/d_a_player_main_04_item.h"
 #include "d/actor/d_a_player_main_04_effect.h"
@@ -2451,6 +2452,14 @@ void daPy_lk_c::setHatAngle() {
             windHit = true;
         }
     }
+    if (lkT60HatWind::wantSample()) { /* true60: the frame-start wind at HATA (d_a_player_hatwind_t60.h) */
+        gabi::Local<cXyz> hwPos;
+        gabi::Local<cXyz> hwDir;
+        gabi::Local<be<f32>> hwPow;
+        lk_jntPos(mpCLModel, LinkPoseConstants::CL_JNT_HATA_JNT_e, hwPos);
+        LinkPoseApi::dKyw_get_AllWind_vec(hwPos.get(), hwDir.get(), hwPow.get());
+        lkT60HatWind::keep(hwDir.get(), hwPow.get());
+    }
     if (!lk_t60FrameStep()) {
         return;
     }
@@ -2489,7 +2498,9 @@ void daPy_lk_c::setHatAngle() {
     lk_jntPos(mpCLModel, LinkPoseConstants::CL_JNT_HATA_JNT_e, spA0);
     gabi::Local<cXyz> spAC;
     gabi::Local<be<f32>> sp18;
-    LinkPoseApi::dKyw_get_AllWind_vec(spA0.get(), spAC.get(), sp18.get());
+    if (!lkT60HatWind::use(spAC.get(), sp18.get())) { /* true60: the first step's sample */
+        LinkPoseApi::dKyw_get_AllWind_vec(spA0.get(), spAC.get(), sp18.get());
+    }
     if (r31) {
         *sp18 = 1.0f;
     }
