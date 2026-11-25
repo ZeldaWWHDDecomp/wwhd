@@ -26,6 +26,7 @@
 #include <cstdlib>
 #include "d/actor/d_a_player_carry_t60.h"
 #include "d/actor/d_a_player_waitturn_t60.h"
+#include "d/actor/d_a_player_ropelet_t60.h" /* true60 */
 #include "d/actor/d_a_player_movecos_t60.h" /* true60: the swim speed's cosine */
 #include "d/actor/d_a_player_heading_t60.h" /* true60: the swim stroke's heading */
 #include "d/actor/d_a_player_swimupturn_t60.h" /* true60 */
@@ -6412,6 +6413,15 @@ BOOL daPy_lk_c::checkRopeSwingTurn(cXyz* foot, f32 swingX, f32 swingZ) {
 BOOL daPy_lk_c::procRopeSwing() {
     if (checkHangRopeActorNull()) {
         return TRUE;
+    }
+    /* true60 (d_a_player_ropelet_t60.h): a let-go on an earlier step runs the frame whole at dt 1 */
+    lkT60_ropeLetNote(this, &gabi::at<Link07::PlayerRopeTurnWork>(gabi::ea(this))->mRopeTurnSpeed);
+    if (t60::dt() != 1.0f && lkT60_ropeLetRedo(this, &gabi::at<Link07::PlayerRopeTurnWork>(gabi::ea(this))->mRopeTurnSpeed,
+                                               (u32)(u8)mItemTrigger, lk_safeStageIs(gabi::guest_str("ADMumi")) != FALSE)) {
+        const float lkT60Dt0 = t60_set_dt(1.0f);
+        const BOOL lkT60R = procRopeSwing();
+        t60_set_dt(lkT60Dt0);
+        return lkT60R;
     }
     gabi::Local<cXyz> toe; /* sp+0x38 */
     {
