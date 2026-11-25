@@ -8,6 +8,7 @@
  */
 #include "d/d_camera_subject.h"
 #include "d/d_camera_key_t60.h"
+#include "d/d_camera_subjbase_t60.h" /* true60 */
 #include "true60.h"
 #include <cstdlib>
 #include "d/d_camera_run_t60.h"
@@ -214,6 +215,7 @@ bool dCamera_c::CalcSubjectAngle(s16* outV, s16* outU) {
     }
     cSAngle_l* r = subject_angleFromShort(tmp.get(), (s16)mpPlayerActor.get()->shape_angle.y);
     work->m3BA = (s16)*r;
+    subject_t60::noteBase(gabi::ea(this), s_subjectCameraCall(), (s16)work->m3BA); /* true60 */
     f32 yaw = x, pitch = y;
     f32 eyeY = mEye.y;
     bool keep = eyeY > mGroundHeight + 5.0f && eyeY > mBG.mCameraGround.mGroundY + 5.0f;
@@ -533,7 +535,15 @@ bool dCamera_c::subjectCamera(s32 style) {
         }
         cSAngle_l* a =
             subject_angleFromShort(tmp.get(), (s16)mpPlayerActor.get()->shape_angle.y.get());
+        /* true60 (d_camera_subjbase_t60.h): the offset from the frame's first player call's base */
+        int16_t t60Base;
+        const bool t60UseBase = subject_t60::frameBase(gabi::ea(this), &t60Base);
+        const s16 t60Live = (s16)work->m3BA;
+        if (t60UseBase)
+            work->m3BA = t60Base;
         subject_angleSubtract(a, t3e, &work->m3BA);
+        if (t60UseBase)
+            work->m3BA = t60Live;
         *angU = (s16)*t3e;
         /* true60 (hookshot aim pitch; 2026-11-22, routes 378): the steady
          * camera rebuilds the pitch share from Link's s16 pitch (getBodyAngleX) once per 30 Hz frame in the original
