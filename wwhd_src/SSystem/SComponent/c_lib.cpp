@@ -487,9 +487,10 @@ static s32 divideSignedPPC(s32 a, s32 b) {
 
 /* true60: chaseUC (kind 0), chaseS (1), chaseAngleS (2) on an in-between or tick30 sub-step: the frame's step
  * split as ceil((k+1)*S/N) from the start, the tick30 sub-step the original one step from the start */
-template <class T> static s32 t60Chase(be<T>* pValue, s32 target, s32 step, int kind) {
+template <class T> static s32 t60Chase(be<T>* pValue, s32 target, s32 step, int kind, unsigned site) {
     s32 cur = *pValue;
     T60IntEntry* e = t60IntEntry(pValue, cur);
+    t60cs_check(e, t60cs_sig(3u + (unsigned)kind, step, 0, 0), cur, site); /* true60: as addCalcAngleS */
     s32 start = e ? e->start : cur, ret;
     bool write;
     s32 full = t60ChaseFull(start, target, step, kind, &ret, &write);
@@ -593,6 +594,7 @@ void cLib_addCalcAngleS2(be<s16>* pValue, s32 target, s32 scale, s32 maxStep) {
     if (t60::dt() != 1.0f) {
         s32 cur = *pValue;
         T60IntEntry* e = t60IntEntry(pValue, cur);
+        t60cs_check(e, t60cs_sig(1u, scale, maxStep, 0), cur, T60CS_SITE()); /* true60: as addCalcAngleS */
         s32 start = e ? e->start : cur;
         s16 full = t60AngleS2Full(start, target, scale, maxStep);
         if (t60PinFull(e)) {
@@ -629,6 +631,7 @@ s32 cLib_addCalcAngleL(be<s32>* pValue, s32 target, s32 scale, s32 maxStep, s32 
     if (t60::dt() != 1.0f) {
         s32 cur = *pValue;
         T60IntEntry* e = t60IntEntry(pValue, cur);
+        t60cs_check(e, t60cs_sig(2u, scale, maxStep, minStep), cur, T60CS_SITE()); /* true60: as addCalcAngleS */
         s32 start = e ? e->start : cur;
         s32 diff = (s32)((u32)target - (u32)cur);
         if (diff == 0 && start == cur) { /* the original returns before any store */
@@ -691,7 +694,7 @@ s32 cLib_addCalcAngleL(be<s32>* pValue, s32 target, s32 scale, s32 maxStep, s32 
 /* 0200F4FC */
 s32 cLib_chaseUC(be<u8>* pValue, s32 target, s32 step) {
     if (t60::dt() != 1.0f)
-        return t60Chase(pValue, target, step, 0);
+        return t60Chase(pValue, target, step, 0, T60CS_SITE());
     s32 x = *pValue;
     if (step == 0)
         return x == target;
@@ -710,7 +713,7 @@ s32 cLib_chaseUC(be<u8>* pValue, s32 target, s32 step) {
 /* 0200F564 */
 s32 cLib_chaseS(be<s16>* pValue, s32 target, s32 step) {
     if (t60::dt() != 1.0f)
-        return t60Chase(pValue, target, step, 1);
+        return t60Chase(pValue, target, step, 1, T60CS_SITE());
     s32 x = *pValue;
     if (step == 0)
         return x == target;
@@ -791,7 +794,7 @@ s32 cLib_chasePosXZ(cXyz* pValue, cXyz* target, f32 step) {
 /* 0200F8D0 */
 s32 cLib_chaseAngleS(be<s16>* pValue, s32 target, s32 step) {
     if (t60::dt() != 1.0f)
-        return t60Chase(pValue, target, step, 2);
+        return t60Chase(pValue, target, step, 2, T60CS_SITE());
     s32 x = *pValue;
     if (step == 0)
         return x == target;
