@@ -837,7 +837,9 @@ bool daTsuboMode::Act_c::_execute() {
         if (m682 != 0 || mMode != 2 || !mAcch.ChkGroundHit() || mAcch.ChkGroundLanding() || prm_get_cull(this) == 0 ||
             !(actor_condition & 4) || !tsuboMode_fopAcM_cullingCheck(this) || m800 != 0 || prm_get_moveBg(this)) {
             if (t60cs::pic()) { /* true60: a PIC step: the frame's motion and the model only */
-                mode_proc_call();
+                /* (d_a_tsubo_mode_t60.h: a frame whose tick30 run kills it in lava: no move) */
+                if (!tsubo_t60::lava_kill_pic(this, tsuboMode_chk_sink_water(this), data(this)->mCenterHeight))
+                    mode_proc_call();
                 tsubo_t60::picMtx(this);
                 tsuboMode_cull_set_draw(this);
                 t60cs::end();

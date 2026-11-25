@@ -48,6 +48,31 @@ static inline bool held_pic_nc() {
     static const bool nc = [] { const char* e = getenv("WWHD_T60_POTHELD_NEGCTRL"); return e && e[0] == '1'; }();
     return nc;
 }
+/* (carriables helper 2026-11-24, md-loop helper's pot route: the pot falling into lava drawn at
+ * y -857.62 on the earlier step where the frame stays at -837.53): the tick30 step's damage_bg_proc (before mode_proc_call)
+ * kills a dropping / thrown pot whose frame-start place is below the lava surface (chk_sink_lava: mLavaY > pos.y +
+ * min(mCenterHeight, 20), not in water first): A's frame ends where it started (damaged_lava, the pot deleted, no move);
+ * the earlier steps moved it on by the predicted fall. Picture only: such an earlier step skips the move (the place stays
+ * the frame start's); its inputs are the frame-start words (mLavaY is written by the tick30 crr_pos only). NC
+ * WWHD_T60_POTLAVA_NEGCTRL=1. */
+static inline bool lava_pic_nc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_POTLAVA_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
+#else
+    return true;
+#endif
+}
+/* sinkWater: tsuboMode_chk_sink_water's answer; centerH: the attribute's mCenterHeight */
+static inline bool lava_kill_pic(daTsuboMode::Act_c* a, bool sinkWater, f32 centerH) {
+    if (lava_pic_nc())
+        return false;
+    const s32 mode = static_cast<s32>(a->mMode);
+    if (!(mode == 2 || mode == 3 || mode == 5) || sinkWater || a->m67F != 0)
+        return false;
+    const f32 h = (20.0f - centerH >= 0.0f) ? centerH : 20.0f;
+    return (f32)a->mLavaY > (f32)a->current.pos.y + h;
+}
 /* the execute's earlier-step tail (t60w::begin returned true); returns true (the execute's result) */
 static inline bool picture(daTsuboMode::Act_c* a) {
     if (t60::dt() == 1.0f || t60::tick30() || !held(a) || held_pic_nc())
