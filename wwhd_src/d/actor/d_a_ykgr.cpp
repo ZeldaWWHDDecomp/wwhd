@@ -199,6 +199,7 @@ static BOOL daYkgrDraw(void* v_this) {
     mDoMtx_stack_c::YrotM(i_this->current.angle.y);
     mDoMtx_XrotM(mDoMtx_stack_c::get(), i_this->current.angle.x);
     PSMTXCopy(mDoMtx_stack_c::get(), &i_this->mMtx);
+    ykgr_t60::eyePicture(&i_this->mMtx); /* true60 (d_a_ykgr_t60.h): the drawn camera's eye */
     YkgrEmitter_view* e = m_emitter;
     if (e != nullptr) {
         e->setGlobalRTMatrix(&i_this->mMtx);
