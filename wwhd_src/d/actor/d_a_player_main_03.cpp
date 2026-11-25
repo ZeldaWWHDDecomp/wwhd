@@ -5018,7 +5018,7 @@ template <class V>
 static inline void lk_ccMoveStep(V* cc, f32 dt) {
     const bool fresh = (f32)cc->x != 0.0f || (f32)cc->y != 0.0f || (f32)cc->z != 0.0f;
     const bool held = s_lkCcHold[0] != 0.0f || s_lkCcHold[1] != 0.0f || s_lkCcHold[2] != 0.0f;
-    if (t60::first_step() || (fresh && !held)) {
+    if (t60::first_step() || (fresh && !held && lkT60_ccLateFreshNc())) { /* true60 (d_a_player_posadd_t60.h) */
         s_lkCcHold[0] = cc->x;
         s_lkCcHold[1] = cc->y;
         s_lkCcHold[2] = cc->z;

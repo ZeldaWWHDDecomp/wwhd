@@ -57,6 +57,20 @@ static inline bool lkT60_wallSegAllOff() {
 /* the xz moves of this frame's earlier steps' BG checks (mAcch.CrrPos: wall pushes), noted around the call in main_04
  * (d_a_player_landline_t60.h); reset on the frame's first step */
 inline double g_lkT60BgK[2] = {0.0, 0.0};
+/* (2026-11-25, long1 N 4 seg 1 frame 1082: Link +0.079 / +0.021, then the roll's wall
+ * crash at 1094 a frame apart): posMove's collision push (lk_ccMoveStep, main_03) took a push first seen
+ * on a later step of a frame that started without one (the collision pass after an earlier step: Link and the pusher at
+ * their mid-frame places) and handed out its share on that step; A's frame has no push there: its collision pass runs at
+ * the frame end and the push moves Link on the next frame. Form: only the frame's first step takes a push; a later step's
+ * fresh one waits for the next frame's first step (the frame end's pass). NC WWHD_T60_CCFRESH_NEGCTRL=1 (the late take). */
+static inline bool lkT60_ccLateFreshNc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_CCFRESH_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return true;
+#endif
+}
 /* (2026-11-25, route ld frame 405, Outset lookout ladder climb-over, N 2: Link
  * 5.53 xz off): g_lkT60BgK counts an earlier step's CrrPos xz push, which the tick30 speed-ramp position-gap (3) place takes out of K; but a
  * push the same execute overwrites afterwards (LADDER_UP_END: the ladder / root code puts the place back) never reaches
