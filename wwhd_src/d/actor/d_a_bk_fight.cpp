@@ -393,6 +393,7 @@ void fight_run(bk_class* i_this) {
                     anm_init(i_this, dRes_INDEX_BK_BCK_BK_JUMP2_e, 0.0f, 0, 1.0f,
                              dRes_INDEX_BK_BAS_BK_JUMP2_e);
                     i_this->mJumpStep = 2;
+                    bk_t60_jland_note(i_this); /* true60 (d_a_bk_t60.h): for the held tick30 step */
                     i_this->mSmokeTimer = l_bkHIO().mSmokeTimerBase + 2;
                     i_this->mSmokeType = 4;
                 }

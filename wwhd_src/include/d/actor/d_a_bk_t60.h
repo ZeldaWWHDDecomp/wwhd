@@ -154,6 +154,38 @@ template <class T> static inline int bk_t60_turn_due(T* i_this) {
     return -1;
 }
 
+/* (2026-11-25; long2 seg 3 + at N 2, Bokoblin 47C5E81C frame
+ * 1012): fight_run's jump-run landing (jump step 1 -> 2, case 1) breaks out of the jump switch, and the same call then
+ * decides the fight distance (mPlayerDistance < mFightDist: action 5, mode 0, the attack). A's landing call attacked at
+ * 1012. At N steps the landing came on the first step (the ground answer held), where the decision is
+ * not taken (it reads Link: tick30 only), and the jump step change held the tick30 step (bk_t60_ai_held): no decision
+ * that frame; the next frame's case 2 stopped the run (speedF 0) and attacked a frame late, from a standstill (the
+ * spear's swing 142 off at Link's 1050 knock-back, 8.4 off by 1106). Form: the landing on an earlier step is noted
+ * (frame tag, keyed by the jump step's address); the held tick30 step (Bk_move, after its sensing) makes the landing
+ * call's decision with the tick30 sensing, as A's call. dt 1 / a landing on the tick30 step: nothing (the call decides
+ * itself). Negative control WWHD_T60_BKJLANDATK_NEGCTRL=1. */
+static inline bool bk_t60_jlandatk_nc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_BKJLANDATK_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return true;
+#endif
+}
+template <class T> static inline u32 bk_t60_jland_key(T* i_this) { return gabi::ea(&i_this->mJumpStep) ^ 0xD1000000u; }
+/* fight_run case 1, the landing (jump step -> 2) */
+template <class T> static inline void bk_t60_jland_note(T* i_this) {
+    if (t60::dt() == 1.0f || t60::tick30() || bk_t60_jlandatk_nc())
+        return;
+    wwhd_t60_latch_set(bk_t60_jland_key(i_this), bk_t60_frame_tag());
+}
+/* the held tick30 step: the landing call's tail decision is due */
+template <class T> static inline bool bk_t60_jland_due(T* i_this) {
+    if (t60::dt() == 1.0f || !t60::tick30() || bk_t60_jlandatk_nc())
+        return false;
+    return wwhd_t60_latch_pending(bk_t60_jland_key(i_this), bk_t60_frame_tag()) != 0;
+}
+
 /* fight_run's jump-run launch (pair frame 50 = A 3552, Bokoblin 47C5CE68). In
  * jump steps 0 / 2 A's one call turns current.angle.y twice: the prelude's turn (scale 4, 0x800) and the jump step's
  * (scale 2, 0x2000); step 2's launch then adds its random yaw. The c_lib integer ease keeps one frame entry per value:

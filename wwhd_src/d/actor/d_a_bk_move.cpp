@@ -918,6 +918,13 @@ void Bk_move(bk_class* i_this) {
                 i_this->current.angle.y = (s16)((u32)(s16)i_this->current.angle.y + (u32)t60Add);
             } else if (t60Turn > 0)
                 cLib_addCalcAngleS2(&i_this->current.angle.y, i_this->dr.mTurnTargetY, 4, t60Turn);
+            /* ... and fight_run's jump landing tail (d_a_bk_t60.h): the landing call's fight-distance
+             * decision with this step's sensing */
+            if (bk_t60_jland_due(i_this) && i_this->dr.mAction == BK_ACTION_FIGHT_RUN && i_this->dr.mMode == 1 &&
+                i_this->mPlayerDistance < l_bkHIO().mFightDist) {
+                i_this->dr.mAction = 5;
+                i_this->dr.mMode = 0;
+            }
         }
         /* ... and jyunkai's walk tail (turn + speed ramp) when its mode 1 ran on an earlier step (entered there from
          * mode 0 / -1: A's entry call turns and ramps in the same call; d_a_bk_t60.h bk_t60_walk_due, f171): on
