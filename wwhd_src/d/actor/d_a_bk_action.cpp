@@ -9,6 +9,7 @@
 #include "d/actor/d_a_bk_action.h"
 #include "d/actor/d_a_bk_t60.h"
 #include "c/c_damagereaction_carrier_t60.h" /* true60: b_hang on a rope bridge, coupled to it (rider rule) */
+#include "d/actor/d_a_bk_wsearch_t60.h" /* */
 
 const gc_tu_data gc_tu = {
     .safeString = 0x10009474,
@@ -312,8 +313,11 @@ void wepon_search(bk_class* i_this) {
 
     f32 f31 = 10000.0f;
     if (boko != nullptr) {
-        f32 dx = boko->current.pos.x - actor->current.pos.x;
-        f32 dz = boko->current.pos.z - actor->current.pos.z;
+        /* true60 (d_a_bk_wsearch_t60.h): from the frame-start place */
+        f32 t60X = actor->current.pos.x, t60Z = actor->current.pos.z;
+        t60bkws::place(gabi::ea(i_this), &t60X, &t60Z);
+        f32 dx = boko->current.pos.x - t60X;
+        f32 dz = boko->current.pos.z - t60Z;
         i_this->dr.mTurnTargetY = cM_atan2s(dx, dz);
         f31 = std_sqrtf(gabi::fmadds(dx, dx, dz * dz));
     }
