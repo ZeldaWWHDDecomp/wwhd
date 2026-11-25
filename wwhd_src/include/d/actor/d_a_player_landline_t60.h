@@ -369,6 +369,12 @@ static inline void end(uint32_t flags, cXyz& oldPos, const cXyz& pos) {
     if (r.bgNote) {
         g_lkT60BgK[0] += (double)pos.x - (double)r.pre[0];
         g_lkT60BgK[1] += (double)pos.z - (double)r.pre[1];
+        /* (d_a_player_posadd_t60.h) the note, for the next posAdd's undone-push check */
+        g_lkT60BgLast.pre[0] = r.pre[0];
+        g_lkT60BgLast.pre[1] = r.pre[1];
+        g_lkT60BgLast.push[0] = (double)pos.x - (double)r.pre[0];
+        g_lkT60BgLast.push[1] = (double)pos.z - (double)r.pre[1];
+        g_lkT60BgLast.on = g_lkT60BgLast.push[0] != 0.0 || g_lkT60BgLast.push[1] != 0.0;
         r.bgNote = false;
     }
     if (r.on) {

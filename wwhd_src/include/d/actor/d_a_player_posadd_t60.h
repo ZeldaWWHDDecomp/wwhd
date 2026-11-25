@@ -57,6 +57,28 @@ static inline bool lkT60_wallSegAllOff() {
 /* the xz moves of this frame's earlier steps' BG checks (mAcch.CrrPos: wall pushes), noted around the call in main_04
  * (d_a_player_landline_t60.h); reset on the frame's first step */
 inline double g_lkT60BgK[2] = {0.0, 0.0};
+/* (2026-11-25, route ld frame 405, Outset lookout ladder climb-over, N 2: Link
+ * 5.53 xz off): g_lkT60BgK counts an earlier step's CrrPos xz push, which the tick30 speed-ramp position-gap (3) place takes out of K; but a
+ * push the same execute overwrites afterwards (LADDER_UP_END: the ladder / root code puts the place back) never reaches
+ * K (corr = p - W at the next posAdd), and the place subtracted a push K did not hold (405: exactly the push (2.297,
+ * 5.031)). Form: landline::end keeps the step's pre-CrrPos xz and its push (g_lkT60BgLast); the frame's next posAdd,
+ * when its p is bit-equal there in xz (the push undone), takes that step's note back out of g_lkT60BgK, before the speed-ramp position-gap (3)
+ * place and the WallSeg flags read it. A push that survives (AIRSEG's walk frame 111, the pig route's wall) is kept.
+ * NC WWHD_T60_BGKSURVIVE_NEGCTRL=1. Game build only; dt 1 never. */
+struct LkT60BgLast {
+    f32 pre[2];     /* the step's xz before its CrrPos */
+    double push[2]; /* the push its CrrPos noted into g_lkT60BgK */
+    bool on;
+};
+inline LkT60BgLast g_lkT60BgLast = {};
+static inline bool lkT60_bgSurviveOff() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_BGKSURVIVE_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return true;
+#endif
+}
 /* (2026-11-25; bk3 at N 2, Link frame 125 CUT_A, A 75.859 -> 72.557 / B 72.529, then the
  * Bokoblin 47C5CE68's sensing, its launch turn at 153 and the held stick 47C58678 0.15 off): posMove's root move (modes
  * 1 / 5 / 8 / 9: the animation root's step, turned into the world by shape_angle.y) adds A's frame root step once, turned
@@ -195,7 +217,13 @@ static inline void lkT60_posAdd(const f32 p[3], const double v[3], const double 
             s.S[i] += corr;
             s.K[i] += corr;
         }
+        /* the last noted push undone before this posAdd: its note out of BgK */
+        if (g_lkT60BgLast.on && !lkT60_bgSurviveOff() && p[0] == g_lkT60BgLast.pre[0] && p[2] == g_lkT60BgLast.pre[1]) {
+            g_lkT60BgK[0] -= g_lkT60BgLast.push[0];
+            g_lkT60BgK[1] -= g_lkT60BgLast.push[1];
+        }
     }
+    g_lkT60BgLast.on = false;
     const bool m6c3 = t60::tick30() && !lkT60_move6c3Off();
     double dl[3] = {0.0, 0.0, 0.0};
     for (int i = 0; i < 3; i++) {
