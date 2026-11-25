@@ -3644,7 +3644,11 @@ int daPy_lk_c::setMoveAnime(f32 f27, f32 f28, f32 f25, int r27, int r28, int r29
         int plays = lkT60_anmRemaining();
         if (plays > 0) {
             s32 fm = lk_anm_getFrameMax(r3);
-            f31 = lkT60_projectFrame(frameCtrl0, plays) / (f32)fm;
+            /* (the control that leaves r3's frame, d_a_player_moveinit_t60.h) */
+            J3DFrameCtrl* lkW = lkT60_moveAnmWriter(r3, frameCtrl0, frameCtrl1, &mFrameCtrlUpper[1],
+                (u32)gabi::at<player02::anmRatioPack_c>(gabi::ea(mAnmRatioUnder))[1].mpAnmTransform,
+                (u32)gabi::at<player02::anmRatioPack_c>(gabi::ea(mAnmRatioUpper))[1].mpAnmTransform);
+            f31 = lkT60_projectFrame(lkW, plays) / (f32)fm;
         }
     }
     f32 inv = 1.0f - f27;

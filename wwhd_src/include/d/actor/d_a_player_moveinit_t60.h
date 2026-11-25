@@ -63,3 +63,36 @@ static inline bool lkT60_moveInitHold(uint32_t curProcEa) {
             (lkT60_procStep() && !lkT60_moveInitPreNc() &&
              wwhd_t60_latch_pending(lkT60_procPreKey(curProcEa), lkT60_frameTag()) != 0));
 }
+
+/* (2026-11-25, long1 seg 7 walk start frame 5450 -> 5813): the original's phase
+ * f31 reads the move animation's own frame (r3->getFrame()), which animeUpdate 023D9F6C left at the frame of the LAST
+ * frame control that played it: with the wait blend both under slots hold the same animation, so control 1 (rate
+ * (rate x f26) x f30, 2.3000002 where control 0 has 2.3) writes it last. The switch form projected control 0 instead:
+ * A 1.0592308 + 2.3000002 = 3.3592310 (4056FDA4), B 1.0592308 + 2.3 = 3.3592308 (...A3), 1 ulp, the 1-2 ulp drift of
+ * the under controls from there on, the base-foot switch at 5504 (speedF 2.3767 / 2.3765, Link 0.001 off) and the wall
+ * circle 0 contact edge at 5812 (A off the wall, B on it: A's release speed at 5813). Form: the projection takes the
+ * control that writes the animation last in animeUpdate's order (under 0, under 1 when it plays the same animation, upper
+ * 1 when it plays it and not under 1's). NC WWHD_T60_MOVEANMFRAME_NEGCTRL=1. dt 1: not run (the switch form is not). */
+static inline bool lkT60_moveAnmFrameNc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] {
+        const char* e = getenv("WWHD_T60_MOVEANMFRAME_NEGCTRL");
+        return e && e[0] == '1';
+    }();
+    return v;
+#else
+    return false;
+#endif
+}
+/* the frame control whose frame animeUpdate writes last into animation r3 (under slot 0's animation) */
+static inline J3DFrameCtrl* lkT60_moveAnmWriter(uint32_t r3, J3DFrameCtrl* under0, J3DFrameCtrl* under1, J3DFrameCtrl* upper1,
+                                                uint32_t under1Anm, uint32_t upper1Anm) {
+    if (lkT60_moveAnmFrameNc())
+        return under0;
+    J3DFrameCtrl* w = under0;
+    if (under1Anm != 0 && under1Anm == r3)
+        w = under1;
+    if (upper1Anm != 0 && upper1Anm == r3 && upper1Anm != under1Anm)
+        w = upper1;
+    return w;
+}
