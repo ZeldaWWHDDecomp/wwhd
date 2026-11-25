@@ -1580,15 +1580,19 @@ void daPy_lk_c::setGrabItemPos() {
             } else {
                 grabOffset = -85.0f;
             }
-            mGrabItemOffsetY = mGrabItemOffsetY + m35D8;
-            LinkPoseApi::addCalc(&mGrabItemOffsetY, grabOffset, 0.5f, 20.0f, 1.0f);
-            f32 v = mGrabItemOffsetY;
             f32 spd = speedF;
-            if (v < -85.0f) {
-                mGrabItemOffsetY = -85.0f;
-                m35D8 = v - -85.0f;
-            } else {
-                m35D8 = 0.0f;
+            if (lk04_grabEaseRun()) { /* true60 (carry placement): the worn ease once a frame, tick30 step, dt 1 */
+                const f32 easeDt = lk04_grabEaseBegin();
+                mGrabItemOffsetY = mGrabItemOffsetY + m35D8;
+                LinkPoseApi::addCalc(&mGrabItemOffsetY, grabOffset, 0.5f, 20.0f, 1.0f);
+                lk04_grabEaseEnd(easeDt);
+                f32 v = mGrabItemOffsetY;
+                if (v < -85.0f) {
+                    mGrabItemOffsetY = -85.0f;
+                    m35D8 = v - -85.0f;
+                } else {
+                    m35D8 = 0.0f;
+                }
             }
             s16 target_slant_angle;
             if (spd > 0.0f && m34C3 != 0) {

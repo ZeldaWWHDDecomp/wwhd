@@ -63,3 +63,29 @@ extern "C" __attribute__((visibility("default"))) float wwhd_t60_grab_pic_dy(uin
 #else
 static inline void lk04_grabPicNote(uint32_t, float, bool, bool, float) {}
 #endif
+
+/* carry placement, worn barrel (obr on es3, frame 248 -> 249): the worn ease (setGrabItemPos: mGrabItemOffsetY +=
+ * m35D8, addCalc toward 0 / -115 / -85 by 0.5 with steps 1 .. 20, the part past -85 into m35D8, which lowers Link's body
+ * chain in the calc) is a once-a-frame chase with a minimum step: A at 248 moved -86.875 -> -85.875 (half the gap 0.94,
+ * the minimum 1: m35D8 -0.875), B's per-step chase 0.549 + 0.5 (m35D8 -0.8258), the next frame's calc 0.049 off. Form:
+ * an earlier step holds the ease (mGrabItemOffsetY / m35D8 as the frame started; the worn barrel's place on it is the
+ * held picture's), the tick30 step runs it once at dt 1 from the frame-start values (the original arithmetic). dt 1: the
+ * original. NC WWHD_T60_GRABEASE_NEGCTRL=1 (the per-step form). */
+static inline bool lk04_grabEaseNc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_GRABEASE_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return false;
+#endif
+}
+static inline bool lk04_grabEaseRun() { return t60::dt() == 1.0f || t60::tick30() || lk04_grabEaseNc(); }
+static inline f32 lk04_grabEaseBegin() {
+    if (t60::dt() == 1.0f || lk04_grabEaseNc())
+        return -1.0f;
+    return t60_set_dt(1.0f);
+}
+static inline void lk04_grabEaseEnd(f32 prev) {
+    if (prev >= 0.0f)
+        t60_set_dt(prev);
+}
