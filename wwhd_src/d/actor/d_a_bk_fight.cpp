@@ -11,6 +11,7 @@
 #include "d/actor/d_a_bk_t60.h"
 #include <unordered_map>
 #include "d/actor/d_a_bk_turnend_t60.h" /* true60: */
+#include "d/actor/d_a_bk_athit_t60.h" /* true60: */
 
 /* true60 (the animation-rate rule): the attack frame mAttackFrame is a hand-stepped animation frame (the step's play
  * speed per frame, beside the animation it follows): + speed x dt per step. Its window compares (At sphere, sound, blur)
@@ -688,6 +689,14 @@ static inline fopAc_ac_c* yari_hit_check(bk_class* i_this, f32 prev, f32 frameEn
     bk_t60_at_frame_start(i_this);
 
     if (i_this->mAtHitWait != 0) {
+        /* true60 (d_a_bk_athit_t60.h): the frame whose first step read the hit still sweeps */
+        if (t60bkah::sweepDue(gabi::ea(&i_this->mAtHitWait), bk_t60_frame_tag())) {
+            dCcD_Sph_MoveCAt(&i_this->mWeaponSph, &i_this->mAtPos);
+            dComIfG_Ccsp_Set(&i_this->mWeaponSph);
+            if (i_this->mHasMachete != 0) {
+                dCcMassS_Mng_Set(gabi::at<u8>(dComIfGp_ea() + PLAY_CCMASS), &i_this->mWeaponSph, 3);
+            }
+        }
         return nullptr;
     }
 
@@ -725,6 +734,7 @@ static inline fopAc_ac_c* yari_hit_check(bk_class* i_this, f32 prev, f32 frameEn
                 bk_t60_wsph_note(i_this, 1);
             if (i_this->mAtStarted != 0 && i_this->mWeaponSph.ChkAtHit()) {
                 i_this->mAtHitWait = 5;
+                t60bkah::noteRead(gabi::ea(&i_this->mAtHitWait), bk_t60_frame_tag()); /* true60: */
                 void* hitObj = dCcD_GObjInf_GetAtHitObj(&i_this->mWeaponSph);
                 return hitObj ? cCcD_Obj_GetAc(hitObj) : nullptr;
             }
