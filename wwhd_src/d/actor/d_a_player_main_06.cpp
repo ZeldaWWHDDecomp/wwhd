@@ -16,6 +16,7 @@
 #include "d/actor/d_a_player_t60.h"
 #include "d/actor/d_a_player_crawl_t60.h"
 #include "d/actor/d_a_player_climb_t60.h"
+#include "d/actor/d_a_player_ladder_t60.h" /* */
 #include "d/actor/d_a_player_hang_t60.h"
 
 const gc_tu_data gc_tu = {.safeString = 0x10034B24};
@@ -1162,7 +1163,11 @@ BOOL daPy_lk_c::procLadderUpStart() {
                 mRootMoveMode = 0;
                 procFall_init(1, 6.0f);
             } else {
-                changeLadderMoveProc(1);
+                { /* true60 (d_a_player_ladder_t60.h): a first-step entry eases the whole frame */
+                    const LkT60LadderEase lkT60Le = lkT60_ladderEaseNote(this);
+                    changeLadderMoveProc(1);
+                    lkT60_ladderEaseRedo(this, lkT60Le);
+                }
             }
         } else if (lkT60_pass(&frameCtrl, 9.0f)) {
             setLadderFootSe();
@@ -1204,7 +1209,11 @@ BOOL daPy_lk_c::procLadderDownStart() {
                 mRootMoveMode = 0;
                 procFall_init(1, 6.0f);
             } else {
-                changeLadderMoveProc(1);
+                { /* true60 (d_a_player_ladder_t60.h): a first-step entry eases the whole frame */
+                    const LkT60LadderEase lkT60Le = lkT60_ladderEaseNote(this);
+                    changeLadderMoveProc(1);
+                    lkT60_ladderEaseRedo(this, lkT60Le);
+                }
             }
         } else if (lkT60_pass(&frameCtrl, 26.0f) || lkT60_pass(&frameCtrl, 36.0f) || lkT60_pass(&frameCtrl, 43.0f)) {
             setLadderFootSe();
@@ -1250,7 +1259,11 @@ BOOL daPy_lk_c::procLadderMove() {
                     setLadderFootSe();
                 }
             } else {
-                changeLadderMoveProc(mProcVar6);
+                { /* true60 (d_a_player_ladder_t60.h): a first-step entry eases the whole frame */
+                    const LkT60LadderEase lkT60Le = lkT60_ladderEaseNote(this);
+                    changeLadderMoveProc(mProcVar6);
+                    lkT60_ladderEaseRedo(this, lkT60Le);
+                }
             }
         } else {
             f32 spd = getLadderMoveAnmSpeed();
