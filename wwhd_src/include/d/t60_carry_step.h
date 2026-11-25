@@ -79,6 +79,17 @@ static inline bool heldMoveNc() {
 #endif
 }
 
+/* negative control of the release-frame placement below (WWHD_T60_RELPLACE_NEGCTRL=1: the frame-start old place on every
+ * release, the form before) */
+static inline bool relPlaceNc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_RELPLACE_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return false;
+#endif
+}
+
 enum Phase { WHOLE = 0, PIC = 1, TICK = 2 };
 /* an actor's extra words (offsets from the actor base; lengths in whole words) */
 struct Range {
@@ -121,6 +132,8 @@ struct Frame {
     u32 glOff, glN;
     f32 gl0[kGlide], gl1[kGlide]; /* the glided values at the frame start and the frame end */
     bool picSaved; /* the model / stack words before the frame's first picture matrix */
+    bool picEnd;   /* pe holds the place a PIC step of this frame left */
+    u32 pe[3];     /* the position the frame's last PIC step left (a holder's placement on the tick30 step differs) */
     u32 mdlEa, mdl[kMdlLen / 4], stk[kStackLen / 4];
     u32 prevEnd[kOldLen / 4], prevTag; /* the place block as the previous frame's tick30 run left it */
 };
@@ -230,6 +243,7 @@ template <class A> static inline Phase begin(A* a, const Spec<A>& s) {
         f->moved = false;
         f->glided = false;
         f->picSaved = false;
+        f->picEnd = false;
     }
     f->span = gabi::fadds_ppc(f->span, t60::dt());
     t60wc::note(actor); /* extension: the frame's 30 Hz carrier for its riders (as the whole form) */
@@ -253,6 +267,9 @@ template <class A> static inline Phase begin(A* a, const Spec<A>& s) {
     /* tick30: the tracked words as A has them (the actor's own PIC changes undone, every other writer's kept); the old
      * place fopAc_Execute copied from the last picture back to the frame start's (held: its holder's tick30 placement, as A
      * has it after the holder's frame) */
+    /* (the place before the words go back: the holder's tick30 placement, or the last PIC step's own place) */
+    u32 cp[3];
+    gget(cp, actor + kBaseA + kOldLen, 12);
     scatter(actor, s.extra, f->base);
     /* (a holder that released the actor on an earlier step placed it no more; the old
      * place fopAc_Execute copied is then the earlier step's picture: the frame start's, as A) */
@@ -266,7 +283,15 @@ template <class A> static inline Phase begin(A* a, const Spec<A>& s) {
          * tick30 step, is Link's own step order and stays) */
         /* the position only: the old angles / room fopAc copied keep the holder's own writes of this frame (Link's
          * procGrabThrow sets current.angle.y before freeGrabItem; bomb pair btH: A's old.angle.y 0x3B17) */
-        gput(actor + kBaseA, f->prevTag + 1 == tag ? f->prevEnd : f->a, 12);
+        /* carry placement (2026-11-24, obt worn barrel put-down obtH6 frame 351): a holder that
+         * placed the actor on its tick30 step and released it after (Link's GRAB_PUT end: setGrabItemPos, then the
+         * release) is A's frame: fopAc_Execute's copy after the holder's frame is that placement (A old 2955.62 = current,
+         * B had the previous frame's end 2962.46). Taken only when the position differs from the last PIC step's (a tick30
+         * place equal to it stays with the previous frame's end, as before; read before the words go back, so a release
+         * on an earlier step whose PIC flight moved the place is no placement). NC WWHD_T60_RELPLACE_NEGCTRL=1 */
+        const bool placed = f->picEnd && (cp[0] != f->pe[0] || cp[1] != f->pe[1] || cp[2] != f->pe[2]);
+        if (!placed || relPlaceNc())
+            gput(actor + kBaseA, f->prevTag + 1 == tag ? f->prevEnd : f->a, 12);
     }
     /* the pictures' model matrix and matrix stack back (a run that sets no matrix, e.g. a delete, leaves A's) */
     if (f->picSaved) {
@@ -282,8 +307,11 @@ template <class A> static inline Phase begin(A* a, const Spec<A>& s) {
 }
 /* the execute's end (every return path) */
 static inline void end() {
-    if (s_phase == PIC && s_cur) /* the words as this PIC step leaves them */
+    if (s_phase == PIC && s_cur) { /* the words as this PIC step leaves them */
         gather(s_cur->actor, s_extra, s_cur->last);
+        gget(s_cur->pe, s_cur->actor + kBaseA + kOldLen, 12);
+        s_cur->picEnd = true;
+    }
     if (s_phase == TICK) {
         if (s_cur) { /* the place this frame leaves, for the next frame's old place */
             gget(s_cur->prevEnd, s_cur->actor + kBaseA + kOldLen, kOldLen);
