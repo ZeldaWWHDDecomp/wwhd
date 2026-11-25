@@ -141,4 +141,21 @@ static inline f64 footRaw(f64 travel, f32 dt) {
     }
     return travel / (f64)dt;
 }
+/* (2026-11-25, long1 seg 7 frame 7642, the Atorizk exit): the first 30 Hz
+ * fallback frame (dt 1) after converted frames took posMoveFromFootPos's travel toe - mFootData.mToePos with the toe
+ * the last step stored (the tick30 step's view, half a frame into the previous frame's pose at N 2: travel 14.72 /
+ * A 12.52, speedF 13.52 / 12.51). A's stored toe is the previous frame's frame-start one (its one execute): the toe
+ * ring's entry of the previous frame's first step. Form: that frame's travel is taken from the ring entry (the frame
+ * start of the converted frame right before). NC WWHD_T60_FALLBACK_CHORD_NEGCTRL=1. N steps: not run. */
+static inline bool fallbackChordOn() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] {
+        const char* e = getenv("WWHD_T60_FALLBACK_CHORD_NEGCTRL");
+        return !(e && e[0] == '1');
+    }();
+    return v;
+#else
+    return false;
+#endif
+}
 } // namespace lkT60Pose

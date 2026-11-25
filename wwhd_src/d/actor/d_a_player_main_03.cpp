@@ -4707,8 +4707,22 @@ void daPy_lk_c::posMoveFromFootPos() {
         if (smooth) {
             step = lk_fmaddsD(step, 0.3f, mFootMoveDist * 0.7f);
         }
-    } else if (r < 1.0f && std::fabs((f32)(mOldStickDistance - mStickDistance)) < 0.2f) {
-        step = lk_fmaddsD(step, 0.3f, mFootMoveDist * 0.7f);
+    } else {
+        /* true60 (d_a_player_pose_t60.h): a dt 1 frame right after converted frames: the travel
+         * from the previous frame's frame-start toe (A's stored toe), not the last step's */
+        f64 lkPx, lkPz;
+        const uint32_t lkNow = t60_step_counter();
+        if (lkT60Pose::fallbackChordOn() && s_lkFrameStartValid && lkNow - s_lkFrameStart < (uint32_t)kLkToeRing &&
+            lk_toeAt(lkNow - 1, idx, lkPx, lkPz) && lk_toeAt(s_lkFrameStart, idx, lkPx, lkPz)) {
+            xz->x = (f32)((f64)toe[idx]->x - lkPx);
+            xz->z = (f32)((f64)toe[idx]->z - lkPz);
+            xz->y = 0.0f;
+            step = LinkActionApi::sqrtWide(LinkActionApi::squareMagnitude(xz.get()));
+        }
+        s_lkFrameStartValid = false;
+        if (r < 1.0f && std::fabs((f32)(mOldStickDistance - mStickDistance)) < 0.2f) {
+            step = lk_fmaddsD(step, 0.3f, mFootMoveDist * 0.7f);
+        }
     }
     f32 ns = mNormalSpeed;
     f32 v = ns * (1.0f - r);
