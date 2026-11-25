@@ -3030,7 +3030,7 @@ BOOL daPy_lk_c::jointBeforeCB(int jnt_no, u32 param_2 /* J3DTransformInfo* */, u
         angles->y = by;
         angles->z = mBodyAngle.x;
         lk_saveTransInfo(self, jnt_no, param_2);
-        transform->mTranslate.y = gabi::fadds_ppc((f32)transform->mTranslate.y, m35D8);
+        transform->mTranslate.y = gabi::fadds_ppc((f32)transform->mTranslate.y, lkT60_bodyOfs(m35D8)); /* true60: the frame-start offset (d_a_player_upperplay_t60.h) */
     } else if (jnt_no == 0) {
         angles->x = m34F2;
         angles->z = m34F4;

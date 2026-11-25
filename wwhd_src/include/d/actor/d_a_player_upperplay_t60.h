@@ -95,3 +95,37 @@ template <class FC> static inline void lkT60_applyEndState(int slot, FC* fc) {
     fc->mState = e.st;
     e.ea = 0;
 }
+
+/* carry placement, worn barrel (frame 244 GRAB_WAIT entry):
+ * the hands and the worn barrel 8.787 low on the tick30 step, then halving; every logic word equal at the frame end.
+ * setGrabItemPos (end of execute, after the model calc) eases the worn offset toward GRAB_WAIT's -115 and pushes the
+ * part past -85 into m35D8 (+0x6A30: -15, -7.5, -3.75 ... in both runs at the frame ends); jointBeforeCB lowers the body
+ * chain by m35D8 in the calc. The original's calc of frame f reads the m35D8 of frame f - 1's end; B's tick30 calc read
+ * the value the frame's earlier step left (-8.787): half a frame early, the whole pose 8.787 low, the barrel on the hands
+ * with it. Form: the calc reads the m35D8 the frame's first calc found (frame start) on every step of the frame, so the
+ * tick30 calc's input is A's. Host memory, this TU. dt 1: never. NC WWHD_T60_BODYOFS_NEGCTRL=1. */
+namespace lkup60 {
+static uint32_t s_bodyStamp = ~0u;
+static f32 s_bodyOfs = 0.0f;
+static inline bool bodyNc() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool v = [] { const char* e = getenv("WWHD_T60_BODYOFS_NEGCTRL"); return e && e[0] == '1'; }();
+    return v;
+#else
+    return true;
+#endif
+}
+}  // namespace lkup60
+static inline f32 lkT60_bodyOfs(f32 v) {
+    if (t60::dt() == 1.0f || lkup60::bodyNc())
+        return v;
+    const uint32_t now = t60_step_counter();
+    if (t60::first_step()) {
+        if (lkup60::s_bodyStamp != now)
+            lkup60::s_bodyStamp = now, lkup60::s_bodyOfs = v;
+        return v;
+    }
+    if (now - lkup60::s_bodyStamp < (uint32_t)t60::steps())
+        return lkup60::s_bodyOfs;
+    return v;
+}
