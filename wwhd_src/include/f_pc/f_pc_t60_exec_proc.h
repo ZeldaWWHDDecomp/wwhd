@@ -15,18 +15,27 @@ extern "C" __attribute__((visibility("default"))) uint32_t wwhd_t60_exec_proc;
  * in-between pass that runs logic) is logic, not a draw-method replay (pair: the Yboil's pos_reset on its first
  * step drew from the hold counters, A from the logic ones: every reset bubble at another place) */
 extern "C" __attribute__((visibility("default"))) uint32_t wwhd_t60_exec_logic;
+/* (2026-11-25, the strict RNG-pair rule tooling: RNG-DRAWSTREAM) 1 inside a process's draw method (fpcDw_Execute;
+ * 0 again in an execute or create it calls): the keyed test RNG counts a draw method's draws on counters of their own, so a
+ * picture-side difference (route ld: the seagull 47BE84FC culled on B's frame pass at 430 / 431, its point-light flicker
+ * cM_rndF(1) not drawn) no longer shifts the logic's seq stream (its sing gate's cM_rndF(1) at 805: B sang, two extra
+ * 0x4805 cries) */
+extern "C" __attribute__((visibility("default"))) uint32_t wwhd_t60_exec_draw;
 struct T60ExecProc {
-    uint32_t previous, previousLogic;
-    explicit T60ExecProc(base_process_class* p, bool logic = false)
-        : previous(wwhd_t60_exec_proc), previousLogic(wwhd_t60_exec_logic) {
+    uint32_t previous, previousLogic, previousDraw;
+    explicit T60ExecProc(base_process_class* p, bool logic = false, bool draw = false)
+        : previous(wwhd_t60_exec_proc), previousLogic(wwhd_t60_exec_logic), previousDraw(wwhd_t60_exec_draw) {
         wwhd_t60_exec_proc = gabi::ea(p);
         if (logic) wwhd_t60_exec_logic = 1;
+        wwhd_t60_exec_draw = draw ? 1 : 0;
     }
-    ~T60ExecProc() { wwhd_t60_exec_proc = previous; wwhd_t60_exec_logic = previousLogic; }
+    ~T60ExecProc() { wwhd_t60_exec_proc = previous; wwhd_t60_exec_logic = previousLogic; wwhd_t60_exec_draw = previousDraw; }
 };
 #define T60_EXEC_PROC(p) T60ExecProc t60ExecProc(p)
 #define T60_EXEC_LOGIC(p) T60ExecProc t60ExecProc(p, true)
+#define T60_EXEC_DRAW(p) T60ExecProc t60ExecProc(p, false, true)
 #else
 #define T60_EXEC_PROC(p) ((void)0)
 #define T60_EXEC_LOGIC(p) ((void)0)
+#define T60_EXEC_DRAW(p) ((void)0)
 #endif

@@ -20,7 +20,7 @@ BOOL fpcDw_Execute(base_process_class* i_proc) {
     layer_class* layer = i_proc->mLyTg.mpLayer;
     u32 draw_func = methods->mpDrawFunc.get();
     fpcLy_SetCurrentLayer(layer);
-    T60_EXEC_PROC(i_proc);  // (true60 test aid: draws in the draw method keyed by the drawing process)
+    T60_EXEC_DRAW(i_proc);  // (true60 test aid: draws in the draw method keyed by the drawing process, on their own counters)
     BOOL ret = gabi::call_ptr<s32>(draw_func, i_proc);
     fpcLy_SetCurrentLayer(curLay);
     return ret;
