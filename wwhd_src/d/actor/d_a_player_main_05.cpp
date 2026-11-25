@@ -12,6 +12,7 @@
  */
 #include "d/actor/d_a_player_main_05.h"
 #include "d/actor/d_a_player_anm_t60.h"
+#include "d/actor/d_a_player_jumpfall_t60.h" /* true60 */
 #include "true60.h"
 #include "d/actor/d_a_player_t60.h"
 #include "d/actor/d_a_player_neckdmg_t60.h" /* true60 */
@@ -1639,7 +1640,7 @@ BOOL daPy_lk_c::procSmallJump() {
         changeLandProc(1.3f);
     } else if (checkFanGlideProc(0)) {
         return TRUE;
-    } else if (speed.y < -gravity) {
+    } else if (lkT60_jumpFallTest(speed.y < -gravity)) { /* true60 (d_a_player_jumpfall_t60.h) */
         // HD: HIO folded
         lk05ProcFall_init(this, (s32)mProcVar6, 7.0f);
         lk05SetTextureAnime(this, 0x37, 0);
