@@ -292,7 +292,22 @@ static inline bool wallSegYOff() {
 #endif
 }
 /* before mAcch.CrrPos (acf: the flags before ClrGroundHit, the previous check's result) */
-static inline bool begin(uint32_t acf, cXyz& oldPos, cXyz& pos, uint32_t tag) {
+/* Shallow water: the water exclusion of the segment's y / speed.y part (r.water, made for Link swimming up out of the
+ * water, where the frame's y is not the gravity fall) took every WATER_IN frame. Link walking in shallow water (for
+ * example down the Helmaroc King tower's stairs: MOVE, WATER_IN, a wall push, the gravity fall as on dry ground) then
+ * had the wall-segment check at the 30 Hz segment start but his own height and speed.y share, so the wall push came out
+ * a few hundredths off and the camera pressed on the wall amplified it. r.water now applies only while Link swims
+ * (passed by the caller) and is in water; walking in shallow water takes the 30 Hz fall as on land.
+ * Negative control WWHD_T60_WATERSWIM_NEGCTRL=1 (every WATER_IN frame, as before). dt 1: never. */
+static inline bool waterSwimOff() {
+#if defined(GABI_GAME_BUILD) && GABI_T60
+    static const bool nc = [] { const char* e = getenv("WWHD_T60_WATERSWIM_NEGCTRL"); return e && e[0] == '1'; }();
+    return nc;
+#else
+    return true;
+#endif
+}
+static inline bool begin(uint32_t acf, cXyz& oldPos, cXyz& pos, uint32_t tag, bool swimming = true) {
     Rec& r = s_rec;
     r.on = false;
     r.airSeg = false;
@@ -312,7 +327,8 @@ static inline bool begin(uint32_t acf, cXyz& oldPos, cXyz& pos, uint32_t tag) {
         g_lkT60WallSeg = false;
         g_lkT60WallSegAll = false;
         r.air = !(acf & (uint32_t)dBgS_Acch::GROUND_HIT);
-        r.water = (acf & (uint32_t)dBgS_Acch::WATER_IN) != 0; /* (WATER_HIT alone: a water plane found below, e.g. land by the sea) */
+        r.water = (acf & (uint32_t)dBgS_Acch::WATER_IN) != 0 && /* (WATER_HIT alone: a water plane found below, e.g. land by the sea) */
+                  (swimming || waterSwimOff()); /* (shallow water, walking: the gravity fall) */
         /* the frame-start segment start and whether the body set the position */
         ld3(r.o0, oldPos);
         r.set = !negctrlSet() && (r.o0[0] != r.p0[0] || r.o0[1] != r.p0[1] || r.o0[2] != r.p0[2]);

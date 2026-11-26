@@ -4840,7 +4840,8 @@ BOOL daPy_lk_c::execute() {
     u32 sp8y = lk_fbits(current.pos.y);
     u32 sp8x = lk_fbits(current.pos.x);
     mAcch.m_flags = acf & ~0x20u; /* mAcch.ClrGroundHit() */
-    const bool lkT60Seg = lkT60Land::begin(acf, old.pos, current.pos, lkT60_frameTag()); /* true60 (d_a_player_landline_t60.h) */
+    const bool lkT60Seg = lkT60Land::begin(acf, old.pos, current.pos, lkT60_frameTag(),
+                                                   (mModeFlg & LinkPoseConstants::ModeFlg_SWIM) != 0); /* true60 (d_a_player_landline_t60.h) */
     lkT60Land::segHist(mAcch, lkT60Seg); /* true60 (d_a_player_landline_t60.h): A's input history */
     lkT60LandHist::note(acf, lkT60Seg, lkT60_frameTag()); /* true60 (d_a_player_landhist_t60.h) */
     {
