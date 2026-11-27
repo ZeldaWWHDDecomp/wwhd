@@ -3,6 +3,7 @@
 #include "d/d_snap.h"
 #include "port_hooks.h"
 #include "d/t60_draw.h"
+#include <utility>  // std::pair (libc++ does not bring it in through the headers above)
 
 static u32 l_snapAddress;
 static u32 l_snapInitialized;

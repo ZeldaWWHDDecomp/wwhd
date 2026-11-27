@@ -95,9 +95,15 @@ void gmem_stack_reserve(uint32_t ea, uint32_t n);
 __attribute__((weak)) void gmem_stack_reserve(uint32_t ea, uint32_t n) { (void)ea; (void)n; }
 #endif
 /* the original's frame of a function (native_frames.h): weak null default = no automatic frames;
- * the harness and native/game-test builds link tools/verify/src/native_frames.cpp */
+ * the harness and native/game-test builds link tools/verify/src/native_frames.cpp. GABI_FRAME_INFO_EXTERN (the
+ * port's game units: its tools/decomp_build/frames_vis.h): only native_frames.h's declaration, the port's runtime
+ * defines it once. No weak copy per unit then: on Windows (COFF) each weak definition also defines a
+ * `.weak.gmem_frame_info.default.<suffix>` symbol whose suffix is another symbol of the same object, the same one in
+ * every unit (ld.lld: duplicate symbol; ZeldaWWHDRecomp/ZeldaWWHDRecomp#678). */
 #ifndef GABI_HARNESS
+#ifndef GABI_FRAME_INFO_EXTERN
 __attribute__((weak)) const GabiFrameInfo* gmem_frame_info(uint32_t addr) { (void)addr; return nullptr; }
+#endif
 /* a gabi::Local that does not fit into the original's frame (automatic native frame fallback):
  * reported by the harness (stderr + build/verify/frame_fallbacks.tsv), ignored elsewhere */
 __attribute__((weak)) void gmem_frame_fallback(uint32_t func, uint32_t size, uint32_t used, uint32_t space, uint32_t frame) {
