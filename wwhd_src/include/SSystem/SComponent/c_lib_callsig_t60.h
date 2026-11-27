@@ -23,7 +23,11 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#if !defined(_WIN32)
 #include <dlfcn.h>
+#else
+extern "C" char __ImageBase; /* the base of the module this code is linked into (PE) */
+#endif
 
 static inline bool t60cs_nc() {
 #if defined(GABI_GAME_BUILD) && GABI_T60
@@ -74,8 +78,13 @@ static inline bool t60cs_log() {
 #endif
 }
 static inline unsigned long t60cs_off(const void* p) {
+#if defined(_WIN32)
+    /* Windows links the decomp into one exe, so its image base gives the same module-relative offset */
+    return p ? (unsigned long)((const char*)p - &__ImageBase) : 0ul;
+#else
     Dl_info i;
     return p && dladdr(p, &i) && i.dli_fbase ? (unsigned long)((const char*)p - (const char*)i.dli_fbase) : 0ul;
+#endif
 }
 
 /* pin hand-off (2026-11-24): two call sites easing one value on every step (Link's neck yaw in procDamage + the
