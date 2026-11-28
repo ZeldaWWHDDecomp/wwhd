@@ -4,6 +4,7 @@ callee 026066C4 r4=8
 callee 025881A4 r3=12
 callee 025E1A40 r4=12
 callee 025E4F64 stack=4
+callee 02587A0C stack=1     # dLib_bcks_setAnm (HD: the second morf, 9th argument, on the stack; setAnm passes 0)
 ret 02520460 0,1,2,3,4,5
 ret 025D63E8 0,1
 ret 02542D88 -1,0,1

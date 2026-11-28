@@ -104,7 +104,7 @@ s32 pfallStaffId(dEvent_manager_c *, const char *, u32, u32);
 s32 pfallActIdx(dEvent_manager_c *, s32, gptr<char> *, s32, u32, u32);
 s32 pfallIsAdvance(dEvent_manager_c *, s32);
 void pfallSetAnm(const char *, mDoExt_McaMorf *, be<s8> *, be<s8> *, be<s8> *, be<s32> *,
-                 dLib_anm_prm_c *, u32);
+                 dLib_anm_prm_c *, u32, mDoExt_McaMorf *);
 s32 pfallCheckPlayer(cXyz *, f32, f32);
 s32 pfallEndCheck(dEvent_manager_c *, const char *);
 void pfallNextStage(const char *, s32, s32, s32, f32, u32, u32, u32);

@@ -117,8 +117,11 @@ static daObj_PfallHIO_c *pfallHioConstruct(daObj_PfallHIO_c *self) {
 }
 /* 02383794 */
 void daObj_Pfall_c::setAnm() {
+    /* HD: dLib_bcks_setAnm also takes the second morf (its ninth argument, on the stack): none here, 0 as the
+     * original stores it (02383794 stw r10=0 at sp+8). Without it the call left the word at sp+8 as the stack had
+     * it, e.g. a morf an earlier execute passed there (NpcSo's), and the change of animation also set it on that one. */
     pfallSetAnm("Pfall", mpMorf, &mBckIdx, &mAnmPrmIdx, &mOldAnmPrmIdx, a_anm_bcks_tbl,
-                a_anm_prm_tbl, 0);
+                a_anm_prm_tbl, 0, nullptr);
 }
 /* 0238299C */
 void daObj_Pfall_c::set_mtx() {
@@ -621,7 +624,7 @@ ext 025E1AA4 void pfallMonsterSound(u32, cXyz*, u32, u32, s32)
 ext 02542D88 s32 pfallStaffId(dEvent_manager_c*, const char*, u32, u32)
 ext 02542EDC s32 pfallActIdx(dEvent_manager_c*, s32, gptr<char>*, s32, u32, u32)
 ext 025447C8 s32 pfallIsAdvance(dEvent_manager_c*, s32)
-ext 02587A0C void pfallSetAnm(const char*, mDoExt_McaMorf*, be<s8>*, be<s8>*, be<s8>*, be<s32>*, dLib_anm_prm_c*, u32)
+ext 02587A0C void pfallSetAnm(const char*, mDoExt_McaMorf*, be<s8>*, be<s8>*, be<s8>*, be<s32>*, dLib_anm_prm_c*, u32, mDoExt_McaMorf*)
 ext 025881A4 s32 pfallCheckPlayer(cXyz*, f32, f32)
 ext 0254457C s32 pfallEndCheck(dEvent_manager_c*, const char*)
 ext 0252012C void pfallNextStage(const char*, s32, s32, s32, f32, u32, u32, u32)
